@@ -1,0 +1,39 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+!.vscode/
+!.vscode/launch.json
+!.vscode/extensions.json
+*.iml
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Backend (Spring Boot / Maven)
+navitas-assist-backend/target/
+navitas-assist-backend/.classpath
+navitas-assist-backend/.project
+navitas-assist-backend/.settings/
+
+# Frontend (Angular)
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/.cache/
+frontend/coverage/
+
+# Environment files
+.env
+.env.*
+frontend/.env
+frontend/.env.*
+navitas-assist-backend/.env
+navitas-assist-backend/.env.*
+!.env.example
+!.env.prod.example

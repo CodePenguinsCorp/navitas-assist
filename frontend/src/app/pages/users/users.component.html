@@ -1,0 +1,184 @@
+<section class="page-surface">
+  <section class="page-heading">
+    <div>
+      <h1>Usuários</h1>
+    </div>
+    <div class="shell-actions">
+      <button type="button" class="button-primary" (click)="openCreateModal()">Novo usuário</button>
+      <button type="button" class="button-secondary" (click)="refresh()" [disabled]="loading()">
+        Atualizar
+      </button>
+    </div>
+  </section>
+
+  <section class="stats-grid stats-grid--three">
+    <article class="panel stat-card">
+      <span>Ativos</span>
+      <strong>{{ activeUsers() }}</strong>
+    </article>
+    <article class="panel stat-card">
+      <span>Administradores</span>
+      <strong>{{ adminUsers() }}</strong>
+    </article>
+    <article class="panel stat-card">
+      <span>Perfis em uso</span>
+      <strong>{{ roleCount() }}</strong>
+    </article>
+  </section>
+
+  <section class="panel catalog-toolbar catalog-toolbar--filters">
+    <label class="search-field">
+      <span>Buscar</span>
+      <input
+        #userSearch
+        type="search"
+        placeholder="Nome, usuário ou perfil"
+        [value]="searchTerm()"
+        (input)="updateSearch(userSearch.value)"
+      />
+    </label>
+
+    <label class="filter-field">
+      <span>Perfil</span>
+      <app-custom-select
+        ariaLabel="Filtrar por perfil"
+        [options]="roleFilterOptions"
+        [value]="roleFilter()"
+        (valueChange)="updateRoleFilter($any($event))"
+      />
+    </label>
+
+    <label class="filter-field">
+      <span>Status</span>
+      <app-custom-select
+        ariaLabel="Filtrar por status"
+        [options]="statusFilterOptions"
+        [value]="statusFilter()"
+        (valueChange)="updateStatusFilter($any($event))"
+      />
+    </label>
+
+    <span class="catalog-toolbar__result">{{ filteredUsers().length }} registro(s)</span>
+  </section>
+
+  @if (errorMessage()) {
+    <article class="panel alert-banner alert-banner--error">
+      <strong>{{ errorMessage() }}</strong>
+    </article>
+  }
+
+  @if (successMessage()) {
+    <article class="panel alert-banner alert-banner--success">
+      <strong>{{ successMessage() }}</strong>
+    </article>
+  }
+
+  <article class="table-card table-card--list panel">
+    @if (loading() && users().length === 0) {
+      <p>Carregando usuários...</p>
+    } @else if (users().length === 0) {
+      <section class="empty-state">
+        <h3>Nenhum usuário cadastrado.</h3>
+        <p>Cadastre perfis internos para controlar o acesso ao sistema.</p>
+        <button type="button" class="button-primary" (click)="openCreateModal()">Cadastrar usuário</button>
+      </section>
+    } @else if (filteredUsers().length === 0) {
+      <section class="empty-state">
+        <h3>Nenhum resultado encontrado.</h3>
+        <p>Ajuste os filtros para localizar outro usuário.</p>
+      </section>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Usuário</th>
+              <th>Perfil</th>
+              <th>Status</th>
+              <th>Atualizado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (user of filteredUsers(); track user.id) {
+              <tr>
+                <td>
+                  <strong class="table-title">{{ user.fullName }}</strong>
+                </td>
+                <td>{{ user.username }}</td>
+                <td>{{ roleLabel(user.role) }}</td>
+                <td>
+                  <span [class]="statusClass(user)">{{ user.active ? 'Ativo' : 'Inativo' }}</span>
+                </td>
+                <td>{{ updatedAtLabel(user) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </article>
+</section>
+
+@if (createModalOpen()) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <section class="modal-panel modal-panel--narrow panel" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <div>
+          <h3>Novo usuário</h3>
+          <p>Crie um perfil de acesso para a operação.</p>
+        </div>
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()">×</button>
+      </header>
+
+      <form class="form-grid" [formGroup]="form" (ngSubmit)="saveUser()">
+        <label class="field-group">
+          <span>Nome completo</span>
+          <input type="text" formControlName="fullName" />
+          @if (hasError('fullName')) {
+            <small class="field-error">Informe o nome completo.</small>
+          }
+        </label>
+
+        <label class="field-group">
+          <span>Usuário</span>
+          <input type="text" formControlName="username" />
+          @if (hasError('username')) {
+            <small class="field-error">Informe o usuário.</small>
+          }
+        </label>
+
+        <label class="field-group">
+          <span>Perfil</span>
+          <app-custom-select
+            formControlName="role"
+            ariaLabel="Perfil do usuário"
+            [options]="userRoleOptions"
+          />
+        </label>
+
+        <label class="field-group">
+          <span>Senha inicial</span>
+          <input type="password" formControlName="password" />
+          @if (hasError('password')) {
+            <small class="field-error">A senha precisa ter pelo menos 6 caracteres.</small>
+          }
+        </label>
+
+        <label class="checkbox-row field-group--full">
+          <input type="checkbox" formControlName="active" />
+          <span>Usuário ativo</span>
+        </label>
+
+        <div class="form-actions form-actions--full">
+          <button type="submit" class="button-primary" [disabled]="submitting()">
+            {{ submitting() ? 'Salvando...' : 'Cadastrar usuário' }}
+          </button>
+          <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="submitting()">
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}

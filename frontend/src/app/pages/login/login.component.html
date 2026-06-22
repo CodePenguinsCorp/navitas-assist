@@ -1,0 +1,126 @@
+<div class="login-view">
+  <section class="login-stage" aria-label="Login">
+    <div class="login-stage__content">
+      <div class="login-brand">
+        <img
+          class="login-brand__logo"
+          src="navitas-assist-logo.png"
+          alt="Navitas Assist"
+        />
+      </div>
+
+      <form class="login-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="login-field">
+          <label class="sr-only" for="username">Usuário</label>
+          <input
+            id="username"
+            type="text"
+            formControlName="username"
+            placeholder="Usuário"
+            autocomplete="username"
+            spellcheck="false"
+            [attr.aria-invalid]="hasError('username')"
+          />
+        </div>
+
+        <div class="login-field">
+          <label class="sr-only" for="password">Senha</label>
+          <div class="login-password">
+            <input
+              id="password"
+              [type]="passwordVisible() ? 'text' : 'password'"
+              formControlName="password"
+              placeholder="Senha"
+              autocomplete="current-password"
+              [attr.aria-invalid]="hasError('password')"
+            />
+            <button
+              type="button"
+              class="login-password__toggle"
+              (click)="togglePasswordVisibility()"
+              [attr.aria-label]="passwordVisible() ? 'Ocultar senha' : 'Mostrar senha'"
+              [attr.aria-pressed]="passwordVisible()"
+            >
+              @if (passwordVisible()) {
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M3 3l18 18"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M10.58 10.58a2 2 0 0 0 2.84 2.84"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M9.88 5.09A10.94 10.94 0 0 1 12 4.91c7 0 10.5 6 10.5 6a20.68 20.68 0 0 1-3.04 3.8"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M6.61 6.61C4.04 8.18 2.5 10.91 2.5 10.91s3.5 6 10.5 6c1.37 0 2.63-.23 3.77-.63"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              } @else {
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M1.5 12s3.5-6 10.5-6 10.5 6 10.5 6-3.5 6-10.5 6S1.5 12 1.5 12Z"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="3"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  />
+                </svg>
+              }
+            </button>
+          </div>
+        </div>
+
+        @if (authError()) {
+          <div class="login-feedback" role="alert" aria-live="polite">
+            <span class="login-feedback__icon" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="9"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                />
+                <path
+                  d="M12 7.5v5"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                />
+                <circle cx="12" cy="16.5" r="1" fill="currentColor" />
+              </svg>
+            </span>
+            <span class="login-feedback__text">{{ authError() }}</span>
+          </div>
+        }
+
+        <button type="submit" class="login-submit" [disabled]="submitting()">
+          {{ submitting() ? 'Entrando...' : 'Acessar' }}
+        </button>
+      </form>
+    </div>
+  </section>
+</div>

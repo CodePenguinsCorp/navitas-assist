@@ -1,0 +1,176 @@
+<section class="page-surface">
+  <section class="page-heading">
+    <div>
+      <h1>Produtos</h1>
+    </div>
+    <div class="shell-actions">
+      <button type="button" class="button-primary" (click)="openCreateModal()">Novo produto</button>
+      <button type="button" class="button-secondary" (click)="refresh()" [disabled]="loading()">
+        Atualizar
+      </button>
+    </div>
+  </section>
+
+  <section class="stats-grid stats-grid--three">
+    <article class="panel stat-card">
+      <span>Categorias</span>
+      <strong>{{ categoryCount() }}</strong>
+    </article>
+    <article class="panel stat-card">
+      <span>Com firmware</span>
+      <strong>{{ productsWithFirmware() }}</strong>
+    </article>
+    <article class="panel stat-card">
+      <span>Garantia média</span>
+      <strong>{{ averageWarrantyMonths() }} meses</strong>
+    </article>
+  </section>
+
+  <section class="panel catalog-toolbar">
+    <label class="search-field">
+      <span>Buscar</span>
+      <input
+        #productSearch
+        type="search"
+        placeholder="SKU, produto, categoria ou versão"
+        [value]="searchTerm()"
+        (input)="updateSearch(productSearch.value)"
+      />
+    </label>
+    <span class="catalog-toolbar__result">{{ filteredProducts().length }} registro(s)</span>
+  </section>
+
+  @if (errorMessage()) {
+    <article class="panel alert-banner alert-banner--error">
+      <strong>{{ errorMessage() }}</strong>
+    </article>
+  }
+
+  @if (successMessage()) {
+    <article class="panel alert-banner alert-banner--success">
+      <strong>{{ successMessage() }}</strong>
+    </article>
+  }
+
+  <article class="table-card table-card--list panel">
+    @if (loading() && products().length === 0) {
+      <p>Carregando produtos...</p>
+    } @else if (products().length === 0) {
+      <section class="empty-state">
+        <h3>Nenhum produto cadastrado.</h3>
+        <p>Cadastre produtos para utilizar no fluxo de abertura de RMAs.</p>
+        <button type="button" class="button-primary" (click)="openCreateModal()">Cadastrar produto</button>
+      </section>
+    } @else if (filteredProducts().length === 0) {
+      <section class="empty-state">
+        <h3>Nenhum resultado encontrado.</h3>
+        <p>Ajuste a busca para localizar outro produto.</p>
+      </section>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Produto</th>
+              <th>Categoria</th>
+              <th>Versões</th>
+              <th>Garantia</th>
+              <th>Atualizado</th>
+              <th class="table-actions-col">Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (product of filteredProducts(); track product.id) {
+              <tr>
+                <td>{{ product.sku }}</td>
+                <td>
+                  <strong class="table-title">{{ product.name }}</strong>
+                  <span class="table-subtitle">{{ product.technicalNotes || 'Sem observação técnica' }}</span>
+                </td>
+                <td>{{ product.category || 'Não informada' }}</td>
+                <td>{{ versionLabel(product) }}</td>
+                <td>{{ product.defaultWarrantyMonths }} meses</td>
+                <td>{{ updatedAtLabel(product) }}</td>
+                <td class="table-actions-col">
+                  <button type="button" class="button-secondary button-secondary--small" (click)="openEditModal(product)">
+                    Editar
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </article>
+</section>
+
+@if (activeModal()) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <section class="modal-panel panel" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <div>
+          <h3>{{ editingProduct() ? 'Editar produto' : 'Novo produto' }}</h3>
+          <p>{{ editingProduct() ? 'Atualize o cadastro técnico do produto.' : 'Preencha os dados mínimos para o catálogo técnico.' }}</p>
+        </div>
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()">×</button>
+      </header>
+
+      <form class="form-grid" [formGroup]="form" (ngSubmit)="saveProduct()">
+        <label class="field-group">
+          <span>SKU</span>
+          <input type="text" formControlName="sku" />
+          @if (hasError('sku')) {
+            <small class="field-error">Informe o SKU.</small>
+          }
+        </label>
+
+        <label class="field-group">
+          <span>Produto</span>
+          <input type="text" formControlName="name" />
+          @if (hasError('name')) {
+            <small class="field-error">Informe o nome do produto.</small>
+          }
+        </label>
+
+        <label class="field-group">
+          <span>Categoria</span>
+          <input type="text" formControlName="category" />
+        </label>
+
+        <label class="field-group">
+          <span>Garantia padrão (meses)</span>
+          <input type="number" min="1" formControlName="defaultWarrantyMonths" />
+          @if (hasError('defaultWarrantyMonths')) {
+            <small class="field-error">Informe uma garantia válida.</small>
+          }
+        </label>
+
+        <label class="field-group">
+          <span>Versão de hardware</span>
+          <input type="text" formControlName="hardwareVersion" />
+        </label>
+
+        <label class="field-group">
+          <span>Versão de firmware</span>
+          <input type="text" formControlName="firmwareVersion" />
+        </label>
+
+        <label class="field-group field-group--full">
+          <span>Observações técnicas</span>
+          <textarea formControlName="technicalNotes"></textarea>
+        </label>
+
+        <div class="form-actions form-actions--full">
+          <button type="submit" class="button-primary" [disabled]="submitting()">
+            {{ submitting() ? 'Salvando...' : editingProduct() ? 'Salvar alterações' : 'Cadastrar produto' }}
+          </button>
+          <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="submitting()">
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}

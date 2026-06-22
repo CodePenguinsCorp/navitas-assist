@@ -1,0 +1,62 @@
+<div class="shell">
+  <aside class="shell-sidebar" aria-label="Barra lateral">
+    <div class="brand-lockup brand-lockup--logo-only">
+      <img
+        class="brand-lockup__logo"
+        src="navitas-assist-logo-cropped.png"
+        alt="Navitas Assist"
+      />
+    </div>
+
+    <div class="nav-groups">
+      @for (group of visibleNavGroups(); track group.label) {
+        <section class="nav-group" [attr.aria-label]="group.label">
+          <h2 class="nav-group__title">{{ group.label }}</h2>
+
+          <nav class="nav-list">
+            @for (item of group.items; track item.route) {
+              <a
+                [routerLink]="item.route"
+                routerLinkActive="is-active"
+                class="nav-item"
+                ariaCurrentWhenActive="page"
+              >
+                <strong>{{ item.label }}</strong>
+              </a>
+            }
+          </nav>
+        </section>
+      }
+    </div>
+  </aside>
+
+  <div class="shell-main">
+    <header class="shell-header">
+      <div class="shell-actions">
+        <div class="top-user">
+          <span class="top-user__avatar" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="8" r="3.25" stroke="currentColor" stroke-width="1.8" />
+              <path
+                d="M5.5 18.25c1.2-2.7 3.58-4.05 6.5-4.05s5.3 1.35 6.5 4.05"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              />
+            </svg>
+          </span>
+          <div class="top-user__meta">
+            <strong>{{ currentUser()?.name }}</strong>
+            <span>{{ currentRoleLabel() }}</span>
+          </div>
+        </div>
+
+        <button type="button" class="button-secondary shell-logout" (click)="logout()">Sair</button>
+      </div>
+    </header>
+
+    <main class="shell-content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

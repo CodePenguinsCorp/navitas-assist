@@ -1,0 +1,47 @@
+<section class="page-surface">
+  <section class="page-heading">
+    <div>
+      <h1>Relatórios</h1>
+    </div>
+  </section>
+
+  <section class="report-grid">
+    @for (report of reports; track report.title) {
+      <article class="report-card panel">
+        <div class="support-line">
+          <h3>{{ report.title }}</h3>
+          <span class="tag">{{ report.format }}</span>
+        </div>
+        <p>{{ report.description }}</p>
+        <span class="mini-chip">{{ report.frequency }}</span>
+      </article>
+    }
+  </section>
+
+  <section class="two-column-grid">
+    <article class="matrix-card panel">
+      <h3>Acessos</h3>
+      <div class="report-list">
+        @for (item of accessMatrix; track item.role) {
+          <div class="matrix-row">
+            <div>
+              <strong>{{ roleLabels[item.role] }}</strong>
+              <span>{{ item.access }}</span>
+            </div>
+          </div>
+        }
+      </div>
+    </article>
+
+    <article class="status-card panel">
+      <h3>Segurança</h3>
+      <div class="policy-list">
+        @for (policy of policies; track policy) {
+          <div class="policy-item">
+            <strong>{{ policy }}</strong>
+          </div>
+        }
+      </div>
+    </article>
+  </section>
+</section>

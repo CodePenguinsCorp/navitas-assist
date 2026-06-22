@@ -1,0 +1,127 @@
+<section class="page-surface">
+  <section class="page-heading">
+    <div>
+      <h1>Dashboard</h1>
+    </div>
+    <div class="shell-actions">
+      <a routerLink="/rmas" class="button-primary">RMAs</a>
+      <a routerLink="/clientes" class="button-secondary">Clientes</a>
+      <a routerLink="/produtos" class="button-secondary">Produtos</a>
+      <button type="button" class="button-secondary" (click)="refresh()">Atualizar</button>
+    </div>
+  </section>
+
+  @if (errorMessage()) {
+    <article class="status-card panel">
+      <h3>{{ errorMessage() }}</h3>
+    </article>
+  }
+
+  <section class="metrics-grid">
+    @for (metric of metrics(); track metric.label) {
+      <article class="metric-card panel" [class]="metric.tone">
+        <p class="metric-label">{{ metric.label }}</p>
+        <div class="metric-value">{{ metric.value }}</div>
+        <p>{{ metric.variation }}</p>
+      </article>
+    }
+  </section>
+
+  <section class="module-grid">
+    @for (module of modules(); track module.title) {
+      <article class="module-card panel module-card--compact">
+        <div class="support-line">
+          <strong>{{ module.title }}</strong>
+          <span class="tag">{{ module.tag }}</span>
+        </div>
+        <div class="support-line">
+          <span>{{ module.summary }}</span>
+          <a [routerLink]="module.route" class="button-secondary">Abrir</a>
+        </div>
+      </article>
+    }
+  </section>
+
+  <section class="two-column-grid">
+    <article class="table-card panel">
+      <h3>Fila</h3>
+      @if (loading()) {
+        <p>Carregando...</p>
+      } @else if (queue().length === 0) {
+        <p>Nenhum RMA.</p>
+      } @else {
+        <table>
+          <thead>
+            <tr>
+              <th>RMA</th>
+              <th>Cliente</th>
+              <th>Entrada</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of queue(); track item.code) {
+              <tr>
+                <td>{{ item.code }} | {{ item.priority }}</td>
+                <td>{{ item.client }}</td>
+                <td>{{ item.entryDate }}</td>
+                <td>{{ item.status }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </article>
+
+    <article class="timeline-card panel">
+      <h3>Auditoria</h3>
+      @if (loading()) {
+        <p>Carregando...</p>
+      } @else if (auditEvents().length === 0) {
+        <p>Sem alterações.</p>
+      } @else {
+        <div class="timeline-list">
+          @for (event of auditEvents(); track event.id) {
+            <div class="timeline-entry">
+              <div>
+                <strong>{{ event.action }}</strong>
+                <span>{{ event.detail }}</span>
+              </div>
+              <time>{{ event.time }}</time>
+            </div>
+          }
+        </div>
+      }
+    </article>
+  </section>
+
+  <article class="table-card panel">
+    <h3>Últimos RMAs</h3>
+    @if (loading()) {
+      <p>Carregando...</p>
+    } @else if (recentRmas().length === 0) {
+      <p>Nenhum RMA.</p>
+    } @else {
+      <table>
+        <thead>
+          <tr>
+            <th>RMA</th>
+            <th>Cliente</th>
+            <th>Responsável</th>
+            <th>Atualizado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (rma of recentRmas(); track rma.code) {
+            <tr>
+              <td>{{ rma.code }}</td>
+              <td>{{ rma.client }}</td>
+              <td>{{ rma.owner }}</td>
+              <td>{{ rma.updatedAt }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </article>
+</section>

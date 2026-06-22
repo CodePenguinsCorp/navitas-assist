@@ -1,0 +1,529 @@
+<section class="page-surface">
+  <section class="page-heading">
+    <div>
+      <h1>RMAs</h1>
+    </div>
+    <div class="shell-actions">
+      @if (canOpenRma()) {
+        <button type="button" class="button-primary" (click)="openCreateModal()">Novo RMA</button>
+      }
+      <button type="button" class="button-secondary" (click)="refresh()">Atualizar</button>
+    </div>
+  </section>
+
+  @if (pageError()) {
+    <article class="status-card panel">
+      <h3>{{ pageError() }}</h3>
+    </article>
+  }
+
+  @if (pageMessage()) {
+    <article class="status-card panel success-card">
+      <h3>{{ pageMessage() }}</h3>
+    </article>
+  }
+
+  <section class="two-column-grid">
+    <article class="panel form-panel">
+      <h3>Filtros</h3>
+      <form [formGroup]="filtersForm" (ngSubmit)="submitFilters()" class="form-grid form-grid--inline">
+        <div class="field-group">
+          <label for="query">Busca</label>
+          <input id="query" type="text" formControlName="query" placeholder="Cliente, RMA, lote ou serial" />
+        </div>
+
+        <div class="field-group">
+          <label>Status</label>
+          <app-custom-select
+            formControlName="status"
+            ariaLabel="Filtrar por status"
+            [options]="statusFilterOptions"
+          />
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="button-primary" [disabled]="loading()">Buscar</button>
+          <button type="button" class="button-secondary" (click)="clearFilters()">Limpar</button>
+        </div>
+      </form>
+    </article>
+
+    <article class="panel form-panel">
+      <h3>Histórico</h3>
+      <form [formGroup]="historyForm" (ngSubmit)="searchHistory()" class="form-grid form-grid--inline">
+        <div class="field-group">
+          <label for="historyBatch">Lote</label>
+          <input id="historyBatch" type="text" formControlName="batchNumber" placeholder="LOT-2026-01" />
+        </div>
+
+        <div class="field-group">
+          <label for="historySerial">Serial</label>
+          <input id="historySerial" type="text" formControlName="serialNumber" placeholder="SN-445512" />
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="button-primary" [disabled]="historyLoading()">Consultar</button>
+        </div>
+      </form>
+
+      @if (historyError()) {
+        <p class="field-error">{{ historyError() }}</p>
+      }
+
+      @if (historyMessage()) {
+        <p class="muted-inline">{{ historyMessage() }}</p>
+      }
+
+      @if (historyResults().length > 0) {
+        <div class="history-stack">
+          @for (item of historyResults(); track item.id) {
+            <button type="button" class="history-item" (click)="selectHistoryItem(item)">
+              <strong>{{ item.code }} | {{ item.clientName }}</strong>
+              <span>{{ trackableLabel(item) }} | {{ statusLabel(item.status) }} | {{ dateLabel(item.entryDate) }}</span>
+            </button>
+          }
+        </div>
+      }
+    </article>
+  </section>
+
+  <section class="two-column-grid">
+    <article class="panel form-panel">
+      <div class="support-line">
+        <h3>Selecionado</h3>
+
+        @if (selectedRma()) {
+          <div class="detail-actions">
+            @if (canUpdateStatus()) {
+              <button type="button" class="button-secondary" (click)="openStatusModal()">Status</button>
+            }
+            @if (canRegisterDiagnosis()) {
+              <button type="button" class="button-secondary" (click)="openDiagnosisModal()">Diagnóstico</button>
+            }
+          </div>
+        }
+      </div>
+
+      @if (selectedRma()) {
+        <h3>{{ selectedRma()!.code }} | {{ selectedRma()!.clientName }}</h3>
+        <div class="summary-list">
+          <span class="mini-chip">{{ statusLabel(selectedRma()!.status) }}</span>
+          <span class="mini-chip">{{ priorityLabel(selectedRma()!.priority) }}</span>
+          <span class="mini-chip">{{ warrantyLabel(selectedRma()!.warrantyStatus, selectedRma()!.warrantyOverridden) }}</span>
+        </div>
+        <p>{{ selectedRma()!.productName }} | {{ trackableLabel(selectedRma()!) }}</p>
+        <p>{{ selectedRma()!.reportedFailure }}</p>
+
+        <div class="detail-grid">
+          <div>
+            <span>Recebido por</span>
+            <strong>{{ selectedRma()!.receivedBy }}</strong>
+          </div>
+          <div>
+            <span>Entrada</span>
+            <strong>{{ dateLabel(selectedRma()!.entryDate) }}</strong>
+          </div>
+          <div>
+            <span>Responsável</span>
+            <strong>{{ ownerLabel(selectedRma()!) }}</strong>
+          </div>
+          <div>
+            <span>Atualizado</span>
+            <strong>{{ dateTimeLabel(selectedRma()!.updatedAt) }}</strong>
+          </div>
+        </div>
+
+        <div class="summary-block">
+          <strong>Diagnóstico atual</strong>
+          @if (selectedRma()!.diagnosis) {
+            <p>{{ selectedRma()!.diagnosis!.foundFailure }}</p>
+            <p>
+              {{ failureTypeLabel(selectedRma()!.diagnosis!.failureType) }} |
+              {{ failureCauseLabel(selectedRma()!.diagnosis!.probableCause) }}
+            </p>
+          } @else {
+            <p>Sem diagnóstico.</p>
+          }
+        </div>
+      } @else {
+        <h3>Nenhum RMA selecionado</h3>
+        <p>Escolha um item do kanban ou do histórico.</p>
+      }
+    </article>
+
+    <article class="queue-card panel">
+      <h3>Fila</h3>
+      @if (loading() && queue().length === 0) {
+        <p>Carregando...</p>
+      } @else if (queue().length === 0) {
+        <p>Nenhum RMA.</p>
+      } @else {
+        <div class="queue-list">
+          @for (item of queue(); track item.code) {
+            <div class="queue-entry">
+              <div>
+                <strong>{{ item.code }} | {{ item.client }}</strong>
+                <span>{{ item.channel }} | {{ item.status }}</span>
+              </div>
+              <div class="report-meta">
+                <span class="mini-chip" [class]="priorityClass(item.priority)">{{ item.priority }}</span>
+                <span class="mini-chip" [class]="warrantyTextClass(item.warranty)">{{ item.warranty }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </article>
+  </section>
+
+  <article class="panel kanban-toolbar">
+    <div>
+      <h3>Quadro Kanban</h3>
+      <p>Arraste os cards entre as colunas para atualizar o status do RMA.</p>
+    </div>
+    @if (boardUpdatingId()) {
+      <span class="status-pill status-checking">Movendo item...</span>
+    }
+  </article>
+
+  <div class="kanban-board">
+    <section class="kanban-grid">
+      @for (column of columns(); track column.status) {
+        <article
+          class="kanban-column panel"
+          [class.is-drop-target]="isDropTarget(column.status)"
+          (dragover)="allowColumnDrop($event, column.status)"
+          (dragleave)="leaveColumn(column.status)"
+          (drop)="dropOnColumn($event, column.status)"
+        >
+          <header>
+            <h3>{{ column.label }}</h3>
+            <span class="mini-chip">{{ column.items.length }}</span>
+          </header>
+
+          <div class="kanban-stack">
+            @if (loading() && totalRmas() === 0) {
+              <p class="empty-note">Carregando...</p>
+            } @else {
+              @for (item of column.items; track item.id) {
+                <article
+                  class="rma-card interactive-card"
+                  [class.is-selected]="isSelected(item)"
+                  [class.is-dragging]="isDragging(item)"
+                  [class.is-updating]="isStatusUpdating(item)"
+                  [draggable]="canUpdateStatus() && boardUpdatingId() === null"
+                  tabindex="0"
+                  (click)="selectRma(item)"
+                  (keydown.enter)="selectRma(item)"
+                  (dragstart)="startCardDrag($event, item)"
+                  (dragend)="endCardDrag()"
+                >
+                  <header>
+                    <div>
+                      <h4>{{ item.code }}</h4>
+                      <p>{{ item.clientName }}</p>
+                    </div>
+                    <span
+                      class="mini-chip"
+                      [class]="warrantyClass(item.warrantyStatus, item.warrantyOverridden)"
+                    >
+                      {{ warrantyLabel(item.warrantyStatus, item.warrantyOverridden) }}
+                    </span>
+                  </header>
+                  <p>{{ item.productName }} | {{ trackableLabel(item) }}</p>
+                  <p>{{ item.reportedFailure }}</p>
+
+                  <div class="card-grid">
+                    <div>
+                      <span>Responsável</span>
+                      <strong>{{ ownerLabel(item) }}</strong>
+                    </div>
+                    <div>
+                      <span>Entrada</span>
+                      <strong>{{ dateLabel(item.entryDate) }}</strong>
+                    </div>
+                  </div>
+
+                  <div class="support-line">
+                    <span class="mini-chip" [class]="priorityClass(priorityLabel(item.priority))">
+                      {{ priorityLabel(item.priority) }}
+                    </span>
+                    @if (isStatusUpdating(item)) {
+                      <span class="mini-chip">Atualizando...</span>
+                    }
+                  </div>
+                </article>
+              }
+            }
+
+            @if (!loading() && column.items.length === 0) {
+              <p class="empty-note">Nenhum item.</p>
+            }
+          </div>
+        </article>
+      }
+    </section>
+  </div>
+
+  <article class="timeline-card panel">
+    <h3>Movimentações</h3>
+    @if (!selectedRma()) {
+      <p>Selecione um RMA.</p>
+    } @else if (selectedRma()!.statusHistory.length === 0) {
+      <p>Sem movimentações.</p>
+    } @else {
+      <div class="timeline-list">
+        @for (event of selectedRma()!.statusHistory; track event.changedAt + event.status) {
+          <div class="timeline-entry">
+            <div>
+              <strong>{{ statusLabel(event.status) }}</strong>
+              <span>{{ event.note || ('Atualizado por ' + event.changedBy) }}</span>
+            </div>
+            <time>{{ dateTimeLabel(event.changedAt) }}</time>
+          </div>
+        }
+      </div>
+    }
+  </article>
+</section>
+
+@if (activeModal() === 'create') {
+  <section class="modal-overlay" (click)="closeModal()">
+    <article class="panel modal-panel" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h3>Novo RMA</h3>
+          <p>Preencha os dados do atendimento.</p>
+        </div>
+        <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar">×</button>
+      </div>
+
+      <form [formGroup]="createForm" (ngSubmit)="createRma()" class="form-grid">
+        <div class="field-group">
+          <label>Cliente</label>
+          <app-custom-select
+            formControlName="clientId"
+            ariaLabel="Selecionar cliente"
+            [options]="clientSelectOptions()"
+          />
+        </div>
+
+        <div class="field-group">
+          <label>Produto</label>
+          <app-custom-select
+            formControlName="productId"
+            ariaLabel="Selecionar produto"
+            [options]="productSelectOptions()"
+          />
+        </div>
+
+        <div class="field-group">
+          <label for="batchNumber">Lote</label>
+          <input id="batchNumber" type="text" formControlName="batchNumber" placeholder="Opcional" />
+        </div>
+
+        <div class="field-group">
+          <label for="serialNumber">Serial</label>
+          <input id="serialNumber" type="text" formControlName="serialNumber" placeholder="Opcional" />
+        </div>
+
+        <div class="field-group">
+          <label>Fabricação</label>
+          <app-date-picker formControlName="manufacturedAt" ariaLabel="Data de fabricação" />
+        </div>
+
+        <div class="field-group">
+          <label>Compra</label>
+          <app-date-picker
+            formControlName="purchaseDate"
+            ariaLabel="Data da compra"
+            [disabled]="createForm.controls.purchaseDateUnknown.value"
+          />
+        </div>
+
+        <label class="checkbox-row">
+          <input type="checkbox" formControlName="purchaseDateUnknown" />
+          Data da compra desconhecida
+        </label>
+
+        <div class="field-group">
+          <label>Entrada</label>
+          <app-date-picker formControlName="entryDate" ariaLabel="Data de entrada" [allowClear]="false" />
+        </div>
+
+        <div class="field-group">
+          <label for="invoiceNumber">Nota fiscal</label>
+          <input id="invoiceNumber" type="text" formControlName="invoiceNumber" />
+        </div>
+
+        <div class="field-group">
+          <label for="invoiceFileName">Arquivo da NF</label>
+          <input id="invoiceFileName" type="text" formControlName="invoiceFileName" placeholder="Referência" />
+        </div>
+
+        <div class="field-group">
+          <label>Prioridade</label>
+          <app-custom-select
+            formControlName="priority"
+            ariaLabel="Selecionar prioridade"
+            [options]="prioritySelectOptions"
+          />
+        </div>
+
+        <div class="field-group">
+          <label for="receivedBy">Recebido por</label>
+          <input id="receivedBy" type="text" formControlName="receivedBy" />
+        </div>
+
+        <div class="field-group field-group--full">
+          <label for="reportedFailure">Falha relatada</label>
+          <textarea id="reportedFailure" formControlName="reportedFailure" rows="4"></textarea>
+        </div>
+
+        <div class="field-group field-group--full">
+          <label for="receivedAccessories">Acessórios</label>
+          <textarea id="receivedAccessories" formControlName="receivedAccessories" rows="3"></textarea>
+        </div>
+
+        <div class="field-group field-group--full">
+          <label for="physicalCondition">Condição física</label>
+          <textarea id="physicalCondition" formControlName="physicalCondition" rows="3"></textarea>
+        </div>
+
+        <div class="field-group">
+          <label>Override de garantia</label>
+          <app-custom-select
+            formControlName="warrantyStatusOverride"
+            ariaLabel="Override de garantia"
+            [options]="warrantyOverrideSelectOptions"
+          />
+        </div>
+
+        <div class="field-group field-group--full">
+          <label for="warrantyJustification">Justificativa</label>
+          <textarea id="warrantyJustification" formControlName="warrantyJustification" rows="3"></textarea>
+        </div>
+
+        <div class="field-group field-group--full">
+          <label for="repairSummary">Reparo</label>
+          <textarea id="repairSummary" formControlName="repairSummary" rows="3"></textarea>
+        </div>
+
+        <div class="field-group field-group--full">
+          <label for="replacedPartsSummary">Peças trocadas</label>
+          <textarea id="replacedPartsSummary" formControlName="replacedPartsSummary" rows="3"></textarea>
+        </div>
+
+        <div class="field-group field-group--full">
+          <label for="testSummary">Testes</label>
+          <textarea id="testSummary" formControlName="testSummary" rows="3"></textarea>
+        </div>
+
+        <div class="form-actions form-actions--full">
+          <button type="button" class="button-secondary" (click)="closeModal()">Cancelar</button>
+          <button type="submit" class="button-primary" [disabled]="createSubmitting()">
+            {{ createSubmitting() ? 'Abrindo...' : 'Abrir RMA' }}
+          </button>
+        </div>
+      </form>
+    </article>
+  </section>
+}
+
+@if (activeModal() === 'status') {
+  <section class="modal-overlay" (click)="closeModal()">
+    <article class="panel modal-panel modal-panel--narrow" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h3>Status</h3>
+          <p>{{ selectedRma()?.code }}</p>
+        </div>
+        <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar">×</button>
+      </div>
+
+      <form [formGroup]="statusForm" (ngSubmit)="updateStatus()" class="form-grid">
+        <div class="field-group">
+          <label>Novo status</label>
+          <app-custom-select
+            formControlName="status"
+            ariaLabel="Novo status do RMA"
+            [options]="statusSelectOptions"
+          />
+        </div>
+
+        <div class="field-group field-group--full">
+          <label for="statusNote">Observação</label>
+          <textarea id="statusNote" formControlName="note" rows="4"></textarea>
+        </div>
+
+        <div class="form-actions form-actions--full">
+          <button type="button" class="button-secondary" (click)="closeModal()">Cancelar</button>
+          <button type="submit" class="button-primary" [disabled]="statusSubmitting()">
+            {{ statusSubmitting() ? 'Salvando...' : 'Salvar status' }}
+          </button>
+        </div>
+      </form>
+    </article>
+  </section>
+}
+
+@if (activeModal() === 'diagnosis') {
+  <section class="modal-overlay" (click)="closeModal()">
+    <article class="panel modal-panel modal-panel--narrow" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h3>Diagnóstico</h3>
+          <p>{{ selectedRma()?.code }}</p>
+        </div>
+        <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar">×</button>
+      </div>
+
+      <form [formGroup]="diagnosisForm" (ngSubmit)="saveDiagnosis()" class="form-grid">
+        <div class="field-group field-group--full">
+          <label for="foundFailure">Falha encontrada</label>
+          <textarea id="foundFailure" formControlName="foundFailure" rows="4"></textarea>
+        </div>
+
+        <div class="field-group">
+          <label>Tipo de falha</label>
+          <app-custom-select
+            formControlName="failureType"
+            ariaLabel="Tipo de falha"
+            [options]="failureTypeSelectOptions"
+          />
+        </div>
+
+        <div class="field-group">
+          <label>Causa provável</label>
+          <app-custom-select
+            formControlName="probableCause"
+            ariaLabel="Causa provável"
+            [options]="failureCauseSelectOptions"
+          />
+        </div>
+
+        <div class="field-group">
+          <label>Data</label>
+          <app-date-picker formControlName="diagnosedAt" ariaLabel="Data do diagnóstico" [allowClear]="false" />
+        </div>
+
+        <div class="field-group">
+          <label for="technicianName">Técnico</label>
+          <input id="technicianName" type="text" formControlName="technicianName" />
+        </div>
+
+        <div class="field-group field-group--full">
+          <label for="diagnosisNotes">Notas</label>
+          <textarea id="diagnosisNotes" formControlName="notes" rows="4"></textarea>
+        </div>
+
+        <div class="form-actions form-actions--full">
+          <button type="button" class="button-secondary" (click)="closeModal()">Cancelar</button>
+          <button type="submit" class="button-primary" [disabled]="diagnosisSubmitting()">
+            {{ diagnosisSubmitting() ? 'Salvando...' : 'Salvar diagnóstico' }}
+          </button>
+        </div>
+      </form>
+    </article>
+  </section>
+}

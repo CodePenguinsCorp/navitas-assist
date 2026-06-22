@@ -1,0 +1,177 @@
+<section class="page-surface">
+  <section class="page-heading">
+    <div>
+      <h1>Clientes</h1>
+    </div>
+    <div class="shell-actions">
+      <button type="button" class="button-primary" (click)="openCreateModal()">Novo cliente</button>
+      <button type="button" class="button-secondary" (click)="refresh()" [disabled]="loading()">
+        Atualizar
+      </button>
+    </div>
+  </section>
+
+  <section class="stats-grid stats-grid--three">
+    <article class="panel stat-card">
+      <span>Com contato</span>
+      <strong>{{ clientsWithContact() }}</strong>
+    </article>
+    <article class="panel stat-card">
+      <span>Com documento</span>
+      <strong>{{ clientsWithDocument() }}</strong>
+    </article>
+    <article class="panel stat-card">
+      <span>Com e-mail</span>
+      <strong>{{ clientsWithEmail() }}</strong>
+    </article>
+  </section>
+
+  <section class="panel catalog-toolbar">
+    <label class="search-field">
+      <span>Buscar</span>
+      <input
+        #clientSearch
+        type="search"
+        placeholder="Razão social, contato, documento ou e-mail"
+        [value]="searchTerm()"
+        (input)="updateSearch(clientSearch.value)"
+      />
+    </label>
+    <span class="catalog-toolbar__result">{{ filteredClients().length }} registro(s)</span>
+  </section>
+
+  @if (errorMessage()) {
+    <article class="panel alert-banner alert-banner--error">
+      <strong>{{ errorMessage() }}</strong>
+    </article>
+  }
+
+  @if (successMessage()) {
+    <article class="panel alert-banner alert-banner--success">
+      <strong>{{ successMessage() }}</strong>
+    </article>
+  }
+
+  <article class="table-card table-card--list panel">
+    @if (loading() && clients().length === 0) {
+      <p>Carregando clientes...</p>
+    } @else if (clients().length === 0) {
+      <section class="empty-state">
+        <h3>Nenhum cliente cadastrado.</h3>
+        <p>Cadastre o primeiro cliente para vincular novos RMAs.</p>
+        <button type="button" class="button-primary" (click)="openCreateModal()">Cadastrar cliente</button>
+      </section>
+    } @else if (filteredClients().length === 0) {
+      <section class="empty-state">
+        <h3>Nenhum resultado encontrado.</h3>
+        <p>Ajuste a busca para localizar outro cliente.</p>
+      </section>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Contato</th>
+              <th>Documento</th>
+              <th>Atualizado</th>
+              <th class="table-actions-col">Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (client of filteredClients(); track client.id) {
+              <tr>
+                <td>
+                  <strong class="table-title">{{ client.legalName }}</strong>
+                  <span class="table-subtitle">{{ client.tradeName || 'Sem nome fantasia' }}</span>
+                </td>
+                <td>
+                  <strong class="table-title">{{ client.contactName || 'Não informado' }}</strong>
+                  <span class="table-subtitle">{{ client.email || client.phone || 'Sem canal principal' }}</span>
+                </td>
+                <td>{{ client.documentNumber || 'Não informado' }}</td>
+                <td>{{ updatedAtLabel(client) }}</td>
+                <td class="table-actions-col">
+                  <button type="button" class="button-secondary button-secondary--small" (click)="openEditModal(client)">
+                    Editar
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </article>
+</section>
+
+@if (activeModal()) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <section class="modal-panel panel" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <div>
+          <h3>{{ editingClient() ? 'Editar cliente' : 'Novo cliente' }}</h3>
+          <p>{{ editingClient() ? 'Atualize os dados principais do cliente.' : 'Preencha os dados principais para liberar o cadastro.' }}</p>
+        </div>
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()">×</button>
+      </header>
+
+      <form class="form-grid" [formGroup]="form" (ngSubmit)="saveClient()">
+        <label class="field-group field-group--full">
+          <span>Razão social</span>
+          <input type="text" formControlName="legalName" />
+          @if (hasError('legalName')) {
+            <small class="field-error">Informe a razão social.</small>
+          }
+        </label>
+
+        <label class="field-group">
+          <span>Nome fantasia</span>
+          <input type="text" formControlName="tradeName" />
+        </label>
+
+        <label class="field-group">
+          <span>Documento</span>
+          <input type="text" formControlName="documentNumber" />
+        </label>
+
+        <label class="field-group">
+          <span>Contato</span>
+          <input type="text" formControlName="contactName" />
+        </label>
+
+        <label class="field-group">
+          <span>Telefone</span>
+          <input type="text" formControlName="phone" />
+        </label>
+
+        <label class="field-group field-group--full">
+          <span>E-mail</span>
+          <input type="email" formControlName="email" />
+          @if (hasError('email')) {
+            <small class="field-error">Informe um e-mail válido.</small>
+          }
+        </label>
+
+        <label class="field-group field-group--full">
+          <span>Endereço</span>
+          <input type="text" formControlName="address" />
+        </label>
+
+        <label class="field-group field-group--full">
+          <span>Observações</span>
+          <textarea formControlName="notes"></textarea>
+        </label>
+
+        <div class="form-actions form-actions--full">
+          <button type="submit" class="button-primary" [disabled]="submitting()">
+            {{ submitting() ? 'Salvando...' : editingClient() ? 'Salvar alterações' : 'Cadastrar cliente' }}
+          </button>
+          <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="submitting()">
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}

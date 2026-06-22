@@ -1,0 +1,57 @@
+<div class="date-picker" [class.is-open]="isOpen()" [class.is-disabled]="isDisabled()">
+  <button
+    type="button"
+    class="date-picker__trigger"
+    [disabled]="isDisabled()"
+    [attr.aria-expanded]="isOpen()"
+    [attr.aria-label]="ariaLabel()"
+    (click)="toggle()"
+  >
+    <span class="date-picker__value">{{ displayValue() }}</span>
+    <span class="date-picker__icon" aria-hidden="true">
+      <svg viewBox="0 0 20 20" focusable="false">
+        <path d="M5.5 3.5v3M14.5 3.5v3M4 7.5h12M6 10.5h2M9 10.5h2M12 10.5h2M6 13.5h2M9 13.5h2M12 13.5h2M5 5.5h10a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z" />
+      </svg>
+    </span>
+  </button>
+
+  @if (isOpen()) {
+    <section class="date-picker__panel">
+      <header class="date-picker__header">
+        <button type="button" class="date-picker__nav" aria-label="Mês anterior" (click)="previousMonth()">‹</button>
+        <strong>{{ monthLabel() }}</strong>
+        <button type="button" class="date-picker__nav" aria-label="Próximo mês" (click)="nextMonth()">›</button>
+      </header>
+
+      <div class="date-picker__weekdays">
+        @for (label of weekdayLabels; track $index) {
+          <span>{{ label }}</span>
+        }
+      </div>
+
+      <div class="date-picker__days">
+        @for (day of calendarDays(); track day.iso) {
+          <button
+            type="button"
+            class="date-picker__day"
+            [class.is-outside]="!day.inCurrentMonth"
+            [class.is-today]="day.isToday"
+            [class.is-selected]="day.isSelected"
+            (click)="selectDay(day)"
+          >
+            {{ day.day }}
+          </button>
+        }
+      </div>
+
+      <footer class="date-picker__footer">
+        @if (allowClear()) {
+          <button type="button" class="date-picker__footer-action" (click)="clear()">Limpar</button>
+        } @else {
+          <span></span>
+        }
+        <button type="button" class="date-picker__footer-action" (click)="selectToday()">Hoje</button>
+      </footer>
+    </section>
+  }
+</div>
