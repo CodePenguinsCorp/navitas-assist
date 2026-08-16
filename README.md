@@ -1,10 +1,35 @@
 # Navitas Assist
 
-Sistema web para diagnostico tecnico e acompanhamento de RMAs.
+Sistema web para diagnóstico técnico e acompanhamento de RMAs.
 
-## Visao Geral
+## Integrantes
 
-O projeto foi dividido em duas aplicacoes:
+André Schultz - Frontend
+José Henrique Brühmüller - PO
+Lucas Monich Nunes - Backend
+Matheus Büsemayer - QA
+
+## Problema Atendido
+
+O processo de assistência técnica enfrenta dificuldades como:
+- Falta de rastreabilidade dos produtos
+- Controle manual de informações
+- Dificuldade em localizar histórico de atendimentos
+- Falta de padronização no processo de RMA
+- Retrabalho e perda de informações
+
+## Objetivo do Sistema
+
+Desenvolver um sistema digital que permita o controle e rastreamento de produtos da Navitas que retornam para assistência técnica ou reparo, consolidando o processo de RMA no sistema Navitas Assist e facilitando o registro, acompanhamento e geração de relatórios relacionados aos atendimentos.
+
+## Público Beneficiado
+
+O projeto beneficia diretamente dois principais públicos. O primeiro e mais diretamente beneficiado é a empresa Navitas Tecnologia, uma vez que o produto pretende otimizar os processos de RMA da empresa proporcionando maior competitividade e eficiência interna, um diferencial necessário nos setores de tecnologia.
+O segundo público beneficiado será composto pelos clientes e parceiros da Navitas Tecnologia, que poderão usufruir de uma experiência mais eficiente, organizada e transparente no atendimento de reparos e assistência dos produtos Navitas, resultando em benefícios diretos, como maior agilidade e confiabilidade no serviço, e indiretos, como aumento da satisfação, fortalecimento do relacionamento e maior credibilidade da marca.
+
+## Visão Geral
+
+O projeto foi dividido em duas aplicações:
 
 - `frontend/`: SPA em Angular
 - `navitas-assist-backend/`: API REST em Spring Boot
@@ -19,11 +44,11 @@ O projeto foi dividido em duas aplicacoes:
 ## Estrutura do Projeto
 
 - `frontend/`: interface web
-- `navitas-assist-backend/`: API e regras de negocio
+- `navitas-assist-backend/`: API e regras de negócio
 - `run-local.ps1`: sobe a stack local via Docker
 - `stop-local.ps1`: para a stack local via Docker
 - `compose.yaml`: sobe frontend, backend e MySQL via Docker
-- `compose.prod.yaml`: stack de producao usando imagens publicadas
+- `compose.prod.yaml`: stack de produção usando imagens publicadas
 
 ## Requisitos
 
@@ -38,15 +63,13 @@ O projeto foi dividido em duas aplicacoes:
 - Node.js e npm
 - PowerShell
 
-## Portas Padrao
+## Portas Padrão
 
 - frontend: `4200`
 - backend: `8080`
 - banco: `3306`
 
 ## Rodando com Docker
-
-Esse e o caminho padrao do projeto agora.
 
 ### 1. Crie o arquivo `.env`
 
@@ -68,14 +91,14 @@ Esse comando sobe:
 - backend Spring Boot
 - MySQL 8.4
 
-Voce tambem pode usar o Compose diretamente:
+Você também pode usar o Compose diretamente:
 
 ```powershell
 docker compose up --build -d
 ```
 
-Se a stack ja estiver rodando, o `run-local.ps1` derruba e sobe novamente os servicos alvo automaticamente.
-Quando houver mudanca de codigo no backend ou frontend, prefira usar `-Build` para reconstruir as imagens locais antes de subir.
+Se a stack já estiver rodando, o `run-local.ps1` derruba e sobe novamente os serviços alvo automaticamente.
+Quando houver mudança de código no backend ou frontend, prefira usar `-Build` para reconstruir as imagens locais antes de subir.
 
 ### 3. Acesse
 
@@ -83,7 +106,7 @@ Quando houver mudanca de codigo no backend ou frontend, prefira usar `-Build` pa
 - backend: `http://localhost:8080`
 - healthcheck: `http://localhost:8080/health`
 
-### 4. Comandos uteis
+### 4. Comandos úteis
 
 Parar toda a stack:
 
@@ -128,7 +151,7 @@ Esse profile usa:
 
 - host: `127.0.0.1`
 - banco: `navitas_assist`
-- usuario: `navitas_app`
+- usuário: `navitas_app`
 - senha: `navitas123`
 
 Esse fluxo usa o MySQL publicado pelo Docker na porta `3306`.
@@ -143,9 +166,9 @@ npm install
 npm start
 ```
 
-## Variaveis de Ambiente
+## Variáveis de Ambiente
 
-O setup local reconhece estas variaveis principais:
+O setup local reconhece estas variáveis principais:
 
 - `FRONTEND_PORT`
 - `BACKEND_PORT`
@@ -164,25 +187,23 @@ O setup local reconhece estas variaveis principais:
 
 Sem sobrescrever nada:
 
-- o setup padrao do Docker usa `navitas_app / navitas123`
+- o setup padrão do Docker usa `navitas_app / navitas123`
 - o frontend Docker consome a API por proxy interno em `/api`
-- o profile `local` continua disponivel para rodar o backend manualmente contra o MySQL do Docker
+- o profile `local` continua disponável para rodar o backend manualmente contra o MySQL do Docker
 
 ## Admin Inicial
 
-No primeiro boot, se ainda nao existir usuario no banco, a aplicacao cria:
+No primeiro boot, se ainda não existir usuário no banco, a aplicação cria:
 
 - usuario: `admin`
 - senha: `admin123`
 
-## Producao
+## Produção
 
-O projeto agora possui os mesmos artefatos basicos de deploy do `Reserva-Plus`:
-
-- `compose.prod.yaml`: stack de producao usando imagens publicadas
+- `compose.prod.yaml`: stack de produção usando imagens publicadas
 - `scripts/init-prod-env.ps1` e `scripts/init-prod-env.sh`: geram `.env.prod` com segredos fortes
-- `scripts/deploy-prod.ps1` e `scripts/deploy-prod.sh`: fazem pull e sobem a stack de producao
-- `.env.prod.example`: exemplo de variaveis para producao
+- `scripts/deploy-prod.ps1` e `scripts/deploy-prod.sh`: fazem pull e sobem a stack de produção
+- `.env.prod.example`: exemplo de variáveis para produção
 
 Exemplo para gerar um `.env.prod`:
 
@@ -198,7 +219,7 @@ Exemplo para deploy manual:
 
 ## Troubleshooting
 
-Se o MySQL Docker nao subir, provavelmente ja existe outro banco ocupando a porta `3306`.
+Se o MySQL Docker não subir, provavelmente já existe outro banco ocupando a porta `3306`.
 Nesse caso:
 
 - encerre o XAMPP/MySQL local
@@ -209,3 +230,38 @@ Para inspecionar a stack:
 ```powershell
 docker compose ps
 ```
+
+## Projeto Mínimo Viável (MVP)
+
+Disponibilizar um fluxo funcional de gerenciamento de assistência técnica, permitindo registrar uma assistência, acompanhar sua evolução e consultar as principais informações do atendimento.
+
+### Funcionalidades incluídas no MVP:
+
+- Cadastro e consulta de clientes
+- Cadastro e consulta de produtos
+- Abertura de assistência técnica
+- Identificação da assistência
+- Registro do diagnóstico
+- Atualização do status
+- Registro de reparo e testes
+- Consulta do histórico básico da assistência
+
+## Cronograma de Desenvolvimento
+
+- [x] **10/08 a 24/08 - Ponto de partida mínimo concluído**
+  - **Foco:** Repositório criado, README preenchido, stack definida, arquitetura inicial e backlog documentado.
+
+- [ ] **24/08 a 28/09 - Sprint 1 em desenvolvimento**
+  - **Foco (MVP):** Cadastros básicos (clientes e produtos), login de usuários e fluxo inicial de abertura de RMA.
+
+- [ ] **28/09 a 26/10 - Sprint 1 revisada e Sprint 2 planejada**
+  - **Foco (MVP):** Atualização do status do RMA, inserção de diagnóstico e listagem/consulta de chamados. Demonstração do MVP funcional.
+
+- [ ] **26/10 a 16/11 - Preparação para validação**
+  - **Foco:** Geração de laudos em PDF, auditoria do histórico e criação do Dashboard de indicadores.
+
+- [ ] **16/11 a 30/11 - Implementação e Homologação**
+  - **Foco:** Apresentação de uma versão testável para a Navitas Tecnologia obter feedback. Correção de bugs, otimização de performance e ajustes de usabilidade.
+
+- [ ] **30/11 a 14/12 - Entrega do Produto Finalizado**
+  - **Foco:** Deploy da versão final em produção. Entrega de documentação técnica, manuais de uso e treinamento básico para a equipe da Navitas.
