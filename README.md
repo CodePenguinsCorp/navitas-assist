@@ -4,10 +4,10 @@ Sistema web para diagnóstico técnico e acompanhamento de RMAs.
 
 ## Integrantes
 
-André Schultz - Frontend
-José Henrique Brühmüller - PO
-Lucas Monich Nunes - Backend
-Matheus Büsemayer - QA
+- André Schultz - Frontend
+- José Henrique Brühmüller - PO
+- Lucas Monich Nunes - Backend
+- Matheus Büsemayer - QA
 
 ## Problema Atendido
 
