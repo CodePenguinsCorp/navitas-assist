@@ -246,6 +246,21 @@ Disponibilizar um fluxo funcional de gerenciamento de assistência técnica, per
 - Registro de reparo e testes
 - Consulta do histórico básico da assistência
 
+## Backlog
+
+| ID | Item | Tipo | Prioridade | Responsável |
+|:---|:---|:---|:---|:---|
+| **1** | Revisar e finalizar estrutura inicial do projeto | Técnico | Alta | André e Matheus |
+| **2** | Modelar e configurar o banco de dados | Técnico | Alta | José e Lucas |
+| **3** | Implementar autenticação e autorização | Requisito técnico | Alta | José e Lucas |
+| **4** | Implementar cadastro de clientes | Requisito funcional | Alta | André e Lucas |
+| **5** | Implementar cadastro de produtos | Requisito funcional | Alta | André e Lucas |
+| **6** | Implementar abertura da assistência | Requisito funcional | Alta | José e Lucas |
+| **7** | Implementar fluxo e status da assistência | Requisito funcional | Alta | José e Matheus |
+| **8** | Implementar registro de diagnóstico, reparo e testes | Requisito funcional | Alta | André e Matheus |
+| **9** | Integrar frontend e backend do fluxo principal | Técnico | Alta | André, José e Lucas |
+| **10** | Validar primeiro incremento com a Navitas | Validação | Média | José e Matheus |
+
 ## Cronograma de Desenvolvimento
 
 | Período | Marco esperado | Evidência de entrega | Resp. |
@@ -256,3 +271,9 @@ Disponibilizar um fluxo funcional de gerenciamento de assistência técnica, per
 | **05/10 a 19/10** | Versão Alpha em implementação | Funcionalidades principais integradas | Todos |
 | **19/10 a 16/11** | Preparação para implementação/validação | Versão testável, feedback do parceiro ou plano de homologação | Todos |
 | **Novembro** | Implementação, validação e evolução da entrega | Evidências de uso, testes, homologação ou deploy | Todos |
+
+## Próximos Passos
+
+- [ ] **Interface Kanban para RMAs:** Fazer com que a gestão de status do chamado seja feita de forma visual, melhorando a experiência do usuário.
+- [ ] **Ampliação da Cobertura de Testes:** Criar novos testes de integração para as regras de negócio de RMAs e Garantias.
+- [ ] **Homologação e Deploy:** Validar os scripts de ambiente de produção, preparando o sistema para o primeiro ciclo de uso e feedback do cliente.
