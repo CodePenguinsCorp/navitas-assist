@@ -265,10 +265,10 @@ Disponibilizar um fluxo funcional de gerenciamento de assistência técnica, per
 
 | Período | Marco esperado | Evidência de entrega | Resp. |
 | :--- | :--- | :--- | :--- |
-| **10/08 a 24/08** | Ponto de partida mínimo concluído | README, arquitetura, stack, backlog, estrutura inicial e repositório | Todos |
-| **24/08 a 21/09** | Sprint 1 em desenvolvimento | Primeiro incremento funcional, commits e tarefas registradas | Todos |
+| **10/08 a 24/08** | Ponto de partida mínimo concluído | README, arquitetura, stack, backlog, estrutura inicial e repositório | André e Matheus |
+| **24/08 a 21/09** | Sprint 1 em desenvolvimento | Primeiro incremento funcional, commits e tarefas registradas | José |
 | **21/09 a 05/10** | Sprint 1 revisada e Sprint 2 planejada | Demonstração parcial e backlog ajustado | Todos |
-| **05/10 a 19/10** | Versão Alpha em implementação | Funcionalidades principais integradas | Todos |
+| **05/10 a 19/10** | Versão Alpha em implementação | Funcionalidades principais integradas | José e Lucas |
 | **19/10 a 16/11** | Preparação para implementação/validação | Versão testável, feedback do parceiro ou plano de homologação | Todos |
 | **Novembro** | Implementação, validação e evolução da entrega | Evidências de uso, testes, homologação ou deploy | Todos |
 
