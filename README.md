@@ -248,20 +248,11 @@ Disponibilizar um fluxo funcional de gerenciamento de assistência técnica, per
 
 ## Cronograma de Desenvolvimento
 
-- [x] **10/08 a 24/08 - Ponto de partida mínimo concluído**
-  - **Foco:** Repositório criado, README preenchido, stack definida, arquitetura inicial e backlog documentado.
-
-- [ ] **24/08 a 28/09 - Sprint 1 em desenvolvimento**
-  - **Foco (MVP):** Cadastros básicos (clientes e produtos), login de usuários e fluxo inicial de abertura de RMA.
-
-- [ ] **28/09 a 26/10 - Sprint 1 revisada e Sprint 2 planejada**
-  - **Foco (MVP):** Atualização do status do RMA, inserção de diagnóstico e listagem/consulta de chamados. Demonstração do MVP funcional.
-
-- [ ] **26/10 a 16/11 - Preparação para validação**
-  - **Foco:** Geração de laudos em PDF, auditoria do histórico e criação do Dashboard de indicadores.
-
-- [ ] **16/11 a 30/11 - Implementação e Homologação**
-  - **Foco:** Apresentação de uma versão testável para a Navitas Tecnologia obter feedback. Correção de bugs, otimização de performance e ajustes de usabilidade.
-
-- [ ] **30/11 a 14/12 - Entrega do Produto Finalizado**
-  - **Foco:** Deploy da versão final em produção. Entrega de documentação técnica, manuais de uso e treinamento básico para a equipe da Navitas.
+| Período | Marco esperado | Evidência de entrega | Resp. |
+| :--- | :--- | :--- | :--- |
+| **10/08 a 24/08** | Ponto de partida mínimo concluído | README, arquitetura, stack, backlog, estrutura inicial e repositório | Todos |
+| **24/08 a 21/09** | Sprint 1 em desenvolvimento | Primeiro incremento funcional, commits e tarefas registradas | Todos |
+| **21/09 a 05/10** | Sprint 1 revisada e Sprint 2 planejada | Demonstração parcial e backlog ajustado | Todos |
+| **05/10 a 19/10** | Versão Alpha em implementação | Funcionalidades principais integradas | Todos |
+| **19/10 a 16/11** | Preparação para implementação/validação | Versão testável, feedback do parceiro ou plano de homologação | Todos |
+| **Novembro** | Implementação, validação e evolução da entrega | Evidências de uso, testes, homologação ou deploy | Todos |
