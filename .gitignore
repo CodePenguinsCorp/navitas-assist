@@ -16,10 +16,10 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Backend (Spring Boot / Maven)
-navitas-assist-backend/target/
-navitas-assist-backend/.classpath
-navitas-assist-backend/.project
-navitas-assist-backend/.settings/
+backend/target/
+backend/.classpath
+backend/.project
+backend/.settings/
 
 # Frontend (Angular)
 frontend/node_modules/
@@ -33,7 +33,7 @@ frontend/coverage/
 .env.*
 frontend/.env
 frontend/.env.*
-navitas-assist-backend/.env
-navitas-assist-backend/.env.*
+backend/.env
+backend/.env.*
 !.env.example
 !.env.prod.example

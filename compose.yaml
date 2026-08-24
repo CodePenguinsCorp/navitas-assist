@@ -23,7 +23,7 @@ services:
 
   backend:
     build:
-      context: ./navitas-assist-backend
+      context: ./backend
       dockerfile: Dockerfile
     container_name: navitas-assist-backend
     restart: unless-stopped

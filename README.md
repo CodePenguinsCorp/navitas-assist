@@ -32,7 +32,7 @@ O segundo público beneficiado será composto pelos clientes e parceiros da Navi
 O projeto foi dividido em duas aplicações:
 
 - `frontend/`: SPA em Angular
-- `navitas-assist-backend/`: API REST em Spring Boot
+- `backend/`: API REST em Spring Boot
 
 ## Stack
 
@@ -44,7 +44,7 @@ O projeto foi dividido em duas aplicações:
 ## Estrutura do Projeto
 
 - `frontend/`: interface web
-- `navitas-assist-backend/`: API e regras de negócio
+- `backend/`: API e regras de negócio
 - `run-local.ps1`: sobe a stack local via Docker
 - `stop-local.ps1`: para a stack local via Docker
 - `compose.yaml`: sobe frontend, backend e MySQL via Docker
@@ -138,14 +138,14 @@ Se quiser subir o backend manualmente:
 
 ```powershell
 .\run-local.ps1 -DatabaseOnly
-cd .\navitas-assist-backend
+cd .\backend
 $env:SPRING_PROFILES_ACTIVE="local"
 mvn spring-boot:run
 ```
 
 O profile `local` fica em:
 
-- `navitas-assist-backend/src/main/resources/application-local.yml`
+- `backend/src/main/resources/application-local.yml`
 
 Esse profile usa:
 
