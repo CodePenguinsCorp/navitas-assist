@@ -3,6 +3,7 @@ import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
 import { AppShellComponent } from './layout/app-shell.component';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
+import { KanbanComponent } from './pages/kanban/kanban.component';
 import { LoginComponent } from './pages/login/login.component';
 import { ClientsComponent } from './pages/clients/clients.component';
 import { ProductsComponent } from './pages/products/products.component';
@@ -35,6 +36,11 @@ export const routes: Routes = [
         path: 'rmas',
         component: RmasComponent,
         title: 'RMAs | Navitas Assist'
+      },
+      {
+        path: 'kanban',
+        component: KanbanComponent,
+        title: 'Kanban | Navitas Assist'
       },
       {
         path: 'cadastros',

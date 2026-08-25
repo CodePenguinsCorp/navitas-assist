@@ -38,6 +38,10 @@ export class CatalogService {
     return this.http.put<ProductResponse>(`/api/products/${id}`, payload);
   }
 
+  deleteProduct(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/products/${id}`);
+  }
+
   listUsers(): Observable<UserAccountResponse[]> {
     return this.http.get<UserAccountResponse[]>('/api/users');
   }

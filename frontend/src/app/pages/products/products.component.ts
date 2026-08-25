@@ -21,11 +21,79 @@ type ProductFormControlName =
   | 'defaultWarrantyMonths'
   | 'technicalNotes';
 
+const PRODUCT_LIMITS = {
+  sku: 20,
+  name: 120,
+  category: 80,
+  hardwareVersion: 40,
+  firmwareVersion: 40,
+  technicalNotes: 1000
+} as const;
+
+const PRODUCT_PREVIEW_LIMITS = {
+  category: 32,
+  technicalNotes: 64
+} as const;
+
 @Component({
   selector: 'app-products',
   imports: [ReactiveFormsModule],
   templateUrl: './products.component.html',
-  styles: [':host { display: block; }']
+  styles: [`
+    :host {
+      display: block;
+    }
+
+    .product-actions {
+      display: flex;
+      gap: 0.45rem;
+    }
+
+    .product-sku {
+      display: inline-block;
+      max-width: 20ch;
+      overflow-wrap: anywhere;
+    }
+
+    .product-preview {
+      display: block;
+      max-width: 32ch;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .button-secondary--danger {
+      border-color: #efc7cf;
+      color: var(--danger-text);
+    }
+
+    .button-secondary--danger:hover {
+      background: var(--danger-bg);
+    }
+
+    .button-primary--danger {
+      background: var(--danger-text);
+    }
+
+    .button-primary--danger:hover {
+      background: #7f3441;
+    }
+
+    .delete-confirmation {
+      margin: 0 0 1.25rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .delete-confirmation strong {
+      color: var(--brand-blue-deep);
+    }
+
+    .modal-feedback {
+      margin-bottom: 1rem;
+    }
+  `]
 })
 export class ProductsComponent {
   private readonly formBuilder = inject(FormBuilder);
@@ -33,16 +101,22 @@ export class ProductsComponent {
 
   protected readonly loading = signal(true);
   protected readonly submitting = signal(false);
+  protected readonly deletingProductId = signal<number | null>(null);
   protected readonly errorMessage = signal('');
+  protected readonly modalErrorMessage = signal('');
+  protected readonly deleteModalErrorMessage = signal('');
   protected readonly successMessage = signal('');
   protected readonly searchTerm = signal('');
   protected readonly activeModal = signal<ProductModalMode | null>(null);
+  protected readonly limits = PRODUCT_LIMITS;
 
   private readonly productsSignal = signal<ProductResponse[]>([]);
   private readonly editingProductSignal = signal<ProductResponse | null>(null);
+  private readonly deletingProductSignal = signal<ProductResponse | null>(null);
 
   protected readonly products = this.productsSignal.asReadonly();
   protected readonly editingProduct = this.editingProductSignal.asReadonly();
+  protected readonly deletingProduct = this.deletingProductSignal.asReadonly();
 
   protected readonly filteredProducts = computed(() =>
     [...this.productsSignal()]
@@ -78,13 +152,13 @@ export class ProductsComponent {
   });
 
   protected readonly form = this.formBuilder.nonNullable.group({
-    sku: ['', [Validators.required, Validators.maxLength(60)]],
-    name: ['', [Validators.required, Validators.maxLength(120)]],
-    category: ['', [Validators.maxLength(80)]],
-    hardwareVersion: ['', [Validators.maxLength(40)]],
-    firmwareVersion: ['', [Validators.maxLength(40)]],
+    sku: ['', [Validators.required, Validators.maxLength(PRODUCT_LIMITS.sku)]],
+    name: ['', [Validators.required, Validators.maxLength(PRODUCT_LIMITS.name)]],
+    category: ['', [Validators.maxLength(PRODUCT_LIMITS.category)]],
+    hardwareVersion: ['', [Validators.maxLength(PRODUCT_LIMITS.hardwareVersion)]],
+    firmwareVersion: ['', [Validators.maxLength(PRODUCT_LIMITS.firmwareVersion)]],
     defaultWarrantyMonths: [12, [Validators.required, Validators.min(1)]],
-    technicalNotes: ['', [Validators.maxLength(1000)]]
+    technicalNotes: ['', [Validators.maxLength(PRODUCT_LIMITS.technicalNotes)]]
   });
 
   constructor() {
@@ -123,13 +197,13 @@ export class ProductsComponent {
 
   protected closeModal(): void {
     this.activeModal.set(null);
+    this.modalErrorMessage.set('');
   }
 
   protected saveProduct(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.errorMessage.set('Preencha os campos obrigatórios do produto.');
-      this.successMessage.set('');
+      this.modalErrorMessage.set('Revise os campos destacados antes de salvar o produto.');
       return;
     }
 
@@ -155,7 +229,50 @@ export class ProductsComponent {
         this.loadProducts();
       },
       error: (error) => {
-        this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível salvar o produto agora.'));
+        this.modalErrorMessage.set(
+          extractHttpErrorMessage(error, 'Não foi possível salvar o produto agora.')
+        );
+      }
+    });
+  }
+
+  protected openDeleteModal(product: ProductResponse): void {
+    this.deletingProductSignal.set(product);
+    this.clearMessages();
+  }
+
+  protected closeDeleteModal(): void {
+    if (this.deletingProductId() !== null) {
+      return;
+    }
+
+    this.resetDeleteModal();
+  }
+
+  protected confirmDeleteProduct(): void {
+    const product = this.deletingProductSignal();
+
+    if (!product || this.deletingProductId() !== null) {
+      return;
+    }
+
+    this.deletingProductId.set(product.id);
+    this.clearMessages();
+
+    this.catalogService.deleteProduct(product.id).pipe(
+      finalize(() => this.deletingProductId.set(null))
+    ).subscribe({
+      next: () => {
+        this.productsSignal.update((products) =>
+          products.filter((currentProduct) => currentProduct.id !== product.id)
+        );
+        this.successMessage.set(`Produto ${product.name} excluído com sucesso.`);
+        this.resetDeleteModal();
+      },
+      error: (error) => {
+        this.deleteModalErrorMessage.set(
+          extractHttpErrorMessage(error, 'Não foi possível excluir o produto agora.')
+        );
       }
     });
   }
@@ -167,6 +284,22 @@ export class ProductsComponent {
 
   protected updatedAtLabel(product: ProductResponse): string {
     return formatDateTime(product.updatedAt);
+  }
+
+  protected categoryPreview(product: ProductResponse): string {
+    return previewText(product.category, 'Não informada', PRODUCT_PREVIEW_LIMITS.category);
+  }
+
+  protected skuPreview(product: ProductResponse): string {
+    return previewText(product.sku, 'Não informado', PRODUCT_LIMITS.sku);
+  }
+
+  protected technicalNotesPreview(product: ProductResponse): string {
+    return previewText(
+      product.technicalNotes,
+      'Sem observação técnica',
+      PRODUCT_PREVIEW_LIMITS.technicalNotes
+    );
   }
 
   protected versionLabel(product: ProductResponse): string {
@@ -204,7 +337,14 @@ export class ProductsComponent {
 
   private clearMessages(): void {
     this.errorMessage.set('');
+    this.modalErrorMessage.set('');
+    this.deleteModalErrorMessage.set('');
     this.successMessage.set('');
+  }
+
+  private resetDeleteModal(): void {
+    this.deletingProductSignal.set(null);
+    this.deleteModalErrorMessage.set('');
   }
 }
 
@@ -230,4 +370,18 @@ function buildProductPayload(raw: ReturnType<ProductsComponent['form']['getRawVa
     defaultWarrantyMonths: raw.defaultWarrantyMonths,
     technicalNotes: normalizeOptionalText(raw.technicalNotes)
   };
+}
+
+function previewText(value: string | null, emptyText: string, maxLength: number): string {
+  const normalizedValue = normalizeOptionalText(value);
+
+  if (!normalizedValue) {
+    return emptyText;
+  }
+
+  if (normalizedValue.length <= maxLength) {
+    return normalizedValue;
+  }
+
+  return `${normalizedValue.slice(0, maxLength).trimEnd()}…`;
 }

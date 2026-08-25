@@ -1,0 +1,105 @@
+<section class="page-surface kanban-page">
+  <section class="kanban-hero panel">
+    <div class="kanban-hero__copy">
+      <p class="eyebrow">Operações</p>
+      <h1>Kanban de RMAs</h1>
+      <p>Visual dedicado para acompanhar o fluxo da assistência técnica e mover chamados entre etapas sem sair do quadro.</p>
+    </div>
+
+    <div class="kanban-hero__stats">
+      @for (stat of heroStats(); track stat.label) {
+        <article class="kanban-hero__stat">
+          <span>{{ stat.label }}</span>
+          <strong>{{ stat.value }}</strong>
+          <p>{{ stat.detail }}</p>
+        </article>
+      }
+    </div>
+  </section>
+
+  @if (pageError()) {
+    <article class="status-card panel">
+      <h3>{{ pageError() }}</h3>
+    </article>
+  }
+
+  <section class="kanban-stage panel">
+    <div class="kanban-stage__header">
+      <div>
+        <h2>Fluxo operacional</h2>
+        <p>Arraste os cards entre as colunas para refletir a etapa atual de cada atendimento.</p>
+      </div>
+    </div>
+
+    <app-rma-kanban-board
+      [rmas]="rmas()"
+      [loading]="loading()"
+      [canUpdateStatus]="canUpdateStatus()"
+      [boardUpdatingId]="boardUpdatingId()"
+      [selectedRmaId]="selectedRmaId()"
+      [draggedRmaId]="draggedRmaId()"
+      [dragTargetStatus]="dragTargetStatus()"
+      [showToolbar]="false"
+      (cardSelect)="selectRma($event)"
+      (cardDragStart)="startCardDrag($event.event, $event.rma)"
+      (cardDragEnd)="endCardDrag()"
+      (columnDragOver)="allowColumnDrop($event.event, $event.status)"
+      (columnDragLeave)="leaveColumn($event)"
+      (columnDrop)="dropOnColumn($event.event, $event.status)"
+    />
+  </section>
+</section>
+
+@if (pendingStatusRma(); as rma) {
+  <section class="modal-overlay" (click)="closeStatusModal()">
+    <article class="panel modal-panel modal-panel--narrow" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h3>Status</h3>
+          <p>{{ rma.code }}</p>
+        </div>
+        <button
+          type="button"
+          class="modal-close"
+          (click)="closeStatusModal()"
+          [disabled]="boardUpdatingId() !== null"
+          aria-label="Fechar"
+        >&times;</button>
+      </div>
+
+      @if (statusModalError()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ statusModalError() }}</strong>
+        </article>
+      }
+
+      <form [formGroup]="statusForm" (ngSubmit)="saveStatusChange()" class="form-grid">
+        <div class="field-group">
+          <label>Novo status</label>
+          <app-custom-select
+            formControlName="status"
+            ariaLabel="Novo status do RMA"
+            [options]="statusSelectOptions"
+          />
+        </div>
+
+        <div class="field-group field-group--full">
+          <label for="kanbanStatusNote">Observação</label>
+          <textarea id="kanbanStatusNote" formControlName="note" rows="4"></textarea>
+        </div>
+
+        <div class="form-actions form-actions--full">
+          <button
+            type="button"
+            class="button-secondary"
+            (click)="closeStatusModal()"
+            [disabled]="boardUpdatingId() !== null"
+          >Cancelar</button>
+          <button type="submit" class="button-primary" [disabled]="boardUpdatingId() !== null">
+            {{ boardUpdatingId() !== null ? 'Salvando...' : 'Salvar status' }}
+          </button>
+        </div>
+      </form>
+    </article>
+  </section>
+}

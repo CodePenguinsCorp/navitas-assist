@@ -54,6 +54,7 @@ export class DashboardComponent {
   private readonly rmaService = inject(RmaService);
 
   protected readonly loading = signal(true);
+  protected readonly refreshing = signal(false);
   protected readonly errorMessage = signal('');
 
   private readonly rmasSignal = signal<RmaResponse[]>([]);
@@ -154,10 +155,15 @@ export class DashboardComponent {
   }
 
   protected refresh(): void {
-    this.loadDashboard();
+    if (this.refreshing()) {
+      return;
+    }
+
+    this.refreshing.set(true);
+    this.loadDashboard(true);
   }
 
-  private loadDashboard(): void {
+  private loadDashboard(isRefresh = false): void {
     this.loading.set(true);
     this.errorMessage.set('');
 
@@ -171,7 +177,12 @@ export class DashboardComponent {
       products: this.catalogService.listProducts(),
       users: usersRequest
     }).pipe(
-      finalize(() => this.loading.set(false))
+      finalize(() => {
+        this.loading.set(false);
+        if (isRefresh) {
+          this.refreshing.set(false);
+        }
+      })
     ).subscribe({
       next: ({ rmas, clients, products, users }) => {
         this.rmasSignal.set(rmas);

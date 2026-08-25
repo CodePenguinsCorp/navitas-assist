@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record ProductRequest(
-    @NotBlank @Size(max = 60) String sku,
+    @NotBlank @Size(max = 20) String sku,
     @NotBlank @Size(max = 120) String name,
     @Size(max = 80) String category,
     @Size(max = 40) String hardwareVersion,

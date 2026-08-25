@@ -8,6 +8,7 @@ import br.com.navitasassist.product.Product;
 import br.com.navitasassist.product.ProductRequest;
 import br.com.navitasassist.product.ProductResponse;
 import br.com.navitasassist.repository.ProductRepository;
+import br.com.navitasassist.repository.RmaRecordRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final RmaRecordRepository rmaRecordRepository;
 
     @Transactional(readOnly = true)
     public List<ProductResponse> listAll() {
@@ -43,6 +45,16 @@ public class ProductService {
 
         apply(product, request);
         return ProductResponse.from(productRepository.save(product));
+    }
+
+    public void delete(Long id) {
+        Product product = getEntityById(id);
+
+        if (rmaRecordRepository.existsByProduct_Id(id)) {
+            throw new BusinessException("Product cannot be deleted because it is used by an RMA.");
+        }
+
+        productRepository.delete(product);
     }
 
     @Transactional(readOnly = true)

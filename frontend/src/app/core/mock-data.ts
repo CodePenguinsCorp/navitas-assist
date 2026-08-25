@@ -113,6 +113,11 @@ export const NAV_GROUPS: NavGroup[] = [
         label: 'RMAs',
         route: '/rmas',
         roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
+      },
+      {
+        label: 'Kanban',
+        route: '/kanban',
+        roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
       }
     ]
   },
@@ -153,6 +158,13 @@ export const MODULE_CARDS: ModuleCard[] = [
     title: 'RMAs',
     summary: 'Fluxo operacional.',
     route: '/rmas',
+    tag: 'Operação',
+    roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
+  },
+  {
+    title: 'Kanban',
+    summary: 'Quadro por etapa.',
+    route: '/kanban',
     tag: 'Operação',
     roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
   },

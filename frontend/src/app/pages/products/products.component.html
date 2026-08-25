@@ -83,19 +83,42 @@
           <tbody>
             @for (product of filteredProducts(); track product.id) {
               <tr>
-                <td>{{ product.sku }}</td>
+                <td>
+                  <span class="product-sku" [attr.title]="product.sku">{{ skuPreview(product) }}</span>
+                </td>
                 <td>
                   <strong class="table-title">{{ product.name }}</strong>
-                  <span class="table-subtitle">{{ product.technicalNotes || 'Sem observação técnica' }}</span>
+                  <span class="table-subtitle product-preview" [attr.title]="product.technicalNotes">
+                    {{ technicalNotesPreview(product) }}
+                  </span>
                 </td>
-                <td>{{ product.category || 'Não informada' }}</td>
+                <td>
+                  <span class="product-preview" [attr.title]="product.category">
+                    {{ categoryPreview(product) }}
+                  </span>
+                </td>
                 <td>{{ versionLabel(product) }}</td>
                 <td>{{ product.defaultWarrantyMonths }} meses</td>
                 <td>{{ updatedAtLabel(product) }}</td>
                 <td class="table-actions-col">
-                  <button type="button" class="button-secondary button-secondary--small" (click)="openEditModal(product)">
-                    Editar
-                  </button>
+                  <div class="product-actions">
+                    <button
+                      type="button"
+                      class="button-secondary button-secondary--small"
+                      (click)="openEditModal(product)"
+                      [disabled]="deletingProductId() === product.id"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      class="button-secondary button-secondary--small button-secondary--danger"
+                      (click)="openDeleteModal(product)"
+                      [disabled]="deletingProductId() !== null"
+                    >
+                      {{ deletingProductId() === product.id ? 'Excluindo...' : 'Excluir' }}
+                    </button>
+                  </div>
                 </td>
               </tr>
             }
@@ -117,26 +140,39 @@
         <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()">×</button>
       </header>
 
+      @if (modalErrorMessage()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ modalErrorMessage() }}</strong>
+        </article>
+      }
+
       <form class="form-grid" [formGroup]="form" (ngSubmit)="saveProduct()">
         <label class="field-group">
-          <span>SKU</span>
-          <input type="text" formControlName="sku" />
+          <span>SKU (máx. {{ limits.sku }} caracteres)</span>
+          <input type="text" formControlName="sku" [attr.maxlength]="limits.sku" />
           @if (hasError('sku')) {
-            <small class="field-error">Informe o SKU.</small>
+            <small class="field-error">
+              {{ form.controls.sku.hasError('required') ? 'Informe o SKU.' : 'O SKU excede o limite permitido.' }}
+            </small>
           }
         </label>
 
         <label class="field-group">
           <span>Produto</span>
-          <input type="text" formControlName="name" />
+          <input type="text" formControlName="name" [attr.maxlength]="limits.name" />
           @if (hasError('name')) {
-            <small class="field-error">Informe o nome do produto.</small>
+            <small class="field-error">
+              {{ form.controls.name.hasError('required') ? 'Informe o nome do produto.' : 'O nome excede o limite permitido.' }}
+            </small>
           }
         </label>
 
         <label class="field-group">
-          <span>Categoria</span>
-          <input type="text" formControlName="category" />
+          <span>Categoria (máx. {{ limits.category }} caracteres)</span>
+          <input type="text" formControlName="category" [attr.maxlength]="limits.category" />
+          @if (hasError('category')) {
+            <small class="field-error">A categoria excede o limite permitido.</small>
+          }
         </label>
 
         <label class="field-group">
@@ -149,17 +185,26 @@
 
         <label class="field-group">
           <span>Versão de hardware</span>
-          <input type="text" formControlName="hardwareVersion" />
+          <input type="text" formControlName="hardwareVersion" [attr.maxlength]="limits.hardwareVersion" />
+          @if (hasError('hardwareVersion')) {
+            <small class="field-error">A versão de hardware excede o limite permitido.</small>
+          }
         </label>
 
         <label class="field-group">
           <span>Versão de firmware</span>
-          <input type="text" formControlName="firmwareVersion" />
+          <input type="text" formControlName="firmwareVersion" [attr.maxlength]="limits.firmwareVersion" />
+          @if (hasError('firmwareVersion')) {
+            <small class="field-error">A versão de firmware excede o limite permitido.</small>
+          }
         </label>
 
         <label class="field-group field-group--full">
-          <span>Observações técnicas</span>
-          <textarea formControlName="technicalNotes"></textarea>
+          <span>Observações técnicas (máx. {{ limits.technicalNotes }} caracteres)</span>
+          <textarea formControlName="technicalNotes" [attr.maxlength]="limits.technicalNotes"></textarea>
+          @if (hasError('technicalNotes')) {
+            <small class="field-error">As observações excedem o limite permitido.</small>
+          }
         </label>
 
         <div class="form-actions form-actions--full">
@@ -171,6 +216,63 @@
           </button>
         </div>
       </form>
+    </section>
+  </div>
+}
+
+@if (deletingProduct(); as product) {
+  <div class="modal-overlay" (click)="closeDeleteModal()">
+    <section
+      class="modal-panel modal-panel--narrow panel"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="delete-product-title"
+      aria-describedby="delete-product-description"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="modal-header">
+        <div>
+          <h3 id="delete-product-title">Excluir produto</h3>
+          <p>Esta ação não poderá ser desfeita.</p>
+        </div>
+        <button
+          type="button"
+          class="modal-close"
+          aria-label="Fechar"
+          (click)="closeDeleteModal()"
+          [disabled]="deletingProductId() !== null"
+        >×</button>
+      </header>
+
+      @if (deleteModalErrorMessage()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ deleteModalErrorMessage() }}</strong>
+        </article>
+      }
+
+      <p id="delete-product-description" class="delete-confirmation">
+        Tem certeza de que deseja excluir <strong>{{ product.name }}</strong>, SKU
+        <strong>{{ product.sku }}</strong>?
+      </p>
+
+      <div class="form-actions">
+        <button
+          type="button"
+          class="button-primary button-primary--danger"
+          (click)="confirmDeleteProduct()"
+          [disabled]="deletingProductId() !== null"
+        >
+          {{ deletingProductId() === product.id ? 'Excluindo...' : 'Excluir produto' }}
+        </button>
+        <button
+          type="button"
+          class="button-secondary"
+          (click)="closeDeleteModal()"
+          [disabled]="deletingProductId() !== null"
+        >
+          Cancelar
+        </button>
+      </div>
     </section>
   </div>
 }

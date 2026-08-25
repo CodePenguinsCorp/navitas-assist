@@ -11,6 +11,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
 
+    boolean existsByProduct_Id(Long productId);
+
     Optional<RmaRecord> findByCodeIgnoreCase(String code);
 
     Optional<RmaRecord> findTopByCodeStartingWithOrderByCodeDesc(String prefix);

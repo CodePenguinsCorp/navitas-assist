@@ -1,0 +1,88 @@
+@if (showToolbar()) {
+  <article class="panel board-toolbar">
+    <div>
+      <h3>{{ toolbarTitle() }}</h3>
+      <p>{{ toolbarDescription() }}</p>
+    </div>
+    @if (boardUpdatingId()) {
+      <span class="status-pill status-checking">Movendo item...</span>
+    }
+  </article>
+}
+
+<div class="board-shell">
+  <section class="board-grid">
+    @for (column of columns(); track column.status) {
+      <article
+        class="board-column panel"
+        [class.is-drop-target]="isDropTarget(column.status)"
+        [attr.data-status]="column.status"
+        (dragover)="columnDragOver.emit({ event: $event, status: column.status })"
+        (dragleave)="columnDragLeave.emit(column.status)"
+        (drop)="columnDrop.emit({ event: $event, status: column.status })"
+      >
+        <header class="board-column__header">
+          <h3>{{ column.label }}</h3>
+          <span class="mini-chip">{{ column.items.length }}</span>
+        </header>
+
+        <div class="board-column__stack">
+          @if (loading() && totalRmas() === 0) {
+            <p class="board-empty-note">Carregando...</p>
+          } @else {
+            @for (item of column.items; track item.id) {
+              <article
+                class="board-card interactive-card"
+                [class.is-selected]="isSelected(item)"
+                [class.is-dragging]="isDragging(item)"
+                [class.is-updating]="isStatusUpdating(item)"
+                [draggable]="canUpdateStatus() && boardUpdatingId() === null"
+                tabindex="0"
+                (click)="cardSelect.emit(item)"
+                (keydown.enter)="cardSelect.emit(item)"
+                (dragstart)="cardDragStart.emit({ event: $event, rma: item })"
+                (dragend)="cardDragEnd.emit()"
+              >
+                <header class="board-card__header">
+                  <div>
+                    <h4>{{ item.code }}</h4>
+                    <p>{{ item.clientName }}</p>
+                  </div>
+                  <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus, item.warrantyOverridden)">
+                    {{ warrantyLabel(item.warrantyStatus, item.warrantyOverridden) }}
+                  </span>
+                </header>
+                <p>{{ item.productName }} | {{ trackableLabel(item) }}</p>
+                <p>{{ item.reportedFailure }}</p>
+
+                <div class="board-card__grid">
+                  <div>
+                    <span>Responsável</span>
+                    <strong>{{ ownerLabel(item) }}</strong>
+                  </div>
+                  <div>
+                    <span>Entrada</span>
+                    <strong>{{ dateLabel(item.entryDate) }}</strong>
+                  </div>
+                </div>
+
+                <div class="board-card__footer support-line">
+                  <span class="mini-chip" [class]="priorityClass(item.priority)">
+                    {{ priorityLabel(item.priority) }}
+                  </span>
+                  @if (isStatusUpdating(item)) {
+                    <span class="mini-chip">Atualizando...</span>
+                  }
+                </div>
+              </article>
+            }
+          }
+
+          @if (!loading() && column.items.length === 0) {
+            <p class="board-empty-note">Nenhum item.</p>
+          }
+        </div>
+      </article>
+    }
+  </section>
+</div>
