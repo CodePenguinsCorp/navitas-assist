@@ -34,6 +34,52 @@ type UserModalMode = 'create' | 'edit';
 
     .user-actions { display: flex; gap: 0.45rem; }
 
+    .user-form-modal {
+      width: min(100%, 780px);
+    }
+
+    .user-form-modal .modal-header {
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .user-form {
+      gap: 0.85rem 1rem;
+    }
+
+    .user-form .field-group {
+      grid-template-rows: auto;
+    }
+
+    .user-status-card {
+      display: flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 0.6rem 0.85rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--surface-alt);
+    }
+
+    .user-status-card input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--brand-blue);
+    }
+
+    .user-status-card strong {
+      color: var(--text);
+      font-size: 0.95rem;
+      line-height: 1.2;
+    }
+
+    .field-hint {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 400;
+      line-height: 1.35;
+    }
+
     .button-secondary--danger { border-color: #efc7cf; color: var(--danger-text); }
     .button-secondary--danger:hover { background: var(--danger-bg); }
     .button-primary--danger { background: var(--danger-text); }

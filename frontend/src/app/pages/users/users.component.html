@@ -141,7 +141,7 @@
 
 @if (activeModal()) {
   <div class="modal-overlay" (click)="closeModal()">
-    <section class="modal-panel modal-panel--narrow panel" (click)="$event.stopPropagation()">
+    <section class="modal-panel user-form-modal panel" (click)="$event.stopPropagation()">
       <header class="modal-header">
         <div>
           <h3>{{ editingUser() ? 'Editar usuário' : 'Novo usuário' }}</h3>
@@ -156,10 +156,10 @@
         </article>
       }
 
-      <form class="form-grid" [formGroup]="form" (ngSubmit)="saveUser()">
+      <form class="form-grid user-form" [formGroup]="form" (ngSubmit)="saveUser()">
         <label class="field-group">
           <span>Nome completo</span>
-          <input type="text" formControlName="fullName" />
+          <input type="text" formControlName="fullName" autocomplete="name" />
           @if (hasError('fullName')) {
             <small class="field-error">Informe o nome completo.</small>
           }
@@ -167,7 +167,7 @@
 
         <label class="field-group">
           <span>Usuário</span>
-          <input type="text" formControlName="username" />
+          <input type="text" formControlName="username" autocomplete="username" />
           @if (hasError('username')) {
             <small class="field-error">Informe o usuário.</small>
           }
@@ -183,18 +183,23 @@
         </label>
 
         <label class="field-group">
+          <span>Status</span>
+          <span class="checkbox-row user-status-card">
+            <input type="checkbox" formControlName="active" />
+            <strong>Usuário ativo</strong>
+          </span>
+        </label>
+
+        <label class="field-group field-group--full">
           <span>{{ editingUser() ? 'Nova senha (opcional)' : 'Senha inicial' }}</span>
-          <input type="password" formControlName="password" />
+          <input type="password" formControlName="password" autocomplete="new-password" />
           @if (hasError('password')) {
             <small class="field-error">
               {{ form.controls.password.hasError('required') ? 'Informe a senha inicial.' : 'A senha precisa ter entre 6 e 120 caracteres.' }}
             </small>
+          } @else if (editingUser()) {
+            <small class="field-hint">Deixe em branco para manter a senha atual.</small>
           }
-        </label>
-
-        <label class="checkbox-row field-group--full">
-          <input type="checkbox" formControlName="active" />
-          <span>Usuário ativo</span>
         </label>
 
         <div class="form-actions form-actions--full">
