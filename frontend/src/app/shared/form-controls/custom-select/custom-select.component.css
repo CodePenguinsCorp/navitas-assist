@@ -92,6 +92,12 @@
   text-align: left;
 }
 
+.custom-select__option > span {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
 .custom-select__option:hover {
   background: #edf5fc;
   color: var(--brand-blue-deep);
