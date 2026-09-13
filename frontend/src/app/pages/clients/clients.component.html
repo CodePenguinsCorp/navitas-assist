@@ -137,9 +137,10 @@
       <form class="form-grid" [formGroup]="form" (ngSubmit)="saveClient()">
         <label class="field-group field-group--full">
           <span>Razão social</span>
-          <input type="text" formControlName="legalName" />
+          <input type="text" formControlName="legalName" (input)="limitLegalName($event)" />
+          <small>Até 120 caracteres, sem contar espaços e traços.</small>
           @if (hasError('legalName')) {
-            <small class="field-error">Informe a razão social.</small>
+            <small class="field-error">Informe a razão social com até 120 caracteres, sem contar espaços e traços.</small>
           }
         </label>
 
@@ -149,18 +150,16 @@
         </label>
 
         <label class="field-group">
-          <span>Documento</span>
-          <input type="text" formControlName="documentNumber" />
-        </label>
-
-        <label class="field-group">
-          <span>Contato</span>
-          <input type="text" formControlName="contactName" />
+          <span>CNPJ/CPF</span>
+          <input type="text" formControlName="documentNumber" maxlength="18" />
         </label>
 
         <label class="field-group">
           <span>Telefone</span>
-          <input type="text" formControlName="phone" />
+          <input type="tel" formControlName="phone" maxlength="30" />
+          @if (hasError('phone')) {
+            <small class="field-error">Informe um telefone com até 30 caracteres.</small>
+          }
         </label>
 
         <label class="field-group field-group--full">
@@ -173,7 +172,10 @@
 
         <label class="field-group field-group--full">
           <span>Endereço</span>
-          <input type="text" formControlName="address" />
+          <input type="text" formControlName="address" maxlength="255" />
+          @if (hasError('address')) {
+            <small class="field-error">Informe um endereço com até 255 caracteres.</small>
+          }
         </label>
 
         <label class="field-group field-group--full">
