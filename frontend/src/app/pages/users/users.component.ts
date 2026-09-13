@@ -25,6 +25,8 @@ type UserFormControlName = 'username' | 'fullName' | 'password' | 'role' | 'acti
 type UserStatusFilter = 'all' | 'active' | 'inactive';
 type UserModalMode = 'create' | 'edit';
 
+const USER_LIMITS = { fullName: 60, username: 30 } as const;
+
 @Component({
   selector: 'app-users',
   imports: [ReactiveFormsModule, CustomSelectComponent],
@@ -118,6 +120,7 @@ export class UsersComponent {
   protected readonly roleFilterOptions = ROLE_FILTER_OPTIONS;
   protected readonly statusFilterOptions = STATUS_FILTER_OPTIONS;
   protected readonly userRoleOptions = USER_ROLE_OPTIONS;
+  protected readonly limits = USER_LIMITS;
 
   protected readonly filteredUsers = computed(() =>
     [...this.usersSignal()]
@@ -145,8 +148,8 @@ export class UsersComponent {
   protected readonly roleCount = computed(() => countDistinct(this.usersSignal().map((user) => user.role)));
 
   protected readonly form = this.formBuilder.nonNullable.group({
-    username: ['', [Validators.required, Validators.maxLength(60)]],
-    fullName: ['', [Validators.required, Validators.maxLength(120)]],
+    username: ['', [Validators.required, Validators.maxLength(USER_LIMITS.username)]],
+    fullName: ['', [Validators.required, Validators.maxLength(USER_LIMITS.fullName)]],
     password: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(120)]],
     role: ['SERVICE_DESK' as UserRole, [Validators.required]],
     active: [true]

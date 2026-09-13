@@ -159,17 +159,17 @@
       <form class="form-grid user-form" [formGroup]="form" (ngSubmit)="saveUser()">
         <label class="field-group">
           <span>Nome completo</span>
-          <input type="text" formControlName="fullName" autocomplete="name" />
+          <input type="text" formControlName="fullName" autocomplete="name" [attr.maxlength]="limits.fullName" />
           @if (hasError('fullName')) {
-            <small class="field-error">Informe o nome completo.</small>
+            <small class="field-error">Informe o nome completo com até {{ limits.fullName }} caracteres.</small>
           }
         </label>
 
         <label class="field-group">
           <span>Usuário</span>
-          <input type="text" formControlName="username" autocomplete="username" />
+          <input type="text" formControlName="username" autocomplete="username" [attr.maxlength]="limits.username" />
           @if (hasError('username')) {
-            <small class="field-error">Informe o usuário.</small>
+            <small class="field-error">Informe o usuário com até {{ limits.username }} caracteres.</small>
           }
         </label>
 
