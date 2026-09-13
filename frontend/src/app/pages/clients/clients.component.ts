@@ -25,7 +25,20 @@ type ClientFormControlName =
   selector: 'app-clients',
   imports: [ReactiveFormsModule],
   templateUrl: './clients.component.html',
-  styles: [':host { display: block; }']
+  styles: [`
+    :host { display: block; }
+
+    .client-actions { display: flex; gap: 0.45rem; }
+
+    .button-secondary--danger { border-color: #efc7cf; color: var(--danger-text); }
+    .button-secondary--danger:hover { background: var(--danger-bg); }
+    .button-primary--danger { background: var(--danger-text); }
+    .button-primary--danger:hover { background: #7f3441; }
+
+    .delete-confirmation { margin: 0 0 1.25rem; color: var(--muted); line-height: 1.55; }
+    .delete-confirmation strong { color: var(--brand-blue-deep); }
+    .modal-feedback { margin-bottom: 1rem; }
+  `]
 })
 export class ClientsComponent {
   private readonly formBuilder = inject(FormBuilder);
@@ -33,16 +46,21 @@ export class ClientsComponent {
 
   protected readonly loading = signal(true);
   protected readonly submitting = signal(false);
+  protected readonly deletingClientId = signal<number | null>(null);
   protected readonly errorMessage = signal('');
+  protected readonly modalErrorMessage = signal('');
+  protected readonly deleteModalErrorMessage = signal('');
   protected readonly successMessage = signal('');
   protected readonly searchTerm = signal('');
   protected readonly activeModal = signal<ClientModalMode | null>(null);
 
   private readonly clientsSignal = signal<ClientResponse[]>([]);
   private readonly editingClientSignal = signal<ClientResponse | null>(null);
+  private readonly deletingClientSignal = signal<ClientResponse | null>(null);
 
   protected readonly clients = this.clientsSignal.asReadonly();
   protected readonly editingClient = this.editingClientSignal.asReadonly();
+  protected readonly deletingClient = this.deletingClientSignal.asReadonly();
 
   protected readonly filteredClients = computed(() =>
     [...this.clientsSignal()]
@@ -122,13 +140,13 @@ export class ClientsComponent {
 
   protected closeModal(): void {
     this.activeModal.set(null);
+    this.modalErrorMessage.set('');
   }
 
   protected saveClient(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.errorMessage.set('Preencha os campos obrigatórios do cliente.');
-      this.successMessage.set('');
+      this.modalErrorMessage.set('Revise os campos destacados antes de salvar o cliente.');
       return;
     }
 
@@ -154,7 +172,50 @@ export class ClientsComponent {
         this.loadClients();
       },
       error: (error) => {
-        this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível salvar o cliente agora.'));
+        this.modalErrorMessage.set(
+          extractHttpErrorMessage(error, 'Não foi possível salvar o cliente agora.')
+        );
+      }
+    });
+  }
+
+  protected openDeleteModal(client: ClientResponse): void {
+    this.deletingClientSignal.set(client);
+    this.clearMessages();
+  }
+
+  protected closeDeleteModal(): void {
+    if (this.deletingClientId() !== null) {
+      return;
+    }
+
+    this.resetDeleteModal();
+  }
+
+  protected confirmDeleteClient(): void {
+    const client = this.deletingClientSignal();
+
+    if (!client || this.deletingClientId() !== null) {
+      return;
+    }
+
+    this.deletingClientId.set(client.id);
+    this.clearMessages();
+
+    this.catalogService.deleteClient(client.id).pipe(
+      finalize(() => this.deletingClientId.set(null))
+    ).subscribe({
+      next: () => {
+        this.clientsSignal.update((clients) =>
+          clients.filter((currentClient) => currentClient.id !== client.id)
+        );
+        this.successMessage.set(`Cliente ${client.legalName} excluído com sucesso.`);
+        this.resetDeleteModal();
+      },
+      error: (error) => {
+        this.deleteModalErrorMessage.set(
+          extractHttpErrorMessage(error, 'Não foi possível excluir o cliente agora.')
+        );
       }
     });
   }
@@ -184,7 +245,14 @@ export class ClientsComponent {
 
   private clearMessages(): void {
     this.errorMessage.set('');
+    this.modalErrorMessage.set('');
+    this.deleteModalErrorMessage.set('');
     this.successMessage.set('');
+  }
+
+  private resetDeleteModal(): void {
+    this.deletingClientSignal.set(null);
+    this.deleteModalErrorMessage.set('');
   }
 }
 

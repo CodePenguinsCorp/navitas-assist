@@ -94,6 +94,7 @@
               <th>Perfil</th>
               <th>Status</th>
               <th>Atualizado</th>
+              <th class="table-actions-col">Ação</th>
             </tr>
           </thead>
           <tbody>
@@ -108,6 +109,27 @@
                   <span [class]="statusClass(user)">{{ user.active ? 'Ativo' : 'Inativo' }}</span>
                 </td>
                 <td>{{ updatedAtLabel(user) }}</td>
+                <td class="table-actions-col">
+                  <div class="user-actions">
+                    <button
+                      type="button"
+                      class="button-secondary button-secondary--small"
+                      (click)="openEditModal(user)"
+                      [disabled]="deletingUserId() === user.id"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      class="button-secondary button-secondary--small button-secondary--danger"
+                      (click)="openDeleteModal(user)"
+                      [disabled]="deletingUserId() !== null || isCurrentUser(user)"
+                      [attr.title]="isCurrentUser(user) ? 'Você não pode excluir a própria conta.' : null"
+                    >
+                      {{ deletingUserId() === user.id ? 'Excluindo...' : 'Excluir' }}
+                    </button>
+                  </div>
+                </td>
               </tr>
             }
           </tbody>
@@ -117,16 +139,22 @@
   </article>
 </section>
 
-@if (createModalOpen()) {
+@if (activeModal()) {
   <div class="modal-overlay" (click)="closeModal()">
     <section class="modal-panel modal-panel--narrow panel" (click)="$event.stopPropagation()">
       <header class="modal-header">
         <div>
-          <h3>Novo usuário</h3>
-          <p>Crie um perfil de acesso para a operação.</p>
+          <h3>{{ editingUser() ? 'Editar usuário' : 'Novo usuário' }}</h3>
+          <p>{{ editingUser() ? 'Atualize os dados e as permissões do usuário.' : 'Crie um perfil de acesso para a operação.' }}</p>
         </div>
         <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()">×</button>
       </header>
+
+      @if (modalErrorMessage()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ modalErrorMessage() }}</strong>
+        </article>
+      }
 
       <form class="form-grid" [formGroup]="form" (ngSubmit)="saveUser()">
         <label class="field-group">
@@ -155,10 +183,12 @@
         </label>
 
         <label class="field-group">
-          <span>Senha inicial</span>
+          <span>{{ editingUser() ? 'Nova senha (opcional)' : 'Senha inicial' }}</span>
           <input type="password" formControlName="password" />
           @if (hasError('password')) {
-            <small class="field-error">A senha precisa ter pelo menos 6 caracteres.</small>
+            <small class="field-error">
+              {{ form.controls.password.hasError('required') ? 'Informe a senha inicial.' : 'A senha precisa ter entre 6 e 120 caracteres.' }}
+            </small>
           }
         </label>
 
@@ -169,13 +199,70 @@
 
         <div class="form-actions form-actions--full">
           <button type="submit" class="button-primary" [disabled]="submitting()">
-            {{ submitting() ? 'Salvando...' : 'Cadastrar usuário' }}
+            {{ submitting() ? 'Salvando...' : editingUser() ? 'Salvar alterações' : 'Cadastrar usuário' }}
           </button>
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="submitting()">
             Cancelar
           </button>
         </div>
       </form>
+    </section>
+  </div>
+}
+
+@if (deletingUser(); as user) {
+  <div class="modal-overlay" (click)="closeDeleteModal()">
+    <section
+      class="modal-panel modal-panel--narrow panel"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="delete-user-title"
+      aria-describedby="delete-user-description"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="modal-header">
+        <div>
+          <h3 id="delete-user-title">Excluir usuário</h3>
+          <p>Esta ação não poderá ser desfeita.</p>
+        </div>
+        <button
+          type="button"
+          class="modal-close"
+          aria-label="Fechar"
+          (click)="closeDeleteModal()"
+          [disabled]="deletingUserId() !== null"
+        >×</button>
+      </header>
+
+      @if (deleteModalErrorMessage()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ deleteModalErrorMessage() }}</strong>
+        </article>
+      }
+
+      <p id="delete-user-description" class="delete-confirmation">
+        Tem certeza de que deseja excluir <strong>{{ user.fullName }}</strong>, usuário
+        <strong>{{ user.username }}</strong>?
+      </p>
+
+      <div class="form-actions">
+        <button
+          type="button"
+          class="button-primary button-primary--danger"
+          (click)="confirmDeleteUser()"
+          [disabled]="deletingUserId() !== null"
+        >
+          {{ deletingUserId() === user.id ? 'Excluindo...' : 'Excluir usuário' }}
+        </button>
+        <button
+          type="button"
+          class="button-secondary"
+          (click)="closeDeleteModal()"
+          [disabled]="deletingUserId() !== null"
+        >
+          Cancelar
+        </button>
+      </div>
     </section>
   </div>
 }

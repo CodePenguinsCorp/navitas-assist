@@ -70,6 +70,14 @@ export interface UserAccountRequest {
   active: boolean;
 }
 
+export interface UserAccountUpdateRequest {
+  username: string;
+  fullName: string;
+  password: string | null;
+  role: UserRole;
+  active: boolean;
+}
+
 export interface ClientResponse {
   id: number;
   legalName: string;

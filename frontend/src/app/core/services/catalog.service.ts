@@ -7,7 +7,8 @@ import {
   ProductRequest,
   ProductResponse,
   UserAccountRequest,
-  UserAccountResponse
+  UserAccountResponse,
+  UserAccountUpdateRequest
 } from '../models';
 
 @Injectable({ providedIn: 'root' })
@@ -24,6 +25,10 @@ export class CatalogService {
 
   updateClient(id: number, payload: ClientRequest): Observable<ClientResponse> {
     return this.http.put<ClientResponse>(`/api/clients/${id}`, payload);
+  }
+
+  deleteClient(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/clients/${id}`);
   }
 
   listProducts(): Observable<ProductResponse[]> {
@@ -48,5 +53,13 @@ export class CatalogService {
 
   createUser(payload: UserAccountRequest): Observable<UserAccountResponse> {
     return this.http.post<UserAccountResponse>('/api/users', payload);
+  }
+
+  updateUser(id: number, payload: UserAccountUpdateRequest): Observable<UserAccountResponse> {
+    return this.http.put<UserAccountResponse>(`/api/users/${id}`, payload);
+  }
+
+  deleteUser(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/users/${id}`);
   }
 }

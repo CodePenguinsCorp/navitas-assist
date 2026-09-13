@@ -1,8 +1,14 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { finalize } from 'rxjs';
+import { Observable, finalize } from 'rxjs';
 import { ROLE_LABELS, ROLE_OPTIONS } from '../../core/mock-data';
-import { UserAccountRequest, UserAccountResponse, UserRole } from '../../core/models';
+import {
+  UserAccountRequest,
+  UserAccountResponse,
+  UserAccountUpdateRequest,
+  UserRole
+} from '../../core/models';
+import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import {
   countDistinct,
@@ -17,29 +23,51 @@ import {
 
 type UserFormControlName = 'username' | 'fullName' | 'password' | 'role' | 'active';
 type UserStatusFilter = 'all' | 'active' | 'inactive';
+type UserModalMode = 'create' | 'edit';
 
 @Component({
   selector: 'app-users',
   imports: [ReactiveFormsModule, CustomSelectComponent],
   templateUrl: './users.component.html',
-  styles: [':host { display: block; }']
+  styles: [`
+    :host { display: block; }
+
+    .user-actions { display: flex; gap: 0.45rem; }
+
+    .button-secondary--danger { border-color: #efc7cf; color: var(--danger-text); }
+    .button-secondary--danger:hover { background: var(--danger-bg); }
+    .button-primary--danger { background: var(--danger-text); }
+    .button-primary--danger:hover { background: #7f3441; }
+
+    .delete-confirmation { margin: 0 0 1.25rem; color: var(--muted); line-height: 1.55; }
+    .delete-confirmation strong { color: var(--brand-blue-deep); }
+    .modal-feedback { margin-bottom: 1rem; }
+  `]
 })
 export class UsersComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly catalogService = inject(CatalogService);
+  private readonly authService = inject(AuthService);
 
   protected readonly loading = signal(true);
   protected readonly submitting = signal(false);
+  protected readonly deletingUserId = signal<number | null>(null);
   protected readonly errorMessage = signal('');
+  protected readonly modalErrorMessage = signal('');
+  protected readonly deleteModalErrorMessage = signal('');
   protected readonly successMessage = signal('');
   protected readonly searchTerm = signal('');
   protected readonly roleFilter = signal<UserRole | ''>('');
   protected readonly statusFilter = signal<UserStatusFilter>('all');
-  protected readonly createModalOpen = signal(false);
+  protected readonly activeModal = signal<UserModalMode | null>(null);
 
   private readonly usersSignal = signal<UserAccountResponse[]>([]);
+  private readonly editingUserSignal = signal<UserAccountResponse | null>(null);
+  private readonly deletingUserSignal = signal<UserAccountResponse | null>(null);
 
   protected readonly users = this.usersSignal.asReadonly();
+  protected readonly editingUser = this.editingUserSignal.asReadonly();
+  protected readonly deletingUser = this.deletingUserSignal.asReadonly();
   protected readonly roleOptions = ROLE_OPTIONS;
   protected readonly roleFilterOptions = ROLE_FILTER_OPTIONS;
   protected readonly statusFilterOptions = STATUS_FILTER_OPTIONS;
@@ -95,40 +123,116 @@ export class UsersComponent {
   }
 
   protected openCreateModal(): void {
+    this.editingUserSignal.set(null);
+    this.configurePasswordValidation(true);
     this.form.reset(emptyUserForm());
-    this.createModalOpen.set(true);
+    this.activeModal.set('create');
+    this.clearMessages();
+  }
+
+  protected openEditModal(user: UserAccountResponse): void {
+    this.editingUserSignal.set(user);
+    this.configurePasswordValidation(false);
+    this.form.reset({
+      username: user.username,
+      fullName: user.fullName,
+      password: '',
+      role: user.role,
+      active: user.active
+    });
+    this.activeModal.set('edit');
     this.clearMessages();
   }
 
   protected closeModal(): void {
-    this.createModalOpen.set(false);
+    this.activeModal.set(null);
+    this.modalErrorMessage.set('');
   }
 
   protected saveUser(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.errorMessage.set('Preencha os campos obrigatórios do usuário.');
-      this.successMessage.set('');
+      this.modalErrorMessage.set('Revise os campos destacados antes de salvar o usuário.');
       return;
     }
 
-    const payload = buildUserPayload(this.form.getRawValue());
+    const rawValue = this.form.getRawValue();
+    const currentUser = this.editingUserSignal();
+    const request$: Observable<UserAccountResponse> = currentUser
+      ? this.catalogService.updateUser(currentUser.id, buildUserUpdatePayload(rawValue))
+      : this.catalogService.createUser(buildUserPayload(rawValue));
 
     this.submitting.set(true);
     this.clearMessages();
 
-    this.catalogService.createUser(payload).pipe(
+    request$.pipe(
       finalize(() => this.submitting.set(false))
     ).subscribe({
       next: (user) => {
-        this.successMessage.set(`Usuário ${user.fullName} cadastrado com sucesso.`);
+        this.successMessage.set(
+          currentUser
+            ? `Usuário ${user.fullName} atualizado com sucesso.`
+            : `Usuário ${user.fullName} cadastrado com sucesso.`
+        );
         this.closeModal();
         this.loadUsers();
       },
       error: (error) => {
-        this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível salvar o usuário agora.'));
+        this.modalErrorMessage.set(
+          extractHttpErrorMessage(error, 'Não foi possível salvar o usuário agora.')
+        );
       }
     });
+  }
+
+  protected openDeleteModal(user: UserAccountResponse): void {
+    if (this.isCurrentUser(user)) {
+      return;
+    }
+
+    this.deletingUserSignal.set(user);
+    this.clearMessages();
+  }
+
+  protected closeDeleteModal(): void {
+    if (this.deletingUserId() !== null) {
+      return;
+    }
+
+    this.resetDeleteModal();
+  }
+
+  protected confirmDeleteUser(): void {
+    const user = this.deletingUserSignal();
+
+    if (!user || this.deletingUserId() !== null) {
+      return;
+    }
+
+    this.deletingUserId.set(user.id);
+    this.clearMessages();
+
+    this.catalogService.deleteUser(user.id).pipe(
+      finalize(() => this.deletingUserId.set(null))
+    ).subscribe({
+      next: () => {
+        this.usersSignal.update((users) =>
+          users.filter((currentUser) => currentUser.id !== user.id)
+        );
+        this.successMessage.set(`Usuário ${user.fullName} excluído com sucesso.`);
+        this.resetDeleteModal();
+      },
+      error: (error) => {
+        this.deleteModalErrorMessage.set(
+          extractHttpErrorMessage(error, 'Não foi possível excluir o usuário agora.')
+        );
+      }
+    });
+  }
+
+  protected isCurrentUser(user: UserAccountResponse): boolean {
+    return user.username.toLocaleLowerCase('pt-BR') ===
+      this.authService.currentUser()?.username.toLocaleLowerCase('pt-BR');
   }
 
   protected roleLabel(role: UserRole): string {
@@ -164,7 +268,20 @@ export class UsersComponent {
 
   private clearMessages(): void {
     this.errorMessage.set('');
+    this.modalErrorMessage.set('');
+    this.deleteModalErrorMessage.set('');
     this.successMessage.set('');
+  }
+
+  private configurePasswordValidation(required: boolean): void {
+    const validators = [Validators.minLength(6), Validators.maxLength(120)];
+    this.form.controls.password.setValidators(required ? [Validators.required, ...validators] : validators);
+    this.form.controls.password.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private resetDeleteModal(): void {
+    this.deletingUserSignal.set(null);
+    this.deleteModalErrorMessage.set('');
   }
 }
 
@@ -183,6 +300,18 @@ function buildUserPayload(raw: ReturnType<UsersComponent['form']['getRawValue']>
     username: raw.username.trim(),
     fullName: raw.fullName.trim(),
     password: raw.password,
+    role: raw.role,
+    active: raw.active
+  };
+}
+
+function buildUserUpdatePayload(
+  raw: ReturnType<UsersComponent['form']['getRawValue']>
+): UserAccountUpdateRequest {
+  return {
+    username: raw.username.trim(),
+    fullName: raw.fullName.trim(),
+    password: raw.password || null,
     role: raw.role,
     active: raw.active
   };

@@ -89,9 +89,24 @@
                 <td>{{ client.documentNumber || 'Não informado' }}</td>
                 <td>{{ updatedAtLabel(client) }}</td>
                 <td class="table-actions-col">
-                  <button type="button" class="button-secondary button-secondary--small" (click)="openEditModal(client)">
-                    Editar
-                  </button>
+                  <div class="client-actions">
+                    <button
+                      type="button"
+                      class="button-secondary button-secondary--small"
+                      (click)="openEditModal(client)"
+                      [disabled]="deletingClientId() === client.id"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      class="button-secondary button-secondary--small button-secondary--danger"
+                      (click)="openDeleteModal(client)"
+                      [disabled]="deletingClientId() !== null"
+                    >
+                      {{ deletingClientId() === client.id ? 'Excluindo...' : 'Excluir' }}
+                    </button>
+                  </div>
                 </td>
               </tr>
             }
@@ -112,6 +127,12 @@
         </div>
         <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()">×</button>
       </header>
+
+      @if (modalErrorMessage()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ modalErrorMessage() }}</strong>
+        </article>
+      }
 
       <form class="form-grid" [formGroup]="form" (ngSubmit)="saveClient()">
         <label class="field-group field-group--full">
@@ -169,6 +190,62 @@
           </button>
         </div>
       </form>
+    </section>
+  </div>
+}
+
+@if (deletingClient(); as client) {
+  <div class="modal-overlay" (click)="closeDeleteModal()">
+    <section
+      class="modal-panel modal-panel--narrow panel"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="delete-client-title"
+      aria-describedby="delete-client-description"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="modal-header">
+        <div>
+          <h3 id="delete-client-title">Excluir cliente</h3>
+          <p>Esta ação não poderá ser desfeita.</p>
+        </div>
+        <button
+          type="button"
+          class="modal-close"
+          aria-label="Fechar"
+          (click)="closeDeleteModal()"
+          [disabled]="deletingClientId() !== null"
+        >×</button>
+      </header>
+
+      @if (deleteModalErrorMessage()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ deleteModalErrorMessage() }}</strong>
+        </article>
+      }
+
+      <p id="delete-client-description" class="delete-confirmation">
+        Tem certeza de que deseja excluir o cliente <strong>{{ client.legalName }}</strong>?
+      </p>
+
+      <div class="form-actions">
+        <button
+          type="button"
+          class="button-primary button-primary--danger"
+          (click)="confirmDeleteClient()"
+          [disabled]="deletingClientId() !== null"
+        >
+          {{ deletingClientId() === client.id ? 'Excluindo...' : 'Excluir cliente' }}
+        </button>
+        <button
+          type="button"
+          class="button-secondary"
+          (click)="closeDeleteModal()"
+          [disabled]="deletingClientId() !== null"
+        >
+          Cancelar
+        </button>
+      </div>
     </section>
   </div>
 }

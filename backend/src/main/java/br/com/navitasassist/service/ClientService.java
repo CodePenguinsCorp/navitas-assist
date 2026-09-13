@@ -5,8 +5,10 @@ import java.util.List;
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.client.ClientRequest;
 import br.com.navitasassist.client.ClientResponse;
+import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.repository.ClientRepository;
+import br.com.navitasassist.repository.RmaRecordRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ClientService {
 
     private final ClientRepository clientRepository;
+    private final RmaRecordRepository rmaRecordRepository;
 
     @Transactional(readOnly = true)
     public List<ClientResponse> listAll() {
@@ -38,6 +41,16 @@ public class ClientService {
         Client client = getEntityById(id);
         apply(client, request);
         return ClientResponse.from(clientRepository.save(client));
+    }
+
+    public void delete(Long id) {
+        Client client = getEntityById(id);
+
+        if (rmaRecordRepository.existsByClient_Id(id)) {
+            throw new BusinessException("Client cannot be deleted because it is used by an RMA.");
+        }
+
+        clientRepository.delete(client);
     }
 
     @Transactional(readOnly = true)
