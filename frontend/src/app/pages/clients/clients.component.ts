@@ -97,7 +97,7 @@ export class ClientsComponent {
   );
 
   protected readonly form = this.formBuilder.nonNullable.group({
-    legalName: ['', [Validators.required, Validators.maxLength(120)]],
+    legalName: ['', [Validators.required, Validators.pattern(/^(?:[\s\p{Pd}]*[^\s\p{Pd}]){0,120}[\s\p{Pd}]*$/u)]],
     tradeName: ['', [Validators.maxLength(120)]],
     documentNumber: ['', [Validators.maxLength(18)]],
     contactName: ['', [Validators.maxLength(120)]],
@@ -113,6 +113,24 @@ export class ClientsComponent {
 
   protected updateSearch(value: string): void {
     this.searchTerm.set(value);
+  }
+
+  protected limitLegalName(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    let count = 0;
+    let limitedValue = '';
+
+    for (const character of input.value) {
+      if (!/[\s\p{Pd}]/u.test(character) && ++count > 120) {
+        break;
+      }
+      limitedValue += character;
+    }
+
+    if (input.value !== limitedValue) {
+      input.value = limitedValue;
+      this.form.controls.legalName.setValue(limitedValue);
+    }
   }
 
   protected openCreateModal(): void {
