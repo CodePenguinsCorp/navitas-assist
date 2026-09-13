@@ -92,6 +92,11 @@ type ModalView = 'create' | 'details' | 'diagnosis';
       color: var(--muted);
       line-height: 1.55;
     }
+
+    .purchase-date-unknown {
+      min-height: 42px;
+      align-self: center;
+    }
   `]
 })
 export class RmasComponent {
@@ -142,6 +147,9 @@ export class RmasComponent {
   protected readonly dateTimeLabel = formatDateTime;
   protected readonly trackableLabel = trackableLabel;
   protected readonly ownerLabel = ownerLabel;
+  protected get todayDate(): string {
+    return todayInputValue();
+  }
 
   protected readonly clientSelectOptions = computed<ReadonlyArray<CustomSelectOption<number>>>(() => [
     { value: 0, label: 'Selecione' },
@@ -195,15 +203,15 @@ export class RmasComponent {
     invoiceNumber: [''],
     invoiceFileName: [''],
     receivedBy: ['', [Validators.required, Validators.maxLength(120)]],
-    reportedFailure: ['', [Validators.required, Validators.maxLength(2000)]],
-    receivedAccessories: [''],
-    physicalCondition: [''],
+    reportedFailure: ['', [Validators.required, Validators.maxLength(1000)]],
+    receivedAccessories: ['', [Validators.maxLength(500)]],
+    physicalCondition: ['', [Validators.maxLength(500)]],
     priority: ['MEDIUM' as RmaPriority, [Validators.required]],
     warrantyStatusOverride: ['' as WarrantyOverrideValue],
-    warrantyJustification: [''],
-    repairSummary: [''],
-    replacedPartsSummary: [''],
-    testSummary: ['']
+    warrantyJustification: ['', [Validators.maxLength(1000)]],
+    repairSummary: ['', [Validators.maxLength(600)]],
+    replacedPartsSummary: ['', [Validators.maxLength(600)]],
+    testSummary: ['', [Validators.maxLength(800)]]
   });
 
   protected readonly diagnosisForm = this.formBuilder.nonNullable.group({
@@ -337,6 +345,14 @@ export class RmasComponent {
     }
 
     const raw = this.createForm.getRawValue();
+    const purchaseDate = raw.purchaseDateUnknown ? '' : raw.purchaseDate;
+    if ((raw.manufacturedAt && raw.manufacturedAt > this.todayDate)
+      || (purchaseDate && (purchaseDate > this.todayDate || !!raw.manufacturedAt && purchaseDate < raw.manufacturedAt))
+      || (purchaseDate && raw.entryDate < purchaseDate)) {
+      this.pageError.set('Confira as datas: fabricação até hoje, compra entre fabricação e hoje, e entrada a partir da compra.');
+      this.pageMessage.set('');
+      return;
+    }
     const warrantyStatusOverride = raw.warrantyStatusOverride || null;
     const warrantyJustification = normalizeText(raw.warrantyJustification);
 

@@ -127,6 +127,17 @@
   background: #edf5fc;
 }
 
+.date-picker__day:disabled,
+.date-picker__footer-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.date-picker__day:disabled:hover,
+.date-picker__footer-action:disabled:hover {
+  background: transparent;
+}
+
 .date-picker__day.is-outside {
   color: #97a9bc;
 }

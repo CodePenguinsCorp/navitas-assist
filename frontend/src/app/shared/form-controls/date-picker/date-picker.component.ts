@@ -41,6 +41,8 @@ export class DatePickerComponent implements ControlValueAccessor {
   readonly ariaLabel = input('Selecionar data');
   readonly disabled = input(false);
   readonly allowClear = input(true);
+  readonly minDate = input('');
+  readonly maxDate = input('');
 
   @Output() readonly valueChange = new EventEmitter<string>();
 
@@ -57,6 +59,11 @@ export class DatePickerComponent implements ControlValueAccessor {
     new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(this.viewMonth())
   );
   protected readonly calendarDays = computed(() => buildCalendarDays(this.viewMonth(), this.selectedValue()));
+  protected readonly todayDisabled = computed(() => this.isDateDisabled(toIsoDate(new Date())));
+
+  protected isDateDisabled(iso: string): boolean {
+    return (!!this.minDate() && iso < this.minDate()) || (!!this.maxDate() && iso > this.maxDate());
+  }
 
   private onChange: (value: string) => void = () => {};
   private onTouched: () => void = () => {};
@@ -82,6 +89,7 @@ export class DatePickerComponent implements ControlValueAccessor {
   }
 
   protected selectDay(day: CalendarDay): void {
+    if (this.isDateDisabled(day.iso)) return;
     this.applyValue(day.iso);
     this.close();
   }
@@ -92,6 +100,7 @@ export class DatePickerComponent implements ControlValueAccessor {
   }
 
   protected selectToday(): void {
+    if (this.todayDisabled()) return;
     this.applyValue(toIsoDate(new Date()));
     this.close();
   }

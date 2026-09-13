@@ -291,7 +291,12 @@
 
         <div class="field-group">
           <label>Fabricação</label>
-          <app-date-picker formControlName="manufacturedAt" ariaLabel="Data de fabricação" />
+          <app-date-picker formControlName="manufacturedAt" ariaLabel="Data de fabricação" [maxDate]="todayDate" />
+        </div>
+
+        <div class="field-group">
+          <label>Entrada</label>
+          <app-date-picker formControlName="entryDate" ariaLabel="Data de entrada" [allowClear]="false" [minDate]="createForm.controls.purchaseDateUnknown.value ? '' : createForm.controls.purchaseDate.value" />
         </div>
 
         <div class="field-group">
@@ -300,18 +305,15 @@
             formControlName="purchaseDate"
             ariaLabel="Data da compra"
             [disabled]="createForm.controls.purchaseDateUnknown.value"
+            [minDate]="createForm.controls.manufacturedAt.value"
+            [maxDate]="todayDate"
           />
         </div>
 
-        <label class="checkbox-row">
+        <label class="checkbox-row purchase-date-unknown">
           <input type="checkbox" formControlName="purchaseDateUnknown" />
           Data da compra desconhecida
         </label>
-
-        <div class="field-group">
-          <label>Entrada</label>
-          <app-date-picker formControlName="entryDate" ariaLabel="Data de entrada" [allowClear]="false" />
-        </div>
 
         <div class="field-group">
           <label for="invoiceNumber">Nota fiscal</label>
@@ -339,17 +341,17 @@
 
         <div class="field-group field-group--full">
           <label for="reportedFailure">Falha relatada</label>
-          <textarea id="reportedFailure" formControlName="reportedFailure" rows="4"></textarea>
+          <textarea id="reportedFailure" formControlName="reportedFailure" rows="4" maxlength="1000"></textarea>
         </div>
 
         <div class="field-group field-group--full">
           <label for="receivedAccessories">Acessórios</label>
-          <textarea id="receivedAccessories" formControlName="receivedAccessories" rows="3"></textarea>
+          <textarea id="receivedAccessories" formControlName="receivedAccessories" rows="3" maxlength="500"></textarea>
         </div>
 
         <div class="field-group field-group--full">
           <label for="physicalCondition">Condição física</label>
-          <textarea id="physicalCondition" formControlName="physicalCondition" rows="3"></textarea>
+          <textarea id="physicalCondition" formControlName="physicalCondition" rows="3" maxlength="500"></textarea>
         </div>
 
         <div class="field-group">
@@ -363,22 +365,22 @@
 
         <div class="field-group field-group--full">
           <label for="warrantyJustification">Justificativa</label>
-          <textarea id="warrantyJustification" formControlName="warrantyJustification" rows="3"></textarea>
+          <textarea id="warrantyJustification" formControlName="warrantyJustification" rows="3" maxlength="1000"></textarea>
         </div>
 
         <div class="field-group field-group--full">
           <label for="repairSummary">Reparo</label>
-          <textarea id="repairSummary" formControlName="repairSummary" rows="3"></textarea>
+          <textarea id="repairSummary" formControlName="repairSummary" rows="3" maxlength="600"></textarea>
         </div>
 
         <div class="field-group field-group--full">
           <label for="replacedPartsSummary">Peças trocadas</label>
-          <textarea id="replacedPartsSummary" formControlName="replacedPartsSummary" rows="3"></textarea>
+          <textarea id="replacedPartsSummary" formControlName="replacedPartsSummary" rows="3" maxlength="600"></textarea>
         </div>
 
         <div class="field-group field-group--full">
           <label for="testSummary">Testes</label>
-          <textarea id="testSummary" formControlName="testSummary" rows="3"></textarea>
+          <textarea id="testSummary" formControlName="testSummary" rows="3" maxlength="800"></textarea>
         </div>
 
         <div class="form-actions form-actions--full">

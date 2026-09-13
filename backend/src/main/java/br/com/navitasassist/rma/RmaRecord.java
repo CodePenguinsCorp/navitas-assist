@@ -97,7 +97,7 @@ public class RmaRecord extends AuditableEntity {
     @Column(nullable = false)
     private boolean warrantyOverridden;
 
-    @Column(length = 255)
+    @Column(length = 1000)
     private String warrantyJustification;
 
     @Column(length = 120)
