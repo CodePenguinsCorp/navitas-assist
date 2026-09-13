@@ -107,6 +107,7 @@ export class RmasComponent {
 
   protected readonly loading = signal(true);
   protected readonly createSubmitting = signal(false);
+  protected readonly dateErrors = signal({ manufacturedAt: '', purchaseDate: '', entryDate: '' });
   protected readonly diagnosisSubmitting = signal(false);
   protected readonly historyLoading = signal(false);
 
@@ -149,6 +150,13 @@ export class RmasComponent {
   protected readonly ownerLabel = ownerLabel;
   protected get todayDate(): string {
     return todayInputValue();
+  }
+
+  protected get entryMinDate(): string {
+    const manufacturedAt = this.createForm.controls.manufacturedAt.value;
+    const purchaseDate = this.createForm.controls.purchaseDateUnknown.value
+      ? '' : this.createForm.controls.purchaseDate.value;
+    return manufacturedAt > purchaseDate ? manufacturedAt : purchaseDate;
   }
 
   protected readonly clientSelectOptions = computed<ReadonlyArray<CustomSelectOption<number>>>(() => [
@@ -224,6 +232,13 @@ export class RmasComponent {
   });
 
   constructor() {
+    this.createForm.valueChanges.subscribe(() => {
+      if (this.createForm.controls.purchaseDateUnknown.value && this.createForm.controls.purchaseDate.value) {
+        this.createForm.controls.purchaseDate.setValue('');
+        return;
+      }
+      this.dateErrors.set(this.validateCreateDates());
+    });
     this.seedOperatorDefaults();
     this.loadWorkspace();
   }
@@ -345,11 +360,10 @@ export class RmasComponent {
     }
 
     const raw = this.createForm.getRawValue();
-    const purchaseDate = raw.purchaseDateUnknown ? '' : raw.purchaseDate;
-    if ((raw.manufacturedAt && raw.manufacturedAt > this.todayDate)
-      || (purchaseDate && (purchaseDate > this.todayDate || !!raw.manufacturedAt && purchaseDate < raw.manufacturedAt))
-      || (purchaseDate && raw.entryDate < purchaseDate)) {
-      this.pageError.set('Confira as datas: fabricação até hoje, compra entre fabricação e hoje, e entrada a partir da compra.');
+    const dateErrors = this.validateCreateDates();
+    this.dateErrors.set(dateErrors);
+    if (Object.values(dateErrors).some(Boolean)) {
+      this.pageError.set('Corrija as datas indicadas no formulário.');
       this.pageMessage.set('');
       return;
     }
@@ -563,6 +577,23 @@ export class RmasComponent {
       replacedPartsSummary: '',
       testSummary: ''
     });
+  }
+
+  private validateCreateDates(): { manufacturedAt: string; purchaseDate: string; entryDate: string } {
+    const { manufacturedAt, purchaseDate, purchaseDateUnknown, entryDate } = this.createForm.getRawValue();
+    const knownPurchaseDate = purchaseDateUnknown ? '' : purchaseDate;
+    return {
+      manufacturedAt: manufacturedAt && manufacturedAt > this.todayDate
+        ? 'A fabricação não pode ser posterior a hoje.' : '',
+      purchaseDate: knownPurchaseDate && knownPurchaseDate > this.todayDate
+        ? 'A compra não pode ser posterior a hoje.'
+        : knownPurchaseDate && manufacturedAt && knownPurchaseDate < manufacturedAt
+          ? 'A compra não pode ser anterior à fabricação.' : '',
+      entryDate: entryDate && manufacturedAt && entryDate < manufacturedAt
+        ? 'A entrada não pode ser anterior à fabricação.'
+        : knownPurchaseDate && entryDate && entryDate < knownPurchaseDate
+          ? 'A entrada não pode ser anterior à compra.' : ''
+    };
   }
 
   private buildFilters(): { query?: string; status?: RmaStatus } {

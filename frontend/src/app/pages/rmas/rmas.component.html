@@ -292,11 +292,17 @@
         <div class="field-group">
           <label>Fabricação</label>
           <app-date-picker formControlName="manufacturedAt" ariaLabel="Data de fabricação" [maxDate]="todayDate" />
+          @if (dateErrors().manufacturedAt) {
+            <small class="field-error">{{ dateErrors().manufacturedAt }}</small>
+          }
         </div>
 
         <div class="field-group">
           <label>Entrada</label>
-          <app-date-picker formControlName="entryDate" ariaLabel="Data de entrada" [allowClear]="false" [minDate]="createForm.controls.purchaseDateUnknown.value ? '' : createForm.controls.purchaseDate.value" />
+          <app-date-picker formControlName="entryDate" ariaLabel="Data de entrada" [allowClear]="false" [minDate]="entryMinDate" />
+          @if (dateErrors().entryDate) {
+            <small class="field-error">{{ dateErrors().entryDate }}</small>
+          }
         </div>
 
         <div class="field-group">
@@ -308,6 +314,9 @@
             [minDate]="createForm.controls.manufacturedAt.value"
             [maxDate]="todayDate"
           />
+          @if (dateErrors().purchaseDate) {
+            <small class="field-error">{{ dateErrors().purchaseDate }}</small>
+          }
         </div>
 
         <label class="checkbox-row purchase-date-unknown">

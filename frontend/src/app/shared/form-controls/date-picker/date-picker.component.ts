@@ -3,6 +3,7 @@ import {
   ElementRef,
   EventEmitter,
   HostListener,
+  OnDestroy,
   Output,
   computed,
   forwardRef,
@@ -34,7 +35,8 @@ const WEEKDAY_LABELS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
     }
   ]
 })
-export class DatePickerComponent implements ControlValueAccessor {
+export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
+  private static openPicker: DatePickerComponent | null = null;
   private readonly hostElement = inject(ElementRef<HTMLElement>);
 
   readonly placeholder = input('Selecione uma data');
@@ -74,10 +76,13 @@ export class DatePickerComponent implements ControlValueAccessor {
     }
 
     if (!this.isOpen()) {
+      DatePickerComponent.openPicker?.close();
       this.focusCurrentMonth();
+      this.isOpen.set(true);
+      DatePickerComponent.openPicker = this;
+    } else {
+      this.close();
     }
-
-    this.isOpen.update((open) => !open);
   }
 
   protected previousMonth(): void {
@@ -130,6 +135,12 @@ export class DatePickerComponent implements ControlValueAccessor {
     }
   }
 
+  ngOnDestroy(): void {
+    if (DatePickerComponent.openPicker === this) {
+      DatePickerComponent.openPicker = null;
+    }
+  }
+
   @HostListener('document:click', ['$event'])
   protected handleDocumentClick(event: MouseEvent): void {
     if (!this.hostElement.nativeElement.contains(event.target as Node)) {
@@ -150,6 +161,9 @@ export class DatePickerComponent implements ControlValueAccessor {
   }
 
   private close(): void {
+    if (DatePickerComponent.openPicker === this) {
+      DatePickerComponent.openPicker = null;
+    }
     if (this.isOpen()) {
       this.isOpen.set(false);
     }
