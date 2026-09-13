@@ -1022,8 +1022,34 @@ a {
   padding: 1.1rem 0.8rem 1.1rem 1.1rem;
   overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-gutter: stable;
   background-clip: padding-box;
+}
+
+.modal-panel::-webkit-scrollbar {
+  width: 12px;
+}
+
+.modal-panel::-webkit-scrollbar-track {
+  margin-block: 0.75rem;
+  border-radius: 999px;
+  background: rgba(205, 220, 235, 0.65);
+}
+
+.modal-panel::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: linear-gradient(180deg, #1c76bb 0%, #2ea8d4 100%);
+}
+
+.modal-panel::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #165f98 0%, #238cb4 100%);
+}
+
+.modal-panel::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .modal-panel .form-grid {
