@@ -21,21 +21,6 @@
     }
   </section>
 
-  <section class="module-grid">
-    @for (module of modules(); track module.title) {
-      <article class="module-card panel module-card--compact">
-        <div class="support-line">
-          <strong>{{ module.title }}</strong>
-          <span class="tag">{{ module.tag }}</span>
-        </div>
-        <div class="support-line">
-          <span>{{ module.summary }}</span>
-          <a [routerLink]="module.route" class="button-secondary">Abrir</a>
-        </div>
-      </article>
-    }
-  </section>
-
   <section class="two-column-grid">
     <article class="table-card panel">
       <h3>Fila</h3>

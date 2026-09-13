@@ -1,9 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { finalize, forkJoin, of } from 'rxjs';
 import {
   CLOSED_RMA_STATUSES,
-  MODULE_CARDS,
   RMA_PRIORITY_LABELS,
   RMA_STATUS_LABELS
 } from '../../core/mock-data';
@@ -44,7 +42,6 @@ interface RecentRmaRow {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink],
   templateUrl: './dashboard.component.html',
   styles: [':host { display: block; }']
 })
@@ -101,10 +98,6 @@ export class DashboardComponent {
       }
     ];
   });
-
-  protected readonly modules = computed(() =>
-    MODULE_CARDS.filter((module) => this.authService.hasAnyRole(module.roles))
-  );
 
   protected readonly queue = computed<QueueRow[]>(() =>
     [...this.rmasSignal()]
