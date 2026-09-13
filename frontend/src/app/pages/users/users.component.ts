@@ -32,9 +32,38 @@ const USER_LIMITS = { fullName: 60, username: 30 } as const;
   imports: [ReactiveFormsModule, CustomSelectComponent],
   templateUrl: './users.component.html',
   styles: [`
-    :host { display: block; }
+    :host { display: block; min-width: 0; }
 
-    .user-actions { display: flex; gap: 0.45rem; }
+    .page-surface { grid-template-columns: minmax(0, 1fr); }
+    .table-card, .table-wrap, .search-field, .filter-field { min-width: 0; }
+    .search-field input { width: 100%; min-width: 0; }
+    .filter-field { flex: 0 1 180px; }
+    .table-card table { table-layout: fixed; }
+    .table-card th, .table-card td { overflow-wrap: anywhere; padding-inline: 0.4rem; }
+    .table-actions-col { width: 9rem; white-space: normal; }
+    .user-actions { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+    .alert-banner, .delete-confirmation { overflow-wrap: anywhere; }
+
+    @media (max-width: 720px) {
+      .table-card table, .table-card tbody, .table-card tr, .table-card td { display: block; }
+      .table-card thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+      }
+      .table-card tr { padding-block: 0.65rem; border-bottom: 1px solid var(--line); }
+      .table-card td { width: auto; border: 0; padding-block: 0.35rem; }
+      .table-card td::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 0.2rem;
+        color: var(--muted);
+        font-size: 0.76rem;
+        font-weight: 700;
+      }
+    }
 
     .user-form-modal {
       width: min(100%, 780px);

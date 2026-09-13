@@ -100,16 +100,16 @@
           <tbody>
             @for (user of filteredUsers(); track user.id) {
               <tr>
-                <td>
+                <td data-label="Nome">
                   <strong class="table-title">{{ user.fullName }}</strong>
                 </td>
-                <td>{{ user.username }}</td>
-                <td>{{ roleLabel(user.role) }}</td>
-                <td>
+                <td data-label="Usuário">{{ user.username }}</td>
+                <td data-label="Perfil">{{ roleLabel(user.role) }}</td>
+                <td data-label="Status">
                   <span [class]="statusClass(user)">{{ user.active ? 'Ativo' : 'Inativo' }}</span>
                 </td>
-                <td>{{ updatedAtLabel(user) }}</td>
-                <td class="table-actions-col">
+                <td data-label="Atualizado">{{ updatedAtLabel(user) }}</td>
+                <td class="table-actions-col" data-label="Ação">
                   <div class="user-actions">
                     <button
                       type="button"
