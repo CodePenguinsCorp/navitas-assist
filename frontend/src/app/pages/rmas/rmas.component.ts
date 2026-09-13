@@ -234,10 +234,6 @@ export class RmasComponent {
     this.refreshRmas();
   }
 
-  protected refresh(): void {
-    this.refreshRmas();
-  }
-
   protected openCreateModal(): void {
     if (!this.canOpenRma()) {
       this.pageError.set('Seu perfil não pode abrir novos RMAs.');

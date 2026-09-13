@@ -3,20 +3,6 @@
     <div>
       <h1>Dashboard</h1>
     </div>
-    <div class="shell-actions">
-      <a routerLink="/rmas" class="button-primary">RMAs</a>
-      <a routerLink="/clientes" class="button-secondary">Clientes</a>
-      <a routerLink="/produtos" class="button-secondary">Produtos</a>
-      <button
-        type="button"
-        class="button-secondary"
-        [disabled]="refreshing()"
-        [attr.aria-busy]="refreshing()"
-        (click)="refresh()"
-      >
-        {{ refreshing() ? 'Atualizando...' : 'Atualizar' }}
-      </button>
-    </div>
   </section>
 
   @if (errorMessage()) {

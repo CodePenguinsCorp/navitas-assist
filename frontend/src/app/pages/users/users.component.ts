@@ -82,10 +82,6 @@ export class UsersComponent {
     this.loadUsers();
   }
 
-  protected refresh(): void {
-    this.loadUsers();
-  }
-
   protected updateSearch(value: string): void {
     this.searchTerm.set(value);
   }

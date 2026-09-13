@@ -93,10 +93,6 @@ export class ClientsComponent {
     this.loadClients();
   }
 
-  protected refresh(): void {
-    this.loadClients();
-  }
-
   protected updateSearch(value: string): void {
     this.searchTerm.set(value);
   }

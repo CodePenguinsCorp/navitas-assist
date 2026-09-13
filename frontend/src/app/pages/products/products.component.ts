@@ -165,10 +165,6 @@ export class ProductsComponent {
     this.loadProducts();
   }
 
-  protected refresh(): void {
-    this.loadProducts();
-  }
-
   protected updateSearch(value: string): void {
     this.searchTerm.set(value);
   }
