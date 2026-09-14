@@ -22,7 +22,7 @@ public class Client extends AuditableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 120)
+    @Column(nullable = false, columnDefinition = "text")
     private String legalName;
 
     @Column(length = 120)

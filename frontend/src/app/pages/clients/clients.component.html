@@ -25,7 +25,10 @@
 
   <section class="panel catalog-toolbar">
     <label class="search-field">
-      <span>Buscar</span>
+      <span class="search-field__heading">
+        <span>Buscar</span>
+        <span class="catalog-toolbar__result">{{ filteredClients().length }} registro(s)</span>
+      </span>
       <input
         #clientSearch
         type="search"
@@ -34,7 +37,6 @@
         (input)="updateSearch(clientSearch.value)"
       />
     </label>
-    <span class="catalog-toolbar__result">{{ filteredClients().length }} registro(s)</span>
   </section>
 
   @if (errorMessage()) {
@@ -125,7 +127,9 @@
           <h3>{{ editingClient() ? 'Editar cliente' : 'Novo cliente' }}</h3>
           <p>{{ editingClient() ? 'Atualize os dados principais do cliente.' : 'Preencha os dados principais para liberar o cadastro.' }}</p>
         </div>
-        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()">×</button>
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
       </header>
 
       @if (modalErrorMessage()) {
@@ -137,9 +141,10 @@
       <form class="form-grid" [formGroup]="form" (ngSubmit)="saveClient()">
         <label class="field-group field-group--full">
           <span>Razão social</span>
-          <input type="text" formControlName="legalName" />
+          <input type="text" formControlName="legalName" (input)="limitLegalName($event)" />
+          <small>Até 120 caracteres, sem contar espaços e traços.</small>
           @if (hasError('legalName')) {
-            <small class="field-error">Informe a razão social.</small>
+            <small class="field-error">Informe a razão social com até 120 caracteres, sem contar espaços e traços.</small>
           }
         </label>
 
@@ -149,18 +154,16 @@
         </label>
 
         <label class="field-group">
-          <span>Documento</span>
-          <input type="text" formControlName="documentNumber" />
-        </label>
-
-        <label class="field-group">
-          <span>Contato</span>
-          <input type="text" formControlName="contactName" />
+          <span>CNPJ/CPF</span>
+          <input type="text" formControlName="documentNumber" maxlength="18" />
         </label>
 
         <label class="field-group">
           <span>Telefone</span>
-          <input type="text" formControlName="phone" />
+          <input type="tel" formControlName="phone" maxlength="30" />
+          @if (hasError('phone')) {
+            <small class="field-error">Informe um telefone com até 30 caracteres.</small>
+          }
         </label>
 
         <label class="field-group field-group--full">
@@ -173,7 +176,10 @@
 
         <label class="field-group field-group--full">
           <span>Endereço</span>
-          <input type="text" formControlName="address" />
+          <input type="text" formControlName="address" maxlength="255" />
+          @if (hasError('address')) {
+            <small class="field-error">Informe um endereço com até 255 caracteres.</small>
+          }
         </label>
 
         <label class="field-group field-group--full">
@@ -215,7 +221,9 @@
           aria-label="Fechar"
           (click)="closeDeleteModal()"
           [disabled]="deletingClientId() !== null"
-        >×</button>
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
       </header>
 
       @if (deleteModalErrorMessage()) {

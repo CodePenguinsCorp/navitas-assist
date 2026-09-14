@@ -305,7 +305,7 @@ export class RmasComponent {
     const normalizedSerial = normalizeText(serialNumber);
 
     if (!normalizedBatch && !normalizedSerial) {
-      this.historyError.set('Informe lote ou serial para consultar o histórico.');
+      this.historyError.set('');
       this.historyMessage.set('');
       this.historySignal.set([]);
       return;
