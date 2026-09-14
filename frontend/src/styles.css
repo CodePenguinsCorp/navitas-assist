@@ -1108,6 +1108,15 @@ a {
   background: var(--surface-alt);
 }
 
+.modal-close svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
 .stats-grid {
   display: grid;
   gap: 1rem;
@@ -1154,6 +1163,19 @@ a {
 .catalog-toolbar__result {
   color: var(--muted);
   font-size: 0.92rem;
+}
+
+.search-field__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.search-field .catalog-toolbar__result {
+  font-size: 0.82rem;
+  font-weight: 400;
+  white-space: nowrap;
 }
 
 .search-field,

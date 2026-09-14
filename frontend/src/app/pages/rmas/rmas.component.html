@@ -182,7 +182,9 @@
             <h3>{{ rma.code }}</h3>
             <p>{{ rma.clientName }}</p>
           </div>
-          <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar">&times;</button>
+          <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
         </div>
 
         <div class="summary-list">
@@ -253,7 +255,9 @@
           <h3>Novo RMA</h3>
           <p>Preencha os dados do atendimento.</p>
         </div>
-        <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar">&times;</button>
+        <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
       </div>
 
       <form [formGroup]="createForm" (ngSubmit)="createRma()" class="form-grid">
@@ -386,7 +390,9 @@
           <h3>Diagnóstico</h3>
           <p>{{ selectedRma()?.code }}</p>
         </div>
-        <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar">&times;</button>
+        <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
       </div>
 
       <form [formGroup]="diagnosisForm" (ngSubmit)="saveDiagnosis()" class="form-grid">

@@ -64,7 +64,9 @@
           (click)="closeStatusModal()"
           [disabled]="boardUpdatingId() !== null"
           aria-label="Fechar"
-        >&times;</button>
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
       </div>
 
       @if (statusModalError()) {
