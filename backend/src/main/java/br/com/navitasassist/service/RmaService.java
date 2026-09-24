@@ -14,6 +14,8 @@ import br.com.navitasassist.item.ItemIdentification;
 import br.com.navitasassist.product.Product;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.CreateRmaRequest;
+import br.com.navitasassist.rma.RmaItem;
+import br.com.navitasassist.rma.RmaItemRequest;
 import br.com.navitasassist.rma.RmaPriority;
 import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaResponse;
@@ -70,16 +72,16 @@ public class RmaService {
 
     public RmaResponse create(CreateRmaRequest request) {
         Client client = clientService.getEntityById(request.clientId());
-        Product product = productService.getEntityById(request.productId());
+        List<RmaItem> items = buildItems(request.items());
 
         RmaRecord rma = new RmaRecord();
         rma.setCode(generateNextCode());
         rma.setClient(client);
-        rma.setProduct(product);
         rma.setStatus(RmaStatus.RECEIVED);
         rma.setPriority(defaultPriority(request.priority()));
 
-        applyTrackableFields(rma.getItemIdentification(), request.batchNumber(), request.serialNumber(), request.manufacturedAt());
+        rma.replaceItems(items);
+        syncLegacyItem(rma);
         applyCommonFields(
             rma,
             request.purchaseDate(),
@@ -111,17 +113,9 @@ public class RmaService {
         if (request.clientId() != null) {
             rma.setClient(clientService.getEntityById(request.clientId()));
         }
-        if (request.productId() != null) {
-            rma.setProduct(productService.getEntityById(request.productId()));
-        }
-        if (request.batchNumber() != null) {
-            rma.getItemIdentification().setBatchNumber(trimToNull(request.batchNumber()));
-        }
-        if (request.serialNumber() != null) {
-            rma.getItemIdentification().setSerialNumber(trimToNull(request.serialNumber()));
-        }
-        if (request.manufacturedAt() != null) {
-            rma.getItemIdentification().setManufacturedAt(request.manufacturedAt());
+        if (request.items() != null) {
+            rma.replaceItems(buildItems(request.items()));
+            syncLegacyItem(rma);
         }
         if (request.priority() != null) {
             rma.setPriority(request.priority());
@@ -151,7 +145,7 @@ public class RmaService {
         boolean shouldRecalculateWarranty = request.purchaseDate() != null
             || request.purchaseDateUnknown() != null
             || request.entryDate() != null
-            || request.productId() != null;
+            || request.items() != null;
 
         if (request.warrantyStatusOverride() != null) {
             applyWarranty(rma, request.warrantyStatusOverride(), request.warrantyJustification());
@@ -201,12 +195,37 @@ public class RmaService {
             .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
     }
 
-    private void applyTrackableFields(
-        ItemIdentification itemIdentification,
-        String batchNumber,
-        String serialNumber,
-        LocalDate manufacturedAt
-    ) {
+    private List<RmaItem> buildItems(List<RmaItemRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            throw new BusinessException("At least one product must be provided.");
+        }
+        if (requests.stream().anyMatch(Objects::isNull)) {
+            throw new BusinessException("Each RMA item must be provided.");
+        }
+
+        return requests.stream().map(request -> {
+            RmaItem item = new RmaItem();
+            item.setProduct(productService.getEntityById(request.productId()));
+            applyTrackableFields(item.getItemIdentification(), request.batchNumber(), request.serialNumber(), request.manufacturedAt());
+            if (item.getItemIdentification().isEmpty()) {
+                throw new BusinessException("Each product must have at least a batch number or serial number.");
+            }
+            return item;
+        }).toList();
+    }
+
+    private void syncLegacyItem(RmaRecord rma) {
+        RmaItem firstItem = rma.getItems().get(0);
+        rma.setProduct(firstItem.getProduct());
+        applyTrackableFields(
+            rma.getItemIdentification(),
+            firstItem.getItemIdentification().getBatchNumber(),
+            firstItem.getItemIdentification().getSerialNumber(),
+            firstItem.getItemIdentification().getManufacturedAt()
+        );
+    }
+
+    private void applyTrackableFields(ItemIdentification itemIdentification, String batchNumber, String serialNumber, LocalDate manufacturedAt) {
         itemIdentification.setBatchNumber(trimToNull(batchNumber));
         itemIdentification.setSerialNumber(trimToNull(serialNumber));
         itemIdentification.setManufacturedAt(manufacturedAt);
@@ -281,8 +300,11 @@ public class RmaService {
     }
 
     private void validateMandatoryFields(RmaRecord rma) {
-        if (rma.getItemIdentification().isEmpty()) {
-            throw new BusinessException("At least batch number or serial number must be provided.");
+        if (rma.getItems().isEmpty() && (rma.getProduct() == null || rma.getItemIdentification().isEmpty())) {
+            throw new BusinessException("At least one identified product must be provided.");
+        }
+        if (rma.getItems().stream().anyMatch(item -> item.getProduct() == null || item.getItemIdentification().isEmpty())) {
+            throw new BusinessException("Each product must have at least a batch number or serial number.");
         }
         if (rma.getPurchaseDate() == null && !rma.isPurchaseDateUnknown()) {
             throw new BusinessException("Provide a purchase date or mark it as unknown.");
@@ -290,8 +312,8 @@ public class RmaService {
         if (rma.getPurchaseDate() != null && rma.isPurchaseDateUnknown()) {
             throw new BusinessException("Purchase date cannot be informed and unknown at the same time.");
         }
-        if (rma.getClient() == null || rma.getProduct() == null) {
-            throw new BusinessException("Client and product are required.");
+        if (rma.getClient() == null) {
+            throw new BusinessException("Client is required.");
         }
         if (rma.getEntryDate() == null || trimToNull(rma.getReportedFailure()) == null || trimToNull(rma.getReceivedBy()) == null) {
             throw new BusinessException("Entry date, receiver and reported failure are required.");
@@ -323,7 +345,13 @@ public class RmaService {
             return WarrantyStatus.PENDING;
         }
 
-        LocalDate warrantyLimit = rma.getPurchaseDate().plusMonths(rma.getProduct().getDefaultWarrantyMonths());
+        Integer legacyWarrantyMonths = rma.getProduct() == null ? null : rma.getProduct().getDefaultWarrantyMonths();
+        int warrantyMonths = rma.getItems().stream()
+            .map(RmaItem::getProduct)
+            .map(Product::getDefaultWarrantyMonths)
+            .min(Integer::compareTo)
+            .orElseGet(() -> Objects.requireNonNull(legacyWarrantyMonths, "RMA must have at least one product"));
+        LocalDate warrantyLimit = rma.getPurchaseDate().plusMonths(warrantyMonths);
         return warrantyLimit.isBefore(rma.getEntryDate())
             ? WarrantyStatus.OUT_OF_WARRANTY
             : WarrantyStatus.IN_WARRANTY;

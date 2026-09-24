@@ -11,6 +11,7 @@ public record RmaResponse(
     String code,
     Long clientId,
     String clientName,
+    List<RmaItemResponse> items,
     Long productId,
     String productName,
     String productSku,
@@ -45,17 +46,23 @@ public record RmaResponse(
     Instant updatedAt
 ) {
     public static RmaResponse from(RmaRecord rma) {
+        List<RmaItemResponse> items = rma.getItems().isEmpty()
+            ? List.of(RmaItemResponse.fromLegacy(rma))
+            : rma.getItems().stream().map(RmaItemResponse::from).toList();
+        RmaItemResponse primaryItem = items.get(0);
+
         return new RmaResponse(
             rma.getId(),
             rma.getCode(),
             rma.getClient().getId(),
             rma.getClient().getLegalName(),
-            rma.getProduct().getId(),
-            rma.getProduct().getName(),
-            rma.getProduct().getSku(),
-            rma.getItemIdentification().getBatchNumber(),
-            rma.getItemIdentification().getSerialNumber(),
-            rma.getItemIdentification().getManufacturedAt(),
+            items,
+            primaryItem.productId(),
+            primaryItem.productName(),
+            primaryItem.productSku(),
+            primaryItem.batchNumber(),
+            primaryItem.serialNumber(),
+            primaryItem.manufacturedAt(),
             rma.getPurchaseDate(),
             rma.isPurchaseDateUnknown(),
             rma.getEntryDate(),
