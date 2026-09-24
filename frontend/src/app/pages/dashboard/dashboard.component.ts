@@ -12,7 +12,8 @@ import {
   RmaPriority,
   RmaResponse,
   RmaStatusHistoryResponse,
-  UserAccountResponse
+  UserAccountResponse,
+  WarrantyStatus
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
@@ -67,9 +68,10 @@ export class DashboardComponent {
 
     const activeRmas = rmas.filter((rma) => !CLOSED_RMA_STATUSES.includes(rma.status));
     const initialQueue = rmas.filter((rma) => rma.status === 'RECEIVED' || rma.status === 'TRIAGE');
-    const inWarrantyCount = rmas.filter((rma) => rma.warrantyStatus === 'IN_WARRANTY').length;
-    const pendingWarrantyCount = rmas.filter((rma) => rma.warrantyStatus === 'PENDING').length;
-    const warrantyRate = rmas.length === 0 ? 0 : Math.round((inWarrantyCount / rmas.length) * 100);
+    const rmaItems = rmas.flatMap((rma) => rma.items);
+    const inWarrantyCount = rmaItems.filter((item) => item.warrantyStatus === WarrantyStatus.IN_WARRANTY).length;
+    const pendingWarrantyCount = rmaItems.filter((item) => item.warrantyStatus === WarrantyStatus.PENDING).length;
+    const warrantyRate = rmaItems.length === 0 ? 0 : Math.round((inWarrantyCount / rmaItems.length) * 100);
     const catalogTotal = clients.length + products.length + users.length;
 
     return [
@@ -80,9 +82,9 @@ export class DashboardComponent {
         tone: 'brand'
       },
       {
-        label: 'Garantia',
+        label: 'Produtos em garantia',
         value: `${warrantyRate}%`,
-        variation: pendingWarrantyCount > 0 ? `${pendingWarrantyCount} pendentes` : 'Sem pendências',
+        variation: `${inWarrantyCount} de ${rmaItems.length} itens | ${pendingWarrantyCount} pendentes`,
         tone: 'sky'
       },
       {

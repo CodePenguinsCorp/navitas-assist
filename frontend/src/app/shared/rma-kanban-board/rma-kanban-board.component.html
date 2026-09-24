@@ -48,11 +48,15 @@
                     <h4>{{ item.code }}</h4>
                     <p>{{ item.clientName }}</p>
                   </div>
-                  <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus, item.warrantyOverridden)">
-                    {{ warrantyLabel(item.warrantyStatus, item.warrantyOverridden) }}
-                  </span>
                 </header>
                 <p>{{ productSummary(item) }} | {{ trackableLabel(item) }}</p>
+                <div class="board-card__warranties">
+                  @for (product of item.items; track product.id ?? $index; let index = $index) {
+                    <span class="mini-chip" [class]="warrantyClass(product.warrantyStatus)" [title]="product.productName">
+                      Item {{ index + 1 }} · {{ product.productSku }}: {{ warrantyLabel(product.warrantyStatus) }}
+                    </span>
+                  }
+                </div>
                 <p>{{ item.reportedFailure }}</p>
 
                 <div class="board-card__grid">

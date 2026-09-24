@@ -8,8 +8,7 @@ import {
   FAILURE_TYPE_OPTIONS,
   RMA_PRIORITY_LABELS,
   RMA_STATUS_FLOW,
-  RMA_STATUS_LABELS,
-  WARRANTY_STATUS_LABELS
+  RMA_STATUS_LABELS
 } from '../../core/mock-data';
 import {
   ClientResponse,
@@ -20,8 +19,7 @@ import {
   ProductResponse,
   RmaPriority,
   RmaResponse,
-  RmaStatus,
-  WarrantyStatus
+  RmaStatus
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
@@ -43,7 +41,7 @@ import {
   todayInputValue,
   trackableLabel,
   warrantyLabel,
-  warrantyTextClass
+  warrantyClass
 } from '../../core/utils/rma-ui';
 import {
   CustomSelectComponent,
@@ -54,7 +52,6 @@ import { DatePickerComponent } from '../../shared/form-controls/date-picker/date
 type SearchStatusValue = RmaStatus | '';
 type FailureTypeValue = FailureType | '';
 type FailureCauseValue = FailureCause | '';
-type WarrantyOverrideValue = WarrantyStatus | '';
 type ModalView = 'create' | 'details' | 'diagnosis';
 
 @Component({
@@ -142,8 +139,14 @@ type ModalView = 'create' | 'details' | 'diagnosis';
       border-bottom: 0;
     }
 
-    .rma-item-detail span {
+    .rma-item-detail > span:not(.mini-chip) {
       color: var(--muted);
+    }
+
+    .rma-item-warranties {
+      display: grid;
+      justify-items: start;
+      gap: 0.4rem;
     }
 
     @media (max-width: 720px) {
@@ -194,7 +197,7 @@ export class RmasComponent {
   protected readonly priorityLabel = priorityLabel;
   protected readonly priorityClass = priorityChipClass;
   protected readonly warrantyLabel = warrantyLabel;
-  protected readonly warrantyTextClass = warrantyTextClass;
+  protected readonly warrantyClass = warrantyClass;
   protected readonly failureTypeLabel = failureTypeLabel;
   protected readonly failureCauseLabel = failureCauseLabel;
   protected readonly dateLabel = formatDate;
@@ -222,7 +225,6 @@ export class RmasComponent {
 
   protected readonly statusFilterOptions = STATUS_FILTER_OPTIONS;
   protected readonly prioritySelectOptions = PRIORITY_SELECT_OPTIONS;
-  protected readonly warrantyOverrideSelectOptions = WARRANTY_OVERRIDE_OPTIONS;
   protected readonly failureTypeSelectOptions = FAILURE_TYPE_SELECT_OPTIONS;
   protected readonly failureCauseSelectOptions = FAILURE_CAUSE_SELECT_OPTIONS;
 
@@ -257,8 +259,6 @@ export class RmasComponent {
     receivedAccessories: [''],
     physicalCondition: [''],
     priority: ['MEDIUM' as RmaPriority, [Validators.required]],
-    warrantyStatusOverride: ['' as WarrantyOverrideValue],
-    warrantyJustification: [''],
     repairSummary: [''],
     replacedPartsSummary: [''],
     testSummary: ['']
@@ -409,15 +409,6 @@ export class RmasComponent {
     }
 
     const raw = this.createForm.getRawValue();
-    const warrantyStatusOverride = raw.warrantyStatusOverride || null;
-    const warrantyJustification = normalizeText(raw.warrantyJustification);
-
-    if (warrantyStatusOverride && !warrantyJustification) {
-      this.pageError.set('Informe a justificativa do override de garantia.');
-      this.pageMessage.set('');
-      return;
-    }
-
     const payload: CreateRmaRequest = {
       clientId: raw.clientId,
       items: raw.items.map((item) => ({
@@ -436,8 +427,6 @@ export class RmasComponent {
       receivedAccessories: normalizeText(raw.receivedAccessories),
       physicalCondition: normalizeText(raw.physicalCondition),
       priority: raw.priority,
-      warrantyStatusOverride,
-      warrantyJustification,
       repairSummary: normalizeText(raw.repairSummary),
       replacedPartsSummary: normalizeText(raw.replacedPartsSummary),
       testSummary: normalizeText(raw.testSummary)
@@ -614,8 +603,6 @@ export class RmasComponent {
       receivedAccessories: '',
       physicalCondition: '',
       priority: 'MEDIUM',
-      warrantyStatusOverride: '',
-      warrantyJustification: '',
       repairSummary: '',
       replacedPartsSummary: '',
       testSummary: ''
@@ -667,13 +654,6 @@ const PRIORITY_SELECT_OPTIONS: ReadonlyArray<CustomSelectOption<RmaPriority>> = 
   { value: 'HIGH', label: RMA_PRIORITY_LABELS.HIGH },
   { value: 'MEDIUM', label: RMA_PRIORITY_LABELS.MEDIUM },
   { value: 'LOW', label: RMA_PRIORITY_LABELS.LOW }
-];
-
-const WARRANTY_OVERRIDE_OPTIONS: ReadonlyArray<CustomSelectOption<WarrantyOverrideValue>> = [
-  { value: '', label: 'Cálculo automático' },
-  { value: 'IN_WARRANTY', label: WARRANTY_STATUS_LABELS.IN_WARRANTY },
-  { value: 'OUT_OF_WARRANTY', label: WARRANTY_STATUS_LABELS.OUT_OF_WARRANTY },
-  { value: 'PENDING', label: WARRANTY_STATUS_LABELS.PENDING }
 ];
 
 const FAILURE_TYPE_SELECT_OPTIONS: ReadonlyArray<CustomSelectOption<FailureTypeValue>> = [

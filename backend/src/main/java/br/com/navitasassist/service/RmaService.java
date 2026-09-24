@@ -12,7 +12,6 @@ import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.diagnosis.Diagnosis;
 import br.com.navitasassist.diagnosis.DiagnosisRequest;
 import br.com.navitasassist.item.ItemIdentification;
-import br.com.navitasassist.product.Product;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.CreateRmaRequest;
 import br.com.navitasassist.rma.RmaItem;
@@ -24,7 +23,6 @@ import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusHistory;
 import br.com.navitasassist.rma.RmaStatusUpdateRequest;
 import br.com.navitasassist.rma.UpdateRmaRequest;
-import br.com.navitasassist.rma.WarrantyStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -102,7 +100,6 @@ public class RmaService {
             null
         );
         validateMandatoryFields(rma);
-        applyWarranty(rma, request.warrantyStatusOverride(), request.warrantyJustification());
         addStatusHistory(rma, RmaStatus.RECEIVED, "RMA created");
 
         return RmaResponse.from(rmaRecordRepository.save(rma));
@@ -142,17 +139,6 @@ public class RmaService {
         );
 
         validateMandatoryFields(rma);
-
-        boolean shouldRecalculateWarranty = request.purchaseDate() != null
-            || request.purchaseDateUnknown() != null
-            || request.entryDate() != null
-            || request.items() != null;
-
-        if (request.warrantyStatusOverride() != null) {
-            applyWarranty(rma, request.warrantyStatusOverride(), request.warrantyJustification());
-        } else if (shouldRecalculateWarranty && !rma.isWarrantyOverridden()) {
-            applyWarranty(rma, null, null);
-        }
 
         return RmaResponse.from(rmaRecordRepository.save(rma));
     }
@@ -207,6 +193,7 @@ public class RmaService {
         return requests.stream().map(request -> {
             RmaItem item = new RmaItem();
             item.setProduct(productService.getEntityById(request.productId()));
+            item.setWarrantyMonths(item.getProduct().getDefaultWarrantyMonths());
             applyTrackableFields(item.getItemIdentification(), request.batchNumber(), request.serialNumber(), request.manufacturedAt());
             if (item.getItemIdentification().isEmpty()) {
                 throw new BusinessException("Each product must have at least a batch number or serial number.");
@@ -319,43 +306,6 @@ public class RmaService {
         if (rma.getEntryDate() == null || trimToNull(rma.getReportedFailure()) == null || trimToNull(rma.getReceivedBy()) == null) {
             throw new BusinessException("Entry date, receiver and reported failure are required.");
         }
-    }
-
-    private void applyWarranty(RmaRecord rma, WarrantyStatus overrideStatus, String justification) {
-        String actor = currentUsername();
-
-        if (overrideStatus != null) {
-            if (trimToNull(justification) == null) {
-                throw new BusinessException("Warranty override requires a justification.");
-            }
-            rma.setWarrantyStatus(overrideStatus);
-            rma.setWarrantyOverridden(true);
-            rma.setWarrantyJustification(trim(justification));
-        } else {
-            rma.setWarrantyStatus(calculateWarranty(rma));
-            rma.setWarrantyOverridden(false);
-            rma.setWarrantyJustification(null);
-        }
-
-        rma.setWarrantyUpdatedBy(actor);
-        rma.setWarrantyUpdatedAt(Instant.now());
-    }
-
-    private WarrantyStatus calculateWarranty(RmaRecord rma) {
-        if (rma.isPurchaseDateUnknown() || rma.getPurchaseDate() == null) {
-            return WarrantyStatus.PENDING;
-        }
-
-        Integer legacyWarrantyMonths = rma.getProduct() == null ? null : rma.getProduct().getDefaultWarrantyMonths();
-        int warrantyMonths = rma.getItems().stream()
-            .map(RmaItem::getProduct)
-            .map(Product::getDefaultWarrantyMonths)
-            .min(Integer::compareTo)
-            .orElseGet(() -> Objects.requireNonNull(legacyWarrantyMonths, "RMA must have at least one product"));
-        LocalDate warrantyLimit = rma.getPurchaseDate().plusMonths(warrantyMonths);
-        return warrantyLimit.isBefore(rma.getEntryDate())
-            ? WarrantyStatus.OUT_OF_WARRANTY
-            : WarrantyStatus.IN_WARRANTY;
     }
 
     private void addStatusHistory(RmaRecord rma, RmaStatus status, String note) {

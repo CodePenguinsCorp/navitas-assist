@@ -47,6 +47,24 @@ O projeto foi dividido em duas aplicações:
 - Datas sem horário (`YYYY-MM-DD` / `LocalDate`) preservam o dia informado, sem conversão de fuso.
 - Instantes de auditoria continuam armazenados em UTC e são exibidos no horário de São Paulo. No frontend, reutilize os utilitários de `core/utils/date-ui.ts`.
 
+## Garantia dos produtos no RMA
+
+Cada produto é avaliado individualmente. O vencimento corresponde à data de compra informada no RMA mais o prazo de garantia do produto, em meses. A cobertura considera a data de entrada do atendimento e inclui o dia do vencimento.
+
+O enum `WarrantyStatus`, usado no backend e no frontend, representa três situações:
+
+| Valor | Situação | Regra |
+| --- | --- | --- |
+| `PENDING` | Pendente | Data de compra desconhecida. |
+| `IN_WARRANTY` | Em garantia | Entrada até o vencimento, inclusive. |
+| `OUT_OF_WARRANTY` | Fora de garantia | Entrada após o vencimento. |
+
+O prazo é registrado em cada novo item para preservar a garantia quando o cadastro do produto mudar. A API disponibiliza prazo, vencimento e situação em `items[]`; as telas exibem esses dados por produto. O cálculo é automático, sem edição manual da situação.
+
+### Atualização do banco local
+
+Para bancos criados antes da NAV-29, execute [migrate-nav-29-warranty.sql](scripts/migrate-nav-29-warranty.sql) no banco da aplicação com o backend parado e depois inicie a versão atualizada. O script remove as cinco colunas antigas de garantia de `rmas`, preserva os registros e pode ser executado novamente. Bancos novos já são criados sem essas colunas.
+
 ## Estrutura do Projeto
 
 - `frontend/`: interface web

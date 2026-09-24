@@ -125,7 +125,7 @@
               <th>Produto</th>
               <th>Status</th>
               <th>Prioridade</th>
-              <th>Garantia</th>
+              <th>Garantia por produto</th>
               <th>Entrada</th>
               <th class="table-actions-col">Detalhes</th>
             </tr>
@@ -157,9 +157,13 @@
                   </span>
                 </td>
                 <td>
-                  <span class="mini-chip" [class]="warrantyTextClass(warrantyLabel(rma.warrantyStatus, rma.warrantyOverridden))">
-                    {{ warrantyLabel(rma.warrantyStatus, rma.warrantyOverridden) }}
-                  </span>
+                  <div class="rma-item-warranties">
+                    @for (item of rma.items; track item.id ?? $index; let index = $index) {
+                      <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)" [title]="item.productName + ' | ' + itemTrackableLabel(item)">
+                        Item {{ index + 1 }} · {{ item.productSku }}: {{ warrantyLabel(item.warrantyStatus) }}
+                      </span>
+                    }
+                  </div>
                 </td>
                 <td>{{ dateLabel(rma.entryDate) }}</td>
                 <td class="table-actions-col"><span class="rma-open-hint">Abrir</span></td>
@@ -190,9 +194,6 @@
         <div class="summary-list">
           <span class="mini-chip">{{ statusLabel(rma.status) }}</span>
           <span class="mini-chip" [class]="priorityClass(rma.priority)">{{ priorityLabel(rma.priority) }}</span>
-          <span class="mini-chip" [class]="warrantyTextClass(warrantyLabel(rma.warrantyStatus, rma.warrantyOverridden))">
-            {{ warrantyLabel(rma.warrantyStatus, rma.warrantyOverridden) }}
-          </span>
         </div>
 
         <div class="detail-grid">
@@ -219,12 +220,22 @@
         </div>
 
         <div class="summary-block">
-          <strong>Produtos e lotes</strong>
+          <strong>Produtos, lotes e garantias</strong>
+          <p class="muted-inline">Garantia avaliada na entrada do RMA. Compra: {{ rma.purchaseDateUnknown ? 'Data desconhecida' : dateLabel(rma.purchaseDate) }}.</p>
           <div class="rma-items-detail">
             @for (item of rma.items; track item.id ?? $index) {
               <div class="rma-item-detail">
                 <strong>{{ item.productSku }} | {{ item.productName }}</strong>
                 <span>{{ itemTrackableLabel(item) }}</span>
+                <div>
+                  <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)">{{ warrantyLabel(item.warrantyStatus) }}</span>
+                </div>
+                <span>Prazo de garantia: {{ item.warrantyMonths }} meses</span>
+                @if (item.warrantyExpiresAt) {
+                  <span>Vencimento: {{ dateLabel(item.warrantyExpiresAt) }}</span>
+                } @else {
+                  <span>Informe a data de compra para calcular a garantia.</span>
+                }
                 @if (item.manufacturedAt) {
                   <span>Fabricação: {{ dateLabel(item.manufacturedAt) }}</span>
                 }
@@ -392,20 +403,6 @@
         <div class="field-group field-group--full">
           <label for="physicalCondition">Condição física</label>
           <textarea id="physicalCondition" formControlName="physicalCondition" rows="3"></textarea>
-        </div>
-
-        <div class="field-group">
-          <label>Override de garantia</label>
-          <app-custom-select
-            formControlName="warrantyStatusOverride"
-            ariaLabel="Override de garantia"
-            [options]="warrantyOverrideSelectOptions"
-          />
-        </div>
-
-        <div class="field-group field-group--full">
-          <label for="warrantyJustification">Justificativa</label>
-          <textarea id="warrantyJustification" formControlName="warrantyJustification" rows="3"></textarea>
         </div>
 
         <div class="field-group field-group--full">

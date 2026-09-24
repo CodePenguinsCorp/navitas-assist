@@ -85,7 +85,14 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.items[0].batchNumber").value("LOT-A"))
             .andExpect(jsonPath("$.items[1].productId").value(secondProduct.getId()))
             .andExpect(jsonPath("$.items[1].batchNumber").value("LOT-B"))
-            .andExpect(jsonPath("$.items[1].serialNumber").value("SERIAL-B"));
+            .andExpect(jsonPath("$.items[1].serialNumber").value("SERIAL-B"))
+            .andExpect(jsonPath("$.items[0].warrantyMonths").value(12))
+            .andExpect(jsonPath("$.items[1].warrantyMonths").value(24))
+            .andExpect(jsonPath("$.items[0].warrantyStatus").value("PENDING"))
+            .andExpect(jsonPath("$.items[1].warrantyStatus").value("PENDING"))
+            .andExpect(jsonPath("$.items[0].warrantyExpiresAt").doesNotExist())
+            .andExpect(jsonPath("$.warrantyStatus").doesNotExist())
+            .andExpect(jsonPath("$.warrantyOverridden").doesNotExist());
 
         mockMvc.perform(get("/api/rmas/history")
                 .param("batchNumber", "LOT-B")
@@ -164,8 +171,8 @@ class RmaControllerIntegrationTest {
         rma.setClient(savedClient);
         rma.setProduct(originalProduct);
         rma.getItemIdentification().setBatchNumber("OLD-LOT");
-        rma.setPurchaseDate(LocalDate.now().minusMonths(18));
-        rma.setEntryDate(LocalDate.now());
+        rma.setPurchaseDate(LocalDate.of(2025, 1, 1));
+        rma.setEntryDate(LocalDate.of(2026, 7, 1));
         rma.setReceivedBy("Service desk");
         rma.setReportedFailure("Products do not start");
 
@@ -192,7 +199,11 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.items[1].productId").value(shortWarrantyProduct.getId()))
             .andExpect(jsonPath("$.productId").value(longWarrantyProduct.getId()))
             .andExpect(jsonPath("$.batchNumber").value("NEW-LOT-A"))
-            .andExpect(jsonPath("$.warrantyStatus").value("OUT_OF_WARRANTY"));
+            .andExpect(jsonPath("$.items[0].warrantyStatus").value("IN_WARRANTY"))
+            .andExpect(jsonPath("$.items[0].warrantyExpiresAt").value("2027-01-01"))
+            .andExpect(jsonPath("$.items[1].warrantyStatus").value("OUT_OF_WARRANTY"))
+            .andExpect(jsonPath("$.items[1].warrantyExpiresAt").value("2026-01-01"))
+            .andExpect(jsonPath("$.warrantyStatus").doesNotExist());
 
         mockMvc.perform(get("/api/rmas/history")
                 .param("batchNumber", "OLD-LOT")
@@ -231,7 +242,87 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.items", hasSize(1)))
             .andExpect(jsonPath("$.items[0].id").doesNotExist())
             .andExpect(jsonPath("$.items[0].productId").value(product.getId()))
-            .andExpect(jsonPath("$.items[0].serialNumber").value("LEGACY-SERIAL"));
+            .andExpect(jsonPath("$.items[0].serialNumber").value("LEGACY-SERIAL"))
+            .andExpect(jsonPath("$.items[0].warrantyStatus").value("PENDING"))
+            .andExpect(jsonPath("$.warrantyOverridden").doesNotExist());
+
+        mockMvc.perform(put("/api/rmas/{id}", savedRma.getId())
+                .with(httpBasic("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"purchaseDate":"2025-01-01","purchaseDateUnknown":false,"entryDate":"2026-01-02"}
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items[0].warrantyStatus").value("OUT_OF_WARRANTY"))
+            .andExpect(jsonPath("$.items[0].warrantyExpiresAt").value("2026-01-01"));
+    }
+
+    @Test
+    void shouldCalculateEachItemIndependentlyAndIgnoreManualWarrantyFields() throws Exception {
+        Client client = new Client();
+        client.setLegalName("Warranty client");
+        Client savedClient = clientRepository.save(client);
+        Product shortProduct = saveProduct("WARRANTY-12", "Twelve months", 12);
+        Product longProduct = saveProduct("WARRANTY-24", "Twenty-four months", 24);
+
+        Map<String, Object> payload = Map.of(
+            "clientId", savedClient.getId(),
+            "items", List.of(
+                Map.of("productId", shortProduct.getId(), "serialNumber", "SHORT"),
+                Map.of("productId", longProduct.getId(), "serialNumber", "LONG")
+            ),
+            "purchaseDate", "2025-01-01",
+            "entryDate", "2026-07-01",
+            "receivedBy", "Service desk",
+            "reportedFailure", "Failure",
+            "warrantyStatusOverride", "IN_WARRANTY",
+            "warrantyJustification", "Obsolete client payload"
+        );
+
+        String response = mockMvc.perform(post("/api/rmas")
+                .with(httpBasic("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.items[0].warrantyStatus").value("OUT_OF_WARRANTY"))
+            .andExpect(jsonPath("$.items[0].warrantyExpiresAt").value("2026-01-01"))
+            .andExpect(jsonPath("$.items[1].warrantyStatus").value("IN_WARRANTY"))
+            .andExpect(jsonPath("$.items[1].warrantyExpiresAt").value("2027-01-01"))
+            .andExpect(jsonPath("$.warrantyStatus").doesNotExist())
+            .andExpect(jsonPath("$.warrantyOverridden").doesNotExist())
+            .andExpect(jsonPath("$.warrantyJustification").doesNotExist())
+            .andExpect(jsonPath("$.warrantyUpdatedAt").doesNotExist())
+            .andReturn().getResponse().getContentAsString();
+        long id = objectMapper.readTree(response).get("id").asLong();
+
+        // Changing the catalog must not change the term registered for an existing item.
+        shortProduct.setDefaultWarrantyMonths(36);
+        productRepository.saveAndFlush(shortProduct);
+        mockMvc.perform(get("/api/rmas/{id}", id).with(httpBasic("admin", "admin123")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items[0].warrantyMonths").value(12))
+            .andExpect(jsonPath("$.items[0].warrantyStatus").value("OUT_OF_WARRANTY"))
+            .andExpect(jsonPath("$.items[1].warrantyMonths").value(24));
+
+        mockMvc.perform(put("/api/rmas/{id}", id)
+                .with(httpBasic("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"entryDate":"2026-01-01","warrantyStatusOverride":"OUT_OF_WARRANTY","warrantyJustification":"Ignored"}
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items[0].warrantyStatus").value("IN_WARRANTY"))
+            .andExpect(jsonPath("$.items[1].warrantyStatus").value("IN_WARRANTY"));
+
+        mockMvc.perform(put("/api/rmas/{id}", id)
+                .with(httpBasic("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"purchaseDateUnknown\":true}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items[0].warrantyStatus").value("PENDING"))
+            .andExpect(jsonPath("$.items[1].warrantyStatus").value("PENDING"))
+            .andExpect(jsonPath("$.items[0].warrantyExpiresAt").doesNotExist())
+            .andExpect(jsonPath("$.items[1].warrantyExpiresAt").doesNotExist());
     }
 
     private Product saveProduct(String sku, String name, int warrantyMonths) {
