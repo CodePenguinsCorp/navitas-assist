@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.nio.charset.StandardCharsets;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -26,6 +27,13 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/health").permitAll()
                 .requestMatchers("/api/users/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/auth/me", "/api/clients/**", "/api/products/**", "/api/rmas/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/clients", "/api/products", "/api/rmas").hasAnyRole("ADMIN", "SERVICE_DESK")
+                .requestMatchers(HttpMethod.PUT, "/api/rmas/*/diagnosis").hasAnyRole("ADMIN", "TECHNICIAN")
+                .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/status").hasAnyRole("ADMIN", "SERVICE_DESK", "TECHNICIAN")
+                .requestMatchers(HttpMethod.PUT, "/api/clients/*", "/api/products/*", "/api/rmas/*").hasAnyRole("ADMIN", "SERVICE_DESK")
+                .requestMatchers(HttpMethod.DELETE, "/api/clients/*", "/api/products/*").hasAnyRole("ADMIN", "SERVICE_DESK")
+                .requestMatchers("/api/**").hasRole("ADMIN")
                 .anyRequest().authenticated())
             .exceptionHandling(exception -> exception
                 .authenticationEntryPoint(restAuthenticationEntryPoint()))
