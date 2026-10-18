@@ -12,6 +12,6 @@ public record ProductRequest(
     @Size(max = 40) String hardwareVersion,
     @Size(max = 40) String firmwareVersion,
     @NotNull @Min(1) Integer defaultWarrantyMonths,
-    @Size(max = 1000) String technicalNotes
+    @Size(max = 500) String technicalNotes
 ) {
 }

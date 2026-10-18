@@ -2,11 +2,13 @@ package br.com.navitasassist.product;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -112,14 +114,76 @@ class ProductControllerIntegrationTest {
     }
 
     @Test
-    void shouldRejectCategoryAndTechnicalNotesOverTheirLimits() throws Exception {
+    void shouldRejectCategoryOverItsLimit() throws Exception {
         mockMvc.perform(post("/api/products")
                 .with(httpBasic("admin", "admin123"))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(productJson("SKU-LIMITS", "C".repeat(81), "N".repeat(1001))))
+                .content(productJson("SKU-LIMITS", "C".repeat(81), "Notes")))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.details", hasItem(startsWith("category:"))))
+            .andExpect(jsonPath("$.details", hasItem(startsWith("category:"))));
+    }
+
+    @Test
+    void shouldCreateProductWithFiveHundredCharacterTechnicalNotes() throws Exception {
+        String notes = "N".repeat(500);
+
+        mockMvc.perform(post("/api/products")
+                .with(httpBasic("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(productJson("SKU-NOTES", "Category", notes)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.technicalNotes").value(notes));
+
+        assertEquals(notes, productRepository.findAll().get(0).getTechnicalNotes());
+    }
+
+    @Test
+    void shouldRejectTechnicalNotesOverFiveHundredCharactersOnCreate() throws Exception {
+        mockMvc.perform(post("/api/products")
+                .with(httpBasic("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(productJson("SKU-NOTES", "Category", "N".repeat(501))))
+            .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.details", hasItem(startsWith("technicalNotes:"))));
+
+        assertEquals(0, productRepository.count());
+    }
+
+    @Test
+    void shouldUpdateProductWithFiveHundredCharacterTechnicalNotes() throws Exception {
+        Product product = saveProductWithTechnicalNotes();
+        String notes = "N".repeat(500);
+
+        mockMvc.perform(put("/api/products/{id}", product.getId())
+                .with(httpBasic("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(productJson(product.getSku(), "Category", notes)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.technicalNotes").value(notes));
+
+        assertEquals(notes, productRepository.findById(product.getId()).orElseThrow().getTechnicalNotes());
+    }
+
+    @Test
+    void shouldRejectTechnicalNotesOverFiveHundredCharactersOnUpdate() throws Exception {
+        Product product = saveProductWithTechnicalNotes();
+
+        mockMvc.perform(put("/api/products/{id}", product.getId())
+                .with(httpBasic("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(productJson(product.getSku(), "Category", "N".repeat(501))))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.details", hasItem(startsWith("technicalNotes:"))));
+
+        assertEquals("Original notes", productRepository.findById(product.getId()).orElseThrow().getTechnicalNotes());
+    }
+
+    private Product saveProductWithTechnicalNotes() {
+        Product product = new Product();
+        product.setSku("SKU-NOTES");
+        product.setName("Test product");
+        product.setTechnicalNotes("Original notes");
+        return productRepository.save(product);
     }
 
     private String productJson(String sku, String category, String technicalNotes) throws Exception {

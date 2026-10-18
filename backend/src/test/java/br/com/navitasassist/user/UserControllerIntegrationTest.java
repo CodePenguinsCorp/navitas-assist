@@ -1,9 +1,13 @@
 package br.com.navitasassist.user;
 
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -69,6 +73,95 @@ class UserControllerIntegrationTest {
     }
 
     @Test
+    void shouldCreateUserWithNameAndUsernameAtTheirLimits() throws Exception {
+        String username = "u".repeat(60);
+        String fullName = "N".repeat(120);
+
+        mockMvc.perform(post("/api/users")
+                .with(httpBasic("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(userJson(username, fullName)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.username").value(username))
+            .andExpect(jsonPath("$.fullName").value(fullName));
+
+        assertEquals(fullName, userAccountRepository.findByUsernameIgnoreCase(username).orElseThrow().getFullName());
+    }
+
+    @Test
+    void shouldUpdateUserWithNameAndUsernameAtTheirLimits() throws Exception {
+        UserAccount user = createUser("operator", "Operator", "password123");
+        String username = "u".repeat(60);
+        String fullName = "N".repeat(120);
+
+        mockMvc.perform(put("/api/users/{id}", user.getId())
+                .with(httpBasic("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(userJson(username, fullName)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.username").value(username))
+            .andExpect(jsonPath("$.fullName").value(fullName));
+
+        UserAccount updatedUser = userAccountRepository.findById(user.getId()).orElseThrow();
+        assertEquals(username, updatedUser.getUsername());
+        assertEquals(fullName, updatedUser.getFullName());
+    }
+
+    @Test
+    void shouldRejectUsernameOverSixtyCharactersOnCreate() throws Exception {
+        String username = "u".repeat(61);
+
+        mockMvc.perform(post("/api/users")
+                .with(httpBasic("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(userJson(username, "Operator")))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.details", hasItem(startsWith("username:"))));
+
+        assertFalse(userAccountRepository.findByUsernameIgnoreCase(username).isPresent());
+    }
+
+    @Test
+    void shouldRejectNameOverOneHundredTwentyCharactersOnCreate() throws Exception {
+        mockMvc.perform(post("/api/users")
+                .with(httpBasic("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(userJson("operator", "N".repeat(121))))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.details", hasItem(startsWith("fullName:"))));
+
+        assertFalse(userAccountRepository.findByUsernameIgnoreCase("operator").isPresent());
+    }
+
+    @Test
+    void shouldRejectUsernameOverSixtyCharactersOnUpdate() throws Exception {
+        UserAccount user = createUser("operator", "Operator", "password123");
+
+        mockMvc.perform(put("/api/users/{id}", user.getId())
+                .with(httpBasic("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(userJson("u".repeat(61), "Operator")))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.details", hasItem(startsWith("username:"))));
+
+        assertEquals("operator", userAccountRepository.findById(user.getId()).orElseThrow().getUsername());
+    }
+
+    @Test
+    void shouldRejectNameOverOneHundredTwentyCharactersOnUpdate() throws Exception {
+        UserAccount user = createUser("operator", "Operator", "password123");
+
+        mockMvc.perform(put("/api/users/{id}", user.getId())
+                .with(httpBasic("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(userJson("operator", "N".repeat(121))))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.details", hasItem(startsWith("fullName:"))));
+
+        assertEquals("Operator", userAccountRepository.findById(user.getId()).orElseThrow().getFullName());
+    }
+
+    @Test
     void shouldDeleteAnotherUser() throws Exception {
         UserAccount user = createUser("delete.me", "Delete Me", "password123");
 
@@ -89,6 +182,16 @@ class UserControllerIntegrationTest {
             .andExpect(jsonPath("$.message").value("You cannot delete your own user account."));
 
         assertTrue(userAccountRepository.existsById(admin.getId()));
+    }
+
+    private String userJson(String username, String fullName) throws Exception {
+        return objectMapper.writeValueAsString(Map.of(
+            "username", username,
+            "fullName", fullName,
+            "password", "password123",
+            "role", "SERVICE_DESK",
+            "active", true
+        ));
     }
 
     private UserAccount createUser(String username, String fullName, String password) {

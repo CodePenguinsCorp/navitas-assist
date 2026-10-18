@@ -67,7 +67,7 @@
 
     <article class="panel form-panel">
       <h3>Histórico</h3>
-      <form [formGroup]="historyForm" (ngSubmit)="searchHistory()" class="form-grid form-grid--inline">
+      <form [formGroup]="historyForm" (ngSubmit)="searchHistory()" class="form-grid form-grid--inline rma-history-form">
         <div class="field-group">
           <label for="historyBatch">Lote</label>
           <input id="historyBatch" type="text" formControlName="batchNumber" placeholder="LOT-2026-01" />

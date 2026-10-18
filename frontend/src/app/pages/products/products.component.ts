@@ -27,7 +27,7 @@ const PRODUCT_LIMITS = {
   category: 80,
   hardwareVersion: 40,
   firmwareVersion: 40,
-  technicalNotes: 1000
+  technicalNotes: 500
 } as const;
 
 const PRODUCT_PREVIEW_LIMITS = {

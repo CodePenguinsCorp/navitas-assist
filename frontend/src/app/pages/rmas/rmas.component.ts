@@ -64,6 +64,15 @@ type ModalView = 'create' | 'details' | 'diagnosis';
       display: block;
     }
 
+    .rma-history-form .field-group {
+      min-width: 0;
+    }
+
+    .rma-history-form input {
+      width: 100%;
+      min-width: 0;
+    }
+
     .rma-table-row {
       cursor: pointer;
       transition: background 160ms ease;

@@ -67,8 +67,10 @@ export class DashboardComponent {
     const activeRmas = rmas.filter((rma) => !CLOSED_RMA_STATUSES.includes(rma.status));
     const initialQueue = rmas.filter((rma) => rma.status === 'RECEIVED' || rma.status === 'TRIAGE');
     const inWarrantyCount = rmas.filter((rma) => rma.warrantyStatus === 'IN_WARRANTY').length;
-    const pendingWarrantyCount = rmas.filter((rma) => rma.warrantyStatus === 'PENDING').length;
     const warrantyRate = rmas.length === 0 ? 0 : Math.round((inWarrantyCount / rmas.length) * 100);
+    const averageWarrantyMonths = products.length === 0
+      ? null
+      : Math.round(products.reduce((sum, product) => sum + product.defaultWarrantyMonths, 0) / products.length);
     const catalogTotal = clients.length + products.length + users.length;
 
     return [
@@ -81,7 +83,9 @@ export class DashboardComponent {
       {
         label: 'Garantia',
         value: `${warrantyRate}%`,
-        variation: pendingWarrantyCount > 0 ? `${pendingWarrantyCount} pendentes` : 'Sem pendências',
+        variation: this.loading()
+          ? 'Carregando...'
+          : averageWarrantyMonths === null ? 'Duração média: não informada' : `Duração média: ${averageWarrantyMonths} meses`,
         tone: 'sky'
       },
       {
