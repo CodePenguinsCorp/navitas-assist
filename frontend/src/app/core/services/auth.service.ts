@@ -1,41 +1,61 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable } from 'rxjs';
-import { map, tap } from 'rxjs/operators';
+import { Observable, catchError, finalize, map, of, shareReplay, switchMap, tap } from 'rxjs';
 import { AuthUserResponse, LoginPayload, UserRole, UserSession } from '../models';
-
-const STORAGE_KEY = 'navitas-assist.session';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
-  private readonly sessionSignal = signal<UserSession | null>(this.restoreSession());
+  private readonly sessionSignal = signal<UserSession | null>(null);
+  private readonly initializedSignal = signal(false);
+  private restoreRequest$: Observable<UserSession | null> | null = null;
 
   readonly currentUser = this.sessionSignal.asReadonly();
   readonly isAuthenticated = computed(() => this.sessionSignal() !== null);
 
   login(payload: LoginPayload): Observable<UserSession> {
-    const username = payload.username.trim();
-    const authHeader = this.createBasicAuthHeader(username, payload.password);
-
-    return this.http.get<AuthUserResponse>('/api/auth/me', {
-      headers: new HttpHeaders({
-        Authorization: authHeader
-      })
-    }).pipe(
-      map((user) => ({
-        username: user.username,
-        name: user.fullName || user.username,
-        role: user.role,
-        authHeader
+    return this.ensureCsrfToken().pipe(
+      switchMap(() => this.http.post<AuthUserResponse>('/api/auth/login', {
+        username: payload.username.trim(),
+        password: payload.password
       })),
-      tap((session) => this.persistSession(session))
+      map((user) => this.toSession(user)),
+      tap((session) => {
+        this.sessionSignal.set(session);
+        this.initializedSignal.set(true);
+      })
     );
   }
 
-  logout(): void {
-    this.sessionSignal.set(null);
-    localStorage.removeItem(STORAGE_KEY);
+  logout(): Observable<void> {
+    return this.ensureCsrfToken().pipe(
+      switchMap(() => this.http.post<void>('/api/auth/logout', {})),
+      finalize(() => {
+        this.sessionSignal.set(null);
+        this.initializedSignal.set(true);
+      })
+    );
+  }
+
+  restoreSession(): Observable<UserSession | null> {
+    if (this.initializedSignal()) {
+      return of(this.sessionSignal());
+    }
+
+    if (!this.restoreRequest$) {
+      this.restoreRequest$ = this.http.get<AuthUserResponse>('/api/auth/me').pipe(
+        map((user) => this.toSession(user)),
+        tap((session) => this.sessionSignal.set(session)),
+        catchError(() => {
+          this.sessionSignal.set(null);
+          return of(null);
+        }),
+        finalize(() => this.initializedSignal.set(true)),
+        shareReplay({ bufferSize: 1, refCount: false })
+      );
+    }
+
+    return this.restoreRequest$;
   }
 
   hasAnyRole(roles: UserRole[]): boolean {
@@ -47,30 +67,15 @@ export class AuthService {
     return roles.includes(session.role);
   }
 
-  getAuthorizationHeader(): string | null {
-    return this.sessionSignal()?.authHeader ?? null;
+  private ensureCsrfToken(): Observable<unknown> {
+    return this.http.get('/api/auth/csrf');
   }
 
-  private persistSession(session: UserSession): void {
-    this.sessionSignal.set(session);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-  }
-
-  private restoreSession(): UserSession | null {
-    const rawValue = localStorage.getItem(STORAGE_KEY);
-    if (!rawValue) {
-      return null;
-    }
-
-    try {
-      return JSON.parse(rawValue) as UserSession;
-    } catch {
-      localStorage.removeItem(STORAGE_KEY);
-      return null;
-    }
-  }
-
-  private createBasicAuthHeader(username: string, password: string): string {
-    return `Basic ${btoa(`${username}:${password}`)}`;
+  private toSession(user: AuthUserResponse): UserSession {
+    return {
+      username: user.username,
+      name: user.fullName || user.username,
+      role: user.role
+    };
   }
 }

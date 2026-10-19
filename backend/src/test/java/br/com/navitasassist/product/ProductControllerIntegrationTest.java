@@ -4,7 +4,8 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -64,7 +65,8 @@ class ProductControllerIntegrationTest {
         Product savedProduct = productRepository.save(product);
 
         mockMvc.perform(delete("/api/products/{id}", savedProduct.getId())
-                .with(httpBasic("admin", "admin123")))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf()))
             .andExpect(status().isNoContent());
 
         assertFalse(productRepository.existsById(savedProduct.getId()));
@@ -92,7 +94,8 @@ class ProductControllerIntegrationTest {
         rmaRecordRepository.save(rma);
 
         mockMvc.perform(delete("/api/products/{id}", savedProduct.getId())
-                .with(httpBasic("admin", "admin123")))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf()))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value(
                 "Product cannot be deleted because it is used by an RMA."
@@ -104,7 +107,8 @@ class ProductControllerIntegrationTest {
     @Test
     void shouldRejectSkuOverTwentyCharacters() throws Exception {
         mockMvc.perform(post("/api/products")
-                .with(httpBasic("admin", "admin123"))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(productJson("123456789012345678901", "Category", "Notes")))
             .andExpect(status().isBadRequest())
@@ -114,7 +118,8 @@ class ProductControllerIntegrationTest {
     @Test
     void shouldRejectCategoryAndTechnicalNotesOverTheirLimits() throws Exception {
         mockMvc.perform(post("/api/products")
-                .with(httpBasic("admin", "admin123"))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(productJson("SKU-LIMITS", "C".repeat(81), "N".repeat(1001))))
             .andExpect(status().isBadRequest())

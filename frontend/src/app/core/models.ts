@@ -42,7 +42,6 @@ export interface UserSession {
   username: string;
   name: string;
   role: UserRole;
-  authHeader: string;
 }
 
 export interface LoginPayload {

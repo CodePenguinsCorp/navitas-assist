@@ -27,12 +27,15 @@ services:
       mysql:
         condition: service_healthy
     environment:
+      SPRING_PROFILES_ACTIVE: prod
       DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       DB_USER: ${MYSQL_USER}
       DB_PASSWORD: ${MYSQL_PASSWORD}
       APP_ADMIN_USERNAME: ${APP_ADMIN_USERNAME:-admin}
       APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:?APP_ADMIN_PASSWORD obrigatorio}
       APP_ADMIN_FULL_NAME: ${APP_ADMIN_FULL_NAME:-Administrador}
+      SESSION_TIMEOUT: ${SESSION_TIMEOUT:-30m}
+      SESSION_COOKIE_SECURE: "true"
     expose:
       - "8080"
 
