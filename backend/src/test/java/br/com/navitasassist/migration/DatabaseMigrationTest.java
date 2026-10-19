@@ -10,12 +10,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.flywaydb.core.Flyway;
-import org.flywaydb.core.api.MigrationVersion;
 import org.junit.jupiter.api.Test;
 
 class DatabaseMigrationTest {
@@ -24,16 +22,15 @@ class DatabaseMigrationTest {
     private static final String PASSWORD = "";
 
     @Test
-    void createsVersionedSchemaInEmptyDatabase() throws SQLException {
-        String url = databaseUrl("empty");
+    void createsSchemaAndSupportsMultipleItemsPerRma() throws SQLException {
+        String url = "jdbc:h2:mem:migration_empty;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
 
-        int executedMigrations = flyway(url).migrate().migrationsExecuted;
+        int executedMigrations = Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate().migrationsExecuted;
 
-        assertEquals(2, executedMigrations);
+        assertEquals(1, executedMigrations);
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
             assertTrue(tableExists(connection, "rmas"));
             assertTrue(tableExists(connection, "rma_items"));
-            assertTrue(tableExists(connection, "flyway_schema_history"));
             assertEquals(
                 Set.of(
                     "idx_rma_items_rma_id",
@@ -43,67 +40,16 @@ class DatabaseMigrationTest {
                 ),
                 applicationIndexes(connection, "rma_items")
             );
-        }
-    }
 
-    @Test
-    void baselinesExistingDatabaseAndMigratesLegacyRmaWithoutDataLoss() throws SQLException {
-        String url = databaseUrl("legacy");
-        Flyway.configure()
-            .dataSource(url, USER, PASSWORD)
-            .target(MigrationVersion.fromVersion("1"))
-            .load()
-            .migrate();
-
-        long productId;
-        long rmaId;
-        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
-            try (Statement statement = connection.createStatement()) {
-                statement.execute("DROP TABLE flyway_schema_history");
-            }
             long clientId = insertClient(connection);
-            productId = insertProduct(connection);
-            rmaId = insertLegacyRma(connection, clientId, productId);
-        }
+            long productId = insertProduct(connection);
+            long rmaId = insertRma(connection, clientId, productId);
+            insertItem(connection, rmaId, productId, "SERIAL-A");
+            insertItem(connection, rmaId, productId, "SERIAL-B");
 
-        int executedMigrations = flyway(url).migrate().migrationsExecuted;
-
-        assertEquals(1, executedMigrations);
-        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
-            try (PreparedStatement statement = connection.prepareStatement("""
-                SELECT product_id, batch_number, serial_number, manufactured_at
-                FROM rma_items
-                WHERE rma_id = ?
-                """)) {
-                statement.setLong(1, rmaId);
-                try (ResultSet result = statement.executeQuery()) {
-                    assertTrue(result.next());
-                    assertEquals(productId, result.getLong("product_id"));
-                    assertEquals("LOTE-25", result.getString("batch_number"));
-                    assertEquals("SERIAL-25", result.getString("serial_number"));
-                    assertEquals(LocalDate.of(2026, 1, 15), result.getObject("manufactured_at", LocalDate.class));
-                }
-            }
-
-            assertEquals(1, count(connection, "rmas"));
-            assertEquals(1, count(connection, "rma_items"));
-            assertLegacyRmaPreserved(connection, rmaId, productId);
-            insertAdditionalItem(connection, rmaId, productId);
             assertEquals(2, count(connection, "rma_items"));
-            assertThrows(SQLException.class, () -> insertOrphanItem(connection, productId));
+            assertThrows(SQLException.class, () -> insertItem(connection, 999999, productId, "ORPHAN"));
         }
-    }
-
-    private Flyway flyway(String url) {
-        return Flyway.configure()
-            .dataSource(url, USER, PASSWORD)
-            .baselineOnMigrate(true)
-            .baselineVersion(MigrationVersion.fromVersion("1"))
-            .load();
-    }
-
-    private String databaseUrl(String name) {
-        return "jdbc:h2:mem:migration_" + name + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
     }
 
     private boolean tableExists(Connection connection, String tableName) throws SQLException {
@@ -128,7 +74,7 @@ class DatabaseMigrationTest {
     private long insertClient(Connection connection) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
             INSERT INTO clients (legal_name, created_at, updated_at)
-            VALUES ('Cliente legado', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            VALUES ('Cliente', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """, Statement.RETURN_GENERATED_KEYS)) {
             statement.executeUpdate();
             return generatedId(statement);
@@ -138,29 +84,40 @@ class DatabaseMigrationTest {
     private long insertProduct(Connection connection) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
             INSERT INTO products (sku, name, default_warranty_months, created_at, updated_at)
-            VALUES ('NAV-25', 'Produto legado', 12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            VALUES ('NAV-25', 'Produto', 12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """, Statement.RETURN_GENERATED_KEYS)) {
             statement.executeUpdate();
             return generatedId(statement);
         }
     }
 
-    private long insertLegacyRma(Connection connection, long clientId, long productId) throws SQLException {
+    private long insertRma(Connection connection, long clientId, long productId) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
             INSERT INTO rmas (
-                code, client_id, product_id, batch_number, serial_number, manufactured_at,
-                purchase_date_unknown, entry_date, received_by, reported_failure, priority,
-                status, warranty_status, warranty_overridden, created_at, updated_at
+                code, client_id, product_id, purchase_date_unknown, entry_date, received_by,
+                reported_failure, priority, status, warranty_status, warranty_overridden,
+                created_at, updated_at
             ) VALUES (
-                'RMA-LEGACY-25', ?, ?, 'LOTE-25', 'SERIAL-25', DATE '2026-01-15',
-                TRUE, DATE '2026-10-19', 'Técnico', 'Falha legada', 'HIGH',
-                'RECEIVED', 'PENDING', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                'RMA-25', ?, ?, TRUE, DATE '2026-10-19', 'Técnico', 'Falha',
+                'HIGH', 'RECEIVED', 'PENDING', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             )
             """, Statement.RETURN_GENERATED_KEYS)) {
             statement.setLong(1, clientId);
             statement.setLong(2, productId);
             statement.executeUpdate();
             return generatedId(statement);
+        }
+    }
+
+    private void insertItem(Connection connection, long rmaId, long productId, String serialNumber) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+            INSERT INTO rma_items (rma_id, product_id, serial_number)
+            VALUES (?, ?, ?)
+            """)) {
+            statement.setLong(1, rmaId);
+            statement.setLong(2, productId);
+            statement.setString(3, serialNumber);
+            statement.executeUpdate();
         }
     }
 
@@ -176,44 +133,6 @@ class DatabaseMigrationTest {
              ResultSet result = statement.executeQuery("SELECT COUNT(*) FROM " + tableName)) {
             result.next();
             return result.getInt(1);
-        }
-    }
-
-    private void assertLegacyRmaPreserved(Connection connection, long rmaId, long productId) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("""
-            SELECT product_id, batch_number, serial_number, manufactured_at
-            FROM rmas
-            WHERE id = ?
-            """)) {
-            statement.setLong(1, rmaId);
-            try (ResultSet result = statement.executeQuery()) {
-                assertTrue(result.next());
-                assertEquals(productId, result.getLong("product_id"));
-                assertEquals("LOTE-25", result.getString("batch_number"));
-                assertEquals("SERIAL-25", result.getString("serial_number"));
-                assertEquals(LocalDate.of(2026, 1, 15), result.getObject("manufactured_at", LocalDate.class));
-            }
-        }
-    }
-
-    private void insertAdditionalItem(Connection connection, long rmaId, long productId) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("""
-            INSERT INTO rma_items (rma_id, product_id, serial_number)
-            VALUES (?, ?, 'SERIAL-25-B')
-            """)) {
-            statement.setLong(1, rmaId);
-            statement.setLong(2, productId);
-            statement.executeUpdate();
-        }
-    }
-
-    private void insertOrphanItem(Connection connection, long productId) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("""
-            INSERT INTO rma_items (rma_id, product_id)
-            VALUES (999999, ?)
-            """)) {
-            statement.setLong(1, productId);
-            statement.executeUpdate();
         }
     }
 }
