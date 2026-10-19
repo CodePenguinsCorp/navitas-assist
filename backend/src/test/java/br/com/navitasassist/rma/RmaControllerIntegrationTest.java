@@ -2,7 +2,8 @@ package br.com.navitasassist.rma;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -10,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +34,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class RmaControllerIntegrationTest {
+
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
 
     @Autowired
     private MockMvc mockMvc;
@@ -76,7 +80,8 @@ class RmaControllerIntegrationTest {
         );
 
         mockMvc.perform(post("/api/rmas")
-                .with(httpBasic("admin", "admin123"))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))
             .andExpect(status().isCreated())
@@ -96,14 +101,14 @@ class RmaControllerIntegrationTest {
 
         mockMvc.perform(get("/api/rmas/history")
                 .param("batchNumber", "LOT-B")
-                .with(httpBasic("admin", "admin123")))
+                .with(user("admin").roles("ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$", hasSize(1)))
             .andExpect(jsonPath("$[0].items", hasSize(2)));
 
         mockMvc.perform(get("/api/rmas")
                 .param("query", "SKU-RMA-2")
-                .with(httpBasic("admin", "admin123")))
+                .with(user("admin").roles("ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$", hasSize(1)));
     }
@@ -125,7 +130,8 @@ class RmaControllerIntegrationTest {
         );
 
         mockMvc.perform(post("/api/rmas")
-                .with(httpBasic("admin", "admin123"))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))
             .andExpect(status().isBadRequest())
@@ -150,11 +156,94 @@ class RmaControllerIntegrationTest {
             """.formatted(savedClient.getId(), LocalDate.now());
 
         mockMvc.perform(post("/api/rmas")
-                .with(httpBasic("admin", "admin123"))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.details[0]", startsWith("items[0]:")));
+    }
+
+    @Test
+    void shouldRejectInconsistentRmaDates() throws Exception {
+        Client client = new Client();
+        client.setLegalName("Date validation client");
+        Client savedClient = clientRepository.save(client);
+        Product product = saveProduct("SKU-RMA-DATES", "Date validation product", 12);
+        LocalDate today = LocalDate.now(BUSINESS_ZONE);
+
+        Map<String, Object> futureManufacturing = Map.of(
+            "clientId", savedClient.getId(),
+            "items", List.of(Map.of("productId", product.getId(), "serialNumber", "FUTURE", "manufacturedAt", today.plusDays(1).toString())),
+            "purchaseDateUnknown", true,
+            "entryDate", today.toString(),
+            "receivedBy", "Service desk",
+            "reportedFailure", "Product does not start"
+        );
+        mockMvc.perform(post("/api/rmas")
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(futureManufacturing)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Manufacturing date cannot be after today."));
+
+        Map<String, Object> purchaseBeforeManufacturing = Map.of(
+            "clientId", savedClient.getId(),
+            "items", List.of(Map.of("productId", product.getId(), "serialNumber", "PURCHASE", "manufacturedAt", today.minusDays(1).toString())),
+            "purchaseDate", today.minusDays(2).toString(),
+            "entryDate", today.toString(),
+            "receivedBy", "Service desk",
+            "reportedFailure", "Product does not start"
+        );
+        mockMvc.perform(post("/api/rmas")
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(purchaseBeforeManufacturing)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Purchase date cannot be before manufacturing date."));
+
+        Map<String, Object> entryBeforePurchase = Map.of(
+            "clientId", savedClient.getId(),
+            "items", List.of(Map.of("productId", product.getId(), "serialNumber", "ENTRY")),
+            "purchaseDate", today.toString(),
+            "entryDate", today.minusDays(1).toString(),
+            "receivedBy", "Service desk",
+            "reportedFailure", "Product does not start"
+        );
+        mockMvc.perform(post("/api/rmas")
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(entryBeforePurchase)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Entry date cannot be before purchase date."));
+    }
+
+    @Test
+    void shouldRejectReportedFailureAboveNewRmaLimit() throws Exception {
+        Client client = new Client();
+        client.setLegalName("Text limit client");
+        Client savedClient = clientRepository.save(client);
+        Product product = saveProduct("SKU-RMA-LIMIT", "Text limit product", 12);
+
+        Map<String, Object> payload = Map.of(
+            "clientId", savedClient.getId(),
+            "items", List.of(Map.of("productId", product.getId(), "serialNumber", "LIMIT")),
+            "purchaseDateUnknown", true,
+            "entryDate", LocalDate.now(BUSINESS_ZONE).toString(),
+            "receivedBy", "Service desk",
+            "reportedFailure", "x".repeat(1001)
+        );
+
+        mockMvc.perform(post("/api/rmas")
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.details[0]", startsWith("reportedFailure:")));
     }
 
     @Test
@@ -190,7 +279,8 @@ class RmaControllerIntegrationTest {
         );
 
         mockMvc.perform(put("/api/rmas/{id}", savedRma.getId())
-                .with(httpBasic("admin", "admin123"))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))
             .andExpect(status().isOk())
@@ -207,13 +297,13 @@ class RmaControllerIntegrationTest {
 
         mockMvc.perform(get("/api/rmas/history")
                 .param("batchNumber", "OLD-LOT")
-                .with(httpBasic("admin", "admin123")))
+                .with(user("admin").roles("ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$", hasSize(0)));
 
         mockMvc.perform(get("/api/rmas/history")
                 .param("serialNumber", "NEW-SERIAL-B")
-                .with(httpBasic("admin", "admin123")))
+                .with(user("admin").roles("ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$", hasSize(1)));
     }
@@ -237,7 +327,7 @@ class RmaControllerIntegrationTest {
         RmaRecord savedRma = rmaRecordRepository.saveAndFlush(rma);
 
         mockMvc.perform(get("/api/rmas/{id}", savedRma.getId())
-                .with(httpBasic("admin", "admin123")))
+                .with(user("admin").roles("ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items", hasSize(1)))
             .andExpect(jsonPath("$.items[0].id").doesNotExist())
@@ -247,7 +337,8 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.warrantyOverridden").doesNotExist());
 
         mockMvc.perform(put("/api/rmas/{id}", savedRma.getId())
-                .with(httpBasic("admin", "admin123"))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {"purchaseDate":"2025-01-01","purchaseDateUnknown":false,"entryDate":"2026-01-02"}
@@ -280,7 +371,8 @@ class RmaControllerIntegrationTest {
         );
 
         String response = mockMvc.perform(post("/api/rmas")
-                .with(httpBasic("admin", "admin123"))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))
             .andExpect(status().isCreated())
@@ -298,14 +390,15 @@ class RmaControllerIntegrationTest {
         // Changing the catalog must not change the term registered for an existing item.
         shortProduct.setDefaultWarrantyMonths(36);
         productRepository.saveAndFlush(shortProduct);
-        mockMvc.perform(get("/api/rmas/{id}", id).with(httpBasic("admin", "admin123")))
+        mockMvc.perform(get("/api/rmas/{id}", id).with(user("admin").roles("ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items[0].warrantyMonths").value(12))
             .andExpect(jsonPath("$.items[0].warrantyStatus").value("OUT_OF_WARRANTY"))
             .andExpect(jsonPath("$.items[1].warrantyMonths").value(24));
 
         mockMvc.perform(put("/api/rmas/{id}", id)
-                .with(httpBasic("admin", "admin123"))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {"entryDate":"2026-01-01","warrantyStatusOverride":"OUT_OF_WARRANTY","warrantyJustification":"Ignored"}
@@ -315,7 +408,8 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.items[1].warrantyStatus").value("IN_WARRANTY"));
 
         mockMvc.perform(put("/api/rmas/{id}", id)
-                .with(httpBasic("admin", "admin123"))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"purchaseDateUnknown\":true}"))
             .andExpect(status().isOk())

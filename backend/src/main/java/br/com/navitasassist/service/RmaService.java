@@ -34,6 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class RmaService {
 
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
+
     private final RmaRecordRepository rmaRecordRepository;
     private final ClientService clientService;
     private final ProductService productService;
@@ -100,6 +102,7 @@ public class RmaService {
             null
         );
         validateMandatoryFields(rma);
+        validateDates(rma);
         addStatusHistory(rma, RmaStatus.RECEIVED, "RMA created");
 
         return RmaResponse.from(rmaRecordRepository.save(rma));
@@ -139,6 +142,7 @@ public class RmaService {
         );
 
         validateMandatoryFields(rma);
+        validateDates(rma);
 
         return RmaResponse.from(rmaRecordRepository.save(rma));
     }
@@ -308,6 +312,34 @@ public class RmaService {
         }
     }
 
+    private void validateDates(RmaRecord rma) {
+        LocalDate today = LocalDate.now(BUSINESS_ZONE);
+        LocalDate legacyManufacturedAt = rma.getItemIdentification().getManufacturedAt();
+        List<LocalDate> manufacturedDates = rma.getItems().isEmpty()
+            ? (legacyManufacturedAt == null ? List.of() : List.of(legacyManufacturedAt))
+            : rma.getItems().stream()
+                .map(RmaItem::getItemIdentification)
+                .map(ItemIdentification::getManufacturedAt)
+                .filter(Objects::nonNull)
+                .toList();
+
+        if (manufacturedDates.stream().anyMatch(date -> date.isAfter(today))) {
+            throw new BusinessException("Manufacturing date cannot be after today.");
+        }
+        if (rma.getPurchaseDate() != null && rma.getPurchaseDate().isAfter(today)) {
+            throw new BusinessException("Purchase date cannot be after today.");
+        }
+        if (rma.getPurchaseDate() != null && manufacturedDates.stream().anyMatch(date -> rma.getPurchaseDate().isBefore(date))) {
+            throw new BusinessException("Purchase date cannot be before manufacturing date.");
+        }
+        if (rma.getPurchaseDate() != null && rma.getEntryDate().isBefore(rma.getPurchaseDate())) {
+            throw new BusinessException("Entry date cannot be before purchase date.");
+        }
+        if (manufacturedDates.stream().anyMatch(date -> rma.getEntryDate().isBefore(date))) {
+            throw new BusinessException("Entry date cannot be before manufacturing date.");
+        }
+    }
+
     private void addStatusHistory(RmaRecord rma, RmaStatus status, String note) {
         RmaStatusHistory history = new RmaStatusHistory();
         history.setStatus(status);
@@ -318,7 +350,7 @@ public class RmaService {
     }
 
     private String generateNextCode() {
-        int year = LocalDate.now(ZoneId.of("America/Sao_Paulo")).getYear();
+        int year = LocalDate.now(BUSINESS_ZONE).getYear();
         String prefix = "RMA-" + year + "-";
 
         int nextValue = rmaRecordRepository.findTopByCodeStartingWithOrderByCodeDesc(prefix)

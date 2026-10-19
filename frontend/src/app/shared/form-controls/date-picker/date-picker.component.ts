@@ -3,6 +3,7 @@ import {
   ElementRef,
   EventEmitter,
   HostListener,
+  OnDestroy,
   Output,
   computed,
   forwardRef,
@@ -11,7 +12,7 @@ import {
   signal
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { formatDate, todayInputValue } from '../../../core/utils/date-ui';
+import { todayInputValue } from '../../../core/utils/date';
 
 interface CalendarDay {
   iso: string;
@@ -35,13 +36,16 @@ const WEEKDAY_LABELS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
     }
   ]
 })
-export class DatePickerComponent implements ControlValueAccessor {
+export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
+  private static openPicker: DatePickerComponent | null = null;
   private readonly hostElement = inject(ElementRef<HTMLElement>);
 
   readonly placeholder = input('Selecione uma data');
   readonly ariaLabel = input('Selecionar data');
   readonly disabled = input(false);
   readonly allowClear = input(true);
+  readonly minDate = input('');
+  readonly maxDate = input('');
 
   @Output() readonly valueChange = new EventEmitter<string>();
 
@@ -55,9 +59,14 @@ export class DatePickerComponent implements ControlValueAccessor {
   protected readonly isDisabled = computed(() => this.disabled() || this.disabledByForm());
   protected readonly displayValue = computed(() => formatDisplayDate(this.selectedValue(), this.placeholder()));
   protected readonly monthLabel = computed(() =>
-    new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(this.viewMonth())
+    new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(this.viewMonth())
   );
   protected readonly calendarDays = computed(() => buildCalendarDays(this.viewMonth(), this.selectedValue()));
+  protected readonly todayDisabled = computed(() => this.isDateDisabled(todayInputValue()));
+
+  protected isDateDisabled(iso: string): boolean {
+    return (!!this.minDate() && iso < this.minDate()) || (!!this.maxDate() && iso > this.maxDate());
+  }
 
   private onChange: (value: string) => void = () => {};
   private onTouched: () => void = () => {};
@@ -68,10 +77,13 @@ export class DatePickerComponent implements ControlValueAccessor {
     }
 
     if (!this.isOpen()) {
+      DatePickerComponent.openPicker?.close();
       this.focusCurrentMonth();
+      this.isOpen.set(true);
+      DatePickerComponent.openPicker = this;
+    } else {
+      this.close();
     }
-
-    this.isOpen.update((open) => !open);
   }
 
   protected previousMonth(): void {
@@ -83,6 +95,7 @@ export class DatePickerComponent implements ControlValueAccessor {
   }
 
   protected selectDay(day: CalendarDay): void {
+    if (this.isDateDisabled(day.iso)) return;
     this.applyValue(day.iso);
     this.close();
   }
@@ -93,6 +106,7 @@ export class DatePickerComponent implements ControlValueAccessor {
   }
 
   protected selectToday(): void {
+    if (this.todayDisabled()) return;
     this.applyValue(todayInputValue());
     this.close();
   }
@@ -122,6 +136,12 @@ export class DatePickerComponent implements ControlValueAccessor {
     }
   }
 
+  ngOnDestroy(): void {
+    if (DatePickerComponent.openPicker === this) {
+      DatePickerComponent.openPicker = null;
+    }
+  }
+
   @HostListener('document:click', ['$event'])
   protected handleDocumentClick(event: MouseEvent): void {
     if (!this.hostElement.nativeElement.contains(event.target as Node)) {
@@ -142,6 +162,9 @@ export class DatePickerComponent implements ControlValueAccessor {
   }
 
   private close(): void {
+    if (DatePickerComponent.openPicker === this) {
+      DatePickerComponent.openPicker = null;
+    }
     if (this.isOpen()) {
       this.isOpen.set(false);
     }
@@ -151,22 +174,21 @@ export class DatePickerComponent implements ControlValueAccessor {
 }
 
 function buildCalendarDays(viewMonth: Date, selectedValue: string): CalendarDay[] {
-  // UTC serve apenas para aritmética de datas civis; "hoje" vem do fuso de São Paulo.
-  const year = viewMonth.getUTCFullYear();
-  const month = viewMonth.getUTCMonth();
-  const firstDay = new Date(Date.UTC(year, month, 1));
-  const startOffset = firstDay.getUTCDay();
-  const startDate = new Date(Date.UTC(year, month, 1 - startOffset));
+  const year = viewMonth.getFullYear();
+  const month = viewMonth.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const startOffset = firstDay.getDay();
+  const startDate = new Date(year, month, 1 - startOffset);
   const todayIso = todayInputValue();
 
   return Array.from({ length: 42 }, (_, index) => {
-    const date = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate() + index));
+    const date = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + index);
     const iso = toIsoDate(date);
 
     return {
       iso,
-      day: date.getUTCDate(),
-      inCurrentMonth: date.getUTCMonth() === month,
+      day: date.getDate(),
+      inCurrentMonth: date.getMonth() === month,
       isToday: iso === todayIso,
       isSelected: iso === selectedValue
     };
@@ -179,7 +201,7 @@ function formatDisplayDate(value: string, placeholder: string): string {
     return placeholder;
   }
 
-  return formatDate(toIsoDate(parsed));
+  return new Intl.DateTimeFormat('pt-BR').format(parsed);
 }
 
 function parseIsoDate(value: string): Date | null {
@@ -196,20 +218,20 @@ function parseIsoDate(value: string): Date | null {
     return null;
   }
 
-  return new Date(Date.UTC(year, month - 1, day));
+  return new Date(year, month - 1, day);
 }
 
 function startOfMonth(date: Date): Date {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+  return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
 function shiftMonth(date: Date, amount: number): Date {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + amount, 1));
+  return new Date(date.getFullYear(), date.getMonth() + amount, 1);
 }
 
 function toIsoDate(date: Date): string {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }

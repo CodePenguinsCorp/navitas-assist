@@ -18,12 +18,12 @@ public record CreateRmaRequest(
     @Size(max = 80) String invoiceNumber,
     @Size(max = 180) String invoiceFileName,
     @NotBlank @Size(max = 120) String receivedBy,
-    @NotBlank @Size(max = 2000) String reportedFailure,
-    @Size(max = 1000) String receivedAccessories,
-    @Size(max = 1000) String physicalCondition,
+    @NotBlank @Size(max = 1000) String reportedFailure,
+    @Size(max = 500) String receivedAccessories,
+    @Size(max = 500) String physicalCondition,
     RmaPriority priority,
-    @Size(max = 2000) String repairSummary,
-    @Size(max = 2000) String replacedPartsSummary,
-    @Size(max = 2000) String testSummary
+    @Size(max = 600) String repairSummary,
+    @Size(max = 600) String replacedPartsSummary,
+    @Size(max = 800) String testSummary
 ) {
 }

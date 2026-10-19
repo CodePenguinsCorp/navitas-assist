@@ -11,4 +11,12 @@ public record UserAccountRequest(
     @NotNull UserRole role,
     boolean active
 ) {
+
+    @Override
+    public String toString() {
+        return "UserAccountRequest[username=" + username
+            + ", fullName=" + fullName
+            + ", password=[REDACTED], role=" + role
+            + ", active=" + active + "]";
+    }
 }

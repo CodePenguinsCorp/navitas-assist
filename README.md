@@ -43,9 +43,9 @@ O projeto foi dividido em duas aplicações:
 
 ## Datas e fuso horário
 
-- Exibição de horários, definição de "hoje" e ano do código do RMA usam sempre `America/Sao_Paulo`, independentemente do fuso do navegador ou servidor.
+- Regras de negócio que dependem de "hoje" e o ano do código do RMA usam `America/Sao_Paulo`, independentemente do fuso do navegador ou servidor.
 - Datas sem horário (`YYYY-MM-DD` / `LocalDate`) preservam o dia informado, sem conversão de fuso.
-- Instantes de auditoria continuam armazenados em UTC e são exibidos no horário de São Paulo. No frontend, reutilize os utilitários de `core/utils/date-ui.ts`.
+- No frontend, reutilize os utilitários de `core/utils/date.ts` para calcular o dia atual e exibir datas civis.
 
 ## Garantia dos produtos no RMA
 
@@ -60,10 +60,6 @@ O enum `WarrantyStatus`, usado no backend e no frontend, representa três situa�
 | `OUT_OF_WARRANTY` | Fora de garantia | Entrada após o vencimento. |
 
 O prazo é registrado em cada novo item para preservar a garantia quando o cadastro do produto mudar. A API disponibiliza prazo, vencimento e situação em `items[]`; as telas exibem esses dados por produto. O cálculo é automático, sem edição manual da situação.
-
-### Atualização do banco local
-
-Para bancos criados antes da NAV-29, execute [migrate-nav-29-warranty.sql](scripts/migrate-nav-29-warranty.sql) no banco da aplicação com o backend parado e depois inicie a versão atualizada. O script remove as cinco colunas antigas de garantia de `rmas`, preserva os registros e pode ser executado novamente. Bancos novos já são criados sem essas colunas.
 
 ## Estrutura do Projeto
 
@@ -113,7 +109,7 @@ Esse comando sobe:
 
 - frontend Angular servido por Nginx
 - backend Spring Boot
-- MySQL 8.4
+- MySQL 8.0
 
 Você também pode usar o Compose diretamente:
 
@@ -205,6 +201,8 @@ O setup local reconhece estas variáveis principais:
 - `DB_USER`
 - `DB_PASSWORD`
 - `SERVER_PORT`
+- `SESSION_TIMEOUT`
+- `SESSION_COOKIE_SECURE`
 - `APP_ADMIN_USERNAME`
 - `APP_ADMIN_PASSWORD`
 - `APP_ADMIN_FULL_NAME`
@@ -215,12 +213,38 @@ Sem sobrescrever nada:
 - o frontend Docker consome a API por proxy interno em `/api`
 - o profile `local` continua disponável para rodar o backend manualmente contra o MySQL do Docker
 
+## Autenticação e Sessão
+
+A aplicação usa sessão criada no backend. O frontend envia usuário e senha somente para `POST /api/auth/login`; credenciais reutilizáveis não são persistidas no `localStorage` nem no `sessionStorage`.
+
+- `JSESSIONID` é `HttpOnly` e `SameSite=Strict`; em ambientes não locais também é `Secure`
+- requisições de escrita usam token CSRF no cookie `XSRF-TOKEN` e no header `X-XSRF-TOKEN`
+- a sessão é restaurada após recarregar a página por `GET /api/auth/me`
+- a expiração padrão por inatividade é de 30 minutos e pode ser alterada com `SESSION_TIMEOUT`
+- `POST /api/auth/logout` invalida a sessão e remove os cookies de sessão e CSRF
+- respostas de autenticação e autorização permanecem em JSON, com `401` e `403`
+
 ## Admin Inicial
 
-No primeiro boot, se ainda não existir usuário no banco, a aplicação cria:
+No profile `local`, no primeiro boot e apenas se ainda não existir usuário no banco, a aplicação cria:
 
 - usuario: `admin`
 - senha: `admin123`
+
+Esses valores também são usados somente nos testes automatizados. Fora dos profiles `local` e `test`, `DB_URL`, `DB_USER`, `DB_PASSWORD`, `APP_ADMIN_USERNAME`, `APP_ADMIN_PASSWORD` e `APP_ADMIN_FULL_NAME` são obrigatórios; a aplicação falha na inicialização se algum deles não for informado. O ambiente de produção usa validação de schema e não imprime SQL nem credenciais nos logs.
+
+## Autorização da API
+
+| Recurso/operação | ADMIN | SERVICE_DESK | TECHNICIAN | VIEWER |
+|:---|:---:|:---:|:---:|:---:|
+| Consultar clientes, produtos e RMAs | Sim | Sim | Sim | Sim |
+| Criar, alterar ou excluir clientes e produtos | Sim | Sim | Não | Não |
+| Abrir ou alterar dados gerais de RMA | Sim | Sim | Não | Não |
+| Alterar o status de RMA | Sim | Sim | Sim | Não |
+| Registrar ou alterar diagnóstico | Sim | Não | Sim | Não |
+| Gerenciar usuários | Sim | Não | Não | Não |
+
+Requisições sem autenticação recebem `401`; usuários autenticados sem permissão recebem `403`. Operações de API não classificadas explicitamente ficam restritas a `ADMIN`.
 
 ## Produção
 
@@ -239,6 +263,17 @@ Exemplo para deploy manual:
 
 ```powershell
 .\scripts\deploy-prod.ps1
+```
+
+## Schema do banco
+
+O projeto ainda não possui banco de produção nem dados que precisem ser preservados. O Flyway cria o schema inicial em um banco vazio e o Hibernate apenas valida o resultado (`ddl-auto=validate`). Não existe migração ou backfill de dados legados.
+
+Quando o schema local ficar incompatível, descarte o volume de desenvolvimento e recrie a stack. O primeiro comando remove todos os dados locais:
+
+```powershell
+docker compose down -v
+docker compose up --build -d
 ```
 
 ## Troubleshooting

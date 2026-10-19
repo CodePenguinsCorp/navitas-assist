@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.time.LocalDate;
 
+import br.com.navitasassist.product.Product;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -36,5 +37,27 @@ class ItemWarrantyTest {
 
         assertEquals(WarrantyStatus.PENDING, warranty.status());
         assertNull(warranty.expiresAt());
+    }
+
+    @Test
+    void shouldUseCurrentProductTermForLegacyItemWithoutSnapshot() {
+        Product product = new Product();
+        product.setSku("LEGACY");
+        product.setName("Legacy product");
+        product.setDefaultWarrantyMonths(18);
+
+        RmaRecord rma = new RmaRecord();
+        rma.setPurchaseDate(LocalDate.of(2025, 1, 1));
+        rma.setEntryDate(LocalDate.of(2026, 6, 30));
+
+        RmaItem item = new RmaItem();
+        item.setRma(rma);
+        item.setProduct(product);
+
+        RmaItemResponse response = RmaItemResponse.from(item);
+
+        assertEquals(18, response.warrantyMonths());
+        assertEquals(LocalDate.of(2026, 7, 1), response.warrantyExpiresAt());
+        assertEquals(WarrantyStatus.IN_WARRANTY, response.warrantyStatus());
     }
 }

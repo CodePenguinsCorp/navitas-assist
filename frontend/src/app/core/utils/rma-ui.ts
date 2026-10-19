@@ -15,8 +15,7 @@ import {
   RmaStatusHistoryResponse,
   WarrantyStatus
 } from '../models';
-
-export { formatDate, formatDateTime, todayInputValue } from './date-ui';
+import { formatDateOnly } from './date';
 
 export function statusLabel(status: RmaStatus): string {
   return RMA_STATUS_LABELS[status];
@@ -58,6 +57,21 @@ export function failureTypeLabel(value: FailureType | null): string {
 
 export function failureCauseLabel(value: FailureCause | null): string {
   return value ? FAILURE_CAUSE_LABELS[value] : 'N\u00e3o classificada';
+}
+
+export function formatDate(value: string | null): string {
+  return formatDateOnly(value);
+}
+
+export function formatDateTime(value: string | null): string {
+  if (!value) {
+    return 'N\u00e3o informado';
+  }
+
+  return new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  }).format(new Date(value));
 }
 
 export function trackableLabel(rma: Pick<RmaResponse, 'items' | 'serialNumber' | 'batchNumber'>): string {
