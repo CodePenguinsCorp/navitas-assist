@@ -2,9 +2,9 @@ spring:
   application:
     name: navitas-assist-backend
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/navitas_assist?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
-    username: ${DB_USER:navitas_app}
-    password: ${DB_PASSWORD:navitas123}
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -18,10 +18,18 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+  servlet:
+    session:
+      timeout: ${SESSION_TIMEOUT:30m}
+      cookie:
+        http-only: true
+        secure: ${SESSION_COOKIE_SECURE:true}
+        same-site: strict
 
 navitas:
   security:
+    cookie-secure: ${SESSION_COOKIE_SECURE:true}
     seed-admin:
-      username: ${APP_ADMIN_USERNAME:admin}
-      password: ${APP_ADMIN_PASSWORD:admin123}
-      full-name: ${APP_ADMIN_FULL_NAME:Administrador}
+      username: ${APP_ADMIN_USERNAME}
+      password: ${APP_ADMIN_PASSWORD}
+      full-name: ${APP_ADMIN_FULL_NAME}

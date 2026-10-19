@@ -181,6 +181,8 @@ O setup local reconhece estas variáveis principais:
 - `DB_USER`
 - `DB_PASSWORD`
 - `SERVER_PORT`
+- `SESSION_TIMEOUT`
+- `SESSION_COOKIE_SECURE`
 - `APP_ADMIN_USERNAME`
 - `APP_ADMIN_PASSWORD`
 - `APP_ADMIN_FULL_NAME`
@@ -191,12 +193,38 @@ Sem sobrescrever nada:
 - o frontend Docker consome a API por proxy interno em `/api`
 - o profile `local` continua disponável para rodar o backend manualmente contra o MySQL do Docker
 
+## Autenticação e Sessão
+
+A aplicação usa sessão criada no backend. O frontend envia usuário e senha somente para `POST /api/auth/login`; credenciais reutilizáveis não são persistidas no `localStorage` nem no `sessionStorage`.
+
+- `JSESSIONID` é `HttpOnly` e `SameSite=Strict`; em ambientes não locais também é `Secure`
+- requisições de escrita usam token CSRF no cookie `XSRF-TOKEN` e no header `X-XSRF-TOKEN`
+- a sessão é restaurada após recarregar a página por `GET /api/auth/me`
+- a expiração padrão por inatividade é de 30 minutos e pode ser alterada com `SESSION_TIMEOUT`
+- `POST /api/auth/logout` invalida a sessão e remove os cookies de sessão e CSRF
+- respostas de autenticação e autorização permanecem em JSON, com `401` e `403`
+
 ## Admin Inicial
 
-No primeiro boot, se ainda não existir usuário no banco, a aplicação cria:
+No profile `local`, no primeiro boot e apenas se ainda não existir usuário no banco, a aplicação cria:
 
 - usuario: `admin`
 - senha: `admin123`
+
+Esses valores também são usados somente nos testes automatizados. Fora dos profiles `local` e `test`, `DB_URL`, `DB_USER`, `DB_PASSWORD`, `APP_ADMIN_USERNAME`, `APP_ADMIN_PASSWORD` e `APP_ADMIN_FULL_NAME` são obrigatórios; a aplicação falha na inicialização se algum deles não for informado. O ambiente de produção usa validação de schema e não imprime SQL nem credenciais nos logs.
+
+## Autorização da API
+
+| Recurso/operação | ADMIN | SERVICE_DESK | TECHNICIAN | VIEWER |
+|:---|:---:|:---:|:---:|:---:|
+| Consultar clientes, produtos e RMAs | Sim | Sim | Sim | Sim |
+| Criar, alterar ou excluir clientes e produtos | Sim | Sim | Não | Não |
+| Abrir ou alterar dados gerais de RMA | Sim | Sim | Não | Não |
+| Alterar o status de RMA | Sim | Sim | Sim | Não |
+| Registrar ou alterar diagnóstico | Sim | Não | Sim | Não |
+| Gerenciar usuários | Sim | Não | Não | Não |
+
+Requisições sem autenticação recebem `401`; usuários autenticados sem permissão recebem `403`. Operações de API não classificadas explicitamente ficam restritas a `ADMIN`.
 
 ## Produção
 
