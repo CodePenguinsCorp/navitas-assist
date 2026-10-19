@@ -42,7 +42,6 @@ export interface UserSession {
   username: string;
   name: string;
   role: UserRole;
-  authHeader: string;
 }
 
 export interface LoginPayload {
@@ -138,12 +137,16 @@ export interface DiagnosisResponse {
   updatedAt: string;
 }
 
-export interface CreateRmaRequest {
-  clientId: number;
+export interface RmaItemRequest {
   productId: number;
   batchNumber: string | null;
   serialNumber: string | null;
   manufacturedAt: string | null;
+}
+
+export interface CreateRmaRequest {
+  clientId: number;
+  items: RmaItemRequest[];
   purchaseDate: string | null;
   purchaseDateUnknown: boolean;
   entryDate: string;
@@ -182,11 +185,22 @@ export interface RmaStatusHistoryResponse {
   note: string | null;
 }
 
+export interface RmaItemResponse {
+  id: number | null;
+  productId: number;
+  productName: string;
+  productSku: string;
+  batchNumber: string | null;
+  serialNumber: string | null;
+  manufacturedAt: string | null;
+}
+
 export interface RmaResponse {
   id: number;
   code: string;
   clientId: number;
   clientName: string;
+  items: RmaItemResponse[];
   productId: number;
   productName: string;
   productSku: string;

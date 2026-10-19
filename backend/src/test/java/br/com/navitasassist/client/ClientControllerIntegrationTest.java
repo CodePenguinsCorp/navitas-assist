@@ -2,7 +2,8 @@ package br.com.navitasassist.client;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -58,7 +59,8 @@ class ClientControllerIntegrationTest {
         String legalName = "A -–— ".repeat(119) + "Z";
 
         mockMvc.perform(post("/api/clients")
-                .with(httpBasic("admin", "admin123"))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(Map.of(
                     "legalName", legalName, "phone", "1".repeat(30), "address", "A".repeat(255)))))
@@ -76,7 +78,8 @@ class ClientControllerIntegrationTest {
                 Map.of("legalName", "Client", "phone", "1".repeat(31)),
                 Map.of("legalName", "Client", "address", "A".repeat(256)))) {
             mockMvc.perform(post("/api/clients")
-                    .with(httpBasic("admin", "admin123"))
+                    .with(user("admin").roles("ADMIN"))
+                    .with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(payload)))
                 .andExpect(status().isBadRequest());
@@ -92,7 +95,8 @@ class ClientControllerIntegrationTest {
         Client savedClient = clientRepository.save(client);
 
         mockMvc.perform(delete("/api/clients/{id}", savedClient.getId())
-                .with(httpBasic("admin", "admin123")))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf()))
             .andExpect(status().isNoContent());
 
         assertFalse(clientRepository.existsById(savedClient.getId()));
@@ -120,7 +124,8 @@ class ClientControllerIntegrationTest {
         rmaRecordRepository.save(rma);
 
         mockMvc.perform(delete("/api/clients/{id}", savedClient.getId())
-                .with(httpBasic("admin", "admin123")))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf()))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value(
                 "Client cannot be deleted because it is used by an RMA."

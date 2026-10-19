@@ -50,7 +50,7 @@ public class ProductService {
     public void delete(Long id) {
         Product product = getEntityById(id);
 
-        if (rmaRecordRepository.existsByProduct_Id(id)) {
+        if (rmaRecordRepository.existsByProduct_Id(id) || rmaRecordRepository.existsByItems_Product_Id(id)) {
             throw new BusinessException("Product cannot be deleted because it is used by an RMA.");
         }
 

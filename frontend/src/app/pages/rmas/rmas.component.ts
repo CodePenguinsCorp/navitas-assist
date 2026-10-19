@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { finalize, forkJoin } from 'rxjs';
 import {
   FAILURE_CAUSE_LABELS,
@@ -37,6 +37,8 @@ import {
   ownerLabel,
   priorityChipClass,
   priorityLabel,
+  productSummary,
+  rmaItemTrackableLabel,
   statusLabel,
   todayInputValue,
   trackableLabel,
@@ -93,9 +95,61 @@ type ModalView = 'create' | 'details' | 'diagnosis';
       line-height: 1.55;
     }
 
-    .purchase-date-unknown {
-      min-height: 42px;
-      align-self: center;
+    .rma-items-editor,
+    .rma-items-detail {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .rma-items-editor {
+      padding: 0.9rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--surface-alt);
+    }
+
+    .rma-items-editor__header,
+    .rma-item-editor__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .rma-item-editor {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+      padding: 0.9rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: #ffffff;
+    }
+
+    .rma-item-editor__header,
+    .rma-item-editor__error {
+      grid-column: 1 / -1;
+    }
+
+    .rma-item-detail {
+      display: grid;
+      gap: 0.2rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .rma-item-detail:last-child {
+      border-bottom: 0;
+    }
+
+    .rma-item-detail span {
+      color: var(--muted);
+    }
+
+    @media (max-width: 720px) {
+      .rma-item-editor {
+        grid-template-columns: 1fr;
+      }
     }
   `]
 })
@@ -107,7 +161,6 @@ export class RmasComponent {
 
   protected readonly loading = signal(true);
   protected readonly createSubmitting = signal(false);
-  protected readonly dateErrors = signal({ manufacturedAt: '', purchaseDate: '', entryDate: '' });
   protected readonly diagnosisSubmitting = signal(false);
   protected readonly historyLoading = signal(false);
 
@@ -148,16 +201,8 @@ export class RmasComponent {
   protected readonly dateTimeLabel = formatDateTime;
   protected readonly trackableLabel = trackableLabel;
   protected readonly ownerLabel = ownerLabel;
-  protected get todayDate(): string {
-    return todayInputValue();
-  }
-
-  protected get entryMinDate(): string {
-    const manufacturedAt = this.createForm.controls.manufacturedAt.value;
-    const purchaseDate = this.createForm.controls.purchaseDateUnknown.value
-      ? '' : this.createForm.controls.purchaseDate.value;
-    return manufacturedAt > purchaseDate ? manufacturedAt : purchaseDate;
-  }
+  protected readonly productSummary = productSummary;
+  protected readonly itemTrackableLabel = rmaItemTrackableLabel;
 
   protected readonly clientSelectOptions = computed<ReadonlyArray<CustomSelectOption<number>>>(() => [
     { value: 0, label: 'Selecione' },
@@ -201,25 +246,22 @@ export class RmasComponent {
 
   protected readonly createForm = this.formBuilder.nonNullable.group({
     clientId: [0, [Validators.required, Validators.min(1)]],
-    productId: [0, [Validators.required, Validators.min(1)]],
-    batchNumber: [''],
-    serialNumber: [''],
-    manufacturedAt: [''],
+    items: this.formBuilder.array([this.createRmaItemForm()]),
     purchaseDate: [''],
     purchaseDateUnknown: [false],
     entryDate: [todayInputValue(), [Validators.required]],
     invoiceNumber: [''],
     invoiceFileName: [''],
     receivedBy: ['', [Validators.required, Validators.maxLength(120)]],
-    reportedFailure: ['', [Validators.required, Validators.maxLength(1000)]],
-    receivedAccessories: ['', [Validators.maxLength(500)]],
-    physicalCondition: ['', [Validators.maxLength(500)]],
+    reportedFailure: ['', [Validators.required, Validators.maxLength(2000)]],
+    receivedAccessories: [''],
+    physicalCondition: [''],
     priority: ['MEDIUM' as RmaPriority, [Validators.required]],
     warrantyStatusOverride: ['' as WarrantyOverrideValue],
-    warrantyJustification: ['', [Validators.maxLength(1000)]],
-    repairSummary: ['', [Validators.maxLength(600)]],
-    replacedPartsSummary: ['', [Validators.maxLength(600)]],
-    testSummary: ['', [Validators.maxLength(800)]]
+    warrantyJustification: [''],
+    repairSummary: [''],
+    replacedPartsSummary: [''],
+    testSummary: ['']
   });
 
   protected readonly diagnosisForm = this.formBuilder.nonNullable.group({
@@ -232,15 +274,22 @@ export class RmasComponent {
   });
 
   constructor() {
-    this.createForm.valueChanges.subscribe(() => {
-      if (this.createForm.controls.purchaseDateUnknown.value && this.createForm.controls.purchaseDate.value) {
-        this.createForm.controls.purchaseDate.setValue('');
-        return;
-      }
-      this.dateErrors.set(this.validateCreateDates());
-    });
     this.seedOperatorDefaults();
     this.loadWorkspace();
+  }
+
+  protected get createItems() {
+    return this.createForm.controls.items;
+  }
+
+  protected addCreateItem(): void {
+    this.createItems.push(this.createRmaItemForm());
+  }
+
+  protected removeCreateItem(index: number): void {
+    if (this.createItems.length > 1) {
+      this.createItems.removeAt(index);
+    }
   }
 
   protected submitFilters(): void {
@@ -360,13 +409,6 @@ export class RmasComponent {
     }
 
     const raw = this.createForm.getRawValue();
-    const dateErrors = this.validateCreateDates();
-    this.dateErrors.set(dateErrors);
-    if (Object.values(dateErrors).some(Boolean)) {
-      this.pageError.set('Corrija as datas indicadas no formulário.');
-      this.pageMessage.set('');
-      return;
-    }
     const warrantyStatusOverride = raw.warrantyStatusOverride || null;
     const warrantyJustification = normalizeText(raw.warrantyJustification);
 
@@ -378,10 +420,12 @@ export class RmasComponent {
 
     const payload: CreateRmaRequest = {
       clientId: raw.clientId,
-      productId: raw.productId,
-      batchNumber: normalizeText(raw.batchNumber),
-      serialNumber: normalizeText(raw.serialNumber),
-      manufacturedAt: normalizeText(raw.manufacturedAt),
+      items: raw.items.map((item) => ({
+        productId: item.productId,
+        batchNumber: normalizeText(item.batchNumber),
+        serialNumber: normalizeText(item.serialNumber),
+        manufacturedAt: normalizeText(item.manufacturedAt)
+      })),
       purchaseDate: raw.purchaseDateUnknown ? null : normalizeText(raw.purchaseDate),
       purchaseDateUnknown: raw.purchaseDateUnknown,
       entryDate: raw.entryDate,
@@ -555,12 +599,11 @@ export class RmasComponent {
   }
 
   private resetCreateForm(): void {
+    this.createItems.clear();
+    this.createItems.push(this.createRmaItemForm());
     this.createForm.reset({
       clientId: 0,
-      productId: 0,
-      batchNumber: '',
-      serialNumber: '',
-      manufacturedAt: '',
+      items: [{ productId: 0, batchNumber: '', serialNumber: '', manufacturedAt: '' }],
       purchaseDate: '',
       purchaseDateUnknown: false,
       entryDate: todayInputValue(),
@@ -579,23 +622,6 @@ export class RmasComponent {
     });
   }
 
-  private validateCreateDates(): { manufacturedAt: string; purchaseDate: string; entryDate: string } {
-    const { manufacturedAt, purchaseDate, purchaseDateUnknown, entryDate } = this.createForm.getRawValue();
-    const knownPurchaseDate = purchaseDateUnknown ? '' : purchaseDate;
-    return {
-      manufacturedAt: manufacturedAt && manufacturedAt > this.todayDate
-        ? 'A fabricação não pode ser posterior a hoje.' : '',
-      purchaseDate: knownPurchaseDate && knownPurchaseDate > this.todayDate
-        ? 'A compra não pode ser posterior a hoje.'
-        : knownPurchaseDate && manufacturedAt && knownPurchaseDate < manufacturedAt
-          ? 'A compra não pode ser anterior à fabricação.' : '',
-      entryDate: entryDate && manufacturedAt && entryDate < manufacturedAt
-        ? 'A entrada não pode ser anterior à fabricação.'
-        : knownPurchaseDate && entryDate && entryDate < knownPurchaseDate
-          ? 'A entrada não pode ser anterior à compra.' : ''
-    };
-  }
-
   private buildFilters(): { query?: string; status?: RmaStatus } {
     const raw = this.filtersForm.getRawValue();
     const query = normalizeText(raw.query);
@@ -606,10 +632,25 @@ export class RmasComponent {
     };
   }
 
+  private createRmaItemForm() {
+    return this.formBuilder.nonNullable.group({
+      productId: [0, [Validators.required, Validators.min(1)]],
+      batchNumber: ['', [Validators.maxLength(60)]],
+      serialNumber: ['', [Validators.maxLength(60)]],
+      manufacturedAt: ['']
+    }, { validators: atLeastOneItemIdentification });
+  }
+
   private currentOperatorName(): string {
     const user = this.authService.currentUser();
     return user?.name ?? user?.username ?? '';
   }
+}
+
+function atLeastOneItemIdentification(control: AbstractControl): ValidationErrors | null {
+  const batchNumber = control.get('batchNumber')?.value;
+  const serialNumber = control.get('serialNumber')?.value;
+  return batchNumber?.trim() || serialNumber?.trim() ? null : { identificationRequired: true };
 }
 
 const STATUS_FILTER_OPTIONS: ReadonlyArray<CustomSelectOption<SearchStatusValue>> = [

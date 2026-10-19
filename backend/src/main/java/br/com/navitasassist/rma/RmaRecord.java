@@ -55,6 +55,10 @@ public class RmaRecord extends AuditableEntity {
     @Embedded
     private ItemIdentification itemIdentification = new ItemIdentification();
 
+    @OneToMany(mappedBy = "rma", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id ASC")
+    private List<RmaItem> items = new ArrayList<>();
+
     @Column
     private LocalDate purchaseDate;
 
@@ -144,5 +148,15 @@ public class RmaRecord extends AuditableEntity {
     public void addStatusHistory(RmaStatusHistory history) {
         history.setRma(this);
         this.statusHistory.add(history);
+    }
+
+    public void replaceItems(List<RmaItem> items) {
+        this.items.clear();
+        items.forEach(this::addItem);
+    }
+
+    public void addItem(RmaItem item) {
+        item.setRma(this);
+        this.items.add(item);
     }
 }

@@ -4,7 +4,8 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -17,6 +18,7 @@ import br.com.navitasassist.client.Client;
 import br.com.navitasassist.repository.ClientRepository;
 import br.com.navitasassist.repository.ProductRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
+import br.com.navitasassist.rma.RmaItem;
 import br.com.navitasassist.rma.RmaRecord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,7 +66,8 @@ class ProductControllerIntegrationTest {
         Product savedProduct = productRepository.save(product);
 
         mockMvc.perform(delete("/api/products/{id}", savedProduct.getId())
-                .with(httpBasic("admin", "admin123")))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf()))
             .andExpect(status().isNoContent());
 
         assertFalse(productRepository.existsById(savedProduct.getId()));
@@ -92,7 +95,8 @@ class ProductControllerIntegrationTest {
         rmaRecordRepository.save(rma);
 
         mockMvc.perform(delete("/api/products/{id}", savedProduct.getId())
-                .with(httpBasic("admin", "admin123")))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf()))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value(
                 "Product cannot be deleted because it is used by an RMA."
@@ -102,9 +106,57 @@ class ProductControllerIntegrationTest {
     }
 
     @Test
+    void shouldNotDeleteProductLinkedAsSecondaryRmaItem() throws Exception {
+        Product primaryProduct = new Product();
+        primaryProduct.setSku("SKU-RMA-PRIMARY");
+        primaryProduct.setName("Primary RMA product");
+        Product savedPrimaryProduct = productRepository.save(primaryProduct);
+
+        Product secondaryProduct = new Product();
+        secondaryProduct.setSku("SKU-RMA-SECONDARY");
+        secondaryProduct.setName("Secondary RMA product");
+        Product savedSecondaryProduct = productRepository.save(secondaryProduct);
+
+        Client client = new Client();
+        client.setLegalName("Multiple product client");
+        Client savedClient = clientRepository.save(client);
+
+        RmaRecord rma = new RmaRecord();
+        rma.setCode("RMA-TEST-SECONDARY");
+        rma.setProduct(savedPrimaryProduct);
+        rma.getItemIdentification().setBatchNumber("PRIMARY-LOT");
+        rma.setClient(savedClient);
+        rma.setEntryDate(LocalDate.now());
+        rma.setReceivedBy("Test user");
+        rma.setReportedFailure("Test failure");
+
+        RmaItem primaryItem = new RmaItem();
+        primaryItem.setProduct(savedPrimaryProduct);
+        primaryItem.getItemIdentification().setBatchNumber("PRIMARY-LOT");
+        rma.addItem(primaryItem);
+
+        RmaItem secondaryItem = new RmaItem();
+        secondaryItem.setProduct(savedSecondaryProduct);
+        secondaryItem.getItemIdentification().setSerialNumber("SECONDARY-SERIAL");
+        rma.addItem(secondaryItem);
+        rmaRecordRepository.saveAndFlush(rma);
+
+        mockMvc.perform(delete("/api/products/{id}", savedSecondaryProduct.getId())
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value(
+                "Product cannot be deleted because it is used by an RMA."
+            ));
+
+        assertTrue(productRepository.existsById(savedSecondaryProduct.getId()));
+    }
+
+    @Test
     void shouldRejectSkuOverTwentyCharacters() throws Exception {
         mockMvc.perform(post("/api/products")
-                .with(httpBasic("admin", "admin123"))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(productJson("123456789012345678901", "Category", "Notes")))
             .andExpect(status().isBadRequest())
@@ -114,7 +166,8 @@ class ProductControllerIntegrationTest {
     @Test
     void shouldRejectCategoryAndTechnicalNotesOverTheirLimits() throws Exception {
         mockMvc.perform(post("/api/products")
-                .with(httpBasic("admin", "admin123"))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(productJson("SKU-LIMITS", "C".repeat(81), "N".repeat(1001))))
             .andExpect(status().isBadRequest())

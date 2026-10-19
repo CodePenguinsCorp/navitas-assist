@@ -14,13 +14,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @RequiredArgsConstructor
 public class InitialDataConfig {
 
-    @Value("${navitas.security.seed-admin.username:admin}")
+    @Value("${navitas.security.seed-admin.username}")
     private String seedUsername;
 
-    @Value("${navitas.security.seed-admin.password:admin123}")
+    @Value("${navitas.security.seed-admin.password}")
     private String seedPassword;
 
-    @Value("${navitas.security.seed-admin.full-name:Administrador}")
+    @Value("${navitas.security.seed-admin.full-name}")
     private String seedFullName;
 
     private final PasswordEncoder passwordEncoder;

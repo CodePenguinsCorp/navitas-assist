@@ -147,8 +147,8 @@
                 </td>
                 <td>{{ rma.clientName }}</td>
                 <td>
-                  <strong class="table-title">{{ rma.productName }}</strong>
-                  <span class="table-subtitle">{{ rma.productSku }}</span>
+                  <strong class="table-title">{{ productSummary(rma) }}</strong>
+                  <span class="table-subtitle">{{ rma.items.length }} item(ns)</span>
                 </td>
                 <td><span class="mini-chip">{{ statusLabel(rma.status) }}</span></td>
                 <td>
@@ -197,12 +197,8 @@
 
         <div class="detail-grid">
           <div>
-            <span>Produto</span>
-            <strong>{{ rma.productSku }} | {{ rma.productName }}</strong>
-          </div>
-          <div>
-            <span>Identificação</span>
-            <strong>{{ trackableLabel(rma) }}</strong>
+            <span>Produtos</span>
+            <strong>{{ rma.items.length }} item(ns)</strong>
           </div>
           <div>
             <span>Recebido por</span>
@@ -219,6 +215,21 @@
           <div>
             <span>Atualizado</span>
             <strong>{{ dateTimeLabel(rma.updatedAt) }}</strong>
+          </div>
+        </div>
+
+        <div class="summary-block">
+          <strong>Produtos e lotes</strong>
+          <div class="rma-items-detail">
+            @for (item of rma.items; track item.id ?? $index) {
+              <div class="rma-item-detail">
+                <strong>{{ item.productSku }} | {{ item.productName }}</strong>
+                <span>{{ itemTrackableLabel(item) }}</span>
+                @if (item.manufacturedAt) {
+                  <span>Fabricação: {{ dateLabel(item.manufacturedAt) }}</span>
+                }
+              </div>
+            }
           </div>
         </div>
 
@@ -274,39 +285,55 @@
           />
         </div>
 
-        <div class="field-group">
-          <label>Produto</label>
-          <app-custom-select
-            formControlName="productId"
-            ariaLabel="Selecionar produto"
-            [options]="productSelectOptions()"
-          />
-        </div>
+        <div class="field-group field-group--full" formArrayName="items">
+          <div class="rma-items-editor">
+            <div class="rma-items-editor__header">
+              <div>
+                <strong>Produtos do RMA</strong>
+                <p class="muted-inline">Cada produto pode ter seu próprio lote ou serial.</p>
+              </div>
+              <button type="button" class="button-secondary" (click)="addCreateItem()">Adicionar produto</button>
+            </div>
 
-        <div class="field-group">
-          <label for="batchNumber">Lote</label>
-          <input id="batchNumber" type="text" formControlName="batchNumber" placeholder="Opcional" />
-        </div>
+            @for (itemForm of createItems.controls; track itemForm; let index = $index) {
+              <div class="rma-item-editor" [formGroupName]="index">
+                <div class="rma-item-editor__header">
+                  <strong>Item {{ index + 1 }}</strong>
+                  @if (createItems.length > 1) {
+                    <button type="button" class="button-secondary" (click)="removeCreateItem(index)">Remover</button>
+                  }
+                </div>
 
-        <div class="field-group">
-          <label for="serialNumber">Serial</label>
-          <input id="serialNumber" type="text" formControlName="serialNumber" placeholder="Opcional" />
-        </div>
+                <div class="field-group">
+                  <label>Produto</label>
+                  <app-custom-select
+                    formControlName="productId"
+                    [ariaLabel]="'Selecionar produto do item ' + (index + 1)"
+                    [options]="productSelectOptions()"
+                  />
+                </div>
 
-        <div class="field-group">
-          <label>Fabricação</label>
-          <app-date-picker formControlName="manufacturedAt" ariaLabel="Data de fabricação" [maxDate]="todayDate" />
-          @if (dateErrors().manufacturedAt) {
-            <small class="field-error">{{ dateErrors().manufacturedAt }}</small>
-          }
-        </div>
+                <div class="field-group">
+                  <label [for]="'batchNumber-' + index">Lote</label>
+                  <input [id]="'batchNumber-' + index" type="text" formControlName="batchNumber" placeholder="Informe lote ou serial" />
+                </div>
 
-        <div class="field-group">
-          <label>Entrada</label>
-          <app-date-picker formControlName="entryDate" ariaLabel="Data de entrada" [allowClear]="false" [minDate]="entryMinDate" />
-          @if (dateErrors().entryDate) {
-            <small class="field-error">{{ dateErrors().entryDate }}</small>
-          }
+                <div class="field-group">
+                  <label [for]="'serialNumber-' + index">Serial</label>
+                  <input [id]="'serialNumber-' + index" type="text" formControlName="serialNumber" placeholder="Informe lote ou serial" />
+                </div>
+
+                <div class="field-group">
+                  <label>Fabricação</label>
+                  <app-date-picker formControlName="manufacturedAt" [ariaLabel]="'Data de fabricação do item ' + (index + 1)" />
+                </div>
+
+                @if (itemForm.hasError('identificationRequired') && itemForm.touched) {
+                  <p class="field-error rma-item-editor__error">Informe ao menos o lote ou o serial deste produto.</p>
+                }
+              </div>
+            }
+          </div>
         </div>
 
         <div class="field-group">
@@ -315,18 +342,18 @@
             formControlName="purchaseDate"
             ariaLabel="Data da compra"
             [disabled]="createForm.controls.purchaseDateUnknown.value"
-            [minDate]="createForm.controls.manufacturedAt.value"
-            [maxDate]="todayDate"
           />
-          @if (dateErrors().purchaseDate) {
-            <small class="field-error">{{ dateErrors().purchaseDate }}</small>
-          }
         </div>
 
-        <label class="checkbox-row purchase-date-unknown">
+        <label class="checkbox-row">
           <input type="checkbox" formControlName="purchaseDateUnknown" />
           Data da compra desconhecida
         </label>
+
+        <div class="field-group">
+          <label>Entrada</label>
+          <app-date-picker formControlName="entryDate" ariaLabel="Data de entrada" [allowClear]="false" />
+        </div>
 
         <div class="field-group">
           <label for="invoiceNumber">Nota fiscal</label>
@@ -354,17 +381,17 @@
 
         <div class="field-group field-group--full">
           <label for="reportedFailure">Falha relatada</label>
-          <textarea id="reportedFailure" formControlName="reportedFailure" rows="4" maxlength="1000"></textarea>
+          <textarea id="reportedFailure" formControlName="reportedFailure" rows="4"></textarea>
         </div>
 
         <div class="field-group field-group--full">
           <label for="receivedAccessories">Acessórios</label>
-          <textarea id="receivedAccessories" formControlName="receivedAccessories" rows="3" maxlength="500"></textarea>
+          <textarea id="receivedAccessories" formControlName="receivedAccessories" rows="3"></textarea>
         </div>
 
         <div class="field-group field-group--full">
           <label for="physicalCondition">Condição física</label>
-          <textarea id="physicalCondition" formControlName="physicalCondition" rows="3" maxlength="500"></textarea>
+          <textarea id="physicalCondition" formControlName="physicalCondition" rows="3"></textarea>
         </div>
 
         <div class="field-group">
@@ -378,22 +405,22 @@
 
         <div class="field-group field-group--full">
           <label for="warrantyJustification">Justificativa</label>
-          <textarea id="warrantyJustification" formControlName="warrantyJustification" rows="3" maxlength="1000"></textarea>
+          <textarea id="warrantyJustification" formControlName="warrantyJustification" rows="3"></textarea>
         </div>
 
         <div class="field-group field-group--full">
           <label for="repairSummary">Reparo</label>
-          <textarea id="repairSummary" formControlName="repairSummary" rows="3" maxlength="600"></textarea>
+          <textarea id="repairSummary" formControlName="repairSummary" rows="3"></textarea>
         </div>
 
         <div class="field-group field-group--full">
           <label for="replacedPartsSummary">Peças trocadas</label>
-          <textarea id="replacedPartsSummary" formControlName="replacedPartsSummary" rows="3" maxlength="600"></textarea>
+          <textarea id="replacedPartsSummary" formControlName="replacedPartsSummary" rows="3"></textarea>
         </div>
 
         <div class="field-group field-group--full">
           <label for="testSummary">Testes</label>
-          <textarea id="testSummary" formControlName="testSummary" rows="3" maxlength="800"></textarea>
+          <textarea id="testSummary" formControlName="testSummary" rows="3"></textarea>
         </div>
 
         <div class="form-actions form-actions--full">

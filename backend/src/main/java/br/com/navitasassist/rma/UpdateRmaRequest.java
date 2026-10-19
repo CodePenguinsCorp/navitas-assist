@@ -1,15 +1,15 @@
 package br.com.navitasassist.rma;
 
 import java.time.LocalDate;
+import java.util.List;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record UpdateRmaRequest(
     Long clientId,
-    Long productId,
-    @Size(max = 60) String batchNumber,
-    @Size(max = 60) String serialNumber,
-    LocalDate manufacturedAt,
+    @Size(min = 1) List<@NotNull @Valid RmaItemRequest> items,
     LocalDate purchaseDate,
     Boolean purchaseDateUnknown,
     LocalDate entryDate,

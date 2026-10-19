@@ -26,9 +26,11 @@ export class LoginComponent {
   });
 
   constructor() {
-    if (this.authService.isAuthenticated()) {
-      void this.router.navigateByUrl('/dashboard');
-    }
+    this.authService.restoreSession().subscribe((session) => {
+      if (session) {
+        void this.router.navigateByUrl('/dashboard');
+      }
+    });
   }
 
   protected submit(): void {

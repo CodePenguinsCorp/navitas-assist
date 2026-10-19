@@ -9,6 +9,7 @@ import {
   FailureCause,
   FailureType,
   RmaPriority,
+  RmaItemResponse,
   RmaResponse,
   RmaStatus,
   RmaStatusHistoryResponse,
@@ -96,16 +97,33 @@ export function formatDateTime(value: string | null): string {
   }).format(new Date(value));
 }
 
-export function trackableLabel(rma: Pick<RmaResponse, 'serialNumber' | 'batchNumber'>): string {
-  if (rma.serialNumber) {
-    return `Serial ${rma.serialNumber}`;
+export function trackableLabel(rma: Pick<RmaResponse, 'items' | 'serialNumber' | 'batchNumber'>): string {
+  const firstItem = rma.items[0] ?? rma;
+  const label = rmaItemTrackableLabel(firstItem);
+  const additionalItems = rma.items.length - 1;
+  return additionalItems > 0 ? `${label} + ${additionalItems} item(ns)` : label;
+}
+
+export function rmaItemTrackableLabel(item: Pick<RmaItemResponse, 'serialNumber' | 'batchNumber'>): string {
+  if (item.serialNumber && item.batchNumber) {
+    return `Serial ${item.serialNumber} | Lote ${item.batchNumber}`;
   }
 
-  if (rma.batchNumber) {
-    return `Lote ${rma.batchNumber}`;
+  if (item.serialNumber) {
+    return `Serial ${item.serialNumber}`;
+  }
+
+  if (item.batchNumber) {
+    return `Lote ${item.batchNumber}`;
   }
 
   return 'Item sem identifica\u00e7\u00e3o';
+}
+
+export function productSummary(rma: Pick<RmaResponse, 'items' | 'productName'>): string {
+  const firstProductName = rma.items[0]?.productName ?? rma.productName;
+  const additionalItems = rma.items.length - 1;
+  return additionalItems > 0 ? `${firstProductName} + ${additionalItems} item(ns)` : firstProductName;
 }
 
 export function ownerLabel(
