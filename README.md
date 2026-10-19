@@ -245,6 +245,17 @@ Exemplo para deploy manual:
 .\scripts\deploy-prod.ps1
 ```
 
+## Schema do banco
+
+O projeto ainda não possui banco de produção nem dados que precisem ser preservados. O Flyway cria o schema inicial em um banco vazio e o Hibernate apenas valida o resultado (`ddl-auto=validate`). Não existe migração ou backfill de dados legados.
+
+Quando o schema local ficar incompatível, descarte o volume de desenvolvimento e recrie a stack. O primeiro comando remove todos os dados locais:
+
+```powershell
+docker compose down -v
+docker compose up --build -d
+```
+
 ## Troubleshooting
 
 Se o MySQL Docker não subir, provavelmente já existe outro banco ocupando a porta `3306`.
