@@ -82,7 +82,12 @@ export function formatDate(value: string | null): string {
     return 'N\u00e3o informado';
   }
 
-  return new Intl.DateTimeFormat('pt-BR').format(new Date(value));
+  const dateOnly = parseDateOnly(value);
+  if (dateOnly) {
+    return new Intl.DateTimeFormat('pt-BR', { timeZone: SAO_PAULO_TIME_ZONE }).format(dateOnly);
+  }
+
+  return new Intl.DateTimeFormat('pt-BR', { timeZone: SAO_PAULO_TIME_ZONE }).format(new Date(value));
 }
 
 export function formatDateTime(value: string | null): string {
@@ -157,7 +162,29 @@ export function normalizeText(value: string): string | null {
 }
 
 export function todayInputValue(): string {
-  return new Date().toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: SAO_PAULO_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
+}
+
+const SAO_PAULO_TIME_ZONE = 'America/Sao_Paulo';
+
+function parseDateOnly(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day, 12));
+  return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day
+    ? parsed
+    : null;
 }
 
 function priorityWeight(priority: RmaPriority): number {

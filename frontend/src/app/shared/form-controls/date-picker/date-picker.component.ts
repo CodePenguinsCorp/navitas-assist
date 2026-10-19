@@ -49,7 +49,7 @@ export class DatePickerComponent implements ControlValueAccessor {
 
   private readonly selectedValue = signal('');
   private readonly disabledByForm = signal(false);
-  private readonly viewMonth = signal(startOfMonth(new Date()));
+  private readonly viewMonth = signal(startOfMonth(todayInSaoPaulo()));
 
   protected readonly isDisabled = computed(() => this.disabled() || this.disabledByForm());
   protected readonly displayValue = computed(() => formatDisplayDate(this.selectedValue(), this.placeholder()));
@@ -92,7 +92,7 @@ export class DatePickerComponent implements ControlValueAccessor {
   }
 
   protected selectToday(): void {
-    this.applyValue(toIsoDate(new Date()));
+    this.applyValue(todayIsoDate());
     this.close();
   }
 
@@ -137,7 +137,7 @@ export class DatePickerComponent implements ControlValueAccessor {
 
   private focusCurrentMonth(): void {
     const parsed = parseIsoDate(this.selectedValue());
-    this.viewMonth.set(startOfMonth(parsed ?? new Date()));
+    this.viewMonth.set(startOfMonth(parsed ?? todayInSaoPaulo()));
   }
 
   private close(): void {
@@ -155,7 +155,7 @@ function buildCalendarDays(viewMonth: Date, selectedValue: string): CalendarDay[
   const firstDay = new Date(year, month, 1);
   const startOffset = firstDay.getDay();
   const startDate = new Date(year, month, 1 - startOffset);
-  const todayIso = toIsoDate(new Date());
+  const todayIso = todayIsoDate();
 
   return Array.from({ length: 42 }, (_, index) => {
     const date = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + index);
@@ -177,7 +177,7 @@ function formatDisplayDate(value: string, placeholder: string): string {
     return placeholder;
   }
 
-  return new Intl.DateTimeFormat('pt-BR').format(parsed);
+  return new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(parsed);
 }
 
 function parseIsoDate(value: string): Date | null {
@@ -210,4 +210,19 @@ function toIsoDate(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function todayInSaoPaulo(): Date {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric'
+  }).formatToParts(new Date());
+  const part = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((item) => item.type === type)?.value);
+  return new Date(part('year'), part('month') - 1, part('day'));
+}
+
+function todayIsoDate(): string {
+  return toIsoDate(todayInSaoPaulo());
 }
