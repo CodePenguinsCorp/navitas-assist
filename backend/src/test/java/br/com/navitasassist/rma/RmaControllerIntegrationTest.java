@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 
@@ -33,6 +34,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class RmaControllerIntegrationTest {
+
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
 
     @Autowired
     private MockMvc mockMvc;
@@ -152,6 +155,88 @@ class RmaControllerIntegrationTest {
                 .content(payload))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.details[0]", startsWith("items[0]:")));
+    }
+
+    @Test
+    void shouldRejectInconsistentRmaDates() throws Exception {
+        Client client = new Client();
+        client.setLegalName("Date validation client");
+        Client savedClient = clientRepository.save(client);
+        Product product = saveProduct("SKU-RMA-DATES", "Date validation product", 12);
+        LocalDate today = LocalDate.now(BUSINESS_ZONE);
+
+        Map<String, Object> futureManufacturing = Map.of(
+            "clientId", savedClient.getId(),
+            "items", List.of(Map.of("productId", product.getId(), "serialNumber", "FUTURE", "manufacturedAt", today.plusDays(1).toString())),
+            "purchaseDateUnknown", true,
+            "entryDate", today.toString(),
+            "receivedBy", "Service desk",
+            "reportedFailure", "Product does not start"
+        );
+        mockMvc.perform(post("/api/rmas")
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(futureManufacturing)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Manufacturing date cannot be after today."));
+
+        Map<String, Object> purchaseBeforeManufacturing = Map.of(
+            "clientId", savedClient.getId(),
+            "items", List.of(Map.of("productId", product.getId(), "serialNumber", "PURCHASE", "manufacturedAt", today.minusDays(1).toString())),
+            "purchaseDate", today.minusDays(2).toString(),
+            "entryDate", today.toString(),
+            "receivedBy", "Service desk",
+            "reportedFailure", "Product does not start"
+        );
+        mockMvc.perform(post("/api/rmas")
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(purchaseBeforeManufacturing)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Purchase date cannot be before manufacturing date."));
+
+        Map<String, Object> entryBeforePurchase = Map.of(
+            "clientId", savedClient.getId(),
+            "items", List.of(Map.of("productId", product.getId(), "serialNumber", "ENTRY")),
+            "purchaseDate", today.toString(),
+            "entryDate", today.minusDays(1).toString(),
+            "receivedBy", "Service desk",
+            "reportedFailure", "Product does not start"
+        );
+        mockMvc.perform(post("/api/rmas")
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(entryBeforePurchase)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Entry date cannot be before purchase date."));
+    }
+
+    @Test
+    void shouldRejectReportedFailureAboveNewRmaLimit() throws Exception {
+        Client client = new Client();
+        client.setLegalName("Text limit client");
+        Client savedClient = clientRepository.save(client);
+        Product product = saveProduct("SKU-RMA-LIMIT", "Text limit product", 12);
+
+        Map<String, Object> payload = Map.of(
+            "clientId", savedClient.getId(),
+            "items", List.of(Map.of("productId", product.getId(), "serialNumber", "LIMIT")),
+            "purchaseDateUnknown", true,
+            "entryDate", LocalDate.now(BUSINESS_ZONE).toString(),
+            "receivedBy", "Service desk",
+            "reportedFailure", "x".repeat(1001)
+        );
+
+        mockMvc.perform(post("/api/rmas")
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.details[0]", startsWith("reportedFailure:")));
     }
 
     @Test

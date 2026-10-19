@@ -31,6 +31,13 @@ class DatabaseMigrationTest {
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
             assertTrue(tableExists(connection, "rmas"));
             assertTrue(tableExists(connection, "rma_items"));
+            assertEquals(1000, columnSize(connection, "rmas", "reported_failure"));
+            assertEquals(500, columnSize(connection, "rmas", "received_accessories"));
+            assertEquals(500, columnSize(connection, "rmas", "physical_condition"));
+            assertEquals(1000, columnSize(connection, "rmas", "warranty_justification"));
+            assertEquals(600, columnSize(connection, "rmas", "repair_summary"));
+            assertEquals(600, columnSize(connection, "rmas", "replaced_parts_summary"));
+            assertEquals(800, columnSize(connection, "rmas", "test_summary"));
             assertEquals(
                 Set.of(
                     "idx_rma_items_rma_id",
@@ -69,6 +76,13 @@ class DatabaseMigrationTest {
             }
         }
         return indexes;
+    }
+
+    private int columnSize(Connection connection, String tableName, String columnName) throws SQLException {
+        try (ResultSet columns = connection.getMetaData().getColumns(null, null, tableName, columnName)) {
+            assertTrue(columns.next());
+            return columns.getInt("COLUMN_SIZE");
+        }
     }
 
     private long insertClient(Connection connection) throws SQLException {

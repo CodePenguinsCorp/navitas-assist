@@ -3,6 +3,7 @@ import {
   ElementRef,
   EventEmitter,
   HostListener,
+  OnDestroy,
   Output,
   computed,
   forwardRef,
@@ -11,6 +12,7 @@ import {
   signal
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { todayInputValue } from '../../../core/utils/date';
 
 interface CalendarDay {
   iso: string;
@@ -34,13 +36,16 @@ const WEEKDAY_LABELS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
     }
   ]
 })
-export class DatePickerComponent implements ControlValueAccessor {
+export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
+  private static openPicker: DatePickerComponent | null = null;
   private readonly hostElement = inject(ElementRef<HTMLElement>);
 
   readonly placeholder = input('Selecione uma data');
   readonly ariaLabel = input('Selecionar data');
   readonly disabled = input(false);
   readonly allowClear = input(true);
+  readonly minDate = input('');
+  readonly maxDate = input('');
 
   @Output() readonly valueChange = new EventEmitter<string>();
 
@@ -49,7 +54,7 @@ export class DatePickerComponent implements ControlValueAccessor {
 
   private readonly selectedValue = signal('');
   private readonly disabledByForm = signal(false);
-  private readonly viewMonth = signal(startOfMonth(new Date()));
+  private readonly viewMonth = signal(startOfMonth(parseIsoDate(todayInputValue())!));
 
   protected readonly isDisabled = computed(() => this.disabled() || this.disabledByForm());
   protected readonly displayValue = computed(() => formatDisplayDate(this.selectedValue(), this.placeholder()));
@@ -57,6 +62,11 @@ export class DatePickerComponent implements ControlValueAccessor {
     new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(this.viewMonth())
   );
   protected readonly calendarDays = computed(() => buildCalendarDays(this.viewMonth(), this.selectedValue()));
+  protected readonly todayDisabled = computed(() => this.isDateDisabled(todayInputValue()));
+
+  protected isDateDisabled(iso: string): boolean {
+    return (!!this.minDate() && iso < this.minDate()) || (!!this.maxDate() && iso > this.maxDate());
+  }
 
   private onChange: (value: string) => void = () => {};
   private onTouched: () => void = () => {};
@@ -67,10 +77,13 @@ export class DatePickerComponent implements ControlValueAccessor {
     }
 
     if (!this.isOpen()) {
+      DatePickerComponent.openPicker?.close();
       this.focusCurrentMonth();
+      this.isOpen.set(true);
+      DatePickerComponent.openPicker = this;
+    } else {
+      this.close();
     }
-
-    this.isOpen.update((open) => !open);
   }
 
   protected previousMonth(): void {
@@ -82,6 +95,7 @@ export class DatePickerComponent implements ControlValueAccessor {
   }
 
   protected selectDay(day: CalendarDay): void {
+    if (this.isDateDisabled(day.iso)) return;
     this.applyValue(day.iso);
     this.close();
   }
@@ -92,7 +106,8 @@ export class DatePickerComponent implements ControlValueAccessor {
   }
 
   protected selectToday(): void {
-    this.applyValue(toIsoDate(new Date()));
+    if (this.todayDisabled()) return;
+    this.applyValue(todayInputValue());
     this.close();
   }
 
@@ -121,6 +136,12 @@ export class DatePickerComponent implements ControlValueAccessor {
     }
   }
 
+  ngOnDestroy(): void {
+    if (DatePickerComponent.openPicker === this) {
+      DatePickerComponent.openPicker = null;
+    }
+  }
+
   @HostListener('document:click', ['$event'])
   protected handleDocumentClick(event: MouseEvent): void {
     if (!this.hostElement.nativeElement.contains(event.target as Node)) {
@@ -137,10 +158,13 @@ export class DatePickerComponent implements ControlValueAccessor {
 
   private focusCurrentMonth(): void {
     const parsed = parseIsoDate(this.selectedValue());
-    this.viewMonth.set(startOfMonth(parsed ?? new Date()));
+    this.viewMonth.set(startOfMonth(parsed ?? parseIsoDate(todayInputValue())!));
   }
 
   private close(): void {
+    if (DatePickerComponent.openPicker === this) {
+      DatePickerComponent.openPicker = null;
+    }
     if (this.isOpen()) {
       this.isOpen.set(false);
     }
@@ -155,7 +179,7 @@ function buildCalendarDays(viewMonth: Date, selectedValue: string): CalendarDay[
   const firstDay = new Date(year, month, 1);
   const startOffset = firstDay.getDay();
   const startDate = new Date(year, month, 1 - startOffset);
-  const todayIso = toIsoDate(new Date());
+  const todayIso = todayInputValue();
 
   return Array.from({ length: 42 }, (_, index) => {
     const date = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + index);

@@ -27,6 +27,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
+import { todayInputValue } from '../../core/utils/date';
 import {
   compareRmasForQueue,
   failureCauseLabel,
@@ -40,7 +41,6 @@ import {
   productSummary,
   rmaItemTrackableLabel,
   statusLabel,
-  todayInputValue,
   trackableLabel,
   warrantyLabel,
   warrantyTextClass
@@ -56,6 +56,12 @@ type FailureTypeValue = FailureType | '';
 type FailureCauseValue = FailureCause | '';
 type WarrantyOverrideValue = WarrantyStatus | '';
 type ModalView = 'create' | 'details' | 'diagnosis';
+
+interface CreateDateErrors {
+  manufacturedAt: string[];
+  purchaseDate: string;
+  entryDate: string;
+}
 
 @Component({
   selector: 'app-rmas',
@@ -146,6 +152,11 @@ type ModalView = 'create' | 'details' | 'diagnosis';
       color: var(--muted);
     }
 
+    .purchase-date-unknown {
+      min-height: 42px;
+      align-self: center;
+    }
+
     @media (max-width: 720px) {
       .rma-item-editor {
         grid-template-columns: 1fr;
@@ -161,6 +172,7 @@ export class RmasComponent {
 
   protected readonly loading = signal(true);
   protected readonly createSubmitting = signal(false);
+  protected readonly dateErrors = signal<CreateDateErrors>({ manufacturedAt: [], purchaseDate: '', entryDate: '' });
   protected readonly diagnosisSubmitting = signal(false);
   protected readonly historyLoading = signal(false);
 
@@ -203,6 +215,20 @@ export class RmasComponent {
   protected readonly ownerLabel = ownerLabel;
   protected readonly productSummary = productSummary;
   protected readonly itemTrackableLabel = rmaItemTrackableLabel;
+
+  protected get todayDate(): string {
+    return todayInputValue();
+  }
+
+  protected get purchaseMinDate(): string {
+    return this.latestManufacturedDate();
+  }
+
+  protected get entryMinDate(): string {
+    const purchaseDate = this.createForm.controls.purchaseDateUnknown.value
+      ? '' : this.createForm.controls.purchaseDate.value;
+    return [this.latestManufacturedDate(), purchaseDate].filter(Boolean).sort().at(-1) ?? '';
+  }
 
   protected readonly clientSelectOptions = computed<ReadonlyArray<CustomSelectOption<number>>>(() => [
     { value: 0, label: 'Selecione' },
@@ -253,15 +279,15 @@ export class RmasComponent {
     invoiceNumber: [''],
     invoiceFileName: [''],
     receivedBy: ['', [Validators.required, Validators.maxLength(120)]],
-    reportedFailure: ['', [Validators.required, Validators.maxLength(2000)]],
-    receivedAccessories: [''],
-    physicalCondition: [''],
+    reportedFailure: ['', [Validators.required, Validators.maxLength(1000)]],
+    receivedAccessories: ['', [Validators.maxLength(500)]],
+    physicalCondition: ['', [Validators.maxLength(500)]],
     priority: ['MEDIUM' as RmaPriority, [Validators.required]],
     warrantyStatusOverride: ['' as WarrantyOverrideValue],
-    warrantyJustification: [''],
-    repairSummary: [''],
-    replacedPartsSummary: [''],
-    testSummary: ['']
+    warrantyJustification: ['', [Validators.maxLength(1000)]],
+    repairSummary: ['', [Validators.maxLength(600)]],
+    replacedPartsSummary: ['', [Validators.maxLength(600)]],
+    testSummary: ['', [Validators.maxLength(800)]]
   });
 
   protected readonly diagnosisForm = this.formBuilder.nonNullable.group({
@@ -274,6 +300,13 @@ export class RmasComponent {
   });
 
   constructor() {
+    this.createForm.valueChanges.subscribe(() => {
+      if (this.createForm.controls.purchaseDateUnknown.value && this.createForm.controls.purchaseDate.value) {
+        this.createForm.controls.purchaseDate.setValue('');
+        return;
+      }
+      this.dateErrors.set(this.validateCreateDates());
+    });
     this.seedOperatorDefaults();
     this.loadWorkspace();
   }
@@ -409,6 +442,13 @@ export class RmasComponent {
     }
 
     const raw = this.createForm.getRawValue();
+    const dateErrors = this.validateCreateDates();
+    this.dateErrors.set(dateErrors);
+    if (dateErrors.manufacturedAt.some(Boolean) || dateErrors.purchaseDate || dateErrors.entryDate) {
+      this.pageError.set('Corrija as datas indicadas no formulário.');
+      this.pageMessage.set('');
+      return;
+    }
     const warrantyStatusOverride = raw.warrantyStatusOverride || null;
     const warrantyJustification = normalizeText(raw.warrantyJustification);
 
@@ -620,6 +660,35 @@ export class RmasComponent {
       replacedPartsSummary: '',
       testSummary: ''
     });
+    this.dateErrors.set({ manufacturedAt: [], purchaseDate: '', entryDate: '' });
+  }
+
+  private validateCreateDates(): CreateDateErrors {
+    const { items, purchaseDate, purchaseDateUnknown, entryDate } = this.createForm.getRawValue();
+    const manufacturedDates = items.map((item) => item.manufacturedAt).filter(Boolean);
+    const latestManufacturedDate = manufacturedDates.sort().at(-1) ?? '';
+    const knownPurchaseDate = purchaseDateUnknown ? '' : purchaseDate;
+
+    return {
+      manufacturedAt: items.map((item) => item.manufacturedAt && item.manufacturedAt > this.todayDate
+        ? 'A fabricação não pode ser posterior a hoje.' : ''),
+      purchaseDate: knownPurchaseDate && knownPurchaseDate > this.todayDate
+        ? 'A compra não pode ser posterior a hoje.'
+        : knownPurchaseDate && latestManufacturedDate && knownPurchaseDate < latestManufacturedDate
+          ? 'A compra não pode ser anterior à fabricação.' : '',
+      entryDate: knownPurchaseDate && entryDate && entryDate < knownPurchaseDate
+        ? 'A entrada não pode ser anterior à compra.'
+        : latestManufacturedDate && entryDate && entryDate < latestManufacturedDate
+          ? 'A entrada não pode ser anterior à fabricação.' : ''
+    };
+  }
+
+  private latestManufacturedDate(): string {
+    return this.createItems.controls
+      .map((item) => item.controls.manufacturedAt.value)
+      .filter(Boolean)
+      .sort()
+      .at(-1) ?? '';
   }
 
   private buildFilters(): { query?: string; status?: RmaStatus } {
