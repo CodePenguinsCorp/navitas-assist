@@ -89,7 +89,7 @@ Esse comando sobe:
 
 - frontend Angular servido por Nginx
 - backend Spring Boot
-- MySQL 8.4
+- MySQL 8.0
 
 Você também pode usar o Compose diretamente:
 
