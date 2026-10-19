@@ -63,6 +63,12 @@ export interface UserAccountResponse {
   updatedAt: string;
 }
 
+export interface AssignableUserResponse {
+  id: number;
+  username: string;
+  fullName: string;
+}
+
 export type AuthUserResponse = UserAccountResponse;
 
 export interface UserAccountRequest {
@@ -171,6 +177,10 @@ export interface RmaStatusUpdateRequest {
   note: string | null;
 }
 
+export interface RmaAssigneeUpdateRequest {
+  assigneeId: number | null;
+}
+
 export interface DiagnosisRequest {
   foundFailure: string;
   failureType: FailureType | null;
@@ -185,6 +195,15 @@ export interface RmaStatusHistoryResponse {
   changedBy: string;
   changedAt: string;
   note: string | null;
+}
+
+export interface RmaAssignmentHistoryResponse {
+  previousAssigneeId: number | null;
+  previousAssigneeName: string | null;
+  newAssigneeId: number | null;
+  newAssigneeName: string | null;
+  changedBy: string;
+  changedAt: string;
 }
 
 export interface RmaItemResponse {
@@ -223,6 +242,8 @@ export interface RmaResponse {
   physicalCondition: string | null;
   priority: RmaPriority;
   status: RmaStatus;
+  assigneeId: number | null;
+  assigneeName: string | null;
   repairSummary: string | null;
   replacedPartsSummary: string | null;
   testSummary: string | null;
@@ -231,6 +252,7 @@ export interface RmaResponse {
   trackingCode: string | null;
   diagnosis: DiagnosisResponse | null;
   statusHistory: RmaStatusHistoryResponse[];
+  assignmentHistory: RmaAssignmentHistoryResponse[];
   createdAt: string;
   updatedAt: string;
 }

@@ -9,6 +9,7 @@ import br.com.navitasassist.config.AuditableEntity;
 import br.com.navitasassist.diagnosis.Diagnosis;
 import br.com.navitasassist.item.ItemIdentification;
 import br.com.navitasassist.product.Product;
+import br.com.navitasassist.user.UserAccount;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
@@ -93,6 +94,10 @@ public class RmaRecord extends AuditableEntity {
     @Column(nullable = false, length = 30)
     private RmaStatus status = RmaStatus.RECEIVED;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assignee_id")
+    private UserAccount assignee;
+
     @Column(length = 600)
     private String repairSummary;
 
@@ -118,6 +123,10 @@ public class RmaRecord extends AuditableEntity {
     @OrderBy("changedAt DESC")
     private List<RmaStatusHistory> statusHistory = new ArrayList<>();
 
+    @OneToMany(mappedBy = "rma", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("changedAt DESC")
+    private List<RmaAssignmentHistory> assignmentHistory = new ArrayList<>();
+
     public void setDiagnosis(Diagnosis diagnosis) {
         if (diagnosis == null) {
             this.diagnosis = null;
@@ -131,6 +140,11 @@ public class RmaRecord extends AuditableEntity {
     public void addStatusHistory(RmaStatusHistory history) {
         history.setRma(this);
         this.statusHistory.add(history);
+    }
+
+    public void addAssignmentHistory(RmaAssignmentHistory history) {
+        history.setRma(this);
+        this.assignmentHistory.add(history);
     }
 
     public void replaceItems(List<RmaItem> items) {

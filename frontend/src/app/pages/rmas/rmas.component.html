@@ -250,6 +250,23 @@
         </div>
 
         <div class="summary-block">
+          <strong>Histórico de responsáveis</strong>
+          @if (rma.assignmentHistory.length > 0) {
+            <div class="assignment-history">
+              @for (event of rma.assignmentHistory; track event.changedAt) {
+                <div class="assignment-history__item">
+                  <strong>{{ event.previousAssigneeName || 'Sem responsável' }} → {{ event.newAssigneeName || 'Sem responsável' }}</strong>
+                  <span>{{ dateTimeLabel(event.changedAt) }}</span>
+                  <small>Alterado por {{ event.changedBy }}</small>
+                </div>
+              }
+            </div>
+          } @else {
+            <p class="rma-detail-copy">Nenhuma alteração de responsável registrada.</p>
+          }
+        </div>
+
+        <div class="summary-block">
           <strong>Diagnóstico atual</strong>
           @if (rma.diagnosis) {
             <p class="rma-detail-copy">{{ rma.diagnosis.foundFailure }}</p>

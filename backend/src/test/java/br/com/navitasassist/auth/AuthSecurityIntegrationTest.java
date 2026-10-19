@@ -125,6 +125,8 @@ class AuthSecurityIntegrationTest {
             .andExpect(status().isOk());
         mockMvc.perform(get("/api/rmas").with(user("viewer").roles("VIEWER")))
             .andExpect(status().isOk());
+        mockMvc.perform(get("/api/users/assignable").with(user("viewer").roles("VIEWER")))
+            .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/clients")
                 .with(user("viewer").roles("VIEWER"))
@@ -170,6 +172,12 @@ class AuthSecurityIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
             .andExpect(status().isNotFound());
+        mockMvc.perform(patch("/api/rmas/999999/assignee")
+                .with(user("service.desk").roles("SERVICE_DESK"))
+                .with(csrfCookie(csrfCookie))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"assigneeId\":null}"))
+            .andExpect(status().isNotFound());
         mockMvc.perform(patch("/api/rmas/999999/status")
                 .with(user("service.desk").roles("SERVICE_DESK"))
                 .with(csrfCookie(csrfCookie))
@@ -201,6 +209,12 @@ class AuthSecurityIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"status\":\"IN_DIAGNOSIS\"}"))
             .andExpect(status().isNotFound());
+        mockMvc.perform(patch("/api/rmas/999999/assignee")
+                .with(user("technician").roles("TECHNICIAN"))
+                .with(csrfCookie(csrfCookie))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"assigneeId\":null}"))
+            .andExpect(status().isForbidden());
         mockMvc.perform(put("/api/rmas/999999/diagnosis")
                 .with(user("technician").roles("TECHNICIAN"))
                 .with(csrfCookie(csrfCookie))

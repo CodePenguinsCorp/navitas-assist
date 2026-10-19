@@ -17,6 +17,8 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
 
     boolean existsByClient_Id(Long clientId);
 
+    boolean existsByAssignee_Id(Long assigneeId);
+
     Optional<RmaRecord> findByCodeIgnoreCase(String code);
 
     Optional<RmaRecord> findTopByCodeStartingWithOrderByCodeDesc(String prefix);

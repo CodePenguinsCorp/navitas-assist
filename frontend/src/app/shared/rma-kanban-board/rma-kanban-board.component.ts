@@ -29,6 +29,7 @@ export class RmaKanbanBoardComponent {
   readonly rmas = input<readonly RmaResponse[]>([]);
   readonly loading = input(false);
   readonly canUpdateStatus = input(false);
+  readonly canUpdateAssignee = input(false);
   readonly boardUpdatingId = input<number | null>(null);
   readonly selectedRmaId = input<number | null>(null);
   readonly draggedRmaId = input<number | null>(null);
@@ -38,6 +39,7 @@ export class RmaKanbanBoardComponent {
   readonly toolbarDescription = input('Arraste os cards entre as colunas para atualizar o status do RMA.');
 
   @Output() readonly cardSelect = new EventEmitter<RmaResponse>();
+  @Output() readonly assigneeChange = new EventEmitter<RmaResponse>();
   @Output() readonly cardDragStart = new EventEmitter<{ event: DragEvent; rma: RmaResponse }>();
   @Output() readonly cardDragEnd = new EventEmitter<void>();
   @Output() readonly columnDragOver = new EventEmitter<{ event: DragEvent; status: RmaStatus }>();
@@ -78,5 +80,16 @@ export class RmaKanbanBoardComponent {
 
   protected isStatusUpdating(rma: RmaResponse): boolean {
     return this.boardUpdatingId() === rma.id;
+  }
+
+  protected requestAssigneeChange(event: Event, rma: RmaResponse): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.assigneeChange.emit(rma);
+  }
+
+  protected preventCardDrag(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
   }
 }

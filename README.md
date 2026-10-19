@@ -61,6 +61,12 @@ O enum `WarrantyStatus`, usado no backend e no frontend, representa três situa�
 
 O prazo é registrado em cada novo item para preservar a garantia quando o cadastro do produto mudar. A API disponibiliza prazo, vencimento e situação em `items[]`; as telas exibem esses dados por produto. O cálculo é automático, sem edição manual da situação.
 
+## Responsáveis pelos RMAs
+
+Cada RMA pode ter um técnico responsável ou permanecer sem responsável. ADMIN e SERVICE_DESK podem atribuir, trocar ou remover o responsável diretamente no Kanban; somente usuários ativos com perfil TECHNICIAN aparecem como novas opções. A inativação posterior não apaga a atribuição existente.
+
+Toda alteração registra o responsável anterior, o novo responsável, o autor e o horário. O Kanban permite filtrar por técnico ativo ou por RMAs sem responsável, e os detalhes do RMA exibem o histórico completo de atribuições.
+
 ## Estrutura do Projeto
 
 - `frontend/`: interface web
@@ -241,6 +247,7 @@ Esses valores também são usados somente nos testes automatizados. Fora dos pro
 | Criar, alterar ou excluir clientes e produtos | Sim | Sim | Não | Não |
 | Abrir ou alterar dados gerais de RMA | Sim | Sim | Não | Não |
 | Alterar o status de RMA | Sim | Sim | Sim | Não |
+| Atribuir ou remover responsável do RMA | Sim | Sim | Não | Não |
 | Registrar ou alterar diagnóstico | Sim | Não | Sim | Não |
 | Gerenciar usuários | Sim | Não | Não | Não |
 

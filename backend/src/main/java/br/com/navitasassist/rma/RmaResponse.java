@@ -29,6 +29,8 @@ public record RmaResponse(
     String physicalCondition,
     RmaPriority priority,
     RmaStatus status,
+    Long assigneeId,
+    String assigneeName,
     String repairSummary,
     String replacedPartsSummary,
     String testSummary,
@@ -37,6 +39,7 @@ public record RmaResponse(
     String trackingCode,
     DiagnosisResponse diagnosis,
     List<RmaStatusHistoryResponse> statusHistory,
+    List<RmaAssignmentHistoryResponse> assignmentHistory,
     Instant createdAt,
     Instant updatedAt
 ) {
@@ -69,6 +72,8 @@ public record RmaResponse(
             rma.getPhysicalCondition(),
             rma.getPriority(),
             rma.getStatus(),
+            rma.getAssignee() == null ? null : rma.getAssignee().getId(),
+            rma.getAssignee() == null ? null : rma.getAssignee().getFullName(),
             rma.getRepairSummary(),
             rma.getReplacedPartsSummary(),
             rma.getTestSummary(),
@@ -77,6 +82,7 @@ public record RmaResponse(
             rma.getTrackingCode(),
             DiagnosisResponse.from(rma.getDiagnosis()),
             rma.getStatusHistory().stream().map(RmaStatusHistoryResponse::from).toList(),
+            rma.getAssignmentHistory().stream().map(RmaAssignmentHistoryResponse::from).toList(),
             rma.getCreatedAt(),
             rma.getUpdatedAt()
         );

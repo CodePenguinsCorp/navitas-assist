@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
+  AssignableUserResponse,
   ClientRequest,
   ClientResponse,
   ProductRequest,
@@ -49,6 +50,10 @@ export class CatalogService {
 
   listUsers(): Observable<UserAccountResponse[]> {
     return this.http.get<UserAccountResponse[]>('/api/users');
+  }
+
+  listAssignableUsers(): Observable<AssignableUserResponse[]> {
+    return this.http.get<AssignableUserResponse[]>('/api/users/assignable');
   }
 
   createUser(payload: UserAccountRequest): Observable<UserAccountResponse> {

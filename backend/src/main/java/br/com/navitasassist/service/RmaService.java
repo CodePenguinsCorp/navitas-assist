@@ -14,6 +14,8 @@ import br.com.navitasassist.diagnosis.DiagnosisRequest;
 import br.com.navitasassist.item.ItemIdentification;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.CreateRmaRequest;
+import br.com.navitasassist.rma.RmaAssigneeUpdateRequest;
+import br.com.navitasassist.rma.RmaAssignmentHistory;
 import br.com.navitasassist.rma.RmaItem;
 import br.com.navitasassist.rma.RmaItemRequest;
 import br.com.navitasassist.rma.RmaPriority;
@@ -23,6 +25,7 @@ import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusHistory;
 import br.com.navitasassist.rma.RmaStatusUpdateRequest;
 import br.com.navitasassist.rma.UpdateRmaRequest;
+import br.com.navitasassist.user.UserAccount;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -39,6 +42,7 @@ public class RmaService {
     private final RmaRecordRepository rmaRecordRepository;
     private final ClientService clientService;
     private final ProductService productService;
+    private final UserAccountService userAccountService;
 
     @Transactional(readOnly = true)
     public List<RmaResponse> search(String query, RmaStatus status) {
@@ -158,6 +162,25 @@ public class RmaService {
             addStatusHistory(rma, request.status(), request.note());
         }
 
+        return RmaResponse.from(rmaRecordRepository.save(rma));
+    }
+
+    public RmaResponse updateAssignee(Long id, RmaAssigneeUpdateRequest request) {
+        RmaRecord rma = getEntityById(id);
+        UserAccount previousAssignee = rma.getAssignee();
+        UserAccount newAssignee = request.assigneeId() == null
+            ? null
+            : userAccountService.getAssignableTechnicianById(request.assigneeId());
+
+        if (Objects.equals(
+            previousAssignee == null ? null : previousAssignee.getId(),
+            newAssignee == null ? null : newAssignee.getId()
+        )) {
+            return RmaResponse.from(rma);
+        }
+
+        rma.setAssignee(newAssignee);
+        addAssignmentHistory(rma, previousAssignee, newAssignee);
         return RmaResponse.from(rmaRecordRepository.save(rma));
     }
 
@@ -347,6 +370,17 @@ public class RmaService {
         history.setChangedAt(Instant.now());
         history.setNote(trimToNull(note));
         rma.addStatusHistory(history);
+    }
+
+    private void addAssignmentHistory(RmaRecord rma, UserAccount previousAssignee, UserAccount newAssignee) {
+        RmaAssignmentHistory history = new RmaAssignmentHistory();
+        history.setPreviousAssigneeId(previousAssignee == null ? null : previousAssignee.getId());
+        history.setPreviousAssigneeName(previousAssignee == null ? null : previousAssignee.getFullName());
+        history.setNewAssigneeId(newAssignee == null ? null : newAssignee.getId());
+        history.setNewAssigneeName(newAssignee == null ? null : newAssignee.getFullName());
+        history.setChangedBy(currentUsername());
+        history.setChangedAt(Instant.now());
+        rma.addAssignmentHistory(history);
     }
 
     private String generateNextCode() {

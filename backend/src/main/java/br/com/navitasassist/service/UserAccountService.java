@@ -4,11 +4,14 @@ import java.util.List;
 
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
+import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
+import br.com.navitasassist.user.AssignableUserResponse;
 import br.com.navitasassist.user.UserAccount;
 import br.com.navitasassist.user.UserAccountRequest;
 import br.com.navitasassist.user.UserAccountResponse;
 import br.com.navitasassist.user.UserAccountUpdateRequest;
+import br.com.navitasassist.user.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -20,11 +23,20 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserAccountService {
 
     private final UserAccountRepository userAccountRepository;
+    private final RmaRecordRepository rmaRecordRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
     public List<UserAccountResponse> listAll() {
         return userAccountRepository.findAll().stream().map(UserAccountResponse::from).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<AssignableUserResponse> listAssignableTechnicians() {
+        return userAccountRepository.findAllByActiveTrueAndRoleOrderByFullNameAsc(UserRole.TECHNICIAN)
+            .stream()
+            .map(AssignableUserResponse::from)
+            .toList();
     }
 
     public UserAccountResponse create(UserAccountRequest request) {
@@ -61,8 +73,23 @@ public class UserAccountService {
         if (userAccount.getUsername().equalsIgnoreCase(authenticatedUsername)) {
             throw new BusinessException("You cannot delete your own user account.");
         }
+        if (rmaRecordRepository.existsByAssignee_Id(id)) {
+            throw new BusinessException("User is assigned to one or more RMAs and cannot be deleted.");
+        }
 
         userAccountRepository.delete(userAccount);
+    }
+
+    @Transactional(readOnly = true)
+    public UserAccount getAssignableTechnicianById(Long id) {
+        UserAccount userAccount = getEntityById(id);
+        if (!userAccount.isActive()) {
+            throw new BusinessException("Inactive users cannot be assigned to an RMA.");
+        }
+        if (userAccount.getRole() != UserRole.TECHNICIAN) {
+            throw new BusinessException("Only technicians can be assigned to an RMA.");
+        }
+        return userAccount;
     }
 
     @Transactional(readOnly = true)

@@ -64,6 +64,7 @@ CREATE TABLE rmas (
     physical_condition VARCHAR(500),
     priority VARCHAR(20) NOT NULL,
     status VARCHAR(30) NOT NULL,
+    assignee_id BIGINT,
     repair_summary VARCHAR(600),
     replaced_parts_summary VARCHAR(600),
     test_summary VARCHAR(800),
@@ -77,12 +78,14 @@ CREATE TABLE rmas (
     CONSTRAINT uk_rmas_code UNIQUE (code),
     CONSTRAINT fk_rmas_client FOREIGN KEY (client_id) REFERENCES clients (id),
     CONSTRAINT fk_rmas_product FOREIGN KEY (product_id) REFERENCES products (id),
+    CONSTRAINT fk_rmas_assignee FOREIGN KEY (assignee_id) REFERENCES user_accounts (id),
     CONSTRAINT ck_rmas_priority CHECK (priority IN ('LOW', 'MEDIUM', 'HIGH')),
     CONSTRAINT ck_rmas_status CHECK (status IN ('RECEIVED', 'TRIAGE', 'IN_DIAGNOSIS', 'WAITING_PART', 'IN_REPAIR', 'IN_TESTS', 'COMPLETED', 'RETURNED', 'IRREPARABLE'))
 );
 
 CREATE INDEX idx_rmas_client_id ON rmas (client_id);
 CREATE INDEX idx_rmas_product_id ON rmas (product_id);
+CREATE INDEX idx_rmas_assignee_id ON rmas (assignee_id);
 
 CREATE TABLE rma_items (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -132,3 +135,17 @@ CREATE TABLE rma_status_history (
 );
 
 CREATE INDEX idx_rma_status_history_rma_id ON rma_status_history (rma_id);
+
+CREATE TABLE rma_assignment_history (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    rma_id BIGINT NOT NULL,
+    previous_assignee_id BIGINT,
+    previous_assignee_name VARCHAR(120),
+    new_assignee_id BIGINT,
+    new_assignee_name VARCHAR(120),
+    changed_by VARCHAR(120) NOT NULL,
+    changed_at DATETIME(6) NOT NULL,
+    CONSTRAINT fk_rma_assignment_history_rma FOREIGN KEY (rma_id) REFERENCES rmas (id)
+);
+
+CREATE INDEX idx_rma_assignment_history_rma_id ON rma_assignment_history (rma_id);

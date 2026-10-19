@@ -155,6 +155,26 @@ interface CreateDateErrors {
       gap: 0.4rem;
     }
 
+    .assignment-history {
+      display: grid;
+      gap: 0.65rem;
+      margin-top: 0.7rem;
+    }
+
+    .assignment-history__item {
+      display: grid;
+      gap: 0.2rem;
+      padding: 0.7rem 0.8rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--surface-alt);
+    }
+
+    .assignment-history__item span,
+    .assignment-history__item small {
+      color: var(--muted);
+    }
+
     .purchase-date-unknown {
       min-height: 42px;
       align-self: center;

@@ -211,6 +211,28 @@
   color: var(--muted);
 }
 
+.board-card__assignee-action {
+  margin-top: 0.35rem;
+  padding: 0;
+  border: 0;
+  color: var(--brand);
+  background: transparent;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.board-card__assignee-action:hover:not(:disabled),
+.board-card__assignee-action:focus-visible {
+  text-decoration: underline;
+}
+
+.board-card__assignee-action:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
 .board-card__footer {
   margin-top: 0.8rem;
 }

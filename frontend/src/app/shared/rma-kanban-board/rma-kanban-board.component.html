@@ -63,6 +63,15 @@
                   <div>
                     <span>Responsável</span>
                     <strong>{{ ownerLabel(item) }}</strong>
+                    @if (canUpdateAssignee()) {
+                      <button
+                        type="button"
+                        class="board-card__assignee-action"
+                        [disabled]="boardUpdatingId() !== null"
+                        (click)="requestAssigneeChange($event, item)"
+                        (dragstart)="preventCardDrag($event)"
+                      >{{ item.assigneeId ? 'Trocar' : 'Atribuir' }}</button>
+                    }
                   </div>
                   <div>
                     <span>Entrada</span>
