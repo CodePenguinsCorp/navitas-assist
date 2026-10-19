@@ -29,7 +29,9 @@ export class AppShellComponent {
   });
 
   protected logout(): void {
-    this.authService.logout();
-    void this.router.navigateByUrl('/login');
+    this.authService.logout().subscribe({
+      complete: () => void this.router.navigateByUrl('/login'),
+      error: () => void this.router.navigateByUrl('/login')
+    });
   }
 }
