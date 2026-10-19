@@ -174,10 +174,6 @@ export function normalizeText(value: string): string | null {
   return trimmed ? trimmed : null;
 }
 
-export function todayInputValue(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function priorityWeight(priority: RmaPriority): number {
   switch (priority) {
     case 'HIGH':

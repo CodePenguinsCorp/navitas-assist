@@ -77,13 +77,13 @@ public class RmaRecord extends AuditableEntity {
     @Column(nullable = false, length = 120)
     private String receivedBy;
 
-    @Column(nullable = false, length = 2000)
+    @Column(nullable = false, length = 1000)
     private String reportedFailure;
 
-    @Column(length = 1000)
+    @Column(length = 500)
     private String receivedAccessories;
 
-    @Column(length = 1000)
+    @Column(length = 500)
     private String physicalCondition;
 
     @Enumerated(EnumType.STRING)
@@ -110,13 +110,13 @@ public class RmaRecord extends AuditableEntity {
     @Column
     private Instant warrantyUpdatedAt;
 
-    @Column(length = 2000)
+    @Column(length = 600)
     private String repairSummary;
 
-    @Column(length = 2000)
+    @Column(length = 600)
     private String replacedPartsSummary;
 
-    @Column(length = 2000)
+    @Column(length = 800)
     private String testSummary;
 
     @Column

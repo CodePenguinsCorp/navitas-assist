@@ -12,6 +12,7 @@ import {
   signal
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { todayInputValue } from '../../../core/utils/date';
 
 interface CalendarDay {
   iso: string;
@@ -53,7 +54,7 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
 
   private readonly selectedValue = signal('');
   private readonly disabledByForm = signal(false);
-  private readonly viewMonth = signal(startOfMonth(new Date()));
+  private readonly viewMonth = signal(startOfMonth(parseIsoDate(todayInputValue())!));
 
   protected readonly isDisabled = computed(() => this.disabled() || this.disabledByForm());
   protected readonly displayValue = computed(() => formatDisplayDate(this.selectedValue(), this.placeholder()));
@@ -61,7 +62,7 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
     new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(this.viewMonth())
   );
   protected readonly calendarDays = computed(() => buildCalendarDays(this.viewMonth(), this.selectedValue()));
-  protected readonly todayDisabled = computed(() => this.isDateDisabled(toIsoDate(new Date())));
+  protected readonly todayDisabled = computed(() => this.isDateDisabled(todayInputValue()));
 
   protected isDateDisabled(iso: string): boolean {
     return (!!this.minDate() && iso < this.minDate()) || (!!this.maxDate() && iso > this.maxDate());
@@ -106,7 +107,7 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
 
   protected selectToday(): void {
     if (this.todayDisabled()) return;
-    this.applyValue(toIsoDate(new Date()));
+    this.applyValue(todayInputValue());
     this.close();
   }
 
@@ -157,7 +158,7 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
 
   private focusCurrentMonth(): void {
     const parsed = parseIsoDate(this.selectedValue());
-    this.viewMonth.set(startOfMonth(parsed ?? new Date()));
+    this.viewMonth.set(startOfMonth(parsed ?? parseIsoDate(todayInputValue())!));
   }
 
   private close(): void {
@@ -178,7 +179,7 @@ function buildCalendarDays(viewMonth: Date, selectedValue: string): CalendarDay[
   const firstDay = new Date(year, month, 1);
   const startOffset = firstDay.getDay();
   const startDate = new Date(year, month, 1 - startOffset);
-  const todayIso = toIsoDate(new Date());
+  const todayIso = todayInputValue();
 
   return Array.from({ length: 42 }, (_, index) => {
     const date = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + index);
