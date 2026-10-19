@@ -15,6 +15,7 @@ import {
   RmaStatusHistoryResponse,
   WarrantyStatus
 } from '../models';
+import { formatDateOnly } from './date';
 
 export function statusLabel(status: RmaStatus): string {
   return RMA_STATUS_LABELS[status];
@@ -79,11 +80,7 @@ export function failureCauseLabel(value: FailureCause | null): string {
 }
 
 export function formatDate(value: string | null): string {
-  if (!value) {
-    return 'N\u00e3o informado';
-  }
-
-  return new Intl.DateTimeFormat('pt-BR').format(new Date(value));
+  return formatDateOnly(value);
 }
 
 export function formatDateTime(value: string | null): string {
