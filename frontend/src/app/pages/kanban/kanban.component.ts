@@ -1,13 +1,20 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { finalize } from 'rxjs';
+import { finalize, forkJoin } from 'rxjs';
 import {
   CLOSED_RMA_STATUSES,
   RMA_STATUS_FLOW,
   RMA_STATUS_LABELS
 } from '../../core/mock-data';
-import { RmaResponse, RmaStatus, RmaStatusUpdateRequest } from '../../core/models';
+import {
+  AssignableUserResponse,
+  RmaAssigneeUpdateRequest,
+  RmaResponse,
+  RmaStatus,
+  RmaStatusUpdateRequest
+} from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
+import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { normalizeText } from '../../core/utils/rma-ui';
@@ -23,6 +30,8 @@ interface KanbanHeroStat {
   detail: string;
 }
 
+type AssigneeFilterValue = 'all' | 'unassigned' | number;
+
 @Component({
   selector: 'app-kanban',
   imports: [ReactiveFormsModule, CustomSelectComponent, RmaKanbanBoardComponent],
@@ -32,24 +41,51 @@ interface KanbanHeroStat {
 export class KanbanComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly authService = inject(AuthService);
+  private readonly catalogService = inject(CatalogService);
   private readonly rmaService = inject(RmaService);
 
   protected readonly loading = signal(true);
   protected readonly pageError = signal('');
   protected readonly statusModalError = signal('');
+  protected readonly assignmentModalError = signal('');
   protected readonly boardUpdatingId = signal<number | null>(null);
   protected readonly draggedRmaId = signal<number | null>(null);
   protected readonly dragTargetStatus = signal<RmaStatus | null>(null);
   protected readonly selectedRmaId = signal<number | null>(null);
+  protected readonly assigneeFilter = signal<AssigneeFilterValue>('all');
 
   private readonly rmasSignal = signal<RmaResponse[]>([]);
+  private readonly assignableUsersSignal = signal<AssignableUserResponse[]>([]);
   private readonly pendingStatusRmaSignal = signal<RmaResponse | null>(null);
+  private readonly pendingAssignmentRmaSignal = signal<RmaResponse | null>(null);
 
-  protected readonly rmas = this.rmasSignal.asReadonly();
+  protected readonly filteredRmas = computed(() => {
+    const filter = this.assigneeFilter();
+    if (filter === 'all') {
+      return this.rmasSignal();
+    }
+    if (filter === 'unassigned') {
+      return this.rmasSignal().filter((rma) => rma.assigneeId === null);
+    }
+    return this.rmasSignal().filter((rma) => rma.assigneeId === filter);
+  });
   protected readonly pendingStatusRma = this.pendingStatusRmaSignal.asReadonly();
+  protected readonly pendingAssignmentRma = this.pendingAssignmentRmaSignal.asReadonly();
   protected readonly statusSelectOptions = STATUS_SELECT_OPTIONS;
+  protected readonly assigneeFilterOptions = computed<ReadonlyArray<CustomSelectOption<AssigneeFilterValue>>>(() => [
+    { value: 'all', label: 'Todos os responsáveis' },
+    { value: 'unassigned', label: 'Sem responsável' },
+    ...this.assignableUsersSignal().map((user) => ({ value: user.id, label: `${user.fullName} (@${user.username})` }))
+  ]);
+  protected readonly assigneeSelectOptions = computed<ReadonlyArray<CustomSelectOption<number | null>>>(() => [
+    { value: null, label: 'Sem responsável' },
+    ...this.assignableUsersSignal().map((user) => ({ value: user.id, label: `${user.fullName} (@${user.username})` }))
+  ]);
   protected readonly canUpdateStatus = computed(() =>
     this.authService.hasAnyRole(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN'])
+  );
+  protected readonly canUpdateAssignee = computed(() =>
+    this.authService.hasAnyRole(['ADMIN', 'SERVICE_DESK'])
   );
   protected readonly activeCount = computed(() =>
     this.rmasSignal().filter((rma) => !CLOSED_RMA_STATUSES.includes(rma.status)).length
@@ -91,6 +127,10 @@ export class KanbanComponent {
     note: ['']
   });
 
+  protected readonly assignmentForm = this.formBuilder.group({
+    assigneeId: [null as number | null]
+  });
+
   constructor() {
     this.loadKanban();
   }
@@ -98,6 +138,40 @@ export class KanbanComponent {
   protected selectRma(rma: RmaResponse): void {
     this.selectedRmaId.set(rma.id);
     this.pageError.set('');
+  }
+
+  protected updateAssigneeFilter(value: unknown): void {
+    if (value === 'all' || value === 'unassigned' || typeof value === 'number') {
+      this.assigneeFilter.set(value);
+    }
+  }
+
+  protected openAssignmentModal(rma: RmaResponse): void {
+    if (!this.canUpdateAssignee() || this.boardUpdatingId() !== null) {
+      return;
+    }
+
+    this.pendingAssignmentRmaSignal.set(rma);
+    this.assignmentModalError.set('');
+    this.assignmentForm.reset({ assigneeId: rma.assigneeId });
+  }
+
+  protected closeAssignmentModal(): void {
+    if (this.boardUpdatingId() !== null) {
+      return;
+    }
+
+    this.pendingAssignmentRmaSignal.set(null);
+    this.assignmentModalError.set('');
+  }
+
+  protected saveAssignment(): void {
+    const target = this.pendingAssignmentRmaSignal();
+    if (!target) {
+      return;
+    }
+
+    this.submitAssigneeUpdate(target, this.assignmentForm.getRawValue());
   }
 
   protected startCardDrag(event: DragEvent, rma: RmaResponse): void {
@@ -204,11 +278,15 @@ export class KanbanComponent {
     this.loading.set(true);
     this.pageError.set('');
 
-    this.rmaService.list().pipe(
+    forkJoin({
+      rmas: this.rmaService.list(),
+      assignableUsers: this.catalogService.listAssignableUsers()
+    }).pipe(
       finalize(() => this.loading.set(false))
     ).subscribe({
-      next: (rmas) => {
+      next: ({ rmas, assignableUsers }) => {
         this.rmasSignal.set(rmas);
+        this.assignableUsersSignal.set(assignableUsers);
         this.syncSelection(rmas);
       },
       error: (error) => {
@@ -254,6 +332,27 @@ export class KanbanComponent {
       error: (error) => {
         this.statusModalError.set(
           extractHttpErrorMessage(error, 'Não foi possível atualizar o status do RMA.')
+        );
+      }
+    });
+  }
+
+  private submitAssigneeUpdate(target: RmaResponse, payload: RmaAssigneeUpdateRequest): void {
+    this.boardUpdatingId.set(target.id);
+    this.pageError.set('');
+    this.assignmentModalError.set('');
+
+    this.rmaService.updateAssignee(target.id, payload).pipe(
+      finalize(() => this.boardUpdatingId.set(null))
+    ).subscribe({
+      next: (updated) => {
+        this.selectedRmaId.set(updated.id);
+        this.pendingAssignmentRmaSignal.set(null);
+        this.loadKanban();
+      },
+      error: (error) => {
+        this.assignmentModalError.set(
+          extractHttpErrorMessage(error, 'Não foi possível atualizar o responsável do RMA.')
         );
       }
     });

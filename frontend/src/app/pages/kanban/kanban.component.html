@@ -29,18 +29,29 @@
         <h2>Fluxo operacional</h2>
         <p>Arraste os cards entre as colunas para refletir a etapa atual de cada atendimento.</p>
       </div>
+      <div class="kanban-filter">
+        <label>Responsável</label>
+        <app-custom-select
+          ariaLabel="Filtrar Kanban por responsável"
+          [options]="assigneeFilterOptions()"
+          [value]="assigneeFilter()"
+          (valueChange)="updateAssigneeFilter($event)"
+        />
+      </div>
     </div>
 
     <app-rma-kanban-board
-      [rmas]="rmas()"
+      [rmas]="filteredRmas()"
       [loading]="loading()"
       [canUpdateStatus]="canUpdateStatus()"
+      [canUpdateAssignee]="canUpdateAssignee()"
       [boardUpdatingId]="boardUpdatingId()"
       [selectedRmaId]="selectedRmaId()"
       [draggedRmaId]="draggedRmaId()"
       [dragTargetStatus]="dragTargetStatus()"
       [showToolbar]="false"
       (cardSelect)="selectRma($event)"
+      (assigneeChange)="openAssignmentModal($event)"
       (cardDragStart)="startCardDrag($event.event, $event.rma)"
       (cardDragEnd)="endCardDrag()"
       (columnDragOver)="allowColumnDrop($event.event, $event.status)"
@@ -99,6 +110,58 @@
           >Cancelar</button>
           <button type="submit" class="button-primary" [disabled]="boardUpdatingId() !== null">
             {{ boardUpdatingId() !== null ? 'Salvando...' : 'Salvar status' }}
+          </button>
+        </div>
+      </form>
+    </article>
+  </section>
+}
+
+@if (pendingAssignmentRma(); as rma) {
+  <section class="modal-overlay" (click)="closeAssignmentModal()">
+    <article class="panel modal-panel modal-panel--narrow" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h3>Responsável</h3>
+          <p>{{ rma.code }} · Atual: {{ rma.assigneeName || 'Sem responsável' }}</p>
+        </div>
+        <button
+          type="button"
+          class="modal-close"
+          (click)="closeAssignmentModal()"
+          [disabled]="boardUpdatingId() !== null"
+          aria-label="Fechar"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </div>
+
+      @if (assignmentModalError()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ assignmentModalError() }}</strong>
+        </article>
+      }
+
+      <form [formGroup]="assignmentForm" (ngSubmit)="saveAssignment()" class="form-grid">
+        <div class="field-group field-group--full">
+          <label>Novo responsável</label>
+          <app-custom-select
+            formControlName="assigneeId"
+            ariaLabel="Novo responsável do RMA"
+            [options]="assigneeSelectOptions()"
+          />
+          <small>Somente técnicos ativos podem receber novas atribuições.</small>
+        </div>
+
+        <div class="form-actions form-actions--full">
+          <button
+            type="button"
+            class="button-secondary"
+            (click)="closeAssignmentModal()"
+            [disabled]="boardUpdatingId() !== null"
+          >Cancelar</button>
+          <button type="submit" class="button-primary" [disabled]="boardUpdatingId() !== null">
+            {{ boardUpdatingId() !== null ? 'Salvando...' : 'Salvar responsável' }}
           </button>
         </div>
       </form>

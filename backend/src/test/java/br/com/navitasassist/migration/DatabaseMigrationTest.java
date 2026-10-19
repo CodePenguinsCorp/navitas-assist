@@ -32,6 +32,7 @@ class DatabaseMigrationTest {
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
             assertTrue(tableExists(connection, "rmas"));
             assertTrue(tableExists(connection, "rma_items"));
+            assertTrue(tableExists(connection, "rma_assignment_history"));
             assertEquals(1000, columnSize(connection, "rmas", "reported_failure"));
             assertEquals(500, columnSize(connection, "rmas", "received_accessories"));
             assertEquals(500, columnSize(connection, "rmas", "physical_condition"));
@@ -41,6 +42,7 @@ class DatabaseMigrationTest {
             assertFalse(columnExists(connection, "rmas", "warranty_updated_by"));
             assertFalse(columnExists(connection, "rmas", "warranty_updated_at"));
             assertTrue(columnExists(connection, "rma_items", "warranty_months"));
+            assertTrue(columnExists(connection, "rmas", "assignee_id"));
             assertEquals(600, columnSize(connection, "rmas", "repair_summary"));
             assertEquals(600, columnSize(connection, "rmas", "replaced_parts_summary"));
             assertEquals(800, columnSize(connection, "rmas", "test_summary"));
@@ -52,6 +54,10 @@ class DatabaseMigrationTest {
                     "idx_rma_items_serial_number"
                 ),
                 applicationIndexes(connection, "rma_items")
+            );
+            assertEquals(
+                Set.of("idx_rma_assignment_history_rma_id"),
+                applicationIndexes(connection, "rma_assignment_history")
             );
 
             long clientId = insertClient(connection);

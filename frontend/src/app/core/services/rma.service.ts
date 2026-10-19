@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import {
   CreateRmaRequest,
   DiagnosisRequest,
+  RmaAssigneeUpdateRequest,
   RmaResponse,
   RmaStatus,
   RmaStatusUpdateRequest
@@ -51,6 +52,10 @@ export class RmaService {
 
   updateStatus(id: number, payload: RmaStatusUpdateRequest): Observable<RmaResponse> {
     return this.http.patch<RmaResponse>(`/api/rmas/${id}/status`, payload);
+  }
+
+  updateAssignee(id: number, payload: RmaAssigneeUpdateRequest): Observable<RmaResponse> {
+    return this.http.patch<RmaResponse>(`/api/rmas/${id}/assignee`, payload);
   }
 
   upsertDiagnosis(id: number, payload: DiagnosisRequest): Observable<RmaResponse> {

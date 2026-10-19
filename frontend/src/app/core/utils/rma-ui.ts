@@ -104,18 +104,9 @@ export function productSummary(rma: Pick<RmaResponse, 'items' | 'productName'>):
 }
 
 export function ownerLabel(
-  rma: Pick<RmaResponse, 'diagnosis' | 'statusHistory' | 'receivedBy'>
+  rma: Pick<RmaResponse, 'assigneeName'>
 ): string {
-  if (rma.diagnosis?.technicianName?.trim()) {
-    return rma.diagnosis.technicianName.trim();
-  }
-
-  const latestHistory = latestStatusUpdate(rma.statusHistory);
-  if (latestHistory?.changedBy?.trim()) {
-    return latestHistory.changedBy.trim();
-  }
-
-  return rma.receivedBy;
+  return rma.assigneeName?.trim() || 'Sem responsável';
 }
 
 export function latestStatusUpdate(

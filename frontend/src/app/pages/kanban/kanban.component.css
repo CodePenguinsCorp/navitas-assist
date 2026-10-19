@@ -121,6 +121,18 @@
   line-height: 1.55;
 }
 
+.kanban-filter {
+  display: grid;
+  gap: 0.35rem;
+  min-inline-size: min(280px, 100%);
+}
+
+.kanban-filter label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
 .modal-feedback {
   margin-bottom: 1rem;
 }
@@ -144,6 +156,10 @@
 
   .kanban-stage__header {
     flex-direction: column;
+  }
+
+  .kanban-filter {
+    inline-size: 100%;
   }
 
 }

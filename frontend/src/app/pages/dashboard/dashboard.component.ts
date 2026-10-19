@@ -215,16 +215,7 @@ function parseDateValue(value: string | null): number {
 }
 
 function extractOwner(rma: RmaResponse): string {
-  if (rma.diagnosis?.technicianName?.trim()) {
-    return rma.diagnosis.technicianName.trim();
-  }
-
-  const lastStatusUpdate = latestStatusUpdate(rma.statusHistory);
-  if (lastStatusUpdate?.changedBy?.trim()) {
-    return lastStatusUpdate.changedBy.trim();
-  }
-
-  return rma.receivedBy;
+  return rma.assigneeName?.trim() || 'Sem responsável';
 }
 
 function latestStatusUpdate(history: RmaStatusHistoryResponse[]): RmaStatusHistoryResponse | null {

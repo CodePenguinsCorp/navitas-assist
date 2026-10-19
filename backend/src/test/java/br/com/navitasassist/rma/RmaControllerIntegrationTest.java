@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -20,6 +21,9 @@ import br.com.navitasassist.product.Product;
 import br.com.navitasassist.repository.ClientRepository;
 import br.com.navitasassist.repository.ProductRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
+import br.com.navitasassist.repository.UserAccountRepository;
+import br.com.navitasassist.user.UserAccount;
+import br.com.navitasassist.user.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,11 +56,17 @@ class RmaControllerIntegrationTest {
     @Autowired
     private RmaRecordRepository rmaRecordRepository;
 
+    @Autowired
+    private UserAccountRepository userAccountRepository;
+
     @BeforeEach
     void cleanRmas() {
         rmaRecordRepository.deleteAll();
         productRepository.deleteAll();
         clientRepository.deleteAll();
+        userAccountRepository.findAll().stream()
+            .filter(user -> !user.getUsername().equalsIgnoreCase("admin"))
+            .forEach(userAccountRepository::delete);
     }
 
     @Test
@@ -419,11 +429,111 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.items[1].warrantyExpiresAt").doesNotExist());
     }
 
+    @Test
+    void shouldAssignOnlyActiveTechniciansAndKeepAssignmentHistory() throws Exception {
+        Client client = new Client();
+        client.setLegalName("Assignment client");
+        Client savedClient = clientRepository.save(client);
+        Product product = saveProduct("ASSIGNMENT-PRODUCT", "Assignment product", 12);
+
+        RmaRecord rma = new RmaRecord();
+        rma.setCode("RMA-ASSIGN-0001");
+        rma.setClient(savedClient);
+        rma.setProduct(product);
+        rma.getItemIdentification().setSerialNumber("ASSIGN-SERIAL");
+        rma.setPurchaseDateUnknown(true);
+        rma.setEntryDate(LocalDate.now(BUSINESS_ZONE));
+        rma.setReceivedBy("Service desk");
+        rma.setReportedFailure("Assignment test");
+        RmaRecord savedRma = rmaRecordRepository.saveAndFlush(rma);
+
+        UserAccount firstTechnician = saveUser("first.tech", "First Technician", UserRole.TECHNICIAN, true);
+        UserAccount secondTechnician = saveUser("second.tech", "Second Technician", UserRole.TECHNICIAN, true);
+        UserAccount inactiveTechnician = saveUser("inactive.tech", "Inactive Technician", UserRole.TECHNICIAN, false);
+        UserAccount serviceUser = saveUser("service.user", "Service User", UserRole.SERVICE_DESK, true);
+
+        mockMvc.perform(get("/api/users/assignable")
+                .with(user("viewer").roles("VIEWER")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(2)))
+            .andExpect(jsonPath("$[0].fullName").value("First Technician"))
+            .andExpect(jsonPath("$[1].fullName").value("Second Technician"));
+
+        mockMvc.perform(get("/api/rmas/{id}", savedRma.getId())
+                .with(user("admin").roles("ADMIN")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.assigneeId").doesNotExist());
+
+        mockMvc.perform(patch("/api/rmas/{id}/assignee", savedRma.getId())
+                .with(user("service.desk").roles("SERVICE_DESK"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"assigneeId\":" + firstTechnician.getId() + "}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.assigneeId").value(firstTechnician.getId()))
+            .andExpect(jsonPath("$.assigneeName").value("First Technician"))
+            .andExpect(jsonPath("$.assignmentHistory", hasSize(1)))
+            .andExpect(jsonPath("$.assignmentHistory[0].previousAssigneeId").doesNotExist())
+            .andExpect(jsonPath("$.assignmentHistory[0].newAssigneeId").value(firstTechnician.getId()))
+            .andExpect(jsonPath("$.assignmentHistory[0].newAssigneeName").value("First Technician"))
+            .andExpect(jsonPath("$.assignmentHistory[0].changedBy").value("service.desk"));
+
+        mockMvc.perform(patch("/api/rmas/{id}/assignee", savedRma.getId())
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"assigneeId\":" + inactiveTechnician.getId() + "}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Inactive users cannot be assigned to an RMA."));
+
+        mockMvc.perform(patch("/api/rmas/{id}/assignee", savedRma.getId())
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"assigneeId\":" + serviceUser.getId() + "}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Only technicians can be assigned to an RMA."));
+
+        mockMvc.perform(patch("/api/rmas/{id}/assignee", savedRma.getId())
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"assigneeId\":" + secondTechnician.getId() + "}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.assigneeId").value(secondTechnician.getId()))
+            .andExpect(jsonPath("$.assignmentHistory", hasSize(2)));
+
+        mockMvc.perform(patch("/api/rmas/{id}/assignee", savedRma.getId())
+                .with(user("service.desk").roles("SERVICE_DESK"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"assigneeId\":null}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.assigneeId").doesNotExist())
+            .andExpect(jsonPath("$.assigneeName").doesNotExist())
+            .andExpect(jsonPath("$.assignmentHistory", hasSize(3)));
+
+        mockMvc.perform(get("/api/rmas/{id}", savedRma.getId())
+                .with(user("admin").roles("ADMIN")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.assignmentHistory[?(@.previousAssigneeName == 'First Technician' && @.newAssigneeName == 'Second Technician')]", hasSize(1)));
+    }
+
     private Product saveProduct(String sku, String name, int warrantyMonths) {
         Product product = new Product();
         product.setSku(sku);
         product.setName(name);
         product.setDefaultWarrantyMonths(warrantyMonths);
         return productRepository.save(product);
+    }
+
+    private UserAccount saveUser(String username, String fullName, UserRole role, boolean active) {
+        UserAccount user = new UserAccount();
+        user.setUsername(username);
+        user.setFullName(fullName);
+        user.setPasswordHash("not-used-in-this-test");
+        user.setRole(role);
+        user.setActive(active);
+        return userAccountRepository.save(user);
     }
 }
