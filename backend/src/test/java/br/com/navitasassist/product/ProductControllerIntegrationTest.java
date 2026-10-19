@@ -18,6 +18,7 @@ import br.com.navitasassist.client.Client;
 import br.com.navitasassist.repository.ClientRepository;
 import br.com.navitasassist.repository.ProductRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
+import br.com.navitasassist.rma.RmaItem;
 import br.com.navitasassist.rma.RmaRecord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -102,6 +103,53 @@ class ProductControllerIntegrationTest {
             ));
 
         assertTrue(productRepository.existsById(savedProduct.getId()));
+    }
+
+    @Test
+    void shouldNotDeleteProductLinkedAsSecondaryRmaItem() throws Exception {
+        Product primaryProduct = new Product();
+        primaryProduct.setSku("SKU-RMA-PRIMARY");
+        primaryProduct.setName("Primary RMA product");
+        Product savedPrimaryProduct = productRepository.save(primaryProduct);
+
+        Product secondaryProduct = new Product();
+        secondaryProduct.setSku("SKU-RMA-SECONDARY");
+        secondaryProduct.setName("Secondary RMA product");
+        Product savedSecondaryProduct = productRepository.save(secondaryProduct);
+
+        Client client = new Client();
+        client.setLegalName("Multiple product client");
+        Client savedClient = clientRepository.save(client);
+
+        RmaRecord rma = new RmaRecord();
+        rma.setCode("RMA-TEST-SECONDARY");
+        rma.setProduct(savedPrimaryProduct);
+        rma.getItemIdentification().setBatchNumber("PRIMARY-LOT");
+        rma.setClient(savedClient);
+        rma.setEntryDate(LocalDate.now());
+        rma.setReceivedBy("Test user");
+        rma.setReportedFailure("Test failure");
+
+        RmaItem primaryItem = new RmaItem();
+        primaryItem.setProduct(savedPrimaryProduct);
+        primaryItem.getItemIdentification().setBatchNumber("PRIMARY-LOT");
+        rma.addItem(primaryItem);
+
+        RmaItem secondaryItem = new RmaItem();
+        secondaryItem.setProduct(savedSecondaryProduct);
+        secondaryItem.getItemIdentification().setSerialNumber("SECONDARY-SERIAL");
+        rma.addItem(secondaryItem);
+        rmaRecordRepository.saveAndFlush(rma);
+
+        mockMvc.perform(delete("/api/products/{id}", savedSecondaryProduct.getId())
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value(
+                "Product cannot be deleted because it is used by an RMA."
+            ));
+
+        assertTrue(productRepository.existsById(savedSecondaryProduct.getId()));
     }
 
     @Test

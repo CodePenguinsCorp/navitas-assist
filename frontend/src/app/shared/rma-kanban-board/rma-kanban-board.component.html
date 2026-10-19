@@ -52,7 +52,7 @@
                     {{ warrantyLabel(item.warrantyStatus, item.warrantyOverridden) }}
                   </span>
                 </header>
-                <p>{{ item.productName }} | {{ trackableLabel(item) }}</p>
+                <p>{{ productSummary(item) }} | {{ trackableLabel(item) }}</p>
                 <p>{{ item.reportedFailure }}</p>
 
                 <div class="board-card__grid">

@@ -7,6 +7,7 @@ import {
   ownerLabel,
   priorityChipClass,
   priorityLabel,
+  productSummary,
   statusLabel,
   trackableLabel,
   warrantyClass,
@@ -56,6 +57,7 @@ export class RmaKanbanBoardComponent {
 
   protected readonly priorityLabel = priorityLabel;
   protected readonly priorityClass = priorityChipClass;
+  protected readonly productSummary = productSummary;
   protected readonly warrantyLabel = warrantyLabel;
   protected readonly warrantyClass = warrantyClass;
   protected readonly trackableLabel = trackableLabel;
