@@ -195,7 +195,7 @@ export class RmasComponent {
     invoiceNumber: [''],
     invoiceFileName: [''],
     receivedBy: ['', [Validators.required, Validators.maxLength(120)]],
-    reportedFailure: ['', [Validators.required, Validators.maxLength(2000)]],
+    reportedFailure: ['', [Validators.required, Validators.maxLength(600)]],
     receivedAccessories: [''],
     physicalCondition: [''],
     priority: ['MEDIUM' as RmaPriority, [Validators.required]],

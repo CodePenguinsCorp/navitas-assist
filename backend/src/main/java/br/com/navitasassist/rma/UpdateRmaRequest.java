@@ -16,7 +16,7 @@ public record UpdateRmaRequest(
     @Size(max = 80) String invoiceNumber,
     @Size(max = 180) String invoiceFileName,
     @Size(max = 120) String receivedBy,
-    @Size(max = 2000) String reportedFailure,
+    @Size(max = 600) String reportedFailure,
     @Size(max = 1000) String receivedAccessories,
     @Size(max = 1000) String physicalCondition,
     RmaPriority priority,
