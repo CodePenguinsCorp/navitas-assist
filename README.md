@@ -198,6 +198,19 @@ No primeiro boot, se ainda não existir usuário no banco, a aplicação cria:
 - usuario: `admin`
 - senha: `admin123`
 
+## Autorização da API
+
+| Recurso/operação | ADMIN | SERVICE_DESK | TECHNICIAN | VIEWER |
+|:---|:---:|:---:|:---:|:---:|
+| Consultar clientes, produtos e RMAs | Sim | Sim | Sim | Sim |
+| Criar, alterar ou excluir clientes e produtos | Sim | Sim | Não | Não |
+| Abrir ou alterar dados gerais de RMA | Sim | Sim | Não | Não |
+| Alterar o status de RMA | Sim | Sim | Sim | Não |
+| Registrar ou alterar diagnóstico | Sim | Não | Sim | Não |
+| Gerenciar usuários | Sim | Não | Não | Não |
+
+Requisições sem autenticação recebem `401`; usuários autenticados sem permissão recebem `403`. Operações de API não classificadas explicitamente ficam restritas a `ADMIN`.
+
 ## Produção
 
 - `compose.prod.yaml`: stack de produção usando imagens publicadas
