@@ -2,7 +2,8 @@ package br.com.navitasassist.rma;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -76,7 +77,8 @@ class RmaControllerIntegrationTest {
         );
 
         mockMvc.perform(post("/api/rmas")
-                .with(httpBasic("admin", "admin123"))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))
             .andExpect(status().isCreated())
@@ -89,14 +91,14 @@ class RmaControllerIntegrationTest {
 
         mockMvc.perform(get("/api/rmas/history")
                 .param("batchNumber", "LOT-B")
-                .with(httpBasic("admin", "admin123")))
+                .with(user("admin").roles("ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$", hasSize(1)))
             .andExpect(jsonPath("$[0].items", hasSize(2)));
 
         mockMvc.perform(get("/api/rmas")
                 .param("query", "SKU-RMA-2")
-                .with(httpBasic("admin", "admin123")))
+                .with(user("admin").roles("ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$", hasSize(1)));
     }
@@ -118,7 +120,8 @@ class RmaControllerIntegrationTest {
         );
 
         mockMvc.perform(post("/api/rmas")
-                .with(httpBasic("admin", "admin123"))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))
             .andExpect(status().isBadRequest())
@@ -143,7 +146,8 @@ class RmaControllerIntegrationTest {
             """.formatted(savedClient.getId(), LocalDate.now());
 
         mockMvc.perform(post("/api/rmas")
-                .with(httpBasic("admin", "admin123"))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
             .andExpect(status().isBadRequest())
@@ -183,7 +187,8 @@ class RmaControllerIntegrationTest {
         );
 
         mockMvc.perform(put("/api/rmas/{id}", savedRma.getId())
-                .with(httpBasic("admin", "admin123"))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))
             .andExpect(status().isOk())
@@ -196,13 +201,13 @@ class RmaControllerIntegrationTest {
 
         mockMvc.perform(get("/api/rmas/history")
                 .param("batchNumber", "OLD-LOT")
-                .with(httpBasic("admin", "admin123")))
+                .with(user("admin").roles("ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$", hasSize(0)));
 
         mockMvc.perform(get("/api/rmas/history")
                 .param("serialNumber", "NEW-SERIAL-B")
-                .with(httpBasic("admin", "admin123")))
+                .with(user("admin").roles("ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$", hasSize(1)));
     }
@@ -226,7 +231,7 @@ class RmaControllerIntegrationTest {
         RmaRecord savedRma = rmaRecordRepository.saveAndFlush(rma);
 
         mockMvc.perform(get("/api/rmas/{id}", savedRma.getId())
-                .with(httpBasic("admin", "admin123")))
+                .with(user("admin").roles("ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items", hasSize(1)))
             .andExpect(jsonPath("$.items[0].id").doesNotExist())

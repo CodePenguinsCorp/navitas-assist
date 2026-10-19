@@ -6,11 +6,25 @@ spring:
     password:
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
         format_sql: false
+        type:
+          preferred_instant_jdbc_type: TIMESTAMP
 
 server:
   port: 0
+  servlet:
+    session:
+      cookie:
+        secure: false
+
+navitas:
+  security:
+    cookie-secure: false
+    seed-admin:
+      username: admin
+      password: admin123
+      full-name: Administrador

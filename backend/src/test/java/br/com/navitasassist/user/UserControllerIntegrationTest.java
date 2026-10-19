@@ -2,7 +2,8 @@ package br.com.navitasassist.user;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -51,7 +52,8 @@ class UserControllerIntegrationTest {
         UserAccount user = createUser("operator", "Operator", "old-password");
 
         mockMvc.perform(put("/api/users/{id}", user.getId())
-                .with(httpBasic("admin", "admin123"))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(Map.of(
                     "username", "operator.updated",
@@ -73,7 +75,8 @@ class UserControllerIntegrationTest {
         UserAccount user = createUser("delete.me", "Delete Me", "password123");
 
         mockMvc.perform(delete("/api/users/{id}", user.getId())
-                .with(httpBasic("admin", "admin123")))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf()))
             .andExpect(status().isNoContent());
 
         assertFalse(userAccountRepository.existsById(user.getId()));
@@ -84,7 +87,8 @@ class UserControllerIntegrationTest {
         UserAccount admin = userAccountRepository.findByUsernameIgnoreCase("admin").orElseThrow();
 
         mockMvc.perform(delete("/api/users/{id}", admin.getId())
-                .with(httpBasic("admin", "admin123")))
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf()))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value("You cannot delete your own user account."));
 
