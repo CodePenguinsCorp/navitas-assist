@@ -46,7 +46,7 @@
       <form [formGroup]="filtersForm" (ngSubmit)="submitFilters()" class="form-grid form-grid--inline">
         <div class="field-group">
           <label for="query">Busca</label>
-          <input id="query" type="text" formControlName="query" placeholder="Cliente, RMA, lote ou serial" />
+          <input id="query" type="text" formControlName="query" placeholder="Cliente, RMA, produto, lote ou serial" />
         </div>
 
         <div class="field-group">
@@ -224,7 +224,18 @@
 
         <div class="summary-block">
           <strong>Falha relatada</strong>
-          <p class="rma-detail-copy">{{ rma.reportedFailure }}</p>
+          <p id="rma-reported-failure" class="rma-detail-copy" [class.rma-detail-copy--expandable]="canExpandReportedFailure()">{{ reportedFailureText() }}</p>
+          @if (canExpandReportedFailure()) {
+            <button
+              type="button"
+              class="rma-detail-toggle"
+              [attr.aria-expanded]="reportedFailureExpanded()"
+              aria-controls="rma-reported-failure"
+              (click)="toggleReportedFailure()"
+            >
+              {{ reportedFailureExpanded() ? 'Ver menos' : 'Ver mais' }}
+            </button>
+          }
         </div>
 
         <div class="summary-block">

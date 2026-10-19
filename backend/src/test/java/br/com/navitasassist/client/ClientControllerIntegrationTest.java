@@ -1,10 +1,14 @@
 package br.com.navitasassist.client;
 
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -61,19 +65,47 @@ class ClientControllerIntegrationTest {
                 .with(httpBasic("admin", "admin123"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(Map.of(
-                    "legalName", legalName, "phone", "1".repeat(30), "address", "A".repeat(255)))))
+                    "legalName", legalName, "phone", "1".repeat(20), "address", "A".repeat(255)))))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.legalName").value(legalName));
+            .andExpect(jsonPath("$.legalName").value(legalName))
+            .andExpect(jsonPath("$.phone").value("1".repeat(20)));
 
         assertTrue(clientRepository.findAll().stream()
             .anyMatch(client -> legalName.equals(client.getLegalName())));
+        assertEquals("1".repeat(20), clientRepository.findAll().get(0).getPhone());
+    }
+
+    @Test
+    void shouldUpdateClientWithoutErasingContactNameWhenOmitted() throws Exception {
+        Client client = new Client();
+        client.setLegalName("Test client");
+        client.setContactName("Existing contact");
+        Client savedClient = clientRepository.save(client);
+
+        mockMvc.perform(put("/api/clients/{id}", savedClient.getId())
+                .with(httpBasic("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                    "legalName", "Updated client",
+                    "phone", "47999999999",
+                    "email", "client@example.com"
+                ))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.phone").value("47999999999"))
+            .andExpect(jsonPath("$.email").value("client@example.com"));
+
+        Client updatedClient = clientRepository.findById(savedClient.getId()).orElseThrow();
+        assertEquals("Existing contact", updatedClient.getContactName());
+        assertEquals("Updated client", updatedClient.getLegalName());
+        assertEquals("47999999999", updatedClient.getPhone());
+        assertEquals("client@example.com", updatedClient.getEmail());
     }
 
     @Test
     void shouldRejectClientFieldsExceedingLimits() throws Exception {
         for (Map<String, String> payload : java.util.List.of(
                 Map.of("legalName", "A -".repeat(121)),
-                Map.of("legalName", "Client", "phone", "1".repeat(31)),
+                Map.of("legalName", "Client", "phone", "1".repeat(21)),
                 Map.of("legalName", "Client", "address", "A".repeat(256)))) {
             mockMvc.perform(post("/api/clients")
                     .with(httpBasic("admin", "admin123"))
@@ -83,6 +115,103 @@ class ClientControllerIntegrationTest {
         }
 
         assertTrue(clientRepository.findAll().isEmpty());
+    }
+
+    @Test
+    void shouldUpdateClientWithTwentyCharacterPhone() throws Exception {
+        Client client = new Client();
+        client.setLegalName("Test client");
+        Client savedClient = clientRepository.save(client);
+        String phone = "1".repeat(20);
+
+        mockMvc.perform(put("/api/clients/{id}", savedClient.getId())
+                .with(httpBasic("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("legalName", "Test client", "phone", phone))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.phone").value(phone));
+
+        assertEquals(phone, clientRepository.findById(savedClient.getId()).orElseThrow().getPhone());
+    }
+
+    @Test
+    void shouldRejectPhoneOverTwentyCharactersOnUpdate() throws Exception {
+        Client client = new Client();
+        client.setLegalName("Test client");
+        client.setPhone("47999999999");
+        Client savedClient = clientRepository.save(client);
+
+        mockMvc.perform(put("/api/clients/{id}", savedClient.getId())
+                .with(httpBasic("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("legalName", "Test client", "phone", "1".repeat(21)))))
+            .andExpect(status().isBadRequest());
+
+        assertEquals("47999999999", clientRepository.findById(savedClient.getId()).orElseThrow().getPhone());
+    }
+
+    @Test
+    void shouldCreateClientWithPhonePunctuation() throws Exception {
+        String phone = "+1 (2) 3-4.5#*";
+
+        mockMvc.perform(post("/api/clients")
+                .with(httpBasic("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("legalName", "Test client", "phone", phone))))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.phone").value(phone));
+
+        assertEquals(phone, clientRepository.findAll().get(0).getPhone());
+    }
+
+    @Test
+    void shouldUpdateClientWithPhonePunctuation() throws Exception {
+        Client client = new Client();
+        client.setLegalName("Test client");
+        Client savedClient = clientRepository.save(client);
+        String phone = "+1 (2) 3-4.5#*";
+
+        mockMvc.perform(put("/api/clients/{id}", savedClient.getId())
+                .with(httpBasic("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("legalName", "Test client", "phone", phone))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.phone").value(phone));
+
+        assertEquals(phone, clientRepository.findById(savedClient.getId()).orElseThrow().getPhone());
+    }
+
+    @Test
+    void shouldRejectInvalidPhoneCharactersOnCreate() throws Exception {
+        for (String phone : java.util.List.of("47999A1234", "47@9991234", "47/9991234", "47\n9991234")) {
+            mockMvc.perform(post("/api/clients")
+                    .with(httpBasic("admin", "admin123"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(Map.of("legalName", "Test client", "phone", phone))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.details", hasItem(startsWith("phone:"))));
+        }
+
+        assertTrue(clientRepository.findAll().isEmpty());
+    }
+
+    @Test
+    void shouldRejectInvalidPhoneCharactersOnUpdate() throws Exception {
+        Client client = new Client();
+        client.setLegalName("Test client");
+        client.setPhone("47999999999");
+        Client savedClient = clientRepository.save(client);
+
+        for (String phone : java.util.List.of("47999A1234", "47@9991234", "47/9991234", "47\n9991234")) {
+            mockMvc.perform(put("/api/clients/{id}", savedClient.getId())
+                    .with(httpBasic("admin", "admin123"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(Map.of("legalName", "Test client", "phone", phone))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.details", hasItem(startsWith("phone:"))));
+        }
+
+        assertEquals("47999999999", clientRepository.findById(savedClient.getId()).orElseThrow().getPhone());
     }
 
     @Test

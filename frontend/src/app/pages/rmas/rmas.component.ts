@@ -55,6 +55,8 @@ type FailureCauseValue = FailureCause | '';
 type WarrantyOverrideValue = WarrantyStatus | '';
 type ModalView = 'create' | 'details' | 'diagnosis';
 
+const REPORTED_FAILURE_PREVIEW_LIMIT = 300;
+
 @Component({
   selector: 'app-rmas',
   imports: [ReactiveFormsModule, CustomSelectComponent, DatePickerComponent],
@@ -100,6 +102,24 @@ type ModalView = 'create' | 'details' | 'diagnosis';
     .rma-detail-copy {
       color: var(--muted);
       line-height: 1.55;
+      overflow-wrap: anywhere;
+    }
+
+    .rma-detail-copy--expandable {
+      margin-bottom: 0.25rem;
+    }
+
+    .rma-detail-toggle {
+      margin-bottom: 0.85rem;
+      padding: 0;
+      background: transparent;
+      color: var(--brand-blue);
+      font-weight: 600;
+      line-height: 1.55;
+    }
+
+    .rma-detail-toggle:hover {
+      text-decoration: underline;
     }
   `]
 })
@@ -119,6 +139,7 @@ export class RmasComponent {
   protected readonly historyError = signal('');
   protected readonly historyMessage = signal('');
   protected readonly activeModal = signal<ModalView | null>(null);
+  protected readonly reportedFailureExpanded = signal(false);
 
   private readonly rmasSignal = signal<RmaResponse[]>([]);
   private readonly historySignal = signal<RmaResponse[]>([]);
@@ -131,6 +152,15 @@ export class RmasComponent {
   );
   protected readonly historyResults = this.historySignal.asReadonly();
   protected readonly selectedRma = this.selectedRmaSignal.asReadonly();
+  protected readonly canExpandReportedFailure = computed(() =>
+    (this.selectedRma()?.reportedFailure.length ?? 0) > REPORTED_FAILURE_PREVIEW_LIMIT
+  );
+  protected readonly reportedFailureText = computed(() => {
+    const text = this.selectedRma()?.reportedFailure ?? '';
+    return this.reportedFailureExpanded() || !this.canExpandReportedFailure()
+      ? text
+      : `${text.slice(0, REPORTED_FAILURE_PREVIEW_LIMIT - 1).trimEnd()}…`;
+  });
 
   protected readonly totalRmas = computed(() => this.rmasSignal().length);
   protected readonly ongoingRmas = computed(() =>
@@ -255,9 +285,14 @@ export class RmasComponent {
   }
 
   protected openDetailsModal(rma: RmaResponse): void {
+    this.reportedFailureExpanded.set(false);
     this.selectRma(rma);
     this.pageMessage.set('');
     this.activeModal.set('details');
+  }
+
+  protected toggleReportedFailure(): void {
+    this.reportedFailureExpanded.update((expanded) => !expanded);
   }
 
   protected openDetailsFromKeyboard(event: Event, rma: RmaResponse): void {

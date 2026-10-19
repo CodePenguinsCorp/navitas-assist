@@ -103,7 +103,7 @@
             @for (user of filteredUsers(); track user.id) {
               <tr>
                 <td>
-                  <strong class="table-title">{{ user.fullName }}</strong>
+                  <strong class="table-title" [attr.title]="user.fullName">{{ user.fullName.length > 30 ? user.fullName.slice(0, 30) + '…' : user.fullName }}</strong>
                 </td>
                 <td>{{ user.username }}</td>
                 <td>{{ roleLabel(user.role) }}</td>

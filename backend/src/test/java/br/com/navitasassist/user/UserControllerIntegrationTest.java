@@ -75,7 +75,7 @@ class UserControllerIntegrationTest {
     @Test
     void shouldCreateUserWithNameAndUsernameAtTheirLimits() throws Exception {
         String username = "u".repeat(60);
-        String fullName = "N".repeat(120);
+        String fullName = "N".repeat(80);
 
         mockMvc.perform(post("/api/users")
                 .with(httpBasic("admin", "admin123"))
@@ -92,7 +92,7 @@ class UserControllerIntegrationTest {
     void shouldUpdateUserWithNameAndUsernameAtTheirLimits() throws Exception {
         UserAccount user = createUser("operator", "Operator", "password123");
         String username = "u".repeat(60);
-        String fullName = "N".repeat(120);
+        String fullName = "N".repeat(80);
 
         mockMvc.perform(put("/api/users/{id}", user.getId())
                 .with(httpBasic("admin", "admin123"))
@@ -122,11 +122,11 @@ class UserControllerIntegrationTest {
     }
 
     @Test
-    void shouldRejectNameOverOneHundredTwentyCharactersOnCreate() throws Exception {
+    void shouldRejectNameOverEightyCharactersOnCreate() throws Exception {
         mockMvc.perform(post("/api/users")
                 .with(httpBasic("admin", "admin123"))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(userJson("operator", "N".repeat(121))))
+                .content(userJson("operator", "N".repeat(81))))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.details", hasItem(startsWith("fullName:"))));
 
@@ -148,13 +148,13 @@ class UserControllerIntegrationTest {
     }
 
     @Test
-    void shouldRejectNameOverOneHundredTwentyCharactersOnUpdate() throws Exception {
+    void shouldRejectNameOverEightyCharactersOnUpdate() throws Exception {
         UserAccount user = createUser("operator", "Operator", "password123");
 
         mockMvc.perform(put("/api/users/{id}", user.getId())
                 .with(httpBasic("admin", "admin123"))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(userJson("operator", "N".repeat(121))))
+                .content(userJson("operator", "N".repeat(81))))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.details", hasItem(startsWith("fullName:"))));
 

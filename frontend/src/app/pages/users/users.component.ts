@@ -27,7 +27,7 @@ type UserModalMode = 'create' | 'edit';
 
 const USER_LIMITS = {
   username: 60,
-  fullName: 120
+  fullName: 80
 } as const;
 
 @Component({

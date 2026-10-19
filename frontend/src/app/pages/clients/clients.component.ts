@@ -15,7 +15,6 @@ type ClientFormControlName =
   | 'legalName'
   | 'tradeName'
   | 'documentNumber'
-  | 'contactName'
   | 'email'
   | 'phone'
   | 'address'
@@ -73,7 +72,6 @@ export class ClientsComponent {
           client.legalName,
           client.tradeName,
           client.documentNumber,
-          client.contactName,
           client.email,
           client.phone
         )
@@ -82,12 +80,7 @@ export class ClientsComponent {
 
   protected readonly totalClients = computed(() => this.clientsSignal().length);
   protected readonly clientsWithContact = computed(
-    () =>
-      this.clientsSignal().filter(
-        (client) =>
-          Boolean(normalizeOptionalText(client.contactName)) ||
-          Boolean(normalizeOptionalText(client.phone))
-      ).length
+    () => this.clientsSignal().filter((client) => Boolean(normalizeOptionalText(client.phone))).length
   );
   protected readonly clientsWithDocument = computed(
     () => this.clientsSignal().filter((client) => Boolean(normalizeOptionalText(client.documentNumber))).length
@@ -100,9 +93,8 @@ export class ClientsComponent {
     legalName: ['', [Validators.required, Validators.pattern(/^(?:[\s\p{Pd}]*[^\s\p{Pd}]){0,120}[\s\p{Pd}]*$/u)]],
     tradeName: ['', [Validators.maxLength(120)]],
     documentNumber: ['', [Validators.maxLength(18)]],
-    contactName: ['', [Validators.maxLength(120)]],
     email: ['', [Validators.email, Validators.maxLength(120)]],
-    phone: ['', [Validators.maxLength(30)]],
+    phone: ['', [Validators.maxLength(20), Validators.pattern(/^[0-9 ()+.#*-]*$/)]],
     address: ['', [Validators.maxLength(255)]],
     notes: ['', [Validators.maxLength(1000)]]
   });
@@ -146,7 +138,6 @@ export class ClientsComponent {
       legalName: client.legalName,
       tradeName: client.tradeName ?? '',
       documentNumber: client.documentNumber ?? '',
-      contactName: client.contactName ?? '',
       email: client.email ?? '',
       phone: client.phone ?? '',
       address: client.address ?? '',
@@ -279,7 +270,6 @@ function emptyClientForm() {
     legalName: '',
     tradeName: '',
     documentNumber: '',
-    contactName: '',
     email: '',
     phone: '',
     address: '',
@@ -292,7 +282,6 @@ function buildClientPayload(raw: ReturnType<ClientsComponent['form']['getRawValu
     legalName: raw.legalName.trim(),
     tradeName: normalizeOptionalText(raw.tradeName),
     documentNumber: normalizeOptionalText(raw.documentNumber),
-    contactName: normalizeOptionalText(raw.contactName),
     email: normalizeOptionalText(raw.email),
     phone: normalizeOptionalText(raw.phone),
     address: normalizeOptionalText(raw.address),
