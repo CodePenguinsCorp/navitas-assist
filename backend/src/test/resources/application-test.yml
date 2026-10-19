@@ -6,11 +6,13 @@ spring:
     password:
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
         format_sql: false
+        type:
+          preferred_instant_jdbc_type: TIMESTAMP
 
 server:
   port: 0

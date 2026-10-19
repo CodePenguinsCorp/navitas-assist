@@ -217,6 +217,29 @@ Exemplo para deploy manual:
 .\scripts\deploy-prod.ps1
 ```
 
+## Migrações e recuperação do banco
+
+O backend usa Flyway e executa as migrações versionadas de `backend/src/main/resources/db/migration` antes de validar o mapeamento JPA. O Hibernate não altera mais o schema automaticamente (`ddl-auto=validate`) e a exibição de SQL fica desabilitada.
+
+Em um banco vazio, todas as versões são aplicadas. Em uma instalação existente sem `flyway_schema_history`, o schema atual é registrado como baseline na versão 1 e as migrações posteriores são executadas. A versão 2 cria `rma_items` e copia `product_id`, lote, serial e data de fabricação de cada RMA legado. Esses campos continuam em `rmas` temporariamente para compatibilidade e só devem ser removidos depois que todas as versões da aplicação usarem exclusivamente `rma_items`.
+
+Antes de atualizar produção, pare o backend e gere um backup:
+
+```powershell
+docker compose -f compose.prod.yaml --env-file .env.prod stop backend
+docker compose -f compose.prod.yaml --env-file .env.prod exec mysql sh -c 'mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" > /tmp/navitas-assist.sql'
+docker cp navitas-assist-mysql:/tmp/navitas-assist.sql .\navitas-assist-backup.sql
+```
+
+Se a migração falhar, mantenha o backend parado, restaure o dump e volte para a imagem anterior:
+
+```powershell
+docker cp .\navitas-assist-backup.sql navitas-assist-mysql:/tmp/navitas-assist.sql
+docker compose -f compose.prod.yaml --env-file .env.prod exec mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < /tmp/navitas-assist.sql'
+```
+
+Migrações já publicadas são imutáveis. Qualquer correção deve ser feita em uma nova versão, nunca alterando um arquivo que já tenha sido aplicado.
+
 ## Troubleshooting
 
 Se o MySQL Docker não subir, provavelmente já existe outro banco ocupando a porta `3306`.
