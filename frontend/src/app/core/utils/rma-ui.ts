@@ -16,8 +16,6 @@ import {
   WarrantyStatus
 } from '../models';
 
-export { formatDate, formatDateTime, todayInputValue } from './date-ui';
-
 export function statusLabel(status: RmaStatus): string {
   return RMA_STATUS_LABELS[status];
 }
@@ -78,6 +76,25 @@ export function failureTypeLabel(value: FailureType | null): string {
 
 export function failureCauseLabel(value: FailureCause | null): string {
   return value ? FAILURE_CAUSE_LABELS[value] : 'N\u00e3o classificada';
+}
+
+export function formatDate(value: string | null): string {
+  if (!value) {
+    return 'N\u00e3o informado';
+  }
+
+  return new Intl.DateTimeFormat('pt-BR').format(new Date(value));
+}
+
+export function formatDateTime(value: string | null): string {
+  if (!value) {
+    return 'N\u00e3o informado';
+  }
+
+  return new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  }).format(new Date(value));
 }
 
 export function trackableLabel(rma: Pick<RmaResponse, 'items' | 'serialNumber' | 'batchNumber'>): string {
@@ -155,6 +172,10 @@ export function compareRmasForQueue(left: RmaResponse, right: RmaResponse): numb
 export function normalizeText(value: string): string | null {
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
+}
+
+export function todayInputValue(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function priorityWeight(priority: RmaPriority): number {

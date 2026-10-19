@@ -2,7 +2,6 @@ package br.com.navitasassist.service;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
 
@@ -368,7 +367,7 @@ public class RmaService {
     }
 
     private String generateNextCode() {
-        int year = LocalDate.now(ZoneId.of("America/Sao_Paulo")).getYear();
+        int year = LocalDate.now().getYear();
         String prefix = "RMA-" + year + "-";
 
         int nextValue = rmaRecordRepository.findTopByCodeStartingWithOrderByCodeDesc(prefix)

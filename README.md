@@ -41,12 +41,6 @@ O projeto foi dividido em duas aplicações:
 - Java: 17+
 - Banco: MySQL 8
 
-## Datas e fuso horário
-
-- Exibição de horários, definição de "hoje" e ano do código do RMA usam sempre `America/Sao_Paulo`, independentemente do fuso do navegador ou servidor.
-- Datas sem horário (`YYYY-MM-DD` / `LocalDate`) preservam o dia informado, sem conversão de fuso.
-- Instantes de auditoria continuam armazenados em UTC e são exibidos no horário de São Paulo. No frontend, reutilize os utilitários de `core/utils/date-ui.ts`.
-
 ## Estrutura do Projeto
 
 - `frontend/`: interface web
