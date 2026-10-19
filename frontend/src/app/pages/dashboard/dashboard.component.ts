@@ -17,6 +17,7 @@ import {
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
+import { formatDateOnly } from '../../core/utils/date';
 
 interface QueueRow {
   code: string;
@@ -106,7 +107,7 @@ export class DashboardComponent {
       .map((rma) => ({
         code: rma.code,
         client: rma.clientName,
-        entryDate: formatDate(rma.entryDate),
+        entryDate: formatDateOnly(rma.entryDate),
         status: RMA_STATUS_LABELS[rma.status],
         priority: RMA_PRIORITY_LABELS[rma.priority]
       }))
@@ -230,14 +231,6 @@ function latestStatusUpdate(history: RmaStatusHistoryResponse[]): RmaStatusHisto
   }
 
   return [...history].sort((left, right) => compareDateStrings(right.changedAt, left.changedAt))[0] ?? null;
-}
-
-function formatDate(value: string | null): string {
-  if (!value) {
-    return 'Não informado';
-  }
-
-  return new Intl.DateTimeFormat('pt-BR').format(new Date(value));
 }
 
 function formatDateTime(value: string | null): string {
