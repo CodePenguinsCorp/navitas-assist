@@ -1,6 +1,5 @@
 package br.com.navitasassist.rma;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -93,22 +92,6 @@ public class RmaRecord extends AuditableEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private RmaStatus status = RmaStatus.RECEIVED;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private WarrantyStatus warrantyStatus = WarrantyStatus.PENDING;
-
-    @Column(nullable = false)
-    private boolean warrantyOverridden;
-
-    @Column(length = 1000)
-    private String warrantyJustification;
-
-    @Column(length = 120)
-    private String warrantyUpdatedBy;
-
-    @Column
-    private Instant warrantyUpdatedAt;
 
     @Column(length = 600)
     private String repairSummary;

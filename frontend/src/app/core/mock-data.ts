@@ -53,9 +53,9 @@ export const RMA_PRIORITY_LABELS: Record<RmaPriority, string> = {
 };
 
 export const WARRANTY_STATUS_LABELS: Record<WarrantyStatus, string> = {
-  PENDING: 'Pendente',
-  IN_WARRANTY: 'Em garantia',
-  OUT_OF_WARRANTY: 'Fora de garantia'
+  [WarrantyStatus.PENDING]: 'Pendente',
+  [WarrantyStatus.IN_WARRANTY]: 'Em garantia',
+  [WarrantyStatus.OUT_OF_WARRANTY]: 'Fora de garantia'
 };
 
 export const FAILURE_TYPE_OPTIONS: FailureType[] = [
@@ -213,7 +213,7 @@ export const REPORT_CARDS: ReportCard[] = [
   },
   {
     title: 'Garantia',
-    description: 'Overrides e justificativas.',
+    description: 'Prazos e situação por produto.',
     frequency: 'Semanal',
     format: 'Auditoria'
   },

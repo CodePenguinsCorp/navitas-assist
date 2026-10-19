@@ -6,7 +6,11 @@ export type HealthState = 'checking' | 'online' | 'offline';
 
 export type RmaPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 
-export type WarrantyStatus = 'PENDING' | 'IN_WARRANTY' | 'OUT_OF_WARRANTY';
+export enum WarrantyStatus {
+  PENDING = 'PENDING',
+  IN_WARRANTY = 'IN_WARRANTY',
+  OUT_OF_WARRANTY = 'OUT_OF_WARRANTY'
+}
 
 export type RmaStatus =
   | 'RECEIVED'
@@ -157,8 +161,6 @@ export interface CreateRmaRequest {
   receivedAccessories: string | null;
   physicalCondition: string | null;
   priority: RmaPriority;
-  warrantyStatusOverride: WarrantyStatus | null;
-  warrantyJustification: string | null;
   repairSummary: string | null;
   replacedPartsSummary: string | null;
   testSummary: string | null;
@@ -193,6 +195,9 @@ export interface RmaItemResponse {
   batchNumber: string | null;
   serialNumber: string | null;
   manufacturedAt: string | null;
+  warrantyMonths: number;
+  warrantyExpiresAt: string | null;
+  warrantyStatus: WarrantyStatus;
 }
 
 export interface RmaResponse {
@@ -218,11 +223,6 @@ export interface RmaResponse {
   physicalCondition: string | null;
   priority: RmaPriority;
   status: RmaStatus;
-  warrantyStatus: WarrantyStatus;
-  warrantyOverridden: boolean;
-  warrantyJustification: string | null;
-  warrantyUpdatedBy: string | null;
-  warrantyUpdatedAt: string | null;
   repairSummary: string | null;
   replacedPartsSummary: string | null;
   testSummary: string | null;

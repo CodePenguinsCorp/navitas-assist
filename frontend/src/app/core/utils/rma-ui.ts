@@ -36,38 +36,18 @@ export function priorityChipClass(priority: RmaPriority): string {
   }
 }
 
-export function warrantyClass(warrantyStatus: WarrantyStatus, warrantyOverridden = false): string {
-  if (warrantyOverridden) {
-    return 'warranty-alert';
-  }
-
+export function warrantyClass(warrantyStatus: WarrantyStatus): string {
   switch (warrantyStatus) {
-    case 'IN_WARRANTY':
+    case WarrantyStatus.IN_WARRANTY:
       return 'warranty-ok';
-    case 'OUT_OF_WARRANTY':
+    case WarrantyStatus.OUT_OF_WARRANTY:
       return 'warranty-off';
     default:
       return 'warranty-alert';
   }
 }
 
-export function warrantyTextClass(label: string): string {
-  switch (label) {
-    case 'Em garantia':
-      return 'warranty-ok';
-    case 'Override manual':
-    case 'Pendente':
-      return 'warranty-alert';
-    default:
-      return 'warranty-off';
-  }
-}
-
-export function warrantyLabel(warrantyStatus: WarrantyStatus, warrantyOverridden = false): string {
-  if (warrantyOverridden) {
-    return 'Override manual';
-  }
-
+export function warrantyLabel(warrantyStatus: WarrantyStatus): string {
   return WARRANTY_STATUS_LABELS[warrantyStatus];
 }
 

@@ -1,6 +1,7 @@
 package br.com.navitasassist.migration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -34,7 +35,12 @@ class DatabaseMigrationTest {
             assertEquals(1000, columnSize(connection, "rmas", "reported_failure"));
             assertEquals(500, columnSize(connection, "rmas", "received_accessories"));
             assertEquals(500, columnSize(connection, "rmas", "physical_condition"));
-            assertEquals(1000, columnSize(connection, "rmas", "warranty_justification"));
+            assertFalse(columnExists(connection, "rmas", "warranty_status"));
+            assertFalse(columnExists(connection, "rmas", "warranty_overridden"));
+            assertFalse(columnExists(connection, "rmas", "warranty_justification"));
+            assertFalse(columnExists(connection, "rmas", "warranty_updated_by"));
+            assertFalse(columnExists(connection, "rmas", "warranty_updated_at"));
+            assertTrue(columnExists(connection, "rma_items", "warranty_months"));
             assertEquals(600, columnSize(connection, "rmas", "repair_summary"));
             assertEquals(600, columnSize(connection, "rmas", "replaced_parts_summary"));
             assertEquals(800, columnSize(connection, "rmas", "test_summary"));
@@ -85,6 +91,12 @@ class DatabaseMigrationTest {
         }
     }
 
+    private boolean columnExists(Connection connection, String tableName, String columnName) throws SQLException {
+        try (ResultSet columns = connection.getMetaData().getColumns(null, null, tableName, columnName)) {
+            return columns.next();
+        }
+    }
+
     private long insertClient(Connection connection) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
             INSERT INTO clients (legal_name, created_at, updated_at)
@@ -109,11 +121,10 @@ class DatabaseMigrationTest {
         try (PreparedStatement statement = connection.prepareStatement("""
             INSERT INTO rmas (
                 code, client_id, product_id, purchase_date_unknown, entry_date, received_by,
-                reported_failure, priority, status, warranty_status, warranty_overridden,
-                created_at, updated_at
+                reported_failure, priority, status, created_at, updated_at
             ) VALUES (
                 'RMA-25', ?, ?, TRUE, DATE '2026-10-19', 'Técnico', 'Falha',
-                'HIGH', 'RECEIVED', 'PENDING', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                'HIGH', 'RECEIVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             )
             """, Statement.RETURN_GENERATED_KEYS)) {
             statement.setLong(1, clientId);

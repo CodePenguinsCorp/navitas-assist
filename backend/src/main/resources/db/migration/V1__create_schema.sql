@@ -64,11 +64,6 @@ CREATE TABLE rmas (
     physical_condition VARCHAR(500),
     priority VARCHAR(20) NOT NULL,
     status VARCHAR(30) NOT NULL,
-    warranty_status VARCHAR(30) NOT NULL,
-    warranty_overridden BOOLEAN NOT NULL,
-    warranty_justification VARCHAR(1000),
-    warranty_updated_by VARCHAR(120),
-    warranty_updated_at DATETIME(6),
     repair_summary VARCHAR(600),
     replaced_parts_summary VARCHAR(600),
     test_summary VARCHAR(800),
@@ -83,8 +78,7 @@ CREATE TABLE rmas (
     CONSTRAINT fk_rmas_client FOREIGN KEY (client_id) REFERENCES clients (id),
     CONSTRAINT fk_rmas_product FOREIGN KEY (product_id) REFERENCES products (id),
     CONSTRAINT ck_rmas_priority CHECK (priority IN ('LOW', 'MEDIUM', 'HIGH')),
-    CONSTRAINT ck_rmas_status CHECK (status IN ('RECEIVED', 'TRIAGE', 'IN_DIAGNOSIS', 'WAITING_PART', 'IN_REPAIR', 'IN_TESTS', 'COMPLETED', 'RETURNED', 'IRREPARABLE')),
-    CONSTRAINT ck_rmas_warranty_status CHECK (warranty_status IN ('PENDING', 'IN_WARRANTY', 'OUT_OF_WARRANTY'))
+    CONSTRAINT ck_rmas_status CHECK (status IN ('RECEIVED', 'TRIAGE', 'IN_DIAGNOSIS', 'WAITING_PART', 'IN_REPAIR', 'IN_TESTS', 'COMPLETED', 'RETURNED', 'IRREPARABLE'))
 );
 
 CREATE INDEX idx_rmas_client_id ON rmas (client_id);
@@ -97,6 +91,7 @@ CREATE TABLE rma_items (
     batch_number VARCHAR(60),
     serial_number VARCHAR(60),
     manufactured_at DATE,
+    warranty_months INTEGER,
     CONSTRAINT fk_rma_items_rma FOREIGN KEY (rma_id) REFERENCES rmas (id),
     CONSTRAINT fk_rma_items_product FOREIGN KEY (product_id) REFERENCES products (id)
 );

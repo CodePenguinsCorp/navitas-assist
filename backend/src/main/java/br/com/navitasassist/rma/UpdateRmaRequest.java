@@ -20,8 +20,6 @@ public record UpdateRmaRequest(
     @Size(max = 500) String receivedAccessories,
     @Size(max = 500) String physicalCondition,
     RmaPriority priority,
-    WarrantyStatus warrantyStatusOverride,
-    @Size(max = 1000) String warrantyJustification,
     @Size(max = 600) String repairSummary,
     @Size(max = 600) String replacedPartsSummary,
     @Size(max = 800) String testSummary,

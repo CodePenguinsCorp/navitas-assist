@@ -12,17 +12,21 @@ public record RmaItemResponse(
     String productSku,
     String batchNumber,
     String serialNumber,
-    LocalDate manufacturedAt
+    LocalDate manufacturedAt,
+    int warrantyMonths,
+    LocalDate warrantyExpiresAt,
+    WarrantyStatus warrantyStatus
 ) {
     public static RmaItemResponse from(RmaItem item) {
-        return from(item.getId(), item.getProduct(), item.getItemIdentification());
+        int months = item.getWarrantyMonths() == null ? item.getProduct().getDefaultWarrantyMonths() : item.getWarrantyMonths();
+        return from(item.getId(), item.getProduct(), item.getItemIdentification(), ItemWarranty.calculate(item.getRma(), months));
     }
 
     public static RmaItemResponse fromLegacy(RmaRecord rma) {
-        return from(null, rma.getProduct(), rma.getItemIdentification());
+        return from(null, rma.getProduct(), rma.getItemIdentification(), ItemWarranty.calculate(rma, rma.getProduct().getDefaultWarrantyMonths()));
     }
 
-    private static RmaItemResponse from(Long id, Product product, ItemIdentification identification) {
+    private static RmaItemResponse from(Long id, Product product, ItemIdentification identification, ItemWarranty warranty) {
         return new RmaItemResponse(
             id,
             product.getId(),
@@ -30,7 +34,10 @@ public record RmaItemResponse(
             product.getSku(),
             identification.getBatchNumber(),
             identification.getSerialNumber(),
-            identification.getManufacturedAt()
+            identification.getManufacturedAt(),
+            warranty.months(),
+            warranty.expiresAt(),
+            warranty.status()
         );
     }
 }

@@ -2,6 +2,7 @@ package br.com.navitasassist.rma;
 
 import br.com.navitasassist.item.ItemIdentification;
 import br.com.navitasassist.product.Product;
+import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -33,6 +34,9 @@ public class RmaItem {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
+
+    @Column
+    private Integer warrantyMonths;
 
     @Embedded
     private ItemIdentification itemIdentification = new ItemIdentification();
