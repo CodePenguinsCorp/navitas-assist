@@ -1,4 +1,4 @@
-import { formatDateOnly, todayInputValue } from './date';
+import { businessDateInputValue, formatDateOnly, todayInputValue } from './date';
 
 describe('date utilities', () => {
   it('formats civil dates without converting them through UTC', () => {
@@ -9,5 +9,10 @@ describe('date utilities', () => {
   it('calculates today in America/Sao_Paulo around the UTC day boundary', () => {
     expect(todayInputValue(new Date('2026-10-20T02:30:00Z'))).toBe('2026-10-19');
     expect(todayInputValue(new Date('2026-10-20T03:30:00Z'))).toBe('2026-10-20');
+  });
+
+  it('converts instants to the business date used by filters', () => {
+    expect(businessDateInputValue(new Date('2026-10-20T02:59:00Z'))).toBe('2026-10-19');
+    expect(businessDateInputValue(new Date('invalid'))).toBe('');
   });
 });

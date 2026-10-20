@@ -13,17 +13,26 @@ export function formatDateOnly(value: string | null, fallback = 'N\u00e3o inform
   const year = Number(match[1]);
   const month = Number(match[2]);
   const day = Number(match[3]);
-  const maximumDay = month >= 1 && month <= 12 ? new Date(Date.UTC(year, month, 0)).getUTCDate() : 0;
+  const maximumDay =
+    month >= 1 && month <= 12 ? new Date(Date.UTC(year, month, 0)).getUTCDate() : 0;
   return day >= 1 && day <= maximumDay ? `${match[3]}/${match[2]}/${match[1]}` : fallback;
 }
 
 export function todayInputValue(now = new Date()): string {
+  return businessDateInputValue(now);
+}
+
+export function businessDateInputValue(value: Date): string {
+  if (Number.isNaN(value.getTime())) {
+    return '';
+  }
+
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: APP_TIME_ZONE,
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit'
-  }).formatToParts(now);
+    day: '2-digit',
+  }).formatToParts(value);
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return `${values['year']}-${values['month']}-${values['day']}`;
 }
