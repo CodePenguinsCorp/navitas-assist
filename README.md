@@ -67,6 +67,12 @@ Cada RMA pode ter um técnico responsável ou permanecer sem responsável. ADMIN
 
 Toda alteração registra o responsável anterior, o novo responsável, o autor e o horário. O Kanban permite filtrar por técnico ativo ou por RMAs sem responsável, e os detalhes do RMA exibem o histórico completo de atribuições.
 
+## Visualizações salvas do Kanban
+
+Cada usuário autenticado pode salvar combinações dos filtros avançados do Kanban, reaplicá-las, renomeá-las, excluí-las e escolher uma visualização padrão. A preferência fica associada à conta e é restaurada ao abrir o quadro em uma nova sessão.
+
+As rotas em `/api/kanban-views` usam sempre o usuário da sessão; o cliente não informa nem escolhe o proprietário. Nomes são únicos por usuário, e falhas de persistência não alteram os filtros que já estão aplicados na tela.
+
 ## Estrutura do Projeto
 
 - `frontend/`: interface web
@@ -261,6 +267,7 @@ Esses valores também são usados somente nos testes automatizados. Fora dos pro
 | Alterar o status de RMA | Sim | Sim | Sim | Não |
 | Atribuir ou remover responsável do RMA | Sim | Sim | Não | Não |
 | Registrar ou alterar diagnóstico | Sim | Não | Sim | Não |
+| Gerenciar as próprias visualizações do Kanban | Sim | Sim | Sim | Sim |
 | Gerenciar usuários | Sim | Não | Não | Não |
 
 Requisições sem autenticação recebem `401`; usuários autenticados sem permissão recebem `403`. Operações de API não classificadas explicitamente ficam restritas a `ADMIN`.

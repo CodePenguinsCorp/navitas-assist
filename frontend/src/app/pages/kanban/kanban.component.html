@@ -45,6 +45,59 @@
       </div>
     </div>
 
+    <section class="kanban-views" aria-labelledby="kanbanViewsTitle">
+      <div class="kanban-views__copy">
+        <strong id="kanbanViewsTitle">Visualizações</strong>
+        <span>Salve e reaplique combinações de filtros da sua conta.</span>
+      </div>
+      <div class="kanban-views__controls">
+        <app-custom-select
+          ariaLabel="Visualização salva do Kanban"
+          [options]="viewSelectOptions()"
+          [value]="activeViewId()"
+          [disabled]="viewBusy()"
+          (valueChange)="applyView($event)"
+        />
+        <button
+          type="button"
+          class="button-secondary"
+          (click)="openCreateViewModal()"
+          [disabled]="viewBusy()"
+        >
+          Salvar atual
+        </button>
+        @if (activeView(); as view) {
+          <button
+            type="button"
+            class="button-secondary"
+            (click)="openRenameViewModal()"
+            [disabled]="viewBusy()"
+          >
+            Renomear
+          </button>
+          <button
+            type="button"
+            class="button-secondary"
+            (click)="makeActiveViewDefault()"
+            [disabled]="viewBusy() || view.defaultView"
+          >
+            {{ view.defaultView ? 'Visão padrão' : 'Tornar padrão' }}
+          </button>
+          <button
+            type="button"
+            class="button-secondary button-secondary--danger"
+            (click)="deleteActiveView()"
+            [disabled]="viewBusy()"
+          >
+            Excluir
+          </button>
+        }
+      </div>
+      @if (viewError()) {
+        <p class="field-error kanban-views__error" role="alert">{{ viewError() }}</p>
+      }
+    </section>
+
     <form class="kanban-filters" [formGroup]="filtersForm">
       <div class="field-group kanban-filters__search">
         <label for="kanbanSearch">Busca</label>
@@ -156,6 +209,71 @@
     />
   </section>
 </section>
+
+@if (viewModalMode(); as mode) {
+  <section class="modal-overlay" (click)="closeViewModal()">
+    <article class="panel modal-panel modal-panel--narrow" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h3>{{ mode === 'create' ? 'Salvar visualização' : 'Renomear visualização' }}</h3>
+          <p>
+            {{
+              mode === 'create'
+                ? 'Os filtros atuais serão vinculados à sua conta.'
+                : 'Os filtros salvos serão preservados.'
+            }}
+          </p>
+        </div>
+        <button
+          type="button"
+          class="modal-close"
+          (click)="closeViewModal()"
+          [disabled]="viewBusy()"
+          aria-label="Fechar"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
+        </button>
+      </div>
+
+      @if (viewError()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ viewError() }}</strong>
+        </article>
+      }
+
+      <form [formGroup]="viewForm" (ngSubmit)="saveView()" class="form-grid">
+        <div class="field-group field-group--full">
+          <label for="kanbanViewName">Nome</label>
+          <input id="kanbanViewName" formControlName="name" maxlength="80" autocomplete="off" />
+          @if (viewForm.controls.name.touched && viewForm.controls.name.invalid) {
+            <small class="field-error">Informe um nome com até 80 caracteres.</small>
+          }
+        </div>
+
+        <label class="kanban-view-default field-group--full">
+          <input type="checkbox" formControlName="defaultView" />
+          <span>Aplicar automaticamente após o login</span>
+        </label>
+
+        <div class="form-actions form-actions--full">
+          <button
+            type="button"
+            class="button-secondary"
+            (click)="closeViewModal()"
+            [disabled]="viewBusy()"
+          >
+            Cancelar
+          </button>
+          <button type="submit" class="button-primary" [disabled]="viewBusy()">
+            {{ viewBusy() ? 'Salvando...' : 'Salvar' }}
+          </button>
+        </div>
+      </form>
+    </article>
+  </section>
+}
 
 @if (pendingStatusRma(); as rma) {
   <section class="modal-overlay" (click)="closeStatusModal()">

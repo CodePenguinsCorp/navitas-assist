@@ -11,6 +11,9 @@ import {
 } from '../../core/mock-data';
 import {
   AssignableUserResponse,
+  KanbanViewFilters,
+  KanbanViewRequest,
+  KanbanViewResponse,
   RmaPriority,
   RmaAssigneeUpdateRequest,
   RmaResponse,
@@ -20,6 +23,7 @@ import {
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
+import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { businessDateInputValue } from '../../core/utils/date';
@@ -54,6 +58,8 @@ interface KanbanFilterValues {
   updatedTo: string;
 }
 
+type ViewModalMode = 'create' | 'rename' | null;
+
 @Component({
   selector: 'app-kanban',
   imports: [
@@ -69,12 +75,17 @@ export class KanbanComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly catalogService = inject(CatalogService);
+  private readonly kanbanViewService = inject(KanbanViewService);
   private readonly rmaService = inject(RmaService);
 
   protected readonly loading = signal(true);
   protected readonly pageError = signal('');
   protected readonly statusModalError = signal('');
   protected readonly assignmentModalError = signal('');
+  protected readonly viewError = signal('');
+  protected readonly viewBusy = signal(false);
+  protected readonly activeViewId = signal<number | null>(null);
+  protected readonly viewModalMode = signal<ViewModalMode>(null);
   protected readonly boardUpdatingId = signal<number | null>(null);
   protected readonly draggedRmaId = signal<number | null>(null);
   protected readonly dragTargetStatus = signal<RmaStatus | null>(null);
@@ -82,6 +93,7 @@ export class KanbanComponent {
 
   private readonly rmasSignal = signal<RmaResponse[]>([]);
   private readonly assignableUsersSignal = signal<AssignableUserResponse[]>([]);
+  private readonly viewsSignal = signal<KanbanViewResponse[]>([]);
   private readonly pendingStatusRmaSignal = signal<RmaResponse | null>(null);
   private readonly pendingAssignmentRmaSignal = signal<RmaResponse | null>(null);
 
@@ -107,6 +119,18 @@ export class KanbanComponent {
   );
   protected readonly activeFilterCount = computed(() => countActiveFilters(this.filters()));
   protected readonly totalRmas = computed(() => this.rmasSignal().length);
+  protected readonly activeView = computed(() =>
+    this.viewsSignal().find((view) => view.id === this.activeViewId()),
+  );
+  protected readonly viewSelectOptions = computed<ReadonlyArray<CustomSelectOption<number | null>>>(
+    () => [
+      { value: null, label: 'Padrão (sem filtros)' },
+      ...this.viewsSignal().map((view) => ({
+        value: view.id,
+        label: `${view.defaultView ? '★ ' : ''}${view.name}`,
+      })),
+    ],
+  );
   protected readonly pendingStatusRma = this.pendingStatusRmaSignal.asReadonly();
   protected readonly pendingAssignmentRma = this.pendingAssignmentRmaSignal.asReadonly();
   protected readonly statusSelectOptions = STATUS_SELECT_OPTIONS;
@@ -179,8 +203,14 @@ export class KanbanComponent {
     assigneeId: [null as number | null],
   });
 
+  protected readonly viewForm = this.formBuilder.nonNullable.group({
+    name: ['', [Validators.required, Validators.maxLength(80)]],
+    defaultView: [false],
+  });
+
   constructor() {
     this.loadKanban();
+    this.loadViews();
   }
 
   protected selectRma(rma: RmaResponse): void {
@@ -190,6 +220,135 @@ export class KanbanComponent {
 
   protected clearFilters(): void {
     this.filtersForm.reset(DEFAULT_KANBAN_FILTERS);
+    this.activeViewId.set(null);
+  }
+
+  protected applyView(value: unknown): void {
+    if (value === null) {
+      this.clearFilters();
+      return;
+    }
+    if (typeof value !== 'number') {
+      return;
+    }
+
+    const view = this.viewsSignal().find((item) => item.id === value);
+    if (!view) {
+      return;
+    }
+
+    this.filtersForm.reset(fromPersistedFilters(view.filters));
+    this.activeViewId.set(view.id);
+    this.viewError.set('');
+  }
+
+  protected openCreateViewModal(): void {
+    this.viewForm.reset({ name: '', defaultView: false });
+    this.viewModalMode.set('create');
+    this.viewError.set('');
+  }
+
+  protected openRenameViewModal(): void {
+    const view = this.activeView();
+    if (!view) {
+      return;
+    }
+    this.viewForm.reset({ name: view.name, defaultView: view.defaultView });
+    this.viewModalMode.set('rename');
+    this.viewError.set('');
+  }
+
+  protected closeViewModal(): void {
+    if (!this.viewBusy()) {
+      this.viewModalMode.set(null);
+    }
+  }
+
+  protected saveView(): void {
+    if (this.viewForm.invalid) {
+      this.viewForm.markAllAsTouched();
+      return;
+    }
+
+    const mode = this.viewModalMode();
+    const currentView = this.activeView();
+    if (!mode || (mode === 'rename' && !currentView)) {
+      return;
+    }
+
+    const raw = this.viewForm.getRawValue();
+    const payload: KanbanViewRequest = {
+      name: raw.name.trim(),
+      defaultView: raw.defaultView,
+      filters:
+        mode === 'create'
+          ? toPersistedFilters(this.filtersForm.getRawValue())
+          : currentView!.filters,
+    };
+    const request =
+      mode === 'create'
+        ? this.kanbanViewService.create(payload)
+        : this.kanbanViewService.update(currentView!.id, payload);
+
+    this.viewBusy.set(true);
+    this.viewError.set('');
+    request.pipe(finalize(() => this.viewBusy.set(false))).subscribe({
+      next: (saved) => {
+        this.syncSavedView(saved);
+        this.activeViewId.set(saved.id);
+        this.viewModalMode.set(null);
+      },
+      error: (error) => {
+        this.viewError.set(
+          extractHttpErrorMessage(error, 'Não foi possível salvar a visualização.'),
+        );
+      },
+    });
+  }
+
+  protected makeActiveViewDefault(): void {
+    const view = this.activeView();
+    if (!view || view.defaultView || this.viewBusy()) {
+      return;
+    }
+
+    this.viewBusy.set(true);
+    this.viewError.set('');
+    this.kanbanViewService
+      .setDefault(view.id)
+      .pipe(finalize(() => this.viewBusy.set(false)))
+      .subscribe({
+        next: (updated) => this.syncSavedView(updated),
+        error: (error) => {
+          this.viewError.set(
+            extractHttpErrorMessage(error, 'Não foi possível definir a visualização padrão.'),
+          );
+        },
+      });
+  }
+
+  protected deleteActiveView(): void {
+    const view = this.activeView();
+    if (!view || this.viewBusy()) {
+      return;
+    }
+
+    this.viewBusy.set(true);
+    this.viewError.set('');
+    this.kanbanViewService
+      .delete(view.id)
+      .pipe(finalize(() => this.viewBusy.set(false)))
+      .subscribe({
+        next: () => {
+          this.viewsSignal.update((views) => views.filter((item) => item.id !== view.id));
+          this.clearFilters();
+        },
+        error: (error) => {
+          this.viewError.set(
+            extractHttpErrorMessage(error, 'Não foi possível excluir a visualização.'),
+          );
+        },
+      });
   }
 
   protected openAssignmentModal(rma: RmaResponse): void {
@@ -343,6 +502,34 @@ export class KanbanComponent {
           this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível carregar o Kanban.'));
         },
       });
+  }
+
+  private loadViews(): void {
+    this.kanbanViewService.list().subscribe({
+      next: (views) => {
+        this.viewsSignal.set(sortViews(views));
+        const defaultView = views.find((view) => view.defaultView);
+        if (defaultView) {
+          this.applyView(defaultView.id);
+        }
+      },
+      error: (error) => {
+        this.viewError.set(
+          extractHttpErrorMessage(error, 'Não foi possível carregar as visualizações salvas.'),
+        );
+      },
+    });
+  }
+
+  private syncSavedView(saved: KanbanViewResponse): void {
+    this.viewsSignal.update((views) =>
+      sortViews([
+        ...views
+          .filter((view) => view.id !== saved.id)
+          .map((view) => (saved.defaultView ? { ...view, defaultView: false } : view)),
+        saved,
+      ]),
+    );
   }
 
   private syncSelection(rmas: RmaResponse[]): void {
@@ -546,4 +733,37 @@ function mergeAssigneeOptions(
   return [...options.entries()]
     .sort((left, right) => left[1].localeCompare(right[1], 'pt-BR'))
     .map(([value, label]) => ({ value, label }));
+}
+
+function toPersistedFilters(filters: KanbanFilterValues): KanbanViewFilters {
+  return {
+    query: normalizeText(filters.query),
+    priority: filters.priority === 'all' ? null : filters.priority,
+    status: filters.status === 'all' ? null : filters.status,
+    warranty: filters.warranty === 'all' ? null : filters.warranty,
+    assigneeId: typeof filters.assignee === 'number' ? filters.assignee : null,
+    unassignedOnly: filters.assignee === 'unassigned',
+    entryFrom: filters.entryFrom || null,
+    entryTo: filters.entryTo || null,
+    updatedFrom: filters.updatedFrom || null,
+    updatedTo: filters.updatedTo || null,
+  };
+}
+
+function fromPersistedFilters(filters: KanbanViewFilters): KanbanFilterValues {
+  return {
+    query: filters.query ?? '',
+    priority: filters.priority ?? 'all',
+    status: filters.status ?? 'all',
+    warranty: filters.warranty ?? 'all',
+    assignee: filters.unassignedOnly ? 'unassigned' : (filters.assigneeId ?? 'all'),
+    entryFrom: filters.entryFrom ?? '',
+    entryTo: filters.entryTo ?? '',
+    updatedFrom: filters.updatedFrom ?? '',
+    updatedTo: filters.updatedTo ?? '',
+  };
+}
+
+function sortViews(views: KanbanViewResponse[]): KanbanViewResponse[] {
+  return [...views].sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
 }

@@ -45,6 +45,34 @@ CREATE TABLE user_accounts (
     CONSTRAINT ck_user_accounts_role CHECK (role IN ('ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER'))
 );
 
+CREATE TABLE kanban_views (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    owner_id BIGINT NOT NULL,
+    name VARCHAR(80) NOT NULL,
+    is_default BOOLEAN NOT NULL,
+    search_query VARCHAR(200),
+    priority VARCHAR(20),
+    status VARCHAR(30),
+    warranty_status VARCHAR(30),
+    assignee_id BIGINT,
+    unassigned_only BOOLEAN NOT NULL,
+    entry_from DATE,
+    entry_to DATE,
+    updated_from DATE,
+    updated_to DATE,
+    created_at DATETIME(6) NOT NULL,
+    updated_at DATETIME(6) NOT NULL,
+    created_by VARCHAR(60),
+    updated_by VARCHAR(60),
+    CONSTRAINT uk_kanban_views_owner_name UNIQUE (owner_id, name),
+    CONSTRAINT fk_kanban_views_owner FOREIGN KEY (owner_id) REFERENCES user_accounts (id) ON DELETE CASCADE,
+    CONSTRAINT ck_kanban_views_priority CHECK (priority IS NULL OR priority IN ('LOW', 'MEDIUM', 'HIGH')),
+    CONSTRAINT ck_kanban_views_status CHECK (status IS NULL OR status IN ('RECEIVED', 'TRIAGE', 'IN_DIAGNOSIS', 'WAITING_PART', 'IN_REPAIR', 'IN_TESTS', 'COMPLETED', 'RETURNED', 'IRREPARABLE')),
+    CONSTRAINT ck_kanban_views_warranty CHECK (warranty_status IS NULL OR warranty_status IN ('PENDING', 'IN_WARRANTY', 'OUT_OF_WARRANTY'))
+);
+
+CREATE INDEX idx_kanban_views_owner_id ON kanban_views (owner_id);
+
 CREATE TABLE rmas (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(20) NOT NULL,

@@ -9,7 +9,7 @@ export type RmaPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 export enum WarrantyStatus {
   PENDING = 'PENDING',
   IN_WARRANTY = 'IN_WARRANTY',
-  OUT_OF_WARRANTY = 'OUT_OF_WARRANTY'
+  OUT_OF_WARRANTY = 'OUT_OF_WARRANTY',
 }
 
 export type RmaStatus =
@@ -179,6 +179,31 @@ export interface RmaStatusUpdateRequest {
 
 export interface RmaAssigneeUpdateRequest {
   assigneeId: number | null;
+}
+
+export interface KanbanViewFilters {
+  query: string | null;
+  priority: RmaPriority | null;
+  status: RmaStatus | null;
+  warranty: WarrantyStatus | null;
+  assigneeId: number | null;
+  unassignedOnly: boolean;
+  entryFrom: string | null;
+  entryTo: string | null;
+  updatedFrom: string | null;
+  updatedTo: string | null;
+}
+
+export interface KanbanViewRequest {
+  name: string;
+  defaultView: boolean;
+  filters: KanbanViewFilters;
+}
+
+export interface KanbanViewResponse extends KanbanViewRequest {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface DiagnosisRequest {
