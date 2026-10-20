@@ -244,6 +244,17 @@ export interface RmaItemResponse {
   warrantyStatus: WarrantyStatus;
 }
 
+export type RmaSlaStatus = 'NORMAL' | 'WARNING' | 'OVERDUE' | 'CLOSED';
+
+export interface RmaSlaResponse {
+  status: RmaSlaStatus;
+  startedAt: string;
+  warningAt: string | null;
+  dueAt: string | null;
+  elapsedSeconds: number;
+  limitSeconds: number | null;
+}
+
 export interface RmaResponse {
   id: number;
   code: string;
@@ -267,6 +278,7 @@ export interface RmaResponse {
   physicalCondition: string | null;
   priority: RmaPriority;
   status: RmaStatus;
+  sla: RmaSlaResponse;
   assigneeId: number | null;
   assigneeName: string | null;
   repairSummary: string | null;

@@ -95,7 +95,8 @@
 
 .kanban-stage {
   min-inline-size: 0;
-  overflow: hidden;
+  /* Filter menus must remain visible when the board has no matching cards. */
+  overflow: visible;
   padding: 1rem;
   background:
     radial-gradient(circle at top left, rgba(46, 168, 212, 0.08), transparent 18%),
@@ -104,6 +105,7 @@
 
 .kanban-stage__header {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;

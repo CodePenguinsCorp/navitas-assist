@@ -21,6 +21,8 @@ import {
   RmaStatusUpdateRequest,
   WarrantyStatus,
 } from '../../core/models';
+import { SlaClockService } from '../../core/services/sla-clock.service';
+import { SlaFilterValue, SLA_LABELS, slaStatus } from '../../core/utils/rma-sla';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
@@ -32,6 +34,7 @@ import {
   CustomSelectComponent,
   CustomSelectOption,
 } from '../../shared/form-controls/custom-select/custom-select.component';
+import { BoundedFilterPanelsDirective } from '../../shared/form-controls/bounded-filter-panels.directive';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
 import { RmaKanbanBoardComponent } from '../../shared/rma-kanban-board/rma-kanban-board.component';
 
@@ -47,6 +50,7 @@ type StatusFilterValue = 'all' | RmaStatus;
 type WarrantyFilterValue = 'all' | WarrantyStatus;
 
 interface KanbanFilterValues {
+  sla: SlaFilterValue;
   query: string;
   priority: PriorityFilterValue;
   status: StatusFilterValue;
@@ -64,6 +68,7 @@ type ViewModalMode = 'create' | 'rename' | null;
   selector: 'app-kanban',
   imports: [
     ReactiveFormsModule,
+    BoundedFilterPanelsDirective,
     CustomSelectComponent,
     DatePickerComponent,
     RmaKanbanBoardComponent,
@@ -72,6 +77,11 @@ type ViewModalMode = 'create' | 'rename' | null;
   styleUrl: './kanban.component.css',
 })
 export class KanbanComponent {
+  private readonly slaClock = inject(SlaClockService);
+  protected readonly slaFilterOptions: ReadonlyArray<CustomSelectOption<SlaFilterValue>> = [
+    { value: 'all', label: 'Todas as situações' },
+    ...(['NORMAL', 'WARNING', 'OVERDUE', 'CLOSED'] as const).map((value) => ({ value, label: SLA_LABELS[value] }))
+  ];
   private readonly formBuilder = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly catalogService = inject(CatalogService);
@@ -98,6 +108,7 @@ export class KanbanComponent {
   private readonly pendingAssignmentRmaSignal = signal<RmaResponse | null>(null);
 
   protected readonly filtersForm = this.formBuilder.nonNullable.group({
+    sla: ['all' as SlaFilterValue],
     query: [''],
     priority: ['all' as PriorityFilterValue],
     status: ['all' as StatusFilterValue],
@@ -115,7 +126,7 @@ export class KanbanComponent {
     },
   );
   protected readonly filteredRmas = computed(() =>
-    filterKanbanRmas(this.rmasSignal(), this.filters()),
+    filterKanbanRmas(this.rmasSignal(), this.filters(), this.slaClock.now()),
   );
   protected readonly activeFilterCount = computed(() => countActiveFilters(this.filters()));
   protected readonly totalRmas = computed(() => this.rmasSignal().length);
@@ -611,6 +622,7 @@ const STATUS_SELECT_OPTIONS: ReadonlyArray<CustomSelectOption<RmaStatus>> = RMA_
 );
 
 const DEFAULT_KANBAN_FILTERS: KanbanFilterValues = {
+  sla: 'all',
   query: '',
   priority: 'all',
   status: 'all',
@@ -643,7 +655,7 @@ const WARRANTY_FILTER_OPTIONS: ReadonlyArray<CustomSelectOption<WarrantyFilterVa
   })),
 ];
 
-function filterKanbanRmas(rmas: RmaResponse[], filters: KanbanFilterValues): RmaResponse[] {
+function filterKanbanRmas(rmas: RmaResponse[], filters: KanbanFilterValues, now: number): RmaResponse[] {
   const query = normalizeSearch(filters.query);
 
   return rmas.filter((rma) => {
@@ -663,6 +675,7 @@ function filterKanbanRmas(rmas: RmaResponse[], filters: KanbanFilterValues): Rma
     const matchesUpdatedDate = isWithinRange(updatedDate, filters.updatedFrom, filters.updatedTo);
 
     return (
+      (filters.sla === 'all' || slaStatus(rma.sla, now) === filters.sla) &&
       matchesQuery &&
       matchesPriority &&
       matchesStatus &&
@@ -752,6 +765,7 @@ function toPersistedFilters(filters: KanbanFilterValues): KanbanViewFilters {
 
 function fromPersistedFilters(filters: KanbanViewFilters): KanbanFilterValues {
   return {
+    sla: 'all',
     query: filters.query ?? '',
     priority: filters.priority ?? 'all',
     status: filters.status ?? 'all',

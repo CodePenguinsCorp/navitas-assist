@@ -1,8 +1,9 @@
-import { Signal } from '@angular/core';
+import { Signal, signal } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { KanbanViewRequest, RmaResponse, WarrantyStatus } from '../../core/models';
+import { SlaClockService } from '../../core/services/sla-clock.service';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
@@ -11,15 +12,18 @@ import { KanbanComponent } from './kanban.component';
 
 describe('KanbanComponent filters', () => {
   let component: KanbanHarness;
+  let now = signal(Date.parse('2026-10-20T12:00:00Z'));
   let createdViewRequest: KanbanViewRequest | null;
   let failCreateView: boolean;
 
   beforeEach(async () => {
+    now = signal(Date.parse('2026-10-20T12:00:00Z'));
     createdViewRequest = null;
     failCreateView = false;
     await TestBed.configureTestingModule({
       imports: [KanbanComponent],
       providers: [
+        { provide: SlaClockService, useValue: { now } },
         { provide: AuthService, useValue: { hasAnyRole: () => true } },
         {
           provide: CatalogService,
@@ -95,6 +99,25 @@ describe('KanbanComponent filters', () => {
     expect(component.activeCount()).toBe(1);
   });
 
+  it('combines SLA with advanced filters and clears the entire form', () => {
+    component.filtersForm.patchValue({ sla: 'NORMAL', priority: 'HIGH', assignee: 7, query: 'arvore' });
+    expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
+    expect(component.activeFilterCount()).toBe(4);
+    component.filtersForm.patchValue({ sla: 'CLOSED' });
+    expect(component.filteredRmas()).toEqual([]);
+    component.clearFilters();
+    expect(component.filteredRmas()).toHaveLength(2);
+    expect(component.filtersForm.getRawValue().sla).toBe('all');
+    expect(component.activeFilterCount()).toBe(0);
+  });
+
+  it('updates the combined SLA filter as its deadline passes', () => {
+    component.filtersForm.patchValue({ sla: 'OVERDUE', priority: 'HIGH', assignee: 7 });
+    expect(component.filteredRmas()).toEqual([]);
+    now.set(Date.parse('2026-10-20T13:00:00Z'));
+    expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
+  });
+
   it('returns an empty result and restores all cards and counters when filters are cleared', () => {
     component.filtersForm.patchValue({ query: 'não existe' });
 
@@ -125,8 +148,10 @@ describe('KanbanComponent filters', () => {
     );
     expect(component.activeViewId()).toBe(5);
 
-    component.filtersForm.patchValue({ priority: 'all', query: '' });
+    component.filtersForm.patchValue({ priority: 'all', query: '', sla: 'CLOSED' });
     component.applyView(5);
+    expect(component.filtersForm.getRawValue().sla).toBe('all');
+    expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
     expect(component.filtersForm.getRawValue()).toEqual(
       expect.objectContaining({ priority: 'HIGH', query: 'árvore' }),
     );
@@ -266,6 +291,14 @@ function buildRma(values: {
     diagnosis: null,
     statusHistory: [],
     assignmentHistory: [],
+    sla: {
+      status: values.status === 'COMPLETED' ? 'CLOSED' : 'NORMAL',
+      startedAt: '2026-10-20T11:00:00Z',
+      warningAt: values.status === 'COMPLETED' ? null : '2026-10-20T12:30:00Z',
+      dueAt: values.status === 'COMPLETED' ? null : '2026-10-20T13:00:00Z',
+      elapsedSeconds: 0,
+      limitSeconds: values.status === 'COMPLETED' ? null : 7200,
+    },
     createdAt: '2026-10-10T12:00:00Z',
     updatedAt: values.updatedAt,
   };
