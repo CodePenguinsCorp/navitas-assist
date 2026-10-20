@@ -29,6 +29,7 @@ public record RmaResponse(
     String physicalCondition,
     RmaPriority priority,
     RmaStatus status,
+    RmaSlaResponse sla,
     Long assigneeId,
     String assigneeName,
     String repairSummary,
@@ -43,7 +44,7 @@ public record RmaResponse(
     Instant createdAt,
     Instant updatedAt
 ) {
-    public static RmaResponse from(RmaRecord rma) {
+    public static RmaResponse from(RmaRecord rma, RmaSlaResponse sla) {
         List<RmaItemResponse> items = rma.getItems().isEmpty()
             ? List.of(RmaItemResponse.fromLegacy(rma))
             : rma.getItems().stream().map(RmaItemResponse::from).toList();
@@ -72,6 +73,7 @@ public record RmaResponse(
             rma.getPhysicalCondition(),
             rma.getPriority(),
             rma.getStatus(),
+            sla,
             rma.getAssignee() == null ? null : rma.getAssignee().getId(),
             rma.getAssignee() == null ? null : rma.getAssignee().getFullName(),
             rma.getRepairSummary(),

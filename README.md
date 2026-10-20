@@ -362,3 +362,50 @@ Disponibilizar um fluxo funcional de gerenciamento de assistência técnica, per
 - [ ] **Interface Kanban para RMAs:** Fazer com que a gestão de status do chamado seja feita de forma visual, melhorando a experiência do usuário.
 - [ ] **Ampliação da Cobertura de Testes:** Criar novos testes de integração para as regras de negócio de RMAs e Garantias.
 - [ ] **Homologação e Deploy:** Validar os scripts de ambiente de produção, preparando o sistema para o primeiro ciclo de uso e feedback do cliente.
+
+
+## SLA do Kanban (NAV-10)
+
+O backend calcula o SLA de cada RMA e o inclui no campo `sla` das respostas de consulta e atualização. Os cards mostram situação por texto e cor, tempo decorrido na etapa, limite e data/hora do prazo. O filtro de SLA combina-se com o de responsável. A tela recalcula situação e tempo a cada 30 segundos sem recarregar; datas são exibidas no fuso do navegador, a partir de instantes UTC.
+
+### Regras e valores iniciais
+
+Os valores abaixo são padrões operacionais iniciais, ajustáveis pelo administrador da implantação. São **minutos corridos**, incluindo noites, fins de semana e feriados; `WAITING_PART` também conta tempo.
+
+| Etapa | Prazo padrão | Variável do backend |
+| --- | --- | --- |
+| RECEIVED | 1440 min (24h) | SLA_RECEIVED_MINUTES |
+| TRIAGE | 1440 min (24h) | SLA_TRIAGE_MINUTES |
+| IN_DIAGNOSIS | 2880 min (48h) | SLA_DIAGNOSIS_MINUTES |
+| WAITING_PART | 7200 min (120h) | SLA_WAITING_PART_MINUTES |
+| IN_REPAIR | 4320 min (72h) | SLA_REPAIR_MINUTES |
+| IN_TESTS | 1440 min (24h) | SLA_TESTS_MINUTES |
+
+- `NORMAL`: antes de 80% do prazo; `WARNING`: a partir de 80%, inclusive; `OVERDUE`: no instante do prazo e depois dele. `SLA_WARNING_PERCENT` pode variar de 1 a 99.
+- A entrada na etapa é a primeira ocorrência do bloco mais recente dessa etapa no histórico. Observações repetindo o status não reiniciam o relógio. Sair e voltar inicia um novo prazo. Empates de timestamp usam o ID do histórico.
+- `COMPLETED`, `RETURNED` e `IRREPARABLE` retornam `CLOSED`, sem prazo e sem acumular tempo (zero na etapa encerrada). O card mostra a data de entrada no estado encerrado. Reabrir reinicia o SLA da nova etapa.
+- Legados sem histórico da etapa usam `createdAt`; se ausente, `entryDate` à meia-noite de America/Sao_Paulo. Esse fallback é aproximado; registros com histórico usam os instantes reais. Tempos futuros nunca produzem duração negativa.
+- Não há pausa automática, calendário comercial ou SLA total do atendimento. A regra atual é aplicada a todos os registros, sem snapshots de políticas antigas.
+
+### Configuração por etapa e prioridade
+
+Configure `navitas.sla` em um arquivo Spring externo (ou `SPRING_APPLICATION_JSON`). Por padrão todas as prioridades usam o prazo da etapa. Uma substituição afeta apenas a prioridade informada:
+
+```yaml
+navitas:
+  sla:
+    warning-percent: 80
+    stages:
+      IN_DIAGNOSIS:
+        minutes: 2880
+        priority-minutes:
+          HIGH: 1440
+```
+
+As demais etapas preservam os padrões. Prazos e substituições aceitam de 1 a 5256000 minutos; configuração inválida impede a inicialização. Reinicie o backend após alterar a configuração e recarregue o Kanban. Em Docker, as variáveis precisam estar no ambiente do **container backend** (por `environment`/`env_file` de um override Compose); apenas adicionar ao `.env` do host não as injeta automaticamente. Não há endpoint de edição nem alteração de permissões.
+
+### Validação
+
+- Backend: `mvn test` em `backend/` (limiares, notas, reentrada, encerramento/reabertura, prioridade, configuração e contrato HTTP).
+- Filtros e apresentação: `npm run test:sla` em `frontend/`, com Node 22.14+ (runner nativo, sem framework adicional).
+- Templates e tipos Angular: `npm run build` em `frontend/`.

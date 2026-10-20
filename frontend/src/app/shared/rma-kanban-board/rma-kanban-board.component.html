@@ -59,6 +59,8 @@
                 </div>
                 <p>{{ item.reportedFailure }}</p>
 
+                <app-rma-sla-badge [sla]="item.sla" />
+
                 <div class="board-card__grid">
                   <div>
                     <span>Responsável</span>

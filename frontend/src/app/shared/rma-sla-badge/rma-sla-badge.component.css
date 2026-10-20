@@ -1,0 +1,28 @@
+:host { display: block; }
+
+.sla {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.8rem;
+  padding: 0.6rem;
+  border-left: 4px solid currentColor;
+  border-radius: 4px;
+  color: #1a5938;
+  background: #eaf6ee;
+  font-size: 0.8rem;
+}
+
+.sla[data-sla='WARNING'] {
+  color: #714500;
+  background: #fff3ce;
+}
+
+.sla[data-sla='OVERDUE'] {
+  color: #942629;
+  background: #ffeded;
+}
+
+.sla[data-sla='CLOSED'] {
+  color: #435267;
+  background: #edf1f5;
+}

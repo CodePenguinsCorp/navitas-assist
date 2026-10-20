@@ -98,7 +98,16 @@
       }
     </section>
 
-    <form class="kanban-filters" [formGroup]="filtersForm">
+    <form appBoundedFilterPanels class="kanban-filters" [formGroup]="filtersForm">
+      <div class="field-group">
+        <label>SLA</label>
+        <app-custom-select
+          formControlName="sla"
+          ariaLabel="Filtrar Kanban por SLA"
+          [options]="slaFilterOptions"
+        />
+      </div>
+
       <div class="field-group kanban-filters__search">
         <label for="kanbanSearch">Busca</label>
         <input

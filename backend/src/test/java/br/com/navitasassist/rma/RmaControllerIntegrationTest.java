@@ -519,6 +519,47 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.assignmentHistory[?(@.previousAssigneeName == 'First Technician' && @.newAssigneeName == 'Second Technician')]", hasSize(1)));
     }
 
+    @Test
+    void shouldExposeSlaAndRestartItAfterPersistedStageChange() throws Exception {
+        Client client = new Client();
+        client.setLegalName("SLA client");
+        RmaRecord rma = new RmaRecord();
+        rma.setCode("RMA-SLA-0001");
+        rma.setClient(clientRepository.save(client));
+        rma.setProduct(saveProduct("SLA-PRODUCT", "SLA product", 12));
+        rma.getItemIdentification().setSerialNumber("SLA-SERIAL");
+        rma.setPurchaseDateUnknown(true);
+        rma.setEntryDate(LocalDate.now(BUSINESS_ZONE));
+        rma.setReceivedBy("Service desk");
+        rma.setReportedFailure("SLA test");
+        RmaStatusHistory history = new RmaStatusHistory();
+        history.setStatus(RmaStatus.RECEIVED);
+        history.setChangedBy("admin");
+        history.setChangedAt(java.time.Instant.parse("2020-01-01T10:00:00Z"));
+        rma.addStatusHistory(history);
+        Long id = rmaRecordRepository.saveAndFlush(rma).getId();
+
+        mockMvc.perform(get("/api/rmas/{id}", id).with(user("viewer").roles("VIEWER")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.sla.status").value("OVERDUE"))
+            .andExpect(jsonPath("$.sla.startedAt").value("2020-01-01T10:00:00Z"))
+            .andExpect(jsonPath("$.sla.limitSeconds").value(86400));
+        mockMvc.perform(patch("/api/rmas/{id}/status", id).with(user("tech").roles("TECHNICIAN")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"IN_DIAGNOSIS\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.sla.status").value("NORMAL"))
+            .andExpect(jsonPath("$.sla.limitSeconds").value(172800));
+        mockMvc.perform(get("/api/rmas").with(user("viewer").roles("VIEWER")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].sla.status").value("NORMAL"));
+        mockMvc.perform(patch("/api/rmas/{id}/status", id).with(user("tech").roles("TECHNICIAN")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"COMPLETED\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.sla.status").value("CLOSED"))
+            .andExpect(jsonPath("$.sla.elapsedSeconds").value(0))
+            .andExpect(jsonPath("$.sla.dueAt").doesNotExist());
+    }
+
     private Product saveProduct(String sku, String name, int warrantyMonths) {
         Product product = new Product();
         product.setSku(sku);

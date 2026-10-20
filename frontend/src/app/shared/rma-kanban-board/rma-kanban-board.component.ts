@@ -1,4 +1,5 @@
 import { Component, EventEmitter, Output, computed, input } from '@angular/core';
+import { RmaSlaBadgeComponent } from '../rma-sla-badge/rma-sla-badge.component';
 import { RMA_STATUS_FLOW } from '../../core/mock-data';
 import { RmaResponse, RmaStatus } from '../../core/models';
 import {
@@ -22,6 +23,7 @@ interface RmaBoardColumn {
 
 @Component({
   selector: 'app-rma-kanban-board',
+  imports: [RmaSlaBadgeComponent],
   templateUrl: './rma-kanban-board.component.html',
   styleUrl: './rma-kanban-board.component.css'
 })

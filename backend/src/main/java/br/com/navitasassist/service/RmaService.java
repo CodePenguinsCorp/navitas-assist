@@ -40,23 +40,24 @@ public class RmaService {
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
 
     private final RmaRecordRepository rmaRecordRepository;
+    private final RmaSlaService rmaSlaService;
     private final ClientService clientService;
     private final ProductService productService;
     private final UserAccountService userAccountService;
 
     @Transactional(readOnly = true)
     public List<RmaResponse> search(String query, RmaStatus status) {
-        return rmaRecordRepository.search(trimToNull(query), status).stream().map(RmaResponse::from).toList();
+        return rmaRecordRepository.search(trimToNull(query), status).stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
     public RmaResponse getById(Long id) {
-        return RmaResponse.from(getEntityById(id));
+        return toResponse(getEntityById(id));
     }
 
     @Transactional(readOnly = true)
     public RmaResponse getByCode(String code) {
-        return RmaResponse.from(rmaRecordRepository.findByCodeIgnoreCase(code)
+        return toResponse(rmaRecordRepository.findByCodeIgnoreCase(code)
             .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + code)));
     }
 
@@ -71,7 +72,7 @@ public class RmaService {
 
         return rmaRecordRepository.findHistory(normalizedBatch, normalizedSerial)
             .stream()
-            .map(RmaResponse::from)
+            .map(this::toResponse)
             .toList();
     }
 
@@ -109,7 +110,7 @@ public class RmaService {
         validateDates(rma);
         addStatusHistory(rma, RmaStatus.RECEIVED, "RMA created");
 
-        return RmaResponse.from(rmaRecordRepository.save(rma));
+        return toResponse(rmaRecordRepository.save(rma));
     }
 
     public RmaResponse update(Long id, UpdateRmaRequest request) {
@@ -148,7 +149,7 @@ public class RmaService {
         validateMandatoryFields(rma);
         validateDates(rma);
 
-        return RmaResponse.from(rmaRecordRepository.save(rma));
+        return toResponse(rmaRecordRepository.save(rma));
     }
 
     public RmaResponse updateStatus(Long id, RmaStatusUpdateRequest request) {
@@ -162,7 +163,7 @@ public class RmaService {
             addStatusHistory(rma, request.status(), request.note());
         }
 
-        return RmaResponse.from(rmaRecordRepository.save(rma));
+        return toResponse(rmaRecordRepository.save(rma));
     }
 
     public RmaResponse updateAssignee(Long id, RmaAssigneeUpdateRequest request) {
@@ -176,12 +177,12 @@ public class RmaService {
             previousAssignee == null ? null : previousAssignee.getId(),
             newAssignee == null ? null : newAssignee.getId()
         )) {
-            return RmaResponse.from(rma);
+            return toResponse(rma);
         }
 
         rma.setAssignee(newAssignee);
         addAssignmentHistory(rma, previousAssignee, newAssignee);
-        return RmaResponse.from(rmaRecordRepository.save(rma));
+        return toResponse(rmaRecordRepository.save(rma));
     }
 
     public RmaResponse upsertDiagnosis(Long id, DiagnosisRequest request) {
@@ -200,7 +201,7 @@ public class RmaService {
         diagnosis.setDiagnosedAt(request.diagnosedAt());
         diagnosis.setTechnicianName(trim(request.technicianName()));
 
-        return RmaResponse.from(rmaRecordRepository.save(rma));
+        return toResponse(rmaRecordRepository.save(rma));
     }
 
     @Transactional(readOnly = true)
@@ -410,6 +411,10 @@ public class RmaService {
             return "system";
         }
         return authentication.getName();
+    }
+
+    private RmaResponse toResponse(RmaRecord rma) {
+        return RmaResponse.from(rma, rmaSlaService.calculate(rma, Instant.now()));
     }
 
     private String trimToNull(String value) {
