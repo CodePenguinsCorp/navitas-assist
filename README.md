@@ -192,6 +192,18 @@ npm install
 npm start
 ```
 
+### Testes automatizados do frontend
+
+A suíte Angular usa Vitest com ambiente DOM emulado por happy-dom. Para instalar as dependências e executar uma única vez:
+
+```powershell
+cd .\frontend
+npm ci
+npm test -- --watch=false
+```
+
+Para desenvolvimento, `npm test` mantém o runner em modo interativo quando o terminal oferece TTY. O workflow `Frontend CI` executa a suíte sem watch e também valida o build de produção em pushes e pull requests que alterem o frontend.
+
 ## Variáveis de Ambiente
 
 O setup local reconhece estas variáveis principais:
