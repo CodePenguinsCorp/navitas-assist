@@ -1,0 +1,13 @@
+import { formatDateOnly, todayInputValue } from './date';
+
+describe('date utilities', () => {
+  it('formats civil dates without converting them through UTC', () => {
+    expect(formatDateOnly('2026-10-20')).toBe('20/10/2026');
+    expect(formatDateOnly('2026-02-30')).toBe('N\u00e3o informado');
+  });
+
+  it('calculates today in America/Sao_Paulo around the UTC day boundary', () => {
+    expect(todayInputValue(new Date('2026-10-20T02:30:00Z'))).toBe('2026-10-19');
+    expect(todayInputValue(new Date('2026-10-20T03:30:00Z'))).toBe('2026-10-20');
+  });
+});
