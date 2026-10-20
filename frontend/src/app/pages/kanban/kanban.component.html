@@ -3,7 +3,10 @@
     <div class="kanban-hero__copy">
       <p class="eyebrow">Operações</p>
       <h1>Kanban de RMAs</h1>
-      <p>Visual dedicado para acompanhar o fluxo da assistência técnica e mover chamados entre etapas sem sair do quadro.</p>
+      <p>
+        Visual dedicado para acompanhar o fluxo da assistência técnica e mover chamados entre etapas
+        sem sair do quadro.
+      </p>
     </div>
 
     <div class="kanban-hero__stats">
@@ -29,16 +32,109 @@
         <h2>Fluxo operacional</h2>
         <p>Arraste os cards entre as colunas para refletir a etapa atual de cada atendimento.</p>
       </div>
-      <div class="kanban-filter">
-        <label>Responsável</label>
-        <app-custom-select
-          ariaLabel="Filtrar Kanban por responsável"
-          [options]="assigneeFilterOptions()"
-          [value]="assigneeFilter()"
-          (valueChange)="updateAssigneeFilter($event)"
-        />
+      <div class="kanban-stage__summary">
+        <span>{{ filteredRmas().length }} de {{ totalRmas() }} RMA(s)</span>
+        <button
+          type="button"
+          class="button-secondary"
+          (click)="clearFilters()"
+          [disabled]="activeFilterCount() === 0"
+        >
+          Limpar filtros{{ activeFilterCount() ? ' (' + activeFilterCount() + ')' : '' }}
+        </button>
       </div>
     </div>
+
+    <form class="kanban-filters" [formGroup]="filtersForm">
+      <div class="field-group kanban-filters__search">
+        <label for="kanbanSearch">Busca</label>
+        <input
+          id="kanbanSearch"
+          type="search"
+          formControlName="query"
+          placeholder="Código, cliente, produto, lote ou série"
+        />
+      </div>
+
+      <div class="field-group">
+        <label>Prioridade</label>
+        <app-custom-select
+          formControlName="priority"
+          ariaLabel="Filtrar Kanban por prioridade"
+          [options]="priorityFilterOptions"
+        />
+      </div>
+
+      <div class="field-group">
+        <label>Status</label>
+        <app-custom-select
+          formControlName="status"
+          ariaLabel="Filtrar Kanban por status"
+          [options]="statusFilterOptions"
+        />
+      </div>
+
+      <div class="field-group">
+        <label>Garantia</label>
+        <app-custom-select
+          formControlName="warranty"
+          ariaLabel="Filtrar Kanban por garantia"
+          [options]="warrantyFilterOptions"
+        />
+      </div>
+
+      <div class="field-group">
+        <label>Responsável</label>
+        <app-custom-select
+          formControlName="assignee"
+          ariaLabel="Filtrar Kanban por responsável"
+          [options]="assigneeFilterOptions()"
+        />
+      </div>
+
+      <div class="field-group">
+        <label>Entrada a partir de</label>
+        <app-date-picker
+          formControlName="entryFrom"
+          ariaLabel="Filtrar por data inicial de entrada"
+          [maxDate]="filtersForm.controls.entryTo.value"
+        />
+      </div>
+
+      <div class="field-group">
+        <label>Entrada até</label>
+        <app-date-picker
+          formControlName="entryTo"
+          ariaLabel="Filtrar por data final de entrada"
+          [minDate]="filtersForm.controls.entryFrom.value"
+        />
+      </div>
+
+      <div class="field-group">
+        <label>Atualização a partir de</label>
+        <app-date-picker
+          formControlName="updatedFrom"
+          ariaLabel="Filtrar por data inicial de atualização"
+          [maxDate]="filtersForm.controls.updatedTo.value"
+        />
+      </div>
+
+      <div class="field-group">
+        <label>Atualização até</label>
+        <app-date-picker
+          formControlName="updatedTo"
+          ariaLabel="Filtrar por data final de atualização"
+          [minDate]="filtersForm.controls.updatedFrom.value"
+        />
+      </div>
+    </form>
+
+    @if (!loading() && totalRmas() > 0 && filteredRmas().length === 0) {
+      <article class="kanban-empty" role="status">
+        <strong>Nenhum RMA encontrado</strong>
+        <p>Ajuste ou limpe os filtros para voltar a visualizar os atendimentos.</p>
+      </article>
+    }
 
     <app-rma-kanban-board
       [rmas]="filteredRmas()"
@@ -76,7 +172,9 @@
           [disabled]="boardUpdatingId() !== null"
           aria-label="Fechar"
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
         </button>
       </div>
 
@@ -107,7 +205,9 @@
             class="button-secondary"
             (click)="closeStatusModal()"
             [disabled]="boardUpdatingId() !== null"
-          >Cancelar</button>
+          >
+            Cancelar
+          </button>
           <button type="submit" class="button-primary" [disabled]="boardUpdatingId() !== null">
             {{ boardUpdatingId() !== null ? 'Salvando...' : 'Salvar status' }}
           </button>
@@ -132,7 +232,9 @@
           [disabled]="boardUpdatingId() !== null"
           aria-label="Fechar"
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
         </button>
       </div>
 
@@ -159,7 +261,9 @@
             class="button-secondary"
             (click)="closeAssignmentModal()"
             [disabled]="boardUpdatingId() !== null"
-          >Cancelar</button>
+          >
+            Cancelar
+          </button>
           <button type="submit" class="button-primary" [disabled]="boardUpdatingId() !== null">
             {{ boardUpdatingId() !== null ? 'Salvando...' : 'Salvar responsável' }}
           </button>
