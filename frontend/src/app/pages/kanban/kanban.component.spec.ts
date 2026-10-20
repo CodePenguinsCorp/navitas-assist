@@ -273,7 +273,6 @@ function buildRma(values: {
     purchaseDateUnknown: false,
     entryDate: values.entryDate,
     invoiceNumber: null,
-    invoiceFileName: null,
     receivedBy: 'Atendimento',
     reportedFailure: 'Falha informada',
     receivedAccessories: null,

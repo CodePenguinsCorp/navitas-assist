@@ -38,8 +38,6 @@ describe('RmaService', () => {
       purchaseDateUnknown: false,
       entryDate: '2026-10-20',
       invoiceNumber: null,
-      invoiceFileName: null,
-      receivedBy: 'Tester',
       reportedFailure: 'Falha',
       receivedAccessories: null,
       physicalCondition: null,

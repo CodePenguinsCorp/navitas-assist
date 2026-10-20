@@ -1,5 +1,6 @@
 package br.com.navitasassist.rma;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -27,6 +28,8 @@ import br.com.navitasassist.user.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -85,7 +88,7 @@ class RmaControllerIntegrationTest {
             ),
             "purchaseDateUnknown", true,
             "entryDate", LocalDate.now().toString(),
-            "receivedBy", "Service desk",
+            "invoiceNumber", "NF-123",
             "reportedFailure", "Products do not start"
         );
 
@@ -95,6 +98,9 @@ class RmaControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))
             .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.receivedBy").value("admin"))
+            .andExpect(jsonPath("$.invoiceNumber").value("NF-123"))
+            .andExpect(jsonPath("$.invoiceFileName").doesNotExist())
             .andExpect(jsonPath("$.items", hasSize(2)))
             .andExpect(jsonPath("$.items[0].productId").value(firstProduct.getId()))
             .andExpect(jsonPath("$.items[0].batchNumber").value("LOT-A"))
@@ -558,6 +564,53 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.sla.status").value("CLOSED"))
             .andExpect(jsonPath("$.sla.elapsedSeconds").value(0))
             .andExpect(jsonPath("$.sla.dueAt").doesNotExist());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "ADMIN", "SERVICE_DESK" })
+    void shouldIgnoreClientSuppliedReceiverAndPreserveOriginalReceiverOnUpdate(String role) throws Exception {
+        Client client = new Client();
+        client.setLegalName("Receiver audit client");
+        Client savedClient = clientRepository.save(client);
+        Product product = saveProduct("RECEIVER-PRODUCT", "Receiver product", 12);
+        Map<String, Object> payload = Map.of(
+            "clientId", savedClient.getId(),
+            "items", List.of(Map.of("productId", product.getId(), "serialNumber", "RECEIVER-SERIAL")),
+            "purchaseDateUnknown", true,
+            "entryDate", LocalDate.now(BUSINESS_ZONE).toString(),
+            "invoiceNumber", "  NF-123  ",
+            "invoiceFileName", "untrusted.pdf",
+            "receivedBy", "Forged receiver",
+            "reportedFailure", "Product does not start"
+        );
+
+        String response = mockMvc.perform(post("/api/rmas")
+                .with(user("original.operator").roles(role))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.receivedBy").value("original.operator"))
+            .andExpect(jsonPath("$.invoiceNumber").value("NF-123"))
+            .andExpect(jsonPath("$.invoiceFileName").doesNotExist())
+            .andReturn().getResponse().getContentAsString();
+        long id = objectMapper.readTree(response).get("id").asLong();
+        assertEquals("original.operator", rmaRecordRepository.findById(id).orElseThrow().getReceivedBy());
+        assertEquals("NF-123", rmaRecordRepository.findById(id).orElseThrow().getInvoiceNumber());
+
+        mockMvc.perform(put("/api/rmas/{id}", id)
+                .with(user("another.operator").roles(role))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"invoiceNumber":"NF-456","receivedBy":"Forged update","invoiceFileName":"another.pdf"}
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.receivedBy").value("original.operator"))
+            .andExpect(jsonPath("$.invoiceNumber").value("NF-456"))
+            .andExpect(jsonPath("$.invoiceFileName").doesNotExist());
+        assertEquals("original.operator", rmaRecordRepository.findById(id).orElseThrow().getReceivedBy());
+        assertEquals("NF-456", rmaRecordRepository.findById(id).orElseThrow().getInvoiceNumber());
     }
 
     private Product saveProduct(String sku, String name, int warrantyMonths) {

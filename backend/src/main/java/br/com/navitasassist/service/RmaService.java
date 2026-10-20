@@ -85,6 +85,7 @@ public class RmaService {
         rma.setClient(client);
         rma.setStatus(RmaStatus.RECEIVED);
         rma.setPriority(defaultPriority(request.priority()));
+        rma.setReceivedBy(currentUsername());
 
         rma.replaceItems(items);
         syncLegacyItem(rma);
@@ -94,8 +95,6 @@ public class RmaService {
             request.purchaseDateUnknown(),
             request.entryDate(),
             request.invoiceNumber(),
-            request.invoiceFileName(),
-            request.receivedBy(),
             request.reportedFailure(),
             request.receivedAccessories(),
             request.physicalCondition(),
@@ -133,8 +132,6 @@ public class RmaService {
             request.purchaseDateUnknown(),
             request.entryDate(),
             request.invoiceNumber(),
-            request.invoiceFileName(),
-            request.receivedBy(),
             request.reportedFailure(),
             request.receivedAccessories(),
             request.physicalCondition(),
@@ -253,8 +250,6 @@ public class RmaService {
         Boolean purchaseDateUnknown,
         LocalDate entryDate,
         String invoiceNumber,
-        String invoiceFileName,
-        String receivedBy,
         String reportedFailure,
         String receivedAccessories,
         String physicalCondition,
@@ -279,12 +274,6 @@ public class RmaService {
         }
         if (invoiceNumber != null) {
             rma.setInvoiceNumber(trimToNull(invoiceNumber));
-        }
-        if (invoiceFileName != null) {
-            rma.setInvoiceFileName(trimToNull(invoiceFileName));
-        }
-        if (receivedBy != null) {
-            rma.setReceivedBy(trim(receivedBy));
         }
         if (reportedFailure != null) {
             rma.setReportedFailure(trim(reportedFailure));

@@ -85,7 +85,6 @@ CREATE TABLE rmas (
     purchase_date_unknown BOOLEAN NOT NULL,
     entry_date DATE NOT NULL,
     invoice_number VARCHAR(80),
-    invoice_file_name VARCHAR(180),
     received_by VARCHAR(120) NOT NULL,
     reported_failure VARCHAR(1000) NOT NULL,
     received_accessories VARCHAR(500),

@@ -202,8 +202,8 @@
             <strong>{{ rma.items.length }} item(ns)</strong>
           </div>
           <div>
-            <span>Recebido por</span>
-            <strong>{{ rma.receivedBy }}</strong>
+            <span>Nota fiscal</span>
+            <strong>{{ rma.invoiceNumber || 'Não informada' }}</strong>
           </div>
           <div>
             <span>Entrada</span>
@@ -404,22 +404,12 @@
         </div>
 
         <div class="field-group">
-          <label for="invoiceFileName">Arquivo da NF</label>
-          <input id="invoiceFileName" type="text" formControlName="invoiceFileName" placeholder="Referência" />
-        </div>
-
-        <div class="field-group">
           <label>Prioridade</label>
           <app-custom-select
             formControlName="priority"
             ariaLabel="Selecionar prioridade"
             [options]="prioritySelectOptions"
           />
-        </div>
-
-        <div class="field-group">
-          <label for="receivedBy">Recebido por</label>
-          <input id="receivedBy" type="text" formControlName="receivedBy" />
         </div>
 
         <div class="field-group field-group--full">
