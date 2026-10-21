@@ -7,8 +7,12 @@ import {
   extractHttpErrorMessage,
   formatDateTime,
   includesQuery,
+  matchesPresence,
+  PRESENCE_FILTER_OPTIONS,
+  PresenceFilter,
   normalizeOptionalText
 } from '../../core/utils/catalog-ui';
+import { CustomSelectComponent } from '../../shared/form-controls/custom-select/custom-select.component';
 
 type ClientModalMode = 'create' | 'edit';
 type ClientFormControlName =
@@ -23,7 +27,7 @@ type ClientFormControlName =
 
 @Component({
   selector: 'app-clients',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, CustomSelectComponent],
   templateUrl: './clients.component.html',
   styles: [`
     :host { display: block; }
@@ -52,6 +56,9 @@ export class ClientsComponent {
   protected readonly deleteModalErrorMessage = signal('');
   protected readonly successMessage = signal('');
   protected readonly searchTerm = signal('');
+  protected readonly documentFilter = signal<PresenceFilter>('all');
+  protected readonly emailFilter = signal<PresenceFilter>('all');
+  protected readonly presenceFilterOptions = PRESENCE_FILTER_OPTIONS;
   protected readonly activeModal = signal<ClientModalMode | null>(null);
 
   private readonly clientsSignal = signal<ClientResponse[]>([]);
@@ -76,7 +83,9 @@ export class ClientsComponent {
           client.contactName,
           client.email,
           client.phone
-        )
+        ) &&
+        matchesPresence(client.documentNumber, this.documentFilter()) &&
+        matchesPresence(client.email, this.emailFilter())
       )
   );
 
@@ -113,6 +122,14 @@ export class ClientsComponent {
 
   protected updateSearch(value: string): void {
     this.searchTerm.set(value);
+  }
+
+  protected updateDocumentFilter(value: PresenceFilter): void {
+    this.documentFilter.set(value);
+  }
+
+  protected updateEmailFilter(value: PresenceFilter): void {
+    this.emailFilter.set(value);
   }
 
   protected limitLegalName(event: Event): void {

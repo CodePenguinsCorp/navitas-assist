@@ -3,6 +3,23 @@ export function normalizeOptionalText(value: string | null | undefined): string 
   return trimmed ? trimmed : null;
 }
 
+export type PresenceFilter = 'all' | 'with' | 'without';
+
+export const PRESENCE_FILTER_OPTIONS: ReadonlyArray<{ value: PresenceFilter; label: string }> = [
+  { value: 'all', label: 'Todos' },
+  { value: 'with', label: 'Com' },
+  { value: 'without', label: 'Sem' }
+];
+
+export function matchesPresence(value: string | null | undefined, filter: PresenceFilter): boolean {
+  if (filter === 'all') {
+    return true;
+  }
+
+  const hasValue = Boolean(normalizeOptionalText(value));
+  return filter === 'with' ? hasValue : !hasValue;
+}
+
 export function extractHttpErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === 'object' && error !== null) {
     const maybeHttpError = error as {

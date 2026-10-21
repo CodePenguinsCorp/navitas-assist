@@ -8,8 +8,12 @@ import {
   extractHttpErrorMessage,
   formatDateTime,
   includesQuery,
+  matchesPresence,
+  PRESENCE_FILTER_OPTIONS,
+  PresenceFilter,
   normalizeOptionalText
 } from '../../core/utils/catalog-ui';
+import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
 
 type ProductModalMode = 'create' | 'edit';
 type ProductFormControlName =
@@ -37,7 +41,7 @@ const PRODUCT_PREVIEW_LIMITS = {
 
 @Component({
   selector: 'app-products',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, CustomSelectComponent],
   templateUrl: './products.component.html',
   styles: [`
     :host {
@@ -107,6 +111,9 @@ export class ProductsComponent {
   protected readonly deleteModalErrorMessage = signal('');
   protected readonly successMessage = signal('');
   protected readonly searchTerm = signal('');
+  protected readonly categoryFilter = signal('');
+  protected readonly firmwareFilter = signal<PresenceFilter>('all');
+  protected readonly presenceFilterOptions = PRESENCE_FILTER_OPTIONS;
   protected readonly activeModal = signal<ProductModalMode | null>(null);
   protected readonly limits = PRODUCT_LIMITS;
 
@@ -117,6 +124,26 @@ export class ProductsComponent {
   protected readonly products = this.productsSignal.asReadonly();
   protected readonly editingProduct = this.editingProductSignal.asReadonly();
   protected readonly deletingProduct = this.deletingProductSignal.asReadonly();
+
+  protected readonly categoryFilterOptions = computed<ReadonlyArray<CustomSelectOption<string>>>(() => {
+    const categories = new Map<string, string>();
+    for (const product of this.productsSignal()) {
+      const category = normalizeOptionalText(product.category);
+      if (category) {
+        const key = category.toLocaleLowerCase('pt-BR');
+        if (!categories.has(key)) {
+          categories.set(key, category);
+        }
+      }
+    }
+
+    return [
+      { value: '', label: 'Todas' },
+      ...[...categories.values()]
+        .sort((left, right) => left.localeCompare(right, 'pt-BR', { sensitivity: 'base' }))
+        .map((category) => ({ value: category, label: category }))
+    ];
+  });
 
   protected readonly filteredProducts = computed(() =>
     [...this.productsSignal()]
@@ -129,7 +156,11 @@ export class ProductsComponent {
           product.category,
           product.hardwareVersion,
           product.firmwareVersion
-        )
+        ) &&
+        (!this.categoryFilter() ||
+          normalizeOptionalText(product.category)?.toLocaleLowerCase('pt-BR') ===
+            this.categoryFilter().toLocaleLowerCase('pt-BR')) &&
+        matchesPresence(product.firmwareVersion, this.firmwareFilter())
       )
   );
 
@@ -167,6 +198,14 @@ export class ProductsComponent {
 
   protected updateSearch(value: string): void {
     this.searchTerm.set(value);
+  }
+
+  protected updateCategoryFilter(value: string): void {
+    this.categoryFilter.set(value);
+  }
+
+  protected updateFirmwareFilter(value: PresenceFilter): void {
+    this.firmwareFilter.set(value);
   }
 
   protected openCreateModal(): void {
@@ -262,6 +301,7 @@ export class ProductsComponent {
         this.productsSignal.update((products) =>
           products.filter((currentProduct) => currentProduct.id !== product.id)
         );
+        this.syncCategoryFilter();
         this.successMessage.set(`Produto ${product.name} excluído com sucesso.`);
         this.resetDeleteModal();
       },
@@ -324,7 +364,10 @@ export class ProductsComponent {
     this.catalogService.listProducts().pipe(
       finalize(() => this.loading.set(false))
     ).subscribe({
-      next: (products) => this.productsSignal.set(products),
+      next: (products) => {
+        this.productsSignal.set(products);
+        this.syncCategoryFilter();
+      },
       error: (error) => {
         this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os produtos.'));
       }
@@ -336,6 +379,18 @@ export class ProductsComponent {
     this.modalErrorMessage.set('');
     this.deleteModalErrorMessage.set('');
     this.successMessage.set('');
+  }
+
+  private syncCategoryFilter(): void {
+    const selected = this.categoryFilter();
+    if (!selected) {
+      return;
+    }
+
+    const matchingOption = this.categoryFilterOptions().find(
+      (option) => option.value.toLocaleLowerCase('pt-BR') === selected.toLocaleLowerCase('pt-BR')
+    );
+    this.categoryFilter.set(matchingOption?.value ?? '');
   }
 
   private resetDeleteModal(): void {
