@@ -15,6 +15,7 @@ import br.com.navitasassist.item.ItemIdentification;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.CreateRmaRequest;
 import br.com.navitasassist.rma.RmaAssigneeUpdateRequest;
+import br.com.navitasassist.rma.RmaBulkStatusUpdateRequest;
 import br.com.navitasassist.rma.RmaAssignmentHistory;
 import br.com.navitasassist.rma.RmaItem;
 import br.com.navitasassist.rma.RmaItemRequest;
@@ -123,7 +124,8 @@ public class RmaService {
             rma.replaceItems(buildItems(request.items()));
             syncLegacyItem(rma);
         }
-        if (request.priority() != null) {
+        if (request.priority() != null && request.priority() != rma.getPriority()) {
+            addStatusHistory(rma, rma.getStatus(), "Priority changed from " + rma.getPriority() + " to " + request.priority());
             rma.setPriority(request.priority());
         }
 
@@ -153,7 +155,19 @@ public class RmaService {
     }
 
     public RmaResponse updateStatus(Long id, RmaStatusUpdateRequest request) {
-        RmaRecord rma = getEntityById(id);
+        return applyStatusChange(getEntityById(id), request);
+    }
+
+    public RmaResponse updateStatusInBulk(Long id, RmaBulkStatusUpdateRequest request) {
+        RmaRecord rma = rmaRecordRepository.findByIdForUpdate(id)
+            .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
+        if (rma.getStatus() != request.expectedStatus()) {
+            throw new BusinessException("RMA status changed. Refresh the item before trying again.");
+        }
+        return applyStatusChange(rma, new RmaStatusUpdateRequest(request.status(), request.note()));
+    }
+
+    private RmaResponse applyStatusChange(RmaRecord rma, RmaStatusUpdateRequest request) {
         boolean changed = !Objects.equals(rma.getStatus(), request.status());
 
         if (changed) {

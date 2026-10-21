@@ -560,6 +560,75 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.sla.dueAt").doesNotExist());
     }
 
+    @Test
+    void shouldAllowAnyBulkStageIncludingBackwardMovesAndKeepHistoryPerRma() throws Exception {
+        Long firstId = saveBulkTestRma("RMA-BULK-0001");
+        Long secondId = saveBulkTestRma("RMA-BULK-0002");
+        String nextStage = "{\"status\":\"TRIAGE\",\"expectedStatus\":\"RECEIVED\",\"note\":\"Triagem em lote\"}";
+
+        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", firstId).with(user("tech").roles("TECHNICIAN"))
+                .with(csrf()).contentType(MediaType.APPLICATION_JSON).content(nextStage))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("TRIAGE"))
+            .andExpect(jsonPath("$.statusHistory[0].note").value("Triagem em lote"));
+
+        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", secondId).with(user("service.desk").roles("SERVICE_DESK"))
+                .with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"RETURNED\",\"expectedStatus\":\"RECEIVED\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("RETURNED"));
+
+        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", firstId).with(user("tech").roles("TECHNICIAN"))
+                .with(csrf()).contentType(MediaType.APPLICATION_JSON).content(nextStage))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("RMA status changed. Refresh the item before trying again."));
+
+        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", secondId).with(user("tech").roles("TECHNICIAN"))
+                .with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"RECEIVED\",\"expectedStatus\":\"RETURNED\",\"note\":\"Corrigido após movimento por engano\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("RECEIVED"))
+            .andExpect(jsonPath("$.statusHistory[0].note").value("Corrigido após movimento por engano"));
+
+        mockMvc.perform(get("/api/rmas/{id}", firstId).with(user("viewer").roles("VIEWER")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.statusHistory", hasSize(1)));
+        mockMvc.perform(get("/api/rmas/{id}", secondId).with(user("viewer").roles("VIEWER")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("RECEIVED"))
+            .andExpect(jsonPath("$.statusHistory", hasSize(2)));
+
+        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", firstId).with(user("viewer").roles("VIEWER"))
+                .with(csrf()).contentType(MediaType.APPLICATION_JSON).content(nextStage))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldRecordPriorityHistoryAndRestrictWhoCanChangeIt() throws Exception {
+        Long id = saveBulkTestRma("RMA-BULK-PRIORITY");
+        mockMvc.perform(put("/api/rmas/{id}", id).with(user("tech").roles("TECHNICIAN"))
+                .with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"priority\":\"HIGH\"}"))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(put("/api/rmas/{id}", id).with(user("admin").roles("ADMIN"))
+                .with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"priority\":\"HIGH\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.priority").value("HIGH"))
+            .andExpect(jsonPath("$.statusHistory[0].note").value("Priority changed from MEDIUM to HIGH"));
+    }
+
+    private Long saveBulkTestRma(String code) {
+        Client client = new Client();
+        client.setLegalName("Bulk test client " + code);
+        RmaRecord rma = new RmaRecord();
+        rma.setCode(code);
+        rma.setClient(clientRepository.save(client));
+        rma.setProduct(saveProduct(code, "Bulk test product", 12));
+        rma.getItemIdentification().setSerialNumber(code);
+        rma.setPurchaseDateUnknown(true);
+        rma.setEntryDate(LocalDate.now(BUSINESS_ZONE));
+        rma.setReceivedBy("Service desk");
+        rma.setReportedFailure("Bulk test");
+        return rmaRecordRepository.saveAndFlush(rma).getId();
+    }
+
     private Product saveProduct(String sku, String name, int warrantyMonths) {
         Product product = new Product();
         product.setSku(sku);

@@ -8,6 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { RmaService } from '../../core/services/rma.service';
+import { BulkRmaResult } from '../../shared/kanban-bulk-actions/kanban-bulk-actions.component';
 import { KanbanComponent } from './kanban.component';
 
 describe('KanbanComponent filters', () => {
@@ -161,6 +162,27 @@ describe('KanbanComponent filters', () => {
     expect(component.activeFilterCount()).toBe(0);
   });
 
+  it('selects across columns and filters, clears selection and patches affected cards', () => {
+    component.toggleBulkSelection(TEST_RMAS[0]);
+    component.toggleBulkSelection(TEST_RMAS[1]);
+    expect(component.bulkSelectedRmas()).toHaveLength(2);
+    component.filtersForm.patchValue({ priority: 'HIGH' });
+    expect(component.hiddenSelectedCount()).toBe(1);
+    component.selectVisibleRmas();
+    expect(component.bulkSelectedRmas()).toHaveLength(2);
+    const updated = { ...TEST_RMAS[0], priority: 'LOW' as const };
+    component.applyBulkResults([
+      { id: 1, code: updated.code, success: true, message: 'OK', rma: updated },
+      { id: 2, code: TEST_RMAS[1].code, success: false, message: 'Etapa alterada', rma: { ...TEST_RMAS[1], status: 'IN_DIAGNOSIS' } },
+    ]);
+    expect(component.bulkSelectedRmas().map((rma) => rma.id)).toEqual([2]);
+    component.clearFilters();
+    expect(component.filteredRmas()[0]).toBe(updated);
+    expect(component.filteredRmas()[1].status).toBe('IN_DIAGNOSIS');
+    component.clearBulkSelection();
+    expect(component.bulkSelectedRmas()).toEqual([]);
+  });
+
   it('keeps the current filters when persistence fails', () => {
     failCreateView = true;
     component.filtersForm.patchValue({ status: 'TRIAGE', query: 'cliente' });
@@ -177,6 +199,12 @@ describe('KanbanComponent filters', () => {
 });
 
 interface KanbanHarness {
+  bulkSelectedRmas: Signal<RmaResponse[]>;
+  hiddenSelectedCount: Signal<number>;
+  toggleBulkSelection(rma: RmaResponse): void;
+  selectVisibleRmas(): void;
+  clearBulkSelection(): void;
+  applyBulkResults(results: BulkRmaResult[]): void;
   filtersForm: FormGroup;
   viewForm: FormGroup;
   filteredRmas: Signal<RmaResponse[]>;

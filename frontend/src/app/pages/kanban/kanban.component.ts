@@ -36,6 +36,7 @@ import {
 } from '../../shared/form-controls/custom-select/custom-select.component';
 import { BoundedFilterPanelsDirective } from '../../shared/form-controls/bounded-filter-panels.directive';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
+import { BulkRmaResult, KanbanBulkActionsComponent } from '../../shared/kanban-bulk-actions/kanban-bulk-actions.component';
 import { RmaKanbanBoardComponent } from '../../shared/rma-kanban-board/rma-kanban-board.component';
 
 interface KanbanHeroStat {
@@ -72,6 +73,7 @@ type ViewModalMode = 'create' | 'rename' | null;
     CustomSelectComponent,
     DatePickerComponent,
     RmaKanbanBoardComponent,
+    KanbanBulkActionsComponent,
   ],
   templateUrl: './kanban.component.html',
   styleUrl: './kanban.component.css',
@@ -99,6 +101,10 @@ export class KanbanComponent {
   protected readonly boardUpdatingId = signal<number | null>(null);
   protected readonly draggedRmaId = signal<number | null>(null);
   protected readonly dragTargetStatus = signal<RmaStatus | null>(null);
+  protected readonly bulkSelectedIds = signal<readonly number[]>([]);
+  protected readonly bulkBusy = signal(false);
+  protected readonly bulkSelectedRmas = computed(() => this.rmasSignal().filter((rma) => this.bulkSelectedIds().includes(rma.id)));
+  protected readonly hiddenSelectedCount = computed(() => this.bulkSelectedRmas().filter((rma) => !this.filteredRmas().some((visible) => visible.id === rma.id)).length);
   protected readonly selectedRmaId = signal<number | null>(null);
 
   private readonly rmasSignal = signal<RmaResponse[]>([]);
@@ -222,6 +228,27 @@ export class KanbanComponent {
   constructor() {
     this.loadKanban();
     this.loadViews();
+  }
+
+  protected toggleBulkSelection(rma: RmaResponse): void {
+    if (this.bulkBusy() || this.boardUpdatingId() !== null || !this.canUpdateStatus()) return;
+    this.bulkSelectedIds.update((ids) => ids.includes(rma.id) ? ids.filter((id) => id !== rma.id) : [...ids, rma.id]);
+  }
+
+  protected selectVisibleRmas(): void {
+    if (this.bulkBusy() || this.boardUpdatingId() !== null || !this.canUpdateStatus()) return;
+    this.bulkSelectedIds.update((ids) => [...new Set([...ids, ...this.filteredRmas().map((rma) => rma.id)])]);
+  }
+
+  protected clearBulkSelection(): void {
+    if (!this.bulkBusy()) this.bulkSelectedIds.set([]);
+  }
+
+  protected applyBulkResults(results: BulkRmaResult[]): void {
+    const updated = new Map(results.filter((result) => result.rma).map((result) => [result.id, result.rma!]));
+    this.rmasSignal.update((rmas) => rmas.map((rma) => updated.get(rma.id) ?? rma));
+    const succeeded = new Set(results.filter((result) => result.success).map((result) => result.id));
+    this.bulkSelectedIds.update((ids) => ids.filter((id) => !succeeded.has(id)));
   }
 
   protected selectRma(rma: RmaResponse): void {
@@ -363,7 +390,7 @@ export class KanbanComponent {
   }
 
   protected openAssignmentModal(rma: RmaResponse): void {
-    if (!this.canUpdateAssignee() || this.boardUpdatingId() !== null) {
+    if (!this.canUpdateAssignee() || this.bulkBusy() || this.boardUpdatingId() !== null) {
       return;
     }
 
@@ -391,7 +418,7 @@ export class KanbanComponent {
   }
 
   protected startCardDrag(event: DragEvent, rma: RmaResponse): void {
-    if (!this.canUpdateStatus() || this.boardUpdatingId() !== null) {
+    if (!this.canUpdateStatus() || this.bulkBusy() || this.boardUpdatingId() !== null) {
       event.preventDefault();
       return;
     }
@@ -414,7 +441,7 @@ export class KanbanComponent {
 
   protected allowColumnDrop(event: DragEvent, status: RmaStatus): void {
     if (
-      !this.canUpdateStatus() ||
+      !this.canUpdateStatus() || this.bulkBusy() ||
       this.boardUpdatingId() !== null ||
       this.draggedRmaId() === null
     ) {
@@ -438,7 +465,7 @@ export class KanbanComponent {
   protected dropOnColumn(event: DragEvent, status: RmaStatus): void {
     event.preventDefault();
 
-    if (!this.canUpdateStatus() || this.boardUpdatingId() !== null) {
+    if (!this.canUpdateStatus() || this.bulkBusy() || this.boardUpdatingId() !== null) {
       this.clearBoardDragState();
       return;
     }
