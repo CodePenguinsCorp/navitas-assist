@@ -210,6 +210,17 @@ npm test -- --watch=false
 
 Para desenvolvimento, `npm test` mantém o runner em modo interativo quando o terminal oferece TTY. O workflow `Frontend CI` executa a suíte sem watch e também valida o build de produção em pushes e pull requests que alterem o frontend.
 
+## Testes automatizados do backend
+
+A partir da raiz do projeto, execute a suíte de testes e o build do JAR com Maven 3.9.9 e Java 17:
+
+```powershell
+cd .\backend
+mvn -B -ntp verify
+```
+
+O workflow `Backend CI` executa o mesmo comando em um contêiner Maven 3.9.9/Java 17 para pushes e pull requests que alterem `backend/` ou o próprio workflow. Os testes usam o profile `test` com H2; o CI não precisa de banco externo nem de credenciais da aplicação. Alterações somente no frontend não acionam esse workflow.
+
 ## Variáveis de Ambiente
 
 O setup local reconhece estas variáveis principais:
