@@ -175,6 +175,10 @@ export interface RmaStatusUpdateRequest {
   note: string | null;
 }
 
+export interface RmaBulkStatusUpdateRequest extends RmaStatusUpdateRequest {
+  expectedStatus: RmaStatus;
+}
+
 export interface RmaAssigneeUpdateRequest {
   assigneeId: number | null;
 }

@@ -198,8 +198,28 @@
       </article>
     }
 
+    @if (canUpdateStatus()) {
+      <app-kanban-bulk-actions
+        [selection]="bulkSelectedRmas()"
+        [hiddenCount]="hiddenSelectedCount()"
+        [visibleCount]="filteredRmas().length"
+        [canUpdateStatus]="canUpdateStatus()"
+        [canManage]="canUpdateAssignee()"
+        [assigneeOptions]="assigneeSelectOptions()"
+        [disabled]="loading() || boardUpdatingId() !== null"
+        (selectVisible)="selectVisibleRmas()"
+        (clearSelection)="clearBulkSelection()"
+        (busyChange)="bulkBusy.set($event)"
+        (applied)="applyBulkResults($event)"
+      />
+    }
+
     <app-rma-kanban-board
       [rmas]="filteredRmas()"
+      [bulkSelectionEnabled]="canUpdateStatus()"
+      [bulkSelectedIds]="bulkSelectedIds()"
+      [interactionDisabled]="bulkBusy()"
+      (bulkSelectionChange)="toggleBulkSelection($event)"
       [loading]="loading()"
       [canUpdateStatus]="canUpdateStatus()"
       [canUpdateAssignee]="canUpdateAssignee()"

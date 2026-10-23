@@ -75,6 +75,14 @@ Cada usuário autenticado pode salvar combinações dos filtros avançados do Ka
 
 As rotas em `/api/kanban-views` usam sempre o usuário da sessão; o cliente não informa nem escolhe o proprietário. Nomes são únicos por usuário, e falhas de persistência não alteram os filtros que já estão aplicados na tela.
 
+## Ações em lote no Kanban (NAV-15)
+
+Marque cards em qualquer coluna e use **Selecionar visíveis** para incluir os itens mostrados pelos filtros. A seleção permanece ao mudar os filtros; o contador informa quantos selecionados estão ocultos. Use **Limpar seleção** para começar de novo. Antes de aplicar, a confirmação mostra a ação, a quantidade e os RMAs envolvidos. O resultado de cada RMA aparece separadamente; falhas continuam selecionadas para revisão. O quadro atualiza somente os itens afetados.
+
+ADMIN e SERVICE_DESK podem alterar status, prioridade e responsável em lote. TECHNICIAN pode alterar somente status. VIEWER não pode selecionar nem alterar. Cada atualização passa pelas permissões da API e registra o histórico do RMA: etapas e prioridades no histórico de status; atribuições no histórico de responsáveis.
+
+Na alteração de **status em lote**, qualquer etapa pode ser escolhida para os RMAs selecionados, inclusive uma etapa anterior ou a reabertura de um RMA encerrado. O histórico registra cada mudança. A API ainda confere a etapa atual de cada card para evitar sobrescrever uma alteração feita em outra sessão depois da seleção; nesse caso, somente o card desatualizado falha e é recarregado.
+
 ## Estrutura do Projeto
 
 - `frontend/`: interface web

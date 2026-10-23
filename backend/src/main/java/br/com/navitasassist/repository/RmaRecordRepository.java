@@ -5,11 +5,17 @@ import java.util.Optional;
 
 import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaStatus;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from RmaRecord r where r.id = :id")
+    Optional<RmaRecord> findByIdForUpdate(@Param("id") Long id);
 
     boolean existsByProduct_Id(Long productId);
 

@@ -54,6 +54,14 @@ describe('RmaService', () => {
     request.flush({});
   });
 
+  it('updates only priority through the existing RMA endpoint', () => {
+    service.updatePriority(11, 'HIGH').subscribe();
+    const request = httpTesting.expectOne('/api/rmas/11');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ priority: 'HIGH' });
+    request.flush({});
+  });
+
   it('patches status and assignee through their dedicated endpoints', () => {
     service.updateStatus(11, { status: 'IN_REPAIR', note: 'Iniciar' }).subscribe();
     const status = httpTesting.expectOne('/api/rmas/11/status');
