@@ -291,6 +291,18 @@ export interface RmaResponse {
   updatedAt: string;
 }
 
+export interface RmaReportFilters {
+  entryFrom?: string;
+  entryTo?: string;
+  status?: RmaStatus;
+  clientId?: number;
+}
+
+export interface RmaReportResponse {
+  generatedAt: string;
+  rmas: RmaResponse[];
+}
+
 export interface NavItem {
   label: string;
   route: string;
@@ -315,16 +327,4 @@ export interface ModuleCard {
   route: string;
   tag: string;
   roles: UserRole[];
-}
-
-export interface ReportCard {
-  title: string;
-  description: string;
-  frequency: string;
-  format: string;
-}
-
-export interface AccessMatrixItem {
-  role: UserRole;
-  access: string;
 }
