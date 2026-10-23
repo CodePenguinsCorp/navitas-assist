@@ -63,6 +63,8 @@ O prazo é registrado em cada novo item para preservar a garantia quando o cadas
 
 ## Responsáveis pelos RMAs
 
+O número da nota fiscal permanece disponível na abertura e nos detalhes do RMA. Não há campo de arquivo da NF nem de “Recebido por” na interface. O backend registra automaticamente o nome de usuário autenticado como recebedor na criação e preserva esse registro nas edições; `receivedBy` é somente leitura na API.
+
 Cada RMA pode ter um técnico responsável ou permanecer sem responsável. ADMIN e SERVICE_DESK podem atribuir, trocar ou remover o responsável diretamente no Kanban; somente usuários ativos com perfil TECHNICIAN aparecem como novas opções. A inativação posterior não apaga a atribuição existente.
 
 Toda alteração registra o responsável anterior, o novo responsável, o autor e o horário. O Kanban permite filtrar por técnico ativo ou por RMAs sem responsável, e os detalhes do RMA exibem o histórico completo de atribuições.

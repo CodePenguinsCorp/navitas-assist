@@ -71,9 +71,6 @@ public class RmaRecord extends AuditableEntity {
     @Column(length = 80)
     private String invoiceNumber;
 
-    @Column(length = 180)
-    private String invoiceFileName;
-
     @Column(nullable = false, length = 120)
     private String receivedBy;
 

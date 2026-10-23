@@ -299,8 +299,6 @@ export class RmasComponent {
     purchaseDateUnknown: [false],
     entryDate: [todayInputValue(), [Validators.required]],
     invoiceNumber: [''],
-    invoiceFileName: [''],
-    receivedBy: ['', [Validators.required, Validators.maxLength(120)]],
     reportedFailure: ['', [Validators.required, Validators.maxLength(1000)]],
     receivedAccessories: ['', [Validators.maxLength(500)]],
     physicalCondition: ['', [Validators.maxLength(500)]],
@@ -481,8 +479,6 @@ export class RmasComponent {
       purchaseDateUnknown: raw.purchaseDateUnknown,
       entryDate: raw.entryDate,
       invoiceNumber: normalizeText(raw.invoiceNumber),
-      invoiceFileName: normalizeText(raw.invoiceFileName),
-      receivedBy: raw.receivedBy.trim(),
       reportedFailure: raw.reportedFailure.trim(),
       receivedAccessories: normalizeText(raw.receivedAccessories),
       physicalCondition: normalizeText(raw.physicalCondition),
@@ -638,10 +634,6 @@ export class RmasComponent {
   private seedOperatorDefaults(): void {
     const operatorName = this.currentOperatorName();
 
-    this.createForm.patchValue({
-      receivedBy: operatorName
-    });
-
     this.diagnosisForm.patchValue({
       technicianName: operatorName
     });
@@ -657,8 +649,6 @@ export class RmasComponent {
       purchaseDateUnknown: false,
       entryDate: todayInputValue(),
       invoiceNumber: '',
-      invoiceFileName: '',
-      receivedBy: this.currentOperatorName(),
       reportedFailure: '',
       receivedAccessories: '',
       physicalCondition: '',

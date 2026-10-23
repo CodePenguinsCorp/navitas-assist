@@ -16,8 +16,6 @@ public record CreateRmaRequest(
     boolean purchaseDateUnknown,
     @NotNull LocalDate entryDate,
     @Size(max = 80) String invoiceNumber,
-    @Size(max = 180) String invoiceFileName,
-    @NotBlank @Size(max = 120) String receivedBy,
     @NotBlank @Size(max = 1000) String reportedFailure,
     @Size(max = 500) String receivedAccessories,
     @Size(max = 500) String physicalCondition,

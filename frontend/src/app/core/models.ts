@@ -161,8 +161,6 @@ export interface CreateRmaRequest {
   purchaseDateUnknown: boolean;
   entryDate: string;
   invoiceNumber: string | null;
-  invoiceFileName: string | null;
-  receivedBy: string;
   reportedFailure: string;
   receivedAccessories: string | null;
   physicalCondition: string | null;
@@ -271,7 +269,6 @@ export interface RmaResponse {
   purchaseDateUnknown: boolean;
   entryDate: string;
   invoiceNumber: string | null;
-  invoiceFileName: string | null;
   receivedBy: string;
   reportedFailure: string;
   receivedAccessories: string | null;
