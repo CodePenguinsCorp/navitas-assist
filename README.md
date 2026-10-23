@@ -75,6 +75,21 @@ Cada usuário autenticado pode salvar combinações dos filtros avançados do Ka
 
 As rotas em `/api/kanban-views` usam sempre o usuário da sessão; o cliente não informa nem escolhe o proprietário. Nomes são únicos por usuário, e falhas de persistência não alteram os filtros que já estão aplicados na tela.
 
+## Relatórios reais de RMA (NAV-27)
+
+A tela Relatórios consulta `GET /api/reports/rmas`. ADMIN, TECHNICIAN e VIEWER têm acesso; sem sessão a API responde `401`, e SERVICE_DESK recebe `403`, conforme os perfis da navegação existente.
+
+Filtros opcionais combinados: `entryFrom` e `entryTo` (`YYYY-MM-DD`, inclusivos, sobre a **data de entrada**, inclusive no relatório de devoluções), `status` (enum de RMA) e `clientId` (inteiro positivo). Parâmetros inválidos ou intervalo invertido retornam `400`. O retorno é `{ generatedAt, rmas }`, com os mesmos campos de `RmaResponse`; cliente inexistente retorna `rmas: []`. A ordenação é por entrada decrescente e ID decrescente. O seletor de clientes consulta o catálogo completo, independentemente do resultado filtrado.
+
+- **Laudo técnico:** falha relatada, produtos, diagnóstico, tipo de falha, causa, observações, técnico, reparo, peças e testes. Diagnóstico ausente aparece como pendente.
+- **Aging por etapa:** tempo corrido na etapa atual por RMA, quantidade, média e maior tempo por etapa ativa. Reutiliza o SLA existente; notas não reiniciam o prazo e encerrados não entram nas métricas ativas. É uma fotografia no instante `generatedAt`, atualizada ao consultar novamente.
+- **Garantia:** prazo, vencimento e situação por produto, considerando os snapshots e a data de entrada. A regra atual é automática; não existem overrides manuais.
+- **Devoluções:** RMAs atualmente em `RETURNED`, com expedição, transportadora e rastreio; não é uma contagem histórica de passagens pelo status.
+
+Instantes são exibidos em `America/Sao_Paulo`. Datas civis preservam o dia recebido. Os relatórios são consultas em tela, sem alteração de schema e sem download de arquivos nesta entrega.
+
+**Exportação:** antes de implementar, validar com o produto os exemplos, colunas, volume e política de acesso para PDF A4 de laudo por RMA e CSV UTF-8 das consultas tabulares (datas ISO e proteção contra fórmulas). A especificação proposta e seus limites estão em `docs/superpowers/specs/2026-10-23-nav-27-design.md`; o formato ainda não foi homologado.
+
 ## Estrutura do Projeto
 
 - `frontend/`: interface web

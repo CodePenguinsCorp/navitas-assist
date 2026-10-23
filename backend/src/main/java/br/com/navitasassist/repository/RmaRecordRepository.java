@@ -2,6 +2,7 @@ package br.com.navitasassist.repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDate;
 
 import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaStatus;
@@ -22,6 +23,17 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
     Optional<RmaRecord> findByCodeIgnoreCase(String code);
 
     Optional<RmaRecord> findTopByCodeStartingWithOrderByCodeDesc(String prefix);
+
+    @Query("""
+        select r from RmaRecord r
+        where (:entryFrom is null or r.entryDate >= :entryFrom)
+          and (:entryTo is null or r.entryDate <= :entryTo)
+          and (:status is null or r.status = :status)
+          and (:clientId is null or r.client.id = :clientId)
+        order by r.entryDate desc, r.id desc
+        """)
+    List<RmaRecord> searchReport(@Param("entryFrom") LocalDate entryFrom, @Param("entryTo") LocalDate entryTo,
+        @Param("status") RmaStatus status, @Param("clientId") Long clientId);
 
     @Query("""
         select distinct r
