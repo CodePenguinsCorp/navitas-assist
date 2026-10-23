@@ -23,7 +23,7 @@
     </article>
   </section>
 
-  <section class="panel catalog-toolbar">
+  <section class="panel catalog-toolbar catalog-toolbar--filters">
     <label class="search-field">
       <span class="search-field__heading">
         <span>Buscar</span>
@@ -35,6 +35,24 @@
         placeholder="Razão social, contato, documento ou e-mail"
         [value]="searchTerm()"
         (input)="updateSearch(clientSearch.value)"
+      />
+    </label>
+    <label class="filter-field">
+      <span>Documento</span>
+      <app-custom-select
+        ariaLabel="Filtrar por documento"
+        [options]="presenceFilterOptions"
+        [value]="documentFilter()"
+        (valueChange)="updateDocumentFilter($any($event))"
+      />
+    </label>
+    <label class="filter-field">
+      <span>E-mail</span>
+      <app-custom-select
+        ariaLabel="Filtrar por e-mail"
+        [options]="presenceFilterOptions"
+        [value]="emailFilter()"
+        (valueChange)="updateEmailFilter($any($event))"
       />
     </label>
   </section>
@@ -63,7 +81,7 @@
     } @else if (filteredClients().length === 0) {
       <section class="empty-state">
         <h3>Nenhum resultado encontrado.</h3>
-        <p>Ajuste a busca para localizar outro cliente.</p>
+        <p>Ajuste a busca ou os filtros para localizar outro cliente.</p>
       </section>
     } @else {
       <div class="table-wrap">

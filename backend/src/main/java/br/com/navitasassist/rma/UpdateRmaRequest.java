@@ -14,8 +14,6 @@ public record UpdateRmaRequest(
     Boolean purchaseDateUnknown,
     LocalDate entryDate,
     @Size(max = 80) String invoiceNumber,
-    @Size(max = 180) String invoiceFileName,
-    @Size(max = 120) String receivedBy,
     @Size(max = 1000) String reportedFailure,
     @Size(max = 500) String receivedAccessories,
     @Size(max = 500) String physicalCondition,

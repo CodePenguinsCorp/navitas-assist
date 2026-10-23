@@ -63,6 +63,8 @@ O prazo é registrado em cada novo item para preservar a garantia quando o cadas
 
 ## Responsáveis pelos RMAs
 
+O número da nota fiscal permanece disponível na abertura e nos detalhes do RMA. Não há campo de arquivo da NF nem de “Recebido por” na interface. O backend registra automaticamente o nome de usuário autenticado como recebedor na criação e preserva esse registro nas edições; `receivedBy` é somente leitura na API.
+
 Cada RMA pode ter um técnico responsável ou permanecer sem responsável. ADMIN e SERVICE_DESK podem atribuir, trocar ou remover o responsável diretamente no Kanban; somente usuários ativos com perfil TECHNICIAN aparecem como novas opções. A inativação posterior não apaga a atribuição existente.
 
 Toda alteração registra o responsável anterior, o novo responsável, o autor e o horário. O Kanban permite filtrar por técnico ativo ou por RMAs sem responsável, e os detalhes do RMA exibem o histórico completo de atribuições.
@@ -208,15 +210,27 @@ npm start
 
 ### Testes automatizados do frontend
 
-A suíte Angular usa Vitest com ambiente DOM emulado por happy-dom. Para instalar as dependências e executar uma única vez:
+O frontend possui duas suítes: a Angular usa Vitest com DOM emulado por happy-dom, e a de SLA usa Node 22. Para instalar as dependências e executar ambas uma vez:
 
 ```powershell
 cd .\frontend
 npm ci
 npm test -- --watch=false
+npm run test:sla
 ```
 
-Para desenvolvimento, `npm test` mantém o runner em modo interativo quando o terminal oferece TTY. O workflow `Frontend CI` executa a suíte sem watch e também valida o build de produção em pushes e pull requests que alterem o frontend.
+Para desenvolvimento, `npm test` mantém o runner em modo interativo quando o terminal oferece TTY. A suíte de SLA valida os limites de prazo e os filtros. O workflow `Frontend CI` executa ambas as suítes e valida o build de produção em pushes e pull requests que alterem o frontend.
+
+## Testes automatizados do backend
+
+A partir da raiz do projeto, execute a suíte de testes e o build do JAR com Maven 3.9.9 e Java 17:
+
+```powershell
+cd .\backend
+mvn -B -ntp verify
+```
+
+O workflow `Backend CI` executa o mesmo comando em um contêiner Maven 3.9.9/Java 17 para pushes e pull requests que alterem `backend/` ou o próprio workflow. Os testes usam o profile `test` com H2; o CI não precisa de banco externo nem de credenciais da aplicação. Alterações somente no frontend não acionam esse workflow.
 
 ## Variáveis de Ambiente
 
