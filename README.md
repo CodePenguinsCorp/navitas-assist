@@ -75,6 +75,16 @@ Cada usuário autenticado pode salvar combinações dos filtros avançados do Ka
 
 As rotas em `/api/kanban-views` usam sempre o usuário da sessão; o cliente não informa nem escolhe o proprietário. Nomes são únicos por usuário, e falhas de persistência não alteram os filtros que já estão aplicados na tela.
 
+## Ordem manual do Kanban (NAV-34)
+
+ADMIN, SERVICE_DESK e TECHNICIAN podem arrastar cards dentro da mesma coluna ou usar os botões **Subir** e **Descer** com mouse ou teclado (Tab e Enter/Espaço). O quadro sinaliza onde o card será inserido. A ordem é compartilhada entre usuários e preservada ao recarregar e ao aplicar ou remover filtros; prioridade e atualização deixam de definir a ordem dos cards. VIEWER apenas consulta.
+
+Novos RMAs e mudanças de status, inclusive em lote e reaberturas, inserem o card no fim da coluna de destino. Soltar na área livre de uma coluna coloca o card no fim da lista completa. Ao ordenar usando cards visíveis como referência, os cards ocultos preservam sua ordem relativa. Mudanças de coluna continuam usando a confirmação de status existente.
+
+`PATCH /api/rmas/{id}/position` recebe `expectedStatus`, `anchorId` e `after` (antes/depois do card de referência). O backend retorna a coluna completa com `boardPosition`; `GET /api/rmas?boardOrder=true` consulta pela posição, com desempate por ID. A listagem comum mantém sua ordenação anterior. O cliente não envia posições nem a lista filtrada. Operações concorrentes são serializadas no banco; se o card ou a referência tiver mudado de coluna, a operação é rejeitada e o operador deve atualizar o quadro. Uma falha mantém a ordem e os filtros da tela.
+
+A migração V2 inicializa os RMAs existentes em ordem crescente de ID e cria o índice de ordenação. Os testes de concorrência automatizados usam H2 em modo MySQL. A paginação da NAV-28 ainda não está nesta base; o contrato relativo permite ordenar sem enviar todas as páginas.
+
 ## Ações em lote no Kanban (NAV-15)
 
 Marque cards em qualquer coluna e use **Selecionar visíveis** para incluir os itens mostrados pelos filtros. A seleção permanece ao mudar os filtros; o contador informa quantos selecionados estão ocultos. Use **Limpar seleção** para começar de novo. Antes de aplicar, a confirmação mostra a ação, a quantidade e os RMAs envolvidos. O resultado de cada RMA aparece separadamente; falhas continuam selecionadas para revisão. O quadro atualiza somente os itens afetados.
@@ -315,7 +325,7 @@ Exemplo para deploy manual:
 
 ## Schema do banco
 
-O projeto ainda não possui banco de produção nem dados que precisem ser preservados. O Flyway cria o schema inicial em um banco vazio e o Hibernate apenas valida o resultado (`ddl-auto=validate`). Não existe migração ou backfill de dados legados.
+O Flyway cria o schema inicial em um banco vazio e aplica as migrações versionadas em bancos existentes; o Hibernate apenas valida o resultado (`ddl-auto=validate`). A migração V2 adiciona a posição dos cards do Kanban e inicializa os RMAs existentes sem apagar seus dados.
 
 Quando o schema local ficar incompatível, descarte o volume de desenvolvimento e recrie a stack. O primeiro comando remove todos os dados locais:
 

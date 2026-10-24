@@ -18,13 +18,22 @@ describe('RmaService', () => {
 
   afterEach(() => httpTesting.verify());
 
+  it('sends a relative anchor and expected column when persisting card order', () => {
+    service.updatePosition(11, { expectedStatus: 'TRIAGE', anchorId: 7, after: true }).subscribe();
+    const request = httpTesting.expectOne('/api/rmas/11/position');
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ expectedStatus: 'TRIAGE', anchorId: 7, after: true });
+    request.flush([]);
+  });
+
   it('trims search text and preserves the selected status', () => {
-    service.list({ query: '  RMA-1  ', status: 'TRIAGE' }).subscribe();
+    service.list({ query: '  RMA-1  ', status: 'TRIAGE', boardOrder: true }).subscribe();
 
     const request = httpTesting.expectOne((candidate) => candidate.url === '/api/rmas');
     expect(request.request.method).toBe('GET');
     expect(request.request.params.get('query')).toBe('RMA-1');
     expect(request.request.params.get('status')).toBe('TRIAGE');
+    expect(request.request.params.get('boardOrder')).toBe('true');
     request.flush([]);
   });
 

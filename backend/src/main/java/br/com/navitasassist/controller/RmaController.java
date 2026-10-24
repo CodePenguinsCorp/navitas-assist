@@ -7,6 +7,7 @@ import br.com.navitasassist.rma.CreateRmaRequest;
 import br.com.navitasassist.rma.RmaAssigneeUpdateRequest;
 import br.com.navitasassist.rma.RmaBulkStatusUpdateRequest;
 import br.com.navitasassist.rma.RmaResponse;
+import br.com.navitasassist.rma.RmaPositionUpdateRequest;
 import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusUpdateRequest;
 import br.com.navitasassist.rma.UpdateRmaRequest;
@@ -35,9 +36,10 @@ public class RmaController {
     @GetMapping
     public List<RmaResponse> search(
         @RequestParam(required = false) String query,
-        @RequestParam(required = false) RmaStatus status
+        @RequestParam(required = false) RmaStatus status,
+        @RequestParam(defaultValue = "false") boolean boardOrder
     ) {
-        return rmaService.search(query, status);
+        return rmaService.search(query, status, boardOrder);
     }
 
     @GetMapping("/history")
@@ -82,6 +84,11 @@ public class RmaController {
     @PatchMapping("/{id}/assignee")
     public RmaResponse updateAssignee(@PathVariable Long id, @RequestBody RmaAssigneeUpdateRequest request) {
         return rmaService.updateAssignee(id, request);
+    }
+
+    @PatchMapping("/{id}/position")
+    public List<RmaResponse> updatePosition(@PathVariable Long id, @Valid @RequestBody RmaPositionUpdateRequest request) {
+        return rmaService.updatePosition(id, request);
     }
 
     @PutMapping("/{id}/diagnosis")

@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { afterNextRender, Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize, forkJoin, map } from 'rxjs';
@@ -37,7 +37,8 @@ import {
 import { BoundedFilterPanelsDirective } from '../../shared/form-controls/bounded-filter-panels.directive';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
 import { BulkRmaResult, KanbanBulkActionsComponent } from '../../shared/kanban-bulk-actions/kanban-bulk-actions.component';
-import { RmaKanbanBoardComponent } from '../../shared/rma-kanban-board/rma-kanban-board.component';
+import { RmaCardReorder, RmaKanbanBoardComponent } from '../../shared/rma-kanban-board/rma-kanban-board.component';
+import { compareRmasForBoard } from '../../core/utils/rma-ui';
 
 interface KanbanHeroStat {
   label: string;
@@ -79,6 +80,9 @@ type ViewModalMode = 'create' | 'rename' | null;
   styleUrl: './kanban.component.css',
 })
 export class KanbanComponent {
+  private readonly element: ElementRef<HTMLElement> = inject(ElementRef);
+  private readonly injector = inject(Injector);
+  protected readonly orderAnnouncement = signal('');
   private readonly slaClock = inject(SlaClockService);
   protected readonly slaFilterOptions: ReadonlyArray<CustomSelectOption<SlaFilterValue>> = [
     { value: 'all', label: 'Todas as situações' },
@@ -478,13 +482,39 @@ export class KanbanComponent {
     }
 
     if (dragged.status === status) {
-      this.selectRma(dragged);
+      const last = this.rmasSignal().filter((item) => item.status === status && item.id !== dragged.id).sort(compareRmasForBoard).at(-1);
+      if (last) this.reorderCard({ rma: dragged, anchorId: last.id, after: true });
       this.clearBoardDragState();
       return;
     }
 
     this.openStatusModal(dragged, status);
     this.clearBoardDragState();
+  }
+
+  protected reorderCard({ rma, anchorId, after }: RmaCardReorder): void {
+    if (!this.canUpdateStatus() || this.bulkBusy() || this.loading() || this.boardUpdatingId() !== null) return;
+    this.clearBoardDragState();
+    this.boardUpdatingId.set(rma.id);
+    this.pageError.set('');
+    this.orderAnnouncement.set('');
+    this.rmaService.updatePosition(rma.id, { expectedStatus: rma.status, anchorId, after })
+      .pipe(finalize(() => this.boardUpdatingId.set(null)))
+      .subscribe({
+        next: (column) => {
+          this.rmasSignal.update((rmas) => {
+            const updated = new Map(rmas.map((item) => [item.id, item]));
+            column.forEach((item) => updated.set(item.id, item));
+            return [...updated.values()];
+          });
+          this.selectedRmaId.set(rma.id);
+          this.orderAnnouncement.set(`Ordem de ${rma.code} salva.`);
+          afterNextRender(() => this.element.nativeElement.querySelector<HTMLElement>(`[data-rma-id="${rma.id}"]`)?.focus(), { injector: this.injector });
+        },
+        error: (error) => {
+          this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível salvar a ordem. Atualize o quadro e tente novamente.'));
+        },
+      });
   }
 
   protected closeStatusModal(): void {
@@ -526,7 +556,7 @@ export class KanbanComponent {
     this.pageError.set('');
 
     forkJoin({
-      rmas: this.rmaService.list(),
+      rmas: this.rmaService.list({ boardOrder: true }),
       assignableUsers: this.catalogService.listAssignableUsers(),
     })
       .pipe(finalize(() => this.loading.set(false)))
