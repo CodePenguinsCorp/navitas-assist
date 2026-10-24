@@ -26,9 +26,10 @@ class DatabaseMigrationTest {
     void createsSchemaAndSupportsMultipleItemsPerRma() throws SQLException {
         String url = "jdbc:h2:mem:migration_empty;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
 
-        int executedMigrations = Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate().migrationsExecuted;
+        Flyway flyway = Flyway.configure().dataSource(url, USER, PASSWORD).load();
+        int executedMigrations = flyway.migrate().migrationsExecuted;
 
-        assertEquals(2, executedMigrations);
+        assertEquals(flyway.info().all().length, executedMigrations);
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
             assertTrue(tableExists(connection, "rmas"));
             assertTrue(tableExists(connection, "rma_items"));
