@@ -1,0 +1,59 @@
+<section class="page-surface">
+  <section class="page-heading">
+    <div>
+      <h1>Etiquetas</h1>
+    </div>
+  </section>
+
+  <article class="panel form-panel">
+    <div class="label-search">
+      <label class="field-group">
+        <span>Código do RMA</span>
+        <input #codeInput type="text" placeholder="RMA-2026-000001" (keydown.enter)="load(codeInput.value)" />
+      </label>
+      <button type="button" class="button-primary" (click)="load(codeInput.value)" [disabled]="loading()">{{ loading() ? 'Gerando...' : 'Gerar etiqueta' }}</button>
+    </div>
+    <p class="muted-inline">O QR Code e o código de barras levam só um identificador aleatório; nenhum dado do RMA fica gravado neles.</p>
+  </article>
+
+  @if (errorMessage()) {
+    <article class="panel alert-banner alert-banner--error" role="alert">
+      <strong>{{ errorMessage() }}</strong>
+    </article>
+  }
+  @if (successMessage()) {
+    <article class="panel alert-banner alert-banner--success" role="status">
+      <strong>{{ successMessage() }}</strong>
+    </article>
+  }
+
+  @if (rma(); as current) {
+    @if (scanCode(); as code) {
+      <article class="panel form-panel">
+        <h3>Pré-visualização</h3>
+        <div class="label-fields" role="group" aria-label="Campos da etiqueta">
+          @for (option of fieldOptions; track option.key) {
+            <label><input type="checkbox" [checked]="fields().includes(option.key)" (change)="toggleField(option.key)" /> {{ option.label }}</label>
+          }
+        </div>
+
+        <div class="label-preview label-print-area">
+          <app-rma-label [rma]="current" [scanCode]="code" [fields]="fields()" />
+        </div>
+
+        <div class="label-actions">
+          <button type="button" class="button-primary" (click)="print()">Imprimir</button>
+          @if (canRevoke()) {
+            @if (confirmingRevoke()) {
+              <span>Etiquetas já impressas deixarão de funcionar. Confirmar?</span>
+              <button type="button" class="button-primary" (click)="confirmRevoke()" [disabled]="loading()">Revogar e gerar novo código</button>
+              <button type="button" class="button-secondary" (click)="confirmingRevoke.set(false)" [disabled]="loading()">Cancelar</button>
+            } @else {
+              <button type="button" class="button-secondary" (click)="confirmingRevoke.set(true)">Revogar código</button>
+            }
+          }
+        </div>
+      </article>
+    }
+  }
+</section>

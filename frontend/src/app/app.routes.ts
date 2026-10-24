@@ -43,6 +43,20 @@ export const routes: Routes = [
         title: 'Kanban | Navitas Assist'
       },
       {
+        path: 'leitura',
+        loadComponent: () => import('./pages/scan/scan.component').then((module) => module.ScanComponent),
+        title: 'Leitura de etiqueta | Navitas Assist'
+      },
+      {
+        path: 'etiquetas',
+        loadComponent: () => import('./pages/labels/labels.component').then((module) => module.LabelsComponent),
+        canActivate: [roleGuard],
+        data: {
+          roles: ['ADMIN', 'SERVICE_DESK', 'TECHNICIAN']
+        },
+        title: 'Etiquetas | Navitas Assist'
+      },
+      {
         path: 'cadastros',
         pathMatch: 'full',
         redirectTo: 'clientes'
