@@ -279,7 +279,11 @@
           }
         </div>
 
-        <app-rma-parts-panel [rmaId]="rma.id" [rmaStatus]="rma.status" />
+        @defer {
+          <app-rma-parts-panel [rmaId]="rma.id" [rmaStatus]="rma.status" />
+        } @placeholder {
+          <p class="rma-detail-copy">Carregando peças...</p>
+        }
 
         <div class="form-actions">
           @if (canRegisterDiagnosis()) {
