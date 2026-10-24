@@ -1,0 +1,379 @@
+<section class="page-surface">
+  <section class="page-heading">
+    <div>
+      <h1>Peças</h1>
+    </div>
+    @if (canManage()) {
+      <div class="shell-actions">
+        <button type="button" class="button-primary" (click)="openCreateModal()">Nova peça</button>
+      </div>
+    }
+  </section>
+
+  <section class="stats-grid stats-grid--three">
+    <article class="panel stat-card">
+      <span>Abaixo do mínimo</span>
+      <strong>{{ belowMinimumCount() }}</strong>
+    </article>
+    <article class="panel stat-card">
+      <span>Reservas pendentes</span>
+      <strong>{{ pending().length }}</strong>
+    </article>
+    <article class="panel stat-card">
+      <span>Valor em estoque</span>
+      <strong>{{ currency(stockValue()) }}</strong>
+    </article>
+  </section>
+
+  <div class="part-tabs" role="tablist">
+    <button type="button" role="tab" class="button-secondary button-secondary--small" [class.is-active]="activeTab() === 'stock'" [attr.aria-selected]="activeTab() === 'stock'" (click)="selectTab('stock')">Estoque</button>
+    <button type="button" role="tab" class="button-secondary button-secondary--small" [class.is-active]="activeTab() === 'replenishment'" [attr.aria-selected]="activeTab() === 'replenishment'" (click)="selectTab('replenishment')">
+      Reposição ({{ replenishment().length }})
+    </button>
+  </div>
+
+  @if (errorMessage()) {
+    <article class="panel alert-banner alert-banner--error">
+      <strong>{{ errorMessage() }}</strong>
+    </article>
+  }
+
+  @if (successMessage()) {
+    <article class="panel alert-banner alert-banner--success">
+      <strong>{{ successMessage() }}</strong>
+    </article>
+  }
+
+  @if (activeTab() === 'stock') {
+    <section class="panel catalog-toolbar">
+      <label class="search-field">
+        <span class="search-field__heading">
+          <span>Buscar</span>
+          <span class="catalog-toolbar__result">{{ filteredParts().length }} registro(s)</span>
+        </span>
+        <input #partSearch type="search" placeholder="Código, peça ou localização" [value]="searchTerm()" (input)="updateSearch(partSearch.value)" />
+      </label>
+    </section>
+
+    <article class="table-card table-card--list panel">
+      @if (loading() && parts().length === 0) {
+        <p>Carregando peças...</p>
+      } @else if (parts().length === 0) {
+        <section class="empty-state">
+          <h3>Nenhuma peça cadastrada.</h3>
+          <p>Cadastre peças de reposição para reservá-las nos RMAs.</p>
+        </section>
+      } @else if (filteredParts().length === 0) {
+        <section class="empty-state">
+          <h3>Nenhum resultado encontrado.</h3>
+          <p>Ajuste a busca para localizar outra peça.</p>
+        </section>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Peça</th>
+                <th>Localização</th>
+                <th>Em estoque</th>
+                <th>Reservado</th>
+                <th>Disponível</th>
+                <th>Mínimo</th>
+                <th>Custo</th>
+                <th class="table-actions-col">Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (part of filteredParts(); track part.id) {
+                <tr>
+                  <td>{{ part.code }}</td>
+                  <td>
+                    <strong class="table-title">{{ part.name }}</strong>
+                    @if (!part.active) {
+                      <span class="mini-chip warranty-off">Inativa</span>
+                    } @else if (part.belowMinimum) {
+                      <span class="mini-chip priority-high">Repor</span>
+                    }
+                  </td>
+                  <td>{{ part.location || 'Não informada' }}</td>
+                  <td>{{ quantity(part.onHand, part.unit) }}</td>
+                  <td>{{ quantity(part.reserved, part.unit) }}</td>
+                  <td><strong>{{ quantity(part.available, part.unit) }}</strong></td>
+                  <td>{{ quantity(part.minimumStock, part.unit) }}</td>
+                  <td>{{ currency(part.unitCost) }}</td>
+                  <td class="table-actions-col">
+                    <div class="part-actions">
+                      <button type="button" class="button-secondary button-secondary--small" (click)="openHistory(part)">Histórico</button>
+                      @if (canManage()) {
+                        <button type="button" class="button-secondary button-secondary--small" (click)="openMovementModal(part)">Movimentar</button>
+                        <button type="button" class="button-secondary button-secondary--small" (click)="openEditModal(part)">Editar</button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </article>
+  } @else {
+    <article class="table-card table-card--list panel">
+      <h3>Alerta de reposição</h3>
+      @if (replenishment().length === 0) {
+        <p>Nenhuma peça abaixo do mínimo ou com reserva pendente.</p>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Peça</th>
+                <th>Disponível</th>
+                <th>Mínimo</th>
+                <th>Pendente em RMAs</th>
+                <th>Sugestão de compra</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of replenishment(); track item.partId) {
+                <tr>
+                  <td><strong class="table-title">{{ item.code }} | {{ item.name }}</strong><span class="table-subtitle">{{ item.location || 'Sem localização' }}</span></td>
+                  <td>{{ quantity(item.available, item.unit) }}</td>
+                  <td>{{ quantity(item.minimumStock, item.unit) }}</td>
+                  <td>{{ quantity(item.pendingQuantity, item.unit) }}</td>
+                  <td><strong>{{ quantity(item.suggestedQuantity, item.unit) }}</strong></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </article>
+
+    <article class="table-card table-card--list panel">
+      <h3>Peças pendentes por RMA</h3>
+      @if (pending().length === 0) {
+        <p>Nenhuma reserva aguardando saldo.</p>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>RMA</th>
+                <th>Peça</th>
+                <th>Quantidade</th>
+                <th>Disponível</th>
+                <th>Solicitada em</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (reservation of pending(); track reservation.id) {
+                <tr>
+                  <td>{{ reservation.rmaCode }}</td>
+                  <td>{{ reservation.partCode }} | {{ reservation.partName }}</td>
+                  <td>{{ quantity(reservation.quantity, reservation.unit) }}</td>
+                  <td>{{ quantity(reservation.partAvailable, reservation.unit) }}</td>
+                  <td>{{ dateTime(reservation.createdAt) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </article>
+  }
+</section>
+
+@if (formOpen()) {
+  <div class="modal-overlay" (click)="closeModals()">
+    <section class="modal-panel panel" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <div>
+          <h3>{{ editingPart() ? 'Editar peça' : 'Nova peça' }}</h3>
+          <p>O saldo é alterado somente por movimentos de estoque.</p>
+        </div>
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModals()">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </header>
+
+      @if (modalErrorMessage()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ modalErrorMessage() }}</strong>
+        </article>
+      }
+
+      <form class="form-grid" [formGroup]="form" (ngSubmit)="savePart()">
+        <label class="field-group">
+          <span>Código</span>
+          <input type="text" formControlName="code" [attr.maxlength]="limits.code" />
+          @if (hasError('code')) {
+            <small class="field-error">Informe o código da peça.</small>
+          }
+        </label>
+        <label class="field-group">
+          <span>Peça</span>
+          <input type="text" formControlName="name" [attr.maxlength]="limits.name" />
+          @if (hasError('name')) {
+            <small class="field-error">Informe o nome da peça.</small>
+          }
+        </label>
+        <label class="field-group">
+          <span>Unidade</span>
+          <input type="text" formControlName="unit" [attr.maxlength]="limits.unit" placeholder="un, m, kg" />
+          @if (hasError('unit')) {
+            <small class="field-error">Informe a unidade.</small>
+          }
+        </label>
+        <label class="field-group">
+          <span>Localização</span>
+          <input type="text" formControlName="location" [attr.maxlength]="limits.location" placeholder="Prateleira, gaveta..." />
+        </label>
+        <label class="field-group">
+          <span>Saldo mínimo</span>
+          <input type="number" min="0" step="any" formControlName="minimumStock" />
+          @if (hasError('minimumStock')) {
+            <small class="field-error">Informe um saldo mínimo válido.</small>
+          }
+        </label>
+        <label class="field-group">
+          <span>Custo unitário (R$)</span>
+          <input type="number" min="0" step="0.01" formControlName="unitCost" />
+          @if (hasError('unitCost')) {
+            <small class="field-error">Informe um custo válido.</small>
+          }
+        </label>
+        <label class="field-group field-group--full">
+          <span><input type="checkbox" formControlName="active" /> Peça ativa</span>
+        </label>
+
+        <div class="form-actions form-actions--full">
+          <button type="submit" class="button-primary" [disabled]="submitting()">{{ submitting() ? 'Salvando...' : 'Salvar' }}</button>
+          <button type="button" class="button-secondary" (click)="closeModals()" [disabled]="submitting()">Cancelar</button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (movementPart(); as part) {
+  <div class="modal-overlay" (click)="closeModals()">
+    <section class="modal-panel modal-panel--narrow panel" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <div>
+          <h3>Movimentar estoque</h3>
+          <p>{{ part.code }} | {{ part.name }} — disponível: {{ quantity(part.available, part.unit) }}</p>
+        </div>
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModals()">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </header>
+
+      @if (modalErrorMessage()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ modalErrorMessage() }}</strong>
+        </article>
+      }
+
+      <form class="form-grid" [formGroup]="movementForm" (ngSubmit)="saveMovement()">
+        <label class="field-group">
+          <span>Tipo</span>
+          <app-custom-select ariaLabel="Tipo de movimento" [options]="movementTypeOptions" formControlName="type" />
+        </label>
+        <label class="field-group">
+          <span>Quantidade {{ movementForm.controls.type.value === 'ADJUSTMENT' ? '(negativa reduz o saldo)' : '' }}</span>
+          <input type="number" step="any" formControlName="quantity" />
+        </label>
+        <label class="field-group field-group--full">
+          <span>Motivo {{ movementForm.controls.type.value === 'ADJUSTMENT' ? '(obrigatório)' : '' }}</span>
+          <input type="text" formControlName="reason" [attr.maxlength]="limits.reason" />
+        </label>
+        <div class="form-actions form-actions--full">
+          <button type="submit" class="button-primary" [disabled]="submitting()">{{ submitting() ? 'Registrando...' : 'Registrar' }}</button>
+          <button type="button" class="button-secondary" (click)="closeModals()" [disabled]="submitting()">Cancelar</button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (historyPart(); as part) {
+  <div class="modal-overlay" (click)="closeModals()">
+    <section class="modal-panel panel" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <div>
+          <h3>Histórico de movimentos</h3>
+          <p>{{ part.code }} | {{ part.name }}. Movimentos não são editados; correções geram estorno.</p>
+        </div>
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModals()">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </header>
+
+      @if (modalErrorMessage()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ modalErrorMessage() }}</strong>
+        </article>
+      }
+
+      @if (historyLoading() && history().length === 0) {
+        <p>Carregando histórico...</p>
+      } @else if (history().length === 0) {
+        <p>Nenhum movimento registrado.</p>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Tipo</th>
+                <th>Estoque</th>
+                <th>Reserva</th>
+                <th>Saldo após</th>
+                <th>RMA</th>
+                <th>Usuário / motivo</th>
+                @if (canManage()) {
+                  <th class="table-actions-col">Ação</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (movement of history(); track movement.id) {
+                <tr>
+                  <td>{{ dateTime(movement.createdAt) }}</td>
+                  <td>
+                    {{ movementLabels[movement.type] }}
+                    @if (movement.reversedMovementId) {
+                      <span class="table-subtitle">do movimento {{ movement.reversedMovementId }}</span>
+                    }
+                    @if (movement.reversed) {
+                      <span class="mini-chip warranty-off">Estornado</span>
+                    }
+                  </td>
+                  <td>{{ signedQuantity(movement.onHandChange) }}</td>
+                  <td>{{ signedQuantity(movement.reservedChange) }}</td>
+                  <td>{{ quantity(movement.onHandAfter, part.unit) }}</td>
+                  <td>{{ movement.rmaCode || '—' }}</td>
+                  <td>{{ movement.createdBy }}@if (movement.reason) {<span class="table-subtitle">{{ movement.reason }}</span>}</td>
+                  @if (canManage()) {
+                    <td class="table-actions-col">
+                      @if (reversingMovementId() === movement.id) {
+                        <div class="movement-reversal">
+                          <input type="text" placeholder="Motivo do estorno" [formControl]="reversalReason" [attr.maxlength]="limits.reason" />
+                          <button type="button" class="button-primary button-secondary--small" (click)="confirmReversal(movement)" [disabled]="submitting()">Confirmar</button>
+                        </div>
+                      } @else if (canReverse(movement)) {
+                        <button type="button" class="button-secondary button-secondary--small" (click)="startReversal(movement)">Estornar</button>
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  </div>
+}

@@ -1,0 +1,95 @@
+<div class="summary-block">
+  <strong>Peças</strong>
+
+  @if (parts(); as rmaParts) {
+    <div class="parts-summary">
+      <span class="mini-chip priority-low">{{ activeCount() }} reservada(s)</span>
+      <span class="mini-chip warranty-ok">{{ consumedCount() }} consumida(s)</span>
+      <span class="mini-chip warranty-alert">{{ rmaParts.pendingCount }} pendente(s)</span>
+      <span class="mini-chip">Custo consumido: {{ currency(rmaParts.consumedCost) }}</span>
+      <span class="mini-chip">Custo reservado: {{ currency(rmaParts.reservedCost) }}</span>
+    </div>
+  }
+
+  @if (errorMessage()) {
+    <p class="field-error" role="alert">{{ errorMessage() }}</p>
+  }
+  @if (successMessage()) {
+    <p class="muted-inline" role="status">{{ successMessage() }}</p>
+  }
+
+  @if (loading() && !parts()) {
+    <p class="rma-detail-copy">Carregando peças...</p>
+  } @else if (reservations().length === 0) {
+    <p class="rma-detail-copy">Nenhuma peça reservada para este RMA.</p>
+  } @else {
+    <div class="parts-list">
+      @for (reservation of reservations(); track reservation.id) {
+        <div class="parts-item">
+          <div>
+            <strong>{{ reservation.partCode }} | {{ reservation.partName }}</strong>
+            <div>
+              <span class="mini-chip" [class]="statusClass(reservation.status)">{{ statusLabels[reservation.status] }}</span>
+              {{ quantity(reservation.quantity, reservation.unit) }} · {{ currency(reservation.totalCost) }}
+            </div>
+            <small>
+              Disponível em estoque: {{ quantity(reservation.partAvailable, reservation.unit) }}
+              @if (reservation.location) { · Local: {{ reservation.location }} }
+            </small>
+            @if (reservation.note) {
+              <small>{{ reservation.note }}</small>
+            }
+          </div>
+
+          @if (canReserve()) {
+            <div class="parts-item__actions">
+              @if (reservation.status === 'ACTIVE') {
+                <button type="button" class="button-secondary button-secondary--small" (click)="runAction(reservation, 'consume')" [disabled]="busyReservationId() !== null">Consumir</button>
+              }
+              @if (reservation.status === 'PENDING') {
+                <button type="button" class="button-secondary button-secondary--small" (click)="runAction(reservation, 'allocate')" [disabled]="busyReservationId() !== null">Efetivar reserva</button>
+              }
+              @if (reservation.status === 'ACTIVE' || reservation.status === 'PENDING') {
+                <button type="button" class="button-secondary button-secondary--small" (click)="runAction(reservation, 'cancel')" [disabled]="busyReservationId() !== null">Cancelar</button>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  @if (canCreateReservation()) {
+    <form class="parts-reserve" [formGroup]="reserveForm" (ngSubmit)="reserve()">
+      <label class="field-group">
+        <span>Peça</span>
+        <app-custom-select ariaLabel="Peça para reservar" placeholder="Selecione a peça" [options]="partOptions()" formControlName="partId" />
+      </label>
+      <label class="field-group">
+        <span>Quantidade</span>
+        <input type="number" min="0.001" step="any" formControlName="quantity" />
+      </label>
+      <label class="field-group">
+        <span>Observação</span>
+        <input type="text" maxlength="255" formControlName="note" />
+      </label>
+      <button type="submit" class="button-primary" [disabled]="submitting()">{{ submitting() ? 'Reservando...' : 'Reservar' }}</button>
+    </form>
+  }
+
+  @if (parts()?.movements?.length) {
+    <details class="parts-history">
+      <summary>Histórico de movimentos de peças</summary>
+      <ul>
+        @for (movement of parts()!.movements; track movement.id) {
+          <li>
+            {{ dateTime(movement.createdAt) }} · {{ movementLabels[movement.type] }} · {{ movement.partCode }} ·
+            {{ quantity(movement.quantity) }} · {{ movement.createdBy }}
+            @if (movement.reversed) { · estornado }
+            @if (movement.reason) { · {{ movement.reason }} }
+          </li>
+        }
+      </ul>
+    </details>
+  }
+</div>
