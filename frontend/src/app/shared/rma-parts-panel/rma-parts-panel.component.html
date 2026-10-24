@@ -43,10 +43,10 @@
 
           @if (canReserve()) {
             <div class="parts-item__actions">
-              @if (reservation.status === 'ACTIVE') {
+              @if (reservation.status === 'ACTIVE' && !isClosed()) {
                 <button type="button" class="button-secondary button-secondary--small" (click)="runAction(reservation, 'consume')" [disabled]="busyReservationId() !== null">Consumir</button>
               }
-              @if (reservation.status === 'PENDING') {
+              @if (reservation.status === 'PENDING' && !isClosed()) {
                 <button type="button" class="button-secondary button-secondary--small" (click)="runAction(reservation, 'allocate')" [disabled]="busyReservationId() !== null">Efetivar reserva</button>
               }
               @if (reservation.status === 'ACTIVE' || reservation.status === 'PENDING') {

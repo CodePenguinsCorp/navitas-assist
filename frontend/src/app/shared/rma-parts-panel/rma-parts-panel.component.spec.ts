@@ -81,8 +81,13 @@ describe('RmaPartsPanelComponent', () => {
     expect(component.successMessage()).toContain('pendente de reposição');
   });
 
-  it('hides the reservation form for closed RMAs', async () => {
+  it('only allows cancelling reservations of closed RMAs', async () => {
     await setUp('ADMIN', 'COMPLETED');
+    const text: string = fixture.nativeElement.textContent;
+
     expect(fixture.nativeElement.querySelector('form')).toBeNull();
+    expect(text).not.toContain('Consumir');
+    expect(text).not.toContain('Efetivar reserva');
+    expect(text).toContain('Cancelar');
   });
 });

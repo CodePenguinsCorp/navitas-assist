@@ -27,6 +27,7 @@ import br.com.navitasassist.part.RmaPartsResponse;
 import br.com.navitasassist.repository.PartMovementRepository;
 import br.com.navitasassist.repository.PartRepository;
 import br.com.navitasassist.repository.PartReservationRepository;
+import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaStatus;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Stock balances live on the part row and change only here, always under a pessimistic lock on that row, and always
- * together with an immutable {@link PartMovement}. Lock order is part first, then reservation.
+ * together with an immutable {@link PartMovement}. Lock order is RMA, then part, then reservation.
  */
 @Service
 @RequiredArgsConstructor
@@ -47,10 +48,12 @@ public class PartStockService {
 
     private static final Set<PartMovementType> MANUAL_TYPES = EnumSet.of(PartMovementType.ENTRY, PartMovementType.EXIT, PartMovementType.ADJUSTMENT);
     private static final Set<RmaStatus> CLOSED_RMA_STATUSES = EnumSet.of(RmaStatus.COMPLETED, RmaStatus.RETURNED, RmaStatus.IRREPARABLE);
+    private static final String CLOSED_RMA_RESERVATION_MESSAGE = "Parts cannot be allocated or consumed for a closed RMA.";
 
     private final PartRepository partRepository;
     private final PartMovementRepository partMovementRepository;
     private final PartReservationRepository partReservationRepository;
+    private final RmaRecordRepository rmaRecordRepository;
     private final RmaService rmaService;
 
     @Transactional(readOnly = true)
@@ -141,10 +144,7 @@ public class PartStockService {
      * is kept as PENDING, which feeds the pending-parts list and the replenishment alert.
      */
     public PartReservationResponse reserve(Long rmaId, PartReservationRequest request) {
-        RmaRecord rma = rmaService.getEntityById(rmaId);
-        if (CLOSED_RMA_STATUSES.contains(rma.getStatus())) {
-            throw new BusinessException("Parts cannot be reserved for a closed RMA.");
-        }
+        RmaRecord rma = lockOpenRma(rmaId, "Parts cannot be reserved for a closed RMA.");
 
         Part part = lockPart(request.partId());
         if (!part.isActive()) {
@@ -167,9 +167,14 @@ public class PartStockService {
     }
 
     public PartReservationResponse allocate(Long rmaId, Long reservationId) {
-        Part part = lockPart(findReservationPartId(rmaId, reservationId));
+        Long partId = findReservationPartId(rmaId, reservationId);
+        lockOpenRma(rmaId, CLOSED_RMA_RESERVATION_MESSAGE);
+        Part part = lockPart(partId);
         PartReservation reservation = lockReservation(reservationId);
         requireStatus(reservation, "Only pending reservations can be allocated.", PartReservationStatus.PENDING);
+        if (!part.isActive()) {
+            throw new BusinessException("Part is inactive: " + part.getCode());
+        }
 
         record(part, PartMovementType.RESERVATION, BigDecimal.ZERO, reservation.getQuantity(), part.getUnitCost(), reservation.getRma(), reservation, null, null);
         reservation.setStatus(PartReservationStatus.ACTIVE);
@@ -177,7 +182,9 @@ public class PartStockService {
     }
 
     public PartReservationResponse consume(Long rmaId, Long reservationId) {
-        Part part = lockPart(findReservationPartId(rmaId, reservationId));
+        Long partId = findReservationPartId(rmaId, reservationId);
+        lockOpenRma(rmaId, CLOSED_RMA_RESERVATION_MESSAGE);
+        Part part = lockPart(partId);
         PartReservation reservation = lockReservation(reservationId);
         requireStatus(reservation, "Only active reservations can be consumed.", PartReservationStatus.ACTIVE);
 
@@ -258,6 +265,17 @@ public class PartStockService {
 
     private BigDecimal sumCost(List<PartReservationResponse> reservations, PartReservationStatus status) {
         return reservations.stream().filter(reservation -> reservation.status() == status).map(PartReservationResponse::totalCost).reduce(BigDecimal.ZERO.setScale(2), BigDecimal::add);
+    }
+
+    /**
+     * Locks the RMA row, serializing reservation changes with status changes that close the RMA (see RmaService).
+     */
+    private RmaRecord lockOpenRma(Long rmaId, String closedMessage) {
+        RmaRecord rma = rmaRecordRepository.findByIdForUpdate(rmaId).orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + rmaId));
+        if (CLOSED_RMA_STATUSES.contains(rma.getStatus())) {
+            throw new BusinessException(closedMessage);
+        }
+        return rma;
     }
 
     private Part lockPart(Long partId) {

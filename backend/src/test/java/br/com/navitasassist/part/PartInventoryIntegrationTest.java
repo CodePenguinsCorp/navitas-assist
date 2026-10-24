@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -23,6 +24,7 @@ import br.com.navitasassist.repository.PartRepository;
 import br.com.navitasassist.repository.PartReservationRepository;
 import br.com.navitasassist.repository.ProductRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
+import br.com.navitasassist.rma.RmaItem;
 import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaStatus;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -363,6 +365,62 @@ class PartInventoryIntegrationTest {
             .andExpect(jsonPath("$.message").value("Part is inactive: PCA-UPD"));
     }
 
+    @Test
+    void openReservationsBlockClosingTheRmaUntilConsumedOrCancelled() throws Exception {
+        long partId = createPart("PCA-CLOSE", "10.00", "0");
+        movement(partId, "ENTRY", "2", null, ADMIN).andExpect(status().isCreated());
+        long active = id(reserve(rma.getId(), partId, "1", TECHNICIAN).andExpect(jsonPath("$.status").value("ACTIVE")));
+        long pending = id(reserve(rma.getId(), partId, "5", TECHNICIAN).andExpect(jsonPath("$.status").value("PENDING")));
+
+        changeStatus(rma.getId(), "IRREPARABLE")
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("RMA has open part reservations. Consume or cancel them before closing."));
+
+        action(rma.getId(), active, "consume", TECHNICIAN).andExpect(status().isOk());
+        changeStatus(rma.getId(), "COMPLETED").andExpect(status().isBadRequest());
+
+        action(rma.getId(), pending, "cancel", TECHNICIAN).andExpect(status().isOk());
+        changeStatus(rma.getId(), "COMPLETED").andExpect(status().isOk()).andExpect(jsonPath("$.status").value("COMPLETED"));
+        changeStatus(rma.getId(), "RETURNED").andExpect(status().isOk());
+    }
+
+    @Test
+    void closedRmaReservationsCanOnlyBeCancelled() throws Exception {
+        long partId = createPart("PCA-CLOSED-RES", "10.00", "0");
+        movement(partId, "ENTRY", "1", null, ADMIN).andExpect(status().isCreated());
+        long active = id(reserve(rma.getId(), partId, "1", TECHNICIAN));
+        long pending = id(reserve(rma.getId(), partId, "3", TECHNICIAN));
+        RmaRecord closed = rmaRecordRepository.findById(rma.getId()).orElseThrow();
+        closed.setStatus(RmaStatus.COMPLETED);
+        rmaRecordRepository.save(closed);
+
+        action(rma.getId(), active, "consume", TECHNICIAN)
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Parts cannot be allocated or consumed for a closed RMA."));
+        action(rma.getId(), pending, "allocate", TECHNICIAN).andExpect(status().isBadRequest());
+
+        action(rma.getId(), active, "cancel", TECHNICIAN).andExpect(status().isOk()).andExpect(jsonPath("$.partAvailable").value(1));
+        action(rma.getId(), pending, "cancel", TECHNICIAN).andExpect(status().isOk());
+    }
+
+    @Test
+    void pendingReservationOfAnInactivePartCannotBeAllocated() throws Exception {
+        long partId = createPart("PCA-INACTIVE", "10.00", "0");
+        long pending = id(reserve(rma.getId(), partId, "1", TECHNICIAN).andExpect(jsonPath("$.status").value("PENDING")));
+        movement(partId, "ENTRY", "5", null, ADMIN).andExpect(status().isCreated());
+        Map<String, Object> payload = partPayload("PCA-INACTIVE", "10.00", "0");
+        payload.put("active", false);
+        mockMvc.perform(put("/api/parts/{id}", partId).with(ADMIN).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(json(payload))).andExpect(status().isOk());
+
+        action(rma.getId(), pending, "allocate", TECHNICIAN)
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Part is inactive: PCA-INACTIVE"));
+    }
+
+    private org.springframework.test.web.servlet.ResultActions changeStatus(long rmaId, String status) throws Exception {
+        return mockMvc.perform(patch("/api/rmas/{id}/status", rmaId).with(TECHNICIAN).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(json(Map.of("status", status))));
+    }
+
     private RmaRecord createRma(String code, RmaStatus status) {
         Product product = productRepository.findAll().stream().findFirst().orElseGet(() -> {
             Product created = new Product();
@@ -383,6 +441,10 @@ class PartInventoryIntegrationTest {
         record.setReceivedBy("Teste");
         record.setReportedFailure("Falha");
         record.setStatus(status);
+        RmaItem item = new RmaItem();
+        item.setProduct(product);
+        item.getItemIdentification().setSerialNumber("SER-" + code);
+        record.addItem(item);
         return rmaRecordRepository.save(record);
     }
 
