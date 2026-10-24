@@ -21,6 +21,25 @@ public record RmaCustodyResponse(
     Instant since,
     CustodyFlag flag
 ) {
+    public static RmaCustodyResponse from(RmaCustodyRow row, CustodyFlag flag) {
+        boolean located = row.locationId() != null;
+        return new RmaCustodyResponse(
+            row.rmaId(),
+            row.rmaCode(),
+            row.rmaStatus(),
+            row.clientTradeName() == null ? row.clientLegalName() : row.clientTradeName(),
+            row.productName(),
+            row.locationId(),
+            row.locationCode(),
+            row.locationName(),
+            row.locationType(),
+            located ? row.custodianId() : null,
+            located ? row.custodianName() : null,
+            row.since(),
+            flag
+        );
+    }
+
     public static RmaCustodyResponse from(RmaRecord rma, RmaCustodyMovement latest, CustodyFlag flag) {
         StorageLocation location = latest == null ? null : latest.getToLocation();
         boolean located = location != null;

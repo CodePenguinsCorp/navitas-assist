@@ -39,7 +39,7 @@ public class StorageLocationService {
     }
 
     public StorageLocationResponse update(Long id, StorageLocationRequest request) {
-        StorageLocation location = getEntityById(id);
+        StorageLocation location = storageLocationRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Location not found: " + id));
         String code = normalizeCode(request.code());
         validateCode(location, code);
 

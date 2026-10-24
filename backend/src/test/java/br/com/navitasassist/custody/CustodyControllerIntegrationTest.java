@@ -3,6 +3,8 @@ package br.com.navitasassist.custody;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -18,8 +20,14 @@ import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import br.com.navitasassist.client.Client;
+import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.product.Product;
 import br.com.navitasassist.repository.ClientRepository;
 import br.com.navitasassist.repository.ProductRepository;
@@ -29,6 +37,8 @@ import br.com.navitasassist.repository.StorageLocationRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaStatus;
+import br.com.navitasassist.service.CustodyService;
+import br.com.navitasassist.service.StorageLocationService;
 import br.com.navitasassist.user.UserAccount;
 import br.com.navitasassist.user.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,6 +52,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -76,6 +87,15 @@ class CustodyControllerIntegrationTest {
 
     @Autowired
     private RmaCustodyMovementRepository rmaCustodyMovementRepository;
+
+    @Autowired
+    private CustodyService custodyService;
+
+    @Autowired
+    private StorageLocationService storageLocationService;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
 
     private UserAccount technician;
 
@@ -299,25 +319,94 @@ class CustodyControllerIntegrationTest {
 
         mockMvc.perform(get("/api/custody").param("locationId", String.valueOf(areaId)).with(user("custody.viewer").roles("VIEWER")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(2)))
-            .andExpect(jsonPath("$[0].rmaCode").value("RMA-CUST-6"))
-            .andExpect(jsonPath("$[0].locationName").value("Bancada 4"))
-            .andExpect(jsonPath("$[1].rmaCode").value("RMA-CUST-7"));
+            .andExpect(jsonPath("$.content", hasSize(2)))
+            .andExpect(jsonPath("$.totalElements").value(2))
+            .andExpect(jsonPath("$.content[0].rmaCode").value("RMA-CUST-6"))
+            .andExpect(jsonPath("$.content[0].locationName").value("Bancada 4"))
+            .andExpect(jsonPath("$.content[0].clientName").value("Cliente RMA-CUST-6"))
+            .andExpect(jsonPath("$.content[0].productName").value("Produto RMA-CUST-6"))
+            .andExpect(jsonPath("$.content[1].rmaCode").value("RMA-CUST-7"));
 
         mockMvc.perform(get("/api/custody").with(user("custody.viewer").roles("VIEWER")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(4)));
+            .andExpect(jsonPath("$.content", hasSize(4)))
+            .andExpect(jsonPath("$.totalElements").value(4));
+
+        mockMvc.perform(get("/api/custody").param("size", "2").param("page", "1").with(user("custody.viewer").roles("VIEWER")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content", hasSize(2)))
+            .andExpect(jsonPath("$.page").value(1))
+            .andExpect(jsonPath("$.totalPages").value(2))
+            .andExpect(jsonPath("$.content[0].rmaCode").value("RMA-CUST-8"));
+
+        mockMvc.perform(get("/api/custody").param("query", "prateleira").with(user("custody.viewer").roles("VIEWER")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content", hasSize(1)))
+            .andExpect(jsonPath("$.content[0].rmaId").value(elsewhereId));
 
         mockMvc.perform(get("/api/custody").param("flag", "MISSING").with(user("custody.viewer").roles("VIEWER")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(1)))
-            .andExpect(jsonPath("$[0].rmaId").value(missingId))
-            .andExpect(jsonPath("$[0].locationId").doesNotExist());
+            .andExpect(jsonPath("$.content", hasSize(1)))
+            .andExpect(jsonPath("$.content[0].rmaId").value(missingId))
+            .andExpect(jsonPath("$.content[0].locationId").doesNotExist());
 
         mockMvc.perform(get("/api/custody").param("flag", "STALE").with(user("custody.viewer").roles("VIEWER")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(1)))
-            .andExpect(jsonPath("$[0].rmaId").value(elsewhereId));
+            .andExpect(jsonPath("$.content", hasSize(1)))
+            .andExpect(jsonPath("$.content[0].rmaId").value(elsewhereId));
+
+        mockMvc.perform(get("/api/custody/summary").with(user("custody.viewer").roles("VIEWER")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.tracked").value(4))
+            .andExpect(jsonPath("$.missing").value(1))
+            .andExpect(jsonPath("$.stale").value(1));
+
+        mockMvc.perform(get("/api/custody/summary").param("locationId", String.valueOf(areaId)).with(user("custody.viewer").roles("VIEWER")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.tracked").value(2))
+            .andExpect(jsonPath("$.missing").value(0));
+    }
+
+    @Test
+    void shouldSerializeLocationDeactivationAndConcurrentMovement() throws Exception {
+        long locationId = createLocation("BANC-RACE", "Bancada concorrente", "BENCH", null);
+        Long rmaId = saveRma("RMA-CUST-RACE", RmaStatus.TRIAGE);
+        CountDownLatch locationLocked = new CountDownLatch(1);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        try {
+            Future<Throwable> movement = executor.submit(() -> {
+                locationLocked.await(5, TimeUnit.SECONDS);
+                try {
+                    custodyService.move(rmaId, new CustodyMovementRequest(CustodyMovementType.ENTRY, locationId, technician.getId(), null));
+                    return null;
+                } catch (RuntimeException exception) {
+                    return exception;
+                }
+            });
+
+            transactionTemplate.executeWithoutResult(status -> {
+                storageLocationService.update(locationId, new StorageLocationRequest("BANC-RACE", "Bancada concorrente", StorageLocationType.BENCH, null, null, false));
+                locationLocked.countDown();
+                sleepQuietly(400);
+                assertFalse(movement.isDone(), "Movement must wait for the location lock held by the deactivation.");
+            });
+
+            Throwable failure = movement.get(5, TimeUnit.SECONDS);
+            assertInstanceOf(BusinessException.class, failure);
+            assertEquals("Inactive locations cannot receive equipment.", failure.getMessage());
+            assertEquals(0, rmaCustodyMovementRepository.findAllByRma_IdOrderByPerformedAtDescIdDesc(rmaId).size());
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    private static void sleepQuietly(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Test

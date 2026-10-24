@@ -44,8 +44,9 @@ describe('CustodyComponent', () => {
           listCustodians: () => of([{ id: 4, username: 'tech', fullName: 'Técnica' }]),
           search: (filters: { locationId?: number | null; flag?: string | null }) => {
             searches.push(filters);
-            return of(ENTRIES);
+            return of({ content: ENTRIES, page: 0, size: 20, totalElements: 45, totalPages: 3 });
           },
+          summary: () => of({ tracked: 45, missing: 7, stale: 3 }),
           move: (rmaId: number, payload: CustodyMovementRequest) => {
             moves.push({ rmaId, payload });
             return of({ current: { ...ENTRIES[0], locationId: payload.toLocationId }, movements: [] });
@@ -63,13 +64,16 @@ describe('CustodyComponent', () => {
   it('flags missing and stale equipment and reloads by area', async () => {
     await setup('VIEWER');
 
-    expect(component.missingCount()).toBe(1);
-    expect(component.staleCount()).toBe(1);
-    expect(fixture.nativeElement.textContent).toContain('Sem localização');
-    expect(fixture.nativeElement.textContent).not.toContain('Movimentar');
+    expect(component.summary()).toEqual({ tracked: 45, missing: 7, stale: 3 });
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('45 registro(s)');
+    expect(text).toContain('Página 1 de 3');
+    expect(text).not.toContain('Movimentar');
 
+    component.goToPage(2);
+    expect(searches.at(-1)).toEqual(expect.objectContaining({ page: 2 }));
     component.updateLocationFilter(1);
-    expect(searches.at(-1)).toEqual({ locationId: 1, flag: null });
+    expect(searches.at(-1)).toEqual(expect.objectContaining({ locationId: 1, flag: null, page: 0 }));
   });
 
   it('offers only entry without location and only active destinations', async () => {
@@ -102,8 +106,8 @@ describe('CustodyComponent', () => {
 
 type CustodyHarness = {
   form: FormGroup;
-  missingCount: Signal<number>;
-  staleCount: Signal<number>;
+  summary: Signal<{ tracked: number; missing: number; stale: number }>;
+  goToPage(page: number): void;
   movementTypeOptions: Signal<ReadonlyArray<CustomSelectOption<string>>>;
   destinationOptions: Signal<ReadonlyArray<CustomSelectOption<number | null>>>;
   updateLocationFilter(value: number | null): void;

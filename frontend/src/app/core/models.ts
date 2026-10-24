@@ -398,6 +398,20 @@ export interface RmaCustodyResponse {
   flag: CustodyFlag;
 }
 
+export interface PageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface CustodySummaryResponse {
+  tracked: number;
+  missing: number;
+  stale: number;
+}
+
 export interface RmaCustodyDetailResponse {
   current: RmaCustodyResponse;
   movements: CustodyMovementResponse[];

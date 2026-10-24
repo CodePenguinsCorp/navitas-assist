@@ -6,8 +6,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import br.com.navitasassist.config.CustodyProperties;
 import br.com.navitasassist.controller.BusinessException;
@@ -16,10 +14,14 @@ import br.com.navitasassist.custody.CustodyFlag;
 import br.com.navitasassist.custody.CustodyMovementRequest;
 import br.com.navitasassist.custody.CustodyMovementResponse;
 import br.com.navitasassist.custody.CustodyMovementType;
+import br.com.navitasassist.custody.CustodySummaryResponse;
 import br.com.navitasassist.custody.RmaCustodyDetailResponse;
 import br.com.navitasassist.custody.RmaCustodyMovement;
 import br.com.navitasassist.custody.RmaCustodyResponse;
+import br.com.navitasassist.custody.RmaCustodyRow;
 import br.com.navitasassist.custody.StorageLocation;
+import br.com.navitasassist.pagination.PageParams;
+import br.com.navitasassist.pagination.PageResponse;
 import br.com.navitasassist.repository.RmaCustodyMovementRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
@@ -28,7 +30,11 @@ import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.user.AssignableUserResponse;
 import br.com.navitasassist.user.UserAccount;
 import br.com.navitasassist.user.UserRole;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -51,22 +57,24 @@ public class CustodyService {
     private final UserAccountRepository userAccountRepository;
     private final StorageLocationService storageLocationService;
     private final CustodyProperties custodyProperties;
+    private final EntityManager entityManager;
 
     @Transactional(readOnly = true)
-    public List<RmaCustodyResponse> search(Long locationId, CustodyFlag flag) {
-        Instant now = Instant.now();
-        Map<Long, RmaCustodyMovement> latestByRma = rmaCustodyMovementRepository.findLatestPerRma()
-            .stream()
-            .collect(Collectors.toMap(movement -> movement.getRma().getId(), Function.identity()));
-        Set<Long> locationIds = locationId == null ? null : storageLocationService.subtreeIds(storageLocationService.getEntityById(locationId));
+    public PageResponse<RmaCustodyResponse> search(Long locationId, CustodyFlag flag, String query, Integer page, Integer size) {
+        Instant staleBefore = staleBefore();
+        Page<RmaCustodyRow> rows = searchRows(locationId, flag, trimToNull(query), staleBefore, PageParams.of(page, size));
+        return PageResponse.from(rows, row -> RmaCustodyResponse.from(row, flagFor(row, staleBefore)));
+    }
 
-        return rmaRecordRepository.findAll().stream()
-            .filter(rma -> isTracked(rma, latestByRma.get(rma.getId())))
-            .filter(rma -> locationIds == null || isInside(latestByRma.get(rma.getId()), locationIds))
-            .map(rma -> RmaCustodyResponse.from(rma, latestByRma.get(rma.getId()), flagFor(rma, latestByRma.get(rma.getId()), now)))
-            .filter(response -> flag == null || response.flag() == flag)
-            .sorted(Comparator.comparing(RmaCustodyResponse::rmaCode))
-            .toList();
+    @Transactional(readOnly = true)
+    public CustodySummaryResponse summarize(Long locationId) {
+        Instant staleBefore = staleBefore();
+        Pageable countOnly = PageParams.of(0, 1);
+        return new CustodySummaryResponse(
+            searchRows(locationId, null, null, staleBefore, countOnly).getTotalElements(),
+            searchRows(locationId, CustodyFlag.MISSING, null, staleBefore, countOnly).getTotalElements(),
+            searchRows(locationId, CustodyFlag.STALE, null, staleBefore, countOnly).getTotalElements()
+        );
     }
 
     @Transactional(readOnly = true)
@@ -101,6 +109,7 @@ public class CustodyService {
             validateExit(rma, currentLocation, request);
         } else {
             StorageLocation destination = resolveDestination(request, currentLocation);
+            assertLocationAvailable(destination);
             UserAccount custodian = resolveCustodian(request.custodianId());
             movement.setToLocation(destination);
             movement.setCustodianId(custodian.getId());
@@ -123,11 +132,6 @@ public class CustodyService {
         }
 
         StorageLocation destination = storageLocationService.getEntityById(request.toLocationId());
-        for (StorageLocation location = destination; location != null; location = location.getParent()) {
-            if (!location.isActive()) {
-                throw new BusinessException("Inactive locations cannot receive equipment.");
-            }
-        }
         if (currentLocation != null && currentLocation.getId().equals(destination.getId())) {
             throw new BusinessException("The equipment is already in this location.");
         }
@@ -169,12 +173,46 @@ public class CustodyService {
         );
     }
 
-    private boolean isTracked(RmaRecord rma, RmaCustodyMovement latest) {
-        return !FINISHED_STATUSES.contains(rma.getStatus()) || (latest != null && latest.getToLocation() != null);
+    /**
+     * Locks the destination and its ancestors (by id, so concurrent movements lock in the same order) and re-reads them,
+     * serializing the check with {@link StorageLocationService#update(Long, br.com.navitasassist.custody.StorageLocationRequest)}.
+     */
+    private void assertLocationAvailable(StorageLocation destination) {
+        List<StorageLocation> chain = new java.util.ArrayList<>();
+        for (StorageLocation location = destination; location != null; location = location.getParent()) {
+            chain.add(location);
+        }
+        chain.sort(Comparator.comparing(StorageLocation::getId));
+        chain.forEach(location -> entityManager.refresh(location, LockModeType.PESSIMISTIC_WRITE));
+        if (chain.stream().anyMatch(location -> !location.isActive())) {
+            throw new BusinessException("Inactive locations cannot receive equipment.");
+        }
     }
 
-    private boolean isInside(RmaCustodyMovement latest, Set<Long> locationIds) {
-        return latest != null && latest.getToLocation() != null && locationIds.contains(latest.getToLocation().getId());
+    private Page<RmaCustodyRow> searchRows(Long locationId, CustodyFlag flag, String query, Instant staleBefore, Pageable pageable) {
+        Set<Long> locationIds = locationId == null ? Set.of(-1L) : storageLocationService.subtreeIds(storageLocationService.getEntityById(locationId));
+        return rmaCustodyMovementRepository.searchTracked(
+            FINISHED_STATUSES,
+            locationId == null,
+            locationIds,
+            flag == null || flag == CustodyFlag.MISSING,
+            flag == null || flag == CustodyFlag.STALE,
+            flag == null || flag == CustodyFlag.OK,
+            staleBefore,
+            query,
+            pageable
+        );
+    }
+
+    private Instant staleBefore() {
+        return Instant.now().minus(Duration.ofHours(custodyProperties.getStaleAfterHours()));
+    }
+
+    private CustodyFlag flagFor(RmaCustodyRow row, Instant staleBefore) {
+        if (row.locationId() == null) {
+            return FINISHED_STATUSES.contains(row.rmaStatus()) ? CustodyFlag.OK : CustodyFlag.MISSING;
+        }
+        return row.since().isBefore(staleBefore) ? CustodyFlag.STALE : CustodyFlag.OK;
     }
 
     private CustodyFlag flagFor(RmaRecord rma, RmaCustodyMovement latest, Instant now) {

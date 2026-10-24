@@ -7,13 +7,14 @@ import {
   CustodyMovementRequest,
   CustodyMovementResponse,
   CustodyMovementType,
+  CustodySummaryResponse,
   RmaCustodyResponse,
   RmaStatus,
   StorageLocationResponse
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CustodyService } from '../../core/services/custody.service';
-import { extractHttpErrorMessage, includesQuery, normalizeOptionalText } from '../../core/utils/catalog-ui';
+import { extractHttpErrorMessage, normalizeOptionalText } from '../../core/utils/catalog-ui';
 import { CUSTODY_FLAG_LABELS, CUSTODY_MOVEMENT_TYPE_LABELS, custodyFlagClass } from '../../core/utils/custody-ui';
 import { formatBusinessDateTime } from '../../core/utils/date';
 import { statusLabel } from '../../core/utils/rma-ui';
@@ -21,6 +22,7 @@ import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-con
 
 const FINISHED_STATUSES: RmaStatus[] = ['COMPLETED', 'RETURNED', 'IRREPARABLE'];
 const REASON_LIMIT = 255;
+const PAGE_SIZE = 20;
 
 @Component({
   selector: 'app-custody',
@@ -74,6 +76,10 @@ export class CustodyComponent {
   protected readonly locationFilter = signal<number | null>(null);
   protected readonly flagFilter = signal<CustodyFlag | null>(null);
   protected readonly reasonLimit = REASON_LIMIT;
+  protected readonly page = signal(0);
+  protected readonly totalPages = signal(0);
+  protected readonly totalElements = signal(0);
+  protected readonly summary = signal<CustodySummaryResponse>({ tracked: 0, missing: 0, stale: 0 });
   protected readonly canMove = computed(() => this.authService.hasAnyRole(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN']));
 
   private readonly entriesSignal = signal<RmaCustodyResponse[]>([]);
@@ -88,11 +94,6 @@ export class CustodyComponent {
   protected readonly historyEntry = this.historyEntrySignal.asReadonly();
   protected readonly history = this.historySignal.asReadonly();
 
-  protected readonly filteredEntries = computed(() =>
-    this.entriesSignal().filter((entry) => includesQuery(this.searchTerm(), entry.rmaCode, entry.clientName, entry.productName, entry.locationName, entry.custodianName))
-  );
-  protected readonly missingCount = computed(() => this.entriesSignal().filter((entry) => entry.flag === 'MISSING').length);
-  protected readonly staleCount = computed(() => this.entriesSignal().filter((entry) => entry.flag === 'STALE').length);
 
   protected readonly locationFilterOptions = computed<ReadonlyArray<CustomSelectOption<number | null>>>(() => [
     { value: null, label: 'Todos' },
@@ -144,15 +145,27 @@ export class CustodyComponent {
 
   protected updateSearch(value: string): void {
     this.searchTerm.set(value);
+    this.page.set(0);
+    this.loadEntries();
   }
 
   protected updateLocationFilter(value: number | null): void {
     this.locationFilter.set(value);
+    this.page.set(0);
     this.loadEntries();
   }
 
   protected updateFlagFilter(value: CustodyFlag | null): void {
     this.flagFilter.set(value);
+    this.page.set(0);
+    this.loadEntries();
+  }
+
+  protected goToPage(page: number): void {
+    if (page < 0 || page >= this.totalPages()) {
+      return;
+    }
+    this.page.set(page);
     this.loadEntries();
   }
 
@@ -244,10 +257,17 @@ export class CustodyComponent {
     this.loading.set(true);
     this.errorMessage.set('');
 
-    this.custodyService.search({ locationId: this.locationFilter(), flag: this.flagFilter() }).pipe(finalize(() => this.loading.set(false))).subscribe({
-      next: (entries) => this.entriesSignal.set(entries),
-      error: (error) => this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar a localização dos equipamentos.'))
-    });
+    this.custodyService.search({ locationId: this.locationFilter(), flag: this.flagFilter(), query: this.searchTerm(), page: this.page(), size: PAGE_SIZE })
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: (result) => {
+          this.entriesSignal.set(result.content);
+          this.totalPages.set(result.totalPages);
+          this.totalElements.set(result.totalElements);
+        },
+        error: (error) => this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar a localização dos equipamentos.'))
+      });
+    this.custodyService.summary(this.locationFilter()).subscribe({ next: (summary) => this.summary.set(summary) });
   }
 
   private loadLocations(): void {

@@ -40,11 +40,19 @@ describe('CustodyService', () => {
     expect(all.request.params.keys()).toEqual([]);
     all.flush([]);
 
-    service.search({ locationId: 5, flag: 'STALE' }).subscribe();
+    service.search({ locationId: 5, flag: 'STALE', query: ' bancada ', page: 2, size: 20 }).subscribe();
     const filtered = httpTesting.expectOne((request) => request.url === '/api/custody');
     expect(filtered.request.params.get('locationId')).toBe('5');
     expect(filtered.request.params.get('flag')).toBe('STALE');
-    filtered.flush([]);
+    expect(filtered.request.params.get('query')).toBe('bancada');
+    expect(filtered.request.params.get('page')).toBe('2');
+    expect(filtered.request.params.get('size')).toBe('20');
+    filtered.flush({ content: [], page: 2, size: 20, totalElements: 0, totalPages: 0 });
+
+    service.summary(5).subscribe();
+    const summary = httpTesting.expectOne((request) => request.url === '/api/custody/summary');
+    expect(summary.request.params.get('locationId')).toBe('5');
+    summary.flush({ tracked: 0, missing: 0, stale: 0 });
   });
 
   it('posts movements to the RMA custody endpoint', () => {

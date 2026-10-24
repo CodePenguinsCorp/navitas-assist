@@ -4,8 +4,10 @@ import java.util.List;
 
 import br.com.navitasassist.custody.CustodyFlag;
 import br.com.navitasassist.custody.CustodyMovementRequest;
+import br.com.navitasassist.custody.CustodySummaryResponse;
 import br.com.navitasassist.custody.RmaCustodyDetailResponse;
 import br.com.navitasassist.custody.RmaCustodyResponse;
+import br.com.navitasassist.pagination.PageResponse;
 import br.com.navitasassist.service.CustodyService;
 import br.com.navitasassist.user.AssignableUserResponse;
 import jakarta.validation.Valid;
@@ -28,11 +30,19 @@ public class CustodyController {
     private final CustodyService custodyService;
 
     @GetMapping
-    public List<RmaCustodyResponse> search(
+    public PageResponse<RmaCustodyResponse> search(
         @RequestParam(required = false) Long locationId,
-        @RequestParam(required = false) CustodyFlag flag
+        @RequestParam(required = false) CustodyFlag flag,
+        @RequestParam(required = false) String query,
+        @RequestParam(required = false) Integer page,
+        @RequestParam(required = false) Integer size
     ) {
-        return custodyService.search(locationId, flag);
+        return custodyService.search(locationId, flag, query, page, size);
+    }
+
+    @GetMapping("/summary")
+    public CustodySummaryResponse summarize(@RequestParam(required = false) Long locationId) {
+        return custodyService.summarize(locationId);
     }
 
     @GetMapping("/custodians")

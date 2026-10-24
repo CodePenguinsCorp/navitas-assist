@@ -8,15 +8,15 @@
   <section class="stats-grid stats-grid--three">
     <article class="panel stat-card">
       <span>Equipamentos</span>
-      <strong>{{ entries().length }}</strong>
+      <strong>{{ summary().tracked }}</strong>
     </article>
     <article class="panel stat-card">
       <span>Sem localização</span>
-      <strong>{{ missingCount() }}</strong>
+      <strong>{{ summary().missing }}</strong>
     </article>
     <article class="panel stat-card">
       <span>Parados</span>
-      <strong>{{ staleCount() }}</strong>
+      <strong>{{ summary().stale }}</strong>
     </article>
   </section>
 
@@ -24,7 +24,7 @@
     <label class="search-field">
       <span class="search-field__heading">
         <span>Buscar</span>
-        <span class="catalog-toolbar__result">{{ filteredEntries().length }} registro(s)</span>
+        <span class="catalog-toolbar__result">{{ totalElements() }} registro(s)</span>
       </span>
       <input #custodySearch type="search" placeholder="RMA, cliente, produto, local ou responsável" [value]="searchTerm()" (input)="updateSearch(custodySearch.value)" />
     </label>
@@ -53,7 +53,7 @@
   <article class="table-card table-card--list panel">
     @if (loading() && entries().length === 0) {
       <p>Carregando localização dos equipamentos...</p>
-    } @else if (filteredEntries().length === 0) {
+    } @else if (entries().length === 0) {
       <section class="empty-state">
         <h3>Nenhum equipamento encontrado.</h3>
         <p>Ajuste a busca ou os filtros para localizar outros equipamentos.</p>
@@ -73,7 +73,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (entry of filteredEntries(); track entry.rmaId) {
+            @for (entry of entries(); track entry.rmaId) {
               <tr>
                 <td>
                   <strong class="table-title">{{ entry.rmaCode }}</strong>
@@ -97,6 +97,13 @@
           </tbody>
         </table>
       </div>
+      @if (totalPages() > 1) {
+        <div class="custody-actions">
+          <button type="button" class="button-secondary button-secondary--small" (click)="goToPage(page() - 1)" [disabled]="page() === 0 || loading()">Anterior</button>
+          <span>Página {{ page() + 1 }} de {{ totalPages() }}</span>
+          <button type="button" class="button-secondary button-secondary--small" (click)="goToPage(page() + 1)" [disabled]="page() + 1 >= totalPages() || loading()">Próxima</button>
+        </div>
+      }
     }
   </article>
 </section>

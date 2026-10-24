@@ -5,6 +5,8 @@ import {
   AssignableUserResponse,
   CustodyFlag,
   CustodyMovementRequest,
+  CustodySummaryResponse,
+  PageResponse,
   RmaCustodyDetailResponse,
   RmaCustodyResponse,
   StorageLocationRequest,
@@ -27,7 +29,7 @@ export class CustodyService {
     return this.http.put<StorageLocationResponse>(`/api/locations/${id}`, payload);
   }
 
-  search(filters: { locationId?: number | null; flag?: CustodyFlag | null } = {}): Observable<RmaCustodyResponse[]> {
+  search(filters: { locationId?: number | null; flag?: CustodyFlag | null; query?: string; page?: number; size?: number } = {}): Observable<PageResponse<RmaCustodyResponse>> {
     let params = new HttpParams();
     if (filters.locationId) {
       params = params.set('locationId', filters.locationId);
@@ -35,7 +37,21 @@ export class CustodyService {
     if (filters.flag) {
       params = params.set('flag', filters.flag);
     }
-    return this.http.get<RmaCustodyResponse[]>('/api/custody', { params });
+    if (filters.query?.trim()) {
+      params = params.set('query', filters.query.trim());
+    }
+    if (filters.page !== undefined) {
+      params = params.set('page', filters.page);
+    }
+    if (filters.size !== undefined) {
+      params = params.set('size', filters.size);
+    }
+    return this.http.get<PageResponse<RmaCustodyResponse>>('/api/custody', { params });
+  }
+
+  summary(locationId: number | null = null): Observable<CustodySummaryResponse> {
+    const params = locationId ? new HttpParams().set('locationId', locationId) : new HttpParams();
+    return this.http.get<CustodySummaryResponse>('/api/custody/summary', { params });
   }
 
   listCustodians(): Observable<AssignableUserResponse[]> {
