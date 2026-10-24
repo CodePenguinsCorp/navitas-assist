@@ -12,14 +12,13 @@ import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaSlaResponse;
 import br.com.navitasassist.rma.RmaSlaStatus;
 import br.com.navitasassist.rma.RmaStatus;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Periodically turns SLA states into notification events. The key includes the stage start, so each stage of an RMA
- * alerts at most once per SLA level no matter how often the scan runs.
+ * Turns SLA states into notification events. The key includes the stage start, so each stage of an RMA alerts at most
+ * once per SLA level no matter how often the scan runs. Periodic execution lives in {@link SlaNotificationScheduler}.
  */
 @Service
 public class SlaNotificationScanner {
@@ -37,11 +36,6 @@ public class SlaNotificationScanner {
         this.notificationProcessor = notificationProcessor;
         this.readOnlyTransaction = new TransactionTemplate(transactionManager);
         this.readOnlyTransaction.setReadOnly(true);
-    }
-
-    @Scheduled(fixedDelayString = "${navitas.notifications.sla-scan.interval:PT5M}", initialDelayString = "${navitas.notifications.sla-scan.interval:PT5M}")
-    public void scheduledScan() {
-        scan(Instant.now());
     }
 
     public void scan(Instant now) {
