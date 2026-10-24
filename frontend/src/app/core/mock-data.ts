@@ -135,6 +135,11 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: ['ADMIN', 'SERVICE_DESK']
       },
       {
+        label: 'Protocolos',
+        route: '/protocolos',
+        roles: ['ADMIN']
+      },
+      {
         label: 'Usuários',
         route: '/usuarios',
         roles: ['ADMIN']

@@ -266,6 +266,10 @@
           }
         </div>
 
+        @if (protocolsComponent(); as protocols) {
+          <ng-container *ngComponentOutlet="protocols; inputs: { rmaId: rma.id }" />
+        }
+
         <div class="summary-block">
           <strong>Diagnóstico atual</strong>
           @if (rma.diagnosis) {

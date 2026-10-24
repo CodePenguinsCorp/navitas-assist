@@ -1,4 +1,5 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { NgComponentOutlet } from '@angular/common';
+import { Component, Type, computed, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { finalize, forkJoin } from 'rxjs';
 import {
@@ -62,7 +63,7 @@ interface CreateDateErrors {
 
 @Component({
   selector: 'app-rmas',
-  imports: [ReactiveFormsModule, CustomSelectComponent, DatePickerComponent],
+  imports: [ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, NgComponentOutlet],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {
@@ -188,6 +189,7 @@ interface CreateDateErrors {
   `]
 })
 export class RmasComponent {
+  protected readonly protocolsComponent = signal<Type<unknown> | null>(null);
   private readonly formBuilder = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly catalogService = inject(CatalogService);
@@ -369,6 +371,7 @@ export class RmasComponent {
   }
 
   protected openDetailsModal(rma: RmaResponse): void {
+    void import('../../shared/rma-protocols/rma-protocols.component').then((module) => this.protocolsComponent.set(module.RmaProtocolsComponent));
     this.selectRma(rma);
     this.pageMessage.set('');
     this.activeModal.set('details');
