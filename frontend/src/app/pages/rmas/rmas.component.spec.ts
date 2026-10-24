@@ -2,6 +2,7 @@ import { Signal, signal } from '@angular/core';
 import { FormArray, FormGroup } from '@angular/forms';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
+import { provideRouter } from '@angular/router';
 import { RmaResponse, UserSession, WarrantyStatus } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
@@ -23,6 +24,7 @@ describe('RmasComponent form', () => {
     await TestBed.configureTestingModule({
       imports: [RmasComponent],
       providers: [
+        provideRouter([]),
         {
           provide: AuthService,
           useValue: { currentUser: currentUser.asReadonly(), hasAnyRole: () => true },
