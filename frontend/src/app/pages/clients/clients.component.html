@@ -11,15 +11,15 @@
   <section class="stats-grid stats-grid--three">
     <article class="panel stat-card">
       <span>Com contato</span>
-      <strong>{{ clientsWithContact() }}</strong>
+      <strong>{{ summary().withContact }}</strong>
     </article>
     <article class="panel stat-card">
       <span>Com documento</span>
-      <strong>{{ clientsWithDocument() }}</strong>
+      <strong>{{ summary().withDocument }}</strong>
     </article>
     <article class="panel stat-card">
       <span>Com e-mail</span>
-      <strong>{{ clientsWithEmail() }}</strong>
+      <strong>{{ summary().withEmail }}</strong>
     </article>
   </section>
 
@@ -27,7 +27,7 @@
     <label class="search-field">
       <span class="search-field__heading">
         <span>Buscar</span>
-        <span class="catalog-toolbar__result">{{ filteredClients().length }} registro(s)</span>
+        <span class="catalog-toolbar__result">{{ totalElements() }} registro(s)</span>
       </span>
       <input
         #clientSearch
@@ -72,13 +72,13 @@
   <article class="table-card table-card--list panel">
     @if (loading() && clients().length === 0) {
       <p>Carregando clientes...</p>
-    } @else if (clients().length === 0) {
+    } @else if (clients().length === 0 && !hasActiveFilters) {
       <section class="empty-state">
         <h3>Nenhum cliente cadastrado.</h3>
         <p>Cadastre o primeiro cliente para vincular novos RMAs.</p>
         <button type="button" class="button-primary" (click)="openCreateModal()">Cadastrar cliente</button>
       </section>
-    } @else if (filteredClients().length === 0) {
+    } @else if (clients().length === 0) {
       <section class="empty-state">
         <h3>Nenhum resultado encontrado.</h3>
         <p>Ajuste a busca ou os filtros para localizar outro cliente.</p>
@@ -96,7 +96,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (client of filteredClients(); track client.id) {
+            @for (client of clients(); track client.id) {
               <tr>
                 <td>
                   <strong class="table-title">{{ client.legalName }}</strong>
@@ -133,6 +133,16 @@
           </tbody>
         </table>
       </div>
+      <app-pagination
+        [page]="page()"
+        [size]="pageSize()"
+        [totalElements]="totalElements()"
+        [totalPages]="totalPages()"
+        [shown]="clients().length"
+        [loading]="loading()"
+        (pageChange)="goToPage($event)"
+        (sizeChange)="changePageSize($event)"
+      />
     }
   </article>
 </section>

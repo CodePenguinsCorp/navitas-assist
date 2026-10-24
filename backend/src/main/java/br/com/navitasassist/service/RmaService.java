@@ -12,6 +12,8 @@ import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.diagnosis.Diagnosis;
 import br.com.navitasassist.diagnosis.DiagnosisRequest;
 import br.com.navitasassist.item.ItemIdentification;
+import br.com.navitasassist.pagination.PageParams;
+import br.com.navitasassist.pagination.PageResponse;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.CreateRmaRequest;
 import br.com.navitasassist.rma.RmaAssigneeUpdateRequest;
@@ -49,6 +51,14 @@ public class RmaService {
     @Transactional(readOnly = true)
     public List<RmaResponse> search(String query, RmaStatus status) {
         return rmaRecordRepository.search(trimToNull(query), status).stream().map(this::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<RmaResponse> searchPage(String query, RmaStatus status, Integer page, Integer size) {
+        return PageResponse.from(
+            rmaRecordRepository.searchPage(trimToNull(query), status, PageParams.of(page, size)),
+            this::toResponse
+        );
     }
 
     @Transactional(readOnly = true)

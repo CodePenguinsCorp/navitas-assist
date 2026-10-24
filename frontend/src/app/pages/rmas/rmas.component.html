@@ -12,15 +12,15 @@
 
   <section class="stats-grid stats-grid--three">
     <article class="panel stat-card">
-      <span>RMAs listados</span>
+      <span>RMAs encontrados</span>
       <strong>{{ totalRmas() }}</strong>
     </article>
     <article class="panel stat-card">
-      <span>Em atendimento</span>
+      <span>Em atendimento (nesta página)</span>
       <strong>{{ ongoingRmas() }}</strong>
     </article>
     <article class="panel stat-card">
-      <span>Prioridade alta</span>
+      <span>Prioridade alta (nesta página)</span>
       <strong>{{ highPriorityRmas() }}</strong>
     </article>
   </section>
@@ -41,7 +41,7 @@
     <article class="panel form-panel">
       <div class="support-line">
         <h3>Filtros</h3>
-        <span class="catalog-toolbar__result">{{ rmas().length }} registro(s)</span>
+        <span class="catalog-toolbar__result">{{ totalElements() }} registro(s)</span>
       </div>
       <form [formGroup]="filtersForm" (ngSubmit)="submitFilters()" class="form-grid form-grid--inline">
         <div class="field-group">
@@ -172,6 +172,16 @@
           </tbody>
         </table>
       </div>
+      <app-pagination
+        [page]="page()"
+        [size]="pageSize()"
+        [totalElements]="totalElements()"
+        [totalPages]="totalPages()"
+        [shown]="rmas().length"
+        [loading]="loading()"
+        (pageChange)="goToPage($event)"
+        (sizeChange)="changePageSize($event)"
+      />
     }
   </article>
 

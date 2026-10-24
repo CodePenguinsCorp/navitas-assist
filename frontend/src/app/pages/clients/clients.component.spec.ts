@@ -1,57 +1,44 @@
-import { Signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
 import { of } from 'rxjs';
-import { ClientRequest, ClientResponse } from '../../core/models';
-import { CatalogService } from '../../core/services/catalog.service';
+import { ClientRequest, ClientResponse, PageResponse } from '../../core/models';
+import { CatalogService, ClientFilters } from '../../core/services/catalog.service';
 import { PresenceFilter } from '../../core/utils/catalog-ui';
 import { ClientsComponent } from './clients.component';
 
-const CLIENTS: ClientResponse[] = [
-  {
-    id: 1, legalName: 'Alfa', tradeName: null, documentNumber: '123', contactName: null,
-    email: 'alfa@example.com', phone: null, address: null, notes: null,
+function client(id: number, legalName: string): ClientResponse {
+  return {
+    id, legalName, tradeName: null, documentNumber: null, contactName: null, email: null,
+    phone: null, address: null, notes: null,
     createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
-  },
-  {
-    id: 2, legalName: 'Beta', tradeName: null, documentNumber: null, contactName: null,
-    email: 'beta@example.com', phone: null, address: null, notes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
-  },
-  {
-    id: 3, legalName: 'Gama', tradeName: null, documentNumber: '456', contactName: null,
-    email: '   ', phone: null, address: null, notes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
-  }
-];
+  };
+}
 
-describe('ClientsComponent filters', () => {
+function page(content: ClientResponse[], pageNumber = 0, size = 20, totalElements = content.length): PageResponse<ClientResponse> {
+  return { content, page: pageNumber, size, totalElements, totalPages: Math.ceil(totalElements / size) };
+}
+
+describe('ClientsComponent pagination', () => {
   let component: ClientsHarness;
   let fixture: ComponentFixture<ClientsComponent>;
-  let clients: ClientResponse[];
+  let listClients: ReturnType<typeof vi.fn>;
+  let getClientSummary: ReturnType<typeof vi.fn>;
+  let deleteClient: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
-    clients = [...CLIENTS];
+    vi.useFakeTimers();
+    listClients = vi.fn((filters: ClientFilters) => of(page([client(1, 'Alfa'), client(2, 'Beta')], filters.page, filters.size, 45)));
+    getClientSummary = vi.fn(() => of({ total: 45, withContact: 10, withDocument: 20, withEmail: 30 }));
+    deleteClient = vi.fn(() => of(undefined));
+
     await TestBed.configureTestingModule({
       imports: [ClientsComponent],
       providers: [{ provide: CatalogService, useValue: {
-        listClients: () => of(clients),
-        createClient: (request: ClientRequest) => {
-          const client: ClientResponse = { ...request, id: 4,
-            createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' };
-          clients = [...clients, client];
-          return of(client);
-        },
-        updateClient: (id: number, request: ClientRequest) => {
-          const client: ClientResponse = { ...request, id,
-            createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' };
-          clients = clients.map((current) => current.id === id ? client : current);
-          return of(client);
-        },
-        deleteClient: (id: number) => {
-          clients = clients.filter((client) => client.id !== id);
-          return of(undefined);
-        }
+        listClients,
+        getClientSummary,
+        deleteClient,
+        createClient: (request: ClientRequest) => of({ ...client(9, request.legalName) }),
+        updateClient: (id: number, request: ClientRequest) => of({ ...client(id, request.legalName) })
       } }]
     }).compileComponents();
 
@@ -60,62 +47,87 @@ describe('ClientsComponent filters', () => {
     fixture.detectChanges();
   });
 
-  it('combines text, document and email filters and updates the result count', () => {
-    component.updateDocumentFilter('with');
-    component.updateEmailFilter('with');
-    expect(component.filteredClients().map((client) => client.id)).toEqual([1]);
+  afterEach(() => vi.useRealTimers());
 
-    component.updateSearch('gama');
-    expect(component.filteredClients()).toEqual([]);
+  it('loads the first page with the default size and shows the total and summary', () => {
+    expect(listClients).toHaveBeenLastCalledWith({ page: 0, size: 20, query: '', hasDocument: undefined, hasEmail: undefined });
+    expect(fixture.nativeElement.textContent).toContain('45 registro(s)');
+    expect(fixture.nativeElement.textContent).toContain('Página 1 de 3');
+    expect(fixture.nativeElement.textContent).toContain('1–2 de 45');
+    expect(getClientSummary).toHaveBeenCalledTimes(1);
+  });
+
+  it('navigates between pages and keeps the active filters', () => {
+    component.updateDocumentFilter('with');
+    component.goToPage(1);
+
+    expect(listClients).toHaveBeenLastCalledWith({ page: 1, size: 20, query: '', hasDocument: true, hasEmail: undefined });
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('0 registro(s)');
-    expect(fixture.nativeElement.textContent).toContain('Ajuste a busca ou os filtros');
-
-    component.updateEmailFilter('without');
-    expect(component.filteredClients().map((client) => client.id)).toEqual([3]);
+    expect(fixture.nativeElement.textContent).toContain('Página 2 de 3');
   });
 
-  it('clears one filter without losing the others', () => {
+  it('returns to the first page when a filter or the page size changes', () => {
+    component.goToPage(2);
+    component.updateEmailFilter('without');
+    expect(listClients).toHaveBeenLastCalledWith({ page: 0, size: 20, query: '', hasDocument: undefined, hasEmail: false });
+
+    component.goToPage(1);
+    component.changePageSize(50);
+    expect(listClients).toHaveBeenLastCalledWith({ page: 0, size: 50, query: '', hasDocument: undefined, hasEmail: false });
+  });
+
+  it('debounces the text search and queries the backend from the first page', () => {
+    component.goToPage(1);
+    listClients.mockClear();
+
+    component.updateSearch('al');
+    component.updateSearch('alfa');
+    expect(listClients).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(300);
+    expect(listClients).toHaveBeenCalledTimes(1);
+    expect(listClients).toHaveBeenLastCalledWith({ page: 0, size: 20, query: 'alfa', hasDocument: undefined, hasEmail: undefined });
+  });
+
+  it('shows the filtered empty state only when filters are active', () => {
+    listClients.mockImplementation(() => of(page([])));
     component.updateDocumentFilter('without');
-    component.updateEmailFilter('with');
-    expect(component.filteredClients().map((client) => client.id)).toEqual([2]);
+    fixture.detectChanges();
 
-    component.updateDocumentFilter('all');
-    expect(component.filteredClients().map((client) => client.id)).toEqual([1, 2]);
-    component.updateEmailFilter('all');
-    expect(component.filteredClients()).toHaveLength(3);
+    expect(fixture.nativeElement.textContent).toContain('Nenhum resultado encontrado.');
+    expect(fixture.nativeElement.textContent).toContain('0 registro(s)');
   });
 
-  it('keeps the filters correct after creating, editing and deleting clients', () => {
-    component.updateDocumentFilter('with');
-    component.updateEmailFilter('without');
-    expect(component.filteredClients().map((client) => client.id)).toEqual([3]);
+  it('reloads the current page and the summary after deleting a client', () => {
+    component.goToPage(1);
+    listClients.mockClear();
+    getClientSummary.mockClear();
 
-    component.openCreateModal();
-    component.form.patchValue({ legalName: 'Delta', documentNumber: '789' });
-    component.saveClient();
-    expect(component.filteredClients().map((client) => client.id)).toEqual([4, 3]);
-
-    component.openEditModal(CLIENTS[2]);
-    component.form.patchValue({ email: 'gama@example.com' });
-    component.saveClient();
-    expect(component.filteredClients().map((client) => client.id)).toEqual([4]);
-
-    component.openDeleteModal(clients.find((client) => client.id === 4)!);
+    component.openDeleteModal(client(1, 'Alfa'));
     component.confirmDeleteClient();
-    expect(component.filteredClients()).toEqual([]);
+
+    expect(deleteClient).toHaveBeenCalledWith(1);
+    expect(listClients).toHaveBeenLastCalledWith({ page: 1, size: 20, query: '', hasDocument: undefined, hasEmail: undefined });
+    expect(getClientSummary).toHaveBeenCalledTimes(1);
+  });
+
+  it('moves back to the last page when the current page becomes empty', () => {
+    listClients.mockImplementation((filters: ClientFilters) =>
+      of(filters.page === 2 ? page([], 2, 20, 40) : page([client(1, 'Alfa')], filters.page, filters.size, 40)));
+
+    component.goToPage(2);
+
+    expect(listClients).toHaveBeenLastCalledWith({ page: 1, size: 20, query: '', hasDocument: undefined, hasEmail: undefined });
   });
 });
 
 interface ClientsHarness {
   form: FormGroup;
-  filteredClients: Signal<ClientResponse[]>;
   updateSearch(value: string): void;
   updateDocumentFilter(value: PresenceFilter): void;
   updateEmailFilter(value: PresenceFilter): void;
-  openCreateModal(): void;
-  openEditModal(client: ClientResponse): void;
-  saveClient(): void;
+  goToPage(page: number): void;
+  changePageSize(size: number): void;
   openDeleteModal(client: ClientResponse): void;
   confirmDeleteClient(): void;
 }

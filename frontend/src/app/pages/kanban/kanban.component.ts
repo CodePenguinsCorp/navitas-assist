@@ -526,7 +526,7 @@ export class KanbanComponent {
     this.pageError.set('');
 
     forkJoin({
-      rmas: this.rmaService.list(),
+      rmas: this.rmaService.listBoard(),
       assignableUsers: this.catalogService.listAssignableUsers(),
     })
       .pipe(finalize(() => this.loading.set(false)))
