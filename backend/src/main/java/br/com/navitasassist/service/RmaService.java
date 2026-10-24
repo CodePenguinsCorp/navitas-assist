@@ -27,6 +27,7 @@ import br.com.navitasassist.rma.RmaResponse;
 import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusHistory;
 import br.com.navitasassist.rma.RmaStatusUpdateRequest;
+import br.com.navitasassist.rma.RmaSummaryResponse;
 import br.com.navitasassist.rma.UpdateRmaRequest;
 import br.com.navitasassist.user.UserAccount;
 import lombok.RequiredArgsConstructor;
@@ -59,6 +60,11 @@ public class RmaService {
             rmaRecordRepository.searchPage(trimToNull(query), status, PageParams.of(page, size)),
             this::toResponse
         );
+    }
+
+    @Transactional(readOnly = true)
+    public RmaSummaryResponse summarize(String query, RmaStatus status) {
+        return rmaRecordRepository.summarize(trimToNull(query), status, List.of(RmaStatus.COMPLETED, RmaStatus.RETURNED, RmaStatus.IRREPARABLE));
     }
 
     @Transactional(readOnly = true)

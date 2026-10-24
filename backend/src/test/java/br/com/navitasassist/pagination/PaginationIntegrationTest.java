@@ -271,6 +271,35 @@ class PaginationIntegrationTest {
             .andExpect(jsonPath("$.content[*].code", contains("RMA-Q-MED-OLD", "RMA-Q-MED-NEW", "RMA-Q-LOW-OLD")));
     }
 
+    @Test
+    void shouldSummarizeRmasAcrossAllPagesWithTheListFilters() throws Exception {
+        Client client = saveClient("Summary Client", null, null);
+        Product product = saveProduct("SKU-SUMMARY", "Summary product", null, null);
+
+        saveRma(client, product, "RMA-S-1", RmaStatus.RECEIVED, 1, RmaPriority.HIGH);
+        saveRma(client, product, "RMA-S-2", RmaStatus.IN_REPAIR, 2, RmaPriority.HIGH);
+        saveRma(client, product, "RMA-S-3", RmaStatus.COMPLETED, 3, RmaPriority.HIGH);
+        saveRma(client, product, "RMA-S-4", RmaStatus.RETURNED, 4, RmaPriority.LOW);
+        saveRma(client, product, "RMA-S-5", RmaStatus.RECEIVED, 5, RmaPriority.MEDIUM);
+
+        mockMvc.perform(get("/api/rmas/summary").with(admin()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(5))
+            .andExpect(jsonPath("$.ongoing").value(3))
+            .andExpect(jsonPath("$.highPriority").value(3));
+        mockMvc.perform(get("/api/rmas/summary").param("status", "RECEIVED").with(user("viewer").roles("VIEWER")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(2))
+            .andExpect(jsonPath("$.ongoing").value(2))
+            .andExpect(jsonPath("$.highPriority").value(1));
+        mockMvc.perform(get("/api/rmas/summary").param("query", "RMA-S-3").with(admin()))
+            .andExpect(jsonPath("$.total").value(1))
+            .andExpect(jsonPath("$.ongoing").value(0));
+        mockMvc.perform(get("/api/rmas").param("size", "2").with(admin()))
+            .andExpect(jsonPath("$.content", hasSize(2)))
+            .andExpect(jsonPath("$.totalElements").value(5));
+    }
+
     private RequestPostProcessor admin() {
         return user("admin").roles("ADMIN");
     }

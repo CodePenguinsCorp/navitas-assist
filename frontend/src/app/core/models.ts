@@ -346,6 +346,12 @@ export interface PageResponse<T> {
   totalPages: number;
 }
 
+export interface RmaSummaryResponse {
+  total: number;
+  ongoing: number;
+  highPriority: number;
+}
+
 export interface ClientSummaryResponse {
   total: number;
   withContact: number;
