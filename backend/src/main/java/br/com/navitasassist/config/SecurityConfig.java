@@ -54,6 +54,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/assignable").authenticated()
                 .requestMatchers("/api/kanban-views/**").authenticated()
+                .requestMatchers("/api/notifications/**").authenticated()
+                .requestMatchers("/api/notification-rules/**").hasRole("ADMIN")
                 .requestMatchers("/api/users/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/auth/me", "/api/clients/**", "/api/products/**", "/api/rmas/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/auth/logout").authenticated()

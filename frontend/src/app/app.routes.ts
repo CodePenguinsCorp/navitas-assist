@@ -43,6 +43,11 @@ export const routes: Routes = [
         title: 'Kanban | Navitas Assist'
       },
       {
+        path: 'notificacoes',
+        loadComponent: () => import('./pages/notifications/notifications.component').then((module) => module.NotificationsComponent),
+        title: 'Notificações | Navitas Assist'
+      },
+      {
         path: 'cadastros',
         pathMatch: 'full',
         redirectTo: 'clientes'
