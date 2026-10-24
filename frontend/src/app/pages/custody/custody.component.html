@@ -1,0 +1,191 @@
+<section class="page-surface">
+  <section class="page-heading">
+    <div>
+      <h1>Localização</h1>
+    </div>
+  </section>
+
+  <section class="stats-grid stats-grid--three">
+    <article class="panel stat-card">
+      <span>Equipamentos</span>
+      <strong>{{ entries().length }}</strong>
+    </article>
+    <article class="panel stat-card">
+      <span>Sem localização</span>
+      <strong>{{ missingCount() }}</strong>
+    </article>
+    <article class="panel stat-card">
+      <span>Parados</span>
+      <strong>{{ staleCount() }}</strong>
+    </article>
+  </section>
+
+  <section class="panel catalog-toolbar catalog-toolbar--filters">
+    <label class="search-field">
+      <span class="search-field__heading">
+        <span>Buscar</span>
+        <span class="catalog-toolbar__result">{{ filteredEntries().length }} registro(s)</span>
+      </span>
+      <input #custodySearch type="search" placeholder="RMA, cliente, produto, local ou responsável" [value]="searchTerm()" (input)="updateSearch(custodySearch.value)" />
+    </label>
+    <label class="filter-field">
+      <span>Local ou área</span>
+      <app-custom-select ariaLabel="Filtrar por local" [options]="locationFilterOptions()" [value]="locationFilter()" (valueChange)="updateLocationFilter($any($event))" />
+    </label>
+    <label class="filter-field">
+      <span>Sinalização</span>
+      <app-custom-select ariaLabel="Filtrar por sinalização" [options]="flagFilterOptions" [value]="flagFilter()" (valueChange)="updateFlagFilter($any($event))" />
+    </label>
+  </section>
+
+  @if (errorMessage()) {
+    <article class="panel alert-banner alert-banner--error">
+      <strong>{{ errorMessage() }}</strong>
+    </article>
+  }
+
+  @if (successMessage()) {
+    <article class="panel alert-banner alert-banner--success">
+      <strong>{{ successMessage() }}</strong>
+    </article>
+  }
+
+  <article class="table-card table-card--list panel">
+    @if (loading() && entries().length === 0) {
+      <p>Carregando localização dos equipamentos...</p>
+    } @else if (filteredEntries().length === 0) {
+      <section class="empty-state">
+        <h3>Nenhum equipamento encontrado.</h3>
+        <p>Ajuste a busca ou os filtros para localizar outros equipamentos.</p>
+      </section>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>RMA</th>
+              <th>Etapa</th>
+              <th>Local atual</th>
+              <th>Responsável</th>
+              <th>Desde</th>
+              <th>Sinalização</th>
+              <th class="table-actions-col">Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (entry of filteredEntries(); track entry.rmaId) {
+              <tr>
+                <td>
+                  <strong class="table-title">{{ entry.rmaCode }}</strong>
+                  <span class="table-subtitle">{{ entry.clientName }} · {{ entry.productName }}</span>
+                </td>
+                <td>{{ rmaStatusLabel(entry.rmaStatus) }}</td>
+                <td>{{ entry.locationName ? entry.locationCode + ' · ' + entry.locationName : 'Sem localização' }}</td>
+                <td>{{ entry.custodianName ?? '—' }}</td>
+                <td>{{ dateTimeLabel(entry.since) }}</td>
+                <td><span [class]="'mini-chip ' + flagClass(entry.flag)">{{ flagLabel(entry.flag) }}</span></td>
+                <td class="table-actions-col">
+                  <div class="custody-actions">
+                    @if (canMove()) {
+                      <button type="button" class="button-secondary button-secondary--small" (click)="openMoveModal(entry)">Movimentar</button>
+                    }
+                    <button type="button" class="button-secondary button-secondary--small" (click)="openHistory(entry)">Histórico</button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </article>
+</section>
+
+@if (movingEntry(); as entry) {
+  <div class="modal-overlay" (click)="closeMoveModal()">
+    <section class="modal-panel panel" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <div>
+          <h3>Movimentar {{ entry.rmaCode }}</h3>
+          <p>Local atual: {{ entry.locationName ?? 'sem localização' }}</p>
+        </div>
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeMoveModal()">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </header>
+
+      @if (modalErrorMessage()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ modalErrorMessage() }}</strong>
+        </article>
+      }
+
+      <form class="form-grid" [formGroup]="form" (ngSubmit)="saveMovement()">
+        <label class="field-group">
+          <span>Movimentação</span>
+          <app-custom-select ariaLabel="Tipo de movimentação" [options]="movementTypeOptions()" formControlName="type" />
+        </label>
+
+        @if (!isExit()) {
+          <label class="field-group">
+            <span>Destino</span>
+            <app-custom-select ariaLabel="Local de destino" placeholder="Selecione o local" [options]="destinationOptions()" formControlName="toLocationId" />
+          </label>
+
+          <label class="field-group">
+            <span>Responsável pela custódia</span>
+            <app-custom-select ariaLabel="Responsável pela custódia" [options]="custodianOptions()" formControlName="custodianId" />
+          </label>
+        }
+
+        <label class="field-group field-group--full">
+          <span>Motivo (máx. {{ reasonLimit }} caracteres)</span>
+          <textarea formControlName="reason" [attr.maxlength]="reasonLimit"></textarea>
+        </label>
+
+        <div class="form-actions form-actions--full">
+          <button type="submit" class="button-primary" [disabled]="submitting()">{{ submitting() ? 'Registrando...' : 'Registrar movimentação' }}</button>
+          <button type="button" class="button-secondary" (click)="closeMoveModal()" [disabled]="submitting()">Cancelar</button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (historyEntry(); as entry) {
+  <div class="modal-overlay" (click)="closeHistory()">
+    <section class="modal-panel panel" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <div>
+          <h3>Histórico de custódia · {{ entry.rmaCode }}</h3>
+          <p>Registros permanentes; não podem ser editados nem apagados.</p>
+        </div>
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeHistory()">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </header>
+
+      @if (modalErrorMessage()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ modalErrorMessage() }}</strong>
+        </article>
+      }
+
+      @if (history().length === 0) {
+        <p>Nenhuma movimentação registrada.</p>
+      } @else {
+        <ul class="custody-history">
+          @for (movement of history(); track movement.id) {
+            <li>
+              <strong>{{ movementLabel(movement.type) }}: {{ movement.fromLocationName ?? '—' }} → {{ movement.toLocationName ?? 'Fora da custódia' }}</strong>
+              <p>Responsável: {{ movement.custodianName ?? '—' }} · Operador: {{ movement.performedBy }} · {{ dateTimeLabel(movement.performedAt) }}</p>
+              @if (movement.reason) {
+                <p>Motivo: {{ movement.reason }}</p>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  </div>
+}
