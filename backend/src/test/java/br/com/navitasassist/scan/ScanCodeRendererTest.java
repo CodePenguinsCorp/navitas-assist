@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 class ScanCodeRendererTest {
 
     private static final String TOKEN = "K7M2Q4XW7ZP3HTD6RVB5NCJ6LYG2FA4S";
+    private static final String BARCODE_TOKEN = "048213907765120394857601";
 
     private final ScanCodeRenderer renderer = new ScanCodeRenderer();
 
@@ -28,7 +29,15 @@ class ScanCodeRendererTest {
 
     @Test
     void barcodeDecodesBackToTheOpaqueToken() throws Exception {
-        assertEquals(TOKEN, decode(renderer.matrix(TOKEN, ScanCodeFormat.BARCODE), BarcodeFormat.CODE_128));
+        assertEquals(BARCODE_TOKEN, decode(renderer.matrix(BARCODE_TOKEN, ScanCodeFormat.BARCODE), BarcodeFormat.CODE_128));
+    }
+
+    @Test
+    void barcodeModulesStayPrintableAt203Dpi() {
+        assertEquals(187, renderer.matrix(BARCODE_TOKEN, ScanCodeFormat.BARCODE).getWidth());
+        assertTrue(renderer.barcodeModuleWidthMm(BARCODE_TOKEN) >= ScanCodeRenderer.MIN_BARCODE_MODULE_MM, "module " + renderer.barcodeModuleWidthMm(BARCODE_TOKEN) + " mm");
+        // The 32-character QR token would be far too dense as Code 128, which is why the barcode has its own payload.
+        assertTrue(renderer.barcodeModuleWidthMm(TOKEN) < ScanCodeRenderer.MIN_BARCODE_MODULE_MM);
     }
 
     @Test

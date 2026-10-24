@@ -188,7 +188,7 @@ class DatabaseMigrationTest {
             assertEquals(Set.of("idx_rma_scan_actions_rma_id"), applicationIndexes(connection, "rma_scan_actions"));
 
             long rmaId = insertRma(connection, insertClient(connection), insertProduct(connection));
-            String insert = "INSERT INTO rma_scan_codes (rma_id, token, active, created_at, created_by) VALUES (" + rmaId + ", 'TOKEN', TRUE, CURRENT_TIMESTAMP, 'teste')";
+            String insert = "INSERT INTO rma_scan_codes (rma_id, token, barcode_token, active, created_at, created_by) VALUES (" + rmaId + ", 'TOKEN', '000000000000000000000001', TRUE, CURRENT_TIMESTAMP, 'teste')";
             try (Statement statement = connection.createStatement()) {
                 statement.executeUpdate(insert);
                 assertThrows(SQLException.class, () -> statement.executeUpdate(insert));

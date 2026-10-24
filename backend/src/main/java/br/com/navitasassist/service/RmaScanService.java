@@ -26,7 +26,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Scan codes are 160 random bits in Base32 (32 characters): they reveal nothing about the RMA and are not guessable.
+ * Scan codes are 160 random bits in Base32 (32 characters, printed as QR) plus 24 random digits (about 80 bits, printed
+ * as Code 128): they reveal nothing about the RMA and are not guessable.
  * Malformed, unknown and revoked codes all fail with the same not-found response, so a lookup never confirms existence.
  */
 @Service
@@ -37,6 +38,7 @@ public class RmaScanService {
     private static final String NOT_FOUND = "Scan code not found.";
     private static final char[] BASE32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".toCharArray();
     private static final Pattern TOKEN_FORMAT = Pattern.compile("[A-Z2-7]{32}");
+    private static final Pattern BARCODE_TOKEN_FORMAT = Pattern.compile("[0-9]{24}");
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final RmaScanCodeRepository rmaScanCodeRepository;
@@ -55,6 +57,7 @@ public class RmaScanService {
             RmaScanCode code = new RmaScanCode();
             code.setRma(rma);
             code.setToken(newToken());
+            code.setBarcodeToken(newBarcodeToken());
             code.setCreatedAt(Instant.now());
             code.setCreatedBy(currentUsername());
             return rmaScanCodeRepository.save(code);
@@ -73,7 +76,7 @@ public class RmaScanService {
     @Transactional(readOnly = true)
     public String svg(Long rmaId, ScanCodeFormat format) {
         RmaScanCode code = rmaScanCodeRepository.findFirstByRma_IdAndActiveTrueOrderByIdDesc(rmaId).orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND));
-        return renderer.svg(code.getToken(), format);
+        return renderer.svg(format == ScanCodeFormat.QR ? code.getToken() : code.getBarcodeToken(), format);
     }
 
     @Transactional(readOnly = true)
@@ -109,10 +112,13 @@ public class RmaScanService {
 
     private RmaScanCode activeCode(String token) {
         String normalized = token == null ? "" : token.trim().toUpperCase(Locale.ROOT);
-        if (!TOKEN_FORMAT.matcher(normalized).matches()) {
-            throw new ResourceNotFoundException(NOT_FOUND);
+        if (TOKEN_FORMAT.matcher(normalized).matches()) {
+            return rmaScanCodeRepository.findByTokenAndActiveTrue(normalized).orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND));
         }
-        return rmaScanCodeRepository.findByTokenAndActiveTrue(normalized).orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND));
+        if (BARCODE_TOKEN_FORMAT.matcher(normalized).matches()) {
+            return rmaScanCodeRepository.findByBarcodeTokenAndActiveTrue(normalized).orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND));
+        }
+        throw new ResourceNotFoundException(NOT_FOUND);
     }
 
     private String newToken() {
@@ -128,6 +134,14 @@ public class RmaScanService {
                 token.append(BASE32[(buffer >> (bits - 5)) & 31]);
                 bits -= 5;
             }
+        }
+        return token.toString();
+    }
+
+    private String newBarcodeToken() {
+        StringBuilder token = new StringBuilder(24);
+        for (int i = 0; i < 24; i++) {
+            token.append(RANDOM.nextInt(10));
         }
         return token.toString();
     }

@@ -2,12 +2,14 @@ CREATE TABLE rma_scan_codes (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     rma_id BIGINT NOT NULL,
     token VARCHAR(40) NOT NULL,
+    barcode_token VARCHAR(24) NOT NULL,
     active BOOLEAN NOT NULL,
     created_at DATETIME(6) NOT NULL,
     created_by VARCHAR(120) NOT NULL,
     revoked_at DATETIME(6),
     revoked_by VARCHAR(120),
     CONSTRAINT uk_rma_scan_codes_token UNIQUE (token),
+    CONSTRAINT uk_rma_scan_codes_barcode_token UNIQUE (barcode_token),
     CONSTRAINT fk_rma_scan_codes_rma FOREIGN KEY (rma_id) REFERENCES rmas (id) ON DELETE CASCADE
 );
 

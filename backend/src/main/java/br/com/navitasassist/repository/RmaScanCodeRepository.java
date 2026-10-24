@@ -12,5 +12,8 @@ public interface RmaScanCodeRepository extends JpaRepository<RmaScanCode, Long> 
     Optional<RmaScanCode> findByTokenAndActiveTrue(String token);
 
     @EntityGraph(attributePaths = { "rma" })
+    Optional<RmaScanCode> findByBarcodeTokenAndActiveTrue(String barcodeToken);
+
+    @EntityGraph(attributePaths = { "rma" })
     Optional<RmaScanCode> findFirstByRma_IdAndActiveTrueOrderByIdDesc(Long rmaId);
 }

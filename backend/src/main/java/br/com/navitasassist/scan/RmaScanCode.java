@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * Opaque, random identifier printed on an RMA label. It carries no RMA data and stops resolving once revoked.
+ * Opaque, random identifiers printed on an RMA label (QR and barcode). They carry no RMA data and stop resolving once revoked.
  */
 @Getter
 @Setter
@@ -36,6 +36,13 @@ public class RmaScanCode {
 
     @Column(nullable = false, unique = true, length = 40, updatable = false)
     private String token;
+
+    /**
+     * Shorter numeric identifier (24 random digits, about 80 bits) printed only as Code 128, so the barcode modules stay
+     * wide enough for 203 dpi printers. Revoked together with {@link #token}.
+     */
+    @Column(nullable = false, unique = true, length = 24, updatable = false)
+    private String barcodeToken;
 
     @Column(nullable = false)
     private boolean active = true;

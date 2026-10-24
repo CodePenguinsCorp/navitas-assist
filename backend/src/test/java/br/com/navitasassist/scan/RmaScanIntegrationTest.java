@@ -132,6 +132,19 @@ class RmaScanIntegrationTest {
     }
 
     @Test
+    void barcodePayloadIsAShorterOpaqueCodeForTheSameRma() throws Exception {
+        issue(DESK);
+        String barcodeToken = rmaScanCodeRepository.findFirstByRma_IdAndActiveTrueOrderByIdDesc(rma.getId()).orElseThrow().getBarcodeToken();
+
+        assertTrue(barcodeToken.matches("[0-9]{24}"), barcodeToken);
+        mockMvc.perform(get("/api/scan/{token}", barcodeToken).with(VIEWER)).andExpect(status().isOk()).andExpect(jsonPath("$.id").value(rma.getId()));
+
+        mockMvc.perform(post("/api/rmas/{id}/scan-code/revoke", rma.getId()).with(DESK).with(csrf())).andExpect(status().isNoContent());
+        assertEquals("Scan code not found.", notFoundMessage(barcodeToken));
+        assertEquals("Scan code not found.", notFoundMessage("000000000000000000000000"));
+    }
+
+    @Test
     void invalidUnknownAndRevokedTokensLookExactlyTheSame() throws Exception {
         String token = issue(DESK);
 

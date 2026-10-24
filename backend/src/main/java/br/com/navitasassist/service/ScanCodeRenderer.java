@@ -20,15 +20,36 @@ public class ScanCodeRenderer {
 
     private static final int BARCODE_HEIGHT = 60;
 
+    /**
+     * Printable width of the barcode on the 100 x 50 mm label: 100 mm minus 3 mm padding on each side. The barcode spans
+     * this full width, so module width = 94 mm / total modules (quiet zones included).
+     */
+    public static final double LABEL_BARCODE_WIDTH_MM = 94.0;
+
+    /**
+     * Minimum module width accepted for the printed Code 128 (about 2.6 dots at 203 dpi).
+     */
+    public static final double MIN_BARCODE_MODULE_MM = 0.33;
+
     public BitMatrix matrix(String token, ScanCodeFormat format) {
         try {
             if (format == ScanCodeFormat.QR) {
                 return new QRCodeWriter().encode(token, BarcodeFormat.QR_CODE, 0, 0, Map.of(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M, EncodeHintType.MARGIN, 2));
             }
-            return new Code128Writer().encode(token, BarcodeFormat.CODE_128, 0, 1, Map.of(EncodeHintType.MARGIN, 10));
+            // For 1D codes ZXing's MARGIN is the total of both sides: 20 gives the 10-module quiet zone Code 128 requires per side.
+            return new Code128Writer().encode(token, BarcodeFormat.CODE_128, 0, 1, Map.of(EncodeHintType.MARGIN, 20));
         } catch (WriterException exception) {
             throw new IllegalStateException("Scan code could not be encoded.", exception);
         }
+    }
+
+    /**
+     * Module width the printed barcode will have on the label. With the 24-digit barcode token, Code 128 set C encodes two
+     * digits per symbol: (12 + start + check) x 11 + stop 13 = 167 modules, plus 2 x 10 quiet zone = 187 modules, i.e.
+     * 94 / 187 = 0.50 mm per module.
+     */
+    public double barcodeModuleWidthMm(String barcodeToken) {
+        return LABEL_BARCODE_WIDTH_MM / matrix(barcodeToken, ScanCodeFormat.BARCODE).getWidth();
     }
 
     public String svg(String token, ScanCodeFormat format) {
