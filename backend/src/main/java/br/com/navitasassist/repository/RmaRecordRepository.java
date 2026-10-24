@@ -24,16 +24,30 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
 
     Optional<RmaRecord> findTopByCodeStartingWithOrderByCodeDesc(String prefix);
 
+    // Report rows with their to-one relations; collections are loaded by the fetch* queries below for the same RMAs.
     @Query("""
         select r from RmaRecord r
-        where (:entryFrom is null or r.entryDate >= :entryFrom)
-          and (:entryTo is null or r.entryDate <= :entryTo)
+        join fetch r.client
+        join fetch r.product
+        left join fetch r.assignee
+        left join fetch r.diagnosis
+        where r.entryDate >= :entryFrom
+          and r.entryDate <= :entryTo
           and (:status is null or r.status = :status)
           and (:clientId is null or r.client.id = :clientId)
         order by r.entryDate desc, r.id desc
         """)
     List<RmaRecord> searchReport(@Param("entryFrom") LocalDate entryFrom, @Param("entryTo") LocalDate entryTo,
         @Param("status") RmaStatus status, @Param("clientId") Long clientId);
+
+    @Query("select distinct r from RmaRecord r left join fetch r.items i left join fetch i.product where r in :rmas")
+    List<RmaRecord> fetchItemsWithProducts(@Param("rmas") List<RmaRecord> rmas);
+
+    @Query("select distinct r from RmaRecord r left join fetch r.statusHistory where r in :rmas")
+    List<RmaRecord> fetchStatusHistory(@Param("rmas") List<RmaRecord> rmas);
+
+    @Query("select distinct r from RmaRecord r left join fetch r.assignmentHistory where r in :rmas")
+    List<RmaRecord> fetchAssignmentHistory(@Param("rmas") List<RmaRecord> rmas);
 
     @Query("""
         select distinct r

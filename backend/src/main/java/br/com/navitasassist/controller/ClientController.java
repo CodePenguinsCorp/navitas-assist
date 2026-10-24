@@ -30,6 +30,11 @@ public class ClientController {
         return clientService.listAll();
     }
 
+    @GetMapping("/options")
+    public List<ClientResponse> listOptions() {
+        return clientService.listOptions();
+    }
+
     @GetMapping("/{id}")
     public ClientResponse getById(@PathVariable Long id) {
         return clientService.getById(id);

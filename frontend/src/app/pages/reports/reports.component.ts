@@ -6,11 +6,14 @@ import { FAILURE_CAUSE_LABELS, FAILURE_TYPE_LABELS, RMA_STATUS_FLOW, RMA_STATUS_
 import { RmaReportResponse, RmaStatus } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import { ReportService } from '../../core/services/report.service';
-import { formatDateOnly } from '../../core/utils/date';
+import { formatDateOnly, todayInputValue } from '../../core/utils/date';
 import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
 
 type ReportType = 'technical' | 'aging' | 'warranty' | 'returns';
+
+const DEFAULT_PERIOD_DAYS = 90;
+const MAX_PERIOD_DAYS = 366;
 
 @Component({
   selector: 'app-reports',
@@ -26,7 +29,7 @@ export class ReportsComponent {
   private request?: Subscription;
 
   protected readonly form = this.formBuilder.nonNullable.group({
-    report: 'technical' as ReportType, entryFrom: '', entryTo: '', status: '' as RmaStatus | '',
+    report: 'technical' as ReportType, entryFrom: shiftDate(todayInputValue(), -(DEFAULT_PERIOD_DAYS - 1)), entryTo: todayInputValue(), status: '' as RmaStatus | '',
     clientId: this.formBuilder.control<number | null>(null)
   });
   protected readonly reportType = toSignal(this.form.controls.report.valueChanges, { initialValue: this.form.controls.report.value });
@@ -65,7 +68,7 @@ export class ReportsComponent {
 
   protected loadClients(): void {
     this.clientsError.set('');
-    this.catalogService.listClients().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.catalogService.listClientOptions().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (clients) => this.clientOptions.set([{ value: null, label: 'Todos os clientes' },
         ...clients.map((client) => ({ value: client.id, label: client.legalName }))]),
       error: () => this.clientsError.set('Não foi possível carregar os clientes para o filtro.')
@@ -79,6 +82,10 @@ export class ReportsComponent {
     const { entryFrom, entryTo, status, clientId } = this.form.getRawValue();
     if (entryFrom && entryTo && entryFrom > entryTo) {
       this.errorMessage.set('A data inicial deve ser anterior ou igual à data final.');
+      return;
+    }
+    if (entryFrom && entryTo && daysBetween(entryFrom, entryTo) + 1 > MAX_PERIOD_DAYS) {
+      this.errorMessage.set(`O período do relatório deve ter no máximo ${MAX_PERIOD_DAYS} dias.`);
       return;
     }
     this.loading.set(true);
@@ -99,4 +106,14 @@ export class ReportsComponent {
     const days = Math.floor(minutes / 1440);
     return `${days ? `${days}d ` : ''}${Math.floor(minutes % 1440 / 60)}h ${minutes % 60}min`;
   }
+}
+
+function shiftDate(value: string, days: number): string {
+  const date = new Date(`${value}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000);
 }

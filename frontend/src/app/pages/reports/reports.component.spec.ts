@@ -32,7 +32,7 @@ describe('ReportsComponent', () => {
   let http: HttpTestingController;
   const text = () => fixture.nativeElement.textContent as string;
   const respond = (rmas: RmaResponse[] = [RMA]) => {
-    http.expectOne((request) => request.url === '/api/reports/rmas').flush({ generatedAt: '2026-10-21T01:00:00Z', rmas });
+    http.expectOne((request) => request.url === '/api/reports/rmas').flush({ generatedAt: '2026-10-21T01:00:00Z', entryFrom: '2026-07-24', entryTo: '2026-10-21', rmas });
     fixture.detectChanges();
   };
 
@@ -44,12 +44,26 @@ describe('ReportsComponent', () => {
     fixture = TestBed.createComponent(ReportsComponent);
     component = fixture.componentInstance as unknown as ReportsHarness;
     fixture.detectChanges();
-    http.expectOne('/api/clients').flush([{ id: 2, legalName: 'Cliente Alfa', tradeName: null, documentNumber: null,
+    http.expectOne('/api/clients/options').flush([{ id: 2, legalName: 'Cliente Alfa', tradeName: null, documentNumber: null,
       contactName: null, email: null, phone: null, address: null, notes: null,
       createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' }]);
   });
 
   afterEach(() => http.verify());
+
+  it('starts with the last 90 days and blocks periods longer than 366 days', () => {
+    const initial = http.expectOne((request) => request.url === '/api/reports/rmas');
+    const from = initial.request.params.get('entryFrom') as string;
+    const to = initial.request.params.get('entryTo') as string;
+    expect((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000).toBe(89);
+    initial.flush({ generatedAt: '2026-10-21T01:00:00Z', entryFrom: from, entryTo: to, rmas: [] });
+
+    component.form.patchValue({ entryFrom: '2025-01-01', entryTo: '2026-01-02' });
+    component.loadReports();
+    fixture.detectChanges();
+    http.expectNone((request) => request.url === '/api/reports/rmas');
+    expect(text()).toContain('no máximo 366 dias');
+  });
 
   it('loads real technical details and formats civil dates and the snapshot in Sao Paulo', () => {
     expect(text()).toContain('Carregando relatórios');
@@ -152,14 +166,14 @@ describe('ReportsComponent', () => {
   it('keeps report access available when the client selector fails and allows retrying it', () => {
     respond();
     component.loadClients();
-    http.expectOne('/api/clients').flush({}, { status: 500, statusText: 'Server error' });
+    http.expectOne('/api/clients/options').flush({}, { status: 500, statusText: 'Server error' });
     fixture.detectChanges();
     expect(text()).toContain('Não foi possível carregar os clientes');
     expect(text()).toContain('RMA-REAL');
     const retry = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
       .find((button) => button.textContent?.includes('Recarregar clientes'))!;
     retry.click();
-    http.expectOne('/api/clients').flush([]);
+    http.expectOne('/api/clients/options').flush([]);
     fixture.detectChanges();
     expect(text()).not.toContain('Não foi possível carregar os clientes');
   });

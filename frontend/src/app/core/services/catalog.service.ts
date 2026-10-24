@@ -20,6 +20,10 @@ export class CatalogService {
     return this.http.get<ClientResponse[]>('/api/clients');
   }
 
+  listClientOptions(): Observable<ClientResponse[]> {
+    return this.http.get<ClientResponse[]>('/api/clients/options');
+  }
+
   createClient(payload: ClientRequest): Observable<ClientResponse> {
     return this.http.post<ClientResponse>('/api/clients', payload);
   }

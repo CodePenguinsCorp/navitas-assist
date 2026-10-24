@@ -300,6 +300,8 @@ export interface RmaReportFilters {
 
 export interface RmaReportResponse {
   generatedAt: string;
+  entryFrom: string;
+  entryTo: string;
   rmas: RmaResponse[];
 }
 

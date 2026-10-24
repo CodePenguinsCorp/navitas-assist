@@ -27,6 +27,11 @@ public class ClientService {
     }
 
     @Transactional(readOnly = true)
+    public List<ClientResponse> listOptions() {
+        return clientRepository.findAllByOrderByLegalNameAscIdAsc().stream().map(ClientResponse::from).toList();
+    }
+
+    @Transactional(readOnly = true)
     public ClientResponse getById(Long id) {
         return ClientResponse.from(getEntityById(id));
     }
