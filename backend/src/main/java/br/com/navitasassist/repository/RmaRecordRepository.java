@@ -57,6 +57,7 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
         """)
     List<RmaRecord> search(@Param("query") String query, @Param("status") RmaStatus status);
 
+    // Queue order, as the RMA list used before pagination: priority first, then the oldest entry.
     @Query(value = """
         select r
         from RmaRecord r
@@ -82,8 +83,14 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
                 )
             )
           )
-
-        order by r.entryDate desc, r.id desc
+        order by
+          case
+            when r.priority = br.com.navitasassist.rma.RmaPriority.HIGH then 0
+            when r.priority = br.com.navitasassist.rma.RmaPriority.MEDIUM then 1
+            else 2
+          end,
+          r.entryDate asc,
+          r.id asc
         """,
         countQuery = """
         select count(r)

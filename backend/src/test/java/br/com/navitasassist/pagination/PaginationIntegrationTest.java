@@ -17,6 +17,7 @@ import br.com.navitasassist.repository.ProductRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.rma.RmaItem;
+import br.com.navitasassist.rma.RmaPriority;
 import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusHistory;
@@ -230,11 +231,11 @@ class PaginationIntegrationTest {
         }
 
         mockMvc.perform(get("/api/rmas").param("size", "2").with(admin()))
-            .andExpect(jsonPath("$.content[*].code", contains("RMA-2026-0005", "RMA-2026-0004")))
+            .andExpect(jsonPath("$.content[*].code", contains("RMA-2026-0001", "RMA-2026-0002")))
             .andExpect(jsonPath("$.totalElements").value(5))
             .andExpect(jsonPath("$.totalPages").value(3));
         mockMvc.perform(get("/api/rmas").param("size", "2").param("page", "1").with(admin()))
-            .andExpect(jsonPath("$.content[*].code", contains("RMA-2026-0003", "RMA-2026-0002")));
+            .andExpect(jsonPath("$.content[*].code", contains("RMA-2026-0003", "RMA-2026-0004")));
         mockMvc.perform(get("/api/rmas").param("status", "RECEIVED").param("size", "3").with(admin()))
             .andExpect(jsonPath("$.totalElements").value(4))
             .andExpect(jsonPath("$.totalPages").value(2));
@@ -245,6 +246,29 @@ class PaginationIntegrationTest {
             .andExpect(jsonPath("$", hasSize(5)));
         mockMvc.perform(get("/api/rmas/board").param("status", "IN_REPAIR").with(admin()))
             .andExpect(jsonPath("$", hasSize(1)));
+    }
+
+    @Test
+    void shouldPageRmasInQueueOrderAcrossPages() throws Exception {
+        Client client = saveClient("Queue Client", null, null);
+        Product product = saveProduct("SKU-QUEUE", "Queue product", null, null);
+
+        saveRma(client, product, "RMA-Q-LOW-OLD", RmaStatus.RECEIVED, 1, RmaPriority.LOW);
+        saveRma(client, product, "RMA-Q-HIGH-NEW", RmaStatus.RECEIVED, 9, RmaPriority.HIGH);
+        saveRma(client, product, "RMA-Q-MED-OLD", RmaStatus.TRIAGE, 2, RmaPriority.MEDIUM);
+        saveRma(client, product, "RMA-Q-HIGH-OLD", RmaStatus.IN_REPAIR, 3, RmaPriority.HIGH);
+        saveRma(client, product, "RMA-Q-MED-NEW", RmaStatus.RECEIVED, 8, RmaPriority.MEDIUM);
+        saveRma(client, product, "RMA-Q-HIGH-SAME-1", RmaStatus.RECEIVED, 5, RmaPriority.HIGH);
+        saveRma(client, product, "RMA-Q-HIGH-SAME-2", RmaStatus.RECEIVED, 5, RmaPriority.HIGH);
+
+        mockMvc.perform(get("/api/rmas").param("size", "4").with(admin()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[*].code", contains("RMA-Q-HIGH-OLD", "RMA-Q-HIGH-SAME-1", "RMA-Q-HIGH-SAME-2", "RMA-Q-HIGH-NEW")))
+            .andExpect(jsonPath("$.totalElements").value(7))
+            .andExpect(jsonPath("$.totalPages").value(2));
+        mockMvc.perform(get("/api/rmas").param("size", "4").param("page", "1").with(admin()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[*].code", contains("RMA-Q-MED-OLD", "RMA-Q-MED-NEW", "RMA-Q-LOW-OLD")));
     }
 
     private RequestPostProcessor admin() {
@@ -280,8 +304,13 @@ class PaginationIntegrationTest {
     }
 
     private void saveRma(Client client, Product product, String code, RmaStatus rmaStatus, int daysAfter) {
+        saveRma(client, product, code, rmaStatus, daysAfter, RmaPriority.MEDIUM);
+    }
+
+    private void saveRma(Client client, Product product, String code, RmaStatus rmaStatus, int daysAfter, RmaPriority priority) {
         RmaRecord rma = new RmaRecord();
         rma.setCode(code);
+        rma.setPriority(priority);
         rma.setClient(client);
         rma.setProduct(product);
         rma.setStatus(rmaStatus);
