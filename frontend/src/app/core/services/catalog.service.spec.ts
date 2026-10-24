@@ -66,4 +66,42 @@ describe('CatalogService', () => {
     expect(request.request.method).toBe('GET');
     request.flush([]);
   });
+
+  it('sends pagination and boolean filters to the clients endpoint', () => {
+    service.listClients({ page: 1, size: 10, query: '  acme ', hasDocument: true, hasEmail: false }).subscribe();
+
+    const request = httpTesting.expectOne((candidate) => candidate.url === '/api/clients');
+    expect(request.request.params.get('page')).toBe('1');
+    expect(request.request.params.get('size')).toBe('10');
+    expect(request.request.params.get('query')).toBe('acme');
+    expect(request.request.params.get('hasDocument')).toBe('true');
+    expect(request.request.params.get('hasEmail')).toBe('false');
+    request.flush({ content: [], page: 1, size: 10, totalElements: 0, totalPages: 0 });
+  });
+
+  it('omits empty filters from the product and user requests', () => {
+    service.listProducts({ query: '   ', category: '' }).subscribe();
+    const products = httpTesting.expectOne((candidate) => candidate.url === '/api/products');
+    expect(products.request.params.keys()).toEqual([]);
+    products.flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 });
+
+    service.listUsers({ role: 'ADMIN', active: false }).subscribe();
+    const users = httpTesting.expectOne((candidate) => candidate.url === '/api/users');
+    expect(users.request.params.get('role')).toBe('ADMIN');
+    expect(users.request.params.get('active')).toBe('false');
+    users.flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 });
+  });
+
+  it('uses dedicated endpoints for selector options and summaries', () => {
+    service.listClientOptions().subscribe();
+    httpTesting.expectOne('/api/clients/options').flush([]);
+    service.listProductOptions().subscribe();
+    httpTesting.expectOne('/api/products/options').flush([]);
+    service.getClientSummary().subscribe();
+    httpTesting.expectOne('/api/clients/summary').flush({});
+    service.getProductSummary().subscribe();
+    httpTesting.expectOne('/api/products/summary').flush({});
+    service.getUserSummary().subscribe();
+    httpTesting.expectOne('/api/users/summary').flush({});
+  });
 });

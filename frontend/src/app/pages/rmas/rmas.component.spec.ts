@@ -14,7 +14,7 @@ describe('RmasComponent form', () => {
   let rmaService: { list: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
-    rmaService = { list: vi.fn(() => of([])), create: vi.fn(() => of(createdRma)) };
+    rmaService = { list: vi.fn(() => of({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 })), create: vi.fn(() => of(createdRma)) };
     const currentUser = signal<UserSession | null>({
       username: 'tester',
       name: 'Tester',
@@ -29,7 +29,7 @@ describe('RmasComponent form', () => {
         },
         {
           provide: CatalogService,
-          useValue: { listClients: () => of([]), listProducts: () => of([]) },
+          useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]) },
         },
         { provide: RmaService, useValue: rmaService },
       ],

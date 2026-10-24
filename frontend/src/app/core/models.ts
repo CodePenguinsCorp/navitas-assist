@@ -332,3 +332,37 @@ export interface AccessMatrixItem {
   role: UserRole;
   access: string;
 }
+
+export interface PageQuery {
+  page?: number;
+  size?: number;
+}
+
+export interface PageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface ClientSummaryResponse {
+  total: number;
+  withContact: number;
+  withDocument: number;
+  withEmail: number;
+}
+
+export interface ProductSummaryResponse {
+  total: number;
+  withFirmware: number;
+  averageWarrantyMonths: number;
+  categories: string[];
+}
+
+export interface UserSummaryResponse {
+  total: number;
+  active: number;
+  admins: number;
+  roles: number;
+}

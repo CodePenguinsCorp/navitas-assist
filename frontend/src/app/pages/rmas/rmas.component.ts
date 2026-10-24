@@ -25,9 +25,9 @@ import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
+import { PagedList } from '../../core/utils/paged-list';
 import { todayInputValue } from '../../core/utils/date';
 import {
-  compareRmasForQueue,
   failureCauseLabel,
   failureTypeLabel,
   formatDate,
@@ -48,6 +48,7 @@ import {
   CustomSelectOption
 } from '../../shared/form-controls/custom-select/custom-select.component';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
 
 type SearchStatusValue = RmaStatus | '';
 type FailureTypeValue = FailureType | '';
@@ -62,7 +63,7 @@ interface CreateDateErrors {
 
 @Component({
   selector: 'app-rmas',
-  imports: [ReactiveFormsModule, CustomSelectComponent, DatePickerComponent],
+  imports: [ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, PaginationComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {
@@ -193,7 +194,6 @@ export class RmasComponent {
   private readonly catalogService = inject(CatalogService);
   private readonly rmaService = inject(RmaService);
 
-  protected readonly loading = signal(true);
   protected readonly createSubmitting = signal(false);
   protected readonly dateErrors = signal<CreateDateErrors>({ manufacturedAt: [], purchaseDate: '', entryDate: '' });
   protected readonly diagnosisSubmitting = signal(false);
@@ -205,24 +205,31 @@ export class RmasComponent {
   protected readonly historyMessage = signal('');
   protected readonly activeModal = signal<ModalView | null>(null);
 
-  private readonly rmasSignal = signal<RmaResponse[]>([]);
+  private readonly rmaList = new PagedList<RmaResponse>(
+    (pageQuery) => this.rmaService.list({ ...pageQuery, ...this.buildFilters() }),
+    (error) => this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível carregar os RMAs agora.')),
+    (rmas) => this.syncSelection(rmas)
+  );
   private readonly historySignal = signal<RmaResponse[]>([]);
   private readonly clientsSignal = signal<ClientResponse[]>([]);
   private readonly productsSignal = signal<ProductResponse[]>([]);
   private readonly selectedRmaSignal = signal<RmaResponse | null>(null);
 
-  protected readonly rmas = computed(() =>
-    [...this.rmasSignal()].sort(compareRmasForQueue)
-  );
+  protected readonly rmas = this.rmaList.items;
+  protected readonly loading = this.rmaList.loading;
+  protected readonly page = this.rmaList.page;
+  protected readonly pageSize = this.rmaList.size;
+  protected readonly totalElements = this.rmaList.totalElements;
+  protected readonly totalPages = this.rmaList.totalPages;
   protected readonly historyResults = this.historySignal.asReadonly();
   protected readonly selectedRma = this.selectedRmaSignal.asReadonly();
 
-  protected readonly totalRmas = computed(() => this.rmasSignal().length);
+  protected readonly totalRmas = this.rmaList.totalElements;
   protected readonly ongoingRmas = computed(() =>
-    this.rmasSignal().filter((rma) => !TERMINAL_RMA_STATUSES.has(rma.status)).length
+    this.rmaList.items().filter((rma) => !TERMINAL_RMA_STATUSES.has(rma.status)).length
   );
   protected readonly highPriorityRmas = computed(() =>
-    this.rmasSignal().filter((rma) => rma.priority === 'HIGH').length
+    this.rmaList.items().filter((rma) => rma.priority === 'HIGH').length
   );
 
   protected readonly statusLabel = statusLabel;
@@ -345,7 +352,18 @@ export class RmasComponent {
 
   protected submitFilters(): void {
     this.pageMessage.set('');
-    this.refreshRmas();
+    this.pageError.set('');
+    this.rmaList.firstPage();
+  }
+
+  protected goToPage(page: number): void {
+    this.pageError.set('');
+    this.rmaList.goToPage(page);
+  }
+
+  protected changePageSize(size: number): void {
+    this.pageError.set('');
+    this.rmaList.changeSize(size);
   }
 
   protected clearFilters(): void {
@@ -354,7 +372,8 @@ export class RmasComponent {
       status: ''
     });
     this.pageMessage.set('');
-    this.refreshRmas();
+    this.pageError.set('');
+    this.rmaList.firstPage();
   }
 
   protected openCreateModal(): void {
@@ -559,43 +578,26 @@ export class RmasComponent {
   }
 
   private loadWorkspace(): void {
-    this.loading.set(true);
     this.pageError.set('');
+    this.rmaList.reload();
 
     forkJoin({
-      clients: this.catalogService.listClients(),
-      products: this.catalogService.listProducts(),
-      rmas: this.rmaService.list(this.buildFilters())
-    }).pipe(
-      finalize(() => this.loading.set(false))
-    ).subscribe({
-      next: ({ clients, products, rmas }) => {
+      clients: this.catalogService.listClientOptions(),
+      products: this.catalogService.listProductOptions()
+    }).subscribe({
+      next: ({ clients, products }) => {
         this.clientsSignal.set(clients);
         this.productsSignal.set(products);
-        this.rmasSignal.set(rmas);
-        this.syncSelection(rmas);
       },
       error: (error) => {
-        this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível carregar a central de RMAs.'));
+        this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível carregar clientes e produtos.'));
       }
     });
   }
 
   private refreshRmas(): void {
-    this.loading.set(true);
     this.pageError.set('');
-
-    this.rmaService.list(this.buildFilters()).pipe(
-      finalize(() => this.loading.set(false))
-    ).subscribe({
-      next: (rmas) => {
-        this.rmasSignal.set(rmas);
-        this.syncSelection(rmas);
-      },
-      error: (error) => {
-        this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível carregar os RMAs agora.'));
-      }
-    });
+    this.rmaList.reload();
   }
 
   private syncSelection(rmas: RmaResponse[]): void {

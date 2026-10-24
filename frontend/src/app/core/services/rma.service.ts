@@ -4,6 +4,8 @@ import { Observable } from 'rxjs';
 import {
   CreateRmaRequest,
   DiagnosisRequest,
+  PageQuery,
+  PageResponse,
   RmaAssigneeUpdateRequest,
   RmaBulkStatusUpdateRequest,
   RmaResponse,
@@ -11,23 +13,25 @@ import {
   RmaStatus,
   RmaStatusUpdateRequest
 } from '../models';
+import { buildPageParams } from '../utils/pagination';
+
+export interface RmaFilters extends PageQuery {
+  query?: string;
+  status?: RmaStatus;
+}
 
 @Injectable({ providedIn: 'root' })
 export class RmaService {
   private readonly http = inject(HttpClient);
 
-  list(filters?: { query?: string; status?: RmaStatus }): Observable<RmaResponse[]> {
-    let params = new HttpParams();
+  list(filters: RmaFilters = {}): Observable<PageResponse<RmaResponse>> {
+    const params = buildPageParams(filters, { query: filters.query, status: filters.status });
+    return this.http.get<PageResponse<RmaResponse>>('/api/rmas', { params });
+  }
 
-    if (filters?.query?.trim()) {
-      params = params.set('query', filters.query.trim());
-    }
-
-    if (filters?.status) {
-      params = params.set('status', filters.status);
-    }
-
-    return this.http.get<RmaResponse[]>('/api/rmas', { params });
+  listBoard(filters: Pick<RmaFilters, 'query' | 'status'> = {}): Observable<RmaResponse[]> {
+    const params = buildPageParams({}, { query: filters.query, status: filters.status });
+    return this.http.get<RmaResponse[]>('/api/rmas/board', { params });
   }
 
   getById(id: number): Observable<RmaResponse> {
