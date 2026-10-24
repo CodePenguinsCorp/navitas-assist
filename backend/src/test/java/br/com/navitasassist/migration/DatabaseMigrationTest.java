@@ -23,12 +23,31 @@ class DatabaseMigrationTest {
     private static final String PASSWORD = "";
 
     @Test
+    void initializesPositionsWhenUpgradingAnExistingSchema() throws SQLException {
+        String url = "jdbc:h2:mem:migration_board_order;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
+        Flyway.configure().dataSource(url, USER, PASSWORD).target("1").load().migrate();
+        long rmaId;
+        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
+            rmaId = insertRma(connection, insertClient(connection), insertProduct(connection));
+        }
+        assertEquals(1, Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate().migrationsExecuted);
+        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD);
+             Statement statement = connection.createStatement();
+             ResultSet result = statement.executeQuery("SELECT id, board_position FROM rmas")) {
+            assertTrue(result.next());
+            assertEquals(rmaId, result.getLong("id"));
+            assertEquals(rmaId, result.getLong("board_position"));
+            assertFalse(result.next());
+        }
+    }
+
+    @Test
     void createsSchemaAndSupportsMultipleItemsPerRma() throws SQLException {
         String url = "jdbc:h2:mem:migration_empty;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
 
         int executedMigrations = Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate().migrationsExecuted;
 
-        assertEquals(1, executedMigrations);
+        assertEquals(2, executedMigrations);
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
             assertTrue(tableExists(connection, "rmas"));
             assertTrue(tableExists(connection, "rma_items"));

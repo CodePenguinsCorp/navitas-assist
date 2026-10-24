@@ -10,8 +10,19 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Sort;
 
 public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
+
+    // ponytail: serializes board writes; use one lock row per column if contention becomes measurable.
+    @Query(value = "select id from rma_board_order_lock where id = 1 for update", nativeQuery = true)
+    Integer lockBoardOrder();
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    List<RmaRecord> findByStatusOrderByBoardPositionAscIdAsc(RmaStatus status);
+
+    @Query("select coalesce(max(r.boardPosition), 0) + 1 from RmaRecord r where r.status = :status")
+    long nextBoardPosition(@Param("status") RmaStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from RmaRecord r where r.id = :id")
@@ -51,9 +62,8 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
             or lower(coalesce(ip.name, '')) like lower(concat('%', :query, '%'))
             or lower(coalesce(ip.sku, '')) like lower(concat('%', :query, '%'))
           )
-        order by r.entryDate desc, r.id desc
         """)
-    List<RmaRecord> search(@Param("query") String query, @Param("status") RmaStatus status);
+    List<RmaRecord> search(@Param("query") String query, @Param("status") RmaStatus status, Sort sort);
 
     @Query("""
         select distinct r

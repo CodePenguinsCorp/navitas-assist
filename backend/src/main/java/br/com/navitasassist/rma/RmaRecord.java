@@ -91,6 +91,9 @@ public class RmaRecord extends AuditableEntity {
     @Column(nullable = false, length = 30)
     private RmaStatus status = RmaStatus.RECEIVED;
 
+    @Column(nullable = false)
+    private long boardPosition;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assignee_id")
     private UserAccount assignee;

@@ -259,6 +259,7 @@ export interface RmaSlaResponse {
 
 export interface RmaResponse {
   id: number;
+  boardPosition: number;
   code: string;
   clientId: number;
   clientName: string;
@@ -293,6 +294,12 @@ export interface RmaResponse {
   assignmentHistory: RmaAssignmentHistoryResponse[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface RmaPositionUpdateRequest {
+  expectedStatus: RmaStatus;
+  anchorId: number;
+  after: boolean;
 }
 
 export interface NavItem {

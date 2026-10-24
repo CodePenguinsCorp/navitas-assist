@@ -7,6 +7,7 @@ import {
   RmaAssigneeUpdateRequest,
   RmaBulkStatusUpdateRequest,
   RmaResponse,
+  RmaPositionUpdateRequest,
   RmaPriority,
   RmaStatus,
   RmaStatusUpdateRequest
@@ -16,7 +17,7 @@ import {
 export class RmaService {
   private readonly http = inject(HttpClient);
 
-  list(filters?: { query?: string; status?: RmaStatus }): Observable<RmaResponse[]> {
+  list(filters?: { query?: string; status?: RmaStatus; boardOrder?: boolean }): Observable<RmaResponse[]> {
     let params = new HttpParams();
 
     if (filters?.query?.trim()) {
@@ -26,6 +27,8 @@ export class RmaService {
     if (filters?.status) {
       params = params.set('status', filters.status);
     }
+
+    if (filters?.boardOrder) params = params.set('boardOrder', 'true');
 
     return this.http.get<RmaResponse[]>('/api/rmas', { params });
   }
@@ -54,6 +57,10 @@ export class RmaService {
 
   updateStatus(id: number, payload: RmaStatusUpdateRequest): Observable<RmaResponse> {
     return this.http.patch<RmaResponse>(`/api/rmas/${id}/status`, payload);
+  }
+
+  updatePosition(id: number, payload: RmaPositionUpdateRequest): Observable<RmaResponse[]> {
+    return this.http.patch<RmaResponse[]>(`/api/rmas/${id}/position`, payload);
   }
 
   updateStatusInBulk(id: number, payload: RmaBulkStatusUpdateRequest): Observable<RmaResponse> {

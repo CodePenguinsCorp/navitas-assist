@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, computed, input } from '@angular/core';
+import { Component, EventEmitter, Output, computed, input, signal } from '@angular/core';
 import { RmaSlaBadgeComponent } from '../rma-sla-badge/rma-sla-badge.component';
 import { RMA_STATUS_FLOW } from '../../core/mock-data';
 import { RmaResponse, RmaStatus } from '../../core/models';
@@ -21,6 +21,12 @@ interface RmaBoardColumn {
   items: RmaResponse[];
 }
 
+export interface RmaCardReorder {
+  rma: RmaResponse;
+  anchorId: number;
+  after: boolean;
+}
+
 @Component({
   selector: 'app-rma-kanban-board',
   imports: [RmaSlaBadgeComponent],
@@ -35,6 +41,7 @@ export class RmaKanbanBoardComponent {
   @Output() readonly bulkSelectionChange = new EventEmitter<RmaResponse>();
   readonly loading = input(false);
   readonly canUpdateStatus = input(false);
+  readonly canReorder = input(false);
   readonly canUpdateAssignee = input(false);
   readonly boardUpdatingId = input<number | null>(null);
   readonly selectedRmaId = input<number | null>(null);
@@ -51,6 +58,9 @@ export class RmaKanbanBoardComponent {
   @Output() readonly columnDragOver = new EventEmitter<{ event: DragEvent; status: RmaStatus }>();
   @Output() readonly columnDragLeave = new EventEmitter<RmaStatus>();
   @Output() readonly columnDrop = new EventEmitter<{ event: DragEvent; status: RmaStatus }>();
+  @Output() readonly cardReorder = new EventEmitter<RmaCardReorder>();
+
+  protected readonly dropPlacement = signal<{ id: number; after: boolean } | null>(null);
 
   protected readonly totalRmas = computed(() => this.rmas().length);
   protected readonly columns = computed<RmaBoardColumn[]>(() =>
@@ -97,5 +107,45 @@ export class RmaKanbanBoardComponent {
   protected preventCardDrag(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
+  }
+
+  protected requestReorder(event: Event, rma: RmaResponse, anchor: RmaResponse | undefined, after: boolean): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!anchor || !this.canReorder() || this.interactionDisabled() || this.boardUpdatingId() !== null) return;
+    this.cardReorder.emit({ rma, anchorId: anchor.id, after });
+  }
+
+  protected allowCardDrop(event: DragEvent, target: RmaResponse): void {
+    if (!this.canDropOnCard(target)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    this.dropPlacement.set({ id: target.id, after: event.clientY > bounds.top + bounds.height / 2 });
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+  }
+
+  protected dropOnCard(event: DragEvent, target: RmaResponse): void {
+    if (this.draggedRmaId() === target.id) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.endDrag();
+      return;
+    }
+    if (!this.canDropOnCard(target)) return;
+    const dragged = this.rmas().find((rma) => rma.id === this.draggedRmaId())!;
+    this.requestReorder(event, dragged, target, this.dropPlacement()?.id === target.id && this.dropPlacement()?.after === true);
+    this.endDrag();
+  }
+
+  protected endDrag(): void {
+    this.dropPlacement.set(null);
+    this.cardDragEnd.emit();
+  }
+
+  private canDropOnCard(target: RmaResponse): boolean {
+    const dragged = this.rmas().find((rma) => rma.id === this.draggedRmaId());
+    return this.canReorder() && !this.interactionDisabled() && this.boardUpdatingId() === null
+      && dragged?.status === target.status && dragged.id !== target.id;
   }
 }
