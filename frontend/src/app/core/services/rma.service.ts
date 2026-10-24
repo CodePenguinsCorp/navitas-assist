@@ -34,6 +34,10 @@ export class RmaService {
     return this.http.get<RmaResponse>(`/api/rmas/${id}`);
   }
 
+  getByCode(code: string): Observable<RmaResponse> {
+    return this.http.get<RmaResponse>(`/api/rmas/code/${encodeURIComponent(code.trim())}`);
+  }
+
   history(filters: { batchNumber?: string; serialNumber?: string }): Observable<RmaResponse[]> {
     let params = new HttpParams();
 
