@@ -2,7 +2,9 @@ package br.com.navitasassist.notification;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
@@ -18,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import br.com.navitasassist.client.Client;
+import br.com.navitasassist.config.NotificationAsyncConfig;
 import br.com.navitasassist.product.Product;
 import br.com.navitasassist.repository.ClientRepository;
 import br.com.navitasassist.repository.NotificationEventRepository;
@@ -39,6 +42,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -46,6 +50,7 @@ import org.springframework.http.MediaType;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -89,6 +94,10 @@ class NotificationEmailIntegrationTest {
     @Autowired
     private ClientRepository clientRepository;
 
+    @Autowired
+    @Qualifier(NotificationAsyncConfig.NOTIFICATION_EXECUTOR)
+    private ThreadPoolTaskExecutor notificationExecutor;
+
     private UserAccount technician;
     private RmaResponse rma;
 
@@ -110,6 +119,7 @@ class NotificationEmailIntegrationTest {
         product.setName("Produto e-mail");
         product = productRepository.save(product);
         rma = rmaService.create(new CreateRmaRequest(client.getId(), List.of(new RmaItemRequest(product.getId(), null, "SER-MAIL", null)), null, true, LocalDate.now(), null, "Falha", null, null, RmaPriority.LOW, null, null, null));
+        NotificationTestSupport.awaitIdle(notificationExecutor);
         reset(mailSender);
     }
 
@@ -126,7 +136,7 @@ class NotificationEmailIntegrationTest {
 
     @Test
     void sendsOnlyToTheCorporateDomainWithoutLinks() throws Exception {
-        assign().andExpect(status().isOk());
+        assignAndWait().andExpect(status().isOk());
 
         ArgumentCaptor<SimpleMailMessage> message = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender).send(message.capture());
@@ -140,7 +150,7 @@ class NotificationEmailIntegrationTest {
     void emailFailureDoesNotUndoTheRmaOperation() throws Exception {
         doThrow(new MailSendException("SMTP indisponível")).when(mailSender).send(any(SimpleMailMessage.class));
 
-        assign().andExpect(status().isOk()).andExpect(jsonPath("$.assigneeId").value(technician.getId()));
+        assignAndWait().andExpect(status().isOk()).andExpect(jsonPath("$.assigneeId").value(technician.getId()));
 
         assertEquals(technician.getId(), rmaRecordRepository.findById(rma.id()).orElseThrow().getAssignee().getId());
         Notification notification = assignmentNotification();
@@ -149,6 +159,28 @@ class NotificationEmailIntegrationTest {
         mockMvc.perform(get("/api/notification-rules/failures").with(user("admin").roles("ADMIN")))
             .andExpect(jsonPath("$[0].source").value("EMAIL"))
             .andExpect(jsonPath("$[0].recipient").value("nav40-mail-tech"));
+    }
+
+    @Test
+    void slowEmailDeliveryDoesNotHoldTheRmaRequest() throws Exception {
+        doAnswer(invocation -> {
+            Thread.sleep(3000);
+            return null;
+        }).when(mailSender).send(any(SimpleMailMessage.class));
+
+        long started = System.nanoTime();
+        assign().andExpect(status().isOk());
+        long elapsedMillis = (System.nanoTime() - started) / 1_000_000;
+
+        assertTrue(elapsedMillis < 1500, "RMA request waited for e-mail: " + elapsedMillis + " ms");
+        NotificationTestSupport.awaitIdle(notificationExecutor);
+        assertEquals(NotificationEmailStatus.SENT, assignmentNotification().getEmailStatus());
+    }
+
+    private org.springframework.test.web.servlet.ResultActions assignAndWait() throws Exception {
+        org.springframework.test.web.servlet.ResultActions result = assign();
+        NotificationTestSupport.awaitIdle(notificationExecutor);
+        return result;
     }
 
     private org.springframework.test.web.servlet.ResultActions assign() throws Exception {

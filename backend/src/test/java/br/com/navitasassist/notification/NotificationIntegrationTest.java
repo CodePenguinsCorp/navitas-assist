@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 
 import br.com.navitasassist.client.Client;
+import br.com.navitasassist.config.NotificationAsyncConfig;
 import br.com.navitasassist.product.Product;
 import br.com.navitasassist.repository.ClientRepository;
 import br.com.navitasassist.repository.NotificationEventRepository;
@@ -47,10 +48,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -103,6 +106,10 @@ class NotificationIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    @Qualifier(NotificationAsyncConfig.NOTIFICATION_EXECUTOR)
+    private ThreadPoolTaskExecutor notificationExecutor;
 
     private final List<Long> createdUserIds = new ArrayList<>();
     private UserAccount technician;
@@ -180,6 +187,7 @@ class NotificationIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(Map.of("assigneeId", technician.getId()))))
             .andExpect(status().isOk());
+        NotificationTestSupport.awaitIdle(notificationExecutor);
 
         assertEquals(1, countFor(technician, NotificationEventType.RMA_ASSIGNED));
         assertEquals(0, countFor(otherTechnician, NotificationEventType.RMA_ASSIGNED));
@@ -280,6 +288,7 @@ class NotificationIntegrationTest {
     void slaScanAlertsOverdueRmasOncePerStage() throws Exception {
         RmaResponse created = createRma();
         rmaService.updateAssignee(created.id(), new br.com.navitasassist.rma.RmaAssigneeUpdateRequest(technician.getId()));
+        NotificationTestSupport.awaitIdle(notificationExecutor);
         RmaRecord rma = rmaRecordRepository.findById(created.id()).orElseThrow();
         backdateStage(rma, Instant.now().minus(Duration.ofDays(30)));
 
@@ -320,8 +329,10 @@ class NotificationIntegrationTest {
     }
 
     private RmaResponse createRma() {
-        return rmaService.create(new CreateRmaRequest(client.getId(), List.of(new RmaItemRequest(product.getId(), null, "SER-NAV40-" + System.nanoTime(), null)), null, true,
+        RmaResponse created = rmaService.create(new CreateRmaRequest(client.getId(), List.of(new RmaItemRequest(product.getId(), null, "SER-NAV40-" + System.nanoTime(), null)), null, true,
             LocalDate.now(), null, "Não liga", null, null, RmaPriority.HIGH, null, null, null));
+        NotificationTestSupport.awaitIdle(notificationExecutor);
+        return created;
     }
 
     private void backdateStage(RmaRecord rma, Instant enteredAt) {

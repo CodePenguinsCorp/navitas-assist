@@ -38,6 +38,25 @@ public class NotificationEventStore {
         return notificationEventRepository.save(record).getId();
     }
 
+    /**
+     * Records an event that could not even be queued, so it shows up in the failure list instead of disappearing.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordRejected(RmaNotificationEvent event, String error) {
+        if (notificationEventRepository.existsByEventKey(event.eventKey())) {
+            return;
+        }
+
+        NotificationEvent record = new NotificationEvent();
+        record.setEventKey(event.eventKey());
+        record.setEventType(event.type());
+        record.setStatus(NotificationEventStatus.FAILED);
+        record.setErrorMessage(truncate(error));
+        record.setOccurredAt(event.occurredAt() == null ? Instant.now() : event.occurredAt());
+        record.setProcessedAt(Instant.now());
+        notificationEventRepository.save(record);
+    }
+
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markFailed(Long eventId, String error) {
         notificationEventRepository.findById(eventId).ifPresent(record -> {

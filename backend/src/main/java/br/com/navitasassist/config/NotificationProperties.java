@@ -15,6 +15,7 @@ public class NotificationProperties {
 
     private final Email email = new Email();
     private final SlaScan slaScan = new SlaScan();
+    private final Async async = new Async();
 
     /**
      * Optional corporate e-mail channel. Disabled by default; addresses are built only as {@code username@domain}, so
@@ -33,5 +34,13 @@ public class NotificationProperties {
     public static class SlaScan {
         private boolean enabled = true;
         private Duration interval = Duration.ofMinutes(5);
+    }
+
+    @Getter
+    @Setter
+    public static class Async {
+        private int corePoolSize = 2;
+        private int maxPoolSize = 4;
+        private int queueCapacity = 500;
     }
 }
