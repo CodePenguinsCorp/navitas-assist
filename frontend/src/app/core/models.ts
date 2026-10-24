@@ -332,3 +332,111 @@ export interface AccessMatrixItem {
   role: UserRole;
   access: string;
 }
+
+export type ProtocolItemType = 'CHECK' | 'MEASUREMENT' | 'TEXT';
+
+export type ProtocolItemOutcome = 'PASSED' | 'FAILED' | 'NOT_APPLICABLE';
+
+export type ProtocolExecutionStatus = 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
+
+export interface ProtocolTemplateItemRequest {
+  stepName: string;
+  title: string;
+  instructions: string | null;
+  type: ProtocolItemType;
+  required: boolean;
+  unit: string | null;
+  decimalPlaces: number | null;
+  minValue: string | null;
+  maxValue: string | null;
+  expectedResult: string | null;
+  evidenceRequired: boolean;
+}
+
+export interface ProtocolTemplateRequest {
+  name: string;
+  productId: number | null;
+  category: string | null;
+  active: boolean;
+  blockedStatuses: RmaStatus[];
+  items: ProtocolTemplateItemRequest[];
+}
+
+export interface ProtocolTemplateItemResponse {
+  id: number;
+  sortOrder: number;
+  stepName: string;
+  title: string;
+  instructions: string | null;
+  type: ProtocolItemType;
+  required: boolean;
+  unit: string | null;
+  decimalPlaces: number | null;
+  minValue: number | null;
+  maxValue: number | null;
+  expectedResult: string | null;
+  evidenceRequired: boolean;
+}
+
+export interface ProtocolTemplateResponse {
+  id: number;
+  name: string;
+  productId: number | null;
+  productName: string | null;
+  category: string | null;
+  active: boolean;
+  currentVersion: number;
+  blockedStatuses: RmaStatus[];
+  items: ProtocolTemplateItemResponse[];
+  updatedAt: string;
+}
+
+export interface ProtocolItemResultRequest {
+  outcome: ProtocolItemOutcome;
+  measuredValue: string | null;
+  textValue: string | null;
+  evidence: string | null;
+  justification: string | null;
+  startedAt: string | null;
+}
+
+export interface ProtocolItemResultResponse {
+  id: number;
+  attempt: number;
+  outcome: ProtocolItemOutcome;
+  measuredValue: string | null;
+  unit: string | null;
+  textValue: string | null;
+  evidence: string | null;
+  justification: string | null;
+  executedBy: string;
+  startedAt: string;
+  completedAt: string;
+}
+
+export interface ProtocolExecutionItemResponse {
+  item: ProtocolTemplateItemResponse;
+  latest: ProtocolItemResultResponse | null;
+  attempts: ProtocolItemResultResponse[];
+}
+
+export interface ProtocolExecutionResponse {
+  id: number;
+  rmaId: number;
+  rmaCode: string;
+  templateId: number;
+  templateName: string;
+  versionNumber: number;
+  status: ProtocolExecutionStatus;
+  blockedStatuses: RmaStatus[];
+  startedBy: string;
+  startedAt: string;
+  completedBy: string | null;
+  completedAt: string | null;
+  totalItems: number;
+  completedItems: number;
+  requiredItems: number;
+  pendingRequiredItems: number;
+  failedItems: number;
+  items: ProtocolExecutionItemResponse[];
+}
