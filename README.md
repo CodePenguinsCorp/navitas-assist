@@ -431,3 +431,14 @@ As demais etapas preservam os padrões. Prazos e substituições aceitam de 1 a 
 - Backend: `mvn test` em `backend/` (limiares, notas, reentrada, encerramento/reabertura, prioridade, configuração e contrato HTTP).
 - Filtros e apresentação: `npm run test:sla` em `frontend/`, com Node 22.14+ (runner nativo, sem framework adicional).
 - Templates e tipos Angular: `npm run build` em `frontend/`.
+
+## Protocolos técnicos e checklists (NAV-45)
+
+Modelos versionados de protocolo por produto ou categoria, executados durante o RMA. A migration `V6__create_technical_protocols.sql` cria `protocol_templates`, `protocol_template_versions`, `protocol_template_items`, `rma_protocol_executions` e `rma_protocol_item_results`.
+
+- **Modelos** (`/api/protocols/templates`, escrita somente ADMIN): etapas, instruções, itens obrigatórios, verificação, texto ou medição (unidade, casas decimais, mínimo e máximo), resultado esperado e exigência de evidência. Cada alteração cria uma nova versão imutável; execuções já iniciadas continuam na versão em que começaram.
+- **Execução** (`/api/protocols/rmas/{rmaId}/executions`, ADMIN e TECHNICIAN): vincula a versão atual ao RMA e registra, por item, executor, início, conclusão, resultado, medição (`BigDecimal`, devolvida como texto com a precisão configurada), texto e evidência (texto ou referência).
+- **Validações no backend**: obrigatórios pendentes impedem a conclusão; medições com mais casas que o configurado ou fora da faixa não podem ser aprovadas; evidência exigida e texto obrigatório são verificados.
+- **Reprovação e repetição**: reprovar ou marcar como não aplicável exige justificativa; repetir um item cria uma nova tentativa (também com justificativa) e o histórico das anteriores é mantido.
+- **Bloqueio de status**: cada versão define as etapas do RMA (`blockedStatuses`) bloqueadas enquanto a execução mais recente daquele protocolo tiver itens obrigatórios não aprovados.
+- **Laudo (NAV-27)**: `GET /api/protocols/rmas/{rmaId}/executions` expõe protocolo, versão, executor e todas as tentativas de cada item; é o ponto de integração do laudo técnico.
