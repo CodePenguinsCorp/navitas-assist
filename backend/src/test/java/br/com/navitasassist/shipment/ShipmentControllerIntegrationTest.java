@@ -227,6 +227,18 @@ class ShipmentControllerIntegrationTest {
             .andExpect(jsonPath("$.shipment.originAddress").doesNotExist())
             .andExpect(jsonPath("$.shipment.addressesPurged").value(true))
             .andExpect(jsonPath("$.shipment.originName").value("Cliente"));
+
+        Map<String, Object> update = shipmentPayload(rmaId, "RETURN", "Correios", "BR500", null);
+        update.remove("rmaId");
+        update.put("justification", "Correção do serviço");
+        mockMvc.perform(put("/api/shipments/{id}", oldId)
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(update)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.shipment.originAddress").doesNotExist())
+            .andExpect(jsonPath("$.shipment.destinationAddress").doesNotExist());
         mockMvc.perform(get("/api/shipments/{id}", recentId).with(user("admin").roles("ADMIN")))
             .andExpect(jsonPath("$.shipment.originAddress").value("Rua do Cliente, 10"))
             .andExpect(jsonPath("$.shipment.addressesPurged").value(false));

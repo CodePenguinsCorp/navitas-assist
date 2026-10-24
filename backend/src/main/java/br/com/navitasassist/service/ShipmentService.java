@@ -102,6 +102,10 @@ public class ShipmentService {
         applyFields(shipment, request.originName(), request.originAddress(), request.destinationName(), request.destinationAddress(),
             request.volumes(), request.carrier(), request.serviceName(), request.trackingCode(), request.labelReference(), request.cost());
         validateTrackingCode(shipment, id);
+        if (shipment.getAddressesPurgedAt() != null) {
+            shipment.setOriginAddress(null);
+            shipment.setDestinationAddress(null);
+        }
 
         if (!Objects.equals(previousCarrier, shipment.getCarrier()) || !Objects.equals(previousTracking, shipment.getTrackingCode())) {
             changes.add("tracking");
