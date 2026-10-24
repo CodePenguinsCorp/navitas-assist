@@ -146,7 +146,8 @@ public class ProtocolExecutionService {
     }
 
     /**
-     * Blocks RMA status changes configured in the protocol version while its latest execution has unsatisfied required items.
+     * Blocks RMA status changes configured in a protocol version while its required items are not satisfied: either the
+     * latest execution has pending items, or an active protocol that applies to the RMA was never started.
      */
     @Transactional(readOnly = true)
     public void assertTransitionAllowed(RmaRecord rma, RmaStatus targetStatus) {
@@ -163,6 +164,16 @@ public class ProtocolExecutionService {
             .ifPresent(execution -> {
                 throw new BusinessException("Required items of protocol " + execution.getTemplateName() + " v" + execution.getVersionNumber()
                     + " are pending. The RMA cannot move to " + targetStatus + ".");
+            });
+
+        protocolTemplateService.findActiveApplicable(rma).stream()
+            .filter(template -> !latestByTemplate.containsKey(template.getId()))
+            .filter(template -> template.latestVersion().blockedStatusSet().contains(targetStatus))
+            .filter(template -> template.latestVersion().getItems().stream().anyMatch(ProtocolTemplateItem::isRequired))
+            .findFirst()
+            .ifPresent(template -> {
+                throw new BusinessException("Protocol " + template.getName() + " v" + template.getCurrentVersion()
+                    + " has required items and was not started. The RMA cannot move to " + targetStatus + ".");
             });
     }
 

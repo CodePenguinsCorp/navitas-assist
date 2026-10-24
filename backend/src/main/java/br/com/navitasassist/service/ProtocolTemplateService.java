@@ -56,7 +56,7 @@ public class ProtocolTemplateService {
      * Editing never touches existing versions: a new version is appended and only new executions use it.
      */
     public ProtocolTemplateResponse update(Long id, ProtocolTemplateRequest request) {
-        ProtocolTemplate template = getEntityById(id);
+        ProtocolTemplate template = protocolTemplateRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Protocol template not found: " + id));
         applyMetadata(template, request);
         ProtocolTemplateVersion version = buildVersion(request, template.getCurrentVersion() + 1);
         template.addVersion(version);
@@ -67,6 +67,11 @@ public class ProtocolTemplateService {
     @Transactional(readOnly = true)
     public ProtocolTemplate getEntityById(Long id) {
         return protocolTemplateRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Protocol template not found: " + id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProtocolTemplate> findActiveApplicable(RmaRecord rma) {
+        return protocolTemplateRepository.findAllActive().stream().filter(template -> appliesTo(template, rma)).toList();
     }
 
     public boolean appliesTo(ProtocolTemplate template, RmaRecord rma) {

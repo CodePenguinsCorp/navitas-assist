@@ -263,6 +263,55 @@ class ProtocolControllerIntegrationTest {
         changeStatus(rmaId, "IN_TESTS").andExpect(status().isOk()).andExpect(jsonPath("$.status").value("IN_TESTS"));
     }
 
+    @Test
+    void shouldBlockConfiguredTransitionsWhenAnApplicableProtocolWasNotStarted() throws Exception {
+        Long rmaId = saveRma("RMA-PROT-6", product);
+        Product other = saveProduct("PROT-3", "Fonte", "Fontes");
+        Long otherRmaId = saveRma("RMA-PROT-7", other);
+        Map<String, Object> template = templatePayload("Inspeção final", null, "Controladores", List.of(checkItem("Aperto dos bornes", true)));
+        template.put("blockedStatuses", List.of("IN_TESTS"));
+        long templateId = templateId(createTemplate(objectMapper.writeValueAsString(template)));
+
+        changeStatus(rmaId, "IN_TESTS")
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Protocol Inspeção final v1 has required items and was not started. The RMA cannot move to IN_TESTS."));
+        changeStatus(rmaId, "IN_REPAIR").andExpect(status().isOk());
+        changeStatus(otherRmaId, "IN_TESTS").andExpect(status().isOk());
+
+        JsonNode execution = startExecution(rmaId, templateId, "tech", "TECHNICIAN");
+        changeStatus(rmaId, "IN_TESTS")
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Required items of protocol Inspeção final v1 are pending. The RMA cannot move to IN_TESTS."));
+
+        result(execution.get("id").asLong(), itemId(execution, 0), "PASSED", null, null, null, null).andExpect(status().isCreated());
+        changeStatus(rmaId, "IN_TESTS").andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldNotBlockTransitionsForInactiveOrOptionalOnlyProtocols() throws Exception {
+        Long rmaId = saveRma("RMA-PROT-8", product);
+        Map<String, Object> inactive = templatePayload("Inativo", product.getId(), null, List.of(checkItem("Obrigatório", true)));
+        inactive.put("blockedStatuses", List.of("IN_TESTS"));
+        inactive.put("active", false);
+        createTemplate(objectMapper.writeValueAsString(inactive)).andExpect(status().isCreated());
+        Map<String, Object> optional = templatePayload("Opcional", product.getId(), null, List.of(checkItem("Opcional", false)));
+        optional.put("blockedStatuses", List.of("IN_TESTS"));
+        createTemplate(objectMapper.writeValueAsString(optional)).andExpect(status().isCreated());
+
+        changeStatus(rmaId, "IN_TESTS").andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldRejectMeasurementsBeyondStoragePrecisionAsValidationError() throws Exception {
+        Long rmaId = saveRma("RMA-PROT-9", product);
+        long templateId = templateId(createTemplate(templateJson("Grande", product.getId(), null, List.of(measurementItem("Resistência", true, "Ω", 2, null, null)))));
+        JsonNode execution = startExecution(rmaId, templateId, "tech", "TECHNICIAN");
+
+        result(execution.get("id").asLong(), itemId(execution, 0), "PASSED", "12345678901234.00", null, null, null)
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Validation failed"));
+    }
+
     private ResultActions createTemplate(String json) throws Exception {
         return mockMvc.perform(post("/api/protocols/templates")
             .with(user("admin").roles("ADMIN"))
