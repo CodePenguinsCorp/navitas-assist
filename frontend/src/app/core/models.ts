@@ -295,6 +295,130 @@ export interface RmaResponse {
   updatedAt: string;
 }
 
+export type PartMovementType =
+  | 'ENTRY'
+  | 'EXIT'
+  | 'ADJUSTMENT'
+  | 'RESERVATION'
+  | 'RESERVATION_CANCEL'
+  | 'CONSUMPTION'
+  | 'REVERSAL';
+
+export type ManualPartMovementType = Extract<PartMovementType, 'ENTRY' | 'EXIT' | 'ADJUSTMENT'>;
+
+export type PartReservationStatus = 'PENDING' | 'ACTIVE' | 'CONSUMED' | 'CANCELLED' | 'REVERSED';
+
+export interface PartRequest {
+  code: string;
+  name: string;
+  unit: string;
+  location: string | null;
+  minimumStock: number;
+  unitCost: number;
+  active: boolean;
+}
+
+export interface PartResponse {
+  id: number;
+  code: string;
+  name: string;
+  unit: string;
+  location: string | null;
+  minimumStock: number;
+  unitCost: number;
+  onHand: number;
+  reserved: number;
+  available: number;
+  belowMinimum: boolean;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PartMovementRequest {
+  type: ManualPartMovementType;
+  quantity: number;
+  reason: string | null;
+}
+
+export interface PartReversalRequest {
+  reason: string;
+}
+
+export interface PartMovementResponse {
+  id: number;
+  partId: number;
+  partCode: string;
+  partName: string;
+  type: PartMovementType;
+  quantity: number;
+  onHandChange: number;
+  reservedChange: number;
+  onHandAfter: number;
+  reservedAfter: number;
+  unitCost: number;
+  totalCost: number;
+  rmaId: number | null;
+  rmaCode: string | null;
+  reservationId: number | null;
+  reversedMovementId: number | null;
+  reversed: boolean;
+  reason: string | null;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface PartReservationRequest {
+  partId: number;
+  quantity: number;
+  note: string | null;
+}
+
+export interface PartReservationResponse {
+  id: number;
+  rmaId: number;
+  rmaCode: string;
+  partId: number;
+  partCode: string;
+  partName: string;
+  unit: string;
+  location: string | null;
+  quantity: number;
+  status: PartReservationStatus;
+  partAvailable: number;
+  unitCost: number;
+  totalCost: number;
+  note: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RmaPartsResponse {
+  rmaId: number;
+  rmaCode: string;
+  reservations: PartReservationResponse[];
+  movements: PartMovementResponse[];
+  reservedCost: number;
+  consumedCost: number;
+  pendingCount: number;
+}
+
+export interface PartReplenishmentResponse {
+  partId: number;
+  code: string;
+  name: string;
+  unit: string;
+  location: string | null;
+  minimumStock: number;
+  onHand: number;
+  reserved: number;
+  available: number;
+  pendingQuantity: number;
+  suggestedQuantity: number;
+  belowMinimum: boolean;
+}
+
 export interface NavItem {
   label: string;
   route: string;
