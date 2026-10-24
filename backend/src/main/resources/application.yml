@@ -44,6 +44,8 @@ navitas:
         minutes: ${SLA_TESTS_MINUTES:1440}
   shipments:
     address-retention-days: ${SHIPMENT_ADDRESS_RETENTION_DAYS:365}
+    retention:
+      enabled: ${SHIPMENT_ADDRESS_RETENTION_ENABLED:true}
   security:
     cookie-secure: ${SESSION_COOKIE_SECURE:true}
     seed-admin:

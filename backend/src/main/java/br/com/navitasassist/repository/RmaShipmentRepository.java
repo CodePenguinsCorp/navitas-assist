@@ -19,17 +19,17 @@ public interface RmaShipmentRepository extends JpaRepository<RmaShipment, Long> 
     Optional<RmaShipment> findByIdForUpdate(@Param("id") Long id);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select s from RmaShipment s where upper(s.carrier) = upper(:carrier) and upper(s.trackingCode) = upper(:trackingCode)")
-    Optional<RmaShipment> findByCarrierAndTrackingCodeForUpdate(@Param("carrier") String carrier, @Param("trackingCode") String trackingCode);
+    @Query("select s from RmaShipment s where s.carrierKey = :carrierKey and s.trackingCode = :trackingCode")
+    Optional<RmaShipment> findByCarrierKeyAndTrackingCodeForUpdate(@Param("carrierKey") String carrierKey, @Param("trackingCode") String trackingCode);
 
     @Query("""
         select count(s) > 0
         from RmaShipment s
-        where upper(s.carrier) = upper(:carrier)
-          and upper(s.trackingCode) = upper(:trackingCode)
+        where s.carrierKey = :carrierKey
+          and s.trackingCode = :trackingCode
           and (:excludedId is null or s.id <> :excludedId)
         """)
-    boolean existsTrackingCode(@Param("carrier") String carrier, @Param("trackingCode") String trackingCode, @Param("excludedId") Long excludedId);
+    boolean existsTrackingCode(@Param("carrierKey") String carrierKey, @Param("trackingCode") String trackingCode, @Param("excludedId") Long excludedId);
 
     @Query("""
         select s

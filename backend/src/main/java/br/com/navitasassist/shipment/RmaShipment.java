@@ -71,6 +71,9 @@ public class RmaShipment extends AuditableEntity {
     @Column(nullable = false, length = 120)
     private String carrier;
 
+    @Column(nullable = false, length = 120)
+    private String carrierKey;
+
     @Column(length = 120)
     private String serviceName;
 

@@ -31,6 +31,7 @@ import br.com.navitasassist.shipment.ShipmentResponse;
 import br.com.navitasassist.shipment.ShipmentStatus;
 import br.com.navitasassist.shipment.UpdateShipmentRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -83,7 +84,7 @@ public class ShipmentService {
 
         ShipmentStatus initialStatus = shipment.getTrackingCode() == null ? ShipmentStatus.CREATED : ShipmentStatus.LABEL_ISSUED;
         shipment.setStatus(initialStatus);
-        RmaShipment saved = rmaShipmentRepository.save(shipment);
+        RmaShipment saved = saveUnique(shipment);
         recordEvent(saved, newEvent(ShipmentEventSource.SYSTEM, initialStatus, "Shipment created", null, null, Instant.now()));
         return toDetail(saved);
     }
@@ -120,8 +121,9 @@ public class ShipmentService {
             shipment.setStatus(status);
         }
         String description = changes.isEmpty() ? "Shipment data updated" : "Shipment data updated: " + String.join(", ", changes);
-        recordEvent(shipment, newEvent(ShipmentEventSource.MANUAL, status, description, null, request.justification(), Instant.now()));
-        return toDetail(rmaShipmentRepository.save(shipment));
+        RmaShipment saved = saveUnique(shipment);
+        recordEvent(saved, newEvent(ShipmentEventSource.MANUAL, status, description, null, request.justification(), Instant.now()));
+        return toDetail(saved);
     }
 
     public ShipmentDetailResponse addManualEvent(Long id, ManualShipmentEventRequest request) {
@@ -137,7 +139,7 @@ public class ShipmentService {
     }
 
     public CarrierEventIngestResponse ingest(CarrierEventRequest request) {
-        RmaShipment shipment = rmaShipmentRepository.findByCarrierAndTrackingCodeForUpdate(request.carrier().trim(), normalizeTracking(request.trackingCode()))
+        RmaShipment shipment = rmaShipmentRepository.findByCarrierKeyAndTrackingCodeForUpdate(normalizeCarrierKey(request.carrier()), normalizeTracking(request.trackingCode()))
             .orElseThrow(() -> new ResourceNotFoundException("Shipment not found for tracking code: " + request.trackingCode()));
         boolean duplicate = !ingestEvent(shipment, new CarrierTrackingEvent(request.externalEventId(), request.status(), request.description(), request.proofReference(), request.occurredAt()));
         rmaShipmentRepository.save(shipment);
@@ -224,6 +226,7 @@ public class ShipmentService {
         shipment.setDestinationAddress(trimToNull(destinationAddress));
         shipment.setVolumes(volumes);
         shipment.setCarrier(carrier.trim());
+        shipment.setCarrierKey(normalizeCarrierKey(carrier));
         shipment.setServiceName(trimToNull(serviceName));
         shipment.setTrackingCode(normalizeTracking(trackingCode));
         shipment.setLabelReference(trimToNull(labelReference));
@@ -231,7 +234,7 @@ public class ShipmentService {
     }
 
     private void validateTrackingCode(RmaShipment shipment, Long excludedId) {
-        if (shipment.getTrackingCode() != null && rmaShipmentRepository.existsTrackingCode(shipment.getCarrier(), shipment.getTrackingCode(), excludedId)) {
+        if (shipment.getTrackingCode() != null && rmaShipmentRepository.existsTrackingCode(shipment.getCarrierKey(), shipment.getTrackingCode(), excludedId)) {
             throw new BusinessException("Tracking code already registered for this carrier: " + shipment.getTrackingCode());
         }
     }
@@ -257,6 +260,18 @@ public class ShipmentService {
             return "system";
         }
         return authentication.getName();
+    }
+
+    private RmaShipment saveUnique(RmaShipment shipment) {
+        try {
+            return rmaShipmentRepository.saveAndFlush(shipment);
+        } catch (DataIntegrityViolationException exception) {
+            throw new BusinessException("Tracking code already registered for this carrier: " + shipment.getTrackingCode());
+        }
+    }
+
+    private String normalizeCarrierKey(String carrier) {
+        return carrier.trim().replaceAll("\\s+", " ").toUpperCase(Locale.ROOT);
     }
 
     private String normalizeTracking(String value) {
