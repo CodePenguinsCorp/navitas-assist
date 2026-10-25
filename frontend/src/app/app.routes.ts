@@ -7,7 +7,6 @@ import { KanbanComponent } from './pages/kanban/kanban.component';
 import { LoginComponent } from './pages/login/login.component';
 import { ClientsComponent } from './pages/clients/clients.component';
 import { ProductsComponent } from './pages/products/products.component';
-import { ReportsComponent } from './pages/reports/reports.component';
 import { RmasComponent } from './pages/rmas/rmas.component';
 import { UsersComponent } from './pages/users/users.component';
 
@@ -76,7 +75,7 @@ export const routes: Routes = [
       },
       {
         path: 'relatorios',
-        component: ReportsComponent,
+        loadComponent: () => import('./pages/reports/reports.component').then((module) => module.ReportsComponent),
         canActivate: [roleGuard],
         data: {
           roles: ['ADMIN', 'TECHNICIAN', 'VIEWER']
