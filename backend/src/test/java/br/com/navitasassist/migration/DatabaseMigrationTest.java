@@ -34,6 +34,10 @@ class DatabaseMigrationTest {
             assertTrue(tableExists(connection, "rma_items"));
             assertTrue(tableExists(connection, "rma_assignment_history"));
             assertTrue(tableExists(connection, "kanban_views"));
+            assertFalse(columnExists(connection, "clients", "contact_name"));
+            assertEquals(30, columnSize(connection, "clients", "phone"));
+            assertEquals(255, columnSize(connection, "clients", "address"));
+            assertEquals(18, columnSize(connection, "clients", "document_number"));
             assertFalse(columnExists(connection, "rmas", "invoice_file_name"));
             assertEquals(80, columnSize(connection, "rmas", "invoice_number"));
             assertEquals(1000, columnSize(connection, "rmas", "reported_failure"));
