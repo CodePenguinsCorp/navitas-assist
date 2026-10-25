@@ -6,13 +6,11 @@ import {
   RMA_STATUS_LABELS
 } from '../../core/mock-data';
 import {
-  ClientResponse,
   MetricCard,
-  ProductResponse,
   RmaPriority,
   RmaResponse,
   RmaStatusHistoryResponse,
-  UserAccountResponse,
+  UserSummaryResponse,
   WarrantyStatus
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
@@ -56,15 +54,15 @@ export class DashboardComponent {
   protected readonly errorMessage = signal('');
 
   private readonly rmasSignal = signal<RmaResponse[]>([]);
-  private readonly clientsSignal = signal<ClientResponse[]>([]);
-  private readonly productsSignal = signal<ProductResponse[]>([]);
-  private readonly usersSignal = signal<UserAccountResponse[]>([]);
+  private readonly clientTotalSignal = signal(0);
+  private readonly productTotalSignal = signal(0);
+  private readonly userTotalSignal = signal(0);
 
   protected readonly metrics = computed<MetricCard[]>(() => {
     const rmas = this.rmasSignal();
-    const clients = this.clientsSignal();
-    const products = this.productsSignal();
-    const users = this.usersSignal();
+    const clients = this.clientTotalSignal();
+    const products = this.productTotalSignal();
+    const users = this.userTotalSignal();
 
     const activeRmas = rmas.filter((rma) => !CLOSED_RMA_STATUSES.includes(rma.status));
     const initialQueue = rmas.filter((rma) => rma.status === 'RECEIVED' || rma.status === 'TRIAGE');
@@ -72,7 +70,7 @@ export class DashboardComponent {
     const inWarrantyCount = rmaItems.filter((item) => item.warrantyStatus === WarrantyStatus.IN_WARRANTY).length;
     const pendingWarrantyCount = rmaItems.filter((item) => item.warrantyStatus === WarrantyStatus.PENDING).length;
     const warrantyRate = rmaItems.length === 0 ? 0 : Math.round((inWarrantyCount / rmaItems.length) * 100);
-    const catalogTotal = clients.length + products.length + users.length;
+    const catalogTotal = clients + products + users;
 
     return [
       {
@@ -96,7 +94,7 @@ export class DashboardComponent {
       {
         label: 'Cadastros',
         value: String(catalogTotal),
-        variation: `${clients.length} clientes | ${products.length} produtos${users.length > 0 ? ` | ${users.length} usuários` : ''}`,
+        variation: `${clients} clientes | ${products} produtos${users > 0 ? ` | ${users} usuários` : ''}`,
         tone: 'light'
       }
     ];
@@ -154,22 +152,22 @@ export class DashboardComponent {
     this.errorMessage.set('');
 
     const usersRequest = this.authService.hasAnyRole(['ADMIN'])
-      ? this.catalogService.listUsers()
-      : of<UserAccountResponse[]>([]);
+      ? this.catalogService.getUserSummary()
+      : of<UserSummaryResponse>({ total: 0, active: 0, admins: 0, roles: 0 });
 
     forkJoin({
-      rmas: this.rmaService.list(),
-      clients: this.catalogService.listClients(),
-      products: this.catalogService.listProducts(),
+      rmas: this.rmaService.listBoard(),
+      clients: this.catalogService.getClientSummary(),
+      products: this.catalogService.getProductSummary(),
       users: usersRequest
     }).pipe(
       finalize(() => this.loading.set(false))
     ).subscribe({
       next: ({ rmas, clients, products, users }) => {
         this.rmasSignal.set(rmas);
-        this.clientsSignal.set(clients);
-        this.productsSignal.set(products);
-        this.usersSignal.set(users);
+        this.clientTotalSignal.set(clients.total);
+        this.productTotalSignal.set(products.total);
+        this.userTotalSignal.set(users.total);
       },
       error: () => {
         this.errorMessage.set('Não foi possível carregar o dashboard.');

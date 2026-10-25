@@ -3,11 +3,14 @@ package br.com.navitasassist.controller;
 import java.util.List;
 
 import br.com.navitasassist.diagnosis.DiagnosisRequest;
+import br.com.navitasassist.pagination.PageResponse;
 import br.com.navitasassist.rma.CreateRmaRequest;
 import br.com.navitasassist.rma.RmaAssigneeUpdateRequest;
+import br.com.navitasassist.rma.RmaBulkStatusUpdateRequest;
 import br.com.navitasassist.rma.RmaResponse;
 import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusUpdateRequest;
+import br.com.navitasassist.rma.RmaSummaryResponse;
 import br.com.navitasassist.rma.UpdateRmaRequest;
 import br.com.navitasassist.service.RmaService;
 import jakarta.validation.Valid;
@@ -32,6 +35,24 @@ public class RmaController {
     private final RmaService rmaService;
 
     @GetMapping
+    public PageResponse<RmaResponse> searchPage(
+        @RequestParam(required = false) String query,
+        @RequestParam(required = false) RmaStatus status,
+        @RequestParam(required = false) Integer page,
+        @RequestParam(required = false) Integer size
+    ) {
+        return rmaService.searchPage(query, status, page, size);
+    }
+
+    @GetMapping("/summary")
+    public RmaSummaryResponse summarize(
+        @RequestParam(required = false) String query,
+        @RequestParam(required = false) RmaStatus status
+    ) {
+        return rmaService.summarize(query, status);
+    }
+
+    @GetMapping("/board")
     public List<RmaResponse> search(
         @RequestParam(required = false) String query,
         @RequestParam(required = false) RmaStatus status
@@ -71,6 +92,11 @@ public class RmaController {
     @PatchMapping("/{id}/status")
     public RmaResponse updateStatus(@PathVariable Long id, @Valid @RequestBody RmaStatusUpdateRequest request) {
         return rmaService.updateStatus(id, request);
+    }
+
+    @PatchMapping("/{id}/bulk-status")
+    public RmaResponse updateStatusInBulk(@PathVariable Long id, @Valid @RequestBody RmaBulkStatusUpdateRequest request) {
+        return rmaService.updateStatusInBulk(id, request);
     }
 
     @PatchMapping("/{id}/assignee")

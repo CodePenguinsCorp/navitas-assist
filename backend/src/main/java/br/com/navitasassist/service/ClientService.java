@@ -5,8 +5,11 @@ import java.util.List;
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.client.ClientRequest;
 import br.com.navitasassist.client.ClientResponse;
+import br.com.navitasassist.client.ClientSummaryResponse;
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
+import br.com.navitasassist.pagination.PageParams;
+import br.com.navitasassist.pagination.PageResponse;
 import br.com.navitasassist.repository.ClientRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,13 +25,27 @@ public class ClientService {
     private final RmaRecordRepository rmaRecordRepository;
 
     @Transactional(readOnly = true)
-    public List<ClientResponse> listAll() {
-        return clientRepository.findAll().stream().map(ClientResponse::from).toList();
+    public PageResponse<ClientResponse> search(
+        String query,
+        Boolean hasDocument,
+        Boolean hasEmail,
+        Integer page,
+        Integer size
+    ) {
+        return PageResponse.from(
+            clientRepository.search(blankToNull(query), hasDocument, hasEmail, PageParams.of(page, size)),
+            ClientResponse::from
+        );
     }
 
     @Transactional(readOnly = true)
     public List<ClientResponse> listOptions() {
         return clientRepository.findAllByOrderByLegalNameAscIdAsc().stream().map(ClientResponse::from).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ClientSummaryResponse summarize() {
+        return clientRepository.summarize();
     }
 
     @Transactional(readOnly = true)
@@ -73,6 +90,10 @@ public class ClientService {
         client.setPhone(trim(request.phone()));
         client.setAddress(trim(request.address()));
         client.setNotes(trim(request.notes()));
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     private String trim(String value) {

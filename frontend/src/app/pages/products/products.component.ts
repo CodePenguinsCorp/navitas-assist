@@ -1,19 +1,20 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable, finalize } from 'rxjs';
-import { ProductRequest, ProductResponse } from '../../core/models';
+import { Observable, Subject, debounceTime, finalize } from 'rxjs';
+import { ProductRequest, ProductResponse, ProductSummaryResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import {
-  countDistinct,
   extractHttpErrorMessage,
   formatDateTime,
-  includesQuery,
-  matchesPresence,
   PRESENCE_FILTER_OPTIONS,
   PresenceFilter,
   normalizeOptionalText
 } from '../../core/utils/catalog-ui';
+import { PagedList } from '../../core/utils/paged-list';
+import { SEARCH_DEBOUNCE_MS, presenceToFlag } from '../../core/utils/pagination';
 import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
 
 type ProductModalMode = 'create' | 'edit';
 type ProductFormControlName =
@@ -41,7 +42,7 @@ const PRODUCT_PREVIEW_LIMITS = {
 
 @Component({
   selector: 'app-products',
-  imports: [ReactiveFormsModule, CustomSelectComponent],
+  imports: [ReactiveFormsModule, CustomSelectComponent, PaginationComponent],
   templateUrl: './products.component.html',
   styles: [`
     :host {
@@ -103,7 +104,8 @@ export class ProductsComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly catalogService = inject(CatalogService);
 
-  protected readonly loading = signal(true);
+  private readonly destroyRef = inject(DestroyRef);
+
   protected readonly submitting = signal(false);
   protected readonly deletingProductId = signal<number | null>(null);
   protected readonly errorMessage = signal('');
@@ -117,70 +119,34 @@ export class ProductsComponent {
   protected readonly activeModal = signal<ProductModalMode | null>(null);
   protected readonly limits = PRODUCT_LIMITS;
 
-  private readonly productsSignal = signal<ProductResponse[]>([]);
+  private readonly searchChanges = new Subject<void>();
+  private readonly productList = new PagedList<ProductResponse>(
+    (pageQuery) => this.catalogService.listProducts({
+      ...pageQuery,
+      query: this.searchTerm(),
+      category: this.categoryFilter(),
+      hasFirmware: presenceToFlag(this.firmwareFilter())
+    }),
+    (error) => this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os produtos.'))
+  );
+  private readonly summarySignal = signal<ProductSummaryResponse>({ total: 0, withFirmware: 0, averageWarrantyMonths: 0, categories: [] });
   private readonly editingProductSignal = signal<ProductResponse | null>(null);
   private readonly deletingProductSignal = signal<ProductResponse | null>(null);
 
-  protected readonly products = this.productsSignal.asReadonly();
+  protected readonly products = this.productList.items;
+  protected readonly loading = this.productList.loading;
+  protected readonly page = this.productList.page;
+  protected readonly pageSize = this.productList.size;
+  protected readonly totalElements = this.productList.totalElements;
+  protected readonly totalPages = this.productList.totalPages;
+  protected readonly summary = this.summarySignal.asReadonly();
   protected readonly editingProduct = this.editingProductSignal.asReadonly();
   protected readonly deletingProduct = this.deletingProductSignal.asReadonly();
 
-  protected readonly categoryFilterOptions = computed<ReadonlyArray<CustomSelectOption<string>>>(() => {
-    const categories = new Map<string, string>();
-    for (const product of this.productsSignal()) {
-      const category = normalizeOptionalText(product.category);
-      if (category) {
-        const key = category.toLocaleLowerCase('pt-BR');
-        if (!categories.has(key)) {
-          categories.set(key, category);
-        }
-      }
-    }
-
-    return [
-      { value: '', label: 'Todas' },
-      ...[...categories.values()]
-        .sort((left, right) => left.localeCompare(right, 'pt-BR', { sensitivity: 'base' }))
-        .map((category) => ({ value: category, label: category }))
-    ];
-  });
-
-  protected readonly filteredProducts = computed(() =>
-    [...this.productsSignal()]
-      .sort((left, right) => left.name.localeCompare(right.name, 'pt-BR', { sensitivity: 'base' }))
-      .filter((product) =>
-        includesQuery(
-          this.searchTerm(),
-          product.sku,
-          product.name,
-          product.category,
-          product.hardwareVersion,
-          product.firmwareVersion
-        ) &&
-        (!this.categoryFilter() ||
-          normalizeOptionalText(product.category)?.toLocaleLowerCase('pt-BR') ===
-            this.categoryFilter().toLocaleLowerCase('pt-BR')) &&
-        matchesPresence(product.firmwareVersion, this.firmwareFilter())
-      )
-  );
-
-  protected readonly totalProducts = computed(() => this.productsSignal().length);
-  protected readonly categoryCount = computed(() =>
-    countDistinct(this.productsSignal().map((product) => product.category))
-  );
-  protected readonly productsWithFirmware = computed(
-    () =>
-      this.productsSignal().filter((product) => Boolean(normalizeOptionalText(product.firmwareVersion))).length
-  );
-  protected readonly averageWarrantyMonths = computed(() => {
-    const products = this.productsSignal();
-    if (products.length === 0) {
-      return 0;
-    }
-
-    const totalMonths = products.reduce((sum, product) => sum + product.defaultWarrantyMonths, 0);
-    return Math.round(totalMonths / products.length);
-  });
+  protected readonly categoryFilterOptions = computed<ReadonlyArray<CustomSelectOption<string>>>(() => [
+    { value: '', label: 'Todas' },
+    ...this.summarySignal().categories.map((category) => ({ value: category, label: category }))
+  ]);
 
   protected readonly form = this.formBuilder.nonNullable.group({
     sku: ['', [Validators.required, Validators.maxLength(PRODUCT_LIMITS.sku)]],
@@ -193,19 +159,39 @@ export class ProductsComponent {
   });
 
   constructor() {
+    this.searchChanges.pipe(
+      debounceTime(SEARCH_DEBOUNCE_MS),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(() => this.productList.firstPage());
     this.loadProducts();
+    this.loadSummary();
+  }
+
+  protected get hasActiveFilters(): boolean {
+    return Boolean(this.searchTerm().trim()) || Boolean(this.categoryFilter()) || this.firmwareFilter() !== 'all';
   }
 
   protected updateSearch(value: string): void {
     this.searchTerm.set(value);
+    this.searchChanges.next();
   }
 
   protected updateCategoryFilter(value: string): void {
     this.categoryFilter.set(value);
+    this.productList.firstPage();
   }
 
   protected updateFirmwareFilter(value: PresenceFilter): void {
     this.firmwareFilter.set(value);
+    this.productList.firstPage();
+  }
+
+  protected goToPage(page: number): void {
+    this.productList.goToPage(page);
+  }
+
+  protected changePageSize(size: number): void {
+    this.productList.changeSize(size);
   }
 
   protected openCreateModal(): void {
@@ -262,6 +248,7 @@ export class ProductsComponent {
         );
         this.closeModal();
         this.loadProducts();
+        this.loadSummary();
       },
       error: (error) => {
         this.modalErrorMessage.set(
@@ -298,10 +285,8 @@ export class ProductsComponent {
       finalize(() => this.deletingProductId.set(null))
     ).subscribe({
       next: () => {
-        this.productsSignal.update((products) =>
-          products.filter((currentProduct) => currentProduct.id !== product.id)
-        );
-        this.syncCategoryFilter();
+        this.loadProducts();
+        this.loadSummary();
         this.successMessage.set(`Produto ${product.name} excluído com sucesso.`);
         this.resetDeleteModal();
       },
@@ -358,19 +343,17 @@ export class ProductsComponent {
   }
 
   private loadProducts(): void {
-    this.loading.set(true);
     this.errorMessage.set('');
+    this.productList.reload();
+  }
 
-    this.catalogService.listProducts().pipe(
-      finalize(() => this.loading.set(false))
-    ).subscribe({
-      next: (products) => {
-        this.productsSignal.set(products);
+  private loadSummary(): void {
+    this.catalogService.getProductSummary().subscribe({
+      next: (summary) => {
+        this.summarySignal.set(summary);
         this.syncCategoryFilter();
       },
-      error: (error) => {
-        this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os produtos.'));
-      }
+      error: () => undefined
     });
   }
 
@@ -390,7 +373,12 @@ export class ProductsComponent {
     const matchingOption = this.categoryFilterOptions().find(
       (option) => option.value.toLocaleLowerCase('pt-BR') === selected.toLocaleLowerCase('pt-BR')
     );
-    this.categoryFilter.set(matchingOption?.value ?? '');
+    const next = matchingOption?.value ?? '';
+
+    if (next !== selected) {
+      this.categoryFilter.set(next);
+      this.productList.firstPage();
+    }
   }
 
   private resetDeleteModal(): void {

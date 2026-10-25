@@ -36,13 +36,19 @@
                 [class.is-selected]="isSelected(item)"
                 [class.is-dragging]="isDragging(item)"
                 [class.is-updating]="isStatusUpdating(item)"
-                [draggable]="canUpdateStatus() && boardUpdatingId() === null"
+                [draggable]="canUpdateStatus() && !interactionDisabled() && boardUpdatingId() === null"
                 tabindex="0"
                 (click)="cardSelect.emit(item)"
                 (keydown.enter)="cardSelect.emit(item)"
                 (dragstart)="cardDragStart.emit({ event: $event, rma: item })"
                 (dragend)="cardDragEnd.emit()"
               >
+                @if (bulkSelectionEnabled()) {
+                  <label class="board-card__selection" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" (dragstart)="preventCardDrag($event)">
+                    <input type="checkbox" [checked]="bulkSelectedIds().includes(item.id)" [disabled]="interactionDisabled() || boardUpdatingId() !== null" [attr.aria-label]="'Selecionar ' + item.code" (change)="bulkSelectionChange.emit(item)" />
+                    Selecionar
+                  </label>
+                }
                 <header class="board-card__header">
                   <div>
                     <h4>{{ item.code }}</h4>
@@ -69,7 +75,7 @@
                       <button
                         type="button"
                         class="board-card__assignee-action"
-                        [disabled]="boardUpdatingId() !== null"
+                        [disabled]="interactionDisabled() || boardUpdatingId() !== null"
                         (click)="requestAssigneeChange($event, item)"
                         (dragstart)="preventCardDrag($event)"
                       >{{ item.assigneeId ? 'Trocar' : 'Atribuir' }}</button>

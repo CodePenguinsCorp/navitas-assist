@@ -4,28 +4,40 @@ import { Observable } from 'rxjs';
 import {
   CreateRmaRequest,
   DiagnosisRequest,
+  PageQuery,
+  PageResponse,
   RmaAssigneeUpdateRequest,
+  RmaBulkStatusUpdateRequest,
   RmaResponse,
+  RmaSummaryResponse,
+  RmaPriority,
   RmaStatus,
   RmaStatusUpdateRequest
 } from '../models';
+import { buildPageParams } from '../utils/pagination';
+
+export interface RmaFilters extends PageQuery {
+  query?: string;
+  status?: RmaStatus;
+}
 
 @Injectable({ providedIn: 'root' })
 export class RmaService {
   private readonly http = inject(HttpClient);
 
-  list(filters?: { query?: string; status?: RmaStatus }): Observable<RmaResponse[]> {
-    let params = new HttpParams();
+  list(filters: RmaFilters = {}): Observable<PageResponse<RmaResponse>> {
+    const params = buildPageParams(filters, { query: filters.query, status: filters.status });
+    return this.http.get<PageResponse<RmaResponse>>('/api/rmas', { params });
+  }
 
-    if (filters?.query?.trim()) {
-      params = params.set('query', filters.query.trim());
-    }
+  getSummary(filters: Pick<RmaFilters, 'query' | 'status'> = {}): Observable<RmaSummaryResponse> {
+    const params = buildPageParams({}, { query: filters.query, status: filters.status });
+    return this.http.get<RmaSummaryResponse>('/api/rmas/summary', { params });
+  }
 
-    if (filters?.status) {
-      params = params.set('status', filters.status);
-    }
-
-    return this.http.get<RmaResponse[]>('/api/rmas', { params });
+  listBoard(filters: Pick<RmaFilters, 'query' | 'status'> = {}): Observable<RmaResponse[]> {
+    const params = buildPageParams({}, { query: filters.query, status: filters.status });
+    return this.http.get<RmaResponse[]>('/api/rmas/board', { params });
   }
 
   getById(id: number): Observable<RmaResponse> {
@@ -52,6 +64,14 @@ export class RmaService {
 
   updateStatus(id: number, payload: RmaStatusUpdateRequest): Observable<RmaResponse> {
     return this.http.patch<RmaResponse>(`/api/rmas/${id}/status`, payload);
+  }
+
+  updateStatusInBulk(id: number, payload: RmaBulkStatusUpdateRequest): Observable<RmaResponse> {
+    return this.http.patch<RmaResponse>(`/api/rmas/${id}/bulk-status`, payload);
+  }
+
+  updatePriority(id: number, priority: RmaPriority): Observable<RmaResponse> {
+    return this.http.put<RmaResponse>(`/api/rmas/${id}`, { priority });
   }
 
   updateAssignee(id: number, payload: RmaAssigneeUpdateRequest): Observable<RmaResponse> {

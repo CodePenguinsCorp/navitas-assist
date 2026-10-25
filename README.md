@@ -90,6 +90,40 @@ Instantes são exibidos em `America/Sao_Paulo`. Datas civis preservam o dia rece
 
 **Exportação:** antes de implementar, validar com o produto os exemplos, colunas, volume e política de acesso para PDF A4 de laudo por RMA e CSV UTF-8 das consultas tabulares (datas ISO e proteção contra fórmulas). A especificação proposta e seus limites estão em `docs/superpowers/specs/2026-10-23-nav-27-design.md`; o formato ainda não foi homologado.
 
+## Ações em lote no Kanban (NAV-15)
+
+Marque cards em qualquer coluna e use **Selecionar visíveis** para incluir os itens mostrados pelos filtros. A seleção permanece ao mudar os filtros; o contador informa quantos selecionados estão ocultos. Use **Limpar seleção** para começar de novo. Antes de aplicar, a confirmação mostra a ação, a quantidade e os RMAs envolvidos. O resultado de cada RMA aparece separadamente; falhas continuam selecionadas para revisão. O quadro atualiza somente os itens afetados.
+
+ADMIN e SERVICE_DESK podem alterar status, prioridade e responsável em lote. TECHNICIAN pode alterar somente status. VIEWER não pode selecionar nem alterar. Cada atualização passa pelas permissões da API e registra o histórico do RMA: etapas e prioridades no histórico de status; atribuições no histórico de responsáveis.
+
+Na alteração de **status em lote**, qualquer etapa pode ser escolhida para os RMAs selecionados, inclusive uma etapa anterior ou a reabertura de um RMA encerrado. O histórico registra cada mudança. A API ainda confere a etapa atual de cada card para evitar sobrescrever uma alteração feita em outra sessão depois da seleção; nesse caso, somente o card desatualizado falha e é recarregado.
+
+## Paginação das consultas (NAV-28)
+
+`GET /api/rmas`, `/api/clients`, `/api/products` e `/api/users` retornam uma página:
+
+```json
+{ "content": [], "page": 0, "size": 20, "totalElements": 0, "totalPages": 0 }
+```
+
+| Parâmetro | Regra |
+|:---|:---|
+| `page` | Índice a partir de 0 (padrão `0`). Valores negativos ou não numéricos retornam `400`. Uma página além do fim retorna `content` vazio com os totais corretos. |
+| `size` | Padrão `20`, mínimo `1`, máximo `100`. Fora do intervalo retorna `400`. |
+
+A ordem é fixa e estável (desempate por `id`): RMAs na ordem da fila (prioridade alta, média e demais; depois a entrada mais antiga); clientes, produtos e usuários por nome. Os filtros são aplicados no backend antes de paginar e `totalElements` considera apenas os registros filtrados:
+
+| Recurso | Filtros |
+|:---|:---|
+| `/api/rmas` | `query`, `status` |
+| `/api/clients` | `query`, `hasDocument`, `hasEmail` |
+| `/api/products` | `query`, `category`, `hasFirmware` |
+| `/api/users` (ADMIN) | `query`, `role`, `active` |
+
+Para dados que não podem ficar incompletos há rotas sem paginação: `GET /api/rmas/board` (Kanban e dashboard, aceita `query` e `status`), `GET /api/clients/options` e `GET /api/products/options` (seletores do formulário de RMA, ordenados por nome). Os totais dos cartões das telas vêm de `GET /api/clients/summary`, `/api/products/summary` (inclui `categories` para o filtro) e `/api/users/summary`, calculados sobre todos os registros. As autorizações são as mesmas dos demais `GET` do recurso.
+
+No frontend, as telas de RMAs, clientes, produtos e usuários mostram o total filtrado e navegam por página (10, 20, 50 ou 100 por página). Alterar busca, filtro ou tamanho volta para a primeira página; a busca por texto aguarda 300 ms. Após excluir o último item de uma página, a tela volta para a última página existente.
+
 ## Estrutura do Projeto
 
 - `frontend/`: interface web

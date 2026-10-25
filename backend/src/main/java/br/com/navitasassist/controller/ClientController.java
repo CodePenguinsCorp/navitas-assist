@@ -4,6 +4,8 @@ import java.util.List;
 
 import br.com.navitasassist.client.ClientRequest;
 import br.com.navitasassist.client.ClientResponse;
+import br.com.navitasassist.client.ClientSummaryResponse;
+import br.com.navitasassist.pagination.PageResponse;
 import br.com.navitasassist.service.ClientService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,13 +29,24 @@ public class ClientController {
     private final ClientService clientService;
 
     @GetMapping
-    public List<ClientResponse> listAll() {
-        return clientService.listAll();
+    public PageResponse<ClientResponse> search(
+        @RequestParam(required = false) String query,
+        @RequestParam(required = false) Boolean hasDocument,
+        @RequestParam(required = false) Boolean hasEmail,
+        @RequestParam(required = false) Integer page,
+        @RequestParam(required = false) Integer size
+    ) {
+        return clientService.search(query, hasDocument, hasEmail, page, size);
     }
 
     @GetMapping("/options")
     public List<ClientResponse> listOptions() {
         return clientService.listOptions();
+    }
+
+    @GetMapping("/summary")
+    public ClientSummaryResponse summarize() {
+        return clientService.summarize();
     }
 
     @GetMapping("/{id}")

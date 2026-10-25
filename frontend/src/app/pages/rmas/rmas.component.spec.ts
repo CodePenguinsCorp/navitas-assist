@@ -11,10 +11,14 @@ import { RmasComponent } from './rmas.component';
 describe('RmasComponent form', () => {
   let component: RmaFormHarness;
   let fixture: ComponentFixture<RmasComponent>;
-  let rmaService: { list: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
+  let rmaService: { list: ReturnType<typeof vi.fn>; getSummary: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
-    rmaService = { list: vi.fn(() => of([])), create: vi.fn(() => of(createdRma)) };
+    rmaService = {
+      list: vi.fn(() => of({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 })),
+      getSummary: vi.fn(() => of({ total: 45, ongoing: 30, highPriority: 7 })),
+      create: vi.fn(() => of(createdRma)),
+    };
     const currentUser = signal<UserSession | null>({
       username: 'tester',
       name: 'Tester',
@@ -29,7 +33,7 @@ describe('RmasComponent form', () => {
         },
         {
           provide: CatalogService,
-          useValue: { listClients: () => of([]), listProducts: () => of([]) },
+          useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]) },
         },
         { provide: RmaService, useValue: rmaService },
       ],
@@ -59,6 +63,16 @@ describe('RmasComponent form', () => {
     expect(component.dateErrors().manufacturedAt[0]).toContain('posterior a hoje');
     expect(component.dateErrors().purchaseDate).toContain('anterior');
     expect(component.dateErrors().entryDate).toContain('anterior');
+  });
+
+  it('shows summary cards from server totals instead of the current page', () => {
+    fixture.detectChanges();
+    const page: HTMLElement = fixture.nativeElement;
+
+    expect(rmaService.getSummary).toHaveBeenCalled();
+    expect(page.textContent).toContain('45');
+    expect(page.textContent).toContain('30');
+    expect(page.textContent).toContain('7');
   });
 
   it('clears a purchase date when it is marked as unknown', () => {
