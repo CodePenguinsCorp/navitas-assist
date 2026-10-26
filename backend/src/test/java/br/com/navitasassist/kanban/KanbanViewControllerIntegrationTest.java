@@ -204,6 +204,56 @@ class KanbanViewControllerIntegrationTest {
             .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void shouldPersistLaneSettingsAndUpdateThemOnlyForTheirOwner() throws Exception {
+        Map<String, Object> grouped = filters("urgente");
+        grouped.put("groupBy", "ASSIGNEE");
+        grouped.put("descendingLanes", true);
+        grouped.put("emptyLanesFirst", true);
+        String response = mockMvc.perform(post("/api/kanban-views")
+                .with(user("view.alice").roles("VIEWER")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(viewJson("Raias", false, grouped)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.filters.groupBy").value("ASSIGNEE"))
+            .andExpect(jsonPath("$.filters.descendingLanes").value(true))
+            .andExpect(jsonPath("$.filters.emptyLanesFirst").value(true))
+            .andReturn().getResponse().getContentAsString();
+        long id = objectMapper.readTree(response).get("id").asLong();
+        mockMvc.perform(get("/api/kanban-views").with(user("view.alice").roles("VIEWER")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].filters.groupBy").value("ASSIGNEE"));
+        grouped.put("groupBy", "PRODUCT");
+        mockMvc.perform(put("/api/kanban-views/{id}", id)
+                .with(user("view.bob").roles("VIEWER")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(viewJson("Raias", false, grouped)))
+            .andExpect(status().isNotFound());
+        mockMvc.perform(put("/api/kanban-views/{id}", id)
+                .with(user("view.alice").roles("VIEWER")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(viewJson("Raias", false, grouped)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.filters.groupBy").value("PRODUCT"));
+    }
+
+    @Test
+    void shouldDefaultLegacyViewsToUngroupedAndRejectUnsupportedGrouping() throws Exception {
+        mockMvc.perform(post("/api/kanban-views")
+                .with(user("view.alice").roles("VIEWER")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(viewJson("Legada", false, filters(null))))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.filters.groupBy").value("NONE"))
+            .andExpect(jsonPath("$.filters.descendingLanes").value(false))
+            .andExpect(jsonPath("$.filters.emptyLanesFirst").value(false));
+        for (Object invalid : new Object[] {"BLOCKED", "customField", 2}) {
+            Map<String, Object> grouped = filters(null);
+            grouped.put("groupBy", invalid);
+            mockMvc.perform(post("/api/kanban-views")
+                    .with(user("view.alice").roles("VIEWER")).with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON).content(viewJson("Inválida", false, grouped)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid request body"));
+        }
+    }
+
     private String viewJson(String name, boolean defaultView, Map<String, Object> filters) throws Exception {
         return objectMapper.writeValueAsString(Map.of(
             "name", name,

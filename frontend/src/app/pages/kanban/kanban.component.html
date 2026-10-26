@@ -100,6 +100,14 @@
 
     <form appBoundedFilterPanels class="kanban-filters" [formGroup]="filtersForm">
       <div class="field-group">
+        <label>Agrupar em raias</label>
+        <app-custom-select formControlName="groupBy" ariaLabel="Agrupar Kanban em raias" [options]="laneGroupingOptions" />
+      </div>
+      @if (filters().groupBy !== 'NONE') {
+        <label class="checkbox-row"><input type="checkbox" formControlName="descendingLanes" /> Inverter ordem das raias</label>
+        <label class="checkbox-row"><input type="checkbox" formControlName="emptyLanesFirst" /> Sem valor no início</label>
+      }
+      <div class="field-group">
         <label>SLA</label>
         <app-custom-select
           formControlName="sla"
@@ -191,6 +199,10 @@
       </div>
     </form>
 
+    @if (filters().groupBy !== 'NONE') {
+      <p class="support-line">As raias usam os filtros atuais. Arrastar um card altera somente sua etapa, sem mudar responsável, cliente ou produtos.</p>
+    }
+
     @if (!loading() && totalRmas() > 0 && filteredRmas().length === 0) {
       <article class="kanban-empty" role="status">
         <strong>Nenhum RMA encontrado</strong>
@@ -215,6 +227,11 @@
     }
 
     <app-rma-kanban-board
+      [groupBy]="filters().groupBy"
+      [descendingLanes]="filters().descendingLanes"
+      [emptyLanesFirst]="filters().emptyLanesFirst"
+      [collapsedLaneKeys]="collapsedLaneKeys()"
+      (laneToggle)="lanePreferences.toggle(filters().groupBy, $event)"
       [rmas]="filteredRmas()"
       [bulkSelectionEnabled]="canUpdateStatus()"
       [bulkSelectedIds]="bulkSelectedIds()"

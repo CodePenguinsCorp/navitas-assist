@@ -183,7 +183,12 @@ export interface RmaAssigneeUpdateRequest {
   assigneeId: number | null;
 }
 
+export type KanbanGroupBy = 'NONE' | 'ASSIGNEE' | 'PRIORITY' | 'CLIENT' | 'PRODUCT';
+
 export interface KanbanViewFilters {
+  groupBy?: KanbanGroupBy;
+  descendingLanes?: boolean;
+  emptyLanesFirst?: boolean;
   query: string | null;
   priority: RmaPriority | null;
   status: RmaStatus | null;

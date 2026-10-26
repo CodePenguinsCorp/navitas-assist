@@ -109,6 +109,9 @@ public class KanbanViewService {
         view.setEntryTo(filters.entryTo());
         view.setUpdatedFrom(filters.updatedFrom());
         view.setUpdatedTo(filters.updatedTo());
+        view.setGroupBy(filters.groupBy());
+        view.setDescendingLanes(filters.descendingLanes());
+        view.setEmptyLanesFirst(filters.emptyLanesFirst());
     }
 
     private UserAccount getOwner(String username) {

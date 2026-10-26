@@ -11,8 +11,24 @@
 }
 
 <div class="board-shell">
+  @if (loading() && groupBy() !== 'NONE' && totalRmas() === 0) {
+    <p role="status">Carregando...</p>
+  }
+  @for (lane of lanes(); track lane.key) {
+    <section class="board-lane">
+      @if (groupBy() !== 'NONE') {
+        <header class="board-toolbar panel">
+          <div>
+            <h3><button type="button" class="button-secondary board-lane__toggle" [attr.aria-expanded]="!collapsedLaneKeys().includes(lane.key)" (click)="laneToggle.emit(lane.key)">
+              {{ collapsedLaneKeys().includes(lane.key) ? 'Expandir' : 'Recolher' }} · {{ lane.label }}
+            </button></h3>
+            <p>{{ lane.items.length }} RMA(s) · {{ lane.activeCount }} ativo(s) · {{ lane.highPriorityCount }} de alta prioridade</p>
+          </div>
+        </header>
+      }
+      @if (groupBy() === 'NONE' || !collapsedLaneKeys().includes(lane.key)) {
   <section class="board-grid">
-    @for (column of columns(); track column.status) {
+    @for (column of lane.columns; track column.status) {
       <article
         class="board-column panel"
         [class.is-drop-target]="isDropTarget(column.status)"
@@ -106,4 +122,7 @@
       </article>
     }
   </section>
+      }
+    </section>
+  }
 </div>

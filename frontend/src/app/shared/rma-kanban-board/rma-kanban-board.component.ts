@@ -1,7 +1,8 @@
 import { Component, EventEmitter, Output, computed, input } from '@angular/core';
 import { RmaSlaBadgeComponent } from '../rma-sla-badge/rma-sla-badge.component';
 import { RMA_STATUS_FLOW } from '../../core/mock-data';
-import { RmaResponse, RmaStatus } from '../../core/models';
+import { KanbanGroupBy, RmaResponse, RmaStatus } from '../../core/models';
+import { groupKanbanLanes } from '../../core/utils/kanban-lanes';
 import {
   compareRmasForBoard,
   formatDate,
@@ -28,6 +29,11 @@ interface RmaBoardColumn {
   styleUrl: './rma-kanban-board.component.css'
 })
 export class RmaKanbanBoardComponent {
+  readonly groupBy = input<KanbanGroupBy>('NONE');
+  readonly descendingLanes = input(false);
+  readonly emptyLanesFirst = input(false);
+  readonly collapsedLaneKeys = input<readonly string[]>([]);
+  @Output() readonly laneToggle = new EventEmitter<string>();
   readonly rmas = input<readonly RmaResponse[]>([]);
   readonly bulkSelectionEnabled = input(false);
   readonly bulkSelectedIds = input<readonly number[]>([]);
@@ -53,13 +59,15 @@ export class RmaKanbanBoardComponent {
   @Output() readonly columnDrop = new EventEmitter<{ event: DragEvent; status: RmaStatus }>();
 
   protected readonly totalRmas = computed(() => this.rmas().length);
-  protected readonly columns = computed<RmaBoardColumn[]>(() =>
-    RMA_STATUS_FLOW.map((status) => ({
+  protected readonly lanes = computed(() =>
+    groupKanbanLanes(this.rmas(), this.groupBy(), this.descendingLanes(), this.emptyLanesFirst()).map(lane => ({
+      ...lane, columns: RMA_STATUS_FLOW.map((status): RmaBoardColumn => ({
       status,
       label: statusLabel(status),
-      items: [...this.rmas()]
+      items: [...lane.items]
         .filter((rma) => rma.status === status)
         .sort(compareRmasForBoard)
+      }))
     }))
   );
 
