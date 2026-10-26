@@ -332,3 +332,82 @@ export interface AccessMatrixItem {
   role: UserRole;
   access: string;
 }
+
+export type ShipmentType = 'PICKUP' | 'POSTING' | 'TRANSFER' | 'RETURN';
+
+export type ShipmentStatus = 'CREATED' | 'LABEL_ISSUED' | 'IN_TRANSIT' | 'DELIVERY_ATTEMPT' | 'EXCEPTION' | 'DELIVERED' | 'CANCELLED';
+
+export type ShipmentEventSource = 'SYSTEM' | 'INTEGRATION' | 'MANUAL';
+
+export interface ShipmentFieldsRequest {
+  type: ShipmentType;
+  originName: string;
+  originAddress: string | null;
+  destinationName: string;
+  destinationAddress: string | null;
+  volumes: number;
+  carrier: string;
+  serviceName: string | null;
+  trackingCode: string | null;
+  labelReference: string | null;
+  cost: string | null;
+}
+
+export interface CreateShipmentRequest extends ShipmentFieldsRequest {
+  rmaId: number;
+}
+
+export interface UpdateShipmentRequest extends ShipmentFieldsRequest {
+  justification: string;
+}
+
+export interface ManualShipmentEventRequest {
+  status: ShipmentStatus;
+  description: string | null;
+  proofReference: string | null;
+  occurredAt: string | null;
+  justification: string;
+}
+
+export interface ShipmentResponse {
+  id: number;
+  rmaId: number;
+  rmaCode: string;
+  type: ShipmentType;
+  status: ShipmentStatus;
+  originName: string;
+  originAddress: string | null;
+  destinationName: string;
+  destinationAddress: string | null;
+  addressRestricted: boolean;
+  addressesPurged: boolean;
+  volumes: number;
+  carrier: string;
+  serviceName: string | null;
+  trackingCode: string | null;
+  labelReference: string | null;
+  cost: number | null;
+  deliveryAttempts: number;
+  closedAt: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShipmentEventResponse {
+  id: number;
+  source: ShipmentEventSource;
+  externalEventId: string | null;
+  status: ShipmentStatus;
+  description: string | null;
+  proofReference: string | null;
+  justification: string | null;
+  occurredAt: string;
+  recordedBy: string;
+  recordedAt: string;
+}
+
+export interface ShipmentDetailResponse {
+  shipment: ShipmentResponse;
+  events: ShipmentEventResponse[];
+}

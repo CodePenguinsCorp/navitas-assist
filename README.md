@@ -431,3 +431,14 @@ As demais etapas preservam os padrões. Prazos e substituições aceitam de 1 a 
 - Backend: `mvn test` em `backend/` (limiares, notas, reentrada, encerramento/reabertura, prioridade, configuração e contrato HTTP).
 - Filtros e apresentação: `npm run test:sla` em `frontend/`, com Node 22.14+ (runner nativo, sem framework adicional).
 - Templates e tipos Angular: `npm run build` em `frontend/`.
+
+## Remessas e rastreamento (NAV-44)
+
+Controle interno das coletas, postagens, transferências e devoluções de cada RMA. A migration `V4__create_rma_shipments.sql` cria `rma_shipments` e `rma_shipment_events`.
+
+- **Várias remessas por RMA**, com origem, destino, volumes, transportadora, serviço, código de rastreio, referência de etiqueta e custo (`BigDecimal`). `GET /api/shipments/rma/{rmaId}/summary` soma os custos logísticos do RMA.
+- **Eventos**: integração (`INTEGRATION`), manual (`MANUAL`) e sistema (`SYSTEM`); são imutáveis. Eventos de transportadora são idempotentes por `externalEventId` dentro da remessa. Eventos antigos que chegam fora de ordem entram no histórico, mas não regridem a situação.
+- **Operação manual auditada**: `POST /api/shipments/{id}/events` e `PUT /api/shipments/{id}` exigem justificativa e registram o autor. Funcionam sem integração.
+- **Integração**: a porta `CarrierTrackingGateway` ainda não tem implementação real. A implementação padrão responde `503` em `POST /api/shipments/{id}/sync`, sem afetar a operação manual. O endpoint de ingestão `POST /api/shipments/events/ingest` é restrito a ADMIN.
+- **Endereços**: visíveis apenas para ADMIN e SERVICE_DESK; para os demais perfis a resposta traz `addressRestricted: true` e os endereços nulos. Endereços de remessas encerradas são apagados após `SHIPMENT_ADDRESS_RETENTION_DAYS` dias (padrão 365), por rotina diária às 03:00 de America/Sao_Paulo.
+- **Sem acesso de clientes**: todas as rotas exigem autenticação interna; não há links públicos de acompanhamento. Exclusões são negadas.
