@@ -184,6 +184,7 @@ export interface RmaAssigneeUpdateRequest {
 }
 
 export interface KanbanViewFilters {
+  blocked?: boolean | null;
   query: string | null;
   priority: RmaPriority | null;
   status: RmaStatus | null;
@@ -231,6 +232,26 @@ export interface RmaAssignmentHistoryResponse {
   newAssigneeName: string | null;
   changedBy: string;
   changedAt: string;
+}
+
+export interface RmaBlockRequest {
+  reason: string;
+  category: string | null;
+}
+
+export interface RmaBlockResolveRequest {
+  resolutionNote: string;
+}
+
+export interface RmaBlockResponse {
+  id: number;
+  reason: string;
+  category: string | null;
+  blockedBy: string;
+  blockedAt: string;
+  resolvedBy: string | null;
+  resolvedAt: string | null;
+  resolutionNote: string | null;
 }
 
 export interface RmaItemResponse {
@@ -291,6 +312,8 @@ export interface RmaResponse {
   diagnosis: DiagnosisResponse | null;
   statusHistory: RmaStatusHistoryResponse[];
   assignmentHistory: RmaAssignmentHistoryResponse[];
+  currentBlock: RmaBlockResponse | null;
+  blockHistory: RmaBlockResponse[];
   createdAt: string;
   updatedAt: string;
 }
