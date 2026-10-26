@@ -83,6 +83,16 @@ ADMIN e SERVICE_DESK podem alterar status, prioridade e responsável em lote. TE
 
 Na alteração de **status em lote**, qualquer etapa pode ser escolhida para os RMAs selecionados, inclusive uma etapa anterior ou a reabertura de um RMA encerrado. O histórico registra cada mudança. A API ainda confere a etapa atual de cada card para evitar sobrescrever uma alteração feita em outra sessão depois da seleção; nesse caso, somente o card desatualizado falha e é recarregado.
 
+## Limites de WIP (NAV-32)
+
+No Kanban, ADMIN pode configurar um limite inteiro de 1 a 100000 por coluna ativa e escolher entre alertar ou bloquear novas entradas. Campo vazio significa sem limite. As colunas iniciam sem limite. As contagens são globais, mesmo com filtros aplicados; **Atualizar WIP** consulta novamente a ocupação. Alterações locais de status e ações em lote também atualizam essas contagens.
+
+Cada cabeçalho mostra o limite e os estados Sem limite, Normal, Próximo (a partir de 80%), Atingido ou Excedido, com texto além de cor. Reduzir um limite abaixo da ocupação atual preserva os cards existentes e bloqueia novas entradas quando configurado como bloqueante.
+
+Criação em Recebido e mudanças individuais/em lote passam pela mesma validação no backend. Apenas ADMIN pode informar uma justificativa de exceção, de até 200 caracteres, nos formulários de criação, mudança de status ou lote. A exceção efetivamente usada fica no histórico do RMA com coluna, autor, horário e justificativa. Lotes preservam os resultados de cada item. Colunas encerradas não recebem limite de WIP.
+
+A proteção usa bloqueio da linha de configuração da coluna e transações READ_COMMITTED antes da contagem; todas as alterações de RMAs existentes bloqueiam o registro para evitar restaurar um status antigo em gravações concorrentes. A V1 inclui seis configurações iniciais. Conforme o padrão de banco recriável do projeto, bancos de desenvolvimento com a V1 anterior precisam ser recriados; não há migration incremental.
+
 ## Estrutura do Projeto
 
 - `frontend/`: interface web

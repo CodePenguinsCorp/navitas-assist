@@ -26,6 +26,10 @@
           <span class="mini-chip">{{ column.items.length }}</span>
         </header>
 
+        @if (wipFor(column.status); as wip) {
+          <p class="status-pill" [class.status-offline]="wip.maxItems !== null && wip.currentCount >= wip.maxItems" [class.status-checking]="wip.maxItems !== null && wip.currentCount >= wip.maxItems * 0.8 && wip.currentCount < wip.maxItems" [class.status-online]="wip.maxItems === null || wip.currentCount < wip.maxItems * 0.8">{{ wipLabel(wip) }}</p>
+        }
+
         <div class="board-column__stack">
           @if (loading() && totalRmas() === 0) {
             <p class="board-empty-note">Carregando...</p>

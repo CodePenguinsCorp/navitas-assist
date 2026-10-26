@@ -1,0 +1,14 @@
+@if (canConfigure()) {
+  <button type="button" class="button-secondary" [disabled]="busy() || !ready()" (click)="open()">Configurar WIP</button>
+      <dialog #wipDialog class="panel modal-panel modal-panel--narrow" aria-labelledby="wipTitle" (cancel)="cancel($event)">
+        <header class="modal-header"><h3 id="wipTitle">Limites de WIP</h3><button type="button" class="modal-close" autofocus [disabled]="busy()" (click)="close()" aria-label="Fechar limites de WIP">×</button></header>
+        <p>Os limites contam todos os RMAs da coluna, independentemente dos filtros. Deixe o limite vazio para não limitar.</p>
+        @if (error()) { <p role="alert" class="field-error">{{ error() }}</p> }
+        <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
+          <div class="field-group field-group--full"><label>Coluna</label><app-custom-select ariaLabel="Coluna do limite WIP" formControlName="status" [options]="options" [disabled]="busy()" (valueChange)="selectColumn($event)" /></div>
+          <div class="field-group"><label for="wipMax">Limite (opcional)</label><input id="wipMax" type="number" formControlName="maxItems" min="1" max="100000" step="1" [readOnly]="busy()" /></div>
+          <label class="checkbox-row"><input type="checkbox" formControlName="blocking" /> Bloquear novas entradas acima do limite</label>
+          <div class="form-actions form-actions--full"><button type="button" class="button-secondary" [disabled]="busy()" (click)="close()">Cancelar</button><button type="submit" class="button-primary" [disabled]="busy() || form.invalid || !ready()">{{ busy() ? 'Salvando...' : 'Salvar limite' }}</button></div>
+        </form>
+      </dialog>
+}

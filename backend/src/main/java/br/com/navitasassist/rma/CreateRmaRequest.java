@@ -22,6 +22,7 @@ public record CreateRmaRequest(
     RmaPriority priority,
     @Size(max = 600) String repairSummary,
     @Size(max = 600) String replacedPartsSummary,
-    @Size(max = 800) String testSummary
+    @Size(max = 800) String testSummary,
+    @Size(max = 200) String wipOverrideReason
 ) {
 }

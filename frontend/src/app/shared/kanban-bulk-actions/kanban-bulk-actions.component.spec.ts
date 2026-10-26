@@ -123,6 +123,19 @@ describe('KanbanBulkActionsComponent', () => {
     expect(service.updateAssignee).toHaveBeenCalledWith(2, { assigneeId: null });
   });
 
+  it('sends an admin WIP justification and keeps per-item failures visible', () => {
+    fixture.componentRef.setInput('canOverrideWip', true);
+    service.updateStatusInBulk.mockImplementation((id: number) => id === 1 ? of({ ...rmas[0], status: 'TRIAGE' }) : throwError(() => ({ error: { message: 'WIP limit reached for TRIAGE.' } })));
+    button('Alterar status').click();
+    fixture.detectChanges();
+    fixture.componentInstance['form'].patchValue({ status: 'TRIAGE', wipOverrideReason: 'Urgente' });
+    submit();
+    fixture.detectChanges();
+    expect(service.updateStatusInBulk).toHaveBeenCalledWith(1, { status: 'TRIAGE', expectedStatus: 'RECEIVED', note: null, wipOverrideReason: 'Urgente' });
+    expect(fixture.nativeElement.textContent).toContain('1 atualizado(s); 1 com falha');
+    expect(fixture.nativeElement.textContent).toContain('Limite de WIP');
+  });
+
   it('offers technicians only status changes and sends nothing for an empty selection', () => {
     fixture.componentRef.setInput('canManage', false);
     fixture.detectChanges();

@@ -8,6 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { RmaService } from '../../core/services/rma.service';
+import { WipService } from '../../core/services/wip.service';
 import { BulkRmaResult } from '../../shared/kanban-bulk-actions/kanban-bulk-actions.component';
 import { KanbanComponent } from './kanban.component';
 
@@ -24,6 +25,7 @@ describe('KanbanComponent filters', () => {
     await TestBed.configureTestingModule({
       imports: [KanbanComponent],
       providers: [
+        { provide: WipService, useValue: { list: () => of([]) } },
         { provide: SlaClockService, useValue: { now } },
         { provide: AuthService, useValue: { hasAnyRole: () => true } },
         {
@@ -195,6 +197,19 @@ describe('KanbanComponent filters', () => {
       expect.objectContaining({ status: 'TRIAGE', query: 'cliente' }),
     );
     expect(component.viewError()).toBe('Falha ao salvar');
+  });
+
+  it('keeps a dragged card in its original column when backend WIP rejects the move', () => {
+    const service = TestBed.inject(RmaService);
+    service.updateStatus = vi.fn(() => throwError(() => ({ error: { message: 'WIP limit reached for IN_DIAGNOSIS.' } })));
+    const page = component as unknown as KanbanComponent;
+    const event = { preventDefault: () => {}, dataTransfer: null } as unknown as DragEvent;
+    page['startCardDrag'](event, TEST_RMAS[0]);
+    page['dropOnColumn'](event, 'IN_DIAGNOSIS');
+    page['saveStatusChange']();
+    expect(service.updateStatus).toHaveBeenCalledWith(1, { status: 'IN_DIAGNOSIS', note: null });
+    expect(page['statusModalError']()).toContain('Limite de WIP');
+    expect(component.filteredRmas()[0].status).toBe('TRIAGE');
   });
 });
 

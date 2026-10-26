@@ -1,7 +1,8 @@
 import { Component, EventEmitter, Output, computed, input } from '@angular/core';
 import { RmaSlaBadgeComponent } from '../rma-sla-badge/rma-sla-badge.component';
 import { RMA_STATUS_FLOW } from '../../core/mock-data';
-import { RmaResponse, RmaStatus } from '../../core/models';
+import { RmaResponse, RmaStatus, WipLimit } from '../../core/models';
+import { wipLabel } from '../../core/utils/wip-ui';
 import {
   compareRmasForBoard,
   formatDate,
@@ -28,6 +29,9 @@ interface RmaBoardColumn {
   styleUrl: './rma-kanban-board.component.css'
 })
 export class RmaKanbanBoardComponent {
+  readonly wipLimits = input<readonly WipLimit[]>([]);
+  protected readonly wipLabel = wipLabel;
+  protected wipFor(status: RmaStatus): WipLimit | undefined { return this.wipLimits().find(limit => limit.status === status); }
   readonly rmas = input<readonly RmaResponse[]>([]);
   readonly bulkSelectionEnabled = input(false);
   readonly bulkSelectedIds = input<readonly number[]>([]);

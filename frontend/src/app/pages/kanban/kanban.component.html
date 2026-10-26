@@ -45,6 +45,12 @@
       </div>
     </div>
 
+    <div class="support-line">
+      <button type="button" class="button-secondary" (click)="loadWip()">Atualizar WIP</button>
+      <app-kanban-wip-settings [limits]="wipLimits()" (saved)="loadWip()" />
+      <p>WIP considera todos os RMAs da coluna, independentemente dos filtros.</p>
+    </div>
+
     <section class="kanban-views" aria-labelledby="kanbanViewsTitle">
       <div class="kanban-views__copy">
         <strong id="kanbanViewsTitle">Visualizações</strong>
@@ -191,6 +197,7 @@
       </div>
     </form>
 
+    @if (wipError()) { <p class="field-error" role="alert">{{ wipError() }}</p> }
     @if (!loading() && totalRmas() > 0 && filteredRmas().length === 0) {
       <article class="kanban-empty" role="status">
         <strong>Nenhum RMA encontrado</strong>
@@ -200,6 +207,7 @@
 
     @if (canUpdateStatus()) {
       <app-kanban-bulk-actions
+        [canOverrideWip]="canOverrideWip()"
         [selection]="bulkSelectedRmas()"
         [hiddenCount]="hiddenSelectedCount()"
         [visibleCount]="filteredRmas().length"
@@ -215,6 +223,7 @@
     }
 
     <app-rma-kanban-board
+      [wipLimits]="wipLimits()"
       [rmas]="filteredRmas()"
       [bulkSelectionEnabled]="canUpdateStatus()"
       [bulkSelectedIds]="bulkSelectedIds()"
@@ -332,6 +341,9 @@
       }
 
       <form [formGroup]="statusForm" (ngSubmit)="saveStatusChange()" class="form-grid">
+        @if (canOverrideWip()) {
+          <div class="field-group field-group--full"><label for="wipStatusReason">Exceção de WIP (opcional, somente ADMIN)</label><input id="wipStatusReason" formControlName="wipOverrideReason" maxlength="200" placeholder="Justifique apenas se precisar exceder um limite bloqueante" /></div>
+        }
         <div class="field-group">
           <label>Novo status</label>
           <app-custom-select

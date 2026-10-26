@@ -39,6 +39,9 @@
         @if (action() === 'status') {
           <div class="field-group field-group--full"><label>Novo status</label><app-custom-select formControlName="status" ariaLabel="Status do lote" [options]="statusOptions" /></div>
           <div class="field-group field-group--full"><label for="bulkNote">Observação</label><textarea id="bulkNote" formControlName="note" rows="2" maxlength="255" [readOnly]="busy()"></textarea></div>
+          @if (canOverrideWip()) {
+            <div class="field-group field-group--full"><label for="bulkWipReason">Exceção de WIP (opcional, somente ADMIN)</label><input id="bulkWipReason" formControlName="wipOverrideReason" maxlength="200" [readOnly]="busy()" placeholder="Justificativa para exceder limites bloqueantes" /></div>
+          }
         } @else if (action() === 'priority') {
           <div class="field-group field-group--full"><label>Nova prioridade</label><app-custom-select formControlName="priority" ariaLabel="Prioridade do lote" [options]="priorityOptions" /></div>
         } @else {

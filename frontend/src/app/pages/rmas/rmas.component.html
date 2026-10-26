@@ -304,6 +304,9 @@
       </div>
 
       <form [formGroup]="createForm" (ngSubmit)="createRma()" class="form-grid">
+        @if (pageError()) {
+          <p class="field-error field-group--full" role="alert">{{ pageError() }}</p>
+        }
         <div class="field-group">
           <label>Cliente</label>
           <app-custom-select
@@ -441,6 +444,10 @@
           <label for="testSummary">Testes</label>
           <textarea id="testSummary" formControlName="testSummary" rows="3" maxlength="800"></textarea>
         </div>
+
+        @if (canOverrideWip()) {
+          <div class="field-group field-group--full"><label for="createWipReason">Exceção de WIP (opcional, somente ADMIN)</label><input id="createWipReason" formControlName="wipOverrideReason" maxlength="200" placeholder="Justifique apenas se RECEBIDO estiver com limite bloqueante atingido" /></div>
+        }
 
         <div class="form-actions form-actions--full">
           <button type="button" class="button-secondary" (click)="closeModal()">Cancelar</button>

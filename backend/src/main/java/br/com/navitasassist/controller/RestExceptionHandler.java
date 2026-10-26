@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -43,6 +44,11 @@ public class RestExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception exception) {
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error", List.of());
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleInvalidBody(HttpMessageNotReadableException exception) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Invalid request body", List.of());
     }
 
     private ResponseEntity<ApiError> buildResponse(HttpStatus status, String message, List<String> details) {

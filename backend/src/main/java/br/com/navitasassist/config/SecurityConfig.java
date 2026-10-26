@@ -54,6 +54,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/assignable").authenticated()
                 .requestMatchers("/api/kanban-views/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/kanban-wip").authenticated()
                 .requestMatchers("/api/users/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/auth/me", "/api/clients/**", "/api/products/**", "/api/rmas/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/auth/logout").authenticated()
