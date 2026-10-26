@@ -295,6 +295,24 @@ export interface RmaResponse {
   updatedAt: string;
 }
 
+export type ScanSource = 'CAMERA' | 'SCANNER' | 'MANUAL';
+
+export interface ScanCodeResponse {
+  rmaId: number;
+  rmaCode: string;
+  token: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface ScanStatusChangeRequest {
+  expectedStatus: RmaStatus;
+  status: RmaStatus;
+  note: string | null;
+  source: ScanSource;
+  confirmed: boolean;
+}
+
 export interface NavItem {
   label: string;
   route: string;

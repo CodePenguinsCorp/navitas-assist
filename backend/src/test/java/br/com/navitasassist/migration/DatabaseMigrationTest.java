@@ -26,9 +26,10 @@ class DatabaseMigrationTest {
     void createsSchemaAndSupportsMultipleItemsPerRma() throws SQLException {
         String url = "jdbc:h2:mem:migration_empty;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
 
-        int executedMigrations = Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate().migrationsExecuted;
+        Flyway flyway = Flyway.configure().dataSource(url, USER, PASSWORD).load();
+        int executedMigrations = flyway.migrate().migrationsExecuted;
 
-        assertEquals(1, executedMigrations);
+        assertEquals(flyway.info().all().length, executedMigrations);
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
             assertTrue(tableExists(connection, "rmas"));
             assertTrue(tableExists(connection, "rma_items"));
@@ -171,6 +172,27 @@ class DatabaseMigrationTest {
              ResultSet result = statement.executeQuery("SELECT COUNT(*) FROM " + tableName)) {
             result.next();
             return result.getInt(1);
+        }
+    }
+
+    @Test
+    void createsScanCodeTablesWithUniqueOpaqueTokens() throws SQLException {
+        String url = "jdbc:h2:mem:migration_scan_codes;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
+
+        Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate();
+
+        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
+            assertTrue(tableExists(connection, "rma_scan_codes"));
+            assertTrue(tableExists(connection, "rma_scan_actions"));
+            assertEquals(Set.of("idx_rma_scan_codes_rma_id"), applicationIndexes(connection, "rma_scan_codes"));
+            assertEquals(Set.of("idx_rma_scan_actions_rma_id"), applicationIndexes(connection, "rma_scan_actions"));
+
+            long rmaId = insertRma(connection, insertClient(connection), insertProduct(connection));
+            String insert = "INSERT INTO rma_scan_codes (rma_id, token, barcode_token, active, created_at, created_by) VALUES (" + rmaId + ", 'TOKEN', '000000000000000000000001', TRUE, CURRENT_TIMESTAMP, 'teste')";
+            try (Statement statement = connection.createStatement()) {
+                statement.executeUpdate(insert);
+                assertThrows(SQLException.class, () -> statement.executeUpdate(insert));
+            }
         }
     }
 }
