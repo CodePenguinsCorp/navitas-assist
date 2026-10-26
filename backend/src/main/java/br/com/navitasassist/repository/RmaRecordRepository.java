@@ -1,5 +1,6 @@
 package br.com.navitasassist.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,6 +17,8 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from RmaRecord r where r.id = :id")
     Optional<RmaRecord> findByIdForUpdate(@Param("id") Long id);
+
+    List<RmaRecord> findByStatusNotIn(Collection<RmaStatus> statuses);
 
     boolean existsByProduct_Id(Long productId);
 

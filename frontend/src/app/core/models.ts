@@ -295,6 +295,72 @@ export interface RmaResponse {
   updatedAt: string;
 }
 
+export type NotificationEventType =
+  | 'RMA_CREATED'
+  | 'RMA_ASSIGNED'
+  | 'SLA_WARNING'
+  | 'SLA_OVERDUE'
+  | 'RMA_BLOCKED'
+  | 'WIP_LIMIT_EXCEEDED'
+  | 'PART_PENDING'
+  | 'INTERNAL_APPROVAL_REQUIRED'
+  | 'TEST_FAILED'
+  | 'RECURRENCE_DETECTED';
+
+export type NotificationSeverity = 'INFO' | 'WARNING' | 'CRITICAL';
+
+export interface NotificationResponse {
+  id: number;
+  eventType: NotificationEventType;
+  severity: NotificationSeverity;
+  title: string;
+  message: string;
+  rmaId: number | null;
+  rmaCode: string | null;
+  actionPath: string | null;
+  createdAt: string;
+  readAt: string | null;
+  snoozedUntil: string | null;
+  read: boolean;
+}
+
+export interface NotificationSummaryResponse {
+  unread: number;
+}
+
+export interface NotificationPreferenceResponse {
+  eventType: NotificationEventType;
+  severity: NotificationSeverity;
+  enabled: boolean;
+  userMutable: boolean;
+  muted: boolean;
+}
+
+export interface NotificationRuleRequest {
+  enabled: boolean;
+  severity: NotificationSeverity;
+  recipientRoles: UserRole[];
+  notifyAssignee: boolean;
+  emailEnabled: boolean;
+  userMutable: boolean;
+}
+
+export interface NotificationRuleResponse extends NotificationRuleRequest {
+  eventType: NotificationEventType;
+  updatedAt: string;
+  updatedBy: string | null;
+}
+
+export interface NotificationFailureResponse {
+  source: 'EVENT' | 'EMAIL';
+  eventKey: string;
+  eventType: NotificationEventType;
+  rmaCode: string | null;
+  recipient: string | null;
+  error: string | null;
+  occurredAt: string;
+}
+
 export interface NavItem {
   label: string;
   route: string;

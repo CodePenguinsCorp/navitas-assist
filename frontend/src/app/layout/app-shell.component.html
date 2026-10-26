@@ -33,6 +33,12 @@
   <div class="shell-main">
     <header class="shell-header">
       <div class="shell-actions">
+        <a routerLink="/notificacoes" class="button-secondary shell-notifications" [attr.aria-label]="'Notificações: ' + unreadNotifications() + ' não lida(s)'">
+          Notificações
+          @if (unreadNotifications() > 0) {
+            <span class="mini-chip priority-high">{{ unreadNotifications() }}</span>
+          }
+        </a>
         <div class="top-user">
           <span class="top-user__avatar" aria-hidden="true">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">

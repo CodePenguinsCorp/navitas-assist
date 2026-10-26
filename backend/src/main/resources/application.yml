@@ -15,6 +15,11 @@ spring:
         format_sql: false
   flyway:
     validate-on-migrate: true
+  mail:
+    properties:
+      "[mail.smtp.connectiontimeout]": ${MAIL_SMTP_CONNECTION_TIMEOUT_MS:5000}
+      "[mail.smtp.timeout]": ${MAIL_SMTP_READ_TIMEOUT_MS:10000}
+      "[mail.smtp.writetimeout]": ${MAIL_SMTP_WRITE_TIMEOUT_MS:10000}
 
 server:
   port: ${SERVER_PORT:8080}
@@ -42,6 +47,18 @@ navitas:
         minutes: ${SLA_REPAIR_MINUTES:4320}
       IN_TESTS:
         minutes: ${SLA_TESTS_MINUTES:1440}
+  notifications:
+    sla-scan:
+      enabled: ${NOTIFICATIONS_SLA_SCAN_ENABLED:true}
+      interval: ${NOTIFICATIONS_SLA_SCAN_INTERVAL:PT5M}
+    async:
+      core-pool-size: ${NOTIFICATIONS_ASYNC_CORE_POOL_SIZE:2}
+      max-pool-size: ${NOTIFICATIONS_ASYNC_MAX_POOL_SIZE:4}
+      queue-capacity: ${NOTIFICATIONS_ASYNC_QUEUE_CAPACITY:500}
+    email:
+      enabled: ${NOTIFICATIONS_EMAIL_ENABLED:false}
+      domain: ${NOTIFICATIONS_EMAIL_DOMAIN:}
+      from: ${NOTIFICATIONS_EMAIL_FROM:navitas-assist@localhost}
   security:
     cookie-secure: ${SESSION_COOKIE_SECURE:true}
     seed-admin:
