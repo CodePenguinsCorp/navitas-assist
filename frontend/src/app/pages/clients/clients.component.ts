@@ -1,18 +1,20 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable, finalize } from 'rxjs';
-import { ClientRequest, ClientResponse } from '../../core/models';
+import { Observable, Subject, debounceTime, finalize } from 'rxjs';
+import { ClientRequest, ClientResponse, ClientSummaryResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import {
   extractHttpErrorMessage,
   formatDateTime,
-  includesQuery,
-  matchesPresence,
   PRESENCE_FILTER_OPTIONS,
   PresenceFilter,
   normalizeOptionalText
 } from '../../core/utils/catalog-ui';
+import { PagedList } from '../../core/utils/paged-list';
+import { SEARCH_DEBOUNCE_MS, presenceToFlag } from '../../core/utils/pagination';
 import { CustomSelectComponent } from '../../shared/form-controls/custom-select/custom-select.component';
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
 
 type ClientModalMode = 'create' | 'edit';
 type ClientFormControlName =
@@ -27,7 +29,7 @@ type ClientFormControlName =
 
 @Component({
   selector: 'app-clients',
-  imports: [ReactiveFormsModule, CustomSelectComponent],
+  imports: [ReactiveFormsModule, CustomSelectComponent, PaginationComponent],
   templateUrl: './clients.component.html',
   styles: [`
     :host { display: block; }
@@ -48,7 +50,8 @@ export class ClientsComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly catalogService = inject(CatalogService);
 
-  protected readonly loading = signal(true);
+  private readonly destroyRef = inject(DestroyRef);
+
   protected readonly submitting = signal(false);
   protected readonly deletingClientId = signal<number | null>(null);
   protected readonly errorMessage = signal('');
@@ -61,49 +64,29 @@ export class ClientsComponent {
   protected readonly presenceFilterOptions = PRESENCE_FILTER_OPTIONS;
   protected readonly activeModal = signal<ClientModalMode | null>(null);
 
-  private readonly clientsSignal = signal<ClientResponse[]>([]);
+  private readonly searchChanges = new Subject<void>();
+  private readonly clientList = new PagedList<ClientResponse>(
+    (pageQuery) => this.catalogService.listClients({
+      ...pageQuery,
+      query: this.searchTerm(),
+      hasDocument: presenceToFlag(this.documentFilter()),
+      hasEmail: presenceToFlag(this.emailFilter())
+    }),
+    (error) => this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os clientes.'))
+  );
+  private readonly summarySignal = signal<ClientSummaryResponse>({ total: 0, withContact: 0, withDocument: 0, withEmail: 0 });
   private readonly editingClientSignal = signal<ClientResponse | null>(null);
   private readonly deletingClientSignal = signal<ClientResponse | null>(null);
 
-  protected readonly clients = this.clientsSignal.asReadonly();
+  protected readonly clients = this.clientList.items;
+  protected readonly loading = this.clientList.loading;
+  protected readonly page = this.clientList.page;
+  protected readonly pageSize = this.clientList.size;
+  protected readonly totalElements = this.clientList.totalElements;
+  protected readonly totalPages = this.clientList.totalPages;
+  protected readonly summary = this.summarySignal.asReadonly();
   protected readonly editingClient = this.editingClientSignal.asReadonly();
   protected readonly deletingClient = this.deletingClientSignal.asReadonly();
-
-  protected readonly filteredClients = computed(() =>
-    [...this.clientsSignal()]
-      .sort((left, right) =>
-        left.legalName.localeCompare(right.legalName, 'pt-BR', { sensitivity: 'base' })
-      )
-      .filter((client) =>
-        includesQuery(
-          this.searchTerm(),
-          client.legalName,
-          client.tradeName,
-          client.documentNumber,
-          client.contactName,
-          client.email,
-          client.phone
-        ) &&
-        matchesPresence(client.documentNumber, this.documentFilter()) &&
-        matchesPresence(client.email, this.emailFilter())
-      )
-  );
-
-  protected readonly totalClients = computed(() => this.clientsSignal().length);
-  protected readonly clientsWithContact = computed(
-    () =>
-      this.clientsSignal().filter(
-        (client) =>
-          Boolean(normalizeOptionalText(client.contactName)) ||
-          Boolean(normalizeOptionalText(client.phone))
-      ).length
-  );
-  protected readonly clientsWithDocument = computed(
-    () => this.clientsSignal().filter((client) => Boolean(normalizeOptionalText(client.documentNumber))).length
-  );
-  protected readonly clientsWithEmail = computed(
-    () => this.clientsSignal().filter((client) => Boolean(normalizeOptionalText(client.email))).length
-  );
 
   protected readonly form = this.formBuilder.nonNullable.group({
     legalName: ['', [Validators.required, Validators.pattern(/^(?:[\s\p{Pd}]*[^\s\p{Pd}]){0,120}[\s\p{Pd}]*$/u)]],
@@ -116,20 +99,40 @@ export class ClientsComponent {
     notes: ['', [Validators.maxLength(1000)]]
   });
 
+  protected get hasActiveFilters(): boolean {
+    return Boolean(this.searchTerm().trim()) || this.documentFilter() !== 'all' || this.emailFilter() !== 'all';
+  }
+
   constructor() {
+    this.searchChanges.pipe(
+      debounceTime(SEARCH_DEBOUNCE_MS),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(() => this.clientList.firstPage());
     this.loadClients();
+    this.loadSummary();
   }
 
   protected updateSearch(value: string): void {
     this.searchTerm.set(value);
+    this.searchChanges.next();
   }
 
   protected updateDocumentFilter(value: PresenceFilter): void {
     this.documentFilter.set(value);
+    this.clientList.firstPage();
   }
 
   protected updateEmailFilter(value: PresenceFilter): void {
     this.emailFilter.set(value);
+    this.clientList.firstPage();
+  }
+
+  protected goToPage(page: number): void {
+    this.clientList.goToPage(page);
+  }
+
+  protected changePageSize(size: number): void {
+    this.clientList.changeSize(size);
   }
 
   protected limitLegalName(event: Event): void {
@@ -205,6 +208,7 @@ export class ClientsComponent {
         );
         this.closeModal();
         this.loadClients();
+        this.loadSummary();
       },
       error: (error) => {
         this.modalErrorMessage.set(
@@ -241,9 +245,8 @@ export class ClientsComponent {
       finalize(() => this.deletingClientId.set(null))
     ).subscribe({
       next: () => {
-        this.clientsSignal.update((clients) =>
-          clients.filter((currentClient) => currentClient.id !== client.id)
-        );
+        this.loadClients();
+        this.loadSummary();
         this.successMessage.set(`Cliente ${client.legalName} excluído com sucesso.`);
         this.resetDeleteModal();
       },
@@ -265,16 +268,14 @@ export class ClientsComponent {
   }
 
   private loadClients(): void {
-    this.loading.set(true);
     this.errorMessage.set('');
+    this.clientList.reload();
+  }
 
-    this.catalogService.listClients().pipe(
-      finalize(() => this.loading.set(false))
-    ).subscribe({
-      next: (clients) => this.clientsSignal.set(clients),
-      error: (error) => {
-        this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os clientes.'));
-      }
+  private loadSummary(): void {
+    this.catalogService.getClientSummary().subscribe({
+      next: (summary) => this.summarySignal.set(summary),
+      error: () => undefined
     });
   }
 
