@@ -2,6 +2,7 @@ package br.com.navitasassist.config;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,15 +16,24 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.session.SessionRegistry;
+import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
+import org.springframework.security.web.authentication.logout.CookieClearingLogoutHandler;
+import org.springframework.security.web.authentication.logout.LogoutHandler;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
+import org.springframework.security.web.authentication.session.SessionAuthenticationException;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.session.ConcurrentSessionFilter;
+import org.springframework.security.web.session.HttpSessionEventPublisher;
 
 @Configuration
 @EnableMethodSecurity
@@ -36,9 +46,23 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
         HttpSecurity http,
         SecurityContextRepository securityContextRepository,
-        CsrfTokenRepository csrfTokenRepository
+        CsrfTokenRepository csrfTokenRepository,
+        SessionRegistry sessionRegistry
     ) throws Exception {
+        LogoutHandler unregisterSession = (request, response, authentication) -> {
+            var session = request.getSession(false);
+            if (session != null) {
+                sessionRegistry.removeSessionInformation(session.getId());
+            }
+        };
+        ConcurrentSessionFilter expiredSessions = new ConcurrentSessionFilter(sessionRegistry, event ->
+            restAuthenticationEntryPoint().commence(event.getRequest(), event.getResponse(),
+                new SessionAuthenticationException("Session expired")));
+        expiredSessions.setLogoutHandlers(List.of(unregisterSession, new SecurityContextLogoutHandler(),
+            new CookieClearingLogoutHandler("JSESSIONID", "XSRF-TOKEN")));
+
         http
+            .addFilterBefore(expiredSessions, CsrfFilter.class)
             .csrf(csrf -> csrf
                 .csrfTokenRepository(csrfTokenRepository)
                 .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
@@ -70,10 +94,21 @@ public class SecurityConfig {
                 .accessDeniedHandler(restAccessDeniedHandler()))
             .logout(logout -> logout
                 .logoutUrl("/api/auth/logout")
+                .addLogoutHandler(unregisterSession)
                 .deleteCookies("JSESSIONID", "XSRF-TOKEN")
                 .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)));
 
         return http.build();
+    }
+
+    @Bean
+    public SessionRegistry sessionRegistry() {
+        return new SessionRegistryImpl();
+    }
+
+    @Bean
+    public HttpSessionEventPublisher httpSessionEventPublisher() {
+        return new HttpSessionEventPublisher();
     }
 
     @Bean

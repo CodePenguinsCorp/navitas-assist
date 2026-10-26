@@ -270,6 +270,10 @@ A aplicação usa sessão criada no backend. O frontend envia usuário e senha s
 - `POST /api/auth/logout` invalida a sessão e remove os cookies de sessão e CSRF
 - respostas de autenticação e autorização permanecem em JSON, com `401` e `403`
 
+Alterar usuário, senha, perfil ou situação ativa, ou excluir uma conta, revoga todas as suas sessões após o commit. Na próxima requisição, o backend invalida a sessão e responde `401`; é necessário entrar novamente. Alterar apenas o nome completo não encerra sessões, e operações recusadas ou revertidas não revogam o acesso. O registro usa o ID da conta, portanto reutilizar um nome de usuário excluído não recupera sessões antigas.
+
+O registro de sessões é mantido em memória por instância, assim como as sessões HTTP atuais. A revogação atende a execução em uma única instância; não sincroniza réplicas nem cancela requisições que já passaram pela autorização. Logout, expiração e troca do ID da sessão removem os registros correspondentes.
+
 ## Admin Inicial
 
 No profile `local`, no primeiro boot e apenas se ainda não existir usuário no banco, a aplicação cria:
