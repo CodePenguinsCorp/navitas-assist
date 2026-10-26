@@ -5,6 +5,8 @@ import {
   CreateRmaRequest,
   DiagnosisRequest,
   RmaAssigneeUpdateRequest,
+  RmaBlockRequest,
+  RmaBlockResolveRequest,
   RmaBulkStatusUpdateRequest,
   RmaResponse,
   RmaPriority,
@@ -66,6 +68,14 @@ export class RmaService {
 
   updateAssignee(id: number, payload: RmaAssigneeUpdateRequest): Observable<RmaResponse> {
     return this.http.patch<RmaResponse>(`/api/rmas/${id}/assignee`, payload);
+  }
+
+  block(id: number, payload: RmaBlockRequest): Observable<RmaResponse> {
+    return this.http.post<RmaResponse>(`/api/rmas/${id}/blocks`, payload);
+  }
+
+  resolveBlock(id: number, blockId: number, payload: RmaBlockResolveRequest): Observable<RmaResponse> {
+    return this.http.patch<RmaResponse>(`/api/rmas/${id}/blocks/${blockId}`, payload);
   }
 
   upsertDiagnosis(id: number, payload: DiagnosisRequest): Observable<RmaResponse> {

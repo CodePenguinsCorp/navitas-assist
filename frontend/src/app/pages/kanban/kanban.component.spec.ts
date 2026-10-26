@@ -1,6 +1,6 @@
 import { Signal, signal } from '@angular/core';
 import { FormGroup } from '@angular/forms';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { KanbanViewRequest, RmaResponse, WarrantyStatus } from '../../core/models';
 import { SlaClockService } from '../../core/services/sla-clock.service';
@@ -13,6 +13,7 @@ import { KanbanComponent } from './kanban.component';
 
 describe('KanbanComponent filters', () => {
   let component: KanbanHarness;
+  let fixture: ComponentFixture<KanbanComponent>;
   let now = signal(Date.parse('2026-10-20T12:00:00Z'));
   let createdViewRequest: KanbanViewRequest | null;
   let failCreateView: boolean;
@@ -60,12 +61,27 @@ describe('KanbanComponent filters', () => {
             delete: () => of(undefined),
           },
         },
-        { provide: RmaService, useValue: { list: () => of(TEST_RMAS) } },
+        { provide: RmaService, useValue: { list: () => of(TEST_RMAS), getById: (id: number) => of(TEST_RMAS.find((rma) => rma.id === id)) } },
       ],
     }).compileComponents();
 
-    component = TestBed.createComponent(KanbanComponent)
-      .componentInstance as unknown as KanbanHarness;
+    fixture = TestBed.createComponent(KanbanComponent);
+    component = fixture.componentInstance as unknown as KanbanHarness;
+  });
+
+  it('preserves selection and filters when inspecting impediments with Enter', () => {
+    component.selectRma(TEST_RMAS[1]);
+    component.filtersForm.patchValue({ priority: 'HIGH' });
+    fixture.detectChanges();
+    const inspect = [...fixture.nativeElement.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent?.includes('Ver impedimentos')) as HTMLButtonElement;
+    inspect.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    inspect.click();
+    fixture.detectChanges();
+    const dialog: HTMLDialogElement = fixture.nativeElement.querySelector('app-rma-block-panel dialog');
+    expect(dialog.open).toBe(true);
+    dialog.querySelector<HTMLButtonElement>('button')!.click();
+    expect(component.selectedRmaId()).toBe(2);
+    expect(component.filtersForm.getRawValue().priority).toBe('HIGH');
   });
 
   it.each([
@@ -82,6 +98,24 @@ describe('KanbanComponent filters', () => {
       expect(component.filteredRmas().map((rma) => rma.id)).toEqual([id]);
     },
   );
+
+  it('combines blockage with existing filters, persists it and clears it', () => {
+    Object.assign(TEST_RMAS[0], { currentBlock: { id: 9, reason: 'Peça pendente' } });
+    component.filtersForm.patchValue({ blocked: 'blocked', priority: 'HIGH' });
+    expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
+    component.openCreateViewModal();
+    component.viewForm.patchValue({ name: 'Impedidos' });
+    component.saveView();
+    expect(createdViewRequest?.filters).toEqual(expect.objectContaining({ blocked: true }));
+    component.filtersForm.patchValue({ blocked: 'unblocked', priority: 'all' });
+    expect(component.filteredRmas().map((rma) => rma.id)).toEqual([2]);
+    component.applyView(5);
+    expect(component.filtersForm.getRawValue().blocked).toBe('blocked');
+    component.clearFilters();
+    expect(component.filteredRmas()).toHaveLength(2);
+    expect(component.filtersForm.getRawValue().blocked).toBe('all');
+    Object.assign(TEST_RMAS[0], { currentBlock: null });
+  });
 
   it('combines priority, status, warranty, assignee and business-date filters', () => {
     component.filtersForm.patchValue({
@@ -199,6 +233,8 @@ describe('KanbanComponent filters', () => {
 });
 
 interface KanbanHarness {
+  selectedRmaId: Signal<number | null>;
+  selectRma(rma: RmaResponse): void;
   bulkSelectedRmas: Signal<RmaResponse[]>;
   hiddenSelectedCount: Signal<number>;
   toggleBulkSelection(rma: RmaResponse): void;
@@ -318,6 +354,8 @@ function buildRma(values: {
     diagnosis: null,
     statusHistory: [],
     assignmentHistory: [],
+    currentBlock: null,
+    blockHistory: [],
     sla: {
       status: values.status === 'COMPLETED' ? 'CLOSED' : 'NORMAL',
       startedAt: '2026-10-20T11:00:00Z',

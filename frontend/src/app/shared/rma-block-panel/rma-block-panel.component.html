@@ -1,0 +1,35 @@
+<dialog #dialog class="panel modal-panel" aria-labelledby="block-panel-title" (cancel)="cancel($event)">
+  <div class="modal-header">
+    <h2 id="block-panel-title">Impedimentos {{ rma()?.code }}</h2>
+    <button type="button" class="button-secondary" autofocus [disabled]="busy()" (click)="close()">Fechar</button>
+  </div>
+  @if (loading()) { <p role="status">Carregando impedimentos...</p> }
+  @if (error()) { <p class="field-error" role="alert">{{ error() }}</p> }
+  @if (!loading() && !rma()) { <button type="button" class="button-secondary" data-retry (click)="load()">Tentar novamente</button> }
+  @if (rma(); as item) {
+    <app-rma-block-history [rma]="item" />
+    @if (canEdit()) {
+      @if (item.currentBlock) {
+        <form class="form-grid" [formGroup]="resolveForm" (ngSubmit)="save()">
+          <div class="field-group field-group--full">
+            <label for="block-resolution">Nota de resolução obrigatória</label>
+            <textarea id="block-resolution" formControlName="resolutionNote" rows="3" maxlength="1000"></textarea>
+          </div>
+          <button type="submit" class="button-primary" [disabled]="busy()">{{ busy() ? 'Salvando...' : 'Desbloquear RMA' }}</button>
+        </form>
+      } @else {
+        <form class="form-grid" [formGroup]="blockForm" (ngSubmit)="save()">
+          <div class="field-group field-group--full">
+            <label for="block-reason">Motivo obrigatório</label>
+            <textarea id="block-reason" formControlName="reason" rows="3" maxlength="1000"></textarea>
+          </div>
+          <div class="field-group field-group--full">
+            <label for="block-category">Categoria opcional</label>
+            <input id="block-category" formControlName="category" maxlength="80" />
+          </div>
+          <button type="submit" class="button-primary" [disabled]="busy()">{{ busy() ? 'Salvando...' : 'Bloquear RMA' }}</button>
+        </form>
+      }
+    }
+  }
+</dialog>

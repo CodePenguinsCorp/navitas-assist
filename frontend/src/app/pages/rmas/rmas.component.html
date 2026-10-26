@@ -250,6 +250,10 @@
         </div>
 
         <div class="summary-block">
+          <app-rma-block-history [rma]="rma" />
+        </div>
+
+        <div class="summary-block">
           <strong>Histórico de responsáveis</strong>
           @if (rma.assignmentHistory.length > 0) {
             <div class="assignment-history">

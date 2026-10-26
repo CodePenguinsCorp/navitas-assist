@@ -40,6 +40,8 @@ public record RmaResponse(
     DiagnosisResponse diagnosis,
     List<RmaStatusHistoryResponse> statusHistory,
     List<RmaAssignmentHistoryResponse> assignmentHistory,
+    RmaBlockResponse currentBlock,
+    List<RmaBlockResponse> blockHistory,
     Instant createdAt,
     Instant updatedAt
 ) {
@@ -83,6 +85,8 @@ public record RmaResponse(
             DiagnosisResponse.from(rma.getDiagnosis()),
             rma.getStatusHistory().stream().map(RmaStatusHistoryResponse::from).toList(),
             rma.getAssignmentHistory().stream().map(RmaAssignmentHistoryResponse::from).toList(),
+            rma.getBlockHistory().stream().filter(block -> block.getResolvedAt() == null).findFirst().map(RmaBlockResponse::from).orElse(null),
+            rma.getBlockHistory().stream().map(RmaBlockResponse::from).toList(),
             rma.getCreatedAt(),
             rma.getUpdatedAt()
         );

@@ -75,6 +75,16 @@ Cada usuário autenticado pode salvar combinações dos filtros avançados do Ka
 
 As rotas em `/api/kanban-views` usam sempre o usuário da sessão; o cliente não informa nem escolhe o proprietário. Nomes são únicos por usuário, e falhas de persistência não alteram os filtros que já estão aplicados na tela.
 
+## Impedimentos dos RMAs (NAV-33)
+
+Use **Ver impedimentos** no card para consultar o bloqueio atual e todos os episódios anteriores, sem sair do quadro. ADMIN, SERVICE_DESK e TECHNICIAN podem bloquear com motivo obrigatório (até 1000 caracteres) e categoria opcional (até 80), ou desbloquear com nota de resolução obrigatória (até 1000). VIEWER pode consultar. A API aplica as mesmas permissões e exige CSRF nas alterações.
+
+Bloquear não muda a coluna nem impede movimentação. O SLA continua correndo; uma eventual pausa depende de decisão de produto. Cards mostram texto, motivo resumido e tempo bloqueado. O filtro de impedimentos combina com os demais filtros e é preservado nas visualizações salvas. Fechar o painel mantém os filtros e a seleção. Os detalhes do RMA também apresentam o histórico completo.
+
+Cada episódio registra autor e instante de início e de resolução, mantendo as notas anteriores. Instantes são apresentados em `America/Sao_Paulo`. A API retorna `currentBlock` e `blockHistory`; POST `/api/rmas/{id}/blocks` inicia um episódio e PATCH `/api/rmas/{id}/blocks/{blockId}` resolve somente aquele episódio. Bloqueios concorrentes são serializados pelo lock do RMA; uma resolução desatualizada não encerra um episódio posterior.
+
+A tabela de episódios e o filtro salvo foram incluídos na V1, conforme o banco recriável do projeto. Um banco de desenvolvimento criado com a V1 anterior precisa ser recriado antes de aplicar a nova versão; este fluxo não remove bancos ou volumes. O painel geral da NAV-21 ainda não está na main; seu desenvolvimento pode reutilizar `RmaBlockHistoryComponent` e `RmaBlockPanelComponent`.
+
 ## Ações em lote no Kanban (NAV-15)
 
 Marque cards em qualquer coluna e use **Selecionar visíveis** para incluir os itens mostrados pelos filtros. A seleção permanece ao mudar os filtros; o contador informa quantos selecionados estão ocultos. Use **Limpar seleção** para começar de novo. Antes de aplicar, a confirmação mostra a ação, a quantidade e os RMAs envolvidos. O resultado de cada RMA aparece separadamente; falhas continuam selecionadas para revisão. O quadro atualiza somente os itens afetados.

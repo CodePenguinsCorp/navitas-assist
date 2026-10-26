@@ -61,6 +61,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/rmas/*/diagnosis").hasAnyRole("ADMIN", "TECHNICIAN")
                 .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/status", "/api/rmas/*/bulk-status").hasAnyRole("ADMIN", "SERVICE_DESK", "TECHNICIAN")
                 .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/assignee").hasAnyRole("ADMIN", "SERVICE_DESK")
+                .requestMatchers(HttpMethod.POST, "/api/rmas/*/blocks").hasAnyRole("ADMIN", "SERVICE_DESK", "TECHNICIAN")
+                .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/blocks/*").hasAnyRole("ADMIN", "SERVICE_DESK", "TECHNICIAN")
                 .requestMatchers(HttpMethod.PUT, "/api/clients/*", "/api/products/*", "/api/rmas/*").hasAnyRole("ADMIN", "SERVICE_DESK")
                 .requestMatchers(HttpMethod.DELETE, "/api/clients/*", "/api/products/*").hasAnyRole("ADMIN", "SERVICE_DESK")
                 .requestMatchers("/api/**").hasRole("ADMIN")

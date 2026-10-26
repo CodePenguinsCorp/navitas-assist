@@ -125,7 +125,7 @@ const createdRma: RmaResponse = {
   invoiceNumber: 'NF-123', receivedBy: 'tester', reportedFailure: 'Falha', receivedAccessories: null,
   physicalCondition: null, priority: 'MEDIUM', status: 'RECEIVED', assigneeId: null, assigneeName: null,
   repairSummary: null, replacedPartsSummary: null, testSummary: null, shippedAt: null, carrier: null,
-  trackingCode: null, diagnosis: null, statusHistory: [], assignmentHistory: [],
+  trackingCode: null, diagnosis: null, statusHistory: [], assignmentHistory: [], currentBlock: null, blockHistory: [],
   sla: { status: 'NORMAL', startedAt: '2026-10-20T12:00:00Z', warningAt: '2026-10-21T07:12:00Z',
     dueAt: '2026-10-21T12:00:00Z', elapsedSeconds: 0, limitSeconds: 86400 },
   createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z',

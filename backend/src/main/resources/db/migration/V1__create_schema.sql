@@ -60,6 +60,7 @@ CREATE TABLE kanban_views (
     entry_to DATE,
     updated_from DATE,
     updated_to DATE,
+    blocked BOOLEAN,
     created_at DATETIME(6) NOT NULL,
     updated_at DATETIME(6) NOT NULL,
     created_by VARCHAR(60),
@@ -176,3 +177,22 @@ CREATE TABLE rma_assignment_history (
 );
 
 CREATE INDEX idx_rma_assignment_history_rma_id ON rma_assignment_history (rma_id);
+
+CREATE TABLE rma_blocks (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    rma_id BIGINT NOT NULL,
+    reason VARCHAR(1000) NOT NULL,
+    category VARCHAR(80),
+    blocked_by VARCHAR(120) NOT NULL,
+    blocked_at DATETIME(6) NOT NULL,
+    resolved_by VARCHAR(120),
+    resolved_at DATETIME(6),
+    resolution_note VARCHAR(1000),
+    CONSTRAINT fk_rma_blocks_rma FOREIGN KEY (rma_id) REFERENCES rmas (id),
+    CONSTRAINT ck_rma_blocks_resolution CHECK (
+        (resolved_at IS NULL AND resolved_by IS NULL AND resolution_note IS NULL)
+        OR (resolved_at IS NOT NULL AND resolved_by IS NOT NULL AND resolution_note IS NOT NULL AND resolved_at >= blocked_at)
+    )
+);
+
+CREATE INDEX idx_rma_blocks_rma_id ON rma_blocks (rma_id);

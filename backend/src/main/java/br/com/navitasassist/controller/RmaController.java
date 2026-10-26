@@ -5,6 +5,8 @@ import java.util.List;
 import br.com.navitasassist.diagnosis.DiagnosisRequest;
 import br.com.navitasassist.rma.CreateRmaRequest;
 import br.com.navitasassist.rma.RmaAssigneeUpdateRequest;
+import br.com.navitasassist.rma.RmaBlockRequest;
+import br.com.navitasassist.rma.RmaBlockResolveRequest;
 import br.com.navitasassist.rma.RmaBulkStatusUpdateRequest;
 import br.com.navitasassist.rma.RmaResponse;
 import br.com.navitasassist.rma.RmaStatus;
@@ -87,5 +89,15 @@ public class RmaController {
     @PutMapping("/{id}/diagnosis")
     public RmaResponse upsertDiagnosis(@PathVariable Long id, @Valid @RequestBody DiagnosisRequest request) {
         return rmaService.upsertDiagnosis(id, request);
+    }
+
+    @PostMapping("/{id}/blocks")
+    public RmaResponse block(@PathVariable Long id, @Valid @RequestBody RmaBlockRequest request) {
+        return rmaService.block(id, request);
+    }
+
+    @PatchMapping("/{id}/blocks/{blockId}")
+    public RmaResponse resolveBlock(@PathVariable Long id, @PathVariable Long blockId, @Valid @RequestBody RmaBlockResolveRequest request) {
+        return rmaService.resolveBlock(id, blockId, request);
     }
 }
