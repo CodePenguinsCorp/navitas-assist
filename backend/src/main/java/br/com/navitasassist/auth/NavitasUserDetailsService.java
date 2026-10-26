@@ -8,6 +8,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -16,8 +17,10 @@ public class NavitasUserDetailsService implements UserDetailsService {
     private final UserAccountRepository userAccountRepository;
 
     @Override
+    @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        UserAccount userAccount = userAccountRepository.findByUsernameIgnoreCase(username)
+        // Login holds this lock until the authenticated session has been registered.
+        UserAccount userAccount = userAccountRepository.findByUsernameIgnoreCaseForUpdate(username)
             .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
         return User.builder()
