@@ -5,6 +5,7 @@ import { of } from 'rxjs';
 import { RmaResponse, UserSession, WarrantyStatus } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
+import { ProtocolService } from '../../core/services/protocol.service';
 import { RmaService } from '../../core/services/rma.service';
 import { RmasComponent } from './rmas.component';
 
@@ -32,6 +33,7 @@ describe('RmasComponent form', () => {
           useValue: { listClients: () => of([]), listProducts: () => of([]) },
         },
         { provide: RmaService, useValue: rmaService },
+        { provide: ProtocolService, useValue: { listExecutions: () => of([]), listTemplates: () => of([]) } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(RmasComponent);

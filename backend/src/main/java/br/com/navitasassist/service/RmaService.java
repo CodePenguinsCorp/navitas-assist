@@ -45,6 +45,7 @@ public class RmaService {
     private final ClientService clientService;
     private final ProductService productService;
     private final UserAccountService userAccountService;
+    private final ProtocolExecutionService protocolExecutionService;
 
     @Transactional(readOnly = true)
     public List<RmaResponse> search(String query, RmaStatus status) {
@@ -168,6 +169,7 @@ public class RmaService {
         boolean changed = !Objects.equals(rma.getStatus(), request.status());
 
         if (changed) {
+            protocolExecutionService.assertTransitionAllowed(rma, request.status());
             rma.setStatus(request.status());
         }
         if (changed || trimToNull(request.note()) != null) {
