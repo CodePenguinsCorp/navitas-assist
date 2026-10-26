@@ -19,6 +19,16 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
     @Query("select account from UserAccount account where upper(account.username) = upper(:username)")
     Optional<UserAccount> findByUsernameIgnoreCaseForUpdate(@Param("username") String username);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select account from UserAccount account where account.active = true and account.role = :role order by account.id")
+    List<UserAccount> findActiveByRoleForUpdate(@Param("role") UserRole role);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select account from UserAccount account where account.id = :id")
+    Optional<UserAccount> findByIdForUpdate(@Param("id") Long id);
+
+    long countByRoleAndActiveTrue(UserRole role);
+
     boolean existsByUsernameIgnoreCase(String username);
 
     List<UserAccount> findAllByActiveTrueAndRoleOrderByFullNameAsc(UserRole role);
