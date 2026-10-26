@@ -20,7 +20,7 @@ class RmaSlaTest {
     @CsvSource({"0,NORMAL", "479,NORMAL", "480,WARNING", "599,WARNING", "600,OVERDUE", "601,OVERDUE"})
     void shouldClassifyExactThresholds(long seconds, RmaSlaStatus status) {
         properties.getStages().get(RmaStatus.RECEIVED).setMinutes(10);
-        RmaSlaResponse sla = service.calculate(record(), START.plusSeconds(seconds));
+        RmaSlaResponse sla = calculate(record(), START.plusSeconds(seconds));
         assertEquals(status, sla.status());
         assertEquals(seconds, sla.elapsedSeconds());
         assertEquals(START.plusSeconds(600), sla.dueAt());
@@ -29,12 +29,12 @@ class RmaSlaTest {
     @Test
     void shouldIgnoreNotesAndUseOnlyMostRecentVisitToStage() {
         RmaRecord rma = record();
-        rma.setStatus(RmaStatus.TRIAGE);
+        rma.setStatus("TRIAGE");
         rma.addStatusHistory(event(2, RmaStatus.TRIAGE, 60));
         rma.addStatusHistory(event(5, RmaStatus.TRIAGE, 240));
         rma.addStatusHistory(event(3, RmaStatus.IN_DIAGNOSIS, 120));
         rma.addStatusHistory(event(4, RmaStatus.TRIAGE, 180));
-        RmaSlaResponse sla = service.calculate(rma, START.plusSeconds(300));
+        RmaSlaResponse sla = calculate(rma, START.plusSeconds(300));
         assertEquals(START.plusSeconds(180), sla.startedAt());
         assertEquals(120, sla.elapsedSeconds());
     }
@@ -44,7 +44,7 @@ class RmaSlaTest {
         RmaRecord rma = record();
         rma.addStatusHistory(event(3, RmaStatus.RECEIVED, 60));
         rma.addStatusHistory(event(2, RmaStatus.TRIAGE, 60));
-        assertEquals(START.plusSeconds(60), service.calculate(rma, START.plusSeconds(70)).startedAt());
+        assertEquals(START.plusSeconds(60), calculate(rma, START.plusSeconds(70)).startedAt());
     }
 
     @Test
@@ -52,33 +52,33 @@ class RmaSlaTest {
         properties.getStages().get(RmaStatus.RECEIVED).getPriorityMinutes().put(RmaPriority.HIGH, 5L);
         RmaRecord rma = record();
         rma.setPriority(RmaPriority.HIGH);
-        assertEquals(300L, service.calculate(rma, START).limitSeconds());
+        assertEquals(300L, calculate(rma, START).limitSeconds());
         rma.setPriority(RmaPriority.MEDIUM);
-        assertEquals(86400L, service.calculate(rma, START).limitSeconds());
+        assertEquals(86400L, calculate(rma, START).limitSeconds());
     }
 
     @ParameterizedTest
     @EnumSource(value = RmaStatus.class, names = {"COMPLETED", "RETURNED", "IRREPARABLE"})
     void shouldStopTimeInClosedStagesAndRestartOnReopening(RmaStatus status) {
         RmaRecord rma = record();
-        rma.setStatus(status);
+        rma.setStatus(status.name());
         rma.addStatusHistory(event(2, status, 100));
-        RmaSlaResponse closed = service.calculate(rma, START.plusSeconds(200));
-        assertEquals(closed, service.calculate(rma, START.plusSeconds(900000)));
+        RmaSlaResponse closed = calculate(rma, START.plusSeconds(200));
+        assertEquals(closed, calculate(rma, START.plusSeconds(900000)));
         assertEquals(RmaSlaStatus.CLOSED, closed.status());
         assertNull(closed.dueAt());
         assertEquals(0, closed.elapsedSeconds());
-        rma.setStatus(RmaStatus.RECEIVED);
+        rma.setStatus("RECEIVED");
         rma.addStatusHistory(event(3, RmaStatus.RECEIVED, 300));
-        assertEquals(10, service.calculate(rma, START.plusSeconds(310)).elapsedSeconds());
+        assertEquals(10, calculate(rma, START.plusSeconds(310)).elapsedSeconds());
     }
 
     @Test
     void shouldUseCreationForLegacyHistoryAndClampFutureTime() {
         RmaRecord rma = record();
         rma.getStatusHistory().clear();
-        assertEquals(START, service.calculate(rma, START.plusSeconds(10)).startedAt());
-        assertEquals(0, service.calculate(rma, START.minusSeconds(10)).elapsedSeconds());
+        assertEquals(START, calculate(rma, START.plusSeconds(10)).startedAt());
+        assertEquals(0, calculate(rma, START.minusSeconds(10)).elapsedSeconds());
     }
 
     @Test
@@ -99,6 +99,11 @@ class RmaSlaTest {
         }
     }
 
+    private RmaSlaResponse calculate(RmaRecord rma, Instant now) {
+        boolean done = java.util.Set.of("COMPLETED", "RETURNED", "IRREPARABLE").contains(rma.getStatus());
+        return service.calculate(rma, now, new br.com.navitasassist.workflow.WorkflowDocument.Status(rma.getStatus(), rma.getStatus(), done ? br.com.navitasassist.workflow.WorkflowDocument.Category.DONE : br.com.navitasassist.workflow.WorkflowDocument.Category.IN_PROGRESS, true, done ? null : RmaStatus.valueOf(rma.getStatus())));
+    }
+
     private RmaRecord record() {
         RmaRecord rma = new RmaRecord();
         rma.setCreatedAt(START);
@@ -109,7 +114,7 @@ class RmaSlaTest {
     private RmaStatusHistory event(long id, RmaStatus status, long seconds) {
         RmaStatusHistory history = new RmaStatusHistory();
         history.setId(id);
-        history.setStatus(status);
+        history.setStatus(status.name());
         history.setChangedAt(START.plusSeconds(seconds));
         return history;
     }

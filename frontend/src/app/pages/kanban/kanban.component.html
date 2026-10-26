@@ -4,8 +4,7 @@
       <p class="eyebrow">Operações</p>
       <h1>Kanban de RMAs</h1>
       <p>
-        Visual dedicado para acompanhar o fluxo da assistência técnica e mover chamados entre etapas
-        sem sair do quadro.
+        Visual dedicado para acompanhar o fluxo da assistência técnica e mover chamados entre etapas sem sair do quadro.
       </p>
     </div>
 
@@ -34,12 +33,7 @@
       </div>
       <div class="kanban-stage__summary">
         <span>{{ filteredRmas().length }} de {{ totalRmas() }} RMA(s)</span>
-        <button
-          type="button"
-          class="button-secondary"
-          (click)="clearFilters()"
-          [disabled]="activeFilterCount() === 0"
-        >
+        <button type="button" class="button-secondary" (click)="clearFilters()" [disabled]="activeFilterCount() === 0">
           Limpar filtros{{ activeFilterCount() ? ' (' + activeFilterCount() + ')' : '' }}
         </button>
       </div>
@@ -58,21 +52,11 @@
           [disabled]="viewBusy()"
           (valueChange)="applyView($event)"
         />
-        <button
-          type="button"
-          class="button-secondary"
-          (click)="openCreateViewModal()"
-          [disabled]="viewBusy()"
-        >
+        <button type="button" class="button-secondary" (click)="openCreateViewModal()" [disabled]="viewBusy()">
           Salvar atual
         </button>
         @if (activeView(); as view) {
-          <button
-            type="button"
-            class="button-secondary"
-            (click)="openRenameViewModal()"
-            [disabled]="viewBusy()"
-          >
+          <button type="button" class="button-secondary" (click)="openRenameViewModal()" [disabled]="viewBusy()">
             Renomear
           </button>
           <button
@@ -101,11 +85,7 @@
     <form appBoundedFilterPanels class="kanban-filters" [formGroup]="filtersForm">
       <div class="field-group">
         <label>SLA</label>
-        <app-custom-select
-          formControlName="sla"
-          ariaLabel="Filtrar Kanban por SLA"
-          [options]="slaFilterOptions"
-        />
+        <app-custom-select formControlName="sla" ariaLabel="Filtrar Kanban por SLA" [options]="slaFilterOptions" />
       </div>
 
       <div class="field-group kanban-filters__search">
@@ -132,7 +112,7 @@
         <app-custom-select
           formControlName="status"
           ariaLabel="Filtrar Kanban por status"
-          [options]="statusFilterOptions"
+          [options]="statusFilterOptions()"
         />
       </div>
 
@@ -215,6 +195,7 @@
     }
 
     <app-rma-kanban-board
+      [statuses]="workflowStatuses()"
       [rmas]="filteredRmas()"
       [bulkSelectionEnabled]="canUpdateStatus()"
       [bulkSelectedIds]="bulkSelectedIds()"
@@ -287,12 +268,7 @@
         </label>
 
         <div class="form-actions form-actions--full">
-          <button
-            type="button"
-            class="button-secondary"
-            (click)="closeViewModal()"
-            [disabled]="viewBusy()"
-          >
+          <button type="button" class="button-secondary" (click)="closeViewModal()" [disabled]="viewBusy()">
             Cancelar
           </button>
           <button type="submit" class="button-primary" [disabled]="viewBusy()">
@@ -337,7 +313,7 @@
           <app-custom-select
             formControlName="status"
             ariaLabel="Novo status do RMA"
-            [options]="statusSelectOptions"
+            [options]="statusSelectOptions()"
           />
         </div>
 

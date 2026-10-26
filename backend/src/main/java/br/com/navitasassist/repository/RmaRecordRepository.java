@@ -17,6 +17,8 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
     @Query("select r from RmaRecord r where r.id = :id")
     Optional<RmaRecord> findByIdForUpdate(@Param("id") Long id);
 
+    boolean existsByStatus(String status);
+
     boolean existsByProduct_Id(Long productId);
 
     boolean existsByItems_Product_Id(Long productId);
@@ -53,7 +55,7 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
           )
         order by r.entryDate desc, r.id desc
         """)
-    List<RmaRecord> search(@Param("query") String query, @Param("status") RmaStatus status);
+    List<RmaRecord> search(@Param("query") String query, @Param("status") String status);
 
     @Query("""
         select distinct r

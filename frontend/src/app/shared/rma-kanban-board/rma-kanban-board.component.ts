@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Output, computed, input } from '@angular/core';
 import { RmaSlaBadgeComponent } from '../rma-sla-badge/rma-sla-badge.component';
 import { RMA_STATUS_FLOW } from '../../core/mock-data';
-import { RmaResponse, RmaStatus } from '../../core/models';
+import { WorkflowStatusDefinition, RmaResponse, RmaStatus } from '../../core/models';
 import {
   compareRmasForBoard,
   formatDate,
@@ -12,7 +12,7 @@ import {
   statusLabel,
   trackableLabel,
   warrantyClass,
-  warrantyLabel
+  warrantyLabel,
 } from '../../core/utils/rma-ui';
 
 interface RmaBoardColumn {
@@ -25,9 +25,10 @@ interface RmaBoardColumn {
   selector: 'app-rma-kanban-board',
   imports: [RmaSlaBadgeComponent],
   templateUrl: './rma-kanban-board.component.html',
-  styleUrl: './rma-kanban-board.component.css'
+  styleUrl: './rma-kanban-board.component.css',
 })
 export class RmaKanbanBoardComponent {
+  readonly statuses = input<readonly WorkflowStatusDefinition[]>([]);
   readonly rmas = input<readonly RmaResponse[]>([]);
   readonly bulkSelectionEnabled = input(false);
   readonly bulkSelectedIds = input<readonly number[]>([]);
@@ -54,13 +55,13 @@ export class RmaKanbanBoardComponent {
 
   protected readonly totalRmas = computed(() => this.rmas().length);
   protected readonly columns = computed<RmaBoardColumn[]>(() =>
-    RMA_STATUS_FLOW.map((status) => ({
-      status,
-      label: statusLabel(status),
-      items: [...this.rmas()]
-        .filter((rma) => rma.status === status)
-        .sort(compareRmasForBoard)
-    }))
+    this.statuses()
+      .filter((s) => s.active || this.rmas().some((r) => r.status === s.code))
+      .map((s) => ({
+        status: s.code,
+        label: s.label,
+        items: [...this.rmas()].filter((rma) => rma.status === s.code).sort(compareRmasForBoard),
+      })),
   );
 
   protected readonly priorityLabel = priorityLabel;

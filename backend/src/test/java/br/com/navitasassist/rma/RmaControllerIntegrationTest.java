@@ -539,7 +539,7 @@ class RmaControllerIntegrationTest {
         rma.setReceivedBy("Service desk");
         rma.setReportedFailure("SLA test");
         RmaStatusHistory history = new RmaStatusHistory();
-        history.setStatus(RmaStatus.RECEIVED);
+        history.setStatus("RECEIVED");
         history.setChangedBy("admin");
         history.setChangedAt(java.time.Instant.parse("2020-01-01T10:00:00Z"));
         rma.addStatusHistory(history);

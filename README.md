@@ -75,6 +75,28 @@ Cada usuário autenticado pode salvar combinações dos filtros avançados do Ka
 
 As rotas em `/api/kanban-views` usam sempre o usuário da sessão; o cliente não informa nem escolhe o proprietário. Nomes são únicos por usuário, e falhas de persistência não alteram os filtros que já estão aplicados na tela.
 
+## Workflows de RMA (NAV-31)
+
+Administradores configuram o fluxo em **Fluxos de RMA**: status, nomes, ordem, categoria, etapa inicial, transições, perfis, campos obrigatórios, condições e ações. O editor mantém um rascunho separado da versão publicada; salvar não muda a operação. Publicar valida o fluxo e cria uma nova versão. Descartar remove somente o rascunho. Uma revisão esperada protege a edição contra sobrescrita por outra sessão.
+
+O fluxo inicial conserva as nove etapas e as movimentações existentes. Novas etapas usam códigos estáveis e categorias **Pendente**, **Em andamento** e **Concluído**. Etapas não concluídas escolhem uma política de SLA existente. Arquivar impede novas entradas, mantendo os cards existentes e as saídas necessárias à migração; excluir uma etapa em uso é recusado. O histórico preserva o nome do status, do workflow e a versão utilizada na data do evento, mesmo após uma renomeação.
+
+Arraste, formulário e ações em lote passam pela mesma validação no backend. Condições podem exigir dados do RMA, checklist concluído, aprovação interna ou estado de um RMA relacionado. O lote oferece destinos comuns aos itens selecionados e continua informando resultados individuais. Ações posteriores à transição podem registrar nota, definir prioridade ou remover responsável, dentro da mesma transação.
+
+`GET /api/workflows` disponibiliza a versão publicada a usuários autenticados. Criação, edição, descarte de rascunho e publicação em `/api/workflows/draft` e `/api/workflows/publish` são exclusivos de ADMIN. Status e versão esperados protegem transições iniciadas com dados desatualizados. O relacionamento entre RMAs usa `PATCH /api/rmas/{id}/related-rma`, com nota e validação de referência.
+
+## Checklists e aprovações internas (NAV-61)
+
+Em **Modelos de checklist**, ADMIN mantém modelos versionados com itens obrigatórios e opcionais. Cada execução vinculada ao RMA guarda uma cópia da versão utilizada; editar ou arquivar o modelo não reescreve execuções anteriores. Marcar e desmarcar itens exige observação e registra autor e data. A execução fica concluída quando todos os itens obrigatórios estão marcados; reiniciar preserva a execução anterior.
+
+Nos detalhes do RMA, ADMIN, SERVICE_DESK e TECHNICIAN podem executar checklists e solicitar aprovação por finalidade, com justificativa. ADMIN e SERVICE_DESK aprovam ou rejeitam com motivo. VIEWER consulta os registros. Uma nova solicitação mantém a decisão anterior no histórico e passa a ser a referência para aquela finalidade. Revisões esperadas impedem alterações concorrentes de itens e decisões já desatualizadas.
+
+As condições do workflow consultam a execução mais recente de cada modelo e a solicitação mais recente de cada finalidade. A conclusão e a aprovação são calculadas a partir desses registros; não são flags livres enviadas pelo cliente. Modelos ainda exigidos pelo workflow publicado não podem ser arquivados: primeiro é necessário retirar a condição e publicar a mudança. Esta base será reutilizável pelos protocolos técnicos da NAV-45 e pelas aprovações financeiras da NAV-39.
+
+O catálogo usa `/api/checklist-templates`; execuções ficam em `/api/rmas/{id}/checklists`, e solicitações/decisões em `/api/rmas/{id}/approvals`. A API aplica as mesmas restrições de perfil das telas.
+
+Roteiro de validação separado por issue: [NAV-31, NAV-61 e integração](docs/testing/nav31-nav61-manual.md).
+
 ## Ações em lote no Kanban (NAV-15)
 
 Marque cards em qualquer coluna e use **Selecionar visíveis** para incluir os itens mostrados pelos filtros. A seleção permanece ao mudar os filtros; o contador informa quantos selecionados estão ocultos. Use **Limpar seleção** para começar de novo. Antes de aplicar, a confirmação mostra a ação, a quantidade e os RMAs envolvidos. O resultado de cada RMA aparece separadamente; falhas continuam selecionadas para revisão. O quadro atualiza somente os itens afetados.
@@ -315,7 +337,7 @@ Exemplo para deploy manual:
 
 ## Schema do banco
 
-O projeto ainda não possui banco de produção nem dados que precisem ser preservados. O Flyway cria o schema inicial em um banco vazio e o Hibernate apenas valida o resultado (`ddl-auto=validate`). Não existe migração ou backfill de dados legados.
+O Flyway cria o schema inicial em um banco vazio e aplica migrações versionadas em bancos que já possuam histórico Flyway. A migração V3 adiciona workflows, checklists e aprovações e prepara os códigos e snapshots de status existentes. Ela foi validada sobre V1 e sobre V1 + V2 da NAV-34. As versões precisam ser conciliadas antes da integração com outros PRs: o [PR #23 (estoque)](https://github.com/CodePenguinsCorp/navitas-assist/pull/23) também utiliza V3, e o [PR #24 (custódia)](https://github.com/CodePenguinsCorp/navitas-assist/pull/24) utiliza V2, assim como a NAV-34. Após definir a ordem e a numeração, validar o conjunto em banco separado; aplicar V3 antes de uma V2 que será incorporada depois exige tratar a ordem do Flyway. Um schema antigo criado sem histórico Flyway exige tratamento específico e não deve receber um baseline automático sem validação.
 
 Quando o schema local ficar incompatível, descarte o volume de desenvolvimento e recrie a stack. O primeiro comando remove todos os dados locais:
 

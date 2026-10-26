@@ -50,9 +50,8 @@ public class KanbanView extends AuditableEntity {
     @Column(length = 20)
     private RmaPriority priority;
 
-    @Enumerated(EnumType.STRING)
-    @Column(length = 30)
-    private RmaStatus status;
+    @Column(length = 60)
+    private String status;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "warranty_status", length = 30)

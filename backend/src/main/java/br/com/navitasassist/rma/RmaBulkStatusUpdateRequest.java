@@ -1,11 +1,9 @@
 package br.com.navitasassist.rma;
 
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
 public record RmaBulkStatusUpdateRequest(
-    @NotNull RmaStatus status,
-    @NotNull RmaStatus expectedStatus,
-    @Size(max = 255) String note
-) {
-}
+        @NotBlank @Size(max = 60) String status,
+        @NotBlank @Size(max = 60) String expectedStatus,
+        @Size(max = 255) String note,
+        Long expectedWorkflowVersion) {}

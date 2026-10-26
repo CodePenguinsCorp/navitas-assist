@@ -1,0 +1,51 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.checklist-editor {
+  padding: 1.3rem;
+}
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.fields label {
+  display: grid;
+  gap: 0.4rem;
+}
+input:not([type='checkbox']) {
+  width: 100%;
+}
+.actions,
+.template-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+.template-row {
+  justify-content: space-between;
+  border-top: 1px solid var(--line);
+  padding: 0.8rem 0;
+}
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.item-editor {
+  border-top: 1px solid var(--line);
+  padding: 1rem 0;
+}
+fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+@media (max-width: 650px) {
+  .fields {
+    grid-template-columns: 1fr;
+  }
+}

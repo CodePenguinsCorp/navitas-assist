@@ -26,9 +26,9 @@ class DatabaseMigrationTest {
     void createsSchemaAndSupportsMultipleItemsPerRma() throws SQLException {
         String url = "jdbc:h2:mem:migration_empty;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
 
-        int executedMigrations = Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate().migrationsExecuted;
+        int executedMigrations = Flyway.configure().dataSource(url, USER, PASSWORD).placeholders(java.util.Map.of("dropCheck","DROP CONSTRAINT")).load().migrate().migrationsExecuted;
 
-        assertEquals(1, executedMigrations);
+        assertEquals(2, executedMigrations);
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
             assertTrue(tableExists(connection, "rmas"));
             assertTrue(tableExists(connection, "rma_items"));
@@ -75,6 +75,30 @@ class DatabaseMigrationTest {
 
             assertEquals(2, count(connection, "rma_items"));
             assertThrows(SQLException.class, () -> insertItem(connection, 999999, productId, "ORPHAN"));
+        }
+    }
+
+    @Test
+    void upgradesExistingStatusHistoryWithoutChangingSnapshots() throws SQLException {
+        String url = "jdbc:h2:mem:migration_workflow_existing;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
+        Flyway.configure().dataSource(url, USER, PASSWORD).target("1").placeholders(java.util.Map.of("dropCheck", "DROP CONSTRAINT")).load().migrate();
+        long rmaId;
+        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
+            rmaId = insertRma(connection, insertClient(connection), insertProduct(connection));
+            try (PreparedStatement statement = connection.prepareStatement("insert into rma_status_history(rma_id,status,changed_by,changed_at,note) values (?,'RECEIVED','legacy',CURRENT_TIMESTAMP,'Original')")) {
+                statement.setLong(1,rmaId);statement.executeUpdate();
+            }
+        }
+        assertEquals(1, Flyway.configure().dataSource(url, USER, PASSWORD).placeholders(java.util.Map.of("dropCheck", "DROP CONSTRAINT")).load().migrate().migrationsExecuted);
+        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD); Statement statement = connection.createStatement()) {
+            assertEquals(60,columnSize(connection,"rmas","status"));
+            assertEquals(60,columnSize(connection,"rma_status_history","status"));
+            assertEquals(60,columnSize(connection,"kanban_views","status"));
+            try (ResultSet result=statement.executeQuery("select status_label,workflow_name,workflow_version,note from rma_status_history")) {
+                assertTrue(result.next());assertEquals("Recebido",result.getString(1));assertEquals("Fluxo de RMA",result.getString(2));assertEquals(1,result.getLong(3));assertEquals("Original",result.getString(4));
+            }
+            assertEquals(1,statement.executeUpdate("update rmas set status='CUSTOM_STATUS' where id="+rmaId));
+            assertEquals(1,statement.executeUpdate("update rma_status_history set status='CUSTOM_STATUS'"));
         }
     }
 

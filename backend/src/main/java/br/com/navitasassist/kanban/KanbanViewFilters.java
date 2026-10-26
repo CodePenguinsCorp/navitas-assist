@@ -11,7 +11,7 @@ import jakarta.validation.constraints.Size;
 public record KanbanViewFilters(
     @Size(max = 200) String query,
     RmaPriority priority,
-    RmaStatus status,
+    String status,
     WarrantyStatus warranty,
     @Positive Long assigneeId,
     boolean unassignedOnly,

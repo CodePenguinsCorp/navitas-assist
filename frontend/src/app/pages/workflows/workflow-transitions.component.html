@@ -1,0 +1,183 @@
+<section class="panel transition-section">
+  <h2>Transições e regras</h2>
+  <p>Escolha a origem para editar suas saídas. Cada regra será conferida com os dados reais do RMA.</p>
+  <div class="source-tabs" role="group" aria-label="Origem das transições">
+    @for (s of definition().statuses; track $index) {
+      <button class="button-secondary" [attr.aria-pressed]="source() === s.code" (click)="sourceChange.emit(s.code)">
+        {{ s.label }}
+      </button>
+    }
+  </div>
+  @if (source()) {
+    <figure>
+      <svg role="img" [attr.aria-label]="'Saídas de ' + label(source())" [attr.viewBox]="'0 0 860 ' + graphHeight()">
+        <defs>
+          <marker id="workflow-arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L9,3 z" fill="#236da7" />
+          </marker>
+        </defs>
+        <rect x="8" [attr.y]="graphHeight() / 2 - 28" width="240" height="56" rx="8" />
+        <text x="128" [attr.y]="graphHeight() / 2 + 5" text-anchor="middle">
+          <title>{{ label(source()) }}</title>
+          {{ graphLabel(source()) }}
+        </text>
+        @for (t of outgoing(); track $index; let i = $index) {
+          <line
+            x1="250"
+            [attr.y1]="graphHeight() / 2"
+            x2="500"
+            [attr.y2]="40 + i * 40"
+            marker-end="url(#workflow-arrow)"
+          />
+          <text x="520" [attr.y]="45 + i * 40">
+            <title>{{ label(t.to) }}</title>
+            {{ graphLabel(t.to) }}
+          </text>
+        }
+      </svg>
+      <figcaption>
+        As setas mostram as saídas configuradas. Perfis e condições abaixo controlam cada passagem.
+      </figcaption>
+    </figure>
+    <button class="button-primary" (click)="add()">Adicionar transição de {{ label(source()) }}</button>
+    <ul class="transition-list" aria-label="Lista acessível das transições">
+      @for (t of outgoing(); track $index) {
+        <li class="transition-editor">
+          <div class="transition-head">
+            <h3>{{ label(t.from) }} para {{ label(t.to) }}</h3>
+            <button class="button-secondary" (click)="remove(t)">Remover transição</button>
+          </div>
+          <label class="field-group"
+            >Destino<app-custom-select
+              ariaLabel="Destino da transição"
+              [options]="destinations()"
+              [(ngModel)]="t.to"
+              (ngModelChange)="changed.emit()"
+          /></label>
+          <fieldset>
+            <legend>Perfis autorizados</legend>
+            @for (role of roles; track role) {
+              <label class="check"
+                ><input type="checkbox" [checked]="t.roles.includes(role)" (change)="toggle(t.roles, role)" />{{
+                  role === 'ADMIN' ? 'Administrador' : role === 'TECHNICIAN' ? 'Técnico' : 'Atendimento'
+                }}</label
+              >
+            }
+          </fieldset>
+          <details>
+            <summary>Campos obrigatórios ({{ t.requiredFields.length }})</summary>
+            <div class="fields-grid">
+              @for (field of fields; track field) {
+                <label class="check"
+                  ><input
+                    type="checkbox"
+                    [checked]="t.requiredFields.includes(field)"
+                    (change)="toggle(t.requiredFields, field)"
+                  />{{ fieldNames[field] }}</label
+                >
+              }
+            </div>
+          </details>
+          <h4>Condições</h4>
+          @for (c of t.conditions; track $index; let i = $index) {
+            <div class="rule-row">
+              <label class="field-group"
+                >Tipo<app-custom-select
+                  ariaLabel="Tipo da condição"
+                  [options]="conditionTypes"
+                  [(ngModel)]="c.type"
+                  (ngModelChange)="conditionType(c)"
+              /></label>
+              @switch (c.type) {
+                @case ('FIELD') {
+                  <label class="field-group"
+                    >Campo<app-custom-select
+                      ariaLabel="Campo da condição"
+                      [options]="fieldOptions()"
+                      [(ngModel)]="c.field"
+                  /></label>
+                }
+                @case ('CHECKLIST') {
+                  <label class="field-group"
+                    >Modelo<app-custom-select
+                      ariaLabel="Modelo de checklist"
+                      [options]="checklistOptions()"
+                      [(ngModel)]="c.field"
+                  /></label>
+                }
+                @case ('APPROVAL') {
+                  <label class="field-group"
+                    >Finalidade da aprovação<input
+                      [(ngModel)]="c.field"
+                      placeholder="Ex.: LIBERACAO_REPARO"
+                      maxlength="60"
+                    /><small>Use este mesmo código ao solicitar aprovação no RMA.</small></label
+                  >
+                }
+              }
+              <label class="field-group"
+                >Operador<app-custom-select
+                  ariaLabel="Operador da condição"
+                  [options]="c.type === 'FIELD' ? operators : booleanOperators"
+                  [(ngModel)]="c.operator"
+                  (ngModelChange)="c.operator === 'PRESENT' ? (c.value = null) : null"
+              /></label>
+              @if (c.operator !== 'PRESENT') {
+                @if (c.type === 'CHECKLIST' || c.type === 'APPROVAL') {
+                  <label class="field-group"
+                    >Resultado<app-custom-select
+                      ariaLabel="Resultado esperado"
+                      [options]="booleans"
+                      [(ngModel)]="c.value"
+                  /></label>
+                } @else if (c.type === 'RELATED_STATUS') {
+                  <label class="field-group"
+                    >Status relacionado<app-custom-select
+                      ariaLabel="Status relacionado"
+                      [options]="statuses()"
+                      [(ngModel)]="c.value"
+                  /></label>
+                } @else {
+                  <label class="field-group">Valor<input [(ngModel)]="c.value" /></label>
+                }
+              }
+              <button class="button-secondary" (click)="t.conditions.splice(i, 1); changed.emit()">
+                Remover condição
+              </button>
+            </div>
+          }
+          <button class="button-secondary" (click)="addCondition(t)">Adicionar condição</button>
+          <h4>Ações após a passagem</h4>
+          @for (a of t.actions; track $index; let i = $index) {
+            <div class="rule-row">
+              <label class="field-group"
+                >Ação<app-custom-select
+                  ariaLabel="Ação da transição"
+                  [options]="actionTypes"
+                  [(ngModel)]="a.type"
+                  (ngModelChange)="actionType(a)"
+              /></label>
+              @if (a.type === 'ADD_NOTE') {
+                <label class="field-group">Nota<input [(ngModel)]="a.value" maxlength="255" /></label>
+              }
+              @if (a.type === 'SET_PRIORITY') {
+                <label class="field-group"
+                  >Prioridade<app-custom-select
+                    ariaLabel="Prioridade da ação"
+                    [options]="priorities"
+                    [(ngModel)]="a.value"
+                /></label>
+              }
+              <button class="button-secondary" (click)="t.actions.splice(i, 1); changed.emit()">Remover ação</button>
+            </div>
+          }
+          <button class="button-secondary" (click)="t.actions.push({ type: 'ADD_NOTE', value: '' }); changed.emit()">
+            Adicionar ação
+          </button>
+        </li>
+      } @empty {
+        <li>Esta origem ainda não tem saídas. Adicione uma transição para um status ativo.</li>
+      }
+    </ul>
+  }
+</section>

@@ -12,16 +12,7 @@ export enum WarrantyStatus {
   OUT_OF_WARRANTY = 'OUT_OF_WARRANTY',
 }
 
-export type RmaStatus =
-  | 'RECEIVED'
-  | 'TRIAGE'
-  | 'IN_DIAGNOSIS'
-  | 'WAITING_PART'
-  | 'IN_REPAIR'
-  | 'IN_TESTS'
-  | 'COMPLETED'
-  | 'RETURNED'
-  | 'IRREPARABLE';
+export type RmaStatus = string;
 
 export type FailureType =
   | 'POWER_SUPPLY'
@@ -33,14 +24,7 @@ export type FailureType =
   | 'MECHANICAL'
   | 'OTHER';
 
-export type FailureCause =
-  | 'COMPONENT'
-  | 'SOLDER'
-  | 'HUMIDITY'
-  | 'OVERLOAD'
-  | 'ESD'
-  | 'INCORRECT_USAGE'
-  | 'OTHER';
+export type FailureCause = 'COMPONENT' | 'SOLDER' | 'HUMIDITY' | 'OVERLOAD' | 'ESD' | 'INCORRECT_USAGE' | 'OTHER';
 
 export interface UserSession {
   username: string;
@@ -171,6 +155,8 @@ export interface CreateRmaRequest {
 }
 
 export interface RmaStatusUpdateRequest {
+  expectedStatus?: string;
+  expectedWorkflowVersion?: number;
   status: RmaStatus;
   note: string | null;
 }
@@ -218,6 +204,9 @@ export interface DiagnosisRequest {
 }
 
 export interface RmaStatusHistoryResponse {
+  statusLabel?: string;
+  workflowName?: string;
+  workflowVersion?: number;
   status: RmaStatus;
   changedBy: string;
   changedAt: string;
@@ -258,6 +247,11 @@ export interface RmaSlaResponse {
 }
 
 export interface RmaResponse {
+  statusLabel?: string;
+  statusCategory?: WorkflowCategory;
+  workflowVersion?: number;
+  transitionOptions?: WorkflowTransitionOption[];
+  relatedRmaId?: number | null;
   id: number;
   code: string;
   clientId: number;
@@ -331,4 +325,114 @@ export interface ReportCard {
 export interface AccessMatrixItem {
   role: UserRole;
   access: string;
+}
+
+export type WorkflowCategory = 'PENDING' | 'IN_PROGRESS' | 'DONE';
+export type WorkflowSlaStage = 'RECEIVED' | 'TRIAGE' | 'IN_DIAGNOSIS' | 'WAITING_PART' | 'IN_REPAIR' | 'IN_TESTS';
+export interface WorkflowStatusDefinition {
+  code: string;
+  label: string;
+  category: WorkflowCategory;
+  active: boolean;
+  slaStage: WorkflowSlaStage | null;
+}
+export interface WorkflowCondition {
+  type: 'FIELD' | 'CHECKLIST' | 'APPROVAL' | 'RELATED_STATUS';
+  field: string | null;
+  operator: 'PRESENT' | 'EQUALS' | 'NOT_EQUALS';
+  value: string | null;
+}
+export interface WorkflowAction {
+  type: 'ADD_NOTE' | 'SET_PRIORITY' | 'CLEAR_ASSIGNEE';
+  value: string | null;
+}
+export interface WorkflowTransitionDefinition {
+  from: string;
+  to: string;
+  roles: UserRole[];
+  requiredFields: string[];
+  conditions: WorkflowCondition[];
+  actions: WorkflowAction[];
+}
+export interface WorkflowDefinition {
+  name: string;
+  initialStatus: string;
+  statuses: WorkflowStatusDefinition[];
+  transitions: WorkflowTransitionDefinition[];
+}
+export interface PublishedWorkflow {
+  version: number;
+  definition: WorkflowDefinition;
+}
+export interface WorkflowDraft {
+  publishedVersion: number;
+  revision: number;
+  definition: WorkflowDefinition | null;
+}
+export interface WorkflowTransitionOption {
+  status: string;
+  label: string;
+  allowed: boolean;
+  reason: string | null;
+}
+export interface RelatedRmaRequest {
+  relatedRmaId: number | null;
+  note: string;
+  expectedUpdatedAt?: string | null;
+}
+export interface ChecklistItemDefinition {
+  code: string;
+  label: string;
+  required: boolean;
+}
+export interface ChecklistTemplateRequest {
+  code: string;
+  name: string;
+  items: ChecklistItemDefinition[];
+  active: boolean;
+  expectedVersion?: number;
+}
+export interface ChecklistTemplate extends ChecklistTemplateRequest {
+  id: number;
+  version: number;
+}
+export interface RmaChecklistItem extends ChecklistItemDefinition {
+  checked: boolean;
+  note: string | null;
+  updatedBy: string | null;
+  updatedAt: string | null;
+}
+export interface ChecklistAuditEvent {
+  itemCode: string | null;
+  checked: boolean | null;
+  note: string;
+  actor: string;
+  at: string;
+}
+export interface RmaChecklistExecution {
+  id: number;
+  templateCode: string;
+  templateName: string;
+  templateVersion: number;
+  items: RmaChecklistItem[];
+  completed: boolean;
+  revision: number;
+  history: ChecklistAuditEvent[];
+}
+export interface ChecklistItemUpdateRequest {
+  checked: boolean;
+  note: string;
+  expectedRevision: number;
+}
+export interface RmaApproval {
+  id: number;
+  code: string;
+  justification: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  requestedBy: string;
+  requestedAt: string;
+  decidedBy: string | null;
+  decidedAt: string | null;
+  decisionNote: string | null;
+  revision: number;
 }

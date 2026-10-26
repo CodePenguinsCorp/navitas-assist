@@ -1,0 +1,88 @@
+<section class="page-stack">
+  <header class="page-heading">
+    <div>
+      <h1>Modelos de checklist</h1>
+      <p>Organize verificações obrigatórias e preserve a versão de cada execução.</p>
+    </div>
+    <button class="button-primary" [disabled]="busy()" (click)="edit()">Novo modelo</button>
+  </header>
+  @if (error()) {
+    <article class="panel alert-banner alert-banner--error" role="alert">
+      <p>{{ error() }}</p>
+      <p>
+        Para arquivar um modelo usado pelo fluxo, retire sua condição e publique o fluxo primeiro. Em conflito de
+        versão, suas alterações permanecem disponíveis para comparação.
+      </p>
+    </article>
+  }
+  @if (message()) {
+    <p class="alert-banner alert-banner--success" role="status">{{ message() }}</p>
+  }
+  @if (editor(); as e) {
+    <section class="panel checklist-editor">
+      <h2>{{ editingId() ? 'Editar modelo' : 'Novo modelo' }}</h2>
+      <fieldset [disabled]="busy()">
+        <div class="fields">
+          <label class="field-group"
+            >Nome<input [ngModel]="e.name" (ngModelChange)="rename($event)" maxlength="120" /></label
+          ><label class="field-group"
+            >Código estável<input [(ngModel)]="e.code" [disabled]="!!editingId()" maxlength="60"
+          /></label>
+        </div>
+        <label class="check"><input type="checkbox" [(ngModel)]="e.active" />Modelo ativo</label>
+        <p>Arquivar impede novas vinculações. As execuções existentes continuam preservadas.</p>
+        <h3>Itens na ordem de execução</h3>
+        @for (item of e.items; track $index; let i = $index) {
+          <article class="item-editor">
+            <div class="fields">
+              <label class="field-group">Descrição<input [(ngModel)]="item.label" maxlength="255" /></label
+              ><label class="field-group">Código do item<input [(ngModel)]="item.code" maxlength="60" /></label>
+            </div>
+            <div class="actions">
+              <label class="check"><input type="checkbox" [(ngModel)]="item.required" />Obrigatório</label
+              ><button
+                class="button-secondary"
+                [disabled]="i === 0"
+                (click)="move(i, -1)"
+                aria-label="Mover item acima"
+              >
+                ↑ Acima</button
+              ><button
+                class="button-secondary"
+                [disabled]="i === e.items.length - 1"
+                (click)="move(i, 1)"
+                aria-label="Mover item abaixo"
+              >
+                ↓ Abaixo</button
+              ><button class="button-secondary" (click)="e.items.splice(i, 1)">Remover item</button>
+            </div>
+          </article>
+        }
+        <button class="button-secondary" (click)="add()">Adicionar item</button>
+      </fieldset>
+      <div class="actions">
+        <button class="button-primary" [disabled]="busy()" (click)="save()">Salvar modelo</button
+        ><button class="button-secondary" [disabled]="busy()" (click)="close()">Cancelar</button>
+      </div>
+    </section>
+  }
+  <section class="panel checklist-editor">
+    <h2>Catálogo de modelos</h2>
+    @if (busy()) {
+      <p role="status">Carregando?</p>
+    }
+    @for (t of templates(); track t.id) {
+      <article class="template-row">
+        <div>
+          <h3>{{ t.name }}</h3>
+          <p>
+            {{ t.code }} · Versão {{ t.version }} · {{ t.items.length }} itens · {{ t.active ? 'Ativo' : 'Arquivado' }}
+          </p>
+        </div>
+        <button class="button-secondary" [disabled]="busy()" (click)="edit(t)">Editar {{ t.name }}</button>
+      </article>
+    } @empty {
+      <p>Cadastre um modelo com ao menos um item obrigatório para vincular aos RMAs.</p>
+    }
+  </section>
+</section>

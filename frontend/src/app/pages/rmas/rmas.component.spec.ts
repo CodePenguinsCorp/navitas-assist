@@ -6,6 +6,8 @@ import { RmaResponse, UserSession, WarrantyStatus } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
+import { WorkflowService } from '../../core/services/workflow.service';
+import { OperationsService } from '../../core/services/operations.service';
 import { RmasComponent } from './rmas.component';
 
 describe('RmasComponent form', () => {
@@ -32,6 +34,11 @@ describe('RmasComponent form', () => {
           useValue: { listClients: () => of([]), listProducts: () => of([]) },
         },
         { provide: RmaService, useValue: rmaService },
+        { provide: WorkflowService, useValue: { published: () => of({ definition: { statuses: [] } }) } },
+        {
+          provide: OperationsService,
+          useValue: { templates: () => of([]), executions: () => of([]), approvals: () => of([]) },
+        },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(RmasComponent);
@@ -80,7 +87,10 @@ describe('RmasComponent form', () => {
 
   it('creates an RMA with its invoice number without sending a file or receiver', () => {
     component.createForm.patchValue({
-      clientId: 1, purchaseDateUnknown: true, invoiceNumber: '  NF-123  ', reportedFailure: 'Falha',
+      clientId: 1,
+      purchaseDateUnknown: true,
+      invoiceNumber: '  NF-123  ',
+      reportedFailure: 'Falha',
     });
     component.createItems.at(0).patchValue({ productId: 2, serialNumber: 'SER-2' });
     component.createRma();
@@ -117,16 +127,59 @@ interface RmaFormHarness {
 }
 
 const createdRma: RmaResponse = {
-  id: 1, code: 'RMA-2026-000001', clientId: 1, clientName: 'Cliente',
-  items: [{ id: 1, productId: 2, productName: 'Produto', productSku: 'SKU-2', batchNumber: null,
-    serialNumber: 'SER-2', manufacturedAt: null, warrantyMonths: 12, warrantyExpiresAt: null, warrantyStatus: WarrantyStatus.PENDING }],
-  productId: 2, productName: 'Produto', productSku: 'SKU-2', batchNumber: null, serialNumber: 'SER-2',
-  manufacturedAt: null, purchaseDate: null, purchaseDateUnknown: true, entryDate: '2026-10-20',
-  invoiceNumber: 'NF-123', receivedBy: 'tester', reportedFailure: 'Falha', receivedAccessories: null,
-  physicalCondition: null, priority: 'MEDIUM', status: 'RECEIVED', assigneeId: null, assigneeName: null,
-  repairSummary: null, replacedPartsSummary: null, testSummary: null, shippedAt: null, carrier: null,
-  trackingCode: null, diagnosis: null, statusHistory: [], assignmentHistory: [],
-  sla: { status: 'NORMAL', startedAt: '2026-10-20T12:00:00Z', warningAt: '2026-10-21T07:12:00Z',
-    dueAt: '2026-10-21T12:00:00Z', elapsedSeconds: 0, limitSeconds: 86400 },
-  createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z',
+  id: 1,
+  code: 'RMA-2026-000001',
+  clientId: 1,
+  clientName: 'Cliente',
+  items: [
+    {
+      id: 1,
+      productId: 2,
+      productName: 'Produto',
+      productSku: 'SKU-2',
+      batchNumber: null,
+      serialNumber: 'SER-2',
+      manufacturedAt: null,
+      warrantyMonths: 12,
+      warrantyExpiresAt: null,
+      warrantyStatus: WarrantyStatus.PENDING,
+    },
+  ],
+  productId: 2,
+  productName: 'Produto',
+  productSku: 'SKU-2',
+  batchNumber: null,
+  serialNumber: 'SER-2',
+  manufacturedAt: null,
+  purchaseDate: null,
+  purchaseDateUnknown: true,
+  entryDate: '2026-10-20',
+  invoiceNumber: 'NF-123',
+  receivedBy: 'tester',
+  reportedFailure: 'Falha',
+  receivedAccessories: null,
+  physicalCondition: null,
+  priority: 'MEDIUM',
+  status: 'RECEIVED',
+  assigneeId: null,
+  assigneeName: null,
+  repairSummary: null,
+  replacedPartsSummary: null,
+  testSummary: null,
+  shippedAt: null,
+  carrier: null,
+  trackingCode: null,
+  diagnosis: null,
+  statusHistory: [],
+  assignmentHistory: [],
+  sla: {
+    status: 'NORMAL',
+    startedAt: '2026-10-20T12:00:00Z',
+    warningAt: '2026-10-21T07:12:00Z',
+    dueAt: '2026-10-21T12:00:00Z',
+    elapsedSeconds: 0,
+    limitSeconds: 86400,
+  },
+  createdAt: '2026-10-20T12:00:00Z',
+  updatedAt: '2026-10-20T12:00:00Z',
 };
