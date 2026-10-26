@@ -72,6 +72,6 @@ public class AuthController {
     @ExceptionHandler(AuthenticationException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public Map<String, String> handleAuthenticationFailure() {
-        return Map.of("message", "Unauthorized");
+        return Map.of("message", "Usuário ou senha inválidos.");
     }
 }

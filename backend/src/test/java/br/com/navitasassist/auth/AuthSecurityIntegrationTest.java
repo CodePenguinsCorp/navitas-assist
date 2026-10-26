@@ -105,7 +105,23 @@ class AuthSecurityIntegrationTest {
             .andExpect(status().isUnauthorized())
             .andExpect(header().doesNotExist(HttpHeaders.WWW_AUTHENTICATE))
             .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.message").value("Unauthorized"));
+            .andExpect(jsonPath("$.message").value("Usuário ou senha inválidos."));
+    }
+
+    @Test
+    void unknownUserShouldReturnSameUnauthorizedMessage() throws Exception {
+        Cookie csrfCookie = requestCsrfCookie();
+
+        mockMvc.perform(post("/api/auth/login")
+                .cookie(csrfCookie)
+                .header("X-XSRF-TOKEN", csrfCookie.getValue())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"username":"usuario-inexistente","password":"wrong-password"}
+                    """))
+            .andExpect(status().isUnauthorized())
+            .andExpect(header().doesNotExist(HttpHeaders.WWW_AUTHENTICATE))
+            .andExpect(jsonPath("$.message").value("Usuário ou senha inválidos."));
     }
 
     @Test
