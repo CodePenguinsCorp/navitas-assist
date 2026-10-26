@@ -431,3 +431,15 @@ As demais etapas preservam os padrões. Prazos e substituições aceitam de 1 a 
 - Backend: `mvn test` em `backend/` (limiares, notas, reentrada, encerramento/reabertura, prioridade, configuração e contrato HTTP).
 - Filtros e apresentação: `npm run test:sla` em `frontend/`, com Node 22.14+ (runner nativo, sem framework adicional).
 - Templates e tipos Angular: `npm run build` em `frontend/`.
+
+## Localização física e custódia (NAV-38)
+
+Controla onde cada RMA está fisicamente e quem responde pela sua custódia. A migration `V2__create_custody_tracking.sql` cria `storage_locations` e `rma_custody_movements`.
+
+- **Locais** (`/locais`, ADMIN e SERVICE_DESK): áreas, bancadas, prateleiras, quarentena e expedição, com local superior opcional e situação ativo/inativo. Locais não são excluídos, apenas inativados; um local inativo (ou dentro de um local inativo) não recebe movimentações, e um local que guarda equipamento não pode ser inativado.
+- **Movimentações** (`/localizacao`): entrada (RMA sem localização), transferência (registra origem, destino, responsável, operador, horário e motivo) e saída (somente RMAs `COMPLETED`, `RETURNED` ou `IRREPARABLE`). ADMIN, SERVICE_DESK e TECHNICIAN movimentam; VIEWER apenas consulta. Sem responsável informado, a custódia fica com o operador.
+- **Histórico imutável**: não há endpoint de edição ou exclusão; `PUT`, `PATCH` e `DELETE` em `/api/custody/**` são negados para todos os perfis e a entidade é `@Immutable`.
+- **Sinalização**: RMA ativo sem localização retorna `MISSING`; equipamento no mesmo local há mais que `CUSTODY_STALE_AFTER_HOURS` horas (padrão 48, de 1 a 8760) retorna `STALE`.
+- **Busca por área**: `GET /api/custody?locationId=` lista os equipamentos presentes no local e em seus sublocais; `flag=MISSING|STALE` filtra a sinalização.
+- **QR Code (NAV-43)**: fora deste escopo. A leitura de etiqueta deve resolver o RMA (por exemplo, `GET /api/rmas/code/{code}`) e registrar a movimentação no mesmo `POST /api/custody/rmas/{rmaId}/movements`, herdando as mesmas permissões e regras.
+- Datas e horários são gravados como instantes UTC e exibidos em America/Sao_Paulo.

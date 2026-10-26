@@ -22,4 +22,6 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
     boolean existsByUsernameIgnoreCase(String username);
 
     List<UserAccount> findAllByActiveTrueAndRoleOrderByFullNameAsc(UserRole role);
+
+    List<UserAccount> findAllByActiveTrueAndRoleNotOrderByFullNameAsc(UserRole role);
 }

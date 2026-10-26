@@ -42,6 +42,8 @@ navitas:
         minutes: ${SLA_REPAIR_MINUTES:4320}
       IN_TESTS:
         minutes: ${SLA_TESTS_MINUTES:1440}
+  custody:
+    stale-after-hours: ${CUSTODY_STALE_AFTER_HOURS:48}
   security:
     cookie-secure: ${SESSION_COOKIE_SECURE:true}
     seed-admin:

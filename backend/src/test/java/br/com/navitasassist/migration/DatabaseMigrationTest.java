@@ -26,14 +26,17 @@ class DatabaseMigrationTest {
     void createsSchemaAndSupportsMultipleItemsPerRma() throws SQLException {
         String url = "jdbc:h2:mem:migration_empty;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
 
-        int executedMigrations = Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate().migrationsExecuted;
+        Flyway flyway = Flyway.configure().dataSource(url, USER, PASSWORD).load();
+        int executedMigrations = flyway.migrate().migrationsExecuted;
 
-        assertEquals(1, executedMigrations);
+        assertEquals(flyway.info().all().length, executedMigrations);
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
             assertTrue(tableExists(connection, "rmas"));
             assertTrue(tableExists(connection, "rma_items"));
             assertTrue(tableExists(connection, "rma_assignment_history"));
             assertTrue(tableExists(connection, "kanban_views"));
+            assertTrue(tableExists(connection, "storage_locations"));
+            assertTrue(tableExists(connection, "rma_custody_movements"));
             assertFalse(columnExists(connection, "rmas", "invoice_file_name"));
             assertEquals(80, columnSize(connection, "rmas", "invoice_number"));
             assertEquals(1000, columnSize(connection, "rmas", "reported_failure"));
@@ -65,6 +68,14 @@ class DatabaseMigrationTest {
             assertEquals(
                 Set.of("idx_kanban_views_owner_id"),
                 applicationIndexes(connection, "kanban_views")
+            );
+            assertEquals(
+                Set.of(
+                    "idx_rma_custody_movements_rma_id",
+                    "idx_rma_custody_movements_to_location_id",
+                    "idx_rma_custody_movements_from_location_id"
+                ),
+                applicationIndexes(connection, "rma_custody_movements")
             );
 
             long clientId = insertClient(connection);

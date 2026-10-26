@@ -332,3 +332,87 @@ export interface AccessMatrixItem {
   role: UserRole;
   access: string;
 }
+
+export type StorageLocationType = 'AREA' | 'BENCH' | 'SHELF' | 'QUARANTINE' | 'SHIPPING';
+
+export type CustodyMovementType = 'ENTRY' | 'TRANSFER' | 'EXIT';
+
+export type CustodyFlag = 'OK' | 'MISSING' | 'STALE';
+
+export interface StorageLocationRequest {
+  code: string;
+  name: string;
+  type: StorageLocationType;
+  parentId: number | null;
+  description: string | null;
+  active: boolean;
+}
+
+export interface StorageLocationResponse {
+  id: number;
+  code: string;
+  name: string;
+  type: StorageLocationType;
+  parentId: number | null;
+  parentName: string | null;
+  description: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustodyMovementRequest {
+  type: CustodyMovementType;
+  toLocationId: number | null;
+  custodianId: number | null;
+  reason: string | null;
+}
+
+export interface CustodyMovementResponse {
+  id: number;
+  type: CustodyMovementType;
+  fromLocationId: number | null;
+  fromLocationName: string | null;
+  toLocationId: number | null;
+  toLocationName: string | null;
+  custodianId: number | null;
+  custodianName: string | null;
+  reason: string | null;
+  performedBy: string;
+  performedAt: string;
+}
+
+export interface RmaCustodyResponse {
+  rmaId: number;
+  rmaCode: string;
+  rmaStatus: RmaStatus;
+  clientName: string;
+  productName: string;
+  locationId: number | null;
+  locationCode: string | null;
+  locationName: string | null;
+  locationType: StorageLocationType | null;
+  custodianId: number | null;
+  custodianName: string | null;
+  since: string | null;
+  flag: CustodyFlag;
+}
+
+export interface PageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface CustodySummaryResponse {
+  tracked: number;
+  missing: number;
+  stale: number;
+}
+
+export interface RmaCustodyDetailResponse {
+  current: RmaCustodyResponse;
+  movements: CustodyMovementResponse[];
+}
