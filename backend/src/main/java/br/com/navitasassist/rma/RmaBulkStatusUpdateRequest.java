@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Size;
 public record RmaBulkStatusUpdateRequest(
     @NotNull RmaStatus status,
     @NotNull RmaStatus expectedStatus,
-    @Size(max = 255) String note
+    @Size(max = 255) String note,
+    @Size(max = 200) String wipOverrideReason
 ) {
 }

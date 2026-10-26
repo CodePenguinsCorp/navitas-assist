@@ -20,6 +20,7 @@ import {
   RmaStatus,
   RmaStatusUpdateRequest,
   WarrantyStatus,
+  WipLimit,
 } from '../../core/models';
 import { SlaClockService } from '../../core/services/sla-clock.service';
 import { SlaFilterValue, SLA_LABELS, slaStatus } from '../../core/utils/rma-sla';
@@ -27,6 +28,9 @@ import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { RmaService } from '../../core/services/rma.service';
+import { WipService } from '../../core/services/wip.service';
+import { wipErrorMessage } from '../../core/utils/wip-ui';
+import { KanbanWipSettingsComponent } from '../../shared/kanban-wip-settings/kanban-wip-settings.component';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { businessDateInputValue } from '../../core/utils/date';
 import { normalizeText } from '../../core/utils/rma-ui';
@@ -74,6 +78,7 @@ type ViewModalMode = 'create' | 'rename' | null;
     DatePickerComponent,
     RmaKanbanBoardComponent,
     KanbanBulkActionsComponent,
+    KanbanWipSettingsComponent,
   ],
   templateUrl: './kanban.component.html',
   styleUrl: './kanban.component.css',
@@ -89,6 +94,10 @@ export class KanbanComponent {
   private readonly catalogService = inject(CatalogService);
   private readonly kanbanViewService = inject(KanbanViewService);
   private readonly rmaService = inject(RmaService);
+  private readonly wipService = inject(WipService);
+  protected readonly wipLimits = signal<WipLimit[]>([]);
+  protected readonly wipError = signal('');
+  protected readonly canOverrideWip = computed(() => this.authService.hasAnyRole(['ADMIN']));
 
   protected readonly loading = signal(true);
   protected readonly pageError = signal('');
@@ -212,6 +221,7 @@ export class KanbanComponent {
   ]);
 
   protected readonly statusForm = this.formBuilder.nonNullable.group({
+    wipOverrideReason: ['', Validators.maxLength(200)],
     status: ['RECEIVED' as RmaStatus, [Validators.required]],
     note: [''],
   });
@@ -226,6 +236,7 @@ export class KanbanComponent {
   });
 
   constructor() {
+    this.loadWip();
     this.loadKanban();
     this.loadViews();
   }
@@ -245,6 +256,7 @@ export class KanbanComponent {
   }
 
   protected applyBulkResults(results: BulkRmaResult[]): void {
+    this.loadWip();
     const updated = new Map(results.filter((result) => result.rma).map((result) => [result.id, result.rma!]));
     this.rmasSignal.update((rmas) => rmas.map((rma) => updated.get(rma.id) ?? rma));
     const succeeded = new Set(results.filter((result) => result.success).map((result) => result.id));
@@ -518,6 +530,7 @@ export class KanbanComponent {
     this.submitStatusUpdate(target, {
       status: raw.status,
       note: normalizeText(raw.note),
+      ...(this.canOverrideWip() && raw.wipOverrideReason.trim() ? { wipOverrideReason: raw.wipOverrideReason.trim() } : {}),
     });
   }
 
@@ -540,6 +553,13 @@ export class KanbanComponent {
           this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível carregar o Kanban.'));
         },
       });
+  }
+
+  protected loadWip(): void {
+    this.wipService.list().subscribe({
+      next: limits => { this.wipLimits.set(limits); this.wipError.set(''); },
+      error: () => this.wipError.set('Não foi possível atualizar as contagens de WIP. Os limites continuam validados pelo servidor; as contagens exibidas podem estar desatualizadas.'),
+    });
   }
 
   private loadViews(): void {
@@ -598,7 +618,7 @@ export class KanbanComponent {
 
     this.rmaService
       .updateStatus(target.id, payload)
-      .pipe(finalize(() => this.boardUpdatingId.set(null)))
+      .pipe(finalize(() => { this.boardUpdatingId.set(null); this.loadWip(); }))
       .subscribe({
         next: (updated) => {
           this.selectedRmaId.set(updated.id);
@@ -607,7 +627,7 @@ export class KanbanComponent {
         },
         error: (error) => {
           this.statusModalError.set(
-            extractHttpErrorMessage(error, 'Não foi possível atualizar o status do RMA.'),
+            wipErrorMessage(error, 'Não foi possível atualizar o status do RMA.'),
           );
         },
       });

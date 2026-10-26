@@ -1,7 +1,7 @@
 import { Signal, signal } from '@angular/core';
 import { FormArray, FormGroup } from '@angular/forms';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { RmaResponse, UserSession, WarrantyStatus } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
@@ -103,6 +103,30 @@ describe('RmasComponent form', () => {
     expect(page.textContent).toContain('NF-123');
     expect(page.textContent).not.toContain('Arquivo da NF');
     expect(page.textContent).not.toContain('Recebido por');
+  });
+
+  it('bounds and sends an administrator justification on receipt', () => {
+    component.createForm.patchValue({ clientId: 1, purchaseDateUnknown: true, reportedFailure: 'Falha', wipOverrideReason: 'a'.repeat(201) });
+    component.createItems.at(0).patchValue({ productId: 2, serialNumber: 'SER-2' });
+    component.createRma();
+    expect(rmaService.create).not.toHaveBeenCalled();
+    component.createForm.patchValue({ wipOverrideReason: '  Recebimento urgente  ' });
+    component.createRma();
+    expect(rmaService.create.mock.calls[0][0]).toEqual(expect.objectContaining({ wipOverrideReason: 'Recebimento urgente' }));
+    expect(component.createForm.get('wipOverrideReason')?.value).toBe('');
+  });
+
+  it('shows WIP rejection inside the open creation modal and preserves entered data', () => {
+    rmaService.create.mockImplementation(() => throwError(() => ({ error: { message: 'WIP limit reached for RECEIVED.' } })));
+    component.openCreateModal();
+    component.createForm.patchValue({ clientId: 1, purchaseDateUnknown: true, reportedFailure: 'Dados preservados' });
+    component.createItems.at(0).patchValue({ productId: 2, serialNumber: 'SER-WIP' });
+    component.createRma();
+    fixture.detectChanges();
+    const alert = fixture.nativeElement.querySelector('.modal-panel [role="alert"]') as HTMLElement | null;
+    expect(alert?.textContent).toContain('Limite de WIP');
+    expect(component.createForm.get('reportedFailure')?.value).toBe('Dados preservados');
+    expect(component.createItems.at(0).get('serialNumber')?.value).toBe('SER-WIP');
   });
 });
 

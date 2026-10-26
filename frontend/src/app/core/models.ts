@@ -155,6 +155,7 @@ export interface RmaItemRequest {
 }
 
 export interface CreateRmaRequest {
+  wipOverrideReason?: string;
   clientId: number;
   items: RmaItemRequest[];
   purchaseDate: string | null;
@@ -171,12 +172,20 @@ export interface CreateRmaRequest {
 }
 
 export interface RmaStatusUpdateRequest {
+  wipOverrideReason?: string;
   status: RmaStatus;
   note: string | null;
 }
 
 export interface RmaBulkStatusUpdateRequest extends RmaStatusUpdateRequest {
   expectedStatus: RmaStatus;
+}
+
+export interface WipLimit {
+  status: RmaStatus;
+  maxItems: number | null;
+  blocking: boolean;
+  currentCount: number;
 }
 
 export interface RmaAssigneeUpdateRequest {

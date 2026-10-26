@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
+    long countByStatus(RmaStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from RmaRecord r where r.id = :id")

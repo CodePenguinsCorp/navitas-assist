@@ -45,6 +45,19 @@ CREATE TABLE user_accounts (
     CONSTRAINT ck_user_accounts_role CHECK (role IN ('ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER'))
 );
 
+CREATE TABLE kanban_wip_limits (
+    status VARCHAR(30) PRIMARY KEY,
+    max_items INT,
+    blocking BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(60),
+    updated_by VARCHAR(60),
+    CONSTRAINT ck_wip_status CHECK (status IN ('RECEIVED', 'TRIAGE', 'IN_DIAGNOSIS', 'WAITING_PART', 'IN_REPAIR', 'IN_TESTS')),
+    CONSTRAINT ck_wip_max CHECK (max_items IS NULL OR (max_items >= 1 AND max_items <= 100000))
+);
+INSERT INTO kanban_wip_limits (status) VALUES ('RECEIVED'), ('TRIAGE'), ('IN_DIAGNOSIS'), ('WAITING_PART'), ('IN_REPAIR'), ('IN_TESTS');
+
 CREATE TABLE kanban_views (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     owner_id BIGINT NOT NULL,

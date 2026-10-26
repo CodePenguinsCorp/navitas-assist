@@ -32,6 +32,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +46,7 @@ public class RmaService {
     private final ClientService clientService;
     private final ProductService productService;
     private final UserAccountService userAccountService;
+    private final WipService wipService;
 
     @Transactional(readOnly = true)
     public List<RmaResponse> search(String query, RmaStatus status) {
@@ -77,7 +79,9 @@ public class RmaService {
             .toList();
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public RmaResponse create(CreateRmaRequest request) {
+        String wipAudit = wipService.checkEntry(RmaStatus.RECEIVED, request.wipOverrideReason());
         Client client = clientService.getEntityById(request.clientId());
         List<RmaItem> items = buildItems(request.items());
 
@@ -109,12 +113,13 @@ public class RmaService {
         validateMandatoryFields(rma);
         validateDates(rma);
         addStatusHistory(rma, RmaStatus.RECEIVED, "RMA created");
+        if (wipAudit != null) addStatusHistory(rma, RmaStatus.RECEIVED, wipAudit);
 
         return toResponse(rmaRecordRepository.save(rma));
     }
 
     public RmaResponse update(Long id, UpdateRmaRequest request) {
-        RmaRecord rma = getEntityById(id);
+        RmaRecord rma = getEntityForUpdate(id);
 
         if (request.clientId() != null) {
             rma.setClient(clientService.getEntityById(request.clientId()));
@@ -151,21 +156,23 @@ public class RmaService {
         return toResponse(rmaRecordRepository.save(rma));
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public RmaResponse updateStatus(Long id, RmaStatusUpdateRequest request) {
-        return applyStatusChange(getEntityById(id), request);
+        return applyStatusChange(getEntityForUpdate(id), request);
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public RmaResponse updateStatusInBulk(Long id, RmaBulkStatusUpdateRequest request) {
-        RmaRecord rma = rmaRecordRepository.findByIdForUpdate(id)
-            .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
+        RmaRecord rma = getEntityForUpdate(id);
         if (rma.getStatus() != request.expectedStatus()) {
             throw new BusinessException("RMA status changed. Refresh the item before trying again.");
         }
-        return applyStatusChange(rma, new RmaStatusUpdateRequest(request.status(), request.note()));
+        return applyStatusChange(rma, new RmaStatusUpdateRequest(request.status(), request.note(), request.wipOverrideReason()));
     }
 
     private RmaResponse applyStatusChange(RmaRecord rma, RmaStatusUpdateRequest request) {
         boolean changed = !Objects.equals(rma.getStatus(), request.status());
+        String wipAudit = changed ? wipService.checkEntry(request.status(), request.wipOverrideReason()) : null;
 
         if (changed) {
             rma.setStatus(request.status());
@@ -173,12 +180,13 @@ public class RmaService {
         if (changed || trimToNull(request.note()) != null) {
             addStatusHistory(rma, request.status(), request.note());
         }
+        if (wipAudit != null) addStatusHistory(rma, request.status(), wipAudit);
 
         return toResponse(rmaRecordRepository.save(rma));
     }
 
     public RmaResponse updateAssignee(Long id, RmaAssigneeUpdateRequest request) {
-        RmaRecord rma = getEntityById(id);
+        RmaRecord rma = getEntityForUpdate(id);
         UserAccount previousAssignee = rma.getAssignee();
         UserAccount newAssignee = request.assigneeId() == null
             ? null
@@ -197,7 +205,7 @@ public class RmaService {
     }
 
     public RmaResponse upsertDiagnosis(Long id, DiagnosisRequest request) {
-        RmaRecord rma = getEntityById(id);
+        RmaRecord rma = getEntityForUpdate(id);
         Diagnosis diagnosis = rma.getDiagnosis();
 
         if (diagnosis == null) {
@@ -218,6 +226,11 @@ public class RmaService {
     @Transactional(readOnly = true)
     public RmaRecord getEntityById(Long id) {
         return rmaRecordRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
+    }
+
+    private RmaRecord getEntityForUpdate(Long id) {
+        return rmaRecordRepository.findByIdForUpdate(id)
             .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
     }
 

@@ -24,6 +24,7 @@ import {
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
+import { wipErrorMessage } from '../../core/utils/wip-ui';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { todayInputValue } from '../../core/utils/date';
 import {
@@ -190,6 +191,7 @@ interface CreateDateErrors {
 export class RmasComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly authService = inject(AuthService);
+  protected readonly canOverrideWip = computed(() => this.authService.hasAnyRole(['ADMIN']));
   private readonly catalogService = inject(CatalogService);
   private readonly rmaService = inject(RmaService);
 
@@ -293,6 +295,7 @@ export class RmasComponent {
   });
 
   protected readonly createForm = this.formBuilder.nonNullable.group({
+    wipOverrideReason: ['', Validators.maxLength(200)],
     clientId: [0, [Validators.required, Validators.min(1)]],
     items: this.formBuilder.array([this.createRmaItemForm()]),
     purchaseDate: [''],
@@ -468,6 +471,7 @@ export class RmasComponent {
       return;
     }
     const payload: CreateRmaRequest = {
+      ...(this.canOverrideWip() && raw.wipOverrideReason.trim() ? { wipOverrideReason: raw.wipOverrideReason.trim() } : {}),
       clientId: raw.clientId,
       items: raw.items.map((item) => ({
         productId: item.productId,
@@ -505,7 +509,7 @@ export class RmasComponent {
         this.refreshRmas();
       },
       error: (error) => {
-        this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível abrir o RMA agora.'));
+        this.pageError.set(wipErrorMessage(error, 'Não foi possível abrir o RMA agora.'));
       }
     });
   }
@@ -655,7 +659,8 @@ export class RmasComponent {
       priority: 'MEDIUM',
       repairSummary: '',
       replacedPartsSummary: '',
-      testSummary: ''
+      testSummary: '',
+      wipOverrideReason: ''
     });
     this.dateErrors.set({ manufacturedAt: [], purchaseDate: '', entryDate: '' });
   }
