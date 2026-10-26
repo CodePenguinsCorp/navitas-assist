@@ -1,0 +1,11 @@
+:host { display: block; }
+.report-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; padding: 1rem; align-items: end; }
+.report-filters .filter-field { min-width: 0; }
+.report-hint { color: var(--muted); line-height: 1.5; }
+.report-filters .report-hint { grid-column: 1 / -1; margin: 0; }
+h2 { font-size: 1.1rem; margin-top: 0; }
+caption { text-align: left; padding: 1rem 0; font-weight: 600; }
+td { vertical-align: top; overflow-wrap: anywhere; }
+td p { margin: 0.3rem 0; }
+.report-text { white-space: pre-wrap; }
+@media (max-width: 760px) { .report-filters { grid-template-columns: 1fr; } }

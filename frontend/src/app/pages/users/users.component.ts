@@ -1,25 +1,25 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable, finalize } from 'rxjs';
+import { Observable, Subject, debounceTime, finalize } from 'rxjs';
 import { ROLE_LABELS, ROLE_OPTIONS } from '../../core/mock-data';
 import {
   UserAccountRequest,
   UserAccountResponse,
   UserAccountUpdateRequest,
-  UserRole
+  UserRole,
+  UserSummaryResponse
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
-import {
-  countDistinct,
-  extractHttpErrorMessage,
-  formatDateTime,
-  includesQuery
-} from '../../core/utils/catalog-ui';
+import { extractHttpErrorMessage, formatDateTime } from '../../core/utils/catalog-ui';
+import { PagedList } from '../../core/utils/paged-list';
+import { SEARCH_DEBOUNCE_MS } from '../../core/utils/pagination';
 import {
   CustomSelectComponent,
   CustomSelectOption
 } from '../../shared/form-controls/custom-select/custom-select.component';
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
 
 type UserFormControlName = 'username' | 'fullName' | 'password' | 'role' | 'active';
 type UserStatusFilter = 'all' | 'active' | 'inactive';
@@ -27,7 +27,7 @@ type UserModalMode = 'create' | 'edit';
 
 @Component({
   selector: 'app-users',
-  imports: [ReactiveFormsModule, CustomSelectComponent],
+  imports: [ReactiveFormsModule, CustomSelectComponent, PaginationComponent],
   templateUrl: './users.component.html',
   styles: [`
     :host { display: block; }
@@ -95,7 +95,7 @@ export class UsersComponent {
   private readonly catalogService = inject(CatalogService);
   private readonly authService = inject(AuthService);
 
-  protected readonly loading = signal(true);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly submitting = signal(false);
   protected readonly deletingUserId = signal<number | null>(null);
   protected readonly errorMessage = signal('');
@@ -107,42 +107,33 @@ export class UsersComponent {
   protected readonly statusFilter = signal<UserStatusFilter>('all');
   protected readonly activeModal = signal<UserModalMode | null>(null);
 
-  private readonly usersSignal = signal<UserAccountResponse[]>([]);
+  private readonly searchChanges = new Subject<void>();
+  private readonly userList = new PagedList<UserAccountResponse>(
+    (pageQuery) => this.catalogService.listUsers({
+      ...pageQuery,
+      query: this.searchTerm(),
+      role: this.roleFilter() || undefined,
+      active: this.statusFilter() === 'all' ? undefined : this.statusFilter() === 'active'
+    }),
+    (error) => this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os usuários.'))
+  );
+  private readonly summarySignal = signal<UserSummaryResponse>({ total: 0, active: 0, admins: 0, roles: 0 });
   private readonly editingUserSignal = signal<UserAccountResponse | null>(null);
   private readonly deletingUserSignal = signal<UserAccountResponse | null>(null);
 
-  protected readonly users = this.usersSignal.asReadonly();
+  protected readonly users = this.userList.items;
+  protected readonly loading = this.userList.loading;
+  protected readonly page = this.userList.page;
+  protected readonly pageSize = this.userList.size;
+  protected readonly totalElements = this.userList.totalElements;
+  protected readonly totalPages = this.userList.totalPages;
+  protected readonly summary = this.summarySignal.asReadonly();
   protected readonly editingUser = this.editingUserSignal.asReadonly();
   protected readonly deletingUser = this.deletingUserSignal.asReadonly();
   protected readonly roleOptions = ROLE_OPTIONS;
   protected readonly roleFilterOptions = ROLE_FILTER_OPTIONS;
   protected readonly statusFilterOptions = STATUS_FILTER_OPTIONS;
   protected readonly userRoleOptions = USER_ROLE_OPTIONS;
-
-  protected readonly filteredUsers = computed(() =>
-    [...this.usersSignal()]
-      .sort((left, right) => left.fullName.localeCompare(right.fullName, 'pt-BR', { sensitivity: 'base' }))
-      .filter((user) => {
-        const matchesText = includesQuery(
-          this.searchTerm(),
-          user.fullName,
-          user.username,
-          this.roleLabel(user.role)
-        );
-        const matchesRole = !this.roleFilter() || user.role === this.roleFilter();
-        const matchesStatus =
-          this.statusFilter() === 'all' ||
-          (this.statusFilter() === 'active' && user.active) ||
-          (this.statusFilter() === 'inactive' && !user.active);
-
-        return matchesText && matchesRole && matchesStatus;
-      })
-  );
-
-  protected readonly totalUsers = computed(() => this.usersSignal().length);
-  protected readonly activeUsers = computed(() => this.usersSignal().filter((user) => user.active).length);
-  protected readonly adminUsers = computed(() => this.usersSignal().filter((user) => user.role === 'ADMIN').length);
-  protected readonly roleCount = computed(() => countDistinct(this.usersSignal().map((user) => user.role)));
 
   protected readonly form = this.formBuilder.nonNullable.group({
     username: ['', [Validators.required, Validators.maxLength(60)]],
@@ -153,19 +144,39 @@ export class UsersComponent {
   });
 
   constructor() {
+    this.searchChanges.pipe(
+      debounceTime(SEARCH_DEBOUNCE_MS),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(() => this.userList.firstPage());
     this.loadUsers();
+    this.loadSummary();
+  }
+
+  protected get hasActiveFilters(): boolean {
+    return Boolean(this.searchTerm().trim()) || Boolean(this.roleFilter()) || this.statusFilter() !== 'all';
   }
 
   protected updateSearch(value: string): void {
     this.searchTerm.set(value);
+    this.searchChanges.next();
   }
 
   protected updateRoleFilter(value: UserRole | ''): void {
     this.roleFilter.set(value);
+    this.userList.firstPage();
   }
 
   protected updateStatusFilter(value: UserStatusFilter): void {
     this.statusFilter.set(value);
+    this.userList.firstPage();
+  }
+
+  protected goToPage(page: number): void {
+    this.userList.goToPage(page);
+  }
+
+  protected changePageSize(size: number): void {
+    this.userList.changeSize(size);
   }
 
   protected openCreateModal(): void {
@@ -222,6 +233,7 @@ export class UsersComponent {
         );
         this.closeModal();
         this.loadUsers();
+        this.loadSummary();
       },
       error: (error) => {
         this.modalErrorMessage.set(
@@ -262,9 +274,8 @@ export class UsersComponent {
       finalize(() => this.deletingUserId.set(null))
     ).subscribe({
       next: () => {
-        this.usersSignal.update((users) =>
-          users.filter((currentUser) => currentUser.id !== user.id)
-        );
+        this.loadUsers();
+        this.loadSummary();
         this.successMessage.set(`Usuário ${user.fullName} excluído com sucesso.`);
         this.resetDeleteModal();
       },
@@ -299,16 +310,14 @@ export class UsersComponent {
   }
 
   private loadUsers(): void {
-    this.loading.set(true);
     this.errorMessage.set('');
+    this.userList.reload();
+  }
 
-    this.catalogService.listUsers().pipe(
-      finalize(() => this.loading.set(false))
-    ).subscribe({
-      next: (users) => this.usersSignal.set(users),
-      error: (error) => {
-        this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os usuários.'));
-      }
+  private loadSummary(): void {
+    this.catalogService.getUserSummary().subscribe({
+      next: (summary) => this.summarySignal.set(summary),
+      error: () => undefined
     });
   }
 

@@ -7,9 +7,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
+import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class RestExceptionHandler {
@@ -35,9 +37,19 @@ public class RestExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "Validation failed", details);
     }
 
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException exception) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Invalid value for parameter: " + exception.getName(), List.of());
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException exception) {
         return buildResponse(HttpStatus.FORBIDDEN, "Access denied", List.of());
+    }
+
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<ApiError> handleQueryValidation(BindException exception) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Invalid query parameters", exception.getFieldErrors().stream().map(this::formatFieldError).toList());
     }
 
     @ExceptionHandler(Exception.class)

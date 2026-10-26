@@ -126,7 +126,8 @@ class RmaControllerIntegrationTest {
                 .param("query", "SKU-RMA-2")
                 .with(user("admin").roles("ADMIN")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(1)));
+            .andExpect(jsonPath("$.content", hasSize(1)))
+            .andExpect(jsonPath("$.totalElements").value(1));
     }
 
     @Test
@@ -557,7 +558,7 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.sla.limitSeconds").value(172800));
         mockMvc.perform(get("/api/rmas").with(user("viewer").roles("VIEWER")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].sla.status").value("NORMAL"));
+            .andExpect(jsonPath("$.content[0].sla.status").value("NORMAL"));
         mockMvc.perform(patch("/api/rmas/{id}/status", id).with(user("tech").roles("TECHNICIAN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"COMPLETED\"}"))
             .andExpect(status().isOk())

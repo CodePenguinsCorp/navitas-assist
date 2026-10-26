@@ -2,51 +2,47 @@ import { Signal } from '@angular/core';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
 import { of } from 'rxjs';
-import { ProductRequest, ProductResponse } from '../../core/models';
-import { CatalogService } from '../../core/services/catalog.service';
+import { PageResponse, ProductResponse, ProductSummaryResponse } from '../../core/models';
+import { CatalogService, ProductFilters } from '../../core/services/catalog.service';
 import { PresenceFilter } from '../../core/utils/catalog-ui';
 import { CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
 import { ProductsComponent } from './products.component';
 
-const INITIAL_PRODUCTS: ProductResponse[] = [
-  { id: 1, sku: 'A', name: 'Controlador Alfa', category: 'Controle', hardwareVersion: null,
-    firmwareVersion: '1.0', defaultWarrantyMonths: 12, technicalNotes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' },
-  { id: 2, sku: 'B', name: 'Controlador Beta', category: 'controle', hardwareVersion: null,
-    firmwareVersion: null, defaultWarrantyMonths: 12, technicalNotes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' },
-  { id: 3, sku: 'C', name: 'Sensor Gama', category: 'Sensor', hardwareVersion: null,
-    firmwareVersion: ' ', defaultWarrantyMonths: 12, technicalNotes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' }
-];
+function product(id: number, name: string): ProductResponse {
+  return {
+    id, sku: `SKU-${id}`, name, category: 'Controle', hardwareVersion: null, firmwareVersion: null,
+    defaultWarrantyMonths: 12, technicalNotes: null,
+    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+  };
+}
 
-describe('ProductsComponent filters', () => {
+function page(content: ProductResponse[], pageNumber = 0, size = 20, totalElements = content.length): PageResponse<ProductResponse> {
+  return { content, page: pageNumber, size, totalElements, totalPages: Math.ceil(totalElements / size) };
+}
+
+const EMPTY_FILTERS = { query: '', category: '', hasFirmware: undefined };
+
+describe('ProductsComponent pagination', () => {
   let component: ProductsHarness;
   let fixture: ComponentFixture<ProductsComponent>;
-  let products: ProductResponse[];
+  let listProducts: ReturnType<typeof vi.fn>;
+  let getProductSummary: ReturnType<typeof vi.fn>;
+  let summary: ProductSummaryResponse;
 
   beforeEach(async () => {
-    products = [...INITIAL_PRODUCTS];
+    vi.useFakeTimers();
+    summary = { total: 45, withFirmware: 20, averageWarrantyMonths: 18, categories: ['Controle', 'Sensor'] };
+    listProducts = vi.fn((filters: ProductFilters) => of(page([product(1, 'Alfa'), product(2, 'Beta')], filters.page, filters.size, 45)));
+    getProductSummary = vi.fn(() => of(summary));
+
     await TestBed.configureTestingModule({
       imports: [ProductsComponent],
       providers: [{ provide: CatalogService, useValue: {
-        listProducts: () => of(products),
-        deleteProduct: (id: number) => {
-          products = products.filter((product) => product.id !== id);
-          return of(undefined);
-        },
-        createProduct: (request: ProductRequest) => {
-          const product: ProductResponse = { ...request, id: 4,
-            createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' };
-          products = [...products, product];
-          return of(product);
-        },
-        updateProduct: (id: number, request: ProductRequest) => {
-          const product: ProductResponse = { ...request, id,
-            createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' };
-          products = products.map((current) => current.id === id ? product : current);
-          return of(product);
-        }
+        listProducts,
+        getProductSummary,
+        deleteProduct: () => of(undefined),
+        createProduct: () => of(product(9, 'Novo')),
+        updateProduct: () => of(product(1, 'Alfa'))
       } }]
     }).compileComponents();
 
@@ -55,64 +51,66 @@ describe('ProductsComponent filters', () => {
     fixture.detectChanges();
   });
 
-  it('combines text, category and firmware filters with unique category options', () => {
-    expect(component.categoryFilterOptions().map((option) => option.label)).toEqual([
-      'Todas', 'Controle', 'Sensor'
-    ]);
-    component.updateCategoryFilter('Controle');
-    component.updateFirmwareFilter('with');
-    expect(component.filteredProducts().map((product) => product.id)).toEqual([1]);
+  afterEach(() => vi.useRealTimers());
 
-    component.updateSearch('beta');
-    expect(component.filteredProducts()).toEqual([]);
-    fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('0 registro(s)');
+  it('loads the first page, total and category options from the backend summary', () => {
+    expect(listProducts).toHaveBeenLastCalledWith({ page: 0, size: 20, ...EMPTY_FILTERS });
+    expect(component.categoryFilterOptions().map((option) => option.label)).toEqual(['Todas', 'Controle', 'Sensor']);
+    expect(fixture.nativeElement.textContent).toContain('45 registro(s)');
+    expect(fixture.nativeElement.textContent).toContain('Página 1 de 3');
+    expect(fixture.nativeElement.textContent).toContain('18 meses');
+  });
+
+  it('sends category and firmware filters to the backend and resets to the first page', () => {
+    component.goToPage(2);
+    component.updateCategoryFilter('Sensor');
+    expect(listProducts).toHaveBeenLastCalledWith({ page: 0, size: 20, ...EMPTY_FILTERS, category: 'Sensor' });
 
     component.updateFirmwareFilter('without');
-    expect(component.filteredProducts().map((product) => product.id)).toEqual([2]);
-    component.updateCategoryFilter('');
-    expect(component.filteredProducts().map((product) => product.id)).toEqual([2]);
+    expect(listProducts).toHaveBeenLastCalledWith({ page: 0, size: 20, query: '', category: 'Sensor', hasFirmware: false });
   });
 
-  it('keeps valid categories and clears a category removed by deletion', () => {
-    component.updateCategoryFilter('Controle');
-    component.openDeleteModal(INITIAL_PRODUCTS[0]);
-    component.confirmDeleteProduct();
-    expect(component.categoryFilter()).toBe('controle');
-    expect(component.filteredProducts().map((product) => product.id)).toEqual([2]);
+  it('keeps filters while navigating and when the page size changes', () => {
+    component.updateFirmwareFilter('with');
+    component.goToPage(1);
+    expect(listProducts).toHaveBeenLastCalledWith({ page: 1, size: 20, query: '', category: '', hasFirmware: true });
 
-    component.openDeleteModal(INITIAL_PRODUCTS[1]);
-    component.confirmDeleteProduct();
-    expect(component.categoryFilter()).toBe('');
-    expect(component.filteredProducts().map((product) => product.id)).toEqual([3]);
+    component.changePageSize(10);
+    expect(listProducts).toHaveBeenLastCalledWith({ page: 0, size: 10, query: '', category: '', hasFirmware: true });
   });
 
-  it('updates category options after creation and resets a category removed by editing', () => {
-    component.openCreateModal();
-    component.form.patchValue({ sku: 'D', name: 'Roteador', category: 'Rede' });
-    component.saveProduct();
-    expect(component.categoryFilterOptions().map((option) => option.value)).toContain('Rede');
+  it('debounces the text search', () => {
+    listProducts.mockClear();
+    component.updateSearch('be');
+    component.updateSearch('beta');
+    expect(listProducts).not.toHaveBeenCalled();
 
+    vi.advanceTimersByTime(300);
+    expect(listProducts).toHaveBeenCalledTimes(1);
+    expect(listProducts).toHaveBeenLastCalledWith({ page: 0, size: 20, ...EMPTY_FILTERS, query: 'beta' });
+  });
+
+  it('clears a category that no longer exists after the summary is refreshed', () => {
     component.updateCategoryFilter('Sensor');
-    component.openEditModal(INITIAL_PRODUCTS[2]);
-    component.form.patchValue({ category: 'Rede' });
-    component.saveProduct();
+    summary = { ...summary, categories: ['Controle'] };
+
+    component.openDeleteModal(product(3, 'Sensor Gama'));
+    component.confirmDeleteProduct();
+
     expect(component.categoryFilter()).toBe('');
-    expect(component.filteredProducts()).toHaveLength(4);
+    expect(listProducts).toHaveBeenLastCalledWith({ page: 0, size: 20, ...EMPTY_FILTERS });
   });
 });
 
 interface ProductsHarness {
   form: FormGroup;
-  filteredProducts: Signal<ProductResponse[]>;
   categoryFilter: Signal<string>;
   categoryFilterOptions: Signal<ReadonlyArray<CustomSelectOption<string>>>;
   updateSearch(value: string): void;
   updateCategoryFilter(value: string): void;
   updateFirmwareFilter(value: PresenceFilter): void;
-  openCreateModal(): void;
-  openEditModal(product: ProductResponse): void;
-  saveProduct(): void;
+  goToPage(page: number): void;
+  changePageSize(size: number): void;
   openDeleteModal(product: ProductResponse): void;
   confirmDeleteProduct(): void;
 }

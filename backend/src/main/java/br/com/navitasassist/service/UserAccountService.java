@@ -4,6 +4,8 @@ import java.util.List;
 
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
+import br.com.navitasassist.pagination.PageParams;
+import br.com.navitasassist.pagination.PageResponse;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.user.AssignableUserResponse;
@@ -12,6 +14,7 @@ import br.com.navitasassist.user.UserAccountRequest;
 import br.com.navitasassist.user.UserAccountResponse;
 import br.com.navitasassist.user.UserAccountUpdateRequest;
 import br.com.navitasassist.user.UserRole;
+import br.com.navitasassist.user.UserSummaryResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -27,8 +30,22 @@ public class UserAccountService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
-    public List<UserAccountResponse> listAll() {
-        return userAccountRepository.findAll().stream().map(UserAccountResponse::from).toList();
+    public PageResponse<UserAccountResponse> search(String query, UserRole role, Boolean active, Integer page, Integer size) {
+        String normalizedQuery = query == null || query.isBlank() ? null : query.trim();
+        return PageResponse.from(
+            userAccountRepository.search(normalizedQuery, role, active, PageParams.of(page, size)),
+            UserAccountResponse::from
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public UserSummaryResponse summarize() {
+        return new UserSummaryResponse(
+            userAccountRepository.count(),
+            userAccountRepository.countByActiveTrue(),
+            userAccountRepository.countByRole(UserRole.ADMIN),
+            userAccountRepository.countDistinctRoles()
+        );
     }
 
     @Transactional(readOnly = true)

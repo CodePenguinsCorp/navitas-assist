@@ -25,7 +25,38 @@ describe('RmaService', () => {
     expect(request.request.method).toBe('GET');
     expect(request.request.params.get('query')).toBe('RMA-1');
     expect(request.request.params.get('status')).toBe('TRIAGE');
+    request.flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 });
+  });
+
+  it('sends the page and size to the paged endpoint', () => {
+    service.list({ page: 2, size: 50 }).subscribe();
+
+    const request = httpTesting.expectOne((candidate) => candidate.url === '/api/rmas');
+    expect(request.request.params.get('page')).toBe('2');
+    expect(request.request.params.get('size')).toBe('50');
+    expect(request.request.params.has('query')).toBe(false);
+    request.flush({ content: [], page: 2, size: 50, totalElements: 0, totalPages: 0 });
+  });
+
+  it('loads the complete board list without pagination parameters', () => {
+    service.listBoard({ query: ' RMA ', status: 'TRIAGE' }).subscribe();
+
+    const request = httpTesting.expectOne((candidate) => candidate.url === '/api/rmas/board');
+    expect(request.request.params.has('page')).toBe(false);
+    expect(request.request.params.has('size')).toBe(false);
+    expect(request.request.params.get('query')).toBe('RMA');
+    expect(request.request.params.get('status')).toBe('TRIAGE');
     request.flush([]);
+  });
+
+  it('loads summary totals with the same filters as the list', () => {
+    service.getSummary({ query: ' RMA ', status: 'TRIAGE' }).subscribe();
+
+    const request = httpTesting.expectOne((candidate) => candidate.url === '/api/rmas/summary');
+    expect(request.request.params.has('page')).toBe(false);
+    expect(request.request.params.get('query')).toBe('RMA');
+    expect(request.request.params.get('status')).toBe('TRIAGE');
+    request.flush({ total: 3, ongoing: 2, highPriority: 1 });
   });
 
   it('posts the complete RMA payload unchanged', () => {
