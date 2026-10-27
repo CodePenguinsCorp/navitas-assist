@@ -110,11 +110,12 @@ public class UserAccountService {
     }
 
     private void validateUsername(UserAccount existing, String username) {
-        boolean duplicate = userAccountRepository.existsByUsernameIgnoreCase(username)
-            && (existing == null || !existing.getUsername().equalsIgnoreCase(username));
+        String normalizedUsername = trim(username);
+        boolean duplicate = userAccountRepository.existsByUsernameIgnoreCase(normalizedUsername)
+            && (existing == null || !existing.getUsername().equalsIgnoreCase(normalizedUsername));
 
         if (duplicate) {
-            throw new BusinessException("Username already registered: " + username);
+            throw new BusinessException("Username already registered: " + normalizedUsername);
         }
     }
 
