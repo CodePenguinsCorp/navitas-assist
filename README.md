@@ -265,6 +265,7 @@ A aplicação usa sessão criada no backend. O frontend envia usuário e senha s
 
 - `JSESSIONID` é `HttpOnly` e `SameSite=Strict`; em ambientes não locais também é `Secure`
 - requisições de escrita usam token CSRF no cookie `XSRF-TOKEN` e no header `X-XSRF-TOKEN`
+- `GET /api/auth/csrf` retorna `204` sem corpo e cria o cookie CSRF somente quando ausente; consultas de outras abas preservam o token existente
 - a sessão é restaurada após recarregar a página por `GET /api/auth/me`
 - a expiração padrão por inatividade é de 30 minutos e pode ser alterada com `SESSION_TIMEOUT`
 - `POST /api/auth/logout` invalida a sessão e remove os cookies de sessão e CSRF
