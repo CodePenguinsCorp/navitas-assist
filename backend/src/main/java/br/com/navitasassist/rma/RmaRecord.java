@@ -124,6 +124,14 @@ public class RmaRecord extends AuditableEntity {
     @OrderBy("changedAt DESC")
     private List<RmaAssignmentHistory> assignmentHistory = new ArrayList<>();
 
+    public ItemIdentification getItemIdentification() {
+        // JPA may reconstruct an all-null embedded value as null.
+        if (itemIdentification == null) {
+            itemIdentification = new ItemIdentification();
+        }
+        return itemIdentification;
+    }
+
     public void setDiagnosis(Diagnosis diagnosis) {
         if (diagnosis == null) {
             this.diagnosis = null;
