@@ -64,11 +64,12 @@ public class ProductService {
     }
 
     private void validateSku(Product existing, String sku) {
-        boolean duplicate = productRepository.existsBySkuIgnoreCase(sku)
-            && (existing == null || !existing.getSku().equalsIgnoreCase(sku));
+        String normalizedSku = trim(sku);
+        boolean duplicate = productRepository.existsBySkuIgnoreCase(normalizedSku)
+            && (existing == null || !existing.getSku().equalsIgnoreCase(normalizedSku));
 
         if (duplicate) {
-            throw new BusinessException("SKU already registered: " + sku);
+            throw new BusinessException("SKU already registered: " + normalizedSku);
         }
     }
 
