@@ -2,6 +2,7 @@ package br.com.navitasassist.service;
 
 import java.util.List;
 
+import br.com.navitasassist.auth.BoundedBCryptPasswordEncoder;
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.repository.RmaRecordRepository;
@@ -55,6 +56,7 @@ public class UserAccountService {
     public UserAccountResponse update(Long id, UserAccountUpdateRequest request) {
         UserAccount userAccount = getEntityById(id);
         validateUsername(userAccount, request.username());
+        BoundedBCryptPasswordEncoder.validatePasswordLength(request.password());
 
         userAccount.setUsername(trim(request.username()));
         userAccount.setFullName(trim(request.fullName()));
