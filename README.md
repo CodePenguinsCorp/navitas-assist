@@ -279,6 +279,8 @@ No profile `local`, no primeiro boot e apenas se ainda não existir usuário no 
 
 Esses valores também são usados somente nos testes automatizados. Fora dos profiles `local` e `test`, `DB_URL`, `DB_USER`, `DB_PASSWORD`, `APP_ADMIN_USERNAME`, `APP_ADMIN_PASSWORD` e `APP_ADMIN_FULL_NAME` são obrigatórios; a aplicação falha na inicialização se algum deles não for informado. O ambiente de produção usa validação de schema e não imprime SQL nem credenciais nos logs.
 
+Fora dos profiles `local` e `test`, o backend também recusa senhas públicas dos exemplos em `DB_PASSWORD` e `APP_ADMIN_PASSWORD`: `admin123`, `navitas123`, `root123`, `troque-esta-senha` e `troque-esta-senha-root`. Substitua esses valores por segredos próprios antes de iniciar; a aplicação informa somente os nomes das variáveis que precisam ser corrigidas. A comparação é exata, sem aparar ou modificar senhas, e não representa uma avaliação geral de força. O nome de usuário `admin` continua permitido com senha própria. Nenhuma conta ou senha existente é alterada automaticamente.
+
 ## Autorização da API
 
 | Recurso/operação | ADMIN | SERVICE_DESK | TECHNICIAN | VIEWER |
