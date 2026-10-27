@@ -270,6 +270,10 @@ A aplicação usa sessão criada no backend. O frontend envia usuário e senha s
 - `POST /api/auth/logout` invalida a sessão e remove os cookies de sessão e CSRF
 - respostas de autenticação e autorização permanecem em JSON, com `401` e `403`
 
+Senhas novas ou alteradas exigem ao menos 6 caracteres e no máximo 72 bytes em UTF-8, limite do BCrypt. Acentos e emojis podem ocupar mais de um byte. O backend rejeita excesso no cadastro, na edição e na criação do administrador inicial; o login retorna `401` para credenciais acima desse limite. Senhas não são aparadas nem truncadas.
+
+Hashes BCrypt existentes permanecem inalterados. Caso exista uma senha histórica acima de 72 bytes, ela precisa ser redefinida: o hash antigo não distingue o conteúdo que ultrapassou esse limite. Não há migração automática ou redefinição de contas.
+
 ## Admin Inicial
 
 No profile `local`, no primeiro boot e apenas se ainda não existir usuário no banco, a aplicação cria:

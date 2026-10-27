@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { Observable, finalize } from 'rxjs';
 import { ROLE_LABELS, ROLE_OPTIONS } from '../../core/mock-data';
 import {
@@ -24,6 +24,9 @@ import {
 type UserFormControlName = 'username' | 'fullName' | 'password' | 'role' | 'active';
 type UserStatusFilter = 'all' | 'active' | 'inactive';
 type UserModalMode = 'create' | 'edit';
+
+const passwordByteLengthValidator: ValidatorFn = control =>
+  new TextEncoder().encode(control.value || '').length > 72 ? { passwordByteLength: true } : null;
 
 @Component({
   selector: 'app-users',
@@ -147,7 +150,7 @@ export class UsersComponent {
   protected readonly form = this.formBuilder.nonNullable.group({
     username: ['', [Validators.required, Validators.maxLength(60)]],
     fullName: ['', [Validators.required, Validators.maxLength(120)]],
-    password: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(120)]],
+    password: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(72), passwordByteLengthValidator]],
     role: ['SERVICE_DESK' as UserRole, [Validators.required]],
     active: [true]
   });
@@ -320,7 +323,7 @@ export class UsersComponent {
   }
 
   private configurePasswordValidation(required: boolean): void {
-    const validators = [Validators.minLength(6), Validators.maxLength(120)];
+    const validators = [Validators.minLength(6), Validators.maxLength(72), passwordByteLengthValidator];
     this.form.controls.password.setValidators(required ? [Validators.required, ...validators] : validators);
     this.form.controls.password.updateValueAndValidity({ emitEvent: false });
   }

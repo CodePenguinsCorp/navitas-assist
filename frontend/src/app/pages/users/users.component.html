@@ -199,7 +199,7 @@
           <input type="password" formControlName="password" autocomplete="new-password" />
           @if (hasError('password')) {
             <small class="field-error">
-              {{ form.controls.password.hasError('required') ? 'Informe a senha inicial.' : 'A senha precisa ter entre 6 e 120 caracteres.' }}
+              {{ form.controls.password.hasError('required') ? 'Informe a senha inicial.' : form.controls.password.hasError('passwordByteLength') ? 'Senha muito longa. Reduza a quantidade de caracteres.' : 'A senha precisa ter ao menos 6 caracteres.' }}
             </small>
           } @else if (editingUser()) {
             <small class="field-hint">Deixe em branco para manter a senha atual.</small>
