@@ -1,6 +1,9 @@
 package br.com.navitasassist.auth;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -19,6 +22,8 @@ import br.com.navitasassist.user.UserRole;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -55,6 +60,118 @@ class AuthSecurityIntegrationTest {
         createUser("service.desk", UserRole.SERVICE_DESK);
         createUser("technician", UserRole.TECHNICIAN);
         createUser("viewer", UserRole.VIEWER);
+    }
+
+    @Test
+    void csrfBootstrapShouldCreateUsableCookieWithoutBodyOrSession() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/auth/csrf"))
+            .andExpect(status().isNoContent())
+            .andExpect(content().string(""))
+            .andExpect(cookie().exists("XSRF-TOKEN"))
+            .andExpect(cookie().path("XSRF-TOKEN", "/"))
+            .andExpect(cookie().httpOnly("XSRF-TOKEN", false))
+            .andExpect(cookie().secure("XSRF-TOKEN", false))
+            .andReturn();
+
+        Cookie token = result.getResponse().getCookie("XSRF-TOKEN");
+        assertNotNull(token);
+        assertEquals("Strict", token.getAttribute("SameSite"));
+        assertNull(result.getRequest().getSession(false));
+        mockMvc.perform(post("/api/auth/login")
+                .with(csrfCookie(token))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"admin\",\"password\":\"admin123\"}"))
+            .andExpect(status().isOk());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void csrfBootstrapShouldPreserveCookieForAnonymousAndAuthenticatedRequests(boolean authenticated) throws Exception {
+        Cookie token = requestCsrfCookie();
+        var request = get("/api/auth/csrf").cookie(token);
+        if (authenticated) {
+            request.with(user("viewer").roles("VIEWER"));
+        }
+
+        mockMvc.perform(request)
+            .andExpect(status().isNoContent())
+            .andExpect(content().string(""))
+            .andExpect(cookie().doesNotExist("XSRF-TOKEN"));
+    }
+
+    @Test
+    void anotherTabBootstrapShouldNotInvalidatePreparedLoginHeader() throws Exception {
+        Cookie browserCookie = requestCsrfCookie();
+        String preparedHeader = browserCookie.getValue();
+
+        for (int tab = 0; tab < 2; tab++) {
+            Cookie replacement = mockMvc.perform(get("/api/auth/csrf").cookie(browserCookie))
+                .andExpect(status().isNoContent())
+                .andReturn().getResponse().getCookie("XSRF-TOKEN");
+            if (replacement != null) {
+                browserCookie = replacement;
+            }
+        }
+
+        MvcResult login = mockMvc.perform(post("/api/auth/login")
+                .cookie(browserCookie)
+                .header("X-XSRF-TOKEN", preparedHeader)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"admin\",\"password\":\"admin123\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.username").value("admin"))
+            .andReturn();
+
+        MockHttpSession session = (MockHttpSession) login.getRequest().getSession(false);
+        assertNotNull(session);
+        mockMvc.perform(get("/api/auth/me").session(session))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.username").value("admin"));
+    }
+
+    @Test
+    void csrfBootstrapShouldGenerateUsableTokenAfterLogoutRemovesCookie() throws Exception {
+        Cookie original = requestCsrfCookie();
+        MvcResult login = mockMvc.perform(post("/api/auth/login")
+                .with(csrfCookie(original))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"admin\",\"password\":\"admin123\"}"))
+            .andExpect(status().isOk())
+            .andReturn();
+        MockHttpSession session = (MockHttpSession) login.getRequest().getSession(false);
+        assertNotNull(session);
+
+        mockMvc.perform(post("/api/auth/logout").session(session).with(csrfCookie(original)))
+            .andExpect(status().isNoContent())
+            .andExpect(cookie().maxAge("XSRF-TOKEN", 0));
+
+        Cookie regenerated = requestCsrfCookie();
+        assertNotEquals(original.getValue(), regenerated.getValue());
+        mockMvc.perform(post("/api/auth/login")
+                .with(csrfCookie(regenerated))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"admin\",\"password\":\"admin123\"}"))
+            .andExpect(status().isOk());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"missing-cookie", "missing-header", "mismatched-header"})
+    void loginShouldStillRejectMissingOrMismatchedCsrf(String scenario) throws Exception {
+        Cookie token = requestCsrfCookie();
+        var request = post("/api/auth/login")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"username\":\"admin\",\"password\":\"admin123\"}");
+        if (!scenario.equals("missing-cookie")) {
+            request.cookie(token);
+        }
+        if (!scenario.equals("missing-header")) {
+            request.header("X-XSRF-TOKEN", scenario.equals("mismatched-header") ? "different-token" : token.getValue());
+        }
+
+        MvcResult rejected = mockMvc.perform(request)
+            .andExpect(status().isForbidden())
+            .andReturn();
+        assertNull(rejected.getRequest().getSession(false));
     }
 
     @Test
