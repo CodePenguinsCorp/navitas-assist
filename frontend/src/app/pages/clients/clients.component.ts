@@ -174,8 +174,11 @@ export class ClientsComponent {
   }
 
   protected closeModal(): void {
-    this.activeModal.set(null);
-    this.modalErrorMessage.set('');
+    if (this.submitting()) {
+      return;
+    }
+
+    this.resetModal();
   }
 
   protected saveClient(): void {
@@ -203,7 +206,7 @@ export class ClientsComponent {
             ? `Cliente ${client.legalName} atualizado com sucesso.`
             : `Cliente ${client.legalName} cadastrado com sucesso.`
         );
-        this.closeModal();
+        this.resetModal();
         this.loadClients();
       },
       error: (error) => {
@@ -283,6 +286,11 @@ export class ClientsComponent {
     this.modalErrorMessage.set('');
     this.deleteModalErrorMessage.set('');
     this.successMessage.set('');
+  }
+
+  private resetModal(): void {
+    this.activeModal.set(null);
+    this.modalErrorMessage.set('');
   }
 
   private resetDeleteModal(): void {
