@@ -1,3 +1,5 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { Signal } from '@angular/core';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
@@ -116,3 +118,67 @@ interface ProductsHarness {
   openDeleteModal(product: ProductResponse): void;
   confirmDeleteProduct(): void;
 }
+
+describe('ProductsComponent HTTP error feedback', () => {
+  let fixture: ComponentFixture<ProductsComponent>;
+  let http: HttpTestingController;
+  let page: HTMLElement;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [ProductsComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()]
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    fixture = TestBed.createComponent(ProductsComponent);
+    http.expectOne('/api/products').flush([]);
+    fixture.detectChanges();
+    page = fixture.nativeElement as HTMLElement;
+    page.querySelector<HTMLButtonElement>('.page-heading button')!.click();
+    fixture.detectChanges();
+    for (const [name, value] of [['sku', 'SKU-NAV-81'], ['name', 'Produto salvo']]) {
+      const input = page.querySelector<HTMLInputElement>(`[formControlName="${name}"]`)!;
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  });
+
+  afterEach(() => http.verify());
+
+  function submitSave(): TestRequest {
+    page.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+    return http.expectOne({ method: 'POST', url: '/api/products' });
+  }
+
+  it.each([
+    { label: 'numeric message', body: { message: 500 }, feedback: 'Não foi possível salvar o produto agora.' },
+    { label: 'nonarray details', body: { message: 'Saving failed', details: 'wrong' }, feedback: 'Saving failed' },
+    { label: 'null body', body: null, feedback: 'Não foi possível salvar o produto agora.' },
+    { label: 'valid API error', body: { message: 'Validation failed', details: ['sku: required'] },
+      feedback: 'Validation failed: sku: required' },
+    { label: 'network failure', body: null, feedback: 'Não foi possível salvar o produto agora.' }
+  ])('shows feedback and allows manual retry after $label', ({ label, body, feedback }) => {
+    const request = submitSave();
+    expect(page.querySelector<HTMLButtonElement>('form .button-primary')!.disabled).toBe(true);
+    if (label === 'network failure') {
+      request.error(new ProgressEvent('error'));
+    } else {
+      request.flush(body, { status: 500, statusText: 'Server Error' });
+    }
+    fixture.detectChanges();
+
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain(feedback);
+    expect(page.querySelector<HTMLInputElement>('[formControlName="name"]')!.value).toBe('Produto salvo');
+    expect(page.querySelector<HTMLButtonElement>('form .button-primary')!.disabled).toBe(false);
+    const retry = submitSave();
+    expect(retry.request.body.name).toBe('Produto salvo');
+    expect(page.querySelector('[role="alert"]')).toBeNull();
+    const saved: ProductResponse = { ...INITIAL_PRODUCTS[0], sku: 'SKU-NAV-81', name: 'Produto salvo' };
+    retry.flush(saved);
+    http.expectOne({ method: 'GET', url: '/api/products' }).flush([saved]);
+    fixture.detectChanges();
+    expect(page.querySelector('.modal-overlay')).toBeNull();
+    expect(page.querySelector('tbody')?.textContent).toContain('Produto salvo');
+  });
+});
