@@ -25,7 +25,7 @@ describe('KanbanComponent filters', () => {
       imports: [KanbanComponent],
       providers: [
         { provide: SlaClockService, useValue: { now } },
-        { provide: AuthService, useValue: { hasAnyRole: () => true } },
+        { provide: AuthService, useValue: { hasAnyRole: () => true, currentUser: signal({ username: 'kanban.test' }) } },
         {
           provide: CatalogService,
           useValue: {
@@ -195,6 +195,47 @@ describe('KanbanComponent filters', () => {
       expect.objectContaining({ status: 'TRIAGE', query: 'cliente' }),
     );
     expect(component.viewError()).toBe('Falha ao salvar');
+  });
+
+  it('saves and restores lane configuration together with filters', () => {
+    component.filtersForm.patchValue({ groupBy: 'ASSIGNEE', descendingLanes: true, emptyLanesFirst: true, priority: 'HIGH' });
+    component.openCreateViewModal();
+    component.viewForm.patchValue({ name: 'Por técnico' });
+    component.saveView();
+    expect(createdViewRequest?.filters).toEqual(expect.objectContaining({ groupBy: 'ASSIGNEE', descendingLanes: true, emptyLanesFirst: true }));
+    component.clearFilters();
+    component.applyView(5);
+    expect(component.filtersForm.getRawValue()).toEqual(expect.objectContaining({ groupBy: 'ASSIGNEE', descendingLanes: true, emptyLanesFirst: true }));
+    expect(component.filteredRmas().map(card => card.id)).toEqual([1]);
+  });
+
+  it('renders filtered lanes, collapses accessibly and preserves selection and counters', () => {
+    localStorage.clear();
+    const fixture = TestBed.createComponent(KanbanComponent);
+    const page = fixture.componentInstance as unknown as KanbanHarness;
+    page.filtersForm.patchValue({ groupBy: 'ASSIGNEE' });
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelectorAll('.board-lane__toggle')).toHaveLength(2);
+    expect(element.querySelectorAll('.board-card')).toHaveLength(2);
+    page.selectVisibleRmas();
+    const toggle = element.querySelector<HTMLButtonElement>('.board-lane__toggle')!;
+    toggle.click();
+    fixture.detectChanges();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(element.querySelectorAll('.board-card')).toHaveLength(1);
+    expect(page.filteredRmas()).toHaveLength(2);
+    expect(page.bulkSelectedRmas()).toHaveLength(2);
+    page.filtersForm.patchValue({ priority: 'HIGH' });
+    fixture.detectChanges();
+    expect(element.querySelectorAll('.board-lane__toggle')).toHaveLength(1);
+    expect(page.filteredRmas()).toHaveLength(1);
+    page.clearFilters();
+    fixture.detectChanges();
+    expect(element.querySelectorAll('.board-lane__toggle')).toHaveLength(0);
+    expect(element.querySelectorAll('.board-card')).toHaveLength(2);
+    fixture.destroy();
+    localStorage.clear();
   });
 });
 

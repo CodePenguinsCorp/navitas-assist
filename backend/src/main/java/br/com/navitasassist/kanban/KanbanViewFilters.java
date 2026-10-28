@@ -18,8 +18,15 @@ public record KanbanViewFilters(
     LocalDate entryFrom,
     LocalDate entryTo,
     LocalDate updatedFrom,
-    LocalDate updatedTo
+    LocalDate updatedTo,
+    KanbanGroupBy groupBy,
+    boolean descendingLanes,
+    boolean emptyLanesFirst
 ) {
+    public KanbanViewFilters {
+        if (groupBy == null) groupBy = KanbanGroupBy.NONE;
+    }
+
     public static KanbanViewFilters from(KanbanView view) {
         return new KanbanViewFilters(
             view.getQuery(),
@@ -31,7 +38,10 @@ public record KanbanViewFilters(
             view.getEntryFrom(),
             view.getEntryTo(),
             view.getUpdatedFrom(),
-            view.getUpdatedTo()
+            view.getUpdatedTo(),
+            view.getGroupBy(),
+            view.isDescendingLanes(),
+            view.isEmptyLanesFirst()
         );
     }
 }

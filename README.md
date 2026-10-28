@@ -83,6 +83,16 @@ ADMIN e SERVICE_DESK podem alterar status, prioridade e responsável em lote. TE
 
 Na alteração de **status em lote**, qualquer etapa pode ser escolhida para os RMAs selecionados, inclusive uma etapa anterior ou a reabertura de um RMA encerrado. O histórico registra cada mudança. A API ainda confere a etapa atual de cada card para evitar sobrescrever uma alteração feita em outra sessão depois da seleção; nesse caso, somente o card desatualizado falha e é recarregado.
 
+## Raias do Kanban (NAV-51)
+
+O quadro pode ser agrupado por responsável, prioridade, cliente ou conjunto de produtos. Cada RMA aparece uma vez; produtos repetidos ou em ordens diferentes formam a mesma combinação. Prioridade segue Alta, Média e Baixa; as demais raias usam ordem alfabética. É possível inverter a ordem e posicionar valores vazios no início.
+
+As visualizações salvas guardam agrupamento, ordem e posição dos vazios junto com os filtros da conta. Visões antigas continuam sem raias. Os indicadores de cada raia contam somente os cards que passaram pelos filtros; recolher uma raia não altera seleção ou totais. O estado recolhido fica neste navegador, separado por conta e agrupamento; se o armazenamento estiver indisponível, funciona apenas durante a sessão atual.
+
+Arrastar entre raias altera somente a etapa; a raia acompanha o responsável, cliente, prioridade ou produtos do RMA. Bloqueios, campos personalizados e limites de WIP dependem de suas próprias funcionalidades e não são opções de agrupamento nesta versão.
+
+Os novos campos de visualização estão na migration inicial V1, conforme o banco recriável do projeto. Um banco de desenvolvimento criado com a V1 anterior precisa ser recriado antes de iniciar esta versão; nenhuma migration incremental foi adicionada.
+
 ## Estrutura do Projeto
 
 - `frontend/`: interface web

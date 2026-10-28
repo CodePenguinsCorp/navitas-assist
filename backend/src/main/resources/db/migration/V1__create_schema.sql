@@ -60,6 +60,9 @@ CREATE TABLE kanban_views (
     entry_to DATE,
     updated_from DATE,
     updated_to DATE,
+    group_by VARCHAR(20) NOT NULL DEFAULT 'NONE',
+    descending_lanes BOOLEAN NOT NULL DEFAULT FALSE,
+    empty_lanes_first BOOLEAN NOT NULL DEFAULT FALSE,
     created_at DATETIME(6) NOT NULL,
     updated_at DATETIME(6) NOT NULL,
     created_by VARCHAR(60),
@@ -68,7 +71,8 @@ CREATE TABLE kanban_views (
     CONSTRAINT fk_kanban_views_owner FOREIGN KEY (owner_id) REFERENCES user_accounts (id) ON DELETE CASCADE,
     CONSTRAINT ck_kanban_views_priority CHECK (priority IS NULL OR priority IN ('LOW', 'MEDIUM', 'HIGH')),
     CONSTRAINT ck_kanban_views_status CHECK (status IS NULL OR status IN ('RECEIVED', 'TRIAGE', 'IN_DIAGNOSIS', 'WAITING_PART', 'IN_REPAIR', 'IN_TESTS', 'COMPLETED', 'RETURNED', 'IRREPARABLE')),
-    CONSTRAINT ck_kanban_views_warranty CHECK (warranty_status IS NULL OR warranty_status IN ('PENDING', 'IN_WARRANTY', 'OUT_OF_WARRANTY'))
+    CONSTRAINT ck_kanban_views_warranty CHECK (warranty_status IS NULL OR warranty_status IN ('PENDING', 'IN_WARRANTY', 'OUT_OF_WARRANTY')),
+    CONSTRAINT ck_kanban_views_group CHECK (group_by IN ('NONE', 'ASSIGNEE', 'PRIORITY', 'CLIENT', 'PRODUCT'))
 );
 
 CREATE INDEX idx_kanban_views_owner_id ON kanban_views (owner_id);

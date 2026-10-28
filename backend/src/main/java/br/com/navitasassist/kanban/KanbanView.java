@@ -70,4 +70,14 @@ public class KanbanView extends AuditableEntity {
     private LocalDate updatedFrom;
 
     private LocalDate updatedTo;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "group_by", nullable = false, length = 20)
+    private KanbanGroupBy groupBy = KanbanGroupBy.NONE;
+
+    @Column(name = "descending_lanes", nullable = false)
+    private boolean descendingLanes;
+
+    @Column(name = "empty_lanes_first", nullable = false)
+    private boolean emptyLanesFirst;
 }

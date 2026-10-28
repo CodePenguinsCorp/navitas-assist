@@ -11,6 +11,7 @@ import {
 } from '../../core/mock-data';
 import {
   AssignableUserResponse,
+  KanbanGroupBy,
   KanbanViewFilters,
   KanbanViewRequest,
   KanbanViewResponse,
@@ -27,6 +28,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { RmaService } from '../../core/services/rma.service';
+import { KanbanLanePreferencesService } from '../../core/services/kanban-lane-preferences.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { businessDateInputValue } from '../../core/utils/date';
 import { normalizeText } from '../../core/utils/rma-ui';
@@ -51,6 +53,9 @@ type StatusFilterValue = 'all' | RmaStatus;
 type WarrantyFilterValue = 'all' | WarrantyStatus;
 
 interface KanbanFilterValues {
+  groupBy: KanbanGroupBy;
+  descendingLanes: boolean;
+  emptyLanesFirst: boolean;
   sla: SlaFilterValue;
   query: string;
   priority: PriorityFilterValue;
@@ -89,6 +94,11 @@ export class KanbanComponent {
   private readonly catalogService = inject(CatalogService);
   private readonly kanbanViewService = inject(KanbanViewService);
   private readonly rmaService = inject(RmaService);
+  protected readonly lanePreferences = inject(KanbanLanePreferencesService);
+  protected readonly laneGroupingOptions: ReadonlyArray<CustomSelectOption<KanbanGroupBy>> = [
+    { value: 'NONE', label: 'Sem raias' }, { value: 'ASSIGNEE', label: 'Responsável' },
+    { value: 'PRIORITY', label: 'Prioridade' }, { value: 'CLIENT', label: 'Cliente' }, { value: 'PRODUCT', label: 'Conjunto de produtos' },
+  ];
 
   protected readonly loading = signal(true);
   protected readonly pageError = signal('');
@@ -114,6 +124,9 @@ export class KanbanComponent {
   private readonly pendingAssignmentRmaSignal = signal<RmaResponse | null>(null);
 
   protected readonly filtersForm = this.formBuilder.nonNullable.group({
+    groupBy: ['NONE' as KanbanGroupBy],
+    descendingLanes: [false],
+    emptyLanesFirst: [false],
     sla: ['all' as SlaFilterValue],
     query: [''],
     priority: ['all' as PriorityFilterValue],
@@ -125,7 +138,7 @@ export class KanbanComponent {
     updatedFrom: [''],
     updatedTo: [''],
   });
-  private readonly filters = toSignal(
+  protected readonly filters = toSignal(
     this.filtersForm.valueChanges.pipe(map(() => this.filtersForm.getRawValue())),
     {
       initialValue: this.filtersForm.getRawValue(),
@@ -134,6 +147,7 @@ export class KanbanComponent {
   protected readonly filteredRmas = computed(() =>
     filterKanbanRmas(this.rmasSignal(), this.filters(), this.slaClock.now()),
   );
+  protected readonly collapsedLaneKeys = computed(() => this.lanePreferences.collapsedKeys(this.filters().groupBy));
   protected readonly activeFilterCount = computed(() => countActiveFilters(this.filters()));
   protected readonly totalRmas = computed(() => this.rmasSignal().length);
   protected readonly activeView = computed(() =>
@@ -649,6 +663,9 @@ const STATUS_SELECT_OPTIONS: ReadonlyArray<CustomSelectOption<RmaStatus>> = RMA_
 );
 
 const DEFAULT_KANBAN_FILTERS: KanbanFilterValues = {
+  groupBy: 'NONE',
+  descendingLanes: false,
+  emptyLanesFirst: false,
   sla: 'all',
   query: '',
   priority: 'all',
@@ -749,6 +766,7 @@ function isWithinRange(value: string, from: string, to: string): boolean {
 
 function countActiveFilters(filters: KanbanFilterValues): number {
   return Object.entries(filters).filter(([key, value]) => {
+    if (key === 'groupBy' || key === 'descendingLanes' || key === 'emptyLanesFirst') return false;
     if (key === 'query') {
       return Boolean(normalizeSearch(String(value)));
     }
@@ -777,6 +795,9 @@ function mergeAssigneeOptions(
 
 function toPersistedFilters(filters: KanbanFilterValues): KanbanViewFilters {
   return {
+    groupBy: filters.groupBy,
+    descendingLanes: filters.descendingLanes,
+    emptyLanesFirst: filters.emptyLanesFirst,
     query: normalizeText(filters.query),
     priority: filters.priority === 'all' ? null : filters.priority,
     status: filters.status === 'all' ? null : filters.status,
@@ -792,6 +813,9 @@ function toPersistedFilters(filters: KanbanFilterValues): KanbanViewFilters {
 
 function fromPersistedFilters(filters: KanbanViewFilters): KanbanFilterValues {
   return {
+    groupBy: filters.groupBy ?? 'NONE',
+    descendingLanes: filters.descendingLanes ?? false,
+    emptyLanesFirst: filters.emptyLanesFirst ?? false,
     sla: 'all',
     query: filters.query ?? '',
     priority: filters.priority ?? 'all',
