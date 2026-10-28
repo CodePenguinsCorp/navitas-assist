@@ -10,11 +10,11 @@
 
   <section class="stats-grid stats-grid--three">
     <article class="panel stat-card">
-      <span>Com contato</span>
-      <strong>{{ clientsWithContact() }}</strong>
+      <span>Com telefone</span>
+      <strong>{{ clientsWithPhone() }}</strong>
     </article>
     <article class="panel stat-card">
-      <span>Com documento</span>
+      <span>Com CPF/CNPJ</span>
       <strong>{{ clientsWithDocument() }}</strong>
     </article>
     <article class="panel stat-card">
@@ -32,15 +32,15 @@
       <input
         #clientSearch
         type="search"
-        placeholder="Razão social, contato, documento ou e-mail"
+        placeholder="Razão social, nome fantasia, CPF/CNPJ, telefone ou e-mail"
         [value]="searchTerm()"
         (input)="updateSearch(clientSearch.value)"
       />
     </label>
     <label class="filter-field">
-      <span>Documento</span>
+      <span>CPF/CNPJ</span>
       <app-custom-select
-        ariaLabel="Filtrar por documento"
+        ariaLabel="Filtrar por CPF/CNPJ"
         [options]="presenceFilterOptions"
         [value]="documentFilter()"
         (valueChange)="updateDocumentFilter($any($event))"
@@ -89,8 +89,8 @@
           <thead>
             <tr>
               <th>Cliente</th>
-              <th>Contato</th>
-              <th>Documento</th>
+              <th>Telefone / e-mail</th>
+              <th>CPF/CNPJ</th>
               <th>Atualizado</th>
               <th class="table-actions-col">Ação</th>
             </tr>
@@ -103,8 +103,8 @@
                   <span class="table-subtitle">{{ client.tradeName || 'Sem nome fantasia' }}</span>
                 </td>
                 <td>
-                  <strong class="table-title">{{ client.contactName || 'Não informado' }}</strong>
-                  <span class="table-subtitle">{{ client.email || client.phone || 'Sem canal principal' }}</span>
+                  <strong class="table-title">{{ client.phone?.trim() || 'Não informado' }}</strong>
+                  <span class="table-subtitle">{{ client.email?.trim() || 'Não informado' }}</span>
                 </td>
                 <td>{{ client.documentNumber || 'Não informado' }}</td>
                 <td>{{ updatedAtLabel(client) }}</td>
@@ -160,7 +160,6 @@
         <label class="field-group field-group--full">
           <span>Razão social</span>
           <input type="text" formControlName="legalName" (input)="limitLegalName($event)" />
-          <small>Até 120 caracteres, sem contar espaços e traços.</small>
           @if (hasError('legalName')) {
             <small class="field-error">Informe a razão social com até 120 caracteres, sem contar espaços e traços.</small>
           }
@@ -172,7 +171,7 @@
         </label>
 
         <label class="field-group">
-          <span>CNPJ/CPF</span>
+          <span>CPF/CNPJ</span>
           <input type="text" formControlName="documentNumber" maxlength="18" />
         </label>
 

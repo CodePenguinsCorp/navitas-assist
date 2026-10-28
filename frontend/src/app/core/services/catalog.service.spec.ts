@@ -23,7 +23,6 @@ describe('CatalogService', () => {
       legalName: 'Cliente Teste',
       tradeName: null,
       documentNumber: null,
-      contactName: null,
       email: null,
       phone: null,
       address: null,
@@ -35,6 +34,13 @@ describe('CatalogService', () => {
     expect(create.request.method).toBe('POST');
     expect(create.request.body).toEqual(payload);
     create.flush({});
+
+    service.updateClient(7, payload).subscribe();
+    const update = httpTesting.expectOne('/api/clients/7');
+    expect(update.request.method).toBe('PUT');
+    expect(update.request.body).toEqual(payload);
+    expect(update.request.body).not.toHaveProperty('contactName');
+    update.flush({});
 
     service.deleteClient(7).subscribe();
     const remove = httpTesting.expectOne('/api/clients/7');

@@ -3,7 +3,6 @@ CREATE TABLE clients (
     legal_name TEXT NOT NULL,
     trade_name VARCHAR(120),
     document_number VARCHAR(18),
-    contact_name VARCHAR(120),
     email VARCHAR(120),
     phone VARCHAR(30),
     address VARCHAR(255),

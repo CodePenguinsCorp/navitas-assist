@@ -32,9 +32,6 @@ public class Client extends AuditableEntity {
     private String documentNumber;
 
     @Column(length = 120)
-    private String contactName;
-
-    @Column(length = 120)
     private String email;
 
     @Column(length = 30)
