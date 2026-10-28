@@ -18,7 +18,7 @@ import {
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
-import { formatDateOnly } from '../../core/utils/date';
+import { formatBusinessDateTime as formatDateTime, formatDateOnly } from '../../core/utils/date';
 
 interface QueueRow {
   code: string;
@@ -224,15 +224,4 @@ function latestStatusUpdate(history: RmaStatusHistoryResponse[]): RmaStatusHisto
   }
 
   return [...history].sort((left, right) => compareDateStrings(right.changedAt, left.changedAt))[0] ?? null;
-}
-
-function formatDateTime(value: string | null): string {
-  if (!value) {
-    return 'Não informado';
-  }
-
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'short',
-    timeStyle: 'short'
-  }).format(new Date(value));
 }

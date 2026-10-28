@@ -1,3 +1,5 @@
+export { formatBusinessDateTime as formatDateTime } from './date';
+
 export function normalizeOptionalText(value: string | null | undefined): string | null {
   const trimmed = value?.trim() ?? '';
   return trimmed ? trimmed : null;
@@ -67,15 +69,4 @@ export function countDistinct(values: Array<string | null | undefined>): number 
       .map((value) => normalizeOptionalText(value)?.toLocaleLowerCase('pt-BR'))
       .filter((value): value is string => Boolean(value))
   ).size;
-}
-
-export function formatDateTime(value: string | null): string {
-  if (!value) {
-    return 'Não informado';
-  }
-
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'short',
-    timeStyle: 'short'
-  }).format(new Date(value));
 }

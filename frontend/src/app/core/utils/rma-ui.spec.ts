@@ -1,6 +1,8 @@
 import { RmaResponse, WarrantyStatus } from '../models';
+import { formatDateTime as formatCatalogDateTime } from './catalog-ui';
 import {
   compareRmasForQueue,
+  formatDateTime as formatRmaDateTime,
   normalizeText,
   ownerLabel,
   rmaItemTrackableLabel,
@@ -29,5 +31,23 @@ describe('RMA UI utilities', () => {
     const low = { priority: 'LOW', entryDate: '2026-01-01' } as RmaResponse;
     const high = { priority: 'HIGH', entryDate: '2026-10-01' } as RmaResponse;
     expect(compareRmasForQueue(high, low)).toBeLessThan(0);
+  });
+});
+
+describe.each([
+  ['RMA/SLA', formatRmaDateTime],
+  ['cadastros', formatCatalogDateTime],
+] as const)('%s date/time display', (_area, format) => {
+  it.each([
+    ['2026-10-20T02:30:00Z', '19/10/2026, 23:30'],
+    ['2026-10-20T03:30:00Z', '20/10/2026, 00:30'],
+    ['2026-01-01T01:15:00Z', '31/12/2025, 22:15'],
+    ['2026-10-20T05:30:00+03:00', '19/10/2026, 23:30'],
+  ])('renders %s in Sao Paulo', (instant, expected) => {
+    expect(format(instant)).toBe(expected);
+  });
+
+  it.each([null, ''])('preserves the missing timestamp label for %s', (value) => {
+    expect(format(value)).toBe('N\u00e3o informado');
   });
 });
