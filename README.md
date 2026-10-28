@@ -269,6 +269,7 @@ A aplicação usa sessão criada no backend. O frontend envia usuário e senha s
 - a expiração padrão por inatividade é de 30 minutos e pode ser alterada com `SESSION_TIMEOUT`
 - `POST /api/auth/logout` invalida a sessão e remove os cookies de sessão e CSRF
 - respostas de autenticação e autorização permanecem em JSON, com `401` e `403`
+- a tela de login indica credenciais inválidas somente para `401` do endpoint de login; falhas de rede, serviço ou preparação do CSRF exibem uma mensagem genérica para nova tentativa, sem mostrar detalhes do servidor
 
 ## Admin Inicial
 

@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -54,8 +55,9 @@ export class LoginComponent {
         const redirectTo = this.route.snapshot.queryParamMap.get('redirectTo') ?? '/dashboard';
         void this.router.navigateByUrl(redirectTo);
       },
-      error: () => {
-        this.authError.set('Credenciais inválidas.');
+      error: (error: unknown) => {
+        const invalidCredentials = error instanceof HttpErrorResponse && error.status === 401 && error.url?.endsWith('/api/auth/login');
+        this.authError.set(invalidCredentials ? 'Credenciais inválidas.' : 'Não foi possível entrar. Tente novamente em instantes.');
       }
     });
   }
