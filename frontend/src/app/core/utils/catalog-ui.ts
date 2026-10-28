@@ -24,13 +24,15 @@ export function extractHttpErrorMessage(error: unknown, fallback: string): strin
   if (typeof error === 'object' && error !== null) {
     const maybeHttpError = error as {
       error?: {
-        message?: string;
-        details?: string[];
+        message?: unknown;
+        details?: unknown;
       };
     };
 
-    const message = maybeHttpError.error?.message?.trim();
-    const details = maybeHttpError.error?.details?.filter(Boolean) ?? [];
+    const message = typeof maybeHttpError.error?.message === 'string' ? maybeHttpError.error.message.trim() : '';
+    const details = Array.isArray(maybeHttpError.error?.details)
+      ? maybeHttpError.error.details.filter((detail): detail is string => typeof detail === 'string' && detail.trim().length > 0)
+      : [];
 
     if (details.length > 0 && message) {
       return `${message}: ${details.join(' | ')}`;
