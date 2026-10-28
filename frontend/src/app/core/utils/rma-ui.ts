@@ -120,12 +120,7 @@ export function latestStatusUpdate(
 }
 
 export function compareRmasForBoard(left: RmaResponse, right: RmaResponse): number {
-  const priorityDiff = priorityWeight(right.priority) - priorityWeight(left.priority);
-  if (priorityDiff !== 0) {
-    return priorityDiff;
-  }
-
-  return compareDateStrings(right.updatedAt, left.updatedAt);
+  return left.boardPosition - right.boardPosition || left.id - right.id;
 }
 
 export function compareRmasForQueue(left: RmaResponse, right: RmaResponse): number {

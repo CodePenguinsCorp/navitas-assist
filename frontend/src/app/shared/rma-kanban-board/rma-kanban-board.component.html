@@ -30,18 +30,24 @@
           @if (loading() && totalRmas() === 0) {
             <p class="board-empty-note">Carregando...</p>
           } @else {
-            @for (item of column.items; track item.id) {
+            @for (item of column.items; track item.id; let index = $index) {
               <article
                 class="board-card interactive-card"
                 [class.is-selected]="isSelected(item)"
                 [class.is-dragging]="isDragging(item)"
                 [class.is-updating]="isStatusUpdating(item)"
+                [style.border-top]="dropPlacement()?.id === item.id && !dropPlacement()?.after ? '3px solid var(--brand-blue)' : null"
+                [style.border-bottom]="dropPlacement()?.id === item.id && dropPlacement()?.after ? '3px solid var(--brand-blue)' : null"
+                [attr.data-rma-id]="item.id"
                 [draggable]="canUpdateStatus() && !interactionDisabled() && boardUpdatingId() === null"
                 tabindex="0"
                 (click)="cardSelect.emit(item)"
                 (keydown.enter)="cardSelect.emit(item)"
                 (dragstart)="cardDragStart.emit({ event: $event, rma: item })"
-                (dragend)="cardDragEnd.emit()"
+                (dragend)="endDrag()"
+                (dragover)="allowCardDrop($event, item)"
+                (dragleave)="dropPlacement.set(null)"
+                (drop)="dropOnCard($event, item)"
               >
                 @if (bulkSelectionEnabled()) {
                   <label class="board-card__selection" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" (dragstart)="preventCardDrag($event)">
@@ -95,6 +101,12 @@
                     <span class="mini-chip">Atualizando...</span>
                   }
                 </div>
+                @if (canReorder()) {
+                  <div class="board-card__footer board-card__order support-line" (keydown)="$event.stopPropagation()" (dragstart)="preventCardDrag($event)">
+                    <button type="button" class="button-secondary button-secondary--small" [attr.aria-label]="'Subir ' + item.code" [disabled]="index === 0 || interactionDisabled() || boardUpdatingId() !== null" (click)="requestReorder($event, item, column.items[index - 1], false)">↑ Subir</button>
+                    <button type="button" class="button-secondary button-secondary--small" [attr.aria-label]="'Descer ' + item.code" [disabled]="index === column.items.length - 1 || interactionDisabled() || boardUpdatingId() !== null" (click)="requestReorder($event, item, column.items[index + 1], true)">↓ Descer</button>
+                  </div>
+                }
               </article>
             }
           }

@@ -123,7 +123,7 @@ const createdRma: RmaResponse = {
   productId: 2, productName: 'Produto', productSku: 'SKU-2', batchNumber: null, serialNumber: 'SER-2',
   manufacturedAt: null, purchaseDate: null, purchaseDateUnknown: true, entryDate: '2026-10-20',
   invoiceNumber: 'NF-123', receivedBy: 'tester', reportedFailure: 'Falha', receivedAccessories: null,
-  physicalCondition: null, priority: 'MEDIUM', status: 'RECEIVED', assigneeId: null, assigneeName: null,
+  physicalCondition: null, priority: 'MEDIUM', status: 'RECEIVED', boardPosition: 1, assigneeId: null, assigneeName: null,
   repairSummary: null, replacedPartsSummary: null, testSummary: null, shippedAt: null, carrier: null,
   trackingCode: null, diagnosis: null, statusHistory: [], assignmentHistory: [],
   sla: { status: 'NORMAL', startedAt: '2026-10-20T12:00:00Z', warningAt: '2026-10-21T07:12:00Z',

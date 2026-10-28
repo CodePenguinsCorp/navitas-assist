@@ -1,5 +1,6 @@
 import { RmaResponse, WarrantyStatus } from '../models';
 import {
+  compareRmasForBoard,
   compareRmasForQueue,
   normalizeText,
   ownerLabel,
@@ -8,6 +9,11 @@ import {
 } from './rma-ui';
 
 describe('RMA UI utilities', () => {
+  it('orders board cards by persisted position rather than priority or update time', () => {
+    const first = { id: 1, boardPosition: 1, priority: 'LOW', updatedAt: '2026-01-01' } as unknown as RmaResponse;
+    const second = { id: 2, boardPosition: 2, priority: 'HIGH', updatedAt: '2026-10-01' } as unknown as RmaResponse;
+    expect([second, first].sort(compareRmasForBoard).map((rma) => rma.id)).toEqual([1, 2]);
+  });
   it('normalizes optional text and renders responsibility and warranty labels', () => {
     expect(normalizeText('  observacao  ')).toBe('observacao');
     expect(normalizeText('   ')).toBeNull();

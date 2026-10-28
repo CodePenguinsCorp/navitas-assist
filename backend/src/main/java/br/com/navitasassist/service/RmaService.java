@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Objects;
 
 import br.com.navitasassist.client.Client;
@@ -20,6 +21,7 @@ import br.com.navitasassist.rma.RmaAssignmentHistory;
 import br.com.navitasassist.rma.RmaItem;
 import br.com.navitasassist.rma.RmaItemRequest;
 import br.com.navitasassist.rma.RmaPriority;
+import br.com.navitasassist.rma.RmaPositionUpdateRequest;
 import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaResponse;
 import br.com.navitasassist.rma.RmaStatus;
@@ -31,6 +33,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -47,8 +50,9 @@ public class RmaService {
     private final UserAccountService userAccountService;
 
     @Transactional(readOnly = true)
-    public List<RmaResponse> search(String query, RmaStatus status) {
-        return rmaRecordRepository.search(trimToNull(query), status).stream().map(this::toResponse).toList();
+    public List<RmaResponse> search(String query, RmaStatus status, boolean boardOrder) {
+        Sort sort = boardOrder ? Sort.by("boardPosition", "id") : Sort.by(Sort.Direction.DESC, "entryDate", "id");
+        return rmaRecordRepository.search(trimToNull(query), status, sort).stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
@@ -78,6 +82,7 @@ public class RmaService {
     }
 
     public RmaResponse create(CreateRmaRequest request) {
+        rmaRecordRepository.lockBoardOrder();
         Client client = clientService.getEntityById(request.clientId());
         List<RmaItem> items = buildItems(request.items());
 
@@ -85,6 +90,7 @@ public class RmaService {
         rma.setCode(generateNextCode());
         rma.setClient(client);
         rma.setStatus(RmaStatus.RECEIVED);
+        rma.setBoardPosition(rmaRecordRepository.nextBoardPosition(RmaStatus.RECEIVED));
         rma.setPriority(defaultPriority(request.priority()));
         rma.setReceivedBy(currentUsername());
 
@@ -114,7 +120,7 @@ public class RmaService {
     }
 
     public RmaResponse update(Long id, UpdateRmaRequest request) {
-        RmaRecord rma = getEntityById(id);
+        RmaRecord rma = getEntityForUpdate(id);
 
         if (request.clientId() != null) {
             rma.setClient(clientService.getEntityById(request.clientId()));
@@ -152,12 +158,13 @@ public class RmaService {
     }
 
     public RmaResponse updateStatus(Long id, RmaStatusUpdateRequest request) {
-        return applyStatusChange(getEntityById(id), request);
+        rmaRecordRepository.lockBoardOrder();
+        return applyStatusChange(getEntityForUpdate(id), request);
     }
 
     public RmaResponse updateStatusInBulk(Long id, RmaBulkStatusUpdateRequest request) {
-        RmaRecord rma = rmaRecordRepository.findByIdForUpdate(id)
-            .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
+        rmaRecordRepository.lockBoardOrder();
+        RmaRecord rma = getEntityForUpdate(id);
         if (rma.getStatus() != request.expectedStatus()) {
             throw new BusinessException("RMA status changed. Refresh the item before trying again.");
         }
@@ -168,6 +175,7 @@ public class RmaService {
         boolean changed = !Objects.equals(rma.getStatus(), request.status());
 
         if (changed) {
+            rma.setBoardPosition(rmaRecordRepository.nextBoardPosition(request.status()));
             rma.setStatus(request.status());
         }
         if (changed || trimToNull(request.note()) != null) {
@@ -178,7 +186,7 @@ public class RmaService {
     }
 
     public RmaResponse updateAssignee(Long id, RmaAssigneeUpdateRequest request) {
-        RmaRecord rma = getEntityById(id);
+        RmaRecord rma = getEntityForUpdate(id);
         UserAccount previousAssignee = rma.getAssignee();
         UserAccount newAssignee = request.assigneeId() == null
             ? null
@@ -197,7 +205,7 @@ public class RmaService {
     }
 
     public RmaResponse upsertDiagnosis(Long id, DiagnosisRequest request) {
-        RmaRecord rma = getEntityById(id);
+        RmaRecord rma = getEntityForUpdate(id);
         Diagnosis diagnosis = rma.getDiagnosis();
 
         if (diagnosis == null) {
@@ -218,6 +226,38 @@ public class RmaService {
     @Transactional(readOnly = true)
     public RmaRecord getEntityById(Long id) {
         return rmaRecordRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
+    }
+
+    public List<RmaResponse> updatePosition(Long id, RmaPositionUpdateRequest request) {
+        rmaRecordRepository.lockBoardOrder();
+        RmaRecord rma = getEntityForUpdate(id);
+        if (rma.getStatus() != request.expectedStatus()) {
+            throw new BusinessException("RMA status changed. Refresh the board before trying again.");
+        }
+        if (id.equals(request.anchorId())) {
+            throw new BusinessException("An RMA cannot be positioned relative to itself.");
+        }
+        List<RmaRecord> column = new ArrayList<>(rmaRecordRepository.findByStatusOrderByBoardPositionAscIdAsc(rma.getStatus()));
+        column.removeIf(item -> item.getId().equals(id));
+        int anchorIndex = -1;
+        for (int i = 0; i < column.size(); i++) {
+            if (column.get(i).getId().equals(request.anchorId())) {
+                anchorIndex = i;
+                break;
+            }
+        }
+        if (anchorIndex < 0) {
+            throw new BusinessException("The reference RMA is no longer in this column. Refresh the board before trying again.");
+        }
+        column.add(anchorIndex + (request.after() ? 1 : 0), rma);
+        for (int i = 0; i < column.size(); i++) column.get(i).setBoardPosition(i + 1L);
+        rmaRecordRepository.flush();
+        return column.stream().map(this::toResponse).toList();
+    }
+
+    private RmaRecord getEntityForUpdate(Long id) {
+        return rmaRecordRepository.findByIdForUpdate(id)
             .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
     }
 
