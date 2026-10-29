@@ -39,17 +39,17 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
         where (:status is null or r.status = :status)
           and (
             :query is null
-            or lower(r.code) like lower(concat('%', :query, '%'))
-            or lower(coalesce(r.itemIdentification.batchNumber, '')) like lower(concat('%', :query, '%'))
-            or lower(coalesce(r.itemIdentification.serialNumber, '')) like lower(concat('%', :query, '%'))
-            or lower(c.legalName) like lower(concat('%', :query, '%'))
-            or lower(coalesce(c.tradeName, '')) like lower(concat('%', :query, '%'))
-            or lower(p.name) like lower(concat('%', :query, '%'))
-            or lower(p.sku) like lower(concat('%', :query, '%'))
-            or lower(coalesce(i.itemIdentification.batchNumber, '')) like lower(concat('%', :query, '%'))
-            or lower(coalesce(i.itemIdentification.serialNumber, '')) like lower(concat('%', :query, '%'))
-            or lower(coalesce(ip.name, '')) like lower(concat('%', :query, '%'))
-            or lower(coalesce(ip.sku, '')) like lower(concat('%', :query, '%'))
+            or lower(r.code) like lower(concat('%', :query, '%')) escape '!'
+            or lower(coalesce(r.itemIdentification.batchNumber, '')) like lower(concat('%', :query, '%')) escape '!'
+            or lower(coalesce(r.itemIdentification.serialNumber, '')) like lower(concat('%', :query, '%')) escape '!'
+            or lower(c.legalName) like lower(concat('%', :query, '%')) escape '!'
+            or lower(coalesce(c.tradeName, '')) like lower(concat('%', :query, '%')) escape '!'
+            or lower(p.name) like lower(concat('%', :query, '%')) escape '!'
+            or lower(p.sku) like lower(concat('%', :query, '%')) escape '!'
+            or lower(coalesce(i.itemIdentification.batchNumber, '')) like lower(concat('%', :query, '%')) escape '!'
+            or lower(coalesce(i.itemIdentification.serialNumber, '')) like lower(concat('%', :query, '%')) escape '!'
+            or lower(coalesce(ip.name, '')) like lower(concat('%', :query, '%')) escape '!'
+            or lower(coalesce(ip.sku, '')) like lower(concat('%', :query, '%')) escape '!'
           )
         order by r.entryDate desc, r.id desc
         """)
