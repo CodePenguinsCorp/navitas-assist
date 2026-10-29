@@ -1,0 +1,120 @@
+<section class="page-stack">
+  <header class="page-heading">
+    <div>
+      <h1>Fluxos de RMA</h1>
+      <p>Configure etapas e regras de passagem dos equipamentos.</p>
+    </div>
+    <span class="mini-chip">Publicado: versão {{ published()?.version ?? '—' }}</span>
+  </header>
+  @if (error()) {
+    <article class="panel alert-banner alert-banner--error" role="alert">
+      <h2>Confira o fluxo antes de continuar</h2>
+      <p>{{ error() }}</p>
+      <p>
+        Corrija a etapa ou regra indicada e tente novamente. Em conflito de revisão, mantenha suas alterações para
+        comparação e recarregue a página para obter a revisão atual.
+      </p>
+    </article>
+  }
+  @if (message()) {
+    <p class="alert-banner alert-banner--success" role="status">{{ message() }}</p>
+  }
+  @if (definition(); as d) {
+    <section class="panel editor-toolbar">
+      <div>
+        <h2>Rascunho · revisão {{ revision() }}</h2>
+        <p>As alterações só entram em operação após publicar.</p>
+      </div>
+      <div class="editor-actions">
+        <button class="button-secondary" [disabled]="busy()" (click)="save()">Salvar rascunho</button
+        ><button class="button-primary" [disabled]="busy()" (click)="publish()">Publicar fluxo</button
+        ><button class="button-secondary" [disabled]="busy()" (click)="discard()">Descartar rascunho</button>
+      </div>
+    </section>
+    <fieldset [disabled]="busy()" class="editor-fieldset">
+      <section class="panel editor-section">
+        <h2>Identificação e entrada</h2>
+        <div class="editor-grid">
+          <label class="field-group">Nome do fluxo<input maxlength="120" [(ngModel)]="d.name" /></label
+          ><label class="field-group"
+            >Status inicial<app-custom-select
+              ariaLabel="Status inicial"
+              [options]="statusOptions()"
+              [(ngModel)]="d.initialStatus"
+          /></label>
+        </div>
+      </section>
+      <section class="panel editor-section">
+        <div class="editor-toolbar">
+          <h2>Etapas do RMA</h2>
+          <button class="button-secondary" (click)="addStatus()">Adicionar status</button>
+        </div>
+        <p>
+          Códigos publicados são estáveis. Arquivar impede entradas e mantém as saídas. A publicação recusa a remoção de
+          uma etapa em uso.
+        </p>
+        @for (s of d.statuses; track $index; let i = $index) {
+          <article class="status-editor">
+            <div class="editor-grid">
+              <label class="field-group"
+                >Nome<input [ngModel]="s.label" (ngModelChange)="rename(s, $event)" maxlength="120" /></label
+              ><label class="field-group"
+                >Código<input
+                  [ngModel]="s.code"
+                  (ngModelChange)="changeCode(s, $event)"
+                  [disabled]="isPublished(s.code)"
+                  maxlength="60" /></label
+              ><label class="field-group"
+                >Categoria<app-custom-select
+                  [ariaLabel]="'Categoria de ' + s.label"
+                  [options]="categories"
+                  [(ngModel)]="s.category"
+                  (ngModelChange)="s.category === 'DONE' ? (s.slaStage = null) : null; touch()"
+              /></label>
+              @if (s.category !== 'DONE') {
+                <label class="field-group"
+                  >Etapa de SLA<app-custom-select
+                    [ariaLabel]="'SLA de ' + s.label"
+                    [options]="slaStages"
+                    [(ngModel)]="s.slaStage"
+                /></label>
+              }
+            </div>
+            <div class="editor-actions">
+              <span class="mini-chip">{{ s.active ? 'Ativo' : 'Arquivado' }}</span
+              ><button
+                class="button-secondary"
+                [attr.aria-label]="'Mover ' + s.label + ' acima'"
+                [disabled]="i === 0"
+                (click)="move(i, -1)"
+              >
+                ↑ Acima</button
+              ><button
+                class="button-secondary"
+                [attr.aria-label]="'Mover ' + s.label + ' abaixo'"
+                [disabled]="i === d.statuses.length - 1"
+                (click)="move(i, 1)"
+              >
+                ↓ Abaixo</button
+              ><button class="button-secondary" (click)="archive(s)">{{ s.active ? 'Arquivar' : 'Reativar' }}</button
+              ><button class="button-secondary" (click)="remove(s)">Remover</button>
+            </div>
+          </article>
+        }
+      </section>
+      <app-workflow-transitions
+        [definition]="d"
+        [templates]="templates()"
+        [source]="source()"
+        (sourceChange)="source.set($event)"
+        (changed)="touch()"
+      />
+    </fieldset>
+  } @else {
+    <section class="panel editor-section">
+      <h2>{{ busy() ? 'Carregando fluxo…' : 'Versão publicada em operação' }}</h2>
+      <p>Crie um rascunho para editar sem afetar os RMAs atuais.</p>
+      <button class="button-primary" [disabled]="busy()" (click)="start()">Editar rascunho</button>
+    </section>
+  }
+</section>

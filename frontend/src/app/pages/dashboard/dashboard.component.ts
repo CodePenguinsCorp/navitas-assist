@@ -1,10 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { finalize, forkJoin, of } from 'rxjs';
-import {
-  CLOSED_RMA_STATUSES,
-  RMA_PRIORITY_LABELS,
-  RMA_STATUS_LABELS
-} from '../../core/mock-data';
+import { CLOSED_RMA_STATUSES, RMA_PRIORITY_LABELS, RMA_STATUS_LABELS } from '../../core/mock-data';
 import {
   ClientResponse,
   MetricCard,
@@ -13,10 +9,12 @@ import {
   RmaResponse,
   RmaStatusHistoryResponse,
   UserAccountResponse,
-  WarrantyStatus
+  WarrantyStatus,
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
+import { WorkflowService } from '../../core/services/workflow.service';
+import { isDone } from '../../core/utils/workflow-ui';
 import { RmaService } from '../../core/services/rma.service';
 import { formatDateOnly } from '../../core/utils/date';
 
@@ -45,11 +43,12 @@ interface RecentRmaRow {
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.component.html',
-  styles: [':host { display: block; }']
+  styles: [':host { display: block; }'],
 })
 export class DashboardComponent {
   private readonly authService = inject(AuthService);
   private readonly catalogService = inject(CatalogService);
+  private readonly workflowService = inject(WorkflowService);
   private readonly rmaService = inject(RmaService);
 
   protected readonly loading = signal(true);
@@ -66,8 +65,10 @@ export class DashboardComponent {
     const products = this.productsSignal();
     const users = this.usersSignal();
 
-    const activeRmas = rmas.filter((rma) => !CLOSED_RMA_STATUSES.includes(rma.status));
-    const initialQueue = rmas.filter((rma) => rma.status === 'RECEIVED' || rma.status === 'TRIAGE');
+    const activeRmas = rmas.filter((rma) => !isDone(rma));
+    const initialQueue = rmas.filter((rma) =>
+      rma.statusCategory ? rma.statusCategory === 'PENDING' : rma.status === 'RECEIVED' || rma.status === 'TRIAGE',
+    );
     const rmaItems = rmas.flatMap((rma) => rma.items);
     const inWarrantyCount = rmaItems.filter((item) => item.warrantyStatus === WarrantyStatus.IN_WARRANTY).length;
     const pendingWarrantyCount = rmaItems.filter((item) => item.warrantyStatus === WarrantyStatus.PENDING).length;
@@ -79,26 +80,26 @@ export class DashboardComponent {
         label: 'RMAs ativos',
         value: String(activeRmas.length),
         variation: `${rmas.length} registros`,
-        tone: 'brand'
+        tone: 'brand',
       },
       {
         label: 'Produtos em garantia',
         value: `${warrantyRate}%`,
         variation: `${inWarrantyCount} de ${rmaItems.length} itens | ${pendingWarrantyCount} pendentes`,
-        tone: 'sky'
+        tone: 'sky',
       },
       {
         label: 'Fila inicial',
         value: String(initialQueue.length),
         variation: `${countHighPriority(initialQueue)} alta`,
-        tone: 'slate'
+        tone: 'slate',
       },
       {
         label: 'Cadastros',
         value: String(catalogTotal),
         variation: `${clients.length} clientes | ${products.length} produtos${users.length > 0 ? ` | ${users.length} usuários` : ''}`,
-        tone: 'light'
-      }
+        tone: 'light',
+      },
     ];
   });
 
@@ -110,9 +111,9 @@ export class DashboardComponent {
         code: rma.code,
         client: rma.clientName,
         entryDate: formatDateOnly(rma.entryDate),
-        status: RMA_STATUS_LABELS[rma.status],
-        priority: RMA_PRIORITY_LABELS[rma.priority]
-      }))
+        status: rma.statusLabel ?? RMA_STATUS_LABELS[rma.status] ?? rma.status,
+        priority: RMA_PRIORITY_LABELS[rma.priority],
+      })),
   );
 
   protected readonly auditEvents = computed<AuditRow[]>(() =>
@@ -120,17 +121,17 @@ export class DashboardComponent {
       .flatMap((rma) =>
         rma.statusHistory.map((event) => ({
           rmaCode: rma.code,
-          event
-        }))
+          event,
+        })),
       )
       .sort((left, right) => compareDateStrings(right.event.changedAt, left.event.changedAt))
       .slice(0, 4)
       .map(({ rmaCode, event }) => ({
         id: `${rmaCode}-${event.changedAt}-${event.status}`,
-        action: `${rmaCode} · ${RMA_STATUS_LABELS[event.status]}`,
-        detail: event.note?.trim() || event.changedBy,
-        time: formatDateTime(event.changedAt)
-      }))
+        action: `${rmaCode} · ${event.statusLabel ?? RMA_STATUS_LABELS[event.status] ?? event.status}`,
+        detail: `${event.note?.trim() || event.changedBy}${event.workflowName ? ' · ' + event.workflowName + ' v' + event.workflowVersion : ''}`,
+        time: formatDateTime(event.changedAt),
+      })),
   );
 
   protected readonly recentRmas = computed<RecentRmaRow[]>(() =>
@@ -141,8 +142,8 @@ export class DashboardComponent {
         code: rma.code,
         client: rma.clientName,
         owner: extractOwner(rma),
-        updatedAt: formatDateTime(rma.updatedAt)
-      }))
+        updatedAt: formatDateTime(rma.updatedAt),
+      })),
   );
 
   constructor() {
@@ -158,23 +159,24 @@ export class DashboardComponent {
       : of<UserAccountResponse[]>([]);
 
     forkJoin({
+      workflow: this.workflowService.published(),
       rmas: this.rmaService.list(),
       clients: this.catalogService.listClients(),
       products: this.catalogService.listProducts(),
-      users: usersRequest
-    }).pipe(
-      finalize(() => this.loading.set(false))
-    ).subscribe({
-      next: ({ rmas, clients, products, users }) => {
-        this.rmasSignal.set(rmas);
-        this.clientsSignal.set(clients);
-        this.productsSignal.set(products);
-        this.usersSignal.set(users);
-      },
-      error: () => {
-        this.errorMessage.set('Não foi possível carregar o dashboard.');
-      }
-    });
+      users: usersRequest,
+    })
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: ({ rmas, clients, products, users }) => {
+          this.rmasSignal.set(rmas);
+          this.clientsSignal.set(clients);
+          this.productsSignal.set(products);
+          this.usersSignal.set(users);
+        },
+        error: () => {
+          this.errorMessage.set('Não foi possível carregar o dashboard.');
+        },
+      });
   }
 }
 
@@ -233,6 +235,6 @@ function formatDateTime(value: string | null): string {
 
   return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'short',
-    timeStyle: 'short'
+    timeStyle: 'short',
   }).format(new Date(value));
 }

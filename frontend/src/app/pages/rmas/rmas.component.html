@@ -54,7 +54,7 @@
           <app-custom-select
             formControlName="status"
             ariaLabel="Filtrar por status"
-            [options]="statusFilterOptions"
+            [options]="statusFilterOptions()"
           />
         </div>
 
@@ -96,7 +96,10 @@
           @for (item of historyResults(); track item.id) {
             <button type="button" class="history-item" (click)="selectHistoryItem(item)">
               <strong>{{ item.code }} | {{ item.clientName }}</strong>
-              <span>{{ trackableLabel(item) }} | {{ statusLabel(item.status) }} | {{ dateLabel(item.entryDate) }}</span>
+              <span
+                >{{ trackableLabel(item) }} | {{ item.statusLabel ?? statusLabel(item.status) }} |
+                {{ dateLabel(item.entryDate) }}</span
+              >
             </button>
           }
         </div>
@@ -150,7 +153,9 @@
                   <strong class="table-title">{{ productSummary(rma) }}</strong>
                   <span class="table-subtitle">{{ rma.items.length }} item(ns)</span>
                 </td>
-                <td><span class="mini-chip">{{ statusLabel(rma.status) }}</span></td>
+                <td>
+                  <span class="mini-chip">{{ rma.statusLabel ?? statusLabel(rma.status) }}</span>
+                </td>
                 <td>
                   <span class="mini-chip" [class]="priorityClass(rma.priority)">
                     {{ priorityLabel(rma.priority) }}
@@ -159,7 +164,11 @@
                 <td>
                   <div class="rma-item-warranties">
                     @for (item of rma.items; track item.id ?? $index; let index = $index) {
-                      <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)" [title]="item.productName + ' | ' + itemTrackableLabel(item)">
+                      <span
+                        class="mini-chip"
+                        [class]="warrantyClass(item.warrantyStatus)"
+                        [title]="item.productName + ' | ' + itemTrackableLabel(item)"
+                      >
                         Item {{ index + 1 }} · {{ item.productSku }}: {{ warrantyLabel(item.warrantyStatus) }}
                       </span>
                     }
@@ -174,7 +183,6 @@
       </div>
     }
   </article>
-
 </section>
 
 @if (activeModal() === 'details') {
@@ -192,7 +200,7 @@
         </div>
 
         <div class="summary-list">
-          <span class="mini-chip">{{ statusLabel(rma.status) }}</span>
+          <span class="mini-chip">{{ rma.statusLabel ?? statusLabel(rma.status) }}</span>
           <span class="mini-chip" [class]="priorityClass(rma.priority)">{{ priorityLabel(rma.priority) }}</span>
         </div>
 
@@ -221,14 +229,19 @@
 
         <div class="summary-block">
           <strong>Produtos, lotes e garantias</strong>
-          <p class="muted-inline">Garantia avaliada na entrada do RMA. Compra: {{ rma.purchaseDateUnknown ? 'Data desconhecida' : dateLabel(rma.purchaseDate) }}.</p>
+          <p class="muted-inline">
+            Garantia avaliada na entrada do RMA. Compra:
+            {{ rma.purchaseDateUnknown ? 'Data desconhecida' : dateLabel(rma.purchaseDate) }}.
+          </p>
           <div class="rma-items-detail">
             @for (item of rma.items; track item.id ?? $index) {
               <div class="rma-item-detail">
                 <strong>{{ item.productSku }} | {{ item.productName }}</strong>
                 <span>{{ itemTrackableLabel(item) }}</span>
                 <div>
-                  <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)">{{ warrantyLabel(item.warrantyStatus) }}</span>
+                  <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)">{{
+                    warrantyLabel(item.warrantyStatus)
+                  }}</span>
                 </div>
                 <span>Prazo de garantia: {{ item.warrantyMonths }} meses</span>
                 @if (item.warrantyExpiresAt) {
@@ -255,7 +268,10 @@
             <div class="assignment-history">
               @for (event of rma.assignmentHistory; track event.changedAt) {
                 <div class="assignment-history__item">
-                  <strong>{{ event.previousAssigneeName || 'Sem responsável' }} → {{ event.newAssigneeName || 'Sem responsável' }}</strong>
+                  <strong
+                    >{{ event.previousAssigneeName || 'Sem responsável' }} →
+                    {{ event.newAssigneeName || 'Sem responsável' }}</strong
+                  >
                   <span>{{ dateTimeLabel(event.changedAt) }}</span>
                   <small>Alterado por {{ event.changedBy }}</small>
                 </div>
@@ -279,6 +295,34 @@
           }
         </div>
 
+        <section class="summary-block">
+          <strong>Histórico de etapas</strong>
+          <ul>
+            @for (event of rma.statusHistory; track $index) {
+              <li>
+                {{ event.statusLabel ?? statusLabel(event.status) }} · {{ dateTimeLabel(event.changedAt) }} ·
+                {{ event.changedBy }}
+                @if (event.workflowName) {
+                  · {{ event.workflowName }} v{{ event.workflowVersion }}
+                }
+                @if (event.note) {
+                  <p>{{ event.note }}</p>
+                }
+              </li>
+            }
+          </ul>
+        </section>
+        @defer (on immediate) {
+          <app-rma-operations
+            [rma]="rma"
+            (updated)="operationsUpdated($event)"
+            (busyChange)="operationsBusy.set($event)"
+          />
+        } @placeholder {
+          <p role="status">Carregando verificações e aprovações…</p>
+        } @error {
+          <p role="alert">Não foi possível carregar as verificações. Feche os detalhes e tente novamente.</p>
+        }
         <div class="form-actions">
           @if (canRegisterDiagnosis()) {
             <button type="button" class="button-primary" (click)="openDiagnosisModal()">Diagnóstico</button>
@@ -343,12 +387,22 @@
 
                 <div class="field-group">
                   <label [for]="'batchNumber-' + index">Lote</label>
-                  <input [id]="'batchNumber-' + index" type="text" formControlName="batchNumber" placeholder="Informe lote ou serial" />
+                  <input
+                    [id]="'batchNumber-' + index"
+                    type="text"
+                    formControlName="batchNumber"
+                    placeholder="Informe lote ou serial"
+                  />
                 </div>
 
                 <div class="field-group">
                   <label [for]="'serialNumber-' + index">Serial</label>
-                  <input [id]="'serialNumber-' + index" type="text" formControlName="serialNumber" placeholder="Informe lote ou serial" />
+                  <input
+                    [id]="'serialNumber-' + index"
+                    type="text"
+                    formControlName="serialNumber"
+                    placeholder="Informe lote ou serial"
+                  />
                 </div>
 
                 <div class="field-group">
@@ -392,7 +446,12 @@
 
         <div class="field-group">
           <label>Entrada</label>
-          <app-date-picker formControlName="entryDate" ariaLabel="Data de entrada" [allowClear]="false" [minDate]="entryMinDate" />
+          <app-date-picker
+            formControlName="entryDate"
+            ariaLabel="Data de entrada"
+            [allowClear]="false"
+            [minDate]="entryMinDate"
+          />
           @if (dateErrors().entryDate) {
             <small class="field-error">{{ dateErrors().entryDate }}</small>
           }
@@ -434,7 +493,12 @@
 
         <div class="field-group field-group--full">
           <label for="replacedPartsSummary">Peças trocadas</label>
-          <textarea id="replacedPartsSummary" formControlName="replacedPartsSummary" rows="3" maxlength="600"></textarea>
+          <textarea
+            id="replacedPartsSummary"
+            formControlName="replacedPartsSummary"
+            rows="3"
+            maxlength="600"
+          ></textarea>
         </div>
 
         <div class="field-group field-group--full">

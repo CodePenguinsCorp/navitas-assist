@@ -27,7 +27,12 @@ public record RmaResponse(
     String receivedAccessories,
     String physicalCondition,
     RmaPriority priority,
-    RmaStatus status,
+    String status,
+    String statusLabel,
+    br.com.navitasassist.workflow.WorkflowDocument.Category statusCategory,
+    long workflowVersion,
+    List<br.com.navitasassist.workflow.WorkflowDocument.TransitionOption> transitionOptions,
+    Long relatedRmaId,
     RmaSlaResponse sla,
     Long assigneeId,
     String assigneeName,
@@ -43,7 +48,7 @@ public record RmaResponse(
     Instant createdAt,
     Instant updatedAt
 ) {
-    public static RmaResponse from(RmaRecord rma, RmaSlaResponse sla) {
+    public static RmaResponse from(RmaRecord rma, RmaSlaResponse sla, br.com.navitasassist.workflow.WorkflowDocument.Published workflow, List<br.com.navitasassist.workflow.WorkflowDocument.TransitionOption> options) {
         List<RmaItemResponse> items = rma.getItems().isEmpty()
             ? List.of(RmaItemResponse.fromLegacy(rma))
             : rma.getItems().stream().map(RmaItemResponse::from).toList();
@@ -71,6 +76,11 @@ public record RmaResponse(
             rma.getPhysicalCondition(),
             rma.getPriority(),
             rma.getStatus(),
+            br.com.navitasassist.service.WorkflowService.status(workflow, rma.getStatus()).label(),
+            br.com.navitasassist.service.WorkflowService.status(workflow, rma.getStatus()).category(),
+            workflow.version(),
+            options,
+            rma.getRelatedRmaId(),
             sla,
             rma.getAssignee() == null ? null : rma.getAssignee().getId(),
             rma.getAssignee() == null ? null : rma.getAssignee().getFullName(),

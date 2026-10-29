@@ -40,6 +40,18 @@ public class RestExceptionHandler {
         return buildResponse(HttpStatus.FORBIDDEN, "Access denied", List.of());
     }
 
+    @ExceptionHandler({org.springframework.http.converter.HttpMessageNotReadableException.class,
+        org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+        org.springframework.web.bind.MissingServletRequestParameterException.class})
+    public ResponseEntity<ApiError> handleMalformedRequest(Exception exception) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Malformed request", List.of());
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleConflict(org.springframework.dao.DataIntegrityViolationException exception) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Request conflicts with existing data", List.of());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception exception) {
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error", List.of());

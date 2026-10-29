@@ -87,9 +87,11 @@ public class RmaRecord extends AuditableEntity {
     @Column(nullable = false, length = 20)
     private RmaPriority priority = RmaPriority.MEDIUM;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private RmaStatus status = RmaStatus.RECEIVED;
+    @Column(nullable = false, length = 60)
+    private String status = "RECEIVED";
+
+    @Column
+    private Long relatedRmaId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assignee_id")

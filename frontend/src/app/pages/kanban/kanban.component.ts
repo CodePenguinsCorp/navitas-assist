@@ -26,6 +26,9 @@ import { SlaFilterValue, SLA_LABELS, slaStatus } from '../../core/utils/rma-sla'
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
+import { WorkflowService } from '../../core/services/workflow.service';
+import { WorkflowStatusDefinition } from '../../core/models';
+import { allowedTransitions, isDone } from '../../core/utils/workflow-ui';
 import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { businessDateInputValue } from '../../core/utils/date';
@@ -36,7 +39,10 @@ import {
 } from '../../shared/form-controls/custom-select/custom-select.component';
 import { BoundedFilterPanelsDirective } from '../../shared/form-controls/bounded-filter-panels.directive';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
-import { BulkRmaResult, KanbanBulkActionsComponent } from '../../shared/kanban-bulk-actions/kanban-bulk-actions.component';
+import {
+  BulkRmaResult,
+  KanbanBulkActionsComponent,
+} from '../../shared/kanban-bulk-actions/kanban-bulk-actions.component';
 import { RmaKanbanBoardComponent } from '../../shared/rma-kanban-board/rma-kanban-board.component';
 
 interface KanbanHeroStat {
@@ -82,12 +88,14 @@ export class KanbanComponent {
   private readonly slaClock = inject(SlaClockService);
   protected readonly slaFilterOptions: ReadonlyArray<CustomSelectOption<SlaFilterValue>> = [
     { value: 'all', label: 'Todas as situações' },
-    ...(['NORMAL', 'WARNING', 'OVERDUE', 'CLOSED'] as const).map((value) => ({ value, label: SLA_LABELS[value] }))
+    ...(['NORMAL', 'WARNING', 'OVERDUE', 'CLOSED'] as const).map((value) => ({ value, label: SLA_LABELS[value] })),
   ];
   private readonly formBuilder = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly catalogService = inject(CatalogService);
   private readonly kanbanViewService = inject(KanbanViewService);
+  private readonly workflowService = inject(WorkflowService);
+  protected readonly workflowStatuses = signal<WorkflowStatusDefinition[]>([]);
   private readonly rmaService = inject(RmaService);
 
   protected readonly loading = signal(true);
@@ -103,8 +111,12 @@ export class KanbanComponent {
   protected readonly dragTargetStatus = signal<RmaStatus | null>(null);
   protected readonly bulkSelectedIds = signal<readonly number[]>([]);
   protected readonly bulkBusy = signal(false);
-  protected readonly bulkSelectedRmas = computed(() => this.rmasSignal().filter((rma) => this.bulkSelectedIds().includes(rma.id)));
-  protected readonly hiddenSelectedCount = computed(() => this.bulkSelectedRmas().filter((rma) => !this.filteredRmas().some((visible) => visible.id === rma.id)).length);
+  protected readonly bulkSelectedRmas = computed(() =>
+    this.rmasSignal().filter((rma) => this.bulkSelectedIds().includes(rma.id)),
+  );
+  protected readonly hiddenSelectedCount = computed(
+    () => this.bulkSelectedRmas().filter((rma) => !this.filteredRmas().some((visible) => visible.id === rma.id)).length,
+  );
   protected readonly selectedRmaId = signal<number | null>(null);
 
   private readonly rmasSignal = signal<RmaResponse[]>([]);
@@ -125,45 +137,37 @@ export class KanbanComponent {
     updatedFrom: [''],
     updatedTo: [''],
   });
-  private readonly filters = toSignal(
-    this.filtersForm.valueChanges.pipe(map(() => this.filtersForm.getRawValue())),
-    {
-      initialValue: this.filtersForm.getRawValue(),
-    },
-  );
+  private readonly filters = toSignal(this.filtersForm.valueChanges.pipe(map(() => this.filtersForm.getRawValue())), {
+    initialValue: this.filtersForm.getRawValue(),
+  });
   protected readonly filteredRmas = computed(() =>
     filterKanbanRmas(this.rmasSignal(), this.filters(), this.slaClock.now()),
   );
   protected readonly activeFilterCount = computed(() => countActiveFilters(this.filters()));
   protected readonly totalRmas = computed(() => this.rmasSignal().length);
-  protected readonly activeView = computed(() =>
-    this.viewsSignal().find((view) => view.id === this.activeViewId()),
-  );
-  protected readonly viewSelectOptions = computed<ReadonlyArray<CustomSelectOption<number | null>>>(
-    () => [
-      { value: null, label: 'Padrão (sem filtros)' },
-      ...this.viewsSignal().map((view) => ({
-        value: view.id,
-        label: `${view.defaultView ? '★ ' : ''}${view.name}`,
-      })),
-    ],
-  );
+  protected readonly activeView = computed(() => this.viewsSignal().find((view) => view.id === this.activeViewId()));
+  protected readonly viewSelectOptions = computed<ReadonlyArray<CustomSelectOption<number | null>>>(() => [
+    { value: null, label: 'Padrão (sem filtros)' },
+    ...this.viewsSignal().map((view) => ({
+      value: view.id,
+      label: `${view.defaultView ? '★ ' : ''}${view.name}`,
+    })),
+  ]);
   protected readonly pendingStatusRma = this.pendingStatusRmaSignal.asReadonly();
   protected readonly pendingAssignmentRma = this.pendingAssignmentRmaSignal.asReadonly();
-  protected readonly statusSelectOptions = STATUS_SELECT_OPTIONS;
-  protected readonly statusFilterOptions = STATUS_FILTER_OPTIONS;
+  protected readonly statusSelectOptions = computed(() => allowedTransitions(this.pendingStatusRmaSignal()));
+  protected readonly statusFilterOptions = computed(() => [
+    { value: 'all', label: 'Todos os status' },
+    ...this.workflowStatuses().map((s) => ({ value: s.code, label: s.label })),
+  ]);
   protected readonly priorityFilterOptions = PRIORITY_FILTER_OPTIONS;
   protected readonly warrantyFilterOptions = WARRANTY_FILTER_OPTIONS;
-  protected readonly assigneeFilterOptions = computed<
-    ReadonlyArray<CustomSelectOption<AssigneeFilterValue>>
-  >(() => [
+  protected readonly assigneeFilterOptions = computed<ReadonlyArray<CustomSelectOption<AssigneeFilterValue>>>(() => [
     { value: 'all', label: 'Todos os responsáveis' },
     { value: 'unassigned', label: 'Sem responsável' },
     ...mergeAssigneeOptions(this.assignableUsersSignal(), this.rmasSignal()),
   ]);
-  protected readonly assigneeSelectOptions = computed<
-    ReadonlyArray<CustomSelectOption<number | null>>
-  >(() => [
+  protected readonly assigneeSelectOptions = computed<ReadonlyArray<CustomSelectOption<number | null>>>(() => [
     { value: null, label: 'Sem responsável' },
     ...this.assignableUsersSignal().map((user) => ({
       value: user.id,
@@ -173,21 +177,15 @@ export class KanbanComponent {
   protected readonly canUpdateStatus = computed(() =>
     this.authService.hasAnyRole(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN']),
   );
-  protected readonly canUpdateAssignee = computed(() =>
-    this.authService.hasAnyRole(['ADMIN', 'SERVICE_DESK']),
-  );
-  protected readonly activeCount = computed(
-    () => this.filteredRmas().filter((rma) => !CLOSED_RMA_STATUSES.includes(rma.status)).length,
-  );
+  protected readonly canUpdateAssignee = computed(() => this.authService.hasAnyRole(['ADMIN', 'SERVICE_DESK']));
+  protected readonly activeCount = computed(() => this.filteredRmas().filter((rma) => !isDone(rma)).length);
   protected readonly highPriorityCount = computed(
     () => this.filteredRmas().filter((rma) => rma.priority === 'HIGH').length,
   );
   protected readonly waitingPartCount = computed(
     () => this.filteredRmas().filter((rma) => rma.status === 'WAITING_PART').length,
   );
-  protected readonly closedCount = computed(
-    () => this.filteredRmas().filter((rma) => CLOSED_RMA_STATUSES.includes(rma.status)).length,
-  );
+  protected readonly closedCount = computed(() => this.filteredRmas().filter((rma) => isDone(rma)).length);
   protected readonly heroStats = computed<ReadonlyArray<KanbanHeroStat>>(() => [
     {
       label: 'Em andamento',
@@ -232,7 +230,7 @@ export class KanbanComponent {
 
   protected toggleBulkSelection(rma: RmaResponse): void {
     if (this.bulkBusy() || this.boardUpdatingId() !== null || !this.canUpdateStatus()) return;
-    this.bulkSelectedIds.update((ids) => ids.includes(rma.id) ? ids.filter((id) => id !== rma.id) : [...ids, rma.id]);
+    this.bulkSelectedIds.update((ids) => (ids.includes(rma.id) ? ids.filter((id) => id !== rma.id) : [...ids, rma.id]));
   }
 
   protected selectVisibleRmas(): void {
@@ -318,10 +316,7 @@ export class KanbanComponent {
     const payload: KanbanViewRequest = {
       name: raw.name.trim(),
       defaultView: raw.defaultView,
-      filters:
-        mode === 'create'
-          ? toPersistedFilters(this.filtersForm.getRawValue())
-          : currentView!.filters,
+      filters: mode === 'create' ? toPersistedFilters(this.filtersForm.getRawValue()) : currentView!.filters,
     };
     const request =
       mode === 'create'
@@ -337,9 +332,7 @@ export class KanbanComponent {
         this.viewModalMode.set(null);
       },
       error: (error) => {
-        this.viewError.set(
-          extractHttpErrorMessage(error, 'Não foi possível salvar a visualização.'),
-        );
+        this.viewError.set(extractHttpErrorMessage(error, 'Não foi possível salvar a visualização.'));
       },
     });
   }
@@ -358,9 +351,7 @@ export class KanbanComponent {
       .subscribe({
         next: (updated) => this.syncSavedView(updated),
         error: (error) => {
-          this.viewError.set(
-            extractHttpErrorMessage(error, 'Não foi possível definir a visualização padrão.'),
-          );
+          this.viewError.set(extractHttpErrorMessage(error, 'Não foi possível definir a visualização padrão.'));
         },
       });
   }
@@ -382,9 +373,7 @@ export class KanbanComponent {
           this.clearFilters();
         },
         error: (error) => {
-          this.viewError.set(
-            extractHttpErrorMessage(error, 'Não foi possível excluir a visualização.'),
-          );
+          this.viewError.set(extractHttpErrorMessage(error, 'Não foi possível excluir a visualização.'));
         },
       });
   }
@@ -441,9 +430,11 @@ export class KanbanComponent {
 
   protected allowColumnDrop(event: DragEvent, status: RmaStatus): void {
     if (
-      !this.canUpdateStatus() || this.bulkBusy() ||
+      !this.canUpdateStatus() ||
+      this.bulkBusy() ||
       this.boardUpdatingId() !== null ||
-      this.draggedRmaId() === null
+      this.draggedRmaId() === null ||
+      !allowedTransitions(this.rmasSignal().find((r) => r.id === this.draggedRmaId())).some((o) => o.value === status)
     ) {
       return;
     }
@@ -472,7 +463,7 @@ export class KanbanComponent {
 
     const draggedId = this.draggedRmaId();
     const dragged = this.rmasSignal().find((item) => item.id === draggedId);
-    if (!dragged) {
+    if (!dragged || !allowedTransitions(dragged).some((o) => o.value === status)) {
       this.clearBoardDragState();
       return;
     }
@@ -510,6 +501,10 @@ export class KanbanComponent {
     }
 
     const raw = this.statusForm.getRawValue();
+    if (!allowedTransitions(target).some((o) => o.value === raw.status)) {
+      this.statusModalError.set('Esta passagem não está permitida. Atualize o RMA e confira as regras.');
+      return;
+    }
     if (raw.status === target.status) {
       this.statusModalError.set('Escolha uma fase diferente da atual.');
       return;
@@ -526,12 +521,14 @@ export class KanbanComponent {
     this.pageError.set('');
 
     forkJoin({
+      workflow: this.workflowService.published(),
       rmas: this.rmaService.list(),
       assignableUsers: this.catalogService.listAssignableUsers(),
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: ({ rmas, assignableUsers }) => {
+        next: ({ rmas, assignableUsers, workflow }) => {
+          this.workflowStatuses.set(workflow.definition.statuses);
           this.rmasSignal.set(rmas);
           this.assignableUsersSignal.set(assignableUsers);
           this.syncSelection(rmas);
@@ -552,9 +549,7 @@ export class KanbanComponent {
         }
       },
       error: (error) => {
-        this.viewError.set(
-          extractHttpErrorMessage(error, 'Não foi possível carregar as visualizações salvas.'),
-        );
+        this.viewError.set(extractHttpErrorMessage(error, 'Não foi possível carregar as visualizações salvas.'));
       },
     });
   }
@@ -597,7 +592,11 @@ export class KanbanComponent {
     this.statusModalError.set('');
 
     this.rmaService
-      .updateStatus(target.id, payload)
+      .updateStatus(target.id, {
+        ...payload,
+        expectedStatus: target.status,
+        expectedWorkflowVersion: target.workflowVersion,
+      })
       .pipe(finalize(() => this.boardUpdatingId.set(null)))
       .subscribe({
         next: (updated) => {
@@ -606,9 +605,7 @@ export class KanbanComponent {
           this.loadKanban();
         },
         error: (error) => {
-          this.statusModalError.set(
-            extractHttpErrorMessage(error, 'Não foi possível atualizar o status do RMA.'),
-          );
+          this.statusModalError.set(extractHttpErrorMessage(error, 'Não foi possível atualizar o status do RMA.'));
         },
       });
   }
@@ -641,12 +638,10 @@ export class KanbanComponent {
   }
 }
 
-const STATUS_SELECT_OPTIONS: ReadonlyArray<CustomSelectOption<RmaStatus>> = RMA_STATUS_FLOW.map(
-  (status) => ({
-    value: status,
-    label: RMA_STATUS_LABELS[status],
-  }),
-);
+const STATUS_SELECT_OPTIONS: ReadonlyArray<CustomSelectOption<RmaStatus>> = RMA_STATUS_FLOW.map((status) => ({
+  value: status,
+  label: RMA_STATUS_LABELS[status],
+}));
 
 const DEFAULT_KANBAN_FILTERS: KanbanFilterValues = {
   sla: 'all',
@@ -690,13 +685,10 @@ function filterKanbanRmas(rmas: RmaResponse[], filters: KanbanFilterValues, now:
     const matchesPriority = filters.priority === 'all' || rma.priority === filters.priority;
     const matchesStatus = filters.status === 'all' || rma.status === filters.status;
     const matchesWarranty =
-      filters.warranty === 'all' ||
-      rma.items.some((item) => item.warrantyStatus === filters.warranty);
+      filters.warranty === 'all' || rma.items.some((item) => item.warrantyStatus === filters.warranty);
     const matchesAssignee =
       filters.assignee === 'all' ||
-      (filters.assignee === 'unassigned'
-        ? rma.assigneeId === null
-        : rma.assigneeId === filters.assignee);
+      (filters.assignee === 'unassigned' ? rma.assigneeId === null : rma.assigneeId === filters.assignee);
     const matchesEntryDate = isWithinRange(rma.entryDate, filters.entryFrom, filters.entryTo);
     const updatedDate = businessDateInputValue(new Date(rma.updatedAt));
     const matchesUpdatedDate = isWithinRange(updatedDate, filters.updatedFrom, filters.updatedTo);
@@ -723,15 +715,9 @@ function rmaSearchText(rma: RmaResponse): string {
   ]);
 
   return normalizeSearch(
-    [
-      rma.code,
-      rma.clientName,
-      rma.productName,
-      rma.productSku,
-      rma.batchNumber,
-      rma.serialNumber,
-      ...itemValues,
-    ].join(' '),
+    [rma.code, rma.clientName, rma.productName, rma.productSku, rma.batchNumber, rma.serialNumber, ...itemValues].join(
+      ' ',
+    ),
   );
 }
 

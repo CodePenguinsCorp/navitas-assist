@@ -1,0 +1,166 @@
+<section class="operations">
+  <h3>Verificações e aprovações</h3>
+  @if (error()) {
+    <p class="alert-banner alert-banner--error" role="alert">
+      {{ error() }}
+    </p>
+  }
+  @if (message()) {
+    <p class="alert-banner alert-banner--success" role="status">{{ message() }}</p>
+  }
+  @if (needsRefresh()) {
+    <button class="button-secondary" [disabled]="busy()" (click)="refresh()">Atualizar verificações</button>
+  }
+  <details class="operation-section">
+    <summary>Passagens do fluxo</summary>
+    <ul>
+      @for (option of rma().transitionOptions ?? []; track option.status) {
+        <li>{{ option.label }}: {{ option.allowed ? 'Disponível' : (option.reason ?? 'Indisponível') }}</li>
+      } @empty {
+        <li>Nenhuma saída configurada para esta etapa.</li>
+      }
+    </ul>
+  </details>
+  <section class="operation-section">
+    <h4>Checklists do RMA</h4>
+    @if (canOperate()) {
+      <fieldset [disabled]="writesBlocked()">
+        <label class="field-group"
+          >Modelo ativo<app-custom-select
+            ariaLabel="Modelo para vincular ou reiniciar"
+            [options]="templateOptions()"
+            [(ngModel)]="templateId" /></label
+        ><button class="button-secondary" [disabled]="!templateId" (click)="start()">
+          Vincular / reiniciar checklist
+        </button>
+        <p>
+          Reiniciar cria outra execução e mantém as anteriores. A regra do fluxo consulta a execução mais recente de
+          cada modelo.
+        </p>
+      </fieldset>
+    }
+    @for (e of executions(); track e.id) {
+      <details [open]="isLatestExecution(e)">
+        <summary>
+          {{ e.templateName }} · v{{ e.templateVersion }} · {{ progress(e) }} ·
+          {{ e.completed ? 'Concluído' : 'Pendente' }}
+          {{ isLatestExecution(e) ? '(mais recente)' : '(execução anterior)' }}
+        </summary>
+        @for (item of e.items; track item.code) {
+          <article class="operation-item">
+            <strong
+              >{{ item.checked ? '✓' : '○' }} {{ item.label }}
+              {{ item.required ? '(obrigatório)' : '(opcional)' }}</strong
+            >
+            @if (item.note) {
+              <p>{{ item.note }} · {{ item.updatedBy }} · {{ dateLabel(item.updatedAt) }}</p>
+            }
+            @if (canOperate()) {
+              <div class="operation-form">
+                <label class="field-group" [for]="'note-' + e.id + '-' + item.code"
+                  >Nota da verificação<input
+                    [id]="'note-' + e.id + '-' + item.code"
+                    [(ngModel)]="itemNotes[key(e, item)]"
+                    [disabled]="writesBlocked()"
+                    maxlength="255" /></label
+                ><button
+                  class="button-secondary"
+                  [disabled]="writesBlocked() || !itemNotes[key(e, item)]?.trim()"
+                  (click)="updateItem(e, item)"
+                >
+                  {{ item.checked ? 'Desmarcar' : 'Marcar' }} {{ item.label }}
+                </button>
+              </div>
+            }
+          </article>
+        }
+        <details>
+          <summary>Histórico da execução ({{ e.history.length }})</summary>
+          <ul>
+            @for (h of e.history; track $index) {
+              <li>
+                {{ dateLabel(h.at) }} · {{ h.actor }} · {{ h.itemCode ?? 'Início' }}
+                {{ h.checked === null ? '' : h.checked ? 'marcado' : 'desmarcado' }} · {{ h.note }}
+              </li>
+            }
+          </ul>
+        </details>
+      </details>
+    } @empty {
+      <p>Nenhum checklist vinculado a este RMA.</p>
+    }
+  </section>
+  <section class="operation-section">
+    <h4>Aprovações internas</h4>
+    @if (canOperate()) {
+      <fieldset [disabled]="writesBlocked()">
+        <div class="operation-form">
+          <label class="field-group"
+            >Finalidade / código<input
+              [(ngModel)]="approvalCode"
+              maxlength="60"
+              placeholder="Ex.: LIBERACAO_REPARO" /></label
+          ><label class="field-group">Justificativa<input [(ngModel)]="justification" maxlength="255" /></label>
+        </div>
+        <p>Use o mesmo código de finalidade configurado na condição do fluxo.</p>
+        <button class="button-secondary" (click)="requestApproval()">Solicitar aprovação</button>
+      </fieldset>
+    }
+    @for (a of approvals(); track a.id) {
+      <article class="operation-item">
+        <strong
+          >{{ a.code }} ·
+          {{ a.status === 'PENDING' ? 'Pendente' : a.status === 'APPROVED' ? 'Aprovada' : 'Rejeitada' }}</strong
+        >
+        @if (!isLatest(a)) {
+          <span class="mini-chip">Substituída por nova solicitação</span>
+        }
+        <p>{{ a.justification }}</p>
+        <p>Solicitada por {{ a.requestedBy }} · {{ dateLabel(a.requestedAt) }}</p>
+        @if (a.decidedBy) {
+          <p>{{ a.decisionNote }} · {{ a.decidedBy }} · {{ dateLabel(a.decidedAt) }}</p>
+        }
+        @if (canDecide() && a.status === 'PENDING' && isLatest(a)) {
+          <label class="field-group"
+            >Nota da decisão<input [(ngModel)]="decisionNotes[a.id]" [disabled]="writesBlocked()" maxlength="255"
+          /></label>
+          <div class="operation-actions">
+            <button
+              class="button-primary"
+              [disabled]="writesBlocked() || !decisionNotes[a.id]?.trim()"
+              (click)="decide(a, 'APPROVED')"
+            >
+              Aprovar</button
+            ><button
+              class="button-secondary"
+              [disabled]="writesBlocked() || !decisionNotes[a.id]?.trim()"
+              (click)="decide(a, 'REJECTED')"
+            >
+              Rejeitar
+            </button>
+          </div>
+        }
+      </article>
+    } @empty {
+      <p>Nenhuma aprovação solicitada.</p>
+    }
+  </section>
+  <section class="operation-section">
+    <h4>RMA relacionado</h4>
+    <p>{{ rma().relatedRmaId ? 'RMA relacionado: #' + rma().relatedRmaId : 'Nenhum RMA relacionado.' }}</p>
+    @if (canOperate()) {
+      <fieldset [disabled]="writesBlocked()">
+        <div class="operation-form">
+          <label class="field-group"
+            >ID do outro RMA<input
+              type="number"
+              min="1"
+              [(ngModel)]="relatedId"
+              placeholder="Vazio para remover vínculo" /></label
+          ><label class="field-group">Nota do vínculo<input [(ngModel)]="relationNote" maxlength="255" /></label>
+        </div>
+        <button class="button-secondary" (click)="relate()">Salvar relacionamento</button>
+      </fieldset>
+    }
+  </section>
+</section>

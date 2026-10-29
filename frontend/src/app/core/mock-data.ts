@@ -8,14 +8,14 @@ import {
   RmaPriority,
   RmaStatus,
   UserRole,
-  WarrantyStatus
+  WarrantyStatus,
 } from './models';
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   ADMIN: 'Administrador',
   TECHNICIAN: 'Técnico',
   SERVICE_DESK: 'Atendimento',
-  VIEWER: 'Consulta'
+  VIEWER: 'Consulta',
 };
 
 export const ROLE_OPTIONS: UserRole[] = ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER'];
@@ -29,7 +29,7 @@ export const RMA_STATUS_FLOW: RmaStatus[] = [
   'IN_TESTS',
   'COMPLETED',
   'RETURNED',
-  'IRREPARABLE'
+  'IRREPARABLE',
 ];
 
 export const CLOSED_RMA_STATUSES: RmaStatus[] = ['COMPLETED', 'RETURNED', 'IRREPARABLE'];
@@ -43,19 +43,19 @@ export const RMA_STATUS_LABELS: Record<RmaStatus, string> = {
   IN_TESTS: 'Testes',
   COMPLETED: 'Concluído',
   RETURNED: 'Devolvido',
-  IRREPARABLE: 'Sem conserto'
+  IRREPARABLE: 'Sem conserto',
 };
 
 export const RMA_PRIORITY_LABELS: Record<RmaPriority, string> = {
   HIGH: 'Alta',
   MEDIUM: 'Média',
-  LOW: 'Baixa'
+  LOW: 'Baixa',
 };
 
 export const WARRANTY_STATUS_LABELS: Record<WarrantyStatus, string> = {
   [WarrantyStatus.PENDING]: 'Pendente',
   [WarrantyStatus.IN_WARRANTY]: 'Em garantia',
-  [WarrantyStatus.OUT_OF_WARRANTY]: 'Fora de garantia'
+  [WarrantyStatus.OUT_OF_WARRANTY]: 'Fora de garantia',
 };
 
 export const FAILURE_TYPE_OPTIONS: FailureType[] = [
@@ -66,7 +66,7 @@ export const FAILURE_TYPE_OPTIONS: FailureType[] = [
   'DISPLAY',
   'FIRMWARE',
   'MECHANICAL',
-  'OTHER'
+  'OTHER',
 ];
 
 export const FAILURE_TYPE_LABELS: Record<FailureType, string> = {
@@ -77,7 +77,7 @@ export const FAILURE_TYPE_LABELS: Record<FailureType, string> = {
   DISPLAY: 'Display',
   FIRMWARE: 'Firmware',
   MECHANICAL: 'Mecânica',
-  OTHER: 'Outro'
+  OTHER: 'Outro',
 };
 
 export const FAILURE_CAUSE_OPTIONS: FailureCause[] = [
@@ -87,7 +87,7 @@ export const FAILURE_CAUSE_OPTIONS: FailureCause[] = [
   'OVERLOAD',
   'ESD',
   'INCORRECT_USAGE',
-  'OTHER'
+  'OTHER',
 ];
 
 export const FAILURE_CAUSE_LABELS: Record<FailureCause, string> = {
@@ -97,7 +97,7 @@ export const FAILURE_CAUSE_LABELS: Record<FailureCause, string> = {
   OVERLOAD: 'Sobrecarga',
   ESD: 'ESD',
   INCORRECT_USAGE: 'Uso incorreto',
-  OTHER: 'Outro'
+  OTHER: 'Outro',
 };
 
 export const NAV_GROUPS: NavGroup[] = [
@@ -107,39 +107,41 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         label: 'Dashboard',
         route: '/dashboard',
-        roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
+        roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER'],
       },
       {
         label: 'RMAs',
         route: '/rmas',
-        roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
+        roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER'],
       },
       {
         label: 'Kanban',
         route: '/kanban',
-        roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
-      }
-    ]
+        roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER'],
+      },
+    ],
   },
   {
     label: 'Cadastros',
     items: [
+      { label: 'Fluxos de RMA', route: '/workflows', roles: ['ADMIN'] },
+      { label: 'Modelos de checklist', route: '/checklists', roles: ['ADMIN'] },
       {
         label: 'Clientes',
         route: '/clientes',
-        roles: ['ADMIN', 'SERVICE_DESK']
+        roles: ['ADMIN', 'SERVICE_DESK'],
       },
       {
         label: 'Produtos',
         route: '/produtos',
-        roles: ['ADMIN', 'SERVICE_DESK']
+        roles: ['ADMIN', 'SERVICE_DESK'],
       },
       {
         label: 'Usuários',
         route: '/usuarios',
-        roles: ['ADMIN']
-      }
-    ]
+        roles: ['ADMIN'],
+      },
+    ],
   },
   {
     label: 'Relatórios',
@@ -147,10 +149,10 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         label: 'Relatórios',
         route: '/relatorios',
-        roles: ['ADMIN', 'TECHNICIAN', 'VIEWER']
-      }
-    ]
-  }
+        roles: ['ADMIN', 'TECHNICIAN', 'VIEWER'],
+      },
+    ],
+  },
 ];
 
 export const MODULE_CARDS: ModuleCard[] = [
@@ -159,43 +161,43 @@ export const MODULE_CARDS: ModuleCard[] = [
     summary: 'Fluxo operacional.',
     route: '/rmas',
     tag: 'Operação',
-    roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
+    roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER'],
   },
   {
     title: 'Kanban',
     summary: 'Quadro por etapa.',
     route: '/kanban',
     tag: 'Operação',
-    roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
+    roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER'],
   },
   {
     title: 'Clientes',
     summary: 'Base comercial.',
     route: '/clientes',
     tag: 'Cadastro',
-    roles: ['ADMIN', 'SERVICE_DESK']
+    roles: ['ADMIN', 'SERVICE_DESK'],
   },
   {
     title: 'Produtos',
     summary: 'Catálogo técnico.',
     route: '/produtos',
     tag: 'Cadastro',
-    roles: ['ADMIN', 'SERVICE_DESK']
+    roles: ['ADMIN', 'SERVICE_DESK'],
   },
   {
     title: 'Usuários',
     summary: 'Perfis e acesso.',
     route: '/usuarios',
     tag: 'Administração',
-    roles: ['ADMIN']
+    roles: ['ADMIN'],
   },
   {
     title: 'Relatórios',
     summary: 'Laudos e auditoria.',
     route: '/relatorios',
     tag: 'Consulta',
-    roles: ['ADMIN', 'TECHNICIAN', 'VIEWER']
-  }
+    roles: ['ADMIN', 'TECHNICIAN', 'VIEWER'],
+  },
 ];
 
 export const REPORT_CARDS: ReportCard[] = [
@@ -203,26 +205,26 @@ export const REPORT_CARDS: ReportCard[] = [
     title: 'Laudo técnico',
     description: 'Diagnóstico e parecer final.',
     frequency: 'Sob demanda',
-    format: 'PDF'
+    format: 'PDF',
   },
   {
     title: 'Aging de RMAs',
     description: 'Fila e tempo por etapa.',
     frequency: 'Diário',
-    format: 'Indicador'
+    format: 'Indicador',
   },
   {
     title: 'Garantia',
     description: 'Prazos e situação por produto.',
     frequency: 'Semanal',
-    format: 'Auditoria'
+    format: 'Auditoria',
   },
   {
     title: 'Devoluções',
     description: 'Concluídos e enviados.',
     frequency: 'Diário',
-    format: 'Controle'
-  }
+    format: 'Controle',
+  },
 ];
 
 export const SECURITY_POLICIES = [
@@ -230,24 +232,24 @@ export const SECURITY_POLICIES = [
   'Validação de campos obrigatórios.',
   'Rastreabilidade de alterações.',
   'Controle de anexos.',
-  'Acesso seguro por HTTPS.'
+  'Acesso seguro por HTTPS.',
 ];
 
 export const ACCESS_MATRIX: AccessMatrixItem[] = [
   {
     role: 'ADMIN',
-    access: 'Acesso total.'
+    access: 'Acesso total.',
   },
   {
     role: 'TECHNICIAN',
-    access: 'Diagnóstico e laudos.'
+    access: 'Diagnóstico e laudos.',
   },
   {
     role: 'SERVICE_DESK',
-    access: 'Abertura e acompanhamento.'
+    access: 'Abertura e acompanhamento.',
   },
   {
     role: 'VIEWER',
-    access: 'Consulta e indicadores.'
-  }
+    access: 'Consulta e indicadores.',
+  },
 ];

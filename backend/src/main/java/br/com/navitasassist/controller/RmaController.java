@@ -35,7 +35,7 @@ public class RmaController {
     @GetMapping
     public List<RmaResponse> search(
         @RequestParam(required = false) String query,
-        @RequestParam(required = false) RmaStatus status
+        @RequestParam(required = false) String status
     ) {
         return rmaService.search(query, status);
     }
@@ -77,6 +77,11 @@ public class RmaController {
     @PatchMapping("/{id}/bulk-status")
     public RmaResponse updateStatusInBulk(@PathVariable Long id, @Valid @RequestBody RmaBulkStatusUpdateRequest request) {
         return rmaService.updateStatusInBulk(id, request);
+    }
+
+    @PatchMapping("/{id}/related-rma")
+    public RmaResponse updateRelatedRma(@PathVariable Long id, @Valid @RequestBody br.com.navitasassist.rma.RelatedRmaRequest request) {
+        return rmaService.updateRelatedRma(id, request);
     }
 
     @PatchMapping("/{id}/assignee")

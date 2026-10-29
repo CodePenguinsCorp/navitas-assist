@@ -3,7 +3,7 @@ import {
   FAILURE_TYPE_LABELS,
   RMA_PRIORITY_LABELS,
   RMA_STATUS_LABELS,
-  WARRANTY_STATUS_LABELS
+  WARRANTY_STATUS_LABELS,
 } from '../mock-data';
 import {
   FailureCause,
@@ -13,12 +13,12 @@ import {
   RmaResponse,
   RmaStatus,
   RmaStatusHistoryResponse,
-  WarrantyStatus
+  WarrantyStatus,
 } from '../models';
 import { formatDateOnly } from './date';
 
 export function statusLabel(status: RmaStatus): string {
-  return RMA_STATUS_LABELS[status];
+  return RMA_STATUS_LABELS[status] ?? status;
 }
 
 export function priorityLabel(priority: RmaPriority): string {
@@ -70,7 +70,7 @@ export function formatDateTime(value: string | null): string {
 
   return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'short',
-    timeStyle: 'short'
+    timeStyle: 'short',
   }).format(new Date(value));
 }
 
@@ -103,15 +103,11 @@ export function productSummary(rma: Pick<RmaResponse, 'items' | 'productName'>):
   return additionalItems > 0 ? `${firstProductName} + ${additionalItems} item(ns)` : firstProductName;
 }
 
-export function ownerLabel(
-  rma: Pick<RmaResponse, 'assigneeName'>
-): string {
+export function ownerLabel(rma: Pick<RmaResponse, 'assigneeName'>): string {
   return rma.assigneeName?.trim() || 'Sem responsável';
 }
 
-export function latestStatusUpdate(
-  history: RmaStatusHistoryResponse[]
-): RmaStatusHistoryResponse | null {
+export function latestStatusUpdate(history: RmaStatusHistoryResponse[]): RmaStatusHistoryResponse | null {
   if (history.length === 0) {
     return null;
   }

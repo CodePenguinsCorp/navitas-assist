@@ -1,0 +1,61 @@
+:host {
+  display: block;
+}
+.operations {
+  margin-top: 1.2rem;
+}
+.operation-section {
+  border-top: 1px solid var(--line);
+  padding: 1rem 0;
+}
+.operation-item {
+  padding: 0.9rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.operation-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  align-items: end;
+}
+.operation-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+}
+label {
+  display: grid;
+  gap: 0.4rem;
+}
+input {
+  width: 100%;
+}
+fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+fieldset > button {
+  margin-top: 0.7rem;
+}
+details {
+  padding: 0.8rem 0;
+}
+summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+p,
+li {
+  color: var(--muted);
+  line-height: 1.5;
+}
+li {
+  margin: 0.5rem 0;
+}
+@media (max-width: 650px) {
+  .operation-form {
+    grid-template-columns: 1fr;
+  }
+}

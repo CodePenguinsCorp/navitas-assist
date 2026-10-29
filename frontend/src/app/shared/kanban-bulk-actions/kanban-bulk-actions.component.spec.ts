@@ -6,20 +6,51 @@ import { BulkRmaResult, KanbanBulkActionsComponent } from './kanban-bulk-actions
 
 describe('KanbanBulkActionsComponent', () => {
   let fixture: ComponentFixture<KanbanBulkActionsComponent>;
-  let service: { updateStatusInBulk: ReturnType<typeof vi.fn>; updatePriority: ReturnType<typeof vi.fn>; updateAssignee: ReturnType<typeof vi.fn>; getById: ReturnType<typeof vi.fn> };
-  const rmas = [{ id: 1, code: 'RMA-1', status: 'RECEIVED' }, { id: 2, code: 'RMA-2', status: 'RECEIVED' }] as RmaResponse[];
-  const button = (text: string) => [...fixture.nativeElement.querySelectorAll('button')].find((element) => (element as HTMLButtonElement).textContent?.includes(text)) as HTMLButtonElement;
-  const submit = () => fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  let service: {
+    updateStatusInBulk: ReturnType<typeof vi.fn>;
+    updatePriority: ReturnType<typeof vi.fn>;
+    updateAssignee: ReturnType<typeof vi.fn>;
+    getById: ReturnType<typeof vi.fn>;
+  };
+  const transitionOptions = ['RECEIVED', 'TRIAGE'].map((status) => ({
+    status,
+    label: status,
+    allowed: true,
+    reason: null,
+  }));
+  const rmas = [
+    { id: 1, code: 'RMA-1', status: 'RECEIVED', workflowVersion: 1, transitionOptions },
+    { id: 2, code: 'RMA-2', status: 'RECEIVED', workflowVersion: 1, transitionOptions },
+  ] as RmaResponse[];
+  const button = (text: string) =>
+    [...fixture.nativeElement.querySelectorAll('button')].find((element) =>
+      (element as HTMLButtonElement).textContent?.includes(text),
+    ) as HTMLButtonElement;
+  const submit = () =>
+    fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
   beforeEach(async () => {
     service = { updateStatusInBulk: vi.fn(), updatePriority: vi.fn(), updateAssignee: vi.fn(), getById: vi.fn() };
-    await TestBed.configureTestingModule({ imports: [KanbanBulkActionsComponent], providers: [{ provide: RmaService, useValue: service }] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [KanbanBulkActionsComponent],
+      providers: [{ provide: RmaService, useValue: service }],
+    }).compileComponents();
     fixture = TestBed.createComponent(KanbanBulkActionsComponent);
     fixture.componentRef.setInput('selection', rmas);
     fixture.componentRef.setInput('canUpdateStatus', true);
     fixture.componentRef.setInput('canManage', true);
     fixture.componentRef.setInput('assigneeOptions', [{ value: null, label: 'Sem responsável' }]);
     fixture.detectChanges();
+  });
+
+  it('offers only the intersection of allowed per-card destinations', () => {
+    fixture.componentRef.setInput('selection', [
+      { ...rmas[0], transitionOptions: [{ status: 'CUSTOM', label: 'Custom', allowed: true, reason: null }] },
+      { ...rmas[1], transitionOptions: [] },
+    ]);
+    fixture.detectChanges();
+    button('Alterar status').click();
+    expect(fixture.componentInstance['statusOptions']()).toEqual([]);
   });
 
   it('requires confirmation and cancels without sending requests', () => {
@@ -36,23 +67,38 @@ describe('KanbanBulkActionsComponent', () => {
   });
 
   it('allows moving mixed cards backward and reopening a returned RMA', () => {
-    fixture.componentRef.setInput('selection', [{ ...rmas[0], status: 'TRIAGE' }, { ...rmas[1], status: 'RETURNED' }]);
+    fixture.componentRef.setInput('selection', [
+      { ...rmas[0], status: 'TRIAGE' },
+      { ...rmas[1], status: 'RETURNED' },
+    ]);
     fixture.detectChanges();
     service.updateStatusInBulk.mockImplementation((id: number) => of({ ...rmas[id - 1], status: 'RECEIVED' }));
     button('Alterar status').click();
-    expect(fixture.componentInstance['statusOptions'].map((option) => option.value)).toContain('RECEIVED');
+    expect(fixture.componentInstance['statusOptions']().map((option) => option.value)).toContain('RECEIVED');
     fixture.componentInstance['form'].controls.status.setValue('RECEIVED');
     fixture.detectChanges();
     expect(button('Aplicar a').disabled).toBe(false);
     submit();
-    expect(service.updateStatusInBulk).toHaveBeenCalledWith(1, { status: 'RECEIVED', note: null, expectedStatus: 'TRIAGE' });
-    expect(service.updateStatusInBulk).toHaveBeenCalledWith(2, { status: 'RECEIVED', note: null, expectedStatus: 'RETURNED' });
+    expect(service.updateStatusInBulk).toHaveBeenCalledWith(1, {
+      status: 'RECEIVED',
+      note: null,
+      expectedStatus: 'TRIAGE',
+      expectedWorkflowVersion: 1,
+    });
+    expect(service.updateStatusInBulk).toHaveBeenCalledWith(2, {
+      status: 'RECEIVED',
+      note: null,
+      expectedStatus: 'RETURNED',
+      expectedWorkflowVersion: 1,
+    });
   });
 
   it('reports partial success per RMA and uses the confirmed selection snapshot', () => {
-    service.updateStatusInBulk.mockImplementation((id: number) => id === 1 ? of({ ...rmas[0], status: 'TRIAGE' }) : throwError(() => ({ error: { message: 'Etapa inválida' } })));
+    service.updateStatusInBulk.mockImplementation((id: number) =>
+      id === 1 ? of({ ...rmas[0], status: 'TRIAGE' }) : throwError(() => ({ error: { message: 'Etapa inválida' } })),
+    );
     let results: BulkRmaResult[] = [];
-    fixture.componentInstance.applied.subscribe((value) => results = value);
+    fixture.componentInstance.applied.subscribe((value) => (results = value));
     button('Alterar status').click();
     fixture.detectChanges();
     fixture.componentInstance['form'].controls.status.setValue('TRIAGE');
@@ -60,25 +106,38 @@ describe('KanbanBulkActionsComponent', () => {
     submit();
     fixture.detectChanges();
     expect(service.updateStatusInBulk).toHaveBeenCalledTimes(2);
-    expect(service.updateStatusInBulk).toHaveBeenCalledWith(1, { status: 'TRIAGE', note: null, expectedStatus: 'RECEIVED' });
-    expect(results.map((result) => [result.id, result.success])).toEqual([[1, true], [2, false]]);
+    expect(service.updateStatusInBulk).toHaveBeenCalledWith(1, {
+      status: 'TRIAGE',
+      note: null,
+      expectedStatus: 'RECEIVED',
+      expectedWorkflowVersion: 1,
+    });
+    expect(results.map((result) => [result.id, result.success])).toEqual([
+      [1, true],
+      [2, false],
+    ]);
     expect(fixture.nativeElement.textContent).toContain('1 atualizado(s); 1 com falha');
     expect(fixture.nativeElement.textContent).toContain('Etapa inválida');
   });
 
   it('refreshes only a card whose status changed after selection', () => {
-    service.updateStatusInBulk.mockImplementation((id: number) => id === 1
-      ? throwError(() => ({ error: { message: 'RMA status changed. Refresh the item before trying again.' } }))
-      : of({ ...rmas[1], status: 'TRIAGE' }));
+    service.updateStatusInBulk.mockImplementation((id: number) =>
+      id === 1
+        ? throwError(() => ({ error: { message: 'RMA status changed. Refresh the item before trying again.' } }))
+        : of({ ...rmas[1], status: 'TRIAGE' }),
+    );
     service.getById.mockReturnValue(of({ ...rmas[0], status: 'IN_DIAGNOSIS' }));
     let results: BulkRmaResult[] = [];
-    fixture.componentInstance.applied.subscribe((value) => results = value);
+    fixture.componentInstance.applied.subscribe((value) => (results = value));
     button('Alterar status').click();
     fixture.detectChanges();
     fixture.componentInstance['form'].controls.status.setValue('TRIAGE');
     submit();
     expect(service.getById).toHaveBeenCalledExactlyOnceWith(1);
-    expect(results.map((result) => [result.success, result.rma?.status])).toEqual([[false, 'IN_DIAGNOSIS'], [true, 'TRIAGE']]);
+    expect(results.map((result) => [result.success, result.rma?.status])).toEqual([
+      [false, 'IN_DIAGNOSIS'],
+      [true, 'TRIAGE'],
+    ]);
   });
 
   it('prevents double submission while requests are pending', () => {
@@ -98,7 +157,10 @@ describe('KanbanBulkActionsComponent', () => {
 
   it('limits simultaneous requests and continues after an item fails', () => {
     const pending = Array.from({ length: 6 }, () => new Subject<RmaResponse>());
-    fixture.componentRef.setInput('selection', pending.map((_, i) => ({ id: i, code: `RMA-${i}`, status: 'RECEIVED' })));
+    fixture.componentRef.setInput(
+      'selection',
+      pending.map((_, i) => ({ id: i, code: `RMA-${i}`, status: 'RECEIVED' })),
+    );
     fixture.detectChanges();
     service.updatePriority.mockImplementation((id: number) => pending[id]);
     button('Alterar prioridade').click();
@@ -107,7 +169,10 @@ describe('KanbanBulkActionsComponent', () => {
     expect(service.updatePriority).toHaveBeenCalledTimes(4);
     pending[0].error({ error: { message: 'Falha' } });
     expect(service.updatePriority).toHaveBeenCalledTimes(5);
-    for (let i = 1; i < 6; i++) { pending[i].next({ id: i } as RmaResponse); pending[i].complete(); }
+    for (let i = 1; i < 6; i++) {
+      pending[i].next({ id: i } as RmaResponse);
+      pending[i].complete();
+    }
     fixture.detectChanges();
     expect(service.updatePriority).toHaveBeenCalledTimes(6);
     expect(fixture.nativeElement.textContent).toContain('5 atualizado(s); 1 com falha');

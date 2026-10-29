@@ -32,9 +32,17 @@ public class RmaStatusHistory {
     @JoinColumn(name = "rma_id", nullable = false)
     private RmaRecord rma;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private RmaStatus status;
+    @Column(nullable = false, length = 60)
+    private String status;
+
+    @Column(length = 120)
+    private String statusLabel;
+
+    @Column(length = 120)
+    private String workflowName;
+
+    @Column
+    private Long workflowVersion;
 
     @Column(nullable = false, length = 120)
     private String changedBy;

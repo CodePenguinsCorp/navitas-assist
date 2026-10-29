@@ -1,11 +1,5 @@
 package br.com.navitasassist.service;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.List;
-import java.util.Objects;
-
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
@@ -15,23 +9,30 @@ import br.com.navitasassist.item.ItemIdentification;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.CreateRmaRequest;
 import br.com.navitasassist.rma.RmaAssigneeUpdateRequest;
-import br.com.navitasassist.rma.RmaBulkStatusUpdateRequest;
 import br.com.navitasassist.rma.RmaAssignmentHistory;
+import br.com.navitasassist.rma.RmaBulkStatusUpdateRequest;
 import br.com.navitasassist.rma.RmaItem;
 import br.com.navitasassist.rma.RmaItemRequest;
 import br.com.navitasassist.rma.RmaPriority;
 import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaResponse;
-import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusHistory;
 import br.com.navitasassist.rma.RmaStatusUpdateRequest;
 import br.com.navitasassist.rma.UpdateRmaRequest;
 import br.com.navitasassist.user.UserAccount;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -40,6 +41,10 @@ public class RmaService {
 
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
 
+    private final WorkflowService workflowService;
+    private final WorkflowRuleEvaluator workflowRules;
+    private final jakarta.persistence.EntityManager entityManager;
+
     private final RmaRecordRepository rmaRecordRepository;
     private final RmaSlaService rmaSlaService;
     private final ClientService clientService;
@@ -47,8 +52,10 @@ public class RmaService {
     private final UserAccountService userAccountService;
 
     @Transactional(readOnly = true)
-    public List<RmaResponse> search(String query, RmaStatus status) {
-        return rmaRecordRepository.search(trimToNull(query), status).stream().map(this::toResponse).toList();
+    public List<RmaResponse> search(String query, String status) {
+        return rmaRecordRepository.search(trimToNull(query), status).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -58,8 +65,11 @@ public class RmaService {
 
     @Transactional(readOnly = true)
     public RmaResponse getByCode(String code) {
-        return toResponse(rmaRecordRepository.findByCodeIgnoreCase(code)
-            .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + code)));
+        return toResponse(
+                rmaRecordRepository
+                        .findByCodeIgnoreCase(code)
+                        .orElseThrow(
+                                () -> new ResourceNotFoundException("RMA not found: " + code)));
     }
 
     @Transactional(readOnly = true)
@@ -68,53 +78,53 @@ public class RmaService {
         String normalizedSerial = trimToNull(serialNumber);
 
         if (normalizedBatch == null && normalizedSerial == null) {
-            throw new BusinessException("Provide a batch number or a serial number to load history.");
+            throw new BusinessException(
+                    "Provide a batch number or a serial number to load history.");
         }
 
-        return rmaRecordRepository.findHistory(normalizedBatch, normalizedSerial)
-            .stream()
-            .map(this::toResponse)
-            .toList();
+        return rmaRecordRepository.findHistory(normalizedBatch, normalizedSerial).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     public RmaResponse create(CreateRmaRequest request) {
+        var workflow = workflowService.lockPublished();
         Client client = clientService.getEntityById(request.clientId());
         List<RmaItem> items = buildItems(request.items());
 
         RmaRecord rma = new RmaRecord();
         rma.setCode(generateNextCode());
         rma.setClient(client);
-        rma.setStatus(RmaStatus.RECEIVED);
+        rma.setStatus(workflow.definition().initialStatus());
         rma.setPriority(defaultPriority(request.priority()));
         rma.setReceivedBy(currentUsername());
 
         rma.replaceItems(items);
         syncLegacyItem(rma);
         applyCommonFields(
-            rma,
-            request.purchaseDate(),
-            request.purchaseDateUnknown(),
-            request.entryDate(),
-            request.invoiceNumber(),
-            request.reportedFailure(),
-            request.receivedAccessories(),
-            request.physicalCondition(),
-            request.repairSummary(),
-            request.replacedPartsSummary(),
-            request.testSummary(),
-            null,
-            null,
-            null
-        );
+                rma,
+                request.purchaseDate(),
+                request.purchaseDateUnknown(),
+                request.entryDate(),
+                request.invoiceNumber(),
+                request.reportedFailure(),
+                request.receivedAccessories(),
+                request.physicalCondition(),
+                request.repairSummary(),
+                request.replacedPartsSummary(),
+                request.testSummary(),
+                null,
+                null,
+                null);
         validateMandatoryFields(rma);
         validateDates(rma);
-        addStatusHistory(rma, RmaStatus.RECEIVED, "RMA created");
+        addStatusHistory(rma, rma.getStatus(), "RMA created");
 
         return toResponse(rmaRecordRepository.save(rma));
     }
 
     public RmaResponse update(Long id, UpdateRmaRequest request) {
-        RmaRecord rma = getEntityById(id);
+        RmaRecord rma = getLockedEntity(id);
 
         if (request.clientId() != null) {
             rma.setClient(clientService.getEntityById(request.clientId()));
@@ -124,26 +134,28 @@ public class RmaService {
             syncLegacyItem(rma);
         }
         if (request.priority() != null && request.priority() != rma.getPriority()) {
-            addStatusHistory(rma, rma.getStatus(), "Priority changed from " + rma.getPriority() + " to " + request.priority());
+            addStatusHistory(
+                    rma,
+                    rma.getStatus(),
+                    "Priority changed from " + rma.getPriority() + " to " + request.priority());
             rma.setPriority(request.priority());
         }
 
         applyCommonFields(
-            rma,
-            request.purchaseDate(),
-            request.purchaseDateUnknown(),
-            request.entryDate(),
-            request.invoiceNumber(),
-            request.reportedFailure(),
-            request.receivedAccessories(),
-            request.physicalCondition(),
-            request.repairSummary(),
-            request.replacedPartsSummary(),
-            request.testSummary(),
-            request.shippedAt(),
-            request.carrier(),
-            request.trackingCode()
-        );
+                rma,
+                request.purchaseDate(),
+                request.purchaseDateUnknown(),
+                request.entryDate(),
+                request.invoiceNumber(),
+                request.reportedFailure(),
+                request.receivedAccessories(),
+                request.physicalCondition(),
+                request.repairSummary(),
+                request.replacedPartsSummary(),
+                request.testSummary(),
+                request.shippedAt(),
+                request.carrier(),
+                request.trackingCode());
 
         validateMandatoryFields(rma);
         validateDates(rma);
@@ -152,42 +164,103 @@ public class RmaService {
     }
 
     public RmaResponse updateStatus(Long id, RmaStatusUpdateRequest request) {
-        return applyStatusChange(getEntityById(id), request);
+        var workflow = workflowService.lockPublished();
+        return applyStatusChange(getLockedEntity(id), request, workflow);
     }
 
     public RmaResponse updateStatusInBulk(Long id, RmaBulkStatusUpdateRequest request) {
-        RmaRecord rma = rmaRecordRepository.findByIdForUpdate(id)
-            .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
-        if (rma.getStatus() != request.expectedStatus()) {
-            throw new BusinessException("RMA status changed. Refresh the item before trying again.");
-        }
-        return applyStatusChange(rma, new RmaStatusUpdateRequest(request.status(), request.note()));
+        var workflow = workflowService.lockPublished();
+        return applyStatusChange(
+                getLockedEntity(id),
+                new RmaStatusUpdateRequest(
+                        request.status(),
+                        request.note(),
+                        request.expectedStatus(),
+                        request.expectedWorkflowVersion()),
+                workflow);
     }
 
-    private RmaResponse applyStatusChange(RmaRecord rma, RmaStatusUpdateRequest request) {
+    private RmaResponse applyStatusChange(
+            RmaRecord rma,
+            RmaStatusUpdateRequest request,
+            br.com.navitasassist.workflow.WorkflowDocument.Published workflow) {
+        if (request.expectedWorkflowVersion() != null
+                && request.expectedWorkflowVersion() != workflow.version()) {
+            throw new BusinessException("Workflow version changed. Refresh before trying again.");
+        }
+        if (request.expectedStatus() != null && !request.expectedStatus().equals(rma.getStatus())) {
+            throw new BusinessException(
+                    "RMA status changed. Refresh the item before trying again.");
+        }
         boolean changed = !Objects.equals(rma.getStatus(), request.status());
-
         if (changed) {
+            var transition = workflowRules.validate(rma, request.status(), workflow);
             rma.setStatus(request.status());
-        }
-        if (changed || trimToNull(request.note()) != null) {
             addStatusHistory(rma, request.status(), request.note());
+            for (var action : transition.actions()) {
+                switch (action.type()) {
+                    case ADD_NOTE -> addStatusHistory(rma, rma.getStatus(), action.value());
+                    case SET_PRIORITY -> {
+                        RmaPriority priority = RmaPriority.valueOf(action.value());
+                        addStatusHistory(
+                                rma,
+                                rma.getStatus(),
+                                "Priority changed from " + rma.getPriority() + " to " + priority);
+                        rma.setPriority(priority);
+                    }
+                    case CLEAR_ASSIGNEE -> {
+                        if (rma.getAssignee() != null) {
+                            addAssignmentHistory(rma, rma.getAssignee(), null);
+                            rma.setAssignee(null);
+                        }
+                    }
+                }
+            }
+        } else if (trimToNull(request.note()) != null) {
+            addStatusHistory(rma, rma.getStatus(), request.note());
         }
-
         return toResponse(rmaRecordRepository.save(rma));
     }
 
+    public RmaResponse updateRelatedRma(
+            Long id, br.com.navitasassist.rma.RelatedRmaRequest request) {
+        RmaRecord rma = getLockedEntity(id);
+        if (request.expectedUpdatedAt() != null
+                && !request.expectedUpdatedAt().equals(rma.getUpdatedAt())) {
+            throw new BusinessException("RMA changed. Refresh before trying again.");
+        }
+        if (Objects.equals(id, request.relatedRmaId()))
+            throw new BusinessException("RMA cannot be related to itself.");
+        if (request.relatedRmaId() != null) getEntityById(request.relatedRmaId());
+        Long previous = rma.getRelatedRmaId();
+        rma.setRelatedRmaId(request.relatedRmaId());
+        addStatusHistory(rma, rma.getStatus(), request.note());
+        addStatusHistory(
+                rma,
+                rma.getStatus(),
+                "Related RMA changed from " + previous + " to " + request.relatedRmaId());
+        // Updating only child history would leave the RMA timestamp unchanged.
+        rma.setUpdatedAt(Instant.now());
+        return toResponse(rmaRecordRepository.save(rma));
+    }
+
+    private RmaRecord getLockedEntity(Long id) {
+        return rmaRecordRepository
+                .findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
+    }
+
     public RmaResponse updateAssignee(Long id, RmaAssigneeUpdateRequest request) {
-        RmaRecord rma = getEntityById(id);
+        RmaRecord rma = getLockedEntity(id);
         UserAccount previousAssignee = rma.getAssignee();
-        UserAccount newAssignee = request.assigneeId() == null
-            ? null
-            : userAccountService.getAssignableTechnicianById(request.assigneeId());
+        UserAccount newAssignee =
+                request.assigneeId() == null
+                        ? null
+                        : userAccountService.getAssignableTechnicianById(request.assigneeId());
 
         if (Objects.equals(
-            previousAssignee == null ? null : previousAssignee.getId(),
-            newAssignee == null ? null : newAssignee.getId()
-        )) {
+                previousAssignee == null ? null : previousAssignee.getId(),
+                newAssignee == null ? null : newAssignee.getId())) {
             return toResponse(rma);
         }
 
@@ -197,7 +270,7 @@ public class RmaService {
     }
 
     public RmaResponse upsertDiagnosis(Long id, DiagnosisRequest request) {
-        RmaRecord rma = getEntityById(id);
+        RmaRecord rma = getLockedEntity(id);
         Diagnosis diagnosis = rma.getDiagnosis();
 
         if (diagnosis == null) {
@@ -217,8 +290,9 @@ public class RmaService {
 
     @Transactional(readOnly = true)
     public RmaRecord getEntityById(Long id) {
-        return rmaRecordRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
+        return rmaRecordRepository
+                .findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
     }
 
     private List<RmaItem> buildItems(List<RmaItemRequest> requests) {
@@ -229,51 +303,62 @@ public class RmaService {
             throw new BusinessException("Each RMA item must be provided.");
         }
 
-        return requests.stream().map(request -> {
-            RmaItem item = new RmaItem();
-            item.setProduct(productService.getEntityById(request.productId()));
-            item.setWarrantyMonths(item.getProduct().getDefaultWarrantyMonths());
-            applyTrackableFields(item.getItemIdentification(), request.batchNumber(), request.serialNumber(), request.manufacturedAt());
-            if (item.getItemIdentification().isEmpty()) {
-                throw new BusinessException("Each product must have at least a batch number or serial number.");
-            }
-            return item;
-        }).toList();
+        return requests.stream()
+                .map(
+                        request -> {
+                            RmaItem item = new RmaItem();
+                            item.setProduct(productService.getEntityById(request.productId()));
+                            item.setWarrantyMonths(item.getProduct().getDefaultWarrantyMonths());
+                            applyTrackableFields(
+                                    item.getItemIdentification(),
+                                    request.batchNumber(),
+                                    request.serialNumber(),
+                                    request.manufacturedAt());
+                            if (item.getItemIdentification().isEmpty()) {
+                                throw new BusinessException(
+                                        "Each product must have at least a batch number or serial"
+                                            + " number.");
+                            }
+                            return item;
+                        })
+                .toList();
     }
 
     private void syncLegacyItem(RmaRecord rma) {
         RmaItem firstItem = rma.getItems().get(0);
         rma.setProduct(firstItem.getProduct());
         applyTrackableFields(
-            rma.getItemIdentification(),
-            firstItem.getItemIdentification().getBatchNumber(),
-            firstItem.getItemIdentification().getSerialNumber(),
-            firstItem.getItemIdentification().getManufacturedAt()
-        );
+                rma.getItemIdentification(),
+                firstItem.getItemIdentification().getBatchNumber(),
+                firstItem.getItemIdentification().getSerialNumber(),
+                firstItem.getItemIdentification().getManufacturedAt());
     }
 
-    private void applyTrackableFields(ItemIdentification itemIdentification, String batchNumber, String serialNumber, LocalDate manufacturedAt) {
+    private void applyTrackableFields(
+            ItemIdentification itemIdentification,
+            String batchNumber,
+            String serialNumber,
+            LocalDate manufacturedAt) {
         itemIdentification.setBatchNumber(trimToNull(batchNumber));
         itemIdentification.setSerialNumber(trimToNull(serialNumber));
         itemIdentification.setManufacturedAt(manufacturedAt);
     }
 
     private void applyCommonFields(
-        RmaRecord rma,
-        LocalDate purchaseDate,
-        Boolean purchaseDateUnknown,
-        LocalDate entryDate,
-        String invoiceNumber,
-        String reportedFailure,
-        String receivedAccessories,
-        String physicalCondition,
-        String repairSummary,
-        String replacedPartsSummary,
-        String testSummary,
-        LocalDate shippedAt,
-        String carrier,
-        String trackingCode
-    ) {
+            RmaRecord rma,
+            LocalDate purchaseDate,
+            Boolean purchaseDateUnknown,
+            LocalDate entryDate,
+            String invoiceNumber,
+            String reportedFailure,
+            String receivedAccessories,
+            String physicalCondition,
+            String repairSummary,
+            String replacedPartsSummary,
+            String testSummary,
+            LocalDate shippedAt,
+            String carrier,
+            String trackingCode) {
         if (purchaseDate != null) {
             rma.setPurchaseDate(purchaseDate);
         }
@@ -319,22 +404,31 @@ public class RmaService {
     }
 
     private void validateMandatoryFields(RmaRecord rma) {
-        if (rma.getItems().isEmpty() && (rma.getProduct() == null || rma.getItemIdentification().isEmpty())) {
+        if (rma.getItems().isEmpty()
+                && (rma.getProduct() == null || rma.getItemIdentification().isEmpty())) {
             throw new BusinessException("At least one identified product must be provided.");
         }
-        if (rma.getItems().stream().anyMatch(item -> item.getProduct() == null || item.getItemIdentification().isEmpty())) {
-            throw new BusinessException("Each product must have at least a batch number or serial number.");
+        if (rma.getItems().stream()
+                .anyMatch(
+                        item ->
+                                item.getProduct() == null
+                                        || item.getItemIdentification().isEmpty())) {
+            throw new BusinessException(
+                    "Each product must have at least a batch number or serial number.");
         }
         if (rma.getPurchaseDate() == null && !rma.isPurchaseDateUnknown()) {
             throw new BusinessException("Provide a purchase date or mark it as unknown.");
         }
         if (rma.getPurchaseDate() != null && rma.isPurchaseDateUnknown()) {
-            throw new BusinessException("Purchase date cannot be informed and unknown at the same time.");
+            throw new BusinessException(
+                    "Purchase date cannot be informed and unknown at the same time.");
         }
         if (rma.getClient() == null) {
             throw new BusinessException("Client is required.");
         }
-        if (rma.getEntryDate() == null || trimToNull(rma.getReportedFailure()) == null || trimToNull(rma.getReceivedBy()) == null) {
+        if (rma.getEntryDate() == null
+                || trimToNull(rma.getReportedFailure()) == null
+                || trimToNull(rma.getReceivedBy()) == null) {
             throw new BusinessException("Entry date, receiver and reported failure are required.");
         }
     }
@@ -342,13 +436,14 @@ public class RmaService {
     private void validateDates(RmaRecord rma) {
         LocalDate today = LocalDate.now(BUSINESS_ZONE);
         LocalDate legacyManufacturedAt = rma.getItemIdentification().getManufacturedAt();
-        List<LocalDate> manufacturedDates = rma.getItems().isEmpty()
-            ? (legacyManufacturedAt == null ? List.of() : List.of(legacyManufacturedAt))
-            : rma.getItems().stream()
-                .map(RmaItem::getItemIdentification)
-                .map(ItemIdentification::getManufacturedAt)
-                .filter(Objects::nonNull)
-                .toList();
+        List<LocalDate> manufacturedDates =
+                rma.getItems().isEmpty()
+                        ? (legacyManufacturedAt == null ? List.of() : List.of(legacyManufacturedAt))
+                        : rma.getItems().stream()
+                                .map(RmaItem::getItemIdentification)
+                                .map(ItemIdentification::getManufacturedAt)
+                                .filter(Objects::nonNull)
+                                .toList();
 
         if (manufacturedDates.stream().anyMatch(date -> date.isAfter(today))) {
             throw new BusinessException("Manufacturing date cannot be after today.");
@@ -356,7 +451,9 @@ public class RmaService {
         if (rma.getPurchaseDate() != null && rma.getPurchaseDate().isAfter(today)) {
             throw new BusinessException("Purchase date cannot be after today.");
         }
-        if (rma.getPurchaseDate() != null && manufacturedDates.stream().anyMatch(date -> rma.getPurchaseDate().isBefore(date))) {
+        if (rma.getPurchaseDate() != null
+                && manufacturedDates.stream()
+                        .anyMatch(date -> rma.getPurchaseDate().isBefore(date))) {
             throw new BusinessException("Purchase date cannot be before manufacturing date.");
         }
         if (rma.getPurchaseDate() != null && rma.getEntryDate().isBefore(rma.getPurchaseDate())) {
@@ -367,19 +464,25 @@ public class RmaService {
         }
     }
 
-    private void addStatusHistory(RmaRecord rma, RmaStatus status, String note) {
+    private void addStatusHistory(RmaRecord rma, String status, String note) {
         RmaStatusHistory history = new RmaStatusHistory();
         history.setStatus(status);
+        var workflow = workflowService.published();
+        history.setStatusLabel(WorkflowService.status(workflow, status).label());
+        history.setWorkflowName(workflow.definition().name());
+        history.setWorkflowVersion(workflow.version());
         history.setChangedBy(currentUsername());
         history.setChangedAt(Instant.now());
         history.setNote(trimToNull(note));
         rma.addStatusHistory(history);
     }
 
-    private void addAssignmentHistory(RmaRecord rma, UserAccount previousAssignee, UserAccount newAssignee) {
+    private void addAssignmentHistory(
+            RmaRecord rma, UserAccount previousAssignee, UserAccount newAssignee) {
         RmaAssignmentHistory history = new RmaAssignmentHistory();
         history.setPreviousAssigneeId(previousAssignee == null ? null : previousAssignee.getId());
-        history.setPreviousAssigneeName(previousAssignee == null ? null : previousAssignee.getFullName());
+        history.setPreviousAssigneeName(
+                previousAssignee == null ? null : previousAssignee.getFullName());
         history.setNewAssigneeId(newAssignee == null ? null : newAssignee.getId());
         history.setNewAssigneeName(newAssignee == null ? null : newAssignee.getFullName());
         history.setChangedBy(currentUsername());
@@ -391,11 +494,13 @@ public class RmaService {
         int year = LocalDate.now(BUSINESS_ZONE).getYear();
         String prefix = "RMA-" + year + "-";
 
-        int nextValue = rmaRecordRepository.findTopByCodeStartingWithOrderByCodeDesc(prefix)
-            .map(RmaRecord::getCode)
-            .map(this::extractSequence)
-            .map(sequence -> sequence + 1)
-            .orElse(1);
+        int nextValue =
+                rmaRecordRepository
+                        .findTopByCodeStartingWithOrderByCodeDesc(prefix)
+                        .map(RmaRecord::getCode)
+                        .map(this::extractSequence)
+                        .map(sequence -> sequence + 1)
+                        .orElse(1);
 
         return prefix + String.format("%06d", nextValue);
     }
@@ -417,7 +522,19 @@ public class RmaService {
     }
 
     private RmaResponse toResponse(RmaRecord rma) {
-        return RmaResponse.from(rma, rmaSlaService.calculate(rma, Instant.now()));
+        if (!org.springframework.transaction.support.TransactionSynchronizationManager
+                .isCurrentTransactionReadOnly()) {
+            entityManager.flush();
+            // Return the database timestamp precision so expectedUpdatedAt round-trips exactly.
+            entityManager.refresh(rma);
+        }
+        var workflow = workflowService.published();
+        return RmaResponse.from(
+                rma,
+                rmaSlaService.calculate(
+                        rma, Instant.now(), WorkflowService.status(workflow, rma.getStatus())),
+                workflow,
+                workflowRules.options(rma, workflow));
     }
 
     private String trimToNull(String value) {

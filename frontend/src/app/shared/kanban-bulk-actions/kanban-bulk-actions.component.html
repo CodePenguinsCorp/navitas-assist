@@ -1,17 +1,54 @@
 <section class="bulk-toolbar" aria-label="Ações em lote">
   <div aria-live="polite">
     <strong>{{ selection().length }} RMA(s) selecionado(s)</strong>
-    @if (hiddenCount()) { <small>{{ hiddenCount() }} fora dos filtros atuais</small> }
+    @if (hiddenCount()) {
+      <small>{{ hiddenCount() }} fora dos filtros atuais</small>
+    }
   </div>
   <div class="bulk-buttons">
-    <button type="button" class="button-secondary" [disabled]="disabled() || busy() || !visibleCount()" (click)="selectVisible.emit()">Selecionar visíveis</button>
-    <button type="button" class="button-secondary" [disabled]="disabled() || busy() || !selection().length" (click)="clearSelection.emit()">Limpar seleção</button>
+    <button
+      type="button"
+      class="button-secondary"
+      [disabled]="disabled() || busy() || !visibleCount()"
+      (click)="selectVisible.emit()"
+    >
+      Selecionar visíveis
+    </button>
+    <button
+      type="button"
+      class="button-secondary"
+      [disabled]="disabled() || busy() || !selection().length"
+      (click)="clearSelection.emit()"
+    >
+      Limpar seleção
+    </button>
     @if (canUpdateStatus()) {
-      <button type="button" class="button-secondary" [disabled]="disabled() || busy() || !selection().length" (click)="open('status')">Alterar status</button>
+      <button
+        type="button"
+        class="button-secondary"
+        [disabled]="disabled() || busy() || !selection().length"
+        (click)="open('status')"
+      >
+        Alterar status
+      </button>
     }
     @if (canManage()) {
-      <button type="button" class="button-secondary" [disabled]="disabled() || busy() || !selection().length" (click)="open('priority')">Alterar prioridade</button>
-      <button type="button" class="button-secondary" [disabled]="disabled() || busy() || !selection().length" (click)="open('assignee')">Alterar responsável</button>
+      <button
+        type="button"
+        class="button-secondary"
+        [disabled]="disabled() || busy() || !selection().length"
+        (click)="open('priority')"
+      >
+        Alterar prioridade
+      </button>
+      <button
+        type="button"
+        class="button-secondary"
+        [disabled]="disabled() || busy() || !selection().length"
+        (click)="open('assignee')"
+      >
+        Alterar responsável
+      </button>
     }
   </div>
 </section>
@@ -21,38 +58,83 @@
     <p role="status">{{ successCount() }} atualizado(s); {{ results().length - successCount() }} com falha.</p>
     <ul>
       @for (result of results(); track result.id) {
-        <li [class.bulk-result--error]="!result.success"><strong>{{ result.code }}</strong> — {{ result.success ? 'Sucesso' : 'Falha' }}: {{ result.message }}</li>
+        <li [class.bulk-result--error]="!result.success">
+          <strong>{{ result.code }}</strong> — {{ result.success ? 'Sucesso' : 'Falha' }}: {{ result.message }}
+        </li>
       }
     </ul>
-    @if (successCount() < results().length) { <p>Os itens com falha continuam selecionados.</p> }
+    @if (successCount() < results().length) {
+      <p>Os itens com falha continuam selecionados.</p>
+    }
   </section>
 }
 
 @if (action()) {
   <section class="modal-overlay" (click)="close()">
-    <article class="panel modal-panel modal-panel--narrow" role="dialog" aria-modal="true" aria-labelledby="bulkConfirmTitle" (click)="$event.stopPropagation()">
+    <article
+      class="panel modal-panel modal-panel--narrow"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="bulkConfirmTitle"
+      (click)="$event.stopPropagation()"
+    >
       <div class="modal-header">
         <h3 id="bulkConfirmTitle">Confirmar alteração em lote</h3>
-        <button type="button" class="modal-close" [disabled]="busy()" (click)="close()" aria-label="Fechar confirmação">×</button>
+        <button type="button" class="modal-close" [disabled]="busy()" (click)="close()" aria-label="Fechar confirmação">
+          ×
+        </button>
       </div>
       <form [formGroup]="form" (ngSubmit)="confirm()" class="form-grid">
         @if (action() === 'status') {
-          <div class="field-group field-group--full"><label>Novo status</label><app-custom-select formControlName="status" ariaLabel="Status do lote" [options]="statusOptions" /></div>
-          <div class="field-group field-group--full"><label for="bulkNote">Observação</label><textarea id="bulkNote" formControlName="note" rows="2" maxlength="255" [readOnly]="busy()"></textarea></div>
+          <div class="field-group field-group--full">
+            <label>Novo status</label
+            ><app-custom-select formControlName="status" ariaLabel="Status do lote" [options]="statusOptions()" />
+          </div>
+          @if (!statusOptions().length) {
+            <p class="field-group--full" role="status">
+              Nenhuma passagem permitida em comum. Revise as regras ou altere a sele??o.
+            </p>
+          }
+          <div class="field-group field-group--full">
+            <label for="bulkNote">Observação</label
+            ><textarea id="bulkNote" formControlName="note" rows="2" maxlength="255" [readOnly]="busy()"></textarea>
+          </div>
         } @else if (action() === 'priority') {
-          <div class="field-group field-group--full"><label>Nova prioridade</label><app-custom-select formControlName="priority" ariaLabel="Prioridade do lote" [options]="priorityOptions" /></div>
+          <div class="field-group field-group--full">
+            <label>Nova prioridade</label
+            ><app-custom-select formControlName="priority" ariaLabel="Prioridade do lote" [options]="priorityOptions" />
+          </div>
         } @else {
-          <div class="field-group field-group--full"><label>Novo responsável</label><app-custom-select formControlName="assigneeId" ariaLabel="Responsável do lote" [options]="assigneeOptions()" /></div>
+          <div class="field-group field-group--full">
+            <label>Novo responsável</label
+            ><app-custom-select
+              formControlName="assigneeId"
+              ariaLabel="Responsável do lote"
+              [options]="assigneeOptions()"
+            />
+          </div>
         }
         <div class="field-group--full bulk-confirm-summary">
           <strong>{{ summary() }} em {{ pending().length }} RMA(s).</strong>
           <p>Cada RMA será validado e terá seu resultado informado separadamente.</p>
-          <ul aria-label="RMAs da operação">@for (rma of pending(); track rma.id) { <li>{{ rma.code }}</li> }</ul>
+          <ul aria-label="RMAs da operação">
+            @for (rma of pending(); track rma.id) {
+              <li>{{ rma.code }}</li>
+            }
+          </ul>
         </div>
-        @if (error()) { <p role="alert" class="field-error field-group--full">{{ error() }}</p> }
+        @if (error()) {
+          <p role="alert" class="field-error field-group--full">{{ error() }}</p>
+        }
         <div class="form-actions form-actions--full">
           <button type="button" class="button-secondary" [disabled]="busy()" (click)="close()">Cancelar</button>
-          <button type="submit" class="button-primary" [disabled]="busy() || (action() === 'status' && !form.controls.status.value)">{{ busy() ? 'Aplicando...' : 'Aplicar a ' + pending().length + ' RMA(s)' }}</button>
+          <button
+            type="submit"
+            class="button-primary"
+            [disabled]="busy() || (action() === 'status' && !form.controls.status.value)"
+          >
+            {{ busy() ? 'Aplicando...' : 'Aplicar a ' + pending().length + ' RMA(s)' }}
+          </button>
         </div>
       </form>
     </article>

@@ -8,6 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { RmaService } from '../../core/services/rma.service';
+import { WorkflowService } from '../../core/services/workflow.service';
 import { BulkRmaResult } from '../../shared/kanban-bulk-actions/kanban-bulk-actions.component';
 import { KanbanComponent } from './kanban.component';
 
@@ -29,8 +30,7 @@ describe('KanbanComponent filters', () => {
         {
           provide: CatalogService,
           useValue: {
-            listAssignableUsers: () =>
-              of([{ id: 7, username: 'tecnico', fullName: 'Técnico Responsável' }]),
+            listAssignableUsers: () => of([{ id: 7, username: 'tecnico', fullName: 'Técnico Responsável' }]),
           },
         },
         {
@@ -61,11 +61,21 @@ describe('KanbanComponent filters', () => {
           },
         },
         { provide: RmaService, useValue: { list: () => of(TEST_RMAS) } },
+        { provide: WorkflowService, useValue: { published: () => of({ definition: { statuses: [] } }) } },
       ],
     }).compileComponents();
 
-    component = TestBed.createComponent(KanbanComponent)
-      .componentInstance as unknown as KanbanHarness;
+    component = TestBed.createComponent(KanbanComponent).componentInstance as unknown as KanbanHarness;
+  });
+
+  it('refuses a drag destination absent from authoritative options', () => {
+    const c = component as any;
+    c.draggedRmaId.set(TEST_RMAS[0].id);
+    const event = { preventDefault: vi.fn() } as unknown as DragEvent;
+    c.allowColumnDrop(event, 'FORBIDDEN');
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    c.dropOnColumn(event, 'FORBIDDEN');
+    expect(c.pendingStatusRmaSignal()).toBeNull();
   });
 
   it.each([
@@ -74,14 +84,11 @@ describe('KanbanComponent filters', () => {
     ['controlador premium', 1],
     ['lote-beta', 2],
     ['SERIE-ALFA', 1],
-  ])(
-    'searches by code, client and item tracking data without case or accent sensitivity',
-    (query, id) => {
-      component.filtersForm.patchValue({ query });
+  ])('searches by code, client and item tracking data without case or accent sensitivity', (query, id) => {
+    component.filtersForm.patchValue({ query });
 
-      expect(component.filteredRmas().map((rma) => rma.id)).toEqual([id]);
-    },
-  );
+    expect(component.filteredRmas().map((rma) => rma.id)).toEqual([id]);
+  });
 
   it('combines priority, status, warranty, assignee and business-date filters', () => {
     component.filtersForm.patchValue({
@@ -153,9 +160,7 @@ describe('KanbanComponent filters', () => {
     component.applyView(5);
     expect(component.filtersForm.getRawValue().sla).toBe('all');
     expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
-    expect(component.filtersForm.getRawValue()).toEqual(
-      expect.objectContaining({ priority: 'HIGH', query: 'árvore' }),
-    );
+    expect(component.filtersForm.getRawValue()).toEqual(expect.objectContaining({ priority: 'HIGH', query: 'árvore' }));
 
     component.deleteActiveView();
     expect(component.activeViewId()).toBeNull();
@@ -173,7 +178,13 @@ describe('KanbanComponent filters', () => {
     const updated = { ...TEST_RMAS[0], priority: 'LOW' as const };
     component.applyBulkResults([
       { id: 1, code: updated.code, success: true, message: 'OK', rma: updated },
-      { id: 2, code: TEST_RMAS[1].code, success: false, message: 'Etapa alterada', rma: { ...TEST_RMAS[1], status: 'IN_DIAGNOSIS' } },
+      {
+        id: 2,
+        code: TEST_RMAS[1].code,
+        success: false,
+        message: 'Etapa alterada',
+        rma: { ...TEST_RMAS[1], status: 'IN_DIAGNOSIS' },
+      },
     ]);
     expect(component.bulkSelectedRmas().map((rma) => rma.id)).toEqual([2]);
     component.clearFilters();

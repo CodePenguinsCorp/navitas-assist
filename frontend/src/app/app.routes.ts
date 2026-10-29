@@ -15,7 +15,7 @@ export const routes: Routes = [
   {
     path: 'login',
     component: LoginComponent,
-    title: 'Entrar | Navitas Assist'
+    title: 'Entrar | Navitas Assist',
   },
   {
     path: '',
@@ -25,68 +25,82 @@ export const routes: Routes = [
       {
         path: '',
         pathMatch: 'full',
-        redirectTo: 'dashboard'
+        redirectTo: 'dashboard',
       },
       {
         path: 'dashboard',
         component: DashboardComponent,
-        title: 'Dashboard | Navitas Assist'
+        title: 'Dashboard | Navitas Assist',
       },
       {
         path: 'rmas',
         component: RmasComponent,
-        title: 'RMAs | Navitas Assist'
+        title: 'RMAs | Navitas Assist',
       },
       {
         path: 'kanban',
         component: KanbanComponent,
-        title: 'Kanban | Navitas Assist'
+        title: 'Kanban | Navitas Assist',
       },
       {
         path: 'cadastros',
         pathMatch: 'full',
-        redirectTo: 'clientes'
+        redirectTo: 'clientes',
       },
       {
         path: 'clientes',
         component: ClientsComponent,
         canActivate: [roleGuard],
         data: {
-          roles: ['ADMIN', 'SERVICE_DESK']
+          roles: ['ADMIN', 'SERVICE_DESK'],
         },
-        title: 'Clientes | Navitas Assist'
+        title: 'Clientes | Navitas Assist',
       },
       {
         path: 'produtos',
         component: ProductsComponent,
         canActivate: [roleGuard],
         data: {
-          roles: ['ADMIN', 'SERVICE_DESK']
+          roles: ['ADMIN', 'SERVICE_DESK'],
         },
-        title: 'Produtos | Navitas Assist'
+        title: 'Produtos | Navitas Assist',
       },
       {
         path: 'usuarios',
         component: UsersComponent,
         canActivate: [roleGuard],
         data: {
-          roles: ['ADMIN']
+          roles: ['ADMIN'],
         },
-        title: 'Usuários | Navitas Assist'
+        title: 'Usuários | Navitas Assist',
+      },
+      {
+        path: 'workflows',
+        loadComponent: () => import('./pages/workflows/workflows.component').then((m) => m.WorkflowsComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN'] },
+        title: 'Fluxos de RMA | Navitas Assist',
+      },
+      {
+        path: 'checklists',
+        loadComponent: () => import('./pages/checklists/checklists.component').then((m) => m.ChecklistsComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN'] },
+        title: 'Modelos de checklist | Navitas Assist',
       },
       {
         path: 'relatorios',
         component: ReportsComponent,
         canActivate: [roleGuard],
         data: {
-          roles: ['ADMIN', 'TECHNICIAN', 'VIEWER']
+          roles: ['ADMIN', 'TECHNICIAN', 'VIEWER'],
         },
-        title: 'Relatórios | Navitas Assist'
-      }
-    ]
+        title: 'Relatórios | Navitas Assist',
+      },
+    ],
   },
   {
     path: '**',
-    redirectTo: ''
-  }
+    redirectTo: '',
+  },
 ];

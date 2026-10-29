@@ -20,12 +20,12 @@ public class RmaSlaService {
 
     private final RmaSlaProperties properties;
 
-    public RmaSlaResponse calculate(RmaRecord rma, Instant now) {
+    public RmaSlaResponse calculate(RmaRecord rma, Instant now, br.com.navitasassist.workflow.WorkflowDocument.Status definition) {
         Instant startedAt = stageEntry(rma, now);
-        if (rma.getStatus() == RmaStatus.COMPLETED || rma.getStatus() == RmaStatus.RETURNED || rma.getStatus() == RmaStatus.IRREPARABLE) {
+        if (definition.category() == br.com.navitasassist.workflow.WorkflowDocument.Category.DONE) {
             return new RmaSlaResponse(RmaSlaStatus.CLOSED, startedAt, null, null, 0, null);
         }
-        long limitSeconds = properties.getStages().get(rma.getStatus()).minutesFor(rma.getPriority()) * 60;
+        long limitSeconds = properties.getStages().get(definition.slaStage()).minutesFor(rma.getPriority()) * 60;
         Instant dueAt = startedAt.plusSeconds(limitSeconds);
         Instant warningAt = startedAt.plusSeconds(limitSeconds * properties.getWarningPercent() / 100);
         RmaSlaStatus status = !now.isBefore(dueAt) ? RmaSlaStatus.OVERDUE
@@ -40,7 +40,7 @@ public class RmaSlaService {
                 .thenComparing(RmaStatusHistory::getId, Comparator.nullsLast(Comparator.naturalOrder())).reversed()).toList();
         Instant entry = null;
         for (RmaStatusHistory event : history) {
-            if (event.getStatus() != rma.getStatus()) {
+            if (!java.util.Objects.equals(event.getStatus(), rma.getStatus())) {
                 break;
             }
             // Consecutive notes in the same stage do not restart its SLA.
