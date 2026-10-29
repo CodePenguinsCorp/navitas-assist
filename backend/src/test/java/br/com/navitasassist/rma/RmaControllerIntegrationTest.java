@@ -1,6 +1,7 @@
 package br.com.navitasassist.rma;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -14,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,6 +31,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -680,6 +683,98 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.invoiceFileName").doesNotExist());
         assertEquals("original.operator", rmaRecordRepository.findById(id).orElseThrow().getReceivedBy());
         assertEquals("NF-456", rmaRecordRepository.findById(id).orElseThrow().getInvoiceNumber());
+    }
+
+
+    @ParameterizedTest
+    @CsvSource({ "ADMIN,false", "ADMIN,true", "SERVICE_DESK,false", "SERVICE_DESK,true" })
+    void shouldAcceptOptionalAndMaximumInvoiceNumbers(String role, boolean maximum) throws Exception {
+        String invoiceNumber = maximum ? "n".repeat(80) : null;
+        var created = mockMvc.perform(post("/api/rmas").with(user("operator").roles(role)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(invoiceRmaPayload(invoiceNumber))))
+            .andExpect(status().isCreated()).andReturn();
+        Long id = objectMapper.readTree(created.getResponse().getContentAsString()).get("id").asLong();
+
+        var persisted = mockMvc.perform(get("/api/rmas/{id}", id).with(user("viewer").roles("VIEWER")))
+            .andExpect(status().isOk());
+        if (maximum) persisted.andExpect(jsonPath("$.invoiceNumber").value(invoiceNumber));
+        else persisted.andExpect(jsonPath("$.invoiceNumber").doesNotExist());
+
+        String updated = "u".repeat(80);
+        mockMvc.perform(put("/api/rmas/{id}", id).with(user("operator").roles(role)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("invoiceNumber", updated))))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.invoiceNumber").value(updated));
+        mockMvc.perform(get("/api/rmas/{id}", id).with(user("viewer").roles("VIEWER")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.invoiceNumber").value(updated));
+
+        mockMvc.perform(put("/api/rmas/{id}", id).with(user("operator").roles(role)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"invoiceNumber\":\"\"}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.invoiceNumber").doesNotExist());
+        mockMvc.perform(get("/api/rmas/{id}", id).with(user("viewer").roles("VIEWER")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.invoiceNumber").doesNotExist());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "ADMIN", "SERVICE_DESK" })
+    void shouldRejectOversizedInvoiceWithoutCreatingOrChangingRma(String role) throws Exception {
+        Map<String, Object> payload = invoiceRmaPayload("n".repeat(81));
+        long count = rmaRecordRepository.count();
+        mockMvc.perform(post("/api/rmas").with(user("operator").roles(role)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(payload)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.details").value(hasItem(startsWith("invoiceNumber:"))));
+        assertEquals(count, rmaRecordRepository.count());
+
+        payload.put("invoiceNumber", "Original NF");
+        var created = mockMvc.perform(post("/api/rmas").with(user("operator").roles(role)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(payload)))
+            .andExpect(status().isCreated()).andReturn();
+        Long id = objectMapper.readTree(created.getResponse().getContentAsString()).get("id").asLong();
+        mockMvc.perform(put("/api/rmas/{id}", id).with(user("operator").roles(role)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                    "invoiceNumber", "n".repeat(81), "reportedFailure", "Overwritten failure"))))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.details").value(hasItem(startsWith("invoiceNumber:"))));
+        mockMvc.perform(get("/api/rmas/{id}", id).with(user("viewer").roles("VIEWER")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.invoiceNumber").value("Original NF"))
+            .andExpect(jsonPath("$.reportedFailure").value("Original failure"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "VIEWER", "TECHNICIAN" })
+    void shouldKeepInvoiceCreationAndUpdatesRestricted(String role) throws Exception {
+        Long id = saveBulkTestRma("RMA-INVOICE-1");
+        long count = rmaRecordRepository.count();
+        mockMvc.perform(post("/api/rmas").with(user("operator").roles(role)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(invoiceRmaPayload("NF-123"))))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(put("/api/rmas/{id}", id).with(user("operator").roles(role)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"invoiceNumber\":\"NF-123\"}"))
+            .andExpect(status().isForbidden());
+        assertEquals(count, rmaRecordRepository.count());
+        mockMvc.perform(get("/api/rmas/{id}", id).with(user("viewer").roles("VIEWER")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.invoiceNumber").doesNotExist())
+            .andExpect(jsonPath("$.reportedFailure").value("Bulk test"));
+    }
+
+    private Map<String, Object> invoiceRmaPayload(String invoiceNumber) {
+        Client client = new Client();
+        client.setLegalName("Invoice test client");
+        Product product = saveProduct("SKU-INVOICE-1", "Invoice test product", 12);
+        Map<String, Object> payload = new HashMap<>(Map.of(
+            "clientId", clientRepository.save(client).getId(),
+            "items", List.of(Map.of("productId", product.getId(), "serialNumber", "SER-INVOICE-1")),
+            "purchaseDateUnknown", true, "entryDate", LocalDate.now(BUSINESS_ZONE).toString(),
+            "reportedFailure", "Original failure"
+        ));
+        if (invoiceNumber != null) payload.put("invoiceNumber", invoiceNumber);
+        return payload;
     }
 
     private Product saveProduct(String sku, String name, int warrantyMonths) {

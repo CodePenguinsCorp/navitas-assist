@@ -399,8 +399,11 @@
         </div>
 
         <div class="field-group">
-          <label for="invoiceNumber">Nota fiscal</label>
-          <input id="invoiceNumber" type="text" formControlName="invoiceNumber" />
+          <label for="invoiceNumber">Nota fiscal (máx. 80 caracteres)</label>
+          <input id="invoiceNumber" type="text" formControlName="invoiceNumber" maxlength="80" />
+          @if (createForm.controls.invoiceNumber.hasError('maxlength') && (createForm.controls.invoiceNumber.dirty || createForm.controls.invoiceNumber.touched)) {
+            <small class="field-error">O número da nota fiscal deve ter no máximo 80 caracteres.</small>
+          }
         </div>
 
         <div class="field-group">

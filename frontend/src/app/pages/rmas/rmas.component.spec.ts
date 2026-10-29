@@ -1,3 +1,5 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Signal, signal } from '@angular/core';
 import { FormArray, FormGroup } from '@angular/forms';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -130,3 +132,132 @@ const createdRma: RmaResponse = {
     dueAt: '2026-10-21T12:00:00Z', elapsedSeconds: 0, limitSeconds: 86400 },
   createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z',
 };
+
+describe('RmasComponent invoice number limit', () => {
+  let fixture: ComponentFixture<RmasComponent>;
+  let http: HttpTestingController;
+  let page: HTMLElement;
+  const errorMessage = 'O número da nota fiscal deve ter no máximo 80 caracteres.';
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [RmasComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()]
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthService).restoreSession().subscribe();
+    http.expectOne('/api/auth/me').flush({
+      id: 1, username: 'tester', fullName: 'Tester', role: 'ADMIN', active: true,
+      createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt
+    });
+    fixture = TestBed.createComponent(RmasComponent);
+    http.expectOne('/api/clients').flush([{
+      id: 1, legalName: 'Cliente', tradeName: null, documentNumber: null, contactName: null,
+      email: null, phone: null, address: null, notes: null,
+      createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt
+    }]);
+    http.expectOne('/api/products').flush([{
+      id: 2, sku: 'SKU-2', name: 'Produto', category: null, hardwareVersion: null,
+      firmwareVersion: null, defaultWarrantyMonths: 12, technicalNotes: null,
+      createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt
+    }]);
+    http.expectOne('/api/rmas').flush([]);
+    fixture.detectChanges();
+    page = fixture.nativeElement as HTMLElement;
+    page.querySelector<HTMLButtonElement>('.page-heading .button-primary')!.click();
+    fixture.detectChanges();
+    selectOption('clientId', 'Cliente');
+    selectOption('productId', 'SKU-2');
+    enter('#serialNumber-0', 'SER-2');
+    enter('#reportedFailure', 'Falha');
+    const unknownPurchaseDate = page.querySelector<HTMLInputElement>('[formControlName="purchaseDateUnknown"]')!;
+    unknownPurchaseDate.checked = true;
+    unknownPurchaseDate.dispatchEvent(new Event('change', { bubbles: true }));
+    fixture.detectChanges();
+  });
+
+  afterEach(() => http.verify());
+
+  function selectOption(controlName: string, text: string): void {
+    const select = page.querySelector<HTMLElement>('app-custom-select[formControlName="' + controlName + '"]')!;
+    select.querySelector<HTMLButtonElement>('.custom-select__trigger')!.click();
+    fixture.detectChanges();
+    const option = Array.from(select.querySelectorAll<HTMLButtonElement>('.custom-select__option'))
+      .find((button) => button.textContent?.includes(text))!;
+    option.click();
+    fixture.detectChanges();
+  }
+
+  function invoice(): HTMLInputElement {
+    return page.querySelector<HTMLInputElement>('#invoiceNumber')!;
+  }
+
+  function enter(selector: string, value: string): void {
+    const input = page.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector)!;
+    input.value = value;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+  }
+
+  function submit(): void {
+    page.querySelector('.modal-overlay form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+  }
+
+  function expectBlockedOversize(): void {
+    enter('#invoiceNumber', 'n'.repeat(81));
+    submit();
+    const requests = http.match({ method: 'POST', url: '/api/rmas' });
+    for (const request of requests) {
+      request.flush({ message: 'Validation failed', details: ['invoiceNumber: too long'] }, { status: 400, statusText: 'Bad Request' });
+    }
+    fixture.detectChanges();
+    expect(requests).toHaveLength(0);
+    expect(invoice().value).toHaveLength(81);
+    expect(page.querySelector<HTMLInputElement>('#serialNumber-0')!.value).toBe('SER-2');
+    expect(page.querySelector<HTMLTextAreaElement>('#reportedFailure')!.value).toBe('Falha');
+    expect(invoice().closest('.field-group')?.textContent).toContain(errorMessage);
+    expect(page.querySelector('.modal-overlay')).not.toBeNull();
+  }
+
+  function succeed(expectedInvoiceNumber: string | null): void {
+    const request = http.expectOne({ method: 'POST', url: '/api/rmas' });
+    expect(request.request.body).toMatchObject({
+      clientId: 1, items: [{ productId: 2, serialNumber: 'SER-2' }], reportedFailure: 'Falha',
+      invoiceNumber: expectedInvoiceNumber, purchaseDateUnknown: true, purchaseDate: null
+    });
+    const saved: RmaResponse = { ...createdRma, invoiceNumber: expectedInvoiceNumber };
+    request.flush(saved);
+    http.expectOne({ method: 'GET', url: '/api/rmas' }).flush([saved]);
+    fixture.detectChanges();
+    expect(page.querySelector('.modal-overlay')).toBeNull();
+  }
+
+  it('informs and applies the existing API limit without an initial error', () => {
+    expect(invoice().maxLength).toBe(80);
+    expect(page.querySelector('label[for="invoiceNumber"]')?.textContent).toContain('80');
+    expect(invoice().closest('.field-group')?.textContent).not.toContain(errorMessage);
+  });
+
+  it.each([
+    { label: 'empty', value: '', expected: null },
+    { label: 'boundary', value: 'n'.repeat(80), expected: 'n'.repeat(80) },
+    { label: 'trimmed', value: '  NF-123  ', expected: 'NF-123' }
+  ])('saves $label invoice numbers with the existing normalization', ({ value, expected }) => {
+    enter('#invoiceNumber', value);
+    submit();
+    succeed(expected);
+  });
+
+  it('blocks oversized invoice numbers without losing the form', () => {
+    expectBlockedOversize();
+  });
+
+  it('permits saving after the oversized value is corrected', () => {
+    expectBlockedOversize();
+    enter('#invoiceNumber', 'n'.repeat(80));
+    expect(invoice().closest('.field-group')?.textContent).not.toContain(errorMessage);
+    submit();
+    succeed('n'.repeat(80));
+  });
+});
