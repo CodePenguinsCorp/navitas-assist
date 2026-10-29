@@ -312,7 +312,7 @@ export class RmasComponent {
     foundFailure: ['', [Validators.required, Validators.maxLength(2000)]],
     failureType: ['' as FailureTypeValue],
     probableCause: ['' as FailureCauseValue],
-    notes: [''],
+    notes: ['', [Validators.maxLength(2000)]],
     diagnosedAt: [todayInputValue(), [Validators.required]],
     technicianName: ['', [Validators.required, Validators.maxLength(120)]]
   });

@@ -501,8 +501,11 @@
         </div>
 
         <div class="field-group field-group--full">
-          <label for="diagnosisNotes">Notas</label>
-          <textarea id="diagnosisNotes" formControlName="notes" rows="4"></textarea>
+          <label for="diagnosisNotes">Notas (máx. 2000 caracteres)</label>
+          <textarea id="diagnosisNotes" formControlName="notes" rows="4" maxlength="2000"></textarea>
+          @if (diagnosisForm.controls.notes.hasError('maxlength') && (diagnosisForm.controls.notes.dirty || diagnosisForm.controls.notes.touched)) {
+            <small class="field-error">As notas devem ter no máximo 2000 caracteres.</small>
+          }
         </div>
 
         <div class="form-actions form-actions--full">

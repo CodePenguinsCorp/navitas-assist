@@ -1,6 +1,7 @@
 package br.com.navitasassist.rma;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -14,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,6 +31,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -680,6 +683,77 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.invoiceFileName").doesNotExist());
         assertEquals("original.operator", rmaRecordRepository.findById(id).orElseThrow().getReceivedBy());
         assertEquals("NF-456", rmaRecordRepository.findById(id).orElseThrow().getInvoiceNumber());
+    }
+
+
+    @ParameterizedTest
+    @CsvSource({ "ADMIN,false", "ADMIN,true", "TECHNICIAN,false", "TECHNICIAN,true" })
+    void shouldAcceptOptionalAndMaximumDiagnosisNotes(String role, boolean maximum) throws Exception {
+        Long id = saveBulkTestRma("RMA-NOTES-1");
+        String notes = maximum ? "n".repeat(2000) : null;
+
+        var response = mockMvc.perform(put("/api/rmas/{id}/diagnosis", id)
+                .with(user("operator").roles(role)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(diagnosisPayload(notes))))
+            .andExpect(status().isOk());
+        if (maximum) response.andExpect(jsonPath("$.diagnosis.notes").value(notes));
+        else response.andExpect(jsonPath("$.diagnosis.notes").doesNotExist());
+
+        var persisted = mockMvc.perform(get("/api/rmas/{id}", id).with(user("viewer").roles("VIEWER")))
+            .andExpect(status().isOk());
+        if (maximum) persisted.andExpect(jsonPath("$.diagnosis.notes").value(notes));
+        else persisted.andExpect(jsonPath("$.diagnosis.notes").doesNotExist());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "ADMIN", "TECHNICIAN" })
+    void shouldRejectOversizedNotesWithoutCreatingOrChangingDiagnosis(String role) throws Exception {
+        Long id = saveBulkTestRma("RMA-NOTES-1");
+        Map<String, Object> invalid = diagnosisPayload("n".repeat(2001));
+        invalid.put("foundFailure", "Overwritten failure");
+        invalid.put("technicianName", "Overwritten technician");
+
+        for (boolean existing : new boolean[] { false, true }) {
+            if (existing) {
+                mockMvc.perform(put("/api/rmas/{id}/diagnosis", id)
+                        .with(user("operator").roles(role)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(diagnosisPayload("Original notes"))))
+                    .andExpect(status().isOk());
+            }
+            mockMvc.perform(put("/api/rmas/{id}/diagnosis", id)
+                    .with(user("operator").roles(role)).with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(invalid)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.details").value(hasItem(startsWith("notes:"))));
+            var persisted = mockMvc.perform(get("/api/rmas/{id}", id).with(user("viewer").roles("VIEWER")))
+                .andExpect(status().isOk());
+            if (existing) {
+                persisted.andExpect(jsonPath("$.diagnosis.notes").value("Original notes"))
+                    .andExpect(jsonPath("$.diagnosis.foundFailure").value("Original failure"))
+                    .andExpect(jsonPath("$.diagnosis.technicianName").value("Original technician"));
+            } else persisted.andExpect(jsonPath("$.diagnosis").doesNotExist());
+        }
+    }
+
+    @Test
+    void shouldKeepDiagnosisNotesRestrictedToAllowedRoles() throws Exception {
+        Long id = saveBulkTestRma("RMA-NOTES-1");
+        mockMvc.perform(put("/api/rmas/{id}/diagnosis", id).with(user("viewer").roles("VIEWER")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(diagnosisPayload("Notes"))))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/rmas/{id}", id).with(user("viewer").roles("VIEWER")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.diagnosis").doesNotExist());
+    }
+
+    private Map<String, Object> diagnosisPayload(String notes) {
+        Map<String, Object> payload = new HashMap<>(Map.of(
+            "foundFailure", "Original failure", "technicianName", "Original technician",
+            "diagnosedAt", LocalDate.now(BUSINESS_ZONE).toString()
+        ));
+        if (notes != null) payload.put("notes", notes);
+        return payload;
     }
 
     private Product saveProduct(String sku, String name, int warrantyMonths) {
