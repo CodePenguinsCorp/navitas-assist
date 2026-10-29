@@ -1,3 +1,5 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Signal, signal } from '@angular/core';
 import { FormArray, FormGroup } from '@angular/forms';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -130,3 +132,106 @@ const createdRma: RmaResponse = {
     dueAt: '2026-10-21T12:00:00Z', elapsedSeconds: 0, limitSeconds: 86400 },
   createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z',
 };
+
+describe('RmasComponent diagnosis notes limit', () => {
+  let fixture: ComponentFixture<RmasComponent>;
+  let http: HttpTestingController;
+  let page: HTMLElement;
+  const errorMessage = 'As notas devem ter no máximo 2000 caracteres.';
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [RmasComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()]
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthService).restoreSession().subscribe();
+    http.expectOne('/api/auth/me').flush({
+      id: 1, username: 'tester', fullName: 'Tester', role: 'ADMIN', active: true,
+      createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt
+    });
+    fixture = TestBed.createComponent(RmasComponent);
+    http.expectOne('/api/clients').flush([]);
+    http.expectOne('/api/products').flush([]);
+    http.expectOne('/api/rmas').flush([createdRma]);
+    fixture.detectChanges();
+    page = fixture.nativeElement as HTMLElement;
+    page.querySelector<HTMLElement>('.rma-table-row')!.click();
+    fixture.detectChanges();
+    page.querySelector<HTMLButtonElement>('.modal-overlay .form-actions .button-primary')!.click();
+    fixture.detectChanges();
+    const failure = page.querySelector<HTMLTextAreaElement>('[formControlName="foundFailure"]')!;
+    failure.value = 'Falha';
+    failure.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+  });
+
+  afterEach(() => http.verify());
+
+  function notes(): HTMLTextAreaElement {
+    return page.querySelector<HTMLTextAreaElement>('#diagnosisNotes')!;
+  }
+
+  function enterNotes(value: string): void {
+    notes().value = value;
+    notes().dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+  }
+
+  function submit(): void {
+    page.querySelector('.modal-overlay form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+  }
+
+  function expectBlockedOversize(): void {
+    enterNotes('n'.repeat(2001));
+    submit();
+    const requests = http.match({ method: 'PUT', url: '/api/rmas/1/diagnosis' });
+    for (const request of requests) {
+      request.flush({ message: 'Validation failed', details: ['notes: too long'] }, { status: 400, statusText: 'Bad Request' });
+    }
+    fixture.detectChanges();
+    expect(requests).toHaveLength(0);
+    expect(notes().value).toHaveLength(2001);
+    expect(notes().closest('.field-group')?.textContent).toContain(errorMessage);
+    expect(page.querySelector('.modal-overlay')).not.toBeNull();
+  }
+
+  function succeed(expectedNotes: string | null): void {
+    const request = http.expectOne({ method: 'PUT', url: '/api/rmas/1/diagnosis' });
+    expect(request.request.body.notes).toBe(expectedNotes);
+    const saved: RmaResponse = { ...createdRma, diagnosis: {
+      id: 1, ...request.request.body, createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt
+    } };
+    request.flush(saved);
+    http.expectOne({ method: 'GET', url: '/api/rmas' }).flush([saved]);
+    fixture.detectChanges();
+    expect(page.querySelector('.modal-overlay')).toBeNull();
+  }
+
+  it('shows the existing API limit without initial validation feedback', () => {
+    expect(notes().maxLength).toBe(2000);
+    expect(page.querySelector('label[for="diagnosisNotes"]')?.textContent).toContain('2000');
+    expect(notes().closest('.field-group')?.textContent).not.toContain(errorMessage);
+  });
+
+  it.each([{ label: 'empty', value: '' }, { label: 'boundary', value: 'n'.repeat(2000) }])(
+    'saves $label notes with the existing payload normalization', ({ value }) => {
+      enterNotes(value);
+      submit();
+      succeed(value || null);
+    }
+  );
+
+  it('blocks oversized notes locally without losing the form value', () => {
+    expectBlockedOversize();
+  });
+
+  it('removes feedback after correction and permits saving', () => {
+    expectBlockedOversize();
+    enterNotes('n'.repeat(2000));
+    expect(notes().closest('.field-group')?.textContent).not.toContain(errorMessage);
+    submit();
+    succeed('n'.repeat(2000));
+  });
+});
