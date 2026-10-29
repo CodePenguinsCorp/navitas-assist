@@ -68,7 +68,8 @@ export class CustomSelectComponent implements ControlValueAccessor {
       return;
     }
 
-    this.isOpen.update((open) => !open);
+    if (this.isOpen()) this.close();
+    else this.isOpen.set(true);
   }
 
   protected selectOption(option: CustomSelectOption): void {
@@ -108,12 +109,18 @@ export class CustomSelectComponent implements ControlValueAccessor {
     }
   }
 
+  @HostListener('focusout', ['$event'])
+  protected handleFocusOut(event: FocusEvent): void {
+    if (!this.isDisabled() && !this.hostElement.nativeElement.contains(event.relatedTarget as Node | null)) {
+      this.onTouched();
+    }
+  }
+
   private close(): void {
     if (this.isOpen()) {
       this.isOpen.set(false);
+      this.onTouched();
     }
-
-    this.onTouched();
   }
 }
 

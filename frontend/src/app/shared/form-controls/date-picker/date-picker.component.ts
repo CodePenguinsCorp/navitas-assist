@@ -161,15 +161,21 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
     this.viewMonth.set(startOfMonth(parsed ?? parseIsoDate(todayInputValue())!));
   }
 
+  @HostListener('focusout', ['$event'])
+  protected handleFocusOut(event: FocusEvent): void {
+    if (!this.isDisabled() && !this.hostElement.nativeElement.contains(event.relatedTarget as Node | null)) {
+      this.onTouched();
+    }
+  }
+
   private close(): void {
     if (DatePickerComponent.openPicker === this) {
       DatePickerComponent.openPicker = null;
     }
     if (this.isOpen()) {
       this.isOpen.set(false);
+      this.onTouched();
     }
-
-    this.onTouched();
   }
 }
 
