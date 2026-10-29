@@ -28,6 +28,7 @@ import br.com.navitasassist.rma.RmaStatusUpdateRequest;
 import br.com.navitasassist.rma.UpdateRmaRequest;
 import br.com.navitasassist.user.UserAccount;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.jpa.repository.query.EscapeCharacter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class RmaService {
 
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
+    private static final EscapeCharacter SEARCH_ESCAPE = EscapeCharacter.of('!');
 
     private final RmaRecordRepository rmaRecordRepository;
     private final RmaSlaService rmaSlaService;
@@ -48,7 +50,7 @@ public class RmaService {
 
     @Transactional(readOnly = true)
     public List<RmaResponse> search(String query, RmaStatus status) {
-        return rmaRecordRepository.search(trimToNull(query), status).stream().map(this::toResponse).toList();
+        return rmaRecordRepository.search(SEARCH_ESCAPE.escape(trimToNull(query)), status).stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)

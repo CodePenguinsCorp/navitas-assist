@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -680,6 +681,139 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.invoiceFileName").doesNotExist());
         assertEquals("original.operator", rmaRecordRepository.findById(id).orElseThrow().getReceivedBy());
         assertEquals("NF-456", rmaRecordRepository.findById(id).orElseThrow().getInvoiceNumber());
+    }
+
+
+    @ParameterizedTest
+    @CsvSource({
+        "code,%", "code,_", "batch,%", "batch,_", "serial,%", "serial,_",
+        "clientName,%", "clientName,_", "tradeName,%", "tradeName,_",
+        "productName,%", "productName,_", "sku,%", "sku,_",
+        "itemBatch,%", "itemBatch,_", "itemSerial,%", "itemSerial,_",
+        "itemProductName,%", "itemProductName,_", "itemSku,%", "itemSku,_"
+    })
+    void shouldSearchWildcardSymbolsLiterallyInEveryField(String field, String symbol) throws Exception {
+        RmaRecord expected = saveLiteralSearchRma(field, "Needle" + symbol + "value", "A");
+        saveLiteralSearchRma(field, "NeedleXvalue", "B");
+
+        mockMvc.perform(get("/api/rmas").with(user("viewer").roles("VIEWER"))
+                .param("query", "needle" + symbol + "value"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(1)))
+            .andExpect(jsonPath("$[0].id").value(expected.getId()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "!", "!%", "!_", "\\", "'", "!%_\\'" })
+    void shouldPreserveEscapeMarkersAndOtherLiteralSymbols(String symbols) throws Exception {
+        RmaRecord expected = saveLiteralSearchRma("serial", "Needle" + symbols + "value", "A");
+        String expanded = symbols.replace("%", "X").replace("_", "X");
+        saveLiteralSearchRma("serial", "Needle" + (expanded.equals(symbols) ? "X" : expanded) + "value", "B");
+
+        mockMvc.perform(get("/api/rmas").with(user("viewer").roles("VIEWER"))
+                .param("query", "Needle" + symbols + "value"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(1)))
+            .andExpect(jsonPath("$[0].id").value(expected.getId()));
+    }
+
+    @Test
+    void shouldKeepTrimCaseStatusAndDistinctSearchBehavior() throws Exception {
+        RmaRecord expected = saveLiteralSearchRma("productName", "Needle", "A");
+        RmaRecord otherStatus = saveLiteralSearchRma("productName", "Needle", "B");
+        otherStatus.setStatus(RmaStatus.TRIAGE);
+        rmaRecordRepository.saveAndFlush(otherStatus);
+        saveLiteralSearchRma("none", "", "C");
+
+        mockMvc.perform(get("/api/rmas").with(user("viewer").roles("VIEWER"))
+                .param("query", "  nEeDlE  ").param("status", "RECEIVED"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(1)))
+            .andExpect(jsonPath("$[0].id").value(expected.getId()));
+    }
+
+    @Test
+    void shouldKeepAbsentAndBlankSearchOrderedByEntryDateThenId() throws Exception {
+        RmaRecord older = saveLiteralSearchRma("none", "", "A");
+        older.setEntryDate(LocalDate.now(BUSINESS_ZONE).minusDays(1));
+        rmaRecordRepository.saveAndFlush(older);
+        RmaRecord newer = saveLiteralSearchRma("none", "", "B");
+        RmaRecord newestId = saveLiteralSearchRma("none", "", "C");
+
+        for (String query : new String[] { null, "   " }) {
+            var request = get("/api/rmas").with(user("viewer").roles("VIEWER"));
+            if (query != null) request.param("query", query);
+            mockMvc.perform(request)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(3)))
+                .andExpect(jsonPath("$[0].id").value(newestId.getId()))
+                .andExpect(jsonPath("$[1].id").value(newer.getId()))
+                .andExpect(jsonPath("$[2].id").value(older.getId()));
+        }
+    }
+
+    @Test
+    void shouldKeepHistoryMatchingLiteralWithoutSearchEscaping() throws Exception {
+        RmaRecord expected = saveLiteralSearchRma("batch", "Needle%value", "A");
+        saveLiteralSearchRma("batch", "NeedleXvalue", "B");
+
+        mockMvc.perform(get("/api/rmas/history").with(user("viewer").roles("VIEWER"))
+                .param("batchNumber", "  Needle%value  "))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(1)))
+            .andExpect(jsonPath("$[0].id").value(expected.getId()));
+    }
+
+    private RmaRecord saveLiteralSearchRma(String field, String value, String suffix) {
+        Client client = new Client();
+        client.setLegalName("Client " + suffix);
+        Product product = new Product();
+        product.setSku("P-" + suffix);
+        product.setName("Product " + suffix);
+        product.setDefaultWarrantyMonths(12);
+        Product itemProduct = new Product();
+        itemProduct.setSku("I-" + suffix);
+        itemProduct.setName("Item product " + suffix);
+        itemProduct.setDefaultWarrantyMonths(12);
+        RmaRecord rma = new RmaRecord();
+        rma.setCode("RMA-LITERAL-" + suffix);
+        rma.getItemIdentification().setSerialNumber("LEGACY-" + suffix);
+        RmaItem additional = new RmaItem();
+        additional.getItemIdentification().setSerialNumber("ITEM-" + suffix);
+        additional.setWarrantyMonths(12);
+
+        switch (field) {
+            case "code" -> rma.setCode(value);
+            case "batch" -> rma.getItemIdentification().setBatchNumber(value);
+            case "serial" -> rma.getItemIdentification().setSerialNumber(value);
+            case "clientName" -> client.setLegalName(value);
+            case "tradeName" -> client.setTradeName(value);
+            case "productName" -> product.setName(value);
+            case "sku" -> product.setSku(value);
+            case "itemBatch" -> additional.getItemIdentification().setBatchNumber(value);
+            case "itemSerial" -> additional.getItemIdentification().setSerialNumber(value);
+            case "itemProductName" -> itemProduct.setName(value);
+            case "itemSku" -> itemProduct.setSku(value);
+            case "none" -> { }
+            default -> throw new IllegalArgumentException("Unknown search field: " + field);
+        }
+
+        rma.setClient(clientRepository.saveAndFlush(client));
+        rma.setProduct(productRepository.saveAndFlush(product));
+        additional.setProduct(productRepository.saveAndFlush(itemProduct));
+        RmaItem primary = new RmaItem();
+        primary.setProduct(rma.getProduct());
+        primary.setWarrantyMonths(12);
+        primary.getItemIdentification().setBatchNumber(rma.getItemIdentification().getBatchNumber());
+        primary.getItemIdentification().setSerialNumber(rma.getItemIdentification().getSerialNumber());
+        rma.replaceItems(List.of(primary, additional));
+        rma.setStatus(RmaStatus.RECEIVED);
+        rma.setPriority(RmaPriority.MEDIUM);
+        rma.setPurchaseDateUnknown(true);
+        rma.setEntryDate(LocalDate.now(BUSINESS_ZONE));
+        rma.setReceivedBy("Service desk");
+        rma.setReportedFailure("Literal search fixture");
+        return rmaRecordRepository.saveAndFlush(rma);
     }
 
     private Product saveProduct(String sku, String name, int warrantyMonths) {
