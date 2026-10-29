@@ -298,7 +298,7 @@ export class RmasComponent {
     purchaseDate: [''],
     purchaseDateUnknown: [false],
     entryDate: [todayInputValue(), [Validators.required]],
-    invoiceNumber: [''],
+    invoiceNumber: ['', [Validators.maxLength(80)]],
     reportedFailure: ['', [Validators.required, Validators.maxLength(1000)]],
     receivedAccessories: ['', [Validators.maxLength(500)]],
     physicalCondition: ['', [Validators.maxLength(500)]],
