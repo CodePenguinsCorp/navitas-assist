@@ -1,3 +1,5 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { Signal, signal } from '@angular/core';
 import { FormArray, FormGroup } from '@angular/forms';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -130,3 +132,166 @@ const createdRma: RmaResponse = {
     dueAt: '2026-10-21T12:00:00Z', elapsedSeconds: 0, limitSeconds: 86400 },
   createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z',
 };
+
+describe('RmasComponent pending submissions', () => {
+  let fixture: ComponentFixture<RmasComponent>;
+  let http: HttpTestingController;
+  let page: HTMLElement;
+  type Mode = 'create' | 'diagnosis';
+  const forms = [
+    { mode: 'create' as const, method: 'POST', url: '/api/rmas' },
+    { mode: 'diagnosis' as const, method: 'PUT', url: '/api/rmas/1/diagnosis' }
+  ];
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [RmasComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()]
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthService).restoreSession().subscribe();
+    http.expectOne('/api/auth/me').flush({
+      id: 1, username: 'tester', fullName: 'Tester', role: 'ADMIN', active: true,
+      createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt
+    });
+    fixture = TestBed.createComponent(RmasComponent);
+    http.expectOne('/api/clients').flush([{
+      id: 1, legalName: 'Cliente', tradeName: null, documentNumber: null, contactName: null,
+      email: null, phone: null, address: null, notes: null,
+      createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt
+    }]);
+    http.expectOne('/api/products').flush([{
+      id: 2, sku: 'SKU-2', name: 'Produto', category: null, hardwareVersion: null,
+      firmwareVersion: null, defaultWarrantyMonths: 12, technicalNotes: null,
+      createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt
+    }]);
+    http.expectOne('/api/rmas').flush([createdRma]);
+    fixture.detectChanges();
+    page = fixture.nativeElement as HTMLElement;
+  });
+
+  afterEach(() => http.verify());
+
+  function enter(selector: string, value: string): void {
+    const input = page.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector)!;
+    input.value = value;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+  }
+
+  function selectOption(controlName: string, text: string): void {
+    const select = page.querySelector<HTMLElement>('app-custom-select[formControlName="' + controlName + '"]')!;
+    select.querySelector<HTMLButtonElement>('.custom-select__trigger')!.click();
+    fixture.detectChanges();
+    Array.from(select.querySelectorAll<HTMLButtonElement>('.custom-select__option'))
+      .find((option) => option.textContent?.includes(text))!.click();
+    fixture.detectChanges();
+  }
+
+  function open(mode: Mode, valid = true): void {
+    if (mode === 'create') {
+      page.querySelector<HTMLButtonElement>('.page-heading .button-primary')!.click();
+      fixture.detectChanges();
+      if (!valid) return;
+      selectOption('clientId', 'Cliente');
+      selectOption('productId', 'SKU-2');
+      enter('#serialNumber-0', 'SER-2');
+      enter('#reportedFailure', 'Falha');
+      const unknown = page.querySelector<HTMLInputElement>('[formControlName="purchaseDateUnknown"]')!;
+      unknown.checked = true;
+      unknown.dispatchEvent(new Event('change', { bubbles: true }));
+    } else {
+      page.querySelector<HTMLElement>('.rma-table-row')!.click();
+      fixture.detectChanges();
+      page.querySelector<HTMLButtonElement>('.modal-overlay .form-actions .button-primary')!.click();
+      fixture.detectChanges();
+      if (!valid) return;
+      enter('[formControlName="foundFailure"]', 'Falha');
+    }
+    fixture.detectChanges();
+  }
+
+  function submitButton(): HTMLButtonElement {
+    return page.querySelector<HTMLButtonElement>('.modal-overlay button[type="submit"]')!;
+  }
+
+  function submit(): void {
+    page.querySelector('.modal-overlay form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+  }
+
+  function failureValue(mode: Mode): string {
+    return page.querySelector<HTMLTextAreaElement>('[formControlName="' + (mode === 'create' ? 'reportedFailure' : 'foundFailure') + '"]')!.value;
+  }
+
+  function succeed(request: TestRequest, mode: Mode): void {
+    expect(request.request.body[mode === 'create' ? 'reportedFailure' : 'foundFailure']).toBe('Falha');
+    const saved: RmaResponse = mode === 'create' ? createdRma : {
+      ...createdRma, diagnosis: {
+        id: 1, ...request.request.body, createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt
+      }
+    };
+    request.flush(saved);
+    http.expectOne({ method: 'GET', url: '/api/rmas' }).flush([saved]);
+    fixture.detectChanges();
+    expect(page.querySelector('.modal-overlay')).toBeNull();
+    expect(page.textContent).toContain(mode === 'create' ? 'criado com sucesso' : 'salvo com sucesso');
+  }
+
+  it.each(forms)('ignores repeated $mode submissions while the first request is pending', ({ mode, method, url }) => {
+    open(mode);
+    submit();
+    const first = http.expectOne({ method, url });
+    expect(submitButton().disabled).toBe(true);
+
+    submit();
+    const duplicates = http.match({ method, url });
+    for (const duplicate of duplicates) {
+      duplicate.flush({ message: 'Duplicate request' }, { status: 500, statusText: 'Server Error' });
+    }
+    if (duplicates.length) {
+      first.flush({ message: 'Pending request cleanup' }, { status: 500, statusText: 'Server Error' });
+      fixture.detectChanges();
+    }
+    expect(duplicates).toHaveLength(0);
+    expect(first.cancelled).toBe(false);
+    expect(submitButton().disabled).toBe(true);
+    succeed(first, mode);
+  });
+
+  it.each(forms)('allows a manual $mode retry after an error without losing values', ({ mode, method, url }) => {
+    open(mode);
+    submit();
+    const first = http.expectOne({ method, url });
+    const payload = first.request.body;
+    first.flush({ message: 'Falha temporária' }, { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    expect(failureValue(mode)).toBe('Falha');
+    expect(submitButton().disabled).toBe(false);
+    expect(page.textContent).toContain('Falha temporária');
+    submit();
+    const retry = http.expectOne({ method, url });
+    expect(retry.request.body).toEqual(payload);
+    succeed(retry, mode);
+  });
+
+  it.each(forms)('allows a new $mode operation after a successful one', ({ mode, method, url }) => {
+    open(mode);
+    submit();
+    succeed(http.expectOne({ method, url }), mode);
+
+    open(mode);
+    expect(submitButton().disabled).toBe(false);
+    submit();
+    succeed(http.expectOne({ method, url }), mode);
+  });
+
+  it.each(forms)('does not send or lock an invalid $mode form', ({ mode, method, url }) => {
+    open(mode, false);
+    submit();
+    http.expectNone({ method, url });
+    expect(submitButton().disabled).toBe(false);
+    expect(page.querySelector('.modal-overlay')).not.toBeNull();
+  });
+});
