@@ -236,6 +236,10 @@ export class ProductsComponent {
   }
 
   protected saveProduct(): void {
+    if (this.submitting()) {
+      return;
+    }
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.modalErrorMessage.set('Revise os campos destacados antes de salvar o produto.');
