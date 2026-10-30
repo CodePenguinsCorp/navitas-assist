@@ -213,7 +213,7 @@ export class KanbanComponent {
 
   protected readonly statusForm = this.formBuilder.nonNullable.group({
     status: ['RECEIVED' as RmaStatus, [Validators.required]],
-    note: [''],
+    note: ['', [Validators.maxLength(255)]],
   });
 
   protected readonly assignmentForm = this.formBuilder.group({
@@ -505,7 +505,7 @@ export class KanbanComponent {
 
     if (this.statusForm.invalid) {
       this.statusForm.markAllAsTouched();
-      this.statusModalError.set('Informe um status válido.');
+      this.statusModalError.set('Confira os dados da alteração de status.');
       return;
     }
 

@@ -1,6 +1,8 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Signal, signal } from '@angular/core';
 import { FormGroup } from '@angular/forms';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { KanbanViewRequest, RmaResponse, WarrantyStatus } from '../../core/models';
 import { SlaClockService } from '../../core/services/sla-clock.service';
@@ -330,3 +332,114 @@ function buildRma(values: {
     updatedAt: values.updatedAt,
   };
 }
+
+describe('KanbanComponent status note limit', () => {
+  let fixture: ComponentFixture<KanbanComponent>;
+  let http: HttpTestingController;
+  let page: HTMLElement;
+  let targetStatusLabel: string;
+  const errorMessage = 'A observação deve ter no máximo 255 caracteres.';
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [KanbanComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()]
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthService).restoreSession().subscribe();
+    http.expectOne('/api/auth/me').flush({
+      id: 1, username: 'tester', fullName: 'Tester', role: 'ADMIN', active: true,
+      createdAt: TEST_RMAS[0].createdAt, updatedAt: TEST_RMAS[0].updatedAt
+    });
+    fixture = TestBed.createComponent(KanbanComponent);
+    http.expectOne('/api/rmas').flush(TEST_RMAS);
+    http.expectOne('/api/users/assignable').flush([]);
+    http.expectOne('/api/kanban-views').flush([]);
+    fixture.detectChanges();
+    page = fixture.nativeElement as HTMLElement;
+    page.querySelector<HTMLElement>('.board-card')!.dispatchEvent(new Event('dragstart', { bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+    page.querySelector<HTMLElement>('.board-column[data-status="IN_DIAGNOSIS"]')!
+      .dispatchEvent(new Event('drop', { bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+    targetStatusLabel = statusLabel();
+  });
+
+  afterEach(() => http.verify());
+
+  function note(): HTMLTextAreaElement {
+    return page.querySelector<HTMLTextAreaElement>('#kanbanStatusNote')!;
+  }
+
+  function statusLabel(): string {
+    return page.querySelector('.modal-overlay app-custom-select[formControlName="status"] .custom-select__label')!.textContent!.trim();
+  }
+
+  function enterNote(value: string): void {
+    note().value = value;
+    note().dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+  }
+
+  function submit(): void {
+    page.querySelector('.modal-overlay form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+  }
+
+  function expectBlockedOversize(): void {
+    enterNote('n'.repeat(256));
+    submit();
+    const requests = http.match({ method: 'PATCH', url: '/api/rmas/1/status' });
+    for (const request of requests) {
+      request.flush({ message: 'Validation failed', details: ['note: too long'] }, { status: 400, statusText: 'Bad Request' });
+    }
+    fixture.detectChanges();
+    expect(requests).toHaveLength(0);
+    expect(note().value).toHaveLength(256);
+    expect(statusLabel()).toBe(targetStatusLabel);
+    expect(note().closest('.field-group')?.textContent).toContain(errorMessage);
+    expect(page.querySelector('.modal-overlay [role="alert"]')?.textContent).toContain('Confira os dados da alteração de status.');
+    expect(page.querySelector('.modal-overlay')).not.toBeNull();
+  }
+
+  function succeed(expectedNote: string | null): void {
+    const request = http.expectOne({ method: 'PATCH', url: '/api/rmas/1/status' });
+    expect(request.request.body).toEqual({ status: 'IN_DIAGNOSIS', note: expectedNote });
+    const saved: RmaResponse = { ...TEST_RMAS[0], status: 'IN_DIAGNOSIS' };
+    request.flush(saved);
+    http.expectOne('/api/rmas').flush([saved, TEST_RMAS[1]]);
+    http.expectOne('/api/users/assignable').flush([]);
+    fixture.detectChanges();
+    expect(page.querySelector('.modal-overlay')).toBeNull();
+    expect(page.querySelector('.board-column[data-status="IN_DIAGNOSIS"] .board-card')?.textContent).toContain(saved.code);
+  }
+
+  it('informs and applies the API limit without an initial error', () => {
+    expect(note().maxLength).toBe(255);
+    expect(page.querySelector('label[for="kanbanStatusNote"]')?.textContent).toContain('255');
+    expect(note().closest('.field-group')?.textContent).not.toContain(errorMessage);
+    expect(page.querySelector('.modal-overlay [role="alert"]')).toBeNull();
+  });
+
+  it.each([
+    { label: 'empty', value: '', expected: null },
+    { label: 'boundary', value: 'n'.repeat(255), expected: 'n'.repeat(255) },
+    { label: 'trimmed', value: '  Nota  ', expected: 'Nota' }
+  ])('saves $label notes with the existing normalization', ({ value, expected }) => {
+    enterNote(value);
+    submit();
+    succeed(expected);
+  });
+
+  it('blocks oversized notes and preserves the selected status and form', () => {
+    expectBlockedOversize();
+  });
+
+  it('removes feedback and permits saving after correction', () => {
+    expectBlockedOversize();
+    enterNote('n'.repeat(255));
+    expect(note().closest('.field-group')?.textContent).not.toContain(errorMessage);
+    submit();
+    succeed('n'.repeat(255));
+  });
+});
