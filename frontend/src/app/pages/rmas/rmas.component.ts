@@ -447,6 +447,10 @@ export class RmasComponent {
   }
 
   protected createRma(): void {
+    if (this.createSubmitting()) {
+      return;
+    }
+
     if (!this.canOpenRma()) {
       this.pageError.set('Seu perfil não pode abrir novos RMAs.');
       return;
@@ -511,6 +515,10 @@ export class RmasComponent {
   }
 
   protected saveDiagnosis(): void {
+    if (this.diagnosisSubmitting()) {
+      return;
+    }
+
     const selected = this.selectedRmaSignal();
     if (!selected) {
       this.pageError.set('Selecione um RMA para registrar diagnóstico.');
