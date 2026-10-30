@@ -38,11 +38,14 @@ This will compile your project and store the build artifacts in the `dist/` dire
 
 ## Running unit tests
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+To run the Angular tests once with Vitest and happy-dom, then the separate SLA tests, use:
 
 ```bash
-ng test
+npm test -- --watch=false
+npm run test:sla
 ```
+
+Use `npm test` during development to enable the runner's interactive watch behavior when a TTY is available. The separate SLA suite checks deadline boundaries and SLA filters with Node 22. The repository's `Frontend CI` workflow runs both test commands and the production build for frontend changes.
 
 ## Running end-to-end tests
 

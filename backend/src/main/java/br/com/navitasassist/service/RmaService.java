@@ -2,6 +2,7 @@ package br.com.navitasassist.service;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
 
@@ -11,9 +12,13 @@ import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.diagnosis.Diagnosis;
 import br.com.navitasassist.diagnosis.DiagnosisRequest;
 import br.com.navitasassist.item.ItemIdentification;
-import br.com.navitasassist.product.Product;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.CreateRmaRequest;
+import br.com.navitasassist.rma.RmaAssigneeUpdateRequest;
+import br.com.navitasassist.rma.RmaBulkStatusUpdateRequest;
+import br.com.navitasassist.rma.RmaAssignmentHistory;
+import br.com.navitasassist.rma.RmaItem;
+import br.com.navitasassist.rma.RmaItemRequest;
 import br.com.navitasassist.rma.RmaPriority;
 import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaResponse;
@@ -21,7 +26,7 @@ import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusHistory;
 import br.com.navitasassist.rma.RmaStatusUpdateRequest;
 import br.com.navitasassist.rma.UpdateRmaRequest;
-import br.com.navitasassist.rma.WarrantyStatus;
+import br.com.navitasassist.user.UserAccount;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,23 +38,27 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class RmaService {
 
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
+
     private final RmaRecordRepository rmaRecordRepository;
+    private final RmaSlaService rmaSlaService;
     private final ClientService clientService;
     private final ProductService productService;
+    private final UserAccountService userAccountService;
 
     @Transactional(readOnly = true)
     public List<RmaResponse> search(String query, RmaStatus status) {
-        return rmaRecordRepository.search(trimToNull(query), status).stream().map(RmaResponse::from).toList();
+        return rmaRecordRepository.search(trimToNull(query), status).stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
     public RmaResponse getById(Long id) {
-        return RmaResponse.from(getEntityById(id));
+        return toResponse(getEntityById(id));
     }
 
     @Transactional(readOnly = true)
     public RmaResponse getByCode(String code) {
-        return RmaResponse.from(rmaRecordRepository.findByCodeIgnoreCase(code)
+        return toResponse(rmaRecordRepository.findByCodeIgnoreCase(code)
             .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + code)));
     }
 
@@ -64,30 +73,29 @@ public class RmaService {
 
         return rmaRecordRepository.findHistory(normalizedBatch, normalizedSerial)
             .stream()
-            .map(RmaResponse::from)
+            .map(this::toResponse)
             .toList();
     }
 
     public RmaResponse create(CreateRmaRequest request) {
         Client client = clientService.getEntityById(request.clientId());
-        Product product = productService.getEntityById(request.productId());
+        List<RmaItem> items = buildItems(request.items());
 
         RmaRecord rma = new RmaRecord();
         rma.setCode(generateNextCode());
         rma.setClient(client);
-        rma.setProduct(product);
         rma.setStatus(RmaStatus.RECEIVED);
         rma.setPriority(defaultPriority(request.priority()));
+        rma.setReceivedBy(currentUsername());
 
-        applyTrackableFields(rma.getItemIdentification(), request.batchNumber(), request.serialNumber(), request.manufacturedAt());
+        rma.replaceItems(items);
+        syncLegacyItem(rma);
         applyCommonFields(
             rma,
             request.purchaseDate(),
             request.purchaseDateUnknown(),
             request.entryDate(),
             request.invoiceNumber(),
-            request.invoiceFileName(),
-            request.receivedBy(),
             request.reportedFailure(),
             request.receivedAccessories(),
             request.physicalCondition(),
@@ -99,10 +107,10 @@ public class RmaService {
             null
         );
         validateMandatoryFields(rma);
-        applyWarranty(rma, request.warrantyStatusOverride(), request.warrantyJustification());
+        validateDates(rma);
         addStatusHistory(rma, RmaStatus.RECEIVED, "RMA created");
 
-        return RmaResponse.from(rmaRecordRepository.save(rma));
+        return toResponse(rmaRecordRepository.save(rma));
     }
 
     public RmaResponse update(Long id, UpdateRmaRequest request) {
@@ -111,19 +119,12 @@ public class RmaService {
         if (request.clientId() != null) {
             rma.setClient(clientService.getEntityById(request.clientId()));
         }
-        if (request.productId() != null) {
-            rma.setProduct(productService.getEntityById(request.productId()));
+        if (request.items() != null) {
+            rma.replaceItems(buildItems(request.items()));
+            syncLegacyItem(rma);
         }
-        if (request.batchNumber() != null) {
-            rma.getItemIdentification().setBatchNumber(trimToNull(request.batchNumber()));
-        }
-        if (request.serialNumber() != null) {
-            rma.getItemIdentification().setSerialNumber(trimToNull(request.serialNumber()));
-        }
-        if (request.manufacturedAt() != null) {
-            rma.getItemIdentification().setManufacturedAt(request.manufacturedAt());
-        }
-        if (request.priority() != null) {
+        if (request.priority() != null && request.priority() != rma.getPriority()) {
+            addStatusHistory(rma, rma.getStatus(), "Priority changed from " + rma.getPriority() + " to " + request.priority());
             rma.setPriority(request.priority());
         }
 
@@ -133,8 +134,6 @@ public class RmaService {
             request.purchaseDateUnknown(),
             request.entryDate(),
             request.invoiceNumber(),
-            request.invoiceFileName(),
-            request.receivedBy(),
             request.reportedFailure(),
             request.receivedAccessories(),
             request.physicalCondition(),
@@ -147,23 +146,25 @@ public class RmaService {
         );
 
         validateMandatoryFields(rma);
+        validateDates(rma);
 
-        boolean shouldRecalculateWarranty = request.purchaseDate() != null
-            || request.purchaseDateUnknown() != null
-            || request.entryDate() != null
-            || request.productId() != null;
-
-        if (request.warrantyStatusOverride() != null) {
-            applyWarranty(rma, request.warrantyStatusOverride(), request.warrantyJustification());
-        } else if (shouldRecalculateWarranty && !rma.isWarrantyOverridden()) {
-            applyWarranty(rma, null, null);
-        }
-
-        return RmaResponse.from(rmaRecordRepository.save(rma));
+        return toResponse(rmaRecordRepository.save(rma));
     }
 
     public RmaResponse updateStatus(Long id, RmaStatusUpdateRequest request) {
-        RmaRecord rma = getEntityById(id);
+        return applyStatusChange(getEntityById(id), request);
+    }
+
+    public RmaResponse updateStatusInBulk(Long id, RmaBulkStatusUpdateRequest request) {
+        RmaRecord rma = rmaRecordRepository.findByIdForUpdate(id)
+            .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
+        if (rma.getStatus() != request.expectedStatus()) {
+            throw new BusinessException("RMA status changed. Refresh the item before trying again.");
+        }
+        return applyStatusChange(rma, new RmaStatusUpdateRequest(request.status(), request.note()));
+    }
+
+    private RmaResponse applyStatusChange(RmaRecord rma, RmaStatusUpdateRequest request) {
         boolean changed = !Objects.equals(rma.getStatus(), request.status());
 
         if (changed) {
@@ -173,7 +174,26 @@ public class RmaService {
             addStatusHistory(rma, request.status(), request.note());
         }
 
-        return RmaResponse.from(rmaRecordRepository.save(rma));
+        return toResponse(rmaRecordRepository.save(rma));
+    }
+
+    public RmaResponse updateAssignee(Long id, RmaAssigneeUpdateRequest request) {
+        RmaRecord rma = getEntityById(id);
+        UserAccount previousAssignee = rma.getAssignee();
+        UserAccount newAssignee = request.assigneeId() == null
+            ? null
+            : userAccountService.getAssignableTechnicianById(request.assigneeId());
+
+        if (Objects.equals(
+            previousAssignee == null ? null : previousAssignee.getId(),
+            newAssignee == null ? null : newAssignee.getId()
+        )) {
+            return toResponse(rma);
+        }
+
+        rma.setAssignee(newAssignee);
+        addAssignmentHistory(rma, previousAssignee, newAssignee);
+        return toResponse(rmaRecordRepository.save(rma));
     }
 
     public RmaResponse upsertDiagnosis(Long id, DiagnosisRequest request) {
@@ -192,7 +212,7 @@ public class RmaService {
         diagnosis.setDiagnosedAt(request.diagnosedAt());
         diagnosis.setTechnicianName(trim(request.technicianName()));
 
-        return RmaResponse.from(rmaRecordRepository.save(rma));
+        return toResponse(rmaRecordRepository.save(rma));
     }
 
     @Transactional(readOnly = true)
@@ -201,12 +221,38 @@ public class RmaService {
             .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
     }
 
-    private void applyTrackableFields(
-        ItemIdentification itemIdentification,
-        String batchNumber,
-        String serialNumber,
-        LocalDate manufacturedAt
-    ) {
+    private List<RmaItem> buildItems(List<RmaItemRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            throw new BusinessException("At least one product must be provided.");
+        }
+        if (requests.stream().anyMatch(Objects::isNull)) {
+            throw new BusinessException("Each RMA item must be provided.");
+        }
+
+        return requests.stream().map(request -> {
+            RmaItem item = new RmaItem();
+            item.setProduct(productService.getEntityById(request.productId()));
+            item.setWarrantyMonths(item.getProduct().getDefaultWarrantyMonths());
+            applyTrackableFields(item.getItemIdentification(), request.batchNumber(), request.serialNumber(), request.manufacturedAt());
+            if (item.getItemIdentification().isEmpty()) {
+                throw new BusinessException("Each product must have at least a batch number or serial number.");
+            }
+            return item;
+        }).toList();
+    }
+
+    private void syncLegacyItem(RmaRecord rma) {
+        RmaItem firstItem = rma.getItems().get(0);
+        rma.setProduct(firstItem.getProduct());
+        applyTrackableFields(
+            rma.getItemIdentification(),
+            firstItem.getItemIdentification().getBatchNumber(),
+            firstItem.getItemIdentification().getSerialNumber(),
+            firstItem.getItemIdentification().getManufacturedAt()
+        );
+    }
+
+    private void applyTrackableFields(ItemIdentification itemIdentification, String batchNumber, String serialNumber, LocalDate manufacturedAt) {
         itemIdentification.setBatchNumber(trimToNull(batchNumber));
         itemIdentification.setSerialNumber(trimToNull(serialNumber));
         itemIdentification.setManufacturedAt(manufacturedAt);
@@ -218,8 +264,6 @@ public class RmaService {
         Boolean purchaseDateUnknown,
         LocalDate entryDate,
         String invoiceNumber,
-        String invoiceFileName,
-        String receivedBy,
         String reportedFailure,
         String receivedAccessories,
         String physicalCondition,
@@ -244,12 +288,6 @@ public class RmaService {
         }
         if (invoiceNumber != null) {
             rma.setInvoiceNumber(trimToNull(invoiceNumber));
-        }
-        if (invoiceFileName != null) {
-            rma.setInvoiceFileName(trimToNull(invoiceFileName));
-        }
-        if (receivedBy != null) {
-            rma.setReceivedBy(trim(receivedBy));
         }
         if (reportedFailure != null) {
             rma.setReportedFailure(trim(reportedFailure));
@@ -281,8 +319,11 @@ public class RmaService {
     }
 
     private void validateMandatoryFields(RmaRecord rma) {
-        if (rma.getItemIdentification().isEmpty()) {
-            throw new BusinessException("At least batch number or serial number must be provided.");
+        if (rma.getItems().isEmpty() && (rma.getProduct() == null || rma.getItemIdentification().isEmpty())) {
+            throw new BusinessException("At least one identified product must be provided.");
+        }
+        if (rma.getItems().stream().anyMatch(item -> item.getProduct() == null || item.getItemIdentification().isEmpty())) {
+            throw new BusinessException("Each product must have at least a batch number or serial number.");
         }
         if (rma.getPurchaseDate() == null && !rma.isPurchaseDateUnknown()) {
             throw new BusinessException("Provide a purchase date or mark it as unknown.");
@@ -290,43 +331,40 @@ public class RmaService {
         if (rma.getPurchaseDate() != null && rma.isPurchaseDateUnknown()) {
             throw new BusinessException("Purchase date cannot be informed and unknown at the same time.");
         }
-        if (rma.getClient() == null || rma.getProduct() == null) {
-            throw new BusinessException("Client and product are required.");
+        if (rma.getClient() == null) {
+            throw new BusinessException("Client is required.");
         }
         if (rma.getEntryDate() == null || trimToNull(rma.getReportedFailure()) == null || trimToNull(rma.getReceivedBy()) == null) {
             throw new BusinessException("Entry date, receiver and reported failure are required.");
         }
     }
 
-    private void applyWarranty(RmaRecord rma, WarrantyStatus overrideStatus, String justification) {
-        String actor = currentUsername();
+    private void validateDates(RmaRecord rma) {
+        LocalDate today = LocalDate.now(BUSINESS_ZONE);
+        LocalDate legacyManufacturedAt = rma.getItemIdentification().getManufacturedAt();
+        List<LocalDate> manufacturedDates = rma.getItems().isEmpty()
+            ? (legacyManufacturedAt == null ? List.of() : List.of(legacyManufacturedAt))
+            : rma.getItems().stream()
+                .map(RmaItem::getItemIdentification)
+                .map(ItemIdentification::getManufacturedAt)
+                .filter(Objects::nonNull)
+                .toList();
 
-        if (overrideStatus != null) {
-            if (trimToNull(justification) == null) {
-                throw new BusinessException("Warranty override requires a justification.");
-            }
-            rma.setWarrantyStatus(overrideStatus);
-            rma.setWarrantyOverridden(true);
-            rma.setWarrantyJustification(trim(justification));
-        } else {
-            rma.setWarrantyStatus(calculateWarranty(rma));
-            rma.setWarrantyOverridden(false);
-            rma.setWarrantyJustification(null);
+        if (manufacturedDates.stream().anyMatch(date -> date.isAfter(today))) {
+            throw new BusinessException("Manufacturing date cannot be after today.");
         }
-
-        rma.setWarrantyUpdatedBy(actor);
-        rma.setWarrantyUpdatedAt(Instant.now());
-    }
-
-    private WarrantyStatus calculateWarranty(RmaRecord rma) {
-        if (rma.isPurchaseDateUnknown() || rma.getPurchaseDate() == null) {
-            return WarrantyStatus.PENDING;
+        if (rma.getPurchaseDate() != null && rma.getPurchaseDate().isAfter(today)) {
+            throw new BusinessException("Purchase date cannot be after today.");
         }
-
-        LocalDate warrantyLimit = rma.getPurchaseDate().plusMonths(rma.getProduct().getDefaultWarrantyMonths());
-        return warrantyLimit.isBefore(rma.getEntryDate())
-            ? WarrantyStatus.OUT_OF_WARRANTY
-            : WarrantyStatus.IN_WARRANTY;
+        if (rma.getPurchaseDate() != null && manufacturedDates.stream().anyMatch(date -> rma.getPurchaseDate().isBefore(date))) {
+            throw new BusinessException("Purchase date cannot be before manufacturing date.");
+        }
+        if (rma.getPurchaseDate() != null && rma.getEntryDate().isBefore(rma.getPurchaseDate())) {
+            throw new BusinessException("Entry date cannot be before purchase date.");
+        }
+        if (manufacturedDates.stream().anyMatch(date -> rma.getEntryDate().isBefore(date))) {
+            throw new BusinessException("Entry date cannot be before manufacturing date.");
+        }
     }
 
     private void addStatusHistory(RmaRecord rma, RmaStatus status, String note) {
@@ -338,8 +376,19 @@ public class RmaService {
         rma.addStatusHistory(history);
     }
 
+    private void addAssignmentHistory(RmaRecord rma, UserAccount previousAssignee, UserAccount newAssignee) {
+        RmaAssignmentHistory history = new RmaAssignmentHistory();
+        history.setPreviousAssigneeId(previousAssignee == null ? null : previousAssignee.getId());
+        history.setPreviousAssigneeName(previousAssignee == null ? null : previousAssignee.getFullName());
+        history.setNewAssigneeId(newAssignee == null ? null : newAssignee.getId());
+        history.setNewAssigneeName(newAssignee == null ? null : newAssignee.getFullName());
+        history.setChangedBy(currentUsername());
+        history.setChangedAt(Instant.now());
+        rma.addAssignmentHistory(history);
+    }
+
     private String generateNextCode() {
-        int year = LocalDate.now().getYear();
+        int year = LocalDate.now(BUSINESS_ZONE).getYear();
         String prefix = "RMA-" + year + "-";
 
         int nextValue = rmaRecordRepository.findTopByCodeStartingWithOrderByCodeDesc(prefix)
@@ -365,6 +414,10 @@ public class RmaService {
             return "system";
         }
         return authentication.getName();
+    }
+
+    private RmaResponse toResponse(RmaRecord rma) {
+        return RmaResponse.from(rma, rmaSlaService.calculate(rma, Instant.now()));
     }
 
     private String trimToNull(String value) {

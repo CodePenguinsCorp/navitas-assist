@@ -36,29 +36,50 @@
                 [class.is-selected]="isSelected(item)"
                 [class.is-dragging]="isDragging(item)"
                 [class.is-updating]="isStatusUpdating(item)"
-                [draggable]="canUpdateStatus() && boardUpdatingId() === null"
+                [draggable]="canUpdateStatus() && !interactionDisabled() && boardUpdatingId() === null"
                 tabindex="0"
                 (click)="cardSelect.emit(item)"
                 (keydown.enter)="cardSelect.emit(item)"
                 (dragstart)="cardDragStart.emit({ event: $event, rma: item })"
                 (dragend)="cardDragEnd.emit()"
               >
+                @if (bulkSelectionEnabled()) {
+                  <label class="board-card__selection" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" (dragstart)="preventCardDrag($event)">
+                    <input type="checkbox" [checked]="bulkSelectedIds().includes(item.id)" [disabled]="interactionDisabled() || boardUpdatingId() !== null" [attr.aria-label]="'Selecionar ' + item.code" (change)="bulkSelectionChange.emit(item)" />
+                    Selecionar
+                  </label>
+                }
                 <header class="board-card__header">
                   <div>
                     <h4>{{ item.code }}</h4>
                     <p>{{ item.clientName }}</p>
                   </div>
-                  <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus, item.warrantyOverridden)">
-                    {{ warrantyLabel(item.warrantyStatus, item.warrantyOverridden) }}
-                  </span>
                 </header>
-                <p>{{ item.productName }} | {{ trackableLabel(item) }}</p>
+                <p>{{ productSummary(item) }} | {{ trackableLabel(item) }}</p>
+                <div class="board-card__warranties">
+                  @for (product of item.items; track product.id ?? $index; let index = $index) {
+                    <span class="mini-chip" [class]="warrantyClass(product.warrantyStatus)" [title]="product.productName">
+                      Item {{ index + 1 }} · {{ product.productSku }}: {{ warrantyLabel(product.warrantyStatus) }}
+                    </span>
+                  }
+                </div>
                 <p>{{ item.reportedFailure }}</p>
+
+                <app-rma-sla-badge [sla]="item.sla" />
 
                 <div class="board-card__grid">
                   <div>
                     <span>Responsável</span>
                     <strong>{{ ownerLabel(item) }}</strong>
+                    @if (canUpdateAssignee()) {
+                      <button
+                        type="button"
+                        class="board-card__assignee-action"
+                        [disabled]="interactionDisabled() || boardUpdatingId() !== null"
+                        (click)="requestAssigneeChange($event, item)"
+                        (dragstart)="preventCardDrag($event)"
+                      >{{ item.assigneeId ? 'Trocar' : 'Atribuir' }}</button>
+                    }
                   </div>
                   <div>
                     <span>Entrada</span>

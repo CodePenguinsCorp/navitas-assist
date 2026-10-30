@@ -3,7 +3,10 @@
     <div class="kanban-hero__copy">
       <p class="eyebrow">Operações</p>
       <h1>Kanban de RMAs</h1>
-      <p>Visual dedicado para acompanhar o fluxo da assistência técnica e mover chamados entre etapas sem sair do quadro.</p>
+      <p>
+        Visual dedicado para acompanhar o fluxo da assistência técnica e mover chamados entre etapas
+        sem sair do quadro.
+      </p>
     </div>
 
     <div class="kanban-hero__stats">
@@ -29,18 +32,204 @@
         <h2>Fluxo operacional</h2>
         <p>Arraste os cards entre as colunas para refletir a etapa atual de cada atendimento.</p>
       </div>
+      <div class="kanban-stage__summary">
+        <span>{{ filteredRmas().length }} de {{ totalRmas() }} RMA(s)</span>
+        <button
+          type="button"
+          class="button-secondary"
+          (click)="clearFilters()"
+          [disabled]="activeFilterCount() === 0"
+        >
+          Limpar filtros{{ activeFilterCount() ? ' (' + activeFilterCount() + ')' : '' }}
+        </button>
+      </div>
     </div>
 
+    <section class="kanban-views" aria-labelledby="kanbanViewsTitle">
+      <div class="kanban-views__copy">
+        <strong id="kanbanViewsTitle">Visualizações</strong>
+        <span>Salve e reaplique combinações de filtros da sua conta.</span>
+      </div>
+      <div class="kanban-views__controls">
+        <app-custom-select
+          ariaLabel="Visualização salva do Kanban"
+          [options]="viewSelectOptions()"
+          [value]="activeViewId()"
+          [disabled]="viewBusy()"
+          (valueChange)="applyView($event)"
+        />
+        <button
+          type="button"
+          class="button-secondary"
+          (click)="openCreateViewModal()"
+          [disabled]="viewBusy()"
+        >
+          Salvar atual
+        </button>
+        @if (activeView(); as view) {
+          <button
+            type="button"
+            class="button-secondary"
+            (click)="openRenameViewModal()"
+            [disabled]="viewBusy()"
+          >
+            Renomear
+          </button>
+          <button
+            type="button"
+            class="button-secondary"
+            (click)="makeActiveViewDefault()"
+            [disabled]="viewBusy() || view.defaultView"
+          >
+            {{ view.defaultView ? 'Visão padrão' : 'Tornar padrão' }}
+          </button>
+          <button
+            type="button"
+            class="button-secondary button-secondary--danger"
+            (click)="deleteActiveView()"
+            [disabled]="viewBusy()"
+          >
+            Excluir
+          </button>
+        }
+      </div>
+      @if (viewError()) {
+        <p class="field-error kanban-views__error" role="alert">{{ viewError() }}</p>
+      }
+    </section>
+
+    <form appBoundedFilterPanels class="kanban-filters" [formGroup]="filtersForm">
+      <div class="field-group">
+        <label>SLA</label>
+        <app-custom-select
+          formControlName="sla"
+          ariaLabel="Filtrar Kanban por SLA"
+          [options]="slaFilterOptions"
+        />
+      </div>
+
+      <div class="field-group kanban-filters__search">
+        <label for="kanbanSearch">Busca</label>
+        <input
+          id="kanbanSearch"
+          type="search"
+          formControlName="query"
+          placeholder="Código, cliente, produto, lote ou série"
+        />
+      </div>
+
+      <div class="field-group">
+        <label>Prioridade</label>
+        <app-custom-select
+          formControlName="priority"
+          ariaLabel="Filtrar Kanban por prioridade"
+          [options]="priorityFilterOptions"
+        />
+      </div>
+
+      <div class="field-group">
+        <label>Status</label>
+        <app-custom-select
+          formControlName="status"
+          ariaLabel="Filtrar Kanban por status"
+          [options]="statusFilterOptions"
+        />
+      </div>
+
+      <div class="field-group">
+        <label>Garantia</label>
+        <app-custom-select
+          formControlName="warranty"
+          ariaLabel="Filtrar Kanban por garantia"
+          [options]="warrantyFilterOptions"
+        />
+      </div>
+
+      <div class="field-group">
+        <label>Responsável</label>
+        <app-custom-select
+          formControlName="assignee"
+          ariaLabel="Filtrar Kanban por responsável"
+          [options]="assigneeFilterOptions()"
+        />
+      </div>
+
+      <div class="field-group">
+        <label>Entrada a partir de</label>
+        <app-date-picker
+          formControlName="entryFrom"
+          ariaLabel="Filtrar por data inicial de entrada"
+          [maxDate]="filtersForm.controls.entryTo.value"
+        />
+      </div>
+
+      <div class="field-group">
+        <label>Entrada até</label>
+        <app-date-picker
+          formControlName="entryTo"
+          ariaLabel="Filtrar por data final de entrada"
+          [minDate]="filtersForm.controls.entryFrom.value"
+        />
+      </div>
+
+      <div class="field-group">
+        <label>Atualização a partir de</label>
+        <app-date-picker
+          formControlName="updatedFrom"
+          ariaLabel="Filtrar por data inicial de atualização"
+          [maxDate]="filtersForm.controls.updatedTo.value"
+        />
+      </div>
+
+      <div class="field-group">
+        <label>Atualização até</label>
+        <app-date-picker
+          formControlName="updatedTo"
+          ariaLabel="Filtrar por data final de atualização"
+          [minDate]="filtersForm.controls.updatedFrom.value"
+        />
+      </div>
+    </form>
+
+    @if (!loading() && totalRmas() > 0 && filteredRmas().length === 0) {
+      <article class="kanban-empty" role="status">
+        <strong>Nenhum RMA encontrado</strong>
+        <p>Ajuste ou limpe os filtros para voltar a visualizar os atendimentos.</p>
+      </article>
+    }
+
+    @if (canUpdateStatus()) {
+      <app-kanban-bulk-actions
+        [selection]="bulkSelectedRmas()"
+        [hiddenCount]="hiddenSelectedCount()"
+        [visibleCount]="filteredRmas().length"
+        [canUpdateStatus]="canUpdateStatus()"
+        [canManage]="canUpdateAssignee()"
+        [assigneeOptions]="assigneeSelectOptions()"
+        [disabled]="loading() || boardUpdatingId() !== null"
+        (selectVisible)="selectVisibleRmas()"
+        (clearSelection)="clearBulkSelection()"
+        (busyChange)="bulkBusy.set($event)"
+        (applied)="applyBulkResults($event)"
+      />
+    }
+
     <app-rma-kanban-board
-      [rmas]="rmas()"
+      [rmas]="filteredRmas()"
+      [bulkSelectionEnabled]="canUpdateStatus()"
+      [bulkSelectedIds]="bulkSelectedIds()"
+      [interactionDisabled]="bulkBusy()"
+      (bulkSelectionChange)="toggleBulkSelection($event)"
       [loading]="loading()"
       [canUpdateStatus]="canUpdateStatus()"
+      [canUpdateAssignee]="canUpdateAssignee()"
       [boardUpdatingId]="boardUpdatingId()"
       [selectedRmaId]="selectedRmaId()"
       [draggedRmaId]="draggedRmaId()"
       [dragTargetStatus]="dragTargetStatus()"
       [showToolbar]="false"
       (cardSelect)="selectRma($event)"
+      (assigneeChange)="openAssignmentModal($event)"
       (cardDragStart)="startCardDrag($event.event, $event.rma)"
       (cardDragEnd)="endCardDrag()"
       (columnDragOver)="allowColumnDrop($event.event, $event.status)"
@@ -49,6 +238,71 @@
     />
   </section>
 </section>
+
+@if (viewModalMode(); as mode) {
+  <section class="modal-overlay" (click)="closeViewModal()">
+    <article class="panel modal-panel modal-panel--narrow" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h3>{{ mode === 'create' ? 'Salvar visualização' : 'Renomear visualização' }}</h3>
+          <p>
+            {{
+              mode === 'create'
+                ? 'Os filtros atuais serão vinculados à sua conta.'
+                : 'Os filtros salvos serão preservados.'
+            }}
+          </p>
+        </div>
+        <button
+          type="button"
+          class="modal-close"
+          (click)="closeViewModal()"
+          [disabled]="viewBusy()"
+          aria-label="Fechar"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
+        </button>
+      </div>
+
+      @if (viewError()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ viewError() }}</strong>
+        </article>
+      }
+
+      <form [formGroup]="viewForm" (ngSubmit)="saveView()" class="form-grid">
+        <div class="field-group field-group--full">
+          <label for="kanbanViewName">Nome</label>
+          <input id="kanbanViewName" formControlName="name" maxlength="80" autocomplete="off" />
+          @if (viewForm.controls.name.touched && viewForm.controls.name.invalid) {
+            <small class="field-error">Informe um nome com até 80 caracteres.</small>
+          }
+        </div>
+
+        <label class="kanban-view-default field-group--full">
+          <input type="checkbox" formControlName="defaultView" />
+          <span>Aplicar automaticamente após o login</span>
+        </label>
+
+        <div class="form-actions form-actions--full">
+          <button
+            type="button"
+            class="button-secondary"
+            (click)="closeViewModal()"
+            [disabled]="viewBusy()"
+          >
+            Cancelar
+          </button>
+          <button type="submit" class="button-primary" [disabled]="viewBusy()">
+            {{ viewBusy() ? 'Salvando...' : 'Salvar' }}
+          </button>
+        </div>
+      </form>
+    </article>
+  </section>
+}
 
 @if (pendingStatusRma(); as rma) {
   <section class="modal-overlay" (click)="closeStatusModal()">
@@ -65,7 +319,9 @@
           [disabled]="boardUpdatingId() !== null"
           aria-label="Fechar"
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
         </button>
       </div>
 
@@ -96,9 +352,67 @@
             class="button-secondary"
             (click)="closeStatusModal()"
             [disabled]="boardUpdatingId() !== null"
-          >Cancelar</button>
+          >
+            Cancelar
+          </button>
           <button type="submit" class="button-primary" [disabled]="boardUpdatingId() !== null">
             {{ boardUpdatingId() !== null ? 'Salvando...' : 'Salvar status' }}
+          </button>
+        </div>
+      </form>
+    </article>
+  </section>
+}
+
+@if (pendingAssignmentRma(); as rma) {
+  <section class="modal-overlay" (click)="closeAssignmentModal()">
+    <article class="panel modal-panel modal-panel--narrow" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h3>Responsável</h3>
+          <p>{{ rma.code }} · Atual: {{ rma.assigneeName || 'Sem responsável' }}</p>
+        </div>
+        <button
+          type="button"
+          class="modal-close"
+          (click)="closeAssignmentModal()"
+          [disabled]="boardUpdatingId() !== null"
+          aria-label="Fechar"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
+        </button>
+      </div>
+
+      @if (assignmentModalError()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ assignmentModalError() }}</strong>
+        </article>
+      }
+
+      <form [formGroup]="assignmentForm" (ngSubmit)="saveAssignment()" class="form-grid">
+        <div class="field-group field-group--full">
+          <label>Novo responsável</label>
+          <app-custom-select
+            formControlName="assigneeId"
+            ariaLabel="Novo responsável do RMA"
+            [options]="assigneeSelectOptions()"
+          />
+          <small>Somente técnicos ativos podem receber novas atribuições.</small>
+        </div>
+
+        <div class="form-actions form-actions--full">
+          <button
+            type="button"
+            class="button-secondary"
+            (click)="closeAssignmentModal()"
+            [disabled]="boardUpdatingId() !== null"
+          >
+            Cancelar
+          </button>
+          <button type="submit" class="button-primary" [disabled]="boardUpdatingId() !== null">
+            {{ boardUpdatingId() !== null ? 'Salvando...' : 'Salvar responsável' }}
           </button>
         </div>
       </form>

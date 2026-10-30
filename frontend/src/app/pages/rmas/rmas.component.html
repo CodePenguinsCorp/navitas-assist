@@ -125,7 +125,7 @@
               <th>Produto</th>
               <th>Status</th>
               <th>Prioridade</th>
-              <th>Garantia</th>
+              <th>Garantia por produto</th>
               <th>Entrada</th>
               <th class="table-actions-col">Detalhes</th>
             </tr>
@@ -147,8 +147,8 @@
                 </td>
                 <td>{{ rma.clientName }}</td>
                 <td>
-                  <strong class="table-title">{{ rma.productName }}</strong>
-                  <span class="table-subtitle">{{ rma.productSku }}</span>
+                  <strong class="table-title">{{ productSummary(rma) }}</strong>
+                  <span class="table-subtitle">{{ rma.items.length }} item(ns)</span>
                 </td>
                 <td><span class="mini-chip">{{ statusLabel(rma.status) }}</span></td>
                 <td>
@@ -157,9 +157,13 @@
                   </span>
                 </td>
                 <td>
-                  <span class="mini-chip" [class]="warrantyTextClass(warrantyLabel(rma.warrantyStatus, rma.warrantyOverridden))">
-                    {{ warrantyLabel(rma.warrantyStatus, rma.warrantyOverridden) }}
-                  </span>
+                  <div class="rma-item-warranties">
+                    @for (item of rma.items; track item.id ?? $index; let index = $index) {
+                      <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)" [title]="item.productName + ' | ' + itemTrackableLabel(item)">
+                        Item {{ index + 1 }} · {{ item.productSku }}: {{ warrantyLabel(item.warrantyStatus) }}
+                      </span>
+                    }
+                  </div>
                 </td>
                 <td>{{ dateLabel(rma.entryDate) }}</td>
                 <td class="table-actions-col"><span class="rma-open-hint">Abrir</span></td>
@@ -190,23 +194,16 @@
         <div class="summary-list">
           <span class="mini-chip">{{ statusLabel(rma.status) }}</span>
           <span class="mini-chip" [class]="priorityClass(rma.priority)">{{ priorityLabel(rma.priority) }}</span>
-          <span class="mini-chip" [class]="warrantyTextClass(warrantyLabel(rma.warrantyStatus, rma.warrantyOverridden))">
-            {{ warrantyLabel(rma.warrantyStatus, rma.warrantyOverridden) }}
-          </span>
         </div>
 
         <div class="detail-grid">
           <div>
-            <span>Produto</span>
-            <strong>{{ rma.productSku }} | {{ rma.productName }}</strong>
+            <span>Produtos</span>
+            <strong>{{ rma.items.length }} item(ns)</strong>
           </div>
           <div>
-            <span>Identificação</span>
-            <strong>{{ trackableLabel(rma) }}</strong>
-          </div>
-          <div>
-            <span>Recebido por</span>
-            <strong>{{ rma.receivedBy }}</strong>
+            <span>Nota fiscal</span>
+            <strong>{{ rma.invoiceNumber || 'Não informada' }}</strong>
           </div>
           <div>
             <span>Entrada</span>
@@ -223,8 +220,50 @@
         </div>
 
         <div class="summary-block">
+          <strong>Produtos, lotes e garantias</strong>
+          <p class="muted-inline">Garantia avaliada na entrada do RMA. Compra: {{ rma.purchaseDateUnknown ? 'Data desconhecida' : dateLabel(rma.purchaseDate) }}.</p>
+          <div class="rma-items-detail">
+            @for (item of rma.items; track item.id ?? $index) {
+              <div class="rma-item-detail">
+                <strong>{{ item.productSku }} | {{ item.productName }}</strong>
+                <span>{{ itemTrackableLabel(item) }}</span>
+                <div>
+                  <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)">{{ warrantyLabel(item.warrantyStatus) }}</span>
+                </div>
+                <span>Prazo de garantia: {{ item.warrantyMonths }} meses</span>
+                @if (item.warrantyExpiresAt) {
+                  <span>Vencimento: {{ dateLabel(item.warrantyExpiresAt) }}</span>
+                } @else {
+                  <span>Informe a data de compra para calcular a garantia.</span>
+                }
+                @if (item.manufacturedAt) {
+                  <span>Fabricação: {{ dateLabel(item.manufacturedAt) }}</span>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="summary-block">
           <strong>Falha relatada</strong>
           <p class="rma-detail-copy">{{ rma.reportedFailure }}</p>
+        </div>
+
+        <div class="summary-block">
+          <strong>Histórico de responsáveis</strong>
+          @if (rma.assignmentHistory.length > 0) {
+            <div class="assignment-history">
+              @for (event of rma.assignmentHistory; track event.changedAt) {
+                <div class="assignment-history__item">
+                  <strong>{{ event.previousAssigneeName || 'Sem responsável' }} → {{ event.newAssigneeName || 'Sem responsável' }}</strong>
+                  <span>{{ dateTimeLabel(event.changedAt) }}</span>
+                  <small>Alterado por {{ event.changedBy }}</small>
+                </div>
+              }
+            </div>
+          } @else {
+            <p class="rma-detail-copy">Nenhuma alteração de responsável registrada.</p>
+          }
         </div>
 
         <div class="summary-block">
@@ -274,28 +313,62 @@
           />
         </div>
 
-        <div class="field-group">
-          <label>Produto</label>
-          <app-custom-select
-            formControlName="productId"
-            ariaLabel="Selecionar produto"
-            [options]="productSelectOptions()"
-          />
-        </div>
+        <div class="field-group field-group--full" formArrayName="items">
+          <div class="rma-items-editor">
+            <div class="rma-items-editor__header">
+              <div>
+                <strong>Produtos do RMA</strong>
+                <p class="muted-inline">Cada produto pode ter seu próprio lote ou serial.</p>
+              </div>
+              <button type="button" class="button-secondary" (click)="addCreateItem()">Adicionar produto</button>
+            </div>
 
-        <div class="field-group">
-          <label for="batchNumber">Lote</label>
-          <input id="batchNumber" type="text" formControlName="batchNumber" placeholder="Opcional" />
-        </div>
+            @for (itemForm of createItems.controls; track itemForm; let index = $index) {
+              <div class="rma-item-editor" [formGroupName]="index">
+                <div class="rma-item-editor__header">
+                  <strong>Item {{ index + 1 }}</strong>
+                  @if (createItems.length > 1) {
+                    <button type="button" class="button-secondary" (click)="removeCreateItem(index)">Remover</button>
+                  }
+                </div>
 
-        <div class="field-group">
-          <label for="serialNumber">Serial</label>
-          <input id="serialNumber" type="text" formControlName="serialNumber" placeholder="Opcional" />
-        </div>
+                <div class="field-group">
+                  <label>Produto</label>
+                  <app-custom-select
+                    formControlName="productId"
+                    [ariaLabel]="'Selecionar produto do item ' + (index + 1)"
+                    [options]="productSelectOptions()"
+                  />
+                </div>
 
-        <div class="field-group">
-          <label>Fabricação</label>
-          <app-date-picker formControlName="manufacturedAt" ariaLabel="Data de fabricação" />
+                <div class="field-group">
+                  <label [for]="'batchNumber-' + index">Lote</label>
+                  <input [id]="'batchNumber-' + index" type="text" formControlName="batchNumber" placeholder="Informe lote ou serial" />
+                </div>
+
+                <div class="field-group">
+                  <label [for]="'serialNumber-' + index">Serial</label>
+                  <input [id]="'serialNumber-' + index" type="text" formControlName="serialNumber" placeholder="Informe lote ou serial" />
+                </div>
+
+                <div class="field-group">
+                  <label>Fabricação</label>
+                  <app-date-picker
+                    formControlName="manufacturedAt"
+                    [ariaLabel]="'Data de fabricação do item ' + (index + 1)"
+                    [maxDate]="todayDate"
+                  />
+                  @if (dateErrors().manufacturedAt[index]) {
+                    <small class="field-error">{{ dateErrors().manufacturedAt[index] }}</small>
+                  }
+                </div>
+
+                @if (itemForm.hasError('identificationRequired') && itemForm.touched) {
+                  <p class="field-error rma-item-editor__error">Informe ao menos o lote ou o serial deste produto.</p>
+                }
+              </div>
+            }
+          </div>
         </div>
 
         <div class="field-group">
@@ -304,27 +377,30 @@
             formControlName="purchaseDate"
             ariaLabel="Data da compra"
             [disabled]="createForm.controls.purchaseDateUnknown.value"
+            [minDate]="purchaseMinDate"
+            [maxDate]="todayDate"
           />
+          @if (dateErrors().purchaseDate) {
+            <small class="field-error">{{ dateErrors().purchaseDate }}</small>
+          }
         </div>
 
-        <label class="checkbox-row">
+        <label class="checkbox-row purchase-date-unknown">
           <input type="checkbox" formControlName="purchaseDateUnknown" />
           Data da compra desconhecida
         </label>
 
         <div class="field-group">
           <label>Entrada</label>
-          <app-date-picker formControlName="entryDate" ariaLabel="Data de entrada" [allowClear]="false" />
+          <app-date-picker formControlName="entryDate" ariaLabel="Data de entrada" [allowClear]="false" [minDate]="entryMinDate" />
+          @if (dateErrors().entryDate) {
+            <small class="field-error">{{ dateErrors().entryDate }}</small>
+          }
         </div>
 
         <div class="field-group">
           <label for="invoiceNumber">Nota fiscal</label>
           <input id="invoiceNumber" type="text" formControlName="invoiceNumber" />
-        </div>
-
-        <div class="field-group">
-          <label for="invoiceFileName">Arquivo da NF</label>
-          <input id="invoiceFileName" type="text" formControlName="invoiceFileName" placeholder="Referência" />
         </div>
 
         <div class="field-group">
@@ -336,11 +412,6 @@
           />
         </div>
 
-        <div class="field-group">
-          <label for="receivedBy">Recebido por</label>
-          <input id="receivedBy" type="text" formControlName="receivedBy" />
-        </div>
-
         <div class="field-group field-group--full">
           <label for="reportedFailure">Falha relatada</label>
           <textarea id="reportedFailure" formControlName="reportedFailure" rows="4" maxlength="600"></textarea>
@@ -348,41 +419,27 @@
 
         <div class="field-group field-group--full">
           <label for="receivedAccessories">Acessórios</label>
-          <textarea id="receivedAccessories" formControlName="receivedAccessories" rows="3"></textarea>
+          <textarea id="receivedAccessories" formControlName="receivedAccessories" rows="3" maxlength="500"></textarea>
         </div>
 
         <div class="field-group field-group--full">
           <label for="physicalCondition">Condição física</label>
-          <textarea id="physicalCondition" formControlName="physicalCondition" rows="3"></textarea>
-        </div>
-
-        <div class="field-group">
-          <label>Override de garantia</label>
-          <app-custom-select
-            formControlName="warrantyStatusOverride"
-            ariaLabel="Override de garantia"
-            [options]="warrantyOverrideSelectOptions"
-          />
-        </div>
-
-        <div class="field-group field-group--full">
-          <label for="warrantyJustification">Justificativa</label>
-          <textarea id="warrantyJustification" formControlName="warrantyJustification" rows="3"></textarea>
+          <textarea id="physicalCondition" formControlName="physicalCondition" rows="3" maxlength="500"></textarea>
         </div>
 
         <div class="field-group field-group--full">
           <label for="repairSummary">Reparo</label>
-          <textarea id="repairSummary" formControlName="repairSummary" rows="3"></textarea>
+          <textarea id="repairSummary" formControlName="repairSummary" rows="3" maxlength="600"></textarea>
         </div>
 
         <div class="field-group field-group--full">
           <label for="replacedPartsSummary">Peças trocadas</label>
-          <textarea id="replacedPartsSummary" formControlName="replacedPartsSummary" rows="3"></textarea>
+          <textarea id="replacedPartsSummary" formControlName="replacedPartsSummary" rows="3" maxlength="600"></textarea>
         </div>
 
         <div class="field-group field-group--full">
           <label for="testSummary">Testes</label>
-          <textarea id="testSummary" formControlName="testSummary" rows="3"></textarea>
+          <textarea id="testSummary" formControlName="testSummary" rows="3" maxlength="800"></textarea>
         </div>
 
         <div class="form-actions form-actions--full">

@@ -23,7 +23,7 @@
     </article>
   </section>
 
-  <section class="panel catalog-toolbar">
+  <section class="panel catalog-toolbar catalog-toolbar--filters">
     <label class="search-field">
       <span class="search-field__heading">
         <span>Buscar</span>
@@ -35,6 +35,24 @@
         placeholder="SKU, produto, categoria ou versão"
         [value]="searchTerm()"
         (input)="updateSearch(productSearch.value)"
+      />
+    </label>
+    <label class="filter-field">
+      <span>Categoria</span>
+      <app-custom-select
+        ariaLabel="Filtrar por categoria"
+        [options]="categoryFilterOptions()"
+        [value]="categoryFilter()"
+        (valueChange)="updateCategoryFilter($any($event))"
+      />
+    </label>
+    <label class="filter-field">
+      <span>Firmware</span>
+      <app-custom-select
+        ariaLabel="Filtrar por firmware"
+        [options]="presenceFilterOptions"
+        [value]="firmwareFilter()"
+        (valueChange)="updateFirmwareFilter($any($event))"
       />
     </label>
   </section>
@@ -63,7 +81,7 @@
     } @else if (filteredProducts().length === 0) {
       <section class="empty-state">
         <h3>Nenhum resultado encontrado.</h3>
-        <p>Ajuste a busca para localizar outro produto.</p>
+        <p>Ajuste a busca ou os filtros para localizar outro produto.</p>
       </section>
     } @else {
       <div class="table-wrap">

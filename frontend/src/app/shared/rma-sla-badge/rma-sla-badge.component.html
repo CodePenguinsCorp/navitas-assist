@@ -1,0 +1,9 @@
+<div class="sla" [attr.data-sla]="state()" [attr.aria-label]="'SLA: ' + labels[state()]">
+  <strong>SLA: {{ labels[state()] }}</strong>
+  @if (state() === 'CLOSED') {
+    <span>Contagem encerrada em {{ dateTime(sla().startedAt) }}</span>
+  } @else {
+    <span>Na etapa: {{ elapsed() }} de {{ duration(sla().limitSeconds ?? 0) }}</span>
+    <span>Prazo: {{ dateTime(sla().dueAt) }}</span>
+  }
+</div>

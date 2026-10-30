@@ -9,11 +9,13 @@ import {
   FailureCause,
   FailureType,
   RmaPriority,
+  RmaItemResponse,
   RmaResponse,
   RmaStatus,
   RmaStatusHistoryResponse,
   WarrantyStatus
 } from '../models';
+import { formatDateOnly } from './date';
 
 export function statusLabel(status: RmaStatus): string {
   return RMA_STATUS_LABELS[status];
@@ -34,38 +36,18 @@ export function priorityChipClass(priority: RmaPriority): string {
   }
 }
 
-export function warrantyClass(warrantyStatus: WarrantyStatus, warrantyOverridden = false): string {
-  if (warrantyOverridden) {
-    return 'warranty-alert';
-  }
-
+export function warrantyClass(warrantyStatus: WarrantyStatus): string {
   switch (warrantyStatus) {
-    case 'IN_WARRANTY':
+    case WarrantyStatus.IN_WARRANTY:
       return 'warranty-ok';
-    case 'OUT_OF_WARRANTY':
+    case WarrantyStatus.OUT_OF_WARRANTY:
       return 'warranty-off';
     default:
       return 'warranty-alert';
   }
 }
 
-export function warrantyTextClass(label: string): string {
-  switch (label) {
-    case 'Em garantia':
-      return 'warranty-ok';
-    case 'Override manual':
-    case 'Pendente':
-      return 'warranty-alert';
-    default:
-      return 'warranty-off';
-  }
-}
-
-export function warrantyLabel(warrantyStatus: WarrantyStatus, warrantyOverridden = false): string {
-  if (warrantyOverridden) {
-    return 'Override manual';
-  }
-
+export function warrantyLabel(warrantyStatus: WarrantyStatus): string {
   return WARRANTY_STATUS_LABELS[warrantyStatus];
 }
 
@@ -78,11 +60,7 @@ export function failureCauseLabel(value: FailureCause | null): string {
 }
 
 export function formatDate(value: string | null): string {
-  if (!value) {
-    return 'N\u00e3o informado';
-  }
-
-  return new Intl.DateTimeFormat('pt-BR').format(new Date(value));
+  return formatDateOnly(value);
 }
 
 export function formatDateTime(value: string | null): string {
@@ -96,31 +74,39 @@ export function formatDateTime(value: string | null): string {
   }).format(new Date(value));
 }
 
-export function trackableLabel(rma: Pick<RmaResponse, 'serialNumber' | 'batchNumber'>): string {
-  if (rma.serialNumber) {
-    return `Serial ${rma.serialNumber}`;
+export function trackableLabel(rma: Pick<RmaResponse, 'items' | 'serialNumber' | 'batchNumber'>): string {
+  const firstItem = rma.items[0] ?? rma;
+  const label = rmaItemTrackableLabel(firstItem);
+  const additionalItems = rma.items.length - 1;
+  return additionalItems > 0 ? `${label} + ${additionalItems} item(ns)` : label;
+}
+
+export function rmaItemTrackableLabel(item: Pick<RmaItemResponse, 'serialNumber' | 'batchNumber'>): string {
+  if (item.serialNumber && item.batchNumber) {
+    return `Serial ${item.serialNumber} | Lote ${item.batchNumber}`;
   }
 
-  if (rma.batchNumber) {
-    return `Lote ${rma.batchNumber}`;
+  if (item.serialNumber) {
+    return `Serial ${item.serialNumber}`;
+  }
+
+  if (item.batchNumber) {
+    return `Lote ${item.batchNumber}`;
   }
 
   return 'Item sem identifica\u00e7\u00e3o';
 }
 
+export function productSummary(rma: Pick<RmaResponse, 'items' | 'productName'>): string {
+  const firstProductName = rma.items[0]?.productName ?? rma.productName;
+  const additionalItems = rma.items.length - 1;
+  return additionalItems > 0 ? `${firstProductName} + ${additionalItems} item(ns)` : firstProductName;
+}
+
 export function ownerLabel(
-  rma: Pick<RmaResponse, 'diagnosis' | 'statusHistory' | 'receivedBy'>
+  rma: Pick<RmaResponse, 'assigneeName'>
 ): string {
-  if (rma.diagnosis?.technicianName?.trim()) {
-    return rma.diagnosis.technicianName.trim();
-  }
-
-  const latestHistory = latestStatusUpdate(rma.statusHistory);
-  if (latestHistory?.changedBy?.trim()) {
-    return latestHistory.changedBy.trim();
-  }
-
-  return rma.receivedBy;
+  return rma.assigneeName?.trim() || 'Sem responsável';
 }
 
 export function latestStatusUpdate(
@@ -154,10 +140,6 @@ export function compareRmasForQueue(left: RmaResponse, right: RmaResponse): numb
 export function normalizeText(value: string): string | null {
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
-}
-
-export function todayInputValue(): string {
-  return new Date().toISOString().slice(0, 10);
 }
 
 function priorityWeight(priority: RmaPriority): number {

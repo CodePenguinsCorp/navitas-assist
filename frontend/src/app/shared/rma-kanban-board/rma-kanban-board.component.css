@@ -189,6 +189,17 @@
   margin-top: 0.8rem;
 }
 
+.board-card__warranties {
+  display: grid;
+  justify-items: start;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.board-card__warranties .mini-chip {
+  white-space: normal;
+}
+
 .board-card__grid span,
 .board-card__grid strong {
   display: block;
@@ -198,6 +209,28 @@
   margin-bottom: 0.15rem;
   font-size: 0.8rem;
   color: var(--muted);
+}
+
+.board-card__assignee-action {
+  margin-top: 0.35rem;
+  padding: 0;
+  border: 0;
+  color: var(--brand);
+  background: transparent;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.board-card__assignee-action:hover:not(:disabled),
+.board-card__assignee-action:focus-visible {
+  text-decoration: underline;
+}
+
+.board-card__assignee-action:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
 }
 
 .board-card__footer {
@@ -218,3 +251,6 @@
     grid-template-columns: 1fr;
   }
 }
+
+.board-card__selection { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.6rem; font-size: 0.8rem; cursor: pointer; }
+.board-card__selection input { width: 16px; height: 16px; accent-color: var(--brand-blue); }

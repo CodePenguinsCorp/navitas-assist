@@ -4,6 +4,7 @@ import java.security.Principal;
 import java.util.List;
 
 import br.com.navitasassist.service.UserAccountService;
+import br.com.navitasassist.user.AssignableUserResponse;
 import br.com.navitasassist.user.UserAccountRequest;
 import br.com.navitasassist.user.UserAccountResponse;
 import br.com.navitasassist.user.UserAccountUpdateRequest;
@@ -30,6 +31,11 @@ public class UserController {
     @GetMapping
     public List<UserAccountResponse> listAll() {
         return userAccountService.listAll();
+    }
+
+    @GetMapping("/assignable")
+    public List<AssignableUserResponse> listAssignableTechnicians() {
+        return userAccountService.listAssignableTechnicians();
     }
 
     @PostMapping

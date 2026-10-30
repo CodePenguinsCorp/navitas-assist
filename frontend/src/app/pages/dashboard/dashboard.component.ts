@@ -12,11 +12,13 @@ import {
   RmaPriority,
   RmaResponse,
   RmaStatusHistoryResponse,
-  UserAccountResponse
+  UserAccountResponse,
+  WarrantyStatus
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
+import { formatDateOnly } from '../../core/utils/date';
 
 interface QueueRow {
   code: string;
@@ -66,9 +68,10 @@ export class DashboardComponent {
 
     const activeRmas = rmas.filter((rma) => !CLOSED_RMA_STATUSES.includes(rma.status));
     const initialQueue = rmas.filter((rma) => rma.status === 'RECEIVED' || rma.status === 'TRIAGE');
-    const inWarrantyCount = rmas.filter((rma) => rma.warrantyStatus === 'IN_WARRANTY').length;
-    const pendingWarrantyCount = rmas.filter((rma) => rma.warrantyStatus === 'PENDING').length;
-    const warrantyRate = rmas.length === 0 ? 0 : Math.round((inWarrantyCount / rmas.length) * 100);
+    const rmaItems = rmas.flatMap((rma) => rma.items);
+    const inWarrantyCount = rmaItems.filter((item) => item.warrantyStatus === WarrantyStatus.IN_WARRANTY).length;
+    const pendingWarrantyCount = rmaItems.filter((item) => item.warrantyStatus === WarrantyStatus.PENDING).length;
+    const warrantyRate = rmaItems.length === 0 ? 0 : Math.round((inWarrantyCount / rmaItems.length) * 100);
     const catalogTotal = clients.length + products.length + users.length;
 
     return [
@@ -79,9 +82,9 @@ export class DashboardComponent {
         tone: 'brand'
       },
       {
-        label: 'Garantia',
+        label: 'Produtos em garantia',
         value: `${warrantyRate}%`,
-        variation: pendingWarrantyCount > 0 ? `${pendingWarrantyCount} pendentes` : 'Sem pendências',
+        variation: `${inWarrantyCount} de ${rmaItems.length} itens | ${pendingWarrantyCount} pendentes`,
         tone: 'sky'
       },
       {
@@ -106,7 +109,7 @@ export class DashboardComponent {
       .map((rma) => ({
         code: rma.code,
         client: rma.clientName,
-        entryDate: formatDate(rma.entryDate),
+        entryDate: formatDateOnly(rma.entryDate),
         status: RMA_STATUS_LABELS[rma.status],
         priority: RMA_PRIORITY_LABELS[rma.priority]
       }))
@@ -212,16 +215,7 @@ function parseDateValue(value: string | null): number {
 }
 
 function extractOwner(rma: RmaResponse): string {
-  if (rma.diagnosis?.technicianName?.trim()) {
-    return rma.diagnosis.technicianName.trim();
-  }
-
-  const lastStatusUpdate = latestStatusUpdate(rma.statusHistory);
-  if (lastStatusUpdate?.changedBy?.trim()) {
-    return lastStatusUpdate.changedBy.trim();
-  }
-
-  return rma.receivedBy;
+  return rma.assigneeName?.trim() || 'Sem responsável';
 }
 
 function latestStatusUpdate(history: RmaStatusHistoryResponse[]): RmaStatusHistoryResponse | null {
@@ -230,14 +224,6 @@ function latestStatusUpdate(history: RmaStatusHistoryResponse[]): RmaStatusHisto
   }
 
   return [...history].sort((left, right) => compareDateStrings(right.changedAt, left.changedAt))[0] ?? null;
-}
-
-function formatDate(value: string | null): string {
-  if (!value) {
-    return 'Não informado';
-  }
-
-  return new Intl.DateTimeFormat('pt-BR').format(new Date(value));
 }
 
 function formatDateTime(value: string | null): string {

@@ -1,6 +1,5 @@
 package br.com.navitasassist.rma;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,6 +9,7 @@ import br.com.navitasassist.config.AuditableEntity;
 import br.com.navitasassist.diagnosis.Diagnosis;
 import br.com.navitasassist.item.ItemIdentification;
 import br.com.navitasassist.product.Product;
+import br.com.navitasassist.user.UserAccount;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
@@ -55,6 +55,10 @@ public class RmaRecord extends AuditableEntity {
     @Embedded
     private ItemIdentification itemIdentification = new ItemIdentification();
 
+    @OneToMany(mappedBy = "rma", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id ASC")
+    private List<RmaItem> items = new ArrayList<>();
+
     @Column
     private LocalDate purchaseDate;
 
@@ -67,19 +71,16 @@ public class RmaRecord extends AuditableEntity {
     @Column(length = 80)
     private String invoiceNumber;
 
-    @Column(length = 180)
-    private String invoiceFileName;
-
     @Column(nullable = false, length = 120)
     private String receivedBy;
 
-    @Column(nullable = false, length = 2000)
+    @Column(nullable = false, length = 1000)
     private String reportedFailure;
 
-    @Column(length = 1000)
+    @Column(length = 500)
     private String receivedAccessories;
 
-    @Column(length = 1000)
+    @Column(length = 500)
     private String physicalCondition;
 
     @Enumerated(EnumType.STRING)
@@ -90,29 +91,17 @@ public class RmaRecord extends AuditableEntity {
     @Column(nullable = false, length = 30)
     private RmaStatus status = RmaStatus.RECEIVED;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private WarrantyStatus warrantyStatus = WarrantyStatus.PENDING;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assignee_id")
+    private UserAccount assignee;
 
-    @Column(nullable = false)
-    private boolean warrantyOverridden;
-
-    @Column(length = 255)
-    private String warrantyJustification;
-
-    @Column(length = 120)
-    private String warrantyUpdatedBy;
-
-    @Column
-    private Instant warrantyUpdatedAt;
-
-    @Column(length = 2000)
+    @Column(length = 600)
     private String repairSummary;
 
-    @Column(length = 2000)
+    @Column(length = 600)
     private String replacedPartsSummary;
 
-    @Column(length = 2000)
+    @Column(length = 800)
     private String testSummary;
 
     @Column
@@ -131,6 +120,10 @@ public class RmaRecord extends AuditableEntity {
     @OrderBy("changedAt DESC")
     private List<RmaStatusHistory> statusHistory = new ArrayList<>();
 
+    @OneToMany(mappedBy = "rma", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("changedAt DESC")
+    private List<RmaAssignmentHistory> assignmentHistory = new ArrayList<>();
+
     public void setDiagnosis(Diagnosis diagnosis) {
         if (diagnosis == null) {
             this.diagnosis = null;
@@ -144,5 +137,20 @@ public class RmaRecord extends AuditableEntity {
     public void addStatusHistory(RmaStatusHistory history) {
         history.setRma(this);
         this.statusHistory.add(history);
+    }
+
+    public void addAssignmentHistory(RmaAssignmentHistory history) {
+        history.setRma(this);
+        this.assignmentHistory.add(history);
+    }
+
+    public void replaceItems(List<RmaItem> items) {
+        this.items.clear();
+        items.forEach(this::addItem);
+    }
+
+    public void addItem(RmaItem item) {
+        item.setRma(this);
+        this.items.add(item);
     }
 }

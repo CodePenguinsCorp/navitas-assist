@@ -1,6 +1,6 @@
 services:
   mysql:
-    image: mysql:8.4
+    image: mysql:8.0
     container_name: navitas-assist-mysql
     restart: unless-stopped
     ports:
@@ -31,12 +31,15 @@ services:
       mysql:
         condition: service_healthy
     environment:
+      SPRING_PROFILES_ACTIVE: local
       DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-navitas_assist}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       DB_USER: ${MYSQL_USER:-navitas_app}
       DB_PASSWORD: ${MYSQL_PASSWORD:-navitas123}
       APP_ADMIN_USERNAME: ${APP_ADMIN_USERNAME:-admin}
       APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-admin123}
       APP_ADMIN_FULL_NAME: ${APP_ADMIN_FULL_NAME:-Administrador}
+      SESSION_TIMEOUT: ${SESSION_TIMEOUT:-30m}
+      SESSION_COOKIE_SECURE: "false"
     ports:
       - "${BACKEND_PORT:-8080}:8080"
 

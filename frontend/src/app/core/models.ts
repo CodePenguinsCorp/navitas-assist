@@ -6,7 +6,11 @@ export type HealthState = 'checking' | 'online' | 'offline';
 
 export type RmaPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 
-export type WarrantyStatus = 'PENDING' | 'IN_WARRANTY' | 'OUT_OF_WARRANTY';
+export enum WarrantyStatus {
+  PENDING = 'PENDING',
+  IN_WARRANTY = 'IN_WARRANTY',
+  OUT_OF_WARRANTY = 'OUT_OF_WARRANTY',
+}
 
 export type RmaStatus =
   | 'RECEIVED'
@@ -42,7 +46,6 @@ export interface UserSession {
   username: string;
   name: string;
   role: UserRole;
-  authHeader: string;
 }
 
 export interface LoginPayload {
@@ -58,6 +61,12 @@ export interface UserAccountResponse {
   active: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AssignableUserResponse {
+  id: number;
+  username: string;
+  fullName: string;
 }
 
 export type AuthUserResponse = UserAccountResponse;
@@ -138,24 +147,24 @@ export interface DiagnosisResponse {
   updatedAt: string;
 }
 
-export interface CreateRmaRequest {
-  clientId: number;
+export interface RmaItemRequest {
   productId: number;
   batchNumber: string | null;
   serialNumber: string | null;
   manufacturedAt: string | null;
+}
+
+export interface CreateRmaRequest {
+  clientId: number;
+  items: RmaItemRequest[];
   purchaseDate: string | null;
   purchaseDateUnknown: boolean;
   entryDate: string;
   invoiceNumber: string | null;
-  invoiceFileName: string | null;
-  receivedBy: string;
   reportedFailure: string;
   receivedAccessories: string | null;
   physicalCondition: string | null;
   priority: RmaPriority;
-  warrantyStatusOverride: WarrantyStatus | null;
-  warrantyJustification: string | null;
   repairSummary: string | null;
   replacedPartsSummary: string | null;
   testSummary: string | null;
@@ -164,6 +173,39 @@ export interface CreateRmaRequest {
 export interface RmaStatusUpdateRequest {
   status: RmaStatus;
   note: string | null;
+}
+
+export interface RmaBulkStatusUpdateRequest extends RmaStatusUpdateRequest {
+  expectedStatus: RmaStatus;
+}
+
+export interface RmaAssigneeUpdateRequest {
+  assigneeId: number | null;
+}
+
+export interface KanbanViewFilters {
+  query: string | null;
+  priority: RmaPriority | null;
+  status: RmaStatus | null;
+  warranty: WarrantyStatus | null;
+  assigneeId: number | null;
+  unassignedOnly: boolean;
+  entryFrom: string | null;
+  entryTo: string | null;
+  updatedFrom: string | null;
+  updatedTo: string | null;
+}
+
+export interface KanbanViewRequest {
+  name: string;
+  defaultView: boolean;
+  filters: KanbanViewFilters;
+}
+
+export interface KanbanViewResponse extends KanbanViewRequest {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface DiagnosisRequest {
@@ -182,11 +224,45 @@ export interface RmaStatusHistoryResponse {
   note: string | null;
 }
 
+export interface RmaAssignmentHistoryResponse {
+  previousAssigneeId: number | null;
+  previousAssigneeName: string | null;
+  newAssigneeId: number | null;
+  newAssigneeName: string | null;
+  changedBy: string;
+  changedAt: string;
+}
+
+export interface RmaItemResponse {
+  id: number | null;
+  productId: number;
+  productName: string;
+  productSku: string;
+  batchNumber: string | null;
+  serialNumber: string | null;
+  manufacturedAt: string | null;
+  warrantyMonths: number;
+  warrantyExpiresAt: string | null;
+  warrantyStatus: WarrantyStatus;
+}
+
+export type RmaSlaStatus = 'NORMAL' | 'WARNING' | 'OVERDUE' | 'CLOSED';
+
+export interface RmaSlaResponse {
+  status: RmaSlaStatus;
+  startedAt: string;
+  warningAt: string | null;
+  dueAt: string | null;
+  elapsedSeconds: number;
+  limitSeconds: number | null;
+}
+
 export interface RmaResponse {
   id: number;
   code: string;
   clientId: number;
   clientName: string;
+  items: RmaItemResponse[];
   productId: number;
   productName: string;
   productSku: string;
@@ -197,18 +273,15 @@ export interface RmaResponse {
   purchaseDateUnknown: boolean;
   entryDate: string;
   invoiceNumber: string | null;
-  invoiceFileName: string | null;
   receivedBy: string;
   reportedFailure: string;
   receivedAccessories: string | null;
   physicalCondition: string | null;
   priority: RmaPriority;
   status: RmaStatus;
-  warrantyStatus: WarrantyStatus;
-  warrantyOverridden: boolean;
-  warrantyJustification: string | null;
-  warrantyUpdatedBy: string | null;
-  warrantyUpdatedAt: string | null;
+  sla: RmaSlaResponse;
+  assigneeId: number | null;
+  assigneeName: string | null;
   repairSummary: string | null;
   replacedPartsSummary: string | null;
   testSummary: string | null;
@@ -217,6 +290,7 @@ export interface RmaResponse {
   trackingCode: string | null;
   diagnosis: DiagnosisResponse | null;
   statusHistory: RmaStatusHistoryResponse[];
+  assignmentHistory: RmaAssignmentHistoryResponse[];
   createdAt: string;
   updatedAt: string;
 }

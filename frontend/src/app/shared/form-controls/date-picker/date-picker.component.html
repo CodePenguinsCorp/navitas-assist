@@ -37,6 +37,7 @@
             [class.is-outside]="!day.inCurrentMonth"
             [class.is-today]="day.isToday"
             [class.is-selected]="day.isSelected"
+            [disabled]="isDateDisabled(day.iso)"
             (click)="selectDay(day)"
           >
             {{ day.day }}
@@ -50,7 +51,7 @@
         } @else {
           <span></span>
         }
-        <button type="button" class="date-picker__footer-action" (click)="selectToday()">Hoje</button>
+        <button type="button" class="date-picker__footer-action" [disabled]="todayDisabled()" (click)="selectToday()">Hoje</button>
       </footer>
     </section>
   }

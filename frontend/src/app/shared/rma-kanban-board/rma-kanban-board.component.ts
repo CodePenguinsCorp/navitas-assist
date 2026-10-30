@@ -1,4 +1,5 @@
 import { Component, EventEmitter, Output, computed, input } from '@angular/core';
+import { RmaSlaBadgeComponent } from '../rma-sla-badge/rma-sla-badge.component';
 import { RMA_STATUS_FLOW } from '../../core/mock-data';
 import { RmaResponse, RmaStatus } from '../../core/models';
 import {
@@ -7,6 +8,7 @@ import {
   ownerLabel,
   priorityChipClass,
   priorityLabel,
+  productSummary,
   statusLabel,
   trackableLabel,
   warrantyClass,
@@ -21,13 +23,19 @@ interface RmaBoardColumn {
 
 @Component({
   selector: 'app-rma-kanban-board',
+  imports: [RmaSlaBadgeComponent],
   templateUrl: './rma-kanban-board.component.html',
   styleUrl: './rma-kanban-board.component.css'
 })
 export class RmaKanbanBoardComponent {
   readonly rmas = input<readonly RmaResponse[]>([]);
+  readonly bulkSelectionEnabled = input(false);
+  readonly bulkSelectedIds = input<readonly number[]>([]);
+  readonly interactionDisabled = input(false);
+  @Output() readonly bulkSelectionChange = new EventEmitter<RmaResponse>();
   readonly loading = input(false);
   readonly canUpdateStatus = input(false);
+  readonly canUpdateAssignee = input(false);
   readonly boardUpdatingId = input<number | null>(null);
   readonly selectedRmaId = input<number | null>(null);
   readonly draggedRmaId = input<number | null>(null);
@@ -37,6 +45,7 @@ export class RmaKanbanBoardComponent {
   readonly toolbarDescription = input('Arraste os cards entre as colunas para atualizar o status do RMA.');
 
   @Output() readonly cardSelect = new EventEmitter<RmaResponse>();
+  @Output() readonly assigneeChange = new EventEmitter<RmaResponse>();
   @Output() readonly cardDragStart = new EventEmitter<{ event: DragEvent; rma: RmaResponse }>();
   @Output() readonly cardDragEnd = new EventEmitter<void>();
   @Output() readonly columnDragOver = new EventEmitter<{ event: DragEvent; status: RmaStatus }>();
@@ -56,6 +65,7 @@ export class RmaKanbanBoardComponent {
 
   protected readonly priorityLabel = priorityLabel;
   protected readonly priorityClass = priorityChipClass;
+  protected readonly productSummary = productSummary;
   protected readonly warrantyLabel = warrantyLabel;
   protected readonly warrantyClass = warrantyClass;
   protected readonly trackableLabel = trackableLabel;
@@ -63,7 +73,7 @@ export class RmaKanbanBoardComponent {
   protected readonly dateLabel = formatDate;
 
   protected isSelected(rma: RmaResponse): boolean {
-    return this.selectedRmaId() === rma.id;
+    return this.selectedRmaId() === rma.id || this.bulkSelectedIds().includes(rma.id);
   }
 
   protected isDragging(rma: RmaResponse): boolean {
@@ -76,5 +86,16 @@ export class RmaKanbanBoardComponent {
 
   protected isStatusUpdating(rma: RmaResponse): boolean {
     return this.boardUpdatingId() === rma.id;
+  }
+
+  protected requestAssigneeChange(event: Event, rma: RmaResponse): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.assigneeChange.emit(rma);
+  }
+
+  protected preventCardDrag(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
   }
 }
