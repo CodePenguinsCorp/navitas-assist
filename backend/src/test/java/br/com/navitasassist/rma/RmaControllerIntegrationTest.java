@@ -1,6 +1,7 @@
 package br.com.navitasassist.rma;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -680,6 +681,66 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.invoiceFileName").doesNotExist());
         assertEquals("original.operator", rmaRecordRepository.findById(id).orElseThrow().getReceivedBy());
         assertEquals("NF-456", rmaRecordRepository.findById(id).orElseThrow().getInvoiceNumber());
+    }
+
+
+    @ParameterizedTest
+    @ValueSource(strings = { "ADMIN", "SERVICE_DESK", "TECHNICIAN" })
+    void shouldAcceptOptionalAndMaximumStatusNotes(String role) throws Exception {
+        Long id = saveBulkTestRma("RMA-STATUS-NOTES-1");
+        mockMvc.perform(patch("/api/rmas/{id}/status", id).with(user("operator").roles(role)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"TRIAGE\"}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("TRIAGE"));
+        mockMvc.perform(get("/api/rmas/{id}", id).with(user("viewer").roles("VIEWER")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("TRIAGE"))
+            .andExpect(jsonPath("$.statusHistory", hasSize(1)))
+            .andExpect(jsonPath("$.statusHistory[0].note").doesNotExist());
+
+        String note = "n".repeat(255);
+        mockMvc.perform(patch("/api/rmas/{id}/status", id).with(user("operator").roles(role)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("status", "IN_DIAGNOSIS", "note", note))))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("IN_DIAGNOSIS"));
+        mockMvc.perform(get("/api/rmas/{id}", id).with(user("viewer").roles("VIEWER")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("IN_DIAGNOSIS"))
+            .andExpect(jsonPath("$.statusHistory", hasSize(2)))
+            .andExpect(jsonPath("$.statusHistory[?(@.status == 'IN_DIAGNOSIS')].note").value(hasItem(note)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "ADMIN", "SERVICE_DESK", "TECHNICIAN" })
+    void shouldRejectOversizedStatusNoteWithoutChangingStatusOrHistory(String role) throws Exception {
+        Long id = saveBulkTestRma("RMA-STATUS-NOTES-1");
+        mockMvc.perform(patch("/api/rmas/{id}/status", id).with(user("original.operator").roles(role)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"TRIAGE\",\"note\":\"Original note\"}"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(patch("/api/rmas/{id}/status", id).with(user("operator").roles(role)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("status", "IN_DIAGNOSIS", "note", "n".repeat(256)))))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.details").value(hasItem(startsWith("note:"))));
+        mockMvc.perform(get("/api/rmas/{id}", id).with(user("viewer").roles("VIEWER")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("TRIAGE"))
+            .andExpect(jsonPath("$.statusHistory", hasSize(1)))
+            .andExpect(jsonPath("$.statusHistory[0].status").value("TRIAGE"))
+            .andExpect(jsonPath("$.statusHistory[0].note").value("Original note"))
+            .andExpect(jsonPath("$.statusHistory[0].changedBy").value("original.operator"));
+    }
+
+    @Test
+    void shouldForbidViewerStatusNotesWithoutChangingStatusOrHistory() throws Exception {
+        Long id = saveBulkTestRma("RMA-STATUS-NOTES-1");
+        mockMvc.perform(patch("/api/rmas/{id}/status", id).with(user("viewer").roles("VIEWER")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"TRIAGE\",\"note\":\"Note\"}"))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/rmas/{id}", id).with(user("viewer").roles("VIEWER")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("RECEIVED"))
+            .andExpect(jsonPath("$.statusHistory", hasSize(0)));
     }
 
     private Product saveProduct(String sku, String name, int warrantyMonths) {
