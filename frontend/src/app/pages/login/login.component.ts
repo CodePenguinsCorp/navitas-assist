@@ -34,6 +34,10 @@ export class LoginComponent {
   }
 
   protected submit(): void {
+    if (this.submitting()) {
+      return;
+    }
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.authError.set('Preencha os campos obrigatórios.');
