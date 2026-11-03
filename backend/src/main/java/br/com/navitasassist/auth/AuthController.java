@@ -16,7 +16,6 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.SecurityContextRepository;
-import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,8 +38,7 @@ public class AuthController {
     @GetMapping("/csrf")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void csrf(HttpServletRequest request, HttpServletResponse response) {
-        CsrfToken csrfToken = csrfTokenRepository.generateToken(request);
-        csrfTokenRepository.saveToken(csrfToken, request, response);
+        csrfTokenRepository.loadDeferredToken(request, response).get();
     }
 
     @PostMapping("/login")
