@@ -16,6 +16,7 @@ import br.com.navitasassist.diagnosis.DiagnosisRequest;
 import br.com.navitasassist.item.ItemIdentification;
 import br.com.navitasassist.part.PartReservationStatus;
 import br.com.navitasassist.repository.PartReservationRepository;
+import br.com.navitasassist.repository.RmaCodeGenerationLockRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.CreateRmaRequest;
 import br.com.navitasassist.rma.RmaAssigneeUpdateRequest;
@@ -35,6 +36,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -45,8 +47,10 @@ public class RmaService {
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
     private static final Set<RmaStatus> CLOSED_STATUSES = EnumSet.of(RmaStatus.COMPLETED, RmaStatus.RETURNED, RmaStatus.IRREPARABLE);
     private static final Set<PartReservationStatus> OPEN_RESERVATION_STATUSES = EnumSet.of(PartReservationStatus.ACTIVE, PartReservationStatus.PENDING);
+    private static final int MAX_YEARLY_SEQUENCE = 999_999;
 
     private final RmaRecordRepository rmaRecordRepository;
+    private final RmaCodeGenerationLockRepository rmaCodeGenerationLockRepository;
     private final RmaSlaService rmaSlaService;
     private final ClientService clientService;
     private final ProductService productService;
@@ -84,12 +88,12 @@ public class RmaService {
             .toList();
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public RmaResponse create(CreateRmaRequest request) {
         Client client = clientService.getEntityById(request.clientId());
         List<RmaItem> items = buildItems(request.items());
 
         RmaRecord rma = new RmaRecord();
-        rma.setCode(generateNextCode());
         rma.setClient(client);
         rma.setStatus(RmaStatus.RECEIVED);
         rma.setPriority(defaultPriority(request.priority()));
@@ -115,6 +119,7 @@ public class RmaService {
         );
         validateMandatoryFields(rma);
         validateDates(rma);
+        rma.setCode(generateNextCode());
         addStatusHistory(rma, RmaStatus.RECEIVED, "RMA created");
 
         return toResponse(rmaRecordRepository.save(rma));
@@ -405,6 +410,9 @@ public class RmaService {
     }
 
     private String generateNextCode() {
+        // Held until create commits or rolls back, including the RMA insert.
+        rmaCodeGenerationLockRepository.lockForCodeGeneration()
+            .orElseThrow(() -> new IllegalStateException("RMA code generation lock is missing"));
         int year = LocalDate.now(BUSINESS_ZONE).getYear();
         String prefix = "RMA-" + year + "-";
 
@@ -413,6 +421,10 @@ public class RmaService {
             .map(this::extractSequence)
             .map(sequence -> sequence + 1)
             .orElse(1);
+
+        if (nextValue > MAX_YEARLY_SEQUENCE) {
+            throw new BusinessException("Annual RMA code capacity reached.");
+        }
 
         return prefix + String.format("%06d", nextValue);
     }

@@ -145,7 +145,7 @@
           <h3>{{ editingClient() ? 'Editar cliente' : 'Novo cliente' }}</h3>
           <p>{{ editingClient() ? 'Atualize os dados principais do cliente.' : 'Preencha os dados principais para liberar o cadastro.' }}</p>
         </div>
-        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()">
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()" [disabled]="submitting()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
       </header>

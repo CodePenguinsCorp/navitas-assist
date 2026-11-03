@@ -14,6 +14,10 @@ public class RequiredSecretsEnvironmentPostProcessor implements EnvironmentPostP
     private static final String SPRING_BOOT_TEST_BOOTSTRAPPER =
         "org.springframework.boot.test.context.SpringBootTestContextBootstrapper";
     private static final Set<String> PROFILES_WITH_LOCAL_DEFAULTS = Set.of("local", "test");
+    private static final List<String> PASSWORD_VARIABLES = List.of("DB_PASSWORD", "APP_ADMIN_PASSWORD");
+    private static final Set<String> EXAMPLE_PASSWORDS = Set.of(
+        "admin123", "navitas123", "root123", "troque-esta-senha", "troque-esta-senha-root"
+    );
     private static final List<String> REQUIRED_VARIABLES = List.of(
         "DB_URL",
         "DB_USER",
@@ -42,6 +46,15 @@ public class RequiredSecretsEnvironmentPostProcessor implements EnvironmentPostP
             throw new IllegalStateException(
                 "Missing required environment variables for a non-local environment: "
                     + String.join(", ", missingVariables)
+            );
+        }
+
+        List<String> unsafeVariables = PASSWORD_VARIABLES.stream()
+            .filter(variable -> EXAMPLE_PASSWORDS.contains(environment.getProperty(variable)))
+            .toList();
+        if (!unsafeVariables.isEmpty()) {
+            throw new IllegalStateException(
+                "Replace example passwords for a non-local environment: " + String.join(", ", unsafeVariables)
             );
         }
     }
