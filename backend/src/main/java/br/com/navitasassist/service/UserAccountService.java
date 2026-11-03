@@ -1,7 +1,9 @@
 package br.com.navitasassist.service;
 
 import java.util.List;
+import java.util.Objects;
 
+import br.com.navitasassist.auth.AccountSessionRevoker;
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.repository.RmaRecordRepository;
@@ -13,6 +15,7 @@ import br.com.navitasassist.user.UserAccountResponse;
 import br.com.navitasassist.user.UserAccountUpdateRequest;
 import br.com.navitasassist.user.UserRole;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -26,6 +29,7 @@ public class UserAccountService {
     private final UserAccountRepository userAccountRepository;
     private final RmaRecordRepository rmaRecordRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ApplicationEventPublisher events;
 
     @Transactional(readOnly = true)
     public List<UserAccountResponse> listAll() {
@@ -59,15 +63,25 @@ public class UserAccountService {
         validateAdministratorRemoval(userAccount, request.role() == UserRole.ADMIN && request.active());
         validateUsername(userAccount, request.username());
 
+        boolean passwordChanged = request.password() != null && !request.password().isBlank();
+        boolean accessChanged = !Objects.equals(userAccount.getUsername(), trim(request.username()))
+            || userAccount.getRole() != request.role()
+            || userAccount.isActive() != request.active()
+            || passwordChanged;
+
         userAccount.setUsername(trim(request.username()));
         userAccount.setFullName(trim(request.fullName()));
-        if (request.password() != null && !request.password().isBlank()) {
+        if (passwordChanged) {
             userAccount.setPasswordHash(passwordEncoder.encode(request.password()));
         }
         userAccount.setRole(request.role());
         userAccount.setActive(request.active());
 
-        return UserAccountResponse.from(userAccountRepository.save(userAccount));
+        UserAccountResponse response = UserAccountResponse.from(userAccountRepository.save(userAccount));
+        if (accessChanged) {
+            events.publishEvent(new AccountSessionRevoker.AccessChanged(id));
+        }
+        return response;
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -83,6 +97,7 @@ public class UserAccountService {
         }
 
         userAccountRepository.delete(userAccount);
+        events.publishEvent(new AccountSessionRevoker.AccessChanged(id));
     }
 
     @Transactional(readOnly = true)
