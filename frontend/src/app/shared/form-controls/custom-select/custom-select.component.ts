@@ -31,7 +31,7 @@ export interface CustomSelectOption<T = unknown> {
   ]
 })
 export class CustomSelectComponent implements ControlValueAccessor {
-  private readonly hostElement = inject(ElementRef<HTMLElement>);
+  private readonly hostElement: ElementRef<HTMLElement> = inject(ElementRef);
 
   readonly options = input<readonly CustomSelectOption[]>([]);
   readonly value = input<unknown>(CUSTOM_SELECT_NO_INPUT);
@@ -99,6 +99,15 @@ export class CustomSelectComponent implements ControlValueAccessor {
     if (isDisabled) {
       this.close();
     }
+  }
+
+  @HostListener('keydown.escape', ['$event'])
+  protected handleEscape(event: Event): void {
+    if (!this.isOpen() || event.defaultPrevented) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.close();
+    this.hostElement.nativeElement.querySelector<HTMLButtonElement>('.custom-select__trigger')?.focus();
   }
 
   @HostListener('document:click', ['$event'])

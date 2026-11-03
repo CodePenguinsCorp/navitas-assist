@@ -38,7 +38,7 @@ const WEEKDAY_LABELS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 })
 export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
   private static openPicker: DatePickerComponent | null = null;
-  private readonly hostElement = inject(ElementRef<HTMLElement>);
+  private readonly hostElement: ElementRef<HTMLElement> = inject(ElementRef);
 
   readonly placeholder = input('Selecione uma data');
   readonly ariaLabel = input('Selecionar data');
@@ -140,6 +140,15 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
     if (DatePickerComponent.openPicker === this) {
       DatePickerComponent.openPicker = null;
     }
+  }
+
+  @HostListener('keydown.escape', ['$event'])
+  protected handleEscape(event: Event): void {
+    if (!this.isOpen() || event.defaultPrevented) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.close();
+    this.hostElement.nativeElement.querySelector<HTMLButtonElement>('.date-picker__trigger')?.focus();
   }
 
   @HostListener('document:click', ['$event'])
