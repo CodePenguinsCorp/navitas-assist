@@ -96,7 +96,7 @@ Na alteração de **status em lote**, qualquer etapa pode ser escolhida para os 
 | `page` | Índice a partir de 0 (padrão `0`). Valores negativos ou não numéricos retornam `400`. Uma página além do fim retorna `content` vazio com os totais corretos. |
 | `size` | Padrão `20`, mínimo `1`, máximo `100`. Fora do intervalo retorna `400`. |
 
-A ordem é fixa e estável (desempate por `id`): RMAs por entrada decrescente; clientes, produtos e usuários por nome. Os filtros são aplicados no backend antes de paginar e `totalElements` considera apenas os registros filtrados:
+A ordem é fixa e estável (desempate por `id`): RMAs na ordem da fila (prioridade alta, média e demais; depois a entrada mais antiga); clientes, produtos e usuários por nome. Os filtros são aplicados no backend antes de paginar e `totalElements` considera apenas os registros filtrados:
 
 | Recurso | Filtros |
 |:---|:---|

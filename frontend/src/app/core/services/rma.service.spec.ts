@@ -49,6 +49,16 @@ describe('RmaService', () => {
     request.flush([]);
   });
 
+  it('loads summary totals with the same filters as the list', () => {
+    service.getSummary({ query: ' RMA ', status: 'TRIAGE' }).subscribe();
+
+    const request = httpTesting.expectOne((candidate) => candidate.url === '/api/rmas/summary');
+    expect(request.request.params.has('page')).toBe(false);
+    expect(request.request.params.get('query')).toBe('RMA');
+    expect(request.request.params.get('status')).toBe('TRIAGE');
+    request.flush({ total: 3, ongoing: 2, highPriority: 1 });
+  });
+
   it('posts the complete RMA payload unchanged', () => {
     const payload: CreateRmaRequest = {
       clientId: 3,

@@ -19,6 +19,7 @@ import {
   ProductResponse,
   RmaPriority,
   RmaResponse,
+  RmaSummaryResponse,
   RmaStatus
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
@@ -224,13 +225,10 @@ export class RmasComponent {
   protected readonly historyResults = this.historySignal.asReadonly();
   protected readonly selectedRma = this.selectedRmaSignal.asReadonly();
 
-  protected readonly totalRmas = this.rmaList.totalElements;
-  protected readonly ongoingRmas = computed(() =>
-    this.rmaList.items().filter((rma) => !TERMINAL_RMA_STATUSES.has(rma.status)).length
-  );
-  protected readonly highPriorityRmas = computed(() =>
-    this.rmaList.items().filter((rma) => rma.priority === 'HIGH').length
-  );
+  private readonly summarySignal = signal<RmaSummaryResponse>({ total: 0, ongoing: 0, highPriority: 0 });
+  protected readonly totalRmas = computed(() => this.summarySignal().total);
+  protected readonly ongoingRmas = computed(() => this.summarySignal().ongoing);
+  protected readonly highPriorityRmas = computed(() => this.summarySignal().highPriority);
 
   protected readonly statusLabel = statusLabel;
   protected readonly priorityLabel = priorityLabel;
@@ -354,6 +352,7 @@ export class RmasComponent {
     this.pageMessage.set('');
     this.pageError.set('');
     this.rmaList.firstPage();
+    this.loadSummary();
   }
 
   protected goToPage(page: number): void {
@@ -374,6 +373,7 @@ export class RmasComponent {
     this.pageMessage.set('');
     this.pageError.set('');
     this.rmaList.firstPage();
+    this.loadSummary();
   }
 
   protected openCreateModal(): void {
@@ -580,6 +580,7 @@ export class RmasComponent {
   private loadWorkspace(): void {
     this.pageError.set('');
     this.rmaList.reload();
+    this.loadSummary();
 
     forkJoin({
       clients: this.catalogService.listClientOptions(),
@@ -598,6 +599,14 @@ export class RmasComponent {
   private refreshRmas(): void {
     this.pageError.set('');
     this.rmaList.reload();
+    this.loadSummary();
+  }
+
+  private loadSummary(): void {
+    this.rmaService.getSummary(this.buildFilters()).subscribe({
+      next: (summary) => this.summarySignal.set(summary),
+      error: (error) => this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível carregar o resumo dos RMAs.'))
+    });
   }
 
   private syncSelection(rmas: RmaResponse[]): void {
@@ -728,8 +737,6 @@ const STATUS_FILTER_OPTIONS: ReadonlyArray<CustomSelectOption<SearchStatusValue>
     label: RMA_STATUS_LABELS[status]
   }))
 ];
-
-const TERMINAL_RMA_STATUSES = new Set<RmaStatus>(['COMPLETED', 'RETURNED', 'IRREPARABLE']);
 
 const PRIORITY_SELECT_OPTIONS: ReadonlyArray<CustomSelectOption<RmaPriority>> = [
   { value: 'HIGH', label: RMA_PRIORITY_LABELS.HIGH },

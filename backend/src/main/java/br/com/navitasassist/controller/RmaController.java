@@ -10,6 +10,7 @@ import br.com.navitasassist.rma.RmaBulkStatusUpdateRequest;
 import br.com.navitasassist.rma.RmaResponse;
 import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusUpdateRequest;
+import br.com.navitasassist.rma.RmaSummaryResponse;
 import br.com.navitasassist.rma.UpdateRmaRequest;
 import br.com.navitasassist.service.RmaService;
 import jakarta.validation.Valid;
@@ -41,6 +42,14 @@ public class RmaController {
         @RequestParam(required = false) Integer size
     ) {
         return rmaService.searchPage(query, status, page, size);
+    }
+
+    @GetMapping("/summary")
+    public RmaSummaryResponse summarize(
+        @RequestParam(required = false) String query,
+        @RequestParam(required = false) RmaStatus status
+    ) {
+        return rmaService.summarize(query, status);
     }
 
     @GetMapping("/board")

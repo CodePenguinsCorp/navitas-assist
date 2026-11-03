@@ -9,6 +9,7 @@ import {
   RmaAssigneeUpdateRequest,
   RmaBulkStatusUpdateRequest,
   RmaResponse,
+  RmaSummaryResponse,
   RmaPriority,
   RmaStatus,
   RmaStatusUpdateRequest
@@ -27,6 +28,11 @@ export class RmaService {
   list(filters: RmaFilters = {}): Observable<PageResponse<RmaResponse>> {
     const params = buildPageParams(filters, { query: filters.query, status: filters.status });
     return this.http.get<PageResponse<RmaResponse>>('/api/rmas', { params });
+  }
+
+  getSummary(filters: Pick<RmaFilters, 'query' | 'status'> = {}): Observable<RmaSummaryResponse> {
+    const params = buildPageParams({}, { query: filters.query, status: filters.status });
+    return this.http.get<RmaSummaryResponse>('/api/rmas/summary', { params });
   }
 
   listBoard(filters: Pick<RmaFilters, 'query' | 'status'> = {}): Observable<RmaResponse[]> {
