@@ -63,7 +63,6 @@ public class ClientService {
         client.setLegalName(trim(request.legalName()));
         client.setTradeName(trim(request.tradeName()));
         client.setDocumentNumber(trim(request.documentNumber()));
-        client.setContactName(trim(request.contactName()));
         client.setEmail(trim(request.email()));
         client.setPhone(trim(request.phone()));
         client.setAddress(trim(request.address()));
