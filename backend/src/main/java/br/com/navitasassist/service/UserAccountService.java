@@ -15,6 +15,7 @@ import br.com.navitasassist.user.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -52,8 +53,10 @@ public class UserAccountService {
         return UserAccountResponse.from(userAccountRepository.save(userAccount));
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public UserAccountResponse update(Long id, UserAccountUpdateRequest request) {
-        UserAccount userAccount = getEntityById(id);
+        UserAccount userAccount = getEntityForAdministration(id);
+        validateAdministratorRemoval(userAccount, request.role() == UserRole.ADMIN && request.active());
         validateUsername(userAccount, request.username());
 
         userAccount.setUsername(trim(request.username()));
@@ -67,12 +70,14 @@ public class UserAccountService {
         return UserAccountResponse.from(userAccountRepository.save(userAccount));
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void delete(Long id, String authenticatedUsername) {
-        UserAccount userAccount = getEntityById(id);
+        UserAccount userAccount = getEntityForAdministration(id);
 
         if (userAccount.getUsername().equalsIgnoreCase(authenticatedUsername)) {
             throw new BusinessException("You cannot delete your own user account.");
         }
+        validateAdministratorRemoval(userAccount, false);
         if (rmaRecordRepository.existsByAssignee_Id(id)) {
             throw new BusinessException("User is assigned to one or more RMAs and cannot be deleted.");
         }
@@ -115,6 +120,19 @@ public class UserAccountService {
 
         if (duplicate) {
             throw new BusinessException("Username already registered: " + username);
+        }
+    }
+
+    private UserAccount getEntityForAdministration(Long id) {
+        // All reductions take the same ordered locks before locking their target.
+        userAccountRepository.findActiveByRoleForUpdate(UserRole.ADMIN);
+        return userAccountRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
+    }
+
+    private void validateAdministratorRemoval(UserAccount account, boolean remainsActiveAdmin) {
+        if (account.isActive() && account.getRole() == UserRole.ADMIN && !remainsActiveAdmin
+                && userAccountRepository.countByRoleAndActiveTrue(UserRole.ADMIN) <= 1) {
+            throw new BusinessException("At least one active administrator must remain.");
         }
     }
 
