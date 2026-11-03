@@ -40,4 +40,12 @@ public class RmaItem {
 
     @Embedded
     private ItemIdentification itemIdentification = new ItemIdentification();
+
+    public ItemIdentification getItemIdentification() {
+        // Keep the empty value writable when JPA loads all its columns as null.
+        if (itemIdentification == null) {
+            itemIdentification = new ItemIdentification();
+        }
+        return itemIdentification;
+    }
 }
