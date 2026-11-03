@@ -51,11 +51,16 @@
           </div>
         </div>
 
-        <button type="button" class="button-secondary shell-logout" (click)="logout()">Sair</button>
+        <button type="button" class="button-secondary shell-logout" (click)="logout()" [disabled]="loggingOut()">
+          {{ loggingOut() ? 'Saindo...' : 'Sair' }}
+        </button>
       </div>
     </header>
 
     <main class="shell-content">
+      @if (logoutError()) {
+        <p class="field-error" role="alert">{{ logoutError() }}</p>
+      }
       <router-outlet />
     </main>
   </div>

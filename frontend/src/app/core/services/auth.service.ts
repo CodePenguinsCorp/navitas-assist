@@ -30,7 +30,7 @@ export class AuthService {
   logout(): Observable<void> {
     return this.ensureCsrfToken().pipe(
       switchMap(() => this.http.post<void>('/api/auth/logout', {})),
-      finalize(() => {
+      tap(() => {
         this.sessionSignal.set(null);
         this.initializedSignal.set(true);
       })
