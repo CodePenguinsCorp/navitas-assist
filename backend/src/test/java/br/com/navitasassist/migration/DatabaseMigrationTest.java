@@ -31,6 +31,18 @@ class DatabaseMigrationTest {
         assertEquals(1, executedMigrations);
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
             assertTrue(tableExists(connection, "rmas"));
+            assertTrue(tableExists(connection, "rma_code_generation_lock"));
+            try (Statement statement = connection.createStatement();
+                 ResultSet row = statement.executeQuery("SELECT id FROM rma_code_generation_lock")) {
+                assertTrue(row.next());
+                assertEquals(1, row.getLong("id"));
+                assertFalse(row.next());
+            }
+            assertThrows(SQLException.class, () -> {
+                try (Statement statement = connection.createStatement()) {
+                    statement.executeUpdate("INSERT INTO rma_code_generation_lock (id) VALUES (2)");
+                }
+            });
             assertTrue(tableExists(connection, "rma_items"));
             assertTrue(tableExists(connection, "rma_assignment_history"));
             assertTrue(tableExists(connection, "kanban_views"));

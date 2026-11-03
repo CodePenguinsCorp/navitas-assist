@@ -83,6 +83,12 @@ ADMIN e SERVICE_DESK podem alterar status, prioridade e responsável em lote. TE
 
 Na alteração de **status em lote**, qualquer etapa pode ser escolhida para os RMAs selecionados, inclusive uma etapa anterior ou a reabertura de um RMA encerrado. O histórico registra cada mudança. A API ainda confere a etapa atual de cada card para evitar sobrescrever uma alteração feita em outra sessão depois da seleção; nesse caso, somente o card desatualizado falha e é recarregado.
 
+## Numeração dos RMAs
+
+A criação usa o formato `RMA-AAAA-NNNNNN`, com ano em `America/Sao_Paulo` e sequência iniciada em `000001` a cada ano. O banco serializa a alocação e a inserção para que criações concorrentes recebam códigos distintos. Uma criação revertida não consome número. Ao atingir `999999`, novas criações desse ano recebem erro de negócio `400`.
+
+A linha de bloqueio é criada pela migration inicial em banco vazio. Alterações incompatíveis da V1 seguem a política de recriação local descrita em **Schema do banco**. O bloqueio é compartilhado pelos processos que usam o mesmo banco e serializa as criações; escritas diretas fora da API não seguem esse controle.
+
 ## Estrutura do Projeto
 
 - `frontend/`: interface web
