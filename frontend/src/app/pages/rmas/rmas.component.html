@@ -469,7 +469,11 @@
       <form [formGroup]="diagnosisForm" (ngSubmit)="saveDiagnosis()" class="form-grid">
         <div class="field-group field-group--full">
           <label for="foundFailure">Falha encontrada</label>
-          <textarea id="foundFailure" formControlName="foundFailure" rows="4"></textarea>
+          <textarea id="foundFailure" formControlName="foundFailure" rows="4" maxlength="2000"></textarea>
+          <small>Até 2000 caracteres.</small>
+          @if (diagnosisForm.controls.foundFailure.invalid && (diagnosisForm.controls.foundFailure.dirty || diagnosisForm.controls.foundFailure.touched)) {
+            <small class="field-error">Informe a falha encontrada com até 2000 caracteres.</small>
+          }
         </div>
 
         <div class="field-group">
@@ -497,7 +501,11 @@
 
         <div class="field-group">
           <label for="technicianName">Técnico</label>
-          <input id="technicianName" type="text" formControlName="technicianName" />
+          <input id="technicianName" type="text" formControlName="technicianName" maxlength="120" />
+          <small>Até 120 caracteres.</small>
+          @if (diagnosisForm.controls.technicianName.invalid && (diagnosisForm.controls.technicianName.dirty || diagnosisForm.controls.technicianName.touched)) {
+            <small class="field-error">Informe o técnico com até 120 caracteres.</small>
+          }
         </div>
 
         <div class="field-group field-group--full">

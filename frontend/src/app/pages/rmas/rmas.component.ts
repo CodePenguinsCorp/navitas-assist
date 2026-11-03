@@ -621,7 +621,7 @@ export class RmasComponent {
   }
 
   private primeDetailForms(rma: RmaResponse): void {
-    this.diagnosisForm.setValue({
+    this.diagnosisForm.reset({
       foundFailure: rma.diagnosis?.foundFailure ?? '',
       failureType: (rma.diagnosis?.failureType ?? '') as FailureTypeValue,
       probableCause: (rma.diagnosis?.probableCause ?? '') as FailureCauseValue,
