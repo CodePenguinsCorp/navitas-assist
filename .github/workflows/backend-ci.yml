@@ -18,6 +18,19 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: maven:3.9.9-eclipse-temurin-17
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: navitas-ci-root
+          MYSQL_DATABASE: navitas_ci
+          MYSQL_USER: navitas_ci
+          MYSQL_PASSWORD: navitas-ci-test
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
     defaults:
       run:
         working-directory: backend
@@ -26,3 +39,13 @@ jobs:
         uses: actions/checkout@v4
       - name: Run tests and build
         run: mvn -B -ntp verify
+      - name: Validate MySQL schema and enum persistence
+        env:
+          MYSQL_TEST_PASSWORD: navitas-ci-test
+        run: >-
+          mvn -B -ntp test
+          -Dtest=EnumPersistenceIntegrationTest
+          '-Dspring.datasource.url=jdbc:mysql://mysql:3306/navitas_ci?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC'
+          -Dspring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+          -Dspring.datasource.username=navitas_ci
+          -Dspring.datasource.password="$MYSQL_TEST_PASSWORD"
