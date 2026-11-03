@@ -66,6 +66,25 @@ describe('RmasComponent form', () => {
     expect(component.createForm.get('purchaseDate')?.value).toBe('');
   });
 
+  it('closes the purchase calendar and clears its date when purchase is marked unknown', () => {
+    component.openCreateModal();
+    component.createForm.controls['purchaseDate'].setValue('2026-10-15');
+    fixture.detectChanges();
+    const page: HTMLElement = fixture.nativeElement;
+    const picker = page.querySelector<HTMLElement>('app-date-picker[formControlName="purchaseDate"]')!;
+    const trigger = picker.querySelector<HTMLButtonElement>('.date-picker__trigger')!;
+    trigger.click();
+    fixture.detectChanges();
+    expect(picker.querySelector('.date-picker__panel')).not.toBeNull();
+
+    page.querySelector<HTMLInputElement>('input[formControlName="purchaseDateUnknown"]')!.click();
+    fixture.detectChanges();
+    expect(component.createForm.controls['purchaseDate'].value).toBe('');
+    expect(picker.querySelector('.date-picker__panel')).toBeNull();
+    expect(trigger.disabled).toBe(true);
+    expect(rmaService.create).not.toHaveBeenCalled();
+  });
+
   it('shows the invoice number without file or receiver inputs', () => {
     component.openCreateModal();
     fixture.detectChanges();

@@ -6,6 +6,7 @@ import {
   OnDestroy,
   Output,
   computed,
+  effect,
   forwardRef,
   inject,
   input,
@@ -70,6 +71,12 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
 
   private onChange: (value: string) => void = () => {};
   private onTouched: () => void = () => {};
+
+  constructor() {
+    effect(() => {
+      if (this.isDisabled() && this.isOpen()) this.close();
+    });
+  }
 
   protected toggle(): void {
     if (this.isDisabled()) {
@@ -150,6 +157,7 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
   }
 
   private applyValue(value: string): void {
+    if (this.isDisabled()) return;
     this.selectedValue.set(value);
     this.onChange(value);
     this.valueChange.emit(value);

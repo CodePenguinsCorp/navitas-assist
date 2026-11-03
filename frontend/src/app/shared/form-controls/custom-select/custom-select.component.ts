@@ -56,6 +56,10 @@ export class CustomSelectComponent implements ControlValueAccessor {
 
   constructor() {
     effect(() => {
+      if (this.isDisabled() && this.isOpen()) this.close();
+    });
+
+    effect(() => {
       const incomingValue = this.value();
       if (incomingValue !== CUSTOM_SELECT_NO_INPUT) {
         this.selectedValue.set(incomingValue);
@@ -72,6 +76,7 @@ export class CustomSelectComponent implements ControlValueAccessor {
   }
 
   protected selectOption(option: CustomSelectOption): void {
+    if (this.isDisabled()) return;
     this.selectedValue.set(option.value);
     this.onChange(option.value);
     this.valueChange.emit(option.value);
