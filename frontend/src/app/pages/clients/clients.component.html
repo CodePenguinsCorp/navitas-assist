@@ -168,7 +168,11 @@
 
         <label class="field-group">
           <span>Nome fantasia</span>
-          <input type="text" formControlName="tradeName" />
+          <input type="text" formControlName="tradeName" maxlength="120" />
+          <small>Até 120 caracteres.</small>
+          @if (hasError('tradeName')) {
+            <small class="field-error">Informe um nome fantasia com até 120 caracteres.</small>
+          }
         </label>
 
         <label class="field-group">
@@ -202,7 +206,11 @@
 
         <label class="field-group field-group--full">
           <span>Observações</span>
-          <textarea formControlName="notes"></textarea>
+          <textarea formControlName="notes" maxlength="1000"></textarea>
+          <small>Até 1000 caracteres.</small>
+          @if (hasError('notes')) {
+            <small class="field-error">Informe observações com até 1000 caracteres.</small>
+          }
         </label>
 
         <div class="form-actions form-actions--full">
