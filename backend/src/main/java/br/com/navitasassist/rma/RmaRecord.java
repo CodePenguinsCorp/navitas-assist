@@ -29,6 +29,8 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Getter
 @Setter
@@ -84,10 +86,12 @@ public class RmaRecord extends AuditableEntity {
     private String physicalCondition;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 20)
     private RmaPriority priority = RmaPriority.MEDIUM;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 30)
     private RmaStatus status = RmaStatus.RECEIVED;
 
@@ -123,6 +127,14 @@ public class RmaRecord extends AuditableEntity {
     @OneToMany(mappedBy = "rma", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("changedAt DESC")
     private List<RmaAssignmentHistory> assignmentHistory = new ArrayList<>();
+
+    public ItemIdentification getItemIdentification() {
+        // JPA may reconstruct an all-null embedded value as null.
+        if (itemIdentification == null) {
+            itemIdentification = new ItemIdentification();
+        }
+        return itemIdentification;
+    }
 
     public void setDiagnosis(Diagnosis diagnosis) {
         if (diagnosis == null) {

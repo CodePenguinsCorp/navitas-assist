@@ -154,7 +154,7 @@
           <h3>{{ editingProduct() ? 'Editar produto' : 'Novo produto' }}</h3>
           <p>{{ editingProduct() ? 'Atualize o cadastro técnico do produto.' : 'Preencha os dados mínimos para o catálogo técnico.' }}</p>
         </div>
-        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()">
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()" [disabled]="submitting()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
       </header>

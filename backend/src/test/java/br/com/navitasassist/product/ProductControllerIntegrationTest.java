@@ -2,12 +2,14 @@ package br.com.navitasassist.product;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -23,6 +25,8 @@ import br.com.navitasassist.rma.RmaRecord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -173,6 +177,148 @@ class ProductControllerIntegrationTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.details", hasItem(startsWith("category:"))))
             .andExpect(jsonPath("$.details", hasItem(startsWith("technicalNotes:"))));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"SKU-EXISTS", "sku-exists", " SKU-EXISTS ", " sku-exists ", "\tSKU-EXISTS\t"})
+    void shouldRejectDuplicateSkuOnCreateAfterNormalization(String sku) throws Exception {
+        Product existing = createProduct("SKU-EXISTS");
+
+        mockMvc.perform(post("/api/products")
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(productJson(sku, "Category", "Notes")))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.message").value("SKU already registered: " + sku.trim()))
+            .andExpect(jsonPath("$.details").isEmpty());
+
+        assertThat(productRepository.count()).isEqualTo(1);
+        assertThat(productRepository.findById(existing.getId()).orElseThrow().getSku()).isEqualTo("SKU-EXISTS");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"SKU-EXISTS", "sku-exists", " SKU-EXISTS ", " sku-exists ", "\tSKU-EXISTS\t"})
+    void shouldRejectDuplicateSkuOnUpdateWithoutPartialChanges(String sku) throws Exception {
+        createProduct("SKU-EXISTS");
+        Product edited = createProduct("SKU-EDITED");
+
+        mockMvc.perform(put("/api/products/{id}", edited.getId())
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(productJson(sku, "Changed category", "Changed notes")))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.message").value("SKU already registered: " + sku.trim()));
+
+        assertThat(productRepository.count()).isEqualTo(2);
+        Product persisted = productRepository.findById(edited.getId()).orElseThrow();
+        assertThat(persisted.getSku()).isEqualTo("SKU-EDITED");
+        assertThat(persisted.getName()).isEqualTo("Original product");
+        assertThat(persisted.getCategory()).isNull();
+        assertThat(persisted.getTechnicalNotes()).isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"SKU-SELF", " SKU-SELF ", " sku-self "})
+    void shouldAllowOwnNormalizedSkuOnUpdate(String sku) throws Exception {
+        Product product = createProduct("SKU-SELF");
+
+        mockMvc.perform(put("/api/products/{id}", product.getId())
+                .with(user("service.desk").roles("SERVICE_DESK"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(productJson(sku, "Category", "Notes")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(product.getId()))
+            .andExpect(jsonPath("$.sku").value(sku.trim()));
+
+        assertThat(productRepository.count()).isEqualTo(1);
+        assertThat(productRepository.findById(product.getId()).orElseThrow().getSku()).isEqualTo(sku.trim());
+    }
+
+    @Test
+    void shouldNormalizeUniqueSkusWithoutRemovingInternalSpaces() throws Exception {
+        String response = mockMvc.perform(post("/api/products")
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(productJson(" SKU NEW ", "Category", "Notes")))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.sku").value("SKU NEW"))
+            .andReturn().getResponse().getContentAsString();
+        long id = objectMapper.readTree(response).get("id").asLong();
+        assertThat(productRepository.findById(id).orElseThrow().getSku()).isEqualTo("SKU NEW");
+
+        mockMvc.perform(put("/api/products/{id}", id)
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(productJson(" SKU NEXT ", "Category", "Notes")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.sku").value("SKU NEXT"));
+
+        assertThat(productRepository.count()).isEqualTo(1);
+        assertThat(productRepository.findById(id).orElseThrow().getSku()).isEqualTo("SKU NEXT");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"VIEWER", "TECHNICIAN"})
+    void shouldRejectProductWritesFromUnauthorizedRoles(String role) throws Exception {
+        Product product = createProduct("SKU-PROTECTED");
+        String body = productJson(" SKU NEW ", "Category", "Notes");
+
+        mockMvc.perform(post("/api/products")
+                .with(user("unauthorized").roles(role)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(put("/api/products/{id}", product.getId())
+                .with(user("unauthorized").roles(role)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isForbidden());
+
+        assertThat(productRepository.count()).isEqualTo(1);
+        assertThat(productRepository.findById(product.getId()).orElseThrow().getSku()).isEqualTo("SKU-PROTECTED");
+    }
+
+    @Test
+    void shouldRejectProductWritesWithoutCsrf() throws Exception {
+        Product product = createProduct("SKU-CSRF");
+        String body = productJson(" SKU NEW ", "Category", "Notes");
+
+        mockMvc.perform(post("/api/products").with(user("admin").roles("ADMIN"))
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(put("/api/products/{id}", product.getId()).with(user("admin").roles("ADMIN"))
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isForbidden());
+
+        assertThat(productRepository.count()).isEqualTo(1);
+        assertThat(productRepository.findById(product.getId()).orElseThrow().getSku()).isEqualTo("SKU-CSRF");
+    }
+
+    @Test
+    void shouldKeepSkuLengthLimitOnUpdate() throws Exception {
+        Product product = createProduct("SKU-LIMIT");
+
+        mockMvc.perform(put("/api/products/{id}", product.getId())
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(productJson("123456789012345678901", "Category", "Notes")))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.details", hasItem(startsWith("sku:"))));
+
+        assertThat(productRepository.findById(product.getId()).orElseThrow().getSku()).isEqualTo("SKU-LIMIT");
+    }
+
+    private Product createProduct(String sku) {
+        Product product = new Product();
+        product.setSku(sku);
+        product.setName("Original product");
+        return productRepository.saveAndFlush(product);
     }
 
     private String productJson(String sku, String category, String technicalNotes) throws Exception {

@@ -46,6 +46,7 @@ O projeto foi dividido em duas aplicações:
 - Regras de negócio que dependem de "hoje" e o ano do código do RMA usam `America/Sao_Paulo`, independentemente do fuso do navegador ou servidor.
 - Datas sem horário (`YYYY-MM-DD` / `LocalDate`) preservam o dia informado, sem conversão de fuso.
 - No frontend, reutilize os utilitários de `core/utils/date.ts` para calcular o dia atual e exibir datas civis.
+- Instantes de auditoria, atualizações de cadastros e prazos de SLA são exibidos em `America/Sao_Paulo`, com data/hora curta `pt-BR`, independentemente do fuso do dispositivo. Use `formatBusinessDateTime` do mesmo utilitário; os valores da API não são alterados.
 
 ## Garantia dos produtos no RMA
 
@@ -82,6 +83,12 @@ Marque cards em qualquer coluna e use **Selecionar visíveis** para incluir os i
 ADMIN e SERVICE_DESK podem alterar status, prioridade e responsável em lote. TECHNICIAN pode alterar somente status. VIEWER não pode selecionar nem alterar. Cada atualização passa pelas permissões da API e registra o histórico do RMA: etapas e prioridades no histórico de status; atribuições no histórico de responsáveis.
 
 Na alteração de **status em lote**, qualquer etapa pode ser escolhida para os RMAs selecionados, inclusive uma etapa anterior ou a reabertura de um RMA encerrado. O histórico registra cada mudança. A API ainda confere a etapa atual de cada card para evitar sobrescrever uma alteração feita em outra sessão depois da seleção; nesse caso, somente o card desatualizado falha e é recarregado.
+
+## Numeração dos RMAs
+
+A criação usa o formato `RMA-AAAA-NNNNNN`, com ano em `America/Sao_Paulo` e sequência iniciada em `000001` a cada ano. O banco serializa a alocação e a inserção para que criações concorrentes recebam códigos distintos. Uma criação revertida não consome número. Ao atingir `999999`, novas criações desse ano recebem erro de negócio `400`.
+
+A linha de bloqueio é criada pela migration inicial em banco vazio. Alterações incompatíveis da V1 seguem a política de recriação local descrita em **Schema do banco**. O bloqueio é compartilhado pelos processos que usam o mesmo banco e serializa as criações; escritas diretas fora da API não seguem esse controle.
 
 ## Estrutura do Projeto
 
@@ -265,10 +272,16 @@ A aplicação usa sessão criada no backend. O frontend envia usuário e senha s
 
 - `JSESSIONID` é `HttpOnly` e `SameSite=Strict`; em ambientes não locais também é `Secure`
 - requisições de escrita usam token CSRF no cookie `XSRF-TOKEN` e no header `X-XSRF-TOKEN`
+- `GET /api/auth/csrf` retorna `204` sem corpo e cria o cookie CSRF somente quando ausente; consultas de outras abas preservam o token existente
 - a sessão é restaurada após recarregar a página por `GET /api/auth/me`
 - a expiração padrão por inatividade é de 30 minutos e pode ser alterada com `SESSION_TIMEOUT`
 - `POST /api/auth/logout` invalida a sessão e remove os cookies de sessão e CSRF
 - respostas de autenticação e autorização permanecem em JSON, com `401` e `403`
+- a tela de login indica credenciais inválidas somente para `401` do endpoint de login; falhas de rede, serviço ou preparação do CSRF exibem uma mensagem genérica para nova tentativa, sem mostrar detalhes do servidor
+
+Alterar usuário, senha, perfil ou situação ativa, ou excluir uma conta, revoga todas as suas sessões após o commit. Na próxima requisição, o backend invalida a sessão e responde `401`; é necessário entrar novamente. Alterar apenas o nome completo não encerra sessões, e operações recusadas ou revertidas não revogam o acesso. O registro usa o ID da conta, portanto reutilizar um nome de usuário excluído não recupera sessões antigas.
+
+O registro de sessões é mantido em memória por instância, assim como as sessões HTTP atuais. A revogação atende a execução em uma única instância; não sincroniza réplicas nem cancela requisições que já passaram pela autorização. Logout, expiração e troca do ID da sessão removem os registros correspondentes.
 
 ## Admin Inicial
 
@@ -278,6 +291,8 @@ No profile `local`, no primeiro boot e apenas se ainda não existir usuário no 
 - senha: `admin123`
 
 Esses valores também são usados somente nos testes automatizados. Fora dos profiles `local` e `test`, `DB_URL`, `DB_USER`, `DB_PASSWORD`, `APP_ADMIN_USERNAME`, `APP_ADMIN_PASSWORD` e `APP_ADMIN_FULL_NAME` são obrigatórios; a aplicação falha na inicialização se algum deles não for informado. O ambiente de produção usa validação de schema e não imprime SQL nem credenciais nos logs.
+
+Fora dos profiles `local` e `test`, o backend também recusa senhas públicas dos exemplos em `DB_PASSWORD` e `APP_ADMIN_PASSWORD`: `admin123`, `navitas123`, `root123`, `troque-esta-senha` e `troque-esta-senha-root`. Substitua esses valores por segredos próprios antes de iniciar; a aplicação informa somente os nomes das variáveis que precisam ser corrigidas. A comparação é exata, sem aparar ou modificar senhas, e não representa uma avaliação geral de força. O nome de usuário `admin` continua permitido com senha própria. Nenhuma conta ou senha existente é alterada automaticamente.
 
 ## Autorização da API
 
@@ -388,7 +403,7 @@ Disponibilizar um fluxo funcional de gerenciamento de assistência técnica, per
 
 ## SLA do Kanban (NAV-10)
 
-O backend calcula o SLA de cada RMA e o inclui no campo `sla` das respostas de consulta e atualização. Os cards mostram situação por texto e cor, tempo decorrido na etapa, limite e data/hora do prazo. O filtro de SLA combina-se com o de responsável. A tela recalcula situação e tempo a cada 30 segundos sem recarregar; datas são exibidas no fuso do navegador, a partir de instantes UTC.
+O backend calcula o SLA de cada RMA e o inclui no campo `sla` das respostas de consulta e atualização. Os cards mostram situação por texto e cor, tempo decorrido na etapa, limite e data/hora do prazo. O filtro de SLA combina-se com o de responsável. A tela recalcula situação e tempo a cada 30 segundos sem recarregar; datas são exibidas no fuso `America/Sao_Paulo`, a partir dos instantes da API.
 
 ### Regras e valores iniciais
 

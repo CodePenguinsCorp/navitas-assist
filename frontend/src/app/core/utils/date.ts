@@ -1,5 +1,17 @@
 const APP_TIME_ZONE = 'America/Sao_Paulo';
 
+export function formatBusinessDateTime(value: string | null): string {
+  if (!value) {
+    return 'N\u00e3o informado';
+  }
+
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: APP_TIME_ZONE,
+    dateStyle: 'short',
+    timeStyle: 'short'
+  }).format(new Date(value));
+}
+
 export function formatDateOnly(value: string | null, fallback = 'N\u00e3o informado'): string {
   if (!value) {
     return fallback;
