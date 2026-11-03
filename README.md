@@ -46,6 +46,7 @@ O projeto foi dividido em duas aplicações:
 - Regras de negócio que dependem de "hoje" e o ano do código do RMA usam `America/Sao_Paulo`, independentemente do fuso do navegador ou servidor.
 - Datas sem horário (`YYYY-MM-DD` / `LocalDate`) preservam o dia informado, sem conversão de fuso.
 - No frontend, reutilize os utilitários de `core/utils/date.ts` para calcular o dia atual e exibir datas civis.
+- Instantes de auditoria, atualizações de cadastros e prazos de SLA são exibidos em `America/Sao_Paulo`, com data/hora curta `pt-BR`, independentemente do fuso do dispositivo. Use `formatBusinessDateTime` do mesmo utilitário; os valores da API não são alterados.
 
 ## Garantia dos produtos no RMA
 
@@ -304,6 +305,10 @@ A aplicação usa sessão criada no backend. O frontend envia usuário e senha s
 - respostas de autenticação e autorização permanecem em JSON, com `401` e `403`
 - a tela de login indica credenciais inválidas somente para `401` do endpoint de login; falhas de rede, serviço ou preparação do CSRF exibem uma mensagem genérica para nova tentativa, sem mostrar detalhes do servidor
 
+Alterar usuário, senha, perfil ou situação ativa, ou excluir uma conta, revoga todas as suas sessões após o commit. Na próxima requisição, o backend invalida a sessão e responde `401`; é necessário entrar novamente. Alterar apenas o nome completo não encerra sessões, e operações recusadas ou revertidas não revogam o acesso. O registro usa o ID da conta, portanto reutilizar um nome de usuário excluído não recupera sessões antigas.
+
+O registro de sessões é mantido em memória por instância, assim como as sessões HTTP atuais. A revogação atende a execução em uma única instância; não sincroniza réplicas nem cancela requisições que já passaram pela autorização. Logout, expiração e troca do ID da sessão removem os registros correspondentes.
+
 ## Admin Inicial
 
 No profile `local`, no primeiro boot e apenas se ainda não existir usuário no banco, a aplicação cria:
@@ -424,7 +429,7 @@ Disponibilizar um fluxo funcional de gerenciamento de assistência técnica, per
 
 ## SLA do Kanban (NAV-10)
 
-O backend calcula o SLA de cada RMA e o inclui no campo `sla` das respostas de consulta e atualização. Os cards mostram situação por texto e cor, tempo decorrido na etapa, limite e data/hora do prazo. O filtro de SLA combina-se com o de responsável. A tela recalcula situação e tempo a cada 30 segundos sem recarregar; datas são exibidas no fuso do navegador, a partir de instantes UTC.
+O backend calcula o SLA de cada RMA e o inclui no campo `sla` das respostas de consulta e atualização. Os cards mostram situação por texto e cor, tempo decorrido na etapa, limite e data/hora do prazo. O filtro de SLA combina-se com o de responsável. A tela recalcula situação e tempo a cada 30 segundos sem recarregar; datas são exibidas no fuso `America/Sao_Paulo`, a partir dos instantes da API.
 
 ### Regras e valores iniciais
 

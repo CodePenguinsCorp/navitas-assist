@@ -92,7 +92,6 @@ export interface ClientResponse {
   legalName: string;
   tradeName: string | null;
   documentNumber: string | null;
-  contactName: string | null;
   email: string | null;
   phone: string | null;
   address: string | null;
@@ -105,7 +104,6 @@ export interface ClientRequest {
   legalName: string;
   tradeName: string | null;
   documentNumber: string | null;
-  contactName: string | null;
   email: string | null;
   phone: string | null;
   address: string | null;
@@ -354,7 +352,7 @@ export interface RmaSummaryResponse {
 
 export interface ClientSummaryResponse {
   total: number;
-  withContact: number;
+  withPhone: number;
   withDocument: number;
   withEmail: number;
 }

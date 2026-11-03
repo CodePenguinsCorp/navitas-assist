@@ -20,7 +20,6 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
             or lower(c.legalName) like lower(concat('%', :query, '%'))
             or lower(coalesce(c.tradeName, '')) like lower(concat('%', :query, '%'))
             or lower(coalesce(c.documentNumber, '')) like lower(concat('%', :query, '%'))
-            or lower(coalesce(c.contactName, '')) like lower(concat('%', :query, '%'))
             or lower(coalesce(c.email, '')) like lower(concat('%', :query, '%'))
             or lower(coalesce(c.phone, '')) like lower(concat('%', :query, '%'))
           )
@@ -40,7 +39,7 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
     @Query("""
         select new br.com.navitasassist.client.ClientSummaryResponse(
             count(c),
-            coalesce(sum(case when trim(coalesce(c.contactName, '')) <> '' or trim(coalesce(c.phone, '')) <> '' then 1L else 0L end), 0L),
+            coalesce(sum(case when trim(coalesce(c.phone, '')) <> '' then 1L else 0L end), 0L),
             coalesce(sum(case when trim(coalesce(c.documentNumber, '')) <> '' then 1L else 0L end), 0L),
             coalesce(sum(case when trim(coalesce(c.email, '')) <> '' then 1L else 0L end), 0L)
         )

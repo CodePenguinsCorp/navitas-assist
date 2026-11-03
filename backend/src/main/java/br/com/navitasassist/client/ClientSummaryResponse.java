@@ -1,4 +1,4 @@
 package br.com.navitasassist.client;
 
-public record ClientSummaryResponse(long total, long withContact, long withDocument, long withEmail) {
+public record ClientSummaryResponse(long total, long withPhone, long withDocument, long withEmail) {
 }

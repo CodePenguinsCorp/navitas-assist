@@ -5,7 +5,7 @@ import { ClientResponse } from '../../core/models';
 import { ClientsComponent } from './clients.component';
 
 const CLIENT: ClientResponse = {
-  id: 1, legalName: 'Alfa', tradeName: null, documentNumber: '123', contactName: null,
+  id: 1, legalName: 'Alfa', tradeName: null, documentNumber: '123',
   email: 'alfa@example.com', phone: null, address: null, notes: null,
   createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
 };
@@ -35,7 +35,7 @@ describe('ClientsComponent pending save lifecycle', () => {
 
   function flushLoad(content: ClientResponse[]): void {
     http.expectOne((request) => request.method === 'GET' && request.url === '/api/clients').flush(pageOf(content));
-    http.expectOne('/api/clients/summary').flush({ total: content.length, withContact: 0, withDocument: 0, withEmail: 0 });
+    http.expectOne('/api/clients/summary').flush({ total: content.length, withPhone: 0, withDocument: 0, withEmail: 0 });
   }
 
   function openEditor(mode: 'create' | 'edit'): void {

@@ -202,8 +202,11 @@ export class UsersComponent {
   }
 
   protected closeModal(): void {
-    this.activeModal.set(null);
-    this.modalErrorMessage.set('');
+    if (this.submitting()) {
+      return;
+    }
+
+    this.resetModal();
   }
 
   protected saveUser(): void {
@@ -231,7 +234,7 @@ export class UsersComponent {
             ? `Usuário ${user.fullName} atualizado com sucesso.`
             : `Usuário ${user.fullName} cadastrado com sucesso.`
         );
-        this.closeModal();
+        this.resetModal();
         this.loadUsers();
         this.loadSummary();
       },
@@ -332,6 +335,11 @@ export class UsersComponent {
     const validators = [Validators.minLength(6), Validators.maxLength(120)];
     this.form.controls.password.setValidators(required ? [Validators.required, ...validators] : validators);
     this.form.controls.password.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private resetModal(): void {
+    this.activeModal.set(null);
+    this.modalErrorMessage.set('');
   }
 
   private resetDeleteModal(): void {
