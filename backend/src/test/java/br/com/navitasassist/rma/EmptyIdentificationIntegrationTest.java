@@ -89,7 +89,7 @@ class EmptyIdentificationIntegrationTest {
                 .andExpect(jsonPath("$.items[0].warrantyStatus").value("PENDING"));
         }
         mvc.perform(get("/api/rmas").param("query", saved.getCode()).with(user("viewer").roles("VIEWER")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$[0].id").value(saved.getId()));
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].id").value(saved.getId()));
         assertEquals(before, row("rmas", saved.getId()));
         assertEquals(updatedAt, jdbc.queryForObject("select updated_at from rmas where id = ?", Object.class, saved.getId()));
         if (withItem) assertEquals(before, row("rma_items", saved.getItems().get(0).getId()));

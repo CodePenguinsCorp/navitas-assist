@@ -11,15 +11,15 @@
   <section class="stats-grid stats-grid--three">
     <article class="panel stat-card">
       <span>Ativos</span>
-      <strong>{{ activeUsers() }}</strong>
+      <strong>{{ summary().active }}</strong>
     </article>
     <article class="panel stat-card">
       <span>Administradores</span>
-      <strong>{{ adminUsers() }}</strong>
+      <strong>{{ summary().admins }}</strong>
     </article>
     <article class="panel stat-card">
       <span>Perfis em uso</span>
-      <strong>{{ roleCount() }}</strong>
+      <strong>{{ summary().roles }}</strong>
     </article>
   </section>
 
@@ -27,12 +27,12 @@
     <label class="search-field">
       <span class="search-field__heading">
         <span>Buscar</span>
-        <span class="catalog-toolbar__result">{{ filteredUsers().length }} registro(s)</span>
+        <span class="catalog-toolbar__result">{{ totalElements() }} registro(s)</span>
       </span>
       <input
         #userSearch
         type="search"
-        placeholder="Nome, usuário ou perfil"
+        placeholder="Nome ou usuário"
         [value]="searchTerm()"
         (input)="updateSearch(userSearch.value)"
       />
@@ -75,13 +75,13 @@
   <article class="table-card table-card--list panel">
     @if (loading() && users().length === 0) {
       <p>Carregando usuários...</p>
-    } @else if (users().length === 0) {
+    } @else if (users().length === 0 && !hasActiveFilters) {
       <section class="empty-state">
         <h3>Nenhum usuário cadastrado.</h3>
         <p>Cadastre perfis internos para controlar o acesso ao sistema.</p>
         <button type="button" class="button-primary" (click)="openCreateModal()">Cadastrar usuário</button>
       </section>
-    } @else if (filteredUsers().length === 0) {
+    } @else if (users().length === 0) {
       <section class="empty-state">
         <h3>Nenhum resultado encontrado.</h3>
         <p>Ajuste os filtros para localizar outro usuário.</p>
@@ -100,7 +100,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (user of filteredUsers(); track user.id) {
+            @for (user of users(); track user.id) {
               <tr>
                 <td>
                   <strong class="table-title">{{ user.fullName }}</strong>
@@ -137,6 +137,16 @@
           </tbody>
         </table>
       </div>
+      <app-pagination
+        [page]="page()"
+        [size]="pageSize()"
+        [totalElements]="totalElements()"
+        [totalPages]="totalPages()"
+        [shown]="users().length"
+        [loading]="loading()"
+        (pageChange)="goToPage($event)"
+        (sizeChange)="changePageSize($event)"
+      />
     }
   </article>
 </section>

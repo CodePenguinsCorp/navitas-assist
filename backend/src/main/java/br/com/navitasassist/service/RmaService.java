@@ -14,6 +14,8 @@ import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.diagnosis.Diagnosis;
 import br.com.navitasassist.diagnosis.DiagnosisRequest;
 import br.com.navitasassist.item.ItemIdentification;
+import br.com.navitasassist.pagination.PageParams;
+import br.com.navitasassist.pagination.PageResponse;
 import br.com.navitasassist.part.PartReservationStatus;
 import br.com.navitasassist.repository.PartReservationRepository;
 import br.com.navitasassist.repository.RmaCodeGenerationLockRepository;
@@ -30,6 +32,7 @@ import br.com.navitasassist.rma.RmaResponse;
 import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusHistory;
 import br.com.navitasassist.rma.RmaStatusUpdateRequest;
+import br.com.navitasassist.rma.RmaSummaryResponse;
 import br.com.navitasassist.rma.UpdateRmaRequest;
 import br.com.navitasassist.user.UserAccount;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +63,19 @@ public class RmaService {
     @Transactional(readOnly = true)
     public List<RmaResponse> search(String query, RmaStatus status) {
         return rmaRecordRepository.search(trimToNull(query), status).stream().map(this::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<RmaResponse> searchPage(String query, RmaStatus status, Integer page, Integer size) {
+        return PageResponse.from(
+            rmaRecordRepository.searchPage(trimToNull(query), status, PageParams.of(page, size)),
+            this::toResponse
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public RmaSummaryResponse summarize(String query, RmaStatus status) {
+        return rmaRecordRepository.summarize(trimToNull(query), status, List.of(RmaStatus.COMPLETED, RmaStatus.RETURNED, RmaStatus.IRREPARABLE));
     }
 
     @Transactional(readOnly = true)

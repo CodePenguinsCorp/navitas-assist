@@ -82,6 +82,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/scan/*/status", "/api/rmas/*/scan-code").hasAnyRole("ADMIN", "SERVICE_DESK", "TECHNICIAN")
                 .requestMatchers(HttpMethod.POST, "/api/rmas/*/scan-code/revoke").hasAnyRole("ADMIN", "SERVICE_DESK")
                 .requestMatchers("/api/users/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/reports/rmas").hasAnyRole("ADMIN", "TECHNICIAN", "VIEWER")
                 .requestMatchers(HttpMethod.GET, "/api/auth/me", "/api/clients/**", "/api/products/**", "/api/rmas/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/auth/logout").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/clients", "/api/products", "/api/rmas").hasAnyRole("ADMIN", "SERVICE_DESK")

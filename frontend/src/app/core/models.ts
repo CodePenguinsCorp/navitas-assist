@@ -417,6 +417,20 @@ export interface PartReplenishmentResponse {
   belowMinimum: boolean;
 }
 
+export interface RmaReportFilters {
+  entryFrom?: string;
+  entryTo?: string;
+  status?: RmaStatus;
+  clientId?: number;
+}
+
+export interface RmaReportResponse {
+  generatedAt: string;
+  entryFrom: string;
+  entryTo: string;
+  rmas: RmaResponse[];
+}
+
 export type ScanSource = 'CAMERA' | 'SCANNER' | 'MANUAL';
 
 export interface ScanCodeResponse {
@@ -461,14 +475,42 @@ export interface ModuleCard {
   roles: UserRole[];
 }
 
-export interface ReportCard {
-  title: string;
-  description: string;
-  frequency: string;
-  format: string;
+export interface PageQuery {
+  page?: number;
+  size?: number;
 }
 
-export interface AccessMatrixItem {
-  role: UserRole;
-  access: string;
+export interface PageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface RmaSummaryResponse {
+  total: number;
+  ongoing: number;
+  highPriority: number;
+}
+
+export interface ClientSummaryResponse {
+  total: number;
+  withContact: number;
+  withDocument: number;
+  withEmail: number;
+}
+
+export interface ProductSummaryResponse {
+  total: number;
+  withFirmware: number;
+  averageWarrantyMonths: number;
+  categories: string[];
+}
+
+export interface UserSummaryResponse {
+  total: number;
+  active: number;
+  admins: number;
+  roles: number;
 }
