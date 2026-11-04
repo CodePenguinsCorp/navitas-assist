@@ -19,6 +19,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.Immutable;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Immutable stock ledger entry. Corrections are recorded as a new {@link PartMovementType#REVERSAL} movement.
@@ -39,6 +41,7 @@ public class PartMovement {
     @JoinColumn(name = "part_id", nullable = false)
     private Part part;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private PartMovementType type;

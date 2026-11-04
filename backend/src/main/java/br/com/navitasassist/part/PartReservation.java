@@ -18,6 +18,8 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Getter
 @Setter
@@ -41,6 +43,7 @@ public class PartReservation extends AuditableEntity {
     @Column(nullable = false, updatable = false, precision = 12, scale = 3)
     private BigDecimal quantity;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private PartReservationStatus status;
