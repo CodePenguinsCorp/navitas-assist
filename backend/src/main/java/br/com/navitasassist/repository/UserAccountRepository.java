@@ -35,6 +35,7 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
 
     List<UserAccount> findAllByActiveTrueAndRoleOrderByFullNameAsc(UserRole role);
 
+    List<UserAccount> findAllByActiveTrueAndRoleNotOrderByFullNameAsc(UserRole role);
     @Query("""
         select account
         from UserAccount account

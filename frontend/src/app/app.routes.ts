@@ -47,6 +47,11 @@ export const routes: Routes = [
         title: 'Peças | Navitas Assist'
       },
       {
+        path: 'localizacao',
+        loadComponent: () => import('./pages/custody/custody.component').then((module) => module.CustodyComponent),
+        title: 'Localização | Navitas Assist'
+      },
+      {
         path: 'leitura',
         loadComponent: () => import('./pages/scan/scan.component').then((module) => module.ScanComponent),
         title: 'Leitura de etiqueta | Navitas Assist'
@@ -82,6 +87,15 @@ export const routes: Routes = [
           roles: ['ADMIN', 'SERVICE_DESK']
         },
         title: 'Produtos | Navitas Assist'
+      },
+      {
+        path: 'locais',
+        loadComponent: () => import('./pages/locations/locations.component').then((module) => module.LocationsComponent),
+        canActivate: [roleGuard],
+        data: {
+          roles: ['ADMIN', 'SERVICE_DESK']
+        },
+        title: 'Locais | Navitas Assist'
       },
       {
         path: 'usuarios',
