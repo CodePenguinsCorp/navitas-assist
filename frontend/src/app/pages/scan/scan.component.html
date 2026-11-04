@@ -1,0 +1,97 @@
+<section class="page-surface">
+  <section class="page-heading">
+    <div>
+      <h1>Leitura de etiqueta</h1>
+    </div>
+  </section>
+
+  <article class="panel form-panel">
+    <div class="scan-entry">
+      <label class="field-group">
+        <span>Código da etiqueta ou do RMA</span>
+        <input
+          #codeInput
+          type="text"
+          autocomplete="off"
+          autofocus
+          placeholder="Aponte o leitor ou digite o código"
+          (keydown)="trackKey($event)"
+          (keydown.enter)="submitTyped(codeInput)"
+        />
+      </label>
+      <button type="button" class="button-primary" (click)="submitTyped(codeInput)" [disabled]="resolving()">{{ resolving() ? 'Abrindo...' : 'Abrir' }}</button>
+      @if (cameraSupported) {
+        @if (cameraActive()) {
+          <button type="button" class="button-secondary" (click)="stopCamera()">Parar câmera</button>
+        } @else {
+          <button type="button" class="button-secondary" (click)="startCamera()">Ler com a câmera</button>
+        }
+      }
+    </div>
+    @if (!cameraSupported) {
+      <p class="muted-inline">Este navegador não lê códigos pela câmera. Use um leitor USB/Bluetooth ou digite o código.</p>
+    }
+    @if (cameraSupported) {
+      <video #cameraVideo class="scan-video" [hidden]="!cameraActive()" muted playsinline></video>
+    }
+  </article>
+
+  @if (errorMessage()) {
+    <article class="panel alert-banner alert-banner--error" role="alert">
+      <strong>{{ errorMessage() }}</strong>
+    </article>
+  }
+  @if (successMessage()) {
+    <article class="panel alert-banner alert-banner--success" role="status">
+      <strong>{{ successMessage() }}</strong>
+    </article>
+  }
+
+  @if (rma(); as current) {
+    <article class="panel form-panel" aria-live="polite">
+      <div class="modal-header">
+        <div>
+          <h3>{{ current.code }}</h3>
+          <p>{{ current.clientName }}</p>
+        </div>
+      </div>
+      <div class="summary-list">
+        <span class="mini-chip">{{ statusLabel(current.status) }}</span>
+        <span class="mini-chip">Prioridade {{ priorityLabel(current.priority) }}</span>
+      </div>
+      <div class="detail-grid">
+        <div><span>Produto</span><strong>{{ productSummary(current) }}</strong></div>
+        <div><span>Identificação</span><strong>{{ trackableLabel(current) }}</strong></div>
+        <div><span>Entrada</span><strong>{{ dateLabel(current.entryDate) }}</strong></div>
+        <div><span>Responsável</span><strong>{{ ownerLabel(current) }}</strong></div>
+      </div>
+
+      @if (canChangeStatus()) {
+        <div class="scan-action">
+          <label class="field-group">
+            <span>Novo status</span>
+            <select #statusSelect [value]="targetStatus()" (change)="selectTarget(statusSelect.value)">
+              <option value="">Selecione</option>
+              @for (status of statusOptions(); track status) {
+                <option [value]="status">{{ statusLabel(status) }}</option>
+              }
+            </select>
+          </label>
+          <label class="field-group">
+            <span>Observação</span>
+            <input #noteInput type="text" maxlength="255" [value]="note()" (input)="note.set(noteInput.value)" />
+          </label>
+          <button type="button" class="button-secondary" (click)="requestStatusChange()" [disabled]="submitting()">Alterar status</button>
+        </div>
+
+        @if (confirming() && targetStatus(); as target) {
+          <div class="scan-confirm" role="alertdialog" aria-label="Confirmar alteração de status">
+            <span>Confirmar mudança de <strong>{{ statusLabel(current.status) }}</strong> para <strong>{{ statusLabel($any(target)) }}</strong>?</span>
+            <button type="button" class="button-primary" (click)="confirmStatusChange()" [disabled]="submitting()">{{ submitting() ? 'Salvando...' : 'Confirmar' }}</button>
+            <button type="button" class="button-secondary" (click)="cancelStatusChange()" [disabled]="submitting()">Cancelar</button>
+          </div>
+        }
+      }
+    </article>
+  }
+</section>

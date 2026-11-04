@@ -45,7 +45,7 @@ describe('ReportsComponent', () => {
     component = fixture.componentInstance as unknown as ReportsHarness;
     fixture.detectChanges();
     http.expectOne('/api/clients/options').flush([{ id: 2, legalName: 'Cliente Alfa', tradeName: null, documentNumber: null,
-      contactName: null, email: null, phone: null, address: null, notes: null,
+      email: null, phone: null, address: null, notes: null,
       createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' }]);
   });
 

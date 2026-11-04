@@ -15,9 +15,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.web.context.SecurityContextRepository;
-import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,15 +36,16 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final SecurityContextRepository securityContextRepository;
     private final CsrfTokenRepository csrfTokenRepository;
+    private final SessionRegistry sessionRegistry;
 
     @GetMapping("/csrf")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void csrf(HttpServletRequest request, HttpServletResponse response) {
-        CsrfToken csrfToken = csrfTokenRepository.generateToken(request);
-        csrfTokenRepository.saveToken(csrfToken, request, response);
+        csrfTokenRepository.loadDeferredToken(request, response).get();
     }
 
     @PostMapping("/login")
+    @Transactional
     public UserAccountResponse login(
         @Valid @RequestBody LoginRequest loginRequest,
         HttpServletRequest request,
@@ -52,8 +54,10 @@ public class AuthController {
         Authentication authentication = authenticationManager.authenticate(
             UsernamePasswordAuthenticationToken.unauthenticated(loginRequest.username().trim(), loginRequest.password())
         );
+        UserAccountResponse user = userAccountService.getCurrentUser(authentication.getName());
 
         if (request.getSession(false) != null) {
+            sessionRegistry.removeSessionInformation(request.getSession(false).getId());
             request.changeSessionId();
         }
 
@@ -61,7 +65,8 @@ public class AuthController {
         securityContext.setAuthentication(authentication);
         SecurityContextHolder.setContext(securityContext);
         securityContextRepository.saveContext(securityContext, request, response);
-        return userAccountService.getCurrentUser(authentication.getName());
+        sessionRegistry.registerNewSession(request.getSession().getId(), user.id());
+        return user;
     }
 
     @GetMapping("/me")
@@ -72,6 +77,6 @@ public class AuthController {
     @ExceptionHandler(AuthenticationException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public Map<String, String> handleAuthenticationFailure() {
-        return Map.of("message", "Unauthorized");
+        return Map.of("message", "Usuário ou senha inválidos.");
     }
 }

@@ -147,7 +147,7 @@ class PaginationIntegrationTest {
         saveClient("A", "doc", "a@a.com");
         saveClient("B", null, "b@b.com");
         Client withContact = saveClient("C", null, null);
-        withContact.setContactName("Contact");
+        withContact.setPhone("(47) 99999-0000");
         clientRepository.save(withContact);
 
         mockMvc.perform(get("/api/clients/summary").with(admin()))

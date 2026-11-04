@@ -17,6 +17,8 @@ import {
 } from '../models';
 import { formatDateOnly } from './date';
 
+export { formatBusinessDateTime as formatDateTime } from './date';
+
 export function statusLabel(status: RmaStatus): string {
   return RMA_STATUS_LABELS[status];
 }
@@ -61,17 +63,6 @@ export function failureCauseLabel(value: FailureCause | null): string {
 
 export function formatDate(value: string | null): string {
   return formatDateOnly(value);
-}
-
-export function formatDateTime(value: string | null): string {
-  if (!value) {
-    return 'N\u00e3o informado';
-  }
-
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'short',
-    timeStyle: 'short'
-  }).format(new Date(value));
 }
 
 export function trackableLabel(rma: Pick<RmaResponse, 'items' | 'serialNumber' | 'batchNumber'>): string {

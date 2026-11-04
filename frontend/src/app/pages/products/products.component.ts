@@ -217,8 +217,11 @@ export class ProductsComponent {
   }
 
   protected closeModal(): void {
-    this.activeModal.set(null);
-    this.modalErrorMessage.set('');
+    if (this.submitting()) {
+      return;
+    }
+
+    this.resetModal();
   }
 
   protected saveProduct(): void {
@@ -246,7 +249,7 @@ export class ProductsComponent {
             ? `Produto ${product.name} atualizado com sucesso.`
             : `Produto ${product.name} cadastrado com sucesso.`
         );
-        this.closeModal();
+        this.resetModal();
         this.loadProducts();
         this.loadSummary();
       },
@@ -379,6 +382,11 @@ export class ProductsComponent {
       this.categoryFilter.set(next);
       this.productList.firstPage();
     }
+  }
+
+  private resetModal(): void {
+    this.activeModal.set(null);
+    this.modalErrorMessage.set('');
   }
 
   private resetDeleteModal(): void {
