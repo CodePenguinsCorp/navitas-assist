@@ -1,5 +1,7 @@
 package br.com.navitasassist.custody;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 
 import br.com.navitasassist.rma.RmaRecord;
@@ -35,6 +37,7 @@ public class RmaCustodyMovement {
     @JoinColumn(name = "rma_id", nullable = false)
     private RmaRecord rma;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(name = "movement_type", nullable = false, length = 20)
     private CustodyMovementType type;

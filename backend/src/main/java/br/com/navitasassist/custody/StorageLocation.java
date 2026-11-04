@@ -1,5 +1,7 @@
 package br.com.navitasassist.custody;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import br.com.navitasassist.config.AuditableEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -33,6 +35,7 @@ public class StorageLocation extends AuditableEntity {
     @Column(nullable = false, length = 120)
     private String name;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private StorageLocationType type;

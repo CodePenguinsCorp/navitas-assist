@@ -3,7 +3,6 @@ CREATE TABLE clients (
     legal_name TEXT NOT NULL,
     trade_name VARCHAR(120),
     document_number VARCHAR(18),
-    contact_name VARCHAR(120),
     email VARCHAR(120),
     phone VARCHAR(30),
     address VARCHAR(255),
@@ -72,6 +71,13 @@ CREATE TABLE kanban_views (
 );
 
 CREATE INDEX idx_kanban_views_owner_id ON kanban_views (owner_id);
+
+CREATE TABLE rma_code_generation_lock (
+    id BIGINT PRIMARY KEY,
+    CONSTRAINT ck_rma_code_generation_lock_id CHECK (id = 1)
+);
+
+INSERT INTO rma_code_generation_lock (id) VALUES (1);
 
 CREATE TABLE rmas (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

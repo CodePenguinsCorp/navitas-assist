@@ -92,7 +92,6 @@ export interface ClientResponse {
   legalName: string;
   tradeName: string | null;
   documentNumber: string | null;
-  contactName: string | null;
   email: string | null;
   phone: string | null;
   address: string | null;
@@ -105,7 +104,6 @@ export interface ClientRequest {
   legalName: string;
   tradeName: string | null;
   documentNumber: string | null;
-  contactName: string | null;
   email: string | null;
   phone: string | null;
   address: string | null;
@@ -295,6 +293,38 @@ export interface RmaResponse {
   updatedAt: string;
 }
 
+export interface RmaReportFilters {
+  entryFrom?: string;
+  entryTo?: string;
+  status?: RmaStatus;
+  clientId?: number;
+}
+
+export interface RmaReportResponse {
+  generatedAt: string;
+  entryFrom: string;
+  entryTo: string;
+  rmas: RmaResponse[];
+}
+
+export type ScanSource = 'CAMERA' | 'SCANNER' | 'MANUAL';
+
+export interface ScanCodeResponse {
+  rmaId: number;
+  rmaCode: string;
+  token: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface ScanStatusChangeRequest {
+  expectedStatus: RmaStatus;
+  status: RmaStatus;
+  note: string | null;
+  source: ScanSource;
+  confirmed: boolean;
+}
+
 export interface NavItem {
   label: string;
   route: string;
@@ -321,16 +351,44 @@ export interface ModuleCard {
   roles: UserRole[];
 }
 
-export interface ReportCard {
-  title: string;
-  description: string;
-  frequency: string;
-  format: string;
+export interface PageQuery {
+  page?: number;
+  size?: number;
 }
 
-export interface AccessMatrixItem {
-  role: UserRole;
-  access: string;
+export interface PageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface RmaSummaryResponse {
+  total: number;
+  ongoing: number;
+  highPriority: number;
+}
+
+export interface ClientSummaryResponse {
+  total: number;
+  withContact: number;
+  withDocument: number;
+  withEmail: number;
+}
+
+export interface ProductSummaryResponse {
+  total: number;
+  withFirmware: number;
+  averageWarrantyMonths: number;
+  categories: string[];
+}
+
+export interface UserSummaryResponse {
+  total: number;
+  active: number;
+  admins: number;
+  roles: number;
 }
 
 export type StorageLocationType = 'AREA' | 'BENCH' | 'SHELF' | 'QUARANTINE' | 'SHIPPING';
