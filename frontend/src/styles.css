@@ -1352,3 +1352,23 @@ a {
     max-height: calc(100vh - 1.5rem);
   }
 }
+
+/* Label printing (NAV-43): while printing, only the label preview is rendered. */
+@media print {
+  body.printing-label * {
+    visibility: hidden;
+  }
+
+  body.printing-label .label-print-area,
+  body.printing-label .label-print-area * {
+    visibility: visible;
+  }
+
+  body.printing-label .label-print-area {
+    position: fixed;
+    top: 0;
+    left: 0;
+    padding: 0;
+    border: 0;
+  }
+}

@@ -9,6 +9,11 @@ const SAMPLE_USER: UserAccountResponse = {
   createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
 };
 
+function flushUserLists(http: HttpTestingController, content: unknown[]): void {
+  http.expectOne(r => r.method === 'GET' && r.url.split('?')[0] === '/api/users').flush({ content, page: 0, size: 20, totalElements: content.length, totalPages: 1 });
+  http.expectOne('/api/users/summary').flush({ total: content.length, active: content.length, admins: 0, roles: 0 });
+}
+
 describe('UsersComponent pending save lifecycle', () => {
   let fixture: ComponentFixture<UsersComponent>;
   let http: HttpTestingController;
@@ -21,19 +26,12 @@ describe('UsersComponent pending save lifecycle', () => {
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(UsersComponent);
-    flushLoad([SAMPLE_USER]);
+    flushUserLists(http, [SAMPLE_USER]);
     fixture.detectChanges();
     page = fixture.nativeElement as HTMLElement;
   });
 
   afterEach(() => http.verify());
-
-  function flushLoad(content: UserAccountResponse[]): void {
-    http.expectOne((request) => request.method === 'GET' && request.url === '/api/users').flush(
-      { content, page: 0, size: 20, totalElements: content.length, totalPages: 1 }
-    );
-    http.expectOne('/api/users/summary').flush({ total: content.length, active: content.length, admins: 0, roles: 1 });
-  }
 
   function openEditor(mode: 'create' | 'edit'): void {
     page.querySelector<HTMLButtonElement>(
@@ -71,7 +69,9 @@ describe('UsersComponent pending save lifecycle', () => {
       username: mode === 'create' ? 'operator' : SAMPLE_USER.username,
       role: mode === 'create' ? 'SERVICE_DESK' : SAMPLE_USER.role, fullName: 'Operador salvo' };
     request.flush(saved);
-    flushLoad(mode === 'create' ? [SAMPLE_USER, saved] : [saved]);
+    flushUserLists(http, 
+      mode === 'create' ? [SAMPLE_USER, saved] : [saved]
+    );
     fixture.detectChanges();
   }
 

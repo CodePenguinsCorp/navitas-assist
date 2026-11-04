@@ -73,7 +73,7 @@ export class ClientsComponent {
     }),
     (error) => this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os clientes.'))
   );
-  private readonly summarySignal = signal<ClientSummaryResponse>({ total: 0, withPhone: 0, withDocument: 0, withEmail: 0 });
+  private readonly summarySignal = signal<ClientSummaryResponse>({ total: 0, withContact: 0, withDocument: 0, withEmail: 0 });
   private readonly editingClientSignal = signal<ClientResponse | null>(null);
   private readonly deletingClientSignal = signal<ClientResponse | null>(null);
 

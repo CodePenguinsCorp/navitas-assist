@@ -3,7 +3,6 @@ package br.com.navitasassist.controller;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -96,7 +95,7 @@ class HttpProtocolErrorIntegrationTest {
     @Test
     void unexpectedServiceFailureRemainsGeneric500WithoutLeakingDetails() throws Exception {
         ProductService service = mock(ProductService.class);
-        when(service.search(any(), any(), any(), any(), any())).thenThrow(new IllegalStateException("private-service-details"));
+        when(service.search(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenThrow(new IllegalStateException("private-service-details"));
         MockMvc boundary = MockMvcBuilders.standaloneSetup(new ProductController(service)).setControllerAdvice(new RestExceptionHandler()).build();
         boundary.perform(get("/api/products"))
             .andExpect(status().isInternalServerError())

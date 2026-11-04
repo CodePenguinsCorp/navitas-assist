@@ -293,6 +293,38 @@ export interface RmaResponse {
   updatedAt: string;
 }
 
+export interface RmaReportFilters {
+  entryFrom?: string;
+  entryTo?: string;
+  status?: RmaStatus;
+  clientId?: number;
+}
+
+export interface RmaReportResponse {
+  generatedAt: string;
+  entryFrom: string;
+  entryTo: string;
+  rmas: RmaResponse[];
+}
+
+export type ScanSource = 'CAMERA' | 'SCANNER' | 'MANUAL';
+
+export interface ScanCodeResponse {
+  rmaId: number;
+  rmaCode: string;
+  token: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface ScanStatusChangeRequest {
+  expectedStatus: RmaStatus;
+  status: RmaStatus;
+  note: string | null;
+  source: ScanSource;
+  confirmed: boolean;
+}
+
 export interface NavItem {
   label: string;
   route: string;
@@ -319,18 +351,6 @@ export interface ModuleCard {
   roles: UserRole[];
 }
 
-export interface ReportCard {
-  title: string;
-  description: string;
-  frequency: string;
-  format: string;
-}
-
-export interface AccessMatrixItem {
-  role: UserRole;
-  access: string;
-}
-
 export interface PageQuery {
   page?: number;
   size?: number;
@@ -352,7 +372,7 @@ export interface RmaSummaryResponse {
 
 export interface ClientSummaryResponse {
   total: number;
-  withPhone: number;
+  withContact: number;
   withDocument: number;
   withEmail: number;
 }

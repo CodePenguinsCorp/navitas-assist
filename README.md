@@ -76,6 +76,21 @@ Cada usuário autenticado pode salvar combinações dos filtros avançados do Ka
 
 As rotas em `/api/kanban-views` usam sempre o usuário da sessão; o cliente não informa nem escolhe o proprietário. Nomes são únicos por usuário, e falhas de persistência não alteram os filtros que já estão aplicados na tela.
 
+## Relatórios reais de RMA (NAV-27)
+
+A tela Relatórios consulta `GET /api/reports/rmas`. ADMIN, TECHNICIAN e VIEWER têm acesso; sem sessão a API responde `401`, e SERVICE_DESK recebe `403`, conforme os perfis da navegação existente.
+
+Filtros opcionais combinados: `entryFrom` e `entryTo` (`YYYY-MM-DD`, inclusivos, sobre a **data de entrada**, inclusive no relatório de devoluções), `status` (enum de RMA) e `clientId` (inteiro positivo). Sem período, a consulta usa os **últimos 90 dias** (até hoje em America/Sao_Paulo); com só uma das datas, a outra é completada (90 dias antes do fim, ou até hoje, limitado a 366 dias). O período máximo é de **366 dias**. Parâmetros inválidos, intervalo invertido ou período maior retornam `400`. O retorno é `{ generatedAt, entryFrom, entryTo, rmas }`, com o período efetivamente aplicado e os mesmos campos de `RmaResponse`; cliente inexistente retorna `rmas: []`. A ordenação é por entrada decrescente e ID decrescente. A consulta carrega cliente, produto, responsável e diagnóstico junto com os RMAs, e itens e históricos em consultas em lote, com número fixo de consultas por relatório. O seletor de clientes usa `GET /api/clients/options` (catálogo completo, como na NAV-28), independentemente do resultado filtrado.
+
+- **Laudo técnico:** falha relatada, produtos, diagnóstico, tipo de falha, causa, observações, técnico, reparo, peças e testes. Diagnóstico ausente aparece como pendente.
+- **Aging por etapa:** tempo corrido na etapa atual por RMA, quantidade, média e maior tempo por etapa ativa. Reutiliza o SLA existente; notas não reiniciam o prazo e encerrados não entram nas métricas ativas. É uma fotografia no instante `generatedAt`, atualizada ao consultar novamente.
+- **Garantia:** prazo, vencimento e situação por produto, considerando os snapshots e a data de entrada. A regra atual é automática; não existem overrides manuais.
+- **Devoluções:** RMAs atualmente em `RETURNED`, com expedição, transportadora e rastreio; não é uma contagem histórica de passagens pelo status.
+
+Instantes são exibidos em `America/Sao_Paulo`. Datas civis preservam o dia recebido. Os relatórios são consultas em tela, sem alteração de schema e sem download de arquivos nesta entrega.
+
+**Exportação:** antes de implementar, validar com o produto os exemplos, colunas, volume e política de acesso para PDF A4 de laudo por RMA e CSV UTF-8 das consultas tabulares (datas ISO e proteção contra fórmulas). A especificação proposta e seus limites estão em `docs/superpowers/specs/2026-10-23-nav-27-design.md`; o formato ainda não foi homologado.
+
 ## Ações em lote no Kanban (NAV-15)
 
 Marque cards em qualquer coluna e use **Selecionar visíveis** para incluir os itens mostrados pelos filtros. A seleção permanece ao mudar os filtros; o contador informa quantos selecionados estão ocultos. Use **Limpar seleção** para começar de novo. Antes de aplicar, a confirmação mostra a ação, a quantidade e os RMAs envolvidos. O resultado de cada RMA aparece separadamente; falhas continuam selecionadas para revisão. O quadro atualiza somente os itens afetados.
@@ -109,7 +124,6 @@ A ordem é fixa e estável (desempate por `id`): RMAs na ordem da fila (priorida
 Para dados que não podem ficar incompletos há rotas sem paginação: `GET /api/rmas/board` (Kanban e dashboard, aceita `query` e `status`), `GET /api/clients/options` e `GET /api/products/options` (seletores do formulário de RMA, ordenados por nome). Os totais dos cartões das telas vêm de `GET /api/clients/summary`, `/api/products/summary` (inclui `categories` para o filtro) e `/api/users/summary`, calculados sobre todos os registros. As autorizações são as mesmas dos demais `GET` do recurso.
 
 No frontend, as telas de RMAs, clientes, produtos e usuários mostram o total filtrado e navegam por página (10, 20, 50 ou 100 por página). Alterar busca, filtro ou tamanho volta para a primeira página; a busca por texto aguarda 300 ms. Após excluir o último item de uma página, a tela volta para a última página existente.
-
 ## Numeração dos RMAs
 
 A criação usa o formato `RMA-AAAA-NNNNNN`, com ano em `America/Sao_Paulo` e sequência iniciada em `000001` a cada ano. O banco serializa a alocação e a inserção para que criações concorrentes recebam códigos distintos. Uma criação revertida não consome número. Ao atingir `999999`, novas criações desse ano recebem erro de negócio `400`.

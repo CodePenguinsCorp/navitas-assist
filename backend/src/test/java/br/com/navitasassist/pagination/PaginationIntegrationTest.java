@@ -146,14 +146,14 @@ class PaginationIntegrationTest {
     void shouldSummarizeClientsAcrossAllPages() throws Exception {
         saveClient("A", "doc", "a@a.com");
         saveClient("B", null, "b@b.com");
-        Client withPhone = saveClient("C", null, null);
-        withPhone.setPhone("11999999999");
-        clientRepository.save(withPhone);
+        Client withContact = saveClient("C", null, null);
+        withContact.setPhone("(47) 99999-0000");
+        clientRepository.save(withContact);
 
         mockMvc.perform(get("/api/clients/summary").with(admin()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.total").value(3))
-            .andExpect(jsonPath("$.withPhone").value(1))
+            .andExpect(jsonPath("$.withContact").value(1))
             .andExpect(jsonPath("$.withDocument").value(1))
             .andExpect(jsonPath("$.withEmail").value(2));
     }

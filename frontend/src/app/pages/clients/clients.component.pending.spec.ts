@@ -1,17 +1,17 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
+import { Signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ClientResponse } from '../../core/models';
+import { FormGroup } from '@angular/forms';
+import { of } from 'rxjs';
+import { ClientRequest, ClientResponse } from '../../core/models';
+import { CatalogService } from '../../core/services/catalog.service';
+import { PresenceFilter } from '../../core/utils/catalog-ui';
 import { ClientsComponent } from './clients.component';
 
-const CLIENT: ClientResponse = {
-  id: 1, legalName: 'Alfa', tradeName: null, documentNumber: '123',
-  email: 'alfa@example.com', phone: null, address: null, notes: null,
-  createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
-};
-
-function pageOf(content: ClientResponse[]) {
-  return { content, page: 0, size: 20, totalElements: content.length, totalPages: 1 };
+function flushClientLists(http: HttpTestingController, content: unknown[]): void {
+  http.expectOne(r => r.method === 'GET' && r.url.split('?')[0] === '/api/clients').flush({ content, page: 0, size: 20, totalElements: content.length, totalPages: 1 });
+  http.expectOne('/api/clients/summary').flush({ total: content.length, withContact: 0, withDocument: 0, withEmail: 0 });
 }
 
 describe('ClientsComponent pending save lifecycle', () => {
@@ -26,17 +26,12 @@ describe('ClientsComponent pending save lifecycle', () => {
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(ClientsComponent);
-    flushLoad([CLIENT]);
+    flushClientLists(http, [CLIENTS[0]]);
     fixture.detectChanges();
     page = fixture.nativeElement as HTMLElement;
   });
 
   afterEach(() => http.verify());
-
-  function flushLoad(content: ClientResponse[]): void {
-    http.expectOne((request) => request.method === 'GET' && request.url === '/api/clients').flush(pageOf(content));
-    http.expectOne('/api/clients/summary').flush({ total: content.length, withPhone: 0, withDocument: 0, withEmail: 0 });
-  }
 
   function openEditor(mode: 'create' | 'edit'): void {
     page.querySelector<HTMLButtonElement>(mode === 'create' ? '.page-heading button' : '.client-actions button')!.click();
@@ -56,9 +51,9 @@ describe('ClientsComponent pending save lifecycle', () => {
   }
 
   function succeed(request: TestRequest, mode: 'create' | 'edit'): void {
-    const saved: ClientResponse = { ...CLIENT, id: mode === 'create' ? 4 : 1, legalName: 'Cliente salvo' };
+    const saved: ClientResponse = { ...CLIENTS[0], id: mode === 'create' ? 4 : 1, legalName: 'Cliente salvo' };
     request.flush(saved);
-    flushLoad(mode === 'create' ? [CLIENT, saved] : [saved]);
+    flushClientLists(http, mode === 'create' ? [CLIENTS[0], saved] : [saved]);
     fixture.detectChanges();
   }
 
@@ -138,3 +133,22 @@ describe('ClientsComponent pending save lifecycle', () => {
     expect(page.querySelector<HTMLButtonElement>('.modal-close')!.disabled).toBe(false);
   });
 });
+
+const CLIENTS: ClientResponse[] = [
+  {
+    ...{ contactName: 'Contato legado reservado' },
+    id: 1, legalName: 'Alfa', tradeName: null, documentNumber: '123',
+    email: 'alfa@example.com', phone: null, address: null, notes: null,
+    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+  },
+  {
+    id: 2, legalName: 'Beta', tradeName: null, documentNumber: null,
+    email: 'beta@example.com', phone: '123', address: null, notes: null,
+    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+  },
+  {
+    id: 3, legalName: 'Gama', tradeName: null, documentNumber: '456',
+    email: '   ', phone: null, address: null, notes: null,
+    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+  }
+];
