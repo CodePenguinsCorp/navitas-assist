@@ -1,17 +1,5 @@
 const APP_TIME_ZONE = 'America/Sao_Paulo';
 
-export function formatBusinessDateTime(value: string | null): string {
-  if (!value) {
-    return 'N\u00e3o informado';
-  }
-
-  return new Intl.DateTimeFormat('pt-BR', {
-    timeZone: APP_TIME_ZONE,
-    dateStyle: 'short',
-    timeStyle: 'short'
-  }).format(new Date(value));
-}
-
 export function formatDateOnly(value: string | null, fallback = 'N\u00e3o informado'): string {
   if (!value) {
     return fallback;
@@ -47,4 +35,17 @@ export function businessDateInputValue(value: Date): string {
   }).formatToParts(value);
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return `${values['year']}-${values['month']}-${values['day']}`;
+}
+
+export function formatBusinessDateTime(value: string | null, fallback = 'Não informado'): string {
+  if (!value) {
+    return fallback;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return fallback;
+  }
+
+  return new Intl.DateTimeFormat('pt-BR', { timeZone: APP_TIME_ZONE, dateStyle: 'short', timeStyle: 'short' }).format(date);
 }
