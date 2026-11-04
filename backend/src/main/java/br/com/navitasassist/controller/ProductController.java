@@ -2,8 +2,10 @@ package br.com.navitasassist.controller;
 
 import java.util.List;
 
+import br.com.navitasassist.pagination.PageResponse;
 import br.com.navitasassist.product.ProductRequest;
 import br.com.navitasassist.product.ProductResponse;
+import br.com.navitasassist.product.ProductSummaryResponse;
 import br.com.navitasassist.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,8 +29,24 @@ public class ProductController {
     private final ProductService productService;
 
     @GetMapping
-    public List<ProductResponse> listAll() {
-        return productService.listAll();
+    public PageResponse<ProductResponse> search(
+        @RequestParam(required = false) String query,
+        @RequestParam(required = false) String category,
+        @RequestParam(required = false) Boolean hasFirmware,
+        @RequestParam(required = false) Integer page,
+        @RequestParam(required = false) Integer size
+    ) {
+        return productService.search(query, category, hasFirmware, page, size);
+    }
+
+    @GetMapping("/options")
+    public List<ProductResponse> listOptions() {
+        return productService.listOptions();
+    }
+
+    @GetMapping("/summary")
+    public ProductSummaryResponse summarize() {
+        return productService.summarize();
     }
 
     @GetMapping("/{id}")

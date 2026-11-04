@@ -125,9 +125,9 @@ class ClientControllerIntegrationTest {
             .andReturn().getResponse().getContentAsString();
         assertFalse(objectMapper.readTree(readBody).has("contactName"));
         String listBody = mockMvc.perform(get("/api/clients").with(user("admin").roles("ADMIN")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(1))
             .andReturn().getResponse().getContentAsString();
-        assertFalse(objectMapper.readTree(listBody).get(0).has("contactName"));
+        assertFalse(objectMapper.readTree(listBody).get("content").get(0).has("contactName"));
     }
 
     @Test

@@ -107,7 +107,7 @@ class HttpInputValidationIntegrationTest {
     void validInputsNotFoundAndBeanValidationKeepTheirContracts() throws Exception {
         mockMvc.perform(get("/api/rmas").param("status", "RECEIVED").param("query", "NAV-68-no-matching-rma")
             .with(user("viewer").roles("VIEWER")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$").isArray());
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content").isArray());
         mockMvc.perform(get("/api/products/{id}", Long.MAX_VALUE).with(user("viewer").roles("VIEWER")))
             .andExpect(status().isNotFound()).andExpect(jsonPath("$.status").value(404));
         mockMvc.perform(post("/api/products").with(user("admin").roles("ADMIN")).with(csrf())

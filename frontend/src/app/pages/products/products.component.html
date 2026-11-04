@@ -11,15 +11,15 @@
   <section class="stats-grid stats-grid--three">
     <article class="panel stat-card">
       <span>Categorias</span>
-      <strong>{{ categoryCount() }}</strong>
+      <strong>{{ summary().categories.length }}</strong>
     </article>
     <article class="panel stat-card">
       <span>Com firmware</span>
-      <strong>{{ productsWithFirmware() }}</strong>
+      <strong>{{ summary().withFirmware }}</strong>
     </article>
     <article class="panel stat-card">
       <span>Garantia média</span>
-      <strong>{{ averageWarrantyMonths() }} meses</strong>
+      <strong>{{ summary().averageWarrantyMonths }} meses</strong>
     </article>
   </section>
 
@@ -27,7 +27,7 @@
     <label class="search-field">
       <span class="search-field__heading">
         <span>Buscar</span>
-        <span class="catalog-toolbar__result">{{ filteredProducts().length }} registro(s)</span>
+        <span class="catalog-toolbar__result">{{ totalElements() }} registro(s)</span>
       </span>
       <input
         #productSearch
@@ -72,13 +72,13 @@
   <article class="table-card table-card--list panel">
     @if (loading() && products().length === 0) {
       <p>Carregando produtos...</p>
-    } @else if (products().length === 0) {
+    } @else if (products().length === 0 && !hasActiveFilters) {
       <section class="empty-state">
         <h3>Nenhum produto cadastrado.</h3>
         <p>Cadastre produtos para utilizar no fluxo de abertura de RMAs.</p>
         <button type="button" class="button-primary" (click)="openCreateModal()">Cadastrar produto</button>
       </section>
-    } @else if (filteredProducts().length === 0) {
+    } @else if (products().length === 0) {
       <section class="empty-state">
         <h3>Nenhum resultado encontrado.</h3>
         <p>Ajuste a busca ou os filtros para localizar outro produto.</p>
@@ -98,7 +98,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (product of filteredProducts(); track product.id) {
+            @for (product of products(); track product.id) {
               <tr>
                 <td>
                   <span class="product-sku" [attr.title]="product.sku">{{ skuPreview(product) }}</span>
@@ -142,6 +142,16 @@
           </tbody>
         </table>
       </div>
+      <app-pagination
+        [page]="page()"
+        [size]="pageSize()"
+        [totalElements]="totalElements()"
+        [totalPages]="totalPages()"
+        [shown]="products().length"
+        [loading]="loading()"
+        (pageChange)="goToPage($event)"
+        (sizeChange)="changePageSize($event)"
+      />
     }
   </article>
 </section>

@@ -1,23 +1,61 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   AssignableUserResponse,
   ClientRequest,
   ClientResponse,
+  ClientSummaryResponse,
+  PageQuery,
+  PageResponse,
   ProductRequest,
   ProductResponse,
+  ProductSummaryResponse,
   UserAccountRequest,
   UserAccountResponse,
-  UserAccountUpdateRequest
+  UserAccountUpdateRequest,
+  UserRole,
+  UserSummaryResponse
 } from '../models';
+import { buildPageParams } from '../utils/pagination';
+
+export interface ClientFilters extends PageQuery {
+  query?: string;
+  hasDocument?: boolean;
+  hasEmail?: boolean;
+}
+
+export interface ProductFilters extends PageQuery {
+  query?: string;
+  category?: string;
+  hasFirmware?: boolean;
+}
+
+export interface UserFilters extends PageQuery {
+  query?: string;
+  role?: UserRole;
+  active?: boolean;
+}
 
 @Injectable({ providedIn: 'root' })
 export class CatalogService {
   private readonly http = inject(HttpClient);
 
-  listClients(): Observable<ClientResponse[]> {
-    return this.http.get<ClientResponse[]>('/api/clients');
+  listClients(filters: ClientFilters = {}): Observable<PageResponse<ClientResponse>> {
+    const params = buildPageParams(filters, {
+      query: filters.query,
+      hasDocument: filters.hasDocument,
+      hasEmail: filters.hasEmail
+    });
+    return this.http.get<PageResponse<ClientResponse>>('/api/clients', { params });
+  }
+
+  listClientOptions(): Observable<ClientResponse[]> {
+    return this.http.get<ClientResponse[]>('/api/clients/options');
+  }
+
+  getClientSummary(): Observable<ClientSummaryResponse> {
+    return this.http.get<ClientSummaryResponse>('/api/clients/summary');
   }
 
   createClient(payload: ClientRequest): Observable<ClientResponse> {
@@ -32,8 +70,21 @@ export class CatalogService {
     return this.http.delete<void>(`/api/clients/${id}`);
   }
 
-  listProducts(): Observable<ProductResponse[]> {
-    return this.http.get<ProductResponse[]>('/api/products');
+  listProducts(filters: ProductFilters = {}): Observable<PageResponse<ProductResponse>> {
+    const params = buildPageParams(filters, {
+      query: filters.query,
+      category: filters.category,
+      hasFirmware: filters.hasFirmware
+    });
+    return this.http.get<PageResponse<ProductResponse>>('/api/products', { params });
+  }
+
+  listProductOptions(): Observable<ProductResponse[]> {
+    return this.http.get<ProductResponse[]>('/api/products/options');
+  }
+
+  getProductSummary(): Observable<ProductSummaryResponse> {
+    return this.http.get<ProductSummaryResponse>('/api/products/summary');
   }
 
   createProduct(payload: ProductRequest): Observable<ProductResponse> {
@@ -48,8 +99,17 @@ export class CatalogService {
     return this.http.delete<void>(`/api/products/${id}`);
   }
 
-  listUsers(): Observable<UserAccountResponse[]> {
-    return this.http.get<UserAccountResponse[]>('/api/users');
+  listUsers(filters: UserFilters = {}): Observable<PageResponse<UserAccountResponse>> {
+    const params = buildPageParams(filters, {
+      query: filters.query,
+      role: filters.role,
+      active: filters.active
+    });
+    return this.http.get<PageResponse<UserAccountResponse>>('/api/users', { params });
+  }
+
+  getUserSummary(): Observable<UserSummaryResponse> {
+    return this.http.get<UserSummaryResponse>('/api/users/summary');
   }
 
   listAssignableUsers(): Observable<AssignableUserResponse[]> {

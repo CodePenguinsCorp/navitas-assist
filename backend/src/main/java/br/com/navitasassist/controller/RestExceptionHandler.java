@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
+import org.springframework.validation.BindException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -53,6 +54,11 @@ public class RestExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException exception) {
         return buildResponse(HttpStatus.FORBIDDEN, "Access denied", List.of());
+    }
+
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<ApiError> handleQueryValidation(BindException exception) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Invalid query parameters", exception.getFieldErrors().stream().map(this::formatFieldError).toList());
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)

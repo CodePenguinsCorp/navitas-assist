@@ -95,7 +95,7 @@ class HttpProtocolErrorIntegrationTest {
     @Test
     void unexpectedServiceFailureRemainsGeneric500WithoutLeakingDetails() throws Exception {
         ProductService service = mock(ProductService.class);
-        when(service.listAll()).thenThrow(new IllegalStateException("private-service-details"));
+        when(service.search(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenThrow(new IllegalStateException("private-service-details"));
         MockMvc boundary = MockMvcBuilders.standaloneSetup(new ProductController(service)).setControllerAdvice(new RestExceptionHandler()).build();
         boundary.perform(get("/api/products"))
             .andExpect(status().isInternalServerError())
