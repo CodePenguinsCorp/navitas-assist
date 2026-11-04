@@ -149,7 +149,7 @@
           <h3>{{ editingUser() ? 'Editar usuário' : 'Novo usuário' }}</h3>
           <p>{{ editingUser() ? 'Atualize os dados e as permissões do usuário.' : 'Crie um perfil de acesso para a operação.' }}</p>
         </div>
-        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()">
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()" [disabled]="submitting()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
       </header>

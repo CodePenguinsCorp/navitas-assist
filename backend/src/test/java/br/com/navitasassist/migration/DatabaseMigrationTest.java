@@ -47,6 +47,10 @@ class DatabaseMigrationTest {
             assertTrue(tableExists(connection, "rma_items"));
             assertTrue(tableExists(connection, "rma_assignment_history"));
             assertTrue(tableExists(connection, "kanban_views"));
+            assertFalse(columnExists(connection, "clients", "contact_name"));
+            assertEquals(30, columnSize(connection, "clients", "phone"));
+            assertEquals(255, columnSize(connection, "clients", "address"));
+            assertEquals(18, columnSize(connection, "clients", "document_number"));
             assertFalse(columnExists(connection, "rmas", "invoice_file_name"));
             assertEquals(80, columnSize(connection, "rmas", "invoice_number"));
             assertEquals(1000, columnSize(connection, "rmas", "reported_failure"));
@@ -214,6 +218,27 @@ class DatabaseMigrationTest {
              ResultSet result = statement.executeQuery("SELECT COUNT(*) FROM " + tableName)) {
             result.next();
             return result.getInt(1);
+        }
+    }
+
+    @Test
+    void createsScanCodeTablesWithUniqueOpaqueTokens() throws SQLException {
+        String url = "jdbc:h2:mem:migration_scan_codes;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
+
+        Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate();
+
+        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
+            assertTrue(tableExists(connection, "rma_scan_codes"));
+            assertTrue(tableExists(connection, "rma_scan_actions"));
+            assertEquals(Set.of("idx_rma_scan_codes_rma_id"), applicationIndexes(connection, "rma_scan_codes"));
+            assertEquals(Set.of("idx_rma_scan_actions_rma_id"), applicationIndexes(connection, "rma_scan_actions"));
+
+            long rmaId = insertRma(connection, insertClient(connection), insertProduct(connection));
+            String insert = "INSERT INTO rma_scan_codes (rma_id, token, barcode_token, active, created_at, created_by) VALUES (" + rmaId + ", 'TOKEN', '000000000000000000000001', TRUE, CURRENT_TIMESTAMP, 'teste')";
+            try (Statement statement = connection.createStatement()) {
+                statement.executeUpdate(insert);
+                assertThrows(SQLException.class, () -> statement.executeUpdate(insert));
+            }
         }
     }
 }

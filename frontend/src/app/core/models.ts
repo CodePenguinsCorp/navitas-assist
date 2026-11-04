@@ -92,7 +92,6 @@ export interface ClientResponse {
   legalName: string;
   tradeName: string | null;
   documentNumber: string | null;
-  contactName: string | null;
   email: string | null;
   phone: string | null;
   address: string | null;
@@ -105,7 +104,6 @@ export interface ClientRequest {
   legalName: string;
   tradeName: string | null;
   documentNumber: string | null;
-  contactName: string | null;
   email: string | null;
   phone: string | null;
   address: string | null;
@@ -417,6 +415,24 @@ export interface PartReplenishmentResponse {
   pendingQuantity: number;
   suggestedQuantity: number;
   belowMinimum: boolean;
+}
+
+export type ScanSource = 'CAMERA' | 'SCANNER' | 'MANUAL';
+
+export interface ScanCodeResponse {
+  rmaId: number;
+  rmaCode: string;
+  token: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface ScanStatusChangeRequest {
+  expectedStatus: RmaStatus;
+  status: RmaStatus;
+  note: string | null;
+  source: ScanSource;
+  confirmed: boolean;
 }
 
 export interface NavItem {
