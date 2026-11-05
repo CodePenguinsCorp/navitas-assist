@@ -99,6 +99,15 @@ export const routes: Routes = [
         title: 'Produtos | Navitas Assist'
       },
       {
+        path: 'protocolos',
+        loadComponent: () => import('./pages/protocols/protocols.component').then((module) => module.ProtocolsComponent),
+        canActivate: [roleGuard],
+        data: {
+          roles: ['ADMIN']
+        },
+        title: 'Protocolos | Navitas Assist'
+      },
+      {
         path: 'locais',
         loadComponent: () => import('./pages/locations/locations.component').then((module) => module.LocationsComponent),
         canActivate: [roleGuard],

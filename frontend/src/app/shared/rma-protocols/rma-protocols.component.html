@@ -1,0 +1,83 @@
+<div class="summary-block">
+  <strong>Protocolos técnicos</strong>
+
+  @if (errorMessage()) {
+    <p class="field-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  @if (loading() && executions().length === 0) {
+    <p class="rma-detail-copy">Carregando protocolos...</p>
+  } @else if (executions().length === 0) {
+    <p class="rma-detail-copy">Nenhum protocolo executado.</p>
+  }
+
+  @for (execution of executions(); track execution.id) {
+    <section class="protocol-execution">
+      <div class="protocol-item">
+        <div>
+          <strong>{{ execution.templateName }} · v{{ execution.versionNumber }}</strong>
+          <p>{{ statusLabel(execution) }} · {{ progressLabel(execution) }} · iniciado por {{ execution.startedBy }}</p>
+        </div>
+        @if (canExecute() && execution.status === 'IN_PROGRESS') {
+          <button type="button" class="button-secondary button-secondary--small" (click)="completeExecution(execution)" [disabled]="submitting()">Concluir</button>
+        }
+      </div>
+      <div class="protocol-progress" [attr.aria-label]="progressLabel(execution)"><span [style.width.%]="progressPercent(execution)"></span></div>
+
+      @for (item of execution.items; track item.item.id) {
+        <div class="protocol-item">
+          <div>
+            <strong>{{ item.item.stepName }} · {{ item.item.title }}{{ item.item.required ? ' *' : '' }}</strong>
+            <p>{{ resultSummary(item) }}</p>
+          </div>
+          <div class="protocol-start">
+            <span [class]="outcomeClass(item)">{{ outcomeLabel(item) }}</span>
+            @if (canExecute() && execution.status === 'IN_PROGRESS' && !isEditing(execution, item)) {
+              <button type="button" class="button-secondary button-secondary--small" (click)="openResult(execution, item)">{{ item.latest ? 'Repetir' : 'Registrar' }}</button>
+            }
+          </div>
+        </div>
+
+        @if (isEditing(execution, item)) {
+          <form class="form-grid" [formGroup]="resultForm" (ngSubmit)="saveResult()">
+            <label class="field-group">
+              <span>Resultado</span>
+              <app-custom-select ariaLabel="Resultado do item" [options]="outcomeOptions" formControlName="outcome" />
+            </label>
+            @if (item.item.type === 'MEASUREMENT') {
+              <label class="field-group">
+                <span>Medição ({{ item.item.unit }}, {{ item.item.decimalPlaces }} casa(s))</span>
+                <input type="text" inputmode="decimal" formControlName="measuredValue" />
+              </label>
+            }
+            @if (item.item.type === 'TEXT') {
+              <label class="field-group">
+                <span>Registro</span>
+                <input type="text" formControlName="textValue" maxlength="1000" />
+              </label>
+            }
+            <label class="field-group">
+              <span>Evidência (texto ou referência){{ item.item.evidenceRequired ? ' *' : '' }}</span>
+              <input type="text" formControlName="evidence" maxlength="500" />
+            </label>
+            <label class="field-group">
+              <span>Justificativa{{ item.latest ? ' *' : '' }}</span>
+              <input type="text" formControlName="justification" maxlength="500" />
+            </label>
+            <div class="form-actions form-actions--full">
+              <button type="submit" class="button-primary" [disabled]="submitting()">Salvar resultado</button>
+              <button type="button" class="button-secondary" (click)="cancelResult()">Cancelar</button>
+            </div>
+          </form>
+        }
+      }
+    </section>
+  }
+
+  @if (canExecute() && templateOptions().length > 0) {
+    <div class="protocol-start">
+      <app-custom-select ariaLabel="Protocolo a executar" placeholder="Selecione o protocolo" [options]="templateOptions()" [value]="selectedTemplateId()" (valueChange)="selectTemplate($any($event))" />
+      <button type="button" class="button-secondary button-secondary--small" (click)="startExecution()" [disabled]="submitting()">Iniciar protocolo</button>
+    </div>
+  }
+</div>

@@ -8,6 +8,7 @@ import { provideRouter } from '@angular/router';
 import { ClientResponse, ProductResponse, RmaResponse, UserSession, WarrantyStatus } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
+import { ProtocolService } from '../../core/services/protocol.service';
 import { RmaService } from '../../core/services/rma.service';
 import { RmasComponent } from './rmas.component';
 
@@ -40,6 +41,7 @@ describe('RmasComponent form', () => {
           useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]) },
         },
         { provide: RmaService, useValue: rmaService },
+        { provide: ProtocolService, useValue: { listExecutions: () => of([]), listTemplates: () => of([]) } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(RmasComponent);
