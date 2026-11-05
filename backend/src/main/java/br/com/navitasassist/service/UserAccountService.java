@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Objects;
 
 import br.com.navitasassist.auth.AccountSessionRevoker;
+import br.com.navitasassist.auth.BoundedBCryptPasswordEncoder;
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.pagination.PageParams;
@@ -79,6 +80,7 @@ public class UserAccountService {
         UserAccount userAccount = getEntityForAdministration(id);
         validateAdministratorRemoval(userAccount, request.role() == UserRole.ADMIN && request.active());
         validateUsername(userAccount, request.username());
+        BoundedBCryptPasswordEncoder.validatePasswordLength(request.password());
 
         boolean passwordChanged = request.password() != null && !request.password().isBlank();
         boolean accessChanged = !Objects.equals(userAccount.getUsername(), trim(request.username()))

@@ -419,7 +419,8 @@ export class RmasComponent {
   }
 
   protected closeModal(): void {
-    this.activeModal.set(null);
+    if (this.createSubmitting() || this.diagnosisSubmitting()) return;
+    this.resetModal();
   }
 
   protected searchHistory(): void {
@@ -523,7 +524,7 @@ export class RmasComponent {
         this.primeDetailForms(rma);
         this.resetCreateForm();
         this.filtersForm.setValue({ query: '', status: '' });
-        this.closeModal();
+        this.resetModal();
         this.pageMessage.set(`RMA ${rma.code} criado com sucesso.`);
         this.refreshRmas();
       },
@@ -571,7 +572,7 @@ export class RmasComponent {
       next: (updated) => {
         this.selectedRmaSignal.set(updated);
         this.primeDetailForms(updated);
-        this.closeModal();
+        this.resetModal();
         this.pageMessage.set(`Diagnóstico do ${updated.code} salvo com sucesso.`);
         this.refreshRmas();
       },
@@ -592,6 +593,10 @@ export class RmasComponent {
       next: (rma) => this.openDetailsModal(rma),
       error: (error) => this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível abrir o RMA da notificação.'))
     });
+  }
+
+  private resetModal(): void {
+    this.activeModal.set(null);
   }
 
   private loadWorkspace(): void {
