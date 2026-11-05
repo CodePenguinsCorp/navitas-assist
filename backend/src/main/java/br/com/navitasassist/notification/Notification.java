@@ -1,5 +1,7 @@
 package br.com.navitasassist.notification;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 
 import br.com.navitasassist.rma.RmaRecord;
@@ -42,10 +44,12 @@ public class Notification {
     @JoinColumn(name = "rma_id", updatable = false)
     private RmaRecord rma;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40, updatable = false)
     private NotificationEventType eventType;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20, updatable = false)
     private NotificationSeverity severity;
@@ -66,6 +70,7 @@ public class Notification {
 
     private Instant snoozedUntil;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private NotificationEmailStatus emailStatus = NotificationEmailStatus.NOT_REQUESTED;

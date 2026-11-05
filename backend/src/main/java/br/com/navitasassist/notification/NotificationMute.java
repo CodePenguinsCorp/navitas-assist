@@ -1,5 +1,7 @@
 package br.com.navitasassist.notification;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 
 import br.com.navitasassist.user.UserAccount;
@@ -33,6 +35,7 @@ public class NotificationMute {
     @JoinColumn(name = "user_id", nullable = false, updatable = false)
     private UserAccount user;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40, updatable = false)
     private NotificationEventType eventType;

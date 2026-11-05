@@ -1,7 +1,7 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { switchMap, timer } from 'rxjs';
+import { finalize, switchMap, timer } from 'rxjs';
 import { NAV_GROUPS, ROLE_LABELS } from '../core/mock-data';
 import { AuthService } from '../core/services/auth.service';
 import { NotificationService } from '../core/services/notification.service';
@@ -19,6 +19,8 @@ export class AppShellComponent {
 
   protected readonly currentUser = this.authService.currentUser;
   protected readonly unreadNotifications = this.notificationService.unreadCount;
+  protected readonly loggingOut = signal(false);
+  protected readonly logoutError = signal('');
   protected readonly visibleNavGroups = computed(() =>
     NAV_GROUPS
       .map((group) => ({
@@ -41,9 +43,14 @@ export class AppShellComponent {
   }
 
   protected logout(): void {
-    this.authService.logout().subscribe({
+    if (this.loggingOut()) return;
+    this.loggingOut.set(true);
+    this.logoutError.set('');
+    this.authService.logout().pipe(
+      finalize(() => this.loggingOut.set(false))
+    ).subscribe({
       complete: () => void this.router.navigateByUrl('/login'),
-      error: () => void this.router.navigateByUrl('/login')
+      error: () => this.logoutError.set('Não foi possível confirmar o encerramento da sessão. Tente novamente.')
     });
   }
 }

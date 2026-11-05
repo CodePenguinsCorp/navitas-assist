@@ -1,47 +1,139 @@
 <section class="page-surface">
-  <section class="page-heading">
-    <div>
-      <h1>Relatórios</h1>
-    </div>
-  </section>
-
-  <section class="report-grid">
-    @for (report of reports; track report.title) {
-      <article class="report-card panel">
-        <div class="support-line">
-          <h3>{{ report.title }}</h3>
-          <span class="tag">{{ report.format }}</span>
-        </div>
-        <p>{{ report.description }}</p>
-        <span class="mini-chip">{{ report.frequency }}</span>
+  <section class="page-heading"><h1>Relatórios</h1></section>
+  <form class="panel report-filters" [formGroup]="form" (ngSubmit)="loadReports()">
+    <label class="filter-field"><span>Relatório</span>
+      <app-custom-select ariaLabel="Tipo de relatório" formControlName="report" [options]="reportOptions" />
+    </label>
+    <label class="filter-field"><span>Entrada a partir de</span>
+      <app-date-picker ariaLabel="Data inicial de entrada" formControlName="entryFrom" />
+    </label>
+    <label class="filter-field"><span>Entrada até</span>
+      <app-date-picker ariaLabel="Data final de entrada" formControlName="entryTo" />
+    </label>
+    <label class="filter-field"><span>Status atual</span>
+      <app-custom-select ariaLabel="Filtrar por status" formControlName="status" [options]="statusOptions" />
+    </label>
+    <label class="filter-field"><span>Cliente</span>
+      <app-custom-select ariaLabel="Filtrar por cliente" formControlName="clientId" [options]="clientOptions()" />
+    </label>
+    <button class="button-primary" type="submit" [disabled]="loading()">Consultar</button>
+    <p class="report-hint">O período considera a data de entrada do RMA, inclusive nas devoluções. Altere os filtros e clique em Consultar.</p>
+  </form>
+  @if (clientsError()) {
+    <article class="panel alert-banner alert-banner--error" role="alert">
+      <span>{{ clientsError() }}</span>
+      <button type="button" class="button-secondary" (click)="loadClients()">Recarregar clientes</button>
+    </article>
+  }
+  <section aria-live="polite" [attr.aria-busy]="loading()">
+    @if (loading()) {
+      <article class="panel table-card"><p>Carregando relatórios...</p></article>
+    } @else if (errorMessage()) {
+      <article class="panel alert-banner alert-banner--error" role="alert">
+        <span>{{ errorMessage() }}</span>
+        <button type="button" class="button-secondary" (click)="loadReports()">Tentar novamente</button>
       </article>
+    } @else if (report(); as data) {
+      <p class="report-hint">{{ rmas().length }} RMA(s) consultado(s). Gerado em {{ formatInstant(data.generatedAt) }} (São Paulo). Consulte novamente para atualizar.</p>
+      @if (rmas().length === 0) {
+        <article class="panel empty-state"><h3>Nenhum RMA encontrado.</h3><p>Ajuste os filtros e consulte novamente.</p></article>
+      } @else {
+        @switch (reportType()) {
+          @case ('technical') {
+            <article class="panel table-card">
+              <h2>Laudo técnico</h2>
+              <div class="table-wrap"><table>
+                <caption>Diagnóstico e parecer dos RMAs consultados</caption>
+                <thead><tr><th scope="col">RMA / Cliente</th><th scope="col">Produtos e falha relatada</th><th scope="col">Diagnóstico</th><th scope="col">Reparo e testes</th></tr></thead>
+                <tbody>
+                  @for (rma of rmas(); track rma.id) {
+                    <tr>
+                      <td><strong>{{ rma.code }}</strong><p>{{ rma.clientName }}</p><p>{{ statusLabels[rma.status] }}</p><p>Entrada: {{ formatDate(rma.entryDate) }}</p></td>
+                      <td>
+                        @for (item of rma.items; track $index) {
+                          <p>{{ item.productName }} ({{ item.productSku }}) — Série: {{ item.serialNumber || 'Não informada' }} / Lote: {{ item.batchNumber || 'Não informado' }}</p>
+                        }
+                        <p class="report-text">{{ rma.reportedFailure }}</p>
+                      </td>
+                      <td>
+                        @if (rma.diagnosis; as diagnosis) {
+                          <p class="report-text">{{ diagnosis.foundFailure }}</p>
+                          <p>Tipo: {{ diagnosis.failureType ? failureLabels[diagnosis.failureType] : 'Não informado' }}</p>
+                          <p>Causa: {{ diagnosis.probableCause ? causeLabels[diagnosis.probableCause] : 'Não informada' }}</p>
+                          <p>{{ diagnosis.technicianName }} — {{ formatDate(diagnosis.diagnosedAt) }}</p>
+                          <p class="report-text">{{ diagnosis.notes || 'Sem observações' }}</p>
+                        } @else { <p>Diagnóstico pendente</p> }
+                      </td>
+                      <td><p class="report-text">Reparo: {{ rma.repairSummary || 'Não informado' }}</p>
+                        <p class="report-text">Peças: {{ rma.replacedPartsSummary || 'Não informadas' }}</p>
+                        <p class="report-text">Testes: {{ rma.testSummary || 'Não informados' }}</p></td>
+                    </tr>
+                  }
+                </tbody>
+              </table></div>
+            </article>
+          }
+          @case ('aging') {
+            <article class="panel table-card">
+              <h2>Aging por etapa atual</h2>
+              <p>Tempo corrido na etapa, calculado no instante da consulta. RMAs encerrados não entram nas métricas ativas.</p>
+              @if (activeRmas().length === 0) { <p class="empty-state">Nenhum RMA ativo nos filtros selecionados.</p> }
+              @else {
+                <div class="table-wrap"><table>
+                  <caption>Resumo das etapas ativas</caption>
+                  <thead><tr><th scope="col">Etapa</th><th scope="col">Quantidade</th><th scope="col">Tempo médio</th><th scope="col">Maior tempo</th></tr></thead>
+                  <tbody>@for (stage of aging(); track stage.status) {
+                    <tr [attr.data-stage]="stage.status"><td>{{ statusLabels[stage.status] }}</td><td>{{ stage.count }}</td><td>{{ duration(stage.average) }}</td><td>{{ duration(stage.maximum) }}</td></tr>
+                  }</tbody>
+                </table></div>
+                <div class="table-wrap"><table>
+                  <caption>Tempo por RMA na etapa atual</caption>
+                  <thead><tr><th scope="col">RMA / Cliente</th><th scope="col">Etapa</th><th scope="col">Início (São Paulo)</th><th scope="col">Tempo decorrido</th></tr></thead>
+                  <tbody>@for (rma of activeRmas(); track rma.id) {
+                    <tr><td><strong>{{ rma.code }}</strong><p>{{ rma.clientName }}</p></td><td>{{ statusLabels[rma.status] }}</td>
+                      <td>{{ formatInstant(rma.sla.startedAt) }}</td><td>{{ duration(rma.sla.elapsedSeconds) }}</td></tr>
+                  }</tbody>
+                </table></div>
+              }
+            </article>
+          }
+          @case ('warranty') {
+            <article class="panel table-card">
+              <h2>Garantia por produto</h2>
+              <p>Cálculo automático na data de entrada, sem override manual. Compra desconhecida mantém a garantia pendente.</p>
+              <div class="table-wrap"><table>
+                <caption>Prazos e situação de cada produto do RMA</caption>
+                <thead><tr><th scope="col">RMA / Cliente</th><th scope="col">Produto</th><th scope="col">Compra / Entrada</th><th scope="col">Prazo</th><th scope="col">Vencimento</th><th scope="col">Situação</th></tr></thead>
+                <tbody>@for (rma of rmas(); track rma.id) {
+                  @for (item of rma.items; track $index) {
+                    <tr><td><strong>{{ rma.code }}</strong><p>{{ rma.clientName }}</p></td>
+                      <td>{{ item.productName }} ({{ item.productSku }})<p>Série: {{ item.serialNumber || 'Não informada' }} / Lote: {{ item.batchNumber || 'Não informado' }}</p></td>
+                      <td>{{ formatDate(rma.purchaseDate) }} / {{ formatDate(rma.entryDate) }}</td><td>{{ item.warrantyMonths }} meses</td>
+                      <td>{{ formatDate(item.warrantyExpiresAt) }}</td><td>{{ warrantyLabels[item.warrantyStatus] }}</td></tr>
+                  }
+                }</tbody>
+              </table></div>
+            </article>
+          }
+          @case ('returns') {
+            <article class="panel table-card">
+              <h2>Devoluções</h2><p>Somente RMAs atualmente no status Devolvido.</p>
+              @if (returns().length === 0) { <p class="empty-state">Nenhuma devolução nos filtros selecionados.</p> }
+              @else {
+                <div class="table-wrap"><table>
+                  <caption>Expedição dos RMAs devolvidos</caption>
+                  <thead><tr><th scope="col">RMA / Cliente</th><th scope="col">Entrada</th><th scope="col">Expedição</th><th scope="col">Transportadora</th><th scope="col">Rastreio</th></tr></thead>
+                  <tbody>@for (rma of returns(); track rma.id) {
+                    <tr><td><strong>{{ rma.code }}</strong><p>{{ rma.clientName }}</p></td><td>{{ formatDate(rma.entryDate) }}</td>
+                      <td>{{ formatDate(rma.shippedAt) }}</td><td>{{ rma.carrier || 'Não informada' }}</td><td>{{ rma.trackingCode || 'Não informado' }}</td></tr>
+                  }</tbody>
+                </table></div>
+              }
+            </article>
+          }
+        }
+      }
     }
   </section>
-
-  <section class="two-column-grid">
-    <article class="matrix-card panel">
-      <h3>Acessos</h3>
-      <div class="report-list">
-        @for (item of accessMatrix; track item.role) {
-          <div class="matrix-row">
-            <div>
-              <strong>{{ roleLabels[item.role] }}</strong>
-              <span>{{ item.access }}</span>
-            </div>
-          </div>
-        }
-      </div>
-    </article>
-
-    <article class="status-card panel">
-      <h3>Segurança</h3>
-      <div class="policy-list">
-        @for (policy of policies; track policy) {
-          <div class="policy-item">
-            <strong>{{ policy }}</strong>
-          </div>
-        }
-      </div>
-    </article>
-  </section>
+  <p class="report-hint">Consulta em tela. Exportação indisponível até a validação dos formatos PDF e CSV propostos na documentação.</p>
 </section>

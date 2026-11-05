@@ -1,5 +1,7 @@
 package br.com.navitasassist.notification;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 
 import br.com.navitasassist.rma.RmaRecord;
@@ -35,6 +37,7 @@ public class NotificationEvent {
     @Column(nullable = false, unique = true, length = 160, updatable = false)
     private String eventKey;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40, updatable = false)
     private NotificationEventType eventType;
@@ -43,6 +46,7 @@ public class NotificationEvent {
     @JoinColumn(name = "rma_id")
     private RmaRecord rma;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private NotificationEventStatus status;

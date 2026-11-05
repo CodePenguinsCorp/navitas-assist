@@ -1,5 +1,7 @@
 package br.com.navitasassist.notification;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -29,6 +31,7 @@ public class NotificationRule extends AuditableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, unique = true, length = 40, updatable = false)
     private NotificationEventType eventType;
@@ -36,6 +39,7 @@ public class NotificationRule extends AuditableEntity {
     @Column(nullable = false)
     private boolean enabled;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private NotificationSeverity severity;

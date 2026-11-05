@@ -1,10 +1,8 @@
 import {
-  AccessMatrixItem,
   FailureCause,
   FailureType,
   ModuleCard,
   NavGroup,
-  ReportCard,
   RmaPriority,
   RmaStatus,
   UserRole,
@@ -123,6 +121,31 @@ export const NAV_GROUPS: NavGroup[] = [
         label: 'Notificações',
         route: '/notificacoes',
         roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
+      },
+      {
+        label: 'Remessas',
+        route: '/remessas',
+        roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
+      },
+      {
+        label: 'Peças',
+        route: '/pecas',
+        roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
+      },
+      {
+        label: 'Localização',
+        route: '/localizacao',
+        roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
+      },
+      {
+        label: 'Leitura',
+        route: '/leitura',
+        roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
+      },
+      {
+        label: 'Etiquetas',
+        route: '/etiquetas',
+        roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK']
       }
     ]
   },
@@ -137,6 +160,11 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         label: 'Produtos',
         route: '/produtos',
+        roles: ['ADMIN', 'SERVICE_DESK']
+      },
+      {
+        label: 'Locais',
+        route: '/locais',
         roles: ['ADMIN', 'SERVICE_DESK']
       },
       {
@@ -200,59 +228,5 @@ export const MODULE_CARDS: ModuleCard[] = [
     route: '/relatorios',
     tag: 'Consulta',
     roles: ['ADMIN', 'TECHNICIAN', 'VIEWER']
-  }
-];
-
-export const REPORT_CARDS: ReportCard[] = [
-  {
-    title: 'Laudo técnico',
-    description: 'Diagnóstico e parecer final.',
-    frequency: 'Sob demanda',
-    format: 'PDF'
-  },
-  {
-    title: 'Aging de RMAs',
-    description: 'Fila e tempo por etapa.',
-    frequency: 'Diário',
-    format: 'Indicador'
-  },
-  {
-    title: 'Garantia',
-    description: 'Prazos e situação por produto.',
-    frequency: 'Semanal',
-    format: 'Auditoria'
-  },
-  {
-    title: 'Devoluções',
-    description: 'Concluídos e enviados.',
-    frequency: 'Diário',
-    format: 'Controle'
-  }
-];
-
-export const SECURITY_POLICIES = [
-  'Login por perfil.',
-  'Validação de campos obrigatórios.',
-  'Rastreabilidade de alterações.',
-  'Controle de anexos.',
-  'Acesso seguro por HTTPS.'
-];
-
-export const ACCESS_MATRIX: AccessMatrixItem[] = [
-  {
-    role: 'ADMIN',
-    access: 'Acesso total.'
-  },
-  {
-    role: 'TECHNICIAN',
-    access: 'Diagnóstico e laudos.'
-  },
-  {
-    role: 'SERVICE_DESK',
-    access: 'Abertura e acompanhamento.'
-  },
-  {
-    role: 'VIEWER',
-    access: 'Consulta e indicadores.'
   }
 ];
