@@ -59,8 +59,6 @@ navitas:
       enabled: ${NOTIFICATIONS_EMAIL_ENABLED:false}
       domain: ${NOTIFICATIONS_EMAIL_DOMAIN:}
       from: ${NOTIFICATIONS_EMAIL_FROM:navitas-assist@localhost}
-  custody:
-    stale-after-hours: ${CUSTODY_STALE_AFTER_HOURS:48}
   security:
     cookie-secure: ${SESSION_COOKIE_SECURE:true}
     seed-admin:

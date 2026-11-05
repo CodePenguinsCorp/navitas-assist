@@ -104,11 +104,6 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/protocols/templates/*").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/protocols/rmas/*/executions", "/api/protocols/executions/*/items/*/results", "/api/protocols/executions/*/complete").hasAnyRole("ADMIN", "TECHNICIAN")
                 .requestMatchers("/api/protocols/**").denyAll()
-                .requestMatchers(HttpMethod.GET, "/api/locations/**", "/api/custody/**").authenticated()
-                .requestMatchers(HttpMethod.POST, "/api/locations").hasAnyRole("ADMIN", "SERVICE_DESK")
-                .requestMatchers(HttpMethod.PUT, "/api/locations/*").hasAnyRole("ADMIN", "SERVICE_DESK")
-                .requestMatchers(HttpMethod.POST, "/api/custody/rmas/*/movements").hasAnyRole("ADMIN", "SERVICE_DESK", "TECHNICIAN")
-                .requestMatchers("/api/custody/**").denyAll()
                 .requestMatchers("/api/**").hasRole("ADMIN")
                 .anyRequest().authenticated())
             .exceptionHandling(exception -> exception

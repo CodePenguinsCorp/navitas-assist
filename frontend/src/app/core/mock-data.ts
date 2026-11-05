@@ -128,11 +128,6 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
       },
       {
-        label: 'Localização',
-        route: '/localizacao',
-        roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
-      },
-      {
         label: 'Leitura',
         route: '/leitura',
         roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
@@ -161,11 +156,6 @@ export const NAV_GROUPS: NavGroup[] = [
         label: 'Protocolos',
         route: '/protocolos',
         roles: ['ADMIN']
-      },
-      {
-        label: 'Locais',
-        route: '/locais',
-        roles: ['ADMIN', 'SERVICE_DESK']
       },
       {
         label: 'Usuários',
