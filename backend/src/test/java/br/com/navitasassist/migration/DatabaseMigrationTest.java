@@ -105,6 +105,36 @@ class DatabaseMigrationTest {
         }
     }
 
+    @Test
+    void createsPartInventoryTablesThatRejectNegativeAvailability() throws SQLException {
+        String url = "jdbc:h2:mem:migration_parts;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
+
+        Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate();
+
+        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
+            assertTrue(tableExists(connection, "parts"));
+            assertTrue(tableExists(connection, "part_reservations"));
+            assertTrue(tableExists(connection, "part_movements"));
+            assertEquals(Set.of("idx_part_reservations_part_id", "idx_part_reservations_rma_id", "idx_part_reservations_status"), applicationIndexes(connection, "part_reservations"));
+            assertEquals(Set.of("idx_part_movements_part_id", "idx_part_movements_rma_id"), applicationIndexes(connection, "part_movements"));
+
+            insertPart(connection, "PCA-OK", "5", "5");
+            assertThrows(SQLException.class, () -> insertPart(connection, "PCA-NEG", "1", "2"));
+        }
+    }
+
+    private void insertPart(Connection connection, String code, String onHand, String reserved) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+            INSERT INTO parts (code, name, unit, minimum_stock, unit_cost, on_hand_quantity, reserved_quantity, active, created_at, updated_at)
+            VALUES (?, 'Peça', 'un', 0, 1.50, ?, ?, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """)) {
+            statement.setString(1, code);
+            statement.setBigDecimal(2, new java.math.BigDecimal(onHand));
+            statement.setBigDecimal(3, new java.math.BigDecimal(reserved));
+            statement.executeUpdate();
+        }
+    }
+
     private boolean tableExists(Connection connection, String tableName) throws SQLException {
         try (ResultSet tables = connection.getMetaData().getTables(null, null, tableName, new String[] { "TABLE" })) {
             return tables.next();

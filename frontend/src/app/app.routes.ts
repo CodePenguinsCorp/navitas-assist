@@ -42,6 +42,11 @@ export const routes: Routes = [
         title: 'Kanban | Navitas Assist'
       },
       {
+        path: 'pecas',
+        loadComponent: () => import('./pages/parts/parts.component').then((module) => module.PartsComponent),
+        title: 'Peças | Navitas Assist'
+      },
+      {
         path: 'localizacao',
         loadComponent: () => import('./pages/custody/custody.component').then((module) => module.CustodyComponent),
         title: 'Localização | Navitas Assist'

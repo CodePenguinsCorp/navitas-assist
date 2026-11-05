@@ -3,8 +3,10 @@ package br.com.navitasassist.service;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.controller.BusinessException;
@@ -14,6 +16,8 @@ import br.com.navitasassist.diagnosis.DiagnosisRequest;
 import br.com.navitasassist.item.ItemIdentification;
 import br.com.navitasassist.pagination.PageParams;
 import br.com.navitasassist.pagination.PageResponse;
+import br.com.navitasassist.part.PartReservationStatus;
+import br.com.navitasassist.repository.PartReservationRepository;
 import br.com.navitasassist.repository.RmaCodeGenerationLockRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.CreateRmaRequest;
@@ -44,6 +48,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class RmaService {
 
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
+    private static final Set<RmaStatus> CLOSED_STATUSES = EnumSet.of(RmaStatus.COMPLETED, RmaStatus.RETURNED, RmaStatus.IRREPARABLE);
+    private static final Set<PartReservationStatus> OPEN_RESERVATION_STATUSES = EnumSet.of(PartReservationStatus.ACTIVE, PartReservationStatus.PENDING);
     private static final int MAX_YEARLY_SEQUENCE = 999_999;
 
     private final RmaRecordRepository rmaRecordRepository;
@@ -52,6 +58,7 @@ public class RmaService {
     private final ClientService clientService;
     private final ProductService productService;
     private final UserAccountService userAccountService;
+    private final PartReservationRepository partReservationRepository;
 
     @Transactional(readOnly = true)
     public List<RmaResponse> search(String query, RmaStatus status) {
@@ -173,7 +180,10 @@ public class RmaService {
     }
 
     public RmaResponse updateStatus(Long id, RmaStatusUpdateRequest request) {
-        return applyStatusChange(getEntityById(id), request);
+        RmaRecord rma = CLOSED_STATUSES.contains(request.status())
+            ? rmaRecordRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id))
+            : getEntityById(id);
+        return applyStatusChange(rma, request);
     }
 
     public RmaResponse updateStatusInBulk(Long id, RmaBulkStatusUpdateRequest request) {
@@ -187,6 +197,13 @@ public class RmaService {
 
     private RmaResponse applyStatusChange(RmaRecord rma, RmaStatusUpdateRequest request) {
         boolean changed = !Objects.equals(rma.getStatus(), request.status());
+
+        // Closing requires every part reservation to be consumed or cancelled first, so no stock stays locked or pending
+        // on a closed RMA. The RMA row is locked here and by PartStockService, which serializes both sides.
+        if (changed && CLOSED_STATUSES.contains(request.status())
+            && partReservationRepository.existsByRma_IdAndStatusIn(rma.getId(), OPEN_RESERVATION_STATUSES)) {
+            throw new BusinessException("RMA has open part reservations. Consume or cancel them before closing.");
+        }
 
         if (changed) {
             rma.setStatus(request.status());
