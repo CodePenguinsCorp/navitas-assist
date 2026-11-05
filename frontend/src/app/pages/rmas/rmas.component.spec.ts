@@ -173,7 +173,7 @@ describe('RmasComponent pending editor lifecycle', () => {
   let http: HttpTestingController;
   let page: HTMLElement;
   const client: ClientResponse = {
-    id: 1, legalName: 'Cliente', tradeName: null, documentNumber: null, contactName: null,
+    id: 1, legalName: 'Cliente', tradeName: null, documentNumber: null,
     email: null, phone: null, address: null, notes: null,
     createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt
   };
@@ -185,7 +185,7 @@ describe('RmasComponent pending editor lifecycle', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [RmasComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()]
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])]
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     TestBed.inject(AuthService).restoreSession().subscribe();
@@ -194,9 +194,10 @@ describe('RmasComponent pending editor lifecycle', () => {
       createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt
     });
     fixture = TestBed.createComponent(RmasComponent);
-    http.expectOne('/api/clients').flush([client]);
-    http.expectOne('/api/products').flush([product]);
-    http.expectOne('/api/rmas').flush([createdRma]);
+    http.expectOne('/api/clients/options').flush([client]);
+    http.expectOne('/api/products/options').flush([product]);
+    http.expectOne(r => r.method === 'GET' && r.url.split('?')[0] === '/api/rmas').flush({ content: [createdRma], page: 0, size: 20, totalElements: 1, totalPages: 1 });
+    http.expectOne('/api/rmas/summary').flush({ total: 1, ongoing: 1, highPriority: 0 });
     fixture.detectChanges();
     page = fixture.nativeElement as HTMLElement;
   });
@@ -268,7 +269,9 @@ describe('RmasComponent pending editor lifecycle', () => {
       : { ...createdRma, diagnosis: { id: 1, ...request.request.body,
         createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt } };
     request.flush(saved);
-    http.expectOne({ method: 'GET', url: '/api/rmas' }).flush(mode === 'create' ? [createdRma, saved] : [saved]);
+    const reloaded = mode === 'create' ? [createdRma, saved] : [saved];
+    http.expectOne(r => r.method === 'GET' && r.url.split('?')[0] === '/api/rmas').flush({ content: reloaded, page: 0, size: 20, totalElements: reloaded.length, totalPages: 1 });
+    http.expectOne('/api/rmas/summary').flush({ total: reloaded.length, ongoing: reloaded.length, highPriority: 0 });
     fixture.detectChanges();
   }
 

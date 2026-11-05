@@ -23,7 +23,7 @@ describe('UsersComponent password boundaries', () => {
     createUser = vi.fn(() => of(USER));
     updateUser = vi.fn(() => of(USER));
     await TestBed.configureTestingModule({ imports: [UsersComponent], providers: [
-      { provide: CatalogService, useValue: { listUsers: () => of([USER]), createUser, updateUser } },
+      { provide: CatalogService, useValue: { listUsers: () => of({ content: [USER], page: 0, size: 20, totalElements: 1, totalPages: 1 }), getUserSummary: () => of({ total: 1, active: 1, admins: 0, roles: 1 }), createUser, updateUser } },
       { provide: AuthService, useValue: { currentUser: () => null } }
     ] }).compileComponents();
     fixture = TestBed.createComponent(UsersComponent);
