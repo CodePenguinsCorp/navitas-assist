@@ -14,8 +14,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.product.Product;
@@ -26,9 +28,13 @@ import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.user.UserAccount;
 import br.com.navitasassist.user.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -619,6 +625,100 @@ class RmaControllerIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.priority").value("HIGH"))
             .andExpect(jsonPath("$.statusHistory[0].note").value("Priority changed from MEDIUM to HIGH"));
+    }
+
+    @ParameterizedTest(name = "{0}, existing diagnosis={1}")
+    @MethodSource("authorizedDiagnosisCases")
+    void shouldAcceptRequiredDiagnosisFieldBoundaries(String role, boolean existing) throws Exception {
+        Long id = seedDiagnosisRma(existing);
+        JsonNode before = readDiagnosisRma(id);
+        Map<String, Object> payload = diagnosisPayload();
+        payload.put("foundFailure", "ç".repeat(2000));
+        payload.put("technicianName", "ç".repeat(120));
+        mockMvc.perform(put("/api/rmas/{id}/diagnosis", id).with(user("operator").roles(role))
+                .with(csrf()).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(payload)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.diagnosis.foundFailure").value("ç".repeat(2000)))
+            .andExpect(jsonPath("$.diagnosis.technicianName").value("ç".repeat(120)));
+
+        JsonNode saved = readDiagnosisRma(id);
+        assertEquals("ç".repeat(2000), saved.at("/diagnosis/foundFailure").asText());
+        assertEquals("ç".repeat(120), saved.at("/diagnosis/technicianName").asText());
+        assertEquals("POWER_SUPPLY", saved.at("/diagnosis/failureType").asText());
+        assertEquals("COMPONENT", saved.at("/diagnosis/probableCause").asText());
+        assertEquals("Notas preservadas", saved.at("/diagnosis/notes").asText());
+        assertEquals("2026-06-16", saved.at("/diagnosis/diagnosedAt").asText());
+        assertEquals(before.get("status"), saved.get("status"));
+        assertEquals(before.get("statusHistory"), saved.get("statusHistory"));
+        if (existing) assertEquals(before.at("/diagnosis/id"), saved.at("/diagnosis/id"));
+        assertEquals(1L, rmaRecordRepository.count());
+    }
+
+    static Stream<Arguments> authorizedDiagnosisCases() {
+        return Stream.of(Arguments.of("ADMIN", false), Arguments.of("ADMIN", true),
+            Arguments.of("TECHNICIAN", false), Arguments.of("TECHNICIAN", true));
+    }
+
+    @ParameterizedTest(name = "{0}: {1}, existing diagnosis={3}")
+    @MethodSource("invalidDiagnosisFieldCases")
+    void shouldRejectInvalidRequiredDiagnosisFieldsWithoutMutation(String field, String scenario, String value, boolean existing) throws Exception {
+        Long id = seedDiagnosisRma(existing);
+        JsonNode before = readDiagnosisRma(id);
+        Map<String, Object> payload = diagnosisPayload();
+        payload.put(field, value);
+        mockMvc.perform(put("/api/rmas/{id}/diagnosis", id).with(user("tech").roles("TECHNICIAN"))
+                .with(csrf()).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(payload)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.details", org.hamcrest.Matchers.hasItem(startsWith(field + ":"))));
+        assertEquals(before, readDiagnosisRma(id));
+        assertEquals(1L, rmaRecordRepository.count());
+    }
+
+    static Stream<Arguments> invalidDiagnosisFieldCases() {
+        Stream.Builder<Arguments> cases = Stream.builder();
+        for (String field : new String[] { "foundFailure", "technicianName" }) {
+            for (boolean existing : new boolean[] { false, true }) {
+                cases.add(Arguments.of(field, "null", null, existing));
+                cases.add(Arguments.of(field, "empty", "", existing));
+                cases.add(Arguments.of(field, "whitespace", "   ", existing));
+                cases.add(Arguments.of(field, "overflow", "a".repeat(field.equals("foundFailure") ? 2001 : 121), existing));
+            }
+        }
+        return cases.build();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "VIEWER", "SERVICE_DESK" })
+    void shouldNotAllowOtherRolesToUpdateDiagnosisFields(String role) throws Exception {
+        Long id = seedDiagnosisRma(true);
+        JsonNode before = readDiagnosisRma(id);
+        mockMvc.perform(put("/api/rmas/{id}/diagnosis", id).with(user("forbidden").roles(role))
+                .with(csrf()).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(diagnosisPayload())))
+            .andExpect(status().isForbidden());
+        assertEquals(before, readDiagnosisRma(id));
+    }
+
+    private Map<String, Object> diagnosisPayload() {
+        return new LinkedHashMap<>(Map.of("foundFailure", "Falha preservada", "technicianName", "Técnico preservado",
+            "failureType", "POWER_SUPPLY", "probableCause", "COMPONENT", "notes", "Notas preservadas", "diagnosedAt", "2026-06-16"));
+    }
+
+    private Long seedDiagnosisRma(boolean existing) throws Exception {
+        Long id = saveBulkTestRma("RMA-DIAGNOSIS-LIMITS");
+        if (existing) {
+            mockMvc.perform(put("/api/rmas/{id}/diagnosis", id).with(user("admin").roles("ADMIN"))
+                    .with(csrf()).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(diagnosisPayload())))
+                .andExpect(status().isOk());
+        }
+        return id;
+    }
+
+    private JsonNode readDiagnosisRma(Long id) throws Exception {
+        ObjectNode response = (ObjectNode) objectMapper.readTree(mockMvc.perform(get("/api/rmas/{id}", id).with(user("admin").roles("ADMIN")))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
+        // SLA is derived from Instant.now(), not persisted diagnosis/RMA state.
+        response.remove("sla");
+        return response;
     }
 
     private Long saveBulkTestRma(String code) {
