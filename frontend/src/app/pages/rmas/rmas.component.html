@@ -95,8 +95,8 @@
         <div class="history-stack">
           @for (item of historyResults(); track item.id) {
             <button type="button" class="history-item" (click)="selectHistoryItem(item)">
-              <strong>{{ item.code }} | {{ item.clientName }}</strong>
-              <span>{{ trackableLabel(item) }} | {{ statusLabel(item.status) }} | {{ dateLabel(item.entryDate) }}</span>
+              <strong><span class="code-text">{{ item.code }}</span> · {{ item.clientName }}</strong>
+              <span>{{ trackableLabel(item) }} · {{ statusLabel(item.status) }} · {{ dateLabel(item.entryDate) }}</span>
             </button>
           }
         </div>
@@ -159,7 +159,7 @@
                 <td>
                   <div class="rma-item-warranties">
                     @for (item of rma.items; track item.id ?? $index; let index = $index) {
-                      <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)" [title]="item.productName + ' | ' + itemTrackableLabel(item)">
+                      <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)" [title]="item.productName + ' · ' + itemTrackableLabel(item)">
                         Item {{ index + 1 }} · {{ item.productSku }}: {{ warrantyLabel(item.warrantyStatus) }}
                       </span>
                     }
@@ -234,22 +234,24 @@
           <p class="muted-inline">Garantia avaliada na entrada do RMA. Compra: {{ rma.purchaseDateUnknown ? 'Data desconhecida' : dateLabel(rma.purchaseDate) }}.</p>
           <div class="rma-items-detail">
             @for (item of rma.items; track item.id ?? $index) {
-              <div class="rma-item-detail">
-                <strong>{{ item.productSku }} | {{ item.productName }}</strong>
-                <span>{{ itemTrackableLabel(item) }}</span>
-                <div>
+              <article class="rma-item-detail">
+                <header class="rma-item-detail__header">
+                  <div>
+                    <span class="rma-item-detail__sku code-text">{{ item.productSku }}</span>
+                    <strong>{{ item.productName }}</strong>
+                  </div>
                   <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)">{{ warrantyLabel(item.warrantyStatus) }}</span>
-                </div>
-                <span>Prazo de garantia: {{ item.warrantyMonths }} meses</span>
-                @if (item.warrantyExpiresAt) {
-                  <span>Vencimento: {{ dateLabel(item.warrantyExpiresAt) }}</span>
-                } @else {
-                  <span>Informe a data de compra para calcular a garantia.</span>
-                }
-                @if (item.manufacturedAt) {
-                  <span>Fabricação: {{ dateLabel(item.manufacturedAt) }}</span>
-                }
-              </div>
+                </header>
+                <dl class="meta-list">
+                  <div><dt>Série</dt><dd [class.is-empty]="!item.serialNumber">{{ item.serialNumber || 'Não informada' }}</dd></div>
+                  <div><dt>Lote</dt><dd [class.is-empty]="!item.batchNumber">{{ item.batchNumber || 'Não informado' }}</dd></div>
+                  <div><dt>Prazo</dt><dd>{{ item.warrantyMonths }} meses</dd></div>
+                  <div><dt>Vencimento</dt><dd [class.is-empty]="!item.warrantyExpiresAt">{{ item.warrantyExpiresAt ? dateLabel(item.warrantyExpiresAt) : 'Informe a compra' }}</dd></div>
+                  @if (item.manufacturedAt) {
+                    <div><dt>Fabricação</dt><dd>{{ dateLabel(item.manufacturedAt) }}</dd></div>
+                  }
+                </dl>
+              </article>
             }
           </div>
         </div>
@@ -411,7 +413,7 @@
 
         <label class="checkbox-row purchase-date-unknown">
           <input type="checkbox" formControlName="purchaseDateUnknown" />
-          Data da compra desconhecida
+          <span>Data da compra desconhecida</span>
         </label>
 
         <div class="field-group">

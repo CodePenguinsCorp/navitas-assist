@@ -176,19 +176,6 @@
   background: var(--danger-bg);
 }
 
-.kanban-view-default {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  color: var(--text);
-  font-weight: 600;
-}
-
-.kanban-view-default input {
-  inline-size: 1rem;
-  block-size: 1rem;
-}
-
 .kanban-filters {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

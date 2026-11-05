@@ -20,6 +20,9 @@
   --radius-lg: 16px;
   --radius-md: 12px;
   --radius-sm: 10px;
+  --danger-line: #efc7cf;
+  --danger-strong: #7f3441;
+  --focus-ring: 0 0 0 3px rgba(46, 168, 212, 0.28);
   --shadow: 0 6px 20px rgba(23, 48, 77, 0.06);
 }
 
@@ -49,6 +52,17 @@ textarea {
 button {
   border: 0;
   cursor: pointer;
+}
+
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brand-blue);
+  cursor: pointer;
+}
+
+input[type="checkbox"]:disabled {
+  cursor: not-allowed;
 }
 
 a {
@@ -111,7 +125,32 @@ a {
 .button-secondary--small {
   min-height: 34px;
   padding-inline: 0.85rem;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
+}
+
+.button-primary:focus-visible,
+.button-secondary:focus-visible,
+.modal-close:focus-visible,
+.checkbox-field input:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.button-secondary--danger {
+  border-color: var(--danger-line);
+  color: var(--danger-text);
+}
+
+.button-secondary--danger:hover {
+  background: var(--danger-bg);
+}
+
+.button-primary--danger {
+  background: var(--danger-text);
+}
+
+.button-primary--danger:hover {
+  background: var(--danger-strong);
 }
 
 .tag,
@@ -416,6 +455,13 @@ a {
 .top-user__meta span {
   font-size: 0.74rem;
   color: #5a7390;
+}
+
+.shell-notifications {
+  gap: 0.5rem;
+  min-height: 42px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
 }
 
 .shell-logout {
@@ -1265,6 +1311,172 @@ a {
   justify-items: start;
   gap: 0.65rem;
   padding: 1.25rem 0;
+}
+
+.panel.empty-state {
+  padding: 1.25rem 1.5rem;
+}
+
+.empty-state h3 {
+  font-size: 1rem;
+}
+
+.empty-state p {
+  color: var(--muted);
+}
+
+.checkbox-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 42px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.checkbox-field input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--brand-blue);
+  cursor: pointer;
+}
+
+fieldset.field-group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+fieldset.field-group > span {
+  font-weight: 600;
+}
+
+.status-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+}
+
+.modal-feedback {
+  margin-bottom: 1rem;
+}
+
+/* Label/value pairs: replaces "Label: valor" strings joined by pipes. */
+.meta-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.6rem 1rem;
+  margin: 0;
+}
+
+.meta-list div {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.meta-list dt {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.meta-list dd {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.meta-list dd.is-empty {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.code-text {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.link-button {
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--brand-blue);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.link-button:hover:not(:disabled) {
+  color: var(--brand-blue-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.link-button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.link-button:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.count-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--danger-text);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.select-compact {
+  min-height: 34px;
+  padding: 0 2rem 0 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%231b4f7a' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 0.65rem center;
+  color: var(--brand-blue-deep);
+  font-size: 0.88rem;
+  appearance: none;
+  cursor: pointer;
+}
+
+.select-compact:hover {
+  background-color: var(--surface-alt);
+}
+
+.select-compact:focus-visible {
+  outline: none;
+  border-color: #9cc8e3;
+  box-shadow: var(--focus-ring);
+}
+
+.delete-confirmation {
+  margin: 0 0 1.25rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.delete-confirmation strong {
+  color: var(--brand-blue-deep);
 }
 
 .empty-state h3 {

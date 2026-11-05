@@ -53,37 +53,98 @@ type NotificationsTab = 'inbox' | 'preferences' | 'rules';
       color: #ffffff;
     }
 
+    .notification-toolbar {
+      gap: 0.25rem 1.25rem;
+    }
+
+    .rule-roles .checkbox-field {
+      min-height: 28px;
+      font-weight: 500;
+    }
+
+    .notification-toolbar .button-secondary {
+      margin-left: auto;
+    }
+
     .notification-list {
       display: grid;
-      gap: 0.65rem;
+      gap: 0.5rem;
       margin-top: 1rem;
     }
 
     .notification-item {
+      position: relative;
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
-      gap: 0.4rem 1rem;
-      padding: 0.85rem 1rem;
+      align-items: center;
+      gap: 0.75rem 1.5rem;
+      padding: 0.85rem 1rem 0.85rem 1.25rem;
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: var(--radius-md);
+      background: #ffffff;
     }
 
     .notification-item.is-unread {
-      border-color: var(--brand-blue-deep);
       background: #f5f9fd;
     }
 
-    .notification-item small {
+    .notification-item.is-unread::before {
+      content: '';
+      position: absolute;
+      left: 0.5rem;
+      top: 1.1rem;
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--brand-blue);
+    }
+
+    .notification-body {
+      display: grid;
+      gap: 0.3rem;
+      min-width: 0;
+    }
+
+    .notification-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .notification-meta .mini-chip {
+      min-height: 22px;
+      padding-inline: 0.55rem;
+      font-size: 0.72rem;
+    }
+
+    .notification-event {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--brand-blue-deep);
+    }
+
+    .notification-time {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .notification-title {
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+
+    .notification-message {
+      margin: 0;
+      font-size: 0.88rem;
+      line-height: 1.45;
       color: var(--muted);
     }
 
     .notification-actions {
       justify-content: flex-end;
-      align-items: start;
-    }
-
-    .notification-actions select {
-      min-height: 34px;
+      flex-wrap: nowrap;
     }
 
     @media (max-width: 720px) {
@@ -93,6 +154,7 @@ type NotificationsTab = 'inbox' | 'preferences' | 'rules';
 
       .notification-actions {
         justify-content: flex-start;
+        flex-wrap: wrap;
       }
     }
   `]

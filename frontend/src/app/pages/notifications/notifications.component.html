@@ -29,8 +29,8 @@
   @if (activeTab() === 'inbox') {
     <article class="panel table-card">
       <div class="notification-toolbar">
-        <label><input type="checkbox" [checked]="unreadOnly()" (change)="toggleUnreadOnly()" /> Somente não lidas</label>
-        <label><input type="checkbox" [checked]="includeSnoozed()" (change)="toggleIncludeSnoozed()" /> Mostrar adiadas</label>
+        <label class="checkbox-field"><input type="checkbox" [checked]="unreadOnly()" (change)="toggleUnreadOnly()" /><span>Somente não lidas</span></label>
+        <label class="checkbox-field"><input type="checkbox" [checked]="includeSnoozed()" (change)="toggleIncludeSnoozed()" /><span>Mostrar adiadas</span></label>
         <button type="button" class="button-secondary button-secondary--small" (click)="markAllRead()" [disabled]="busy() || !hasUnread()">Marcar todas como lidas</button>
       </div>
 
@@ -44,16 +44,18 @@
       } @else {
         <div class="notification-list">
           @for (notification of notifications(); track notification.id) {
-            <div class="notification-item" [class.is-unread]="!notification.read">
-              <div>
-                <span class="mini-chip" [class]="severityClass(notification.severity)">{{ severityLabels[notification.severity] }}</span>
-                <span class="mini-chip">{{ eventLabels[notification.eventType] }}</span>
-                <strong class="table-title">{{ notification.title }}</strong>
-                <span>{{ notification.message }}</span>
-                <small>
-                  {{ dateTime(notification.createdAt) }}
-                  @if (notification.snoozedUntil) { · adiada até {{ dateTime(notification.snoozedUntil) }} }
-                </small>
+            <article class="notification-item" [class.is-unread]="!notification.read">
+              <div class="notification-body">
+                <div class="notification-meta">
+                  <span class="mini-chip" [class]="severityClass(notification.severity)">{{ severityLabels[notification.severity] }}</span>
+                  <span class="notification-event">{{ eventLabels[notification.eventType] }}</span>
+                  <time class="notification-time">{{ dateTime(notification.createdAt) }}</time>
+                  @if (notification.snoozedUntil) {
+                    <span class="notification-time">· adiada até {{ dateTime(notification.snoozedUntil) }}</span>
+                  }
+                </div>
+                <strong class="notification-title">{{ notification.title }}</strong>
+                <p class="notification-message">{{ notification.message }}</p>
               </div>
               <div class="notification-actions">
                 @if (notification.actionPath) {
@@ -62,14 +64,14 @@
                 @if (!notification.read) {
                   <button type="button" class="button-secondary button-secondary--small" (click)="markRead(notification)" [disabled]="busy()">Marcar como lida</button>
                 }
-                <select #snoozeSelect aria-label="Adiar notificação" (change)="snooze(notification, snoozeSelect.value); snoozeSelect.value = ''" [disabled]="busy()">
-                  <option value="">Adiar...</option>
+                <select #snoozeSelect class="select-compact" aria-label="Adiar notificação" (change)="snooze(notification, snoozeSelect.value); snoozeSelect.value = ''" [disabled]="busy()">
+                  <option value="">Adiar</option>
                   @for (option of snoozeOptions; track option.value) {
                     <option [value]="option.value">{{ option.label }}</option>
                   }
                 </select>
               </div>
-            </div>
+            </article>
           }
         </div>
       }
@@ -132,7 +134,7 @@
                 <td>{{ eventLabels[rule.eventType] }}<span class="table-subtitle">Atualizada {{ dateTime(rule.updatedAt) }} por {{ rule.updatedBy || 'sistema' }}</span></td>
                 <td><input type="checkbox" [attr.aria-label]="'Ativar ' + eventLabels[rule.eventType]" [checked]="rule.enabled" [disabled]="busy()" (change)="updateRule(rule, { enabled: !rule.enabled })" /></td>
                 <td>
-                  <select #severitySelect [attr.aria-label]="'Severidade de ' + eventLabels[rule.eventType]" [value]="rule.severity" [disabled]="busy()" (change)="updateSeverity(rule, severitySelect.value)">
+                  <select #severitySelect class="select-compact" [attr.aria-label]="'Severidade de ' + eventLabels[rule.eventType]" [value]="rule.severity" [disabled]="busy()" (change)="updateSeverity(rule, severitySelect.value)">
                     @for (severity of severities; track severity) {
                       <option [value]="severity">{{ severityLabels[severity] }}</option>
                     }
@@ -141,7 +143,7 @@
                 <td>
                   <div class="rule-roles">
                     @for (role of roleOptions; track role) {
-                      <label><input type="checkbox" [checked]="rule.recipientRoles.includes(role)" [disabled]="busy()" (change)="toggleRole(rule, role)" /> {{ roleLabels[role] }}</label>
+                      <label class="checkbox-field"><input type="checkbox" [checked]="rule.recipientRoles.includes(role)" [disabled]="busy()" (change)="toggleRole(rule, role)" /><span>{{ roleLabels[role] }}</span></label>
                     }
                   </div>
                 </td>

@@ -41,7 +41,7 @@
           <tbody>
             @for (item of queue(); track item.code) {
               <tr>
-                <td>{{ item.code }} | {{ item.priority }}</td>
+                <td><strong class="table-title code-text">{{ item.code }}</strong><span class="table-subtitle">{{ item.priority }}</span></td>
                 <td>{{ item.client }}</td>
                 <td>{{ item.entryDate }}</td>
                 <td>{{ item.status }}</td>

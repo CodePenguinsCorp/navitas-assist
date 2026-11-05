@@ -27,28 +27,31 @@ const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
       gap: 0.75rem;
       padding: 0.9rem;
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: var(--radius-md);
+      background: var(--surface-alt);
+    }
+
+    .protocol-item-card .field-group {
+      align-content: start;
+    }
+
+    .protocol-item-card__footer {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.25rem 1.5rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--line);
+    }
+
+    .protocol-item-card__footer .button-secondary {
+      margin-left: auto;
     }
 
     .protocol-items {
       display: grid;
       gap: 0.75rem;
-    }
-
-    .checkbox-field {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .status-options {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-    }
-
-    .modal-feedback {
-      margin-bottom: 1rem;
     }
   `]
 })

@@ -14,6 +14,10 @@ export class RmaSlaBadgeComponent {
   private readonly clock = inject(SlaClockService);
   protected readonly state = computed(() => slaStatus(this.sla(), this.clock.now()));
   protected readonly elapsed = computed(() => slaDuration(elapsedSlaSeconds(this.sla(), this.clock.now())));
+  protected readonly progress = computed(() => {
+    const limit = this.sla().limitSeconds ?? 0;
+    return limit > 0 ? Math.min(100, (elapsedSlaSeconds(this.sla(), this.clock.now()) / limit) * 100) : 0;
+  });
   protected readonly labels = SLA_LABELS;
   protected readonly duration = slaDuration;
   protected readonly dateTime = formatDateTime;

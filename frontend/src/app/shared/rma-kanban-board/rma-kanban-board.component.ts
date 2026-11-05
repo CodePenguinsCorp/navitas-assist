@@ -11,8 +11,8 @@ import {
   priorityChipClass,
   priorityLabel,
   productSummary,
+  rmaItemTrackableLabel,
   statusLabel,
-  trackableLabel,
   warrantyClass,
   warrantyLabel
 } from '../../core/utils/rma-ui';
@@ -73,7 +73,7 @@ export class RmaKanbanBoardComponent {
   protected readonly productSummary = productSummary;
   protected readonly warrantyLabel = warrantyLabel;
   protected readonly warrantyClass = warrantyClass;
-  protected readonly trackableLabel = trackableLabel;
+  protected readonly itemTrackableLabel = rmaItemTrackableLabel;
   protected readonly ownerLabel = ownerLabel;
   protected readonly dateLabel = formatDate;
 

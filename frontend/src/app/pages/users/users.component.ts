@@ -82,15 +82,6 @@ const passwordByteLengthValidator: ValidatorFn = control =>
       font-weight: 400;
       line-height: 1.35;
     }
-
-    .button-secondary--danger { border-color: #efc7cf; color: var(--danger-text); }
-    .button-secondary--danger:hover { background: var(--danger-bg); }
-    .button-primary--danger { background: var(--danger-text); }
-    .button-primary--danger:hover { background: #7f3441; }
-
-    .delete-confirmation { margin: 0 0 1.25rem; color: var(--muted); line-height: 1.55; }
-    .delete-confirmation strong { color: var(--brand-blue-deep); }
-    .modal-feedback { margin-bottom: 1rem; }
   `]
 })
 export class UsersComponent {
