@@ -134,6 +134,13 @@ public class RmaRecord extends AuditableEntity {
             itemIdentification = new ItemIdentification();
         }
         return itemIdentification;
+    @OneToMany(mappedBy = "rma", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("blockedAt DESC, id DESC")
+    private List<RmaBlock> blockHistory = new ArrayList<>();
+
+    public void addBlock(RmaBlock block) {
+        block.setRma(this);
+        this.blockHistory.add(block);
     }
 
     public void setDiagnosis(Diagnosis diagnosis) {

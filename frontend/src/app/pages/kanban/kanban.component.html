@@ -137,6 +137,11 @@
       </div>
 
       <div class="field-group">
+        <label>Impedimentos</label>
+        <app-custom-select formControlName="blocked" ariaLabel="Filtrar Kanban por impedimentos" [options]="blockedFilterOptions" />
+      </div>
+
+      <div class="field-group">
         <label>Garantia</label>
         <app-custom-select
           formControlName="warranty"
@@ -229,6 +234,7 @@
       [dragTargetStatus]="dragTargetStatus()"
       [showToolbar]="false"
       (cardSelect)="selectRma($event)"
+      (blockInspect)="blockPanel.open($event.id)"
       (assigneeChange)="openAssignmentModal($event)"
       (cardDragStart)="startCardDrag($event.event, $event.rma)"
       (cardDragEnd)="endCardDrag()"
@@ -238,6 +244,8 @@
     />
   </section>
 </section>
+
+<app-rma-block-panel #blockPanel (updated)="applyBlockUpdate($event)" />
 
 @if (viewModalMode(); as mode) {
   <section class="modal-overlay" (click)="closeViewModal()">

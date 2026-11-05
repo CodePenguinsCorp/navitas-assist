@@ -51,6 +51,7 @@ import {
 } from '../../shared/form-controls/custom-select/custom-select.component';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
+import { RmaBlockHistoryComponent } from '../../shared/rma-block-history/rma-block-history.component';
 import { RmaPartsPanelComponent } from '../../shared/rma-parts-panel/rma-parts-panel.component';
 
 type SearchStatusValue = RmaStatus | '';
@@ -66,7 +67,7 @@ interface CreateDateErrors {
 
 @Component({
   selector: 'app-rmas',
-  imports: [ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, RmaPartsPanelComponent, PaginationComponent],
+  imports: [ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, RmaPartsPanelComponent, PaginationComponent, RmaBlockHistoryComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {

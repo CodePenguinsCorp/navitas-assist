@@ -67,6 +67,11 @@
 
                 <app-rma-sla-badge [sla]="item.sla" />
 
+                @if (item.currentBlock; as block) {
+                  <p [title]="block.reason"><strong>Bloqueado há {{ blockedDuration(block, clock.now()) }}</strong> · {{ block.reason.slice(0, 120) }}{{ block.reason.length > 120 ? '…' : '' }}</p>
+                }
+                <button type="button" class="button-secondary" [disabled]="interactionDisabled() || boardUpdatingId() !== null" (click)="inspectBlock($event, item)" (keydown)="$event.stopPropagation()" (dragstart)="preventCardDrag($event)">Ver impedimentos</button>
+
                 <div class="board-card__grid">
                   <div>
                     <span>Responsável</span>

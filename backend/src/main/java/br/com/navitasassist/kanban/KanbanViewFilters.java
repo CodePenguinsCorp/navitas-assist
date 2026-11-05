@@ -18,7 +18,8 @@ public record KanbanViewFilters(
     LocalDate entryFrom,
     LocalDate entryTo,
     LocalDate updatedFrom,
-    LocalDate updatedTo
+    LocalDate updatedTo,
+    Boolean blocked
 ) {
     public static KanbanViewFilters from(KanbanView view) {
         return new KanbanViewFilters(
@@ -31,7 +32,8 @@ public record KanbanViewFilters(
             view.getEntryFrom(),
             view.getEntryTo(),
             view.getUpdatedFrom(),
-            view.getUpdatedTo()
+            view.getUpdatedTo(),
+            view.getBlocked()
         );
     }
 }

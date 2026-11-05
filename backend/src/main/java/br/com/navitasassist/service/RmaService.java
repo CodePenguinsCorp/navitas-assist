@@ -24,6 +24,9 @@ import br.com.navitasassist.repository.RmaCodeGenerationLockRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.CreateRmaRequest;
 import br.com.navitasassist.rma.RmaAssigneeUpdateRequest;
+import br.com.navitasassist.rma.RmaBlock;
+import br.com.navitasassist.rma.RmaBlockRequest;
+import br.com.navitasassist.rma.RmaBlockResolveRequest;
 import br.com.navitasassist.rma.RmaBulkStatusUpdateRequest;
 import br.com.navitasassist.rma.RmaAssignmentHistory;
 import br.com.navitasassist.rma.RmaItem;
@@ -148,7 +151,7 @@ public class RmaService {
     }
 
     public RmaResponse update(Long id, UpdateRmaRequest request) {
-        RmaRecord rma = getEntityById(id);
+        RmaRecord rma = getEntityForUpdate(id);
 
         if (request.clientId() != null) {
             rma.setClient(clientService.getEntityById(request.clientId()));
@@ -186,10 +189,7 @@ public class RmaService {
     }
 
     public RmaResponse updateStatus(Long id, RmaStatusUpdateRequest request) {
-        RmaRecord rma = CLOSED_STATUSES.contains(request.status())
-            ? rmaRecordRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id))
-            : getEntityById(id);
-        return applyStatusChange(rma, request);
+        return applyStatusChange(getEntityForUpdate(id), request);
     }
 
     public RmaResponse updateStatusInBulk(Long id, RmaBulkStatusUpdateRequest request) {
@@ -222,7 +222,7 @@ public class RmaService {
     }
 
     public RmaResponse updateAssignee(Long id, RmaAssigneeUpdateRequest request) {
-        RmaRecord rma = getEntityById(id);
+        RmaRecord rma = getEntityForUpdate(id);
         UserAccount previousAssignee = rma.getAssignee();
         UserAccount newAssignee = request.assigneeId() == null
             ? null
@@ -245,7 +245,7 @@ public class RmaService {
     }
 
     public RmaResponse upsertDiagnosis(Long id, DiagnosisRequest request) {
-        RmaRecord rma = getEntityById(id);
+        RmaRecord rma = getEntityForUpdate(id);
         Diagnosis diagnosis = rma.getDiagnosis();
 
         if (diagnosis == null) {
@@ -267,6 +267,39 @@ public class RmaService {
     public RmaRecord getEntityById(Long id) {
         return rmaRecordRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
+    }
+
+    private RmaRecord getEntityForUpdate(Long id) {
+        return rmaRecordRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public RmaResponse block(Long id, RmaBlockRequest request) {
+        RmaRecord rma = getEntityForUpdate(id);
+        if (rma.getBlockHistory().stream().anyMatch(block -> block.getResolvedAt() == null)) {
+            throw new BusinessException("RMA is already blocked.");
+        }
+        RmaBlock block = new RmaBlock();
+        block.setReason(trim(request.reason()));
+        block.setCategory(trimToNull(request.category()));
+        block.setBlockedBy(currentUsername());
+        block.setBlockedAt(Instant.now());
+        rma.addBlock(block);
+        rma.setUpdatedAt(block.getBlockedAt());
+        return toResponse(rmaRecordRepository.save(rma));
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public RmaResponse resolveBlock(Long id, Long blockId, RmaBlockResolveRequest request) {
+        RmaRecord rma = getEntityForUpdate(id);
+        RmaBlock block = rma.getBlockHistory().stream().filter(item -> item.getId().equals(blockId)).findFirst()
+            .orElseThrow(() -> new ResourceNotFoundException("RMA block not found: " + blockId));
+        if (block.getResolvedAt() != null) throw new BusinessException("RMA block is no longer active.");
+        block.setResolutionNote(trim(request.resolutionNote()));
+        block.setResolvedBy(currentUsername());
+        block.setResolvedAt(Instant.now());
+        rma.setUpdatedAt(block.getResolvedAt());
+        return toResponse(rmaRecordRepository.save(rma));
     }
 
     private List<RmaItem> buildItems(List<RmaItemRequest> requests) {

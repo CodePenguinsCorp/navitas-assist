@@ -38,6 +38,7 @@ import { BoundedFilterPanelsDirective } from '../../shared/form-controls/bounded
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
 import { BulkRmaResult, KanbanBulkActionsComponent } from '../../shared/kanban-bulk-actions/kanban-bulk-actions.component';
 import { RmaKanbanBoardComponent } from '../../shared/rma-kanban-board/rma-kanban-board.component';
+import { RmaBlockPanelComponent } from '../../shared/rma-block-panel/rma-block-panel.component';
 
 interface KanbanHeroStat {
   label: string;
@@ -51,6 +52,7 @@ type StatusFilterValue = 'all' | RmaStatus;
 type WarrantyFilterValue = 'all' | WarrantyStatus;
 
 interface KanbanFilterValues {
+  blocked: 'all' | 'blocked' | 'unblocked';
   sla: SlaFilterValue;
   query: string;
   priority: PriorityFilterValue;
@@ -73,6 +75,7 @@ type ViewModalMode = 'create' | 'rename' | null;
     CustomSelectComponent,
     DatePickerComponent,
     RmaKanbanBoardComponent,
+    RmaBlockPanelComponent,
     KanbanBulkActionsComponent,
   ],
   templateUrl: './kanban.component.html',
@@ -114,6 +117,7 @@ export class KanbanComponent {
   private readonly pendingAssignmentRmaSignal = signal<RmaResponse | null>(null);
 
   protected readonly filtersForm = this.formBuilder.nonNullable.group({
+    blocked: ['all' as KanbanFilterValues['blocked']],
     sla: ['all' as SlaFilterValue],
     query: [''],
     priority: ['all' as PriorityFilterValue],
@@ -152,6 +156,11 @@ export class KanbanComponent {
   protected readonly pendingAssignmentRma = this.pendingAssignmentRmaSignal.asReadonly();
   protected readonly statusSelectOptions = STATUS_SELECT_OPTIONS;
   protected readonly statusFilterOptions = STATUS_FILTER_OPTIONS;
+  protected readonly blockedFilterOptions: ReadonlyArray<CustomSelectOption<KanbanFilterValues['blocked']>> = [
+    { value: 'all', label: 'Todos os impedimentos' },
+    { value: 'blocked', label: 'Bloqueados' },
+    { value: 'unblocked', label: 'Não bloqueados' },
+  ];
   protected readonly priorityFilterOptions = PRIORITY_FILTER_OPTIONS;
   protected readonly warrantyFilterOptions = WARRANTY_FILTER_OPTIONS;
   protected readonly assigneeFilterOptions = computed<
@@ -254,6 +263,10 @@ export class KanbanComponent {
   protected selectRma(rma: RmaResponse): void {
     this.selectedRmaId.set(rma.id);
     this.pageError.set('');
+  }
+
+  protected applyBlockUpdate(updated: RmaResponse): void {
+    this.rmasSignal.update((rmas) => rmas.map((rma) => rma.id === updated.id ? updated : rma));
   }
 
   protected clearFilters(): void {
@@ -649,6 +662,7 @@ const STATUS_SELECT_OPTIONS: ReadonlyArray<CustomSelectOption<RmaStatus>> = RMA_
 );
 
 const DEFAULT_KANBAN_FILTERS: KanbanFilterValues = {
+  blocked: 'all',
   sla: 'all',
   query: '',
   priority: 'all',
@@ -702,6 +716,7 @@ function filterKanbanRmas(rmas: RmaResponse[], filters: KanbanFilterValues, now:
     const matchesUpdatedDate = isWithinRange(updatedDate, filters.updatedFrom, filters.updatedTo);
 
     return (
+      (filters.blocked === 'all' || Boolean(rma.currentBlock) === (filters.blocked === 'blocked')) &&
       (filters.sla === 'all' || slaStatus(rma.sla, now) === filters.sla) &&
       matchesQuery &&
       matchesPriority &&
@@ -777,6 +792,7 @@ function mergeAssigneeOptions(
 
 function toPersistedFilters(filters: KanbanFilterValues): KanbanViewFilters {
   return {
+    blocked: filters.blocked === 'all' ? null : filters.blocked === 'blocked',
     query: normalizeText(filters.query),
     priority: filters.priority === 'all' ? null : filters.priority,
     status: filters.status === 'all' ? null : filters.status,
@@ -792,6 +808,7 @@ function toPersistedFilters(filters: KanbanFilterValues): KanbanViewFilters {
 
 function fromPersistedFilters(filters: KanbanViewFilters): KanbanFilterValues {
   return {
+    blocked: filters.blocked == null ? 'all' : filters.blocked ? 'blocked' : 'unblocked',
     sla: 'all',
     query: filters.query ?? '',
     priority: filters.priority ?? 'all',
