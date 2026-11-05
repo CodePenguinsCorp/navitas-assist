@@ -57,6 +57,8 @@ describe('RmaService', () => {
     expect(request.request.params.get('query')).toBe('RMA');
     expect(request.request.params.get('status')).toBe('TRIAGE');
     request.flush({ total: 3, ongoing: 2, highPriority: 1 });
+  });
+
   it('starts and resolves a specific blockage through dedicated endpoints', () => {
     service.block(11, { reason: 'Peça pendente', category: null }).subscribe();
     const start = httpTesting.expectOne('/api/rmas/11/blocks');
