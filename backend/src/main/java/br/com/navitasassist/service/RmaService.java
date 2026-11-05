@@ -61,6 +61,7 @@ public class RmaService {
     private final ClientService clientService;
     private final ProductService productService;
     private final UserAccountService userAccountService;
+    private final ProtocolExecutionService protocolExecutionService;
     private final ApplicationEventPublisher eventPublisher;
     private final PartReservationRepository partReservationRepository;
 
@@ -212,6 +213,7 @@ public class RmaService {
         }
 
         if (changed) {
+            protocolExecutionService.assertTransitionAllowed(rma, request.status());
             rma.setStatus(request.status());
         }
         if (changed || trimToNull(request.note()) != null) {

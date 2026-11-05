@@ -47,6 +47,12 @@ class DatabaseMigrationTest {
             assertTrue(tableExists(connection, "rma_items"));
             assertTrue(tableExists(connection, "rma_assignment_history"));
             assertTrue(tableExists(connection, "kanban_views"));
+            assertTrue(tableExists(connection, "protocol_templates"));
+            assertTrue(tableExists(connection, "protocol_template_versions"));
+            assertTrue(tableExists(connection, "protocol_template_items"));
+            assertTrue(tableExists(connection, "rma_protocol_executions"));
+            assertTrue(tableExists(connection, "rma_protocol_item_results"));
+            assertEquals(19, columnSize(connection, "rma_protocol_item_results", "measured_value"));
             assertTrue(tableExists(connection, "rma_shipments"));
             assertTrue(tableExists(connection, "rma_shipment_events"));
             assertTrue(tableExists(connection, "storage_locations"));
