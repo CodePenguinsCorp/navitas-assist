@@ -34,7 +34,7 @@ describe('ShipmentsComponent', () => {
       imports: [ShipmentsComponent],
       providers: [
         { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(role) } },
-        { provide: RmaService, useValue: { list: () => of([{ id: 3, code: 'RMA-2026-000003', clientName: 'Cliente' }]) } },
+        { provide: RmaService, useValue: { listBoard: () => of([{ id: 3, code: 'RMA-2026-000003', clientName: 'Cliente' }]) } },
         { provide: ShipmentService, useValue: {
           list: () => of([SHIPMENT]),
           getDetail: () => of(DETAIL),

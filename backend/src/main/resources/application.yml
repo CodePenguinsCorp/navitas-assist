@@ -46,6 +46,8 @@ navitas:
     address-retention-days: ${SHIPMENT_ADDRESS_RETENTION_DAYS:365}
     retention:
       enabled: ${SHIPMENT_ADDRESS_RETENTION_ENABLED:true}
+  custody:
+    stale-after-hours: ${CUSTODY_STALE_AFTER_HOURS:48}
   security:
     cookie-secure: ${SESSION_COOKIE_SECURE:true}
     seed-admin:

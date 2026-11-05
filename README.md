@@ -46,6 +46,7 @@ O projeto foi dividido em duas aplicações:
 - Regras de negócio que dependem de "hoje" e o ano do código do RMA usam `America/Sao_Paulo`, independentemente do fuso do navegador ou servidor.
 - Datas sem horário (`YYYY-MM-DD` / `LocalDate`) preservam o dia informado, sem conversão de fuso.
 - No frontend, reutilize os utilitários de `core/utils/date.ts` para calcular o dia atual e exibir datas civis.
+- Instantes de auditoria, atualizações de cadastros e prazos de SLA são exibidos em `America/Sao_Paulo`, com data/hora curta `pt-BR`, independentemente do fuso do dispositivo. Use `formatBusinessDateTime` do mesmo utilitário; os valores da API não são alterados.
 
 ## Garantia dos produtos no RMA
 
@@ -75,6 +76,21 @@ Cada usuário autenticado pode salvar combinações dos filtros avançados do Ka
 
 As rotas em `/api/kanban-views` usam sempre o usuário da sessão; o cliente não informa nem escolhe o proprietário. Nomes são únicos por usuário, e falhas de persistência não alteram os filtros que já estão aplicados na tela.
 
+## Relatórios reais de RMA (NAV-27)
+
+A tela Relatórios consulta `GET /api/reports/rmas`. ADMIN, TECHNICIAN e VIEWER têm acesso; sem sessão a API responde `401`, e SERVICE_DESK recebe `403`, conforme os perfis da navegação existente.
+
+Filtros opcionais combinados: `entryFrom` e `entryTo` (`YYYY-MM-DD`, inclusivos, sobre a **data de entrada**, inclusive no relatório de devoluções), `status` (enum de RMA) e `clientId` (inteiro positivo). Sem período, a consulta usa os **últimos 90 dias** (até hoje em America/Sao_Paulo); com só uma das datas, a outra é completada (90 dias antes do fim, ou até hoje, limitado a 366 dias). O período máximo é de **366 dias**. Parâmetros inválidos, intervalo invertido ou período maior retornam `400`. O retorno é `{ generatedAt, entryFrom, entryTo, rmas }`, com o período efetivamente aplicado e os mesmos campos de `RmaResponse`; cliente inexistente retorna `rmas: []`. A ordenação é por entrada decrescente e ID decrescente. A consulta carrega cliente, produto, responsável e diagnóstico junto com os RMAs, e itens e históricos em consultas em lote, com número fixo de consultas por relatório. O seletor de clientes usa `GET /api/clients/options` (catálogo completo, como na NAV-28), independentemente do resultado filtrado.
+
+- **Laudo técnico:** falha relatada, produtos, diagnóstico, tipo de falha, causa, observações, técnico, reparo, peças e testes. Diagnóstico ausente aparece como pendente.
+- **Aging por etapa:** tempo corrido na etapa atual por RMA, quantidade, média e maior tempo por etapa ativa. Reutiliza o SLA existente; notas não reiniciam o prazo e encerrados não entram nas métricas ativas. É uma fotografia no instante `generatedAt`, atualizada ao consultar novamente.
+- **Garantia:** prazo, vencimento e situação por produto, considerando os snapshots e a data de entrada. A regra atual é automática; não existem overrides manuais.
+- **Devoluções:** RMAs atualmente em `RETURNED`, com expedição, transportadora e rastreio; não é uma contagem histórica de passagens pelo status.
+
+Instantes são exibidos em `America/Sao_Paulo`. Datas civis preservam o dia recebido. Os relatórios são consultas em tela, sem alteração de schema e sem download de arquivos nesta entrega.
+
+**Exportação:** antes de implementar, validar com o produto os exemplos, colunas, volume e política de acesso para PDF A4 de laudo por RMA e CSV UTF-8 das consultas tabulares (datas ISO e proteção contra fórmulas). A especificação proposta e seus limites estão em `docs/superpowers/specs/2026-10-23-nav-27-design.md`; o formato ainda não foi homologado.
+
 ## Ações em lote no Kanban (NAV-15)
 
 Marque cards em qualquer coluna e use **Selecionar visíveis** para incluir os itens mostrados pelos filtros. A seleção permanece ao mudar os filtros; o contador informa quantos selecionados estão ocultos. Use **Limpar seleção** para começar de novo. Antes de aplicar, a confirmação mostra a ação, a quantidade e os RMAs envolvidos. O resultado de cada RMA aparece separadamente; falhas continuam selecionadas para revisão. O quadro atualiza somente os itens afetados.
@@ -82,6 +98,37 @@ Marque cards em qualquer coluna e use **Selecionar visíveis** para incluir os i
 ADMIN e SERVICE_DESK podem alterar status, prioridade e responsável em lote. TECHNICIAN pode alterar somente status. VIEWER não pode selecionar nem alterar. Cada atualização passa pelas permissões da API e registra o histórico do RMA: etapas e prioridades no histórico de status; atribuições no histórico de responsáveis.
 
 Na alteração de **status em lote**, qualquer etapa pode ser escolhida para os RMAs selecionados, inclusive uma etapa anterior ou a reabertura de um RMA encerrado. O histórico registra cada mudança. A API ainda confere a etapa atual de cada card para evitar sobrescrever uma alteração feita em outra sessão depois da seleção; nesse caso, somente o card desatualizado falha e é recarregado.
+
+## Paginação das consultas (NAV-28)
+
+`GET /api/rmas`, `/api/clients`, `/api/products` e `/api/users` retornam uma página:
+
+```json
+{ "content": [], "page": 0, "size": 20, "totalElements": 0, "totalPages": 0 }
+```
+
+| Parâmetro | Regra |
+|:---|:---|
+| `page` | Índice a partir de 0 (padrão `0`). Valores negativos ou não numéricos retornam `400`. Uma página além do fim retorna `content` vazio com os totais corretos. |
+| `size` | Padrão `20`, mínimo `1`, máximo `100`. Fora do intervalo retorna `400`. |
+
+A ordem é fixa e estável (desempate por `id`): RMAs na ordem da fila (prioridade alta, média e demais; depois a entrada mais antiga); clientes, produtos e usuários por nome. Os filtros são aplicados no backend antes de paginar e `totalElements` considera apenas os registros filtrados:
+
+| Recurso | Filtros |
+|:---|:---|
+| `/api/rmas` | `query`, `status` |
+| `/api/clients` | `query`, `hasDocument`, `hasEmail` |
+| `/api/products` | `query`, `category`, `hasFirmware` |
+| `/api/users` (ADMIN) | `query`, `role`, `active` |
+
+Para dados que não podem ficar incompletos há rotas sem paginação: `GET /api/rmas/board` (Kanban e dashboard, aceita `query` e `status`), `GET /api/clients/options` e `GET /api/products/options` (seletores do formulário de RMA, ordenados por nome). Os totais dos cartões das telas vêm de `GET /api/clients/summary`, `/api/products/summary` (inclui `categories` para o filtro) e `/api/users/summary`, calculados sobre todos os registros. As autorizações são as mesmas dos demais `GET` do recurso.
+
+No frontend, as telas de RMAs, clientes, produtos e usuários mostram o total filtrado e navegam por página (10, 20, 50 ou 100 por página). Alterar busca, filtro ou tamanho volta para a primeira página; a busca por texto aguarda 300 ms. Após excluir o último item de uma página, a tela volta para a última página existente.
+## Numeração dos RMAs
+
+A criação usa o formato `RMA-AAAA-NNNNNN`, com ano em `America/Sao_Paulo` e sequência iniciada em `000001` a cada ano. O banco serializa a alocação e a inserção para que criações concorrentes recebam códigos distintos. Uma criação revertida não consome número. Ao atingir `999999`, novas criações desse ano recebem erro de negócio `400`.
+
+A linha de bloqueio é criada pela migration inicial em banco vazio. Alterações incompatíveis da V1 seguem a política de recriação local descrita em **Schema do banco**. O bloqueio é compartilhado pelos processos que usam o mesmo banco e serializa as criações; escritas diretas fora da API não seguem esse controle.
 
 ## Estrutura do Projeto
 
@@ -265,10 +312,16 @@ A aplicação usa sessão criada no backend. O frontend envia usuário e senha s
 
 - `JSESSIONID` é `HttpOnly` e `SameSite=Strict`; em ambientes não locais também é `Secure`
 - requisições de escrita usam token CSRF no cookie `XSRF-TOKEN` e no header `X-XSRF-TOKEN`
+- `GET /api/auth/csrf` retorna `204` sem corpo e cria o cookie CSRF somente quando ausente; consultas de outras abas preservam o token existente
 - a sessão é restaurada após recarregar a página por `GET /api/auth/me`
 - a expiração padrão por inatividade é de 30 minutos e pode ser alterada com `SESSION_TIMEOUT`
 - `POST /api/auth/logout` invalida a sessão e remove os cookies de sessão e CSRF
 - respostas de autenticação e autorização permanecem em JSON, com `401` e `403`
+- a tela de login indica credenciais inválidas somente para `401` do endpoint de login; falhas de rede, serviço ou preparação do CSRF exibem uma mensagem genérica para nova tentativa, sem mostrar detalhes do servidor
+
+Alterar usuário, senha, perfil ou situação ativa, ou excluir uma conta, revoga todas as suas sessões após o commit. Na próxima requisição, o backend invalida a sessão e responde `401`; é necessário entrar novamente. Alterar apenas o nome completo não encerra sessões, e operações recusadas ou revertidas não revogam o acesso. O registro usa o ID da conta, portanto reutilizar um nome de usuário excluído não recupera sessões antigas.
+
+O registro de sessões é mantido em memória por instância, assim como as sessões HTTP atuais. A revogação atende a execução em uma única instância; não sincroniza réplicas nem cancela requisições que já passaram pela autorização. Logout, expiração e troca do ID da sessão removem os registros correspondentes.
 
 ## Admin Inicial
 
@@ -278,6 +331,8 @@ No profile `local`, no primeiro boot e apenas se ainda não existir usuário no 
 - senha: `admin123`
 
 Esses valores também são usados somente nos testes automatizados. Fora dos profiles `local` e `test`, `DB_URL`, `DB_USER`, `DB_PASSWORD`, `APP_ADMIN_USERNAME`, `APP_ADMIN_PASSWORD` e `APP_ADMIN_FULL_NAME` são obrigatórios; a aplicação falha na inicialização se algum deles não for informado. O ambiente de produção usa validação de schema e não imprime SQL nem credenciais nos logs.
+
+Fora dos profiles `local` e `test`, o backend também recusa senhas públicas dos exemplos em `DB_PASSWORD` e `APP_ADMIN_PASSWORD`: `admin123`, `navitas123`, `root123`, `troque-esta-senha` e `troque-esta-senha-root`. Substitua esses valores por segredos próprios antes de iniciar; a aplicação informa somente os nomes das variáveis que precisam ser corrigidas. A comparação é exata, sem aparar ou modificar senhas, e não representa uma avaliação geral de força. O nome de usuário `admin` continua permitido com senha própria. Nenhuma conta ou senha existente é alterada automaticamente.
 
 ## Autorização da API
 
@@ -388,7 +443,7 @@ Disponibilizar um fluxo funcional de gerenciamento de assistência técnica, per
 
 ## SLA do Kanban (NAV-10)
 
-O backend calcula o SLA de cada RMA e o inclui no campo `sla` das respostas de consulta e atualização. Os cards mostram situação por texto e cor, tempo decorrido na etapa, limite e data/hora do prazo. O filtro de SLA combina-se com o de responsável. A tela recalcula situação e tempo a cada 30 segundos sem recarregar; datas são exibidas no fuso do navegador, a partir de instantes UTC.
+O backend calcula o SLA de cada RMA e o inclui no campo `sla` das respostas de consulta e atualização. Os cards mostram situação por texto e cor, tempo decorrido na etapa, limite e data/hora do prazo. O filtro de SLA combina-se com o de responsável. A tela recalcula situação e tempo a cada 30 segundos sem recarregar; datas são exibidas no fuso `America/Sao_Paulo`, a partir dos instantes da API.
 
 ### Regras e valores iniciais
 
@@ -434,7 +489,7 @@ As demais etapas preservam os padrões. Prazos e substituições aceitam de 1 a 
 
 ## Remessas e rastreamento (NAV-44)
 
-Controle interno das coletas, postagens, transferências e devoluções de cada RMA. A migration `V4__create_rma_shipments.sql` cria `rma_shipments` e `rma_shipment_events`.
+Controle interno das coletas, postagens, transferências e devoluções de cada RMA. A migration `V5__create_rma_shipments.sql` cria `rma_shipments` e `rma_shipment_events`.
 
 - **Várias remessas por RMA**, com origem, destino, volumes, transportadora, serviço, código de rastreio, referência de etiqueta e custo (`BigDecimal`). `GET /api/shipments/rma/{rmaId}/summary` soma os custos logísticos do RMA.
 - **Eventos**: integração (`INTEGRATION`), manual (`MANUAL`) e sistema (`SYSTEM`); são imutáveis. Eventos de transportadora são idempotentes por `externalEventId` dentro da remessa. Eventos antigos que chegam fora de ordem entram no histórico, mas não regridem a situação.
@@ -442,3 +497,14 @@ Controle interno das coletas, postagens, transferências e devoluções de cada 
 - **Integração**: a porta `CarrierTrackingGateway` ainda não tem implementação real. A implementação padrão responde `503` em `POST /api/shipments/{id}/sync`, sem afetar a operação manual. O endpoint de ingestão `POST /api/shipments/events/ingest` é restrito a ADMIN.
 - **Endereços**: visíveis apenas para ADMIN e SERVICE_DESK; para os demais perfis a resposta traz `addressRestricted: true` e os endereços nulos. Endereços de remessas encerradas são apagados após `SHIPMENT_ADDRESS_RETENTION_DAYS` dias (padrão 365), por rotina diária às 03:00 de America/Sao_Paulo.
 - **Sem acesso de clientes**: todas as rotas exigem autenticação interna; não há links públicos de acompanhamento. Exclusões são negadas.
+## Localização física e custódia (NAV-38)
+
+Controla onde cada RMA está fisicamente e quem responde pela sua custódia. A migration `V3__create_custody_tracking.sql` cria `storage_locations` e `rma_custody_movements`.
+
+- **Locais** (`/locais`, ADMIN e SERVICE_DESK): áreas, bancadas, prateleiras, quarentena e expedição, com local superior opcional e situação ativo/inativo. Locais não são excluídos, apenas inativados; um local inativo (ou dentro de um local inativo) não recebe movimentações, e um local que guarda equipamento não pode ser inativado.
+- **Movimentações** (`/localizacao`): entrada (RMA sem localização), transferência (registra origem, destino, responsável, operador, horário e motivo) e saída (somente RMAs `COMPLETED`, `RETURNED` ou `IRREPARABLE`). ADMIN, SERVICE_DESK e TECHNICIAN movimentam; VIEWER apenas consulta. Sem responsável informado, a custódia fica com o operador.
+- **Histórico imutável**: não há endpoint de edição ou exclusão; `PUT`, `PATCH` e `DELETE` em `/api/custody/**` são negados para todos os perfis e a entidade é `@Immutable`.
+- **Sinalização**: RMA ativo sem localização retorna `MISSING`; equipamento no mesmo local há mais que `CUSTODY_STALE_AFTER_HOURS` horas (padrão 48, de 1 a 8760) retorna `STALE`.
+- **Busca por área**: `GET /api/custody?locationId=` lista os equipamentos presentes no local e em seus sublocais; `flag=MISSING|STALE` filtra a sinalização.
+- **QR Code (NAV-43)**: fora deste escopo. A leitura de etiqueta deve resolver o RMA (por exemplo, `GET /api/rmas/code/{code}`) e registrar a movimentação no mesmo `POST /api/custody/rmas/{rmaId}/movements`, herdando as mesmas permissões e regras.
+- Datas e horários são gravados como instantes UTC e exibidos em America/Sao_Paulo.

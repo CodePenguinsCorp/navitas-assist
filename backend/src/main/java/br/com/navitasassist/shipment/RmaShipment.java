@@ -1,5 +1,7 @@
 package br.com.navitasassist.shipment;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -39,10 +41,12 @@ public class RmaShipment extends AuditableEntity {
     @JoinColumn(name = "rma_id", nullable = false)
     private RmaRecord rma;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(name = "shipment_type", nullable = false, length = 20)
     private ShipmentType type;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private ShipmentStatus status = ShipmentStatus.CREATED;

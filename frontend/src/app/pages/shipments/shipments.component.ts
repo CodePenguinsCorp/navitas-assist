@@ -160,7 +160,7 @@ export class ShipmentsComponent {
     this.formOpen.set(true);
     this.clearMessages();
     if (this.rmaOptionsSignal().length === 0) {
-      this.rmaService.list().subscribe({
+      this.rmaService.listBoard().subscribe({
         next: (rmas) => this.rmaOptionsSignal.set(rmas.map((rma) => ({ value: rma.id, label: `${rma.code} · ${rma.clientName}` }))),
         error: (error) => this.modalErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os RMAs.'))
       });

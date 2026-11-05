@@ -1,5 +1,7 @@
 package br.com.navitasassist.shipment;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 
 import jakarta.persistence.Column;
@@ -34,6 +36,7 @@ public class RmaShipmentEvent {
     @JoinColumn(name = "shipment_id", nullable = false)
     private RmaShipment shipment;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ShipmentEventSource source;
@@ -41,6 +44,7 @@ public class RmaShipmentEvent {
     @Column(length = 120)
     private String externalEventId;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private ShipmentStatus status;
