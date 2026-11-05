@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
 import {
   FAILURE_CAUSE_LABELS,
@@ -195,6 +196,7 @@ export class RmasComponent {
   private readonly authService = inject(AuthService);
   private readonly catalogService = inject(CatalogService);
   private readonly rmaService = inject(RmaService);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly createSubmitting = signal(false);
   protected readonly dateErrors = signal<CreateDateErrors>({ manufacturedAt: [], purchaseDate: '', entryDate: '' });
@@ -333,6 +335,7 @@ export class RmasComponent {
     });
     this.seedOperatorDefaults();
     this.loadWorkspace();
+    this.openRequestedRma();
   }
 
   protected get createItems() {
@@ -575,6 +578,19 @@ export class RmasComponent {
       error: (error) => {
         this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível salvar o diagnóstico agora.'));
       }
+    });
+  }
+
+  /** Opens the RMA referenced by an internal notification link (/rmas?rma=<id>). */
+  private openRequestedRma(): void {
+    const rmaId = Number(this.route.snapshot.queryParamMap.get('rma'));
+    if (!Number.isInteger(rmaId) || rmaId <= 0) {
+      return;
+    }
+
+    this.rmaService.getById(rmaId).subscribe({
+      next: (rma) => this.openDetailsModal(rma),
+      error: (error) => this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível abrir o RMA da notificação.'))
     });
   }
 

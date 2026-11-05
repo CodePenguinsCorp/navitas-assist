@@ -1,5 +1,6 @@
 package br.com.navitasassist.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,6 +36,7 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
 
     List<UserAccount> findAllByActiveTrueAndRoleOrderByFullNameAsc(UserRole role);
 
+    List<UserAccount> findAllByActiveTrueAndRoleInOrderByFullNameAsc(Collection<UserRole> roles);
     List<UserAccount> findAllByActiveTrueAndRoleNotOrderByFullNameAsc(UserRole role);
     @Query("""
         select account

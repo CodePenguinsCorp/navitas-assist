@@ -230,6 +230,28 @@ class DatabaseMigrationTest {
         }
     }
 
+    @Test
+    void createsNotificationTablesWithSeededRulesAndIdempotencyKey() throws SQLException {
+        String url = "jdbc:h2:mem:migration_notifications;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
+
+        Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate();
+
+        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
+            assertTrue(tableExists(connection, "notification_rules"));
+            assertTrue(tableExists(connection, "notification_events"));
+            assertTrue(tableExists(connection, "notifications"));
+            assertTrue(tableExists(connection, "notification_mutes"));
+            assertEquals(Set.of("idx_notifications_recipient_id", "idx_notifications_rma_id"), applicationIndexes(connection, "notifications"));
+            assertEquals(4, count(connection, "notification_rules"));
+
+            try (Statement statement = connection.createStatement()) {
+                String insert = "INSERT INTO notification_events (event_key, event_type, status, recipient_count, occurred_at) VALUES ('KEY-1', 'RMA_CREATED', 'RECEIVED', 0, CURRENT_TIMESTAMP)";
+                statement.executeUpdate(insert);
+                assertThrows(SQLException.class, () -> statement.executeUpdate(insert));
+            }
+        }
+    }
+
     private int count(Connection connection, String tableName) throws SQLException {
         try (Statement statement = connection.createStatement();
              ResultSet result = statement.executeQuery("SELECT COUNT(*) FROM " + tableName)) {

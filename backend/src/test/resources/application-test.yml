@@ -22,6 +22,9 @@ server:
         secure: false
 
 navitas:
+  notifications:
+    sla-scan:
+      enabled: false
   shipments:
     retention:
       enabled: false

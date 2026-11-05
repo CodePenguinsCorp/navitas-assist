@@ -78,6 +78,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/assignable").authenticated()
                 .requestMatchers("/api/kanban-views/**").authenticated()
+                .requestMatchers("/api/notifications/**").authenticated()
+                .requestMatchers("/api/notification-rules/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/scan/*").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/scan/*/status", "/api/rmas/*/scan-code").hasAnyRole("ADMIN", "SERVICE_DESK", "TECHNICIAN")
                 .requestMatchers(HttpMethod.POST, "/api/rmas/*/scan-code/revoke").hasAnyRole("ADMIN", "SERVICE_DESK")

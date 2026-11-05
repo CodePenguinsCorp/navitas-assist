@@ -22,6 +22,8 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
     @Query("select r from RmaRecord r where r.id = :id")
     Optional<RmaRecord> findByIdForUpdate(@Param("id") Long id);
 
+    List<RmaRecord> findByStatusNotIn(Collection<RmaStatus> statuses);
+
     boolean existsByProduct_Id(Long productId);
 
     boolean existsByItems_Product_Id(Long productId);
