@@ -59,10 +59,6 @@ navitas:
       enabled: ${NOTIFICATIONS_EMAIL_ENABLED:false}
       domain: ${NOTIFICATIONS_EMAIL_DOMAIN:}
       from: ${NOTIFICATIONS_EMAIL_FROM:navitas-assist@localhost}
-  shipments:
-    address-retention-days: ${SHIPMENT_ADDRESS_RETENTION_DAYS:365}
-    retention:
-      enabled: ${SHIPMENT_ADDRESS_RETENTION_ENABLED:true}
   custody:
     stale-after-hours: ${CUSTODY_STALE_AFTER_HOURS:48}
   security:
