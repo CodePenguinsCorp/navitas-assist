@@ -36,7 +36,7 @@
         <a routerLink="/notificacoes" class="button-secondary shell-notifications" [attr.aria-label]="'Notificações: ' + unreadNotifications() + ' não lida(s)'">
           Notificações
           @if (unreadNotifications() > 0) {
-            <span class="mini-chip priority-high">{{ unreadNotifications() }}</span>
+            <span class="count-badge" aria-hidden="true">{{ unreadNotifications() > 99 ? '99+' : unreadNotifications() }}</span>
           }
         </a>
         <div class="top-user">

@@ -171,15 +171,17 @@
                 <span>Instruções</span>
                 <input type="text" formControlName="instructions" maxlength="1000" />
               </label>
-              <label class="checkbox-field">
-                <input type="checkbox" formControlName="required" />
-                <span>Obrigatório</span>
-              </label>
-              <label class="checkbox-field">
-                <input type="checkbox" formControlName="evidenceRequired" />
-                <span>Exige evidência</span>
-              </label>
-              <button type="button" class="button-secondary button-secondary--small" (click)="removeItem(index)" [disabled]="items.length === 1">Remover item</button>
+              <div class="protocol-item-card__footer">
+                <label class="checkbox-field">
+                  <input type="checkbox" formControlName="required" />
+                  <span>Obrigatório</span>
+                </label>
+                <label class="checkbox-field">
+                  <input type="checkbox" formControlName="evidenceRequired" />
+                  <span>Exige evidência</span>
+                </label>
+                <button type="button" class="button-secondary button-secondary--small button-secondary--danger" (click)="removeItem(index)" [disabled]="items.length === 1">Remover item</button>
+              </div>
             </div>
           }
           <button type="button" class="button-secondary" (click)="addItem()">Adicionar item</button>

@@ -20,7 +20,7 @@ describe('RMA UI utilities', () => {
 
   it('renders available tracking identifiers', () => {
     expect(rmaItemTrackableLabel({ serialNumber: 'SER-1', batchNumber: 'LOT-1' })).toBe(
-      'Serial SER-1 | Lote LOT-1',
+      'Série SER-1 · Lote LOT-1',
     );
     expect(rmaItemTrackableLabel({ serialNumber: null, batchNumber: null })).toBe(
       'Item sem identifica\u00e7\u00e3o',

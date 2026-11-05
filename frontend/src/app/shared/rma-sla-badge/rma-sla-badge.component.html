@@ -1,9 +1,14 @@
 <div class="sla" [attr.data-sla]="state()" [attr.aria-label]="'SLA: ' + labels[state()]">
-  <strong>SLA: {{ labels[state()] }}</strong>
-  @if (state() === 'CLOSED') {
-    <span>Contagem encerrada em {{ dateTime(sla().startedAt) }}</span>
-  } @else {
-    <span>Na etapa: {{ elapsed() }} de {{ duration(sla().limitSeconds ?? 0) }}</span>
-    <span>Prazo: {{ dateTime(sla().dueAt) }}</span>
+  <div class="sla__row">
+    <strong class="sla__state">{{ labels[state()] }}</strong>
+    @if (state() === 'CLOSED') {
+      <span class="sla__time">Encerrado em {{ dateTime(sla().startedAt) }}</span>
+    } @else {
+      <span class="sla__time">{{ elapsed() }} <span class="sla__limit">/ {{ duration(sla().limitSeconds ?? 0) }}</span></span>
+    }
+  </div>
+  @if (state() !== 'CLOSED') {
+    <div class="sla__track" aria-hidden="true"><span [style.width.%]="progress()"></span></div>
+    <span class="sla__due">Prazo {{ dateTime(sla().dueAt) }}</span>
   }
 </div>

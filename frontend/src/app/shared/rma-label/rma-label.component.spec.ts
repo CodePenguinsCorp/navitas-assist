@@ -18,7 +18,7 @@ describe('RmaLabelComponent', () => {
     const element: HTMLElement = fixture.nativeElement;
     expect(element.textContent).toContain('RMA-2026-000007');
     expect(element.textContent).toContain('CTRL-1 | Controlador');
-    expect(element.textContent).toContain('Serial S-1');
+    expect(element.textContent).toContain('Série S-1');
     expect(element.textContent).not.toContain('Cliente Sigiloso');
     const images = [...element.querySelectorAll('img')].map((image) => image.getAttribute('src'));
     expect(images).toEqual(['/img/qr/TOKEN', '/img/barcode/TOKEN']);

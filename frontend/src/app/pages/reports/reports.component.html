@@ -27,7 +27,7 @@
   }
   <section aria-live="polite" [attr.aria-busy]="loading()">
     @if (loading()) {
-      <article class="panel table-card"><p>Carregando relatórios...</p></article>
+      <article class="panel table-card"><p class="report-muted">Carregando relatórios...</p></article>
     } @else if (errorMessage()) {
       <article class="panel alert-banner alert-banner--error" role="alert">
         <span>{{ errorMessage() }}</span>
@@ -48,25 +48,29 @@
                 <tbody>
                   @for (rma of rmas(); track rma.id) {
                     <tr>
-                      <td><strong>{{ rma.code }}</strong><p>{{ rma.clientName }}</p><p>{{ statusLabels[rma.status] }}</p><p>Entrada: {{ formatDate(rma.entryDate) }}</p></td>
+                      <td><strong class="code-text">{{ rma.code }}</strong><p>{{ rma.clientName }}</p><dl class="report-fields"><div><dt>Status</dt><dd>{{ statusLabels[rma.status] }}</dd></div><div><dt>Entrada</dt><dd>{{ formatDate(rma.entryDate) }}</dd></div></dl></td>
                       <td>
                         @for (item of rma.items; track $index) {
-                          <p>{{ item.productName }} ({{ item.productSku }}) — Série: {{ item.serialNumber || 'Não informada' }} / Lote: {{ item.batchNumber || 'Não informado' }}</p>
+                          <p><strong>{{ item.productName }}</strong> <span class="code-text report-muted">{{ item.productSku }}</span></p><p class="report-muted">Série {{ item.serialNumber || 'não informada' }} · Lote {{ item.batchNumber || 'não informado' }}</p>
                         }
                         <p class="report-text">{{ rma.reportedFailure }}</p>
                       </td>
                       <td>
                         @if (rma.diagnosis; as diagnosis) {
                           <p class="report-text">{{ diagnosis.foundFailure }}</p>
-                          <p>Tipo: {{ diagnosis.failureType ? failureLabels[diagnosis.failureType] : 'Não informado' }}</p>
-                          <p>Causa: {{ diagnosis.probableCause ? causeLabels[diagnosis.probableCause] : 'Não informada' }}</p>
-                          <p>{{ diagnosis.technicianName }} — {{ formatDate(diagnosis.diagnosedAt) }}</p>
-                          <p class="report-text">{{ diagnosis.notes || 'Sem observações' }}</p>
-                        } @else { <p>Diagnóstico pendente</p> }
+                          <dl class="report-fields">
+                            <div><dt>Tipo</dt><dd>{{ diagnosis.failureType ? failureLabels[diagnosis.failureType] : 'Não informado' }}</dd></div>
+                            <div><dt>Causa</dt><dd>{{ diagnosis.probableCause ? causeLabels[diagnosis.probableCause] : 'Não informada' }}</dd></div>
+                            <div><dt>Técnico</dt><dd>{{ diagnosis.technicianName }} · {{ formatDate(diagnosis.diagnosedAt) }}</dd></div>
+                            <div><dt>Observações</dt><dd class="report-text">{{ diagnosis.notes || 'Sem observações' }}</dd></div>
+                          </dl>
+                        } @else { <p class="report-muted">Diagnóstico pendente</p> }
                       </td>
-                      <td><p class="report-text">Reparo: {{ rma.repairSummary || 'Não informado' }}</p>
-                        <p class="report-text">Peças: {{ rma.replacedPartsSummary || 'Não informadas' }}</p>
-                        <p class="report-text">Testes: {{ rma.testSummary || 'Não informados' }}</p></td>
+                      <td><dl class="report-fields">
+                        <div><dt>Reparo</dt><dd class="report-text">{{ rma.repairSummary || 'Não informado' }}</dd></div>
+                        <div><dt>Peças</dt><dd class="report-text">{{ rma.replacedPartsSummary || 'Não informadas' }}</dd></div>
+                        <div><dt>Testes</dt><dd class="report-text">{{ rma.testSummary || 'Não informados' }}</dd></div>
+                      </dl></td>
                     </tr>
                   }
                 </tbody>
@@ -90,7 +94,7 @@
                   <caption>Tempo por RMA na etapa atual</caption>
                   <thead><tr><th scope="col">RMA / Cliente</th><th scope="col">Etapa</th><th scope="col">Início (São Paulo)</th><th scope="col">Tempo decorrido</th></tr></thead>
                   <tbody>@for (rma of activeRmas(); track rma.id) {
-                    <tr><td><strong>{{ rma.code }}</strong><p>{{ rma.clientName }}</p></td><td>{{ statusLabels[rma.status] }}</td>
+                    <tr><td><strong class="code-text">{{ rma.code }}</strong><p class="report-muted">{{ rma.clientName }}</p></td><td>{{ statusLabels[rma.status] }}</td>
                       <td>{{ formatInstant(rma.sla.startedAt) }}</td><td>{{ duration(rma.sla.elapsedSeconds) }}</td></tr>
                   }</tbody>
                 </table></div>
@@ -106,8 +110,8 @@
                 <thead><tr><th scope="col">RMA / Cliente</th><th scope="col">Produto</th><th scope="col">Compra / Entrada</th><th scope="col">Prazo</th><th scope="col">Vencimento</th><th scope="col">Situação</th></tr></thead>
                 <tbody>@for (rma of rmas(); track rma.id) {
                   @for (item of rma.items; track $index) {
-                    <tr><td><strong>{{ rma.code }}</strong><p>{{ rma.clientName }}</p></td>
-                      <td>{{ item.productName }} ({{ item.productSku }})<p>Série: {{ item.serialNumber || 'Não informada' }} / Lote: {{ item.batchNumber || 'Não informado' }}</p></td>
+                    <tr><td><strong class="code-text">{{ rma.code }}</strong><p class="report-muted">{{ rma.clientName }}</p></td>
+                      <td>{{ item.productName }} <span class="code-text report-muted">{{ item.productSku }}</span><p class="report-muted">Série {{ item.serialNumber || 'não informada' }} · Lote {{ item.batchNumber || 'não informado' }}</p></td>
                       <td>{{ formatDate(rma.purchaseDate) }} / {{ formatDate(rma.entryDate) }}</td><td>{{ item.warrantyMonths }} meses</td>
                       <td>{{ formatDate(item.warrantyExpiresAt) }}</td><td>{{ warrantyLabels[item.warrantyStatus] }}</td></tr>
                   }
@@ -124,7 +128,7 @@
                   <caption>Expedição dos RMAs devolvidos</caption>
                   <thead><tr><th scope="col">RMA / Cliente</th><th scope="col">Entrada</th><th scope="col">Expedição</th><th scope="col">Transportadora</th><th scope="col">Rastreio</th></tr></thead>
                   <tbody>@for (rma of returns(); track rma.id) {
-                    <tr><td><strong>{{ rma.code }}</strong><p>{{ rma.clientName }}</p></td><td>{{ formatDate(rma.entryDate) }}</td>
+                    <tr><td><strong class="code-text">{{ rma.code }}</strong><p class="report-muted">{{ rma.clientName }}</p></td><td>{{ formatDate(rma.entryDate) }}</td>
                       <td>{{ formatDate(rma.shippedAt) }}</td><td>{{ rma.carrier || 'Não informada' }}</td><td>{{ rma.trackingCode || 'Não informado' }}</td></tr>
                   }</tbody>
                 </table></div>

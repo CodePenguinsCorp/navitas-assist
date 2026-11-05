@@ -171,7 +171,7 @@
               @for (reservation of pending(); track reservation.id) {
                 <tr>
                   <td>{{ reservation.rmaCode }}</td>
-                  <td>{{ reservation.partCode }} | {{ reservation.partName }}</td>
+                  <td><strong class="table-title code-text">{{ reservation.partCode }}</strong><span class="table-subtitle">{{ reservation.partName }}</span></td>
                   <td>{{ quantity(reservation.quantity, reservation.unit) }}</td>
                   <td>{{ quantity(reservation.partAvailable, reservation.unit) }}</td>
                   <td>{{ dateTime(reservation.createdAt) }}</td>
@@ -244,8 +244,9 @@
             <small class="field-error">Informe um custo válido.</small>
           }
         </label>
-        <label class="field-group field-group--full">
-          <span><input type="checkbox" formControlName="active" /> Peça ativa</span>
+        <label class="checkbox-field field-group--full">
+          <input type="checkbox" formControlName="active" />
+          <span>Peça ativa</span>
         </label>
 
         <div class="form-actions form-actions--full">
@@ -263,7 +264,7 @@
       <header class="modal-header">
         <div>
           <h3>Movimentar estoque</h3>
-          <p>{{ part.code }} | {{ part.name }} — disponível: {{ quantity(part.available, part.unit) }}</p>
+          <p><span class="code-text">{{ part.code }}</span> · {{ part.name }}. Disponível: <strong>{{ quantity(part.available, part.unit) }}</strong></p>
         </div>
         <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModals()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
@@ -304,7 +305,7 @@
       <header class="modal-header">
         <div>
           <h3>Histórico de movimentos</h3>
-          <p>{{ part.code }} | {{ part.name }}. Movimentos não são editados; correções geram estorno.</p>
+          <p><span class="code-text">{{ part.code }}</span> · {{ part.name }}. Movimentos não são editados; correções geram estorno.</p>
         </div>
         <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModals()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>

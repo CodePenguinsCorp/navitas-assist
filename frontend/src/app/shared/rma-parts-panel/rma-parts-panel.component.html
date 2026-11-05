@@ -6,9 +6,11 @@
       <span class="mini-chip priority-low">{{ activeCount() }} reservada(s)</span>
       <span class="mini-chip warranty-ok">{{ consumedCount() }} consumida(s)</span>
       <span class="mini-chip warranty-alert">{{ rmaParts.pendingCount }} pendente(s)</span>
-      <span class="mini-chip">Custo consumido: {{ currency(rmaParts.consumedCost) }}</span>
-      <span class="mini-chip">Custo reservado: {{ currency(rmaParts.reservedCost) }}</span>
     </div>
+    <dl class="meta-list parts-costs">
+      <div><dt>Custo consumido</dt><dd>{{ currency(rmaParts.consumedCost) }}</dd></div>
+      <div><dt>Custo reservado</dt><dd>{{ currency(rmaParts.reservedCost) }}</dd></div>
+    </dl>
   }
 
   @if (errorMessage()) {
@@ -26,16 +28,19 @@
     <div class="parts-list">
       @for (reservation of reservations(); track reservation.id) {
         <div class="parts-item">
-          <div>
-            <strong>{{ reservation.partCode }} | {{ reservation.partName }}</strong>
-            <div>
+          <div class="parts-item__body">
+            <div class="parts-item__title">
+              <strong><span class="code-text">{{ reservation.partCode }}</span> · {{ reservation.partName }}</strong>
               <span class="mini-chip" [class]="statusClass(reservation.status)">{{ statusLabels[reservation.status] }}</span>
-              {{ quantity(reservation.quantity, reservation.unit) }} · {{ currency(reservation.totalCost) }}
             </div>
-            <small>
-              Disponível em estoque: {{ quantity(reservation.partAvailable, reservation.unit) }}
-              @if (reservation.location) { · Local: {{ reservation.location }} }
-            </small>
+            <dl class="meta-list">
+              <div><dt>Quantidade</dt><dd>{{ quantity(reservation.quantity, reservation.unit) }}</dd></div>
+              <div><dt>Custo</dt><dd>{{ currency(reservation.totalCost) }}</dd></div>
+              <div><dt>Em estoque</dt><dd>{{ quantity(reservation.partAvailable, reservation.unit) }}</dd></div>
+              @if (reservation.location) {
+                <div><dt>Local</dt><dd>{{ reservation.location }}</dd></div>
+              }
+            </dl>
             @if (reservation.note) {
               <small>{{ reservation.note }}</small>
             }

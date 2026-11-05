@@ -8,7 +8,7 @@ describe('Label model', () => {
     expect(label.rmaCode).toBe('RMA-2026-000007');
     expect(label.product).toBe('CTRL-1 | Controlador (+1)');
     expect(label.lines).toEqual([
-      { label: 'Série / lote', value: 'Serial S-1 | Lote L-1' },
+      { label: 'Série / lote', value: 'Série S-1 · Lote L-1' },
       { label: 'Entrada', value: '20/10/2026' }
     ]);
     expect(JSON.stringify(label)).not.toContain('Cliente Sigiloso');

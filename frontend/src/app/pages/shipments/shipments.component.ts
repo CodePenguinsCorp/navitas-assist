@@ -65,18 +65,30 @@ const ATTENTION_STATUSES: ShipmentStatus[] = ['EXCEPTION', 'DELIVERY_ATTEMPT'];
     }
 
     .shipment-events li {
-      padding: 0.75rem 0.9rem;
+      display: grid;
+      gap: 0.6rem;
+      padding: 0.85rem 0.9rem;
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: var(--radius-md);
+    }
+
+    .shipment-event__title {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .shipment-event__title time {
+      margin-left: auto;
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
     }
 
     .shipment-events p {
-      margin: 0.25rem 0 0;
+      margin: 0;
       color: var(--muted);
-    }
-
-    .modal-feedback {
-      margin-bottom: 1rem;
     }
   `]
 })

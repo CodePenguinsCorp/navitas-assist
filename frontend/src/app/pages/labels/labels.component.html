@@ -33,7 +33,7 @@
         <h3>Pré-visualização</h3>
         <div class="label-fields" role="group" aria-label="Campos da etiqueta">
           @for (option of fieldOptions; track option.key) {
-            <label><input type="checkbox" [checked]="fields().includes(option.key)" (change)="toggleField(option.key)" /> {{ option.label }}</label>
+            <label class="checkbox-field"><input type="checkbox" [checked]="fields().includes(option.key)" (change)="toggleField(option.key)" /><span>{{ option.label }}</span></label>
           }
         </div>
 

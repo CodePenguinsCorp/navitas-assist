@@ -32,6 +32,27 @@ const ACTION_MESSAGES: Record<PartReservationAction, string> = {
       margin: 0.5rem 0 0.75rem;
     }
 
+    .parts-costs {
+      margin-bottom: 0.75rem;
+    }
+
+    .parts-item__body {
+      display: grid;
+      gap: 0.6rem;
+      min-width: 0;
+    }
+
+    .parts-item__title {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .parts-item .meta-list {
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+
     .parts-list {
       display: grid;
       gap: 0.6rem;
@@ -41,9 +62,10 @@ const ACTION_MESSAGES: Record<PartReservationAction, string> = {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 0.35rem 0.75rem;
-      padding: 0.7rem 0.85rem;
+      padding: 0.85rem 0.9rem;
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: var(--radius-md);
+      background: var(--surface-alt);
     }
 
     .parts-item small {

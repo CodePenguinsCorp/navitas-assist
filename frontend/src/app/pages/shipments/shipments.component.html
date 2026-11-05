@@ -253,17 +253,23 @@
       <ul class="shipment-events">
         @for (event of current.events; track event.id) {
           <li>
-            <strong>{{ statusLabel(event.status) }} · {{ sourceLabel(event.source) }}</strong>
-            <p>{{ dateTimeLabel(event.occurredAt) }} · registrado por {{ event.recordedBy }}</p>
+            <div class="shipment-event__title">
+              <strong>{{ statusLabel(event.status) }}</strong>
+              <span class="mini-chip">{{ sourceLabel(event.source) }}</span>
+              <time>{{ dateTimeLabel(event.occurredAt) }}</time>
+            </div>
             @if (event.description) {
               <p>{{ event.description }}</p>
             }
-            @if (event.proofReference) {
-              <p>Comprovante: {{ event.proofReference }}</p>
-            }
-            @if (event.justification) {
-              <p>Justificativa: {{ event.justification }}</p>
-            }
+            <dl class="meta-list">
+              <div><dt>Registrado por</dt><dd>{{ event.recordedBy }}</dd></div>
+              @if (event.proofReference) {
+                <div><dt>Comprovante</dt><dd>{{ event.proofReference }}</dd></div>
+              }
+              @if (event.justification) {
+                <div><dt>Justificativa</dt><dd>{{ event.justification }}</dd></div>
+              }
+            </dl>
           </li>
         }
       </ul>

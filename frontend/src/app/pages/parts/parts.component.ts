@@ -62,10 +62,6 @@ const MOVEMENT_TYPE_OPTIONS: ReadonlyArray<CustomSelectOption<ManualPartMovement
       color: #ffffff;
     }
 
-    .modal-feedback {
-      margin-bottom: 1rem;
-    }
-
     .movement-reversal {
       display: flex;
       gap: 0.45rem;

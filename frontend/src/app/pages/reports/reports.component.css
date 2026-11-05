@@ -8,4 +8,8 @@ caption { text-align: left; padding: 1rem 0; font-weight: 600; }
 td { vertical-align: top; overflow-wrap: anywhere; }
 td p { margin: 0.3rem 0; }
 .report-text { white-space: pre-wrap; }
+.report-muted { color: var(--muted); }
+.report-fields { display: grid; gap: 0.45rem; margin: 0.4rem 0 0; }
+.report-fields dt { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.report-fields dd { margin: 0.1rem 0 0; }
 @media (max-width: 760px) { .report-filters { grid-template-columns: 1fr; } }

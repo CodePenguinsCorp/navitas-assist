@@ -44,7 +44,7 @@ describe('LabelsComponent', () => {
 
     expect(scanService['issue']).toHaveBeenCalledWith(7);
     expect(element.textContent).toContain('Pré-visualização');
-    expect(element.textContent).toContain('Serial S-1');
+    expect(element.textContent).toContain('Série S-1');
     expect(element.textContent).not.toContain('Revogar');
 
     const clientToggle = [...element.querySelectorAll('label')].find((label) => label.textContent?.trim() === 'Cliente')?.querySelector('input') as HTMLInputElement;

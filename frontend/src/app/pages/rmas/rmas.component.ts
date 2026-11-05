@@ -140,18 +140,35 @@ interface CreateDateErrors {
       grid-column: 1 / -1;
     }
 
+    .rma-items-detail {
+      margin-top: 0.75rem;
+    }
+
     .rma-item-detail {
       display: grid;
-      gap: 0.2rem;
-      padding: 0.75rem 0;
-      border-bottom: 1px solid var(--line);
+      gap: 0.75rem;
+      padding: 0.85rem 0.9rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--surface-alt);
     }
 
-    .rma-item-detail:last-child {
-      border-bottom: 0;
+    .rma-item-detail__header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
     }
 
-    .rma-item-detail > span:not(.mini-chip) {
+    .rma-item-detail__header > div {
+      display: grid;
+      gap: 0.1rem;
+      min-width: 0;
+    }
+
+    .rma-item-detail__sku {
+      font-size: 0.75rem;
+      font-weight: 600;
       color: var(--muted);
     }
 

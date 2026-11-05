@@ -184,11 +184,18 @@
         <ul class="custody-history">
           @for (movement of history(); track movement.id) {
             <li>
-              <strong>{{ movementLabel(movement.type) }}: {{ movement.fromLocationName ?? '—' }} → {{ movement.toLocationName ?? 'Fora da custódia' }}</strong>
-              <p>Responsável: {{ movement.custodianName ?? '—' }} · Operador: {{ movement.performedBy }} · {{ dateTimeLabel(movement.performedAt) }}</p>
-              @if (movement.reason) {
-                <p>Motivo: {{ movement.reason }}</p>
-              }
+              <div class="custody-history__title">
+                <span class="mini-chip">{{ movementLabel(movement.type) }}</span>
+                <strong>{{ movement.fromLocationName ?? '—' }} → {{ movement.toLocationName ?? 'Fora da custódia' }}</strong>
+                <time>{{ dateTimeLabel(movement.performedAt) }}</time>
+              </div>
+              <dl class="meta-list">
+                <div><dt>Responsável</dt><dd [class.is-empty]="!movement.custodianName">{{ movement.custodianName ?? '—' }}</dd></div>
+                <div><dt>Operador</dt><dd>{{ movement.performedBy }}</dd></div>
+                @if (movement.reason) {
+                  <div><dt>Motivo</dt><dd>{{ movement.reason }}</dd></div>
+                }
+              </dl>
             </li>
           }
         </ul>

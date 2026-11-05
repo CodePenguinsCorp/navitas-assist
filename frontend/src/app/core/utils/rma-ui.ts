@@ -74,11 +74,11 @@ export function trackableLabel(rma: Pick<RmaResponse, 'items' | 'serialNumber' |
 
 export function rmaItemTrackableLabel(item: Pick<RmaItemResponse, 'serialNumber' | 'batchNumber'>): string {
   if (item.serialNumber && item.batchNumber) {
-    return `Serial ${item.serialNumber} | Lote ${item.batchNumber}`;
+    return `Série ${item.serialNumber} · Lote ${item.batchNumber}`;
   }
 
   if (item.serialNumber) {
-    return `Serial ${item.serialNumber}`;
+    return `Série ${item.serialNumber}`;
   }
 
   if (item.batchNumber) {

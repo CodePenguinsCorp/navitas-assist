@@ -31,16 +31,6 @@ const LOCATION_LIMITS = {
       max-width: 20ch;
       overflow-wrap: anywhere;
     }
-
-    .checkbox-field {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .modal-feedback {
-      margin-bottom: 1rem;
-    }
   `]
 })
 export class LocationsComponent {

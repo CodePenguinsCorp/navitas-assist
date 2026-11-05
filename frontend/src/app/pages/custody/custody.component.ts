@@ -47,18 +47,30 @@ const PAGE_SIZE = 20;
     }
 
     .custody-history li {
-      padding: 0.75rem 0.9rem;
+      display: grid;
+      gap: 0.6rem;
+      padding: 0.85rem 0.9rem;
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: var(--radius-md);
+    }
+
+    .custody-history__title {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .custody-history__title time {
+      margin-left: auto;
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
     }
 
     .custody-history p {
       margin: 0.25rem 0 0;
       color: var(--muted);
-    }
-
-    .modal-feedback {
-      margin-bottom: 1rem;
     }
   `]
 })

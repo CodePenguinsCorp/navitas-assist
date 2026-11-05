@@ -10,9 +10,6 @@
   gap: 1rem;
   padding: 1rem 1.1rem;
   margin-bottom: 1rem;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 250, 255, 0.96)),
-    linear-gradient(135deg, rgba(46, 168, 212, 0.08), rgba(35, 109, 167, 0.04));
 }
 
 .board-toolbar h3 {
@@ -33,20 +30,7 @@
   padding-bottom: 0.65rem;
   overscroll-behavior-x: contain;
   scrollbar-gutter: stable both-edges;
-}
-
-.board-shell::-webkit-scrollbar {
-  height: 12px;
-}
-
-.board-shell::-webkit-scrollbar-track {
-  background: rgba(205, 220, 235, 0.65);
-  border-radius: 999px;
-}
-
-.board-shell::-webkit-scrollbar-thumb {
-  background: linear-gradient(90deg, #1c76bb 0%, #2ea8d4 100%);
-  border-radius: 999px;
+  scrollbar-color: #8fb8d8 #e3ecf4;
 }
 
 .board-grid {
@@ -64,9 +48,7 @@
   overflow: hidden;
   min-block-size: 100%;
   padding: 1rem;
-  background:
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.9), transparent 32%),
-    linear-gradient(180deg, #fbfdff 0%, #f4f8fc 100%);
+  background: var(--surface-alt);
   border-color: rgba(180, 202, 224, 0.9);
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
@@ -79,41 +61,15 @@
   background: var(--column-accent, var(--brand-sky));
 }
 
-.board-column[data-status='RECEIVED'] {
-  --column-accent: #2ea8d4;
-}
-
-.board-column[data-status='TRIAGE'] {
-  --column-accent: #4ea8ff;
-}
-
-.board-column[data-status='IN_DIAGNOSIS'] {
-  --column-accent: #236da7;
-}
-
-.board-column[data-status='WAITING_PART'] {
-  --column-accent: #d7a230;
-}
-
-.board-column[data-status='IN_REPAIR'] {
-  --column-accent: #f06767;
-}
-
-.board-column[data-status='IN_TESTS'] {
-  --column-accent: #8667e8;
-}
-
-.board-column[data-status='COMPLETED'] {
-  --column-accent: #2f9f67;
-}
-
-.board-column[data-status='RETURNED'] {
-  --column-accent: #5f87a8;
-}
-
-.board-column[data-status='IRREPARABLE'] {
-  --column-accent: #5f6776;
-}
+.board-column[data-status='RECEIVED'] { --column-accent: #2ea8d4; }
+.board-column[data-status='TRIAGE'] { --column-accent: #4ea8ff; }
+.board-column[data-status='IN_DIAGNOSIS'] { --column-accent: #236da7; }
+.board-column[data-status='WAITING_PART'] { --column-accent: #d7a230; }
+.board-column[data-status='IN_REPAIR'] { --column-accent: #f06767; }
+.board-column[data-status='IN_TESTS'] { --column-accent: #8667e8; }
+.board-column[data-status='COMPLETED'] { --column-accent: #2f9f67; }
+.board-column[data-status='RETURNED'] { --column-accent: #5f87a8; }
+.board-column[data-status='IRREPARABLE'] { --column-accent: #5f6776; }
 
 .board-column.is-drop-target {
   border-color: rgba(46, 168, 212, 0.58);
@@ -145,9 +101,11 @@
   padding: 0.95rem;
   border: 1px solid rgba(201, 219, 236, 0.95);
   border-radius: 14px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 255, 0.98));
-  box-shadow: 0 12px 26px rgba(23, 48, 77, 0.08);
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(23, 48, 77, 0.06), 0 2px 6px rgba(23, 48, 77, 0.04);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
 }
 
 .board-card[draggable='true'] {
@@ -166,75 +124,127 @@
 
 .board-card__header {
   display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.7rem;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.board-card__identity {
+  flex: 1;
+  min-width: 0;
 }
 
 .board-card h4 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--brand-blue-deep);
 }
 
 .board-card p {
-  margin: 0.25rem 0 0;
-  color: var(--muted);
-  line-height: 1.48;
+  margin: 0;
+  line-height: 1.45;
 }
 
-.board-card__grid {
+.board-card__client {
+  margin-top: 0.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-card .mini-chip {
+  flex-shrink: 0;
+  min-height: 22px;
+  padding-inline: 0.55rem;
+  font-size: 0.72rem;
+}
+
+.board-card__selection {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin-top: 0.8rem;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+}
+
+.board-card__selection input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--brand-blue);
+  cursor: pointer;
+}
+
+.board-card__product {
+  display: grid;
+  gap: 0.15rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.board-card__product strong {
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.board-card__product > span {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .board-card__warranties {
-  display: grid;
-  justify-items: start;
-  gap: 0.4rem;
-  margin-top: 0.6rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
 }
 
 .board-card__warranties .mini-chip {
   white-space: normal;
 }
 
-.board-card__grid span,
-.board-card__grid strong {
-  display: block;
+.board-card__failure {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 0.84rem;
+  color: var(--text);
 }
 
-.board-card__grid span {
-  margin-bottom: 0.15rem;
+.board-card__block {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  background: var(--danger-bg);
+  color: var(--danger-text);
   font-size: 0.8rem;
-  color: var(--muted);
 }
 
-.board-card__assignee-action {
-  margin-top: 0.35rem;
-  padding: 0;
-  border: 0;
-  color: var(--brand);
-  background: transparent;
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
+.board-card__meta {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.board-card__assignee-action:hover:not(:disabled),
-.board-card__assignee-action:focus-visible {
-  text-decoration: underline;
-}
-
-.board-card__assignee-action:disabled {
-  color: var(--muted);
-  cursor: not-allowed;
+.board-card__meta dd {
+  font-size: 0.84rem;
 }
 
 .board-card__footer {
-  margin-top: 0.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--line);
+}
+
+.board-card__footer .mini-chip {
+  margin-left: auto;
 }
 
 .board-empty-note {
@@ -246,11 +256,5 @@
   .board-grid {
     grid-auto-columns: minmax(278px, 278px);
   }
-
-  .board-card__grid {
-    grid-template-columns: 1fr;
-  }
 }
 
-.board-card__selection { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.6rem; font-size: 0.8rem; cursor: pointer; }
-.board-card__selection input { width: 16px; height: 16px; accent-color: var(--brand-blue); }
