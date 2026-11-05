@@ -47,33 +47,9 @@ export const routes: Routes = [
         title: 'Notificações | Navitas Assist'
       },
       {
-        path: 'remessas',
-        loadComponent: () => import('./pages/shipments/shipments.component').then((module) => module.ShipmentsComponent),
-        title: 'Remessas | Navitas Assist'
-      },
-      {
         path: 'pecas',
         loadComponent: () => import('./pages/parts/parts.component').then((module) => module.PartsComponent),
         title: 'Peças | Navitas Assist'
-      },
-      {
-        path: 'localizacao',
-        loadComponent: () => import('./pages/custody/custody.component').then((module) => module.CustodyComponent),
-        title: 'Localização | Navitas Assist'
-      },
-      {
-        path: 'leitura',
-        loadComponent: () => import('./pages/scan/scan.component').then((module) => module.ScanComponent),
-        title: 'Leitura de etiqueta | Navitas Assist'
-      },
-      {
-        path: 'etiquetas',
-        loadComponent: () => import('./pages/labels/labels.component').then((module) => module.LabelsComponent),
-        canActivate: [roleGuard],
-        data: {
-          roles: ['ADMIN', 'SERVICE_DESK', 'TECHNICIAN']
-        },
-        title: 'Etiquetas | Navitas Assist'
       },
       {
         path: 'cadastros',
@@ -106,15 +82,6 @@ export const routes: Routes = [
           roles: ['ADMIN']
         },
         title: 'Protocolos | Navitas Assist'
-      },
-      {
-        path: 'locais',
-        loadComponent: () => import('./pages/locations/locations.component').then((module) => module.LocationsComponent),
-        canActivate: [roleGuard],
-        data: {
-          roles: ['ADMIN', 'SERVICE_DESK']
-        },
-        title: 'Locais | Navitas Assist'
       },
       {
         path: 'usuarios',
