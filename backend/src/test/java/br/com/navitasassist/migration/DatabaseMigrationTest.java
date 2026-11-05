@@ -26,10 +26,9 @@ class DatabaseMigrationTest {
     void createsSchemaAndSupportsMultipleItemsPerRma() throws SQLException {
         String url = "jdbc:h2:mem:migration_empty;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
 
-        Flyway flyway = Flyway.configure().dataSource(url, USER, PASSWORD).load();
-        int executedMigrations = flyway.migrate().migrationsExecuted;
+        int executedMigrations = Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate().migrationsExecuted;
 
-        assertEquals(flyway.info().all().length, executedMigrations);
+        assertEquals(4, executedMigrations);
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
             assertTrue(tableExists(connection, "rmas"));
             assertTrue(tableExists(connection, "rma_code_generation_lock"));
@@ -57,10 +56,6 @@ class DatabaseMigrationTest {
             assertTrue(tableExists(connection, "rma_protocol_executions"));
             assertTrue(tableExists(connection, "rma_protocol_item_results"));
             assertEquals(19, columnSize(connection, "rma_protocol_item_results", "measured_value"));
-            assertTrue(tableExists(connection, "rma_shipments"));
-            assertTrue(tableExists(connection, "rma_shipment_events"));
-            assertTrue(tableExists(connection, "storage_locations"));
-            assertTrue(tableExists(connection, "rma_custody_movements"));
             assertFalse(columnExists(connection, "clients", "contact_name"));
             assertEquals(30, columnSize(connection, "clients", "phone"));
             assertEquals(255, columnSize(connection, "clients", "address"));
@@ -96,19 +91,6 @@ class DatabaseMigrationTest {
             assertEquals(
                 Set.of("idx_kanban_views_owner_id"),
                 applicationIndexes(connection, "kanban_views")
-            );
-            assertEquals(
-                Set.of("idx_rma_shipments_rma_id", "idx_rma_shipments_status"),
-                applicationIndexes(connection, "rma_shipments")
-            );
-            assertEquals(12, columnSize(connection, "rma_shipments", "cost"));
-            assertEquals(
-                Set.of(
-                    "idx_rma_custody_movements_rma_id",
-                    "idx_rma_custody_movements_to_location_id",
-                    "idx_rma_custody_movements_from_location_id"
-                ),
-                applicationIndexes(connection, "rma_custody_movements")
             );
 
             long clientId = insertClient(connection);
@@ -267,27 +249,6 @@ class DatabaseMigrationTest {
              ResultSet result = statement.executeQuery("SELECT COUNT(*) FROM " + tableName)) {
             result.next();
             return result.getInt(1);
-        }
-    }
-
-    @Test
-    void createsScanCodeTablesWithUniqueOpaqueTokens() throws SQLException {
-        String url = "jdbc:h2:mem:migration_scan_codes;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
-
-        Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate();
-
-        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
-            assertTrue(tableExists(connection, "rma_scan_codes"));
-            assertTrue(tableExists(connection, "rma_scan_actions"));
-            assertEquals(Set.of("idx_rma_scan_codes_rma_id"), applicationIndexes(connection, "rma_scan_codes"));
-            assertEquals(Set.of("idx_rma_scan_actions_rma_id"), applicationIndexes(connection, "rma_scan_actions"));
-
-            long rmaId = insertRma(connection, insertClient(connection), insertProduct(connection));
-            String insert = "INSERT INTO rma_scan_codes (rma_id, token, barcode_token, active, created_at, created_by) VALUES (" + rmaId + ", 'TOKEN', '000000000000000000000001', TRUE, CURRENT_TIMESTAMP, 'teste')";
-            try (Statement statement = connection.createStatement()) {
-                statement.executeUpdate(insert);
-                assertThrows(SQLException.class, () -> statement.executeUpdate(insert));
-            }
         }
     }
 }

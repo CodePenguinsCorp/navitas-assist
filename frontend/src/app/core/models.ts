@@ -520,23 +520,6 @@ export interface RmaReportResponse {
   rmas: RmaResponse[];
 }
 
-export type ScanSource = 'CAMERA' | 'SCANNER' | 'MANUAL';
-
-export interface ScanCodeResponse {
-  rmaId: number;
-  rmaCode: string;
-  token: string;
-  createdAt: string;
-  createdBy: string;
-}
-
-export interface ScanStatusChangeRequest {
-  expectedStatus: RmaStatus;
-  status: RmaStatus;
-  note: string | null;
-  source: ScanSource;
-  confirmed: boolean;
-}
 
 export interface NavItem {
   label: string;
@@ -604,167 +587,12 @@ export interface UserSummaryResponse {
   roles: number;
 }
 
-export type StorageLocationType = 'AREA' | 'BENCH' | 'SHELF' | 'QUARANTINE' | 'SHIPPING';
-
-export type CustodyMovementType = 'ENTRY' | 'TRANSFER' | 'EXIT';
-
-export type CustodyFlag = 'OK' | 'MISSING' | 'STALE';
-
-export interface StorageLocationRequest {
-  code: string;
-  name: string;
-  type: StorageLocationType;
-  parentId: number | null;
-  description: string | null;
-  active: boolean;
-}
-
-export interface StorageLocationResponse {
-  id: number;
-  code: string;
-  name: string;
-  type: StorageLocationType;
-  parentId: number | null;
-  parentName: string | null;
-  description: string | null;
-  active: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CustodyMovementRequest {
-  type: CustodyMovementType;
-  toLocationId: number | null;
-  custodianId: number | null;
-  reason: string | null;
-}
-
-export interface CustodyMovementResponse {
-  id: number;
-  type: CustodyMovementType;
-  fromLocationId: number | null;
-  fromLocationName: string | null;
-  toLocationId: number | null;
-  toLocationName: string | null;
-  custodianId: number | null;
-  custodianName: string | null;
-  reason: string | null;
-  performedBy: string;
-  performedAt: string;
-}
-
-export interface RmaCustodyResponse {
-  rmaId: number;
-  rmaCode: string;
-  rmaStatus: RmaStatus;
-  clientName: string;
-  productName: string;
-  locationId: number | null;
-  locationCode: string | null;
-  locationName: string | null;
-  locationType: StorageLocationType | null;
-  custodianId: number | null;
-  custodianName: string | null;
-  since: string | null;
-  flag: CustodyFlag;
-}
-
 export interface PageResponse<T> {
   content: T[];
   page: number;
   size: number;
   totalElements: number;
   totalPages: number;
-}
-
-export interface CustodySummaryResponse {
-  tracked: number;
-  missing: number;
-  stale: number;
-}
-
-export interface RmaCustodyDetailResponse {
-  current: RmaCustodyResponse;
-  movements: CustodyMovementResponse[];
-}
-
-export type ShipmentType = 'PICKUP' | 'POSTING' | 'TRANSFER' | 'RETURN';
-
-export type ShipmentStatus = 'CREATED' | 'LABEL_ISSUED' | 'IN_TRANSIT' | 'DELIVERY_ATTEMPT' | 'EXCEPTION' | 'DELIVERED' | 'CANCELLED';
-
-export type ShipmentEventSource = 'SYSTEM' | 'INTEGRATION' | 'MANUAL';
-
-export interface ShipmentFieldsRequest {
-  type: ShipmentType;
-  originName: string;
-  originAddress: string | null;
-  destinationName: string;
-  destinationAddress: string | null;
-  volumes: number;
-  carrier: string;
-  serviceName: string | null;
-  trackingCode: string | null;
-  labelReference: string | null;
-  cost: string | null;
-}
-
-export interface CreateShipmentRequest extends ShipmentFieldsRequest {
-  rmaId: number;
-}
-
-export interface UpdateShipmentRequest extends ShipmentFieldsRequest {
-  justification: string;
-}
-
-export interface ManualShipmentEventRequest {
-  status: ShipmentStatus;
-  description: string | null;
-  proofReference: string | null;
-  occurredAt: string | null;
-  justification: string;
-}
-
-export interface ShipmentResponse {
-  id: number;
-  rmaId: number;
-  rmaCode: string;
-  type: ShipmentType;
-  status: ShipmentStatus;
-  originName: string;
-  originAddress: string | null;
-  destinationName: string;
-  destinationAddress: string | null;
-  addressRestricted: boolean;
-  addressesPurged: boolean;
-  volumes: number;
-  carrier: string;
-  serviceName: string | null;
-  trackingCode: string | null;
-  labelReference: string | null;
-  cost: number | null;
-  deliveryAttempts: number;
-  closedAt: string | null;
-  createdBy: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ShipmentEventResponse {
-  id: number;
-  source: ShipmentEventSource;
-  externalEventId: string | null;
-  status: ShipmentStatus;
-  description: string | null;
-  proofReference: string | null;
-  justification: string | null;
-  occurredAt: string;
-  recordedBy: string;
-  recordedAt: string;
-}
-
-export interface ShipmentDetailResponse {
-  shipment: ShipmentResponse;
-  events: ShipmentEventResponse[];
 }
 
 export type ProtocolItemType = 'CHECK' | 'MEASUREMENT' | 'TEXT';
