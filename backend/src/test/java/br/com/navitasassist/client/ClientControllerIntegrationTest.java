@@ -1,5 +1,6 @@
 package br.com.navitasassist.client;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -13,7 +14,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import br.com.navitasassist.product.Product;
 import br.com.navitasassist.repository.ClientRepository;
@@ -23,6 +26,9 @@ import br.com.navitasassist.rma.RmaRecord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -89,6 +95,62 @@ class ClientControllerIntegrationTest {
         }
 
         assertTrue(clientRepository.findAll().isEmpty());
+    }
+
+    @ParameterizedTest(name = "{0} {1}: {2}")
+    @MethodSource("optionalClientFieldCases")
+    void shouldPreserveOptionalFieldLimits(String method, String field, String scenario, String value, String expected, boolean valid) throws Exception {
+        Client original = new Client();
+        original.setLegalName("Cliente original");
+        original.setTradeName("Nome preservado");
+        original.setNotes("Nota preservada");
+        Long id = method.equals("PUT") ? clientRepository.save(original).getId() : null;
+        Map<String, String> payload = new LinkedHashMap<>(Map.of(
+            "legalName", "Cliente atualizado", "tradeName", "Nome preservado", "notes", "Nota preservada"));
+        payload.put(field, value);
+
+        var result = mockMvc.perform((method.equals("POST") ? post("/api/clients") : put("/api/clients/{id}", id))
+            .with(user("admin").roles("ADMIN"))
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(payload)));
+
+        if (!valid) {
+            result.andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.details[0]").value(org.hamcrest.Matchers.containsString(field)));
+            assertEquals(method.equals("POST") ? 0L : 1L, clientRepository.count());
+            if (id != null) {
+                Client unchanged = clientRepository.findById(id).orElseThrow();
+                assertEquals("Cliente original", unchanged.getLegalName());
+                assertEquals("Nome preservado", unchanged.getTradeName());
+                assertEquals("Nota preservada", unchanged.getNotes());
+            }
+            return;
+        }
+
+        result.andExpect(status().is(method.equals("POST") ? 201 : 200));
+        var response = objectMapper.readTree(result.andReturn().getResponse().getContentAsByteArray());
+        assertEquals(objectMapper.valueToTree(expected), response.get(field));
+        Client saved = clientRepository.findById(response.get("id").asLong()).orElseThrow();
+        assertEquals(1L, clientRepository.count());
+        assertEquals("Cliente atualizado", saved.getLegalName());
+        assertEquals(field.equals("tradeName") ? expected : "Nome preservado", saved.getTradeName());
+        assertEquals(field.equals("notes") ? expected : "Nota preservada", saved.getNotes());
+    }
+
+    static Stream<Arguments> optionalClientFieldCases() {
+        Stream.Builder<Arguments> cases = Stream.builder();
+        for (String method : new String[] { "POST", "PUT" }) {
+            for (String field : new String[] { "tradeName", "notes" }) {
+                int limit = field.equals("tradeName") ? 120 : 1000;
+                cases.add(Arguments.of(method, field, "null", null, null, true));
+                cases.add(Arguments.of(method, field, "empty", "", "", true));
+                cases.add(Arguments.of(method, field, "whitespace", "   ", "", true));
+                cases.add(Arguments.of(method, field, "limit", "ç".repeat(limit), "ç".repeat(limit), true));
+                cases.add(Arguments.of(method, field, "overflow", "a".repeat(limit + 1), null, false));
+            }
+        }
+        return cases.build();
     }
 
     @Test
