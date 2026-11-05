@@ -342,8 +342,11 @@
         </div>
 
         <div class="field-group field-group--full">
-          <label for="kanbanStatusNote">Observação</label>
-          <textarea id="kanbanStatusNote" formControlName="note" rows="4"></textarea>
+          <label for="kanbanStatusNote">Observação (máx. 255 caracteres)</label>
+          <textarea id="kanbanStatusNote" formControlName="note" rows="4" maxlength="255"></textarea>
+          @if (statusForm.controls.note.hasError('maxlength') && (statusForm.controls.note.dirty || statusForm.controls.note.touched)) {
+            <small class="field-error">A observação deve ter no máximo 255 caracteres.</small>
+          }
         </div>
 
         <div class="form-actions form-actions--full">
