@@ -90,7 +90,7 @@ export class ProtocolsComponent {
 
   constructor() {
     this.loadTemplates();
-    this.catalogService.listProducts().subscribe({
+    this.catalogService.listProductOptions().subscribe({
       next: (products) => this.productOptionsSignal.set([{ value: null, label: 'Por categoria' }, ...products.map((product) => ({ value: product.id, label: `${product.sku} · ${product.name}` }))])
     });
   }
