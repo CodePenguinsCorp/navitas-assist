@@ -487,9 +487,19 @@ As demais etapas preservam os padrões. Prazos e substituições aceitam de 1 a 
 - Filtros e apresentação: `npm run test:sla` em `frontend/`, com Node 22.14+ (runner nativo, sem framework adicional).
 - Templates e tipos Angular: `npm run build` em `frontend/`.
 
+## Remessas e rastreamento (NAV-44)
+
+Controle interno das coletas, postagens, transferências e devoluções de cada RMA. A migration `V5__create_rma_shipments.sql` cria `rma_shipments` e `rma_shipment_events`.
+
+- **Várias remessas por RMA**, com origem, destino, volumes, transportadora, serviço, código de rastreio, referência de etiqueta e custo (`BigDecimal`). `GET /api/shipments/rma/{rmaId}/summary` soma os custos logísticos do RMA.
+- **Eventos**: integração (`INTEGRATION`), manual (`MANUAL`) e sistema (`SYSTEM`); são imutáveis. Eventos de transportadora são idempotentes por `externalEventId` dentro da remessa. Eventos antigos que chegam fora de ordem entram no histórico, mas não regridem a situação.
+- **Operação manual auditada**: `POST /api/shipments/{id}/events` e `PUT /api/shipments/{id}` exigem justificativa e registram o autor. Funcionam sem integração.
+- **Integração**: a porta `CarrierTrackingGateway` ainda não tem implementação real. A implementação padrão responde `503` em `POST /api/shipments/{id}/sync`, sem afetar a operação manual. O endpoint de ingestão `POST /api/shipments/events/ingest` é restrito a ADMIN.
+- **Endereços**: visíveis apenas para ADMIN e SERVICE_DESK; para os demais perfis a resposta traz `addressRestricted: true` e os endereços nulos. Endereços de remessas encerradas são apagados após `SHIPMENT_ADDRESS_RETENTION_DAYS` dias (padrão 365), por rotina diária às 03:00 de America/Sao_Paulo.
+- **Sem acesso de clientes**: todas as rotas exigem autenticação interna; não há links públicos de acompanhamento. Exclusões são negadas.
 ## Localização física e custódia (NAV-38)
 
-Controla onde cada RMA está fisicamente e quem responde pela sua custódia. A migration `V2__create_custody_tracking.sql` cria `storage_locations` e `rma_custody_movements`.
+Controla onde cada RMA está fisicamente e quem responde pela sua custódia. A migration `V3__create_custody_tracking.sql` cria `storage_locations` e `rma_custody_movements`.
 
 - **Locais** (`/locais`, ADMIN e SERVICE_DESK): áreas, bancadas, prateleiras, quarentena e expedição, com local superior opcional e situação ativo/inativo. Locais não são excluídos, apenas inativados; um local inativo (ou dentro de um local inativo) não recebe movimentações, e um local que guarda equipamento não pode ser inativado.
 - **Movimentações** (`/localizacao`): entrada (RMA sem localização), transferência (registra origem, destino, responsável, operador, horário e motivo) e saída (somente RMAs `COMPLETED`, `RETURNED` ou `IRREPARABLE`). ADMIN, SERVICE_DESK e TECHNICIAN movimentam; VIEWER apenas consulta. Sem responsável informado, a custódia fica com o operador.

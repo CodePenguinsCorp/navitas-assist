@@ -30,6 +30,11 @@ public class RestExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), List.of());
     }
 
+    @ExceptionHandler(CarrierUnavailableException.class)
+    public ResponseEntity<ApiError> handleCarrierUnavailable(CarrierUnavailableException exception) {
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, exception.getMessage(), List.of());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException exception) {
         List<String> details = exception.getBindingResult()

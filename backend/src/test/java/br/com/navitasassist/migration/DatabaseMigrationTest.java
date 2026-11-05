@@ -47,6 +47,8 @@ class DatabaseMigrationTest {
             assertTrue(tableExists(connection, "rma_items"));
             assertTrue(tableExists(connection, "rma_assignment_history"));
             assertTrue(tableExists(connection, "kanban_views"));
+            assertTrue(tableExists(connection, "rma_shipments"));
+            assertTrue(tableExists(connection, "rma_shipment_events"));
             assertTrue(tableExists(connection, "storage_locations"));
             assertTrue(tableExists(connection, "rma_custody_movements"));
             assertFalse(columnExists(connection, "clients", "contact_name"));
@@ -85,6 +87,11 @@ class DatabaseMigrationTest {
                 Set.of("idx_kanban_views_owner_id"),
                 applicationIndexes(connection, "kanban_views")
             );
+            assertEquals(
+                Set.of("idx_rma_shipments_rma_id", "idx_rma_shipments_status"),
+                applicationIndexes(connection, "rma_shipments")
+            );
+            assertEquals(12, columnSize(connection, "rma_shipments", "cost"));
             assertEquals(
                 Set.of(
                     "idx_rma_custody_movements_rma_id",
