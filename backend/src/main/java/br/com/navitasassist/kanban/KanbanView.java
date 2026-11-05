@@ -75,4 +75,6 @@ public class KanbanView extends AuditableEntity {
     private LocalDate updatedFrom;
 
     private LocalDate updatedTo;
+
+    private Boolean blocked;
 }

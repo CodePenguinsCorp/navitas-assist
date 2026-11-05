@@ -204,6 +204,20 @@ class KanbanViewControllerIntegrationTest {
             .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void shouldPersistBlockedAndUnblockedFilters() throws Exception {
+        for (boolean blocked : new boolean[] { true, false }) {
+            Map<String, Object> values = filters(null);
+            values.put("blocked", blocked);
+            mockMvc.perform(post("/api/kanban-views").with(user("view.alice").roles("VIEWER")).with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON).content(viewJson("Blocked " + blocked, false, values)))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.filters.blocked").value(blocked));
+        }
+        mockMvc.perform(get("/api/kanban-views").with(user("view.alice").roles("VIEWER")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$[0].filters.blocked").value(false))
+            .andExpect(jsonPath("$[1].filters.blocked").value(true));
+    }
+
     private String viewJson(String name, boolean defaultView, Map<String, Object> filters) throws Exception {
         return objectMapper.writeValueAsString(Map.of(
             "name", name,

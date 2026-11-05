@@ -61,6 +61,9 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
     @Query("select distinct r from RmaRecord r left join fetch r.assignmentHistory where r in :rmas")
     List<RmaRecord> fetchAssignmentHistory(@Param("rmas") List<RmaRecord> rmas);
 
+    @Query("select distinct r from RmaRecord r left join fetch r.blockHistory where r in :rmas")
+    List<RmaRecord> fetchBlockHistory(@Param("rmas") List<RmaRecord> rmas);
+
     @Query("""
         select distinct r
         from RmaRecord r
