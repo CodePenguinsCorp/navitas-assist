@@ -6,6 +6,7 @@ import {
   OnDestroy,
   Output,
   computed,
+  effect,
   forwardRef,
   inject,
   input,
@@ -38,7 +39,7 @@ const WEEKDAY_LABELS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 })
 export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
   private static openPicker: DatePickerComponent | null = null;
-  private readonly hostElement = inject(ElementRef<HTMLElement>);
+  private readonly hostElement: ElementRef<HTMLElement> = inject(ElementRef);
 
   readonly placeholder = input('Selecione uma data');
   readonly ariaLabel = input('Selecionar data');
@@ -70,6 +71,12 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
 
   private onChange: (value: string) => void = () => {};
   private onTouched: () => void = () => {};
+
+  constructor() {
+    effect(() => {
+      if (this.isDisabled() && this.isOpen()) this.close();
+    });
+  }
 
   protected toggle(): void {
     if (this.isDisabled()) {
@@ -142,6 +149,15 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
     }
   }
 
+  @HostListener('keydown.escape', ['$event'])
+  protected handleEscape(event: Event): void {
+    if (!this.isOpen() || event.defaultPrevented) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.close();
+    this.hostElement.nativeElement.querySelector<HTMLButtonElement>('.date-picker__trigger')?.focus();
+  }
+
   @HostListener('document:click', ['$event'])
   protected handleDocumentClick(event: MouseEvent): void {
     if (!this.hostElement.nativeElement.contains(event.target as Node)) {
@@ -150,6 +166,7 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
   }
 
   private applyValue(value: string): void {
+    if (this.isDisabled()) return;
     this.selectedValue.set(value);
     this.onChange(value);
     this.valueChange.emit(value);
@@ -161,15 +178,21 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
     this.viewMonth.set(startOfMonth(parsed ?? parseIsoDate(todayInputValue())!));
   }
 
+  @HostListener('focusout', ['$event'])
+  protected handleFocusOut(event: FocusEvent): void {
+    if (!this.isDisabled() && !this.hostElement.nativeElement.contains(event.relatedTarget as Node | null)) {
+      this.onTouched();
+    }
+  }
+
   private close(): void {
     if (DatePickerComponent.openPicker === this) {
       DatePickerComponent.openPicker = null;
     }
     if (this.isOpen()) {
       this.isOpen.set(false);
+      this.onTouched();
     }
-
-    this.onTouched();
   }
 }
 

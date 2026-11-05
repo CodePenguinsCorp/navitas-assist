@@ -92,7 +92,6 @@ export interface ClientResponse {
   legalName: string;
   tradeName: string | null;
   documentNumber: string | null;
-  contactName: string | null;
   email: string | null;
   phone: string | null;
   address: string | null;
@@ -105,7 +104,6 @@ export interface ClientRequest {
   legalName: string;
   tradeName: string | null;
   documentNumber: string | null;
-  contactName: string | null;
   email: string | null;
   phone: string | null;
   address: string | null;
@@ -295,6 +293,228 @@ export interface RmaResponse {
   updatedAt: string;
 }
 
+export type NotificationEventType =
+  | 'RMA_CREATED'
+  | 'RMA_ASSIGNED'
+  | 'SLA_WARNING'
+  | 'SLA_OVERDUE'
+  | 'RMA_BLOCKED'
+  | 'WIP_LIMIT_EXCEEDED'
+  | 'PART_PENDING'
+  | 'INTERNAL_APPROVAL_REQUIRED'
+  | 'TEST_FAILED'
+  | 'RECURRENCE_DETECTED';
+
+export type NotificationSeverity = 'INFO' | 'WARNING' | 'CRITICAL';
+
+export interface NotificationResponse {
+  id: number;
+  eventType: NotificationEventType;
+  severity: NotificationSeverity;
+  title: string;
+  message: string;
+  rmaId: number | null;
+  rmaCode: string | null;
+  actionPath: string | null;
+  createdAt: string;
+  readAt: string | null;
+  snoozedUntil: string | null;
+  read: boolean;
+}
+
+export interface NotificationSummaryResponse {
+  unread: number;
+}
+
+export interface NotificationPreferenceResponse {
+  eventType: NotificationEventType;
+  severity: NotificationSeverity;
+  enabled: boolean;
+  userMutable: boolean;
+  muted: boolean;
+}
+
+export interface NotificationRuleRequest {
+  enabled: boolean;
+  severity: NotificationSeverity;
+  recipientRoles: UserRole[];
+  notifyAssignee: boolean;
+  emailEnabled: boolean;
+  userMutable: boolean;
+}
+
+export interface NotificationRuleResponse extends NotificationRuleRequest {
+  eventType: NotificationEventType;
+  updatedAt: string;
+  updatedBy: string | null;
+}
+
+export interface NotificationFailureResponse {
+  source: 'EVENT' | 'EMAIL';
+  eventKey: string;
+  eventType: NotificationEventType;
+  rmaCode: string | null;
+  recipient: string | null;
+  error: string | null;
+  occurredAt: string;
+}
+
+export type PartMovementType =
+  | 'ENTRY'
+  | 'EXIT'
+  | 'ADJUSTMENT'
+  | 'RESERVATION'
+  | 'RESERVATION_CANCEL'
+  | 'CONSUMPTION'
+  | 'REVERSAL';
+
+export type ManualPartMovementType = Extract<PartMovementType, 'ENTRY' | 'EXIT' | 'ADJUSTMENT'>;
+
+export type PartReservationStatus = 'PENDING' | 'ACTIVE' | 'CONSUMED' | 'CANCELLED' | 'REVERSED';
+
+export interface PartRequest {
+  code: string;
+  name: string;
+  unit: string;
+  location: string | null;
+  minimumStock: number;
+  unitCost: number;
+  active: boolean;
+}
+
+export interface PartResponse {
+  id: number;
+  code: string;
+  name: string;
+  unit: string;
+  location: string | null;
+  minimumStock: number;
+  unitCost: number;
+  onHand: number;
+  reserved: number;
+  available: number;
+  belowMinimum: boolean;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PartMovementRequest {
+  type: ManualPartMovementType;
+  quantity: number;
+  reason: string | null;
+}
+
+export interface PartReversalRequest {
+  reason: string;
+}
+
+export interface PartMovementResponse {
+  id: number;
+  partId: number;
+  partCode: string;
+  partName: string;
+  type: PartMovementType;
+  quantity: number;
+  onHandChange: number;
+  reservedChange: number;
+  onHandAfter: number;
+  reservedAfter: number;
+  unitCost: number;
+  totalCost: number;
+  rmaId: number | null;
+  rmaCode: string | null;
+  reservationId: number | null;
+  reversedMovementId: number | null;
+  reversed: boolean;
+  reason: string | null;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface PartReservationRequest {
+  partId: number;
+  quantity: number;
+  note: string | null;
+}
+
+export interface PartReservationResponse {
+  id: number;
+  rmaId: number;
+  rmaCode: string;
+  partId: number;
+  partCode: string;
+  partName: string;
+  unit: string;
+  location: string | null;
+  quantity: number;
+  status: PartReservationStatus;
+  partAvailable: number;
+  unitCost: number;
+  totalCost: number;
+  note: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RmaPartsResponse {
+  rmaId: number;
+  rmaCode: string;
+  reservations: PartReservationResponse[];
+  movements: PartMovementResponse[];
+  reservedCost: number;
+  consumedCost: number;
+  pendingCount: number;
+}
+
+export interface PartReplenishmentResponse {
+  partId: number;
+  code: string;
+  name: string;
+  unit: string;
+  location: string | null;
+  minimumStock: number;
+  onHand: number;
+  reserved: number;
+  available: number;
+  pendingQuantity: number;
+  suggestedQuantity: number;
+  belowMinimum: boolean;
+}
+
+export interface RmaReportFilters {
+  entryFrom?: string;
+  entryTo?: string;
+  status?: RmaStatus;
+  clientId?: number;
+}
+
+export interface RmaReportResponse {
+  generatedAt: string;
+  entryFrom: string;
+  entryTo: string;
+  rmas: RmaResponse[];
+}
+
+export type ScanSource = 'CAMERA' | 'SCANNER' | 'MANUAL';
+
+export interface ScanCodeResponse {
+  rmaId: number;
+  rmaCode: string;
+  token: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface ScanStatusChangeRequest {
+  expectedStatus: RmaStatus;
+  status: RmaStatus;
+  note: string | null;
+  source: ScanSource;
+  confirmed: boolean;
+}
+
 export interface NavItem {
   label: string;
   route: string;
@@ -321,16 +541,207 @@ export interface ModuleCard {
   roles: UserRole[];
 }
 
-export interface ReportCard {
-  title: string;
-  description: string;
-  frequency: string;
-  format: string;
+export interface PageQuery {
+  page?: number;
+  size?: number;
 }
 
-export interface AccessMatrixItem {
-  role: UserRole;
-  access: string;
+export interface PageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface RmaSummaryResponse {
+  total: number;
+  ongoing: number;
+  highPriority: number;
+}
+
+export interface ClientSummaryResponse {
+  total: number;
+  withContact: number;
+  withDocument: number;
+  withEmail: number;
+}
+
+export interface ProductSummaryResponse {
+  total: number;
+  withFirmware: number;
+  averageWarrantyMonths: number;
+  categories: string[];
+}
+
+export interface UserSummaryResponse {
+  total: number;
+  active: number;
+  admins: number;
+  roles: number;
+}
+
+export type StorageLocationType = 'AREA' | 'BENCH' | 'SHELF' | 'QUARANTINE' | 'SHIPPING';
+
+export type CustodyMovementType = 'ENTRY' | 'TRANSFER' | 'EXIT';
+
+export type CustodyFlag = 'OK' | 'MISSING' | 'STALE';
+
+export interface StorageLocationRequest {
+  code: string;
+  name: string;
+  type: StorageLocationType;
+  parentId: number | null;
+  description: string | null;
+  active: boolean;
+}
+
+export interface StorageLocationResponse {
+  id: number;
+  code: string;
+  name: string;
+  type: StorageLocationType;
+  parentId: number | null;
+  parentName: string | null;
+  description: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustodyMovementRequest {
+  type: CustodyMovementType;
+  toLocationId: number | null;
+  custodianId: number | null;
+  reason: string | null;
+}
+
+export interface CustodyMovementResponse {
+  id: number;
+  type: CustodyMovementType;
+  fromLocationId: number | null;
+  fromLocationName: string | null;
+  toLocationId: number | null;
+  toLocationName: string | null;
+  custodianId: number | null;
+  custodianName: string | null;
+  reason: string | null;
+  performedBy: string;
+  performedAt: string;
+}
+
+export interface RmaCustodyResponse {
+  rmaId: number;
+  rmaCode: string;
+  rmaStatus: RmaStatus;
+  clientName: string;
+  productName: string;
+  locationId: number | null;
+  locationCode: string | null;
+  locationName: string | null;
+  locationType: StorageLocationType | null;
+  custodianId: number | null;
+  custodianName: string | null;
+  since: string | null;
+  flag: CustodyFlag;
+}
+
+export interface PageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface CustodySummaryResponse {
+  tracked: number;
+  missing: number;
+  stale: number;
+}
+
+export interface RmaCustodyDetailResponse {
+  current: RmaCustodyResponse;
+  movements: CustodyMovementResponse[];
+}
+
+export type ShipmentType = 'PICKUP' | 'POSTING' | 'TRANSFER' | 'RETURN';
+
+export type ShipmentStatus = 'CREATED' | 'LABEL_ISSUED' | 'IN_TRANSIT' | 'DELIVERY_ATTEMPT' | 'EXCEPTION' | 'DELIVERED' | 'CANCELLED';
+
+export type ShipmentEventSource = 'SYSTEM' | 'INTEGRATION' | 'MANUAL';
+
+export interface ShipmentFieldsRequest {
+  type: ShipmentType;
+  originName: string;
+  originAddress: string | null;
+  destinationName: string;
+  destinationAddress: string | null;
+  volumes: number;
+  carrier: string;
+  serviceName: string | null;
+  trackingCode: string | null;
+  labelReference: string | null;
+  cost: string | null;
+}
+
+export interface CreateShipmentRequest extends ShipmentFieldsRequest {
+  rmaId: number;
+}
+
+export interface UpdateShipmentRequest extends ShipmentFieldsRequest {
+  justification: string;
+}
+
+export interface ManualShipmentEventRequest {
+  status: ShipmentStatus;
+  description: string | null;
+  proofReference: string | null;
+  occurredAt: string | null;
+  justification: string;
+}
+
+export interface ShipmentResponse {
+  id: number;
+  rmaId: number;
+  rmaCode: string;
+  type: ShipmentType;
+  status: ShipmentStatus;
+  originName: string;
+  originAddress: string | null;
+  destinationName: string;
+  destinationAddress: string | null;
+  addressRestricted: boolean;
+  addressesPurged: boolean;
+  volumes: number;
+  carrier: string;
+  serviceName: string | null;
+  trackingCode: string | null;
+  labelReference: string | null;
+  cost: number | null;
+  deliveryAttempts: number;
+  closedAt: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShipmentEventResponse {
+  id: number;
+  source: ShipmentEventSource;
+  externalEventId: string | null;
+  status: ShipmentStatus;
+  description: string | null;
+  proofReference: string | null;
+  justification: string | null;
+  occurredAt: string;
+  recordedBy: string;
+  recordedAt: string;
+}
+
+export interface ShipmentDetailResponse {
+  shipment: ShipmentResponse;
+  events: ShipmentEventResponse[];
 }
 
 export type ProtocolItemType = 'CHECK' | 'MEASUREMENT' | 'TEXT';

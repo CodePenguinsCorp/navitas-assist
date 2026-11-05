@@ -22,6 +22,12 @@ server:
         secure: false
 
 navitas:
+  notifications:
+    sla-scan:
+      enabled: false
+  shipments:
+    retention:
+      enabled: false
   security:
     cookie-secure: false
     seed-admin:

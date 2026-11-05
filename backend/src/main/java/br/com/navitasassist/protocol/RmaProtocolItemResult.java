@@ -1,5 +1,7 @@
 package br.com.navitasassist.protocol;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.Instant;
 
@@ -45,6 +47,7 @@ public class RmaProtocolItemResult {
     @Column(nullable = false)
     private int attempt;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ProtocolItemOutcome outcome;

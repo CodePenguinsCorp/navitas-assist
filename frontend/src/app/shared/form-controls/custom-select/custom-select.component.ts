@@ -31,7 +31,7 @@ export interface CustomSelectOption<T = unknown> {
   ]
 })
 export class CustomSelectComponent implements ControlValueAccessor {
-  private readonly hostElement = inject(ElementRef<HTMLElement>);
+  private readonly hostElement: ElementRef<HTMLElement> = inject(ElementRef);
 
   readonly options = input<readonly CustomSelectOption[]>([]);
   readonly value = input<unknown>(CUSTOM_SELECT_NO_INPUT);
@@ -56,6 +56,10 @@ export class CustomSelectComponent implements ControlValueAccessor {
 
   constructor() {
     effect(() => {
+      if (this.isDisabled() && this.isOpen()) this.close();
+    });
+
+    effect(() => {
       const incomingValue = this.value();
       if (incomingValue !== CUSTOM_SELECT_NO_INPUT) {
         this.selectedValue.set(incomingValue);
@@ -68,10 +72,12 @@ export class CustomSelectComponent implements ControlValueAccessor {
       return;
     }
 
-    this.isOpen.update((open) => !open);
+    if (this.isOpen()) this.close();
+    else this.isOpen.set(true);
   }
 
   protected selectOption(option: CustomSelectOption): void {
+    if (this.isDisabled()) return;
     this.selectedValue.set(option.value);
     this.onChange(option.value);
     this.valueChange.emit(option.value);
@@ -101,6 +107,15 @@ export class CustomSelectComponent implements ControlValueAccessor {
     }
   }
 
+  @HostListener('keydown.escape', ['$event'])
+  protected handleEscape(event: Event): void {
+    if (!this.isOpen() || event.defaultPrevented) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.close();
+    this.hostElement.nativeElement.querySelector<HTMLButtonElement>('.custom-select__trigger')?.focus();
+  }
+
   @HostListener('document:click', ['$event'])
   protected handleDocumentClick(event: MouseEvent): void {
     if (!this.hostElement.nativeElement.contains(event.target as Node)) {
@@ -108,12 +123,18 @@ export class CustomSelectComponent implements ControlValueAccessor {
     }
   }
 
+  @HostListener('focusout', ['$event'])
+  protected handleFocusOut(event: FocusEvent): void {
+    if (!this.isDisabled() && !this.hostElement.nativeElement.contains(event.relatedTarget as Node | null)) {
+      this.onTouched();
+    }
+  }
+
   private close(): void {
     if (this.isOpen()) {
       this.isOpen.set(false);
+      this.onTouched();
     }
-
-    this.onTouched();
   }
 }
 

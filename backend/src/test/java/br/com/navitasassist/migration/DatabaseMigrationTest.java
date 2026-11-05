@@ -32,6 +32,18 @@ class DatabaseMigrationTest {
         assertEquals(flyway.info().all().length, executedMigrations);
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
             assertTrue(tableExists(connection, "rmas"));
+            assertTrue(tableExists(connection, "rma_code_generation_lock"));
+            try (Statement statement = connection.createStatement();
+                 ResultSet row = statement.executeQuery("SELECT id FROM rma_code_generation_lock")) {
+                assertTrue(row.next());
+                assertEquals(1, row.getLong("id"));
+                assertFalse(row.next());
+            }
+            assertThrows(SQLException.class, () -> {
+                try (Statement statement = connection.createStatement()) {
+                    statement.executeUpdate("INSERT INTO rma_code_generation_lock (id) VALUES (2)");
+                }
+            });
             assertTrue(tableExists(connection, "rma_items"));
             assertTrue(tableExists(connection, "rma_assignment_history"));
             assertTrue(tableExists(connection, "kanban_views"));
@@ -41,6 +53,14 @@ class DatabaseMigrationTest {
             assertTrue(tableExists(connection, "rma_protocol_executions"));
             assertTrue(tableExists(connection, "rma_protocol_item_results"));
             assertEquals(19, columnSize(connection, "rma_protocol_item_results", "measured_value"));
+            assertTrue(tableExists(connection, "rma_shipments"));
+            assertTrue(tableExists(connection, "rma_shipment_events"));
+            assertTrue(tableExists(connection, "storage_locations"));
+            assertTrue(tableExists(connection, "rma_custody_movements"));
+            assertFalse(columnExists(connection, "clients", "contact_name"));
+            assertEquals(30, columnSize(connection, "clients", "phone"));
+            assertEquals(255, columnSize(connection, "clients", "address"));
+            assertEquals(18, columnSize(connection, "clients", "document_number"));
             assertFalse(columnExists(connection, "rmas", "invoice_file_name"));
             assertEquals(80, columnSize(connection, "rmas", "invoice_number"));
             assertEquals(1000, columnSize(connection, "rmas", "reported_failure"));
@@ -73,6 +93,19 @@ class DatabaseMigrationTest {
                 Set.of("idx_kanban_views_owner_id"),
                 applicationIndexes(connection, "kanban_views")
             );
+            assertEquals(
+                Set.of("idx_rma_shipments_rma_id", "idx_rma_shipments_status"),
+                applicationIndexes(connection, "rma_shipments")
+            );
+            assertEquals(12, columnSize(connection, "rma_shipments", "cost"));
+            assertEquals(
+                Set.of(
+                    "idx_rma_custody_movements_rma_id",
+                    "idx_rma_custody_movements_to_location_id",
+                    "idx_rma_custody_movements_from_location_id"
+                ),
+                applicationIndexes(connection, "rma_custody_movements")
+            );
 
             long clientId = insertClient(connection);
             long productId = insertProduct(connection);
@@ -82,6 +115,36 @@ class DatabaseMigrationTest {
 
             assertEquals(2, count(connection, "rma_items"));
             assertThrows(SQLException.class, () -> insertItem(connection, 999999, productId, "ORPHAN"));
+        }
+    }
+
+    @Test
+    void createsPartInventoryTablesThatRejectNegativeAvailability() throws SQLException {
+        String url = "jdbc:h2:mem:migration_parts;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
+
+        Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate();
+
+        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
+            assertTrue(tableExists(connection, "parts"));
+            assertTrue(tableExists(connection, "part_reservations"));
+            assertTrue(tableExists(connection, "part_movements"));
+            assertEquals(Set.of("idx_part_reservations_part_id", "idx_part_reservations_rma_id", "idx_part_reservations_status"), applicationIndexes(connection, "part_reservations"));
+            assertEquals(Set.of("idx_part_movements_part_id", "idx_part_movements_rma_id"), applicationIndexes(connection, "part_movements"));
+
+            insertPart(connection, "PCA-OK", "5", "5");
+            assertThrows(SQLException.class, () -> insertPart(connection, "PCA-NEG", "1", "2"));
+        }
+    }
+
+    private void insertPart(Connection connection, String code, String onHand, String reserved) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+            INSERT INTO parts (code, name, unit, minimum_stock, unit_cost, on_hand_quantity, reserved_quantity, active, created_at, updated_at)
+            VALUES (?, 'Peça', 'un', 0, 1.50, ?, ?, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """)) {
+            statement.setString(1, code);
+            statement.setBigDecimal(2, new java.math.BigDecimal(onHand));
+            statement.setBigDecimal(3, new java.math.BigDecimal(reserved));
+            statement.executeUpdate();
         }
     }
 
@@ -173,11 +236,54 @@ class DatabaseMigrationTest {
         }
     }
 
+    @Test
+    void createsNotificationTablesWithSeededRulesAndIdempotencyKey() throws SQLException {
+        String url = "jdbc:h2:mem:migration_notifications;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
+
+        Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate();
+
+        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
+            assertTrue(tableExists(connection, "notification_rules"));
+            assertTrue(tableExists(connection, "notification_events"));
+            assertTrue(tableExists(connection, "notifications"));
+            assertTrue(tableExists(connection, "notification_mutes"));
+            assertEquals(Set.of("idx_notifications_recipient_id", "idx_notifications_rma_id"), applicationIndexes(connection, "notifications"));
+            assertEquals(4, count(connection, "notification_rules"));
+
+            try (Statement statement = connection.createStatement()) {
+                String insert = "INSERT INTO notification_events (event_key, event_type, status, recipient_count, occurred_at) VALUES ('KEY-1', 'RMA_CREATED', 'RECEIVED', 0, CURRENT_TIMESTAMP)";
+                statement.executeUpdate(insert);
+                assertThrows(SQLException.class, () -> statement.executeUpdate(insert));
+            }
+        }
+    }
+
     private int count(Connection connection, String tableName) throws SQLException {
         try (Statement statement = connection.createStatement();
              ResultSet result = statement.executeQuery("SELECT COUNT(*) FROM " + tableName)) {
             result.next();
             return result.getInt(1);
+        }
+    }
+
+    @Test
+    void createsScanCodeTablesWithUniqueOpaqueTokens() throws SQLException {
+        String url = "jdbc:h2:mem:migration_scan_codes;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
+
+        Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate();
+
+        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
+            assertTrue(tableExists(connection, "rma_scan_codes"));
+            assertTrue(tableExists(connection, "rma_scan_actions"));
+            assertEquals(Set.of("idx_rma_scan_codes_rma_id"), applicationIndexes(connection, "rma_scan_codes"));
+            assertEquals(Set.of("idx_rma_scan_actions_rma_id"), applicationIndexes(connection, "rma_scan_actions"));
+
+            long rmaId = insertRma(connection, insertClient(connection), insertProduct(connection));
+            String insert = "INSERT INTO rma_scan_codes (rma_id, token, barcode_token, active, created_at, created_by) VALUES (" + rmaId + ", 'TOKEN', '000000000000000000000001', TRUE, CURRENT_TIMESTAMP, 'teste')";
+            try (Statement statement = connection.createStatement()) {
+                statement.executeUpdate(insert);
+                assertThrows(SQLException.class, () -> statement.executeUpdate(insert));
+            }
         }
     }
 }

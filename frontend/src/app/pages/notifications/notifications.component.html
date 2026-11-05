@@ -1,0 +1,192 @@
+<section class="page-surface">
+  <section class="page-heading">
+    <div>
+      <h1>Notificações</h1>
+    </div>
+  </section>
+
+  <div class="notification-tabs" role="tablist">
+    <button type="button" role="tab" class="button-secondary button-secondary--small" [class.is-active]="activeTab() === 'inbox'" [attr.aria-selected]="activeTab() === 'inbox'" (click)="selectTab('inbox')">
+      Caixa de entrada ({{ unreadCount() }})
+    </button>
+    <button type="button" role="tab" class="button-secondary button-secondary--small" [class.is-active]="activeTab() === 'preferences'" [attr.aria-selected]="activeTab() === 'preferences'" (click)="selectTab('preferences')">Preferências</button>
+    @if (isAdmin()) {
+      <button type="button" role="tab" class="button-secondary button-secondary--small" [class.is-active]="activeTab() === 'rules'" [attr.aria-selected]="activeTab() === 'rules'" (click)="selectTab('rules')">Regras</button>
+    }
+  </div>
+
+  @if (errorMessage()) {
+    <article class="panel alert-banner alert-banner--error" role="alert">
+      <strong>{{ errorMessage() }}</strong>
+    </article>
+  }
+  @if (successMessage()) {
+    <article class="panel alert-banner alert-banner--success" role="status">
+      <strong>{{ successMessage() }}</strong>
+    </article>
+  }
+
+  @if (activeTab() === 'inbox') {
+    <article class="panel table-card">
+      <div class="notification-toolbar">
+        <label><input type="checkbox" [checked]="unreadOnly()" (change)="toggleUnreadOnly()" /> Somente não lidas</label>
+        <label><input type="checkbox" [checked]="includeSnoozed()" (change)="toggleIncludeSnoozed()" /> Mostrar adiadas</label>
+        <button type="button" class="button-secondary button-secondary--small" (click)="markAllRead()" [disabled]="busy() || !hasUnread()">Marcar todas como lidas</button>
+      </div>
+
+      @if (loading() && notifications().length === 0) {
+        <p>Carregando notificações...</p>
+      } @else if (notifications().length === 0) {
+        <section class="empty-state">
+          <h3>Nenhuma notificação.</h3>
+          <p>Alertas sobre RMAs atribuídos, novos itens e SLA aparecem aqui.</p>
+        </section>
+      } @else {
+        <div class="notification-list">
+          @for (notification of notifications(); track notification.id) {
+            <div class="notification-item" [class.is-unread]="!notification.read">
+              <div>
+                <span class="mini-chip" [class]="severityClass(notification.severity)">{{ severityLabels[notification.severity] }}</span>
+                <span class="mini-chip">{{ eventLabels[notification.eventType] }}</span>
+                <strong class="table-title">{{ notification.title }}</strong>
+                <span>{{ notification.message }}</span>
+                <small>
+                  {{ dateTime(notification.createdAt) }}
+                  @if (notification.snoozedUntil) { · adiada até {{ dateTime(notification.snoozedUntil) }} }
+                </small>
+              </div>
+              <div class="notification-actions">
+                @if (notification.actionPath) {
+                  <button type="button" class="button-primary button-secondary--small" (click)="open(notification)">Abrir RMA</button>
+                }
+                @if (!notification.read) {
+                  <button type="button" class="button-secondary button-secondary--small" (click)="markRead(notification)" [disabled]="busy()">Marcar como lida</button>
+                }
+                <select #snoozeSelect aria-label="Adiar notificação" (change)="snooze(notification, snoozeSelect.value); snoozeSelect.value = ''" [disabled]="busy()">
+                  <option value="">Adiar...</option>
+                  @for (option of snoozeOptions; track option.value) {
+                    <option [value]="option.value">{{ option.label }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </article>
+  }
+
+  @if (activeTab() === 'preferences') {
+    <article class="panel table-card">
+      <p>Silencie os alertas que a regra permite. Alertas obrigatórios continuam chegando.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Alerta</th>
+              <th>Severidade</th>
+              <th>Situação</th>
+              <th class="table-actions-col">Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (preference of preferences(); track preference.eventType) {
+              <tr>
+                <td>{{ eventLabels[preference.eventType] }}</td>
+                <td><span class="mini-chip" [class]="severityClass(preference.severity)">{{ severityLabels[preference.severity] }}</span></td>
+                <td>{{ !preference.enabled ? 'Regra desativada' : preference.muted ? 'Silenciado' : 'Recebendo' }}</td>
+                <td class="table-actions-col">
+                  @if (preference.userMutable) {
+                    <button type="button" class="button-secondary button-secondary--small" (click)="toggleMute(preference)" [disabled]="busy()">{{ preference.muted ? 'Reativar' : 'Silenciar' }}</button>
+                  } @else {
+                    <small>Obrigatório</small>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </article>
+  }
+
+  @if (activeTab() === 'rules' && isAdmin()) {
+    <article class="panel table-card">
+      <p>As alterações valem para os próximos eventos, sem nova implantação. O e-mail usa apenas o domínio corporativo configurado no servidor.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Alerta</th>
+              <th>Ativa</th>
+              <th>Severidade</th>
+              <th>Perfis</th>
+              <th>Responsável</th>
+              <th>E-mail</th>
+              <th>Silenciável</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (rule of rules(); track rule.eventType) {
+              <tr>
+                <td>{{ eventLabels[rule.eventType] }}<span class="table-subtitle">Atualizada {{ dateTime(rule.updatedAt) }} por {{ rule.updatedBy || 'sistema' }}</span></td>
+                <td><input type="checkbox" [attr.aria-label]="'Ativar ' + eventLabels[rule.eventType]" [checked]="rule.enabled" [disabled]="busy()" (change)="updateRule(rule, { enabled: !rule.enabled })" /></td>
+                <td>
+                  <select #severitySelect [attr.aria-label]="'Severidade de ' + eventLabels[rule.eventType]" [value]="rule.severity" [disabled]="busy()" (change)="updateSeverity(rule, severitySelect.value)">
+                    @for (severity of severities; track severity) {
+                      <option [value]="severity">{{ severityLabels[severity] }}</option>
+                    }
+                  </select>
+                </td>
+                <td>
+                  <div class="rule-roles">
+                    @for (role of roleOptions; track role) {
+                      <label><input type="checkbox" [checked]="rule.recipientRoles.includes(role)" [disabled]="busy()" (change)="toggleRole(rule, role)" /> {{ roleLabels[role] }}</label>
+                    }
+                  </div>
+                </td>
+                <td><input type="checkbox" [attr.aria-label]="'Notificar responsável em ' + eventLabels[rule.eventType]" [checked]="rule.notifyAssignee" [disabled]="busy()" (change)="updateRule(rule, { notifyAssignee: !rule.notifyAssignee })" /></td>
+                <td><input type="checkbox" [attr.aria-label]="'E-mail em ' + eventLabels[rule.eventType]" [checked]="rule.emailEnabled" [disabled]="busy()" (change)="updateRule(rule, { emailEnabled: !rule.emailEnabled })" /></td>
+                <td><input type="checkbox" [attr.aria-label]="'Permitir silenciar ' + eventLabels[rule.eventType]" [checked]="rule.userMutable" [disabled]="busy()" (change)="updateRule(rule, { userMutable: !rule.userMutable })" /></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="panel table-card">
+      <h3>Falhas de processamento</h3>
+      @if (failures().length === 0) {
+        <p>Nenhuma falha registrada.</p>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Origem</th>
+                <th>Alerta</th>
+                <th>RMA</th>
+                <th>Destinatário</th>
+                <th>Erro</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (failure of failures(); track failure.eventKey + failure.source + (failure.recipient ?? '')) {
+                <tr>
+                  <td>{{ dateTime(failure.occurredAt) }}</td>
+                  <td>{{ failure.source === 'EMAIL' ? 'E-mail' : 'Evento' }}</td>
+                  <td>{{ eventLabels[failure.eventType] }}</td>
+                  <td>{{ failure.rmaCode || '—' }}</td>
+                  <td>{{ failure.recipient || '—' }}</td>
+                  <td>{{ failure.error || '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </article>
+  }
+</section>

@@ -10,16 +10,16 @@
 
   <section class="stats-grid stats-grid--three">
     <article class="panel stat-card">
-      <span>Com contato</span>
-      <strong>{{ clientsWithContact() }}</strong>
+      <span>Com telefone</span>
+      <strong>{{ summary().withContact }}</strong>
     </article>
     <article class="panel stat-card">
       <span>Com documento</span>
-      <strong>{{ clientsWithDocument() }}</strong>
+      <strong>{{ summary().withDocument }}</strong>
     </article>
     <article class="panel stat-card">
       <span>Com e-mail</span>
-      <strong>{{ clientsWithEmail() }}</strong>
+      <strong>{{ summary().withEmail }}</strong>
     </article>
   </section>
 
@@ -27,20 +27,20 @@
     <label class="search-field">
       <span class="search-field__heading">
         <span>Buscar</span>
-        <span class="catalog-toolbar__result">{{ filteredClients().length }} registro(s)</span>
+        <span class="catalog-toolbar__result">{{ totalElements() }} registro(s)</span>
       </span>
       <input
         #clientSearch
         type="search"
-        placeholder="Razão social, contato, documento ou e-mail"
+        placeholder="Razão social, nome fantasia, CPF/CNPJ, telefone ou e-mail"
         [value]="searchTerm()"
         (input)="updateSearch(clientSearch.value)"
       />
     </label>
     <label class="filter-field">
-      <span>Documento</span>
+      <span>CPF/CNPJ</span>
       <app-custom-select
-        ariaLabel="Filtrar por documento"
+        ariaLabel="Filtrar por CPF/CNPJ"
         [options]="presenceFilterOptions"
         [value]="documentFilter()"
         (valueChange)="updateDocumentFilter($any($event))"
@@ -72,13 +72,13 @@
   <article class="table-card table-card--list panel">
     @if (loading() && clients().length === 0) {
       <p>Carregando clientes...</p>
-    } @else if (clients().length === 0) {
+    } @else if (clients().length === 0 && !hasActiveFilters) {
       <section class="empty-state">
         <h3>Nenhum cliente cadastrado.</h3>
         <p>Cadastre o primeiro cliente para vincular novos RMAs.</p>
         <button type="button" class="button-primary" (click)="openCreateModal()">Cadastrar cliente</button>
       </section>
-    } @else if (filteredClients().length === 0) {
+    } @else if (clients().length === 0) {
       <section class="empty-state">
         <h3>Nenhum resultado encontrado.</h3>
         <p>Ajuste a busca ou os filtros para localizar outro cliente.</p>
@@ -89,22 +89,22 @@
           <thead>
             <tr>
               <th>Cliente</th>
-              <th>Contato</th>
-              <th>Documento</th>
+              <th>Telefone / e-mail</th>
+              <th>CPF/CNPJ</th>
               <th>Atualizado</th>
               <th class="table-actions-col">Ação</th>
             </tr>
           </thead>
           <tbody>
-            @for (client of filteredClients(); track client.id) {
+            @for (client of clients(); track client.id) {
               <tr>
                 <td>
                   <strong class="table-title">{{ client.legalName }}</strong>
                   <span class="table-subtitle">{{ client.tradeName || 'Sem nome fantasia' }}</span>
                 </td>
                 <td>
-                  <strong class="table-title">{{ client.contactName || 'Não informado' }}</strong>
-                  <span class="table-subtitle">{{ client.email || client.phone || 'Sem canal principal' }}</span>
+                  <strong class="table-title">{{ client.phone?.trim() || 'Não informado' }}</strong>
+                  <span class="table-subtitle">{{ client.email?.trim() || 'Não informado' }}</span>
                 </td>
                 <td>{{ client.documentNumber || 'Não informado' }}</td>
                 <td>{{ updatedAtLabel(client) }}</td>
@@ -133,6 +133,16 @@
           </tbody>
         </table>
       </div>
+      <app-pagination
+        [page]="page()"
+        [size]="pageSize()"
+        [totalElements]="totalElements()"
+        [totalPages]="totalPages()"
+        [shown]="clients().length"
+        [loading]="loading()"
+        (pageChange)="goToPage($event)"
+        (sizeChange)="changePageSize($event)"
+      />
     }
   </article>
 </section>
@@ -145,7 +155,7 @@
           <h3>{{ editingClient() ? 'Editar cliente' : 'Novo cliente' }}</h3>
           <p>{{ editingClient() ? 'Atualize os dados principais do cliente.' : 'Preencha os dados principais para liberar o cadastro.' }}</p>
         </div>
-        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()">
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()" [disabled]="submitting()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
       </header>
@@ -160,7 +170,6 @@
         <label class="field-group field-group--full">
           <span>Razão social</span>
           <input type="text" formControlName="legalName" (input)="limitLegalName($event)" />
-          <small>Até 120 caracteres, sem contar espaços e traços.</small>
           @if (hasError('legalName')) {
             <small class="field-error">Informe a razão social com até 120 caracteres, sem contar espaços e traços.</small>
           }
@@ -172,7 +181,7 @@
         </label>
 
         <label class="field-group">
-          <span>CNPJ/CPF</span>
+          <span>CPF/CNPJ</span>
           <input type="text" formControlName="documentNumber" maxlength="18" />
         </label>
 

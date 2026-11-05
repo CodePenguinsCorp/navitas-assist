@@ -1,0 +1,297 @@
+<section class="page-surface">
+  <section class="page-heading">
+    <div>
+      <h1>Remessas</h1>
+    </div>
+    @if (canManage()) {
+      <div class="shell-actions">
+        <button type="button" class="button-primary" (click)="openCreateForm()">Nova remessa</button>
+      </div>
+    }
+  </section>
+
+  <section class="stats-grid stats-grid--three">
+    <article class="panel stat-card">
+      <span>Remessas</span>
+      <strong>{{ shipments().length }}</strong>
+    </article>
+    <article class="panel stat-card">
+      <span>Em aberto</span>
+      <strong>{{ openCount() }}</strong>
+    </article>
+    <article class="panel stat-card">
+      <span>Exceções e tentativas</span>
+      <strong>{{ attentionCount() }}</strong>
+    </article>
+  </section>
+
+  <section class="panel catalog-toolbar catalog-toolbar--filters">
+    <label class="search-field">
+      <span class="search-field__heading">
+        <span>Buscar</span>
+        <span class="catalog-toolbar__result">{{ filteredShipments().length }} registro(s)</span>
+      </span>
+      <input #shipmentSearch type="search" placeholder="RMA, transportadora, rastreio, origem ou destino" [value]="searchTerm()" (input)="updateSearch(shipmentSearch.value)" />
+    </label>
+    <label class="filter-field">
+      <span>Situação</span>
+      <app-custom-select ariaLabel="Filtrar por situação" [options]="statusFilterOptions" [value]="statusFilter()" (valueChange)="updateStatusFilter($any($event))" />
+    </label>
+  </section>
+
+  @if (errorMessage()) {
+    <article class="panel alert-banner alert-banner--error">
+      <strong>{{ errorMessage() }}</strong>
+    </article>
+  }
+
+  @if (successMessage()) {
+    <article class="panel alert-banner alert-banner--success">
+      <strong>{{ successMessage() }}</strong>
+    </article>
+  }
+
+  <article class="table-card table-card--list panel">
+    @if (loading() && shipments().length === 0) {
+      <p>Carregando remessas...</p>
+    } @else if (filteredShipments().length === 0) {
+      <section class="empty-state">
+        <h3>Nenhuma remessa encontrada.</h3>
+        <p>Registre coletas, postagens, transferências e devoluções vinculadas aos RMAs.</p>
+      </section>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>RMA</th>
+              <th>Tipo</th>
+              <th>Transportadora</th>
+              <th>Rastreio</th>
+              <th>Situação</th>
+              <th>Custo</th>
+              <th>Atualizado</th>
+              <th class="table-actions-col">Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (shipment of filteredShipments(); track shipment.id) {
+              <tr>
+                <td>
+                  <strong class="table-title">{{ shipment.rmaCode }}</strong>
+                  <span class="table-subtitle">{{ shipment.originName }} → {{ shipment.destinationName }} · {{ shipment.volumes }} volume(s)</span>
+                </td>
+                <td>{{ typeLabel(shipment.type) }}</td>
+                <td>{{ shipment.carrier }}{{ shipment.serviceName ? ' · ' + shipment.serviceName : '' }}</td>
+                <td>{{ shipment.trackingCode ?? '—' }}</td>
+                <td>
+                  <span [class]="statusClass(shipment.status)">{{ statusLabel(shipment.status) }}</span>
+                  @if (shipment.deliveryAttempts > 0) {
+                    <span class="table-subtitle">{{ shipment.deliveryAttempts }} tentativa(s)</span>
+                  }
+                </td>
+                <td>{{ costLabel(shipment.cost) }}</td>
+                <td>{{ dateTimeLabel(shipment.updatedAt) }}</td>
+                <td class="table-actions-col">
+                  <div class="shipment-actions">
+                    <button type="button" class="button-secondary button-secondary--small" (click)="openDetail(shipment)">Detalhes</button>
+                    @if (canManage()) {
+                      <button type="button" class="button-secondary button-secondary--small" (click)="openEditForm(shipment)">Editar</button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </article>
+</section>
+
+@if (formOpen()) {
+  <div class="modal-overlay" (click)="closeForm()">
+    <section class="modal-panel panel" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <div>
+          <h3>{{ editingShipment() ? 'Editar remessa' : 'Nova remessa' }}</h3>
+          <p>{{ editingShipment() ? 'Alterações ficam registradas com autor e justificativa.' : 'Registre a etiqueta e o rastreio quando disponíveis.' }}</p>
+        </div>
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeForm()">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </header>
+
+      @if (modalErrorMessage()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ modalErrorMessage() }}</strong>
+        </article>
+      }
+
+      <form class="form-grid" [formGroup]="form" (ngSubmit)="saveShipment()">
+        @if (!editingShipment()) {
+          <label class="field-group">
+            <span>RMA</span>
+            <app-custom-select ariaLabel="RMA" placeholder="Selecione o RMA" [options]="rmaOptions()" formControlName="rmaId" />
+          </label>
+        }
+
+        <label class="field-group">
+          <span>Tipo</span>
+          <app-custom-select ariaLabel="Tipo de remessa" [options]="typeOptions" formControlName="type" />
+        </label>
+
+        <label class="field-group">
+          <span>Origem</span>
+          <input type="text" formControlName="originName" maxlength="120" />
+          @if (hasError('originName')) {
+            <small class="field-error">Informe a origem.</small>
+          }
+        </label>
+
+        <label class="field-group">
+          <span>Destino</span>
+          <input type="text" formControlName="destinationName" maxlength="120" />
+          @if (hasError('destinationName')) {
+            <small class="field-error">Informe o destino.</small>
+          }
+        </label>
+
+        <label class="field-group field-group--full">
+          <span>Endereço de origem</span>
+          <textarea formControlName="originAddress" maxlength="500"></textarea>
+        </label>
+
+        <label class="field-group field-group--full">
+          <span>Endereço de destino</span>
+          <textarea formControlName="destinationAddress" maxlength="500"></textarea>
+        </label>
+
+        <label class="field-group">
+          <span>Volumes</span>
+          <input type="number" min="1" max="999" formControlName="volumes" />
+          @if (hasError('volumes')) {
+            <small class="field-error">Informe de 1 a 999 volumes.</small>
+          }
+        </label>
+
+        <label class="field-group">
+          <span>Transportadora</span>
+          <input type="text" formControlName="carrier" maxlength="120" />
+          @if (hasError('carrier')) {
+            <small class="field-error">Informe a transportadora.</small>
+          }
+        </label>
+
+        <label class="field-group">
+          <span>Serviço</span>
+          <input type="text" formControlName="serviceName" maxlength="120" />
+        </label>
+
+        <label class="field-group">
+          <span>Código de rastreio</span>
+          <input type="text" formControlName="trackingCode" maxlength="120" />
+        </label>
+
+        <label class="field-group">
+          <span>Etiqueta (número ou referência)</span>
+          <input type="text" formControlName="labelReference" maxlength="255" />
+        </label>
+
+        <label class="field-group">
+          <span>Custo logístico (R$)</span>
+          <input type="text" inputmode="decimal" placeholder="0,00" formControlName="cost" />
+          @if (hasError('cost')) {
+            <small class="field-error">Informe um valor como 125,90.</small>
+          }
+        </label>
+
+        @if (editingShipment()) {
+          <label class="field-group field-group--full">
+            <span>Justificativa da alteração</span>
+            <textarea formControlName="justification" maxlength="500"></textarea>
+          </label>
+        }
+
+        <div class="form-actions form-actions--full">
+          <button type="submit" class="button-primary" [disabled]="submitting()">{{ submitting() ? 'Salvando...' : editingShipment() ? 'Salvar alterações' : 'Registrar remessa' }}</button>
+          <button type="button" class="button-secondary" (click)="closeForm()" [disabled]="submitting()">Cancelar</button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (detail(); as current) {
+  <div class="modal-overlay" (click)="closeDetail()">
+    <section class="modal-panel panel" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <div>
+          <h3>{{ typeLabel(current.shipment.type) }} · {{ current.shipment.rmaCode }}</h3>
+          <p>{{ statusLabel(current.shipment.status) }} · uso interno da equipe</p>
+        </div>
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeDetail()">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </header>
+
+      @if (modalErrorMessage()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ modalErrorMessage() }}</strong>
+        </article>
+      }
+
+      <div class="shipment-details">
+        <div><span>Origem</span>{{ current.shipment.originName }} — {{ addressLabel(current.shipment, current.shipment.originAddress) }}</div>
+        <div><span>Destino</span>{{ current.shipment.destinationName }} — {{ addressLabel(current.shipment, current.shipment.destinationAddress) }}</div>
+        <div><span>Transportadora</span>{{ current.shipment.carrier }}{{ current.shipment.serviceName ? ' · ' + current.shipment.serviceName : '' }}</div>
+        <div><span>Rastreio e etiqueta</span>{{ current.shipment.trackingCode ?? '—' }} · {{ current.shipment.labelReference ?? 'sem etiqueta' }}</div>
+        <div><span>Volumes</span>{{ current.shipment.volumes }}</div>
+        <div><span>Custo</span>{{ costLabel(current.shipment.cost) }}</div>
+      </div>
+
+      <ul class="shipment-events">
+        @for (event of current.events; track event.id) {
+          <li>
+            <strong>{{ statusLabel(event.status) }} · {{ sourceLabel(event.source) }}</strong>
+            <p>{{ dateTimeLabel(event.occurredAt) }} · registrado por {{ event.recordedBy }}</p>
+            @if (event.description) {
+              <p>{{ event.description }}</p>
+            }
+            @if (event.proofReference) {
+              <p>Comprovante: {{ event.proofReference }}</p>
+            }
+            @if (event.justification) {
+              <p>Justificativa: {{ event.justification }}</p>
+            }
+          </li>
+        }
+      </ul>
+
+      @if (canManage()) {
+        <form class="form-grid" [formGroup]="eventForm" (ngSubmit)="saveManualEvent()">
+          <label class="field-group">
+            <span>Nova situação</span>
+            <app-custom-select ariaLabel="Nova situação" [options]="statusOptions" formControlName="status" />
+          </label>
+          <label class="field-group">
+            <span>Comprovante</span>
+            <input type="text" formControlName="proofReference" maxlength="255" />
+          </label>
+          <label class="field-group field-group--full">
+            <span>Descrição</span>
+            <input type="text" formControlName="description" maxlength="500" />
+          </label>
+          <label class="field-group field-group--full">
+            <span>Justificativa</span>
+            <textarea formControlName="justification" maxlength="500"></textarea>
+          </label>
+          <div class="form-actions form-actions--full">
+            <button type="submit" class="button-primary" [disabled]="submitting()">{{ submitting() ? 'Registrando...' : 'Registrar atualização manual' }}</button>
+            <button type="button" class="button-secondary" (click)="syncWithCarrier()" [disabled]="syncing() || !current.shipment.trackingCode">{{ syncing() ? 'Sincronizando...' : 'Sincronizar com transportadora' }}</button>
+          </div>
+        </form>
+      }
+    </section>
+  </div>
+}

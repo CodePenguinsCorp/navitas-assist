@@ -3,8 +3,10 @@ package br.com.navitasassist.service;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.controller.BusinessException;
@@ -12,6 +14,13 @@ import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.diagnosis.Diagnosis;
 import br.com.navitasassist.diagnosis.DiagnosisRequest;
 import br.com.navitasassist.item.ItemIdentification;
+import br.com.navitasassist.notification.NotificationEventType;
+import br.com.navitasassist.notification.RmaNotificationEvent;
+import br.com.navitasassist.pagination.PageParams;
+import br.com.navitasassist.pagination.PageResponse;
+import br.com.navitasassist.part.PartReservationStatus;
+import br.com.navitasassist.repository.PartReservationRepository;
+import br.com.navitasassist.repository.RmaCodeGenerationLockRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.CreateRmaRequest;
 import br.com.navitasassist.rma.RmaAssigneeUpdateRequest;
@@ -25,12 +34,15 @@ import br.com.navitasassist.rma.RmaResponse;
 import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusHistory;
 import br.com.navitasassist.rma.RmaStatusUpdateRequest;
+import br.com.navitasassist.rma.RmaSummaryResponse;
 import br.com.navitasassist.rma.UpdateRmaRequest;
 import br.com.navitasassist.user.UserAccount;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -39,17 +51,36 @@ import org.springframework.transaction.annotation.Transactional;
 public class RmaService {
 
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
+    private static final Set<RmaStatus> CLOSED_STATUSES = EnumSet.of(RmaStatus.COMPLETED, RmaStatus.RETURNED, RmaStatus.IRREPARABLE);
+    private static final Set<PartReservationStatus> OPEN_RESERVATION_STATUSES = EnumSet.of(PartReservationStatus.ACTIVE, PartReservationStatus.PENDING);
+    private static final int MAX_YEARLY_SEQUENCE = 999_999;
 
     private final RmaRecordRepository rmaRecordRepository;
+    private final RmaCodeGenerationLockRepository rmaCodeGenerationLockRepository;
     private final RmaSlaService rmaSlaService;
     private final ClientService clientService;
     private final ProductService productService;
     private final UserAccountService userAccountService;
     private final ProtocolExecutionService protocolExecutionService;
+    private final ApplicationEventPublisher eventPublisher;
+    private final PartReservationRepository partReservationRepository;
 
     @Transactional(readOnly = true)
     public List<RmaResponse> search(String query, RmaStatus status) {
         return rmaRecordRepository.search(trimToNull(query), status).stream().map(this::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<RmaResponse> searchPage(String query, RmaStatus status, Integer page, Integer size) {
+        return PageResponse.from(
+            rmaRecordRepository.searchPage(trimToNull(query), status, PageParams.of(page, size)),
+            this::toResponse
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public RmaSummaryResponse summarize(String query, RmaStatus status) {
+        return rmaRecordRepository.summarize(trimToNull(query), status, List.of(RmaStatus.COMPLETED, RmaStatus.RETURNED, RmaStatus.IRREPARABLE));
     }
 
     @Transactional(readOnly = true)
@@ -78,12 +109,12 @@ public class RmaService {
             .toList();
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public RmaResponse create(CreateRmaRequest request) {
         Client client = clientService.getEntityById(request.clientId());
         List<RmaItem> items = buildItems(request.items());
 
         RmaRecord rma = new RmaRecord();
-        rma.setCode(generateNextCode());
         rma.setClient(client);
         rma.setStatus(RmaStatus.RECEIVED);
         rma.setPriority(defaultPriority(request.priority()));
@@ -109,9 +140,12 @@ public class RmaService {
         );
         validateMandatoryFields(rma);
         validateDates(rma);
+        rma.setCode(generateNextCode());
         addStatusHistory(rma, RmaStatus.RECEIVED, "RMA created");
 
-        return toResponse(rmaRecordRepository.save(rma));
+        RmaRecord saved = rmaRecordRepository.save(rma);
+        eventPublisher.publishEvent(new RmaNotificationEvent(NotificationEventType.RMA_CREATED, "RMA_CREATED:" + saved.getId(), saved.getId(), Instant.now(), currentUsername()));
+        return toResponse(saved);
     }
 
     public RmaResponse update(Long id, UpdateRmaRequest request) {
@@ -153,7 +187,10 @@ public class RmaService {
     }
 
     public RmaResponse updateStatus(Long id, RmaStatusUpdateRequest request) {
-        return applyStatusChange(getEntityById(id), request);
+        RmaRecord rma = CLOSED_STATUSES.contains(request.status())
+            ? rmaRecordRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id))
+            : getEntityById(id);
+        return applyStatusChange(rma, request);
     }
 
     public RmaResponse updateStatusInBulk(Long id, RmaBulkStatusUpdateRequest request) {
@@ -167,6 +204,13 @@ public class RmaService {
 
     private RmaResponse applyStatusChange(RmaRecord rma, RmaStatusUpdateRequest request) {
         boolean changed = !Objects.equals(rma.getStatus(), request.status());
+
+        // Closing requires every part reservation to be consumed or cancelled first, so no stock stays locked or pending
+        // on a closed RMA. The RMA row is locked here and by PartStockService, which serializes both sides.
+        if (changed && CLOSED_STATUSES.contains(request.status())
+            && partReservationRepository.existsByRma_IdAndStatusIn(rma.getId(), OPEN_RESERVATION_STATUSES)) {
+            throw new BusinessException("RMA has open part reservations. Consume or cancel them before closing.");
+        }
 
         if (changed) {
             protocolExecutionService.assertTransitionAllowed(rma, request.status());
@@ -194,7 +238,11 @@ public class RmaService {
         }
 
         rma.setAssignee(newAssignee);
-        addAssignmentHistory(rma, previousAssignee, newAssignee);
+        RmaAssignmentHistory history = addAssignmentHistory(rma, previousAssignee, newAssignee);
+        if (newAssignee != null) {
+            String eventKey = "RMA_ASSIGNED:" + rma.getId() + ":" + newAssignee.getId() + ":" + history.getChangedAt().toEpochMilli();
+            eventPublisher.publishEvent(new RmaNotificationEvent(NotificationEventType.RMA_ASSIGNED, eventKey, rma.getId(), history.getChangedAt(), currentUsername()));
+        }
         return toResponse(rmaRecordRepository.save(rma));
     }
 
@@ -378,7 +426,7 @@ public class RmaService {
         rma.addStatusHistory(history);
     }
 
-    private void addAssignmentHistory(RmaRecord rma, UserAccount previousAssignee, UserAccount newAssignee) {
+    private RmaAssignmentHistory addAssignmentHistory(RmaRecord rma, UserAccount previousAssignee, UserAccount newAssignee) {
         RmaAssignmentHistory history = new RmaAssignmentHistory();
         history.setPreviousAssigneeId(previousAssignee == null ? null : previousAssignee.getId());
         history.setPreviousAssigneeName(previousAssignee == null ? null : previousAssignee.getFullName());
@@ -387,9 +435,13 @@ public class RmaService {
         history.setChangedBy(currentUsername());
         history.setChangedAt(Instant.now());
         rma.addAssignmentHistory(history);
+        return history;
     }
 
     private String generateNextCode() {
+        // Held until create commits or rolls back, including the RMA insert.
+        rmaCodeGenerationLockRepository.lockForCodeGeneration()
+            .orElseThrow(() -> new IllegalStateException("RMA code generation lock is missing"));
         int year = LocalDate.now(BUSINESS_ZONE).getYear();
         String prefix = "RMA-" + year + "-";
 
@@ -398,6 +450,10 @@ public class RmaService {
             .map(this::extractSequence)
             .map(sequence -> sequence + 1)
             .orElse(1);
+
+        if (nextValue > MAX_YEARLY_SEQUENCE) {
+            throw new BusinessException("Annual RMA code capacity reached.");
+        }
 
         return prefix + String.format("%06d", nextValue);
     }

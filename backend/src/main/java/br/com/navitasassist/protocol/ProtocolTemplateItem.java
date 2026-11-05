@@ -1,5 +1,7 @@
 package br.com.navitasassist.protocol;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 
 import jakarta.persistence.Column;
@@ -46,6 +48,7 @@ public class ProtocolTemplateItem {
     @Column(length = 1000)
     private String instructions;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(name = "item_type", nullable = false, length = 20)
     private ProtocolItemType type;

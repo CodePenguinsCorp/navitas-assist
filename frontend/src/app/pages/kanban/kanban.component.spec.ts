@@ -60,7 +60,7 @@ describe('KanbanComponent filters', () => {
             delete: () => of(undefined),
           },
         },
-        { provide: RmaService, useValue: { list: () => of(TEST_RMAS) } },
+        { provide: RmaService, useValue: { listBoard: () => of(TEST_RMAS) } },
       ],
     }).compileComponents();
 

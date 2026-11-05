@@ -1,7 +1,10 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { finalize, switchMap, timer } from 'rxjs';
 import { NAV_GROUPS, ROLE_LABELS } from '../core/mock-data';
 import { AuthService } from '../core/services/auth.service';
+import { NotificationService } from '../core/services/notification.service';
 
 @Component({
   selector: 'app-shell',
@@ -12,8 +15,12 @@ import { AuthService } from '../core/services/auth.service';
 export class AppShellComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly notificationService = inject(NotificationService);
 
   protected readonly currentUser = this.authService.currentUser;
+  protected readonly unreadNotifications = this.notificationService.unreadCount;
+  protected readonly loggingOut = signal(false);
+  protected readonly logoutError = signal('');
   protected readonly visibleNavGroups = computed(() =>
     NAV_GROUPS
       .map((group) => ({
@@ -28,10 +35,22 @@ export class AppShellComponent {
     return currentUser ? ROLE_LABELS[currentUser.role] : ROLE_LABELS.VIEWER;
   });
 
+  constructor() {
+    timer(0, 60_000).pipe(
+      switchMap(() => this.notificationService.refreshSummary()),
+      takeUntilDestroyed()
+    ).subscribe();
+  }
+
   protected logout(): void {
-    this.authService.logout().subscribe({
+    if (this.loggingOut()) return;
+    this.loggingOut.set(true);
+    this.logoutError.set('');
+    this.authService.logout().pipe(
+      finalize(() => this.loggingOut.set(false))
+    ).subscribe({
       complete: () => void this.router.navigateByUrl('/login'),
-      error: () => void this.router.navigateByUrl('/login')
+      error: () => this.logoutError.set('Não foi possível confirmar o encerramento da sessão. Tente novamente.')
     });
   }
 }

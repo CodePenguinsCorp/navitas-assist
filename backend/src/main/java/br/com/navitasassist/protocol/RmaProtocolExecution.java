@@ -1,5 +1,7 @@
 package br.com.navitasassist.protocol;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +48,7 @@ public class RmaProtocolExecution {
     @Column(nullable = false)
     private int versionNumber;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ProtocolExecutionStatus status = ProtocolExecutionStatus.IN_PROGRESS;
