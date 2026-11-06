@@ -26,6 +26,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -37,6 +38,7 @@ class UserAdminSafetyIntegrationTest {
     @Autowired private MockMvc mvc;
     @Autowired private ObjectMapper mapper;
     @Autowired private UserAccountRepository users;
+    @Autowired private PasswordEncoder passwordEncoder;
     private UserAccount admin;
     private String originalAdminName;
 
@@ -49,7 +51,7 @@ class UserAdminSafetyIntegrationTest {
 
     @AfterEach
     void restore() {
-        UserAccount seed = users.findByUsernameIgnoreCase("admin").orElseThrow();
+        UserAccount seed = UserAccountTestSupport.ensureAdmin(users, passwordEncoder);
         seed.setRole(UserRole.ADMIN);
         seed.setActive(true);
         if (originalAdminName != null) seed.setFullName(originalAdminName);

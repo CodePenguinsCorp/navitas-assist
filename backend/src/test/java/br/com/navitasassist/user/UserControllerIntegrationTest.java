@@ -54,6 +54,7 @@ class UserControllerIntegrationTest {
         userAccountRepository.findAll().stream()
             .filter(user -> !user.getUsername().equalsIgnoreCase("admin"))
             .forEach(userAccountRepository::delete);
+        UserAccountTestSupport.ensureAdmin(userAccountRepository, passwordEncoder);
     }
 
     @Test

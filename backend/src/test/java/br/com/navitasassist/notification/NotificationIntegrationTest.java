@@ -42,6 +42,7 @@ import br.com.navitasassist.service.NotificationProcessor;
 import br.com.navitasassist.service.RmaService;
 import br.com.navitasassist.service.SlaNotificationScanner;
 import br.com.navitasassist.user.UserAccount;
+import br.com.navitasassist.user.UserAccountTestSupport;
 import br.com.navitasassist.user.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
@@ -54,6 +55,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -96,6 +98,9 @@ class NotificationIntegrationTest {
     private UserAccountRepository userAccountRepository;
 
     @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
     private RmaRecordRepository rmaRecordRepository;
 
     @Autowired
@@ -124,6 +129,7 @@ class NotificationIntegrationTest {
     void setUp() {
         cleanUp();
         resetRules();
+        UserAccountTestSupport.ensureAdmin(userAccountRepository, passwordEncoder);
         technician = createUser("nav40-tech", UserRole.TECHNICIAN, true);
         otherTechnician = createUser("nav40-tech-2", UserRole.TECHNICIAN, true);
         desk = createUser("nav40-desk", UserRole.SERVICE_DESK, true);

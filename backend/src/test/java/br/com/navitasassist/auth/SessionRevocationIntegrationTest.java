@@ -29,6 +29,7 @@ import java.util.concurrent.TimeoutException;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.service.UserAccountService;
 import br.com.navitasassist.user.UserAccount;
+import br.com.navitasassist.user.UserAccountTestSupport;
 import br.com.navitasassist.user.UserAccountUpdateRequest;
 import br.com.navitasassist.user.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -76,9 +77,7 @@ class SessionRevocationIntegrationTest {
     @BeforeEach
     void prepare() throws Exception {
         users.findAll().stream().filter(account -> account.getUsername().startsWith(TARGET)).forEach(users::delete);
-        if (users.findByUsernameIgnoreCase("admin").isEmpty()) {
-            createAdmin("admin");
-        }
+        UserAccountTestSupport.ensureAdmin(users, encoder);
         target = createAdmin(TARGET);
         actor = login("admin", "password123");
         first = login(TARGET, "password123");

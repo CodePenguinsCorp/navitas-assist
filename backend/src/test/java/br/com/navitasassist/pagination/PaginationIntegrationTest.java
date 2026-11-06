@@ -22,12 +22,14 @@ import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusHistory;
 import br.com.navitasassist.user.UserAccount;
+import br.com.navitasassist.user.UserAccountTestSupport;
 import br.com.navitasassist.user.UserRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -52,6 +54,9 @@ class PaginationIntegrationTest {
     @Autowired
     private UserAccountRepository userAccountRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @BeforeEach
     void clean() {
         rmaRecordRepository.deleteAll();
@@ -60,6 +65,7 @@ class PaginationIntegrationTest {
         userAccountRepository.findAll().stream()
             .filter(account -> !account.getUsername().equalsIgnoreCase("admin"))
             .forEach(userAccountRepository::delete);
+        UserAccountTestSupport.ensureAdmin(userAccountRepository, passwordEncoder);
     }
 
     @Test

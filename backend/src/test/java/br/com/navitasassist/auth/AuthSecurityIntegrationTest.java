@@ -18,6 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.user.UserAccount;
+import br.com.navitasassist.user.UserAccountTestSupport;
 import br.com.navitasassist.user.UserRole;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,9 +58,7 @@ class AuthSecurityIntegrationTest {
         userAccountRepository.findAll().stream()
             .filter(user -> !user.getUsername().equalsIgnoreCase("admin"))
             .forEach(userAccountRepository::delete);
-        if (userAccountRepository.findByUsernameIgnoreCase("admin").isEmpty()) {
-            createUser("admin", UserRole.ADMIN);
-        }
+        UserAccountTestSupport.ensureAdmin(userAccountRepository, passwordEncoder);
         createUser("service.desk", UserRole.SERVICE_DESK);
         createUser("technician", UserRole.TECHNICIAN);
         createUser("viewer", UserRole.VIEWER);
