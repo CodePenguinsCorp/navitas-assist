@@ -76,8 +76,11 @@ class SessionRevocationIntegrationTest {
     @BeforeEach
     void prepare() throws Exception {
         users.findAll().stream().filter(account -> account.getUsername().startsWith(TARGET)).forEach(users::delete);
-        target = createTarget();
-        actor = login("admin", "admin123");
+        if (users.findByUsernameIgnoreCase("admin").isEmpty()) {
+            createAdmin("admin");
+        }
+        target = createAdmin(TARGET);
+        actor = login("admin", "password123");
         first = login(TARGET, "password123");
         second = login(TARGET, "password123");
     }
@@ -164,7 +167,7 @@ class SessionRevocationIntegrationTest {
     @Test
     void reusingDeletedUsernameDoesNotRestoreOldSessions() throws Exception {
         mvc.perform(delete("/api/users/{id}", target.getId()).session(actor).with(csrf())).andExpect(status().isNoContent());
-        UserAccount replacement = createTarget();
+        UserAccount replacement = createAdmin(TARGET);
         assertTrue(!replacement.getId().equals(target.getId()));
         MockHttpSession newSession = login(TARGET, "password123");
         mvc.perform(get("/api/users").session(first)).andExpect(status().isUnauthorized());
@@ -231,9 +234,9 @@ class SessionRevocationIntegrationTest {
         }
     }
 
-    private UserAccount createTarget() {
+    private UserAccount createAdmin(String username) {
         UserAccount account = new UserAccount();
-        account.setUsername(TARGET);
+        account.setUsername(username);
         account.setFullName("Session target");
         account.setPasswordHash(encoder.encode("password123"));
         account.setRole(UserRole.ADMIN);

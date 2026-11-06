@@ -2,8 +2,6 @@ param(
     [string]$OutputPath = ".env.prod",
     [string]$BackendImage = "navitas-assist-backend:ci",
     [string]$FrontendImage = "navitas-assist-frontend:ci",
-    [string]$AdminUsername = "admin",
-    [string]$AdminFullName = "Administrador",
     [switch]$Force
 )
 
@@ -29,7 +27,6 @@ function New-HexSecret {
 
 $mysqlPassword = New-HexSecret 24
 $mysqlRootPassword = New-HexSecret 24
-$adminPassword = New-HexSecret 18
 
 $content = @"
 # Production Compose
@@ -42,14 +39,9 @@ MYSQL_ROOT_PASSWORD=$mysqlRootPassword
 # Images published by CD
 BACKEND_IMAGE=$BackendImage
 FRONTEND_IMAGE=$FrontendImage
-
-# Backend / Spring Boot
-APP_ADMIN_USERNAME=$AdminUsername
-APP_ADMIN_PASSWORD=$adminPassword
-APP_ADMIN_FULL_NAME=$AdminFullName
 "@
 
 Set-Content -LiteralPath $OutputPath -Value $content -Encoding UTF8
 
 Write-Host "Arquivo $OutputPath criado com segredos fortes."
-Write-Host "Guarde a senha inicial do admin em um cofre antes do primeiro deploy."
+Write-Host "As contas da aplicacao sao gerenciadas no banco e nao sao criadas pelo deploy."

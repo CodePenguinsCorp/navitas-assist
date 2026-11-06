@@ -57,6 +57,9 @@ class AuthSecurityIntegrationTest {
         userAccountRepository.findAll().stream()
             .filter(user -> !user.getUsername().equalsIgnoreCase("admin"))
             .forEach(userAccountRepository::delete);
+        if (userAccountRepository.findByUsernameIgnoreCase("admin").isEmpty()) {
+            createUser("admin", UserRole.ADMIN);
+        }
         createUser("service.desk", UserRole.SERVICE_DESK);
         createUser("technician", UserRole.TECHNICIAN);
         createUser("viewer", UserRole.VIEWER);
@@ -80,7 +83,7 @@ class AuthSecurityIntegrationTest {
         mockMvc.perform(post("/api/auth/login")
                 .with(csrfCookie(token))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"admin\",\"password\":\"admin123\"}"))
+                .content("{\"username\":\"admin\",\"password\":\"password123\"}"))
             .andExpect(status().isOk());
     }
 
@@ -117,7 +120,7 @@ class AuthSecurityIntegrationTest {
                 .cookie(browserCookie)
                 .header("X-XSRF-TOKEN", preparedHeader)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"admin\",\"password\":\"admin123\"}"))
+                .content("{\"username\":\"admin\",\"password\":\"password123\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.username").value("admin"))
             .andReturn();
@@ -135,7 +138,7 @@ class AuthSecurityIntegrationTest {
         MvcResult login = mockMvc.perform(post("/api/auth/login")
                 .with(csrfCookie(original))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"admin\",\"password\":\"admin123\"}"))
+                .content("{\"username\":\"admin\",\"password\":\"password123\"}"))
             .andExpect(status().isOk())
             .andReturn();
         MockHttpSession session = (MockHttpSession) login.getRequest().getSession(false);
@@ -150,7 +153,7 @@ class AuthSecurityIntegrationTest {
         mockMvc.perform(post("/api/auth/login")
                 .with(csrfCookie(regenerated))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"admin\",\"password\":\"admin123\"}"))
+                .content("{\"username\":\"admin\",\"password\":\"password123\"}"))
             .andExpect(status().isOk());
     }
 
@@ -160,7 +163,7 @@ class AuthSecurityIntegrationTest {
         Cookie token = requestCsrfCookie();
         var request = post("/api/auth/login")
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"username\":\"admin\",\"password\":\"admin123\"}");
+            .content("{\"username\":\"admin\",\"password\":\"password123\"}");
         if (!scenario.equals("missing-cookie")) {
             request.cookie(token);
         }
@@ -183,7 +186,7 @@ class AuthSecurityIntegrationTest {
                 .header("X-XSRF-TOKEN", csrfCookie.getValue())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                    {"username":"admin","password":"admin123"}
+                    {"username":"admin","password":"password123"}
                     """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.username").value("admin"))

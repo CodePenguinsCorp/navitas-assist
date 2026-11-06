@@ -27,7 +27,3 @@ navitas:
       enabled: false
   security:
     cookie-secure: false
-    seed-admin:
-      username: admin
-      password: admin123
-      full-name: Administrador

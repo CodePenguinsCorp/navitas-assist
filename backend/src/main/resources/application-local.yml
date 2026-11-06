@@ -21,7 +21,3 @@ server:
 navitas:
   security:
     cookie-secure: false
-    seed-admin:
-      username: ${APP_ADMIN_USERNAME:admin}
-      password: ${APP_ADMIN_PASSWORD:admin123}
-      full-name: ${APP_ADMIN_FULL_NAME:Administrador}

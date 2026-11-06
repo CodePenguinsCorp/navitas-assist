@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
 import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
@@ -14,17 +15,14 @@ public class RequiredSecretsEnvironmentPostProcessor implements EnvironmentPostP
     private static final String SPRING_BOOT_TEST_BOOTSTRAPPER =
         "org.springframework.boot.test.context.SpringBootTestContextBootstrapper";
     private static final Set<String> PROFILES_WITH_LOCAL_DEFAULTS = Set.of("local", "test");
-    private static final List<String> PASSWORD_VARIABLES = List.of("DB_PASSWORD", "APP_ADMIN_PASSWORD");
+    private static final List<String> PASSWORD_VARIABLES = List.of("DB_PASSWORD");
     private static final Set<String> EXAMPLE_PASSWORDS = Set.of(
         "admin123", "navitas123", "root123", "troque-esta-senha", "troque-esta-senha-root"
     );
     private static final List<String> REQUIRED_VARIABLES = List.of(
         "DB_URL",
         "DB_USER",
-        "DB_PASSWORD",
-        "APP_ADMIN_USERNAME",
-        "APP_ADMIN_PASSWORD",
-        "APP_ADMIN_FULL_NAME"
+        "DB_PASSWORD"
     );
 
     @Override
@@ -61,6 +59,6 @@ public class RequiredSecretsEnvironmentPostProcessor implements EnvironmentPostP
 
     @Override
     public int getOrder() {
-        return Ordered.HIGHEST_PRECEDENCE;
+        return ConfigDataEnvironmentPostProcessor.ORDER + 1;
     }
 }

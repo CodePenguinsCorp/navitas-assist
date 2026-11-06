@@ -305,9 +305,6 @@ O setup local reconhece estas variáveis principais:
 - `SERVER_PORT`
 - `SESSION_TIMEOUT`
 - `SESSION_COOKIE_SECURE`
-- `APP_ADMIN_USERNAME`
-- `APP_ADMIN_PASSWORD`
-- `APP_ADMIN_FULL_NAME`
 
 Sem sobrescrever nada:
 
@@ -332,20 +329,17 @@ Alterar usuário, senha, perfil ou situação ativa, ou excluir uma conta, revog
 
 O registro de sessões é mantido em memória por instância, assim como as sessões HTTP atuais. A revogação atende a execução em uma única instância; não sincroniza réplicas nem cancela requisições que já passaram pela autorização. Logout, expiração e troca do ID da sessão removem os registros correspondentes.
 
-Senhas novas ou alteradas exigem ao menos 6 caracteres e no máximo 72 bytes em UTF-8, limite do BCrypt. Acentos e emojis podem ocupar mais de um byte. O backend rejeita excesso no cadastro, na edição e na criação do administrador inicial; o login retorna `401` para credenciais acima desse limite. Senhas não são aparadas nem truncadas.
+Senhas novas ou alteradas exigem ao menos 6 caracteres e no máximo 72 bytes em UTF-8, limite do BCrypt. Acentos e emojis podem ocupar mais de um byte. O backend rejeita excesso no cadastro e na edição; o login retorna `401` para credenciais acima desse limite. Senhas não são aparadas nem truncadas.
 
 Hashes BCrypt existentes permanecem inalterados. Caso exista uma senha histórica acima de 72 bytes, ela precisa ser redefinida: o hash antigo não distingue o conteúdo que ultrapassou esse limite. Não há migração automática ou redefinição de contas.
 
-## Admin Inicial
+## Contas de acesso
 
-No profile `local`, no primeiro boot e apenas se ainda não existir usuário no banco, a aplicação cria:
+A aplicação não cria, recria ou altera usuários durante a inicialização. As contas e os hashes de senha ficam exclusivamente no banco. Em um banco novo, o primeiro administrador deve ser inserido explicitamente com um hash BCrypt; depois, o cadastro e a manutenção das contas são feitos pela tela Usuários. Recriar o banco não recria uma conta padrão.
 
-- usuario: `admin`
-- senha: `admin123`
+Fora dos profiles `local` e `test`, somente `DB_URL`, `DB_USER` e `DB_PASSWORD` são obrigatórios. O ambiente de produção usa validação de schema e não imprime SQL nem credenciais nos logs.
 
-Esses valores também são usados somente nos testes automatizados. Fora dos profiles `local` e `test`, `DB_URL`, `DB_USER`, `DB_PASSWORD`, `APP_ADMIN_USERNAME`, `APP_ADMIN_PASSWORD` e `APP_ADMIN_FULL_NAME` são obrigatórios; a aplicação falha na inicialização se algum deles não for informado. O ambiente de produção usa validação de schema e não imprime SQL nem credenciais nos logs.
-
-Fora dos profiles `local` e `test`, o backend também recusa senhas públicas dos exemplos em `DB_PASSWORD` e `APP_ADMIN_PASSWORD`: `admin123`, `navitas123`, `root123`, `troque-esta-senha` e `troque-esta-senha-root`. Substitua esses valores por segredos próprios antes de iniciar; a aplicação informa somente os nomes das variáveis que precisam ser corrigidas. A comparação é exata, sem aparar ou modificar senhas, e não representa uma avaliação geral de força. O nome de usuário `admin` continua permitido com senha própria. Nenhuma conta ou senha existente é alterada automaticamente.
+Fora dos profiles `local` e `test`, o backend recusa senhas de banco publicadas nos exemplos em `DB_PASSWORD`. A aplicação informa somente o nome da variável que precisa ser corrigida, sem modificar seu valor. Essa verificação não altera contas nem senhas dos usuários da aplicação.
 
 ## Autorização da API
 

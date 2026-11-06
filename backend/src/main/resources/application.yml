@@ -61,7 +61,3 @@ navitas:
       from: ${NOTIFICATIONS_EMAIL_FROM:navitas-assist@localhost}
   security:
     cookie-secure: ${SESSION_COOKIE_SECURE:true}
-    seed-admin:
-      username: ${APP_ADMIN_USERNAME}
-      password: ${APP_ADMIN_PASSWORD}
-      full-name: ${APP_ADMIN_FULL_NAME}

@@ -9,9 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.mock.env.MockEnvironment;
 
 class RequiredSecretsEnvironmentPostProcessorTest {
@@ -19,6 +21,26 @@ class RequiredSecretsEnvironmentPostProcessorTest {
     private final RequiredSecretsEnvironmentPostProcessor processor =
         new RequiredSecretsEnvironmentPostProcessor();
     private final SpringApplication application = new SpringApplication();
+
+    @Test
+    void shouldAcceptDatabaseSecretsWithoutAdministratorSettings() {
+        MockEnvironment environment = new MockEnvironment()
+            .withProperty("DB_URL", "jdbc:mysql://db/navitas")
+            .withProperty("DB_USER", "navitas")
+            .withProperty("DB_PASSWORD", "database-secret");
+        environment.setActiveProfiles("prod");
+
+        assertDoesNotThrow(() -> processor.postProcessEnvironment(environment, application));
+    }
+
+    @Test
+    void shouldStartAfterActivatingTheLocalProfile() {
+        SpringApplication startup = new SpringApplication(StartupConfiguration.class);
+        startup.setWebApplicationType(WebApplicationType.NONE);
+        try (ConfigurableApplicationContext context = startup.run("--spring.profiles.active=local")) {
+            assertTrue(context.getEnvironment().matchesProfiles("local"));
+        }
+    }
 
     @Test
     void shouldRejectNonLocalEnvironmentWhenSecretsAreMissing() {
@@ -31,15 +53,6 @@ class RequiredSecretsEnvironmentPostProcessorTest {
         );
 
         assertTrue(exception.getMessage().contains("DB_PASSWORD"));
-        assertTrue(exception.getMessage().contains("APP_ADMIN_PASSWORD"));
-    }
-
-    @Test
-    void shouldAcceptNonLocalEnvironmentWhenAllSecretsArePresent() {
-        MockEnvironment environment = environmentWithSecrets();
-        environment.setActiveProfiles("prod");
-
-        assertDoesNotThrow(() -> processor.postProcessEnvironment(environment, application));
     }
 
     @Test
@@ -64,41 +77,20 @@ class RequiredSecretsEnvironmentPostProcessorTest {
     }
 
     @ParameterizedTest
-    @CsvSource({
-        "DB_PASSWORD, admin123", "DB_PASSWORD, navitas123", "DB_PASSWORD, root123",
-        "DB_PASSWORD, troque-esta-senha", "DB_PASSWORD, troque-esta-senha-root",
-        "APP_ADMIN_PASSWORD, admin123", "APP_ADMIN_PASSWORD, navitas123", "APP_ADMIN_PASSWORD, root123",
-        "APP_ADMIN_PASSWORD, troque-esta-senha", "APP_ADMIN_PASSWORD, troque-esta-senha-root"
-    })
-    void shouldRejectPublishedPasswordsWithoutExposingTheirValues(String variable, String password) {
+    @ValueSource(strings = {"admin123", "navitas123", "root123", "troque-esta-senha", "troque-esta-senha-root"})
+    void shouldRejectPublishedPasswordsWithoutExposingTheirValues(String password) {
         MockEnvironment environment = environmentWithSecrets();
         environment.setActiveProfiles("prod");
-        environment.setProperty(variable, password);
+        environment.setProperty("DB_PASSWORD", password);
 
         IllegalStateException error = assertThrows(IllegalStateException.class,
             () -> processor.postProcessEnvironment(environment, application));
 
-        assertEquals("Replace example passwords for a non-local environment: " + variable, error.getMessage());
+        assertEquals("Replace example passwords for a non-local environment: DB_PASSWORD", error.getMessage());
         assertFalse(error.getMessage().contains(password));
         assertFalse(error.getMessage().contains("database-secret"));
-        assertFalse(error.getMessage().contains("application-secret"));
         assertFalse(error.getMessage().contains(environment.getProperty("DB_URL")));
-        assertEquals(password, environment.getProperty(variable));
-    }
-
-    @Test
-    void shouldReportBothUnsafeVariablesWithoutTheirPasswords() {
-        MockEnvironment environment = environmentWithSecrets();
-        environment.setActiveProfiles("prod");
-        environment.setProperty("DB_PASSWORD", "navitas123");
-        environment.setProperty("APP_ADMIN_PASSWORD", "admin123");
-
-        IllegalStateException error = assertThrows(IllegalStateException.class,
-            () -> processor.postProcessEnvironment(environment, application));
-
-        assertEquals("Replace example passwords for a non-local environment: DB_PASSWORD, APP_ADMIN_PASSWORD", error.getMessage());
-        assertFalse(error.getMessage().contains("navitas123"));
-        assertFalse(error.getMessage().contains("admin123"));
+        assertEquals(password, environment.getProperty("DB_PASSWORD"));
     }
 
     @ParameterizedTest
@@ -108,7 +100,7 @@ class RequiredSecretsEnvironmentPostProcessorTest {
         if (!profile.isEmpty()) {
             environment.setActiveProfiles(profile);
         }
-        environment.setProperty("APP_ADMIN_PASSWORD", "admin123");
+        environment.setProperty("DB_PASSWORD", "navitas123");
         assertThrows(IllegalStateException.class, () -> processor.postProcessEnvironment(environment, application));
     }
 
@@ -118,7 +110,6 @@ class RequiredSecretsEnvironmentPostProcessorTest {
         MockEnvironment environment = environmentWithSecrets();
         environment.setActiveProfiles(profile);
         environment.setProperty("DB_PASSWORD", "navitas123");
-        environment.setProperty("APP_ADMIN_PASSWORD", "admin123");
         assertDoesNotThrow(() -> processor.postProcessEnvironment(environment, application));
     }
 
@@ -126,19 +117,16 @@ class RequiredSecretsEnvironmentPostProcessorTest {
     void shouldKeepSpringBootTestBootstrapBypassForExamplePasswords() {
         MockEnvironment environment = environmentWithSecrets();
         environment.setProperty("org.springframework.boot.test.context.SpringBootTestContextBootstrapper", "true");
-        environment.setProperty("APP_ADMIN_PASSWORD", "admin123");
+        environment.setProperty("DB_PASSWORD", "navitas123");
         assertDoesNotThrow(() -> processor.postProcessEnvironment(environment, application));
     }
 
     @Test
-    void shouldAcceptAdminUsernameAndPreserveCustomSecretValues() {
+    void shouldPreserveCustomDatabasePassword() {
         MockEnvironment environment = environmentWithSecrets();
         environment.setActiveProfiles("prod");
-        environment.setProperty("APP_ADMIN_USERNAME", "admin");
-        environment.setProperty("APP_ADMIN_PASSWORD", " custom-application-secret ");
         environment.setProperty("DB_PASSWORD", " custom-database-secret ");
         assertDoesNotThrow(() -> processor.postProcessEnvironment(environment, application));
-        assertEquals(" custom-application-secret ", environment.getProperty("APP_ADMIN_PASSWORD"));
         assertEquals(" custom-database-secret ", environment.getProperty("DB_PASSWORD"));
     }
 
@@ -147,7 +135,7 @@ class RequiredSecretsEnvironmentPostProcessorTest {
         MockEnvironment environment = environmentWithSecrets();
         environment.setActiveProfiles("prod");
         environment.setProperty("DB_USER", "");
-        environment.setProperty("APP_ADMIN_PASSWORD", "admin123");
+        environment.setProperty("DB_PASSWORD", "navitas123");
         IllegalStateException error = assertThrows(IllegalStateException.class,
             () -> processor.postProcessEnvironment(environment, application));
         assertEquals("Missing required environment variables for a non-local environment: DB_USER", error.getMessage());
@@ -158,11 +146,12 @@ class RequiredSecretsEnvironmentPostProcessorTest {
         Map.of(
             "DB_URL", "jdbc:mysql://db/navitas",
             "DB_USER", "navitas",
-            "DB_PASSWORD", "database-secret",
-            "APP_ADMIN_USERNAME", "administrator",
-            "APP_ADMIN_PASSWORD", "application-secret",
-            "APP_ADMIN_FULL_NAME", "Administrator"
+            "DB_PASSWORD", "database-secret"
         ).forEach(environment::setProperty);
         return environment;
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class StartupConfiguration {
     }
 }

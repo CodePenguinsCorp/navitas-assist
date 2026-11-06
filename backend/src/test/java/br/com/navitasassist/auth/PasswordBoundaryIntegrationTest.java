@@ -2,10 +2,6 @@ package br.com.navitasassist.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -19,7 +15,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import br.com.navitasassist.config.InitialDataConfig;
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.user.UserAccount;
@@ -38,7 +33,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -128,19 +122,6 @@ class PasswordBoundaryIntegrationTest {
     void shouldRejectExcessiveEncodingAtTheConfiguredEncoder(String password) {
         assertThatThrownBy(() -> encoder.encode(password)).isInstanceOf(BusinessException.class)
             .hasMessage("Password must contain at most 72 UTF-8 bytes.");
-    }
-
-    @ParameterizedTest
-    @MethodSource("excessivePasswords")
-    void shouldRejectExcessiveSeedPasswordBeforeSavingAnAdministrator(String password) {
-        UserAccountRepository emptyAccounts = mock(UserAccountRepository.class);
-        InitialDataConfig initialData = new InitialDataConfig(encoder);
-        ReflectionTestUtils.setField(initialData, "seedUsername", "test-seed");
-        ReflectionTestUtils.setField(initialData, "seedFullName", "Test seed");
-        ReflectionTestUtils.setField(initialData, "seedPassword", password);
-        assertThatThrownBy(() -> initialData.seedAdminUser(emptyAccounts).run()).isInstanceOf(BusinessException.class)
-            .hasMessage("Password must contain at most 72 UTF-8 bytes.");
-        verify(emptyAccounts, never()).save(any());
     }
 
     @Test
