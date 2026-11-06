@@ -130,9 +130,9 @@ interface ProductsHarness {
   confirmDeleteProduct(): void;
 }
 
-function flushProductLists(http: HttpTestingController, content: unknown[]): void {
+function flushProductLists(http: HttpTestingController, content: unknown[], categories: string[] = []): void {
   http.expectOne(r => r.method === 'GET' && r.url.split('?')[0] === '/api/products').flush({ content, page: 0, size: 20, totalElements: content.length, totalPages: 1 });
-  http.expectOne('/api/products/summary').flush({ total: content.length, withFirmware: 0, averageWarrantyMonths: 12, categories: [] });
+  http.expectOne('/api/products/summary').flush({ total: content.length, withFirmware: 0, averageWarrantyMonths: 12, categories });
 }
 
 describe('ProductsComponent pending save lifecycle', () => {
@@ -147,7 +147,7 @@ describe('ProductsComponent pending save lifecycle', () => {
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(ProductsComponent);
-    flushProductLists(http, [INITIAL_PRODUCTS[0]]);
+    flushProductLists(http, [INITIAL_PRODUCTS[0]], ['Controle', 'Sensor']);
     fixture.detectChanges();
     page = fixture.nativeElement as HTMLElement;
   });
@@ -203,6 +203,34 @@ describe('ProductsComponent pending save lifecycle', () => {
   }
 
   describe.each(['create', 'edit'] as const)('%s', (mode) => {
+    it.each(['Sensor', 'Robótica'])('suggests existing categories and saves the typed category %s', (category) => {
+      openEditor(mode);
+      const input = page.querySelector<HTMLInputElement>('[formControlName="category"]')!;
+      const suggestions = page.querySelector<HTMLDataListElement>(`datalist[id="${input.getAttribute('list')}"]`);
+      expect(suggestions).not.toBeNull();
+      expect(Array.from(suggestions!.options, (option) => option.value)).toEqual(['Controle', 'Sensor']);
+      if (mode === 'edit') expect(input.value).toBe('Controle');
+
+      enterFields(mode);
+      input.value = category;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      const request = submitSave(mode);
+      expect(request.request.body.category).toBe(category);
+
+      const saved: ProductResponse = { ...INITIAL_PRODUCTS[0], id: mode === 'create' ? 4 : 1,
+        sku: mode === 'create' ? 'SKU-NAV-80' : INITIAL_PRODUCTS[0].sku, name: 'Produto salvo', category };
+      request.flush(saved);
+      const categories = category === 'Robótica' ? ['Controle', 'Robótica', 'Sensor'] : ['Controle', 'Sensor'];
+      flushProductLists(http, [saved], categories);
+      fixture.detectChanges();
+      expect(page.querySelector('.modal-overlay')).toBeNull();
+
+      openEditor(mode);
+      const refreshed = page.querySelector<HTMLDataListElement>('datalist')!;
+      expect(Array.from(refreshed.options, (option) => option.value)).toEqual(categories);
+      if (mode === 'edit') expect(page.querySelector<HTMLInputElement>('[formControlName="category"]')!.value).toBe(category);
+    });
+
     it.each(['overlay', 'close'] as const)('keeps a pending save open through %s and closes on success', (control) => {
       openEditor(mode);
       enterFields(mode);
