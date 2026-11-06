@@ -259,9 +259,15 @@
         </article>
       }
 
-      <p id="delete-client-description" class="delete-confirmation">
-        Tem certeza de que deseja excluir o cliente <strong>{{ client.legalName }}</strong>?
-      </p>
+      <div id="delete-client-description" class="delete-confirmation">
+        <p>Tem certeza de que deseja excluir este cliente?</p>
+        <dl class="meta-list">
+          <div><dt>Cliente</dt><dd>{{ client.legalName }}</dd></div>
+          @if (client.documentNumber) {
+            <div><dt>Documento</dt><dd>{{ client.documentNumber }}</dd></div>
+          }
+        </dl>
+      </div>
 
       <div class="form-actions">
         <button

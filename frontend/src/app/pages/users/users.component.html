@@ -261,10 +261,13 @@
         </article>
       }
 
-      <p id="delete-user-description" class="delete-confirmation">
-        Tem certeza de que deseja excluir <strong>{{ user.fullName }}</strong>, usuário
-        <strong>{{ user.username }}</strong>?
-      </p>
+      <div id="delete-user-description" class="delete-confirmation">
+        <p>Tem certeza de que deseja excluir este usuário?</p>
+        <dl class="meta-list">
+          <div><dt>Nome</dt><dd>{{ user.fullName }}</dd></div>
+          <div><dt>Usuário</dt><dd class="code-text">{{ user.username }}</dd></div>
+        </dl>
+      </div>
 
       <div class="form-actions">
         <button

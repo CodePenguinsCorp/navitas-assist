@@ -10,7 +10,7 @@ import { PAGE_SIZE_OPTIONS, pageRange } from '../../core/utils/pagination';
       </span>
       <label class="pagination__size">
         <span>Por página</span>
-        <select [value]="size()" (change)="changeSize($event)" aria-label="Registros por página">
+        <select class="select-compact" [value]="size()" (change)="changeSize($event)" aria-label="Registros por página">
           @for (option of sizeOptions; track option) {
             <option [value]="option" [selected]="option === size()">{{ option }}</option>
           }
@@ -31,7 +31,6 @@ import { PAGE_SIZE_OPTIONS, pageRange } from '../../core/utils/pagination';
     :host { display: block; }
     .pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1.25rem; padding-top: 1rem; color: var(--muted); font-size: 0.92rem; }
     .pagination__size { display: inline-flex; align-items: center; gap: 0.5rem; }
-    .pagination__size select { min-height: 34px; padding: 0 0.5rem; border: 1px solid var(--line); border-radius: 8px; background: #ffffff; color: var(--brand-blue-deep); }
     .pagination__controls { display: inline-flex; align-items: center; gap: 0.75rem; }
   `]
 })

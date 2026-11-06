@@ -286,10 +286,13 @@
         </article>
       }
 
-      <p id="delete-product-description" class="delete-confirmation">
-        Tem certeza de que deseja excluir <strong>{{ product.name }}</strong>, SKU
-        <strong>{{ product.sku }}</strong>?
-      </p>
+      <div id="delete-product-description" class="delete-confirmation">
+        <p>Tem certeza de que deseja excluir este produto?</p>
+        <dl class="meta-list">
+          <div><dt>Produto</dt><dd>{{ product.name }}</dd></div>
+          <div><dt>SKU</dt><dd class="code-text">{{ product.sku }}</dd></div>
+        </dl>
+      </div>
 
       <div class="form-actions">
         <button
