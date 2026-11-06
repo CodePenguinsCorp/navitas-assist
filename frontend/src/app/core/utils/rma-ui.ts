@@ -100,6 +100,11 @@ export function ownerLabel(
   return rma.assigneeName?.trim() || 'Sem responsável';
 }
 
+export function initialsOf(name: string | null): string {
+  const parts = (name ?? '').replace(/\[[^\]]*\]/g, '').trim().split(/\s+/).filter(Boolean);
+  return parts.length === 0 ? '?' : ((parts[0][0] ?? '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+}
+
 export function latestStatusUpdate(
   history: RmaStatusHistoryResponse[]
 ): RmaStatusHistoryResponse | null {

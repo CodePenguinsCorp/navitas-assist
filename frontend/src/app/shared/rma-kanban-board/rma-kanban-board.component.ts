@@ -7,14 +7,12 @@ import { RmaResponse, RmaStatus } from '../../core/models';
 import {
   compareRmasForBoard,
   formatDate,
+  initialsOf,
   ownerLabel,
   priorityChipClass,
   priorityLabel,
   productSummary,
-  rmaItemTrackableLabel,
-  statusLabel,
-  warrantyClass,
-  warrantyLabel
+  statusLabel
 } from '../../core/utils/rma-ui';
 
 interface RmaBoardColumn {
@@ -47,10 +45,8 @@ export class RmaKanbanBoardComponent {
   readonly toolbarDescription = input('Arraste os cards entre as colunas para atualizar o status do RMA.');
 
   @Output() readonly cardSelect = new EventEmitter<RmaResponse>();
-  @Output() readonly blockInspect = new EventEmitter<RmaResponse>();
   protected readonly clock = inject(SlaClockService);
   protected readonly blockedDuration = blockDuration;
-  @Output() readonly assigneeChange = new EventEmitter<RmaResponse>();
   @Output() readonly cardDragStart = new EventEmitter<{ event: DragEvent; rma: RmaResponse }>();
   @Output() readonly cardDragEnd = new EventEmitter<void>();
   @Output() readonly columnDragOver = new EventEmitter<{ event: DragEvent; status: RmaStatus }>();
@@ -71,9 +67,7 @@ export class RmaKanbanBoardComponent {
   protected readonly priorityLabel = priorityLabel;
   protected readonly priorityClass = priorityChipClass;
   protected readonly productSummary = productSummary;
-  protected readonly warrantyLabel = warrantyLabel;
-  protected readonly warrantyClass = warrantyClass;
-  protected readonly itemTrackableLabel = rmaItemTrackableLabel;
+  protected readonly initials = initialsOf;
   protected readonly ownerLabel = ownerLabel;
   protected readonly dateLabel = formatDate;
 
@@ -93,20 +87,8 @@ export class RmaKanbanBoardComponent {
     return this.boardUpdatingId() === rma.id;
   }
 
-  protected requestAssigneeChange(event: Event, rma: RmaResponse): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.assigneeChange.emit(rma);
-  }
-
   protected preventCardDrag(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
-  }
-
-  protected inspectBlock(event: Event, rma: RmaResponse): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.blockInspect.emit(rma);
   }
 }

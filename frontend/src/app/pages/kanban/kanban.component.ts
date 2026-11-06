@@ -39,6 +39,7 @@ import { DatePickerComponent } from '../../shared/form-controls/date-picker/date
 import { BulkRmaResult, KanbanBulkActionsComponent } from '../../shared/kanban-bulk-actions/kanban-bulk-actions.component';
 import { RmaKanbanBoardComponent } from '../../shared/rma-kanban-board/rma-kanban-board.component';
 import { RmaBlockPanelComponent } from '../../shared/rma-block-panel/rma-block-panel.component';
+import { RmaDetailModalComponent } from '../../shared/rma-detail-modal/rma-detail-modal.component';
 
 interface KanbanHeroStat {
   label: string;
@@ -76,6 +77,7 @@ type ViewModalMode = 'create' | 'rename' | null;
     DatePickerComponent,
     RmaKanbanBoardComponent,
     RmaBlockPanelComponent,
+    RmaDetailModalComponent,
     KanbanBulkActionsComponent,
   ],
   templateUrl: './kanban.component.html',
@@ -109,8 +111,10 @@ export class KanbanComponent {
   protected readonly bulkSelectedRmas = computed(() => this.rmasSignal().filter((rma) => this.bulkSelectedIds().includes(rma.id)));
   protected readonly hiddenSelectedCount = computed(() => this.bulkSelectedRmas().filter((rma) => !this.filteredRmas().some((visible) => visible.id === rma.id)).length);
   protected readonly selectedRmaId = signal<number | null>(null);
+  protected readonly detailRmaId = signal<number | null>(null);
 
   private readonly rmasSignal = signal<RmaResponse[]>([]);
+  protected readonly detailRma = computed(() => this.rmasSignal().find((rma) => rma.id === this.detailRmaId()) ?? null);
   private readonly assignableUsersSignal = signal<AssignableUserResponse[]>([]);
   private readonly viewsSignal = signal<KanbanViewResponse[]>([]);
   private readonly pendingStatusRmaSignal = signal<RmaResponse | null>(null);
@@ -258,6 +262,22 @@ export class KanbanComponent {
     this.rmasSignal.update((rmas) => rmas.map((rma) => updated.get(rma.id) ?? rma));
     const succeeded = new Set(results.filter((result) => result.success).map((result) => result.id));
     this.bulkSelectedIds.update((ids) => ids.filter((id) => !succeeded.has(id)));
+  }
+
+  protected openDetail(rma: RmaResponse): void {
+    this.selectRma(rma);
+    this.detailRmaId.set(rma.id);
+  }
+
+  protected closeDetail(): void {
+    this.detailRmaId.set(null);
+  }
+
+  protected openStatusModal(rma: RmaResponse, status: RmaStatus): void {
+    if (!this.canUpdateStatus() || this.bulkBusy() || this.boardUpdatingId() !== null) return;
+    this.pendingStatusRmaSignal.set(rma);
+    this.statusModalError.set('');
+    this.statusForm.reset({ status, note: '' });
   }
 
   protected selectRma(rma: RmaResponse): void {
@@ -593,15 +613,6 @@ export class KanbanComponent {
     if (!refreshed) {
       this.selectedRmaId.set(null);
     }
-  }
-
-  private openStatusModal(rma: RmaResponse, status: RmaStatus): void {
-    this.pendingStatusRmaSignal.set(rma);
-    this.statusModalError.set('');
-    this.statusForm.reset({
-      status,
-      note: '',
-    });
   }
 
   private submitStatusUpdate(target: RmaResponse, payload: RmaStatusUpdateRequest): void {
