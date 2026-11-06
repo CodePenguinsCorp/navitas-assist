@@ -56,45 +56,21 @@
                   <span class="mini-chip" [class]="priorityClass(item.priority)">{{ priorityLabel(item.priority) }}</span>
                 </header>
 
-                <div class="board-card__product">
-                  <strong>{{ productSummary(item) }}</strong>
-                  <span>{{ itemTrackableLabel(item.items[0] ?? item) }}</span>
-                  <div class="board-card__warranties">
-                    @for (product of item.items; track product.id ?? $index) {
-                      <span class="mini-chip" [class]="warrantyClass(product.warrantyStatus)" [title]="product.productName">
-                        {{ product.productSku }} · {{ warrantyLabel(product.warrantyStatus) }}
-                      </span>
-                    }
-                  </div>
-                </div>
-
+                <strong class="board-card__title">{{ productSummary(item) }}</strong>
                 <p class="board-card__failure" [title]="item.reportedFailure">{{ item.reportedFailure }}</p>
 
                 <app-rma-sla-badge [sla]="item.sla" />
 
                 @if (item.currentBlock; as block) {
-                  <p class="board-card__block" [title]="block.reason"><strong>Bloqueado há {{ blockedDuration(block, clock.now()) }}</strong>{{ block.reason.slice(0, 120) }}{{ block.reason.length > 120 ? '…' : '' }}</p>
+                  <p class="board-card__block" [title]="block.reason"><strong>Bloqueado há {{ blockedDuration(block, clock.now()) }}</strong></p>
                 }
 
-                <dl class="meta-list board-card__meta">
-                  <div>
-                    <dt>Responsável</dt>
-                    <dd [class.is-empty]="!item.assigneeId">{{ ownerLabel(item) }}</dd>
-                  </div>
-                  <div>
-                    <dt>Entrada</dt>
-                    <dd>{{ dateLabel(item.entryDate) }}</dd>
-                  </div>
-                </dl>
-
                 <footer class="board-card__footer">
-                  @if (canUpdateAssignee()) {
-                    <button type="button" class="link-button" [disabled]="interactionDisabled() || boardUpdatingId() !== null" (click)="requestAssigneeChange($event, item)" (dragstart)="preventCardDrag($event)">{{ item.assigneeId ? 'Trocar responsável' : 'Atribuir' }}</button>
-                  }
-                  <button type="button" class="link-button" [disabled]="interactionDisabled() || boardUpdatingId() !== null" (click)="inspectBlock($event, item)" (keydown)="$event.stopPropagation()" (dragstart)="preventCardDrag($event)">Ver impedimentos</button>
+                  <span class="board-card__date">Entrada {{ dateLabel(item.entryDate) }}</span>
                   @if (isStatusUpdating(item)) {
                     <span class="mini-chip">Atualizando...</span>
                   }
+                  <span class="board-card__avatar" [class.is-empty]="!item.assigneeId" [title]="ownerLabel(item)">{{ item.assigneeId ? initials(item.assigneeName) : '?' }}</span>
                 </footer>
               </article>
             }

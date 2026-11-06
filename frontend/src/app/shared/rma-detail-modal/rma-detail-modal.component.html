@@ -1,0 +1,133 @@
+<section class="modal-overlay" (click)="closed.emit()">
+  <article #panel class="panel modal-panel rma-detail" role="dialog" aria-modal="true" tabindex="-1" [attr.aria-label]="'Detalhes do ' + rma().code" (click)="$event.stopPropagation()" (keydown)="trapFocus($any($event))">
+    <header class="rma-detail__bar">
+      <span class="rma-detail__key code-text">{{ rma().code }}</span>
+      <button type="button" class="modal-close" aria-label="Fechar" (click)="closed.emit()">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+      </button>
+    </header>
+
+    <div class="rma-detail__layout">
+      <div class="rma-detail__main">
+        <h2 class="rma-detail__title">{{ productSummary(rma()) }}</h2>
+        <p class="rma-detail__subtitle">{{ rma().clientName }}</p>
+
+        <div class="rma-detail__actions">
+          @if (canUpdateStatus()) {
+            <button type="button" class="button-secondary" [disabled]="disabled()" (click)="statusChange.emit(rma())">Alterar status</button>
+          }
+          @if (canUpdateAssignee()) {
+            <button type="button" class="button-secondary" [disabled]="disabled()" (click)="assigneeChange.emit(rma())">{{ rma().assigneeId ? 'Trocar responsável' : 'Atribuir' }}</button>
+          }
+          <button type="button" class="button-secondary" [disabled]="disabled()" (click)="blockInspect.emit(rma())">Ver impedimentos</button>
+        </div>
+
+        @if (rma().currentBlock; as block) {
+          <p class="rma-detail__block"><strong>Bloqueado há {{ blockedDuration(block, clock.now()) }}</strong>{{ block.reason }}</p>
+        }
+
+        <section class="rma-detail__section">
+          <h3>Falha relatada</h3>
+          <p>{{ rma().reportedFailure }}</p>
+        </section>
+
+        <section class="rma-detail__section">
+          <h3>Itens ({{ rma().items.length }})</h3>
+          <ul class="rma-detail__items">
+            @for (item of rma().items; track item.id ?? $index) {
+              <li>
+                <div>
+                  <strong>{{ item.productName }}</strong>
+                  <span>{{ item.productSku }} · {{ trackableLabel(item) }}</span>
+                </div>
+                <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)">{{ warrantyLabel(item.warrantyStatus) }}</span>
+              </li>
+            }
+          </ul>
+        </section>
+
+        @if (rma().receivedAccessories || rma().physicalCondition) {
+          <section class="rma-detail__section">
+            <h3>Recebimento</h3>
+            <dl class="rma-detail__pairs">
+              @if (rma().receivedAccessories) { <div><dt>Acessórios</dt><dd>{{ rma().receivedAccessories }}</dd></div> }
+              @if (rma().physicalCondition) { <div><dt>Condição física</dt><dd>{{ rma().physicalCondition }}</dd></div> }
+            </dl>
+          </section>
+        }
+
+        @if (rma().diagnosis; as diagnosis) {
+          <section class="rma-detail__section">
+            <h3>Diagnóstico</h3>
+            <dl class="rma-detail__pairs">
+              <div><dt>Falha encontrada</dt><dd>{{ diagnosis.foundFailure || '—' }}</dd></div>
+              <div><dt>Tipo</dt><dd>{{ failureTypeLabel(diagnosis.failureType) }}</dd></div>
+              <div><dt>Causa provável</dt><dd>{{ failureCauseLabel(diagnosis.probableCause) }}</dd></div>
+              @if (diagnosis.notes) { <div><dt>Observações</dt><dd>{{ diagnosis.notes }}</dd></div> }
+              @if (diagnosis.technicianName) { <div><dt>Técnico</dt><dd>{{ diagnosis.technicianName }}</dd></div> }
+            </dl>
+          </section>
+        }
+
+        @if (rma().repairSummary || rma().testSummary || rma().replacedPartsSummary) {
+          <section class="rma-detail__section">
+            <h3>Reparo</h3>
+            <dl class="rma-detail__pairs">
+              @if (rma().repairSummary) { <div><dt>Resumo do reparo</dt><dd>{{ rma().repairSummary }}</dd></div> }
+              @if (rma().replacedPartsSummary) { <div><dt>Peças substituídas</dt><dd>{{ rma().replacedPartsSummary }}</dd></div> }
+              @if (rma().testSummary) { <div><dt>Testes</dt><dd>{{ rma().testSummary }}</dd></div> }
+            </dl>
+          </section>
+        }
+
+        <section class="rma-detail__section">
+          <h3>Atividade</h3>
+          @if (timeline().length === 0 && assignments().length === 0) {
+            <p class="rma-detail__muted">Nenhuma atividade registrada.</p>
+          }
+          <ol class="rma-detail__timeline">
+            @for (entry of timeline(); track entry.changedAt) {
+              <li>
+                <strong>{{ entry.changedBy }}</strong> moveu para <em>{{ statusLabel(entry.status) }}</em>
+                <small>{{ dateTimeLabel(entry.changedAt) }}</small>
+                @if (entry.note) { <p>{{ entry.note }}</p> }
+              </li>
+            }
+            @for (entry of assignments(); track entry.changedAt) {
+              <li>
+                <strong>{{ entry.changedBy }}</strong> alterou o responsável de {{ entry.previousAssigneeName || 'ninguém' }} para {{ entry.newAssigneeName || 'ninguém' }}
+                <small>{{ dateTimeLabel(entry.changedAt) }}</small>
+              </li>
+            }
+          </ol>
+        </section>
+      </div>
+
+      <aside class="rma-detail__side">
+        <span class="rma-detail__status">{{ statusLabel(rma().status) }}</span>
+        <section class="rma-detail__info">
+          <h3>Informações</h3>
+          <dl>
+            <div>
+              <dt>Responsável</dt>
+              <dd class="rma-detail__assignee">
+                @if (rma().assigneeId) { <span class="avatar" aria-hidden="true">{{ initials(rma().assigneeName) }}</span> }
+                {{ ownerLabel(rma()) }}
+              </dd>
+            </div>
+            <div><dt>Prioridade</dt><dd><span class="mini-chip" [class]="priorityClass(rma().priority)">{{ priorityLabel(rma().priority) }}</span></dd></div>
+            <div><dt>SLA</dt><dd><app-rma-sla-badge [sla]="rma().sla" /></dd></div>
+            <div><dt>Cliente</dt><dd>{{ rma().clientName }}</dd></div>
+            <div><dt>Entrada</dt><dd>{{ dateLabel(rma().entryDate) }}</dd></div>
+            <div><dt>Recebido por</dt><dd>{{ rma().receivedBy }}</dd></div>
+            <div><dt>Nota fiscal</dt><dd>{{ rma().invoiceNumber || '—' }}</dd></div>
+            <div><dt>Data da compra</dt><dd>{{ rma().purchaseDateUnknown ? 'Não informada' : dateLabel(rma().purchaseDate) }}</dd></div>
+            @if (rma().trackingCode) { <div><dt>Rastreio</dt><dd>{{ rma().carrier }} · {{ rma().trackingCode }}</dd></div> }
+            <div><dt>Criado em</dt><dd>{{ dateTimeLabel(rma().createdAt) }}</dd></div>
+            <div><dt>Atualizado em</dt><dd>{{ dateTimeLabel(rma().updatedAt) }}</dd></div>
+          </dl>
+        </section>
+      </aside>
+    </div>
+  </article>
+</section>

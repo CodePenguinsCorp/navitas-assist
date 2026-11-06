@@ -69,12 +69,56 @@ describe('KanbanComponent filters', () => {
     component = fixture.componentInstance as unknown as KanbanHarness;
   });
 
-  it('preserves selection and filters when inspecting impediments with Enter', () => {
-    component.selectRma(TEST_RMAS[1]);
+  it('opens the detail modal when a card is clicked and closes it', () => {
+    fixture.detectChanges();
+    fixture.nativeElement.querySelector('.board-card').click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-rma-detail-modal .rma-detail')).not.toBeNull();
+    fixture.nativeElement.querySelector('app-rma-detail-modal .modal-close').click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-rma-detail-modal')).toBeNull();
+  });
+
+  it('closes the detail modal with Escape only when no other modal covers it', () => {
+    fixture.detectChanges();
+    component.openDetail(TEST_RMAS[0]);
+    fixture.detectChanges();
+    clickDetailButton('Alterar status');
+    expect(fixture.nativeElement.querySelectorAll('.modal-overlay').length).toBe(2);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-rma-detail-modal')).not.toBeNull();
+    fixture.nativeElement.querySelectorAll('.modal-overlay')[1].querySelector('.modal-close').click();
+    fixture.detectChanges();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-rma-detail-modal')).toBeNull();
+  });
+
+  it('opens the status and assignment modals from the detail modal', () => {
+    fixture.detectChanges();
+    component.openDetail(TEST_RMAS[0]);
+    fixture.detectChanges();
+    clickDetailButton('Alterar status');
+    expect(fixture.nativeElement.textContent).toContain('Novo status');
+    fixture.nativeElement.querySelectorAll('.modal-overlay')[1].querySelector('.modal-close').click();
+    fixture.detectChanges();
+    clickDetailButton('responsável');
+    expect(fixture.nativeElement.textContent).toContain('Novo responsável');
+  });
+
+  function clickDetailButton(text: string): void {
+    const button = [...fixture.nativeElement.querySelectorAll('app-rma-detail-modal button')].find((item: HTMLButtonElement) => item.textContent?.includes(text)) as HTMLButtonElement;
+    button.click();
+    fixture.detectChanges();
+  }
+
+  it('preserves selection and filters when inspecting impediments from the detail modal', () => {
     component.filtersForm.patchValue({ priority: 'HIGH' });
     fixture.detectChanges();
-    const inspect = [...fixture.nativeElement.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent?.includes('Ver impedimentos')) as HTMLButtonElement;
-    inspect.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    component.openDetail(TEST_RMAS[1]);
+    fixture.detectChanges();
+    const inspect = [...fixture.nativeElement.querySelectorAll('app-rma-detail-modal button')].find((button: HTMLButtonElement) => button.textContent?.includes('Ver impedimentos')) as HTMLButtonElement;
     inspect.click();
     fixture.detectChanges();
     const dialog: HTMLDialogElement = fixture.nativeElement.querySelector('app-rma-block-panel dialog');
@@ -235,6 +279,7 @@ describe('KanbanComponent filters', () => {
 interface KanbanHarness {
   selectedRmaId: Signal<number | null>;
   selectRma(rma: RmaResponse): void;
+  openDetail(rma: RmaResponse): void;
   bulkSelectedRmas: Signal<RmaResponse[]>;
   hiddenSelectedCount: Signal<number>;
   toggleBulkSelection(rma: RmaResponse): void;

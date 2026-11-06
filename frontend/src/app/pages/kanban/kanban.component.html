@@ -233,9 +233,7 @@
       [draggedRmaId]="draggedRmaId()"
       [dragTargetStatus]="dragTargetStatus()"
       [showToolbar]="false"
-      (cardSelect)="selectRma($event)"
-      (blockInspect)="blockPanel.open($event.id)"
-      (assigneeChange)="openAssignmentModal($event)"
+      (cardSelect)="openDetail($event)"
       (cardDragStart)="startCardDrag($event.event, $event.rma)"
       (cardDragEnd)="endCardDrag()"
       (columnDragOver)="allowColumnDrop($event.event, $event.status)"
@@ -246,6 +244,19 @@
 </section>
 
 <app-rma-block-panel #blockPanel (updated)="applyBlockUpdate($event)" />
+
+@if (detailRma(); as rma) {
+  <app-rma-detail-modal
+    [rma]="rma"
+    [canUpdateStatus]="canUpdateStatus()"
+    [canUpdateAssignee]="canUpdateAssignee()"
+    [disabled]="bulkBusy() || boardUpdatingId() !== null"
+    (closed)="closeDetail()"
+    (statusChange)="openStatusModal($event, $event.status)"
+    (assigneeChange)="openAssignmentModal($event)"
+    (blockInspect)="blockPanel.open($event.id)"
+  />
+}
 
 @if (viewModalMode(); as mode) {
   <section class="modal-overlay" (click)="closeViewModal()">
