@@ -1,7 +1,6 @@
 services:
   mysql:
     image: mysql:8.0
-    container_name: navitas-assist-mysql
     restart: unless-stopped
     ports:
       - "${MYSQL_PORT:-3306}:3306"
@@ -25,7 +24,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: navitas-assist-backend
     restart: unless-stopped
     depends_on:
       mysql:
@@ -44,7 +42,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: navitas-assist-frontend
     restart: unless-stopped
     depends_on:
       - backend

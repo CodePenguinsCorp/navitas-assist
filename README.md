@@ -312,6 +312,8 @@ Sem sobrescrever nada:
 - o frontend Docker consome a API por proxy interno em `/api`
 - o profile `local` continua disponável para rodar o backend manualmente contra o MySQL do Docker
 
+Os nomes dos contêineres locais são gerados pelo Docker Compose a partir do projeto. Para executar duas cópias ao mesmo tempo, configure portas diferentes em `FRONTEND_PORT`, `BACKEND_PORT` e `MYSQL_PORT` no `.env` de cada cópia.
+
 ## Autenticação e Sessão
 
 A aplicação usa sessão criada no backend. O frontend envia usuário e senha somente para `POST /api/auth/login`; credenciais reutilizáveis não são persistidas no `localStorage` nem no `sessionStorage`.
