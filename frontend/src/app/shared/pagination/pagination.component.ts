@@ -1,21 +1,19 @@
 import { Component, computed, input, output } from '@angular/core';
 import { PAGE_SIZE_OPTIONS, pageRange } from '../../core/utils/pagination';
+import { CustomSelectComponent } from '../form-controls/custom-select/custom-select.component';
 
 @Component({
   selector: 'app-pagination',
+  imports: [CustomSelectComponent],
   template: `
     <nav class="pagination" aria-label="Paginação">
       <span class="pagination__summary" aria-live="polite">
         {{ range() }} registro(s)
       </span>
-      <label class="pagination__size">
+      <div class="pagination__size">
         <span>Por página</span>
-        <select class="select-compact" [value]="size()" (change)="changeSize($event)" aria-label="Registros por página">
-          @for (option of sizeOptions; track option) {
-            <option [value]="option" [selected]="option === size()">{{ option }}</option>
-          }
-        </select>
-      </label>
+        <app-custom-select size="compact" ariaLabel="Registros por página" [options]="sizeSelectOptions" [value]="size()" (valueChange)="sizeChange.emit($any($event))" />
+      </div>
       <div class="pagination__controls">
         <button type="button" class="button-secondary button-secondary--small" [disabled]="!hasPrevious() || loading()" (click)="pageChange.emit(page() - 1)">
           Anterior
@@ -45,14 +43,11 @@ export class PaginationComponent {
   readonly pageChange = output<number>();
   readonly sizeChange = output<number>();
 
-  protected readonly sizeOptions = PAGE_SIZE_OPTIONS;
+  protected readonly sizeSelectOptions = PAGE_SIZE_OPTIONS.map((option) => ({ value: option, label: String(option) }));
   protected readonly range = computed(() => pageRange(this.page(), this.size(), this.totalElements(), this.shown()));
   protected readonly displayPage = computed(() => Math.min(this.page() + 1, Math.max(this.totalPages(), 1)));
   protected readonly displayTotalPages = computed(() => Math.max(this.totalPages(), 1));
   protected readonly hasPrevious = computed(() => this.page() > 0);
   protected readonly hasNext = computed(() => this.page() + 1 < this.totalPages());
 
-  protected changeSize(event: Event): void {
-    this.sizeChange.emit(Number((event.target as HTMLSelectElement).value));
-  }
 }

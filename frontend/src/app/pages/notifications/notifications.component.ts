@@ -12,6 +12,7 @@ import {
   UserRole
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
+import { CustomSelectComponent } from '../../shared/form-controls/custom-select/custom-select.component';
 import { NotificationService } from '../../core/services/notification.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import {
@@ -28,6 +29,7 @@ type NotificationsTab = 'inbox' | 'preferences' | 'rules';
 
 @Component({
   selector: 'app-notifications',
+  imports: [CustomSelectComponent],
   templateUrl: './notifications.component.html',
   styles: [`
     :host {
@@ -179,6 +181,7 @@ export class NotificationsComponent {
   protected readonly eventLabels = NOTIFICATION_EVENT_LABELS;
   protected readonly severityLabels = NOTIFICATION_SEVERITY_LABELS;
   protected readonly severities = NOTIFICATION_SEVERITIES;
+  protected readonly severityOptions = NOTIFICATION_SEVERITIES.map((severity) => ({ value: severity, label: NOTIFICATION_SEVERITY_LABELS[severity] }));
   protected readonly snoozeOptions = SNOOZE_OPTIONS;
   protected readonly roleOptions = ROLE_OPTIONS;
   protected readonly roleLabels = ROLE_LABELS;
@@ -239,7 +242,7 @@ export class NotificationsComponent {
     });
   }
 
-  protected snooze(notification: NotificationResponse, minutes: string): void {
+  protected snooze(notification: NotificationResponse, minutes: string | number): void {
     const value = Number(minutes);
     if (!value) {
       return;

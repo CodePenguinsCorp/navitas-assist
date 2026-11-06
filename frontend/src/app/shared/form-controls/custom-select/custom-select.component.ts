@@ -1,5 +1,6 @@
 import {
   Component,
+  DestroyRef,
   ElementRef,
   EventEmitter,
   HostListener,
@@ -38,10 +39,16 @@ export class CustomSelectComponent implements ControlValueAccessor {
   readonly placeholder = input('Selecione');
   readonly ariaLabel = input('Seleção');
   readonly disabled = input(false);
+  /** 'compact' fits toolbars and table rows (34px, content width). */
+  readonly size = input<'default' | 'compact'>('default');
+  /** Acts as an action menu: emits the choice and keeps showing the placeholder. */
+  readonly actionMenu = input(false);
 
   @Output() readonly valueChange = new EventEmitter<unknown>();
 
   protected readonly isOpen = signal(false);
+  /** Menu is fixed to the viewport so it never stretches a scrolling modal or table. */
+  protected readonly menuPosition = signal<{ top: number; left: number; width: number; maxHeight: number; above: boolean } | null>(null);
 
   private readonly selectedValue = signal<unknown>(null);
   private readonly disabledByForm = signal(false);
@@ -55,6 +62,10 @@ export class CustomSelectComponent implements ControlValueAccessor {
   private onTouched: () => void = () => {};
 
   constructor() {
+    const onAnyScroll = (event: Event) => this.handleScroll(event);
+    document.addEventListener('scroll', onAnyScroll, true);
+    inject(DestroyRef).onDestroy(() => document.removeEventListener('scroll', onAnyScroll, true));
+
     effect(() => {
       if (this.isDisabled() && this.isOpen()) this.close();
     });
@@ -73,12 +84,44 @@ export class CustomSelectComponent implements ControlValueAccessor {
     }
 
     if (this.isOpen()) this.close();
-    else this.isOpen.set(true);
+    else {
+      this.placeMenu();
+      this.isOpen.set(true);
+    }
+  }
+
+  private placeMenu(): void {
+    const trigger = this.hostElement.nativeElement.querySelector<HTMLElement>('.custom-select__trigger');
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const gap = 6;
+    const below = window.innerHeight - rect.bottom - gap - 8;
+    const above = rect.top - gap - 8;
+    const openAbove = below < 200 && above > below;
+    const maxHeight = Math.max(120, Math.min(280, openAbove ? above : below));
+    this.menuPosition.set({
+      top: openAbove ? rect.top - gap : rect.bottom + gap,
+      left: rect.left,
+      width: Math.max(rect.width, 140),
+      maxHeight,
+      above: openAbove
+    });
+  }
+
+  @HostListener('window:resize')
+  protected handleViewportChange(): void {
+    this.close();
+  }
+
+  protected handleScroll(event: Event): void {
+    const menu = this.hostElement.nativeElement.querySelector('.custom-select__menu');
+    if (menu && event.target instanceof Node && menu.contains(event.target)) return;
+    this.close();
   }
 
   protected selectOption(option: CustomSelectOption): void {
     if (this.isDisabled()) return;
-    this.selectedValue.set(option.value);
+    if (!this.actionMenu()) this.selectedValue.set(option.value);
     this.onChange(option.value);
     this.valueChange.emit(option.value);
     this.close();

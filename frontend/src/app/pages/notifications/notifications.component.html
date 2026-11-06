@@ -64,12 +64,7 @@
                 @if (!notification.read) {
                   <button type="button" class="button-secondary button-secondary--small" (click)="markRead(notification)" [disabled]="busy()">Marcar como lida</button>
                 }
-                <select #snoozeSelect class="select-compact" aria-label="Adiar notificação" (change)="snooze(notification, snoozeSelect.value); snoozeSelect.value = ''" [disabled]="busy()">
-                  <option value="">Adiar</option>
-                  @for (option of snoozeOptions; track option.value) {
-                    <option [value]="option.value">{{ option.label }}</option>
-                  }
-                </select>
+                <app-custom-select size="compact" [actionMenu]="true" ariaLabel="Adiar notificação" placeholder="Adiar" [options]="snoozeOptions" [disabled]="busy()" (valueChange)="snooze(notification, $any($event))" />
               </div>
             </article>
           }
@@ -134,11 +129,7 @@
                 <td>{{ eventLabels[rule.eventType] }}<span class="table-subtitle">Atualizada {{ dateTime(rule.updatedAt) }} por {{ rule.updatedBy || 'sistema' }}</span></td>
                 <td><input type="checkbox" [attr.aria-label]="'Ativar ' + eventLabels[rule.eventType]" [checked]="rule.enabled" [disabled]="busy()" (change)="updateRule(rule, { enabled: !rule.enabled })" /></td>
                 <td>
-                  <select #severitySelect class="select-compact" [attr.aria-label]="'Severidade de ' + eventLabels[rule.eventType]" [value]="rule.severity" [disabled]="busy()" (change)="updateSeverity(rule, severitySelect.value)">
-                    @for (severity of severities; track severity) {
-                      <option [value]="severity">{{ severityLabels[severity] }}</option>
-                    }
-                  </select>
+                  <app-custom-select size="compact" [ariaLabel]="'Severidade de ' + eventLabels[rule.eventType]" [options]="severityOptions" [value]="rule.severity" [disabled]="busy()" (valueChange)="updateSeverity(rule, $any($event))" />
                 </td>
                 <td>
                   <div class="rule-roles">

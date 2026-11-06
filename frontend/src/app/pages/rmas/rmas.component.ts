@@ -59,6 +59,7 @@ type SearchStatusValue = RmaStatus | '';
 type FailureTypeValue = FailureType | '';
 type FailureCauseValue = FailureCause | '';
 type ModalView = 'create' | 'details' | 'diagnosis';
+type DetailTab = 'products' | 'diagnosis' | 'parts' | 'protocols' | 'blocks' | 'history';
 
 interface CreateDateErrors {
   manufacturedAt: string[];
@@ -99,12 +100,84 @@ interface CreateDateErrors {
       font-weight: 700;
     }
 
-    .rma-detail-copy {
-      color: var(--muted);
-      line-height: 1.55;
-    }
 
     .rma-items-editor,
+    .rma-details {
+      display: grid;
+      align-content: start;
+      gap: 1.25rem;
+      padding: 1.5rem 1.25rem 1.5rem 1.75rem;
+    }
+
+    .rma-details__header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .rma-details__identity {
+      display: grid;
+      gap: 0.3rem;
+      min-width: 0;
+    }
+
+    .rma-details__code {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .rma-details__identity h3 {
+      margin: 0;
+      font-size: 1.4rem;
+      line-height: 1.25;
+      color: var(--brand-blue-deep);
+    }
+
+    .rma-details__chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.3rem;
+    }
+
+    .rma-details__header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .rma-details__summary {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      padding: 0.9rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--surface-alt);
+    }
+
+    .rma-details__panel {
+      min-height: 360px;
+    }
+
+    .rma-details__section + .rma-details__section {
+      margin-top: 1.25rem;
+    }
+
+    .rma-details__section h4 {
+      margin: 0 0 0.4rem;
+      font-size: 0.95rem;
+    }
+
+    .rma-details__section p {
+      margin: 0;
+    }
+
+    .rma-details__pairs {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
     .rma-items-detail {
       display: grid;
       gap: 0.75rem;
@@ -178,33 +251,68 @@ interface CreateDateErrors {
       gap: 0.4rem;
     }
 
-    .assignment-history {
-      display: grid;
-      gap: 0.65rem;
-      margin-top: 0.7rem;
-    }
 
-    .assignment-history__item {
-      display: grid;
-      gap: 0.2rem;
-      padding: 0.7rem 0.8rem;
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      background: var(--surface-alt);
-    }
 
-    .assignment-history__item span,
-    .assignment-history__item small {
-      color: var(--muted);
-    }
 
     .purchase-date-unknown {
       min-height: 42px;
       align-self: center;
     }
 
+    .rma-create-form {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .rma-create-form > * {
+      grid-column: 1 / -1;
+    }
+
+    .rma-create-form > .col-2 {
+      grid-column: span 2;
+    }
+
+    .rma-create-form > .col-3 {
+      grid-column: span 3;
+    }
+
+    .rma-create-form textarea {
+      min-height: 84px;
+    }
+
+    .rma-create-form > .rma-items-field {
+      grid-template-rows: auto;
+    }
+
+    .rma-item-editor--row {
+      grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr));
+    }
+
+    @media (max-width: 900px) {
+      .rma-create-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .rma-create-form > .col-2,
+      .rma-create-form > .col-3 {
+        grid-column: span 1;
+      }
+
+      .rma-item-editor--row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 900px) {
+      .rma-details__summary,
+      .rma-details__pairs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
     @media (max-width: 720px) {
-      .rma-item-editor {
+      .rma-create-form,
+      .rma-item-editor,
+      .rma-item-editor--row {
         grid-template-columns: 1fr;
       }
     }
@@ -228,6 +336,15 @@ export class RmasComponent {
   protected readonly historyError = signal('');
   protected readonly historyMessage = signal('');
   protected readonly activeModal = signal<ModalView | null>(null);
+  protected readonly detailTab = signal<DetailTab>('products');
+  protected readonly detailTabs: ReadonlyArray<{ id: DetailTab; label: string }> = [
+    { id: 'products', label: 'Produtos' },
+    { id: 'diagnosis', label: 'Diagnóstico' },
+    { id: 'parts', label: 'Peças' },
+    { id: 'protocols', label: 'Protocolos' },
+    { id: 'blocks', label: 'Impedimentos' },
+    { id: 'history', label: 'Histórico' }
+  ];
 
   private readonly rmaList = new PagedList<RmaResponse>(
     (pageQuery) => this.rmaService.list({ ...pageQuery, ...this.buildFilters() }),
@@ -415,6 +532,7 @@ export class RmasComponent {
     void import('../../shared/rma-protocols/rma-protocols.component').then((module) => this.protocolsComponent.set(module.RmaProtocolsComponent));
     this.selectRma(rma);
     this.pageMessage.set('');
+    this.detailTab.set('products');
     this.activeModal.set('details');
   }
 

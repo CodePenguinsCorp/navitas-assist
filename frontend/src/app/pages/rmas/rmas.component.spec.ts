@@ -211,7 +211,7 @@ describe('RmasComponent pending editor lifecycle', () => {
     else {
       page.querySelector<HTMLElement>('.rma-table-row')!.click();
       fixture.detectChanges();
-      page.querySelector<HTMLButtonElement>('.modal-overlay .form-actions .button-primary')!.click();
+      page.querySelector<HTMLButtonElement>('.rma-details__header-actions .button-primary')!.click();
     }
     fixture.detectChanges();
   }

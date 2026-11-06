@@ -190,126 +190,130 @@
 @if (activeModal() === 'details') {
   @if (selectedRma(); as rma) {
     <section class="modal-overlay" (click)="closeModal()">
-      <article class="panel modal-panel" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div>
-            <h3>{{ rma.code }}</h3>
-            <p>{{ rma.clientName }}</p>
-          </div>
-          <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
-          </button>
-        </div>
-
-        <div class="summary-list">
-          <span class="mini-chip">{{ statusLabel(rma.status) }}</span>
-          <span class="mini-chip" [class]="priorityClass(rma.priority)">{{ priorityLabel(rma.priority) }}</span>
-        </div>
-
-        <div class="detail-grid">
-          <div>
-            <span>Produtos</span>
-            <strong>{{ rma.items.length }} item(ns)</strong>
-          </div>
-          <div>
-            <span>Nota fiscal</span>
-            <strong>{{ rma.invoiceNumber || 'Não informada' }}</strong>
-          </div>
-          <div>
-            <span>Entrada</span>
-            <strong>{{ dateLabel(rma.entryDate) }}</strong>
-          </div>
-          <div>
-            <span>Responsável</span>
-            <strong>{{ ownerLabel(rma) }}</strong>
-          </div>
-          <div>
-            <span>Atualizado</span>
-            <strong>{{ dateTimeLabel(rma.updatedAt) }}</strong>
-          </div>
-        </div>
-
-        <div class="summary-block">
-          <strong>Produtos, lotes e garantias</strong>
-          <p class="muted-inline">Garantia avaliada na entrada do RMA. Compra: {{ rma.purchaseDateUnknown ? 'Data desconhecida' : dateLabel(rma.purchaseDate) }}.</p>
-          <div class="rma-items-detail">
-            @for (item of rma.items; track item.id ?? $index) {
-              <article class="rma-item-detail">
-                <header class="rma-item-detail__header">
-                  <div>
-                    <span class="rma-item-detail__sku code-text">{{ item.productSku }}</span>
-                    <strong>{{ item.productName }}</strong>
-                  </div>
-                  <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)">{{ warrantyLabel(item.warrantyStatus) }}</span>
-                </header>
-                <dl class="meta-list">
-                  <div><dt>Série</dt><dd [class.is-empty]="!item.serialNumber">{{ item.serialNumber || 'Não informada' }}</dd></div>
-                  <div><dt>Lote</dt><dd [class.is-empty]="!item.batchNumber">{{ item.batchNumber || 'Não informado' }}</dd></div>
-                  <div><dt>Prazo</dt><dd>{{ item.warrantyMonths }} meses</dd></div>
-                  <div><dt>Vencimento</dt><dd [class.is-empty]="!item.warrantyExpiresAt">{{ item.warrantyExpiresAt ? dateLabel(item.warrantyExpiresAt) : 'Informe a compra' }}</dd></div>
-                  @if (item.manufacturedAt) {
-                    <div><dt>Fabricação</dt><dd>{{ dateLabel(item.manufacturedAt) }}</dd></div>
-                  }
-                </dl>
-              </article>
-            }
-          </div>
-        </div>
-
-        <div class="summary-block">
-          <strong>Falha relatada</strong>
-          <p class="rma-detail-copy">{{ rma.reportedFailure }}</p>
-        </div>
-
-        <div class="summary-block">
-          <app-rma-block-history [rma]="rma" />
-        </div>
-
-        <div class="summary-block">
-          <strong>Histórico de responsáveis</strong>
-          @if (rma.assignmentHistory.length > 0) {
-            <div class="assignment-history">
-              @for (event of rma.assignmentHistory; track event.changedAt) {
-                <div class="assignment-history__item">
-                  <strong>{{ event.previousAssigneeName || 'Sem responsável' }} → {{ event.newAssigneeName || 'Sem responsável' }}</strong>
-                  <span>{{ dateTimeLabel(event.changedAt) }}</span>
-                  <small>Alterado por {{ event.changedBy }}</small>
-                </div>
+      <article class="panel modal-panel modal-panel--wide rma-details" role="dialog" aria-modal="true" [attr.aria-label]="'Detalhes do ' + rma.code" (click)="$event.stopPropagation()">
+        <header class="rma-details__header">
+          <div class="rma-details__identity">
+            <span class="rma-details__code code-text">{{ rma.code }}</span>
+            <h3>{{ rma.clientName }}</h3>
+            <div class="rma-details__chips">
+              <span class="mini-chip">{{ statusLabel(rma.status) }}</span>
+              <span class="mini-chip" [class]="priorityClass(rma.priority)">{{ priorityLabel(rma.priority) }}</span>
+              @if (rma.currentBlock) {
+                <span class="mini-chip priority-high">Bloqueado</span>
               }
             </div>
-          } @else {
-            <p class="rma-detail-copy">Nenhuma alteração de responsável registrada.</p>
+          </div>
+          <div class="rma-details__header-actions">
+            @if (canRegisterDiagnosis()) {
+              <button type="button" class="button-primary" (click)="openDiagnosisModal()">Diagnóstico</button>
+            }
+            <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+            </button>
+          </div>
+        </header>
+
+        <dl class="meta-list rma-details__summary">
+          <div><dt>Produtos</dt><dd>{{ rma.items.length }} item(ns)</dd></div>
+          <div><dt>Nota fiscal</dt><dd [class.is-empty]="!rma.invoiceNumber">{{ rma.invoiceNumber || 'Não informada' }}</dd></div>
+          <div><dt>Entrada</dt><dd>{{ dateLabel(rma.entryDate) }}</dd></div>
+          <div><dt>Compra</dt><dd [class.is-empty]="rma.purchaseDateUnknown">{{ rma.purchaseDateUnknown ? 'Desconhecida' : dateLabel(rma.purchaseDate) }}</dd></div>
+          <div><dt>Responsável</dt><dd [class.is-empty]="!rma.assigneeId">{{ ownerLabel(rma) }}</dd></div>
+          <div><dt>Atualizado</dt><dd>{{ dateTimeLabel(rma.updatedAt) }}</dd></div>
+        </dl>
+
+        <div class="tab-list" role="tablist" aria-label="Seções do RMA">
+          @for (tab of detailTabs; track tab.id) {
+            <button type="button" role="tab" class="tab" [id]="'rma-tab-' + tab.id" [class.is-active]="detailTab() === tab.id" [attr.aria-selected]="detailTab() === tab.id" [attr.aria-controls]="'rma-panel-' + tab.id" (click)="detailTab.set(tab.id)">{{ tab.label }}</button>
           }
         </div>
 
-        @if (protocolsComponent(); as protocols) {
-          <ng-container *ngComponentOutlet="protocols; inputs: { rmaId: rma.id }" />
-        }
-
-        <div class="summary-block">
-          <strong>Diagnóstico atual</strong>
-          @if (rma.diagnosis) {
-            <p class="rma-detail-copy">{{ rma.diagnosis.foundFailure }}</p>
-            <p class="rma-detail-copy">
-              {{ failureTypeLabel(rma.diagnosis.failureType) }} |
-              {{ failureCauseLabel(rma.diagnosis.probableCause) }}
-            </p>
-          } @else {
-            <p class="rma-detail-copy">Sem diagnóstico.</p>
+        <div class="rma-details__panel" role="tabpanel" [id]="'rma-panel-' + detailTab()" [attr.aria-labelledby]="'rma-tab-' + detailTab()">
+          @switch (detailTab()) {
+            @case ('products') {
+              <section class="rma-details__section">
+                <h4>Falha relatada</h4>
+                <p class="rma-detail-copy">{{ rma.reportedFailure }}</p>
+              </section>
+              <section class="rma-details__section">
+                <h4>Produtos, lotes e garantias</h4>
+                <p class="rma-detail-copy">Garantia avaliada na entrada do RMA.</p>
+                <div class="rma-items-detail">
+                  @for (item of rma.items; track item.id ?? $index) {
+                    <article class="rma-item-detail">
+                      <header class="rma-item-detail__header">
+                        <div>
+                          <span class="rma-item-detail__sku code-text">{{ item.productSku }}</span>
+                          <strong>{{ item.productName }}</strong>
+                        </div>
+                        <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)">{{ warrantyLabel(item.warrantyStatus) }}</span>
+                      </header>
+                      <dl class="meta-list">
+                        <div><dt>Série</dt><dd [class.is-empty]="!item.serialNumber">{{ item.serialNumber || 'Não informada' }}</dd></div>
+                        <div><dt>Lote</dt><dd [class.is-empty]="!item.batchNumber">{{ item.batchNumber || 'Não informado' }}</dd></div>
+                        <div><dt>Prazo</dt><dd>{{ item.warrantyMonths }} meses</dd></div>
+                        <div><dt>Vencimento</dt><dd [class.is-empty]="!item.warrantyExpiresAt">{{ item.warrantyExpiresAt ? dateLabel(item.warrantyExpiresAt) : 'Informe a compra' }}</dd></div>
+                        @if (item.manufacturedAt) {
+                          <div><dt>Fabricação</dt><dd>{{ dateLabel(item.manufacturedAt) }}</dd></div>
+                        }
+                      </dl>
+                    </article>
+                  }
+                </div>
+              </section>
+            }
+            @case ('diagnosis') {
+              @if (rma.diagnosis; as diagnosis) {
+                <dl class="meta-list rma-details__pairs">
+                  <div><dt>Falha encontrada</dt><dd>{{ diagnosis.foundFailure }}</dd></div>
+                  <div><dt>Tipo</dt><dd>{{ failureTypeLabel(diagnosis.failureType) }}</dd></div>
+                  <div><dt>Causa provável</dt><dd>{{ failureCauseLabel(diagnosis.probableCause) }}</dd></div>
+                </dl>
+              } @else {
+                <div class="empty-state">
+                  <h3>Sem diagnóstico.</h3>
+                  <p>Registre o diagnóstico para seguir com reparo e testes.</p>
+                  @if (canRegisterDiagnosis()) {
+                    <button type="button" class="button-secondary" (click)="openDiagnosisModal()">Registrar diagnóstico</button>
+                  }
+                </div>
+              }
+            }
+            @case ('parts') {
+              @defer {
+                <app-rma-parts-panel [rmaId]="rma.id" [rmaStatus]="rma.status" />
+              } @placeholder {
+                <p class="rma-detail-copy">Carregando peças...</p>
+              }
+            }
+            @case ('protocols') {
+              @if (protocolsComponent(); as protocols) {
+                <ng-container *ngComponentOutlet="protocols; inputs: { rmaId: rma.id }" />
+              } @else {
+                <p class="rma-detail-copy">Carregando protocolos...</p>
+              }
+            }
+            @case ('blocks') {
+              <app-rma-block-history [rma]="rma" />
+            }
+            @case ('history') {
+              @if (rma.assignmentHistory.length > 0) {
+                <ol class="record-list">
+                  @for (event of rma.assignmentHistory; track event.changedAt) {
+                    <li class="record-card">
+                      <div class="record-card__title">
+                        <strong>{{ event.previousAssigneeName || 'Sem responsável' }} → {{ event.newAssigneeName || 'Sem responsável' }}</strong>
+                        <time>{{ dateTimeLabel(event.changedAt) }}</time>
+                      </div>
+                      <dl class="meta-list"><div><dt>Alterado por</dt><dd>{{ event.changedBy }}</dd></div></dl>
+                    </li>
+                  }
+                </ol>
+              } @else {
+                <p class="rma-detail-copy">Nenhuma alteração de responsável registrada.</p>
+              }
+            }
           }
-        </div>
-
-        @defer {
-          <app-rma-parts-panel [rmaId]="rma.id" [rmaStatus]="rma.status" />
-        } @placeholder {
-          <p class="rma-detail-copy">Carregando peças...</p>
-        }
-
-        <div class="form-actions">
-          @if (canRegisterDiagnosis()) {
-            <button type="button" class="button-primary" (click)="openDiagnosisModal()">Diagnóstico</button>
-          }
-          <button type="button" class="button-secondary" (click)="closeModal()">Fechar</button>
         </div>
       </article>
     </section>
@@ -318,7 +322,7 @@
 
 @if (activeModal() === 'create') {
   <section class="modal-overlay" (click)="closeModal()">
-    <article class="panel modal-panel" (click)="$event.stopPropagation()">
+    <article class="panel modal-panel modal-panel--form-wide" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <div>
           <h3>Novo RMA</h3>
@@ -329,8 +333,8 @@
         </button>
       </div>
 
-      <form [formGroup]="createForm" (ngSubmit)="createRma()" class="form-grid">
-        <div class="field-group">
+      <form [formGroup]="createForm" (ngSubmit)="createRma()" class="form-grid rma-create-form">
+        <div class="field-group col-2">
           <label>Cliente</label>
           <app-custom-select
             formControlName="clientId"
@@ -339,7 +343,21 @@
           />
         </div>
 
-        <div class="field-group field-group--full" formArrayName="items">
+        <div class="field-group col-2">
+          <label>Prioridade</label>
+          <app-custom-select
+            formControlName="priority"
+            ariaLabel="Selecionar prioridade"
+            [options]="prioritySelectOptions"
+          />
+        </div>
+
+        <div class="field-group col-2">
+          <label for="invoiceNumber">Nota fiscal</label>
+          <input id="invoiceNumber" type="text" formControlName="invoiceNumber" />
+        </div>
+
+        <div class="field-group field-group--full rma-items-field" formArrayName="items">
           <div class="rma-items-editor">
             <div class="rma-items-editor__header">
               <div>
@@ -350,7 +368,7 @@
             </div>
 
             @for (itemForm of createItems.controls; track itemForm; let index = $index) {
-              <div class="rma-item-editor" [formGroupName]="index">
+              <div class="rma-item-editor rma-item-editor--row" [formGroupName]="index">
                 <div class="rma-item-editor__header">
                   <strong>Item {{ index + 1 }}</strong>
                   @if (createItems.length > 1) {
@@ -397,7 +415,7 @@
           </div>
         </div>
 
-        <div class="field-group">
+        <div class="field-group col-2">
           <label>Compra</label>
           <app-date-picker
             formControlName="purchaseDate"
@@ -411,12 +429,12 @@
           }
         </div>
 
-        <label class="checkbox-row purchase-date-unknown">
+        <label class="checkbox-row purchase-date-unknown col-2">
           <input type="checkbox" formControlName="purchaseDateUnknown" />
           <span>Data da compra desconhecida</span>
         </label>
 
-        <div class="field-group">
+        <div class="field-group col-2">
           <label>Entrada</label>
           <app-date-picker formControlName="entryDate" ariaLabel="Data de entrada" [allowClear]="false" [minDate]="entryMinDate" />
           @if (dateErrors().entryDate) {
@@ -424,46 +442,33 @@
           }
         </div>
 
-        <div class="field-group">
-          <label for="invoiceNumber">Nota fiscal</label>
-          <input id="invoiceNumber" type="text" formControlName="invoiceNumber" />
-        </div>
-
-        <div class="field-group">
-          <label>Prioridade</label>
-          <app-custom-select
-            formControlName="priority"
-            ariaLabel="Selecionar prioridade"
-            [options]="prioritySelectOptions"
-          />
-        </div>
 
         <div class="field-group field-group--full">
           <label for="reportedFailure">Falha relatada</label>
           <textarea id="reportedFailure" formControlName="reportedFailure" rows="4" maxlength="1000"></textarea>
         </div>
 
-        <div class="field-group field-group--full">
+        <div class="field-group col-3">
           <label for="receivedAccessories">Acessórios</label>
           <textarea id="receivedAccessories" formControlName="receivedAccessories" rows="3" maxlength="500"></textarea>
         </div>
 
-        <div class="field-group field-group--full">
+        <div class="field-group col-3">
           <label for="physicalCondition">Condição física</label>
           <textarea id="physicalCondition" formControlName="physicalCondition" rows="3" maxlength="500"></textarea>
         </div>
 
-        <div class="field-group field-group--full">
+        <div class="field-group col-2">
           <label for="repairSummary">Reparo</label>
           <textarea id="repairSummary" formControlName="repairSummary" rows="3" maxlength="600"></textarea>
         </div>
 
-        <div class="field-group field-group--full">
+        <div class="field-group col-2">
           <label for="replacedPartsSummary">Peças trocadas</label>
           <textarea id="replacedPartsSummary" formControlName="replacedPartsSummary" rows="3" maxlength="600"></textarea>
         </div>
 
-        <div class="field-group field-group--full">
+        <div class="field-group col-2">
           <label for="testSummary">Testes</label>
           <textarea id="testSummary" formControlName="testSummary" rows="3" maxlength="800"></textarea>
         </div>

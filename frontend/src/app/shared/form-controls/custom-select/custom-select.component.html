@@ -1,4 +1,4 @@
-<div class="custom-select" [class.is-open]="isOpen()" [class.is-disabled]="isDisabled()">
+<div class="custom-select" [class.is-open]="isOpen()" [class.is-disabled]="isDisabled()" [class.custom-select--compact]="size() === 'compact'">
   <button
     type="button"
     class="custom-select__trigger"
@@ -16,7 +16,7 @@
   </button>
 
   @if (isOpen()) {
-    <div class="custom-select__menu" role="listbox">
+    <div class="custom-select__menu" role="listbox" [class.is-above]="menuPosition()?.above" [style.top.px]="menuPosition()?.top" [style.left.px]="menuPosition()?.left" [style.width.px]="menuPosition()?.width" [style.max-height.px]="menuPosition()?.maxHeight">
       @for (option of options(); track $index) {
         <button
           type="button"

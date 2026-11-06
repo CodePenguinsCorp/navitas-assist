@@ -78,7 +78,7 @@
 
 @if (modalOpen()) {
   <div class="modal-overlay" (click)="closeModal()">
-    <section class="modal-panel panel" (click)="$event.stopPropagation()">
+    <section class="modal-panel modal-panel--form-wide panel" (click)="$event.stopPropagation()">
       <header class="modal-header">
         <div>
           <h3>{{ editingTemplate() ? 'Nova versão do protocolo' : 'Novo protocolo' }}</h3>

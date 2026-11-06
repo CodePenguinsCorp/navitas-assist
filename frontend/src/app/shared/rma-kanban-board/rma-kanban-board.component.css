@@ -25,8 +25,8 @@
 .board-shell {
   min-inline-size: 0;
   max-inline-size: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
+  max-block-size: calc(100dvh - 1.5rem);
+  overflow: auto;
   padding-bottom: 0.65rem;
   overscroll-behavior-x: contain;
   scrollbar-gutter: stable both-edges;
