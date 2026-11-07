@@ -222,11 +222,11 @@
         </label>
 
         <div class="form-actions form-actions--full">
-          <button type="submit" class="button-primary" [disabled]="submitting()">
-            {{ submitting() ? 'Salvando...' : editingClient() ? 'Salvar alterações' : 'Cadastrar cliente' }}
-          </button>
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="submitting()">
             Cancelar
+          </button>
+          <button type="submit" class="button-primary" [disabled]="submitting()">
+            {{ submitting() ? 'Salvando...' : editingClient() ? 'Salvar alterações' : 'Cadastrar cliente' }}
           </button>
         </div>
       </form>
@@ -285,19 +285,19 @@
       <div class="form-actions">
         <button
           type="button"
-          class="button-primary button-primary--danger"
-          (click)="confirmDeleteClient()"
-          [disabled]="deletingClientId() !== null"
-        >
-          {{ deletingClientId() === client.id ? 'Excluindo...' : 'Excluir cliente' }}
-        </button>
-        <button
-          type="button"
           class="button-secondary"
           (click)="closeDeleteModal()"
           [disabled]="deletingClientId() !== null"
         >
           Cancelar
+        </button>
+        <button
+          type="button"
+          class="button-primary button-primary--danger"
+          (click)="confirmDeleteClient()"
+          [disabled]="deletingClientId() !== null"
+        >
+          {{ deletingClientId() === client.id ? 'Excluindo...' : 'Excluir cliente' }}
         </button>
       </div>
     </section>

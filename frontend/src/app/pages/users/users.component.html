@@ -224,11 +224,11 @@
         </label>
 
         <div class="form-actions form-actions--full">
-          <button type="submit" class="button-primary" [disabled]="submitting()">
-            {{ submitting() ? 'Salvando...' : editingUser() ? 'Salvar alterações' : 'Cadastrar usuário' }}
-          </button>
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="submitting()">
             Cancelar
+          </button>
+          <button type="submit" class="button-primary" [disabled]="submitting()">
+            {{ submitting() ? 'Salvando...' : editingUser() ? 'Salvar alterações' : 'Cadastrar usuário' }}
           </button>
         </div>
       </form>
@@ -285,19 +285,19 @@
       <div class="form-actions">
         <button
           type="button"
-          class="button-primary button-primary--danger"
-          (click)="confirmDeleteUser()"
-          [disabled]="deletingUserId() !== null"
-        >
-          {{ deletingUserId() === user.id ? 'Excluindo...' : 'Excluir usuário' }}
-        </button>
-        <button
-          type="button"
           class="button-secondary"
           (click)="closeDeleteModal()"
           [disabled]="deletingUserId() !== null"
         >
           Cancelar
+        </button>
+        <button
+          type="button"
+          class="button-primary button-primary--danger"
+          (click)="confirmDeleteUser()"
+          [disabled]="deletingUserId() !== null"
+        >
+          {{ deletingUserId() === user.id ? 'Excluindo...' : 'Excluir usuário' }}
         </button>
       </div>
     </section>

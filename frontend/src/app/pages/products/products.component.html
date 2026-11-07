@@ -249,11 +249,11 @@
         </label>
 
         <div class="form-actions form-actions--full">
-          <button type="submit" class="button-primary" [disabled]="submitting()">
-            {{ submitting() ? 'Salvando...' : editingProduct() ? 'Salvar alterações' : 'Cadastrar produto' }}
-          </button>
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="submitting()">
             Cancelar
+          </button>
+          <button type="submit" class="button-primary" [disabled]="submitting()">
+            {{ submitting() ? 'Salvando...' : editingProduct() ? 'Salvar alterações' : 'Cadastrar produto' }}
           </button>
         </div>
       </form>
@@ -310,19 +310,19 @@
       <div class="form-actions">
         <button
           type="button"
-          class="button-primary button-primary--danger"
-          (click)="confirmDeleteProduct()"
-          [disabled]="deletingProductId() !== null"
-        >
-          {{ deletingProductId() === product.id ? 'Excluindo...' : 'Excluir produto' }}
-        </button>
-        <button
-          type="button"
           class="button-secondary"
           (click)="closeDeleteModal()"
           [disabled]="deletingProductId() !== null"
         >
           Cancelar
+        </button>
+        <button
+          type="button"
+          class="button-primary button-primary--danger"
+          (click)="confirmDeleteProduct()"
+          [disabled]="deletingProductId() !== null"
+        >
+          {{ deletingProductId() === product.id ? 'Excluindo...' : 'Excluir produto' }}
         </button>
       </div>
     </section>

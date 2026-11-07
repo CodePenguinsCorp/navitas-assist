@@ -260,8 +260,8 @@
         </label>
 
         <div class="form-actions form-actions--full">
-          <button type="submit" class="button-primary" [disabled]="submitting()">{{ submitting() ? 'Salvando...' : 'Salvar' }}</button>
           <button type="button" class="button-secondary" (click)="closeModals()" [disabled]="submitting()">Cancelar</button>
+          <button type="submit" class="button-primary" [disabled]="submitting()">{{ submitting() ? 'Salvando...' : 'Salvar' }}</button>
         </div>
       </form>
     </section>
@@ -301,8 +301,8 @@
           <input type="text" formControlName="reason" [attr.maxlength]="limits.reason" />
         </label>
         <div class="form-actions form-actions--full">
-          <button type="submit" class="button-primary" [disabled]="submitting()">{{ submitting() ? 'Registrando...' : 'Registrar' }}</button>
           <button type="button" class="button-secondary" (click)="closeModals()" [disabled]="submitting()">Cancelar</button>
+          <button type="submit" class="button-primary" [disabled]="submitting()">{{ submitting() ? 'Registrando...' : 'Registrar' }}</button>
         </div>
       </form>
     </section>

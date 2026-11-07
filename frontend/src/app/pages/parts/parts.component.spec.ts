@@ -3,6 +3,7 @@ import { of } from 'rxjs';
 import { PartMovementResponse, PartResponse, UserRole } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { PartService } from '../../core/services/part.service';
+import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { PartsComponent } from './parts.component';
 
 const PART: PartResponse = {
@@ -22,6 +23,7 @@ interface PartsHarness {
   belowMinimumCount(): number;
   modalErrorMessage(): string;
   movementForm: { setValue(value: unknown): void };
+  openCreateModal(): void;
   openMovementModal(part: PartResponse): void;
   saveMovement(): void;
   openHistory(part: PartResponse): void;
@@ -93,5 +95,21 @@ describe('PartsComponent', () => {
     component.reversalReason.setValue('Peça não utilizada');
     component.confirmReversal(CONSUMPTION);
     expect(partService['reverseMovement']).toHaveBeenCalledWith(9, 'Peça não utilizada');
+  });
+
+  it('shows Cancelar before the primary action in the form dialog', async () => {
+    await setUp('SERVICE_DESK');
+    component.openCreateModal();
+    fixture.detectChanges();
+
+    expectCancelBeforePrimary(fixture.nativeElement);
+  });
+
+  it('shows Cancelar before the primary action in the movement dialog', async () => {
+    await setUp('SERVICE_DESK');
+    component.openMovementModal(PART);
+    fixture.detectChanges();
+
+    expectCancelBeforePrimary(fixture.nativeElement);
   });
 });

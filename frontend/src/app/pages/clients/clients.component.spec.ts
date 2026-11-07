@@ -4,6 +4,7 @@ import { of } from 'rxjs';
 import { ClientRequest, ClientResponse, PageResponse } from '../../core/models';
 import { CatalogService, ClientFilters } from '../../core/services/catalog.service';
 import { PresenceFilter } from '../../core/utils/catalog-ui';
+import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { ClientsComponent } from './clients.component';
 
 function client(id: number, legalName: string): ClientResponse {
@@ -119,6 +120,20 @@ describe('ClientsComponent pagination', () => {
 
     expect(listClients).toHaveBeenLastCalledWith({ page: 1, size: 20, query: '', hasDocument: undefined, hasEmail: undefined });
   });
+
+  it('shows Cancelar before the primary action in the form dialog', () => {
+    component.openCreateModal();
+    fixture.detectChanges();
+
+    expectCancelBeforePrimary(fixture.nativeElement);
+  });
+
+  it('shows Cancelar before the delete action', () => {
+    component.openDeleteModal(client(1, 'Alfa'));
+    fixture.detectChanges();
+
+    expectCancelBeforePrimary(fixture.nativeElement);
+  });
 });
 
 interface ClientsHarness {
@@ -128,6 +143,7 @@ interface ClientsHarness {
   updateEmailFilter(value: PresenceFilter): void;
   goToPage(page: number): void;
   changePageSize(size: number): void;
+  openCreateModal(): void;
   openDeleteModal(client: ClientResponse): void;
   confirmDeleteClient(): void;
 }

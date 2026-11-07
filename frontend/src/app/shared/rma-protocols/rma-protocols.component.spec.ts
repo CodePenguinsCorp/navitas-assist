@@ -5,6 +5,7 @@ import { of } from 'rxjs';
 import { ProtocolExecutionItemResponse, ProtocolExecutionResponse, ProtocolItemResultRequest, UserRole } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { ProtocolService } from '../../core/services/protocol.service';
+import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { RmaProtocolsComponent } from './rma-protocols.component';
 
 const MEASUREMENT: ProtocolExecutionItemResponse = {
@@ -68,6 +69,14 @@ describe('RmaProtocolsComponent', () => {
 
     expect(results).toEqual([expect.objectContaining({ outcome: 'PASSED', measuredValue: '12.50', textValue: null })]);
     expect(component.executions()[0].pendingRequiredItems).toBe(0);
+  });
+
+  it('shows Cancelar before the primary action in the form dialog', async () => {
+    await setup('TECHNICIAN');
+    component.openResult(EXECUTION, MEASUREMENT);
+    fixture.detectChanges();
+
+    expectCancelBeforePrimary(fixture.nativeElement);
   });
 });
 

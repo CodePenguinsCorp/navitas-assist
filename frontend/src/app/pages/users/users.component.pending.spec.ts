@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { UserAccountResponse } from '../../core/models';
+import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { UsersComponent } from './users.component';
 
 const SAMPLE_USER: UserAccountResponse = {
@@ -148,5 +149,18 @@ describe('UsersComponent pending save lifecycle', () => {
     http.expectNone({ method: 'POST', url: '/api/users' });
     expect(page.querySelector('[role="alert"]')?.textContent).toContain('Revise os campos destacados');
     expect(page.querySelector<HTMLButtonElement>('.modal-close')!.disabled).toBe(false);
+  });
+
+  it('shows Cancelar before the primary action in the form dialog', () => {
+    openEditor('create');
+
+    expectCancelBeforePrimary(page);
+  });
+
+  it('shows Cancelar before the delete action', () => {
+    (fixture.componentInstance as unknown as { openDeleteModal(user: UserAccountResponse): void }).openDeleteModal(SAMPLE_USER);
+    fixture.detectChanges();
+
+    expectCancelBeforePrimary(page);
   });
 });

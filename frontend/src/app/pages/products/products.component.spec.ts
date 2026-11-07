@@ -8,6 +8,7 @@ import { PageResponse, ProductResponse, ProductSummaryResponse } from '../../cor
 import { CatalogService, ProductFilters } from '../../core/services/catalog.service';
 import { PresenceFilter } from '../../core/utils/catalog-ui';
 import { CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
+import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { ProductsComponent } from './products.component';
 
 const INITIAL_PRODUCTS: ProductResponse[] = [
@@ -115,6 +116,20 @@ describe('ProductsComponent pagination', () => {
     expect(component.categoryFilter()).toBe('');
     expect(listProducts).toHaveBeenLastCalledWith({ page: 0, size: 20, ...EMPTY_FILTERS });
   });
+
+  it('shows Cancelar before the primary action in the form dialog', () => {
+    component.openCreateModal();
+    fixture.detectChanges();
+
+    expectCancelBeforePrimary(fixture.nativeElement);
+  });
+
+  it('shows Cancelar before the delete action', () => {
+    component.openDeleteModal(product(1, 'Alfa'));
+    fixture.detectChanges();
+
+    expectCancelBeforePrimary(fixture.nativeElement);
+  });
 });
 
 interface ProductsHarness {
@@ -126,6 +141,7 @@ interface ProductsHarness {
   updateFirmwareFilter(value: PresenceFilter): void;
   goToPage(page: number): void;
   changePageSize(size: number): void;
+  openCreateModal(): void;
   openDeleteModal(product: ProductResponse): void;
   confirmDeleteProduct(): void;
 }

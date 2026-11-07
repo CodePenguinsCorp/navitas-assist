@@ -192,8 +192,8 @@
         </div>
 
         <div class="form-actions form-actions--full">
-          <button type="submit" class="button-primary" [disabled]="submitting()">{{ submitting() ? 'Salvando...' : editingTemplate() ? 'Publicar nova versão' : 'Cadastrar protocolo' }}</button>
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="submitting()">Cancelar</button>
+          <button type="submit" class="button-primary" [disabled]="submitting()">{{ submitting() ? 'Salvando...' : editingTemplate() ? 'Publicar nova versão' : 'Cadastrar protocolo' }}</button>
         </div>
       </form>
     </section>
