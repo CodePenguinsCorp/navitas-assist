@@ -29,30 +29,29 @@
         </section>
       }
     </div>
+
+    <div class="sidebar-user">
+      <span class="avatar avatar--lg" aria-hidden="true">{{ initials(currentUser()?.name ?? null) }}</span>
+      <div class="sidebar-user__meta">
+        <strong>{{ currentUser()?.name }}</strong>
+        <span>{{ currentRoleLabel() }}</span>
+      </div>
+      <button type="button" class="sidebar-user__logout" (click)="logout()" [disabled]="loggingOut()" [attr.title]="loggingOut() ? 'Saindo...' : 'Sair'">
+        <app-icon name="logout" />
+        <span class="sr-only">{{ loggingOut() ? 'Saindo...' : 'Sair' }}</span>
+      </button>
+    </div>
   </aside>
 
   <div class="shell-main">
     <header class="shell-header">
       <div class="shell-actions">
-        <a routerLink="/notificacoes" class="button-secondary shell-notifications" [attr.aria-label]="'Notificações: ' + unreadNotifications() + ' não lida(s)'">
-          <app-icon name="bell" />
-          <span>Notificações</span>
+        <a routerLink="/notificacoes" class="shell-notifications" [class.has-unread]="unreadNotifications() > 0" [attr.aria-label]="'Notificações: ' + unreadNotifications() + ' não lida(s)'" title="Notificações">
+          <app-icon name="bell" [size]="22" />
           @if (unreadNotifications() > 0) {
             <span class="count-badge" aria-hidden="true">{{ unreadNotifications() > 99 ? '99+' : unreadNotifications() }}</span>
           }
         </a>
-        <div class="top-user">
-          <span class="avatar avatar--lg" aria-hidden="true">{{ initials(currentUser()?.name ?? null) }}</span>
-          <div class="top-user__meta">
-            <strong>{{ currentUser()?.name }}</strong>
-            <span>{{ currentRoleLabel() }}</span>
-          </div>
-        </div>
-
-        <button type="button" class="button-secondary shell-logout" (click)="logout()" [disabled]="loggingOut()">
-          <app-icon name="logout" />
-          <span>{{ loggingOut() ? 'Saindo...' : 'Sair' }}</span>
-        </button>
       </div>
     </header>
 

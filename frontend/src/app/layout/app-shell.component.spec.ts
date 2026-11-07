@@ -38,7 +38,7 @@ describe('AppShellComponent logout', () => {
   afterEach(() => http.verify());
 
   function button(): HTMLButtonElement {
-    return page.querySelector<HTMLButtonElement>('.shell-logout')!;
+    return page.querySelector<HTMLButtonElement>('.sidebar-user__logout')!;
   }
 
   function fail(request: TestRequest, kind: 'network' | number): void {
@@ -86,7 +86,7 @@ describe('AppShellComponent logout', () => {
       http.expectNone('/api/auth/logout');
       expect(page.querySelector('[role="alert"]')?.textContent).toContain(feedback);
       expect(page.textContent).not.toContain('internal upstream detail');
-      expect(page.querySelector('.top-user__meta strong')?.textContent).toContain('Administrador');
+      expect(page.querySelector('.sidebar-user__meta strong')?.textContent).toContain('Administrador');
       expect(auth.isAuthenticated()).toBe(true);
       expect(router.navigateByUrl).not.toHaveBeenCalled();
       expect(button().disabled).toBe(false);
