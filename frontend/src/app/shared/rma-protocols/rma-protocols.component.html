@@ -8,7 +8,10 @@
   @if (loading() && executions().length === 0) {
     <p class="rma-detail-copy">Carregando protocolos...</p>
   } @else if (executions().length === 0) {
-    <p class="rma-detail-copy">Nenhum protocolo executado.</p>
+    <div class="empty-state">
+      <span class="icon-tile tone-slate"><app-icon name="checklist" [size]="20" /></span>
+      <p>Nenhum protocolo executado neste RMA.</p>
+    </div>
   }
 
   @for (execution of executions(); track execution.id) {
@@ -75,9 +78,12 @@
   }
 
   @if (canExecute() && templateOptions().length > 0) {
-    <div class="protocol-start">
-      <app-custom-select ariaLabel="Protocolo a executar" placeholder="Selecione o protocolo" [options]="templateOptions()" [value]="selectedTemplateId()" (valueChange)="selectTemplate($any($event))" />
-      <button type="button" class="button-secondary button-secondary--small" (click)="startExecution()" [disabled]="submitting()">Iniciar protocolo</button>
+    <div class="protocol-launch">
+      <span class="protocol-launch__label">Executar protocolo</span>
+      <div class="protocol-launch__row">
+        <app-custom-select ariaLabel="Protocolo a executar" placeholder="Selecione o protocolo" [options]="templateOptions()" [value]="selectedTemplateId()" (valueChange)="selectTemplate($any($event))" />
+        <button type="button" class="button-primary" (click)="startExecution()" [disabled]="submitting() || !selectedTemplateId()"><app-icon name="plus" />Iniciar</button>
+      </div>
     </div>
   }
 </div>

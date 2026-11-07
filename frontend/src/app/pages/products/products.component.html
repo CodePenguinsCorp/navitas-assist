@@ -272,9 +272,12 @@
       (click)="$event.stopPropagation()"
     >
       <header class="modal-header">
-        <div>
-          <h3 id="delete-product-title">Excluir produto</h3>
-          <p>Esta ação não poderá ser desfeita.</p>
+        <div class="danger-heading">
+          <span class="icon-tile tone-danger"><app-icon name="trash" [size]="20" /></span>
+          <div>
+            <h3 id="delete-product-title">Excluir produto</h3>
+            <p>Esta ação não poderá ser desfeita.</p>
+          </div>
         </div>
         <button
           type="button"
@@ -295,10 +298,13 @@
 
       <div id="delete-product-description" class="delete-confirmation">
         <p>Tem certeza de que deseja excluir este produto?</p>
-        <dl class="meta-list">
-          <div><dt>Produto</dt><dd>{{ product.name }}</dd></div>
-          <div><dt>SKU</dt><dd class="code-text">{{ product.sku }}</dd></div>
-        </dl>
+        <div class="delete-target">
+          <span class="icon-tile icon-tile--sm tone-slate"><app-icon name="box" [size]="17" /></span>
+          <div>
+            <strong>{{ product.name }}</strong>
+            <span class="code-text">{{ product.sku }}</span>
+          </div>
+        </div>
       </div>
 
       <div class="form-actions">

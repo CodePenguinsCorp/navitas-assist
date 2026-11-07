@@ -56,22 +56,6 @@ const passwordByteLengthValidator: ValidatorFn = control =>
       grid-template-rows: auto;
     }
 
-    .user-status-card {
-      display: flex;
-      align-items: center;
-      min-height: 44px;
-      padding: 0.6rem 0.85rem;
-      border: 1px solid var(--line);
-      border-radius: var(--radius-sm);
-      background: var(--surface-alt);
-    }
-
-    .user-status-card strong {
-      color: var(--text);
-      font-size: 0.95rem;
-      line-height: 1.2;
-    }
-
     .field-hint {
       color: var(--muted);
       font-size: 0.82rem;

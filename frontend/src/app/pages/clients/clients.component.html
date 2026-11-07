@@ -245,9 +245,12 @@
       (click)="$event.stopPropagation()"
     >
       <header class="modal-header">
-        <div>
-          <h3 id="delete-client-title">Excluir cliente</h3>
-          <p>Esta ação não poderá ser desfeita.</p>
+        <div class="danger-heading">
+          <span class="icon-tile tone-danger"><app-icon name="trash" [size]="20" /></span>
+          <div>
+            <h3 id="delete-client-title">Excluir cliente</h3>
+            <p>Esta ação não poderá ser desfeita.</p>
+          </div>
         </div>
         <button
           type="button"
@@ -268,12 +271,15 @@
 
       <div id="delete-client-description" class="delete-confirmation">
         <p>Tem certeza de que deseja excluir este cliente?</p>
-        <dl class="meta-list">
-          <div><dt>Cliente</dt><dd>{{ client.legalName }}</dd></div>
-          @if (client.documentNumber) {
-            <div><dt>Documento</dt><dd>{{ client.documentNumber }}</dd></div>
-          }
-        </dl>
+        <div class="delete-target">
+          <span class="icon-tile icon-tile--sm tone-slate"><app-icon name="building" [size]="17" /></span>
+          <div>
+            <strong>{{ client.legalName }}</strong>
+            @if (client.documentNumber) {
+              <span class="code-text">{{ client.documentNumber }}</span>
+            }
+          </div>
+        </div>
       </div>
 
       <div class="form-actions">

@@ -1,3 +1,4 @@
+import { IconComponent } from '../icon/icon.component';
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
@@ -23,7 +24,7 @@ interface EditingItem {
 
 @Component({
   selector: 'app-rma-protocols',
-  imports: [ReactiveFormsModule, CustomSelectComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent],
   templateUrl: './rma-protocols.component.html',
   styles: [`
     :host {
@@ -64,6 +65,33 @@ interface EditingItem {
       margin: 0.15rem 0 0;
       color: var(--muted);
       font-size: 0.85rem;
+    }
+
+    .protocol-launch {
+      display: grid;
+      gap: 0.4rem;
+      margin-top: 1rem;
+      padding: 0.85rem 0.9rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--surface-alt);
+    }
+
+    .protocol-launch__label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .protocol-launch__row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.6rem;
+      align-items: center;
+    }
+
+    .protocol-launch__row .button-primary {
+      min-height: 42px;
     }
 
     .protocol-start {

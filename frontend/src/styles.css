@@ -1608,11 +1608,61 @@ fieldset.field-group > span {
   line-height: 1.5;
 }
 
-.delete-confirmation .meta-list {
+/* On/off field inside a form grid: same height as the inputs beside it. */
+.toggle-box {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 42px;
+  padding: 0 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  cursor: pointer;
+}
+
+.toggle-box strong {
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.toggle-box:has(input:checked) {
+  border-color: color-mix(in srgb, var(--brand-blue) 35%, var(--line));
+  background: #eef5fc;
+}
+
+.danger-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+/* The record about to be deleted: icon or avatar, name, code. */
+.delete-target {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   padding: 0.75rem 0.9rem;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface-alt);
+}
+
+.delete-target > div {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.delete-target strong {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.delete-target .code-text {
+  font-size: 0.82rem;
+  color: var(--muted);
 }
 
 .empty-state h3 {
