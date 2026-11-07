@@ -9,6 +9,7 @@ import {
   MetricCard,
   RmaPriority,
   RmaResponse,
+  RmaStatus,
   RmaStatusHistoryResponse,
   UserSummaryResponse,
   WarrantyStatus
@@ -16,6 +17,8 @@ import {
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
+import { IconComponent, IconName } from '../../shared/icon/icon.component';
+import { initialsOf } from '../../core/utils/rma-ui';
 import { formatBusinessDateTime as formatDateTime, formatDateOnly } from '../../core/utils/date';
 
 interface QueueRow {
@@ -23,12 +26,16 @@ interface QueueRow {
   client: string;
   entryDate: string;
   status: string;
+  statusCode: RmaStatus;
   priority: string;
+  priorityCode: RmaPriority;
 }
 
 interface AuditRow {
   id: string;
-  action: string;
+  code: string;
+  status: string;
+  statusCode: RmaStatus;
   detail: string;
   time: string;
 }
@@ -37,11 +44,20 @@ interface RecentRmaRow {
   code: string;
   client: string;
   owner: string;
+  ownerInitials: string;
+  hasOwner: boolean;
   updatedAt: string;
+}
+
+interface DashboardMetric extends MetricCard {
+  icon: IconName;
+  toneClass: string;
+  meter: number | null;
 }
 
 @Component({
   selector: 'app-dashboard',
+  imports: [IconComponent],
   templateUrl: './dashboard.component.html',
   styles: [':host { display: block; }']
 })
@@ -58,7 +74,7 @@ export class DashboardComponent {
   private readonly productTotalSignal = signal(0);
   private readonly userTotalSignal = signal(0);
 
-  protected readonly metrics = computed<MetricCard[]>(() => {
+  protected readonly metrics = computed<DashboardMetric[]>(() => {
     const rmas = this.rmasSignal();
     const clients = this.clientTotalSignal();
     const products = this.productTotalSignal();
@@ -76,26 +92,38 @@ export class DashboardComponent {
       {
         label: 'RMAs ativos',
         value: String(activeRmas.length),
-        variation: `${rmas.length} registros`,
-        tone: 'brand'
+        variation: `${rmas.length} registros no total`,
+        tone: 'brand',
+        icon: 'clipboard',
+        toneClass: '',
+        meter: rmas.length === 0 ? null : Math.round((activeRmas.length / rmas.length) * 100)
       },
       {
         label: 'Produtos em garantia',
         value: `${warrantyRate}%`,
         variation: `${inWarrantyCount} de ${rmaItems.length} itens · ${pendingWarrantyCount} pendentes`,
-        tone: 'sky'
+        tone: 'sky',
+        icon: 'shield',
+        toneClass: 'tone-success',
+        meter: warrantyRate
       },
       {
         label: 'Fila inicial',
         value: String(initialQueue.length),
-        variation: `${countHighPriority(initialQueue)} alta`,
-        tone: 'slate'
+        variation: `${countHighPriority(initialQueue)} com prioridade alta`,
+        tone: 'slate',
+        icon: 'inbox',
+        toneClass: 'tone-warning',
+        meter: null
       },
       {
         label: 'Cadastros',
         value: String(catalogTotal),
         variation: `${clients} clientes · ${products} produtos${users > 0 ? ` · ${users} usuários` : ''}`,
-        tone: 'light'
+        tone: 'light',
+        icon: 'layers',
+        toneClass: 'tone-slate',
+        meter: null
       }
     ];
   });
@@ -109,7 +137,9 @@ export class DashboardComponent {
         client: rma.clientName,
         entryDate: formatDateOnly(rma.entryDate),
         status: RMA_STATUS_LABELS[rma.status],
-        priority: RMA_PRIORITY_LABELS[rma.priority]
+        statusCode: rma.status,
+        priority: RMA_PRIORITY_LABELS[rma.priority],
+        priorityCode: rma.priority
       }))
   );
 
@@ -125,7 +155,9 @@ export class DashboardComponent {
       .slice(0, 4)
       .map(({ rmaCode, event }) => ({
         id: `${rmaCode}-${event.changedAt}-${event.status}`,
-        action: `${rmaCode} · ${RMA_STATUS_LABELS[event.status]}`,
+        code: rmaCode,
+        status: RMA_STATUS_LABELS[event.status],
+        statusCode: event.status,
         detail: event.note?.trim() || event.changedBy,
         time: formatDateTime(event.changedAt)
       }))
@@ -139,6 +171,8 @@ export class DashboardComponent {
         code: rma.code,
         client: rma.clientName,
         owner: extractOwner(rma),
+        ownerInitials: initialsOf(rma.assigneeName),
+        hasOwner: !!rma.assigneeName?.trim(),
         updatedAt: formatDateTime(rma.updatedAt)
       }))
   );

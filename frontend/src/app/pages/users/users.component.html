@@ -4,20 +4,23 @@
       <h1>Usuários</h1>
     </div>
     <div class="shell-actions">
-      <button type="button" class="button-primary" (click)="openCreateModal()">Novo usuário</button>
+      <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo usuário</button>
     </div>
   </section>
 
   <section class="stats-grid stats-grid--three">
     <article class="panel stat-card">
+      <span class="icon-tile tone-success"><app-icon name="check" [size]="20" /></span>
       <span>Ativos</span>
       <strong>{{ summary().active }}</strong>
     </article>
     <article class="panel stat-card">
+      <span class="icon-tile tone-violet"><app-icon name="lock" [size]="20" /></span>
       <span>Administradores</span>
       <strong>{{ summary().admins }}</strong>
     </article>
     <article class="panel stat-card">
+      <span class="icon-tile tone-slate"><app-icon name="users" [size]="20" /></span>
       <span>Perfis em uso</span>
       <strong>{{ summary().roles }}</strong>
     </article>
@@ -77,12 +80,14 @@
       <p>Carregando usuários...</p>
     } @else if (users().length === 0 && !hasActiveFilters) {
       <section class="empty-state">
+        <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
         <h3>Nenhum usuário cadastrado.</h3>
         <p>Cadastre perfis internos para controlar o acesso ao sistema.</p>
-        <button type="button" class="button-primary" (click)="openCreateModal()">Cadastrar usuário</button>
+        <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Cadastrar usuário</button>
       </section>
     } @else if (users().length === 0) {
       <section class="empty-state">
+        <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
         <h3>Nenhum resultado encontrado.</h3>
         <p>Ajuste os filtros para localizar outro usuário.</p>
       </section>
@@ -103,32 +108,34 @@
             @for (user of users(); track user.id) {
               <tr>
                 <td>
-                  <strong class="table-title">{{ user.fullName }}</strong>
+                  <span class="person"><span class="avatar" aria-hidden="true">{{ initials(user.fullName) }}</span><strong class="table-title">{{ user.fullName }}</strong></span>
                 </td>
-                <td>{{ user.username }}</td>
+                <td><span class="code-text">{{ user.username }}</span></td>
                 <td>{{ roleLabel(user.role) }}</td>
                 <td>
-                  <span [class]="statusClass(user)">{{ user.active ? 'Ativo' : 'Inativo' }}</span>
+                  <span class="state-dot" [class.is-on]="user.active">{{ user.active ? 'Ativo' : 'Inativo' }}</span>
                 </td>
                 <td>{{ updatedAtLabel(user) }}</td>
                 <td class="table-actions-col">
                   <div class="user-actions">
                     <button
                       type="button"
-                      class="button-secondary button-secondary--small"
+                      class="icon-button"
+                      title="Editar"
                       (click)="openEditModal(user)"
                       [disabled]="deletingUserId() === user.id"
                     >
-                      Editar
+                      <app-icon name="pencil" /><span class="sr-only">Editar</span>
                     </button>
                     <button
                       type="button"
-                      class="button-secondary button-secondary--small button-secondary--danger"
+                      class="icon-button icon-button--danger"
+                      title="Excluir"
                       (click)="openDeleteModal(user)"
                       [disabled]="deletingUserId() !== null || isCurrentUser(user)"
                       [attr.title]="isCurrentUser(user) ? 'Você não pode excluir a própria conta.' : null"
                     >
-                      {{ deletingUserId() === user.id ? 'Excluindo...' : 'Excluir' }}
+                      <app-icon name="trash" /><span class="sr-only">{{ deletingUserId() === user.id ? 'Excluindo...' : 'Excluir' }}</span>
                     </button>
                   </div>
                 </td>

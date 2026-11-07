@@ -1,3 +1,5 @@
+import { IconComponent } from '../shared/icon/icon.component';
+import { initialsOf } from '../core/utils/rma-ui';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
@@ -8,7 +10,7 @@ import { NotificationService } from '../core/services/notification.service';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, IconComponent],
   templateUrl: './app-shell.component.html',
   styles: [':host { display: block; }']
 })
@@ -21,6 +23,7 @@ export class AppShellComponent {
   protected readonly unreadNotifications = this.notificationService.unreadCount;
   protected readonly loggingOut = signal(false);
   protected readonly logoutError = signal('');
+  protected readonly initials = initialsOf;
   protected readonly visibleNavGroups = computed(() =>
     NAV_GROUPS
       .map((group) => ({

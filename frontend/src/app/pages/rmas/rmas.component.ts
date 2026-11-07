@@ -1,3 +1,4 @@
+import { IconComponent } from '../../shared/icon/icon.component';
 import { NgComponentOutlet } from '@angular/common';
 import { Component, Type, computed, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
@@ -40,6 +41,7 @@ import {
   priorityChipClass,
   priorityLabel,
   productSummary,
+  initialsOf,
   rmaItemTrackableLabel,
   statusLabel,
   trackableLabel,
@@ -69,7 +71,7 @@ interface CreateDateErrors {
 
 @Component({
   selector: 'app-rmas',
-  imports: [ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlockHistoryComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlockHistoryComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {
@@ -133,6 +135,13 @@ interface CreateDateErrors {
       font-size: 1.4rem;
       line-height: 1.25;
       color: var(--brand-blue-deep);
+    }
+
+    .history-item__meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
     }
 
     .rma-details__chips {
@@ -383,6 +392,7 @@ export class RmasComponent {
   protected readonly ownerLabel = ownerLabel;
   protected readonly productSummary = productSummary;
   protected readonly itemTrackableLabel = rmaItemTrackableLabel;
+  protected readonly initials = initialsOf;
 
   protected get todayDate(): string {
     return todayInputValue();

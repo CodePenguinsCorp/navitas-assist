@@ -1,3 +1,4 @@
+import { IconComponent } from '../../shared/icon/icon.component';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable, finalize, forkJoin } from 'rxjs';
@@ -38,11 +39,20 @@ const MOVEMENT_TYPE_OPTIONS: ReadonlyArray<CustomSelectOption<ManualPartMovement
 
 @Component({
   selector: 'app-parts',
-  imports: [ReactiveFormsModule, CustomSelectComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent],
   templateUrl: './parts.component.html',
   styles: [`
     :host {
       display: block;
+    }
+
+    .stock-cell {
+      min-width: 110px;
+    }
+
+    .stock-cell .meter {
+      margin-top: 0.35rem;
+      max-width: 120px;
     }
 
     .part-actions {
@@ -64,6 +74,12 @@ const MOVEMENT_TYPE_OPTIONS: ReadonlyArray<CustomSelectOption<ManualPartMovement
   `]
 })
 export class PartsComponent {
+  /** Available stock against twice the minimum: half the bar means "at the minimum". */
+  protected stockPercent(part: { available: number; minimumStock: number }): number {
+    const reference = Math.max(part.minimumStock * 2, part.available, 1);
+    return Math.round((Math.max(part.available, 0) / reference) * 100);
+  }
+
   private readonly formBuilder = inject(FormBuilder);
   private readonly partService = inject(PartService);
   private readonly authService = inject(AuthService);

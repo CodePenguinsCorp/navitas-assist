@@ -1,3 +1,4 @@
+import type { IconName } from '../shared/icon/icon.component';
 export type UserRole = 'ADMIN' | 'TECHNICIAN' | 'SERVICE_DESK' | 'VIEWER';
 
 export type MetricTone = 'brand' | 'sky' | 'slate' | 'light';
@@ -524,6 +525,7 @@ export interface RmaReportResponse {
 export interface NavItem {
   label: string;
   route: string;
+  icon: IconName;
   roles: UserRole[];
 }
 

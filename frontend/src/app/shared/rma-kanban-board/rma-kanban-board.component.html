@@ -53,7 +53,7 @@
                     <h4 class="code-text">{{ item.code }}</h4>
                     <p class="board-card__client">{{ item.clientName }}</p>
                   </div>
-                  <span class="mini-chip" [class]="priorityClass(item.priority)">{{ priorityLabel(item.priority) }}</span>
+                  <span class="priority-tag" [attr.data-priority]="item.priority"><span class="priority-bars" [attr.data-priority]="item.priority" aria-hidden="true"><i></i><i></i><i></i></span>{{ priorityLabel(item.priority) }}</span>
                 </header>
 
                 <strong class="board-card__title">{{ productSummary(item) }}</strong>

@@ -38,6 +38,7 @@
         <p>Carregando notificações...</p>
       } @else if (notifications().length === 0) {
         <section class="empty-state">
+          <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
           <h3>Nenhuma notificação.</h3>
           <p>Alertas sobre RMAs atribuídos, novos itens e SLA aparecem aqui.</p>
         </section>
@@ -45,9 +46,10 @@
         <div class="notification-list">
           @for (notification of notifications(); track notification.id) {
             <article class="notification-item" [class.is-unread]="!notification.read">
+              <span class="icon-tile icon-tile--sm" [class]="'icon-tile icon-tile--sm ' + severityTone(notification.severity)" [title]="severityLabels[notification.severity]"><app-icon [name]="severityIcon(notification.severity)" [size]="17" /></span>
               <div class="notification-body">
                 <div class="notification-meta">
-                  <span class="mini-chip" [class]="severityClass(notification.severity)">{{ severityLabels[notification.severity] }}</span>
+                  <span class="sr-only">{{ severityLabels[notification.severity] }}</span>
                   <span class="notification-event">{{ eventLabels[notification.eventType] }}</span>
                   <time class="notification-time">{{ dateTime(notification.createdAt) }}</time>
                   @if (notification.snoozedUntil) {
@@ -91,7 +93,7 @@
               <tr>
                 <td>{{ eventLabels[preference.eventType] }}</td>
                 <td><span class="mini-chip" [class]="severityClass(preference.severity)">{{ severityLabels[preference.severity] }}</span></td>
-                <td>{{ !preference.enabled ? 'Regra desativada' : preference.muted ? 'Silenciado' : 'Recebendo' }}</td>
+                <td><span class="state-dot" [class.is-on]="preference.enabled && !preference.muted">{{ !preference.enabled ? 'Regra desativada' : preference.muted ? 'Silenciado' : 'Recebendo' }}</span></td>
                 <td class="table-actions-col">
                   @if (preference.userMutable) {
                     <button type="button" class="button-secondary button-secondary--small" (click)="toggleMute(preference)" [disabled]="busy()">{{ preference.muted ? 'Reativar' : 'Silenciar' }}</button>

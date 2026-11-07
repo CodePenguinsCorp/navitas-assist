@@ -1,3 +1,4 @@
+import { IconComponent } from '../../shared/icon/icon.component';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -42,7 +43,7 @@ const PRODUCT_PREVIEW_LIMITS = {
 
 @Component({
   selector: 'app-products',
-  imports: [ReactiveFormsModule, CustomSelectComponent, PaginationComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PaginationComponent],
   templateUrl: './products.component.html',
   styles: [`
     :host {

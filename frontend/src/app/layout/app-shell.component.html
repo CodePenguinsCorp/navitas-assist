@@ -21,6 +21,7 @@
                 class="nav-item"
                 ariaCurrentWhenActive="page"
               >
+                <app-icon [name]="item.icon" [size]="19" />
                 <strong>{{ item.label }}</strong>
               </a>
             }
@@ -34,23 +35,14 @@
     <header class="shell-header">
       <div class="shell-actions">
         <a routerLink="/notificacoes" class="button-secondary shell-notifications" [attr.aria-label]="'Notificações: ' + unreadNotifications() + ' não lida(s)'">
-          Notificações
+          <app-icon name="bell" />
+          <span>Notificações</span>
           @if (unreadNotifications() > 0) {
             <span class="count-badge" aria-hidden="true">{{ unreadNotifications() > 99 ? '99+' : unreadNotifications() }}</span>
           }
         </a>
         <div class="top-user">
-          <span class="top-user__avatar" aria-hidden="true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="8" r="3.25" stroke="currentColor" stroke-width="1.8" />
-              <path
-                d="M5.5 18.25c1.2-2.7 3.58-4.05 6.5-4.05s5.3 1.35 6.5 4.05"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-              />
-            </svg>
-          </span>
+          <span class="avatar avatar--lg" aria-hidden="true">{{ initials(currentUser()?.name ?? null) }}</span>
           <div class="top-user__meta">
             <strong>{{ currentUser()?.name }}</strong>
             <span>{{ currentRoleLabel() }}</span>
@@ -58,7 +50,8 @@
         </div>
 
         <button type="button" class="button-secondary shell-logout" (click)="logout()" [disabled]="loggingOut()">
-          {{ loggingOut() ? 'Saindo...' : 'Sair' }}
+          <app-icon name="logout" />
+          <span>{{ loggingOut() ? 'Saindo...' : 'Sair' }}</span>
         </button>
       </div>
     </header>

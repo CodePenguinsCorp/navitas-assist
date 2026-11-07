@@ -6,17 +6,21 @@
   </section>
 
   @if (errorMessage()) {
-    <article class="status-card panel">
-      <h3>{{ errorMessage() }}</h3>
+    <article class="panel alert-banner alert-banner--error" role="alert">
+      <strong>{{ errorMessage() }}</strong>
     </article>
   }
 
-  <section class="metrics-grid">
+  <section class="stats-grid stats-grid--four">
     @for (metric of metrics(); track metric.label) {
-      <article class="metric-card panel" [class]="metric.tone">
-        <p class="metric-label">{{ metric.label }}</p>
-        <div class="metric-value">{{ metric.value }}</div>
-        <p>{{ metric.variation }}</p>
+      <article class="panel stat-card">
+        <span class="icon-tile" [class]="'icon-tile ' + metric.toneClass"><app-icon [name]="metric.icon" [size]="20" /></span>
+        <span>{{ metric.label }}</span>
+        <strong>{{ metric.value }}</strong>
+        @if (metric.meter !== null) {
+          <span class="meter" [class]="'meter ' + metric.toneClass" aria-hidden="true"><span [style.width.%]="metric.meter"></span></span>
+        }
+        <small>{{ metric.variation }}</small>
       </article>
     }
   </section>
@@ -27,7 +31,10 @@
       @if (loading()) {
         <p>Carregando...</p>
       } @else if (queue().length === 0) {
-        <p>Nenhum RMA.</p>
+        <div class="empty-state">
+          <span class="icon-tile"><app-icon name="inbox" [size]="20" /></span>
+          <p>Nenhum RMA na fila.</p>
+        </div>
       } @else {
         <table>
           <thead>
@@ -41,10 +48,13 @@
           <tbody>
             @for (item of queue(); track item.code) {
               <tr>
-                <td><strong class="table-title code-text">{{ item.code }}</strong><span class="table-subtitle">{{ item.priority }}</span></td>
+                <td>
+                  <strong class="table-title code-text">{{ item.code }}</strong>
+                  <span class="priority-tag" [attr.data-priority]="item.priorityCode"><span class="priority-bars" [attr.data-priority]="item.priorityCode" aria-hidden="true"><i></i><i></i><i></i></span>{{ item.priority }}</span>
+                </td>
                 <td>{{ item.client }}</td>
                 <td>{{ item.entryDate }}</td>
-                <td>{{ item.status }}</td>
+                <td><span class="status-chip" [attr.data-status]="item.statusCode">{{ item.status }}</span></td>
               </tr>
             }
           </tbody>
@@ -57,19 +67,22 @@
       @if (loading()) {
         <p>Carregando...</p>
       } @else if (auditEvents().length === 0) {
-        <p>Sem alterações.</p>
+        <div class="empty-state">
+          <span class="icon-tile"><app-icon name="history" [size]="20" /></span>
+          <p>Sem alterações recentes.</p>
+        </div>
       } @else {
-        <div class="timeline-list">
+        <ol class="activity-list">
           @for (event of auditEvents(); track event.id) {
-            <div class="timeline-entry">
+            <li class="timeline-entry activity-item" [attr.data-status]="event.statusCode">
               <div>
-                <strong>{{ event.action }}</strong>
+                <strong><span class="code-text">{{ event.code }}</span><span class="status-chip" [attr.data-status]="event.statusCode">{{ event.status }}</span></strong>
                 <span>{{ event.detail }}</span>
               </div>
               <time>{{ event.time }}</time>
-            </div>
+            </li>
           }
-        </div>
+        </ol>
       }
     </article>
   </section>
@@ -79,7 +92,10 @@
     @if (loading()) {
       <p>Carregando...</p>
     } @else if (recentRmas().length === 0) {
-      <p>Nenhum RMA.</p>
+      <div class="empty-state">
+        <span class="icon-tile"><app-icon name="clipboard" [size]="20" /></span>
+        <p>Nenhum RMA registrado.</p>
+      </div>
     } @else {
       <table>
         <thead>
@@ -93,9 +109,9 @@
         <tbody>
           @for (rma of recentRmas(); track rma.code) {
             <tr>
-              <td>{{ rma.code }}</td>
+              <td><strong class="code-text">{{ rma.code }}</strong></td>
               <td>{{ rma.client }}</td>
-              <td>{{ rma.owner }}</td>
+              <td><span class="person"><span class="avatar" [class.avatar--empty]="!rma.hasOwner" aria-hidden="true">{{ rma.hasOwner ? rma.ownerInitials : '–' }}</span><span>{{ rma.owner }}</span></span></td>
               <td>{{ rma.updatedAt }}</td>
             </tr>
           }

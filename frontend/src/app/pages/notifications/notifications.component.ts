@@ -1,3 +1,4 @@
+import { IconComponent, IconName } from '../../shared/icon/icon.component';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, finalize } from 'rxjs';
@@ -29,7 +30,7 @@ type NotificationsTab = 'inbox' | 'preferences' | 'rules';
 
 @Component({
   selector: 'app-notifications',
-  imports: [CustomSelectComponent],
+  imports: [IconComponent, CustomSelectComponent],
   templateUrl: './notifications.component.html',
   styles: [`
     :host {
@@ -68,10 +69,10 @@ type NotificationsTab = 'inbox' | 'preferences' | 'rules';
     .notification-item {
       position: relative;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: auto minmax(0, 1fr) auto;
       align-items: center;
-      gap: 0.75rem 1.5rem;
-      padding: 0.85rem 1rem 0.85rem 1.25rem;
+      gap: 0.75rem 1rem;
+      padding: 0.85rem 1rem;
       border: 1px solid var(--line);
       border-radius: var(--radius-md);
       background: #ffffff;
@@ -84,11 +85,11 @@ type NotificationsTab = 'inbox' | 'preferences' | 'rules';
     .notification-item.is-unread::before {
       content: '';
       position: absolute;
-      left: 0.5rem;
-      top: 1.1rem;
-      width: 6px;
-      height: 6px;
-      border-radius: 999px;
+      left: -1px;
+      top: 12px;
+      bottom: 12px;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
       background: var(--brand-blue);
     }
 
@@ -173,6 +174,13 @@ export class NotificationsComponent {
   protected readonly severityLabels = NOTIFICATION_SEVERITY_LABELS;
   protected readonly severities = NOTIFICATION_SEVERITIES;
   protected readonly severityOptions = NOTIFICATION_SEVERITIES.map((severity) => ({ value: severity, label: NOTIFICATION_SEVERITY_LABELS[severity] }));
+  protected severityIcon(severity: NotificationSeverity): IconName {
+    return severity === 'CRITICAL' ? 'alert' : severity === 'WARNING' ? 'clock' : 'info';
+  }
+
+  protected severityTone(severity: NotificationSeverity): string {
+    return severity === 'CRITICAL' ? 'tone-danger' : severity === 'WARNING' ? 'tone-warning' : 'tone-sky';
+  }
   protected readonly snoozeOptions = SNOOZE_OPTIONS;
   protected readonly roleOptions = ROLE_OPTIONS;
   protected readonly roleLabels = ROLE_LABELS;

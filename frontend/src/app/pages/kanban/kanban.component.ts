@@ -1,3 +1,4 @@
+import { IconComponent, IconName } from '../../shared/icon/icon.component';
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -42,6 +43,8 @@ import { RmaBlockPanelComponent } from '../../shared/rma-block-panel/rma-block-p
 import { RmaDetailModalComponent } from '../../shared/rma-detail-modal/rma-detail-modal.component';
 
 interface KanbanHeroStat {
+  icon: IconName;
+  tone: string;
   label: string;
   value: string;
   detail: string;
@@ -70,7 +73,7 @@ type ViewModalMode = 'create' | 'rename' | null;
 
 @Component({
   selector: 'app-kanban',
-  imports: [
+  imports: [IconComponent, 
     ReactiveFormsModule,
     BoundedFilterPanelsDirective,
     CustomSelectComponent,
@@ -204,21 +207,29 @@ export class KanbanComponent {
   protected readonly heroStats = computed<ReadonlyArray<KanbanHeroStat>>(() => [
     {
       label: 'Em andamento',
+      icon: 'wrench' as IconName,
+      tone: '',
       value: String(this.activeCount()),
       detail: 'Cards ativos no fluxo',
     },
     {
       label: 'Alta prioridade',
+      icon: 'flag' as IconName,
+      tone: 'tone-danger',
       value: String(this.highPriorityCount()),
       detail: 'Itens que exigem atenção',
     },
     {
       label: 'Aguardando peça',
+      icon: 'clock' as IconName,
+      tone: 'tone-warning',
       value: String(this.waitingPartCount()),
       detail: 'Possível gargalo atual',
     },
     {
       label: 'Encerrados',
+      icon: 'check' as IconName,
+      tone: 'tone-success',
       value: String(this.closedCount()),
       detail: 'Concluídos ou devolvidos',
     },

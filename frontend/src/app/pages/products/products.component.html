@@ -4,20 +4,23 @@
       <h1>Produtos</h1>
     </div>
     <div class="shell-actions">
-      <button type="button" class="button-primary" (click)="openCreateModal()">Novo produto</button>
+      <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo produto</button>
     </div>
   </section>
 
   <section class="stats-grid stats-grid--three">
     <article class="panel stat-card">
+      <span class="icon-tile tone-slate"><app-icon name="layers" [size]="20" /></span>
       <span>Categorias</span>
       <strong>{{ summary().categories.length }}</strong>
     </article>
     <article class="panel stat-card">
+      <span class="icon-tile tone-sky"><app-icon name="layers" [size]="20" /></span>
       <span>Com firmware</span>
       <strong>{{ summary().withFirmware }}</strong>
     </article>
     <article class="panel stat-card">
+      <span class="icon-tile tone-success"><app-icon name="shield" [size]="20" /></span>
       <span>Garantia média</span>
       <strong>{{ summary().averageWarrantyMonths }} meses</strong>
     </article>
@@ -74,12 +77,14 @@
       <p>Carregando produtos...</p>
     } @else if (products().length === 0 && !hasActiveFilters) {
       <section class="empty-state">
+        <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
         <h3>Nenhum produto cadastrado.</h3>
         <p>Cadastre produtos para utilizar no fluxo de abertura de RMAs.</p>
-        <button type="button" class="button-primary" (click)="openCreateModal()">Cadastrar produto</button>
+        <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Cadastrar produto</button>
       </section>
     } @else if (products().length === 0) {
       <section class="empty-state">
+        <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
         <h3>Nenhum resultado encontrado.</h3>
         <p>Ajuste a busca ou os filtros para localizar outro produto.</p>
       </section>
@@ -121,19 +126,21 @@
                   <div class="product-actions">
                     <button
                       type="button"
-                      class="button-secondary button-secondary--small"
+                      class="icon-button"
+                      title="Editar"
                       (click)="openEditModal(product)"
                       [disabled]="deletingProductId() === product.id"
                     >
-                      Editar
+                      <app-icon name="pencil" /><span class="sr-only">Editar</span>
                     </button>
                     <button
                       type="button"
-                      class="button-secondary button-secondary--small button-secondary--danger"
+                      class="icon-button icon-button--danger"
+                      title="Excluir"
                       (click)="openDeleteModal(product)"
                       [disabled]="deletingProductId() !== null"
                     >
-                      {{ deletingProductId() === product.id ? 'Excluindo...' : 'Excluir' }}
+                      <app-icon name="trash" /><span class="sr-only">{{ deletingProductId() === product.id ? 'Excluindo...' : 'Excluir' }}</span>
                     </button>
                   </div>
                 </td>

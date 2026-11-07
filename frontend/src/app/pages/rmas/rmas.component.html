@@ -5,21 +5,24 @@
     </div>
     <div class="shell-actions">
       @if (canOpenRma()) {
-        <button type="button" class="button-primary" (click)="openCreateModal()">Novo RMA</button>
+        <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo RMA</button>
       }
     </div>
   </section>
 
   <section class="stats-grid stats-grid--three">
     <article class="panel stat-card">
+      <span class="icon-tile"><app-icon name="clipboard" [size]="20" /></span>
       <span>RMAs encontrados</span>
       <strong>{{ totalRmas() }}</strong>
     </article>
     <article class="panel stat-card">
+      <span class="icon-tile tone-warning"><app-icon name="wrench" [size]="20" /></span>
       <span>Em atendimento (nesta página)</span>
       <strong>{{ ongoingRmas() }}</strong>
     </article>
     <article class="panel stat-card">
+      <span class="icon-tile tone-danger"><app-icon name="flag" [size]="20" /></span>
       <span>Prioridade alta (nesta página)</span>
       <strong>{{ highPriorityRmas() }}</strong>
     </article>
@@ -96,7 +99,7 @@
           @for (item of historyResults(); track item.id) {
             <button type="button" class="history-item" (click)="selectHistoryItem(item)">
               <strong><span class="code-text">{{ item.code }}</span> · {{ item.clientName }}</strong>
-              <span>{{ trackableLabel(item) }} · {{ statusLabel(item.status) }} · {{ dateLabel(item.entryDate) }}</span>
+              <span class="history-item__meta"><span class="status-chip" [attr.data-status]="item.status">{{ statusLabel(item.status) }}</span>{{ trackableLabel(item) }} · {{ dateLabel(item.entryDate) }}</span>
             </button>
           }
         </div>
@@ -109,10 +112,11 @@
       <p>Carregando RMAs...</p>
     } @else if (rmas().length === 0) {
       <section class="empty-state">
+        <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
         <h3>Nenhum RMA encontrado.</h3>
         <p>Ajuste os filtros ou abra um novo RMA.</p>
         @if (canOpenRma()) {
-          <button type="button" class="button-primary" (click)="openCreateModal()">Novo RMA</button>
+          <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo RMA</button>
         }
       </section>
     } @else {
@@ -150,23 +154,21 @@
                   <strong class="table-title">{{ productSummary(rma) }}</strong>
                   <span class="table-subtitle">{{ rma.items.length }} item(ns)</span>
                 </td>
-                <td><span class="mini-chip">{{ statusLabel(rma.status) }}</span></td>
+                <td><span class="status-chip" [attr.data-status]="rma.status">{{ statusLabel(rma.status) }}</span></td>
                 <td>
-                  <span class="mini-chip" [class]="priorityClass(rma.priority)">
-                    {{ priorityLabel(rma.priority) }}
-                  </span>
+                  <span class="priority-tag" [attr.data-priority]="rma.priority"><span class="priority-bars" [attr.data-priority]="rma.priority" aria-hidden="true"><i></i><i></i><i></i></span>{{ priorityLabel(rma.priority) }}</span>
                 </td>
                 <td>
                   <div class="rma-item-warranties">
                     @for (item of rma.items; track item.id ?? $index) {
-                      <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)" [title]="item.productName + ' · ' + itemTrackableLabel(item)">
-                        {{ item.productSku }} · {{ warrantyLabel(item.warrantyStatus) }}
+                      <span class="warranty-tag" [class]="'warranty-tag ' + warrantyClass(item.warrantyStatus)" [title]="item.productName + ' · ' + warrantyLabel(item.warrantyStatus)">
+                        <app-icon name="shield" [size]="14" />{{ item.productSku }}<span class="sr-only"> · {{ warrantyLabel(item.warrantyStatus) }}</span>
                       </span>
                     }
                   </div>
                 </td>
                 <td>{{ dateLabel(rma.entryDate) }}</td>
-                <td class="table-actions-col"><span class="rma-open-hint">Abrir</span></td>
+                <td class="table-actions-col"><span class="open-hint" title="Abrir"><app-icon name="chevron" /><span class="sr-only">Abrir</span></span></td>
               </tr>
             }
           </tbody>
@@ -196,8 +198,8 @@
             <span class="rma-details__code code-text">{{ rma.code }}</span>
             <h3>{{ rma.clientName }}</h3>
             <div class="rma-details__chips">
-              <span class="mini-chip">{{ statusLabel(rma.status) }}</span>
-              <span class="mini-chip" [class]="priorityClass(rma.priority)">{{ priorityLabel(rma.priority) }}</span>
+              <span class="status-chip" [attr.data-status]="rma.status">{{ statusLabel(rma.status) }}</span>
+              <span class="priority-tag" [attr.data-priority]="rma.priority"><span class="priority-bars" [attr.data-priority]="rma.priority" aria-hidden="true"><i></i><i></i><i></i></span>{{ priorityLabel(rma.priority) }}</span>
               @if (rma.currentBlock) {
                 <span class="mini-chip priority-high">Bloqueado</span>
               }
@@ -218,7 +220,7 @@
           <div><dt>Nota fiscal</dt><dd [class.is-empty]="!rma.invoiceNumber">{{ rma.invoiceNumber || 'Não informada' }}</dd></div>
           <div><dt>Entrada</dt><dd>{{ dateLabel(rma.entryDate) }}</dd></div>
           <div><dt>Compra</dt><dd [class.is-empty]="rma.purchaseDateUnknown">{{ rma.purchaseDateUnknown ? 'Desconhecida' : dateLabel(rma.purchaseDate) }}</dd></div>
-          <div><dt>Responsável</dt><dd [class.is-empty]="!rma.assigneeId">{{ ownerLabel(rma) }}</dd></div>
+          <div><dt>Responsável</dt><dd class="person" [class.is-empty]="!rma.assigneeId"><span class="avatar" [class.avatar--empty]="!rma.assigneeId" aria-hidden="true">{{ rma.assigneeId ? initials(rma.assigneeName) : '–' }}</span><span>{{ ownerLabel(rma) }}</span></dd></div>
           <div><dt>Atualizado</dt><dd>{{ dateTimeLabel(rma.updatedAt) }}</dd></div>
         </dl>
 

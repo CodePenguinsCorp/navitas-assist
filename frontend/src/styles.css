@@ -131,6 +131,7 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.45rem;
   min-height: 40px;
   padding: 0 1rem;
   border-radius: 10px;
@@ -357,7 +358,10 @@ a {
 
 .nav-item {
   position: relative;
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: rgba(226, 241, 255, 0.82);
   padding: 0.8rem 1rem;
   border: 1px solid transparent;
   border-radius: 14px;
@@ -1318,10 +1322,18 @@ a {
 }
 
 .stat-card {
+  position: relative;
   display: grid;
+  align-content: start;
   gap: 0.35rem;
   min-height: 108px;
   padding: 1rem 1.1rem;
+}
+
+.stat-card > .icon-tile {
+  position: absolute;
+  top: 1rem;
+  right: 1.1rem;
 }
 
 .stat-card span {
@@ -1687,4 +1699,336 @@ fieldset.field-group > span {
     width: 100%;
     max-height: calc(100vh - 1.5rem);
   }
+}
+
+/* ---------- Visual primitives: icons, avatars, status, meters ---------- */
+
+.icon-tile {
+  --tone: var(--brand-blue);
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--tone) 12%, #ffffff);
+  color: var(--tone);
+}
+
+.icon-tile--sm {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+}
+
+.tone-success { --tone: #2f8a5b; }
+.tone-warning { --tone: #b7791f; }
+.tone-danger { --tone: #b33a4a; }
+.tone-sky { --tone: #1f8fbf; }
+.tone-slate { --tone: #5b6c80; }
+.tone-violet { --tone: #6d55c9; }
+
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #dcebf8;
+  color: var(--brand-blue-deep);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.avatar--lg {
+  width: 34px;
+  height: 34px;
+  font-size: 0.78rem;
+}
+
+.avatar--empty {
+  background: #eef2f6;
+  color: var(--muted);
+}
+
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.person > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* RMA status: one hue per stage, same as the Kanban column accents. */
+.status-chip {
+  --tone: #5b6c80;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 26px;
+  padding: 0 0.65rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tone) 11%, #ffffff);
+  color: color-mix(in srgb, var(--tone) 78%, #000000);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-chip::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--tone);
+}
+
+[data-status='RECEIVED'] { --tone: #2ea8d4; }
+[data-status='TRIAGE'] { --tone: #3b8fe0; }
+[data-status='IN_DIAGNOSIS'] { --tone: #236da7; }
+[data-status='WAITING_PART'] { --tone: #c98d16; }
+[data-status='IN_REPAIR'] { --tone: #e05a5a; }
+[data-status='IN_TESTS'] { --tone: #7a5fd8; }
+[data-status='COMPLETED'] { --tone: #2f9f67; }
+[data-status='RETURNED'] { --tone: #5f87a8; }
+[data-status='IRREPARABLE'] { --tone: #5f6776; }
+
+/* Priority: signal bars, filled by level. */
+.priority-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
+}
+
+.priority-bars i {
+  width: 3px;
+  border-radius: 1px;
+  background: #d5dfe9;
+}
+
+.priority-bars i:nth-child(1) { height: 5px; }
+.priority-bars i:nth-child(2) { height: 8px; }
+.priority-bars i:nth-child(3) { height: 12px; }
+
+.priority-bars[data-priority='LOW'] i:nth-child(-n + 1),
+.priority-bars[data-priority='MEDIUM'] i:nth-child(-n + 2),
+.priority-bars[data-priority='HIGH'] i { background: currentColor; }
+
+.priority-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.priority-tag[data-priority='HIGH'] { color: var(--danger-text); }
+.priority-tag[data-priority='MEDIUM'] { color: var(--warning-text); }
+.priority-tag[data-priority='LOW'] { color: var(--brand-blue); }
+
+/* Meter: a thin bar for ratios (stock, warranty, progress). */
+.meter {
+  --tone: var(--brand-blue);
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: #e6edf4;
+  overflow: hidden;
+}
+
+.meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--tone);
+}
+
+.empty-state > .icon-tile {
+  margin-bottom: 0.25rem;
+}
+
+/* Icon-only buttons for row actions; the label lives in aria-label/title. */
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: var(--brand-blue-deep);
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.icon-button:hover:not(:disabled) {
+  background: var(--surface-alt);
+  border-color: #c9dceb;
+}
+
+.icon-button--danger {
+  color: var(--danger-text);
+  border-color: var(--danger-line);
+}
+
+.icon-button--danger:hover:not(:disabled) {
+  background: var(--danger-bg);
+}
+
+.icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.icon-button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Activity feed: a vertical line with a status-colored dot per event. */
+.activity-list {
+  position: relative;
+  display: grid;
+  gap: 0;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.activity-item {
+  position: relative;
+  padding: 0.75rem 0 0.75rem 1.4rem;
+  border-bottom: 0;
+}
+
+.activity-item::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--line);
+}
+
+.activity-item:first-child::before { top: 1.1rem; }
+.activity-item:last-child::before { bottom: calc(100% - 1.1rem); }
+
+.activity-item::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.95rem;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: var(--tone, var(--brand-blue));
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.activity-item strong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.activity-item time {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.nav-item:hover,
+.nav-item.is-active {
+  color: #ffffff;
+}
+
+.table-title + .priority-tag,
+.table-title + .status-chip {
+  margin-top: 0.2rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.open-hint {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  color: var(--brand-blue);
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+
+tr:hover .open-hint,
+tr:focus-visible .open-hint {
+  background: #e7f1fa;
+  transform: translateX(2px);
+}
+
+/* On/off state as a colored dot + label (active user, receiving alerts). */
+.state-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.state-dot::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #b8c4d0;
+}
+
+.state-dot.is-on {
+  color: var(--success-text);
+}
+
+.state-dot.is-on::before {
+  background: #2f9f67;
+  box-shadow: 0 0 0 3px rgba(47, 159, 103, 0.15);
+}
+
+/* Warranty per item: shield + SKU, colored by status (label in title). */
+.warranty-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 24px;
+  padding: 0 0.55rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }

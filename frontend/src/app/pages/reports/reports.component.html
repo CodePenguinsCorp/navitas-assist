@@ -48,10 +48,10 @@
                 <tbody>
                   @for (rma of rmas(); track rma.id) {
                     <tr>
-                      <td><strong class="code-text">{{ rma.code }}</strong><p>{{ rma.clientName }}</p><dl class="report-fields"><div><dt>Status</dt><dd>{{ statusLabels[rma.status] }}</dd></div><div><dt>Entrada</dt><dd>{{ formatDate(rma.entryDate) }}</dd></div></dl></td>
+                      <td><strong class="code-text">{{ rma.code }}</strong><p>{{ rma.clientName }}</p><dl class="report-fields"><div><dt>Status</dt><dd><span class="status-chip" [attr.data-status]="rma.status">{{ statusLabels[rma.status] }}</span></dd></div><div><dt>Entrada</dt><dd>{{ formatDate(rma.entryDate) }}</dd></div></dl></td>
                       <td>
                         @for (item of rma.items; track $index) {
-                          <p><strong>{{ item.productName }}</strong> <span class="code-text report-muted">{{ item.productSku }}</span></p><p class="report-muted">Série {{ item.serialNumber || 'não informada' }} · Lote {{ item.batchNumber || 'não informado' }}</p>
+                          <p><strong>{{ item.productName }}</strong></p><p class="report-muted"><span class="code-text">{{ item.productSku }}</span> · Série {{ item.serialNumber || 'não informada' }} · Lote {{ item.batchNumber || 'não informado' }}</p>
                         }
                         <p class="report-text">{{ rma.reportedFailure }}</p>
                       </td>
@@ -94,7 +94,7 @@
                   <caption>Tempo por RMA na etapa atual</caption>
                   <thead><tr><th scope="col">RMA / Cliente</th><th scope="col">Etapa</th><th scope="col">Início (São Paulo)</th><th scope="col">Tempo decorrido</th></tr></thead>
                   <tbody>@for (rma of activeRmas(); track rma.id) {
-                    <tr><td><strong class="code-text">{{ rma.code }}</strong><p class="report-muted">{{ rma.clientName }}</p></td><td>{{ statusLabels[rma.status] }}</td>
+                    <tr><td><strong class="code-text">{{ rma.code }}</strong><p class="report-muted">{{ rma.clientName }}</p></td><td><span class="status-chip" [attr.data-status]="rma.status">{{ statusLabels[rma.status] }}</span></td>
                       <td>{{ formatInstant(rma.sla.startedAt) }}</td><td>{{ duration(rma.sla.elapsedSeconds) }}</td></tr>
                   }</tbody>
                 </table></div>
@@ -111,7 +111,7 @@
                 <tbody>@for (rma of rmas(); track rma.id) {
                   @for (item of rma.items; track $index) {
                     <tr><td><strong class="code-text">{{ rma.code }}</strong><p class="report-muted">{{ rma.clientName }}</p></td>
-                      <td>{{ item.productName }} <span class="code-text report-muted">{{ item.productSku }}</span><p class="report-muted">Série {{ item.serialNumber || 'não informada' }} · Lote {{ item.batchNumber || 'não informado' }}</p></td>
+                      <td><strong>{{ item.productName }}</strong><p class="report-muted"><span class="code-text">{{ item.productSku }}</span> · Série {{ item.serialNumber || 'não informada' }} · Lote {{ item.batchNumber || 'não informado' }}</p></td>
                       <td>{{ formatDate(rma.purchaseDate) }} / {{ formatDate(rma.entryDate) }}</td><td>{{ item.warrantyMonths }} meses</td>
                       <td>{{ formatDate(item.warrantyExpiresAt) }}</td><td>{{ warrantyLabels[item.warrantyStatus] }}</td></tr>
                   }

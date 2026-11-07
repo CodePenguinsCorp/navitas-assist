@@ -1,3 +1,4 @@
+import { IconComponent } from '../../shared/icon/icon.component';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -28,7 +29,7 @@ type ClientFormControlName =
 
 @Component({
   selector: 'app-clients',
-  imports: [ReactiveFormsModule, CustomSelectComponent, PaginationComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PaginationComponent],
   templateUrl: './clients.component.html',
   styles: [`
     :host { display: block; }
