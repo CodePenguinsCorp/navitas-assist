@@ -51,15 +51,16 @@
                   }
                   <div class="board-card__identity">
                     <h4 class="code-text">{{ item.code }}</h4>
-                    <p class="board-card__client">{{ item.clientName }}</p>
+                    <p class="board-card__client" [title]="item.clientName">{{ item.clientName }}</p>
                   </div>
-                  <span class="priority-tag" [attr.data-priority]="item.priority"><span class="priority-bars" [attr.data-priority]="item.priority" aria-hidden="true"><i></i><i></i><i></i></span>{{ priorityLabel(item.priority) }}</span>
+                  <span class="priority-tag" [attr.data-priority]="item.priority" [title]="'Prioridade ' + priorityLabel(item.priority)"><span class="priority-bars" [attr.data-priority]="item.priority" aria-hidden="true"><i></i><i></i><i></i></span>{{ priorityLabel(item.priority) }}</span>
                 </header>
 
                 <strong class="board-card__title">{{ productSummary(item) }}</strong>
-                <p class="board-card__failure" [title]="item.reportedFailure">{{ item.reportedFailure }}</p>
 
-                <app-rma-sla-badge [sla]="item.sla" />
+                @if (showSla(item)) {
+                  <app-rma-sla-badge [sla]="item.sla" />
+                }
 
                 @if (item.currentBlock; as block) {
                   <p class="board-card__block" [title]="block.reason"><strong>Bloqueado há {{ blockedDuration(block, clock.now()) }}</strong></p>
@@ -70,7 +71,7 @@
                   @if (isStatusUpdating(item)) {
                     <span class="mini-chip">Atualizando...</span>
                   }
-                  <span class="board-card__avatar" [class.is-empty]="!item.assigneeId" [title]="ownerLabel(item)">{{ item.assigneeId ? initials(item.assigneeName) : '?' }}</span>
+                  <span class="board-card__avatar" [class.is-empty]="!item.assigneeId" role="img" [attr.aria-label]="'Responsável: ' + ownerLabel(item)" [title]="ownerLabel(item)"><span aria-hidden="true">{{ item.assigneeId ? initials(item.assigneeName) : '?' }}</span></span>
                 </footer>
               </article>
             }

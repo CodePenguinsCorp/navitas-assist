@@ -69,6 +69,161 @@ describe('KanbanComponent filters', () => {
     component = fixture.componentInstance as unknown as KanbanHarness;
   });
 
+  it('does not show the permanent drag instruction in the header', () => {
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('Arraste os cards entre as colunas');
+  });
+
+  it('shows the four indicators in a single compact summary', () => {
+    fixture.detectChanges();
+    const summary: HTMLElement | null = fixture.nativeElement.querySelector('.kanban-summary');
+    expect(summary).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.stats-grid')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.stat-card')).toBeNull();
+    for (const label of ['Em andamento', 'Alta prioridade', 'Aguardando peça', 'Encerrados']) {
+      expect(summary!.textContent).toContain(label);
+    }
+  });
+
+  it('shows search, SLA and assignee as quick filters and hides the other eight controls until Filtros is opened', () => {
+    fixture.detectChanges();
+    const host: HTMLElement = fixture.nativeElement;
+    const panel = host.querySelector<HTMLElement>('#kanbanAdvancedFilters');
+    const quick = ['query', 'sla', 'assignee'];
+    const advanced = ['priority', 'status', 'blocked', 'warranty', 'entryFrom', 'entryTo', 'updatedFrom', 'updatedTo'];
+    for (const name of quick) {
+      const control = host.querySelector(`[formcontrolname="${name}"]`);
+      expect(control, name).not.toBeNull();
+      expect(panel?.contains(control) ?? false, name).toBe(false);
+    }
+    const isHidden = (name: string) => {
+      const control = host.querySelector(`[formcontrolname="${name}"]`);
+      return control === null || Boolean(control.closest('[hidden]'));
+    };
+    expect(advanced.filter(isHidden)).toEqual(advanced);
+
+    const toggle = findButton('Filtros');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(toggle.getAttribute('aria-controls')).toBe('kanbanAdvancedFilters');
+    toggle.click();
+    fixture.detectChanges();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(advanced.filter(isHidden)).toEqual([]);
+    expect(Object.keys(component.filtersForm.controls)).toHaveLength(11);
+  });
+
+  it('shows an active advanced filter as a removable chip while the panel is closed', () => {
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.board-card')).toHaveLength(2);
+    component.filtersForm.patchValue({ priority: 'HIGH' });
+    fixture.detectChanges();
+    expect(component.advancedFiltersOpen()).toBe(false);
+    const chips = chipTexts();
+    expect(chips).toEqual(['Prioridade: Alta']);
+    expect(fixture.nativeElement.querySelector('[aria-label="Remover filtro Prioridade: Alta"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.board-card')).toHaveLength(1);
+    expect(findButton('Filtros').textContent).toContain('1');
+  });
+
+  it('really hides the advanced panel when collapsed and shows it when expanded', () => {
+    fixture.detectChanges();
+    const panel = fixture.nativeElement.querySelector('#kanbanAdvancedFilters') as HTMLElement;
+    expect(panel.hidden).toBe(true);
+    expect(getComputedStyle(panel).display).toBe('none');
+    findButton('Filtros').click();
+    fixture.detectChanges();
+    expect(panel.hidden).toBe(false);
+    expect(getComputedStyle(panel).display).toBe('grid');
+    findButton('Filtros').click();
+    fixture.detectChanges();
+    expect(panel.hidden).toBe(true);
+    expect(getComputedStyle(panel).display).toBe('none');
+  });
+
+  it('moves focus to the next chip, then the previous one, then the Filtros toggle when chips are removed', async () => {
+    component.filtersForm.patchValue({ priority: 'HIGH', status: 'TRIAGE', warranty: WarrantyStatus.IN_WARRANTY });
+    fixture.detectChanges();
+    const removeButton = (label: string) =>
+      fixture.nativeElement.querySelector(`[aria-label="Remover filtro ${label}"]`) as HTMLButtonElement;
+    const remove = async (label: string) => {
+      const button = removeButton(label);
+      button.focus();
+      button.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+    };
+
+    await remove('Prioridade: Alta');
+    expect(document.activeElement).toBe(removeButton('Status: Triagem'));
+
+    await remove('Garantia: Em garantia');
+    expect(document.activeElement).toBe(removeButton('Status: Triagem'));
+
+    await remove('Status: Triagem');
+    expect(chipTexts()).toEqual([]);
+    expect(document.activeElement).toBe(findButton('Filtros'));
+  });
+
+  it('removes only the clicked chip', () => {
+    component.filtersForm.patchValue({ priority: 'HIGH', status: 'TRIAGE' });
+    fixture.detectChanges();
+    expect(component.activeFilterCount()).toBe(2);
+    expect(chipTexts()).toEqual(['Prioridade: Alta', 'Status: Triagem']);
+    (fixture.nativeElement.querySelector('[aria-label="Remover filtro Status: Triagem"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(component.activeFilterCount()).toBe(1);
+    expect(component.filtersForm.getRawValue()).toEqual(expect.objectContaining({ priority: 'HIGH', status: 'all' }));
+    expect(chipTexts()).toEqual(['Prioridade: Alta']);
+  });
+
+  it('keeps the active view selected when a chip is removed', () => {
+    component.filtersForm.patchValue({ priority: 'HIGH', warranty: WarrantyStatus.IN_WARRANTY });
+    component.openCreateViewModal();
+    component.viewForm.patchValue({ name: 'Garantia' });
+    component.saveView();
+    fixture.detectChanges();
+    component.removeFilter('warranty');
+    expect(component.activeViewId()).toBe(5);
+    expect(component.filtersForm.getRawValue()).toEqual(expect.objectContaining({ priority: 'HIGH', warranty: 'all' }));
+  });
+
+  it('labels date, assignee and search chips with readable values', () => {
+    component.filtersForm.patchValue({ entryFrom: '2026-10-10', assignee: 'unassigned', query: '  arvore ' });
+    expect(component.activeFilterChips().map((chip) => chip.label)).toEqual(['Entrada a partir de: 10/10/2026']);
+    component.filtersForm.patchValue({ blocked: 'blocked', warranty: WarrantyStatus.IN_WARRANTY });
+    expect(component.activeFilterChips().map((chip) => chip.key)).toEqual(['blocked', 'warranty', 'entryFrom']);
+  });
+
+  it('keeps saved views usable in a single row', () => {
+    fixture.detectChanges();
+    const host: HTMLElement = fixture.nativeElement;
+    expect(host.textContent).not.toContain('Salve e reaplique');
+    expect(host.querySelector('.kanban-views [aria-label="Visualização salva do Kanban"]')).not.toBeNull();
+    expect(findButton('Salvar atual')).toBeTruthy();
+    const optionalButtons = () =>
+      ['Renomear', 'Tornar padrão', 'Excluir'].filter((text) =>
+        [...host.querySelectorAll<HTMLButtonElement>('.kanban-views button')].some((button) => button.textContent?.trim() === text),
+      );
+    expect(optionalButtons()).toEqual([]);
+    component.openCreateViewModal();
+    component.viewForm.patchValue({ name: 'Críticos' });
+    component.saveView();
+    fixture.detectChanges();
+    expect(optionalButtons()).toEqual(['Renomear', 'Tornar padrão', 'Excluir']);
+  });
+
+  function findButton(text: string): HTMLButtonElement {
+    const button = [...fixture.nativeElement.querySelectorAll('button')].find((item: HTMLButtonElement) =>
+      item.textContent?.trim().startsWith(text),
+    ) as HTMLButtonElement | undefined;
+    expect(button, text).toBeDefined();
+    return button!;
+  }
+
+  function chipTexts(): string[] {
+    return [...fixture.nativeElement.querySelectorAll('.kanban-chip__label')].map((chip: HTMLElement) => chip.textContent!.trim());
+  }
+
   it('opens the detail modal when a card is clicked and closes it', () => {
     fixture.detectChanges();
     fixture.nativeElement.querySelector('.board-card').click();
@@ -300,6 +455,9 @@ interface KanbanHarness {
   openCreateViewModal(): void;
   saveView(): void;
   deleteActiveView(): void;
+  advancedFiltersOpen: Signal<boolean>;
+  activeFilterChips: Signal<ReadonlyArray<{ key: string; label: string }>>;
+  removeFilter(key: string): void;
 }
 
 const TEST_RMAS: RmaResponse[] = [

@@ -1,5 +1,15 @@
 import { IconComponent, IconName } from '../../shared/icon/icon.component';
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  inject,
+  signal,
+  viewChild,
+  viewChildren,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize, forkJoin, map } from 'rxjs';
@@ -30,7 +40,7 @@ import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { businessDateInputValue } from '../../core/utils/date';
-import { normalizeText } from '../../core/utils/rma-ui';
+import { formatDate, normalizeText } from '../../core/utils/rma-ui';
 import {
   CustomSelectComponent,
   CustomSelectOption,
@@ -71,6 +81,36 @@ interface KanbanFilterValues {
 
 type ViewModalMode = 'create' | 'rename' | null;
 
+/** Filters kept behind the "Filtros" toggle; search, SLA and assignee stay in the quick row. */
+const ADVANCED_FILTER_KEYS = [
+  'priority',
+  'status',
+  'blocked',
+  'warranty',
+  'entryFrom',
+  'entryTo',
+  'updatedFrom',
+  'updatedTo',
+] as const satisfies ReadonlyArray<keyof KanbanFilterValues>;
+
+type AdvancedFilterKey = (typeof ADVANCED_FILTER_KEYS)[number];
+
+interface KanbanFilterChip {
+  key: AdvancedFilterKey;
+  label: string;
+}
+
+const FILTER_LABELS: Record<AdvancedFilterKey, string> = {
+  priority: 'Prioridade',
+  status: 'Status',
+  blocked: 'Impedimentos',
+  warranty: 'Garantia',
+  entryFrom: 'Entrada a partir de',
+  entryTo: 'Entrada até',
+  updatedFrom: 'Atualização a partir de',
+  updatedTo: 'Atualização até',
+};
+
 @Component({
   selector: 'app-kanban',
   imports: [IconComponent, 
@@ -97,6 +137,9 @@ export class KanbanComponent {
   private readonly catalogService = inject(CatalogService);
   private readonly kanbanViewService = inject(KanbanViewService);
   private readonly rmaService = inject(RmaService);
+  private readonly injector = inject(Injector);
+  private readonly filtersToggle = viewChild.required<ElementRef<HTMLButtonElement>>('filtersToggle');
+  private readonly chipRemoveButtons = viewChildren<ElementRef<HTMLButtonElement>>('chipRemove');
 
   protected readonly loading = signal(true);
   protected readonly pageError = signal('');
@@ -146,6 +189,14 @@ export class KanbanComponent {
     filterKanbanRmas(this.rmasSignal(), this.filters(), this.slaClock.now()),
   );
   protected readonly activeFilterCount = computed(() => countActiveFilters(this.filters()));
+  protected readonly advancedFiltersOpen = signal(false);
+  protected readonly activeFilterChips = computed<ReadonlyArray<KanbanFilterChip>>(() => {
+    const filters = this.filters();
+    return ADVANCED_FILTER_KEYS.filter((key) => filters[key] !== DEFAULT_KANBAN_FILTERS[key]).map((key) => ({
+      key,
+      label: `${FILTER_LABELS[key]}: ${this.filterValueLabel(key, filters[key])}`,
+    }));
+  });
   protected readonly totalRmas = computed(() => this.rmasSignal().length);
   protected readonly activeView = computed(() =>
     this.viewsSignal().find((view) => view.id === this.activeViewId()),
@@ -303,6 +354,41 @@ export class KanbanComponent {
   protected clearFilters(): void {
     this.filtersForm.reset(DEFAULT_KANBAN_FILTERS);
     this.activeViewId.set(null);
+  }
+
+  protected toggleAdvancedFilters(): void {
+    this.advancedFiltersOpen.update((open) => !open);
+  }
+
+  /** Resets a single filter; the active saved view stays selected, as with a manual edit. */
+  protected removeFilter(key: keyof KanbanFilterValues): void {
+    this.filtersForm.patchValue({ [key]: DEFAULT_KANBAN_FILTERS[key] });
+  }
+
+  /**
+   * Removes a chip without dropping keyboard focus: it moves to the chip that took its place,
+   * otherwise to the previous one, and to the "Filtros" toggle when no chip remains.
+   */
+  protected removeFilterChip(key: AdvancedFilterKey, index: number): void {
+    this.removeFilter(key);
+    afterNextRender(
+      () => {
+        const buttons = this.chipRemoveButtons();
+        const target = buttons[Math.min(index, buttons.length - 1)] ?? this.filtersToggle();
+        target.nativeElement.focus();
+      },
+      { injector: this.injector },
+    );
+  }
+
+  private filterValueLabel(key: AdvancedFilterKey, value: KanbanFilterValues[AdvancedFilterKey]): string {
+    const options: ReadonlyArray<CustomSelectOption<unknown>> | null =
+      key === 'priority' ? this.priorityFilterOptions
+        : key === 'status' ? this.statusFilterOptions
+          : key === 'blocked' ? this.blockedFilterOptions
+            : key === 'warranty' ? this.warrantyFilterOptions
+              : null;
+    return options?.find((option) => option.value === value)?.label ?? formatDate(String(value));
   }
 
   protected applyView(value: unknown): void {

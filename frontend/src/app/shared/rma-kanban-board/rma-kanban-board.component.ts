@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Output, computed, inject, input } from '@angular/core';
 import { SlaClockService } from '../../core/services/sla-clock.service';
 import { blockDuration } from '../../core/utils/rma-block';
+import { slaStatus } from '../../core/utils/rma-sla';
 import { RmaSlaBadgeComponent } from '../rma-sla-badge/rma-sla-badge.component';
 import { RMA_STATUS_FLOW } from '../../core/mock-data';
 import { RmaResponse, RmaStatus } from '../../core/models';
@@ -70,6 +71,12 @@ export class RmaKanbanBoardComponent {
   protected readonly initials = initialsOf;
   protected readonly ownerLabel = ownerLabel;
   protected readonly dateLabel = formatDate;
+
+  /** Healthy and closed SLAs stay in the detail; the card only flags attention or delay. */
+  protected showSla(rma: RmaResponse): boolean {
+    const state = slaStatus(rma.sla, this.clock.now());
+    return state === 'WARNING' || state === 'OVERDUE';
+  }
 
   protected isSelected(rma: RmaResponse): boolean {
     return this.selectedRmaId() === rma.id || this.bulkSelectedIds().includes(rma.id);

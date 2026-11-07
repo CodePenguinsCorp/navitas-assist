@@ -1,21 +1,18 @@
 <section class="page-surface kanban-page">
-  <section class="page-heading">
-    <div>
-      <h1>Kanban de RMAs</h1>
-      <p>Arraste os cards entre as colunas para refletir a etapa atual de cada atendimento.</p>
-    </div>
-  </section>
+  <header class="page-heading kanban-heading">
+    <h1>Kanban de RMAs</h1>
+    <span class="kanban-heading__count">{{ filteredRmas().length }} de {{ totalRmas() }} RMA(s)</span>
+  </header>
 
-  <section class="stats-grid stats-grid--four">
+  <ul class="kanban-summary" aria-label="Indicadores do quadro">
     @for (stat of heroStats(); track stat.label) {
-      <article class="panel stat-card">
-        <span class="icon-tile" [class]="'icon-tile ' + stat.tone"><app-icon [name]="stat.icon" [size]="20" /></span>
+      <li class="kanban-summary__item" [class]="'kanban-summary__item ' + stat.tone" [title]="stat.detail">
+        <app-icon [name]="stat.icon" [size]="16" />
         <span>{{ stat.label }}</span>
         <strong>{{ stat.value }}</strong>
-        <small>{{ stat.detail }}</small>
-      </article>
+      </li>
     }
-  </section>
+  </ul>
 
   @if (pageError()) {
     <article class="status-card panel">
@@ -24,28 +21,156 @@
   }
 
   <section class="kanban-stage panel">
-    <div class="kanban-stage__header">
-      <div>
-        <h2>Fluxo operacional</h2>
+    <form appBoundedFilterPanels class="kanban-filters" [formGroup]="filtersForm">
+      <div class="kanban-filters__bar">
+        <div class="field-group kanban-filters__search">
+          <label for="kanbanSearch">Busca</label>
+          <input
+            id="kanbanSearch"
+            type="search"
+            formControlName="query"
+            placeholder="Código, cliente, produto, lote ou série"
+          />
+        </div>
+
+        <div class="field-group">
+          <label>SLA</label>
+          <app-custom-select
+            formControlName="sla"
+            ariaLabel="Filtrar Kanban por SLA"
+            [options]="slaFilterOptions"
+          />
+        </div>
+
+        <div class="field-group">
+          <label>Responsável</label>
+          <app-custom-select
+            formControlName="assignee"
+            ariaLabel="Filtrar Kanban por responsável"
+            [options]="assigneeFilterOptions()"
+          />
+        </div>
+
+        <div class="kanban-filters__actions">
+          <button
+            type="button"
+            #filtersToggle
+            class="button-secondary kanban-filters__toggle"
+            [class.is-open]="advancedFiltersOpen()"
+            [attr.aria-expanded]="advancedFiltersOpen()"
+            aria-controls="kanbanAdvancedFilters"
+            (click)="toggleAdvancedFilters()"
+          >
+            Filtros
+            @if (activeFilterChips().length; as count) {
+              <span class="mini-chip">{{ count }}<span class="sr-only"> ativo(s)</span></span>
+            }
+          </button>
+          <button
+            type="button"
+            class="button-secondary"
+            (click)="clearFilters()"
+            [disabled]="activeFilterCount() === 0"
+          >
+            Limpar filtros{{ activeFilterCount() ? ' (' + activeFilterCount() + ')' : '' }}
+          </button>
+        </div>
       </div>
-      <div class="kanban-stage__summary">
-        <span>{{ filteredRmas().length }} de {{ totalRmas() }} RMA(s)</span>
-        <button
-          type="button"
-          class="button-secondary"
-          (click)="clearFilters()"
-          [disabled]="activeFilterCount() === 0"
-        >
-          Limpar filtros{{ activeFilterCount() ? ' (' + activeFilterCount() + ')' : '' }}
-        </button>
+
+      <div id="kanbanAdvancedFilters" class="kanban-filters__advanced" [hidden]="!advancedFiltersOpen()">
+        <div class="field-group">
+          <label>Prioridade</label>
+          <app-custom-select
+            formControlName="priority"
+            ariaLabel="Filtrar Kanban por prioridade"
+            [options]="priorityFilterOptions"
+          />
+        </div>
+
+        <div class="field-group">
+          <label>Status</label>
+          <app-custom-select
+            formControlName="status"
+            ariaLabel="Filtrar Kanban por status"
+            [options]="statusFilterOptions"
+          />
+        </div>
+
+        <div class="field-group">
+          <label>Impedimentos</label>
+          <app-custom-select formControlName="blocked" ariaLabel="Filtrar Kanban por impedimentos" [options]="blockedFilterOptions" />
+        </div>
+
+        <div class="field-group">
+          <label>Garantia</label>
+          <app-custom-select
+            formControlName="warranty"
+            ariaLabel="Filtrar Kanban por garantia"
+            [options]="warrantyFilterOptions"
+          />
+        </div>
+
+        <div class="field-group">
+          <label>Entrada a partir de</label>
+          <app-date-picker
+            formControlName="entryFrom"
+            ariaLabel="Filtrar por data inicial de entrada"
+            [maxDate]="filtersForm.controls.entryTo.value"
+          />
+        </div>
+
+        <div class="field-group">
+          <label>Entrada até</label>
+          <app-date-picker
+            formControlName="entryTo"
+            ariaLabel="Filtrar por data final de entrada"
+            [minDate]="filtersForm.controls.entryFrom.value"
+          />
+        </div>
+
+        <div class="field-group">
+          <label>Atualização a partir de</label>
+          <app-date-picker
+            formControlName="updatedFrom"
+            ariaLabel="Filtrar por data inicial de atualização"
+            [maxDate]="filtersForm.controls.updatedTo.value"
+          />
+        </div>
+
+        <div class="field-group">
+          <label>Atualização até</label>
+          <app-date-picker
+            formControlName="updatedTo"
+            ariaLabel="Filtrar por data final de atualização"
+            [minDate]="filtersForm.controls.updatedFrom.value"
+          />
+        </div>
       </div>
-    </div>
+
+      @if (activeFilterChips().length) {
+        <ul class="kanban-chips" aria-label="Filtros avançados aplicados">
+          @for (chip of activeFilterChips(); track chip.key) {
+            <li class="kanban-chip">
+              <span class="kanban-chip__label">{{ chip.label }}</span>
+              <button
+                type="button"
+                class="kanban-chip__remove"
+                [attr.aria-label]="'Remover filtro ' + chip.label"
+                #chipRemove
+                (click)="removeFilterChip(chip.key, $index)"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M6 6l12 12M18 6 6 18" />
+                </svg>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </form>
 
     <section class="kanban-views" aria-labelledby="kanbanViewsTitle">
-      <div class="kanban-views__copy">
-        <strong id="kanbanViewsTitle">Visualizações</strong>
-        <span>Salve e reaplique combinações de filtros da sua conta.</span>
-      </div>
+      <span id="kanbanViewsTitle" class="kanban-views__title">Visualização</span>
       <div class="kanban-views__controls">
         <app-custom-select
           ariaLabel="Visualização salva do Kanban"
@@ -93,104 +218,6 @@
         <p class="field-error kanban-views__error" role="alert">{{ viewError() }}</p>
       }
     </section>
-
-    <form appBoundedFilterPanels class="kanban-filters" [formGroup]="filtersForm">
-      <div class="field-group">
-        <label>SLA</label>
-        <app-custom-select
-          formControlName="sla"
-          ariaLabel="Filtrar Kanban por SLA"
-          [options]="slaFilterOptions"
-        />
-      </div>
-
-      <div class="field-group kanban-filters__search">
-        <label for="kanbanSearch">Busca</label>
-        <input
-          id="kanbanSearch"
-          type="search"
-          formControlName="query"
-          placeholder="Código, cliente, produto, lote ou série"
-        />
-      </div>
-
-      <div class="field-group">
-        <label>Prioridade</label>
-        <app-custom-select
-          formControlName="priority"
-          ariaLabel="Filtrar Kanban por prioridade"
-          [options]="priorityFilterOptions"
-        />
-      </div>
-
-      <div class="field-group">
-        <label>Status</label>
-        <app-custom-select
-          formControlName="status"
-          ariaLabel="Filtrar Kanban por status"
-          [options]="statusFilterOptions"
-        />
-      </div>
-
-      <div class="field-group">
-        <label>Impedimentos</label>
-        <app-custom-select formControlName="blocked" ariaLabel="Filtrar Kanban por impedimentos" [options]="blockedFilterOptions" />
-      </div>
-
-      <div class="field-group">
-        <label>Garantia</label>
-        <app-custom-select
-          formControlName="warranty"
-          ariaLabel="Filtrar Kanban por garantia"
-          [options]="warrantyFilterOptions"
-        />
-      </div>
-
-      <div class="field-group">
-        <label>Responsável</label>
-        <app-custom-select
-          formControlName="assignee"
-          ariaLabel="Filtrar Kanban por responsável"
-          [options]="assigneeFilterOptions()"
-        />
-      </div>
-
-      <div class="field-group">
-        <label>Entrada a partir de</label>
-        <app-date-picker
-          formControlName="entryFrom"
-          ariaLabel="Filtrar por data inicial de entrada"
-          [maxDate]="filtersForm.controls.entryTo.value"
-        />
-      </div>
-
-      <div class="field-group">
-        <label>Entrada até</label>
-        <app-date-picker
-          formControlName="entryTo"
-          ariaLabel="Filtrar por data final de entrada"
-          [minDate]="filtersForm.controls.entryFrom.value"
-        />
-      </div>
-
-      <div class="field-group">
-        <label>Atualização a partir de</label>
-        <app-date-picker
-          formControlName="updatedFrom"
-          ariaLabel="Filtrar por data inicial de atualização"
-          [maxDate]="filtersForm.controls.updatedTo.value"
-        />
-      </div>
-
-      <div class="field-group">
-        <label>Atualização até</label>
-        <app-date-picker
-          formControlName="updatedTo"
-          ariaLabel="Filtrar por data final de atualização"
-          [minDate]="filtersForm.controls.updatedFrom.value"
-        />
-      </div>
-    </form>
 
     @if (!loading() && totalRmas() > 0 && filteredRmas().length === 0) {
       <article class="kanban-empty" role="status">
