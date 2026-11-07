@@ -84,7 +84,7 @@
 }
 
 .button-secondary--danger {
-  border-color: #efc7cf;
+  border-color: var(--danger-line);
   color: var(--danger-text);
 }
 

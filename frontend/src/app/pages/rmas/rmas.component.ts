@@ -264,7 +264,7 @@ interface CreateDateErrors {
 
 
     .purchase-date-unknown {
-      min-height: 42px;
+      min-height: var(--control-height);
       align-self: center;
     }
 

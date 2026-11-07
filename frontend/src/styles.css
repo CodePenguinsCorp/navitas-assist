@@ -24,6 +24,46 @@
   --danger-strong: #7f3441;
   --focus-ring: 0 0 0 3px rgba(46, 168, 212, 0.28);
   --shadow: 0 6px 20px rgba(23, 48, 77, 0.06);
+
+  /* Existing colors that were repeated as literals in the shared controls. */
+  --line-hover: #c9dceb;
+  --brand-tint: #edf5fc;
+  --focus-border: #9cc8e3;
+  --focus-ring-soft: 0 0 0 3px rgba(46, 168, 212, 0.12);
+
+  /* Control geometry: button, field, select, date and tab share one height. */
+  --control-height: 40px;
+  --control-height-sm: 34px;
+  --control-height-xs: 28px;
+  --control-padding-x: var(--space-4);
+  --disabled-opacity: 0.65;
+
+  /* Spacing scale. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Type scale (rem, from a 16px base). */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.8125rem;
+  --font-size-md: 0.875rem;
+  --font-size-control: 0.9375rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.45rem;
+  --font-weight-regular: 400;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --line-height-tight: 1.25;
+  --line-height-body: 1.5;
+
+  /* Radii beyond sm/md/lg. */
+  --radius-xs: 4px;
+  --radius-popover: 14px;
+  --radius-pill: 999px;
 }
 
 * {
@@ -67,7 +107,7 @@ input[type="checkbox"] {
   padding: 0;
   border: 1.5px solid #b4c6d8;
   border-radius: 5px;
-  background: #ffffff;
+  background: var(--surface);
   cursor: pointer;
   transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
@@ -100,8 +140,12 @@ input[type="checkbox"]:focus-visible {
   box-shadow: var(--focus-ring);
 }
 
+input[type="checkbox"]:is(.ng-invalid.ng-touched, .ng-invalid.ng-dirty, [aria-invalid="true"]) {
+  border-color: var(--danger-text);
+}
+
 input[type="checkbox"]:disabled {
-  opacity: 0.5;
+  opacity: var(--disabled-opacity);
   cursor: not-allowed;
 }
 
@@ -117,24 +161,15 @@ a {
   box-shadow: var(--shadow);
 }
 
-.eyebrow {
-  margin: 0 0 0.35rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--brand-sky);
-}
-
 .button-primary,
 .button-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
-  min-height: 40px;
-  padding: 0 1rem;
-  border-radius: 10px;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--control-padding-x);
+  border-radius: var(--radius-sm);
   transition: background-color 160ms ease, border-color 160ms ease;
 }
 
@@ -143,29 +178,30 @@ a {
   color: #ffffff;
 }
 
-.button-primary:hover {
+.button-primary:hover:not(:disabled) {
   background: var(--brand-blue-deep);
 }
 
 .button-primary:disabled,
 .button-secondary:disabled {
-  opacity: 0.65;
+  opacity: var(--disabled-opacity);
   cursor: not-allowed;
 }
 
 .button-secondary {
-  background: #ffffff;
+  background: var(--surface);
   color: var(--brand-blue-deep);
   border: 1px solid var(--line);
 }
 
-.button-secondary:hover {
+.button-secondary:hover:not(:disabled) {
   background: var(--surface-alt);
+  border-color: var(--line-hover);
 }
 
 .button-secondary--small {
-  min-height: 34px;
-  padding-inline: 0.85rem;
+  min-height: var(--control-height-sm);
+  padding-inline: var(--space-3);
   border-radius: var(--radius-sm);
 }
 
@@ -181,15 +217,16 @@ a {
   color: var(--danger-text);
 }
 
-.button-secondary--danger:hover {
+.button-secondary--danger:hover:not(:disabled) {
   background: var(--danger-bg);
+  border-color: var(--danger-line);
 }
 
 .button-primary--danger {
   background: var(--danger-text);
 }
 
-.button-primary--danger:hover {
+.button-primary--danger:hover:not(:disabled) {
   background: var(--danger-strong);
 }
 
@@ -198,22 +235,22 @@ a {
 .status-pill {
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  padding: 0 0.75rem;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 600;
+  min-height: var(--control-height-xs);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
 }
 
 .tag,
 .mini-chip {
-  background: #edf5fc;
+  background: var(--brand-tint);
   color: var(--brand-blue-deep);
 }
 
 .status-pill {
   border: 1px solid var(--line);
-  background: #ffffff;
+  background: var(--surface);
   color: var(--text);
 }
 
@@ -259,7 +296,7 @@ a {
   display: grid;
   grid-template-columns: 272px 1fr;
   min-height: 100vh;
-  background: linear-gradient(180deg, #f7fbff 0%, #f4f7fb 100%);
+  background: linear-gradient(180deg, #f7fbff 0%, var(--bg) 100%);
 }
 
 .shell-sidebar {
@@ -459,50 +496,6 @@ a {
   gap: 1rem;
 }
 
-.top-user {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.7rem;
-  min-height: 42px;
-  padding: 0.4rem 0.7rem 0.4rem 0.5rem;
-  border: 1px solid rgba(199, 214, 229, 0.9);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 8px 20px rgba(24, 61, 99, 0.06);
-}
-
-.top-user__avatar {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #edf5fc 0%, #dcebfa 100%);
-  color: #1f67ad;
-}
-
-.top-user__meta {
-  display: grid;
-  gap: 0.05rem;
-  min-width: 0;
-}
-
-.top-user__meta strong,
-.top-user__meta span {
-  display: block;
-  white-space: nowrap;
-}
-
-.top-user__meta strong {
-  font-size: 0.9rem;
-  color: #173c63;
-}
-
-.top-user__meta span {
-  font-size: 0.74rem;
-  color: #5a7390;
-}
-
 /* Bell with the unread count pinned to its corner. */
 .shell-notifications {
   position: relative;
@@ -520,7 +513,7 @@ a {
 
 .shell-notifications:hover {
   background: var(--surface-alt);
-  border-color: #c9dceb;
+  border-color: var(--line-hover);
 }
 
 .shell-notifications.has-unread {
@@ -541,13 +534,6 @@ a {
   border: 2px solid #ffffff;
   background: #d6334a;
   font-size: 0.72rem;
-}
-
-.shell-logout {
-  min-height: 42px;
-  padding-inline: 1rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.96);
 }
 
 .page-surface {
@@ -888,7 +874,7 @@ a {
 }
 
 .priority-low {
-  background: #edf5fc;
+  background: var(--brand-tint);
   color: var(--brand-blue-deep);
 }
 
@@ -944,45 +930,61 @@ a {
 
 .field-group {
   display: grid;
-  gap: 0.4rem;
+  gap: var(--space-2);
 }
 
 .field-group > span {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
-.field-group input:not([type="checkbox"]),
-.field-group select,
-.field-group textarea {
+/* Text fields: same height, states and colors as the shared select/date triggers.
+   :where() keeps these at low specificity so screen rules can still override them. */
+:is(.field-group, .search-field, .filter-field) :where(input:not([type="checkbox"]), select, textarea) {
   width: 100%;
   min-width: 0;
-  min-height: 42px;
-  padding: 0 0.9rem;
+  min-height: var(--control-height);
+  padding: 0 var(--control-padding-x);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: #ffffff;
+  background: var(--surface);
+  color: var(--text);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
-.field-group input:focus,
-.field-group select:focus,
-.field-group textarea:focus {
+:is(.field-group, .search-field, .filter-field) :where(input:not([type="checkbox"]), select, textarea):hover:not(:disabled, :focus) {
+  border-color: var(--line-hover);
+}
+
+:is(.field-group, .search-field, .filter-field) :where(input, select, textarea):focus {
   outline: none;
-  border-color: #9cc8e3;
-  box-shadow: 0 0 0 3px rgba(46, 168, 212, 0.12);
+  border-color: var(--focus-border);
+  box-shadow: var(--focus-ring-soft);
+}
+
+/* Error after touch or edit, the same condition the screens use to show .field-error. */
+:is(.field-group, .search-field, .filter-field) :where(input:not([type="checkbox"]), select, textarea):is(.ng-invalid.ng-touched, .ng-invalid.ng-dirty, [aria-invalid="true"]) {
+  border-color: var(--danger-text);
+}
+
+:is(.field-group, .search-field, .filter-field) :where(input:not([type="checkbox"]), select, textarea):disabled {
+  opacity: var(--disabled-opacity);
+  cursor: not-allowed;
 }
 
 .field-group textarea {
   min-height: 110px;
-  padding: 0.75rem 0.9rem;
+  padding: var(--space-3) var(--control-padding-x);
   resize: none;
 }
 
+/* Inline message under a field or an action: same color, size and spacing everywhere. */
 .field-error {
   display: block;
   margin: 0;
   color: var(--danger-text);
-  font-size: 0.85rem;
-  line-height: 1.25;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-tight);
 }
 
 .muted-box {
@@ -1067,7 +1069,7 @@ a {
 
 .history-item:hover {
   background: var(--surface-alt);
-  border-color: #c9dceb;
+  border-color: var(--line-hover);
 }
 
 .history-item strong {
@@ -1179,7 +1181,7 @@ a {
 
 .modal-panel .field-group {
   align-content: start;
-  grid-template-rows: auto minmax(42px, auto) minmax(1.1rem, auto);
+  grid-template-rows: auto minmax(var(--control-height), auto) minmax(1.1rem, auto);
 }
 
 .modal-panel .field-group > .field-error {
@@ -1208,7 +1210,7 @@ a {
 /* Tabs: underline style, shared by detail modals and paged sections. */
 .tab-list {
   display: flex;
-  gap: 0.25rem;
+  gap: var(--space-1);
   overflow-x: auto;
   border-bottom: 1px solid var(--line);
   scrollbar-width: none;
@@ -1217,19 +1219,24 @@ a {
 .tab {
   position: relative;
   flex-shrink: 0;
-  min-height: 40px;
-  padding: 0 0.9rem;
+  min-height: var(--control-height);
+  padding: 0 var(--control-padding-x);
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   background: transparent;
   color: var(--muted);
-  font-size: 0.92rem;
-  font-weight: 600;
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
   transition: color 160ms ease, background-color 160ms ease;
 }
 
-.tab:hover {
+.tab:hover:not(:disabled) {
   color: var(--brand-blue-deep);
   background: var(--surface-alt);
+}
+
+.tab:disabled {
+  opacity: var(--disabled-opacity);
+  cursor: not-allowed;
 }
 
 .tab.is-active {
@@ -1439,22 +1446,6 @@ a {
   color: var(--muted);
 }
 
-.search-field input,
-.filter-field select {
-  min-height: 42px;
-  padding: 0 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: #ffffff;
-}
-
-.search-field input:focus,
-.filter-field select:focus {
-  outline: none;
-  border-color: #9cc8e3;
-  box-shadow: 0 0 0 3px rgba(46, 168, 212, 0.12);
-}
-
 .alert-banner {
   padding: 0.95rem 1rem;
 }
@@ -1464,7 +1455,7 @@ a {
 }
 
 .alert-banner--error {
-  border-color: #efc7cf;
+  border-color: var(--danger-line);
   background: linear-gradient(180deg, #fff4f6 0%, #ffecef 100%);
   color: var(--danger-text);
 }
@@ -1523,8 +1514,8 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
-  min-height: 42px;
-  font-weight: 600;
+  min-height: var(--control-height);
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
 }
 
@@ -1591,14 +1582,14 @@ fieldset.field-group > span {
 }
 
 .link-button {
-  min-height: 28px;
+  min-height: var(--control-height-xs);
   padding: 0;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: transparent;
   color: var(--brand-blue);
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
 }
 
 .link-button:hover:not(:disabled) {
@@ -1649,7 +1640,7 @@ fieldset.field-group > span {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  min-height: 42px;
+  min-height: var(--control-height);
   padding: 0 0.85rem;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -1947,18 +1938,18 @@ fieldset.field-group > span {
 .icon-button {
   display: inline-grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: var(--control-height-sm);
+  height: var(--control-height-sm);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: #ffffff;
+  background: var(--surface);
   color: var(--brand-blue-deep);
   transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 
 .icon-button:hover:not(:disabled) {
   background: var(--surface-alt);
-  border-color: #c9dceb;
+  border-color: var(--line-hover);
 }
 
 .icon-button--danger {
@@ -1968,10 +1959,11 @@ fieldset.field-group > span {
 
 .icon-button--danger:hover:not(:disabled) {
   background: var(--danger-bg);
+  border-color: var(--danger-line);
 }
 
 .icon-button:disabled {
-  opacity: 0.5;
+  opacity: var(--disabled-opacity);
   cursor: not-allowed;
 }
 
@@ -1983,7 +1975,7 @@ fieldset.field-group > span {
 .row-actions {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: var(--space-1);
 }
 
 /* Activity feed: a vertical line with a status-colored dot per event. */

@@ -91,7 +91,7 @@ interface EditingItem {
     }
 
     .protocol-launch__row .button-primary {
-      min-height: 42px;
+      min-height: var(--control-height);
     }
 
     .protocol-start {
