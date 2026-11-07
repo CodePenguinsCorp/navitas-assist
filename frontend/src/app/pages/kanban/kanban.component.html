@@ -9,6 +9,7 @@
   <section class="stats-grid stats-grid--four">
     @for (stat of heroStats(); track stat.label) {
       <article class="panel stat-card">
+        <span class="icon-tile" [class]="'icon-tile ' + stat.tone"><app-icon [name]="stat.icon" [size]="20" /></span>
         <span>{{ stat.label }}</span>
         <strong>{{ stat.value }}</strong>
         <small>{{ stat.detail }}</small>

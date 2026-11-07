@@ -105,26 +105,31 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         label: 'Dashboard',
         route: '/dashboard',
+        icon: 'dashboard',
         roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
       },
       {
         label: 'RMAs',
         route: '/rmas',
+        icon: 'clipboard',
         roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
       },
       {
         label: 'Kanban',
         route: '/kanban',
+        icon: 'columns',
         roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
       },
       {
         label: 'Notificações',
         route: '/notificacoes',
+        icon: 'bell',
         roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
       },
       {
         label: 'Peças',
         route: '/pecas',
+        icon: 'wrench',
         roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
       }
     ]
@@ -135,21 +140,25 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         label: 'Clientes',
         route: '/clientes',
+        icon: 'building',
         roles: ['ADMIN', 'SERVICE_DESK']
       },
       {
         label: 'Produtos',
         route: '/produtos',
+        icon: 'box',
         roles: ['ADMIN', 'SERVICE_DESK']
       },
       {
         label: 'Protocolos',
         route: '/protocolos',
+        icon: 'checklist',
         roles: ['ADMIN']
       },
       {
         label: 'Usuários',
         route: '/usuarios',
+        icon: 'users',
         roles: ['ADMIN']
       }
     ]
@@ -160,6 +169,7 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         label: 'Relatórios',
         route: '/relatorios',
+        icon: 'chart',
         roles: ['ADMIN', 'TECHNICIAN', 'VIEWER']
       }
     ]

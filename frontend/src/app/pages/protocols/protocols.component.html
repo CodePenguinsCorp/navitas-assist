@@ -4,7 +4,7 @@
       <h1>Protocolos técnicos</h1>
     </div>
     <div class="shell-actions">
-      <button type="button" class="button-primary" (click)="openCreateModal()">Novo protocolo</button>
+      <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo protocolo</button>
     </div>
   </section>
 
@@ -35,6 +35,7 @@
       <p>Carregando protocolos...</p>
     } @else if (filteredTemplates().length === 0) {
       <section class="empty-state">
+        <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
         <h3>Nenhum protocolo encontrado.</h3>
         <p>Cadastre checklists por produto ou categoria para padronizar diagnóstico, reparo e testes.</p>
       </section>
@@ -65,7 +66,7 @@
                 <td>{{ blockedLabel(template) }}</td>
                 <td>{{ updatedAtLabel(template) }}</td>
                 <td class="table-actions-col">
-                  <button type="button" class="button-secondary button-secondary--small" (click)="openEditModal(template)">Nova versão</button>
+                  <button type="button" class="button-secondary button-secondary--small" (click)="openEditModal(template)"><app-icon name="layers" />Nova versão</button>
                 </td>
               </tr>
             }

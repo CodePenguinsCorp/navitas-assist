@@ -5,21 +5,24 @@
     </div>
     @if (canManage()) {
       <div class="shell-actions">
-        <button type="button" class="button-primary" (click)="openCreateModal()">Nova peça</button>
+        <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Nova peça</button>
       </div>
     }
   </section>
 
   <section class="stats-grid stats-grid--three">
     <article class="panel stat-card">
+      <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
       <span>Abaixo do mínimo</span>
       <strong>{{ belowMinimumCount() }}</strong>
     </article>
     <article class="panel stat-card">
+      <span class="icon-tile tone-warning"><app-icon name="clock" [size]="20" /></span>
       <span>Reservas pendentes</span>
       <strong>{{ pending().length }}</strong>
     </article>
     <article class="panel stat-card">
+      <span class="icon-tile tone-success"><app-icon name="box" [size]="20" /></span>
       <span>Valor em estoque</span>
       <strong>{{ currency(stockValue()) }}</strong>
     </article>
@@ -60,11 +63,13 @@
         <p>Carregando peças...</p>
       } @else if (parts().length === 0) {
         <section class="empty-state">
+          <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
           <h3>Nenhuma peça cadastrada.</h3>
           <p>Cadastre peças de reposição para reservá-las nos RMAs.</p>
         </section>
       } @else if (filteredParts().length === 0) {
         <section class="empty-state">
+          <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
           <h3>Nenhum resultado encontrado.</h3>
           <p>Ajuste a busca para localizar outra peça.</p>
         </section>
@@ -98,15 +103,18 @@
                   <td>{{ part.location || 'Não informada' }}</td>
                   <td>{{ quantity(part.onHand, part.unit) }}</td>
                   <td>{{ quantity(part.reserved, part.unit) }}</td>
-                  <td><strong>{{ quantity(part.available, part.unit) }}</strong></td>
+                  <td class="stock-cell">
+                    <strong>{{ quantity(part.available, part.unit) }}</strong>
+                    <span class="meter" [class.tone-danger]="part.belowMinimum" [class.tone-success]="!part.belowMinimum" [title]="'Mínimo ' + quantity(part.minimumStock, part.unit)" aria-hidden="true"><span [style.width.%]="stockPercent(part)"></span></span>
+                  </td>
                   <td>{{ quantity(part.minimumStock, part.unit) }}</td>
                   <td>{{ currency(part.unitCost) }}</td>
                   <td class="table-actions-col">
                     <div class="part-actions">
-                      <button type="button" class="button-secondary button-secondary--small" (click)="openHistory(part)">Histórico</button>
+                      <button type="button" class="icon-button" title="Histórico" (click)="openHistory(part)"><app-icon name="history" /><span class="sr-only">Histórico</span></button>
                       @if (canManage()) {
-                        <button type="button" class="button-secondary button-secondary--small" (click)="openMovementModal(part)">Movimentar</button>
-                        <button type="button" class="button-secondary button-secondary--small" (click)="openEditModal(part)">Editar</button>
+                        <button type="button" class="icon-button" title="Movimentar" (click)="openMovementModal(part)"><app-icon name="move" /><span class="sr-only">Movimentar</span></button>
+                        <button type="button" class="icon-button" title="Editar" (click)="openEditModal(part)"><app-icon name="pencil" /><span class="sr-only">Editar</span></button>
                       }
                     </div>
                   </td>

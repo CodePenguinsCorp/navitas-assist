@@ -4,20 +4,23 @@
       <h1>Clientes</h1>
     </div>
     <div class="shell-actions">
-      <button type="button" class="button-primary" (click)="openCreateModal()">Novo cliente</button>
+      <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo cliente</button>
     </div>
   </section>
 
   <section class="stats-grid stats-grid--three">
     <article class="panel stat-card">
+      <span class="icon-tile tone-sky"><app-icon name="user" [size]="20" /></span>
       <span>Com telefone</span>
       <strong>{{ summary().withContact }}</strong>
     </article>
     <article class="panel stat-card">
+      <span class="icon-tile tone-slate"><app-icon name="clipboard" [size]="20" /></span>
       <span>Com documento</span>
       <strong>{{ summary().withDocument }}</strong>
     </article>
     <article class="panel stat-card">
+      <span class="icon-tile tone-sky"><app-icon name="inbox" [size]="20" /></span>
       <span>Com e-mail</span>
       <strong>{{ summary().withEmail }}</strong>
     </article>
@@ -74,12 +77,14 @@
       <p>Carregando clientes...</p>
     } @else if (clients().length === 0 && !hasActiveFilters) {
       <section class="empty-state">
+        <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
         <h3>Nenhum cliente cadastrado.</h3>
         <p>Cadastre o primeiro cliente para vincular novos RMAs.</p>
-        <button type="button" class="button-primary" (click)="openCreateModal()">Cadastrar cliente</button>
+        <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Cadastrar cliente</button>
       </section>
     } @else if (clients().length === 0) {
       <section class="empty-state">
+        <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
         <h3>Nenhum resultado encontrado.</h3>
         <p>Ajuste a busca ou os filtros para localizar outro cliente.</p>
       </section>
@@ -112,19 +117,21 @@
                   <div class="client-actions">
                     <button
                       type="button"
-                      class="button-secondary button-secondary--small"
+                      class="icon-button"
+                      title="Editar"
                       (click)="openEditModal(client)"
                       [disabled]="deletingClientId() === client.id"
                     >
-                      Editar
+                      <app-icon name="pencil" /><span class="sr-only">Editar</span>
                     </button>
                     <button
                       type="button"
-                      class="button-secondary button-secondary--small button-secondary--danger"
+                      class="icon-button icon-button--danger"
+                      title="Excluir"
                       (click)="openDeleteModal(client)"
                       [disabled]="deletingClientId() !== null"
                     >
-                      {{ deletingClientId() === client.id ? 'Excluindo...' : 'Excluir' }}
+                      <app-icon name="trash" /><span class="sr-only">{{ deletingClientId() === client.id ? 'Excluindo...' : 'Excluir' }}</span>
                     </button>
                   </div>
                 </td>

@@ -1,3 +1,5 @@
+import { initialsOf } from '../../core/utils/rma-ui';
+import { IconComponent } from '../../shared/icon/icon.component';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
@@ -30,7 +32,7 @@ const passwordByteLengthValidator: ValidatorFn = control =>
 
 @Component({
   selector: 'app-users',
-  imports: [ReactiveFormsModule, CustomSelectComponent, PaginationComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PaginationComponent],
   templateUrl: './users.component.html',
   styles: [`
     :host { display: block; }
@@ -79,6 +81,7 @@ const passwordByteLengthValidator: ValidatorFn = control =>
   `]
 })
 export class UsersComponent {
+  protected readonly initials = initialsOf;
   private readonly formBuilder = inject(FormBuilder);
   private readonly catalogService = inject(CatalogService);
   private readonly authService = inject(AuthService);

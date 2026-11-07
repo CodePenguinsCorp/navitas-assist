@@ -1,3 +1,4 @@
+import { IconComponent } from '../../shared/icon/icon.component';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable, finalize } from 'rxjs';
@@ -14,7 +15,7 @@ const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
 
 @Component({
   selector: 'app-protocols',
-  imports: [ReactiveFormsModule, CustomSelectComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent],
   templateUrl: './protocols.component.html',
   styles: [`
     :host {
