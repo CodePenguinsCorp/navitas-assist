@@ -1,5 +1,5 @@
 import { Component, DestroyRef, ElementRef, EventEmitter, HostListener, Output, afterNextRender, computed, inject, input, viewChild } from '@angular/core';
-import { RmaResponse } from '../../core/models';
+import { RmaResponse, RmaStatus } from '../../core/models';
 import { SlaClockService } from '../../core/services/sla-clock.service';
 import { blockDuration } from '../../core/utils/rma-block';
 import { RmaSlaBadgeComponent } from '../rma-sla-badge/rma-sla-badge.component';
@@ -18,6 +18,16 @@ import {
   warrantyClass,
   warrantyLabel
 } from '../../core/utils/rma-ui';
+
+interface ActivityEntry {
+  kind: 'status' | 'assignee';
+  at: string;
+  by: string;
+  status?: RmaStatus;
+  note?: string | null;
+  from?: string | null;
+  to?: string | null;
+}
 
 @Component({
   selector: 'app-rma-detail-modal',
@@ -49,8 +59,10 @@ export class RmaDetailModalComponent {
   protected readonly initials = initialsOf;
   protected readonly dateLabel = formatDate;
   protected readonly dateTimeLabel = formatDateTime;
-  protected readonly timeline = computed(() => [...this.rma().statusHistory].sort((a, b) => Date.parse(b.changedAt) - Date.parse(a.changedAt)));
-  protected readonly assignments = computed(() => [...this.rma().assignmentHistory].sort((a, b) => Date.parse(b.changedAt) - Date.parse(a.changedAt)));
+  protected readonly activity = computed<ActivityEntry[]>(() => [
+    ...this.rma().statusHistory.map((entry): ActivityEntry => ({ kind: 'status', at: entry.changedAt, by: entry.changedBy, status: entry.status, note: entry.note })),
+    ...this.rma().assignmentHistory.map((entry): ActivityEntry => ({ kind: 'assignee', at: entry.changedAt, by: entry.changedBy, from: entry.previousAssigneeName, to: entry.newAssigneeName }))
+  ].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)));
 
   private readonly panel = viewChild.required<ElementRef<HTMLElement>>('panel');
   private readonly previousFocus = document.activeElement as HTMLElement | null;
