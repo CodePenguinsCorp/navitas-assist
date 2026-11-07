@@ -169,14 +169,6 @@
   cursor: pointer;
 }
 
-.board-card__selection input {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  accent-color: var(--brand-blue);
-  cursor: pointer;
-}
-
 .board-card__title {
   padding-top: 0.75rem;
   border-top: 1px solid var(--line);

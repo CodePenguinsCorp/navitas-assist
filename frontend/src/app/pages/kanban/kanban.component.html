@@ -1,23 +1,19 @@
 <section class="page-surface kanban-page">
-  <section class="kanban-hero panel">
-    <div class="kanban-hero__copy">
-      <p class="eyebrow">Operações</p>
+  <section class="page-heading">
+    <div>
       <h1>Kanban de RMAs</h1>
-      <p>
-        Visual dedicado para acompanhar o fluxo da assistência técnica e mover chamados entre etapas
-        sem sair do quadro.
-      </p>
+      <p>Arraste os cards entre as colunas para refletir a etapa atual de cada atendimento.</p>
     </div>
+  </section>
 
-    <div class="kanban-hero__stats">
-      @for (stat of heroStats(); track stat.label) {
-        <article class="kanban-hero__stat">
-          <span>{{ stat.label }}</span>
-          <strong>{{ stat.value }}</strong>
-          <p>{{ stat.detail }}</p>
-        </article>
-      }
-    </div>
+  <section class="stats-grid stats-grid--four">
+    @for (stat of heroStats(); track stat.label) {
+      <article class="panel stat-card">
+        <span>{{ stat.label }}</span>
+        <strong>{{ stat.value }}</strong>
+        <small>{{ stat.detail }}</small>
+      </article>
+    }
   </section>
 
   @if (pageError()) {
@@ -30,7 +26,6 @@
     <div class="kanban-stage__header">
       <div>
         <h2>Fluxo operacional</h2>
-        <p>Arraste os cards entre as colunas para refletir a etapa atual de cada atendimento.</p>
       </div>
       <div class="kanban-stage__summary">
         <span>{{ filteredRmas().length }} de {{ totalRmas() }} RMA(s)</span>

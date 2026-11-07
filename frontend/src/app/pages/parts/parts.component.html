@@ -25,9 +25,9 @@
     </article>
   </section>
 
-  <div class="part-tabs" role="tablist">
-    <button type="button" role="tab" class="button-secondary button-secondary--small" [class.is-active]="activeTab() === 'stock'" [attr.aria-selected]="activeTab() === 'stock'" (click)="selectTab('stock')">Estoque</button>
-    <button type="button" role="tab" class="button-secondary button-secondary--small" [class.is-active]="activeTab() === 'replenishment'" [attr.aria-selected]="activeTab() === 'replenishment'" (click)="selectTab('replenishment')">
+  <div class="tab-list" role="tablist" aria-label="Seções de peças">
+    <button type="button" role="tab" class="tab" [class.is-active]="activeTab() === 'stock'" [attr.aria-selected]="activeTab() === 'stock'" (click)="selectTab('stock')">Estoque</button>
+    <button type="button" role="tab" class="tab" [class.is-active]="activeTab() === 'replenishment'" [attr.aria-selected]="activeTab() === 'replenishment'" (click)="selectTab('replenishment')">
       Reposição ({{ replenishment().length }})
     </button>
   </div>
@@ -73,7 +73,6 @@
           <table>
             <thead>
               <tr>
-                <th>Código</th>
                 <th>Peça</th>
                 <th>Localização</th>
                 <th>Em estoque</th>
@@ -87,9 +86,9 @@
             <tbody>
               @for (part of filteredParts(); track part.id) {
                 <tr>
-                  <td>{{ part.code }}</td>
                   <td>
                     <strong class="table-title">{{ part.name }}</strong>
+                    <span class="table-subtitle code-text">{{ part.code }}</span>
                     @if (!part.active) {
                       <span class="mini-chip warranty-off">Inativa</span>
                     } @else if (part.belowMinimum) {
@@ -138,7 +137,7 @@
             <tbody>
               @for (item of replenishment(); track item.partId) {
                 <tr>
-                  <td><strong class="table-title">{{ item.code }} | {{ item.name }}</strong><span class="table-subtitle">{{ item.location || 'Sem localização' }}</span></td>
+                  <td><strong class="table-title"><span class="code-text">{{ item.code }}</span> · {{ item.name }}</strong><span class="table-subtitle">{{ item.location || 'Sem localização' }}</span></td>
                   <td>{{ quantity(item.available, item.unit) }}</td>
                   <td>{{ quantity(item.minimumStock, item.unit) }}</td>
                   <td>{{ quantity(item.pendingQuantity, item.unit) }}</td>
@@ -170,7 +169,7 @@
             <tbody>
               @for (reservation of pending(); track reservation.id) {
                 <tr>
-                  <td>{{ reservation.rmaCode }}</td>
+                  <td><span class="code-text">{{ reservation.rmaCode }}</span></td>
                   <td><strong class="table-title code-text">{{ reservation.partCode }}</strong><span class="table-subtitle">{{ reservation.partName }}</span></td>
                   <td>{{ quantity(reservation.quantity, reservation.unit) }}</td>
                   <td>{{ quantity(reservation.partAvailable, reservation.unit) }}</td>

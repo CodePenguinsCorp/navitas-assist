@@ -143,7 +143,7 @@ export class RmaPartsPanelComponent {
   protected readonly partOptions = computed<ReadonlyArray<CustomSelectOption<number>>>(() =>
     this.catalog()
       .filter((part) => part.active)
-      .map((part) => ({ value: part.id, label: `${part.code} | ${part.name} — disponível: ${formatQuantity(part.available, part.unit)}` }))
+      .map((part) => ({ value: part.id, label: `${part.code} · ${part.name} (disponível: ${formatQuantity(part.available, part.unit)})` }))
   );
 
   protected readonly reserveForm = this.formBuilder.group({

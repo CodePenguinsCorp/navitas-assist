@@ -5,13 +5,13 @@
     </div>
   </section>
 
-  <div class="notification-tabs" role="tablist">
-    <button type="button" role="tab" class="button-secondary button-secondary--small" [class.is-active]="activeTab() === 'inbox'" [attr.aria-selected]="activeTab() === 'inbox'" (click)="selectTab('inbox')">
+  <div class="tab-list" role="tablist" aria-label="Seções de notificações">
+    <button type="button" role="tab" class="tab" [class.is-active]="activeTab() === 'inbox'" [attr.aria-selected]="activeTab() === 'inbox'" (click)="selectTab('inbox')">
       Caixa de entrada ({{ unreadCount() }})
     </button>
-    <button type="button" role="tab" class="button-secondary button-secondary--small" [class.is-active]="activeTab() === 'preferences'" [attr.aria-selected]="activeTab() === 'preferences'" (click)="selectTab('preferences')">Preferências</button>
+    <button type="button" role="tab" class="tab" [class.is-active]="activeTab() === 'preferences'" [attr.aria-selected]="activeTab() === 'preferences'" (click)="selectTab('preferences')">Preferências</button>
     @if (isAdmin()) {
-      <button type="button" role="tab" class="button-secondary button-secondary--small" [class.is-active]="activeTab() === 'rules'" [attr.aria-selected]="activeTab() === 'rules'" (click)="selectTab('rules')">Regras</button>
+      <button type="button" role="tab" class="tab" [class.is-active]="activeTab() === 'rules'" [attr.aria-selected]="activeTab() === 'rules'" (click)="selectTab('rules')">Regras</button>
     }
   </div>
 

@@ -224,7 +224,7 @@ describe('RmasComponent pending editor lifecycle', () => {
 
   function fillEditor(mode: 'create' | 'diagnosis'): void {
     if (mode === 'create') {
-      for (const [name, label] of [['clientId', 'Cliente'], ['productId', 'SKU-2 | Produto']]) {
+      for (const [name, label] of [['clientId', 'Cliente'], ['productId', 'SKU-2 · Produto']]) {
         const select = page.querySelector<HTMLElement>(`.modal-overlay app-custom-select[formControlName="${name}"]`)!;
         select.querySelector<HTMLButtonElement>('.custom-select__trigger')!.click();
         fixture.detectChanges();

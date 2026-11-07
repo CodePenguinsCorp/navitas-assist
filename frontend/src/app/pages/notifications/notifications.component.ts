@@ -36,7 +36,6 @@ type NotificationsTab = 'inbox' | 'preferences' | 'rules';
       display: block;
     }
 
-    .notification-tabs,
     .notification-toolbar,
     .notification-actions,
     .rule-roles {
@@ -46,14 +45,6 @@ type NotificationsTab = 'inbox' | 'preferences' | 'rules';
       align-items: center;
     }
 
-    .notification-tabs {
-      margin-bottom: 1rem;
-    }
-
-    .notification-tabs .is-active {
-      background: var(--brand-blue-deep);
-      color: #ffffff;
-    }
 
     .notification-toolbar {
       gap: 0.25rem 1.25rem;

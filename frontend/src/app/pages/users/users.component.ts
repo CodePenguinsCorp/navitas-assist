@@ -64,12 +64,6 @@ const passwordByteLengthValidator: ValidatorFn = control =>
       background: var(--surface-alt);
     }
 
-    .user-status-card input {
-      width: 18px;
-      height: 18px;
-      accent-color: var(--brand-blue);
-    }
-
     .user-status-card strong {
       color: var(--text);
       font-size: 0.95rem;

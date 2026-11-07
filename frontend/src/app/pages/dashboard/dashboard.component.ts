@@ -82,7 +82,7 @@ export class DashboardComponent {
       {
         label: 'Produtos em garantia',
         value: `${warrantyRate}%`,
-        variation: `${inWarrantyCount} de ${rmaItems.length} itens | ${pendingWarrantyCount} pendentes`,
+        variation: `${inWarrantyCount} de ${rmaItems.length} itens · ${pendingWarrantyCount} pendentes`,
         tone: 'sky'
       },
       {
@@ -94,7 +94,7 @@ export class DashboardComponent {
       {
         label: 'Cadastros',
         value: String(catalogTotal),
-        variation: `${clients} clientes | ${products} produtos${users > 0 ? ` | ${users} usuários` : ''}`,
+        variation: `${clients} clientes · ${products} produtos${users > 0 ? ` · ${users} usuários` : ''}`,
         tone: 'light'
       }
     ];

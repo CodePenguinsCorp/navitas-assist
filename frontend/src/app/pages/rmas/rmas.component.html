@@ -158,9 +158,9 @@
                 </td>
                 <td>
                   <div class="rma-item-warranties">
-                    @for (item of rma.items; track item.id ?? $index; let index = $index) {
+                    @for (item of rma.items; track item.id ?? $index) {
                       <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)" [title]="item.productName + ' · ' + itemTrackableLabel(item)">
-                        Item {{ index + 1 }} · {{ item.productSku }}: {{ warrantyLabel(item.warrantyStatus) }}
+                        {{ item.productSku }} · {{ warrantyLabel(item.warrantyStatus) }}
                       </span>
                     }
                   </div>

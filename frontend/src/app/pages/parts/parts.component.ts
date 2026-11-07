@@ -47,20 +47,10 @@ const MOVEMENT_TYPE_OPTIONS: ReadonlyArray<CustomSelectOption<ManualPartMovement
 
     .part-actions {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 0.45rem;
     }
 
-    .part-tabs {
-      display: flex;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
-    }
-
-    .part-tabs .is-active {
-      background: var(--brand-blue-deep);
-      color: #ffffff;
-    }
 
     .movement-reversal {
       display: flex;
