@@ -164,6 +164,16 @@ describe('ReportsComponent', () => {
     expect(text()).toContain('Nenhum RMA encontrado');
   });
 
+  it('does not expose export implementation details in the report hint', () => {
+    respond();
+    const surface = fixture.nativeElement.querySelector('section.page-surface') as HTMLElement;
+    const hint = surface.querySelector(':scope > p.report-hint');
+    expect(hint?.textContent?.trim()).toBe('Consulta em tela.');
+    expect(text()).not.toContain('PDF');
+    expect(text()).not.toContain('CSV');
+    expect(text()).not.toContain('documentação');
+  });
+
   it('keeps report access available when the client selector fails and allows retrying it', () => {
     respond();
     component.loadClients();
