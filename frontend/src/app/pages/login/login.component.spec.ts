@@ -53,6 +53,16 @@ describe('Login failure feedback', () => {
     http.expectNone('/api/auth/login');
   }
 
+  it('shows visible labels for usuário and senha', () => {
+    for (const [id, text, autocomplete] of [['username', 'Usuário', 'username'], ['password', 'Senha', 'current-password']]) {
+      const label = page.querySelector<HTMLLabelElement>(`label[for="${id}"]`);
+      expect(label).not.toBeNull();
+      expect(label!.textContent?.trim()).toBe(text);
+      expect(label!.classList.contains('sr-only')).toBe(false);
+      expect(page.querySelector(`#${id}`)!.getAttribute('autocomplete')).toBe(autocomplete);
+    }
+  });
+
   it('keeps the credential message only for a rejected login', () => {
     startLogin().flush(null);
     http.expectOne('/api/auth/login').flush({ message: 'server-secret' }, { status: 401, statusText: 'Unauthorized' });

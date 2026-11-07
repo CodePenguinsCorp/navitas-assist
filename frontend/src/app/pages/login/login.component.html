@@ -11,12 +11,11 @@
 
       <form class="login-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
         <div class="login-field">
-          <label class="sr-only" for="username">Usuário</label>
+          <label class="login-label" for="username">Usuário</label>
           <input
             id="username"
             type="text"
             formControlName="username"
-            placeholder="Usuário"
             autocomplete="username"
             spellcheck="false"
             [attr.aria-invalid]="hasError('username')"
@@ -24,13 +23,12 @@
         </div>
 
         <div class="login-field">
-          <label class="sr-only" for="password">Senha</label>
+          <label class="login-label" for="password">Senha</label>
           <div class="login-password">
             <input
               id="password"
               [type]="passwordVisible() ? 'text' : 'password'"
               formControlName="password"
-              placeholder="Senha"
               autocomplete="current-password"
               [attr.aria-invalid]="hasError('password')"
             />

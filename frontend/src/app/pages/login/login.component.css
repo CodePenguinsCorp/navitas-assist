@@ -10,7 +10,7 @@
   padding: 0;
   background:
     radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.2), transparent 22%),
-    linear-gradient(135deg, #0b5cab 0%, #0f79d4 46%, #1599ef 100%);
+    linear-gradient(135deg, #0a4f93 0%, #0b5fa8 46%, #0d6cbd 100%);
 }
 
 .login-stage {
@@ -89,6 +89,13 @@
   gap: 0.4rem;
 }
 
+.login-label {
+  color: #ffffff;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+}
+
 .login-field input {
   width: 100%;
   min-height: 42px;
@@ -98,10 +105,6 @@
   background: rgba(248, 245, 252, 0.92);
   color: #163d66;
   transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
-}
-
-.login-field input::placeholder {
-  color: rgba(31, 53, 80, 0.58);
 }
 
 .login-field input:focus {
@@ -213,18 +216,6 @@
 .login-submit:disabled {
   opacity: 0.72;
   cursor: not-allowed;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }
 
 @media (max-width: 720px) {
