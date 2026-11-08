@@ -50,10 +50,10 @@ describe('RmaPartsPanelComponent', () => {
     const text: string = fixture.nativeElement.textContent;
 
     expect(partService['getRmaParts']).toHaveBeenCalledWith(7);
-    expect(text).toContain('1 reservada(s)');
-    expect(text).toContain('1 consumida(s)');
-    expect(text).toContain('1 pendente(s)');
-    expect(text).toContain('Custo consumido');
+    expect(text).toContain('Reservas ativas: 1');
+    expect(text).toContain('Consumidas: 1');
+    expect(text).toContain('Pendentes: 1');
+    expect(text).toContain('Custo consumido no RMA');
     expect(text).not.toContain('Consumir');
     expect(fixture.nativeElement.querySelector('form')).toBeNull();
     expect(partService['list']).not.toHaveBeenCalled();
@@ -66,7 +66,7 @@ describe('RmaPartsPanelComponent', () => {
     expect(text).toContain('Efetivar reserva');
     expect(fixture.nativeElement.querySelector('form')).not.toBeNull();
 
-    const cancel = [...fixture.nativeElement.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent?.trim() === 'Cancelar') as HTMLButtonElement;
+    const cancel = [...fixture.nativeElement.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent?.trim() === 'Cancelar reserva') as HTMLButtonElement;
     cancel.click();
     expect(partService['updateReservation']).toHaveBeenCalledWith(7, 1, 'cancel');
   });
@@ -88,6 +88,6 @@ describe('RmaPartsPanelComponent', () => {
     expect(fixture.nativeElement.querySelector('form')).toBeNull();
     expect(text).not.toContain('Consumir');
     expect(text).not.toContain('Efetivar reserva');
-    expect(text).toContain('Cancelar');
+    expect(text).toContain('Cancelar reserva');
   });
 });

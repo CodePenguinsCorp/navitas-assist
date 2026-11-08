@@ -1,6 +1,7 @@
-import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { finalize } from 'rxjs';
+import { Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Subscription, finalize } from 'rxjs';
 import { CLOSED_RMA_STATUSES } from '../../core/mock-data';
 import { PartReservationResponse, PartResponse, RmaPartsResponse, RmaStatus } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
@@ -28,12 +29,21 @@ const ACTION_MESSAGES: Record<PartReservationAction, string> = {
     .parts-summary {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.45rem;
-      margin: 0.5rem 0 0.75rem;
+      gap: var(--space-2);
+      margin: var(--space-2) 0 var(--space-3);
     }
 
     .parts-costs {
       margin-bottom: 0.75rem;
+    }
+
+    .parts-load-error {
+      display: grid;
+      justify-items: start;
+      gap: var(--space-2);
+      margin: var(--space-2) 0 var(--space-3);
+      border: 1px solid var(--danger-line);
+      border-radius: var(--radius-md);
     }
 
     .parts-item__body {
@@ -80,12 +90,8 @@ const ACTION_MESSAGES: Record<PartReservationAction, string> = {
       align-items: start;
     }
 
-    .parts-reserve {
-      display: grid;
-      grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 2fr) auto;
-      gap: 0.6rem;
-      align-items: end;
-      margin-top: 0.85rem;
+    .parts-reserve-form {
+      margin-top: var(--space-4);
     }
 
     .parts-history {
@@ -98,7 +104,6 @@ const ACTION_MESSAGES: Record<PartReservationAction, string> = {
     }
 
     @media (max-width: 720px) {
-      .parts-reserve,
       .parts-item {
         grid-template-columns: 1fr;
       }
@@ -117,7 +122,18 @@ export class RmaPartsPanelComponent {
   readonly rmaId = input.required<number>();
   readonly rmaStatus = input.required<RmaStatus>();
 
+  private readonly destroyRef = inject(DestroyRef);
+  private loadRequest?: Subscription;
+  private catalogRequest?: Subscription;
+
   protected readonly loading = signal(false);
+  protected readonly loadFailed = signal(false);
+  protected readonly hasLoaded = signal(false);
+  protected readonly loadErrorMessage = signal('');
+  protected readonly catalogLoading = signal(false);
+  protected readonly catalogLoadFailed = signal(false);
+  protected readonly catalogHasLoaded = signal(false);
+  protected readonly catalogLoadErrorMessage = signal('');
   protected readonly submitting = signal(false);
   protected readonly busyReservationId = signal<number | null>(null);
   protected readonly errorMessage = signal('');
@@ -155,32 +171,59 @@ export class RmaPartsPanelComponent {
   constructor() {
     effect(() => {
       const rmaId = this.rmaId();
-      untracked(() => this.load(rmaId));
+      untracked(() => {
+        this.resetContext();
+        this.load(rmaId);
+      });
     });
   }
 
+  protected hasError(control: AbstractControl): boolean {
+    return control.invalid && (control.dirty || control.touched);
+  }
+
+  protected selectedPart(): PartResponse | null {
+    const partId = this.reserveForm.controls.partId.value;
+    return partId === null ? null : this.catalog().find((part) => part.id === partId) ?? null;
+  }
+
+  protected retryLoad(): void {
+    if (!this.loading()) this.load(this.rmaId());
+  }
+
+  protected retryCatalog(): void {
+    if (!this.catalogLoading()) this.loadCatalog();
+  }
+
   protected reserve(): void {
-    if (this.reserveForm.invalid || this.submitting()) {
+    if (!this.catalogHasLoaded() || this.catalogLoadFailed()) return;
+    if (this.submitting()) return;
+    if (this.reserveForm.invalid) {
       this.reserveForm.markAllAsTouched();
-      this.errorMessage.set('Selecione a peça e informe uma quantidade válida.');
       return;
     }
 
+    const rmaId = this.rmaId();
     const raw = this.reserveForm.getRawValue();
     this.submitting.set(true);
     this.clearMessages();
 
-    this.partService.reserve(this.rmaId(), { partId: raw.partId!, quantity: raw.quantity, note: normalizeOptionalText(raw.note) }).pipe(
+    this.partService.reserve(rmaId, { partId: raw.partId!, quantity: raw.quantity, note: normalizeOptionalText(raw.note) }).pipe(
+      takeUntilDestroyed(this.destroyRef),
       finalize(() => this.submitting.set(false))
     ).subscribe({
       next: (reservation) => {
+        if (this.rmaId() !== rmaId) return;
         this.successMessage.set(reservation.status === 'PENDING'
           ? `Saldo insuficiente: ${reservation.partName} ficou pendente de reposição.`
           : `${reservation.partName} reservada para o RMA.`);
         this.reserveForm.reset({ partId: null, quantity: 1, note: '' });
-        this.load(this.rmaId());
+        this.load(rmaId);
       },
-      error: (error) => this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível reservar a peça agora.'))
+      error: (error) => {
+        if (this.rmaId() !== rmaId) return;
+        this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível reservar a peça agora.'));
+      }
     });
   }
 
@@ -189,33 +232,89 @@ export class RmaPartsPanelComponent {
       return;
     }
 
+    const rmaId = this.rmaId();
     this.busyReservationId.set(reservation.id);
     this.clearMessages();
 
-    this.partService.updateReservation(this.rmaId(), reservation.id, action).pipe(
+    this.partService.updateReservation(rmaId, reservation.id, action).pipe(
+      takeUntilDestroyed(this.destroyRef),
       finalize(() => this.busyReservationId.set(null))
     ).subscribe({
       next: () => {
+        if (this.rmaId() !== rmaId) return;
         this.successMessage.set(ACTION_MESSAGES[action]);
-        this.load(this.rmaId());
+        this.load(rmaId);
       },
-      error: (error) => this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível atualizar a reserva agora.'))
+      error: (error) => {
+        if (this.rmaId() !== rmaId) return;
+        this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível atualizar a reserva agora.'));
+      }
     });
   }
 
+  private resetContext(): void {
+    this.loadRequest?.unsubscribe();
+    this.catalogRequest?.unsubscribe();
+    this.parts.set(null);
+    this.hasLoaded.set(false);
+    this.loadFailed.set(false);
+    this.loadErrorMessage.set('');
+    this.catalog.set([]);
+    this.catalogHasLoaded.set(false);
+    this.catalogLoadFailed.set(false);
+    this.catalogLoadErrorMessage.set('');
+    this.reserveForm.reset({ partId: null, quantity: 1, note: '' });
+    this.clearMessages();
+  }
+
   private load(rmaId: number): void {
+    this.loadRequest?.unsubscribe();
     this.loading.set(true);
 
-    this.partService.getRmaParts(rmaId).pipe(
+    this.loadRequest = this.partService.getRmaParts(rmaId).pipe(
+      takeUntilDestroyed(this.destroyRef),
       finalize(() => this.loading.set(false))
     ).subscribe({
-      next: (parts) => this.parts.set(parts),
-      error: (error) => this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as peças do RMA.'))
+      next: (parts) => {
+        if (this.rmaId() !== rmaId) return;
+        this.parts.set(parts);
+        this.hasLoaded.set(true);
+        this.loadFailed.set(false);
+        this.loadErrorMessage.set('');
+      },
+      error: (error) => {
+        if (this.rmaId() !== rmaId) return;
+        this.parts.set(null);
+        this.loadFailed.set(true);
+        this.loadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as peças do RMA.'));
+      }
     });
 
-    if (this.canCreateReservation()) {
-      this.partService.list().subscribe({ next: (catalog) => this.catalog.set(catalog), error: () => this.catalog.set([]) });
-    }
+    this.loadCatalog();
+  }
+
+  private loadCatalog(): void {
+    if (!this.canCreateReservation()) return;
+    this.catalogRequest?.unsubscribe();
+    this.catalogLoading.set(true);
+
+    this.catalogRequest = this.partService.list().pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.catalogLoading.set(false))
+    ).subscribe({
+      next: (catalog) => {
+        this.catalog.set(catalog);
+        this.catalogHasLoaded.set(true);
+        this.catalogLoadFailed.set(false);
+        this.catalogLoadErrorMessage.set('');
+      },
+      error: (error) => {
+        this.catalog.set([]);
+        this.reserveForm.controls.partId.setValue(null);
+        this.catalogLoadFailed.set(true);
+        this.catalogLoadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as opções de peças.'));
+      }
+    });
   }
 
   private clearMessages(): void {

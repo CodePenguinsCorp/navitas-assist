@@ -1,100 +1,134 @@
 <div class="summary-block">
   <strong>Peças</strong>
 
-  @if (parts(); as rmaParts) {
-    <div class="parts-summary">
-      <span class="mini-chip priority-low">{{ activeCount() }} reservada(s)</span>
-      <span class="mini-chip warranty-ok">{{ consumedCount() }} consumida(s)</span>
-      <span class="mini-chip warranty-alert">{{ rmaParts.pendingCount }} pendente(s)</span>
+  @if (loadFailed()) {
+    <div class="alert-banner alert-banner--error parts-load-error" role="alert">
+      <strong>{{ loadErrorMessage() }}</strong>
+      <button type="button" class="button-secondary button-secondary--small" [disabled]="loading()" (click)="retryLoad()">{{ loading() ? 'Carregando...' : 'Tentar novamente' }}</button>
     </div>
-    <dl class="meta-list parts-costs">
-      <div><dt>Custo consumido</dt><dd>{{ currency(rmaParts.consumedCost) }}</dd></div>
-      <div><dt>Custo reservado</dt><dd>{{ currency(rmaParts.reservedCost) }}</dd></div>
-    </dl>
-  }
-
-  @if (errorMessage()) {
-    <p class="field-error" role="alert">{{ errorMessage() }}</p>
-  }
-  @if (successMessage()) {
-    <p class="muted-inline" role="status">{{ successMessage() }}</p>
-  }
-
-  @if (loading() && !parts()) {
-    <p class="rma-detail-copy">Carregando peças...</p>
-  } @else if (reservations().length === 0) {
-    <p class="rma-detail-copy">Nenhuma peça reservada para este RMA.</p>
+  } @else if (!hasLoaded()) {
+    <p class="rma-detail-copy" role="status">Carregando peças...</p>
   } @else {
-    <div class="parts-list">
-      @for (reservation of reservations(); track reservation.id) {
-        <div class="parts-item">
-          <div class="parts-item__body">
-            <div class="parts-item__title">
-              <strong><span class="code-text">{{ reservation.partCode }}</span> · {{ reservation.partName }}</strong>
-              <span class="mini-chip" [class]="statusClass(reservation.status)">{{ statusLabels[reservation.status] }}</span>
-            </div>
-            <dl class="meta-list">
-              <div><dt>Quantidade</dt><dd>{{ quantity(reservation.quantity, reservation.unit) }}</dd></div>
-              <div><dt>Custo</dt><dd>{{ currency(reservation.totalCost) }}</dd></div>
-              <div><dt>Em estoque</dt><dd>{{ quantity(reservation.partAvailable, reservation.unit) }}</dd></div>
-              @if (reservation.location) {
-                <div><dt>Local</dt><dd>{{ reservation.location }}</dd></div>
+    @if (parts(); as rmaParts) {
+      <p class="parts-summary">
+        <span>Reservas ativas: {{ activeCount() }}</span>
+        <span aria-hidden="true">·</span>
+        <span>Consumidas: {{ consumedCount() }}</span>
+        <span aria-hidden="true">·</span>
+        <span>Pendentes: {{ rmaParts.pendingCount }}</span>
+      </p>
+      <dl class="meta-list parts-costs">
+        <div><dt>Custo consumido no RMA</dt><dd>{{ currency(rmaParts.consumedCost) }}</dd></div>
+        <div><dt>Custo reservado no RMA</dt><dd>{{ currency(rmaParts.reservedCost) }}</dd></div>
+      </dl>
+    }
+
+    @if (errorMessage()) {
+      <p class="field-error" role="alert">{{ errorMessage() }}</p>
+    }
+    @if (successMessage()) {
+      <p class="muted-inline" role="status">{{ successMessage() }}</p>
+    }
+
+    @if (reservations().length === 0) {
+      <p class="rma-detail-copy">Nenhuma peça reservada para este RMA.</p>
+    } @else {
+      <div class="parts-list">
+        @for (reservation of reservations(); track reservation.id) {
+          <div class="parts-item">
+            <div class="parts-item__body">
+              <div class="parts-item__title">
+                <strong><span class="code-text">{{ reservation.partCode }}</span> · {{ reservation.partName }}</strong>
+                <span class="mini-chip" [class]="statusClass(reservation.status)">{{ statusLabels[reservation.status] }}</span>
+              </div>
+              <dl class="meta-list">
+                <div><dt>Quantidade</dt><dd>{{ quantity(reservation.quantity, reservation.unit) }}</dd></div>
+                <div><dt>Disponível</dt><dd>{{ quantity(reservation.partAvailable, reservation.unit) }}</dd></div>
+                <div><dt>Custo da reserva</dt><dd>{{ currency(reservation.totalCost) }}</dd></div>
+                @if (reservation.location) {
+                  <div><dt>Local</dt><dd>{{ reservation.location }}</dd></div>
+                }
+              </dl>
+              @if (reservation.note) {
+                <small>{{ reservation.note }}</small>
               }
-            </dl>
-            @if (reservation.note) {
-              <small>{{ reservation.note }}</small>
+            </div>
+
+            @if (canReserve()) {
+              <div class="parts-item__actions">
+                @if (reservation.status === 'ACTIVE' && !isClosed()) {
+                  <button type="button" class="button-secondary button-secondary--small" (click)="runAction(reservation, 'consume')" [disabled]="busyReservationId() !== null">Consumir</button>
+                }
+                @if (reservation.status === 'PENDING' && !isClosed()) {
+                  <button type="button" class="button-secondary button-secondary--small" (click)="runAction(reservation, 'allocate')" [disabled]="busyReservationId() !== null">Efetivar reserva</button>
+                }
+                @if (reservation.status === 'ACTIVE' || reservation.status === 'PENDING') {
+                  <button type="button" class="button-secondary button-secondary--small" (click)="runAction(reservation, 'cancel')" [disabled]="busyReservationId() !== null">Cancelar reserva</button>
+                }
+              </div>
             }
           </div>
-
-          @if (canReserve()) {
-            <div class="parts-item__actions">
-              @if (reservation.status === 'ACTIVE' && !isClosed()) {
-                <button type="button" class="button-secondary button-secondary--small" (click)="runAction(reservation, 'consume')" [disabled]="busyReservationId() !== null">Consumir</button>
-              }
-              @if (reservation.status === 'PENDING' && !isClosed()) {
-                <button type="button" class="button-secondary button-secondary--small" (click)="runAction(reservation, 'allocate')" [disabled]="busyReservationId() !== null">Efetivar reserva</button>
-              }
-              @if (reservation.status === 'ACTIVE' || reservation.status === 'PENDING') {
-                <button type="button" class="button-secondary button-secondary--small" (click)="runAction(reservation, 'cancel')" [disabled]="busyReservationId() !== null">Cancelar</button>
-              }
-            </div>
-          }
-        </div>
-      }
-    </div>
-  }
-
-  @if (canCreateReservation()) {
-    <form class="parts-reserve" [formGroup]="reserveForm" (ngSubmit)="reserve()">
-      <label class="field-group">
-        <span>Peça</span>
-        <app-custom-select ariaLabel="Peça para reservar" placeholder="Selecione a peça" [options]="partOptions()" formControlName="partId" />
-      </label>
-      <label class="field-group">
-        <span>Quantidade</span>
-        <input type="number" min="0.001" step="any" formControlName="quantity" />
-      </label>
-      <label class="field-group">
-        <span>Observação</span>
-        <input type="text" maxlength="255" formControlName="note" />
-      </label>
-      <button type="submit" class="button-primary" [disabled]="submitting()">{{ submitting() ? 'Reservando...' : 'Reservar' }}</button>
-    </form>
-  }
-
-  @if (parts()?.movements?.length) {
-    <details class="parts-history">
-      <summary>Histórico de movimentos de peças</summary>
-      <ul>
-        @for (movement of parts()!.movements; track movement.id) {
-          <li>
-            {{ dateTime(movement.createdAt) }} · {{ movementLabels[movement.type] }} · {{ movement.partCode }} ·
-            {{ quantity(movement.quantity) }} · {{ movement.createdBy }}
-            @if (movement.reversed) { · estornado }
-            @if (movement.reason) { · {{ movement.reason }} }
-          </li>
         }
-      </ul>
-    </details>
+      </div>
+    }
+
+    @if (canCreateReservation()) {
+      <form class="form-grid parts-reserve-form"[formGroup]="reserveForm" (ngSubmit)="reserve()">
+        <fieldset class="form-section">
+          <legend>Reservar peças</legend>
+          @if (catalogLoadFailed()) {
+            <div class="alert-banner alert-banner--error parts-load-error field-group--full" role="alert">
+              <strong>{{ catalogLoadErrorMessage() }}</strong>
+              <button type="button" class="button-secondary button-secondary--small" [disabled]="catalogLoading()" (click)="retryCatalog()">{{ catalogLoading() ? 'Carregando...' : 'Tentar carregar peças' }}</button>
+            </div>
+          } @else if (catalogHasLoaded() && partOptions().length === 0) {
+            <p class="rma-detail-copy field-group--full">Nenhuma peça ativa disponível para reserva.</p>
+          }
+          <label class="field-group">
+            <span>Peça</span>
+            <app-custom-select ariaLabel="Peça para reservar" [placeholder]="catalogHasLoaded() ? 'Selecione a peça' : 'Carregando opções...'" [options]="partOptions()" formControlName="partId"
+              [ariaInvalid]="hasError(reserveForm.controls.partId)" [ariaDescribedBy]="hasError(reserveForm.controls.partId) ? 'reserve-part-error' : null" />
+            @if (hasError(reserveForm.controls.partId)) {
+              <small id="reserve-part-error" class="field-error" role="alert">Selecione a peça.</small>
+            }
+          </label>
+          <label class="field-group">
+            <span>Quantidade @if (selectedPart(); as part) { ({{ part.unit }}) }</span>
+            <input type="number" min="0.001" step="any" formControlName="quantity"
+              [attr.aria-invalid]="hasError(reserveForm.controls.quantity) ? 'true' : null" [attr.aria-describedby]="hasError(reserveForm.controls.quantity) ? 'reserve-quantity-error' : null" />
+            @if (hasError(reserveForm.controls.quantity)) {
+              <small id="reserve-quantity-error" class="field-error" role="alert">Informe uma quantidade de pelo menos 0,001.</small>
+            }
+          </label>
+          <label class="field-group field-group--full">
+            <span>Observação</span>
+            <input type="text" maxlength="255" formControlName="note"
+              [attr.aria-invalid]="hasError(reserveForm.controls.note) ? 'true' : null" [attr.aria-describedby]="hasError(reserveForm.controls.note) ? 'reserve-note-error' : null" />
+            @if (hasError(reserveForm.controls.note)) {
+              <small id="reserve-note-error" class="field-error" role="alert">Use até 255 caracteres.</small>
+            }
+          </label>
+        </fieldset>
+        <div class="form-actions form-actions--full">
+          <button type="submit" class="button-primary" [disabled]="submitting() || !catalogHasLoaded() || catalogLoadFailed()">{{ submitting() ? 'Reservando...' : 'Reservar' }}</button>
+        </div>
+      </form>
+    }
+
+    @if (parts()?.movements?.length) {
+      <details class="parts-history">
+        <summary>Histórico de movimentos de peças</summary>
+        <ul>
+          @for (movement of parts()!.movements; track movement.id) {
+            <li>
+              {{ dateTime(movement.createdAt) }} · {{ movementLabels[movement.type] }} · {{ movement.partCode }} ·
+              {{ quantity(movement.quantity) }} · {{ movement.createdBy }}
+              @if (movement.reversed) { · estornado }
+              @if (movement.reason) { · {{ movement.reason }} }
+            </li>
+          }
+        </ul>
+      </details>
+    }
   }
 </div>
