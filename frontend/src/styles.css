@@ -292,6 +292,20 @@ a {
   line-height: 1.55;
 }
 
+.page-heading__title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.page-heading__count {
+  color: var(--muted);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+
 .shell {
   display: grid;
   grid-template-columns: 272px 1fr;
@@ -1021,6 +1035,34 @@ a {
 
 .form-grid--inline {
   align-items: end;
+}
+
+/* Named group of fields inside a .form-grid; spans the grid and keeps its two columns. */
+fieldset.form-section {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  align-items: start;
+}
+
+/* Floated so it is not the "rendered legend" drawn over the fieldset border: it becomes a grid item. */
+.form-section > legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-weight: var(--font-weight-semibold);
+  grid-column: 1 / -1;
+}
+
+.form-section + .form-section {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
 }
 
 .field-group--full {
@@ -1762,6 +1804,7 @@ fieldset.field-group > span {
   .stats-grid--four,
   .card-grid,
   .form-grid,
+  fieldset.form-section,
   .detail-grid {
     grid-template-columns: 1fr;
   }
@@ -1976,6 +2019,64 @@ fieldset.field-group > span {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+}
+
+/* Unavailable but focusable: faded like :disabled, without fading its tooltip. */
+.row-action[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+.row-action[aria-disabled="true"] > app-icon {
+  opacity: var(--disabled-opacity);
+}
+
+.row-action[aria-disabled="true"]:hover {
+  background: var(--surface);
+}
+
+/* Fixed layer (like the select menu) so .table-wrap's overflow never clips it. */
+.row-action__tip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1100;
+  width: max-content;
+  max-width: min(280px, calc(100vw - 16px));
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--text);
+  color: var(--surface);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.35;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: default;
+  opacity: 0;
+  /* Closed it sits at 0,0 invisibly; it must not catch the pointer there. */
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+/* Invisible bridge over the 6px gap (TIP_GAP) so the pointer can reach the text without leaving the button. */
+.row-action__tip::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 6px;
+}
+
+.row-action__tip--below::before {
+  top: auto;
+  bottom: 100%;
+}
+
+.row-action__tip.is-open {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* Activity feed: a vertical line with a status-colored dot per event. */
