@@ -1,37 +1,17 @@
 <section class="page-surface">
-  <section class="page-heading">
-    <div>
-      <h1>Produtos</h1>
-    </div>
-    <div class="shell-actions">
-      <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo produto</button>
-    </div>
-  </section>
-
-  <section class="stats-grid stats-grid--three">
-    <article class="panel stat-card">
-      <span class="icon-tile tone-slate"><app-icon name="layers" [size]="20" /></span>
-      <span>Categorias</span>
-      <strong>{{ summary().categories.length }}</strong>
-    </article>
-    <article class="panel stat-card">
-      <span class="icon-tile tone-sky"><app-icon name="layers" [size]="20" /></span>
-      <span>Com firmware</span>
-      <strong>{{ summary().withFirmware }}</strong>
-    </article>
-    <article class="panel stat-card">
-      <span class="icon-tile tone-success"><app-icon name="shield" [size]="20" /></span>
-      <span>Garantia média</span>
-      <strong>{{ summary().averageWarrantyMonths }} meses</strong>
-    </article>
-  </section>
+  <app-page-header
+    heading="Produtos"
+    singular="produto"
+    plural="produtos"
+    [count]="loadFailed() || !hasLoaded() ? null : totalElements()"
+    [total]="hasActiveFilters ? summary().total : null"
+  >
+    <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo produto</button>
+  </app-page-header>
 
   <section class="panel catalog-toolbar catalog-toolbar--filters">
     <label class="search-field">
-      <span class="search-field__heading">
-        <span>Buscar</span>
-        <span class="catalog-toolbar__result">{{ totalElements() }} registro(s)</span>
-      </span>
+      <span>Buscar</span>
       <input
         #productSearch
         type="search"
@@ -60,33 +40,39 @@
     </label>
   </section>
 
-  @if (errorMessage()) {
-    <article class="panel alert-banner alert-banner--error">
-      <strong>{{ errorMessage() }}</strong>
-    </article>
-  }
-
   @if (successMessage()) {
-    <article class="panel alert-banner alert-banner--success">
+    <article class="panel alert-banner alert-banner--success" role="status">
       <strong>{{ successMessage() }}</strong>
     </article>
   }
 
   <article class="table-card table-card--list panel">
-    @if (loading() && products().length === 0) {
+    @if (loadFailed()) {
+      <section class="empty-state" role="alert">
+        <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
+        <h3>Não foi possível carregar os produtos.</h3>
+        @if (errorMessage() && errorMessage() !== 'Não foi possível carregar os produtos.') {
+          <p>{{ errorMessage() }}</p>
+        }
+        <button type="button" class="button-secondary" (click)="retryLoad()" [disabled]="loading()">
+          {{ loading() ? 'Carregando...' : 'Tentar novamente' }}
+        </button>
+      </section>
+    } @else if (loading() && !hasLoaded()) {
       <p>Carregando produtos...</p>
     } @else if (products().length === 0 && !hasActiveFilters) {
       <section class="empty-state">
         <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
-        <h3>Nenhum produto cadastrado.</h3>
+        <h3>Nenhum produto cadastrado</h3>
         <p>Cadastre produtos para utilizar no fluxo de abertura de RMAs.</p>
         <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Cadastrar produto</button>
       </section>
     } @else if (products().length === 0) {
       <section class="empty-state">
         <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
-        <h3>Nenhum resultado encontrado.</h3>
-        <p>Ajuste a busca ou os filtros para localizar outro produto.</p>
+        <h3>Nenhum produto encontrado</h3>
+        <p>Ajuste a busca ou os filtros.</p>
+        <button type="button" class="button-secondary" (click)="clearFilters()">Limpar busca e filtros</button>
       </section>
     } @else {
       <div class="table-wrap">
@@ -99,49 +85,63 @@
               <th>Versões</th>
               <th>Garantia</th>
               <th>Atualizado</th>
-              <th class="table-actions-col">Ação</th>
+              <th class="table-actions-col">Ações</th>
             </tr>
           </thead>
           <tbody>
             @for (product of products(); track product.id) {
+              @let hardwareVersion = product.hardwareVersion?.trim();
+              @let firmwareVersion = product.firmwareVersion?.trim();
               <tr>
                 <td>
-                  <span class="product-sku" [attr.title]="product.sku">{{ skuPreview(product) }}</span>
+                  <span class="product-sku">{{ product.sku }}</span>
                 </td>
                 <td>
                   <strong class="table-title">{{ product.name }}</strong>
-                  <span class="table-subtitle product-preview" [attr.title]="product.technicalNotes">
-                    {{ technicalNotesPreview(product) }}
-                  </span>
+                  @if (product.technicalNotes?.trim()) {
+                    <span class="table-subtitle product-preview" [attr.title]="product.technicalNotes">{{ product.technicalNotes }}</span>
+                  }
                 </td>
                 <td>
-                  <span class="product-preview" [attr.title]="product.category">
-                    {{ categoryPreview(product) }}
-                  </span>
+                  @if (product.category?.trim()) {
+                    <span class="product-preview" [attr.title]="product.category">{{ product.category }}</span>
+                  } @else {
+                    <span aria-hidden="true">—</span><span class="sr-only">Categoria não informada</span>
+                  }
                 </td>
-                <td>{{ versionLabel(product) }}</td>
-                <td>{{ product.defaultWarrantyMonths }} meses</td>
+                <td>
+                  @if (hardwareVersion || firmwareVersion) {
+                    @if (hardwareVersion) {
+                      <span class="product-version"><span class="table-subtitle">Hardware</span> {{ hardwareVersion }}</span>
+                    }
+                    @if (firmwareVersion) {
+                      <span class="product-version"><span class="table-subtitle">Firmware</span> {{ firmwareVersion }}</span>
+                    }
+                  } @else {
+                    <span aria-hidden="true">—</span><span class="sr-only">Versões não informadas</span>
+                  }
+                </td>
+                <td>{{ warrantyLabel(product.defaultWarrantyMonths) }}</td>
                 <td>{{ updatedAtLabel(product) }}</td>
                 <td class="table-actions-col">
-                  <div class="product-actions">
+                  <div class="row-actions">
                     <button
-                      type="button"
-                      class="icon-button"
-                      title="Editar"
+                      appRowAction
+                      icon="pencil"
+                      label="Editar"
+                      [target]="product.name"
                       (click)="openEditModal(product)"
                       [disabled]="deletingProductId() === product.id"
-                    >
-                      <app-icon name="pencil" /><span class="sr-only">Editar</span>
-                    </button>
+                    ></button>
                     <button
-                      type="button"
-                      class="icon-button icon-button--danger"
-                      title="Excluir"
+                      appRowAction
+                      icon="trash"
+                      tone="danger"
+                      [label]="deletingProductId() === product.id ? 'Excluindo...' : 'Excluir'"
+                      [target]="product.name"
                       (click)="openDeleteModal(product)"
                       [disabled]="deletingProductId() !== null"
-                    >
-                      <app-icon name="trash" /><span class="sr-only">{{ deletingProductId() === product.id ? 'Excluindo...' : 'Excluir' }}</span>
-                    </button>
+                    ></button>
                   </div>
                 </td>
               </tr>
@@ -165,11 +165,16 @@
 
 @if (activeModal()) {
   <div class="modal-overlay" (click)="closeModal()">
-    <section class="modal-panel panel" (click)="$event.stopPropagation()">
+    <section
+      class="modal-panel panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="product-form-title"
+      (click)="$event.stopPropagation()"
+    >
       <header class="modal-header">
         <div>
-          <h3>{{ editingProduct() ? 'Editar produto' : 'Novo produto' }}</h3>
-          <p>{{ editingProduct() ? 'Atualize o cadastro técnico do produto.' : 'Preencha os dados mínimos para o catálogo técnico.' }}</p>
+          <h3 id="product-form-title">{{ editingProduct() ? 'Editar produto' : 'Novo produto' }}</h3>
         </div>
         <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()" [disabled]="submitting()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
@@ -183,70 +188,82 @@
       }
 
       <form class="form-grid" [formGroup]="form" (ngSubmit)="saveProduct()">
-        <label class="field-group">
-          <span>SKU (máx. {{ limits.sku }} caracteres)</span>
-          <input type="text" formControlName="sku" [attr.maxlength]="limits.sku" />
-          @if (hasError('sku')) {
-            <small class="field-error">
-              {{ form.controls.sku.hasError('required') ? 'Informe o SKU.' : 'O SKU excede o limite permitido.' }}
-            </small>
-          }
-        </label>
+        <fieldset class="form-section">
+          <legend>Identificação</legend>
 
-        <label class="field-group">
-          <span>Produto</span>
-          <input type="text" formControlName="name" [attr.maxlength]="limits.name" />
-          @if (hasError('name')) {
-            <small class="field-error">
-              {{ form.controls.name.hasError('required') ? 'Informe o nome do produto.' : 'O nome excede o limite permitido.' }}
-            </small>
-          }
-        </label>
-
-        <label class="field-group">
-          <span>Categoria (máx. {{ limits.category }} caracteres)</span>
-          <input type="text" formControlName="category" list="product-categories" placeholder="Selecione ou digite uma categoria" [attr.maxlength]="limits.category" />
-          <datalist id="product-categories">
-            @for (category of summary().categories; track category) {
-              <option [value]="category"></option>
+          <label class="field-group">
+            <span>SKU (máx. {{ limits.sku }} caracteres)</span>
+            <input type="text" formControlName="sku" [attr.maxlength]="limits.sku" />
+            @if (hasError('sku')) {
+              <small class="field-error">
+                {{ form.controls.sku.hasError('required') ? 'Informe o SKU.' : 'O SKU excede o limite permitido.' }}
+              </small>
             }
-          </datalist>
-          @if (hasError('category')) {
-            <small class="field-error">A categoria excede o limite permitido.</small>
-          }
-        </label>
+          </label>
 
-        <label class="field-group">
-          <span>Garantia padrão (meses)</span>
-          <input type="number" min="1" formControlName="defaultWarrantyMonths" />
-          @if (hasError('defaultWarrantyMonths')) {
-            <small class="field-error">Informe uma garantia válida.</small>
-          }
-        </label>
+          <label class="field-group">
+            <span>Produto</span>
+            <input type="text" formControlName="name" [attr.maxlength]="limits.name" />
+            @if (hasError('name')) {
+              <small class="field-error">
+                {{ form.controls.name.hasError('required') ? 'Informe o nome do produto.' : 'O nome excede o limite permitido.' }}
+              </small>
+            }
+          </label>
 
-        <label class="field-group">
-          <span>Versão de hardware</span>
-          <input type="text" formControlName="hardwareVersion" [attr.maxlength]="limits.hardwareVersion" />
-          @if (hasError('hardwareVersion')) {
-            <small class="field-error">A versão de hardware excede o limite permitido.</small>
-          }
-        </label>
+          <label class="field-group field-group--full">
+            <span>Categoria (máx. {{ limits.category }} caracteres)</span>
+            <input type="text" formControlName="category" list="product-categories" placeholder="Selecione ou digite uma categoria" [attr.maxlength]="limits.category" />
+            <datalist id="product-categories">
+              @for (category of summary().categories; track category) {
+                <option [value]="category"></option>
+              }
+            </datalist>
+            @if (hasError('category')) {
+              <small class="field-error">A categoria excede o limite permitido.</small>
+            }
+          </label>
+        </fieldset>
 
-        <label class="field-group">
-          <span>Versão de firmware</span>
-          <input type="text" formControlName="firmwareVersion" [attr.maxlength]="limits.firmwareVersion" />
-          @if (hasError('firmwareVersion')) {
-            <small class="field-error">A versão de firmware excede o limite permitido.</small>
-          }
-        </label>
+        <fieldset class="form-section">
+          <legend>Versões</legend>
 
-        <label class="field-group field-group--full">
-          <span>Observações técnicas (máx. {{ limits.technicalNotes }} caracteres)</span>
-          <textarea formControlName="technicalNotes" [attr.maxlength]="limits.technicalNotes"></textarea>
-          @if (hasError('technicalNotes')) {
-            <small class="field-error">As observações excedem o limite permitido.</small>
-          }
-        </label>
+          <label class="field-group">
+            <span>Versão de hardware</span>
+            <input type="text" formControlName="hardwareVersion" [attr.maxlength]="limits.hardwareVersion" />
+            @if (hasError('hardwareVersion')) {
+              <small class="field-error">A versão de hardware excede o limite permitido.</small>
+            }
+          </label>
+
+          <label class="field-group">
+            <span>Versão de firmware</span>
+            <input type="text" formControlName="firmwareVersion" [attr.maxlength]="limits.firmwareVersion" />
+            @if (hasError('firmwareVersion')) {
+              <small class="field-error">A versão de firmware excede o limite permitido.</small>
+            }
+          </label>
+        </fieldset>
+
+        <fieldset class="form-section">
+          <legend>Garantia e observações técnicas</legend>
+
+          <label class="field-group">
+            <span>Garantia padrão (meses)</span>
+            <input type="number" min="1" formControlName="defaultWarrantyMonths" />
+            @if (hasError('defaultWarrantyMonths')) {
+              <small class="field-error">Informe uma garantia válida.</small>
+            }
+          </label>
+
+          <label class="field-group field-group--full">
+            <span>Observações técnicas (máx. {{ limits.technicalNotes }} caracteres)</span>
+            <textarea formControlName="technicalNotes" [attr.maxlength]="limits.technicalNotes"></textarea>
+            @if (hasError('technicalNotes')) {
+              <small class="field-error">As observações excedem o limite permitido.</small>
+            }
+          </label>
+        </fieldset>
 
         <div class="form-actions form-actions--full">
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="submitting()">

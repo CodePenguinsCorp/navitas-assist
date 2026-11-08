@@ -3,7 +3,8 @@ import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@a
 import { Signal } from '@angular/core';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
-import { of } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Observable, Subject, of, throwError } from 'rxjs';
 import { PageResponse, ProductResponse, ProductSummaryResponse } from '../../core/models';
 import { CatalogService, ProductFilters } from '../../core/services/catalog.service';
 import { PresenceFilter } from '../../core/utils/catalog-ui';
@@ -74,7 +75,8 @@ describe('ProductsComponent pagination', () => {
     expect(component.categoryFilterOptions().map((option) => option.label)).toEqual(['Todas', 'Controle', 'Sensor']);
     expect(fixture.nativeElement.textContent).toContain('45 registro(s)');
     expect(fixture.nativeElement.textContent).toContain('Página 1 de 3');
-    expect(fixture.nativeElement.textContent).toContain('18 meses');
+    expect(fixture.nativeElement.querySelector('.stat-card')).toBeNull();
+    expect(getProductSummary).toHaveBeenCalledTimes(1);
   });
 
   it('sends category and firmware filters to the backend and resets to the first page', () => {
@@ -132,8 +134,303 @@ describe('ProductsComponent pagination', () => {
   });
 });
 
+describe('ProductsComponent collection layout and states', () => {
+  let fixture: ComponentFixture<ProductsComponent>;
+  let component: ProductsHarness;
+  let element: HTMLElement;
+  let listProducts: ReturnType<typeof vi.fn>;
+  let getProductSummary: ReturnType<typeof vi.fn>;
+  let deleteProduct: ReturnType<typeof vi.fn>;
+
+  const summary: ProductSummaryResponse = { total: 45, withFirmware: 20, averageWarrantyMonths: 18, categories: ['Controle', 'Sensor'] };
+  const loadError = () => throwError(() => new HttpErrorResponse({ status: 503, error: { message: 'Serviço indisponível.' } }));
+
+  async function mount(options: {
+    list?: (filters: ProductFilters) => Observable<PageResponse<ProductResponse>>;
+    summary?: () => Observable<unknown>;
+  } = {}): Promise<void> {
+    vi.useFakeTimers();
+    listProducts = vi.fn(options.list ?? ((filters: ProductFilters) =>
+      of(page([product(1, 'Alfa'), product(2, 'Beta')], filters.page, filters.size, 45))));
+    getProductSummary = vi.fn(options.summary ?? (() => of(summary)));
+    deleteProduct = vi.fn(() => of(undefined));
+
+    await TestBed.configureTestingModule({
+      imports: [ProductsComponent],
+      providers: [{ provide: CatalogService, useValue: {
+        listProducts,
+        getProductSummary,
+        deleteProduct,
+        createProduct: () => of(product(9, 'Novo')),
+        updateProduct: () => of(product(1, 'Alfa'))
+      } }]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ProductsComponent);
+    component = fixture.componentInstance as unknown as ProductsHarness;
+    element = fixture.nativeElement as HTMLElement;
+    fixture.detectChanges();
+  }
+
+  afterEach(() => vi.useRealTimers());
+
+  const count = () => element.querySelector('.page-heading__count')?.textContent?.trim() ?? null;
+  const loadAlert = () => element.querySelector('.table-card [role="alert"]');
+  const buttonByText = (text: string) => Array.from(element.querySelectorAll<HTMLButtonElement>('button'))
+    .find((button) => button.textContent?.trim() === text);
+  const listOf = (...products: ProductResponse[]) =>
+    (filters: ProductFilters) => of(page(products, filters.page, filters.size, products.length));
+
+  function expectFailureState(): void {
+    expect(loadAlert()?.textContent).toContain('Não foi possível carregar os produtos.');
+    expect(buttonByText('Tentar novamente')).toBeDefined();
+    expect(element.textContent).not.toContain('Nenhum produto cadastrado');
+    expect(element.querySelector('tbody')).toBeNull();
+    expect(element.querySelector('app-pagination')).toBeNull();
+    expect(count()).toBeNull();
+  }
+
+  it('shows the total next to the title', async () => {
+    await mount({ list: (filters) => of(page([product(1, 'Alfa')], filters.page, filters.size, filters.category ? 7 : 45)) });
+    expect(count()).toBe('45 produtos');
+    expect(element.querySelector('.search-field')?.textContent).not.toContain('registro(s)');
+
+    component.updateCategoryFilter('Sensor');
+    fixture.detectChanges();
+    expect(count()).toBe('7 de 45 produtos');
+  });
+
+  it('shows only the count when the summary is unavailable', async () => {
+    await mount({
+      list: (filters) => of(page([product(1, 'Alfa')], filters.page, filters.size, filters.hasFirmware ? 7 : 45)),
+      summary: loadError
+    });
+    component.updateFirmwareFilter('with');
+    fixture.detectChanges();
+    expect(count()).toBe('7 produtos');
+  });
+
+  it('removes statistics cards', async () => {
+    await mount();
+    expect(element.querySelector('.stats-grid')).toBeNull();
+    expect(element.querySelector('.stat-card')).toBeNull();
+    expect(element.textContent).not.toContain('Garantia média');
+  });
+
+  it('shows hardware and firmware as separate labeled values', async () => {
+    await mount({ list: listOf(
+      { ...product(1, 'Ambos'), hardwareVersion: 'R2', firmwareVersion: '3.1' },
+      { ...product(2, 'Só firmware'), firmwareVersion: '1.0' },
+      { ...product(3, 'Nenhuma') }
+    ) });
+    const versionCells = Array.from(element.querySelectorAll('tbody tr')).map((row) => row.querySelectorAll('td')[3]);
+    const body = element.querySelector('tbody')!.textContent ?? '';
+
+    expect(element.querySelector('thead')?.textContent).toContain('Versões');
+    expect(versionCells[0].textContent).toContain('Hardware');
+    expect(versionCells[0].textContent).toContain('R2');
+    expect(versionCells[0].textContent).toContain('Firmware');
+    expect(versionCells[0].textContent).toContain('3.1');
+    expect(versionCells[1].textContent).not.toContain('Hardware');
+    expect(versionCells[1].textContent).toContain('Firmware');
+    expect(versionCells[2].querySelector('[aria-hidden="true"]')?.textContent?.trim()).toBe('—');
+    expect(versionCells[2].querySelector('.sr-only')?.textContent?.trim()).toBe('Versões não informadas');
+    expect(body).not.toContain('HW ');
+    expect(body).not.toContain('FW ');
+    expect(body).not.toContain(' · ');
+  });
+
+  it('renders full category and notes text and leaves truncation to CSS', async () => {
+    const longCategory = 'C'.repeat(80);
+    const longNotes = 'Observação técnica '.repeat(8).trim();
+    await mount({ list: listOf(
+      { ...product(1, 'Longo'), category: longCategory, technicalNotes: longNotes },
+      { ...product(2, 'Vazio'), category: null, technicalNotes: null }
+    ) });
+    const [longRow, emptyRow] = Array.from(element.querySelectorAll('tbody tr'));
+    const body = element.querySelector('tbody')!.textContent ?? '';
+
+    expect(longRow.textContent).toContain(longCategory);
+    expect(longRow.textContent).toContain(longNotes);
+    expect(body).not.toContain('…');
+    expect(body).not.toContain('Não informada');
+    expect(body).not.toContain('Sem observação técnica');
+    expect(emptyRow.querySelector('td:nth-child(2) .table-subtitle')).toBeNull();
+    expect(emptyRow.querySelectorAll('td')[2].querySelector('.sr-only')?.textContent?.trim()).toBe('Categoria não informada');
+  });
+
+  it('uses singular for one month of warranty', async () => {
+    await mount({ list: listOf({ ...product(1, 'Um'), defaultWarrantyMonths: 1 }, { ...product(2, 'Doze'), defaultWarrantyMonths: 12 }) });
+    const [one, twelve] = Array.from(element.querySelectorAll('tbody tr')).map((row) => row.querySelectorAll('td')[4].textContent?.trim());
+    expect(one).toBe('1 mês');
+    expect(twelve).toBe('12 meses');
+  });
+
+  it('names row actions with the product', async () => {
+    await mount();
+    const [edit, remove] = Array.from(element.querySelectorAll<HTMLButtonElement>('tbody tr:first-child .row-actions button'));
+    expect(element.querySelector('thead')?.textContent).toContain('Ações');
+    expect(edit.getAttribute('aria-label')).toBe('Editar Alfa');
+    expect(remove.getAttribute('aria-label')).toBe('Excluir Alfa');
+    expect(edit.querySelector('[role="tooltip"]')?.textContent?.trim()).toBe('Editar');
+    expect(edit.hasAttribute('title')).toBe(false);
+    expect(remove.hasAttribute('title')).toBe(false);
+  });
+
+  it('groups the form into Identificação, Versões and Garantia e observações técnicas', async () => {
+    await mount();
+    component.openCreateModal();
+    fixture.detectChanges();
+
+    const dialog = element.querySelector<HTMLElement>('[role="dialog"]')!;
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(element.querySelector(`#${dialog.getAttribute('aria-labelledby')}`)?.textContent?.trim()).toBe('Novo produto');
+    const sections = Array.from(dialog.querySelectorAll('fieldset.form-section'));
+    expect(sections.map((section) => section.querySelector('legend')?.textContent?.trim()))
+      .toEqual(['Identificação', 'Versões', 'Garantia e observações técnicas']);
+    const controlsIn = (section: Element) => Array.from(section.querySelectorAll('[formControlName]')).map((node) => node.getAttribute('formControlName'));
+    expect(controlsIn(sections[0])).toEqual(['sku', 'name', 'category']);
+    expect(controlsIn(sections[1])).toEqual(['hardwareVersion', 'firmwareVersion']);
+    expect(controlsIn(sections[2])).toEqual(['defaultWarrantyMonths', 'technicalNotes']);
+
+    const category = sections[0].querySelector<HTMLInputElement>('[formControlName="category"]')!;
+    expect(category.type).toBe('text');
+    expect(category.getAttribute('list')).toBe('product-categories');
+    expect(sections[0].querySelector('datalist#product-categories')).not.toBeNull();
+    expect(dialog.textContent).toContain('SKU (máx. 20 caracteres)');
+    expect(dialog.textContent).toContain('Categoria (máx. 80 caracteres)');
+    expect(dialog.textContent).toContain('Observações técnicas (máx. 1000 caracteres)');
+    expect(dialog.textContent).not.toContain('Preencha os dados mínimos');
+  });
+
+  it('shows the failure state on an initial load error', async () => {
+    await mount({ list: loadError });
+    expectFailureState();
+  });
+
+  it('shows the failure state when a reload fails after an empty success', async () => {
+    await mount({ list: listOf() });
+    expect(element.textContent).toContain('Nenhum produto cadastrado');
+    listProducts.mockImplementation(loadError);
+    component.goToPage(1);
+    fixture.detectChanges();
+    expectFailureState();
+  });
+
+  it('shows the failure state when a reload fails after a success with records', async () => {
+    await mount();
+    listProducts.mockImplementation(loadError);
+    component.goToPage(1);
+    fixture.detectChanges();
+    expectFailureState();
+  });
+
+  it('recovers with Tentar novamente using the same filters and page', async () => {
+    await mount({ list: (filters) => of(page([product(1, 'Alfa')], filters.page, filters.size, filters.category ? 30 : 45)) });
+    const working = listProducts.getMockImplementation()!;
+    component.updateCategoryFilter('Sensor');
+    listProducts.mockImplementation(loadError);
+    component.goToPage(1);
+    fixture.detectChanges();
+    expectFailureState();
+
+    listProducts.mockImplementation(working);
+    buttonByText('Tentar novamente')!.click();
+    fixture.detectChanges();
+
+    expect(listProducts).toHaveBeenLastCalledWith({ page: 1, size: 20, query: '', category: 'Sensor', hasFirmware: undefined });
+    expect(loadAlert()).toBeNull();
+    expect(element.querySelector('tbody')?.textContent).toContain('Alfa');
+    expect(count()).toBe('30 de 45 produtos');
+  });
+
+  it('shows a disabled loading retry without the old table or count while the retry is pending, then recovers', async () => {
+    await mount();
+    expect(count()).toBe('45 produtos');
+    listProducts.mockImplementation(loadError);
+    component.goToPage(1);
+    fixture.detectChanges();
+    expectFailureState();
+
+    const pending = new Subject<PageResponse<ProductResponse>>();
+    listProducts.mockImplementation(() => pending);
+    buttonByText('Tentar novamente')!.click();
+    fixture.detectChanges();
+
+    const retry = loadAlert()!.querySelector<HTMLButtonElement>('button')!;
+    expect(retry.disabled).toBe(true);
+    expect(retry.textContent?.trim()).toBe('Carregando...');
+    expect(buttonByText('Tentar novamente')).toBeUndefined();
+    expect(element.querySelector('tbody')).toBeNull();
+    expect(element.querySelector('app-pagination')).toBeNull();
+    expect(count()).toBeNull();
+
+    pending.next(page([product(3, 'Gama')], 1, 20, 45));
+    pending.complete();
+    fixture.detectChanges();
+
+    expect(loadAlert()).toBeNull();
+    expect(element.querySelector('tbody')?.textContent).toContain('Gama');
+    expect(count()).toBe('45 produtos');
+  });
+
+  it('keeps the failure state after opening and closing the form', async () => {
+    await mount({ list: loadError });
+    component.openCreateModal();
+    fixture.detectChanges();
+    component.closeModal();
+    fixture.detectChanges();
+    expectFailureState();
+  });
+
+  it('clears search and every filter from a later page with exactly one request, keeping the page size', async () => {
+    await mount({ list: (filters) => of(filters.category || filters.query || filters.hasFirmware !== undefined
+      ? page([], filters.page, filters.size, 0)
+      : page([product(1, 'Alfa')], filters.page, filters.size, 45)) });
+    component.changePageSize(10);
+    component.updateSearch('alfa');
+    vi.advanceTimersByTime(300);
+    component.updateFirmwareFilter('with');
+    component.updateCategoryFilter('Sensor');
+    component.goToPage(3);
+    expect(listProducts).toHaveBeenLastCalledWith({ page: 3, size: 10, query: 'alfa', category: 'Sensor', hasFirmware: true });
+    component.updateSearch('alfa sensor');
+    fixture.detectChanges();
+    expect(element.textContent).toContain('Nenhum produto encontrado');
+    listProducts.mockClear();
+
+    buttonByText('Limpar busca e filtros')!.click();
+    vi.advanceTimersByTime(400);
+    fixture.detectChanges();
+
+    expect(listProducts).toHaveBeenCalledTimes(1);
+    expect(listProducts).toHaveBeenCalledWith({ page: 0, size: 10, query: '', category: '', hasFirmware: undefined });
+    expect(component.categoryFilter()).toBe('');
+    expect(element.querySelector<HTMLInputElement>('.search-field input')!.value).toBe('');
+    expect(element.querySelector('tbody')?.textContent).toContain('Alfa');
+    expect(count()).toBe('45 produtos');
+  });
+
+  it('identifies name and SKU in the delete confirmation and shows the error in the dialog', async () => {
+    await mount();
+    deleteProduct.mockImplementation(() => throwError(() =>
+      new HttpErrorResponse({ status: 409, error: { message: 'Produto possui RMAs vinculados.' } })));
+
+    component.openDeleteModal(product(1, 'Alfa'));
+    fixture.detectChanges();
+    const dialog = element.querySelector('[role="alertdialog"]')!;
+    expect(dialog.textContent).toContain('Alfa');
+    expect(dialog.textContent).toContain('SKU-1');
+
+    component.confirmDeleteProduct();
+    fixture.detectChanges();
+    expect(element.querySelector('[role="alertdialog"] [role="alert"]')?.textContent).toContain('Produto possui RMAs vinculados.');
+  });
+});
+
 interface ProductsHarness {
   form: FormGroup;
+  closeModal(): void;
   categoryFilter: Signal<string>;
   categoryFilterOptions: Signal<ReadonlyArray<CustomSelectOption<string>>>;
   updateSearch(value: string): void;
@@ -172,7 +469,7 @@ describe('ProductsComponent pending save lifecycle', () => {
 
   function openEditor(mode: 'create' | 'edit'): void {
     page.querySelector<HTMLButtonElement>(
-      mode === 'create' ? '.page-heading button' : '.product-actions button'
+      mode === 'create' ? '.page-heading button' : '.row-actions button'
     )!.click();
     fixture.detectChanges();
   }

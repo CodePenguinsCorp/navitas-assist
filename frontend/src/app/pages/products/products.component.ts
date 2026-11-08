@@ -2,7 +2,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable, Subject, debounceTime, finalize } from 'rxjs';
+import { Observable, Subject, debounceTime, filter, finalize } from 'rxjs';
 import { ProductRequest, ProductResponse, ProductSummaryResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import {
@@ -15,7 +15,9 @@ import {
 import { PagedList } from '../../core/utils/paged-list';
 import { SEARCH_DEBOUNCE_MS, presenceToFlag } from '../../core/utils/pagination';
 import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
+import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
 type ProductModalMode = 'create' | 'edit';
 type ProductFormControlName =
@@ -36,29 +38,26 @@ const PRODUCT_LIMITS = {
   technicalNotes: 1000
 } as const;
 
-const PRODUCT_PREVIEW_LIMITS = {
-  category: 32,
-  technicalNotes: 64
-} as const;
-
 @Component({
   selector: 'app-products',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PaginationComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PaginationComponent, PageHeaderComponent, RowActionComponent],
   templateUrl: './products.component.html',
   styles: [`
     :host {
       display: block;
     }
 
-    .product-actions {
-      display: flex;
-      gap: 0.45rem;
+    .product-sku {
+      white-space: nowrap;
     }
 
-    .product-sku {
-      display: inline-block;
-      max-width: 20ch;
-      overflow-wrap: anywhere;
+    .product-version {
+      display: block;
+      white-space: nowrap;
+    }
+
+    .product-version .table-subtitle {
+      display: inline;
     }
 
     .product-preview {
@@ -88,8 +87,10 @@ export class ProductsComponent {
   protected readonly presenceFilterOptions = PRESENCE_FILTER_OPTIONS;
   protected readonly activeModal = signal<ProductModalMode | null>(null);
   protected readonly limits = PRODUCT_LIMITS;
+  /** Last list query failed; independent of the cached page and of form messages. */
+  protected readonly loadFailed = signal(false);
 
-  private readonly searchChanges = new Subject<void>();
+  private readonly searchChanges = new Subject<'search' | 'cancel'>();
   private readonly productList = new PagedList<ProductResponse>(
     (pageQuery) => this.catalogService.listProducts({
       ...pageQuery,
@@ -97,7 +98,11 @@ export class ProductsComponent {
       category: this.categoryFilter(),
       hasFirmware: presenceToFlag(this.firmwareFilter())
     }),
-    (error) => this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os produtos.'))
+    (error) => {
+      this.loadFailed.set(true);
+      this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os produtos.'));
+    },
+    () => this.loadFailed.set(false)
   );
   private readonly summarySignal = signal<ProductSummaryResponse>({ total: 0, withFirmware: 0, averageWarrantyMonths: 0, categories: [] });
   private readonly editingProductSignal = signal<ProductResponse | null>(null);
@@ -112,6 +117,7 @@ export class ProductsComponent {
   protected readonly summary = this.summarySignal.asReadonly();
   protected readonly editingProduct = this.editingProductSignal.asReadonly();
   protected readonly deletingProduct = this.deletingProductSignal.asReadonly();
+  protected readonly hasLoaded = computed(() => this.productList.result() !== null);
 
   protected readonly categoryFilterOptions = computed<ReadonlyArray<CustomSelectOption<string>>>(() => [
     { value: '', label: 'Todas' },
@@ -131,6 +137,7 @@ export class ProductsComponent {
   constructor() {
     this.searchChanges.pipe(
       debounceTime(SEARCH_DEBOUNCE_MS),
+      filter((kind) => kind === 'search'),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(() => this.productList.firstPage());
     this.loadProducts();
@@ -143,7 +150,19 @@ export class ProductsComponent {
 
   protected updateSearch(value: string): void {
     this.searchTerm.set(value);
-    this.searchChanges.next();
+    this.searchChanges.next('search');
+  }
+
+  protected clearFilters(): void {
+    this.searchChanges.next('cancel');
+    this.searchTerm.set('');
+    this.categoryFilter.set('');
+    this.firmwareFilter.set('all');
+    this.productList.firstPage();
+  }
+
+  protected retryLoad(): void {
+    this.productList.reload();
   }
 
   protected updateCategoryFilter(value: string): void {
@@ -280,39 +299,8 @@ export class ProductsComponent {
     return formatDateTime(product.updatedAt);
   }
 
-  protected categoryPreview(product: ProductResponse): string {
-    return previewText(product.category, 'Não informada', PRODUCT_PREVIEW_LIMITS.category);
-  }
-
-  protected skuPreview(product: ProductResponse): string {
-    return previewText(product.sku, 'Não informado', PRODUCT_LIMITS.sku);
-  }
-
-  protected technicalNotesPreview(product: ProductResponse): string {
-    return previewText(
-      product.technicalNotes,
-      'Sem observação técnica',
-      PRODUCT_PREVIEW_LIMITS.technicalNotes
-    );
-  }
-
-  protected versionLabel(product: ProductResponse): string {
-    const hardwareVersion = normalizeOptionalText(product.hardwareVersion);
-    const firmwareVersion = normalizeOptionalText(product.firmwareVersion);
-
-    if (hardwareVersion && firmwareVersion) {
-      return `HW ${hardwareVersion} · FW ${firmwareVersion}`;
-    }
-
-    if (hardwareVersion) {
-      return `HW ${hardwareVersion}`;
-    }
-
-    if (firmwareVersion) {
-      return `FW ${firmwareVersion}`;
-    }
-
-    return 'Não informado';
+  protected warrantyLabel(months: number): string {
+    return months === 1 ? '1 mês' : `${months} meses`;
   }
 
   private loadProducts(): void {
@@ -387,18 +375,4 @@ function buildProductPayload(raw: ReturnType<ProductsComponent['form']['getRawVa
     defaultWarrantyMonths: raw.defaultWarrantyMonths,
     technicalNotes: normalizeOptionalText(raw.technicalNotes)
   };
-}
-
-function previewText(value: string | null, emptyText: string, maxLength: number): string {
-  const normalizedValue = normalizeOptionalText(value);
-
-  if (!normalizedValue) {
-    return emptyText;
-  }
-
-  if (normalizedValue.length <= maxLength) {
-    return normalizedValue;
-  }
-
-  return `${normalizedValue.slice(0, maxLength).trimEnd()}…`;
 }
