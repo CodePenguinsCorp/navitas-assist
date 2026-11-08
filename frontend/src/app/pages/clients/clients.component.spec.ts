@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
-import { of } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Observable, Subject, of, throwError } from 'rxjs';
 import { ClientRequest, ClientResponse, PageResponse } from '../../core/models';
 import { CatalogService, ClientFilters } from '../../core/services/catalog.service';
 import { PresenceFilter } from '../../core/utils/catalog-ui';
@@ -95,8 +96,8 @@ describe('ClientsComponent pagination', () => {
     component.updateDocumentFilter('without');
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Nenhum resultado encontrado.');
-    expect(fixture.nativeElement.textContent).toContain('0 registro(s)');
+    expect(fixture.nativeElement.textContent).toContain('Nenhum cliente encontrado');
+    expect(fixture.nativeElement.querySelector('.page-heading__count')?.textContent?.trim()).toBe('0 de 45 clientes');
   });
 
   it('reloads the current page and the summary after deleting a client', () => {
@@ -136,8 +137,281 @@ describe('ClientsComponent pagination', () => {
   });
 });
 
+describe('ClientsComponent collection layout and states', () => {
+  let fixture: ComponentFixture<ClientsComponent>;
+  let component: ClientsHarness;
+  let element: HTMLElement;
+  let listClients: ReturnType<typeof vi.fn>;
+  let getClientSummary: ReturnType<typeof vi.fn>;
+  let deleteClient: ReturnType<typeof vi.fn>;
+
+  const loadError = () => throwError(() => new HttpErrorResponse({ status: 503, error: { message: 'Serviço indisponível.' } }));
+
+  async function mount(options: {
+    list?: (filters: ClientFilters) => Observable<PageResponse<ClientResponse>>;
+    summary?: () => Observable<unknown>;
+  } = {}): Promise<void> {
+    vi.useFakeTimers();
+    listClients = vi.fn(options.list ?? ((filters: ClientFilters) =>
+      of(page([client(1, 'Alfa'), client(2, 'Beta')], filters.page, filters.size, 45))));
+    getClientSummary = vi.fn(options.summary ?? (() => of({ total: 45, withContact: 10, withDocument: 20, withEmail: 30 })));
+    deleteClient = vi.fn(() => of(undefined));
+
+    await TestBed.configureTestingModule({
+      imports: [ClientsComponent],
+      providers: [{ provide: CatalogService, useValue: {
+        listClients,
+        getClientSummary,
+        deleteClient,
+        createClient: (request: ClientRequest) => of({ ...client(9, request.legalName) }),
+        updateClient: (id: number, request: ClientRequest) => of({ ...client(id, request.legalName) })
+      } }]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ClientsComponent);
+    component = fixture.componentInstance as unknown as ClientsHarness;
+    element = fixture.nativeElement as HTMLElement;
+    fixture.detectChanges();
+  }
+
+  afterEach(() => vi.useRealTimers());
+
+  const count = () => element.querySelector('.page-heading__count')?.textContent?.trim() ?? null;
+  const loadAlert = () => element.querySelector('.table-card [role="alert"]');
+  const buttonByText = (text: string) => Array.from(element.querySelectorAll<HTMLButtonElement>('button'))
+    .find((button) => button.textContent?.trim() === text);
+
+  function expectFailureState(): void {
+    expect(loadAlert()?.textContent).toContain('Não foi possível carregar os clientes.');
+    expect(buttonByText('Tentar novamente')).toBeDefined();
+    expect(element.textContent).not.toContain('Nenhum cliente cadastrado');
+    expect(element.querySelector('tbody')).toBeNull();
+    expect(element.querySelector('app-pagination')).toBeNull();
+    expect(count()).toBeNull();
+  }
+
+  it('shows the total next to the title and not in the search label', async () => {
+    await mount();
+    expect(element.querySelector('.page-heading h1')?.textContent?.trim()).toBe('Clientes');
+    expect(count()).toBe('45 clientes');
+    expect(element.querySelector('.search-field')?.textContent).not.toContain('registro(s)');
+    expect(element.querySelector('.search-field')?.textContent).toContain('Buscar');
+  });
+
+  it('shows "X de Y" while a filter is active', async () => {
+    await mount({ list: (filters) => of(page([client(1, 'Alfa')], filters.page, filters.size, filters.hasDocument ? 12 : 45)) });
+    component.updateDocumentFilter('with');
+    fixture.detectChanges();
+    expect(count()).toBe('12 de 45 clientes');
+  });
+
+  it('shows only the count when the summary is unavailable', async () => {
+    await mount({
+      list: (filters) => of(page([client(1, 'Alfa')], filters.page, filters.size, filters.hasDocument ? 12 : 45)),
+      summary: loadError
+    });
+    component.updateDocumentFilter('with');
+    fixture.detectChanges();
+    expect(count()).toBe('12 clientes');
+  });
+
+  it('does not render statistics cards', async () => {
+    await mount();
+    expect(element.querySelector('.stats-grid')).toBeNull();
+    expect(element.querySelector('.stat-card')).toBeNull();
+    expect(getClientSummary).toHaveBeenCalledTimes(1);
+  });
+
+  it('names row actions with the client and shows tooltips', async () => {
+    await mount();
+    const [edit, remove] = Array.from(element.querySelectorAll<HTMLButtonElement>('tbody tr:first-child .row-actions button'));
+    expect(element.querySelector('thead')?.textContent).toContain('Ações');
+    expect(edit.getAttribute('aria-label')).toBe('Editar Alfa');
+    expect(remove.getAttribute('aria-label')).toBe('Excluir Alfa');
+    expect(edit.querySelector('[role="tooltip"]')?.textContent?.trim()).toBe('Editar');
+    expect(remove.querySelector('[role="tooltip"]')?.textContent?.trim()).toBe('Excluir');
+    expect(edit.hasAttribute('title')).toBe(false);
+    expect(remove.hasAttribute('title')).toBe(false);
+
+    remove.click();
+    fixture.detectChanges();
+    expect(element.querySelector('[role="alertdialog"]')?.textContent).toContain('Alfa');
+  });
+
+  it('shows a dash with an accessible label for missing contact and document', async () => {
+    const complete: ClientResponse = {
+      ...client(2, 'Beta'), tradeName: 'Beta Fantasia', phone: '(11) 9999-0000', email: 'beta@example.com', documentNumber: '12.345.678/0001-90'
+    };
+    await mount({ list: (filters) => of(page([client(1, 'Alfa'), complete], filters.page, filters.size, 2)) });
+    const [missingRow, completeRow] = Array.from(element.querySelectorAll('tbody tr'));
+    const body = element.querySelector('tbody')!.textContent ?? '';
+    const srOnly = Array.from(missingRow.querySelectorAll('.sr-only')).map((node) => node.textContent?.trim());
+
+    expect(body).not.toContain('Não informado');
+    expect(body).not.toContain('Sem nome fantasia');
+    expect(srOnly).toEqual(expect.arrayContaining(['Telefone não informado', 'E-mail não informado', 'CPF/CNPJ não informado']));
+    expect(missingRow.querySelectorAll('[aria-hidden="true"]').length).toBeGreaterThanOrEqual(3);
+    expect(missingRow.querySelector('td:first-child .table-subtitle')).toBeNull();
+    expect(completeRow.textContent).toContain('Beta Fantasia');
+    expect(completeRow.textContent).toContain('(11) 9999-0000');
+    expect(completeRow.textContent).toContain('beta@example.com');
+    expect(completeRow.textContent).toContain('12.345.678/0001-90');
+  });
+
+  it('groups the form into Identificação, Contato and Observações', async () => {
+    await mount();
+    component.openCreateModal();
+    fixture.detectChanges();
+
+    const dialog = element.querySelector<HTMLElement>('[role="dialog"]')!;
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(element.querySelector(`#${dialog.getAttribute('aria-labelledby')}`)?.textContent?.trim()).toBe('Novo cliente');
+    const sections = Array.from(dialog.querySelectorAll('fieldset.form-section'));
+    expect(sections.map((section) => section.querySelector('legend')?.textContent?.trim())).toEqual(['Identificação', 'Contato', 'Observações']);
+    const controlsIn = (section: Element) => Array.from(section.querySelectorAll('[formControlName]')).map((node) => node.getAttribute('formControlName'));
+    expect(controlsIn(sections[0])).toEqual(['legalName', 'tradeName', 'documentNumber']);
+    expect(controlsIn(sections[1])).toEqual(['phone', 'email', 'address']);
+    expect(controlsIn(sections[2])).toEqual(['notes']);
+    expect(dialog.querySelectorAll('[formControlName]').length).toBe(7);
+    expect(dialog.textContent).not.toContain('Preencha os dados principais');
+  });
+
+  it('shows the failure state on an initial load error', async () => {
+    await mount({ list: loadError });
+    expectFailureState();
+  });
+
+  it('shows the failure state when a reload fails after an empty success', async () => {
+    await mount({ list: (filters) => of(page([], filters.page, filters.size, 0)) });
+    expect(element.textContent).toContain('Nenhum cliente cadastrado');
+    listClients.mockImplementation(loadError);
+    component.goToPage(1);
+    fixture.detectChanges();
+    expectFailureState();
+  });
+
+  it('shows the failure state when a reload fails after a success with records', async () => {
+    await mount();
+    expect(element.querySelector('tbody')).not.toBeNull();
+    listClients.mockImplementation(loadError);
+    component.goToPage(1);
+    fixture.detectChanges();
+    expectFailureState();
+  });
+
+  it('recovers with Tentar novamente using the same filters and page', async () => {
+    await mount({ list: (filters) => of(page([client(1, 'Alfa')], filters.page, filters.size, filters.hasDocument ? 30 : 45)) });
+    const working = listClients.getMockImplementation()!;
+    component.updateDocumentFilter('with');
+    listClients.mockImplementation(loadError);
+    component.goToPage(1);
+    fixture.detectChanges();
+    expectFailureState();
+
+    listClients.mockImplementation(working);
+    buttonByText('Tentar novamente')!.click();
+    fixture.detectChanges();
+
+    expect(listClients).toHaveBeenLastCalledWith({ page: 1, size: 20, query: '', hasDocument: true, hasEmail: undefined });
+    expect(loadAlert()).toBeNull();
+    expect(element.querySelector('tbody')?.textContent).toContain('Alfa');
+    expect(count()).toBe('30 de 45 clientes');
+  });
+
+  it('shows a disabled loading retry without the old table or count while the retry is pending, then recovers', async () => {
+    await mount();
+    expect(count()).toBe('45 clientes');
+    listClients.mockImplementation(loadError);
+    component.goToPage(1);
+    fixture.detectChanges();
+    expectFailureState();
+
+    const pending = new Subject<PageResponse<ClientResponse>>();
+    listClients.mockImplementation(() => pending);
+    buttonByText('Tentar novamente')!.click();
+    fixture.detectChanges();
+
+    const retry = loadAlert()!.querySelector<HTMLButtonElement>('button')!;
+    expect(retry.disabled).toBe(true);
+    expect(retry.textContent?.trim()).toBe('Carregando...');
+    expect(buttonByText('Tentar novamente')).toBeUndefined();
+    expect(element.querySelector('tbody')).toBeNull();
+    expect(element.querySelector('app-pagination')).toBeNull();
+    expect(count()).toBeNull();
+
+    pending.next(page([client(3, 'Gama')], 1, 20, 45));
+    pending.complete();
+    fixture.detectChanges();
+
+    expect(loadAlert()).toBeNull();
+    expect(element.querySelector('tbody')?.textContent).toContain('Gama');
+    expect(count()).toBe('45 clientes');
+  });
+
+  it('keeps the failure state after opening and closing the form', async () => {
+    await mount({ list: loadError });
+    component.openCreateModal();
+    fixture.detectChanges();
+    component.closeModal();
+    fixture.detectChanges();
+    expectFailureState();
+  });
+
+  it('clears search and every filter from a later page with exactly one request, keeping the page size', async () => {
+    await mount({ list: (filters) => of(filters.hasDocument !== undefined || filters.hasEmail !== undefined || filters.query
+      ? page([], filters.page, filters.size, 0)
+      : page([client(1, 'Alfa')], filters.page, filters.size, 45)) });
+    component.changePageSize(50);
+    component.updateSearch('alfa');
+    vi.advanceTimersByTime(300);
+    component.updateDocumentFilter('with');
+    component.updateEmailFilter('without');
+    component.goToPage(2);
+    expect(listClients).toHaveBeenLastCalledWith({ page: 2, size: 50, query: 'alfa', hasDocument: true, hasEmail: false });
+    component.updateSearch('alfa ltda');
+    fixture.detectChanges();
+    expect(element.textContent).toContain('Nenhum cliente encontrado');
+    listClients.mockClear();
+
+    buttonByText('Limpar busca e filtros')!.click();
+    vi.advanceTimersByTime(400);
+    fixture.detectChanges();
+
+    expect(listClients).toHaveBeenCalledTimes(1);
+    expect(listClients).toHaveBeenCalledWith({ page: 0, size: 50, query: '', hasDocument: undefined, hasEmail: undefined });
+    expect(element.querySelector<HTMLInputElement>('.search-field input')!.value).toBe('');
+    expect(element.querySelector('tbody')?.textContent).toContain('Alfa');
+    expect(count()).toBe('45 clientes');
+  });
+
+  it('identifies the client in the delete confirmation', async () => {
+    await mount();
+    component.openDeleteModal({ ...client(1, 'Alfa Ltda'), documentNumber: '12.345.678/0001-90' });
+    fixture.detectChanges();
+    const dialog = element.querySelector('[role="alertdialog"]')!;
+    expect(dialog.textContent).toContain('Alfa Ltda');
+    expect(dialog.textContent).toContain('12.345.678/0001-90');
+  });
+
+  it('keeps the delete dialog open with the link error', async () => {
+    await mount();
+    deleteClient.mockImplementation(() => throwError(() =>
+      new HttpErrorResponse({ status: 409, error: { message: 'Cliente possui RMAs vinculados.' } })));
+    listClients.mockClear();
+
+    component.openDeleteModal(client(1, 'Alfa'));
+    component.confirmDeleteClient();
+    fixture.detectChanges();
+
+    expect(element.querySelector('[role="alertdialog"]')).not.toBeNull();
+    expect(element.querySelector('[role="alertdialog"] [role="alert"]')?.textContent).toContain('Cliente possui RMAs vinculados.');
+    expect(listClients).not.toHaveBeenCalled();
+  });
+});
+
 interface ClientsHarness {
   form: FormGroup;
+  closeModal(): void;
   updateSearch(value: string): void;
   updateDocumentFilter(value: PresenceFilter): void;
   updateEmailFilter(value: PresenceFilter): void;

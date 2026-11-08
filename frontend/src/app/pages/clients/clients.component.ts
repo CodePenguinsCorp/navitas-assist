@@ -1,8 +1,8 @@
 import { IconComponent } from '../../shared/icon/icon.component';
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable, Subject, debounceTime, finalize } from 'rxjs';
+import { Observable, Subject, debounceTime, filter, finalize } from 'rxjs';
 import { ClientRequest, ClientResponse, ClientSummaryResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import {
@@ -15,7 +15,9 @@ import {
 import { PagedList } from '../../core/utils/paged-list';
 import { SEARCH_DEBOUNCE_MS, presenceToFlag } from '../../core/utils/pagination';
 import { CustomSelectComponent } from '../../shared/form-controls/custom-select/custom-select.component';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
+import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
 type ClientModalMode = 'create' | 'edit';
 type ClientFormControlName =
@@ -29,12 +31,10 @@ type ClientFormControlName =
 
 @Component({
   selector: 'app-clients',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PaginationComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PaginationComponent, PageHeaderComponent, RowActionComponent],
   templateUrl: './clients.component.html',
   styles: [`
     :host { display: block; }
-
-    .client-actions { display: flex; gap: 0.45rem; }
   `]
 })
 export class ClientsComponent {
@@ -54,8 +54,10 @@ export class ClientsComponent {
   protected readonly emailFilter = signal<PresenceFilter>('all');
   protected readonly presenceFilterOptions = PRESENCE_FILTER_OPTIONS;
   protected readonly activeModal = signal<ClientModalMode | null>(null);
+  /** Last list query failed; independent of the cached page and of form messages. */
+  protected readonly loadFailed = signal(false);
 
-  private readonly searchChanges = new Subject<void>();
+  private readonly searchChanges = new Subject<'search' | 'cancel'>();
   private readonly clientList = new PagedList<ClientResponse>(
     (pageQuery) => this.catalogService.listClients({
       ...pageQuery,
@@ -63,7 +65,11 @@ export class ClientsComponent {
       hasDocument: presenceToFlag(this.documentFilter()),
       hasEmail: presenceToFlag(this.emailFilter())
     }),
-    (error) => this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os clientes.'))
+    (error) => {
+      this.loadFailed.set(true);
+      this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os clientes.'));
+    },
+    () => this.loadFailed.set(false)
   );
   private readonly summarySignal = signal<ClientSummaryResponse>({ total: 0, withContact: 0, withDocument: 0, withEmail: 0 });
   private readonly editingClientSignal = signal<ClientResponse | null>(null);
@@ -78,6 +84,7 @@ export class ClientsComponent {
   protected readonly summary = this.summarySignal.asReadonly();
   protected readonly editingClient = this.editingClientSignal.asReadonly();
   protected readonly deletingClient = this.deletingClientSignal.asReadonly();
+  protected readonly hasLoaded = computed(() => this.clientList.result() !== null);
 
   protected readonly form = this.formBuilder.nonNullable.group({
     legalName: ['', [Validators.required, Validators.pattern(/^(?:[\s\p{Pd}]*[^\s\p{Pd}]){0,120}[\s\p{Pd}]*$/u)]],
@@ -96,6 +103,7 @@ export class ClientsComponent {
   constructor() {
     this.searchChanges.pipe(
       debounceTime(SEARCH_DEBOUNCE_MS),
+      filter((kind) => kind === 'search'),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(() => this.clientList.firstPage());
     this.loadClients();
@@ -104,7 +112,19 @@ export class ClientsComponent {
 
   protected updateSearch(value: string): void {
     this.searchTerm.set(value);
-    this.searchChanges.next();
+    this.searchChanges.next('search');
+  }
+
+  protected clearFilters(): void {
+    this.searchChanges.next('cancel');
+    this.searchTerm.set('');
+    this.documentFilter.set('all');
+    this.emailFilter.set('all');
+    this.clientList.firstPage();
+  }
+
+  protected retryLoad(): void {
+    this.clientList.reload();
   }
 
   protected updateDocumentFilter(value: PresenceFilter): void {

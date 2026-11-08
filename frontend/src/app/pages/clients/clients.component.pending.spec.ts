@@ -34,7 +34,7 @@ describe('ClientsComponent pending save lifecycle', () => {
   afterEach(() => http.verify());
 
   function openEditor(mode: 'create' | 'edit'): void {
-    page.querySelector<HTMLButtonElement>(mode === 'create' ? '.page-heading button' : '.client-actions button')!.click();
+    page.querySelector<HTMLButtonElement>(mode === 'create' ? '.page-heading button' : '.row-actions button')!.click();
     fixture.detectChanges();
   }
 

@@ -1,37 +1,17 @@
 <section class="page-surface">
-  <section class="page-heading">
-    <div>
-      <h1>Clientes</h1>
-    </div>
-    <div class="shell-actions">
-      <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo cliente</button>
-    </div>
-  </section>
-
-  <section class="stats-grid stats-grid--three">
-    <article class="panel stat-card">
-      <span class="icon-tile tone-sky"><app-icon name="user" [size]="20" /></span>
-      <span>Com telefone</span>
-      <strong>{{ summary().withContact }}</strong>
-    </article>
-    <article class="panel stat-card">
-      <span class="icon-tile tone-slate"><app-icon name="clipboard" [size]="20" /></span>
-      <span>Com documento</span>
-      <strong>{{ summary().withDocument }}</strong>
-    </article>
-    <article class="panel stat-card">
-      <span class="icon-tile tone-sky"><app-icon name="inbox" [size]="20" /></span>
-      <span>Com e-mail</span>
-      <strong>{{ summary().withEmail }}</strong>
-    </article>
-  </section>
+  <app-page-header
+    heading="Clientes"
+    singular="cliente"
+    plural="clientes"
+    [count]="loadFailed() || !hasLoaded() ? null : totalElements()"
+    [total]="hasActiveFilters ? summary().total : null"
+  >
+    <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo cliente</button>
+  </app-page-header>
 
   <section class="panel catalog-toolbar catalog-toolbar--filters">
     <label class="search-field">
-      <span class="search-field__heading">
-        <span>Buscar</span>
-        <span class="catalog-toolbar__result">{{ totalElements() }} registro(s)</span>
-      </span>
+      <span>Buscar</span>
       <input
         #clientSearch
         type="search"
@@ -60,33 +40,39 @@
     </label>
   </section>
 
-  @if (errorMessage()) {
-    <article class="panel alert-banner alert-banner--error">
-      <strong>{{ errorMessage() }}</strong>
-    </article>
-  }
-
   @if (successMessage()) {
-    <article class="panel alert-banner alert-banner--success">
+    <article class="panel alert-banner alert-banner--success" role="status">
       <strong>{{ successMessage() }}</strong>
     </article>
   }
 
   <article class="table-card table-card--list panel">
-    @if (loading() && clients().length === 0) {
+    @if (loadFailed()) {
+      <section class="empty-state" role="alert">
+        <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
+        <h3>Não foi possível carregar os clientes.</h3>
+        @if (errorMessage() && errorMessage() !== 'Não foi possível carregar os clientes.') {
+          <p>{{ errorMessage() }}</p>
+        }
+        <button type="button" class="button-secondary" (click)="retryLoad()" [disabled]="loading()">
+          {{ loading() ? 'Carregando...' : 'Tentar novamente' }}
+        </button>
+      </section>
+    } @else if (loading() && !hasLoaded()) {
       <p>Carregando clientes...</p>
     } @else if (clients().length === 0 && !hasActiveFilters) {
       <section class="empty-state">
         <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
-        <h3>Nenhum cliente cadastrado.</h3>
+        <h3>Nenhum cliente cadastrado</h3>
         <p>Cadastre o primeiro cliente para vincular novos RMAs.</p>
         <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Cadastrar cliente</button>
       </section>
     } @else if (clients().length === 0) {
       <section class="empty-state">
         <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
-        <h3>Nenhum resultado encontrado.</h3>
-        <p>Ajuste a busca ou os filtros para localizar outro cliente.</p>
+        <h3>Nenhum cliente encontrado</h3>
+        <p>Ajuste a busca ou os filtros.</p>
+        <button type="button" class="button-secondary" (click)="clearFilters()">Limpar busca e filtros</button>
       </section>
     } @else {
       <div class="table-wrap">
@@ -94,10 +80,10 @@
           <thead>
             <tr>
               <th>Cliente</th>
-              <th>Telefone / e-mail</th>
+              <th>Contato</th>
               <th>CPF/CNPJ</th>
               <th>Atualizado</th>
-              <th class="table-actions-col">Ação</th>
+              <th class="table-actions-col">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -105,34 +91,49 @@
               <tr>
                 <td>
                   <strong class="table-title">{{ client.legalName }}</strong>
-                  <span class="table-subtitle">{{ client.tradeName || 'Sem nome fantasia' }}</span>
+                  @if (client.tradeName?.trim()) {
+                    <span class="table-subtitle">{{ client.tradeName }}</span>
+                  }
                 </td>
                 <td>
-                  <strong class="table-title">{{ client.phone?.trim() || 'Não informado' }}</strong>
-                  <span class="table-subtitle">{{ client.email?.trim() || 'Não informado' }}</span>
+                  @if (client.phone?.trim()) {
+                    <span class="table-title"><span class="sr-only">Telefone: </span>{{ client.phone }}</span>
+                  } @else {
+                    <span class="table-title"><span aria-hidden="true">—</span><span class="sr-only">Telefone não informado</span></span>
+                  }
+                  @if (client.email?.trim()) {
+                    <span class="table-subtitle"><span class="sr-only">E-mail: </span>{{ client.email }}</span>
+                  } @else {
+                    <span class="table-subtitle"><span aria-hidden="true">—</span><span class="sr-only">E-mail não informado</span></span>
+                  }
                 </td>
-                <td>{{ client.documentNumber || 'Não informado' }}</td>
+                <td>
+                  @if (client.documentNumber?.trim()) {
+                    {{ client.documentNumber }}
+                  } @else {
+                    <span aria-hidden="true">—</span><span class="sr-only">CPF/CNPJ não informado</span>
+                  }
+                </td>
                 <td>{{ updatedAtLabel(client) }}</td>
                 <td class="table-actions-col">
-                  <div class="client-actions">
+                  <div class="row-actions">
                     <button
-                      type="button"
-                      class="icon-button"
-                      title="Editar"
+                      appRowAction
+                      icon="pencil"
+                      label="Editar"
+                      [target]="client.legalName"
                       (click)="openEditModal(client)"
                       [disabled]="deletingClientId() === client.id"
-                    >
-                      <app-icon name="pencil" /><span class="sr-only">Editar</span>
-                    </button>
+                    ></button>
                     <button
-                      type="button"
-                      class="icon-button icon-button--danger"
-                      title="Excluir"
+                      appRowAction
+                      icon="trash"
+                      tone="danger"
+                      [label]="deletingClientId() === client.id ? 'Excluindo...' : 'Excluir'"
+                      [target]="client.legalName"
                       (click)="openDeleteModal(client)"
                       [disabled]="deletingClientId() !== null"
-                    >
-                      <app-icon name="trash" /><span class="sr-only">{{ deletingClientId() === client.id ? 'Excluindo...' : 'Excluir' }}</span>
-                    </button>
+                    ></button>
                   </div>
                 </td>
               </tr>
@@ -156,11 +157,16 @@
 
 @if (activeModal()) {
   <div class="modal-overlay" (click)="closeModal()">
-    <section class="modal-panel panel" (click)="$event.stopPropagation()">
+    <section
+      class="modal-panel panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="client-form-title"
+      (click)="$event.stopPropagation()"
+    >
       <header class="modal-header">
         <div>
-          <h3>{{ editingClient() ? 'Editar cliente' : 'Novo cliente' }}</h3>
-          <p>{{ editingClient() ? 'Atualize os dados principais do cliente.' : 'Preencha os dados principais para liberar o cadastro.' }}</p>
+          <h3 id="client-form-title">{{ editingClient() ? 'Editar cliente' : 'Novo cliente' }}</h3>
         </div>
         <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()" [disabled]="submitting()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
@@ -174,52 +180,64 @@
       }
 
       <form class="form-grid" [formGroup]="form" (ngSubmit)="saveClient()">
-        <label class="field-group field-group--full">
-          <span>Razão social</span>
-          <input type="text" formControlName="legalName" (input)="limitLegalName($event)" />
-          @if (hasError('legalName')) {
-            <small class="field-error">Informe a razão social com até 120 caracteres, sem contar espaços e traços.</small>
-          }
-        </label>
+        <fieldset class="form-section">
+          <legend>Identificação</legend>
 
-        <label class="field-group">
-          <span>Nome fantasia</span>
-          <input type="text" formControlName="tradeName" />
-        </label>
+          <label class="field-group field-group--full">
+            <span>Razão social</span>
+            <input type="text" formControlName="legalName" (input)="limitLegalName($event)" />
+            @if (hasError('legalName')) {
+              <small class="field-error">Informe a razão social com até 120 caracteres, sem contar espaços e traços.</small>
+            }
+          </label>
 
-        <label class="field-group">
-          <span>CPF/CNPJ</span>
-          <input type="text" formControlName="documentNumber" maxlength="18" />
-        </label>
+          <label class="field-group">
+            <span>Nome fantasia</span>
+            <input type="text" formControlName="tradeName" />
+          </label>
 
-        <label class="field-group">
-          <span>Telefone</span>
-          <input type="tel" formControlName="phone" maxlength="30" />
-          @if (hasError('phone')) {
-            <small class="field-error">Informe um telefone com até 30 caracteres.</small>
-          }
-        </label>
+          <label class="field-group">
+            <span>CPF/CNPJ</span>
+            <input type="text" formControlName="documentNumber" maxlength="18" />
+          </label>
+        </fieldset>
 
-        <label class="field-group field-group--full">
-          <span>E-mail</span>
-          <input type="email" formControlName="email" />
-          @if (hasError('email')) {
-            <small class="field-error">Informe um e-mail válido.</small>
-          }
-        </label>
+        <fieldset class="form-section">
+          <legend>Contato</legend>
 
-        <label class="field-group field-group--full">
-          <span>Endereço</span>
-          <input type="text" formControlName="address" maxlength="255" />
-          @if (hasError('address')) {
-            <small class="field-error">Informe um endereço com até 255 caracteres.</small>
-          }
-        </label>
+          <label class="field-group">
+            <span>Telefone</span>
+            <input type="tel" formControlName="phone" maxlength="30" />
+            @if (hasError('phone')) {
+              <small class="field-error">Informe um telefone com até 30 caracteres.</small>
+            }
+          </label>
 
-        <label class="field-group field-group--full">
-          <span>Observações</span>
-          <textarea formControlName="notes"></textarea>
-        </label>
+          <label class="field-group">
+            <span>E-mail</span>
+            <input type="email" formControlName="email" />
+            @if (hasError('email')) {
+              <small class="field-error">Informe um e-mail válido.</small>
+            }
+          </label>
+
+          <label class="field-group field-group--full">
+            <span>Endereço</span>
+            <input type="text" formControlName="address" maxlength="255" />
+            @if (hasError('address')) {
+              <small class="field-error">Informe um endereço com até 255 caracteres.</small>
+            }
+          </label>
+        </fieldset>
+
+        <fieldset class="form-section">
+          <legend>Observações</legend>
+
+          <label class="field-group field-group--full">
+            <span class="sr-only">Observações</span>
+            <textarea formControlName="notes"></textarea>
+          </label>
+        </fieldset>
 
         <div class="form-actions form-actions--full">
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="submitting()">
