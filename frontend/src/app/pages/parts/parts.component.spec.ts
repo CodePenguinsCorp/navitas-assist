@@ -66,8 +66,9 @@ describe('PartsComponent', () => {
     expect(component.belowMinimumCount()).toBe(1);
     expect(text).toContain('Capacitor');
     expect(text).toContain('Repor');
-    expect(text).toContain('Histórico');
-    expect(text).not.toContain('Movimentar');
+    const actions = Array.from(fixture.nativeElement.querySelectorAll('tbody button') as NodeListOf<HTMLButtonElement>).map((button) => button.getAttribute('aria-label'));
+    expect(actions).toContain('Histórico PCA-1 Capacitor');
+    expect(actions).not.toContain('Movimentar PCA-1 Capacitor');
     expect(text).not.toContain('Nova peça');
   });
 

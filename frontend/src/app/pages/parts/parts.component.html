@@ -1,194 +1,192 @@
 <section class="page-surface">
-  <section class="page-heading">
-    <div>
-      <h1>Peças</h1>
-    </div>
+  <app-page-header
+    heading="Peças"
+    singular="peça"
+    plural="peças"
+    [count]="loadFailed() || !hasLoaded() ? null : activeTab() === 'stock' ? filteredParts().length : parts().length"
+    [total]="activeTab() === 'stock' && searchTerm().trim() ? parts().length : null"
+  >
     @if (canManage()) {
-      <div class="shell-actions">
-        <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Nova peça</button>
-      </div>
+      <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Nova peça</button>
     }
-  </section>
+  </app-page-header>
 
-  <section class="stats-grid stats-grid--three">
-    <article class="panel stat-card">
-      <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
-      <span>Abaixo do mínimo</span>
-      <strong>{{ belowMinimumCount() }}</strong>
-    </article>
-    <article class="panel stat-card">
-      <span class="icon-tile tone-warning"><app-icon name="clock" [size]="20" /></span>
-      <span>Reservas pendentes</span>
-      <strong>{{ pending().length }}</strong>
-    </article>
-    <article class="panel stat-card">
-      <span class="icon-tile tone-success"><app-icon name="box" [size]="20" /></span>
-      <span>Valor em estoque</span>
-      <strong>{{ currency(stockValue()) }}</strong>
-    </article>
-  </section>
+  @if (hasLoaded() && !loadFailed()) {
+    <p class="stock-summary">No estoque completo: {{ belowMinimumCount() }} {{ belowMinimumCount() === 1 ? 'peça abaixo' : 'peças abaixo' }} do mínimo · {{ pending().length }} {{ pending().length === 1 ? 'reserva pendente' : 'reservas pendentes' }} · Valor em estoque (saldo × custo unitário atual): {{ currency(stockValue()) }}</p>
+  }
 
   <div class="tab-list" role="tablist" aria-label="Seções de peças">
     <button type="button" role="tab" class="tab" [class.is-active]="activeTab() === 'stock'" [attr.aria-selected]="activeTab() === 'stock'" (click)="selectTab('stock')">Estoque</button>
     <button type="button" role="tab" class="tab" [class.is-active]="activeTab() === 'replenishment'" [attr.aria-selected]="activeTab() === 'replenishment'" (click)="selectTab('replenishment')">
-      Reposição ({{ replenishment().length }})
+      Reposição @if (hasLoaded() && !loadFailed()) { ({{ replenishment().length }}) }
     </button>
   </div>
 
-  @if (errorMessage()) {
-    <article class="panel alert-banner alert-banner--error">
-      <strong>{{ errorMessage() }}</strong>
-    </article>
-  }
-
   @if (successMessage()) {
-    <article class="panel alert-banner alert-banner--success">
+    <article class="panel alert-banner alert-banner--success" role="status">
       <strong>{{ successMessage() }}</strong>
     </article>
   }
 
   @if (activeTab() === 'stock') {
-    <section class="panel catalog-toolbar">
+    <section class="panel catalog-toolbar catalog-toolbar--filters">
       <label class="search-field">
-        <span class="search-field__heading">
-          <span>Buscar</span>
-          <span class="catalog-toolbar__result">{{ filteredParts().length }} registro(s)</span>
-        </span>
+        <span>Buscar</span>
         <input #partSearch type="search" placeholder="Código, peça ou localização" [value]="searchTerm()" (input)="updateSearch(partSearch.value)" />
       </label>
     </section>
+  }
 
-    <article class="table-card table-card--list panel">
-      @if (loading() && parts().length === 0) {
-        <p>Carregando peças...</p>
-      } @else if (parts().length === 0) {
-        <section class="empty-state">
-          <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
-          <h3>Nenhuma peça cadastrada.</h3>
-          <p>Cadastre peças de reposição para reservá-las nos RMAs.</p>
-        </section>
-      } @else if (filteredParts().length === 0) {
-        <section class="empty-state">
-          <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
-          <h3>Nenhum resultado encontrado.</h3>
-          <p>Ajuste a busca para localizar outra peça.</p>
-        </section>
-      } @else {
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Peça</th>
-                <th>Localização</th>
-                <th>Em estoque</th>
-                <th>Reservado</th>
-                <th>Disponível</th>
-                <th>Mínimo</th>
-                <th>Custo</th>
-                <th class="table-actions-col">Ação</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (part of filteredParts(); track part.id) {
-                <tr>
-                  <td>
-                    <strong class="table-title">{{ part.name }}</strong>
-                    <span class="table-subtitle code-text">{{ part.code }}</span>
-                    @if (!part.active) {
-                      <span class="mini-chip warranty-off">Inativa</span>
-                    } @else if (part.belowMinimum) {
-                      <span class="mini-chip priority-high">Repor</span>
-                    }
-                  </td>
-                  <td>{{ part.location || 'Não informada' }}</td>
-                  <td>{{ quantity(part.onHand, part.unit) }}</td>
-                  <td>{{ quantity(part.reserved, part.unit) }}</td>
-                  <td class="stock-cell">
-                    <strong>{{ quantity(part.available, part.unit) }}</strong>
-                    <span class="meter" [class.tone-danger]="part.belowMinimum" [class.tone-success]="!part.belowMinimum" [title]="'Mínimo ' + quantity(part.minimumStock, part.unit)" aria-hidden="true"><span [style.width.%]="stockPercent(part)"></span></span>
-                  </td>
-                  <td>{{ quantity(part.minimumStock, part.unit) }}</td>
-                  <td>{{ currency(part.unitCost) }}</td>
-                  <td class="table-actions-col">
-                    <div class="part-actions">
-                      <button type="button" class="icon-button" title="Histórico" (click)="openHistory(part)"><app-icon name="history" /><span class="sr-only">Histórico</span></button>
-                      @if (canManage()) {
-                        <button type="button" class="icon-button" title="Movimentar" (click)="openMovementModal(part)"><app-icon name="move" /><span class="sr-only">Movimentar</span></button>
-                        <button type="button" class="icon-button" title="Editar" (click)="openEditModal(part)"><app-icon name="pencil" /><span class="sr-only">Editar</span></button>
-                      }
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
+  @if (loadFailed()) {
+    <article class="panel alert-banner alert-banner--error" role="alert">
+      <strong>{{ loadErrorMessage() }}</strong>
+      <button type="button" class="button-secondary" [disabled]="loading()" (click)="retryLoad()">{{ loading() ? 'Carregando...' : 'Tentar novamente' }}</button>
     </article>
+  } @else if (!hasLoaded()) {
+    <article class="panel" role="status">Carregando peças...</article>
   } @else {
-    <article class="table-card table-card--list panel">
-      <h3>Alerta de reposição</h3>
-      @if (replenishment().length === 0) {
-        <p>Nenhuma peça abaixo do mínimo ou com reserva pendente.</p>
-      } @else {
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Peça</th>
-                <th>Disponível</th>
-                <th>Mínimo</th>
-                <th>Pendente em RMAs</th>
-                <th>Sugestão de compra</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of replenishment(); track item.partId) {
+    @if (loading()) {
+      <p role="status">Atualizando estoque...</p>
+    }
+    @if (activeTab() === 'stock') {
+      <article class="table-card table-card--list panel">
+        @if (parts().length === 0) {
+          <section class="empty-state">
+            <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
+            <h3>Nenhuma peça cadastrada</h3>
+            <p>Cadastre peças de reposição para reservá-las nos RMAs.</p>
+            @if (canManage()) {
+              <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Nova peça</button>
+            }
+          </section>
+        } @else if (filteredParts().length === 0) {
+          <section class="empty-state">
+            <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
+            <h3>Nenhuma peça encontrada</h3>
+            <p>Ajuste a busca para localizar outra peça.</p>
+            <button type="button" class="button-secondary" (click)="clearSearch()">Limpar busca</button>
+          </section>
+        } @else {
+          <div class="table-wrap">
+            <table>
+              <thead>
                 <tr>
-                  <td><strong class="table-title"><span class="code-text">{{ item.code }}</span> · {{ item.name }}</strong><span class="table-subtitle">{{ item.location || 'Sem localização' }}</span></td>
-                  <td>{{ quantity(item.available, item.unit) }}</td>
-                  <td>{{ quantity(item.minimumStock, item.unit) }}</td>
-                  <td>{{ quantity(item.pendingQuantity, item.unit) }}</td>
-                  <td><strong>{{ quantity(item.suggestedQuantity, item.unit) }}</strong></td>
+                  <th>Nome / Código</th>
+                  <th>Localização</th>
+                  <th>Em estoque</th>
+                  <th>Reservado</th>
+                  <th>Disponível</th>
+                  <th>Mínimo</th>
+                  <th>Custo unitário</th>
+                  <th class="table-actions-col">Ações</th>
                 </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
-    </article>
+              </thead>
+              <tbody>
+                @for (part of filteredParts(); track part.id) {
+                  <tr>
+                    <td>
+                      <strong class="table-title">{{ part.name }}</strong>
+                      <span class="table-subtitle code-text">{{ part.code }}</span>
+                      @if (!part.active) {
+                        <span class="mini-chip warranty-off">Inativa</span>
+                      } @else if (part.belowMinimum) {
+                        <span class="mini-chip priority-high">Repor</span>
+                      }
+                    </td>
+                    <td>{{ part.location || 'Não informada' }}</td>
+                    <td>{{ quantity(part.onHand, part.unit) }}</td>
+                    <td>{{ quantity(part.reserved, part.unit) }}</td>
+                    <td class="stock-cell">
+                      <strong>{{ quantity(part.available, part.unit) }}</strong>
+                      <span class="meter" [class.tone-danger]="part.belowMinimum" [class.tone-success]="!part.belowMinimum" [title]="'Mínimo ' + quantity(part.minimumStock, part.unit)" aria-hidden="true"><span [style.width.%]="stockPercent(part)"></span></span>
+                    </td>
+                    <td>{{ quantity(part.minimumStock, part.unit) }}</td>
+                    <td>{{ currency(part.unitCost) }}</td>
+                    <td class="table-actions-col">
+                      <div class="row-actions">
+                        <button appRowAction icon="history" label="Histórico" [target]="part.code + ' ' + part.name" (click)="openHistory(part)"></button>
+                        @if (canManage()) {
+                          <button appRowAction icon="move" label="Movimentar" [target]="part.code + ' ' + part.name" (click)="openMovementModal(part)"></button>
+                          <button appRowAction icon="pencil" label="Editar" [target]="part.code + ' ' + part.name" (click)="openEditModal(part)"></button>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </article>
+    } @else {
+      <article class="table-card table-card--list panel">
+        <h3>Alerta de reposição</h3>
+        @if (replenishment().length === 0) {
+          <p>Nenhuma peça abaixo do mínimo ou com reserva pendente.</p>
+        } @else {
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome / Código</th>
+                  <th>Localização</th>
+                  <th>Disponível</th>
+                  <th>Mínimo</th>
+                  <th>Pendente em RMAs</th>
+                  <th>Sugestão de compra</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of replenishment(); track item.partId) {
+                  <tr>
+                    <td><strong class="table-title">{{ item.name }}</strong><span class="table-subtitle code-text">{{ item.code }}</span></td>
+                    <td>{{ item.location || 'Sem localização' }}</td>
+                    <td>{{ quantity(item.available, item.unit) }}</td>
+                    <td>{{ quantity(item.minimumStock, item.unit) }}</td>
+                    <td>{{ quantity(item.pendingQuantity, item.unit) }}</td>
+                    <td><strong>{{ quantity(item.suggestedQuantity, item.unit) }}</strong></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </article>
 
-    <article class="table-card table-card--list panel">
-      <h3>Peças pendentes por RMA</h3>
-      @if (pending().length === 0) {
-        <p>Nenhuma reserva aguardando saldo.</p>
-      } @else {
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>RMA</th>
-                <th>Peça</th>
-                <th>Quantidade</th>
-                <th>Disponível</th>
-                <th>Solicitada em</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (reservation of pending(); track reservation.id) {
+      <article class="table-card table-card--list panel">
+        <h3>Peças pendentes por RMA</h3>
+        @if (pending().length === 0) {
+          <p>Nenhuma reserva aguardando saldo.</p>
+        } @else {
+          <div class="table-wrap">
+            <table>
+              <thead>
                 <tr>
-                  <td><span class="code-text">{{ reservation.rmaCode }}</span></td>
-                  <td><strong class="table-title code-text">{{ reservation.partCode }}</strong><span class="table-subtitle">{{ reservation.partName }}</span></td>
-                  <td>{{ quantity(reservation.quantity, reservation.unit) }}</td>
-                  <td>{{ quantity(reservation.partAvailable, reservation.unit) }}</td>
-                  <td>{{ dateTime(reservation.createdAt) }}</td>
+                  <th>RMA</th>
+                  <th>Nome / Código</th>
+                  <th>Localização</th>
+                  <th>Quantidade</th>
+                  <th>Disponível</th>
+                  <th>Solicitada em</th>
                 </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
-    </article>
+              </thead>
+              <tbody>
+                @for (reservation of pending(); track reservation.id) {
+                  <tr>
+                    <td><span class="code-text">{{ reservation.rmaCode }}</span></td>
+                    <td><strong class="table-title">{{ reservation.partName }}</strong><span class="table-subtitle code-text">{{ reservation.partCode }}</span></td>
+                    <td>{{ reservation.location || 'Sem localização' }}</td>
+                    <td>{{ quantity(reservation.quantity, reservation.unit) }}</td>
+                    <td>{{ quantity(reservation.partAvailable, reservation.unit) }}</td>
+                    <td>{{ dateTime(reservation.createdAt) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </article>
+    }
   }
 </section>
 
@@ -200,7 +198,7 @@
           <h3>{{ editingPart() ? 'Editar peça' : 'Nova peça' }}</h3>
           <p>O saldo é alterado somente por movimentos de estoque.</p>
         </div>
-        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModals()">
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModals()" [disabled]="submitting()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
       </header>
@@ -212,52 +210,58 @@
       }
 
       <form class="form-grid" [formGroup]="form" (ngSubmit)="savePart()">
-        <label class="field-group">
-          <span>Código</span>
-          <input type="text" formControlName="code" [attr.maxlength]="limits.code" />
-          @if (hasError('code')) {
-            <small class="field-error">Informe o código da peça.</small>
-          }
-        </label>
-        <label class="field-group">
-          <span>Peça</span>
-          <input type="text" formControlName="name" [attr.maxlength]="limits.name" />
-          @if (hasError('name')) {
-            <small class="field-error">Informe o nome da peça.</small>
-          }
-        </label>
-        <label class="field-group">
-          <span>Unidade</span>
-          <input type="text" formControlName="unit" [attr.maxlength]="limits.unit" placeholder="un, m, kg" />
-          @if (hasError('unit')) {
-            <small class="field-error">Informe a unidade.</small>
-          }
-        </label>
-        <label class="field-group">
-          <span>Localização</span>
-          <input type="text" formControlName="location" [attr.maxlength]="limits.location" placeholder="Prateleira, gaveta..." />
-        </label>
-        <label class="field-group">
-          <span>Saldo mínimo</span>
-          <input type="number" min="0" step="any" formControlName="minimumStock" />
-          @if (hasError('minimumStock')) {
-            <small class="field-error">Informe um saldo mínimo válido.</small>
-          }
-        </label>
-        <label class="field-group">
-          <span>Custo unitário (R$)</span>
-          <input type="number" min="0" step="0.01" formControlName="unitCost" />
-          @if (hasError('unitCost')) {
-            <small class="field-error">Informe um custo válido.</small>
-          }
-        </label>
-        <label class="field-group">
-          <span>Status</span>
-          <span class="toggle-box">
-            <input type="checkbox" formControlName="active" />
-            <strong>Peça ativa</strong>
-          </span>
-        </label>
+        <fieldset class="form-section">
+          <legend>Identificação</legend>
+          <label class="field-group">
+            <span>Código</span>
+            <input type="text" formControlName="code" [attr.maxlength]="limits.code" />
+            @if (hasError('code')) {
+              <small class="field-error">Informe o código da peça.</small>
+            }
+          </label>
+          <label class="field-group">
+            <span>Peça</span>
+            <input type="text" formControlName="name" [attr.maxlength]="limits.name" />
+            @if (hasError('name')) {
+              <small class="field-error">Informe o nome da peça.</small>
+            }
+          </label>
+          <label class="field-group">
+            <span>Unidade</span>
+            <input type="text" formControlName="unit" [attr.maxlength]="limits.unit" placeholder="un, m, kg" />
+            @if (hasError('unit')) {
+              <small class="field-error">Informe a unidade.</small>
+            }
+          </label>
+          <label class="field-group">
+            <span>Localização</span>
+            <input type="text" formControlName="location" [attr.maxlength]="limits.location" placeholder="Prateleira, gaveta..." />
+          </label>
+        </fieldset>
+        <fieldset class="form-section">
+          <legend>Estoque e custo</legend>
+          <label class="field-group">
+            <span>Saldo mínimo</span>
+            <input type="number" min="0" step="any" formControlName="minimumStock" />
+            @if (hasError('minimumStock')) {
+              <small class="field-error">Informe um saldo mínimo válido.</small>
+            }
+          </label>
+          <label class="field-group">
+            <span>Custo unitário (R$)</span>
+            <input type="number" min="0" step="0.01" formControlName="unitCost" />
+            @if (hasError('unitCost')) {
+              <small class="field-error">Informe um custo válido.</small>
+            }
+          </label>
+          <label class="field-group">
+            <span>Status</span>
+            <span class="toggle-box">
+              <input type="checkbox" formControlName="active" />
+              <strong>Peça ativa</strong>
+            </span>
+          </label>
+        </fieldset>
 
         <div class="form-actions form-actions--full">
           <button type="button" class="button-secondary" (click)="closeModals()" [disabled]="submitting()">Cancelar</button>
@@ -276,7 +280,7 @@
           <h3>Movimentar estoque</h3>
           <p><span class="code-text">{{ part.code }}</span> · {{ part.name }}. Disponível: <strong>{{ quantity(part.available, part.unit) }}</strong></p>
         </div>
-        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModals()">
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModals()" [disabled]="submitting()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
       </header>
@@ -317,7 +321,7 @@
           <h3>Histórico de movimentos</h3>
           <p><span class="code-text">{{ part.code }}</span> · {{ part.name }}. Movimentos não são editados; correções geram estorno.</p>
         </div>
-        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModals()">
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModals()" [disabled]="submitting()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
       </header>

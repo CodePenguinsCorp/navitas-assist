@@ -1,7 +1,8 @@
 import { IconComponent } from '../../shared/icon/icon.component';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable, finalize, forkJoin } from 'rxjs';
+import { Observable, Subscription, finalize, forkJoin } from 'rxjs';
 import {
   ManualPartMovementType,
   PartMovementResponse,
@@ -23,6 +24,8 @@ import {
   formatSignedQuantity
 } from '../../core/utils/part-ui';
 import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
 type PartsTab = 'stock' | 'replenishment';
 type PartFormControlName = 'code' | 'name' | 'unit' | 'location' | 'minimumStock' | 'unitCost';
@@ -39,7 +42,7 @@ const MOVEMENT_TYPE_OPTIONS: ReadonlyArray<CustomSelectOption<ManualPartMovement
 
 @Component({
   selector: 'app-parts',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PageHeaderComponent, RowActionComponent],
   templateUrl: './parts.component.html',
   styles: [`
     :host {
@@ -55,10 +58,11 @@ const MOVEMENT_TYPE_OPTIONS: ReadonlyArray<CustomSelectOption<ManualPartMovement
       max-width: 120px;
     }
 
-    .part-actions {
-      display: flex;
-      flex-wrap: nowrap;
-      gap: 0.45rem;
+    .stock-summary {
+      margin: 0;
+      color: var(--muted);
+      font-size: var(--font-size-md);
+      line-height: var(--line-height-body);
     }
 
 
@@ -83,10 +87,14 @@ export class PartsComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly partService = inject(PartService);
   private readonly authService = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
+  private loadRequest?: Subscription;
 
   protected readonly loading = signal(true);
+  protected readonly loadFailed = signal(false);
+  protected readonly hasLoaded = signal(false);
+  protected readonly loadErrorMessage = signal('');
   protected readonly submitting = signal(false);
-  protected readonly errorMessage = signal('');
   protected readonly modalErrorMessage = signal('');
   protected readonly successMessage = signal('');
   protected readonly searchTerm = signal('');
@@ -145,6 +153,14 @@ export class PartsComponent {
     this.searchTerm.set(value);
   }
 
+  protected clearSearch(): void {
+    this.searchTerm.set('');
+  }
+
+  protected retryLoad(): void {
+    if (!this.loading()) this.load();
+  }
+
   protected selectTab(tab: PartsTab): void {
     this.activeTab.set(tab);
   }
@@ -172,14 +188,12 @@ export class PartsComponent {
   }
 
   protected closeModals(): void {
-    this.formOpen.set(false);
-    this.movementPart.set(null);
-    this.historyPart.set(null);
-    this.reversingMovementId.set(null);
-    this.modalErrorMessage.set('');
+    if (this.submitting()) return;
+    this.resetModals();
   }
 
   protected savePart(): void {
+    if (this.submitting()) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.modalErrorMessage.set('Revise os campos destacados antes de salvar a peça.');
@@ -278,7 +292,7 @@ export class PartsComponent {
     ).subscribe({
       next: (result) => {
         this.successMessage.set(message(result));
-        this.closeModals();
+        this.resetModals();
         this.load();
       },
       error: (error) => this.modalErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível salvar agora.'))
@@ -296,24 +310,38 @@ export class PartsComponent {
   }
 
   private load(): void {
+    this.loadRequest?.unsubscribe();
     this.loading.set(true);
-    this.errorMessage.set('');
 
-    forkJoin({ parts: this.partService.list(), replenishment: this.partService.listReplenishment(), pending: this.partService.listPending() }).pipe(
+    this.loadRequest = forkJoin({ parts: this.partService.list(), replenishment: this.partService.listReplenishment(), pending: this.partService.listPending() }).pipe(
+      takeUntilDestroyed(this.destroyRef),
       finalize(() => this.loading.set(false))
     ).subscribe({
       next: ({ parts, replenishment, pending }) => {
         this.parts.set(parts);
         this.replenishment.set(replenishment);
         this.pending.set(pending);
+        this.hasLoaded.set(true);
+        this.loadFailed.set(false);
+        this.loadErrorMessage.set('');
       },
-      error: (error) => this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar o estoque de peças.'))
+      error: (error) => {
+        this.loadFailed.set(true);
+        this.loadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as peças.'));
+      }
     });
   }
 
   private clearMessages(): void {
-    this.errorMessage.set('');
     this.modalErrorMessage.set('');
     this.successMessage.set('');
+  }
+
+  private resetModals(): void {
+    this.formOpen.set(false);
+    this.movementPart.set(null);
+    this.historyPart.set(null);
+    this.reversingMovementId.set(null);
+    this.modalErrorMessage.set('');
   }
 }
