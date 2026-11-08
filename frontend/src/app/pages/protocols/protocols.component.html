@@ -1,43 +1,54 @@
 <section class="page-surface">
-  <section class="page-heading">
-    <div>
-      <h1>Protocolos técnicos</h1>
-    </div>
-    <div class="shell-actions">
-      <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo protocolo</button>
-    </div>
-  </section>
+  <app-page-header
+    heading="Protocolos técnicos"
+    singular="protocolo"
+    plural="protocolos"
+    [count]="loadFailed() || !loaded() ? null : filteredTemplates().length"
+    [total]="searchTerm().trim() ? templates().length : null"
+  >
+    <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo protocolo</button>
+  </app-page-header>
 
   <section class="panel catalog-toolbar catalog-toolbar--filters">
     <label class="search-field">
-      <span class="search-field__heading">
-        <span>Buscar</span>
-        <span class="catalog-toolbar__result">{{ filteredTemplates().length }} registro(s)</span>
-      </span>
+      <span>Buscar</span>
       <input #protocolSearch type="search" placeholder="Protocolo, produto ou categoria" [value]="searchTerm()" (input)="updateSearch(protocolSearch.value)" />
     </label>
   </section>
 
-  @if (errorMessage()) {
-    <article class="panel alert-banner alert-banner--error">
-      <strong>{{ errorMessage() }}</strong>
-    </article>
-  }
-
   @if (successMessage()) {
-    <article class="panel alert-banner alert-banner--success">
+    <article class="panel alert-banner alert-banner--success" role="status">
       <strong>{{ successMessage() }}</strong>
     </article>
   }
 
   <article class="table-card table-card--list panel">
-    @if (loading() && templates().length === 0) {
+    @if (loadFailed()) {
+      <section class="empty-state" role="alert">
+        <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
+        <h3>Não foi possível carregar os protocolos.</h3>
+        @if (errorMessage() && errorMessage() !== 'Não foi possível carregar os protocolos.') {
+          <p>{{ errorMessage() }}</p>
+        }
+        <button type="button" class="button-secondary" (click)="retryLoad()" [disabled]="loading()">
+          {{ loading() ? 'Carregando...' : 'Tentar novamente' }}
+        </button>
+      </section>
+    } @else if (loading() && !loaded()) {
       <p>Carregando protocolos...</p>
+    } @else if (templates().length === 0) {
+      <section class="empty-state">
+        <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
+        <h3>Nenhum protocolo cadastrado</h3>
+        <p>Cadastre checklists por produto ou categoria para padronizar diagnóstico, reparo e testes.</p>
+        <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Cadastrar protocolo</button>
+      </section>
     } @else if (filteredTemplates().length === 0) {
       <section class="empty-state">
         <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
-        <h3>Nenhum protocolo encontrado.</h3>
-        <p>Cadastre checklists por produto ou categoria para padronizar diagnóstico, reparo e testes.</p>
+        <h3>Nenhum protocolo encontrado</h3>
+        <p>Ajuste a busca.</p>
+        <button type="button" class="button-secondary" (click)="clearSearch()">Limpar busca</button>
       </section>
     } @else {
       <div class="table-wrap">
@@ -49,24 +60,28 @@
               <th>Versão</th>
               <th>Itens</th>
               <th>Etapas bloqueadas</th>
+              <th>Estado</th>
               <th>Atualizado</th>
-              <th class="table-actions-col">Ação</th>
+              <th class="table-actions-col">Ações</th>
             </tr>
           </thead>
           <tbody>
             @for (template of filteredTemplates(); track template.id) {
               <tr>
-                <td>
-                  <strong class="table-title">{{ template.name }}</strong>
-                  <span class="table-subtitle">{{ template.active ? 'Ativo' : 'Inativo' }}</span>
-                </td>
+                <td><strong class="table-title">{{ template.name }}</strong></td>
                 <td>{{ scopeLabel(template) }}</td>
                 <td>v{{ template.currentVersion }}</td>
                 <td>{{ template.items.length }}</td>
                 <td>{{ blockedLabel(template) }}</td>
+                <td><span class="state-dot" [class.is-on]="template.active">{{ template.active ? 'Ativo' : 'Inativo' }}</span></td>
                 <td>{{ updatedAtLabel(template) }}</td>
                 <td class="table-actions-col">
-                  <button type="button" class="button-secondary button-secondary--small" (click)="openEditModal(template)"><app-icon name="layers" />Nova versão</button>
+                  <button
+                    type="button"
+                    class="button-secondary button-secondary--small"
+                    [attr.aria-label]="'Nova versão de ' + template.name"
+                    (click)="openEditModal(template)"
+                  ><app-icon name="layers" />Nova versão</button>
                 </td>
               </tr>
             }
@@ -79,13 +94,19 @@
 
 @if (modalOpen()) {
   <div class="modal-overlay" (click)="closeModal()">
-    <section class="modal-panel modal-panel--form-wide panel" (click)="$event.stopPropagation()">
+    <section
+      class="modal-panel modal-panel--form-wide panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="protocol-form-title"
+      (click)="$event.stopPropagation()"
+    >
       <header class="modal-header">
         <div>
-          <h3>{{ editingTemplate() ? 'Nova versão do protocolo' : 'Novo protocolo' }}</h3>
+          <h3 id="protocol-form-title">{{ editingTemplate() ? 'Nova versão do protocolo' : 'Novo protocolo' }}</h3>
           <p>Execuções já iniciadas continuam na versão em que começaram.</p>
         </div>
-        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()">
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()" [disabled]="submitting()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
       </header>
@@ -97,34 +118,45 @@
       }
 
       <form class="form-grid" [formGroup]="form" (ngSubmit)="saveTemplate()">
-        <label class="field-group">
-          <span>Nome</span>
-          <input type="text" formControlName="name" maxlength="120" />
-        </label>
+        <fieldset class="form-section">
+          <legend>Configuração geral</legend>
 
-        <label class="field-group">
-          <span>Produto</span>
-          <app-custom-select ariaLabel="Produto" [options]="productOptions()" formControlName="productId" />
-        </label>
-
-        @if (form.controls.productId.value === null) {
           <label class="field-group">
-            <span>Categoria</span>
-            <input type="text" formControlName="category" maxlength="80" />
+            <span>Nome</span>
+            <input type="text" formControlName="name" maxlength="120" />
+            @if (hasError(form.controls.name)) {
+              <small class="field-error">{{ form.controls.name.hasError('required') ? 'Informe o nome do protocolo.' : 'Use até 120 caracteres.' }}</small>
+            }
           </label>
-        }
 
-        <label class="field-group">
-          <span>Status</span>
-          <span class="toggle-box">
-            <input type="checkbox" formControlName="active" />
-            <strong>Protocolo ativo</strong>
-          </span>
-        </label>
+          <label class="field-group">
+            <span>Produto</span>
+            <app-custom-select ariaLabel="Produto" [options]="productOptions()" formControlName="productId" />
+          </label>
 
-        <fieldset class="field-group field-group--full">
-          <span>Bloquear mudança do RMA para estas etapas enquanto houver obrigatórios pendentes</span>
-          <div class="status-options">
+          @if (form.controls.productId.value === null) {
+            <label class="field-group">
+              <span>Categoria</span>
+              <input type="text" formControlName="category" maxlength="80" [attr.aria-invalid]="categoryMissing() ? 'true' : null" />
+              @if (categoryMissing()) {
+                <small class="field-error">Informe a categoria ou selecione um produto.</small>
+              }
+            </label>
+          }
+
+          <label class="field-group">
+            <span>Status</span>
+            <span class="toggle-box">
+              <input type="checkbox" formControlName="active" />
+              <strong>Protocolo ativo</strong>
+            </span>
+          </label>
+        </fieldset>
+
+        <fieldset class="form-section" aria-describedby="protocol-blocked-hint">
+          <legend>Etapas bloqueadas</legend>
+          <p id="protocol-blocked-hint" class="form-section__hint">Bloquear mudança do RMA para estas etapas enquanto houver obrigatórios pendentes</p>
+          <div class="status-options field-group--full">
             @for (status of statusOptions; track status) {
               <label class="checkbox-field">
                 <input type="checkbox" [checked]="form.controls.blockedStatuses.value.includes(status)" (change)="toggleBlockedStatus(status, $any($event.target).checked)" />
@@ -134,62 +166,87 @@
           </div>
         </fieldset>
 
-        <div class="field-group field-group--full protocol-items" formArrayName="items">
-          @for (item of items.controls; track item; let index = $index) {
-            <div class="protocol-item-card" [formGroupName]="index">
-              <label class="field-group">
-                <span>Etapa</span>
-                <input type="text" formControlName="stepName" maxlength="120" />
-              </label>
-              <label class="field-group">
-                <span>Item</span>
-                <input type="text" formControlName="title" maxlength="200" />
-              </label>
-              <label class="field-group">
-                <span>Tipo</span>
-                <app-custom-select ariaLabel="Tipo do item" [options]="typeOptions" formControlName="type" />
-              </label>
-              @if (isMeasurement(index)) {
+        <fieldset class="form-section">
+          <legend>Itens</legend>
+          <div class="field-group--full protocol-items" formArrayName="items">
+            @for (item of items.controls; track item; let index = $index) {
+              <div class="protocol-item-card" [formGroupName]="index">
+                <h4 class="protocol-item-card__title">Item {{ index + 1 }}</h4>
                 <label class="field-group">
-                  <span>Unidade</span>
-                  <input type="text" formControlName="unit" maxlength="20" />
+                  <span>Etapa</span>
+                  <input type="text" formControlName="stepName" maxlength="120" />
+                  @if (hasError(item.controls['stepName'])) {
+                    <small class="field-error">Informe a etapa.</small>
+                  }
                 </label>
                 <label class="field-group">
-                  <span>Casas decimais</span>
-                  <input type="number" min="0" max="6" formControlName="decimalPlaces" />
+                  <span>Item</span>
+                  <input type="text" formControlName="title" maxlength="200" />
+                  @if (hasError(item.controls['title'])) {
+                    <small class="field-error">Informe o item.</small>
+                  }
                 </label>
                 <label class="field-group">
-                  <span>Mínimo</span>
-                  <input type="text" inputmode="decimal" formControlName="minValue" />
+                  <span>Tipo</span>
+                  <app-custom-select ariaLabel="Tipo do item" [options]="typeOptions" formControlName="type" />
+                </label>
+                @if (isMeasurement(index)) {
+                  <label class="field-group">
+                    <span>Unidade</span>
+                    <input type="text" formControlName="unit" maxlength="20" />
+                  </label>
+                  <label class="field-group">
+                    <span>Casas decimais</span>
+                    <input type="number" min="0" max="6" formControlName="decimalPlaces" />
+                    @if (hasError(item.controls['decimalPlaces'])) {
+                      <small class="field-error">Use de 0 a 6 casas decimais.</small>
+                    }
+                  </label>
+                  <label class="field-group">
+                    <span>Mínimo</span>
+                    <input type="text" inputmode="decimal" formControlName="minValue" />
+                    @if (hasError(item.controls['minValue'])) {
+                      <small class="field-error">Use um número com até 13 dígitos inteiros e até 6 casas decimais, separadas por vírgula ou ponto.</small>
+                    }
+                  </label>
+                  <label class="field-group">
+                    <span>Máximo</span>
+                    <input type="text" inputmode="decimal" formControlName="maxValue" />
+                    @if (hasError(item.controls['maxValue'])) {
+                      <small class="field-error">Use um número com até 13 dígitos inteiros e até 6 casas decimais, separadas por vírgula ou ponto.</small>
+                    }
+                  </label>
+                }
+                <label class="field-group">
+                  <span>Resultado esperado</span>
+                  <input type="text" formControlName="expectedResult" maxlength="500" />
                 </label>
                 <label class="field-group">
-                  <span>Máximo</span>
-                  <input type="text" inputmode="decimal" formControlName="maxValue" />
+                  <span>Instruções</span>
+                  <input type="text" formControlName="instructions" maxlength="1000" />
                 </label>
-              }
-              <label class="field-group">
-                <span>Resultado esperado</span>
-                <input type="text" formControlName="expectedResult" maxlength="500" />
-              </label>
-              <label class="field-group">
-                <span>Instruções</span>
-                <input type="text" formControlName="instructions" maxlength="1000" />
-              </label>
-              <div class="protocol-item-card__footer">
-                <label class="checkbox-field">
-                  <input type="checkbox" formControlName="required" />
-                  <span>Obrigatório</span>
-                </label>
-                <label class="checkbox-field">
-                  <input type="checkbox" formControlName="evidenceRequired" />
-                  <span>Exige evidência</span>
-                </label>
-                <button type="button" class="button-secondary button-secondary--small button-secondary--danger" (click)="removeItem(index)" [disabled]="items.length === 1">Remover item</button>
+                <div class="protocol-item-card__footer">
+                  <label class="checkbox-field">
+                    <input type="checkbox" formControlName="required" />
+                    <span>Obrigatório</span>
+                  </label>
+                  <label class="checkbox-field">
+                    <input type="checkbox" formControlName="evidenceRequired" />
+                    <span>Exige evidência</span>
+                  </label>
+                  <button
+                    type="button"
+                    class="button-secondary button-secondary--small button-secondary--danger"
+                    [attr.aria-label]="'Remover item ' + (index + 1)"
+                    (click)="removeItem(index)"
+                    [disabled]="items.length === 1"
+                  >Remover item</button>
+                </div>
               </div>
-            </div>
-          }
-          <button type="button" class="button-secondary" (click)="addItem()">Adicionar item</button>
-        </div>
+            }
+            <button type="button" class="button-secondary" (click)="addItem()">Adicionar item</button>
+          </div>
+        </fieldset>
 
         <div class="form-actions form-actions--full">
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="submitting()">Cancelar</button>

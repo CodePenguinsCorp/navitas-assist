@@ -1,5 +1,9 @@
+import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { FormArray, FormGroup } from '@angular/forms';
+import { Observable, Subject, of, throwError } from 'rxjs';
+import { ProtocolTemplateItemResponse, ProtocolTemplateRequest, ProtocolTemplateResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
@@ -7,17 +11,55 @@ import { ProtocolsComponent } from './protocols.component';
 
 interface ProtocolsHarness {
   openCreateModal(): void;
+  openEditModal(template: ProtocolTemplateResponse): void;
+  closeModal(): void;
+  updateSearch(value: string): void;
+  retryLoad(): void;
+  form: FormGroup & { controls: FormGroup['controls'] & { items: FormArray<FormGroup> } };
 }
+
+function item(overrides: Partial<ProtocolTemplateItemResponse> = {}): ProtocolTemplateItemResponse {
+  return {
+    id: 1, sortOrder: 1, stepName: 'Diagnóstico', title: 'Conferir alimentação', instructions: null,
+    type: 'CHECK', required: true, unit: null, decimalPlaces: null, minValue: null, maxValue: null,
+    expectedResult: null, evidenceRequired: false,
+    ...overrides
+  };
+}
+
+function template(overrides: Partial<ProtocolTemplateResponse> = {}): ProtocolTemplateResponse {
+  return {
+    id: 1, name: 'Diagnóstico Alfa', productId: 10, productName: 'Produto Alfa', category: null,
+    active: true, currentVersion: 1, blockedStatuses: [], items: [item()],
+    updatedAt: '2026-10-20T12:00:00Z',
+    ...overrides
+  };
+}
+
+function catalog(): ProtocolTemplateResponse[] {
+  return [
+    template(),
+    template({ id: 2, name: 'Teste de fonte', productId: null, productName: null, category: 'Fontes', active: false, currentVersion: 3 })
+  ];
+}
+
+const loadError = () => throwError(() => new HttpErrorResponse({ status: 500 }));
 
 describe('ProtocolsComponent', () => {
   let fixture: ComponentFixture<ProtocolsComponent>;
   let component: ProtocolsHarness;
+  let listTemplates: ReturnType<typeof vi.fn>;
+  let createTemplate: ReturnType<typeof vi.fn>;
+  let updateTemplate: ReturnType<typeof vi.fn>;
 
-  beforeEach(async () => {
+  async function setup(list: () => Observable<ProtocolTemplateResponse[]> = () => of(catalog())): Promise<void> {
+    listTemplates = vi.fn(list);
+    createTemplate = vi.fn((request: ProtocolTemplateRequest) => of(template({ id: 9, name: request.name })));
+    updateTemplate = vi.fn((id: number, request: ProtocolTemplateRequest) => of(template({ id, name: request.name, currentVersion: 2 })));
     await TestBed.configureTestingModule({
       imports: [ProtocolsComponent],
       providers: [
-        { provide: ProtocolService, useValue: { listTemplates: vi.fn(() => of([])) } },
+        { provide: ProtocolService, useValue: { listTemplates, createTemplate, updateTemplate } },
         { provide: CatalogService, useValue: { listProductOptions: vi.fn(() => of([])) } }
       ]
     }).compileComponents();
@@ -25,12 +67,438 @@ describe('ProtocolsComponent', () => {
     fixture = TestBed.createComponent(ProtocolsComponent);
     component = fixture.componentInstance as unknown as ProtocolsHarness;
     fixture.detectChanges();
+  }
+
+  function element(): HTMLElement {
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  function text(): string {
+    return element().textContent ?? '';
+  }
+
+  function count(): string | null {
+    return element().querySelector('.page-heading__count')?.textContent?.trim() ?? null;
+  }
+
+  function buttonByText(label: string): HTMLButtonElement | undefined {
+    return Array.from(element().querySelectorAll<HTMLButtonElement>('button')).find((button) => button.textContent?.trim() === label);
+  }
+
+  function rows(): HTMLTableRowElement[] {
+    return Array.from(element().querySelectorAll<HTMLTableRowElement>('tbody tr'));
+  }
+
+  describe('catalog', () => {
+    it('shows Cancelar before the primary action in the form dialog', async () => {
+      await setup(() => of([]));
+      component.openCreateModal();
+      fixture.detectChanges();
+
+      expectCancelBeforePrimary(element());
+    });
+
+    it('shows the count next to the title and "X de Y" while searching', async () => {
+      await setup();
+
+      expect(count()).toBe('2 protocolos');
+      expect(element().querySelector('.search-field')?.textContent).not.toContain('registro(s)');
+
+      component.updateSearch('Alfa');
+      fixture.detectChanges();
+
+      expect(count()).toBe('1 de 2 protocolos');
+      expect(rows()).toHaveLength(1);
+      expect(listTemplates).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows state in its own column', async () => {
+      await setup();
+
+      const headers = Array.from(element().querySelectorAll('thead th')).map((th) => th.textContent?.trim());
+      expect(headers).toContain('Estado');
+      expect(headers).toContain('Etapas bloqueadas');
+      expect(headers).toContain('Ações');
+      expect(headers).not.toContain('Ação');
+
+      const states = Array.from(element().querySelectorAll('tbody .state-dot')).map((dot) => dot.textContent?.trim());
+      expect(states).toEqual(['Ativo', 'Inativo']);
+      expect(element().querySelector('tbody .state-dot.is-on')?.textContent?.trim()).toBe('Ativo');
+
+      const nameCell = rows()[0].querySelector('td');
+      expect(nameCell?.textContent).toContain('Diagnóstico Alfa');
+      expect(nameCell?.textContent).not.toContain('Ativo');
+    });
+
+    it('names the Nova versão action with the protocol', async () => {
+      await setup();
+
+      const action = rows()[0].querySelector<HTMLButtonElement>('.table-actions-col button');
+      expect(action?.textContent?.trim()).toBe('Nova versão');
+      expect(action?.getAttribute('aria-label')).toBe('Nova versão de Diagnóstico Alfa');
+    });
+
+    it('shows the empty catalog with a create action', async () => {
+      await setup(() => of([]));
+
+      expect(text()).toContain('Nenhum protocolo cadastrado');
+      expect(text()).not.toContain('Nenhum protocolo encontrado');
+      expect(count()).toBe('0 protocolos');
+
+      buttonByText('Cadastrar protocolo')!.click();
+      fixture.detectChanges();
+
+      expect(element().querySelector('.modal-panel h3')?.textContent?.trim()).toBe('Novo protocolo');
+    });
+
+    it('shows search without results with a clear action', async () => {
+      await setup();
+
+      component.updateSearch('inexistente');
+      fixture.detectChanges();
+
+      expect(text()).toContain('Nenhum protocolo encontrado');
+      expect(text()).toContain('Ajuste a busca.');
+      expect(text()).not.toContain('Nenhum protocolo cadastrado');
+      expect(count()).toBe('0 de 2 protocolos');
+
+      buttonByText('Limpar busca')!.click();
+      fixture.detectChanges();
+
+      expect(rows()).toHaveLength(2);
+      expect(count()).toBe('2 protocolos');
+      expect((element().querySelector('.search-field input') as HTMLInputElement).value).toBe('');
+    });
+
+    it('shows the failure state on load error', async () => {
+      await setup(loadError);
+
+      const alert = element().querySelector('[role="alert"]');
+      expect(alert?.textContent).toContain('Não foi possível carregar os protocolos.');
+      expect(buttonByText('Tentar novamente')).toBeDefined();
+      expect(text()).not.toContain('Nenhum protocolo cadastrado');
+      expect(text()).not.toContain('Carregando protocolos...');
+      expect(count()).toBeNull();
+      expect(element().querySelector('.alert-banner--error')).toBeNull();
+    });
+
+    it('keeps the failure after opening and closing the form', async () => {
+      await setup(loadError);
+
+      component.openCreateModal();
+      fixture.detectChanges();
+      component.closeModal();
+      fixture.detectChanges();
+
+      expect(element().querySelector('[role="alert"]')?.textContent).toContain('Não foi possível carregar os protocolos.');
+      expect(text()).not.toContain('Nenhum protocolo cadastrado');
+    });
+
+    it('shows the failure when a reload fails after a success', async () => {
+      await setup();
+      expect(rows()).toHaveLength(2);
+
+      listTemplates.mockImplementation(loadError);
+      component.retryLoad();
+      fixture.detectChanges();
+
+      expect(element().querySelector('[role="alert"]')?.textContent).toContain('Não foi possível carregar os protocolos.');
+      expect(element().querySelector('tbody')).toBeNull();
+      expect(count()).toBeNull();
+    });
+
+    it('shows the failure when a reload fails after an empty success', async () => {
+      await setup(() => of([]));
+      expect(text()).toContain('Nenhum protocolo cadastrado');
+      expect(count()).toBe('0 protocolos');
+
+      listTemplates.mockImplementation(loadError);
+      component.retryLoad();
+      fixture.detectChanges();
+
+      expect(element().querySelector('[role="alert"]')?.textContent).toContain('Não foi possível carregar os protocolos.');
+      expect(buttonByText('Tentar novamente')).toBeDefined();
+      expect(text()).not.toContain('Nenhum protocolo cadastrado');
+      expect(buttonByText('Cadastrar protocolo')).toBeUndefined();
+      expect(element().querySelector('tbody')).toBeNull();
+      expect(count()).toBeNull();
+    });
+
+    it('shows a disabled loading retry without the old table or count while the retry is pending, then recovers', async () => {
+      await setup();
+      expect(count()).toBe('2 protocolos');
+      listTemplates.mockImplementation(loadError);
+      component.retryLoad();
+      fixture.detectChanges();
+      expect(element().querySelector('[role="alert"]')).not.toBeNull();
+
+      const pending = new Subject<ProtocolTemplateResponse[]>();
+      listTemplates.mockImplementation(() => pending);
+      buttonByText('Tentar novamente')!.click();
+      fixture.detectChanges();
+
+      const retry = element().querySelector('[role="alert"]')!.querySelector<HTMLButtonElement>('button')!;
+      expect(retry.disabled).toBe(true);
+      expect(retry.textContent?.trim()).toBe('Carregando...');
+      expect(buttonByText('Tentar novamente')).toBeUndefined();
+      expect(element().querySelector('tbody')).toBeNull();
+      expect(count()).toBeNull();
+
+      pending.next([template({ id: 3, name: 'Teste de bancada' })]);
+      pending.complete();
+      fixture.detectChanges();
+
+      expect(element().querySelector('[role="alert"]')).toBeNull();
+      expect(rows()).toHaveLength(1);
+      expect(rows()[0].textContent).toContain('Teste de bancada');
+      expect(count()).toBe('1 protocolo');
+    });
+
+    it('recovers with Tentar novamente', async () => {
+      await setup(loadError);
+
+      listTemplates.mockImplementation(() => of(catalog()));
+      buttonByText('Tentar novamente')!.click();
+      fixture.detectChanges();
+
+      expect(listTemplates).toHaveBeenCalledTimes(2);
+      expect(element().querySelector('[role="alert"]')).toBeNull();
+      expect(rows()).toHaveLength(2);
+      expect(count()).toBe('2 protocolos');
+    });
+
+    it('announces the success banner as status', async () => {
+      await setup();
+      (fixture.componentInstance as unknown as { successMessage: { set(value: string): void } }).successMessage.set('Protocolo X cadastrado.');
+      fixture.detectChanges();
+
+      expect(element().querySelector('.alert-banner--success')?.getAttribute('role')).toBe('status');
+    });
   });
 
-  it('shows Cancelar before the primary action in the form dialog', () => {
-    component.openCreateModal();
-    fixture.detectChanges();
+  describe('form', () => {
+    function dialog(): HTMLElement | null {
+      return element().querySelector<HTMLElement>('[role="dialog"]');
+    }
 
-    expectCancelBeforePrimary(fixture.nativeElement);
+    function submit(): void {
+      dialog()!.querySelector<HTMLButtonElement>('button[type="submit"]')!.click();
+      fixture.detectChanges();
+    }
+
+    function fieldOf(selector: string): HTMLElement {
+      return dialog()!.querySelector(selector)!.closest('.field-group') as HTMLElement;
+    }
+
+    function errorOf(selector: string): string | null {
+      return fieldOf(selector).querySelector('.field-error')?.textContent?.trim() ?? null;
+    }
+
+    /** Programmatic form changes do not schedule a check; user events do. */
+    function refresh(): void {
+      fixture.debugElement.injector.get(ChangeDetectorRef).markForCheck();
+      fixture.detectChanges();
+    }
+
+    function fillValid(): void {
+      component.form.patchValue({ name: 'Novo checklist', category: 'Fontes' });
+      component.form.controls.items.at(0).patchValue({ stepName: 'Diagnóstico', title: 'Conferir tensão' });
+      refresh();
+    }
+
+    it('groups the form into Configuração geral, Etapas bloqueadas and Itens', async () => {
+      await setup();
+      component.openCreateModal();
+      fixture.detectChanges();
+
+      const panel = dialog()!;
+      expect(panel.getAttribute('aria-modal')).toBe('true');
+      const titleId = panel.getAttribute('aria-labelledby');
+      expect(titleId).toBeTruthy();
+      expect(panel.querySelector('#' + titleId)?.textContent?.trim()).toBe('Novo protocolo');
+
+      const sections = Array.from(panel.querySelectorAll<HTMLFieldSetElement>('fieldset.form-section'));
+      expect(sections.map((section) => section.querySelector('legend')?.textContent?.trim())).toEqual(['Configuração geral', 'Etapas bloqueadas', 'Itens']);
+
+      const [general, blocked, items] = sections;
+      for (const name of ['name', 'productId', 'category', 'active']) {
+        expect(general.querySelector('[formcontrolname="' + name + '"]')).not.toBeNull();
+      }
+      expect(blocked.textContent).toContain('Bloquear mudança do RMA para estas etapas enquanto houver obrigatórios pendentes');
+      expect(blocked.querySelectorAll('input[type="checkbox"]').length).toBeGreaterThan(0);
+      expect(general.querySelector('[formcontrolname="stepName"]')).toBeNull();
+      expect(items.querySelector('[formcontrolname="stepName"]')).not.toBeNull();
+      expect(items.querySelector('[formcontrolname="title"]')).not.toBeNull();
+
+      buttonByText('Adicionar item')!.click();
+      fixture.detectChanges();
+
+      const cards = Array.from(items.querySelectorAll('.protocol-item-card'));
+      expect(cards.map((card) => card.querySelector('.protocol-item-card__title')?.textContent?.trim())).toEqual(['Item 1', 'Item 2']);
+      const removes = cards.map((card) => Array.from(card.querySelectorAll('button')).find((button) => button.textContent?.trim() === 'Remover item'));
+      expect(removes.map((button) => button?.getAttribute('aria-label'))).toEqual(['Remover item 1', 'Remover item 2']);
+    });
+
+    it('shows the category only without a product', async () => {
+      await setup();
+      component.openCreateModal();
+      fixture.detectChanges();
+      expect(dialog()!.querySelector('[formcontrolname="category"]')).not.toBeNull();
+
+      component.closeModal();
+      component.openEditModal(catalog()[0]);
+      fixture.detectChanges();
+      expect(dialog()!.querySelector('[formcontrolname="category"]')).toBeNull();
+    });
+
+    it('shows field errors after an invalid submit', async () => {
+      await setup();
+      component.openCreateModal();
+      fixture.detectChanges();
+
+      expect(dialog()!.querySelector('.field-error')).toBeNull();
+
+      submit();
+
+      expect(errorOf('[formcontrolname="name"]')).toBe('Informe o nome do protocolo.');
+      expect(errorOf('[formcontrolname="category"]')).toBe('Informe a categoria ou selecione um produto.');
+      expect(errorOf('[formcontrolname="stepName"]')).toBe('Informe a etapa.');
+      expect(errorOf('[formcontrolname="title"]')).toBe('Informe o item.');
+      expect(dialog()!.querySelector('[role="alert"]')?.textContent).toContain('Revise os campos e informe o produto ou a categoria do protocolo.');
+      expect(createTemplate).not.toHaveBeenCalled();
+
+      component.form.patchValue({ name: 'x'.repeat(121), category: 'Fontes' });
+      refresh();
+      expect(errorOf('[formcontrolname="name"]')).toBe('Use até 120 caracteres.');
+      expect(errorOf('[formcontrolname="category"]')).toBeNull();
+    });
+
+    it('starts a reopened form without field errors', async () => {
+      await setup();
+      component.openCreateModal();
+      fixture.detectChanges();
+      submit();
+      component.closeModal();
+      component.openCreateModal();
+      fixture.detectChanges();
+
+      expect(dialog()!.querySelector('.field-error')).toBeNull();
+    });
+
+    it('shows decimal and decimal places errors for measurement items', async () => {
+      await setup();
+      component.openCreateModal();
+      fixture.detectChanges();
+      component.form.controls.items.at(0).controls['type'].setValue('MEASUREMENT');
+      refresh();
+
+      const places = dialog()!.querySelector<HTMLInputElement>('[formcontrolname="decimalPlaces"]')!;
+      places.value = '7';
+      places.dispatchEvent(new Event('input'));
+      const min = dialog()!.querySelector<HTMLInputElement>('[formcontrolname="minValue"]')!;
+      min.value = '1,1234567';
+      min.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+
+      expect(errorOf('[formcontrolname="decimalPlaces"]')).toBe('Use de 0 a 6 casas decimais.');
+      expect(errorOf('[formcontrolname="minValue"]')).toBe('Use um número com até 13 dígitos inteiros e até 6 casas decimais, separadas por vírgula ou ponto.');
+      expect(errorOf('[formcontrolname="maxValue"]')).toBeNull();
+    });
+
+    it('stays open while publishing a new protocol and closes on success', async () => {
+      await setup();
+      const pending = new Subject<ProtocolTemplateResponse>();
+      createTemplate.mockImplementation(() => pending);
+      component.openCreateModal();
+      fixture.detectChanges();
+      fillValid();
+      submit();
+
+      expect(createTemplate).toHaveBeenCalledTimes(1);
+      expect(dialog()!.querySelector<HTMLButtonElement>('.modal-close')!.disabled).toBe(true);
+      component.closeModal();
+      fixture.detectChanges();
+      expect(dialog()).not.toBeNull();
+      element().querySelector<HTMLElement>('.modal-overlay')!.click();
+      fixture.detectChanges();
+      expect(dialog()).not.toBeNull();
+
+      pending.next(template({ id: 9, name: 'Novo checklist' }));
+      pending.complete();
+      fixture.detectChanges();
+
+      expect(dialog()).toBeNull();
+      expect(element().querySelector('[role="status"]')?.textContent).toContain('Protocolo Novo checklist cadastrado.');
+      expect(listTemplates).toHaveBeenCalledTimes(2);
+    });
+
+    it('stays open while publishing a new version and closes on success', async () => {
+      await setup();
+      const pending = new Subject<ProtocolTemplateResponse>();
+      updateTemplate.mockImplementation(() => pending);
+      component.openEditModal(catalog()[0]);
+      fixture.detectChanges();
+      submit();
+
+      expect(dialog()!.querySelector<HTMLButtonElement>('.modal-close')!.disabled).toBe(true);
+      component.closeModal();
+      element().querySelector<HTMLElement>('.modal-overlay')!.click();
+      fixture.detectChanges();
+      expect(dialog()).not.toBeNull();
+
+      pending.next(template({ currentVersion: 2 }));
+      pending.complete();
+      fixture.detectChanges();
+
+      expect(dialog()).toBeNull();
+      expect(element().querySelector('[role="status"]')?.textContent).toContain('Protocolo Diagnóstico Alfa publicado na versão 2.');
+      expect(listTemplates).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps values and reopens closing after a failure', async () => {
+      await setup();
+      createTemplate.mockImplementation(() => throwError(() => new HttpErrorResponse({ status: 409, error: { message: 'Já existe um protocolo com este nome.' } })));
+      component.openCreateModal();
+      fixture.detectChanges();
+      fillValid();
+      submit();
+
+      expect(dialog()).not.toBeNull();
+      expect(dialog()!.querySelector<HTMLInputElement>('[formcontrolname="name"]')!.value).toBe('Novo checklist');
+      expect(dialog()!.querySelector('[role="alert"]')?.textContent).toContain('Já existe um protocolo com este nome.');
+
+      const close = dialog()!.querySelector<HTMLButtonElement>('.modal-close')!;
+      expect(close.disabled).toBe(false);
+      close.click();
+      fixture.detectChanges();
+      expect(dialog()).toBeNull();
+    });
+
+    it('opens a new version with the original rule and publishes through updateTemplate', async () => {
+      await setup();
+      component.openEditModal(catalog()[0]);
+      fixture.detectChanges();
+
+      const panel = element().querySelector<HTMLElement>('.modal-panel')!;
+      expect(panel.querySelector('h3')?.textContent?.trim()).toBe('Nova versão do protocolo');
+      expect(panel.textContent).toContain('Execuções já iniciadas continuam na versão em que começaram.');
+      expect(panel.querySelector('button[type="submit"]')?.textContent?.trim()).toBe('Publicar nova versão');
+
+      panel.querySelector<HTMLButtonElement>('button[type="submit"]')!.click();
+      fixture.detectChanges();
+
+      expect(createTemplate).not.toHaveBeenCalled();
+      expect(updateTemplate).toHaveBeenCalledWith(1, {
+        name: 'Diagnóstico Alfa',
+        productId: 10,
+        category: null,
+        active: true,
+        blockedStatuses: [],
+        items: [{
+          stepName: 'Diagnóstico', title: 'Conferir alimentação', instructions: null, type: 'CHECK', required: true,
+          unit: null, decimalPlaces: null, minValue: null, maxValue: null, expectedResult: null, evidenceRequired: false
+        }]
+      });
+    });
   });
 });

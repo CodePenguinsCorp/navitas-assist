@@ -1,6 +1,6 @@
 import { IconComponent } from '../../shared/icon/icon.component';
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable, finalize } from 'rxjs';
 import { RMA_STATUS_LABELS } from '../../core/mock-data';
 import { ProtocolItemType, ProtocolTemplateItemResponse, ProtocolTemplateRequest, ProtocolTemplateResponse, RmaStatus } from '../../core/models';
@@ -10,12 +10,13 @@ import { extractHttpErrorMessage, includesQuery, normalizeOptionalText } from '.
 import { formatBusinessDateTime } from '../../core/utils/date';
 import { PROTOCOL_ITEM_TYPE_LABELS, normalizeDecimal } from '../../core/utils/protocol-ui';
 import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 
 const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
 
 @Component({
   selector: 'app-protocols',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PageHeaderComponent],
   templateUrl: './protocols.component.html',
   styles: [`
     :host {
@@ -50,9 +51,24 @@ const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
       margin-left: auto;
     }
 
+    .protocol-item-card__title {
+      grid-column: 1 / -1;
+      margin: 0;
+      font-size: var(--font-size-md);
+      font-weight: var(--font-weight-semibold);
+    }
+
     .protocol-items {
       display: grid;
       gap: 0.75rem;
+    }
+
+    .form-section__hint {
+      grid-column: 1 / -1;
+      margin: 0;
+      color: var(--muted);
+      font-size: var(--font-size-md);
+      line-height: 1.35;
     }
   `]
 })
@@ -68,6 +84,12 @@ export class ProtocolsComponent {
   protected readonly successMessage = signal('');
   protected readonly searchTerm = signal('');
   protected readonly modalOpen = signal(false);
+  /** Last list query failed; independent of form messages. */
+  protected readonly loadFailed = signal(false);
+  /** At least one list query succeeded. */
+  protected readonly loaded = signal(false);
+  /** An invalid submit happened in the open form; enables the product/category message. */
+  protected readonly submitAttempted = signal(false);
 
   private readonly templatesSignal = signal<ProtocolTemplateResponse[]>([]);
   private readonly productOptionsSignal = signal<ReadonlyArray<CustomSelectOption<number | null>>>([{ value: null, label: 'Por categoria' }]);
@@ -107,11 +129,20 @@ export class ProtocolsComponent {
     this.searchTerm.set(value);
   }
 
+  protected clearSearch(): void {
+    this.searchTerm.set('');
+  }
+
+  protected retryLoad(): void {
+    this.loadTemplates();
+  }
+
   protected openCreateModal(): void {
     this.editingTemplateSignal.set(null);
     this.form.reset({ name: '', productId: null, category: '', active: true, blockedStatuses: [] });
     this.items.clear();
     this.addItem();
+    this.submitAttempted.set(false);
     this.modalOpen.set(true);
     this.clearMessages();
   }
@@ -121,13 +152,28 @@ export class ProtocolsComponent {
     this.form.reset({ name: template.name, productId: template.productId, category: template.category ?? '', active: template.active, blockedStatuses: [...template.blockedStatuses] });
     this.items.clear();
     template.items.forEach((item) => this.items.push(this.itemGroup(item)));
+    this.submitAttempted.set(false);
     this.modalOpen.set(true);
     this.clearMessages();
   }
 
+  /** Cancel, close button and overlay: ignored while the request is in flight. */
   protected closeModal(): void {
-    this.modalOpen.set(false);
-    this.modalErrorMessage.set('');
+    if (this.submitting()) {
+      return;
+    }
+    this.resetModal();
+  }
+
+  protected hasError(control: AbstractControl): boolean {
+    return control.invalid && (control.touched || control.dirty);
+  }
+
+  /** Method, not computed: the form is not a signal. */
+  protected categoryMissing(): boolean {
+    return this.submitAttempted()
+      && this.form.controls.productId.value === null
+      && !normalizeOptionalText(this.form.controls.category.value);
   }
 
   protected addItem(): void {
@@ -153,6 +199,7 @@ export class ProtocolsComponent {
     const raw = this.form.getRawValue();
     if (this.form.invalid || (raw.productId === null && !normalizeOptionalText(raw.category))) {
       this.form.markAllAsTouched();
+      this.submitAttempted.set(true);
       this.modalErrorMessage.set('Revise os campos e informe o produto ou a categoria do protocolo.');
       return;
     }
@@ -166,7 +213,8 @@ export class ProtocolsComponent {
     request$.pipe(finalize(() => this.submitting.set(false))).subscribe({
       next: (template) => {
         this.successMessage.set(current ? `Protocolo ${template.name} publicado na versão ${template.currentVersion}.` : `Protocolo ${template.name} cadastrado.`);
-        this.closeModal();
+        // submitting is still true here (finalize runs after next), so skip the guard.
+        this.resetModal();
         this.loadTemplates();
       },
       error: (error) => this.modalErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível salvar o protocolo agora.'))
@@ -209,9 +257,22 @@ export class ProtocolsComponent {
     this.loading.set(true);
     this.errorMessage.set('');
     this.protocolService.listTemplates().pipe(finalize(() => this.loading.set(false))).subscribe({
-      next: (templates) => this.templatesSignal.set(templates),
-      error: (error) => this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os protocolos.'))
+      next: (templates) => {
+        this.templatesSignal.set(templates);
+        this.loaded.set(true);
+        this.loadFailed.set(false);
+      },
+      error: (error) => {
+        this.loadFailed.set(true);
+        this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os protocolos.'));
+      }
     });
+  }
+
+  private resetModal(): void {
+    this.modalOpen.set(false);
+    this.modalErrorMessage.set('');
+    this.submitAttempted.set(false);
   }
 
   private clearMessages(): void {
