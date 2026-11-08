@@ -1,6 +1,6 @@
 import { IconComponent } from '../../shared/icon/icon.component';
 import { NgComponentOutlet } from '@angular/common';
-import { Component, Type, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, Injector, Type, afterNextRender, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -59,6 +59,7 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { RmaBlockHistoryComponent } from '../../shared/rma-block-history/rma-block-history.component';
 import { RmaPartsPanelComponent } from '../../shared/rma-parts-panel/rma-parts-panel.component';
+import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
 type SearchStatusValue = RmaStatus | '';
 type FailureTypeValue = FailureType | '';
@@ -85,7 +86,7 @@ export function sameFilters(a: RmaListFilters | null, b: RmaListFilters | null):
 
 @Component({
   selector: 'app-rmas',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlockHistoryComponent, PageHeaderComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlockHistoryComponent, PageHeaderComponent, RowActionComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {
@@ -149,11 +150,6 @@ export function sameFilters(a: RmaListFilters | null, b: RmaListFilters | null):
       margin: 0;
     }
 
-    .rma-open-hint {
-      color: var(--brand-blue);
-      font-weight: 700;
-    }
-
 
     .rma-items-editor,
     .rma-details {
@@ -212,6 +208,11 @@ export function sameFilters(a: RmaListFilters | null, b: RmaListFilters | null):
 
     .rma-details__summary {
       grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .rma-details__summary,
+    .rma-items-editor,
+    .rma-diagnosis__context {
       padding: 0.9rem 1rem;
       border: 1px solid var(--line);
       border-radius: var(--radius-md);
@@ -245,17 +246,6 @@ export function sameFilters(a: RmaListFilters | null, b: RmaListFilters | null):
     }
 
     .rma-items-editor {
-      padding: 0.9rem;
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      background: var(--surface-alt);
-    }
-
-    .rma-items-editor__header,
-    .rma-item-editor__header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
       gap: 0.75rem;
     }
 
@@ -269,9 +259,17 @@ export function sameFilters(a: RmaListFilters | null, b: RmaListFilters | null):
       background: #ffffff;
     }
 
-    .rma-item-editor__header,
     .rma-item-editor__error {
       grid-column: 1 / -1;
+      margin: 0;
+    }
+
+    /* Aligns the row action with the controls: same top offset as a label, same height as a control. */
+    .rma-item-editor__action {
+      display: flex;
+      align-items: center;
+      min-height: var(--control-height);
+      margin-top: calc(1lh + var(--space-2));
     }
 
     .rma-items-detail {
@@ -315,51 +313,70 @@ export function sameFilters(a: RmaListFilters | null, b: RmaListFilters | null):
 
 
 
-    .purchase-date-unknown {
-      min-height: var(--control-height);
-      align-self: center;
-    }
-
-    .rma-create-form {
-      grid-template-columns: repeat(6, minmax(0, 1fr));
-    }
-
     .rma-create-form > * {
       grid-column: 1 / -1;
-    }
-
-    .rma-create-form > .col-2 {
-      grid-column: span 2;
-    }
-
-    .rma-create-form > .col-3 {
-      grid-column: span 3;
     }
 
     .rma-create-form textarea {
       min-height: 84px;
     }
 
-    .rma-create-form > .rma-items-field {
+    .rma-create-form__receipt {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .rma-create-form__receipt > .col-2 {
+      grid-column: span 2;
+    }
+
+    .rma-create-form__receipt > .col-3 {
+      grid-column: span 3;
+    }
+
+    /* Purchase date, "Compra desconhecida" and its consequence stacked in one group;
+       .modal-panel .field-group would otherwise impose three rows. */
+    .rma-purchase {
       grid-template-rows: auto;
     }
 
+    .rma-create-form__done {
+      display: grid;
+      gap: var(--space-3);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--line);
+    }
+
+    .rma-create-form__done > summary {
+      width: fit-content;
+      cursor: pointer;
+      font-weight: var(--font-weight-semibold);
+    }
+
     .rma-item-editor--row {
-      grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr)) auto;
+    }
+
+    /* Read-only context the technician compares with the found failure. */
+    .rma-diagnosis__context {
+      margin-bottom: var(--space-4);
     }
 
     @media (max-width: 900px) {
-      .rma-create-form {
+      .rma-create-form__receipt {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
-      .rma-create-form > .col-2,
-      .rma-create-form > .col-3 {
+      .rma-create-form__receipt > .col-2,
+      .rma-create-form__receipt > .col-3 {
         grid-column: span 1;
       }
 
       .rma-item-editor--row {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .rma-item-editor__action {
+        margin-top: 0;
       }
     }
 
@@ -371,7 +388,7 @@ export function sameFilters(a: RmaListFilters | null, b: RmaListFilters | null):
     }
 
     @media (max-width: 720px) {
-      .rma-create-form,
+      .rma-create-form__receipt,
       .rma-item-editor,
       .rma-item-editor--row {
         grid-template-columns: 1fr;
@@ -386,10 +403,23 @@ export class RmasComponent {
   private readonly catalogService = inject(CatalogService);
   private readonly rmaService = inject(RmaService);
   private readonly route = inject(ActivatedRoute);
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
+  private readonly injector = inject(Injector);
 
   protected readonly createSubmitting = signal(false);
+  /** Creation feedback shown inside the dialog (validation and service errors). */
+  protected readonly createErrorMessage = signal('');
+  protected readonly createSubmitAttempted = signal(false);
+  /**
+   * "Atendimento já realizado" group. Collapsing only hides the presentation:
+   * its controls stay in the DOM and in createForm.
+   */
+  protected readonly retroactiveOpen = signal(false);
   protected readonly dateErrors = signal<CreateDateErrors>({ manufacturedAt: [], purchaseDate: '', entryDate: '' });
   protected readonly diagnosisSubmitting = signal(false);
+  /** Diagnosis feedback shown inside the dialog (validation and service errors). */
+  protected readonly diagnosisErrorMessage = signal('');
+  protected readonly diagnosisSubmitAttempted = signal(false);
   protected readonly historyLoading = signal(false);
 
   protected readonly pageError = signal('');
@@ -640,7 +670,13 @@ export class RmasComponent {
 
     this.pageError.set('');
     this.pageMessage.set('');
+    this.createErrorMessage.set('');
+    this.createSubmitAttempted.set(false);
     this.activeModal.set('create');
+  }
+
+  protected showCreateError(control: AbstractControl): boolean {
+    return control.invalid && (control.touched || this.createSubmitAttempted());
   }
 
   protected openDetailsModal(rma: RmaResponse): void {
@@ -669,7 +705,13 @@ export class RmasComponent {
 
     this.pageError.set('');
     this.pageMessage.set('');
+    this.diagnosisErrorMessage.set('');
+    this.diagnosisSubmitAttempted.set(false);
     this.activeModal.set('diagnosis');
+  }
+
+  protected showDiagnosisError(control: AbstractControl): boolean {
+    return control.invalid && (control.touched || this.diagnosisSubmitAttempted());
   }
 
   protected closeModal(): void {
@@ -730,10 +772,14 @@ export class RmasComponent {
       return;
     }
 
+    this.createErrorMessage.set('');
+
     if (this.createForm.invalid) {
       this.createForm.markAllAsTouched();
-      this.pageError.set('Preencha os campos obrigatórios.');
+      this.createSubmitAttempted.set(true);
+      this.createErrorMessage.set('Preencha os campos obrigatórios.');
       this.pageMessage.set('');
+      this.revealInvalidRetroactiveField();
       return;
     }
 
@@ -741,7 +787,7 @@ export class RmasComponent {
     const dateErrors = this.validateCreateDates();
     this.dateErrors.set(dateErrors);
     if (dateErrors.manufacturedAt.some(Boolean) || dateErrors.purchaseDate || dateErrors.entryDate) {
-      this.pageError.set('Corrija as datas indicadas no formulário.');
+      this.createErrorMessage.set('Corrija as datas indicadas no formulário.');
       this.pageMessage.set('');
       return;
     }
@@ -777,6 +823,7 @@ export class RmasComponent {
         this.selectedRmaSignal.set(rma);
         this.primeDetailForms(rma);
         this.resetCreateForm();
+        this.createSubmitAttempted.set(false);
         this.filtersForm.setValue({ query: '', status: '' });
         this.appliedFilters.set({});
         this.resetModal();
@@ -784,7 +831,7 @@ export class RmasComponent {
         this.refreshRmas();
       },
       error: (error) => {
-        this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível abrir o RMA agora.'));
+        this.createErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível abrir o RMA agora.'));
       }
     });
   }
@@ -801,9 +848,12 @@ export class RmasComponent {
       return;
     }
 
+    this.diagnosisErrorMessage.set('');
+
     if (this.diagnosisForm.invalid) {
       this.diagnosisForm.markAllAsTouched();
-      this.pageError.set('Preencha os campos obrigatórios do diagnóstico.');
+      this.diagnosisSubmitAttempted.set(true);
+      this.diagnosisErrorMessage.set('Preencha os campos obrigatórios do diagnóstico.');
       return;
     }
 
@@ -827,14 +877,26 @@ export class RmasComponent {
       next: (updated) => {
         this.selectedRmaSignal.set(updated);
         this.primeDetailForms(updated);
+        this.diagnosisSubmitAttempted.set(false);
         this.resetModal();
         this.pageMessage.set(`Diagnóstico do ${updated.code} salvo com sucesso.`);
         this.refreshRmas();
       },
       error: (error) => {
-        this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível salvar o diagnóstico agora.'));
+        this.diagnosisErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível salvar o diagnóstico agora.'));
       }
     });
+  }
+
+  /** Opens the collapsed retroactive group and focuses its first invalid field, if any. */
+  private revealInvalidRetroactiveField(): void {
+    const invalid = RETROACTIVE_CONTROLS.find((name) => this.createForm.controls[name].invalid);
+    if (!invalid) return;
+
+    this.retroactiveOpen.set(true);
+    afterNextRender(() => {
+      this.host.nativeElement.querySelector<HTMLElement>(`#${invalid}`)?.focus();
+    }, { injector: this.injector });
   }
 
   /** Opens the RMA referenced by an internal notification link (/rmas?rma=<id>). */
@@ -944,6 +1006,7 @@ export class RmasComponent {
       testSummary: ''
     });
     this.dateErrors.set({ manufacturedAt: [], purchaseDate: '', entryDate: '' });
+    this.retroactiveOpen.set(false);
   }
 
   private validateCreateDates(): CreateDateErrors {
@@ -1005,7 +1068,10 @@ function atLeastOneItemIdentification(control: AbstractControl): ValidationError
   return batchNumber?.trim() || serialNumber?.trim() ? null : { identificationRequired: true };
 }
 
-const STATUS_FILTER_OPTIONS: ReadonlyArray<CustomSelectOption<SearchStatusValue>> = [
+/** Records of a service already performed, in the order of the "Atendimento já realizado" group. */
+const RETROACTIVE_CONTROLS = ['repairSummary', 'replacedPartsSummary', 'testSummary'] as const;
+
+const STATUS_FILTER_OPTIONS:ReadonlyArray<CustomSelectOption<SearchStatusValue>> = [
   { value: '', label: 'Todos' },
   ...RMA_STATUS_FLOW.map((status) => ({
     value: status,

@@ -199,7 +199,7 @@
           </div>
           <div class="rma-details__header-actions">
             @if (canRegisterDiagnosis()) {
-              <button type="button" class="button-primary" (click)="openDiagnosisModal()">Diagnóstico</button>
+              <button type="button" class="button-primary" (click)="openDiagnosisModal()">{{ rma.diagnosis ? 'Editar diagnóstico' : 'Registrar diagnóstico' }}</button>
             }
             <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
@@ -316,60 +316,63 @@
 
 @if (activeModal() === 'create') {
   <section class="modal-overlay" (click)="closeModal()">
-    <article class="panel modal-panel modal-panel--form-wide" (click)="$event.stopPropagation()">
+    <article class="panel modal-panel modal-panel--form-wide" role="dialog" aria-modal="true" aria-labelledby="rma-create-title" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <div>
-          <h3>Novo RMA</h3>
-          <p>Preencha os dados do atendimento.</p>
+          <h3 id="rma-create-title">Novo RMA</h3>
         </div>
         <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar" [disabled]="createSubmitting()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
       </div>
 
+      @if (createErrorMessage()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ createErrorMessage() }}</strong>
+        </article>
+      }
+
       <form [formGroup]="createForm" (ngSubmit)="createRma()" class="form-grid rma-create-form">
-        <div class="field-group col-2">
-          <label>Cliente</label>
-          <app-custom-select
-            formControlName="clientId"
-            ariaLabel="Selecionar cliente"
-            [options]="clientSelectOptions()"
-          />
-        </div>
+        <fieldset class="form-section">
+          <legend>Atendimento</legend>
 
-        <div class="field-group col-2">
-          <label>Prioridade</label>
-          <app-custom-select
-            formControlName="priority"
-            ariaLabel="Selecionar prioridade"
-            [options]="prioritySelectOptions"
-          />
-        </div>
+          <div class="field-group">
+            <label>Cliente</label>
+            <app-custom-select
+              formControlName="clientId"
+              ariaLabel="Selecionar cliente"
+              [options]="clientSelectOptions()"
+            />
+            @if (showCreateError(createForm.controls.clientId)) {
+              <small class="field-error">Selecione o cliente.</small>
+            }
+          </div>
 
-        <div class="field-group col-2">
-          <label for="invoiceNumber">Nota fiscal</label>
-          <input id="invoiceNumber" type="text" formControlName="invoiceNumber" />
-        </div>
+          <div class="field-group">
+            <label>Prioridade</label>
+            <app-custom-select
+              formControlName="priority"
+              ariaLabel="Selecionar prioridade"
+              [options]="prioritySelectOptions"
+            />
+          </div>
 
-        <div class="field-group field-group--full rma-items-field" formArrayName="items">
-          <div class="rma-items-editor">
-            <div class="rma-items-editor__header">
-              <div>
-                <strong>Produtos do RMA</strong>
-                <p class="muted-inline">Cada produto pode ter seu próprio lote ou serial.</p>
-              </div>
-              <button type="button" class="button-secondary" (click)="addCreateItem()">Adicionar produto</button>
-            </div>
+          <div class="field-group field-group--full">
+            <label for="reportedFailure">Falha relatada</label>
+            <textarea id="reportedFailure" formControlName="reportedFailure" rows="4" maxlength="1000"></textarea>
+            @if (showCreateError(createForm.controls.reportedFailure)) {
+              <small class="field-error">Descreva a falha relatada.</small>
+            }
+          </div>
+        </fieldset>
 
+        <fieldset class="form-section">
+          <legend>Produtos e identificação</legend>
+          <p class="muted-inline field-group--full">Informe o lote, a série ou os dois para cada produto.</p>
+
+          <div class="rma-items-editor field-group--full" formArrayName="items">
             @for (itemForm of createItems.controls; track itemForm; let index = $index) {
-              <div class="rma-item-editor rma-item-editor--row" [formGroupName]="index">
-                <div class="rma-item-editor__header">
-                  <strong>Item {{ index + 1 }}</strong>
-                  @if (createItems.length > 1) {
-                    <button type="button" class="button-secondary" (click)="removeCreateItem(index)">Remover</button>
-                  }
-                </div>
-
+              <div class="rma-item-editor rma-item-editor--row" [formGroupName]="index" role="group" [attr.aria-label]="'Produto ' + (index + 1)">
                 <div class="field-group">
                   <label>Produto</label>
                   <app-custom-select
@@ -377,16 +380,25 @@
                     [ariaLabel]="'Selecionar produto do item ' + (index + 1)"
                     [options]="productSelectOptions()"
                   />
+                  @if (showCreateError(itemForm.controls.productId)) {
+                    <small class="field-error">Selecione o produto.</small>
+                  }
                 </div>
 
                 <div class="field-group">
                   <label [for]="'batchNumber-' + index">Lote</label>
-                  <input [id]="'batchNumber-' + index" type="text" formControlName="batchNumber" placeholder="Informe lote ou serial" />
+                  <input [id]="'batchNumber-' + index" type="text" formControlName="batchNumber" />
+                  @if (showCreateError(itemForm.controls.batchNumber)) {
+                    <small class="field-error">Use até 60 caracteres.</small>
+                  }
                 </div>
 
                 <div class="field-group">
-                  <label [for]="'serialNumber-' + index">Serial</label>
-                  <input [id]="'serialNumber-' + index" type="text" formControlName="serialNumber" placeholder="Informe lote ou serial" />
+                  <label [for]="'serialNumber-' + index">Série</label>
+                  <input [id]="'serialNumber-' + index" type="text" formControlName="serialNumber" />
+                  @if (showCreateError(itemForm.controls.serialNumber)) {
+                    <small class="field-error">Use até 60 caracteres.</small>
+                  }
                 </div>
 
                 <div class="field-group">
@@ -401,71 +413,103 @@
                   }
                 </div>
 
-                @if (itemForm.hasError('identificationRequired') && itemForm.touched) {
-                  <p class="field-error rma-item-editor__error">Informe ao menos o lote ou o serial deste produto.</p>
+                <div class="rma-item-editor__action">
+                  @if (createItems.length > 1) {
+                    <button appRowAction icon="trash" tone="danger" label="Remover produto" [target]="'' + (index + 1)" (click)="removeCreateItem(index)"></button>
+                  }
+                </div>
+
+                @if (itemForm.hasError('identificationRequired') && (itemForm.touched || createSubmitAttempted())) {
+                  <p class="field-error rma-item-editor__error">Informe ao menos o lote ou a série deste produto.</p>
                 }
               </div>
             }
+
+            <div>
+              <button type="button" class="button-secondary" (click)="addCreateItem()">Adicionar produto</button>
+            </div>
           </div>
-        </div>
+        </fieldset>
 
-        <div class="field-group col-2">
-          <label>Compra</label>
-          <app-date-picker
-            formControlName="purchaseDate"
-            ariaLabel="Data da compra"
-            [disabled]="createForm.controls.purchaseDateUnknown.value"
-            [minDate]="purchaseMinDate"
-            [maxDate]="todayDate"
-          />
-          @if (dateErrors().purchaseDate) {
-            <small class="field-error">{{ dateErrors().purchaseDate }}</small>
-          }
-        </div>
+        <fieldset class="form-section rma-create-form__receipt">
+          <legend>Recebimento</legend>
 
-        <label class="checkbox-row purchase-date-unknown col-2">
-          <input type="checkbox" formControlName="purchaseDateUnknown" />
-          <span>Data da compra desconhecida</span>
-        </label>
+          <div class="field-group col-2">
+            <label for="invoiceNumber">Nota fiscal</label>
+            <input id="invoiceNumber" type="text" formControlName="invoiceNumber" />
+          </div>
 
-        <div class="field-group col-2">
-          <label>Entrada</label>
-          <app-date-picker formControlName="entryDate" ariaLabel="Data de entrada" [allowClear]="false" [minDate]="entryMinDate" />
-          @if (dateErrors().entryDate) {
-            <small class="field-error">{{ dateErrors().entryDate }}</small>
-          }
-        </div>
+          <div class="field-group rma-purchase col-2" role="group" aria-labelledby="rma-purchase-label">
+            <span id="rma-purchase-label">Data da compra</span>
+            <app-date-picker
+              formControlName="purchaseDate"
+              ariaLabel="Data da compra"
+              [disabled]="createForm.controls.purchaseDateUnknown.value"
+              [minDate]="purchaseMinDate"
+              [maxDate]="todayDate"
+            />
+            <label class="checkbox-row">
+              <input type="checkbox" formControlName="purchaseDateUnknown" />
+              <span>Compra desconhecida</span>
+            </label>
+            @if (createForm.controls.purchaseDateUnknown.value) {
+              <small class="muted-inline">Sem data da compra, a garantia fica pendente.</small>
+            }
+            @if (dateErrors().purchaseDate) {
+              <small class="field-error">{{ dateErrors().purchaseDate }}</small>
+            }
+          </div>
 
+          <div class="field-group col-2">
+            <label>Entrada</label>
+            <app-date-picker formControlName="entryDate" ariaLabel="Data de entrada" [allowClear]="false" [minDate]="entryMinDate" />
+            @if (dateErrors().entryDate) {
+              <small class="field-error">{{ dateErrors().entryDate }}</small>
+            }
+          </div>
 
-        <div class="field-group field-group--full">
-          <label for="reportedFailure">Falha relatada</label>
-          <textarea id="reportedFailure" formControlName="reportedFailure" rows="4" maxlength="1000"></textarea>
-        </div>
+          <div class="field-group col-3">
+            <label for="receivedAccessories">Acessórios</label>
+            <textarea id="receivedAccessories" formControlName="receivedAccessories" rows="3" maxlength="500"></textarea>
+          </div>
 
-        <div class="field-group col-3">
-          <label for="receivedAccessories">Acessórios</label>
-          <textarea id="receivedAccessories" formControlName="receivedAccessories" rows="3" maxlength="500"></textarea>
-        </div>
+          <div class="field-group col-3">
+            <label for="physicalCondition">Condição física</label>
+            <textarea id="physicalCondition" formControlName="physicalCondition" rows="3" maxlength="500"></textarea>
+          </div>
+        </fieldset>
 
-        <div class="field-group col-3">
-          <label for="physicalCondition">Condição física</label>
-          <textarea id="physicalCondition" formControlName="physicalCondition" rows="3" maxlength="500"></textarea>
-        </div>
+        <details class="rma-create-form__done" [open]="retroactiveOpen()" (toggle)="retroactiveOpen.set($any($event.target).open)">
+          <summary>Atendimento já realizado</summary>
+          <fieldset class="form-section">
+            <legend class="sr-only">Atendimento já realizado</legend>
+            <p class="muted-inline field-group--full">Para registrar reparo, peças trocadas e testes feitos antes da abertura.</p>
 
-        <div class="field-group col-2">
-          <label for="repairSummary">Reparo</label>
-          <textarea id="repairSummary" formControlName="repairSummary" rows="3" maxlength="600"></textarea>
-        </div>
+            <div class="field-group">
+              <label for="repairSummary">Reparo</label>
+              <textarea id="repairSummary" formControlName="repairSummary" rows="3" maxlength="600"></textarea>
+              @if (showCreateError(createForm.controls.repairSummary)) {
+                <small class="field-error">Use até 600 caracteres.</small>
+              }
+            </div>
 
-        <div class="field-group col-2">
-          <label for="replacedPartsSummary">Peças trocadas</label>
-          <textarea id="replacedPartsSummary" formControlName="replacedPartsSummary" rows="3" maxlength="600"></textarea>
-        </div>
+            <div class="field-group">
+              <label for="replacedPartsSummary">Peças trocadas</label>
+              <textarea id="replacedPartsSummary" formControlName="replacedPartsSummary" rows="3" maxlength="600"></textarea>
+              @if (showCreateError(createForm.controls.replacedPartsSummary)) {
+                <small class="field-error">Use até 600 caracteres.</small>
+              }
+            </div>
 
-        <div class="field-group col-2">
-          <label for="testSummary">Testes</label>
-          <textarea id="testSummary" formControlName="testSummary" rows="3" maxlength="800"></textarea>
-        </div>
+            <div class="field-group field-group--full">
+              <label for="testSummary">Testes</label>
+              <textarea id="testSummary" formControlName="testSummary" rows="3" maxlength="800"></textarea>
+              @if (showCreateError(createForm.controls.testSummary)) {
+                <small class="field-error">Use até 800 caracteres.</small>
+              }
+            </div>
+          </fieldset>
+        </details>
 
         <div class="form-actions form-actions--full">
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="createSubmitting()">Cancelar</button>
@@ -480,55 +524,87 @@
 
 @if (activeModal() === 'diagnosis') {
   <section class="modal-overlay" (click)="closeModal()">
-    <article class="panel modal-panel modal-panel--narrow" (click)="$event.stopPropagation()">
+    <article class="panel modal-panel modal-panel--narrow" role="dialog" aria-modal="true" aria-labelledby="rma-diagnosis-title" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <div>
-          <h3>Diagnóstico</h3>
-          <p>{{ selectedRma()?.code }}</p>
+          <h3 id="rma-diagnosis-title">Diagnóstico</h3>
+          <p><span class="code-text">{{ selectedRma()?.code }}</span> · {{ selectedRma()?.clientName }}</p>
         </div>
         <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar" [disabled]="diagnosisSubmitting()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
       </div>
 
+      <section class="rma-details__section rma-diagnosis__context" aria-labelledby="rma-diagnosis-reported">
+        <h4 id="rma-diagnosis-reported">Falha relatada</h4>
+        <p>{{ selectedRma()?.reportedFailure }}</p>
+      </section>
+
+      @if (diagnosisErrorMessage()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ diagnosisErrorMessage() }}</strong>
+        </article>
+      }
+
       <form [formGroup]="diagnosisForm" (ngSubmit)="saveDiagnosis()" class="form-grid">
-        <div class="field-group field-group--full">
-          <label for="foundFailure">Falha encontrada</label>
-          <textarea id="foundFailure" formControlName="foundFailure" rows="4"></textarea>
-        </div>
+        <fieldset class="form-section">
+          <legend>Falha encontrada</legend>
 
-        <div class="field-group">
-          <label>Tipo de falha</label>
-          <app-custom-select
-            formControlName="failureType"
-            ariaLabel="Tipo de falha"
-            [options]="failureTypeSelectOptions"
-          />
-        </div>
+          <div class="field-group field-group--full">
+            <label for="foundFailure" class="sr-only">Falha encontrada</label>
+            <textarea id="foundFailure" formControlName="foundFailure" rows="4"></textarea>
+            @if (showDiagnosisError(diagnosisForm.controls.foundFailure)) {
+              <small class="field-error">{{ diagnosisForm.controls.foundFailure.hasError('maxlength') ? 'Use até 2000 caracteres.' : 'Descreva a falha encontrada.' }}</small>
+            }
+          </div>
 
-        <div class="field-group">
-          <label>Causa provável</label>
-          <app-custom-select
-            formControlName="probableCause"
-            ariaLabel="Causa provável"
-            [options]="failureCauseSelectOptions"
-          />
-        </div>
+          <div class="field-group">
+            <label>Tipo de falha</label>
+            <app-custom-select
+              formControlName="failureType"
+              ariaLabel="Tipo de falha"
+              [options]="failureTypeSelectOptions"
+            />
+          </div>
 
-        <div class="field-group">
-          <label>Data</label>
-          <app-date-picker formControlName="diagnosedAt" ariaLabel="Data do diagnóstico" [allowClear]="false" />
-        </div>
+          <div class="field-group">
+            <label>Causa provável</label>
+            <app-custom-select
+              formControlName="probableCause"
+              ariaLabel="Causa provável"
+              [options]="failureCauseSelectOptions"
+            />
+          </div>
+        </fieldset>
 
-        <div class="field-group">
-          <label for="technicianName">Técnico</label>
-          <input id="technicianName" type="text" formControlName="technicianName" />
-        </div>
+        <fieldset class="form-section">
+          <legend>Registro</legend>
 
-        <div class="field-group field-group--full">
-          <label for="diagnosisNotes">Notas</label>
-          <textarea id="diagnosisNotes" formControlName="notes" rows="4"></textarea>
-        </div>
+          <div class="field-group">
+            <label>Data do diagnóstico</label>
+            <app-date-picker formControlName="diagnosedAt" ariaLabel="Data do diagnóstico" [allowClear]="false" />
+            @if (showDiagnosisError(diagnosisForm.controls.diagnosedAt)) {
+              <small class="field-error">Informe a data do diagnóstico.</small>
+            }
+          </div>
+
+          <div class="field-group">
+            <label for="technicianName">Técnico</label>
+            <input id="technicianName" type="text" formControlName="technicianName" />
+            @if (showDiagnosisError(diagnosisForm.controls.technicianName)) {
+              <small class="field-error">{{ diagnosisForm.controls.technicianName.hasError('maxlength') ? 'Use até 120 caracteres.' : 'Informe o técnico.' }}</small>
+            }
+          </div>
+        </fieldset>
+
+        <fieldset class="form-section">
+          <legend>Notas</legend>
+
+          <div class="field-group field-group--full">
+            <label for="diagnosisNotes" class="sr-only">Notas</label>
+            <textarea id="diagnosisNotes" formControlName="notes" rows="4"></textarea>
+          </div>
+        </fieldset>
 
         <div class="form-actions form-actions--full">
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="diagnosisSubmitting()">Cancelar</button>

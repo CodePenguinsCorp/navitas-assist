@@ -262,6 +262,10 @@ describe('RmasComponent pending editor lifecycle', () => {
       url: mode === 'create' ? '/api/rmas' : '/api/rmas/1/diagnosis' });
   }
 
+  function editorFeedback(_mode: 'create' | 'diagnosis'): string | null | undefined {
+    return page.querySelector('[role="dialog"] [role="alert"]')?.textContent;
+  }
+
   function fail(request: TestRequest): void {
     request.flush({ message: 'RMA not saved', details: [] }, { status: 400, statusText: 'Bad Request' });
     fixture.detectChanges();
@@ -313,7 +317,7 @@ describe('RmasComponent pending editor lifecycle', () => {
       openEditor(mode);
       fillEditor(mode);
       fail(submit(mode));
-      expect(page.querySelector('.status-card h3')?.textContent).toContain('RMA not saved');
+      expect(editorFeedback(mode)).toContain('RMA not saved');
       expect(fieldValue(mode)).toBe('Falha mantida');
       expect((exitControl('close') as HTMLButtonElement).disabled).toBe(false);
       expect((exitControl('cancel') as HTMLButtonElement).disabled).toBe(false);
@@ -346,7 +350,7 @@ describe('RmasComponent pending editor lifecycle', () => {
       fixture.detectChanges();
       http.expectNone({ method: mode === 'create' ? 'POST' : 'PUT',
         url: mode === 'create' ? '/api/rmas' : '/api/rmas/1/diagnosis' });
-      expect(page.querySelector('.status-card h3')?.textContent).toContain('Preencha os campos obrigatórios');
+      expect(editorFeedback(mode)).toContain('Preencha os campos obrigatórios');
       expect((exitControl('close') as HTMLButtonElement).disabled).toBe(false);
     });
   });
