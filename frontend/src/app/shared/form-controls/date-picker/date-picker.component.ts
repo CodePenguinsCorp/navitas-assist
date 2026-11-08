@@ -43,6 +43,10 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
 
   readonly placeholder = input('Selecione uma data');
   readonly ariaLabel = input('Selecionar data');
+  /** Id(s) of the message that describes the trigger, such as a field error. */
+  readonly ariaDescribedBy = input<string | null>(null);
+  /** Reflects the invalid state of the bound field on the trigger. */
+  readonly ariaInvalid = input(false);
   readonly disabled = input(false);
   readonly allowClear = input(true);
   readonly minDate = input('');

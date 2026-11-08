@@ -5,6 +5,8 @@
     [disabled]="isDisabled()"
     [attr.aria-expanded]="isOpen()"
     [attr.aria-label]="ariaLabel()"
+    [attr.aria-describedby]="ariaDescribedBy()"
+    [attr.aria-invalid]="ariaInvalid() || null"
     (click)="toggle()"
   >
     <span class="custom-select__label">{{ selectedOption()?.label || placeholder() }}</span>

@@ -38,6 +38,10 @@ export class CustomSelectComponent implements ControlValueAccessor {
   readonly value = input<unknown>(CUSTOM_SELECT_NO_INPUT);
   readonly placeholder = input('Selecione');
   readonly ariaLabel = input('Seleção');
+  /** Id(s) of the message that describes the trigger, such as a field error. */
+  readonly ariaDescribedBy = input<string | null>(null);
+  /** Reflects the invalid state of the bound field on the trigger. */
+  readonly ariaInvalid = input(false);
   readonly disabled = input(false);
   /** 'compact' fits toolbars and table rows (34px, content width). */
   readonly size = input<'default' | 'compact'>('default');
