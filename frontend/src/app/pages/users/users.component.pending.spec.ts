@@ -36,7 +36,7 @@ describe('UsersComponent pending save lifecycle', () => {
 
   function openEditor(mode: 'create' | 'edit'): void {
     page.querySelector<HTMLButtonElement>(
-      mode === 'create' ? '.page-heading button' : '.user-actions button'
+      mode === 'create' ? '.page-heading button' : '.row-actions button'
     )!.click();
     fixture.detectChanges();
   }

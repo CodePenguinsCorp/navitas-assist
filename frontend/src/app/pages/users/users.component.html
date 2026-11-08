@@ -1,37 +1,17 @@
 <section class="page-surface">
-  <section class="page-heading">
-    <div>
-      <h1>Usuários</h1>
-    </div>
-    <div class="shell-actions">
-      <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo usuário</button>
-    </div>
-  </section>
-
-  <section class="stats-grid stats-grid--three">
-    <article class="panel stat-card">
-      <span class="icon-tile tone-success"><app-icon name="check" [size]="20" /></span>
-      <span>Ativos</span>
-      <strong>{{ summary().active }}</strong>
-    </article>
-    <article class="panel stat-card">
-      <span class="icon-tile tone-violet"><app-icon name="lock" [size]="20" /></span>
-      <span>Administradores</span>
-      <strong>{{ summary().admins }}</strong>
-    </article>
-    <article class="panel stat-card">
-      <span class="icon-tile tone-slate"><app-icon name="users" [size]="20" /></span>
-      <span>Perfis em uso</span>
-      <strong>{{ summary().roles }}</strong>
-    </article>
-  </section>
+  <app-page-header
+    heading="Usuários"
+    singular="usuário"
+    plural="usuários"
+    [count]="loadFailed() || !hasLoaded() ? null : totalElements()"
+    [total]="hasActiveFilters ? summary().total : null"
+  >
+    <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo usuário</button>
+  </app-page-header>
 
   <section class="panel catalog-toolbar catalog-toolbar--filters">
     <label class="search-field">
-      <span class="search-field__heading">
-        <span>Buscar</span>
-        <span class="catalog-toolbar__result">{{ totalElements() }} registro(s)</span>
-      </span>
+      <span>Buscar</span>
       <input
         #userSearch
         type="search"
@@ -63,33 +43,39 @@
 
   </section>
 
-  @if (errorMessage()) {
-    <article class="panel alert-banner alert-banner--error">
-      <strong>{{ errorMessage() }}</strong>
-    </article>
-  }
-
   @if (successMessage()) {
-    <article class="panel alert-banner alert-banner--success">
+    <article class="panel alert-banner alert-banner--success" role="status">
       <strong>{{ successMessage() }}</strong>
     </article>
   }
 
   <article class="table-card table-card--list panel">
-    @if (loading() && users().length === 0) {
+    @if (loadFailed()) {
+      <section class="empty-state" role="alert">
+        <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
+        <h3>Não foi possível carregar os usuários.</h3>
+        @if (errorMessage() && errorMessage() !== 'Não foi possível carregar os usuários.') {
+          <p>{{ errorMessage() }}</p>
+        }
+        <button type="button" class="button-secondary" (click)="retryLoad()" [disabled]="loading()">
+          {{ loading() ? 'Carregando...' : 'Tentar novamente' }}
+        </button>
+      </section>
+    } @else if (loading() && !hasLoaded()) {
       <p>Carregando usuários...</p>
     } @else if (users().length === 0 && !hasActiveFilters) {
       <section class="empty-state">
         <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
-        <h3>Nenhum usuário cadastrado.</h3>
+        <h3>Nenhum usuário cadastrado</h3>
         <p>Cadastre perfis internos para controlar o acesso ao sistema.</p>
         <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Cadastrar usuário</button>
       </section>
     } @else if (users().length === 0) {
       <section class="empty-state">
         <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
-        <h3>Nenhum resultado encontrado.</h3>
-        <p>Ajuste os filtros para localizar outro usuário.</p>
+        <h3>Nenhum usuário encontrado</h3>
+        <p>Ajuste a busca ou os filtros.</p>
+        <button type="button" class="button-secondary" (click)="clearFilters()">Limpar busca e filtros</button>
       </section>
     } @else {
       <div class="table-wrap">
@@ -101,7 +87,7 @@
               <th>Perfil</th>
               <th>Status</th>
               <th>Atualizado</th>
-              <th class="table-actions-col">Ação</th>
+              <th class="table-actions-col">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -117,26 +103,25 @@
                 </td>
                 <td>{{ updatedAtLabel(user) }}</td>
                 <td class="table-actions-col">
-                  <div class="user-actions">
+                  <div class="row-actions">
                     <button
-                      type="button"
-                      class="icon-button"
-                      title="Editar"
+                      appRowAction
+                      icon="pencil"
+                      label="Editar"
+                      [target]="user.fullName"
                       (click)="openEditModal(user)"
                       [disabled]="deletingUserId() === user.id"
-                    >
-                      <app-icon name="pencil" /><span class="sr-only">Editar</span>
-                    </button>
+                    ></button>
                     <button
-                      type="button"
-                      class="icon-button icon-button--danger"
-                      title="Excluir"
+                      appRowAction
+                      icon="trash"
+                      tone="danger"
+                      [label]="deletingUserId() === user.id ? 'Excluindo...' : 'Excluir'"
+                      [target]="user.fullName"
+                      [blockedReason]="deleteBlockedReason(user)"
+                      [disabled]="deletingUserId() !== null"
                       (click)="openDeleteModal(user)"
-                      [disabled]="deletingUserId() !== null || isCurrentUser(user)"
-                      [attr.title]="isCurrentUser(user) ? 'Você não pode excluir a própria conta.' : null"
-                    >
-                      <app-icon name="trash" /><span class="sr-only">{{ deletingUserId() === user.id ? 'Excluindo...' : 'Excluir' }}</span>
-                    </button>
+                    ></button>
                   </div>
                 </td>
               </tr>
@@ -160,11 +145,16 @@
 
 @if (activeModal()) {
   <div class="modal-overlay" (click)="closeModal()">
-    <section class="modal-panel user-form-modal panel" (click)="$event.stopPropagation()">
+    <section
+      class="modal-panel user-form-modal panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="user-form-title"
+      (click)="$event.stopPropagation()"
+    >
       <header class="modal-header">
         <div>
-          <h3>{{ editingUser() ? 'Editar usuário' : 'Novo usuário' }}</h3>
-          <p>{{ editingUser() ? 'Atualize os dados e as permissões do usuário.' : 'Crie um perfil de acesso para a operação.' }}</p>
+          <h3 id="user-form-title">{{ editingUser() ? 'Editar usuário' : 'Novo usuário' }}</h3>
         </div>
         <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()" [disabled]="submitting()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
@@ -178,50 +168,62 @@
       }
 
       <form class="form-grid user-form" [formGroup]="form" (ngSubmit)="saveUser()">
-        <label class="field-group">
-          <span>Nome completo</span>
-          <input type="text" formControlName="fullName" autocomplete="name" />
-          @if (hasError('fullName')) {
-            <small class="field-error">Informe o nome completo.</small>
-          }
-        </label>
+        <fieldset class="form-section">
+          <legend>Identidade</legend>
 
-        <label class="field-group">
-          <span>Usuário</span>
-          <input type="text" formControlName="username" autocomplete="username" />
-          @if (hasError('username')) {
-            <small class="field-error">Informe o usuário.</small>
-          }
-        </label>
+          <label class="field-group">
+            <span>Nome completo</span>
+            <input type="text" formControlName="fullName" autocomplete="name" />
+            @if (hasError('fullName')) {
+              <small class="field-error">Informe o nome completo.</small>
+            }
+          </label>
 
-        <label class="field-group">
-          <span>Perfil</span>
-          <app-custom-select
-            formControlName="role"
-            ariaLabel="Perfil do usuário"
-            [options]="userRoleOptions"
-          />
-        </label>
+          <label class="field-group">
+            <span>Usuário</span>
+            <input type="text" formControlName="username" autocomplete="username" />
+            @if (hasError('username')) {
+              <small class="field-error">Informe o usuário.</small>
+            }
+          </label>
+        </fieldset>
 
-        <label class="field-group">
-          <span>Status</span>
-          <span class="toggle-box">
-            <input type="checkbox" formControlName="active" />
-            <strong>Usuário ativo</strong>
-          </span>
-        </label>
+        <fieldset class="form-section">
+          <legend>Acesso</legend>
 
-        <label class="field-group field-group--full">
-          <span>{{ editingUser() ? 'Nova senha (opcional)' : 'Senha inicial' }}</span>
-          <input type="password" formControlName="password" autocomplete="new-password" />
-          @if (hasError('password')) {
-            <small class="field-error">
-              {{ form.controls.password.hasError('required') ? 'Informe a senha inicial.' : form.controls.password.hasError('passwordByteLength') ? 'Senha muito longa. Reduza a quantidade de caracteres.' : 'A senha precisa ter ao menos 6 caracteres.' }}
-            </small>
-          } @else if (editingUser()) {
-            <small class="field-hint">Deixe em branco para manter a senha atual.</small>
-          }
-        </label>
+          <label class="field-group">
+            <span>Perfil</span>
+            <app-custom-select
+              formControlName="role"
+              ariaLabel="Perfil do usuário"
+              [options]="userRoleOptions"
+            />
+          </label>
+
+          <label class="field-group">
+            <span>Status</span>
+            <span class="toggle-box">
+              <input type="checkbox" formControlName="active" />
+              <strong>Usuário ativo</strong>
+            </span>
+          </label>
+        </fieldset>
+
+        <fieldset class="form-section">
+          <legend>Senha</legend>
+
+          <label class="field-group field-group--full">
+            <span>{{ editingUser() ? 'Nova senha (opcional)' : 'Senha inicial' }}</span>
+            <input type="password" formControlName="password" autocomplete="new-password" />
+            @if (hasError('password')) {
+              <small class="field-error">
+                {{ form.controls.password.hasError('required') ? 'Informe a senha inicial.' : form.controls.password.hasError('passwordByteLength') ? 'Senha muito longa. Reduza a quantidade de caracteres.' : 'A senha precisa ter ao menos 6 caracteres.' }}
+              </small>
+            } @else if (editingUser()) {
+              <small class="field-hint">Deixe em branco para manter a senha atual.</small>
+            }
+          </label>
+        </fieldset>
 
         <div class="form-actions form-actions--full">
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="submitting()">

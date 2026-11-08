@@ -1,9 +1,9 @@
 import { initialsOf } from '../../core/utils/rma-ui';
 import { IconComponent } from '../../shared/icon/icon.component';
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
-import { Observable, Subject, debounceTime, finalize } from 'rxjs';
+import { Observable, Subject, debounceTime, filter, finalize } from 'rxjs';
 import { ROLE_LABELS, ROLE_OPTIONS } from '../../core/mock-data';
 import {
   UserAccountRequest,
@@ -21,7 +21,9 @@ import {
   CustomSelectComponent,
   CustomSelectOption
 } from '../../shared/form-controls/custom-select/custom-select.component';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
+import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
 type UserFormControlName = 'username' | 'fullName' | 'password' | 'role' | 'active';
 type UserStatusFilter = 'all' | 'active' | 'inactive';
@@ -32,12 +34,10 @@ const passwordByteLengthValidator: ValidatorFn = control =>
 
 @Component({
   selector: 'app-users',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PaginationComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PaginationComponent, PageHeaderComponent, RowActionComponent],
   templateUrl: './users.component.html',
   styles: [`
     :host { display: block; }
-
-    .user-actions { display: flex; gap: 0.45rem; }
 
     .user-form-modal {
       width: min(100%, 780px);
@@ -81,8 +81,10 @@ export class UsersComponent {
   protected readonly roleFilter = signal<UserRole | ''>('');
   protected readonly statusFilter = signal<UserStatusFilter>('all');
   protected readonly activeModal = signal<UserModalMode | null>(null);
+  /** Last list query failed; independent of the cached page and of form messages. */
+  protected readonly loadFailed = signal(false);
 
-  private readonly searchChanges = new Subject<void>();
+  private readonly searchChanges = new Subject<'search' | 'cancel'>();
   private readonly userList = new PagedList<UserAccountResponse>(
     (pageQuery) => this.catalogService.listUsers({
       ...pageQuery,
@@ -90,7 +92,11 @@ export class UsersComponent {
       role: this.roleFilter() || undefined,
       active: this.statusFilter() === 'all' ? undefined : this.statusFilter() === 'active'
     }),
-    (error) => this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os usuários.'))
+    (error) => {
+      this.loadFailed.set(true);
+      this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os usuários.'));
+    },
+    () => this.loadFailed.set(false)
   );
   private readonly summarySignal = signal<UserSummaryResponse>({ total: 0, active: 0, admins: 0, roles: 0 });
   private readonly editingUserSignal = signal<UserAccountResponse | null>(null);
@@ -105,6 +111,7 @@ export class UsersComponent {
   protected readonly summary = this.summarySignal.asReadonly();
   protected readonly editingUser = this.editingUserSignal.asReadonly();
   protected readonly deletingUser = this.deletingUserSignal.asReadonly();
+  protected readonly hasLoaded = computed(() => this.userList.result() !== null);
   protected readonly roleOptions = ROLE_OPTIONS;
   protected readonly roleFilterOptions = ROLE_FILTER_OPTIONS;
   protected readonly statusFilterOptions = STATUS_FILTER_OPTIONS;
@@ -121,6 +128,7 @@ export class UsersComponent {
   constructor() {
     this.searchChanges.pipe(
       debounceTime(SEARCH_DEBOUNCE_MS),
+      filter((kind) => kind === 'search'),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(() => this.userList.firstPage());
     this.loadUsers();
@@ -133,7 +141,19 @@ export class UsersComponent {
 
   protected updateSearch(value: string): void {
     this.searchTerm.set(value);
-    this.searchChanges.next();
+    this.searchChanges.next('search');
+  }
+
+  protected clearFilters(): void {
+    this.searchChanges.next('cancel');
+    this.searchTerm.set('');
+    this.roleFilter.set('');
+    this.statusFilter.set('all');
+    this.userList.firstPage();
+  }
+
+  protected retryLoad(): void {
+    this.userList.reload();
   }
 
   protected updateRoleFilter(value: UserRole | ''): void {
@@ -268,6 +288,10 @@ export class UsersComponent {
   protected isCurrentUser(user: UserAccountResponse): boolean {
     return user.username.toLocaleLowerCase('pt-BR') ===
       this.authService.currentUser()?.username.toLocaleLowerCase('pt-BR');
+  }
+
+  protected deleteBlockedReason(user: UserAccountResponse): string | null {
+    return this.isCurrentUser(user) ? 'Você não pode excluir a própria conta.' : null;
   }
 
   protected roleLabel(role: UserRole): string {
