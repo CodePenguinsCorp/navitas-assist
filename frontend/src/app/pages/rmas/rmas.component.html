@@ -1,123 +1,115 @@
 <section class="page-surface">
-  <section class="page-heading">
-    <div>
-      <h1>RMAs</h1>
-    </div>
-    <div class="shell-actions">
-      @if (canOpenRma()) {
-        <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo RMA</button>
-      }
-    </div>
-  </section>
+  <app-page-header heading="RMAs" singular="RMA" plural="RMAs" [count]="hasCurrentResult() ? totalElements() : null">
+    @if (canOpenRma()) {
+      <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo RMA</button>
+    }
+  </app-page-header>
 
-  <section class="stats-grid stats-grid--three">
-    <article class="panel stat-card">
-      <span class="icon-tile"><app-icon name="clipboard" [size]="20" /></span>
-      <span>RMAs encontrados</span>
-      <strong>{{ totalRmas() }}</strong>
-    </article>
-    <article class="panel stat-card">
-      <span class="icon-tile tone-warning"><app-icon name="wrench" [size]="20" /></span>
-      <span>Em atendimento (nesta página)</span>
-      <strong>{{ ongoingRmas() }}</strong>
-    </article>
-    <article class="panel stat-card">
-      <span class="icon-tile tone-danger"><app-icon name="flag" [size]="20" /></span>
-      <span>Prioridade alta (nesta página)</span>
-      <strong>{{ highPriorityRmas() }}</strong>
-    </article>
+  <section class="panel catalog-toolbar catalog-toolbar--filters">
+    <form [formGroup]="filtersForm" (ngSubmit)="submitFilters()" class="rma-filters">
+      <label class="search-field">
+        <span>Busca</span>
+        <input type="search" formControlName="query" placeholder="Cliente, RMA, lote ou série" />
+      </label>
+      <label class="filter-field">
+        <span>Status</span>
+        <app-custom-select
+          formControlName="status"
+          ariaLabel="Filtrar por status"
+          [options]="statusFilterOptions"
+        />
+      </label>
+      <div class="rma-filters__actions">
+        <button type="button" class="button-secondary" (click)="clearFilters()">Limpar</button>
+        <button type="submit" class="button-primary" [disabled]="loading()">Buscar</button>
+      </div>
+    </form>
+    @if (visibleSummary(); as s) {
+      <p class="rma-summary">No resultado: <strong>{{ s.ongoing }}</strong> em atendimento · <strong>{{ s.highPriority }}</strong> com prioridade alta</p>
+    }
   </section>
 
   @if (pageError()) {
-    <article class="status-card panel">
+    <article class="status-card panel" role="alert">
       <h3>{{ pageError() }}</h3>
     </article>
   }
 
   @if (pageMessage()) {
-    <article class="status-card panel success-card">
+    <article class="status-card panel success-card" role="status">
       <h3>{{ pageMessage() }}</h3>
     </article>
   }
 
-  <section class="two-column-grid">
-    <article class="panel form-panel">
-      <div class="support-line">
-        <h3>Filtros</h3>
-        <span class="catalog-toolbar__result">{{ totalElements() }} registro(s)</span>
+  <section class="panel form-panel rma-history" aria-labelledby="rma-history-title">
+    <h2 id="rma-history-title">Histórico por lote ou série</h2>
+    <form [formGroup]="historyForm" (ngSubmit)="searchHistory()" class="form-grid form-grid--inline">
+      <div class="field-group">
+        <label for="historyBatch">Lote</label>
+        <input id="historyBatch" type="text" formControlName="batchNumber" placeholder="LOT-2026-01" />
       </div>
-      <form [formGroup]="filtersForm" (ngSubmit)="submitFilters()" class="form-grid form-grid--inline">
-        <div class="field-group">
-          <label for="query">Busca</label>
-          <input id="query" type="text" formControlName="query" placeholder="Cliente, RMA, lote ou serial" />
-        </div>
 
-        <div class="field-group">
-          <label>Status</label>
-          <app-custom-select
-            formControlName="status"
-            ariaLabel="Filtrar por status"
-            [options]="statusFilterOptions"
-          />
-        </div>
+      <div class="field-group">
+        <label for="historySerial">Série</label>
+        <input id="historySerial" type="text" formControlName="serialNumber" placeholder="SN-445512" />
+      </div>
 
-        <div class="form-actions">
-          <button type="submit" class="button-primary" [disabled]="loading()">Buscar</button>
-          <button type="button" class="button-secondary" (click)="clearFilters()">Limpar</button>
-        </div>
-      </form>
-    </article>
+      <div class="form-actions">
+        <button type="submit" class="button-primary" [disabled]="historyLoading()">
+          {{ historyLoading() ? 'Consultando...' : 'Consultar' }}
+        </button>
+      </div>
+    </form>
 
-    <article class="panel form-panel">
-      <h3>Histórico</h3>
-      <form [formGroup]="historyForm" (ngSubmit)="searchHistory()" class="form-grid form-grid--inline">
-        <div class="field-group">
-          <label for="historyBatch">Lote</label>
-          <input id="historyBatch" type="text" formControlName="batchNumber" placeholder="LOT-2026-01" />
-        </div>
+    @if (historyError()) {
+      <p class="field-error" role="alert">{{ historyError() }}</p>
+    }
 
-        <div class="field-group">
-          <label for="historySerial">Serial</label>
-          <input id="historySerial" type="text" formControlName="serialNumber" placeholder="SN-445512" />
-        </div>
+    @if (historyMessage()) {
+      <p class="muted-inline" role="status">{{ historyMessage() }}</p>
+    }
 
-        <div class="form-actions">
-          <button type="submit" class="button-primary" [disabled]="historyLoading()">Consultar</button>
-        </div>
-      </form>
-
-      @if (historyError()) {
-        <p class="field-error">{{ historyError() }}</p>
-      }
-
-      @if (historyMessage()) {
-        <p class="muted-inline">{{ historyMessage() }}</p>
-      }
-
-      @if (historyResults().length > 0) {
-        <div class="history-stack">
-          @for (item of historyResults(); track item.id) {
-            <button type="button" class="history-item" (click)="selectHistoryItem(item)">
-              <strong><span class="code-text">{{ item.code }}</span> · {{ item.clientName }}</strong>
-              <span class="history-item__meta"><span class="status-chip" [attr.data-status]="item.status">{{ statusLabel(item.status) }}</span>{{ trackableLabel(item) }} · {{ dateLabel(item.entryDate) }}</span>
-            </button>
-          }
-        </div>
-      }
-    </article>
+    @if (historyResults().length > 0) {
+      <div class="history-stack">
+        @for (item of historyResults(); track item.id) {
+          <button type="button" class="history-item" (click)="selectHistoryItem(item)">
+            <strong><span class="code-text">{{ item.code }}</span> · {{ item.clientName }}</strong>
+            <span class="history-item__meta"><span class="status-chip" [attr.data-status]="item.status">{{ statusLabel(item.status) }}</span>{{ trackableLabel(item) }} · {{ dateLabel(item.entryDate) }}</span>
+          </button>
+        }
+      </div>
+    }
   </section>
 
   <article class="table-card table-card--list panel">
-    @if (loading() && rmas().length === 0) {
+    @if (loadFailed()) {
+      <section class="empty-state" role="alert">
+        <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
+        <h3>Não foi possível carregar os RMAs.</h3>
+        @if (listErrorMessage() && listErrorMessage() !== 'Não foi possível carregar os RMAs.') {
+          <p>{{ listErrorMessage() }}</p>
+        }
+        <button type="button" class="button-secondary" (click)="retryLoad()" [disabled]="loading()">
+          {{ loading() ? 'Carregando...' : 'Tentar novamente' }}
+        </button>
+      </section>
+    } @else if (loading() && !hasLoaded()) {
       <p>Carregando RMAs...</p>
-    } @else if (rmas().length === 0) {
+    } @else if (rmas().length === 0 && !hasActiveFilters()) {
       <section class="empty-state">
         <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
-        <h3>Nenhum RMA encontrado.</h3>
-        <p>Ajuste os filtros ou abra um novo RMA.</p>
+        <h3>Nenhum RMA registrado</h3>
+        <p>Abra o primeiro RMA para iniciar o atendimento.</p>
         @if (canOpenRma()) {
           <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo RMA</button>
         }
+      </section>
+    } @else if (rmas().length === 0) {
+      <section class="empty-state">
+        <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
+        <h3>Nenhum RMA encontrado</h3>
+        <p>Ajuste a busca ou o status.</p>
+        <button type="button" class="button-secondary" (click)="clearFilters()">Limpar busca e filtros</button>
       </section>
     } @else {
       <div class="table-wrap">
@@ -152,7 +144,7 @@
                 <td>{{ rma.clientName }}</td>
                 <td>
                   <strong class="table-title">{{ productSummary(rma) }}</strong>
-                  <span class="table-subtitle">{{ rma.items.length }} item(ns)</span>
+                  <span class="table-subtitle">{{ itemCountLabel(rma.items.length) }}</span>
                 </td>
                 <td><span class="status-chip" [attr.data-status]="rma.status">{{ statusLabel(rma.status) }}</span></td>
                 <td>

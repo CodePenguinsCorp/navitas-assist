@@ -1,9 +1,10 @@
 import { IconComponent } from '../../shared/icon/icon.component';
 import { NgComponentOutlet } from '@angular/common';
 import { Component, Type, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { finalize, forkJoin } from 'rxjs';
+import { Subject, catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 import {
   FAILURE_CAUSE_LABELS,
   FAILURE_CAUSE_OPTIONS,
@@ -42,6 +43,7 @@ import {
   priorityLabel,
   productSummary,
   initialsOf,
+  itemCountLabel,
   rmaItemTrackableLabel,
   statusLabel,
   trackableLabel,
@@ -53,6 +55,7 @@ import {
   CustomSelectOption
 } from '../../shared/form-controls/custom-select/custom-select.component';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { RmaBlockHistoryComponent } from '../../shared/rma-block-history/rma-block-history.component';
 import { RmaPartsPanelComponent } from '../../shared/rma-parts-panel/rma-parts-panel.component';
@@ -69,9 +72,20 @@ interface CreateDateErrors {
   entryDate: string;
 }
 
+/** Filters confirmed by "Buscar"/"Limpar"; the list and the summary only read these. */
+export interface RmaListFilters {
+  query?: string;
+  status?: RmaStatus;
+}
+
+export function sameFilters(a: RmaListFilters | null, b: RmaListFilters | null): boolean {
+  if (!a || !b) return false;
+  return (a.query ?? undefined) === (b.query ?? undefined) && (a.status ?? undefined) === (b.status ?? undefined);
+}
+
 @Component({
   selector: 'app-rmas',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlockHistoryComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlockHistoryComponent, PageHeaderComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {
@@ -95,6 +109,44 @@ interface CreateDateErrors {
 
     .rma-table-code {
       color: var(--brand-blue-deep);
+      white-space: nowrap;
+    }
+
+    /* The form only groups the controls; its children are items of the shared toolbar. */
+    .rma-filters {
+      display: contents;
+    }
+
+    .rma-filters__actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .rma-summary {
+      margin: 0;
+      margin-left: auto;
+      align-self: center;
+      color: var(--muted);
+      font-size: var(--font-size-md);
+    }
+
+    .rma-summary strong {
+      color: var(--text);
+    }
+
+    .rma-history {
+      display: grid;
+      gap: var(--space-3);
+    }
+
+    .rma-history h2 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .rma-history p {
+      margin: 0;
     }
 
     .rma-open-hint {
@@ -355,10 +407,31 @@ export class RmasComponent {
     { id: 'history', label: 'Histórico' }
   ];
 
+  /** Last filter confirmed by "Buscar" or "Limpar"; paging, size, refresh and retry reuse it. */
+  private readonly appliedFilters = signal<RmaListFilters>({});
+  /** Filter of the list request in flight; copied to resultFilters when it responds. */
+  private requestedFilters: RmaListFilters = {};
+  /** Filter of the list result on screen. */
+  private readonly resultFilters = signal<RmaListFilters | null>(null);
+  /** Last list query failed; independent of the cached page and of page messages. */
+  protected readonly loadFailed = signal(false);
+  protected readonly listErrorMessage = signal('');
+
   private readonly rmaList = new PagedList<RmaResponse>(
-    (pageQuery) => this.rmaService.list({ ...pageQuery, ...this.buildFilters() }),
-    (error) => this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível carregar os RMAs agora.')),
-    (rmas) => this.syncSelection(rmas)
+    (pageQuery) => {
+      const filters = this.appliedFilters();
+      this.requestedFilters = filters;
+      return this.rmaService.list({ ...pageQuery, query: filters.query, status: filters.status });
+    },
+    (error) => {
+      this.loadFailed.set(true);
+      this.listErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os RMAs.'));
+    },
+    (rmas) => {
+      this.resultFilters.set(this.requestedFilters);
+      this.loadFailed.set(false);
+      this.syncSelection(rmas);
+    }
   );
   private readonly historySignal = signal<RmaResponse[]>([]);
   private readonly clientsSignal = signal<ClientResponse[]>([]);
@@ -374,10 +447,24 @@ export class RmasComponent {
   protected readonly historyResults = this.historySignal.asReadonly();
   protected readonly selectedRma = this.selectedRmaSignal.asReadonly();
 
-  private readonly summarySignal = signal<RmaSummaryResponse>({ total: 0, ongoing: 0, highPriority: 0 });
-  protected readonly totalRmas = computed(() => this.summarySignal().total);
-  protected readonly ongoingRmas = computed(() => this.summarySignal().ongoing);
-  protected readonly highPriorityRmas = computed(() => this.summarySignal().highPriority);
+  protected readonly hasActiveFilters = computed(() =>
+    Boolean(this.appliedFilters().query || this.appliedFilters().status)
+  );
+  protected readonly hasLoaded = computed(() => this.rmaList.result() !== null);
+  /** The list on screen answers the confirmed filter and the last query did not fail. */
+  protected readonly hasCurrentResult = computed(() =>
+    this.rmaList.result() !== null && !this.loadFailed() && sameFilters(this.resultFilters(), this.appliedFilters())
+  );
+
+  private readonly summaryRequests = new Subject<RmaListFilters>();
+  private readonly summarySignal = signal<{ filters: RmaListFilters; value: RmaSummaryResponse } | null>(null);
+  protected readonly summary = this.summarySignal.asReadonly();
+  /** Indicators only for the filter of the list on screen; never zeros or another filter's values. */
+  protected readonly visibleSummary = computed(() => {
+    const summary = this.summarySignal();
+    return summary && this.hasCurrentResult() && sameFilters(summary.filters, this.resultFilters())
+      ? summary.value : null;
+  });
 
   protected readonly statusLabel = statusLabel;
   protected readonly priorityLabel = priorityLabel;
@@ -391,6 +478,7 @@ export class RmasComponent {
   protected readonly trackableLabel = trackableLabel;
   protected readonly ownerLabel = ownerLabel;
   protected readonly productSummary = productSummary;
+  protected readonly itemCountLabel = itemCountLabel;
   protected readonly itemTrackableLabel = rmaItemTrackableLabel;
   protected readonly initials = initialsOf;
 
@@ -480,6 +568,16 @@ export class RmasComponent {
       }
       this.dateErrors.set(this.validateCreateDates());
     });
+    this.summaryRequests.pipe(
+      switchMap((filters) => {
+        this.summarySignal.set(null);
+        return this.rmaService.getSummary(filters).pipe(
+          map((value) => ({ filters, value })),
+          catchError(() => of(null))
+        );
+      }),
+      takeUntilDestroyed()
+    ).subscribe((summary) => this.summarySignal.set(summary));
     this.seedOperatorDefaults();
     this.loadWorkspace();
     this.openRequestedRma();
@@ -500,6 +598,7 @@ export class RmasComponent {
   }
 
   protected submitFilters(): void {
+    this.appliedFilters.set(this.buildFilters());
     this.pageMessage.set('');
     this.pageError.set('');
     this.rmaList.firstPage();
@@ -521,9 +620,15 @@ export class RmasComponent {
       query: '',
       status: ''
     });
+    this.appliedFilters.set({});
     this.pageMessage.set('');
     this.pageError.set('');
     this.rmaList.firstPage();
+    this.loadSummary();
+  }
+
+  protected retryLoad(): void {
+    this.rmaList.reload();
     this.loadSummary();
   }
 
@@ -579,7 +684,7 @@ export class RmasComponent {
 
     if (!normalizedBatch && !normalizedSerial) {
       this.historyError.set('');
-      this.historyMessage.set('');
+      this.historyMessage.set('Informe o lote ou a série.');
       this.historySignal.set([]);
       return;
     }
@@ -597,9 +702,9 @@ export class RmasComponent {
       next: (results) => {
         this.historySignal.set(results);
         this.historyMessage.set(
-          results.length > 0
-            ? `${results.length} registro(s) encontrados.`
-            : 'Nenhum histórico encontrado.'
+          results.length === 0
+            ? 'Nenhum RMA encontrado para este lote ou série.'
+            : results.length === 1 ? '1 RMA encontrado' : `${results.length} RMAs encontrados`
         );
       },
       error: (error) => {
@@ -673,6 +778,7 @@ export class RmasComponent {
         this.primeDetailForms(rma);
         this.resetCreateForm();
         this.filtersForm.setValue({ query: '', status: '' });
+        this.appliedFilters.set({});
         this.resetModal();
         this.pageMessage.set(`RMA ${rma.code} criado com sucesso.`);
         this.refreshRmas();
@@ -774,10 +880,8 @@ export class RmasComponent {
   }
 
   private loadSummary(): void {
-    this.rmaService.getSummary(this.buildFilters()).subscribe({
-      next: (summary) => this.summarySignal.set(summary),
-      error: (error) => this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível carregar o resumo dos RMAs.'))
-    });
+    const { query, status } = this.appliedFilters();
+    this.summaryRequests.next({ query, status });
   }
 
   private syncSelection(rmas: RmaResponse[]): void {
@@ -870,7 +974,7 @@ export class RmasComponent {
       .at(-1) ?? '';
   }
 
-  private buildFilters(): { query?: string; status?: RmaStatus } {
+  private buildFilters(): RmaListFilters {
     const raw = this.filtersForm.getRawValue();
     const query = normalizeText(raw.query);
 

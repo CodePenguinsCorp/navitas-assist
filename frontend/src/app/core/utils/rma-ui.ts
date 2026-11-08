@@ -94,6 +94,10 @@ export function productSummary(rma: Pick<RmaResponse, 'items' | 'productName'>):
   return additionalItems > 0 ? `${firstProductName} + ${additionalItems} item(ns)` : firstProductName;
 }
 
+export function itemCountLabel(count: number): string {
+  return count === 1 ? '1 item' : `${count} itens`;
+}
+
 export function ownerLabel(
   rma: Pick<RmaResponse, 'assigneeName'>
 ): string {

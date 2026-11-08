@@ -1,11 +1,15 @@
 import { RmaResponse, WarrantyStatus } from '../models';
+import { buildRma, buildRmaItem } from '../../testing/rma-fixtures';
 import { formatDateTime as formatCatalogDateTime } from './catalog-ui';
 import {
   compareRmasForQueue,
   formatDateTime as formatRmaDateTime,
+  itemCountLabel,
   normalizeText,
   ownerLabel,
+  productSummary,
   rmaItemTrackableLabel,
+  trackableLabel,
   warrantyLabel,
 } from './rma-ui';
 
@@ -31,6 +35,24 @@ describe('RMA UI utilities', () => {
     const low = { priority: 'LOW', entryDate: '2026-01-01' } as RmaResponse;
     const high = { priority: 'HIGH', entryDate: '2026-10-01' } as RmaResponse;
     expect(compareRmasForQueue(high, low)).toBeLessThan(0);
+  });
+
+  it('formats item counts', () => {
+    // Hoje itemCountLabel não existe (vermelho de compilação).
+    expect(itemCountLabel(1)).toBe('1 item');
+    expect(itemCountLabel(2)).toBe('2 itens');
+    expect(itemCountLabel(0)).toBe('0 itens');
+  });
+
+  it('keeps productSummary and trackableLabel for several items', () => {
+    const rma = buildRma({
+      items: [
+        buildRmaItem({ productName: 'Produto A', serialNumber: 'S1', batchNumber: 'L1' }),
+        buildRmaItem({ id: 2, productName: 'Produto B', serialNumber: 'S2', batchNumber: null }),
+      ],
+    });
+    expect(productSummary(rma)).toBe('Produto A + 1 item(ns)');
+    expect(trackableLabel(rma)).toBe('Série S1 · Lote L1 + 1 item(ns)');
   });
 });
 

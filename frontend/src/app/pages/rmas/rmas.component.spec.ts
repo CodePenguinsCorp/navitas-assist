@@ -71,14 +71,16 @@ describe('RmasComponent form', () => {
     expect(component.dateErrors().entryDate).toContain('anterior');
   });
 
-  it('shows summary cards from server totals instead of the current page', () => {
+  it('shows result indicators from server totals', () => {
     fixture.detectChanges();
     const page: HTMLElement = fixture.nativeElement;
+    const summary = page.querySelector('.rma-summary')?.textContent ?? '';
 
     expect(rmaService.getSummary).toHaveBeenCalled();
-    expect(page.textContent).toContain('45');
-    expect(page.textContent).toContain('30');
-    expect(page.textContent).toContain('7');
+    expect(page.querySelector('.stat-card')).toBeNull();
+    expect(page.textContent).not.toContain('nesta página');
+    expect(summary).toContain('30');
+    expect(summary).toContain('7');
   });
 
   it('clears a purchase date when it is marked as unknown', () => {
