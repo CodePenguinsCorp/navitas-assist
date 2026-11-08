@@ -65,16 +65,26 @@ const MOVEMENT_TYPE_OPTIONS: ReadonlyArray<CustomSelectOption<ManualPartMovement
       line-height: var(--line-height-body);
     }
 
+    .movement-context {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+      gap: var(--space-3);
+      margin: 0;
+    }
+
+    .movement-context dt { color: var(--muted); }
+    .movement-context dd { margin: 0; overflow-wrap: anywhere; }
+    .movement-preview { grid-column: 1 / -1; }
+    .movement-preview p { margin: var(--space-2) 0; }
 
     .movement-reversal {
-      display: flex;
-      gap: 0.45rem;
-      align-items: center;
+      display: grid;
+      gap: var(--space-3);
+      padding: var(--space-3);
     }
 
-    .movement-reversal input {
-      min-width: 12rem;
-    }
+    .movement-reversal p { margin: 0; }
+    .movement-reversal .form-actions { flex-wrap: wrap; }
   `]
 })
 export class PartsComponent {
@@ -89,6 +99,7 @@ export class PartsComponent {
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private loadRequest?: Subscription;
+  private historyRequest?: Subscription;
 
   protected readonly loading = signal(true);
   protected readonly loadFailed = signal(false);
@@ -96,6 +107,7 @@ export class PartsComponent {
   protected readonly loadErrorMessage = signal('');
   protected readonly submitting = signal(false);
   protected readonly modalErrorMessage = signal('');
+  protected readonly movementFieldErrors = signal({ quantity: '', reason: '' });
   protected readonly successMessage = signal('');
   protected readonly searchTerm = signal('');
   protected readonly activeTab = signal<PartsTab>('stock');
@@ -117,6 +129,9 @@ export class PartsComponent {
   protected readonly historyPart = signal<PartResponse | null>(null);
   protected readonly history = signal<PartMovementResponse[]>([]);
   protected readonly historyLoading = signal(false);
+  protected readonly historyLoadFailed = signal(false);
+  protected readonly historyHasLoaded = signal(false);
+  protected readonly historyLoadErrorMessage = signal('');
   protected readonly reversingMovementId = signal<number | null>(null);
 
   protected readonly canManage = computed(() => this.authService.hasAnyRole(['ADMIN', 'SERVICE_DESK']));
@@ -219,24 +234,42 @@ export class PartsComponent {
   protected openMovementModal(part: PartResponse): void {
     this.movementPart.set(part);
     this.movementForm.reset({ type: 'ENTRY', quantity: 1, reason: '' });
+    this.movementFieldErrors.set({ quantity: '', reason: '' });
     this.clearMessages();
   }
 
+  protected movementPreview(): { onHandBefore: number; onHandAfter: number; reserved: number; availableBefore: number; availableAfter: number } | null {
+    const part = this.movementPart();
+    const { type, quantity } = this.movementForm.getRawValue();
+    if (!part || !Number.isFinite(quantity) || !quantity || (type !== 'ADJUSTMENT' && quantity < 0)) return null;
+    const change = type === 'EXIT' ? -quantity : quantity;
+    return { onHandBefore: part.onHand, onHandAfter: part.onHand + change, reserved: part.reserved, availableBefore: part.available, availableAfter: part.available + change };
+  }
+
   protected saveMovement(): void {
+    if (this.submitting()) return;
+    this.movementFieldErrors.set({ quantity: '', reason: '' });
+    this.modalErrorMessage.set('');
     const part = this.movementPart();
     const raw = this.movementForm.getRawValue();
     const reason = normalizeOptionalText(raw.reason);
 
-    if (!part || this.movementForm.invalid || !raw.quantity) {
-      this.modalErrorMessage.set('Informe uma quantidade diferente de zero.');
+    if (!part) return;
+    this.movementForm.markAllAsTouched();
+    if (this.movementForm.controls.quantity.invalid || !raw.quantity || !Number.isFinite(raw.quantity)) {
+      this.movementFieldErrors.set({ quantity: 'Informe uma quantidade diferente de zero.', reason: '' });
       return;
     }
     if (raw.type !== 'ADJUSTMENT' && raw.quantity < 0) {
-      this.modalErrorMessage.set('Entradas e saídas usam quantidade positiva.');
+      this.movementFieldErrors.set({ quantity: 'Entradas e saídas usam quantidade positiva.', reason: '' });
       return;
     }
     if (raw.type === 'ADJUSTMENT' && !reason) {
-      this.modalErrorMessage.set('Informe o motivo do ajuste.');
+      this.movementFieldErrors.set({ quantity: '', reason: 'Informe o motivo do ajuste.' });
+      return;
+    }
+    if (this.movementForm.controls.reason.invalid) {
+      this.movementFieldErrors.set({ quantity: '', reason: 'Use até 255 caracteres.' });
       return;
     }
 
@@ -244,32 +277,57 @@ export class PartsComponent {
   }
 
   protected openHistory(part: PartResponse): void {
+    if (this.submitting()) return;
     this.historyPart.set(part);
     this.history.set([]);
+    this.historyHasLoaded.set(false);
+    this.historyLoadFailed.set(false);
+    this.historyLoadErrorMessage.set('');
+    this.cancelReversal();
     this.clearMessages();
     this.loadHistory(part.id);
   }
 
+  protected retryHistory(): void {
+    const part = this.historyPart();
+    if (part && !this.historyLoading()) this.loadHistory(part.id);
+  }
+
   protected startReversal(movement: PartMovementResponse): void {
+    if (this.submitting()) return;
     this.reversingMovementId.set(movement.id);
     this.reversalReason.reset('');
     this.modalErrorMessage.set('');
   }
 
+  protected cancelReversal(): void {
+    if (this.submitting()) return;
+    this.reversingMovementId.set(null);
+    this.reversalReason.reset('');
+    this.modalErrorMessage.set('');
+  }
+
   protected confirmReversal(movement: PartMovementResponse): void {
+    if (this.submitting()) return;
     const reason = normalizeOptionalText(this.reversalReason.value);
     if (!reason) {
       this.modalErrorMessage.set('Informe o motivo do estorno.');
+      return;
+    }
+    if (this.reversalReason.invalid) {
+      this.modalErrorMessage.set('Use até 255 caracteres.');
       return;
     }
 
     this.submitting.set(true);
     this.modalErrorMessage.set('');
     this.partService.reverseMovement(movement.id, reason).pipe(
+      takeUntilDestroyed(this.destroyRef),
       finalize(() => this.submitting.set(false))
     ).subscribe({
       next: () => {
         this.reversingMovementId.set(null);
+        this.reversalReason.reset('');
         this.successMessage.set(`Movimento ${movement.id} estornado.`);
         this.loadHistory(movement.partId);
         this.load();
@@ -300,12 +358,26 @@ export class PartsComponent {
   }
 
   private loadHistory(partId: number): void {
+    if (this.historyPart()?.id !== partId) return;
+    this.historyRequest?.unsubscribe();
     this.historyLoading.set(true);
-    this.partService.listMovements(partId).pipe(
+    this.historyRequest = this.partService.listMovements(partId).pipe(
+      takeUntilDestroyed(this.destroyRef),
       finalize(() => this.historyLoading.set(false))
     ).subscribe({
-      next: (movements) => this.history.set(movements),
-      error: (error) => this.modalErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar o histórico.'))
+      next: (movements) => {
+        if (this.historyPart()?.id !== partId) return;
+        this.history.set(movements);
+        this.historyHasLoaded.set(true);
+        this.historyLoadFailed.set(false);
+        this.historyLoadErrorMessage.set('');
+      },
+      error: (error) => {
+        if (this.historyPart()?.id !== partId) return;
+        this.history.set([]);
+        this.historyLoadFailed.set(true);
+        this.historyLoadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar o histórico.'));
+      }
     });
   }
 
@@ -338,10 +410,16 @@ export class PartsComponent {
   }
 
   private resetModals(): void {
+    this.historyRequest?.unsubscribe();
     this.formOpen.set(false);
     this.movementPart.set(null);
     this.historyPart.set(null);
+    this.history.set([]);
+    this.historyHasLoaded.set(false);
+    this.historyLoadFailed.set(false);
+    this.historyLoadErrorMessage.set('');
     this.reversingMovementId.set(null);
+    this.reversalReason.reset('');
     this.modalErrorMessage.set('');
   }
 }

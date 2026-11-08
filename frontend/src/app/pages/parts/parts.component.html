@@ -278,12 +278,19 @@
       <header class="modal-header">
         <div>
           <h3>Movimentar estoque</h3>
-          <p><span class="code-text">{{ part.code }}</span> · {{ part.name }}. Disponível: <strong>{{ quantity(part.available, part.unit) }}</strong></p>
         </div>
         <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModals()" [disabled]="submitting()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
       </header>
+
+      <dl class="movement-context">
+        <div><dt>Código</dt><dd class="code-text">{{ part.code }}</dd></div>
+        <div><dt>Peça</dt><dd>{{ part.name }}</dd></div>
+        <div><dt>Em estoque</dt><dd>{{ quantity(part.onHand, part.unit) }}</dd></div>
+        <div><dt>Reservado</dt><dd>{{ quantity(part.reserved, part.unit) }}</dd></div>
+        <div><dt>Disponível</dt><dd><strong>{{ quantity(part.available, part.unit) }}</strong></dd></div>
+      </dl>
 
       @if (modalErrorMessage()) {
         <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
@@ -292,18 +299,41 @@
       }
 
       <form class="form-grid" [formGroup]="movementForm" (ngSubmit)="saveMovement()">
-        <label class="field-group">
-          <span>Tipo</span>
-          <app-custom-select ariaLabel="Tipo de movimento" [options]="movementTypeOptions" formControlName="type" />
-        </label>
-        <label class="field-group">
-          <span>Quantidade {{ movementForm.controls.type.value === 'ADJUSTMENT' ? '(negativa reduz o saldo)' : '' }}</span>
-          <input type="number" step="any" formControlName="quantity" />
-        </label>
-        <label class="field-group field-group--full">
-          <span>Motivo {{ movementForm.controls.type.value === 'ADJUSTMENT' ? '(obrigatório)' : '' }}</span>
-          <input type="text" formControlName="reason" [attr.maxlength]="limits.reason" />
-        </label>
+        <fieldset class="form-section">
+          <legend>Movimento</legend>
+          <label class="field-group">
+            <span>Tipo</span>
+            <app-custom-select ariaLabel="Tipo de movimento" [options]="movementTypeOptions" formControlName="type" />
+          </label>
+          <label class="field-group">
+            <span>Quantidade ({{ part.unit }}) {{ movementForm.controls.type.value === 'ADJUSTMENT' ? '(negativa reduz o saldo)' : '' }}</span>
+            <input type="number" step="any" formControlName="quantity" [attr.aria-describedby]="movementFieldErrors().quantity ? 'movement-quantity-error' : null" />
+            @if (movementFieldErrors().quantity) {
+              <small id="movement-quantity-error" class="field-error" role="alert">{{ movementFieldErrors().quantity }}</small>
+            }
+          </label>
+          <label class="field-group field-group--full">
+            <span>Motivo {{ movementForm.controls.type.value === 'ADJUSTMENT' ? '(obrigatório)' : '' }}</span>
+            <input type="text" formControlName="reason" [attr.maxlength]="limits.reason" [attr.aria-describedby]="movementFieldErrors().reason ? 'movement-reason-error' : null" />
+            @if (movementFieldErrors().reason) {
+              <small id="movement-reason-error" class="field-error" role="alert">{{ movementFieldErrors().reason }}</small>
+            }
+          </label>
+        </fieldset>
+        <section class="movement-preview summary-block" aria-labelledby="movement-preview-title">
+          <h4 id="movement-preview-title">Impacto estimado</h4>
+          <p>Estimativa sobre o saldo carregado. O saldo será confirmado ao registrar.</p>
+          @if (movementPreview(); as preview) {
+            <p>Em estoque: {{ quantity(preview.onHandBefore, part.unit) }} → {{ quantity(preview.onHandAfter, part.unit) }}</p>
+            <p>Disponível: {{ quantity(preview.availableBefore, part.unit) }} → {{ quantity(preview.availableAfter, part.unit) }}</p>
+            <p>Reservado: {{ quantity(preview.reserved, part.unit) }}</p>
+            @if (preview.availableAfter < 0) {
+              <p>O disponível estimado ficaria negativo; o registro deve ser recusado por saldo insuficiente.</p>
+            }
+          } @else {
+            <p>Informe uma quantidade válida para ver a estimativa.</p>
+          }
+        </section>
         <div class="form-actions form-actions--full">
           <button type="button" class="button-secondary" (click)="closeModals()" [disabled]="submitting()">Cancelar</button>
           <button type="submit" class="button-primary" [disabled]="submitting()">{{ submitting() ? 'Registrando...' : 'Registrar' }}</button>
@@ -326,14 +356,13 @@
         </button>
       </header>
 
-      @if (modalErrorMessage()) {
-        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
-          <strong>{{ modalErrorMessage() }}</strong>
+      @if (historyLoadFailed()) {
+        <article class="panel alert-banner alert-banner--error" role="alert">
+          <strong>{{ historyLoadErrorMessage() }}</strong>
+          <button type="button" class="button-secondary" (click)="retryHistory()" [disabled]="historyLoading()">{{ historyLoading() ? 'Carregando...' : 'Tentar novamente' }}</button>
         </article>
-      }
-
-      @if (historyLoading() && history().length === 0) {
-        <p>Carregando histórico...</p>
+      } @else if (historyLoading() || !historyHasLoaded()) {
+        <p role="status">Carregando histórico...</p>
       } @else if (history().length === 0) {
         <p>Nenhum movimento registrado.</p>
       } @else {
@@ -341,22 +370,24 @@
           <table>
             <thead>
               <tr>
-                <th>Data</th>
+                <th>Instante</th>
                 <th>Tipo</th>
-                <th>Estoque</th>
-                <th>Reserva</th>
-                <th>Saldo após</th>
+                <th>Variação em estoque</th>
+                <th>Variação reservada</th>
+                <th>Em estoque após</th>
+                <th>Reservado após</th>
                 <th>RMA</th>
-                <th>Usuário / motivo</th>
+                <th>Autor</th>
+                <th>Motivo</th>
                 @if (canManage()) {
-                  <th class="table-actions-col">Ação</th>
+                  <th class="table-actions-col">Ações</th>
                 }
               </tr>
             </thead>
             <tbody>
               @for (movement of history(); track movement.id) {
                 <tr>
-                  <td>{{ dateTime(movement.createdAt) }}</td>
+                  <td><time [attr.datetime]="movement.createdAt">{{ dateTime(movement.createdAt) }}</time></td>
                   <td>
                     {{ movementLabels[movement.type] }}
                     @if (movement.reversedMovementId) {
@@ -366,24 +397,43 @@
                       <span class="mini-chip warranty-off">Estornado</span>
                     }
                   </td>
-                  <td>{{ signedQuantity(movement.onHandChange) }}</td>
-                  <td>{{ signedQuantity(movement.reservedChange) }}</td>
+                  <td>{{ signedQuantity(movement.onHandChange) }} {{ part.unit }}</td>
+                  <td>{{ signedQuantity(movement.reservedChange) }} {{ part.unit }}</td>
                   <td>{{ quantity(movement.onHandAfter, part.unit) }}</td>
+                  <td>{{ quantity(movement.reservedAfter, part.unit) }}</td>
                   <td>{{ movement.rmaCode || '—' }}</td>
-                  <td>{{ movement.createdBy }}@if (movement.reason) {<span class="table-subtitle">{{ movement.reason }}</span>}</td>
+                  <td>{{ movement.createdBy }}</td>
+                  <td>{{ movement.reason || '—' }}</td>
                   @if (canManage()) {
                     <td class="table-actions-col">
-                      @if (reversingMovementId() === movement.id) {
-                        <div class="movement-reversal">
-                          <input type="text" placeholder="Motivo do estorno" [formControl]="reversalReason" [attr.maxlength]="limits.reason" />
-                          <button type="button" class="button-primary button-secondary--small" (click)="confirmReversal(movement)" [disabled]="submitting()">Confirmar</button>
-                        </div>
-                      } @else if (canReverse(movement)) {
-                        <button type="button" class="button-secondary button-secondary--small" (click)="startReversal(movement)">Estornar</button>
+                      @if (reversingMovementId() !== movement.id && canReverse(movement)) {
+                        <button type="button" class="button-secondary button-secondary--small" (click)="startReversal(movement)" [disabled]="submitting()">Estornar</button>
                       }
                     </td>
                   }
                 </tr>
+                @if (canManage() && reversingMovementId() === movement.id) {
+                  <tr>
+                    <td [attr.colspan]="10">
+                      <section class="movement-reversal" [attr.aria-labelledby]="'reversal-title-' + movement.id">
+                        <h4 [id]="'reversal-title-' + movement.id">Estornar movimento {{ movement.id }}</h4>
+                        <p>{{ movementLabels[movement.type] }} · {{ dateTime(movement.createdAt) }} · {{ part.code }} · {{ part.name }}</p>
+                        <p>O movimento original será mantido.</p>
+                        <label class="field-group" [attr.for]="'reversal-reason-' + movement.id">
+                          <span>Motivo do estorno (obrigatório)</span>
+                          <input [id]="'reversal-reason-' + movement.id" type="text" [formControl]="reversalReason" [attr.maxlength]="limits.reason" [attr.aria-describedby]="modalErrorMessage() ? 'reversal-error-' + movement.id : null" />
+                        </label>
+                        @if (modalErrorMessage()) {
+                          <p class="field-error" role="alert" [id]="'reversal-error-' + movement.id">{{ modalErrorMessage() }}</p>
+                        }
+                        <div class="form-actions">
+                          <button type="button" class="button-secondary" (click)="cancelReversal()" [disabled]="submitting()">Cancelar</button>
+                          <button type="button" class="button-primary" (click)="confirmReversal(movement)" [disabled]="submitting()">Confirmar estorno</button>
+                        </div>
+                      </section>
+                    </td>
+                  </tr>
+                }
               }
             </tbody>
           </table>

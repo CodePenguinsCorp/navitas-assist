@@ -78,7 +78,9 @@ describe('PartsComponent', () => {
     component.movementForm.setValue({ type: 'ADJUSTMENT', quantity: -1, reason: '' });
     component.saveMovement();
 
-    expect(component.modalErrorMessage()).toBe('Informe o motivo do ajuste.');
+    fixture.detectChanges();
+    const reasonField = fixture.nativeElement.querySelector('[formControlName="reason"]').closest('label');
+    expect(reasonField.textContent).toContain('Informe o motivo do ajuste.');
     expect(partService['registerMovement']).not.toHaveBeenCalled();
 
     component.movementForm.setValue({ type: 'ADJUSTMENT', quantity: -1, reason: 'Inventário' });
