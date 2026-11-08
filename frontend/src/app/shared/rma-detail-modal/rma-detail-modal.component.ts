@@ -1,37 +1,36 @@
 import { Component, DestroyRef, ElementRef, EventEmitter, HostListener, Output, afterNextRender, computed, inject, input, viewChild } from '@angular/core';
-import { RmaResponse, RmaStatus } from '../../core/models';
+import { RouterLink } from '@angular/router';
+import { RmaResponse } from '../../core/models';
 import { SlaClockService } from '../../core/services/sla-clock.service';
-import { blockDuration } from '../../core/utils/rma-block';
+import {
+  NO_DIAGNOSIS_LABEL,
+  blockedLabel,
+  diagnosisFacts,
+  invoiceFact,
+  purchaseFact,
+  receiptFacts,
+  repairFacts,
+  rmaHistory,
+  rmaItemFacts,
+  sectionLabel
+} from '../../core/utils/rma-detail';
 import { RmaSlaBadgeComponent } from '../rma-sla-badge/rma-sla-badge.component';
 import {
-  failureCauseLabel,
-  failureTypeLabel,
   formatDate,
   formatDateTime,
   initialsOf,
+  itemCountLabel,
   ownerLabel,
-  priorityChipClass,
   priorityLabel,
   productSummary,
-  rmaItemTrackableLabel,
   statusLabel,
   warrantyClass,
   warrantyLabel
 } from '../../core/utils/rma-ui';
 
-interface ActivityEntry {
-  kind: 'status' | 'assignee';
-  at: string;
-  by: string;
-  status?: RmaStatus;
-  note?: string | null;
-  from?: string | null;
-  to?: string | null;
-}
-
 @Component({
   selector: 'app-rma-detail-modal',
-  imports: [RmaSlaBadgeComponent],
+  imports: [RmaSlaBadgeComponent, RouterLink],
   templateUrl: './rma-detail-modal.component.html',
   styleUrl: './rma-detail-modal.component.css'
 })
@@ -45,24 +44,26 @@ export class RmaDetailModalComponent {
   @Output() readonly assigneeChange = new EventEmitter<RmaResponse>();
   @Output() readonly blockInspect = new EventEmitter<RmaResponse>();
   protected readonly clock = inject(SlaClockService);
-  protected readonly blockedDuration = blockDuration;
+  protected readonly blockedLabel = blockedLabel;
   protected readonly statusLabel = statusLabel;
   protected readonly priorityLabel = priorityLabel;
-  protected readonly priorityClass = priorityChipClass;
   protected readonly productSummary = productSummary;
-  protected readonly trackableLabel = rmaItemTrackableLabel;
+  protected readonly itemCountLabel = itemCountLabel;
   protected readonly warrantyLabel = warrantyLabel;
   protected readonly warrantyClass = warrantyClass;
-  protected readonly failureTypeLabel = failureTypeLabel;
-  protected readonly failureCauseLabel = failureCauseLabel;
   protected readonly ownerLabel = ownerLabel;
   protected readonly initials = initialsOf;
   protected readonly dateLabel = formatDate;
   protected readonly dateTimeLabel = formatDateTime;
-  protected readonly activity = computed<ActivityEntry[]>(() => [
-    ...this.rma().statusHistory.map((entry): ActivityEntry => ({ kind: 'status', at: entry.changedAt, by: entry.changedBy, status: entry.status, note: entry.note })),
-    ...this.rma().assignmentHistory.map((entry): ActivityEntry => ({ kind: 'assignee', at: entry.changedAt, by: entry.changedBy, from: entry.previousAssigneeName, to: entry.newAssigneeName }))
-  ].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)));
+  protected readonly sectionLabel = sectionLabel;
+  protected readonly invoiceFact = invoiceFact;
+  protected readonly purchaseFact = purchaseFact;
+  protected readonly rmaItemFacts = rmaItemFacts;
+  protected readonly receiptFacts = receiptFacts;
+  protected readonly diagnosisFacts = diagnosisFacts;
+  protected readonly repairFacts = repairFacts;
+  protected readonly noDiagnosisLabel = NO_DIAGNOSIS_LABEL;
+  protected readonly activity = computed(() => rmaHistory(this.rma()));
 
   private readonly panel = viewChild.required<ElementRef<HTMLElement>>('panel');
   private readonly previousFocus = document.activeElement as HTMLElement | null;

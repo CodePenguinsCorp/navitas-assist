@@ -84,6 +84,12 @@ async function setup(options: { role?: UserRole; create?: CreateFn } = {}) {
   return { fixture, component, page, render, rmaService, open, panel, dialog, alertText, submit, fillValid };
 }
 
+/** Text of the elements an element points to through aria-describedby. */
+function describedText(element: HTMLElement): string {
+  return (element.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(Boolean)
+    .map((id) => document.getElementById(id)?.textContent?.trim() ?? '').join(' ');
+}
+
 describe('RmasComponent creation messages', () => {
   it('marks the creation dialog for assistive technology', async () => {
     // Hoje o article do diálogo não tem role="dialog", aria-modal nem aria-labelledby, e mostra "Preencha os dados do atendimento.".
@@ -127,9 +133,9 @@ describe('RmasComponent creation messages', () => {
     expect(errors.filter((message) => message === 'Use até 60 caracteres.').length).toBe(2);
   });
 
-  it('shows date errors with the banner inside the dialog', async () => {
+  it('shows date errors next to their fields with the banner inside the dialog', async () => {
     // Hoje "Corrija as datas indicadas no formulário." vai para .status-card fora do diálogo.
-    const { component, page, open, render, submit, alertText, fillValid, rmaService } = await setup();
+    const { component, page, open, render, submit, alertText, fillValid, rmaService, panel } = await setup();
     open();
     fillValid();
     component.createForm.patchValue({ purchaseDateUnknown: false, purchaseDate: '2026-06-01', entryDate: '2026-05-01' });
@@ -139,6 +145,79 @@ describe('RmasComponent creation messages', () => {
     expect(alertText()).toBe('Corrija as datas indicadas no formulário.');
     expect(page.querySelector('.status-card')).toBeNull();
     expect(rmaService.create).not.toHaveBeenCalled();
+    const fieldError = (name: string) =>
+      panel()!.querySelector(`app-date-picker[formControlName="${name}"]`)!.closest('.field-group')!
+        .querySelector('.field-error')?.textContent?.trim() ?? null;
+    expect(fieldError('entryDate')).toBe('A entrada não pode ser anterior à compra.');
+    expect(fieldError('purchaseDate')).toBeNull();
+
+    component.createForm.patchValue({ entryDate: '2026-06-10' });
+    render();
+    expect(fieldError('entryDate')).toBeNull();
+  });
+
+  it('ties each field error to its control and marks the control invalid', async () => {
+    // Hoje os <small class="field-error"> não têm id e os controles não têm aria-describedby nem aria-invalid.
+    const { component, open, render, submit, panel } = await setup();
+    open();
+    component.createItems.at(0).controls['batchNumber'].setValue('L'.repeat(61));
+    component.createForm.patchValue({ repairSummary: 'x'.repeat(601) });
+    render();
+    submit();
+
+    const control = (selector: string) => panel()!.querySelector<HTMLElement>(selector)!;
+    const expectTied = (element: HTMLElement, message: string) => {
+      expect(element.getAttribute('aria-invalid'), message).toBe('true');
+      expect(describedText(element), message).toContain(message);
+    };
+    expectTied(control('app-custom-select[formControlName="clientId"] .custom-select__trigger'), 'Selecione o cliente.');
+    expectTied(control('textarea[formControlName="reportedFailure"]'), 'Descreva a falha relatada.');
+    expectTied(control('app-custom-select[formControlName="productId"] .custom-select__trigger'), 'Selecione o produto.');
+    expectTied(control('input[formControlName="batchNumber"]'), 'Use até 60 caracteres.');
+    expectTied(control('textarea[formControlName="repairSummary"]'), 'Use até 600 caracteres.');
+    expect(control('input[formControlName="serialNumber"]').getAttribute('aria-invalid')).toBeNull();
+
+    component.createForm.patchValue({ clientId: 1, reportedFailure: 'Falha', repairSummary: '' });
+    component.createItems.at(0).patchValue({ productId: 2, batchNumber: 'L1' });
+    render();
+    for (const selector of ['app-custom-select[formControlName="clientId"] .custom-select__trigger', 'textarea[formControlName="reportedFailure"]',
+      'app-custom-select[formControlName="productId"] .custom-select__trigger', 'input[formControlName="batchNumber"]', 'textarea[formControlName="repairSummary"]']) {
+      expect(control(selector).getAttribute('aria-invalid'), selector).toBeNull();
+      expect(control(selector).getAttribute('aria-describedby'), selector).toBeNull();
+    }
+  });
+
+  it('ties the identification and date errors to their controls', async () => {
+    // Hoje a mensagem de identificação e as de datas não estão associadas aos controles.
+    const { component, open, render, submit, panel, fillValid } = await setup();
+    open();
+    fillValid();
+    component.createItems.at(0).patchValue({ serialNumber: '', manufacturedAt: '2099-01-01' });
+    component.createForm.patchValue({ purchaseDateUnknown: false, purchaseDate: '2026-06-01', entryDate: '2026-05-01' });
+    render();
+    submit();
+
+    const control = (selector: string) => panel()!.querySelector<HTMLElement>(selector)!;
+    for (const name of ['batchNumber', 'serialNumber']) {
+      const input = control(`input[formControlName="${name}"]`);
+      expect(input.getAttribute('aria-invalid'), name).toBe('true');
+      expect(describedText(input), name).toContain('Informe ao menos o lote ou a série deste produto.');
+    }
+    const trigger = (name: string) => control(`app-date-picker[formControlName="${name}"] .date-picker__trigger`);
+    expect(trigger('manufacturedAt').getAttribute('aria-invalid')).toBe('true');
+    expect(describedText(trigger('manufacturedAt'))).toBe('A fabricação não pode ser posterior a hoje.');
+    expect(trigger('purchaseDate').getAttribute('aria-invalid')).toBe('true');
+    expect(describedText(trigger('purchaseDate'))).toBe('A compra não pode ser anterior à fabricação.');
+    expect(trigger('entryDate').getAttribute('aria-invalid')).toBe('true');
+    expect(describedText(trigger('entryDate'))).toBe('A entrada não pode ser anterior à compra.');
+
+    component.createItems.at(0).patchValue({ serialNumber: 'S1', manufacturedAt: '' });
+    component.createForm.patchValue({ entryDate: '2026-06-10' });
+    render();
+    for (const element of [control('input[formControlName="batchNumber"]'), trigger('manufacturedAt'), trigger('purchaseDate'), trigger('entryDate')]) {
+      expect(element.getAttribute('aria-invalid')).toBeNull();
+      expect(element.getAttribute('aria-describedby')).toBeNull();
+    }
   });
 
   it('shows the save error inside the dialog and keeps the values', async () => {

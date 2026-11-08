@@ -217,6 +217,112 @@ describe('RmasComponent list state', () => {
       expect(summaryText(page)).toContain('4 em atendimento');
     });
 
+    it('waits for the list when the summary of a new filter responds first', async () => {
+      const listB$ = new Subject<PageResponse<RmaResponse>>();
+      const summaryB$ = new Subject<RmaSummaryResponse>();
+      let listCalls = 0;
+      let summaryCalls = 0;
+      const { component, page, render } = await setup({
+        list: (f) => (listCalls++ === 0 ? defaultList(f) : listB$),
+        summary: (f) => (summaryCalls++ === 0 ? defaultSummary(f) : summaryB$)
+      });
+
+      confirmFilters(component, 'B');
+      summaryB$.next({ total: 2, ongoing: 4, highPriority: 1 });
+      render();
+      expect(countLabel(page)).toBeNull();
+      expect(summaryText(page)).toBeNull();
+
+      listB$.next(buildRmaPage([defaultRma], 0, 20, 2));
+      render();
+      expect(countLabel(page)).toBe('2 RMAs');
+      expect(summaryText(page)).toContain('4 em atendimento');
+    });
+
+    it('does not reuse the previous result when the same filter is searched again', async () => {
+      // Hoje a contagem antiga "45 RMAs" fica visível e, depois, o novo resumo aparece ao lado da lista antiga.
+      const list$ = new Subject<PageResponse<RmaResponse>>();
+      const summary$ = new Subject<RmaSummaryResponse>();
+      let listCalls = 0;
+      let summaryCalls = 0;
+      const { component, page, render } = await setup({
+        list: (f) => (listCalls++ === 0 ? defaultList(f) : list$),
+        summary: (f) => (summaryCalls++ === 0 ? defaultSummary(f) : summary$)
+      });
+      expect(countLabel(page)).toBe('45 RMAs');
+
+      confirmFilters(component, '');
+      render();
+      expect(countLabel(page)).toBeNull();
+      expect(summaryText(page)).toBeNull();
+
+      summary$.next({ total: 2, ongoing: 4, highPriority: 1 });
+      render();
+      expect(countLabel(page)).toBeNull();
+      expect(summaryText(page)).toBeNull();
+
+      list$.next(buildRmaPage([defaultRma], 0, 20, 2));
+      render();
+      expect(countLabel(page)).toBe('2 RMAs');
+      expect(summaryText(page)).toContain('4 em atendimento');
+    });
+
+    it('does not mix generations on A, B, A with B still pending', async () => {
+      // Hoje, ao voltar para A, a contagem antiga "45 RMAs" volta a ser exibida com B pendente.
+      const pendingLists = [new Subject<PageResponse<RmaResponse>>(), new Subject<PageResponse<RmaResponse>>()];
+      const pendingSummaries = [new Subject<RmaSummaryResponse>(), new Subject<RmaSummaryResponse>()];
+      let listCalls = 0;
+      let summaryCalls = 0;
+      const { component, page, render } = await setup({
+        list: (f) => (listCalls++ < 2 ? defaultList(f) : pendingLists[listCalls - 3]),
+        summary: (f) => (summaryCalls++ < 2 ? defaultSummary(f) : pendingSummaries[summaryCalls - 3])
+      });
+      confirmFilters(component, 'A');
+      render();
+      expect(countLabel(page)).toBe('45 RMAs');
+      expect(summaryText(page)).toContain('30 em atendimento');
+
+      confirmFilters(component, 'B');
+      confirmFilters(component, 'A');
+      render();
+      expect(countLabel(page)).toBeNull();
+      expect(summaryText(page)).toBeNull();
+
+      const [listB$, listA$] = pendingLists;
+      const [summaryB$, summaryA$] = pendingSummaries;
+      summaryA$.next({ total: 1, ongoing: 1, highPriority: 0 });
+      listB$.next(buildRmaPage([defaultRma], 0, 20, 2));
+      summaryB$.next({ total: 2, ongoing: 9, highPriority: 9 });
+      render();
+      expect(countLabel(page)).toBeNull();
+      expect(summaryText(page)).toBeNull();
+
+      listA$.next(buildRmaPage([defaultRma], 0, 20, 1));
+      render();
+      expect(countLabel(page)).toBe('1 RMA');
+      expect(summaryText(page)).toContain('1 em atendimento');
+      expect(summaryText(page)).toContain('0 com prioridade alta');
+    });
+
+    it('shows the summary again after a failed list followed by a successful search', async () => {
+      let failing = true;
+      const { component, page, render } = await setup({
+        list: (f) => (failing ? throwError(() => httpError) : defaultList(f)),
+        summary: (f) => of(f.query === 'B' ? { total: 45, ongoing: 4, highPriority: 1 } : { total: 45, ongoing: 30, highPriority: 7 })
+      });
+      expect(page.querySelector('.table-card [role="alert"]')).not.toBeNull();
+      expect(summaryText(page)).toBeNull();
+      expect(countLabel(page)).toBeNull();
+
+      failing = false;
+      confirmFilters(component, 'B');
+      render();
+      expect(page.querySelector('.table-card [role="alert"]')).toBeNull();
+      expect(countLabel(page)).toBe('45 RMAs');
+      expect(summaryText(page)).toContain('4 em atendimento');
+      expect(summaryText(page)).toContain('1 com prioridade alta');
+    });
+
     it('hides the count after Buscar until the new list responds', async () => {
       // Hoje não há contagem junto do título (.page-heading__count "45 RMAs" ausente).
       const listB$ = new Subject<PageResponse<RmaResponse>>();

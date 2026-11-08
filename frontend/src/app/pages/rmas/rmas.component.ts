@@ -32,6 +32,19 @@ import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { PagedList } from '../../core/utils/paged-list';
 import { todayInputValue } from '../../core/utils/date';
+import { SlaClockService } from '../../core/services/sla-clock.service';
+import {
+  NO_DIAGNOSIS_LABEL,
+  blockedLabel,
+  diagnosisFacts,
+  invoiceFact,
+  purchaseFact,
+  receiptFacts,
+  repairFacts,
+  rmaHistory,
+  rmaItemFacts,
+  sectionLabel
+} from '../../core/utils/rma-detail';
 import {
   failureCauseLabel,
   failureTypeLabel,
@@ -59,6 +72,7 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { RmaBlockHistoryComponent } from '../../shared/rma-block-history/rma-block-history.component';
 import { RmaPartsPanelComponent } from '../../shared/rma-parts-panel/rma-parts-panel.component';
+import { RmaSlaBadgeComponent } from '../../shared/rma-sla-badge/rma-sla-badge.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
 type SearchStatusValue = RmaStatus | '';
@@ -79,14 +93,9 @@ export interface RmaListFilters {
   status?: RmaStatus;
 }
 
-export function sameFilters(a: RmaListFilters | null, b: RmaListFilters | null): boolean {
-  if (!a || !b) return false;
-  return (a.query ?? undefined) === (b.query ?? undefined) && (a.status ?? undefined) === (b.status ?? undefined);
-}
-
 @Component({
   selector: 'app-rmas',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlockHistoryComponent, PageHeaderComponent, RowActionComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlockHistoryComponent, PageHeaderComponent, RowActionComponent, RmaSlaBadgeComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {
@@ -183,6 +192,12 @@ export function sameFilters(a: RmaListFilters | null, b: RmaListFilters | null):
       font-size: 1.4rem;
       line-height: 1.25;
       color: var(--brand-blue-deep);
+      overflow-wrap: anywhere;
+    }
+
+    .rma-details__note {
+      margin: 0;
+      color: var(--muted);
     }
 
     .history-item__meta {
@@ -207,7 +222,7 @@ export function sameFilters(a: RmaListFilters | null, b: RmaListFilters | null):
     }
 
     .rma-details__summary {
-      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-columns: repeat(7, minmax(0, 1fr));
     }
 
     .rma-details__summary,
@@ -243,6 +258,7 @@ export function sameFilters(a: RmaListFilters | null, b: RmaListFilters | null):
     .rma-items-detail {
       display: grid;
       gap: 0.75rem;
+      margin-top: 0.75rem;
     }
 
     .rma-items-editor {
@@ -270,10 +286,6 @@ export function sameFilters(a: RmaListFilters | null, b: RmaListFilters | null):
       align-items: center;
       min-height: var(--control-height);
       margin-top: calc(1lh + var(--space-2));
-    }
-
-    .rma-items-detail {
-      margin-top: 0.75rem;
     }
 
     .rma-item-detail {
@@ -378,9 +390,7 @@ export function sameFilters(a: RmaListFilters | null, b: RmaListFilters | null):
       .rma-item-editor__action {
         margin-top: 0;
       }
-    }
 
-    @media (max-width: 900px) {
       .rma-details__summary,
       .rma-details__pairs {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -392,6 +402,27 @@ export function sameFilters(a: RmaListFilters | null, b: RmaListFilters | null):
       .rma-item-editor,
       .rma-item-editor--row {
         grid-template-columns: 1fr;
+      }
+
+      /* Identity and Fechar share the first row; the diagnosis action takes its own row below. */
+      .rma-details__header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+
+      .rma-details__header-actions {
+        display: contents;
+      }
+
+      .rma-details__header-actions .modal-close {
+        grid-column: 2;
+        grid-row: 1;
+      }
+
+      .rma-details__header-actions .button-primary {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        justify-self: start;
       }
     }
   `]
@@ -439,10 +470,15 @@ export class RmasComponent {
 
   /** Last filter confirmed by "Buscar" or "Limpar"; paging, size, refresh and retry reuse it. */
   private readonly appliedFilters = signal<RmaListFilters>({});
-  /** Filter of the list request in flight; copied to resultFilters when it responds. */
-  private requestedFilters: RmaListFilters = {};
-  /** Filter of the list result on screen. */
-  private readonly resultFilters = signal<RmaListFilters | null>(null);
+  /**
+   * Each load of list and summary together (Buscar, Limpar, retry, refresh) opens a new generation,
+   * so a repeated filter or A → B → A never reuses an older list or mixes it with a newer summary.
+   */
+  private readonly generation = signal(0);
+  /** Generation of the list request in flight; copied to resultGeneration when it responds. */
+  private requestedGeneration = 0;
+  /** Generation of the list result on screen. */
+  private readonly resultGeneration = signal(-1);
   /** Last list query failed; independent of the cached page and of page messages. */
   protected readonly loadFailed = signal(false);
   protected readonly listErrorMessage = signal('');
@@ -450,7 +486,7 @@ export class RmasComponent {
   private readonly rmaList = new PagedList<RmaResponse>(
     (pageQuery) => {
       const filters = this.appliedFilters();
-      this.requestedFilters = filters;
+      this.requestedGeneration = this.generation();
       return this.rmaService.list({ ...pageQuery, query: filters.query, status: filters.status });
     },
     (error) => {
@@ -458,7 +494,7 @@ export class RmasComponent {
       this.listErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os RMAs.'));
     },
     (rmas) => {
-      this.resultFilters.set(this.requestedFilters);
+      this.resultGeneration.set(this.requestedGeneration);
       this.loadFailed.set(false);
       this.syncSelection(rmas);
     }
@@ -481,18 +517,18 @@ export class RmasComponent {
     Boolean(this.appliedFilters().query || this.appliedFilters().status)
   );
   protected readonly hasLoaded = computed(() => this.rmaList.result() !== null);
-  /** The list on screen answers the confirmed filter and the last query did not fail. */
+  /** The list on screen answers the current generation and the last query did not fail. */
   protected readonly hasCurrentResult = computed(() =>
-    this.rmaList.result() !== null && !this.loadFailed() && sameFilters(this.resultFilters(), this.appliedFilters())
+    this.rmaList.result() !== null && !this.loadFailed() && this.resultGeneration() === this.generation()
   );
 
-  private readonly summaryRequests = new Subject<RmaListFilters>();
-  private readonly summarySignal = signal<{ filters: RmaListFilters; value: RmaSummaryResponse } | null>(null);
+  private readonly summaryRequests = new Subject<{ generation: number; filters: RmaListFilters }>();
+  private readonly summarySignal = signal<{ generation: number; value: RmaSummaryResponse } | null>(null);
   protected readonly summary = this.summarySignal.asReadonly();
-  /** Indicators only for the filter of the list on screen; never zeros or another filter's values. */
+  /** Indicators only for the generation of the list on screen; never zeros or another load's values. */
   protected readonly visibleSummary = computed(() => {
     const summary = this.summarySignal();
-    return summary && this.hasCurrentResult() && sameFilters(summary.filters, this.resultFilters())
+    return summary && this.hasCurrentResult() && summary.generation === this.resultGeneration()
       ? summary.value : null;
   });
 
@@ -511,6 +547,17 @@ export class RmasComponent {
   protected readonly itemCountLabel = itemCountLabel;
   protected readonly itemTrackableLabel = rmaItemTrackableLabel;
   protected readonly initials = initialsOf;
+  protected readonly clock = inject(SlaClockService);
+  protected readonly blockedLabel = blockedLabel;
+  protected readonly sectionLabel = sectionLabel;
+  protected readonly invoiceFact = invoiceFact;
+  protected readonly purchaseFact = purchaseFact;
+  protected readonly rmaItemFacts = rmaItemFacts;
+  protected readonly receiptFacts = receiptFacts;
+  protected readonly diagnosisFacts = diagnosisFacts;
+  protected readonly repairFacts = repairFacts;
+  protected readonly rmaHistory = rmaHistory;
+  protected readonly noDiagnosisLabel = NO_DIAGNOSIS_LABEL;
 
   protected get todayDate(): string {
     return todayInputValue();
@@ -599,10 +646,10 @@ export class RmasComponent {
       this.dateErrors.set(this.validateCreateDates());
     });
     this.summaryRequests.pipe(
-      switchMap((filters) => {
+      switchMap(({ generation, filters }) => {
         this.summarySignal.set(null);
         return this.rmaService.getSummary(filters).pipe(
-          map((value) => ({ filters, value })),
+          map((value) => ({ generation, value })),
           catchError(() => of(null))
         );
       }),
@@ -631,8 +678,7 @@ export class RmasComponent {
     this.appliedFilters.set(this.buildFilters());
     this.pageMessage.set('');
     this.pageError.set('');
-    this.rmaList.firstPage();
-    this.loadSummary();
+    this.loadListAndSummary(true);
   }
 
   protected goToPage(page: number): void {
@@ -653,13 +699,11 @@ export class RmasComponent {
     this.appliedFilters.set({});
     this.pageMessage.set('');
     this.pageError.set('');
-    this.rmaList.firstPage();
-    this.loadSummary();
+    this.loadListAndSummary(true);
   }
 
   protected retryLoad(): void {
-    this.rmaList.reload();
-    this.loadSummary();
+    this.loadListAndSummary();
   }
 
   protected openCreateModal(): void {
@@ -677,6 +721,11 @@ export class RmasComponent {
 
   protected showCreateError(control: AbstractControl): boolean {
     return control.invalid && (control.touched || this.createSubmitAttempted());
+  }
+
+  /** aria-describedby value from the ids of the messages currently shown, or no attribute. */
+  protected describedBy(...ids: Array<string | false>): string | null {
+    return ids.filter(Boolean).join(' ') || null;
   }
 
   protected openDetailsModal(rma: RmaResponse): void {
@@ -918,8 +967,7 @@ export class RmasComponent {
 
   private loadWorkspace(): void {
     this.pageError.set('');
-    this.rmaList.reload();
-    this.loadSummary();
+    this.loadListAndSummary();
 
     forkJoin({
       clients: this.catalogService.listClientOptions(),
@@ -937,13 +985,16 @@ export class RmasComponent {
 
   private refreshRmas(): void {
     this.pageError.set('');
-    this.rmaList.reload();
-    this.loadSummary();
+    this.loadListAndSummary();
   }
 
-  private loadSummary(): void {
+  /** Opens a new generation before requesting, so neither response can match an older load. */
+  private loadListAndSummary(firstPage = false): void {
+    this.generation.update((value) => value + 1);
+    if (firstPage) this.rmaList.firstPage();
+    else this.rmaList.reload();
     const { query, status } = this.appliedFilters();
-    this.summaryRequests.next({ query, status });
+    this.summaryRequests.next({ generation: this.generation(), filters: { query, status } });
   }
 
   private syncSelection(rmas: RmaResponse[]): void {

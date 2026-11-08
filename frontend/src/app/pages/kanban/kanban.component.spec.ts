@@ -1,6 +1,7 @@
 import { Signal, signal } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { KanbanViewRequest, RmaResponse, WarrantyStatus } from '../../core/models';
 import { SlaClockService } from '../../core/services/sla-clock.service';
@@ -25,6 +26,7 @@ describe('KanbanComponent filters', () => {
     await TestBed.configureTestingModule({
       imports: [KanbanComponent],
       providers: [
+        provideRouter([]),
         { provide: SlaClockService, useValue: { now } },
         { provide: AuthService, useValue: { hasAnyRole: () => true } },
         {

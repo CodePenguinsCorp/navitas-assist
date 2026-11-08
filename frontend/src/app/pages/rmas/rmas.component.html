@@ -188,12 +188,13 @@
         <header class="rma-details__header">
           <div class="rma-details__identity">
             <span class="rma-details__code code-text">{{ rma.code }}</span>
-            <h3>{{ rma.clientName }}</h3>
+            <h3>{{ productSummary(rma) }}</h3>
+            <span class="table-subtitle rma-details__client">{{ rma.clientName }}</span>
             <div class="rma-details__chips">
               <span class="status-chip" [attr.data-status]="rma.status">{{ statusLabel(rma.status) }}</span>
               <span class="priority-tag" [attr.data-priority]="rma.priority"><span class="priority-bars" [attr.data-priority]="rma.priority" aria-hidden="true"><i></i><i></i><i></i></span>{{ priorityLabel(rma.priority) }}</span>
-              @if (rma.currentBlock) {
-                <span class="mini-chip priority-high">Bloqueado</span>
+              @if (rma.currentBlock; as block) {
+                <span class="mini-chip priority-high">{{ blockedLabel(block, clock.now()) }}</span>
               }
             </div>
           </div>
@@ -208,12 +209,15 @@
         </header>
 
         <dl class="meta-list rma-details__summary">
-          <div><dt>Produtos</dt><dd>{{ rma.items.length }} item(ns)</dd></div>
-          <div><dt>Nota fiscal</dt><dd [class.is-empty]="!rma.invoiceNumber">{{ rma.invoiceNumber || 'Não informada' }}</dd></div>
+          <div><dt>Produtos</dt><dd>{{ itemCountLabel(rma.items.length) }}</dd></div>
           <div><dt>Entrada</dt><dd>{{ dateLabel(rma.entryDate) }}</dd></div>
-          <div><dt>Compra</dt><dd [class.is-empty]="rma.purchaseDateUnknown">{{ rma.purchaseDateUnknown ? 'Desconhecida' : dateLabel(rma.purchaseDate) }}</dd></div>
+          @let invoice = invoiceFact(rma);
+          <div><dt>{{ invoice.label }}</dt><dd [class.is-empty]="invoice.empty">{{ invoice.value }}</dd></div>
+          @let purchase = purchaseFact(rma);
+          <div><dt>{{ purchase.label }}</dt><dd [class.is-empty]="purchase.empty">{{ purchase.value }}</dd></div>
           <div><dt>Responsável</dt><dd class="person" [class.is-empty]="!rma.assigneeId"><span class="avatar" [class.avatar--empty]="!rma.assigneeId" aria-hidden="true">{{ rma.assigneeId ? initials(rma.assigneeName) : '–' }}</span><span>{{ ownerLabel(rma) }}</span></dd></div>
-          <div><dt>Atualizado</dt><dd>{{ dateTimeLabel(rma.updatedAt) }}</dd></div>
+          <div><dt>SLA</dt><dd><app-rma-sla-badge [sla]="rma.sla" /></dd></div>
+          <div><dt>Atualizado em</dt><dd>{{ dateTimeLabel(rma.updatedAt) }}</dd></div>
         </dl>
 
         <div class="tab-list" role="tablist" aria-label="Seções do RMA">
@@ -230,7 +234,7 @@
                 <p class="rma-detail-copy">{{ rma.reportedFailure }}</p>
               </section>
               <section class="rma-details__section">
-                <h4>Produtos, lotes e garantias</h4>
+                <h4>{{ sectionLabel('products') }}</h4>
                 <p class="rma-detail-copy">Garantia avaliada na entrada do RMA.</p>
                 <div class="rma-items-detail">
                   @for (item of rma.items; track item.id ?? $index) {
@@ -243,34 +247,57 @@
                         <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)">{{ warrantyLabel(item.warrantyStatus) }}</span>
                       </header>
                       <dl class="meta-list">
-                        <div><dt>Série</dt><dd [class.is-empty]="!item.serialNumber">{{ item.serialNumber || 'Não informada' }}</dd></div>
-                        <div><dt>Lote</dt><dd [class.is-empty]="!item.batchNumber">{{ item.batchNumber || 'Não informado' }}</dd></div>
-                        <div><dt>Prazo</dt><dd>{{ item.warrantyMonths }} meses</dd></div>
-                        <div><dt>Vencimento</dt><dd [class.is-empty]="!item.warrantyExpiresAt">{{ item.warrantyExpiresAt ? dateLabel(item.warrantyExpiresAt) : 'Informe a compra' }}</dd></div>
-                        @if (item.manufacturedAt) {
-                          <div><dt>Fabricação</dt><dd>{{ dateLabel(item.manufacturedAt) }}</dd></div>
+                        @for (fact of rmaItemFacts(item); track fact.label) {
+                          @if (fact.label !== 'SKU') {
+                            <div><dt>{{ fact.label }}</dt><dd [class.is-empty]="fact.empty">{{ fact.value }}</dd></div>
+                          }
                         }
                       </dl>
                     </article>
                   }
                 </div>
               </section>
+              @let receipt = receiptFacts(rma);
+              @if (receipt.length > 0) {
+                <section class="rma-details__section">
+                  <h4>{{ sectionLabel('receipt') }}</h4>
+                  <dl class="meta-list rma-details__pairs">
+                    @for (fact of receipt; track fact.label) {
+                      <div><dt>{{ fact.label }}</dt><dd>{{ fact.value }}</dd></div>
+                    }
+                  </dl>
+                </section>
+              }
             }
             @case ('diagnosis') {
-              @if (rma.diagnosis; as diagnosis) {
-                <dl class="meta-list rma-details__pairs">
-                  <div><dt>Falha encontrada</dt><dd>{{ diagnosis.foundFailure }}</dd></div>
-                  <div><dt>Tipo</dt><dd>{{ failureTypeLabel(diagnosis.failureType) }}</dd></div>
-                  <div><dt>Causa provável</dt><dd>{{ failureCauseLabel(diagnosis.probableCause) }}</dd></div>
-                </dl>
-              } @else {
-                <div class="empty-state">
-                  <h3>Sem diagnóstico.</h3>
-                  <p>Registre o diagnóstico para seguir com reparo e testes.</p>
-                  @if (canRegisterDiagnosis()) {
-                    <button type="button" class="button-secondary" (click)="openDiagnosisModal()">Registrar diagnóstico</button>
-                  }
-                </div>
+              <!-- The tab names this section; the wrapper only keeps the spacing of the next one. -->
+              <section class="rma-details__section">
+                @if (rma.diagnosis; as diagnosis) {
+                  <dl class="meta-list rma-details__pairs">
+                    @for (fact of diagnosisFacts(diagnosis); track fact.label) {
+                      <div><dt>{{ fact.label }}</dt><dd [class.is-empty]="fact.empty">{{ fact.value }}</dd></div>
+                    }
+                  </dl>
+                } @else {
+                  <div class="empty-state">
+                    <h3>{{ noDiagnosisLabel }}</h3>
+                    <p>Registre o diagnóstico para seguir com reparo e testes.</p>
+                    @if (canRegisterDiagnosis()) {
+                      <button type="button" class="button-secondary" (click)="openDiagnosisModal()">Registrar diagnóstico</button>
+                    }
+                  </div>
+                }
+              </section>
+              @let repair = repairFacts(rma);
+              @if (repair.length > 0) {
+                <section class="rma-details__section">
+                  <h4>{{ sectionLabel('repair') }}</h4>
+                  <dl class="meta-list rma-details__pairs">
+                    @for (fact of repair; track fact.label) {
+                      <div><dt>{{ fact.label }}</dt><dd>{{ fact.value }}</dd></div>
+                    }
+                  </dl>
+                </section>
               }
             }
             @case ('parts') {
@@ -291,20 +318,24 @@
               <app-rma-block-history [rma]="rma" />
             }
             @case ('history') {
-              @if (rma.assignmentHistory.length > 0) {
+              @let history = rmaHistory(rma);
+              @if (history.length > 0) {
                 <ol class="record-list">
-                  @for (event of rma.assignmentHistory; track event.changedAt) {
+                  @for (entry of history; track $index) {
                     <li class="record-card">
                       <div class="record-card__title">
-                        <strong>{{ event.previousAssigneeName || 'Sem responsável' }} → {{ event.newAssigneeName || 'Sem responsável' }}</strong>
-                        <time>{{ dateTimeLabel(event.changedAt) }}</time>
+                        <strong>{{ entry.kind === 'status' ? entry.label : entry.from + ' → ' + entry.to }}</strong>
+                        <time>{{ dateTimeLabel(entry.at) }}</time>
                       </div>
-                      <dl class="meta-list"><div><dt>Alterado por</dt><dd>{{ event.changedBy }}</dd></div></dl>
+                      @if (entry.kind === 'status' && entry.note) {
+                        <blockquote class="rma-details__note">{{ entry.note }}</blockquote>
+                      }
+                      <dl class="meta-list"><div><dt>Alterado por</dt><dd>{{ entry.by }}</dd></div></dl>
                     </li>
                   }
                 </ol>
               } @else {
-                <p class="rma-detail-copy">Nenhuma alteração de responsável registrada.</p>
+                <p class="rma-detail-copy">Nenhuma alteração registrada.</p>
               }
             }
           }
@@ -342,9 +373,11 @@
               formControlName="clientId"
               ariaLabel="Selecionar cliente"
               [options]="clientSelectOptions()"
+              [ariaInvalid]="showCreateError(createForm.controls.clientId)"
+              [ariaDescribedBy]="showCreateError(createForm.controls.clientId) ? 'clientId-error' : null"
             />
             @if (showCreateError(createForm.controls.clientId)) {
-              <small class="field-error">Selecione o cliente.</small>
+              <small class="field-error" id="clientId-error">Selecione o cliente.</small>
             }
           </div>
 
@@ -359,9 +392,11 @@
 
           <div class="field-group field-group--full">
             <label for="reportedFailure">Falha relatada</label>
-            <textarea id="reportedFailure" formControlName="reportedFailure" rows="4" maxlength="1000"></textarea>
+            <textarea id="reportedFailure" formControlName="reportedFailure" rows="4" maxlength="1000"
+              [attr.aria-invalid]="showCreateError(createForm.controls.reportedFailure) || null"
+              [attr.aria-describedby]="showCreateError(createForm.controls.reportedFailure) ? 'reportedFailure-error' : null"></textarea>
             @if (showCreateError(createForm.controls.reportedFailure)) {
-              <small class="field-error">Descreva a falha relatada.</small>
+              <small class="field-error" id="reportedFailure-error">Descreva a falha relatada.</small>
             }
           </div>
         </fieldset>
@@ -372,6 +407,7 @@
 
           <div class="rma-items-editor field-group--full" formArrayName="items">
             @for (itemForm of createItems.controls; track itemForm; let index = $index) {
+              @let missingIdentification = itemForm.hasError('identificationRequired') && (itemForm.touched || createSubmitAttempted());
               <div class="rma-item-editor rma-item-editor--row" [formGroupName]="index" role="group" [attr.aria-label]="'Produto ' + (index + 1)">
                 <div class="field-group">
                   <label>Produto</label>
@@ -379,25 +415,33 @@
                     formControlName="productId"
                     [ariaLabel]="'Selecionar produto do item ' + (index + 1)"
                     [options]="productSelectOptions()"
+                    [ariaInvalid]="showCreateError(itemForm.controls.productId)"
+                    [ariaDescribedBy]="showCreateError(itemForm.controls.productId) ? 'productId-' + index + '-error' : null"
                   />
                   @if (showCreateError(itemForm.controls.productId)) {
-                    <small class="field-error">Selecione o produto.</small>
+                    <small class="field-error" [id]="'productId-' + index + '-error'">Selecione o produto.</small>
                   }
                 </div>
 
                 <div class="field-group">
                   <label [for]="'batchNumber-' + index">Lote</label>
-                  <input [id]="'batchNumber-' + index" type="text" formControlName="batchNumber" />
-                  @if (showCreateError(itemForm.controls.batchNumber)) {
-                    <small class="field-error">Use até 60 caracteres.</small>
+                  @let batchNumberError = showCreateError(itemForm.controls.batchNumber);
+                  <input [id]="'batchNumber-' + index" type="text" formControlName="batchNumber"
+                    [attr.aria-invalid]="batchNumberError || missingIdentification || null"
+                    [attr.aria-describedby]="describedBy(batchNumberError && 'batchNumber-' + index + '-error', missingIdentification && 'identification-' + index + '-error')" />
+                  @if (batchNumberError) {
+                    <small class="field-error" [id]="'batchNumber-' + index + '-error'">Use até 60 caracteres.</small>
                   }
                 </div>
 
                 <div class="field-group">
                   <label [for]="'serialNumber-' + index">Série</label>
-                  <input [id]="'serialNumber-' + index" type="text" formControlName="serialNumber" />
-                  @if (showCreateError(itemForm.controls.serialNumber)) {
-                    <small class="field-error">Use até 60 caracteres.</small>
+                  @let serialNumberError = showCreateError(itemForm.controls.serialNumber);
+                  <input [id]="'serialNumber-' + index" type="text" formControlName="serialNumber"
+                    [attr.aria-invalid]="serialNumberError || missingIdentification || null"
+                    [attr.aria-describedby]="describedBy(serialNumberError && 'serialNumber-' + index + '-error', missingIdentification && 'identification-' + index + '-error')" />
+                  @if (serialNumberError) {
+                    <small class="field-error" [id]="'serialNumber-' + index + '-error'">Use até 60 caracteres.</small>
                   }
                 </div>
 
@@ -407,9 +451,11 @@
                     formControlName="manufacturedAt"
                     [ariaLabel]="'Data de fabricação do item ' + (index + 1)"
                     [maxDate]="todayDate"
+                    [ariaInvalid]="!!dateErrors().manufacturedAt[index]"
+                    [ariaDescribedBy]="dateErrors().manufacturedAt[index] ? 'manufacturedAt-' + index + '-error' : null"
                   />
                   @if (dateErrors().manufacturedAt[index]) {
-                    <small class="field-error">{{ dateErrors().manufacturedAt[index] }}</small>
+                    <small class="field-error" [id]="'manufacturedAt-' + index + '-error'">{{ dateErrors().manufacturedAt[index] }}</small>
                   }
                 </div>
 
@@ -419,8 +465,8 @@
                   }
                 </div>
 
-                @if (itemForm.hasError('identificationRequired') && (itemForm.touched || createSubmitAttempted())) {
-                  <p class="field-error rma-item-editor__error">Informe ao menos o lote ou a série deste produto.</p>
+                @if (missingIdentification) {
+                  <p class="field-error rma-item-editor__error" [id]="'identification-' + index + '-error'">Informe ao menos o lote ou a série deste produto.</p>
                 }
               </div>
             }
@@ -447,6 +493,8 @@
               [disabled]="createForm.controls.purchaseDateUnknown.value"
               [minDate]="purchaseMinDate"
               [maxDate]="todayDate"
+              [ariaInvalid]="!!dateErrors().purchaseDate"
+              [ariaDescribedBy]="dateErrors().purchaseDate ? 'purchaseDate-error' : null"
             />
             <label class="checkbox-row">
               <input type="checkbox" formControlName="purchaseDateUnknown" />
@@ -456,15 +504,16 @@
               <small class="muted-inline">Sem data da compra, a garantia fica pendente.</small>
             }
             @if (dateErrors().purchaseDate) {
-              <small class="field-error">{{ dateErrors().purchaseDate }}</small>
+              <small class="field-error" id="purchaseDate-error">{{ dateErrors().purchaseDate }}</small>
             }
           </div>
 
           <div class="field-group col-2">
             <label>Entrada</label>
-            <app-date-picker formControlName="entryDate" ariaLabel="Data de entrada" [allowClear]="false" [minDate]="entryMinDate" />
+            <app-date-picker formControlName="entryDate" ariaLabel="Data de entrada" [allowClear]="false" [minDate]="entryMinDate"
+              [ariaInvalid]="!!dateErrors().entryDate" [ariaDescribedBy]="dateErrors().entryDate ? 'entryDate-error' : null" />
             @if (dateErrors().entryDate) {
-              <small class="field-error">{{ dateErrors().entryDate }}</small>
+              <small class="field-error" id="entryDate-error">{{ dateErrors().entryDate }}</small>
             }
           </div>
 
@@ -487,25 +536,31 @@
 
             <div class="field-group">
               <label for="repairSummary">Reparo</label>
-              <textarea id="repairSummary" formControlName="repairSummary" rows="3" maxlength="600"></textarea>
+              <textarea id="repairSummary" formControlName="repairSummary" rows="3" maxlength="600"
+                [attr.aria-invalid]="showCreateError(createForm.controls.repairSummary) || null"
+                [attr.aria-describedby]="showCreateError(createForm.controls.repairSummary) ? 'repairSummary-error' : null"></textarea>
               @if (showCreateError(createForm.controls.repairSummary)) {
-                <small class="field-error">Use até 600 caracteres.</small>
+                <small class="field-error" id="repairSummary-error">Use até 600 caracteres.</small>
               }
             </div>
 
             <div class="field-group">
               <label for="replacedPartsSummary">Peças trocadas</label>
-              <textarea id="replacedPartsSummary" formControlName="replacedPartsSummary" rows="3" maxlength="600"></textarea>
+              <textarea id="replacedPartsSummary" formControlName="replacedPartsSummary" rows="3" maxlength="600"
+                [attr.aria-invalid]="showCreateError(createForm.controls.replacedPartsSummary) || null"
+                [attr.aria-describedby]="showCreateError(createForm.controls.replacedPartsSummary) ? 'replacedPartsSummary-error' : null"></textarea>
               @if (showCreateError(createForm.controls.replacedPartsSummary)) {
-                <small class="field-error">Use até 600 caracteres.</small>
+                <small class="field-error" id="replacedPartsSummary-error">Use até 600 caracteres.</small>
               }
             </div>
 
             <div class="field-group field-group--full">
               <label for="testSummary">Testes</label>
-              <textarea id="testSummary" formControlName="testSummary" rows="3" maxlength="800"></textarea>
+              <textarea id="testSummary" formControlName="testSummary" rows="3" maxlength="800"
+                [attr.aria-invalid]="showCreateError(createForm.controls.testSummary) || null"
+                [attr.aria-describedby]="showCreateError(createForm.controls.testSummary) ? 'testSummary-error' : null"></textarea>
               @if (showCreateError(createForm.controls.testSummary)) {
-                <small class="field-error">Use até 800 caracteres.</small>
+                <small class="field-error" id="testSummary-error">Use até 800 caracteres.</small>
               }
             </div>
           </fieldset>
@@ -552,9 +607,11 @@
 
           <div class="field-group field-group--full">
             <label for="foundFailure" class="sr-only">Falha encontrada</label>
-            <textarea id="foundFailure" formControlName="foundFailure" rows="4"></textarea>
+            <textarea id="foundFailure" formControlName="foundFailure" rows="4"
+              [attr.aria-invalid]="showDiagnosisError(diagnosisForm.controls.foundFailure) || null"
+              [attr.aria-describedby]="showDiagnosisError(diagnosisForm.controls.foundFailure) ? 'foundFailure-error' : null"></textarea>
             @if (showDiagnosisError(diagnosisForm.controls.foundFailure)) {
-              <small class="field-error">{{ diagnosisForm.controls.foundFailure.hasError('maxlength') ? 'Use até 2000 caracteres.' : 'Descreva a falha encontrada.' }}</small>
+              <small class="field-error" id="foundFailure-error">{{ diagnosisForm.controls.foundFailure.hasError('maxlength') ? 'Use até 2000 caracteres.' : 'Descreva a falha encontrada.' }}</small>
             }
           </div>
 
@@ -582,17 +639,21 @@
 
           <div class="field-group">
             <label>Data do diagnóstico</label>
-            <app-date-picker formControlName="diagnosedAt" ariaLabel="Data do diagnóstico" [allowClear]="false" />
+            <app-date-picker formControlName="diagnosedAt" ariaLabel="Data do diagnóstico" [allowClear]="false"
+              [ariaInvalid]="showDiagnosisError(diagnosisForm.controls.diagnosedAt)"
+              [ariaDescribedBy]="showDiagnosisError(diagnosisForm.controls.diagnosedAt) ? 'diagnosedAt-error' : null" />
             @if (showDiagnosisError(diagnosisForm.controls.diagnosedAt)) {
-              <small class="field-error">Informe a data do diagnóstico.</small>
+              <small class="field-error" id="diagnosedAt-error">Informe a data do diagnóstico.</small>
             }
           </div>
 
           <div class="field-group">
             <label for="technicianName">Técnico</label>
-            <input id="technicianName" type="text" formControlName="technicianName" />
+            <input id="technicianName" type="text" formControlName="technicianName"
+              [attr.aria-invalid]="showDiagnosisError(diagnosisForm.controls.technicianName) || null"
+              [attr.aria-describedby]="showDiagnosisError(diagnosisForm.controls.technicianName) ? 'technicianName-error' : null" />
             @if (showDiagnosisError(diagnosisForm.controls.technicianName)) {
-              <small class="field-error">{{ diagnosisForm.controls.technicianName.hasError('maxlength') ? 'Use até 120 caracteres.' : 'Informe o técnico.' }}</small>
+              <small class="field-error" id="technicianName-error">{{ diagnosisForm.controls.technicianName.hasError('maxlength') ? 'Use até 120 caracteres.' : 'Informe o técnico.' }}</small>
             }
           </div>
         </fieldset>

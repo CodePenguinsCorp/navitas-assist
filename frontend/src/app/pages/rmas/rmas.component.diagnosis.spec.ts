@@ -160,6 +160,39 @@ describe('RmasComponent diagnosis dialog', () => {
     expect(text).not.toContain('Descreva a falha encontrada.');
   });
 
+  it('ties each field error to its control and marks the control invalid', async () => {
+    // Hoje os <small class="field-error"> não têm id e os controles não têm aria-describedby nem aria-invalid.
+    const { component, open, render, submit, panel } = await setup();
+    open();
+    component.diagnosisForm.patchValue({ foundFailure: 'x'.repeat(2001), technicianName: '', diagnosedAt: '' });
+    render();
+    submit();
+
+    const control = (selector: string) => panel()!.querySelector<HTMLElement>(selector)!;
+    const describedText = (element: HTMLElement) => (element.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(Boolean)
+      .map((id) => document.getElementById(id)?.textContent?.trim() ?? '').join(' ');
+    const cases: Array<[string, string]> = [
+      ['textarea[formControlName="foundFailure"]', 'Use até 2000 caracteres.'],
+      ['input[formControlName="technicianName"]', 'Informe o técnico.'],
+      ['app-date-picker[formControlName="diagnosedAt"] .date-picker__trigger', 'Informe a data do diagnóstico.']
+    ];
+    for (const [selector, message] of cases) {
+      expect(control(selector).getAttribute('aria-invalid'), selector).toBe('true');
+      expect(describedText(control(selector)), selector).toBe(message);
+    }
+    expect(control('textarea[formControlName="notes"]').getAttribute('aria-invalid')).toBeNull();
+    const typeTrigger = control('app-custom-select[formControlName="failureType"] .custom-select__trigger');
+    expect(typeTrigger.getAttribute('aria-invalid')).toBeNull();
+    expect(typeTrigger.getAttribute('aria-describedby')).toBeNull();
+
+    component.diagnosisForm.patchValue({ foundFailure: 'Falha', technicianName: 'Ana', diagnosedAt: '2026-10-21' });
+    render();
+    for (const [selector] of cases) {
+      expect(control(selector).getAttribute('aria-invalid'), selector).toBeNull();
+      expect(control(selector).getAttribute('aria-describedby'), selector).toBeNull();
+    }
+  });
+
   it('shows the save error inside the dialog and keeps the values', async () => {
     // Hoje a falha do serviço vai para .status-card fora do diálogo.
     const error = new HttpErrorResponse({ status: 400, error: { message: 'Diagnóstico não salvo' } });
