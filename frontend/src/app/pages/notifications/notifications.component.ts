@@ -16,6 +16,7 @@ import {
 import { AuthService } from '../../core/services/auth.service';
 import { SlaClockService } from '../../core/services/sla-clock.service';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { RowActionComponent } from '../../shared/row-action/row-action.component';
 import { CustomSelectComponent } from '../../shared/form-controls/custom-select/custom-select.component';
 import { NotificationService } from '../../core/services/notification.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
@@ -41,7 +42,7 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
 
 @Component({
   selector: 'app-notifications',
-  imports: [IconComponent, CustomSelectComponent, PageHeaderComponent],
+  imports: [IconComponent, CustomSelectComponent, PageHeaderComponent, RowActionComponent],
   templateUrl: './notifications.component.html',
   styles: [`
     :host {
@@ -49,8 +50,7 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
     }
 
     .notification-toolbar,
-    .notification-actions,
-    .rule-roles {
+    .notification-actions {
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
@@ -60,11 +60,6 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
 
     .notification-toolbar {
       gap: 0.25rem 1.25rem;
-    }
-
-    .rule-roles .checkbox-field {
-      min-height: 28px;
-      font-weight: 500;
     }
 
     .notification-toolbar .button-secondary {
@@ -84,11 +79,13 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
       gap: var(--space-3);
     }
 
-    .preferences-state {
+    .preferences-state,
+    .rules-state {
       margin: var(--space-3) 0 0;
     }
 
-    .preferences-state.alert-banner {
+    .preferences-state.alert-banner,
+    .rules-state.alert-banner {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
@@ -210,6 +207,7 @@ export class NotificationsComponent {
   private readonly clock = inject(SlaClockService);
   private inboxRequest?: Subscription;
   private preferencesRequest?: Subscription;
+  private rulesRequest?: Subscription;
 
   protected readonly activeTab = signal<NotificationsTab>('inbox');
   protected readonly inboxLoading = signal(false);
@@ -221,6 +219,9 @@ export class NotificationsComponent {
   protected readonly preferencesHasLoaded = signal(false);
   protected readonly preferencesLoadErrorMessage = signal('');
   protected readonly rulesLoading = signal(false);
+  protected readonly rulesLoadFailed = signal(false);
+  protected readonly rulesHasLoaded = signal(false);
+  protected readonly rulesLoadErrorMessage = signal('');
   protected readonly busy = signal(false);
   protected readonly errorMessage = signal('');
   protected readonly successMessage = signal('');
@@ -381,6 +382,23 @@ export class NotificationsComponent {
     });
   }
 
+  protected retryRules(): void {
+    if (!this.rulesLoading()) this.loadRules();
+  }
+
+  /** Recipients as a fact: configured roles plus the RMA assignee, without judging the result. */
+  protected recipientsSummary(rule: NotificationRuleResponse): string {
+    const roles = ROLE_OPTIONS.filter((role) => rule.recipientRoles.includes(role)).map((role) => ROLE_LABELS[role]).join(', ');
+    if (roles && rule.notifyAssignee) return `${roles} + responsável pelo RMA`;
+    if (roles) return roles;
+    return rule.notifyAssignee ? 'Responsável pelo RMA' : 'Nenhum destinatário';
+  }
+
+  /** Opens the focused rule editor (implemented in the next step of the rules form). */
+  protected openRuleEditor(rule: NotificationRuleResponse): void {
+    void rule;
+  }
+
   protected updateRule(rule: NotificationRuleResponse, change: Partial<NotificationRuleRequest>): void {
     const payload: NotificationRuleRequest = {
       enabled: rule.enabled,
@@ -462,12 +480,24 @@ export class NotificationsComponent {
   }
 
   private loadRules(): void {
+    this.rulesRequest?.unsubscribe();
     this.rulesLoading.set(true);
-    this.notificationService.listRules().pipe(
+    this.rulesRequest = this.notificationService.listRules().pipe(
+      takeUntilDestroyed(this.destroyRef),
       finalize(() => this.rulesLoading.set(false))
     ).subscribe({
-      next: (rules) => this.rules.set(rules),
-      error: (error) => this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as regras.'))
+      next: (rules) => {
+        this.rules.set(rules);
+        this.rulesHasLoaded.set(true);
+        this.rulesLoadFailed.set(false);
+        this.rulesLoadErrorMessage.set('');
+      },
+      error: (error) => {
+        this.rules.set([]);
+        this.rulesHasLoaded.set(false);
+        this.rulesLoadFailed.set(true);
+        this.rulesLoadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as regras.'));
+      }
     });
     this.notificationService.listFailures().subscribe({ next: (failures) => this.failures.set(failures), error: () => this.failures.set([]) });
   }

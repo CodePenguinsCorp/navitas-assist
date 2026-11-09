@@ -163,43 +163,52 @@
 
     @if (activeTab() === 'rules' && isAdmin()) {
       <article class="panel table-card">
-        <p>As alterações valem para os próximos eventos, sem nova implantação. O e-mail usa apenas o domínio corporativo configurado no servidor.</p>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Alerta</th>
-                <th>Ativa</th>
-                <th>Severidade</th>
-                <th>Perfis</th>
-                <th>Responsável</th>
-                <th>E-mail</th>
-                <th>Silenciável</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (rule of rules(); track rule.eventType) {
+        @if (rulesLoadFailed()) {
+          <div class="panel alert-banner alert-banner--error rules-state" role="alert">
+            <strong>{{ rulesLoadErrorMessage() }}</strong>
+            <button type="button" class="button-secondary" [disabled]="rulesLoading()" (click)="retryRules()">{{ rulesLoading() ? 'Carregando...' : 'Tentar novamente' }}</button>
+          </div>
+        } @else if (!rulesHasLoaded()) {
+          <p class="rules-state" role="status">Carregando regras...</p>
+        } @else if (rules().length === 0) {
+          <p class="rules-state">Nenhuma regra disponível.</p>
+        } @else {
+          @if (rulesLoading()) {
+            <p class="rules-state" role="status">Atualizando regras...</p>
+          }
+          <div class="table-wrap">
+            <table>
+              <thead>
                 <tr>
-                  <td>{{ eventLabels[rule.eventType] }}<span class="table-subtitle">Atualizada {{ dateTime(rule.updatedAt) }} por {{ rule.updatedBy || 'sistema' }}</span></td>
-                  <td><input type="checkbox" [attr.aria-label]="'Ativar ' + eventLabels[rule.eventType]" [checked]="rule.enabled" [disabled]="busy()" (change)="updateRule(rule, { enabled: !rule.enabled })" /></td>
-                  <td>
-                    <app-custom-select size="compact" [ariaLabel]="'Severidade de ' + eventLabels[rule.eventType]" [options]="severityOptions" [value]="rule.severity" [disabled]="busy()" (valueChange)="updateSeverity(rule, $any($event))" />
-                  </td>
-                  <td>
-                    <div class="rule-roles">
-                      @for (role of roleOptions; track role) {
-                        <label class="checkbox-field"><input type="checkbox" [checked]="rule.recipientRoles.includes(role)" [disabled]="busy()" (change)="toggleRole(rule, role)" /><span>{{ roleLabels[role] }}</span></label>
-                      }
-                    </div>
-                  </td>
-                  <td><input type="checkbox" [attr.aria-label]="'Notificar responsável em ' + eventLabels[rule.eventType]" [checked]="rule.notifyAssignee" [disabled]="busy()" (change)="updateRule(rule, { notifyAssignee: !rule.notifyAssignee })" /></td>
-                  <td><input type="checkbox" [attr.aria-label]="'E-mail em ' + eventLabels[rule.eventType]" [checked]="rule.emailEnabled" [disabled]="busy()" (change)="updateRule(rule, { emailEnabled: !rule.emailEnabled })" /></td>
-                  <td><input type="checkbox" [attr.aria-label]="'Permitir silenciar ' + eventLabels[rule.eventType]" [checked]="rule.userMutable" [disabled]="busy()" (change)="updateRule(rule, { userMutable: !rule.userMutable })" /></td>
+                  <th>Alerta</th>
+                  <th>Situação</th>
+                  <th>Severidade</th>
+                  <th>Destinatários</th>
+                  <th>E-mail</th>
+                  <th>Silenciável</th>
+                  <th>Atualização</th>
+                  <th class="table-actions-col"><span class="sr-only">Ação</span></th>
                 </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                @for (rule of rules(); track rule.eventType) {
+                  <tr>
+                    <td>{{ eventLabels[rule.eventType] }}</td>
+                    <td><span class="state-dot" [class.is-on]="rule.enabled">{{ rule.enabled ? 'Ativa' : 'Inativa' }}</span></td>
+                    <td><span class="mini-chip" [class]="severityClass(rule.severity)">{{ severityLabels[rule.severity] }}</span></td>
+                    <td>{{ recipientsSummary(rule) }}</td>
+                    <td>{{ rule.emailEnabled ? 'Sim' : 'Não' }}</td>
+                    <td>{{ rule.userMutable ? 'Sim' : 'Não' }}</td>
+                    <td>{{ dateTime(rule.updatedAt) }} por {{ rule.updatedBy || 'sistema' }}</td>
+                    <td class="table-actions-col">
+                      <button appRowAction icon="pencil" label="Editar regra" [target]="eventLabels[rule.eventType]" (click)="openRuleEditor(rule)"></button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
       </article>
 
       <article class="panel table-card">
