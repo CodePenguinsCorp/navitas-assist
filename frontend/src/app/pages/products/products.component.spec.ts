@@ -7,6 +7,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { PageResponse, ProductResponse, ProductSummaryResponse } from '../../core/models';
 import { CatalogService, ProductFilters } from '../../core/services/catalog.service';
+import { LoadingService } from '../../core/services/loading.service';
 import { PresenceFilter } from '../../core/utils/catalog-ui';
 import { CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
@@ -656,3 +657,153 @@ function expectPending(root: HTMLElement): void {
   expect(busy?.children.length).toBe(0);
   expect(root.textContent).not.toContain('Carregando');
 }
+
+describe('ProductsComponent dialog focus', () => {
+  let fixture: ComponentFixture<ProductsComponent>;
+  let element: HTMLElement;
+  let loading: LoadingService;
+  let rows: ProductResponse[];
+  let save: Subject<ProductResponse>;
+  let remove: Subject<void>;
+
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    rows = [product(1, 'Alfa'), product(2, 'Beta')];
+    await TestBed.configureTestingModule({
+      imports: [ProductsComponent],
+      providers: [{ provide: CatalogService, useValue: {
+        listProducts: (filters: { page: number; size: number }) => of(page(rows, filters.page, filters.size)),
+        getProductSummary: () => of({ total: rows.length, withFirmware: 0, averageWarrantyMonths: 12, categories: ['Controle'] }),
+        createProduct: () => (save = new Subject<ProductResponse>()),
+        updateProduct: () => (save = new Subject<ProductResponse>()),
+        deleteProduct: () => (remove = new Subject<void>())
+      } }]
+    }).compileComponents();
+    fixture = TestBed.createComponent(ProductsComponent);
+    element = fixture.nativeElement as HTMLElement;
+    loading = TestBed.inject(LoadingService);
+    render();
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  function render(): void {
+    fixture.detectChanges();
+    TestBed.tick();
+  }
+
+  function find(selector: string): HTMLElement {
+    const found = element.querySelector<HTMLElement>(selector);
+    expect(found, selector + ' must exist').not.toBeNull();
+    return found!;
+  }
+
+  function activate(selector: string): HTMLButtonElement {
+    const trigger = find(selector) as HTMLButtonElement;
+    trigger.focus();
+    trigger.click();
+    render();
+    return trigger;
+  }
+
+  function escape(): KeyboardEvent {
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    (document.activeElement ?? document.body).dispatchEvent(event);
+    render();
+    return event;
+  }
+
+  function fillAndSubmit(): void {
+    for (const [name, value] of [['sku', 'SKU-3'], ['name', 'Gama']]) {
+      const input = find(`[formControlName="${name}"]`) as HTMLInputElement;
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    find('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    render();
+  }
+
+  function showOverlay(): void {
+    loading.start();
+    vi.advanceTimersByTime(200);
+    render();
+  }
+
+  function hideOverlay(): void {
+    loading.finish();
+    vi.advanceTimersByTime(400);
+    render();
+  }
+
+  it('focuses SKU from Novo produto and returns to it on Escape', () => {
+    const trigger = activate('.page-heading button');
+    expect(document.activeElement).toBe(find('[formControlName="sku"]'));
+    expect(escape().defaultPrevented).toBe(true);
+    expect(element.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('focuses Cancelar in the delete confirmation and returns to the row action on Escape', () => {
+    const trigger = activate('button[aria-label="Excluir Alfa"]');
+    const cancel = find('[role="alertdialog"] .form-actions .button-secondary');
+    expect(cancel.textContent?.trim()).toBe('Cancelar');
+    expect(document.activeElement).toBe(cancel);
+    escape();
+    expect(element.querySelector('[role="alertdialog"]')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('ignores Escape while the product is being saved', () => {
+    activate('.page-heading button');
+    fillAndSubmit();
+    escape();
+    expect(element.querySelector('[role="dialog"]')).not.toBeNull();
+    save.next(product(3, 'Gama'));
+    save.complete();
+    render();
+    expect(element.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it('ignores Escape while the product is being deleted', () => {
+    activate('button[aria-label="Excluir Alfa"]');
+    find('[role="alertdialog"] .button-primary--danger').click();
+    render();
+    escape();
+    expect(element.querySelector('[role="alertdialog"]')).not.toBeNull();
+    remove.error(new HttpErrorResponse({ status: 409, error: { message: 'Vinculado.' } }));
+    render();
+    expect(element.querySelector('[role="alertdialog"] [role="alert"]')?.textContent).toContain('Vinculado.');
+  });
+
+  it('returns to Novo produto only after the global overlay hides when the save succeeds under it', () => {
+    const trigger = activate('.page-heading button');
+    fillAndSubmit();
+    showOverlay();
+    const focus = vi.spyOn(trigger, 'focus');
+    rows = [...rows, product(3, 'Gama')];
+    save.next(product(3, 'Gama'));
+    save.complete();
+    render();
+    expect(element.querySelector('[role="dialog"]')).toBeNull();
+    expect(focus).not.toHaveBeenCalled();
+    hideOverlay();
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('falls back to Novo produto after the deleted row disappears, once the overlay hides', () => {
+    activate('button[aria-label="Excluir Alfa"]');
+    find('[role="alertdialog"] .button-primary--danger').click();
+    render();
+    showOverlay();
+    rows = [product(2, 'Beta')];
+    remove.next();
+    remove.complete();
+    render();
+    expect(element.querySelector('button[aria-label="Excluir Alfa"]')).toBeNull();
+    const fallback = find('.page-heading button');
+    expect(document.activeElement).not.toBe(fallback);
+    hideOverlay();
+    expect(document.activeElement).toBe(fallback);
+  });
+});

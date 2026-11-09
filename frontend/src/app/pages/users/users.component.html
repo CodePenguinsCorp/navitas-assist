@@ -2,7 +2,7 @@
   <app-page-header
     heading="Usuários"
   >
-    <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo usuário</button>
+    <button #createButton type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo usuário</button>
   </app-page-header>
 
   <section class="panel catalog-toolbar catalog-toolbar--filters">
@@ -149,6 +149,11 @@
       role="dialog"
       aria-modal="true"
       aria-labelledby="user-form-title"
+      appModalFocus
+      modalInitialFocus="[formcontrolname='fullName']"
+      [modalCloseBlocked]="submitting()"
+      [modalFallbackFocus]="createButton"
+      (modalCloseRequested)="closeModal()"
       (click)="$event.stopPropagation()"
     >
       <header class="modal-header">
@@ -245,6 +250,11 @@
       aria-modal="true"
       aria-labelledby="delete-user-title"
       aria-describedby="delete-user-description"
+      appModalFocus
+      modalInitialFocus=".form-actions .button-secondary"
+      [modalCloseBlocked]="deletingUserId() !== null"
+      [modalFallbackFocus]="createButton"
+      (modalCloseRequested)="closeDeleteModal()"
       (click)="$event.stopPropagation()"
     >
       <header class="modal-header">

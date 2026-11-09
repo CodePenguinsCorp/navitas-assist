@@ -15,6 +15,7 @@ import {
 import { PagedList } from '../../core/utils/paged-list';
 import { SEARCH_DEBOUNCE_MS, presenceToFlag } from '../../core/utils/pagination';
 import { CustomSelectComponent } from '../../shared/form-controls/custom-select/custom-select.component';
+import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
@@ -31,7 +32,7 @@ type ClientFormControlName =
 
 @Component({
   selector: 'app-clients',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PaginationComponent, PageHeaderComponent, RowActionComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PaginationComponent, PageHeaderComponent, RowActionComponent],
   templateUrl: './clients.component.html',
   styles: [`
     :host { display: block; }

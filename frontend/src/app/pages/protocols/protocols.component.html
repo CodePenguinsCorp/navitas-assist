@@ -2,7 +2,7 @@
   <app-page-header
     heading="Protocolos técnicos"
   >
-    <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo protocolo</button>
+    <button #createButton type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo protocolo</button>
   </app-page-header>
 
   <section class="panel catalog-toolbar catalog-toolbar--filters">
@@ -102,6 +102,11 @@
       role="dialog"
       aria-modal="true"
       aria-labelledby="protocol-form-title"
+      appModalFocus
+      modalInitialFocus="[formcontrolname='name']"
+      [modalCloseBlocked]="submitting()"
+      [modalFallbackFocus]="createButton"
+      (modalCloseRequested)="closeModal()"
       (click)="$event.stopPropagation()"
     >
       <header class="modal-header">

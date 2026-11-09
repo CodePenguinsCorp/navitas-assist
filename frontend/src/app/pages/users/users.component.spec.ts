@@ -4,6 +4,7 @@ import { Observable, Subject, of, throwError } from 'rxjs';
 import { PageResponse, UserAccountResponse, UserRole } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService, UserFilters } from '../../core/services/catalog.service';
+import { LoadingService } from '../../core/services/loading.service';
 import { UsersComponent } from './users.component';
 
 function user(id: number, fullName: string): UserAccountResponse {
@@ -399,3 +400,154 @@ function expectPending(root: HTMLElement): void {
   expect(busy?.children.length).toBe(0);
   expect(root.textContent).not.toContain('Carregando');
 }
+
+describe('UsersComponent dialog focus', () => {
+  let fixture: ComponentFixture<UsersComponent>;
+  let element: HTMLElement;
+  let loading: LoadingService;
+  let rows: UserAccountResponse[];
+  let save: Subject<UserAccountResponse>;
+  let remove: Subject<void>;
+
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    rows = [user(1, 'Ana'), user(2, 'Bia')];
+    await TestBed.configureTestingModule({
+      imports: [UsersComponent],
+      providers: [{ provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }), hasAnyRole: () => true } },
+        { provide: CatalogService, useValue: {
+        listUsers: (filters: { page: number; size: number }) => of(page(rows, filters.page, filters.size)),
+        getUserSummary: () => of({ total: rows.length, active: rows.length, admins: 1, roles: 1 }),
+        createUser: () => (save = new Subject<UserAccountResponse>()),
+        updateUser: () => (save = new Subject<UserAccountResponse>()),
+        deleteUser: () => (remove = new Subject<void>())
+      } }]
+    }).compileComponents();
+    fixture = TestBed.createComponent(UsersComponent);
+    element = fixture.nativeElement as HTMLElement;
+    loading = TestBed.inject(LoadingService);
+    render();
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  function render(): void {
+    fixture.detectChanges();
+    TestBed.tick();
+  }
+
+  function find(selector: string): HTMLElement {
+    const found = element.querySelector<HTMLElement>(selector);
+    expect(found, selector + ' must exist').not.toBeNull();
+    return found!;
+  }
+
+  function activate(selector: string): HTMLButtonElement {
+    const trigger = find(selector) as HTMLButtonElement;
+    trigger.focus();
+    trigger.click();
+    render();
+    return trigger;
+  }
+
+  function escape(): KeyboardEvent {
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    (document.activeElement ?? document.body).dispatchEvent(event);
+    render();
+    return event;
+  }
+
+  function fillAndSubmit(): void {
+    for (const [name, value] of [['username', 'caio'], ['fullName', 'Caio'], ['password', 'segredo1']]) {
+      const input = find(`[formControlName="${name}"]`) as HTMLInputElement;
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    find('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    render();
+  }
+
+  function showOverlay(): void {
+    loading.start();
+    vi.advanceTimersByTime(200);
+    render();
+  }
+
+  function hideOverlay(): void {
+    loading.finish();
+    vi.advanceTimersByTime(400);
+    render();
+  }
+
+  it('focuses Nome completo from Novo usuário and returns to it on Escape', () => {
+    const trigger = activate('.page-heading button');
+    expect(document.activeElement).toBe(find('[formControlName="fullName"]'));
+    expect(escape().defaultPrevented).toBe(true);
+    expect(element.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('focuses Cancelar in the delete confirmation and returns to the row action on Escape', () => {
+    const trigger = activate('button[aria-label="Excluir Ana"]');
+    const cancel = find('[role="alertdialog"] .form-actions .button-secondary');
+    expect(cancel.textContent?.trim()).toBe('Cancelar');
+    expect(document.activeElement).toBe(cancel);
+    escape();
+    expect(element.querySelector('[role="alertdialog"]')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('ignores Escape while the user is being saved', () => {
+    activate('.page-heading button');
+    fillAndSubmit();
+    escape();
+    expect(element.querySelector('[role="dialog"]')).not.toBeNull();
+    save.next(user(3, 'Caio'));
+    save.complete();
+    render();
+    expect(element.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it('ignores Escape while the user is being deleted', () => {
+    activate('button[aria-label="Excluir Ana"]');
+    find('[role="alertdialog"] .button-primary--danger').click();
+    render();
+    escape();
+    expect(element.querySelector('[role="alertdialog"]')).not.toBeNull();
+    remove.error(new HttpErrorResponse({ status: 409, error: { message: 'Vinculado.' } }));
+    render();
+    expect(element.querySelector('[role="alertdialog"] [role="alert"]')?.textContent).toContain('Vinculado.');
+  });
+
+  it('returns to Novo usuário only after the global overlay hides when the save succeeds under it', () => {
+    const trigger = activate('.page-heading button');
+    fillAndSubmit();
+    showOverlay();
+    const focus = vi.spyOn(trigger, 'focus');
+    rows = [...rows, user(3, 'Caio')];
+    save.next(user(3, 'Caio'));
+    save.complete();
+    render();
+    expect(element.querySelector('[role="dialog"]')).toBeNull();
+    expect(focus).not.toHaveBeenCalled();
+    hideOverlay();
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('falls back to Novo usuário after the deleted row disappears, once the overlay hides', () => {
+    activate('button[aria-label="Excluir Ana"]');
+    find('[role="alertdialog"] .button-primary--danger').click();
+    render();
+    showOverlay();
+    rows = [user(2, 'Bia')];
+    remove.next();
+    remove.complete();
+    render();
+    expect(element.querySelector('button[aria-label="Excluir Ana"]')).toBeNull();
+    const fallback = find('.page-heading button');
+    expect(document.activeElement).not.toBe(fallback);
+    hideOverlay();
+    expect(document.activeElement).toBe(fallback);
+  });
+});

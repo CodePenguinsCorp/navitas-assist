@@ -6,6 +6,7 @@ import { Observable, Subject, of, throwError } from 'rxjs';
 import { ProtocolTemplateItemResponse, ProtocolTemplateRequest, ProtocolTemplateResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import { ProtocolService } from '../../core/services/protocol.service';
+import { LoadingService } from '../../core/services/loading.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { ProtocolsComponent } from './protocols.component';
 
@@ -522,5 +523,129 @@ describe('ProtocolsComponent', () => {
         }]
       });
     });
+  });
+});
+
+describe('ProtocolsComponent dialog focus', () => {
+  let fixture: ComponentFixture<ProtocolsComponent>;
+  let element: HTMLElement;
+  let loading: LoadingService;
+  let templates: ProtocolTemplateResponse[];
+  let publish: Subject<ProtocolTemplateResponse>;
+
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    templates = catalog();
+    await TestBed.configureTestingModule({
+      imports: [ProtocolsComponent],
+      providers: [
+        { provide: ProtocolService, useValue: {
+          listTemplates: () => of(templates),
+          createTemplate: () => (publish = new Subject<ProtocolTemplateResponse>()),
+          updateTemplate: () => (publish = new Subject<ProtocolTemplateResponse>())
+        } },
+        { provide: CatalogService, useValue: { listProductOptions: () => of([]) } }
+      ]
+    }).compileComponents();
+    fixture = TestBed.createComponent(ProtocolsComponent);
+    element = fixture.nativeElement as HTMLElement;
+    loading = TestBed.inject(LoadingService);
+    render();
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  function render(): void {
+    fixture.detectChanges();
+    TestBed.tick();
+  }
+
+  function find(selector: string): HTMLElement {
+    const found = element.querySelector<HTMLElement>(selector);
+    expect(found, selector + ' must exist').not.toBeNull();
+    return found!;
+  }
+
+  function activate(selector: string): HTMLButtonElement {
+    const trigger = find(selector) as HTMLButtonElement;
+    trigger.focus();
+    trigger.click();
+    render();
+    return trigger;
+  }
+
+  function escape(): KeyboardEvent {
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    (document.activeElement ?? document.body).dispatchEvent(event);
+    render();
+    return event;
+  }
+
+  function publishVersion(): void {
+    find('[role="dialog"] button[type="submit"]').click();
+    render();
+  }
+
+  function showOverlay(): void {
+    loading.start();
+    vi.advanceTimersByTime(200);
+    render();
+  }
+
+  function hideOverlay(): void {
+    loading.finish();
+    vi.advanceTimersByTime(400);
+    render();
+  }
+
+  const newVersion = 'button[aria-label="Nova versão de Diagnóstico Alfa"]';
+
+  it('focuses the protocol name from Novo protocolo and returns to it on Escape', () => {
+    const trigger = activate('.page-heading button');
+    expect(document.activeElement).toBe(find('[formControlName="name"]'));
+    expect(escape().defaultPrevented).toBe(true);
+    expect(element.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('ignores Escape while a new version is being published', () => {
+    activate(newVersion);
+    publishVersion();
+    escape();
+    expect(element.querySelector('[role="dialog"]')).not.toBeNull();
+    publish.next(template({ currentVersion: 2 }));
+    publish.complete();
+    render();
+    expect(element.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it('returns to Nova versão only after the global overlay hides when publishing succeeds under it', () => {
+    const trigger = activate(newVersion);
+    publishVersion();
+    showOverlay();
+    const focus = vi.spyOn(trigger, 'focus');
+    publish.next(template({ currentVersion: 2 }));
+    publish.complete();
+    render();
+    expect(element.querySelector('[role="dialog"]')).toBeNull();
+    expect(focus).not.toHaveBeenCalled();
+    hideOverlay();
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('falls back to Novo protocolo when the row disappears after publishing, once the overlay hides', () => {
+    activate(newVersion);
+    publishVersion();
+    showOverlay();
+    templates = [catalog()[1]];
+    publish.next(template({ currentVersion: 2 }));
+    publish.complete();
+    render();
+    expect(element.querySelector(newVersion)).toBeNull();
+    const fallback = find('.page-heading button');
+    expect(document.activeElement).not.toBe(fallback);
+    hideOverlay();
+    expect(document.activeElement).toBe(fallback);
   });
 });

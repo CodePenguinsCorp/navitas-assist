@@ -2,7 +2,7 @@
   <app-page-header
     heading="Produtos"
   >
-    <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo produto</button>
+    <button #createButton type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo produto</button>
   </app-page-header>
 
   <section class="panel catalog-toolbar catalog-toolbar--filters">
@@ -169,6 +169,11 @@
       role="dialog"
       aria-modal="true"
       aria-labelledby="product-form-title"
+      appModalFocus
+      modalInitialFocus="[formcontrolname='sku']"
+      [modalCloseBlocked]="submitting()"
+      [modalFallbackFocus]="createButton"
+      (modalCloseRequested)="closeModal()"
       (click)="$event.stopPropagation()"
     >
       <header class="modal-header">
@@ -285,6 +290,11 @@
       aria-modal="true"
       aria-labelledby="delete-product-title"
       aria-describedby="delete-product-description"
+      appModalFocus
+      modalInitialFocus=".form-actions .button-secondary"
+      [modalCloseBlocked]="deletingProductId() !== null"
+      [modalFallbackFocus]="createButton"
+      (modalCloseRequested)="closeDeleteModal()"
       (click)="$event.stopPropagation()"
     >
       <header class="modal-header">

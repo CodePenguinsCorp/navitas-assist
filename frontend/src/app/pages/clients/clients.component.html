@@ -2,7 +2,7 @@
   <app-page-header
     heading="Clientes"
   >
-    <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo cliente</button>
+    <button #createButton type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo cliente</button>
   </app-page-header>
 
   <section class="panel catalog-toolbar catalog-toolbar--filters">
@@ -161,6 +161,11 @@
       role="dialog"
       aria-modal="true"
       aria-labelledby="client-form-title"
+      appModalFocus
+      modalInitialFocus="[formcontrolname='legalName']"
+      [modalCloseBlocked]="submitting()"
+      [modalFallbackFocus]="createButton"
+      (modalCloseRequested)="closeModal()"
       (click)="$event.stopPropagation()"
     >
       <header class="modal-header">
@@ -259,6 +264,11 @@
       aria-modal="true"
       aria-labelledby="delete-client-title"
       aria-describedby="delete-client-description"
+      appModalFocus
+      modalInitialFocus=".form-actions .button-secondary"
+      [modalCloseBlocked]="deletingClientId() !== null"
+      [modalFallbackFocus]="createButton"
+      (modalCloseRequested)="closeDeleteModal()"
       (click)="$event.stopPropagation()"
     >
       <header class="modal-header">
