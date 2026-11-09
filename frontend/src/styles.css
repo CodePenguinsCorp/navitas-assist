@@ -2676,8 +2676,11 @@ app-custom-select:has(> .custom-select--status) {
   letter-spacing: 0;
 }
 
-/* A record inside a card: tinted enough to read as a separate piece on white. */
+/* A record inside a card: tinted enough to read as a separate piece on white.
+   Both detail modals lay its content out as a grid; each sets only its own gap. */
 .detail-tile {
+  display: grid;
+  align-content: start;
   padding: var(--space-3) var(--space-4);
   border: 1px solid #e1e9f1;
   border-radius: var(--radius-sm);

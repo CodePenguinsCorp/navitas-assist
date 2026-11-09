@@ -140,6 +140,9 @@ export interface RmaListFilters {
       align-content: start;
       /* Rows keep their content height; the fixed-height modal scrolls instead of squeezing the tabs. */
       grid-auto-rows: max-content;
+    }
+
+    .rma-details {
       gap: 1.5rem;
       padding: 1.5rem 1.25rem 1.5rem 1.75rem;
     }
@@ -198,6 +201,10 @@ export interface RmaListFilters {
       background: var(--surface-alt);
     }
 
+    .rma-items-editor {
+      gap: 0.75rem;
+    }
+
     .rma-details__panel {
       min-height: 360px;
     }
@@ -225,10 +232,6 @@ export interface RmaListFilters {
       margin-top: 0.75rem;
     }
 
-    .rma-items-editor {
-      gap: 0.75rem;
-    }
-
     .rma-item-editor {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -252,8 +255,8 @@ export interface RmaListFilters {
       margin-top: calc(1lh + var(--space-2));
     }
 
+    /* Grid layout comes from the shared .detail-tile. */
     .rma-item-detail {
-      display: grid;
       gap: 0.75rem;
     }
 

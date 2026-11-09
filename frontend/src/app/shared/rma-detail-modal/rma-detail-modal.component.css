@@ -1,5 +1,5 @@
 :host { display: contents; }
-/* Canvas, cards, card titles, tiles and the label/value grid come from the shared .detail-* rules. */
+/* Canvas, cards, card titles, tiles (grid) and the label/value grid come from the shared .detail-* rules. */
 .rma-detail { width: min(100%, 1080px); padding: 1.25rem 0.9rem 1.5rem 1.5rem; }
 .rma-detail:focus { outline: none; }
 .rma-detail__bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
@@ -21,14 +21,14 @@
 
 .rma-detail__items, .rma-detail__timeline { display: grid; margin: 0; padding: 0; list-style: none; }
 .rma-detail__items, .rma-detail__tiles { gap: 0.75rem; }
-.rma-detail__items li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.5rem 0.75rem; }
+.rma-detail__items li { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.5rem 0.75rem; }
 .rma-detail__items li > strong { min-inline-size: 0; overflow-wrap: anywhere; }
 .rma-detail__items dl { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.3rem 1.1rem; margin: 0; font-size: 0.82rem; color: var(--muted); }
 .rma-detail__items dl div { display: flex; gap: 0.35rem; min-inline-size: 0; max-inline-size: 100%; }
 .rma-detail__items dd { margin: 0; min-inline-size: 0; color: var(--text); font-weight: 600; overflow-wrap: anywhere; }
 
 .rma-detail__tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.rma-detail__tile { display: grid; align-content: start; gap: 0.35rem; }
+.rma-detail__tile { gap: 0.35rem; }
 .rma-detail__tile--wide { grid-column: 1 / -1; }
 .rma-detail__tile strong { font-weight: 600; white-space: pre-wrap; }
 .rma-detail__tile .mini-chip { justify-self: start; font-style: normal; }
@@ -49,7 +49,7 @@
 .rma-detail__info--dates { background: transparent; border-style: dashed; box-shadow: none; }
 .rma-detail__info--dates :is(dt, dd) { font-size: 0.8rem; }
 .rma-detail__assignee { display: flex; align-items: center; gap: 0.5rem; }
-/* Display, centering, type and flex-shrink come from the global .avatar. */
-.avatar { inline-size: 26px; block-size: 26px; border-radius: 50%; background: var(--brand-blue); color: #fff; }
+/* Shape, display, centering, type and flex-shrink come from the global .avatar. */
+.avatar { inline-size: 26px; block-size: 26px; background: var(--brand-blue); color: #fff; }
 @media (max-width: 860px) { .rma-detail__layout { grid-template-columns: minmax(0, 1fr); } .rma-detail__side { order: -1; } .rma-detail__tiles { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 520px) { .rma-detail { padding: 1rem 0.4rem 1rem 0.9rem; } .rma-detail__section { padding: 1rem; } }
