@@ -62,7 +62,7 @@
     </article>
   }
 
-  <article class="table-card table-card--list panel">
+  <article #listRegion class="table-card table-card--list panel" tabindex="-1">
     @if (loadFailed()) {
       <section class="empty-state" role="alert">
         <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
@@ -168,7 +168,16 @@
 @if (activeModal() === 'details') {
   @if (selectedRma(); as rma) {
     <section class="modal-overlay" (click)="closeModal()">
-      <article class="panel modal-panel modal-panel--wide rma-details detail-surface" role="dialog" aria-modal="true" [attr.aria-label]="'Detalhes do ' + rma.code" (click)="$event.stopPropagation()">
+      <article
+        class="panel modal-panel modal-panel--wide rma-details detail-surface"
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-label]="'Detalhes do ' + rma.code"
+        appModalFocus
+        [modalFallbackFocus]="listRegion"
+        (modalCloseRequested)="closeModal()"
+        (click)="$event.stopPropagation()"
+      >
         <header class="rma-details__header">
           <div class="rma-details__identity">
             <span class="rma-details__code code-text">{{ rma.code }}</span>
@@ -332,7 +341,18 @@
 
 @if (activeModal() === 'create') {
   <section class="modal-overlay" (click)="closeModal()">
-    <article class="panel modal-panel modal-panel--form-wide" role="dialog" aria-modal="true" aria-labelledby="rma-create-title" (click)="$event.stopPropagation()">
+    <article
+      class="panel modal-panel modal-panel--form-wide"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="rma-create-title"
+      appModalFocus
+      modalInitialFocus="app-custom-select[formcontrolname='clientId'] .custom-select__trigger"
+      [modalCloseBlocked]="createSubmitting()"
+      [modalFallbackFocus]="listRegion"
+      (modalCloseRequested)="closeModal()"
+      (click)="$event.stopPropagation()"
+    >
       <div class="modal-header">
         <div>
           <h3 id="rma-create-title">Novo RMA</h3>
@@ -564,7 +584,18 @@
 
 @if (activeModal() === 'diagnosis') {
   <section class="modal-overlay" (click)="closeModal()">
-    <article class="panel modal-panel modal-panel--narrow" role="dialog" aria-modal="true" aria-labelledby="rma-diagnosis-title" (click)="$event.stopPropagation()">
+    <article
+      class="panel modal-panel modal-panel--narrow"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="rma-diagnosis-title"
+      appModalFocus
+      modalInitialFocus="#foundFailure"
+      [modalCloseBlocked]="diagnosisSubmitting()"
+      [modalFallbackFocus]="listRegion"
+      (modalCloseRequested)="closeModal()"
+      (click)="$event.stopPropagation()"
+    >
       <div class="modal-header">
         <div>
           <h3 id="rma-diagnosis-title">Diagnóstico</h3>

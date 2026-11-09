@@ -7,6 +7,7 @@ import { Observable, Subject, of, throwError } from 'rxjs';
 import { ClientResponse, CreateRmaRequest, ProductResponse, RmaResponse, UserRole, UserSession } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
+import { LoadingService } from '../../core/services/loading.service';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { RmaService } from '../../core/services/rma.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
@@ -493,5 +494,76 @@ describe('RmasComponent creation sections', () => {
     const { open, panel } = await setup();
     open();
     expectCancelBeforePrimary(panel()!);
+  });
+});
+
+describe('RmasComponent creation dialog focus', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  async function focusSetup(create?: CreateFn) {
+    const context = await setup({ create });
+    const loading = TestBed.inject(LoadingService);
+    const render = () => {
+      context.fixture.detectChanges();
+      TestBed.tick();
+    };
+    const newButton = () => context.page.querySelector<HTMLButtonElement>('.page-heading .button-primary')!;
+    const openFromButton = () => {
+      const trigger = newButton();
+      trigger.focus();
+      trigger.click();
+      render();
+      return trigger;
+    };
+    const escape = () => {
+      const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+      (document.activeElement ?? document.body).dispatchEvent(event);
+      render();
+      return event;
+    };
+    const showOverlay = () => { loading.start(); vi.advanceTimersByTime(200); render(); };
+    const hideOverlay = () => { loading.finish(); vi.advanceTimersByTime(400); render(); };
+    render();
+    return { ...context, render, newButton, openFromButton, escape, showOverlay, hideOverlay };
+  }
+
+  it('focuses the Cliente selector from Novo RMA and returns to it on Escape', async () => {
+    const { page, dialog, openFromButton, escape } = await focusSetup();
+    const trigger = openFromButton();
+    const clientSelect = page.querySelector('app-custom-select[formControlName="clientId"] .custom-select__trigger');
+    expect(document.activeElement).toBe(clientSelect);
+    expect(escape().defaultPrevented).toBe(true);
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('ignores Escape while the RMA is being opened', async () => {
+    const pending = new Subject<RmaResponse>();
+    const { dialog, openFromButton, escape, fillValid, submit } = await focusSetup(() => pending);
+    openFromButton();
+    fillValid();
+    submit();
+    expect(escape().defaultPrevented).toBe(false);
+    expect(dialog()).not.toBeNull();
+    pending.error(new HttpErrorResponse({ status: 400, error: { message: 'Recusado.' } }));
+  });
+
+  it('returns to Novo RMA only after the global overlay hides when the creation succeeds under it', async () => {
+    const pending = new Subject<RmaResponse>();
+    const { dialog, render, openFromButton, fillValid, submit, showOverlay, hideOverlay } = await focusSetup(() => pending);
+    const trigger = openFromButton();
+    fillValid();
+    submit();
+    showOverlay();
+    const focus = vi.spyOn(trigger, 'focus');
+    pending.next(buildRma({ id: 2, code: 'RMA-2026-000002' }));
+    pending.complete();
+    render();
+    expect(dialog()).toBeNull();
+    expect(focus).not.toHaveBeenCalled();
+    hideOverlay();
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(trigger);
   });
 });

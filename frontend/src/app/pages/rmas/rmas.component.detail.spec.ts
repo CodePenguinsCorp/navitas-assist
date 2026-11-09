@@ -6,6 +6,7 @@ import { of } from 'rxjs';
 import { DiagnosisResponse, RmaResponse, UserRole, UserSession, WarrantyStatus } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
+import { LoadingService } from '../../core/services/loading.service';
 import { PartService } from '../../core/services/part.service';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { RmaService } from '../../core/services/rma.service';
@@ -348,3 +349,70 @@ describe('RmasComponent detail with the shared information contract', () => {
 function closeDetail(detail: HTMLElement): void {
   detail.querySelector<HTMLButtonElement>('.modal-close')!.click();
 }
+
+describe('RmasComponent detail dialog focus', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  async function focusSetup() {
+    const context = await setup();
+    const loading = TestBed.inject(LoadingService);
+    const render = () => {
+      context.fixture.detectChanges();
+      TestBed.tick();
+    };
+    const openFromRow = () => {
+      const row = context.page.querySelector<HTMLElement>('.rma-table-row')!;
+      row.focus();
+      row.click();
+      render();
+      return row;
+    };
+    const dialog = () => context.page.querySelector<HTMLElement>('.rma-details[role="dialog"]');
+    const listRegion = () => context.page.querySelector<HTMLElement>('.table-card')!;
+    const escape = () => {
+      const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+      (document.activeElement ?? document.body).dispatchEvent(event);
+      render();
+      return event;
+    };
+    const showOverlay = () => { loading.start(); vi.advanceTimersByTime(200); render(); };
+    const hideOverlay = () => { loading.finish(); vi.advanceTimersByTime(400); render(); };
+    render();
+    return { ...context, render, openFromRow, dialog, listRegion, escape, showOverlay, hideOverlay };
+  }
+
+  it('focuses the detail panel from its row and returns to the row on Escape', async () => {
+    const { dialog, openFromRow, escape } = await focusSetup();
+    const row = openFromRow();
+    expect(document.activeElement).toBe(dialog());
+    expect(escape().defaultPrevented).toBe(true);
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(row);
+  });
+
+  it('falls back to the list when the detail was opened without a trigger', async () => {
+    const { open, render, dialog, listRegion, escape } = await focusSetup();
+    (document.activeElement as HTMLElement | null)?.blur();
+    open();
+    render();
+    expect(document.activeElement).toBe(dialog());
+    escape();
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(listRegion());
+  });
+
+  it('defers the return to the row until the global overlay hides', async () => {
+    const { dialog, openFromRow, showOverlay, hideOverlay, render } = await focusSetup();
+    const row = openFromRow();
+    showOverlay();
+    const focus = vi.spyOn(row, 'focus');
+    closeDetail(dialog()!);
+    render();
+    expect(dialog()).toBeNull();
+    expect(focus).not.toHaveBeenCalled();
+    hideOverlay();
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(row);
+  });
+});

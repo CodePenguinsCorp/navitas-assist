@@ -7,6 +7,7 @@ import { Observable, Subject, of, throwError } from 'rxjs';
 import { DiagnosisRequest, DiagnosisResponse, RmaResponse, UserRole, UserSession } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
+import { LoadingService } from '../../core/services/loading.service';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { RmaService } from '../../core/services/rma.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
@@ -319,5 +320,80 @@ describe('RmasComponent diagnosis dialog', () => {
     const { open, panel } = await setup();
     open();
     expectCancelBeforePrimary(panel()!);
+  });
+});
+
+describe('RmasComponent diagnosis dialog focus', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  async function focusSetup(upsert?: UpsertFn) {
+    const context = await setup({ upsert });
+    const loading = TestBed.inject(LoadingService);
+    const render = () => {
+      context.fixture.detectChanges();
+      TestBed.tick();
+    };
+    /** Opens the detail from its row and the diagnosis from the detail header action. */
+    const openFromDetail = () => {
+      const row = context.page.querySelector<HTMLElement>('.rma-table-row')!;
+      row.focus();
+      row.click();
+      render();
+      const action = context.page.querySelector<HTMLButtonElement>('.rma-details__header-actions .button-primary')!;
+      action.focus();
+      action.click();
+      render();
+    };
+    const listRegion = () => context.page.querySelector<HTMLElement>('.table-card')!;
+    const escape = () => {
+      const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+      (document.activeElement ?? document.body).dispatchEvent(event);
+      render();
+      return event;
+    };
+    const showOverlay = () => { loading.start(); vi.advanceTimersByTime(200); render(); };
+    const hideOverlay = () => { loading.finish(); vi.advanceTimersByTime(400); render(); };
+    render();
+    return { ...context, render, openFromDetail, listRegion, escape, showOverlay, hideOverlay };
+  }
+
+  it('focuses Falha encontrada and, with the detail action unmounted, returns to the RMA row on Escape', async () => {
+    const { page, dialog, openFromDetail, escape } = await focusSetup();
+    openFromDetail();
+    expect(document.activeElement).toBe(page.querySelector('#foundFailure'));
+    expect(page.querySelector('.rma-details')).toBeNull();
+    expect(escape().defaultPrevented).toBe(true);
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(page.querySelector('.rma-table-row'));
+  });
+
+  it('ignores Escape while the diagnosis is being saved', async () => {
+    const pending = new Subject<RmaResponse>();
+    const { dialog, openFromDetail, escape, fillValid, submit } = await focusSetup(() => pending);
+    openFromDetail();
+    fillValid();
+    submit();
+    expect(escape().defaultPrevented).toBe(false);
+    expect(dialog()).not.toBeNull();
+    pending.error(new HttpErrorResponse({ status: 400, error: { message: 'Recusado.' } }));
+  });
+
+  it('falls back to the list once the overlay hides when the saved RMA row leaves the refreshed list', async () => {
+    const pending = new Subject<RmaResponse>();
+    const { page, dialog, render, rmaService, openFromDetail, listRegion, fillValid, submit, showOverlay, hideOverlay } = await focusSetup(() => pending);
+    openFromDetail();
+    fillValid();
+    submit();
+    showOverlay();
+    rmaService.list.mockReturnValue(of(buildRmaPage([], 0, 20, 0)));
+    pending.next(rmaWithDiagnosis);
+    pending.complete();
+    render();
+    expect(dialog()).toBeNull();
+    expect(page.querySelector('.rma-table-row')).toBeNull();
+    expect(document.activeElement).not.toBe(listRegion());
+    hideOverlay();
+    expect(document.activeElement).toBe(listRegion());
   });
 });
