@@ -37,20 +37,22 @@
   display: grid;
   gap: var(--space-4);
   grid-auto-flow: column;
-  grid-auto-columns: minmax(300px, 300px);
+  grid-auto-columns: 316px;
   align-items: start;
   min-inline-size: 100%;
   inline-size: max-content;
 }
 
+/* A flat lane: no panel shadow, so the only raised surfaces on the board are the cards. */
 .board-column {
   position: relative;
   overflow: hidden;
   min-block-size: 100%;
-  padding: var(--space-4);
-  background: var(--surface-alt);
-  border-color: rgba(180, 202, 224, 0.9);
-  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  padding: var(--space-5) var(--space-3) var(--space-4);
+  background: #e3eaf3;
+  border-color: #d3dde8;
+  box-shadow: none;
+  transition: 160ms ease;
 }
 
 .board-column::before {
@@ -72,10 +74,9 @@
 .board-column[data-status='IRREPARABLE'] { --column-accent: #5f6776; }
 
 .board-column.is-drop-target {
-  border-color: rgba(46, 168, 212, 0.58);
-  box-shadow:
-    0 0 0 2px rgba(46, 168, 212, 0.14),
-    0 18px 28px rgba(35, 109, 167, 0.12);
+  background: #dbe7f3;
+  border-color: var(--brand-sky);
+  box-shadow: 0 0 0 2px rgba(46, 168, 212, 0.24);
   transform: translateY(-2px);
 }
 
@@ -84,7 +85,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .board-column__header h3 {
@@ -94,18 +95,35 @@
 
 .board-column__stack {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
 .board-card {
-  padding: var(--space-3);
-  border: 1px solid rgba(201, 219, 236, 0.95);
+  padding: var(--space-4);
+  border: 1px solid #c3d1e0;
   border-radius: 14px;
   background: var(--surface);
-  box-shadow: 0 1px 2px rgba(23, 48, 77, 0.06), 0 2px 6px rgba(23, 48, 77, 0.04);
+  box-shadow: 0 1px 3px rgba(23, 48, 77, 0.16);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-2);
+  gap: var(--space-3);
+}
+
+/*
+ * Restated here because the encapsulated .board-card rules outrank the global .interactive-card states.
+ * Lane #e3eaf3 vs white card: border #c3d1e0 plus a soft shadow carry the edge; #4a5d72 keeps 5.6:1 on the
+ * lane (--muted would be 4.2:1) and 5.4:1 on the drop tint #dbe7f3.
+ */
+.board-card:hover {
+  border-color: #9cc8e3;
+  box-shadow: 0 6px 18px rgba(23, 48, 77, 0.16);
+  transform: translateY(-1px);
+}
+
+.board-card.is-selected,
+.board-card:focus-visible {
+  border-color: var(--brand-sky);
+  box-shadow: 0 0 0 3px rgba(46, 168, 212, 0.3);
 }
 
 .board-card[draggable='true'] {
@@ -146,7 +164,7 @@
 }
 
 .board-card__client {
-  margin-top: 0.1rem;
+  margin-top: var(--space-1);
   font-size: 0.82rem;
   color: var(--muted);
   overflow: hidden;
@@ -169,19 +187,23 @@
   cursor: pointer;
 }
 
-.board-card__title {
-  padding-top: var(--space-2);
+.board-card__title,
+.board-card__footer {
+  padding-top: var(--space-3);
   border-top: 1px solid var(--line);
+}
+
+.board-card__title {
   font-size: 0.9rem;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.4;
 }
 
 .board-card__avatar {
   display: grid;
   place-items: center;
-  inline-size: 26px;
-  block-size: 26px;
+  inline-size: 28px;
+  block-size: 28px;
   margin-left: auto;
   border-radius: 50%;
   background: var(--brand-blue);
@@ -203,7 +225,7 @@
 .board-card__block {
   display: grid;
   gap: 0.15rem;
-  padding: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border-radius: 8px;
   background: var(--danger-bg);
   color: var(--danger-text);
@@ -215,22 +237,21 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1) var(--space-4);
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--line);
 }
 
 .board-card__footer .mini-chip {
   margin-left: auto;
 }
 
+/* Sits on the lane, not on a card, so it uses the lane muted tone. */
 .board-empty-note {
   margin: 0;
-  color: var(--muted);
+  color: #4a5d72;
 }
 
 @media (max-width: 720px) {
   .board-grid {
-    grid-auto-columns: minmax(278px, 278px);
+    grid-auto-columns: 278px;
   }
 }
 
