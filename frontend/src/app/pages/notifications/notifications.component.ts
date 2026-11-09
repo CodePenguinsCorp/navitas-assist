@@ -1,6 +1,7 @@
 import { IconComponent, IconName } from '../../shared/icon/icon.component';
 import { Component, DestroyRef, ElementRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Observable, Subscription, finalize } from 'rxjs';
 import { ROLE_LABELS, ROLE_OPTIONS } from '../../core/mock-data';
@@ -10,8 +11,7 @@ import {
   NotificationResponse,
   NotificationRuleRequest,
   NotificationRuleResponse,
-  NotificationSeverity,
-  UserRole
+  NotificationSeverity
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { SlaClockService } from '../../core/services/sla-clock.service';
@@ -42,7 +42,7 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
 
 @Component({
   selector: 'app-notifications',
-  imports: [IconComponent, CustomSelectComponent, PageHeaderComponent, RowActionComponent],
+  imports: [IconComponent, CustomSelectComponent, PageHeaderComponent, RowActionComponent, ReactiveFormsModule],
   templateUrl: './notifications.component.html',
   styles: [`
     :host {
@@ -205,6 +205,7 @@ export class NotificationsComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
   private readonly clock = inject(SlaClockService);
+  private readonly fb = inject(FormBuilder);
   private inboxRequest?: Subscription;
   private preferencesRequest?: Subscription;
   private rulesRequest?: Subscription;
@@ -231,6 +232,17 @@ export class NotificationsComponent {
   protected readonly preferences = signal<NotificationPreferenceResponse[]>([]);
   protected readonly rules = signal<NotificationRuleResponse[]>([]);
   protected readonly failures = signal<NotificationFailureResponse[]>([]);
+  protected readonly editingRule = signal<NotificationRuleResponse | null>(null);
+  protected readonly ruleSubmitting = signal(false);
+  protected readonly ruleErrorMessage = signal('');
+  protected readonly ruleForm = this.fb.nonNullable.group({
+    enabled: false,
+    severity: 'INFO' as NotificationSeverity,
+    notifyAssignee: false,
+    emailEnabled: false,
+    userMutable: false,
+    roles: this.fb.nonNullable.group({ ADMIN: false, TECHNICIAN: false, SERVICE_DESK: false, VIEWER: false })
+  });
 
   protected readonly eventLabels = NOTIFICATION_EVENT_LABELS;
   protected readonly severityLabels = NOTIFICATION_SEVERITY_LABELS;
@@ -394,35 +406,64 @@ export class NotificationsComponent {
     return rule.notifyAssignee ? 'Responsável pelo RMA' : 'Nenhum destinatário';
   }
 
-  /** Opens the focused rule editor (implemented in the next step of the rules form). */
+  /** Every control is reset from the rule, so nothing is carried over from the previously edited one. */
   protected openRuleEditor(rule: NotificationRuleResponse): void {
-    void rule;
-  }
-
-  protected updateRule(rule: NotificationRuleResponse, change: Partial<NotificationRuleRequest>): void {
-    const payload: NotificationRuleRequest = {
+    this.ruleForm.reset({
       enabled: rule.enabled,
       severity: rule.severity,
-      recipientRoles: rule.recipientRoles,
       notifyAssignee: rule.notifyAssignee,
       emailEnabled: rule.emailEnabled,
       userMutable: rule.userMutable,
-      ...change
+      roles: {
+        ADMIN: rule.recipientRoles.includes('ADMIN'),
+        TECHNICIAN: rule.recipientRoles.includes('TECHNICIAN'),
+        SERVICE_DESK: rule.recipientRoles.includes('SERVICE_DESK'),
+        VIEWER: rule.recipientRoles.includes('VIEWER')
+      }
+    });
+    this.ruleErrorMessage.set('');
+    this.editingRule.set(rule);
+  }
+
+  protected closeRuleEditor(): void {
+    if (this.ruleSubmitting()) return;
+    this.resetRuleEditor();
+  }
+
+  /** Single confirmed save with the same six fields of the rule contract. */
+  protected saveRule(): void {
+    const rule = this.editingRule();
+    if (!rule || this.ruleSubmitting()) return;
+
+    const { enabled, severity, roles, notifyAssignee, emailEnabled, userMutable } = this.ruleForm.getRawValue();
+    const payload: NotificationRuleRequest = {
+      enabled,
+      severity,
+      recipientRoles: ROLE_OPTIONS.filter((role) => roles[role]),
+      notifyAssignee,
+      emailEnabled,
+      userMutable
     };
 
-    this.run(this.notificationService.updateRule(rule.eventType, payload), (updated) => {
-      this.rules.update((items) => items.map((item) => item.eventType === updated.eventType ? updated : item));
-      this.successMessage.set(`Regra "${NOTIFICATION_EVENT_LABELS[updated.eventType]}" atualizada.`);
+    this.ruleSubmitting.set(true);
+    this.ruleErrorMessage.set('');
+    this.clearMessages();
+    this.notificationService.updateRule(rule.eventType, payload).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.ruleSubmitting.set(false))
+    ).subscribe({
+      next: (updated) => {
+        this.rules.update((items) => items.map((item) => item.eventType === updated.eventType ? updated : item));
+        this.successMessage.set(`Regra "${NOTIFICATION_EVENT_LABELS[updated.eventType]}" atualizada.`);
+        this.resetRuleEditor();
+      },
+      error: (error) => this.ruleErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível salvar a regra.'))
     });
   }
 
-  protected toggleRole(rule: NotificationRuleResponse, role: UserRole): void {
-    const roles = rule.recipientRoles.includes(role) ? rule.recipientRoles.filter((current) => current !== role) : [...rule.recipientRoles, role];
-    this.updateRule(rule, { recipientRoles: roles });
-  }
-
-  protected updateSeverity(rule: NotificationRuleResponse, severity: string): void {
-    this.updateRule(rule, { severity: severity as NotificationSeverity });
+  private resetRuleEditor(): void {
+    this.editingRule.set(null);
+    this.ruleErrorMessage.set('');
   }
 
   /** The previous result belongs to other filters: drop it and its failure, then start a first load. */

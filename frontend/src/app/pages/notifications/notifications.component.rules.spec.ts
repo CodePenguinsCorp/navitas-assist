@@ -6,6 +6,7 @@ import { Observable, Subject, of, throwError } from 'rxjs';
 import { NotificationFailureResponse, NotificationRuleResponse, UserRole } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { NotificationsComponent } from './notifications.component';
 
 const RULE: NotificationRuleResponse = {
@@ -137,6 +138,125 @@ describe('NotificationsComponent rules', () => {
       expect(Array.from(root().querySelectorAll('[role="tab"]')).map((tab) => tab.textContent!.trim())).not.toContain('Regras');
       component.selectTab('rules');
       expect(service['listRules']).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('rule form', () => {
+    const dialog = () => root().querySelector<HTMLElement>('[role="dialog"]');
+    const openEditor = (label: string) => { root().querySelector<HTMLButtonElement>(`button[aria-label="Editar regra ${label}"]`)!.click(); render(); };
+    const field = (label: string) => Array.from(dialog()!.querySelectorAll('label')).find((item) => normalize(item.textContent).startsWith(label))!.querySelector('input')!;
+    const toggleField = (label: string) => { field(label).click(); render(); };
+    const dialogButton = (label: string) => Array.from(dialog()!.querySelectorAll('button')).find((item) => normalize(item.textContent) === label || item.getAttribute('aria-label') === label)!;
+    const submit = () => { dialog()!.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); render(); };
+    const formHarness = () => component as unknown as { saveRule(): void; ruleForm: { controls: { severity: { setValue(value: string): void } } } };
+
+    // Vermelho: não existe botão de edição que abra um formulário focado da regra.
+    it('edits a rule in a focused form and saves the same contract', async () => {
+      await setup();
+      openRules();
+      openEditor('SLA vencido');
+      expect(Array.from(dialog()!.querySelectorAll('fieldset legend')).map((legend) => normalize(legend.textContent))).toEqual(['Entrega', 'Destinatários', 'E-mail e silenciamento']);
+      expect(normalize(field('Atendimento').closest('fieldset')!.querySelector('legend')!.textContent)).toBe('Destinatários');
+      expect(dialog()!.textContent).toContain('Vale para os próximos eventos.');
+      expectCancelBeforePrimary(dialog()!);
+      toggleField('Atendimento');
+      submit();
+      expect(service['updateRule']).toHaveBeenCalledTimes(1);
+      expect(service['updateRule']).toHaveBeenCalledWith('SLA_OVERDUE', {
+        enabled: true, severity: 'CRITICAL', recipientRoles: ['ADMIN', 'SERVICE_DESK'], notifyAssignee: true, emailEnabled: false, userMutable: false
+      });
+      expect(dialog()).toBeNull();
+      expect(cells(rulesTable()!, 'SLA vencido')).toMatchObject({
+        'Destinatários': 'Administrador, Atendimento + responsável pelo RMA',
+        'Atualização': '24/10/2026, 13:00 por root'
+      });
+      expect(text()).toContain('Regra "SLA vencido" atualizada.');
+    });
+
+    // Vermelho: sem formulário não há como salvar a regra inalterada.
+    it('saves an unchanged rule and all-false booleans', async () => {
+      await setup({ rules: [of([RULE, SILENT_RULE])] });
+      openRules();
+      openEditor('SLA vencido');
+      submit();
+      expect(service['updateRule']).toHaveBeenLastCalledWith('SLA_OVERDUE', {
+        enabled: true, severity: 'CRITICAL', recipientRoles: ['ADMIN'], notifyAssignee: true, emailEnabled: false, userMutable: false
+      });
+      openEditor('Novo RMA');
+      submit();
+      expect(service['updateRule']).toHaveBeenLastCalledWith('RMA_CREATED', {
+        enabled: false, severity: 'INFO', recipientRoles: [], notifyAssignee: false, emailEnabled: false, userMutable: false
+      });
+    });
+
+    // Vermelho: sem formulário não há valores para conferir entre regras.
+    it('does not carry values between consecutive rules', async () => {
+      await setup({ rules: [of([RULE, SILENT_RULE])] });
+      openRules();
+      openEditor('SLA vencido');
+      toggleField('Técnico');
+      expect(field('Técnico').checked).toBe(true);
+      dialogButton('Cancelar').click();
+      render();
+      openEditor('Novo RMA');
+      expect(field('Técnico').checked).toBe(false);
+      expect(field('Administrador').checked).toBe(false);
+      expect(field('Ativa').checked).toBe(false);
+      expect(field('Notificar o responsável pelo RMA').checked).toBe(false);
+      expect(field('Enviar também por e-mail').checked).toBe(false);
+      expect(field('Permitir que cada usuário silencie').checked).toBe(false);
+    });
+
+    // Vermelho: sem formulário não há Cancelar nem gravação pendente.
+    it('does not save on cancel and keeps the form while saving', async () => {
+      const pending = new Subject<NotificationRuleResponse>();
+      await setup({ update: [pending] });
+      openRules();
+      openEditor('SLA vencido');
+      toggleField('Atendimento');
+      dialogButton('Cancelar').click();
+      render();
+      expect(service['updateRule']).not.toHaveBeenCalled();
+      expect(cells(rulesTable()!, 'SLA vencido')['Destinatários']).toBe('Administrador + responsável pelo RMA');
+
+      openEditor('SLA vencido');
+      toggleField('Atendimento');
+      formHarness().saveRule();
+      formHarness().saveRule();
+      render();
+      dialogButton('Fechar').click();
+      root().querySelector<HTMLElement>('.modal-overlay')!.click();
+      dialogButton('Cancelar').click();
+      render();
+      expect(service['updateRule']).toHaveBeenCalledTimes(1);
+      expect(dialog()).not.toBeNull();
+
+      pending.error(new HttpErrorResponse({ status: 500 }));
+      render();
+      expect(field('Atendimento').checked).toBe(true);
+      expect(dialog()!.querySelector('[role="alert"]')!.textContent).toContain('Não foi possível salvar a regra.');
+      dialogButton('Cancelar').click();
+      render();
+      expect(dialog()).toBeNull();
+    });
+
+    describe('preservation', () => {
+      it('sends the chosen severity and a disabled rule', async () => {
+        await setup();
+        openRules();
+        openEditor('SLA vencido');
+        formHarness().ruleForm.controls.severity.setValue('WARNING');
+        toggleField('Ativa');
+        submit();
+        expect(service['updateRule']).toHaveBeenCalledWith('SLA_OVERDUE', expect.objectContaining({ severity: 'WARNING', enabled: false }));
+      });
+
+      it('explains the e-mail restriction next to its checkbox', async () => {
+        await setup();
+        openRules();
+        openEditor('SLA vencido');
+        expect(field('Enviar também por e-mail').closest('.field-group, fieldset')!.textContent).toContain('Somente endereços do domínio corporativo configurado.');
+      });
     });
   });
 });

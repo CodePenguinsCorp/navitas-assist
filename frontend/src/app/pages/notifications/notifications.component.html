@@ -246,4 +246,86 @@
       </article>
     }
   </div>
+
+  @if (editingRule(); as rule) {
+    <div class="modal-overlay" (click)="closeRuleEditor()">
+      <section
+        class="modal-panel rule-form-modal panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="rule-form-title"
+        (click)="$event.stopPropagation()"
+      >
+        <header class="modal-header">
+          <div>
+            <h3 id="rule-form-title">Editar regra: {{ eventLabels[rule.eventType] }}</h3>
+            <p>Vale para os próximos eventos.</p>
+          </div>
+          <button type="button" class="modal-close" aria-label="Fechar" (click)="closeRuleEditor()" [disabled]="ruleSubmitting()">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
+        </header>
+
+        @if (ruleErrorMessage()) {
+          <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+            <strong>{{ ruleErrorMessage() }}</strong>
+          </article>
+        }
+
+        <form class="form-grid" [formGroup]="ruleForm" (ngSubmit)="saveRule()">
+          <fieldset class="form-section">
+            <legend>Entrega</legend>
+
+            <label class="checkbox-field">
+              <input type="checkbox" formControlName="enabled" />
+              <span>Ativa</span>
+            </label>
+
+            <label class="field-group">
+              <span>Severidade</span>
+              <app-custom-select formControlName="severity" ariaLabel="Severidade" [options]="severityOptions" />
+            </label>
+          </fieldset>
+
+          <fieldset class="form-section" formGroupName="roles">
+            <legend>Destinatários</legend>
+
+            @for (role of roleOptions; track role) {
+              <label class="checkbox-field">
+                <input type="checkbox" [formControlName]="role" />
+                <span>{{ roleLabels[role] }}</span>
+              </label>
+            }
+
+            <label class="checkbox-field">
+              <input type="checkbox" [formControl]="ruleForm.controls.notifyAssignee" />
+              <span>Notificar o responsável pelo RMA</span>
+            </label>
+          </fieldset>
+
+          <fieldset class="form-section">
+            <legend>E-mail e silenciamento</legend>
+
+            <div class="field-group">
+              <label class="checkbox-field">
+                <input type="checkbox" formControlName="emailEnabled" aria-describedby="rule-email-hint" />
+                <span>Enviar também por e-mail</span>
+              </label>
+              <small class="field-hint" id="rule-email-hint">Somente endereços do domínio corporativo configurado.</small>
+            </div>
+
+            <label class="checkbox-field">
+              <input type="checkbox" formControlName="userMutable" />
+              <span>Permitir que cada usuário silencie</span>
+            </label>
+          </fieldset>
+
+          <div class="form-actions form-actions--full">
+            <button type="button" class="button-secondary" (click)="closeRuleEditor()" [disabled]="ruleSubmitting()">Cancelar</button>
+            <button type="submit" class="button-primary" [disabled]="ruleSubmitting()">{{ ruleSubmitting() ? 'Salvando...' : 'Salvar regra' }}</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  }
 </section>

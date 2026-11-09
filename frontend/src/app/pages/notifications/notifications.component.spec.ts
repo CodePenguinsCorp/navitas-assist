@@ -27,7 +27,6 @@ interface Harness {
   snooze(notification: NotificationResponse, minutes: string): void;
   selectTab(tab: 'inbox' | 'preferences' | 'rules'): void;
   toggleMute(preference: NotificationPreferenceResponse): void;
-  toggleRole(rule: NotificationRuleResponse, role: UserRole): void;
   isAdmin(): boolean;
 }
 
@@ -95,11 +94,19 @@ describe('NotificationsComponent', () => {
     expect(service['updatePreference']).toHaveBeenCalledWith('RMA_CREATED', true);
   });
 
+  // Mudança deliberada de fluxo (não de contrato): a regra é editada num formulário e enviada uma vez.
   it('lets admins change recipient roles of a rule', async () => {
     await setUp('ADMIN');
     expect(component.isAdmin()).toBe(true);
     component.selectTab('rules');
-    component.toggleRole(RULE, 'SERVICE_DESK');
+    fixture.detectChanges();
+    fixture.nativeElement.querySelector('button[aria-label="Editar regra SLA vencido"]').click();
+    fixture.detectChanges();
+    const dialog: HTMLElement = fixture.nativeElement.querySelector('[role="dialog"]');
+    const serviceDesk = Array.from(dialog.querySelectorAll('label')).find((label) => label.textContent?.trim() === 'Atendimento')!.querySelector('input')!;
+    serviceDesk.click();
+    dialog.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    fixture.detectChanges();
 
     expect(service['updateRule']).toHaveBeenCalledWith('SLA_OVERDUE', {
       enabled: true, severity: 'CRITICAL', recipientRoles: ['ADMIN', 'SERVICE_DESK'], notifyAssignee: true, emailEnabled: false, userMutable: false
