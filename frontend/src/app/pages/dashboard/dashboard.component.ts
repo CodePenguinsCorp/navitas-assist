@@ -79,19 +79,40 @@ interface RecentRmaRow {
       list-style: none;
     }
 
+    /* Each indicator carries its own tone: a solid icon block and a wash of the same color. */
     .dashboard-summary__item {
+      --tone: var(--brand-blue);
+      position: relative;
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
       align-items: start;
       gap: var(--space-1) var(--space-3);
-      padding: var(--space-3) var(--space-4);
+      padding: var(--space-4);
+      overflow: hidden;
+      border-color: color-mix(in srgb, var(--tone) 22%, var(--line));
+      background:
+        radial-gradient(140% 120% at 100% 0%, color-mix(in srgb, var(--tone) 14%, transparent) 0%, transparent 60%),
+        var(--surface);
     }
 
-    .dashboard-summary__item > .icon-tile { grid-row: span 2; }
+    .dashboard-summary__item:nth-child(4n + 2) { --tone: #1f8fbf; }
+    .dashboard-summary__item:nth-child(4n + 3) { --tone: #2f8a5b; }
+    .dashboard-summary__item:nth-child(4n + 4) { --tone: #6d55c9; }
+
+    .dashboard-summary__item > .icon-tile {
+      grid-row: span 2;
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      background: var(--tone);
+      color: #ffffff;
+      box-shadow: 0 6px 14px color-mix(in srgb, var(--tone) 30%, transparent);
+    }
 
     .dashboard-summary__label {
-      color: var(--muted);
-      font-size: 0.82rem;
+      color: var(--text);
+      font-size: var(--font-size-md);
+      font-weight: var(--font-weight-semibold);
     }
 
     .dashboard-summary__value {
@@ -102,9 +123,20 @@ interface RecentRmaRow {
     }
 
     .dashboard-summary__value strong {
-      color: var(--brand-blue-deep);
-      font-size: 1.15rem;
+      display: inline-block;
+      margin-right: var(--space-1);
+      color: var(--brand-dark);
+      font-size: 1.75rem;
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
       font-variant-numeric: tabular-nums;
+    }
+
+    .dashboard-summary__item:nth-child(4n + 4) .dashboard-summary__value strong {
+      font-size: 1.05rem;
+      font-weight: var(--font-weight-bold);
+      letter-spacing: 0;
     }
 
     .dashboard-grid > .panel,

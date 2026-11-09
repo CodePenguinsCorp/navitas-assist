@@ -10,7 +10,7 @@
   --surface-alt: #f8fbfe;
   --line: #d9e3ee;
   --text: #1f3550;
-  --muted: #63778d;
+  --muted: #5b6f85;
   --success-bg: #e6f5ec;
   --success-text: #2f6c49;
   --warning-bg: #fff3dd;
@@ -23,7 +23,7 @@
   --danger-line: #efc7cf;
   --danger-strong: #7f3441;
   --focus-ring: 0 0 0 3px rgba(46, 168, 212, 0.28);
-  --shadow: 0 6px 20px rgba(23, 48, 77, 0.06);
+  --shadow: 0 1px 2px rgba(23, 48, 77, 0.05), 0 8px 24px rgba(23, 48, 77, 0.07);
 
   /* Existing colors that were repeated as literals in the shared controls. */
   --line-hover: #c9dceb;
@@ -771,18 +771,83 @@ a {
 
 .table-card th,
 .table-card td {
-  padding: 0.85rem 0.2rem;
+  padding: 0.85rem 0.6rem;
   border-bottom: 1px solid var(--line);
   text-align: left;
   font-size: 0.92rem;
 }
 
+/* Header row as a tinted strip with rounded ends; body rows get a soft zebra and a hover tint. */
+.table-card thead th {
+  padding-block: 0.6rem;
+  border-bottom-color: var(--line-hover);
+  background: var(--brand-tint);
+}
+
+.table-card thead th:first-child {
+  border-start-start-radius: var(--radius-sm);
+  border-end-start-radius: var(--radius-sm);
+}
+
+.table-card thead th:last-child {
+  border-start-end-radius: var(--radius-sm);
+  border-end-end-radius: var(--radius-sm);
+}
+
+.table-card tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--brand-tint) 40%, var(--surface));
+}
+
+.table-card tbody tr {
+  transition: background-color 120ms ease;
+}
+
+.table-card tbody tr:hover {
+  background: color-mix(in srgb, var(--brand-tint) 85%, var(--surface));
+}
+
+.table-card tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* First heading of a panel becomes a tinted band bleeding to the card edges. */
+.panel:is(.table-card, .form-panel) {
+  --panel-pad-top: 1rem;
+  --panel-pad-x: 1rem;
+}
+
+.panel.table-card--list {
+  --panel-pad-top: 0.65rem;
+}
+
+.panel:is(.table-card, .form-panel) > :is(h2, h3):first-child {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: calc(var(--panel-pad-top) * -1) calc(var(--panel-pad-x) * -1) var(--space-3);
+  padding: var(--space-3) var(--panel-pad-x);
+  border-bottom: 1px solid var(--line);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: linear-gradient(90deg, var(--brand-tint), var(--surface-alt));
+  color: var(--brand-dark);
+  font-size: 1rem;
+  font-weight: var(--font-weight-bold);
+}
+
+.panel:is(.table-card, .form-panel) > :is(h2, h3):first-child::before {
+  content: '';
+  flex-shrink: 0;
+  width: 4px;
+  height: 1.1em;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(180deg, var(--brand-sky), var(--brand-blue));
+}
+
 .table-card th {
-  color: var(--muted);
-  font-size: 0.76rem;
+  color: var(--brand-blue-deep);
+  font-size: 0.8rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
 }
 
 .timeline-list,
@@ -1078,11 +1143,14 @@ a {
 }
 
 /* Named group of fields inside a .form-grid; spans the grid and keeps its two columns. */
+/* Group card: tinted surface, the legend reads as its header with the brand accent. */
 fieldset.form-section {
   min-inline-size: 0;
   margin: 0;
-  padding: 0;
-  border: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1091,18 +1159,29 @@ fieldset.form-section {
 }
 
 /* Floated so it is not the "rendered legend" drawn over the fieldset border: it becomes a grid item. */
-.form-section > legend {
+.form-section > legend:not(.sr-only) {
   float: left;
-  width: 100%;
-  padding: 0;
-  margin-bottom: var(--space-2);
-  font-weight: var(--font-weight-semibold);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: calc(100% + 2 * var(--space-4));
+  margin: calc(var(--space-4) * -1) calc(var(--space-4) * -1) var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  background: var(--brand-tint);
+  color: var(--brand-dark);
+  font-weight: var(--font-weight-bold);
   grid-column: 1 / -1;
 }
 
-.form-section + .form-section {
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--line);
+.form-section > legend:not(.sr-only)::before {
+  content: '';
+  flex-shrink: 0;
+  width: 4px;
+  height: 1.05em;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(180deg, var(--brand-sky), var(--brand-blue));
 }
 
 .field-group--full {

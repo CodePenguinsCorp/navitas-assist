@@ -95,11 +95,6 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
       gap: var(--space-3);
     }
 
-    .failures-section h2 {
-      margin: 0;
-      font-size: 1rem;
-    }
-
     .failures-section .field-hint {
       margin: var(--space-1) 0 0;
     }
