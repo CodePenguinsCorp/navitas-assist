@@ -94,7 +94,7 @@ describe('KanbanComponent filters', () => {
 
   it('shows the four indicators in a single compact summary', () => {
     fixture.detectChanges();
-    const summary: HTMLElement | null = fixture.nativeElement.querySelector('.kanban-summary');
+    const summary: HTMLElement | null = fixture.nativeElement.querySelector('.page-summary');
     expect(summary).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.stats-grid')).toBeNull();
     expect(fixture.nativeElement.querySelector('.stat-card')).toBeNull();
@@ -194,15 +194,57 @@ describe('KanbanComponent filters', () => {
     expect(chipTexts()).toEqual(['Prioridade: Alta']);
   });
 
-  it('keeps the active view selected when a chip is removed', () => {
-    component.filtersForm.patchValue({ priority: 'HIGH', warranty: WarrantyStatus.IN_WARRANTY });
+  function saveCurrentAsView(name: string): void {
     component.openCreateViewModal();
-    component.viewForm.patchValue({ name: 'Garantia' });
+    component.viewForm.patchValue({ name });
     component.saveView();
     fixture.detectChanges();
-    component.removeFilter('warranty');
+  }
+
+  it('deselects the saved view when a chip removal makes the filters differ from it', () => {
+    component.filtersForm.patchValue({ priority: 'HIGH', warranty: WarrantyStatus.IN_WARRANTY });
+    saveCurrentAsView('Garantia');
     expect(component.activeViewId()).toBe(5);
+    component.removeFilter('warranty');
+    expect(component.activeViewId()).toBeNull();
     expect(component.filtersForm.getRawValue()).toEqual(expect.objectContaining({ priority: 'HIGH', warranty: 'all' }));
+    expect(createdViewRequest?.filters).toEqual(expect.objectContaining({ warranty: WarrantyStatus.IN_WARRANTY }));
+  });
+
+  it('deselects the saved view on a manual edit, including SLA, and keeps it when the values come back equal', () => {
+    component.filtersForm.patchValue({ priority: 'HIGH', query: 'árvore' });
+    saveCurrentAsView('Críticos');
+    component.filtersForm.patchValue({ query: '  árvore  ' });
+    expect(component.activeViewId(), 'surrounding spaces are not a different search').toBe(5);
+    component.filtersForm.patchValue({ sla: 'OVERDUE' });
+    expect(component.activeViewId()).toBeNull();
+    component.applyView(5);
+    expect(component.activeViewId()).toBe(5);
+    component.filtersForm.patchValue({ entryFrom: '2026-10-01' });
+    expect(component.activeViewId()).toBeNull();
+  });
+
+  it('keeps the view selected after renaming it', () => {
+    component.filtersForm.patchValue({ priority: 'HIGH' });
+    saveCurrentAsView('Críticos');
+    (component as unknown as { openRenameViewModal(): void }).openRenameViewModal();
+    component.viewForm.patchValue({ name: 'Urgentes' });
+    component.saveView();
+    fixture.detectChanges();
+    expect(component.activeViewId()).toBe(5);
+    expect(component.filtersForm.getRawValue().priority).toBe('HIGH');
+  });
+
+  it('still moves focus to the Filtros toggle after the last chip of a saved view is removed', async () => {
+    component.filtersForm.patchValue({ priority: 'HIGH' });
+    saveCurrentAsView('Críticos');
+    const remove = fixture.nativeElement.querySelector('[aria-label="Remover filtro Prioridade: Alta"]') as HTMLButtonElement;
+    remove.focus();
+    remove.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(component.activeViewId()).toBeNull();
+    expect(document.activeElement).toBe(findButton('Filtros'));
   });
 
   it('labels date, assignee and search chips with readable values', () => {

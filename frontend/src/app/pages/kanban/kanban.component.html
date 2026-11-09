@@ -1,18 +1,25 @@
 <section class="page-surface kanban-page">
-  <header class="page-heading kanban-heading">
-    <h1>Kanban de RMAs</h1>
-    <span class="kanban-heading__count">{{ filteredRmas().length }} de {{ totalRmas() }} RMA(s)</span>
-  </header>
+  <app-page-header heading="Kanban de RMAs" />
 
-  <ul class="kanban-summary" aria-label="Indicadores do quadro">
-    @for (stat of heroStats(); track stat.label) {
-      <li class="kanban-summary__item" [class]="'kanban-summary__item ' + stat.tone" [title]="stat.detail">
-        <app-icon [name]="stat.icon" [size]="16" />
-        <span>{{ stat.label }}</span>
-        <strong>{{ stat.value }}</strong>
+  @if (totalSummary(); as total) {
+    <ul class="page-summary" aria-label="Indicadores do quadro">
+      <li class="page-summary__item page-summary__item--total">
+        <app-icon name="inbox" [size]="16" />
+        <span>
+          @if (total.overall !== null) {<strong>{{ total.count }}</strong> de <strong>{{ total.overall }}</strong>}
+          @else {<strong>{{ total.count }}</strong>}
+          {{ total.label }}
+        </span>
       </li>
-    }
-  </ul>
+      @for (stat of heroStats(); track stat.label) {
+        <li [class]="'page-summary__item ' + stat.tone" [title]="stat.detail">
+          <app-icon [name]="stat.icon" [size]="16" />
+          <span>{{ stat.label }}</span>
+          <strong>{{ stat.value }}</strong>
+        </li>
+      }
+    </ul>
+  }
 
   @if (pageError()) {
     <article class="status-card panel">
@@ -219,14 +226,31 @@
       }
     </section>
 
-    @if (!loading() && totalRmas() > 0 && filteredRmas().length === 0) {
-      <article class="kanban-empty" role="status">
+    @if (loadFailed()) {
+      <article class="kanban-empty" role="alert">
+        <strong>Não foi possível carregar o Kanban.</strong>
+        @if (loadErrorMessage() && loadErrorMessage() !== 'Não foi possível carregar o Kanban.') {
+          <p>{{ loadErrorMessage() }}</p>
+        }
+        <button type="button" class="button-secondary" (click)="retryLoad()" [disabled]="loading()">Tentar novamente</button>
+        @if (loading()) { <div aria-busy="true"></div> }
+      </article>
+    } @else if (!hasLoaded()) {
+      <div aria-busy="true"></div>
+    } @else if (!loading() && totalRmas() === 0) {
+      <article class="kanban-empty">
+        <strong>Nenhum RMA cadastrado</strong>
+        <p>Os RMAs abertos aparecem aqui por etapa do atendimento.</p>
+      </article>
+    } @else if (!loading() && filteredRmas().length === 0) {
+      <article class="kanban-empty">
         <strong>Nenhum RMA encontrado</strong>
         <p>Ajuste ou limpe os filtros para voltar a visualizar os atendimentos.</p>
+        <button type="button" class="button-secondary" (click)="clearFilters()">Limpar filtros</button>
       </article>
     }
 
-    @if (canUpdateStatus()) {
+    @if (boardReady() && canUpdateStatus()) {
       <app-kanban-bulk-actions
         [selection]="bulkSelectedRmas()"
         [hiddenCount]="hiddenSelectedCount()"
@@ -242,27 +266,29 @@
       />
     }
 
-    <app-rma-kanban-board
-      [rmas]="filteredRmas()"
-      [bulkSelectionEnabled]="canUpdateStatus()"
-      [bulkSelectedIds]="bulkSelectedIds()"
-      [interactionDisabled]="bulkBusy()"
-      (bulkSelectionChange)="toggleBulkSelection($event)"
-      [loading]="loading()"
-      [canUpdateStatus]="canUpdateStatus()"
-      [canUpdateAssignee]="canUpdateAssignee()"
-      [boardUpdatingId]="boardUpdatingId()"
-      [selectedRmaId]="selectedRmaId()"
-      [draggedRmaId]="draggedRmaId()"
-      [dragTargetStatus]="dragTargetStatus()"
-      [showToolbar]="false"
-      (cardSelect)="openDetail($event)"
-      (cardDragStart)="startCardDrag($event.event, $event.rma)"
-      (cardDragEnd)="endCardDrag()"
-      (columnDragOver)="allowColumnDrop($event.event, $event.status)"
-      (columnDragLeave)="leaveColumn($event)"
-      (columnDrop)="dropOnColumn($event.event, $event.status)"
-    />
+    @if (boardReady() && (loading() || filteredRmas().length > 0)) {
+      <app-rma-kanban-board
+        [rmas]="filteredRmas()"
+        [bulkSelectionEnabled]="canUpdateStatus()"
+        [bulkSelectedIds]="bulkSelectedIds()"
+        [interactionDisabled]="bulkBusy()"
+        (bulkSelectionChange)="toggleBulkSelection($event)"
+        [loading]="loading()"
+        [canUpdateStatus]="canUpdateStatus()"
+        [canUpdateAssignee]="canUpdateAssignee()"
+        [boardUpdatingId]="boardUpdatingId()"
+        [selectedRmaId]="selectedRmaId()"
+        [draggedRmaId]="draggedRmaId()"
+        [dragTargetStatus]="dragTargetStatus()"
+        [showToolbar]="false"
+        (cardSelect)="openDetail($event)"
+        (cardDragStart)="startCardDrag($event.event, $event.rma)"
+        (cardDragEnd)="endCardDrag()"
+        (columnDragOver)="allowColumnDrop($event.event, $event.status)"
+        (columnDragLeave)="leaveColumn($event)"
+        (columnDrop)="dropOnColumn($event.event, $event.status)"
+      />
+    }
   </section>
 </section>
 

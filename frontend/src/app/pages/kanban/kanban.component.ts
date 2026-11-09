@@ -1,6 +1,7 @@
 import { IconComponent, IconName } from '../../shared/icon/icon.component';
 import {
   Component,
+  DestroyRef,
   ElementRef,
   Injector,
   afterNextRender,
@@ -10,9 +11,9 @@ import {
   viewChild,
   viewChildren,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { finalize, forkJoin, map } from 'rxjs';
+import { Subscription, finalize, forkJoin, map } from 'rxjs';
 import {
   CLOSED_RMA_STATUSES,
   RMA_PRIORITY_LABELS,
@@ -48,6 +49,7 @@ import {
 import { BoundedFilterPanelsDirective } from '../../shared/form-controls/bounded-filter-panels.directive';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
 import { BulkRmaResult, KanbanBulkActionsComponent } from '../../shared/kanban-bulk-actions/kanban-bulk-actions.component';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { RmaKanbanBoardComponent } from '../../shared/rma-kanban-board/rma-kanban-board.component';
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { RmaBlockPanelComponent } from '../../shared/rma-block-panel/rma-block-panel.component';
@@ -124,6 +126,7 @@ const FILTER_LABELS: Record<AdvancedFilterKey, string> = {
     RmaDetailModalComponent,
     KanbanBulkActionsComponent,
     ModalFocusDirective,
+    PageHeaderComponent,
   ],
   templateUrl: './kanban.component.html',
   styleUrl: './kanban.component.css',
@@ -140,10 +143,16 @@ export class KanbanComponent {
   private readonly kanbanViewService = inject(KanbanViewService);
   private readonly rmaService = inject(RmaService);
   private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
+  private loadRequest?: Subscription;
   private readonly filtersToggle = viewChild.required<ElementRef<HTMLButtonElement>>('filtersToggle');
   private readonly chipRemoveButtons = viewChildren<ElementRef<HTMLButtonElement>>('chipRemove');
 
   protected readonly loading = signal(true);
+  /** Board read state, kept apart from action errors (pageError). */
+  protected readonly hasLoaded = signal(false);
+  protected readonly loadFailed = signal(false);
+  protected readonly loadErrorMessage = signal('');
   protected readonly pageError = signal('');
   protected readonly statusModalError = signal('');
   /** Failure of an assignment made from the detail selector, shown inside the detail modal. */
@@ -257,6 +266,17 @@ export class KanbanComponent {
   protected readonly closedCount = computed(
     () => this.filteredRmas().filter((rma) => CLOSED_RMA_STATUSES.includes(rma.status)).length,
   );
+  /** Indicators belong to a current successful read: hidden before it and after a failure. */
+  protected readonly boardReady = computed(() => this.hasLoaded() && !this.loadFailed());
+  /**
+   * First indicator: "Y RMAs" without filter, "X de Y RMAs" with one, with the singular of the last number.
+   */
+  protected readonly totalSummary = computed(() => {
+    if (!this.boardReady()) return null;
+    const count = this.filteredRmas().length;
+    const overall = this.activeFilterCount() > 0 ? this.totalRmas() : null;
+    return { count, overall, label: (overall ?? count) === 1 ? 'RMA' : 'RMAs' };
+  });
   protected readonly heroStats = computed<ReadonlyArray<KanbanHeroStat>>(() => [
     {
       label: 'Em andamento',
@@ -299,8 +319,25 @@ export class KanbanComponent {
   });
 
   constructor() {
+    this.filtersForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.releaseDivergentView());
     this.loadKanban();
     this.loadViews();
+  }
+
+  protected retryLoad(): void {
+    this.loadKanban();
+  }
+
+  /** A saved view stays selected only while the eleven filter values still match it. */
+  private releaseDivergentView(): void {
+    const view = this.activeView();
+    if (!view) return;
+    const saved = fromPersistedFilters(view.filters);
+    const current = this.filtersForm.getRawValue();
+    const matches = (Object.keys(saved) as Array<keyof KanbanFilterValues>).every((key) =>
+      key === 'query' ? (normalizeText(current.query) ?? '') === saved.query : current[key] === saved[key],
+    );
+    if (!matches) this.activeViewId.set(null);
   }
 
   protected toggleBulkSelection(rma: RmaResponse): void {
@@ -359,7 +396,7 @@ export class KanbanComponent {
     this.advancedFiltersOpen.update((open) => !open);
   }
 
-  /** Resets a single filter; the active saved view stays selected, as with a manual edit. */
+  /** Resets a single filter; a saved view that no longer matches is deselected, as with a manual edit. */
   protected removeFilter(key: keyof KanbanFilterValues): void {
     this.filtersForm.patchValue({ [key]: DEFAULT_KANBAN_FILTERS[key] });
   }
@@ -631,23 +668,28 @@ export class KanbanComponent {
     });
   }
 
+  /** Only the latest read counts: a newer one (retry or reload) cancels the previous, as does destroy. */
   private loadKanban(): void {
+    this.loadRequest?.unsubscribe();
     this.loading.set(true);
-    this.pageError.set('');
 
-    forkJoin({
+    this.loadRequest = forkJoin({
       rmas: this.rmaService.listBoard(),
       assignableUsers: this.catalogService.listAssignableUsers(),
     })
-      .pipe(finalize(() => this.loading.set(false)))
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false)))
       .subscribe({
         next: ({ rmas, assignableUsers }) => {
           this.rmasSignal.set(rmas);
           this.assignableUsersSignal.set(assignableUsers);
           this.syncSelection(rmas);
+          this.hasLoaded.set(true);
+          this.loadFailed.set(false);
+          this.loadErrorMessage.set('');
         },
         error: (error) => {
-          this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível carregar o Kanban.'));
+          this.loadFailed.set(true);
+          this.loadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar o Kanban.'));
         },
       });
   }

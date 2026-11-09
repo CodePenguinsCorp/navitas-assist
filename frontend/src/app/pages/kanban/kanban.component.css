@@ -9,47 +9,6 @@
   gap: var(--space-4);
 }
 
-.kanban-heading {
-  align-items: baseline;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
-}
-
-.kanban-heading__count {
-  color: var(--muted);
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-semibold);
-}
-
-.kanban-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-5);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: var(--font-size-md);
-}
-
-.kanban-summary__item {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--muted);
-}
-
-/* --tone comes from the global .tone-* classes; items without one fall back to the brand blue. */
-.kanban-summary__item app-icon {
-  display: inline-flex;
-  color: var(--tone, var(--brand-blue));
-}
-
-.kanban-summary__item strong {
-  color: var(--text);
-  font-weight: var(--font-weight-bold);
-}
-
 .kanban-stage {
   min-inline-size: 0;
   /* Filter menus must remain visible when the board has no matching cards. */
