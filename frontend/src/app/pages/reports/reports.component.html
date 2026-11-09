@@ -58,42 +58,53 @@
       } @else {
         @switch (reportType()) {
           @case ('technical') {
-            <article class="panel table-card">
-              <h2>Laudo técnico</h2>
-              <div class="table-wrap"><table>
-                <caption>Diagnóstico e parecer dos RMAs consultados</caption>
-                <thead><tr><th scope="col">RMA / Cliente</th><th scope="col">Produtos e falha relatada</th><th scope="col">Diagnóstico</th><th scope="col">Reparo e testes</th></tr></thead>
-                <tbody>
-                  @for (rma of rmas(); track rma.id) {
-                    <tr>
-                      <td><strong class="code-text">{{ rma.code }}</strong><p>{{ rma.clientName }}</p><dl class="report-fields"><div><dt>Status</dt><dd><span class="status-chip" [attr.data-status]="rma.status">{{ statusLabels[rma.status] }}</span></dd></div><div><dt>Entrada</dt><dd>{{ formatDate(rma.entryDate) }}</dd></div></dl></td>
-                      <td>
-                        @for (item of rma.items; track $index) {
-                          <p><strong>{{ item.productName }}</strong></p><p class="report-muted"><span class="code-text">{{ item.productSku }}</span> · Série {{ item.serialNumber || 'não informada' }} · Lote {{ item.batchNumber || 'não informado' }}</p>
-                        }
-                        <p class="report-text">{{ rma.reportedFailure }}</p>
-                      </td>
-                      <td>
-                        @if (rma.diagnosis; as diagnosis) {
-                          <p class="report-text">{{ diagnosis.foundFailure }}</p>
-                          <dl class="report-fields">
-                            <div><dt>Tipo</dt><dd>{{ diagnosis.failureType ? failureLabels[diagnosis.failureType] : 'Não informado' }}</dd></div>
-                            <div><dt>Causa</dt><dd>{{ diagnosis.probableCause ? causeLabels[diagnosis.probableCause] : 'Não informada' }}</dd></div>
-                            <div><dt>Técnico</dt><dd>{{ diagnosis.technicianName }} · {{ formatDate(diagnosis.diagnosedAt) }}</dd></div>
-                            <div><dt>Observações</dt><dd class="report-text">{{ diagnosis.notes || 'Sem observações' }}</dd></div>
-                          </dl>
-                        } @else { <p class="report-muted">Diagnóstico pendente</p> }
-                      </td>
-                      <td><dl class="report-fields">
-                        <div><dt>Reparo</dt><dd class="report-text">{{ rma.repairSummary || 'Não informado' }}</dd></div>
-                        <div><dt>Peças</dt><dd class="report-text">{{ rma.replacedPartsSummary || 'Não informadas' }}</dd></div>
-                        <div><dt>Testes</dt><dd class="report-text">{{ rma.testSummary || 'Não informados' }}</dd></div>
-                      </dl></td>
-                    </tr>
-                  }
-                </tbody>
-              </table></div>
-            </article>
+            <section class="report-documents" aria-labelledby="report-technical-title">
+              <h2 id="report-technical-title">Laudo técnico</h2>
+              @for (rma of rmas(); track rma.id) {
+                <article class="panel report-document" [attr.aria-labelledby]="'report-document-' + rma.id">
+                  <h3 [id]="'report-document-' + rma.id"><span class="code-text">{{ rma.code }}</span> · {{ rma.clientName }}</h3>
+                  <dl class="meta-list">
+                    <div><dt>Status</dt><dd><span class="status-chip" [attr.data-status]="rma.status">{{ statusLabels[rma.status] }}</span></dd></div>
+                    <div><dt>Entrada</dt><dd>{{ formatDate(rma.entryDate) }}</dd></div>
+                  </dl>
+                  <section class="report-document__section">
+                    <h4>Produtos</h4>
+                    <div class="table-wrap"><table>
+                      <thead><tr><th scope="col">Produto</th><th scope="col">SKU</th><th scope="col">Série</th><th scope="col">Lote</th></tr></thead>
+                      <tbody>@for (item of rma.items; track $index) {
+                        <tr><td>{{ item.productName }}</td><td class="code-text">{{ item.productSku }}</td>
+                          <td>{{ item.serialNumber || 'Não informada' }}</td><td>{{ item.batchNumber || 'Não informado' }}</td></tr>
+                      }</tbody>
+                    </table></div>
+                  </section>
+                  <section class="report-document__section">
+                    <h4>Falha relatada</h4>
+                    <p class="report-text">{{ rma.reportedFailure }}</p>
+                  </section>
+                  <section class="report-document__section">
+                    <h4>Diagnóstico</h4>
+                    @if (rma.diagnosis; as diagnosis) {
+                      <p class="report-text">{{ diagnosis.foundFailure }}</p>
+                      <dl class="report-fields">
+                        <div><dt>Tipo</dt><dd>{{ diagnosis.failureType ? failureLabels[diagnosis.failureType] : 'Não informado' }}</dd></div>
+                        <div><dt>Causa provável</dt><dd>{{ diagnosis.probableCause ? causeLabels[diagnosis.probableCause] : 'Não informada' }}</dd></div>
+                        <div><dt>Técnico</dt><dd>{{ diagnosis.technicianName }}</dd></div>
+                        <div><dt>Data do diagnóstico</dt><dd>{{ formatDate(diagnosis.diagnosedAt) }}</dd></div>
+                        <div><dt>Notas</dt><dd class="report-text">{{ diagnosis.notes || 'Sem observações' }}</dd></div>
+                      </dl>
+                    } @else { <p class="report-muted">Diagnóstico pendente</p> }
+                  </section>
+                  <section class="report-document__section">
+                    <h4>Reparo e testes</h4>
+                    <dl class="report-fields">
+                      <div><dt>Reparo</dt><dd class="report-text">{{ rma.repairSummary || 'Não informado' }}</dd></div>
+                      <div><dt>Peças trocadas</dt><dd class="report-text">{{ rma.replacedPartsSummary || 'Não informadas' }}</dd></div>
+                      <div><dt>Testes</dt><dd class="report-text">{{ rma.testSummary || 'Não informados' }}</dd></div>
+                    </dl>
+                  </section>
+                </article>
+              }
+            </section>
           }
           @case ('aging') {
             <article class="panel table-card">

@@ -7,6 +7,13 @@
 .report-summary { display: grid; gap: var(--space-2); margin: var(--space-4) 0; }
 .report-summary .report-hint { margin: 0; }
 .report-panel { margin-top: var(--space-4); }
+.report-documents { display: grid; gap: var(--space-4); }
+.report-documents h2 { margin: 0; }
+.report-document { display: grid; gap: var(--space-4); padding: var(--space-4); min-width: 0; }
+.report-document h3 { margin: 0; font-size: 1rem; overflow-wrap: anywhere; }
+.report-document__section { display: grid; gap: var(--space-2); min-width: 0; }
+.report-document__section h4 { margin: 0; font-size: 0.9rem; }
+.report-document__section p { margin: 0; }
 h2 { font-size: 1.1rem; margin-top: 0; }
 caption { text-align: left; padding: 1rem 0; font-weight: 600; }
 td { vertical-align: top; overflow-wrap: anywhere; }
