@@ -7,6 +7,7 @@ import { RmaPriority, RmaResponse, RmaStatus } from '../../core/models';
 import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { CustomSelectComponent, CustomSelectOption } from '../form-controls/custom-select/custom-select.component';
+import { ModalFocusDirective } from '../modal-focus/modal-focus.directive';
 
 export type BulkAction = 'status' | 'priority' | 'assignee';
 export interface BulkRmaResult {
@@ -19,7 +20,7 @@ export interface BulkRmaResult {
 
 @Component({
   selector: 'app-kanban-bulk-actions',
-  imports: [ReactiveFormsModule, CustomSelectComponent],
+  imports: [ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective],
   templateUrl: './kanban-bulk-actions.component.html',
   styleUrl: './kanban-bulk-actions.component.css',
 })

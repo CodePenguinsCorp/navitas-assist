@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
 import { RmaResponse } from '../../core/models';
+import { LoadingService } from '../../core/services/loading.service';
 import { RmaService } from '../../core/services/rma.service';
 import { BulkRmaResult, KanbanBulkActionsComponent } from './kanban-bulk-actions.component';
 
@@ -133,5 +134,95 @@ describe('KanbanBulkActionsComponent', () => {
     fixture.detectChanges();
     expect(button('Alterar status').disabled).toBe(true);
     expect(service.updateStatusInBulk).not.toHaveBeenCalled();
+  });
+});
+
+describe('KanbanBulkActionsComponent confirmation focus', () => {
+  let fixture: ComponentFixture<KanbanBulkActionsComponent>;
+  let pending: Subject<RmaResponse>;
+  const rmas = [{ id: 1, code: 'RMA-1', status: 'RECEIVED' }] as RmaResponse[];
+  const page = () => fixture.nativeElement as HTMLElement;
+  const dialog = () => page().querySelector<HTMLElement>('[role="dialog"]');
+  const button = (text: string) => [...page().querySelectorAll<HTMLButtonElement>('button')].find((element) => element.textContent?.trim().startsWith(text))!;
+
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    await TestBed.configureTestingModule({
+      imports: [KanbanBulkActionsComponent],
+      providers: [{ provide: RmaService, useValue: { updatePriority: () => (pending = new Subject<RmaResponse>()) } }]
+    }).compileComponents();
+    fixture = TestBed.createComponent(KanbanBulkActionsComponent);
+    fixture.componentRef.setInput('selection', rmas);
+    fixture.componentRef.setInput('canUpdateStatus', true);
+    fixture.componentRef.setInput('canManage', true);
+    fixture.componentRef.setInput('assigneeOptions', []);
+    render();
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  function render(): void {
+    fixture.detectChanges();
+    TestBed.tick();
+  }
+
+  function openPriority(): HTMLButtonElement {
+    const trigger = button('Alterar prioridade');
+    trigger.focus();
+    trigger.click();
+    render();
+    return trigger;
+  }
+
+  function escape(): KeyboardEvent {
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    (document.activeElement ?? document.body).dispatchEvent(event);
+    render();
+    return event;
+  }
+
+  function submit(): void {
+    page().querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    render();
+  }
+
+  it('focuses Cancelar and returns to the toolbar action on Escape', () => {
+    const trigger = openPriority();
+    expect(document.activeElement).toBe(button('Cancelar'));
+    expect(escape().defaultPrevented).toBe(true);
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('ignores Escape while the batch is applied and returns after the global overlay hides', () => {
+    const trigger = openPriority();
+    submit();
+    expect(escape().defaultPrevented).toBe(false);
+    expect(dialog()).not.toBeNull();
+    const loading = TestBed.inject(LoadingService);
+    loading.start();
+    vi.advanceTimersByTime(200);
+    render();
+    const focus = vi.spyOn(trigger, 'focus');
+    pending.next({ ...rmas[0], priority: 'HIGH' } as RmaResponse);
+    pending.complete();
+    render();
+    expect(dialog()).toBeNull();
+    expect(focus).not.toHaveBeenCalled();
+    loading.finish();
+    vi.advanceTimersByTime(400);
+    render();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('falls back to the toolbar when the action is no longer available after the batch', () => {
+    openPriority();
+    submit();
+    pending.next({ ...rmas[0], priority: 'HIGH' } as RmaResponse);
+    pending.complete();
+    fixture.componentRef.setInput('selection', []);
+    render();
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(page().querySelector('.bulk-toolbar'));
   });
 });

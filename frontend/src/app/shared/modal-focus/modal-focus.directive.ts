@@ -270,15 +270,21 @@ function returnFocus(request: PendingReturn): void {
   }
 }
 
-/** Makes every branch outside the highest overlay dialog inert, restoring previous values. */
+/**
+ * Makes every branch outside the highest overlay dialog inert, restoring previous values.
+ * Native dialogs opened above it keep their own branch: an inert ancestor would disable them.
+ */
 function syncBackground(): void {
-  const owner = [...stack].reverse().find((entry) => !entry.native) ?? null;
+  const ownerIndex = stack.map((entry) => !entry.native).lastIndexOf(true);
+  const owner = ownerIndex === -1 ? null : stack[ownerIndex];
+  const nativeAbove = stack.slice(ownerIndex + 1).map((entry) => entry.element);
   const desired = new Set<HTMLElement>();
   let node: HTMLElement | null = owner?.element ?? null;
   while (node && node !== document.body && node.parentElement) {
     for (const sibling of Array.from(node.parentElement.children)) {
       if (sibling === node || !(sibling instanceof HTMLElement) || SKIPPED_TAGS.has(sibling.tagName)) continue;
       if (sibling.matches(GLOBAL_LOADING) || sibling.querySelector(GLOBAL_LOADING)) continue;
+      if (nativeAbove.some((element) => sibling.contains(element))) continue;
       desired.add(sibling);
     }
     node = node.parentElement;

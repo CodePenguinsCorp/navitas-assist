@@ -214,7 +214,7 @@ describe('RmaBlockPanelComponent', () => {
     dialog().dispatchEvent(escape);
     expect(escape.defaultPrevented).toBe(true);
     expect(dialog().open).toBe(true);
-    expect(dialog().querySelector<HTMLButtonElement>('[autofocus]')!.disabled).toBe(true);
+    expect(dialog().querySelector<HTMLButtonElement>('.modal-header button')!.disabled).toBe(true);
     request.flush({ ...RMA, currentBlock: BLOCK, blockHistory: [BLOCK] });
     render();
     expect(dialog().open).toBe(true);
@@ -320,3 +320,72 @@ const RMA: RmaResponse = {
   assigneeId: null, assigneeName: null, repairSummary: null, replacedPartsSummary: null, testSummary: null, shippedAt: null, carrier: null, trackingCode: null, diagnosis: null, statusHistory: [], assignmentHistory: [],
   currentBlock: null, blockHistory: [], createdAt: '2026-10-20T10:00:00Z', updatedAt: '2026-10-20T10:00:00Z',
 };
+
+describe('RmaBlockPanelComponent native dialog focus', () => {
+  let fixture: ComponentFixture<RmaBlockPanelComponent>;
+  let http: HttpTestingController;
+  let trigger: HTMLButtonElement;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [RmaBlockPanelComponent], providers: [
+      provideHttpClient(withInterceptors([loadingInterceptor])), provideHttpClientTesting(),
+      { provide: AuthService, useValue: { hasAnyRole: () => true } },
+    ] }).compileComponents();
+    fixture = TestBed.createComponent(RmaBlockPanelComponent);
+    http = TestBed.inject(HttpTestingController);
+    render();
+    trigger = document.createElement('button');
+    trigger.textContent = 'Ver impedimentos';
+    document.body.appendChild(trigger);
+  });
+
+  afterEach(() => trigger.remove());
+
+  function render(): void {
+    fixture.detectChanges();
+    TestBed.tick();
+  }
+
+  const page = () => fixture.nativeElement as HTMLElement;
+  const dialog = () => page().querySelector<HTMLDialogElement>('dialog')!;
+  const title = () => page().querySelector<HTMLElement>('#block-panel-title')!;
+
+  function openFromTrigger(): void {
+    trigger.focus();
+    fixture.componentInstance.open(1);
+    render();
+  }
+
+  it('focuses the title while reading and keeps it there after a failed read', () => {
+    openFromTrigger();
+    expect(dialog().open).toBe(true);
+    expect(title().getAttribute('tabindex')).toBe('-1');
+    expect(document.activeElement).toBe(title());
+    http.expectOne('/api/rmas/1').flush({}, { status: 500, statusText: 'Failure' });
+    render();
+    expect(page().querySelector('[data-retry]')).not.toBeNull();
+    expect(document.activeElement).toBe(title());
+  });
+
+  it('returns to the trigger when Fechar closes the dialog', () => {
+    openFromTrigger();
+    http.expectOne('/api/rmas/1').flush(RMA);
+    render();
+    page().querySelector<HTMLButtonElement>('.modal-header button')!.click();
+    render();
+    expect(dialog().open).toBe(false);
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('returns to the trigger when the browser cancel closes the idle dialog', () => {
+    openFromTrigger();
+    http.expectOne('/api/rmas/1').flush(RMA);
+    render();
+    const cancel = new Event('cancel', { cancelable: true });
+    dialog().dispatchEvent(cancel);
+    render();
+    expect(cancel.defaultPrevented).toBe(true);
+    expect(dialog().open).toBe(false);
+    expect(document.activeElement).toBe(trigger);
+  });
+});

@@ -1,5 +1,16 @@
 <section class="modal-overlay" (click)="closed.emit()">
-  <article #panel class="panel modal-panel rma-detail detail-surface" role="dialog" aria-modal="true" tabindex="-1" [attr.aria-label]="'Detalhes do ' + rma().code" (click)="$event.stopPropagation()" (keydown)="trapFocus($any($event))">
+  <article
+    class="panel modal-panel rma-detail detail-surface"
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+    [attr.aria-label]="'Detalhes do ' + rma().code"
+    appModalFocus
+    [modalCloseBlocked]="disabled()"
+    [modalFallbackFocus]="fallbackFocus()"
+    (modalCloseRequested)="closed.emit()"
+    (click)="$event.stopPropagation()"
+  >
     <header class="rma-detail__bar">
       <span class="rma-detail__key code-text">{{ rma().code }}</span>
       <button type="button" class="modal-close" aria-label="Fechar" (click)="closed.emit()">

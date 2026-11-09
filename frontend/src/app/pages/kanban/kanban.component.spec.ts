@@ -2,12 +2,13 @@ import { Signal, signal } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
-import { KanbanViewRequest, RmaResponse, WarrantyStatus } from '../../core/models';
+import { Subject, of, throwError } from 'rxjs';
+import { KanbanViewRequest, KanbanViewResponse, RmaResponse, WarrantyStatus } from '../../core/models';
 import { SlaClockService } from '../../core/services/sla-clock.service';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
+import { LoadingService } from '../../core/services/loading.service';
 import { RmaService } from '../../core/services/rma.service';
 import { BulkRmaResult } from '../../shared/kanban-bulk-actions/kanban-bulk-actions.component';
 import { KanbanComponent } from './kanban.component';
@@ -259,9 +260,9 @@ describe('KanbanComponent filters', () => {
     expect(fixture.nativeElement.querySelectorAll('.modal-overlay').length).toBe(2);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     fixture.detectChanges();
+    // Only the status confirmation on top reacts; the detail below stays open.
     expect(fixture.nativeElement.querySelector('app-rma-detail-modal')).not.toBeNull();
-    fixture.nativeElement.querySelectorAll('.modal-overlay')[1].querySelector('.modal-close').click();
-    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.modal-overlay').length).toBe(1);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('app-rma-detail-modal')).toBeNull();
@@ -629,3 +630,229 @@ function buildRma(values: {
     updatedAt: values.updatedAt,
   };
 }
+
+describe('KanbanComponent dialog focus', () => {
+  let fixture: ComponentFixture<KanbanComponent>;
+  let page: HTMLElement;
+  let loading: LoadingService;
+  let statusSave: Subject<RmaResponse>;
+  let viewSave: Subject<KanbanViewResponse>;
+  let assigneeSave: Subject<RmaResponse>;
+
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    await TestBed.configureTestingModule({
+      imports: [KanbanComponent],
+      providers: [
+        provideRouter([]),
+        { provide: SlaClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
+        { provide: AuthService, useValue: { hasAnyRole: () => true } },
+        { provide: CatalogService, useValue: { listAssignableUsers: () => of([]) } },
+        {
+          provide: KanbanViewService,
+          useValue: { list: () => of([]), create: () => (viewSave = new Subject<KanbanViewResponse>()) },
+        },
+        {
+          provide: RmaService,
+          useValue: {
+            listBoard: () => of(TEST_RMAS),
+            getById: (id: number) => of(TEST_RMAS.find((rma) => rma.id === id)),
+            updateStatus: () => (statusSave = new Subject<RmaResponse>()),
+            updateAssignee: () => (assigneeSave = new Subject<RmaResponse>()),
+          },
+        },
+      ],
+    }).compileComponents();
+    fixture = TestBed.createComponent(KanbanComponent);
+    page = fixture.nativeElement as HTMLElement;
+    loading = TestBed.inject(LoadingService);
+    render();
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  function render(): void {
+    fixture.detectChanges();
+    TestBed.tick();
+  }
+
+  function find<T extends HTMLElement = HTMLElement>(selector: string): T {
+    const found = page.querySelector<T>(selector);
+    expect(found, selector + ' must exist').not.toBeNull();
+    return found!;
+  }
+
+  function button(root: ParentNode, text: string): HTMLButtonElement {
+    const found = [...root.querySelectorAll<HTMLButtonElement>('button')].find((item) => item.textContent?.trim().startsWith(text));
+    expect(found, text).toBeDefined();
+    return found!;
+  }
+
+  function press(key: string): KeyboardEvent {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+    (document.activeElement ?? document.body).dispatchEvent(event);
+    render();
+    return event;
+  }
+
+  function activate(target: HTMLElement): HTMLElement {
+    target.focus();
+    target.click();
+    render();
+    return target;
+  }
+
+  function openDetailFromCard(): HTMLElement {
+    return activate(find('.board-card'));
+  }
+
+  const detail = () => page.querySelector<HTMLElement>('app-rma-detail-modal .rma-detail');
+  const statusTrigger = () => find<HTMLButtonElement>('app-rma-detail-modal .rma-detail__status .custom-select__trigger');
+  const statusDialog = () => page.querySelector<HTMLElement>('[aria-labelledby="kanban-status-title"]');
+  const viewDialog = () => page.querySelector<HTMLElement>('[aria-labelledby="kanban-view-title"]');
+
+  function confirmStatusFromDetail(status: string): void {
+    activate(statusTrigger());
+    find<HTMLButtonElement>(`app-rma-detail-modal .custom-select__option[data-status="${status}"]`).click();
+    render();
+  }
+
+  function showOverlay(): void {
+    loading.start();
+    vi.advanceTimersByTime(200);
+    render();
+  }
+
+  function hideOverlay(): void {
+    loading.finish();
+    vi.advanceTimersByTime(400);
+    render();
+  }
+
+  it('names the view and status dialogs for assistive technology', () => {
+    activate(button(page, 'Salvar atual'));
+    expect(viewDialog()?.getAttribute('role')).toBe('dialog');
+    expect(viewDialog()?.getAttribute('aria-modal')).toBe('true');
+    expect(find('#kanban-view-title').textContent?.trim()).toBe('Salvar visualização');
+    button(viewDialog()!, 'Cancelar').click();
+    render();
+    openDetailFromCard();
+    confirmStatusFromDetail('IN_REPAIR');
+    expect(statusDialog()?.getAttribute('role')).toBe('dialog');
+    expect(statusDialog()?.getAttribute('aria-modal')).toBe('true');
+    expect(find('#kanban-status-title').textContent?.trim()).toBe('Status');
+  });
+
+  it('focuses the detail panel from its card and returns to the card on Escape', () => {
+    const card = openDetailFromCard();
+    expect(document.activeElement).toBe(detail());
+    expect(press('Escape').defaultPrevented).toBe(true);
+    expect(detail()).toBeNull();
+    expect(document.activeElement).toBe(card);
+  });
+
+  it('closes only the status selector, then only the confirmation, returning to the detail selector', () => {
+    openDetailFromCard();
+    activate(statusTrigger());
+    expect(page.querySelector('app-rma-detail-modal .custom-select__menu')).not.toBeNull();
+    press('Escape');
+    expect(page.querySelector('app-rma-detail-modal .custom-select__menu')).toBeNull();
+    expect(detail()).not.toBeNull();
+    expect(document.activeElement).toBe(statusTrigger());
+
+    confirmStatusFromDetail('IN_REPAIR');
+    expect(document.activeElement).toBe(find('[aria-labelledby="kanban-status-title"] app-custom-select .custom-select__trigger'));
+    expect(press('Escape').defaultPrevented).toBe(true);
+    expect(statusDialog()).toBeNull();
+    expect(detail()).not.toBeNull();
+    expect(document.activeElement).toBe(statusTrigger());
+  });
+
+  it('keeps Tab from an open selector menu under the selector, without option stops', () => {
+    openDetailFromCard();
+    statusTrigger().focus();
+    press('ArrowDown');
+    const option = document.activeElement as HTMLElement;
+    expect(option.getAttribute('role')).toBe('option');
+    press('Tab');
+    expect(page.querySelector('app-rma-detail-modal .custom-select__menu')).toBeNull();
+    expect(document.activeElement).toBe(statusTrigger());
+    press('Tab');
+    expect(detail()!.contains(document.activeElement)).toBe(true);
+    expect((document.activeElement as HTMLElement).getAttribute('role')).not.toBe('option');
+  });
+
+  it('ignores Escape while the status change is saved and returns after the global overlay hides', () => {
+    openDetailFromCard();
+    confirmStatusFromDetail('IN_REPAIR');
+    find('[aria-labelledby="kanban-status-title"] form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    render();
+    expect(press('Escape').defaultPrevented).toBe(false);
+    expect(statusDialog()).not.toBeNull();
+    showOverlay();
+    const trigger = statusTrigger();
+    const focus = vi.spyOn(trigger, 'focus');
+    statusSave.next({ ...TEST_RMAS[0], status: 'IN_REPAIR' });
+    statusSave.complete();
+    render();
+    expect(statusDialog()).toBeNull();
+    expect(focus).not.toHaveBeenCalled();
+    hideOverlay();
+    expect(document.activeElement).toBe(statusTrigger());
+  });
+
+  it('keeps the detail open on Escape while its inline assignment is saved', () => {
+    openDetailFromCard();
+    activate(find('app-rma-detail-modal .rma-detail__assignee-picker .custom-select__trigger'));
+    const option = [...page.querySelectorAll<HTMLButtonElement>('app-rma-detail-modal .rma-detail__assignee-picker .custom-select__option')]
+      .find((item) => item.querySelector('.custom-select__name')?.textContent?.trim() === 'Sem responsável')!;
+    option.click();
+    render();
+    expect(press('Escape').defaultPrevented).toBe(false);
+    expect(detail()).not.toBeNull();
+    assigneeSave.next({ ...TEST_RMAS[0], assigneeId: null });
+    assigneeSave.complete();
+    render();
+    press('Escape');
+    expect(detail()).toBeNull();
+  });
+
+  it('focuses Nome in the view dialog, ignores Escape while saving and returns to Salvar atual', () => {
+    const trigger = activate(button(page, 'Salvar atual'));
+    const name = find<HTMLInputElement>('#kanbanViewName');
+    expect(document.activeElement).toBe(name);
+    name.value = 'Críticos';
+    name.dispatchEvent(new Event('input', { bubbles: true }));
+    find('[aria-labelledby="kanban-view-title"] form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    render();
+    expect(press('Escape').defaultPrevented).toBe(false);
+    expect(viewDialog()).not.toBeNull();
+    viewSave.error({ error: { message: 'Falha ao salvar' } });
+    render();
+    expect(press('Escape').defaultPrevented).toBe(true);
+    expect(viewDialog()).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('opens impediments over the detail with focus on its title and returns to Ver impedimentos', () => {
+    openDetailFromCard();
+    const inspect = activate(button(find('app-rma-detail-modal'), 'Ver impedimentos'));
+    const dialog = find<HTMLDialogElement>('app-rma-block-panel dialog');
+    expect(dialog.open).toBe(true);
+    expect(document.activeElement).toBe(find('#block-panel-title'));
+    expect(loading.visible()).toBe(false);
+    for (let node: HTMLElement | null = dialog; node; node = node.parentElement) {
+      expect(node.inert, 'the native dialog and its ancestors stay interactive').toBe(false);
+    }
+    expect(press('Escape').defaultPrevented, 'the detail below ignores Escape').toBe(false);
+    expect(detail()).not.toBeNull();
+    button(dialog, 'Fechar').click();
+    render();
+    expect(dialog.open).toBe(false);
+    expect(detail()).not.toBeNull();
+    expect(document.activeElement).toBe(inspect);
+    expect(find('.kanban-page').closest('[inert]'), 'the page stays behind the detail').not.toBeNull();
+    press('Escape');
+    expect(detail()).toBeNull();
+  });
+});

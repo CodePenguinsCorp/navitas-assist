@@ -1,4 +1,4 @@
-<section class="bulk-toolbar" aria-label="Ações em lote">
+<section #toolbar class="bulk-toolbar" aria-label="Ações em lote" tabindex="-1">
   <div aria-live="polite">
     <strong>{{ selection().length }} RMA(s) selecionado(s)</strong>
     @if (hiddenCount()) { <small>{{ hiddenCount() }} fora dos filtros atuais</small> }
@@ -30,7 +30,18 @@
 
 @if (action()) {
   <section class="modal-overlay" (click)="close()">
-    <article class="panel modal-panel modal-panel--narrow" role="dialog" aria-modal="true" aria-labelledby="bulkConfirmTitle" (click)="$event.stopPropagation()">
+    <article
+      class="panel modal-panel modal-panel--narrow"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="bulkConfirmTitle"
+      appModalFocus
+      modalInitialFocus=".form-actions .button-secondary"
+      [modalCloseBlocked]="busy()"
+      [modalFallbackFocus]="toolbar"
+      (modalCloseRequested)="close()"
+      (click)="$event.stopPropagation()"
+    >
       <div class="modal-header">
         <h3 id="bulkConfirmTitle">Confirmar alteração em lote</h3>
         <button type="button" class="modal-close" [disabled]="busy()" (click)="close()" aria-label="Fechar confirmação">×</button>

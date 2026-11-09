@@ -1,4 +1,4 @@
-import { Component, DestroyRef, ElementRef, EventEmitter, HostListener, Output, afterNextRender, computed, inject, input, viewChild } from '@angular/core';
+import { Component, EventEmitter, Output, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { RMA_STATUS_FLOW } from '../../core/mock-data';
 import { AssignableUserResponse, RmaResponse, RmaStatus } from '../../core/models';
@@ -16,6 +16,7 @@ import {
   sectionLabel
 } from '../../core/utils/rma-detail';
 import { CustomSelectComponent, CustomSelectOption } from '../form-controls/custom-select/custom-select.component';
+import { ModalFocusDirective } from '../modal-focus/modal-focus.directive';
 import { RmaSlaBadgeComponent } from '../rma-sla-badge/rma-sla-badge.component';
 import {
   formatDate,
@@ -32,7 +33,7 @@ import {
 
 @Component({
   selector: 'app-rma-detail-modal',
-  imports: [CustomSelectComponent, RmaSlaBadgeComponent, RouterLink],
+  imports: [CustomSelectComponent, ModalFocusDirective, RmaSlaBadgeComponent, RouterLink],
   templateUrl: './rma-detail-modal.component.html',
   styleUrl: './rma-detail-modal.component.css'
 })
@@ -45,6 +46,8 @@ export class RmaDetailModalComponent {
   readonly assignableUsers = input<readonly AssignableUserResponse[]>([]);
   /** Failure of the last action started here, such as an assignment. */
   readonly actionError = input('');
+  /** Page control that receives focus when the card that opened the detail is gone on close. */
+  readonly fallbackFocus = input<HTMLElement | null>(null);
   @Output() readonly closed = new EventEmitter<void>();
   /** A status picked in the header selector; the host runs its usual status-change flow. */
   @Output() readonly statusChange = new EventEmitter<{ rma: RmaResponse; status: RmaStatus }>();
@@ -104,31 +107,5 @@ export class RmaDetailModalComponent {
   protected chooseStatus(status: unknown): void {
     const rma = this.rma();
     if (status !== rma.status) this.statusChange.emit({ rma, status: status as RmaStatus });
-  }
-
-  private readonly panel = viewChild.required<ElementRef<HTMLElement>>('panel');
-  private readonly previousFocus = document.activeElement as HTMLElement | null;
-
-  constructor() {
-    afterNextRender(() => this.panel().nativeElement.focus());
-    inject(DestroyRef).onDestroy(() => this.previousFocus?.focus?.());
-  }
-
-  @HostListener('document:keydown.escape')
-  protected onEscape(): void {
-    const covered = document.querySelector('dialog[open]') || document.querySelectorAll('.modal-overlay').length > 1;
-    if (!covered && !this.disabled()) this.closed.emit();
-  }
-
-  protected trapFocus(event: KeyboardEvent): void {
-    if (event.key !== 'Tab') return;
-    const panel = this.panel().nativeElement;
-    const focusable = [...panel.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')];
-    if (focusable.length === 0) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    const active = document.activeElement;
-    if (event.shiftKey && (active === first || active === panel)) { event.preventDefault(); last.focus(); }
-    else if (!event.shiftKey && active === last) { event.preventDefault(); first.focus(); }
   }
 }

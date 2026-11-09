@@ -276,6 +276,7 @@
     [assignableUsers]="assignableUsers()"
     [actionError]="assignmentError()"
     [disabled]="bulkBusy() || boardUpdatingId() !== null"
+    [fallbackFocus]="filtersToggle"
     (closed)="closeDetail()"
     (statusChange)="openStatusModal($event.rma, $event.status)"
     (assigneeChange)="assignFromDetail($event.rma, $event.assigneeId)"
@@ -285,10 +286,21 @@
 
 @if (viewModalMode(); as mode) {
   <section class="modal-overlay" (click)="closeViewModal()">
-    <article class="panel modal-panel modal-panel--narrow" (click)="$event.stopPropagation()">
+    <article
+      class="panel modal-panel modal-panel--narrow"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="kanban-view-title"
+      appModalFocus
+      modalInitialFocus="#kanbanViewName"
+      [modalCloseBlocked]="viewBusy()"
+      [modalFallbackFocus]="filtersToggle"
+      (modalCloseRequested)="closeViewModal()"
+      (click)="$event.stopPropagation()"
+    >
       <div class="modal-header">
         <div>
-          <h3>{{ mode === 'create' ? 'Salvar visualização' : 'Renomear visualização' }}</h3>
+          <h3 id="kanban-view-title">{{ mode === 'create' ? 'Salvar visualização' : 'Renomear visualização' }}</h3>
           <p>
             {{
               mode === 'create'
@@ -350,10 +362,21 @@
 
 @if (pendingStatusRma(); as rma) {
   <section class="modal-overlay" (click)="closeStatusModal()">
-    <article class="panel modal-panel modal-panel--narrow" (click)="$event.stopPropagation()">
+    <article
+      class="panel modal-panel modal-panel--narrow"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="kanban-status-title"
+      appModalFocus
+      modalInitialFocus="app-custom-select[formcontrolname='status'] .custom-select__trigger"
+      [modalCloseBlocked]="boardUpdatingId() !== null"
+      [modalFallbackFocus]="filtersToggle"
+      (modalCloseRequested)="closeStatusModal()"
+      (click)="$event.stopPropagation()"
+    >
       <div class="modal-header">
         <div>
-          <h3>Status</h3>
+          <h3 id="kanban-status-title">Status</h3>
           <p>{{ rma.code }}</p>
         </div>
         <button

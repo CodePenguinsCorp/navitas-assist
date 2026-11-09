@@ -49,6 +49,7 @@ import { BoundedFilterPanelsDirective } from '../../shared/form-controls/bounded
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
 import { BulkRmaResult, KanbanBulkActionsComponent } from '../../shared/kanban-bulk-actions/kanban-bulk-actions.component';
 import { RmaKanbanBoardComponent } from '../../shared/rma-kanban-board/rma-kanban-board.component';
+import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { RmaBlockPanelComponent } from '../../shared/rma-block-panel/rma-block-panel.component';
 import { RmaDetailModalComponent } from '../../shared/rma-detail-modal/rma-detail-modal.component';
 
@@ -122,6 +123,7 @@ const FILTER_LABELS: Record<AdvancedFilterKey, string> = {
     RmaBlockPanelComponent,
     RmaDetailModalComponent,
     KanbanBulkActionsComponent,
+    ModalFocusDirective,
   ],
   templateUrl: './kanban.component.html',
   styleUrl: './kanban.component.css',

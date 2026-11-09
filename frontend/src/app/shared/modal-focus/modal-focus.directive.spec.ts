@@ -502,3 +502,61 @@ describe('ModalFocusDirective', () => {
     });
   });
 });
+
+@Component({
+  imports: [ModalFocusDirective],
+  template: `
+    <main class="sibling-page"><button type="button" class="sibling-outside">Fora</button></main>
+    <div class="native-host">
+      <dialog class="sibling-native" appModalFocus #sibling="appModalFocus" (modalCloseRequested)="sibling.closeNative()">
+        <button type="button" class="sibling-native-button">Nativo</button>
+      </dialog>
+    </div>
+    <div class="modal-overlay">
+      <section class="sibling-panel" role="dialog" appModalFocus>
+        <button type="button" class="sibling-open" (click)="sibling.openNative()">Abrir nativo</button>
+      </section>
+    </div>
+  `
+})
+class SiblingNativeHost {}
+
+describe('ModalFocusDirective native dialog outside the overlay', () => {
+  let fixture: ComponentFixture<SiblingNativeHost>;
+  let page: HTMLElement;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [SiblingNativeHost] }).compileComponents();
+    fixture = TestBed.createComponent(SiblingNativeHost);
+    page = fixture.nativeElement;
+    render();
+  });
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  function render(): void {
+    fixture.detectChanges();
+    TestBed.tick();
+  }
+
+  const el = (selector: string) => page.querySelector<HTMLElement>(selector)!;
+
+  it('keeps a native dialog opened from the overlay and its ancestors out of the inert background', () => {
+    expect(el('.native-host').inert, 'closed native dialog is background of the overlay').toBe(true);
+    const opener = el('.sibling-open');
+    opener.focus();
+    opener.click();
+    render();
+    const dialog = el('dialog.sibling-native') as HTMLDialogElement;
+    expect(dialog.open).toBe(true);
+    for (let node: HTMLElement | null = dialog; node; node = node.parentElement) {
+      expect(node.inert, node.className || node.tagName).toBe(false);
+    }
+    expect(el('.sibling-page').inert, 'the page stays inert').toBe(true);
+    dialog.close();
+    dialog.dispatchEvent(new Event('close'));
+    render();
+    expect(el('.native-host').inert, 'back to background after closing').toBe(true);
+    expect(document.activeElement).toBe(opener);
+  });
+});
