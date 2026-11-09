@@ -1,7 +1,8 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, catchError, finalize, map, of, shareReplay, switchMap, tap } from 'rxjs';
 import { AuthUserResponse, LoginPayload, UserRole, UserSession } from '../models';
+import { SKIP_GLOBAL_LOADING } from '../interceptors/loading.interceptor';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -43,7 +44,9 @@ export class AuthService {
     }
 
     if (!this.restoreRequest$) {
-      this.restoreRequest$ = this.http.get<AuthUserResponse>('/api/auth/me').pipe(
+      this.restoreRequest$ = this.http.get<AuthUserResponse>('/api/auth/me', {
+        context: new HttpContext().set(SKIP_GLOBAL_LOADING, true)
+      }).pipe(
         map((user) => this.toSession(user)),
         tap((session) => this.sessionSignal.set(session)),
         catchError(() => {

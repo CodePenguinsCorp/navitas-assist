@@ -2,3 +2,22 @@
   display: block;
   min-height: 100vh;
 }
+
+.global-loading-dialog {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  background: transparent;
+  z-index: 1200;
+}
+
+.global-loading-dialog::backdrop {
+  background: transparent;
+}

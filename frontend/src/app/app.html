@@ -1,1 +1,6 @@
-<router-outlet />
+<div #content [attr.aria-busy]="busy()">
+  <router-outlet />
+</div>
+<dialog #loadingDialog class="global-loading-dialog" (cancel)="$event.preventDefault()">
+  <app-loading-overlay />
+</dialog>

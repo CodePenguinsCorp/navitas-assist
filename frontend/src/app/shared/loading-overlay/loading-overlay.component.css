@@ -1,0 +1,42 @@
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgb(from var(--brand-dark) r g b / 55%);
+  pointer-events: auto;
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+
+.loading-overlay__card {
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+  width: min(100%, 18rem);
+  padding: 2rem;
+  border-radius: var(--radius-lg);
+  background: #fff;
+  color: var(--brand-dark);
+  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 20%);
+  font-weight: 600;
+}
+
+.loading-overlay__spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 3px solid var(--brand-tint);
+  border-top-color: var(--brand-blue);
+  border-radius: 50%;
+  animation: loading-spin 0.8s linear infinite;
+}
+
+@keyframes loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-overlay__spinner { animation: none; }
+}

@@ -1,6 +1,7 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Observable, catchError, map, of, tap } from 'rxjs';
+import { SKIP_GLOBAL_LOADING } from '../interceptors/loading.interceptor';
 import {
   NotificationEventType,
   NotificationFailureResponse,
@@ -32,7 +33,9 @@ export class NotificationService {
   }
 
   refreshSummary(): Observable<number> {
-    return this.http.get<NotificationSummaryResponse>('/api/notifications/summary').pipe(
+    return this.http.get<NotificationSummaryResponse>('/api/notifications/summary', {
+      context: new HttpContext().set(SKIP_GLOBAL_LOADING, true)
+    }).pipe(
       map((summary) => summary.unread),
       tap((unread) => this.unreadSignal.set(unread)),
       catchError(() => of(this.unreadSignal()))
