@@ -1,5 +1,5 @@
 <section class="modal-overlay" (click)="closed.emit()">
-  <article #panel class="panel modal-panel rma-detail" role="dialog" aria-modal="true" tabindex="-1" [attr.aria-label]="'Detalhes do ' + rma().code" (click)="$event.stopPropagation()" (keydown)="trapFocus($any($event))">
+  <article #panel class="panel modal-panel rma-detail detail-surface" role="dialog" aria-modal="true" tabindex="-1" [attr.aria-label]="'Detalhes do ' + rma().code" (click)="$event.stopPropagation()" (keydown)="trapFocus($any($event))">
     <header class="rma-detail__bar">
       <span class="rma-detail__key code-text">{{ rma().code }}</span>
       <button type="button" class="modal-close" aria-label="Fechar" (click)="closed.emit()">
@@ -9,8 +9,10 @@
 
     <div class="rma-detail__layout">
       <div class="rma-detail__main">
-        <h2 class="rma-detail__title">{{ productSummary(rma()) }}</h2>
-        <p class="rma-detail__subtitle">{{ rma().clientName }}</p>
+        <div class="rma-detail__head">
+          <h2 class="rma-detail__title">{{ productSummary(rma()) }}</h2>
+          <p class="rma-detail__subtitle">{{ rma().clientName }}</p>
+        </div>
 
         <div class="rma-detail__actions">
           @if (canUpdateStatus()) {
@@ -43,22 +45,22 @@
           <p class="rma-detail__block"><strong>{{ blockedLabel(block, clock.now()) }}</strong>{{ block.reason }}</p>
         }
 
-        <section class="rma-detail__section rma-detail__section--failure">
-          <h3 class="rma-detail__heading">
+        <section class="rma-detail__section rma-detail__section--failure detail-card">
+          <h3 class="rma-detail__heading detail-card__title">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.5 20h19L12 3ZM12 10v4.5M12 17.2v.1" /></svg>
             {{ sectionLabel('failure') }}
           </h3>
           <p class="rma-detail__callout">{{ rma().reportedFailure }}</p>
         </section>
 
-        <section class="rma-detail__section">
-          <h3 class="rma-detail__heading">
+        <section class="rma-detail__section detail-card">
+          <h3 class="rma-detail__heading detail-card__title">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8.5 4.5v9L12 21l-8.5-4.5v-9L12 3ZM3.5 7.5 12 12l8.5-4.5M12 12v9" /></svg>
             {{ sectionLabel('products') }} <span class="mini-chip">{{ itemCountLabel(rma().items.length) }}</span>
           </h3>
           <ul class="rma-detail__items">
             @for (item of rma().items; track item.id ?? $index) {
-              <li>
+              <li class="detail-tile">
                 <strong>{{ item.productName }}</strong>
                 <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)">{{ warrantyLabel(item.warrantyStatus) }}</span>
                 <dl>
@@ -73,28 +75,28 @@
 
         @let receipt = receiptFacts(rma());
         @if (receipt.length > 0) {
-          <section class="rma-detail__section">
-            <h3 class="rma-detail__heading">
+          <section class="rma-detail__section detail-card">
+            <h3 class="rma-detail__heading detail-card__title">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h18v12H3V8ZM8 8V5h8v3M3 13h18" /></svg>
               {{ sectionLabel('receipt') }}
             </h3>
             <div class="rma-detail__tiles">
               @for (fact of receipt; track fact.label) {
-                <div class="rma-detail__tile"><span>{{ fact.label }}</span><strong>{{ fact.value }}</strong></div>
+                <div class="rma-detail__tile detail-tile"><span>{{ fact.label }}</span><strong>{{ fact.value }}</strong></div>
               }
             </div>
           </section>
         }
 
-        <section class="rma-detail__section">
-          <h3 class="rma-detail__heading">
+        <section class="rma-detail__section detail-card">
+          <h3 class="rma-detail__heading detail-card__title">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15ZM16 16l5 5" /></svg>
             {{ sectionLabel('diagnosis') }}
           </h3>
           @if (rma().diagnosis; as diagnosis) {
             <div class="rma-detail__tiles">
               @for (fact of diagnosisFacts(diagnosis); track fact.label) {
-                <div class="rma-detail__tile" [class.rma-detail__tile--wide]="fact.label === 'Falha encontrada' || fact.label === 'Notas'">
+                <div class="rma-detail__tile detail-tile" [class.rma-detail__tile--wide]="fact.label === 'Falha encontrada' || fact.label === 'Notas'">
                   <span>{{ fact.label }}</span>
                   @if (fact.label === 'Tipo' || fact.label === 'Causa provável') {
                     <em class="mini-chip">{{ fact.value }}</em>
@@ -111,21 +113,21 @@
 
         @let repair = repairFacts(rma());
         @if (repair.length > 0) {
-          <section class="rma-detail__section">
-            <h3 class="rma-detail__heading">
+          <section class="rma-detail__section detail-card">
+            <h3 class="rma-detail__heading detail-card__title">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5a4 4 0 0 0-5.2 5.2L3 18l3 3 6.3-6.3a4 4 0 0 0 5.2-5.2L14.8 12l-2.8-2.8 2.5-2.7Z" /></svg>
               {{ sectionLabel('repair') }}
             </h3>
             <div class="rma-detail__tiles">
               @for (fact of repair; track fact.label) {
-                <div class="rma-detail__tile" [class.rma-detail__tile--wide]="fact.label === 'Reparo'"><span>{{ fact.label }}</span><strong>{{ fact.value }}</strong></div>
+                <div class="rma-detail__tile detail-tile" [class.rma-detail__tile--wide]="fact.label === 'Reparo'"><span>{{ fact.label }}</span><strong>{{ fact.value }}</strong></div>
               }
             </div>
           </section>
         }
 
-        <section class="rma-detail__section">
-          <h3 class="rma-detail__heading">
+        <section class="rma-detail__section detail-card">
+          <h3 class="rma-detail__heading detail-card__title">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7v5l3 2" /></svg>
             {{ sectionLabel('history') }} <span class="mini-chip">{{ activity().length }}</span>
           </h3>
@@ -155,10 +157,10 @@
       </div>
 
       <aside class="rma-detail__side">
-        <section class="rma-detail__info">
-          <h3 class="rma-detail__info-title">Informações</h3>
-          <dl>
-            <div>
+        <section class="rma-detail__info detail-card">
+          <h3 class="rma-detail__info-title detail-card__header">Informações</h3>
+          <dl class="detail-facts">
+            <div [class.detail-facts__block]="canUpdateAssignee()">
               <dt>Responsável</dt>
               @if (canUpdateAssignee()) {
                 <dd>
@@ -182,12 +184,12 @@
               }
             </div>
             <div><dt>Prioridade</dt><dd><span class="priority-tag" [attr.data-priority]="rma().priority"><span class="priority-bars" [attr.data-priority]="rma().priority" aria-hidden="true"><i></i><i></i><i></i></span>{{ priorityLabel(rma().priority) }}</span></dd></div>
-            <div><dt>SLA</dt><dd><app-rma-sla-badge [sla]="rma().sla" /></dd></div>
+            <div class="detail-facts__block"><dt>SLA</dt><dd><app-rma-sla-badge [sla]="rma().sla" /></dd></div>
           </dl>
         </section>
-        <section class="rma-detail__info">
-          <h3 class="rma-detail__info-title">Atendimento</h3>
-          <dl>
+        <section class="rma-detail__info detail-card">
+          <h3 class="rma-detail__info-title detail-card__header">Atendimento</h3>
+          <dl class="detail-facts">
             <div><dt>Cliente</dt><dd>{{ rma().clientName }}</dd></div>
             <div><dt>Entrada</dt><dd>{{ dateLabel(rma().entryDate) }}</dd></div>
             <div><dt>Recebido por</dt><dd>{{ rma().receivedBy }}</dd></div>
@@ -198,8 +200,8 @@
             @if (rma().trackingCode) { <div><dt>Rastreio</dt><dd>{{ rma().carrier }} · {{ rma().trackingCode }}</dd></div> }
           </dl>
         </section>
-        <section class="rma-detail__info rma-detail__info--dates">
-          <dl>
+        <section class="rma-detail__info rma-detail__info--dates detail-card">
+          <dl class="detail-facts">
             <div><dt>Criado em</dt><dd>{{ dateTimeLabel(rma().createdAt) }}</dd></div>
             <div><dt>Atualizado em</dt><dd>{{ dateTimeLabel(rma().updatedAt) }}</dd></div>
           </dl>

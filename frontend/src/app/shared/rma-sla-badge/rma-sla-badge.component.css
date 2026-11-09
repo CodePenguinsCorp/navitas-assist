@@ -8,23 +8,33 @@
   font-variant-numeric: tabular-nums;
 }
 
-.sla[data-sla='WARNING'] { --sla-tone: #b07a12; }
+.sla[data-sla='WARNING'] { --sla-tone: #8a5e00; }
 .sla[data-sla='OVERDUE'] { --sla-tone: #b33a3f; }
-.sla[data-sla='CLOSED'] { --sla-tone: #6b7c90; }
+.sla[data-sla='CLOSED'] { --sla-tone: #5b6c80; }
 
+/* In a narrow cell the row wraps between whole pieces; no piece ever breaks inside. */
 .sla__row {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.15rem 0.5rem;
 }
 
 .sla__state {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 0.4rem;
   color: var(--sla-tone);
   font-weight: 700;
+}
+
+.sla__state,
+.sla__elapsed,
+.sla__limit,
+.sla__due {
+  white-space: nowrap;
 }
 
 .sla__state::before {

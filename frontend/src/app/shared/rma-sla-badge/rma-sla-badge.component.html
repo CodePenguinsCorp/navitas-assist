@@ -4,7 +4,7 @@
     @if (state() === 'CLOSED') {
       <span class="sla__time">Encerrado em {{ dateTime(sla().startedAt) }}</span>
     } @else {
-      <span class="sla__time">{{ elapsed() }} <span class="sla__limit">/ {{ duration(sla().limitSeconds ?? 0) }}</span></span>
+      <span class="sla__time"><span class="sla__elapsed">{{ elapsed() }}</span>&ngsp;<span class="sla__limit">/ {{ duration(sla().limitSeconds ?? 0) }}</span></span>
     }
   </div>
   @if (state() !== 'CLOSED') {

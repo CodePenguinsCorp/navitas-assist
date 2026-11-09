@@ -298,6 +298,27 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(host.querySelector('.rma-detail__side app-rma-sla-badge')).not.toBeNull();
   });
 
+  it('gives the SLA its own full-width row and never breaks the state or the times inside', async () => {
+    // Hoje o selo dividia "Atrasad / o" e "74h 14min / 24h 0min" numa coluna estreita.
+    const { host } = await setup();
+    const row = [...host.querySelectorAll('.rma-detail__side dl > div')].find((item) => item.querySelector('dt')?.textContent?.trim() === 'SLA')!;
+
+    expect(row.classList).toContain('detail-facts__block');
+    for (const selector of ['.sla__state', '.sla__elapsed', '.sla__limit', '.sla__due']) {
+      expect(getComputedStyle(row.querySelector(selector)!).whiteSpace, selector).toBe('nowrap');
+    }
+    expect(getComputedStyle(row.querySelector('.sla__row')!).flexWrap).toBe('wrap');
+  });
+
+  it('puts every section and side card on a white card over the tinted canvas', async () => {
+    const { host } = await setup();
+
+    expect(host.querySelector('.rma-detail')!.classList).toContain('detail-surface');
+    const cards = [...host.querySelectorAll('.rma-detail__section, .rma-detail__info')];
+    expect(cards.length).toBeGreaterThan(0);
+    expect(cards.every((card) => card.classList.contains('detail-card'))).toBe(true);
+  });
+
   it('focuses the panel on open', async () => {
     const { fixture, host } = await setup();
     await fixture.whenStable();
