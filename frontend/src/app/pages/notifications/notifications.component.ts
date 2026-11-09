@@ -30,6 +30,14 @@ import {
 } from '../../core/utils/notification-ui';
 
 type NotificationsTab = 'inbox' | 'preferences' | 'rules';
+type PreferenceState = 'disabled' | 'mandatory' | 'muted' | 'receiving';
+
+const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
+  disabled: 'Desativado pela administração',
+  mandatory: 'Obrigatório',
+  muted: 'Silenciado',
+  receiving: 'Recebendo'
+};
 
 @Component({
   selector: 'app-notifications',
@@ -69,6 +77,18 @@ type NotificationsTab = 'inbox' | 'preferences' | 'rules';
     }
 
     .inbox-state.alert-banner {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+
+    .preferences-state {
+      margin: var(--space-3) 0 0;
+    }
+
+    .preferences-state.alert-banner {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
@@ -189,6 +209,7 @@ export class NotificationsComponent {
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
   private readonly clock = inject(SlaClockService);
   private inboxRequest?: Subscription;
+  private preferencesRequest?: Subscription;
 
   protected readonly activeTab = signal<NotificationsTab>('inbox');
   protected readonly inboxLoading = signal(false);
@@ -196,6 +217,9 @@ export class NotificationsComponent {
   protected readonly inboxHasLoaded = signal(false);
   protected readonly inboxLoadErrorMessage = signal('');
   protected readonly preferencesLoading = signal(false);
+  protected readonly preferencesLoadFailed = signal(false);
+  protected readonly preferencesHasLoaded = signal(false);
+  protected readonly preferencesLoadErrorMessage = signal('');
   protected readonly rulesLoading = signal(false);
   protected readonly busy = signal(false);
   protected readonly errorMessage = signal('');
@@ -332,9 +356,28 @@ export class NotificationsComponent {
     });
   }
 
+  protected retryPreferences(): void {
+    if (!this.preferencesLoading()) this.loadPreferences();
+  }
+
+  /**
+   * One state per preference, in precedence order. "Obrigatório" means the user cannot mute the alert
+   * (an old mute is ignored while they are a recipient of an active rule); it does not promise delivery.
+   */
+  protected preferenceState(preference: NotificationPreferenceResponse): PreferenceState {
+    if (!preference.enabled) return 'disabled';
+    if (!preference.userMutable) return 'mandatory';
+    return preference.muted ? 'muted' : 'receiving';
+  }
+
+  protected preferenceStateLabel(preference: NotificationPreferenceResponse): string {
+    return PREFERENCE_STATE_LABELS[this.preferenceState(preference)];
+  }
+
   protected toggleMute(preference: NotificationPreferenceResponse): void {
     this.run(this.notificationService.updatePreference(preference.eventType, !preference.muted), (updated) => {
       this.preferences.update((items) => items.map((item) => item.eventType === updated.eventType ? updated : item));
+      this.successMessage.set(`${NOTIFICATION_EVENT_LABELS[updated.eventType]} ${updated.muted ? 'silenciado' : 'reativado'}.`);
     });
   }
 
@@ -397,12 +440,24 @@ export class NotificationsComponent {
   }
 
   private loadPreferences(): void {
+    this.preferencesRequest?.unsubscribe();
     this.preferencesLoading.set(true);
-    this.notificationService.listPreferences().pipe(
+    this.preferencesRequest = this.notificationService.listPreferences().pipe(
+      takeUntilDestroyed(this.destroyRef),
       finalize(() => this.preferencesLoading.set(false))
     ).subscribe({
-      next: (preferences) => this.preferences.set(preferences),
-      error: (error) => this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as preferências.'))
+      next: (preferences) => {
+        this.preferences.set(preferences);
+        this.preferencesHasLoaded.set(true);
+        this.preferencesLoadFailed.set(false);
+        this.preferencesLoadErrorMessage.set('');
+      },
+      error: (error) => {
+        this.preferences.set([]);
+        this.preferencesHasLoaded.set(false);
+        this.preferencesLoadFailed.set(true);
+        this.preferencesLoadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as preferências.'));
+      }
     });
   }
 

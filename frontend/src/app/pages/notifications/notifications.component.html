@@ -112,34 +112,52 @@
     @if (activeTab() === 'preferences') {
       <article class="panel table-card">
         <p>Silencie os alertas que a regra permite. Alertas obrigatórios continuam chegando.</p>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Alerta</th>
-                <th>Severidade</th>
-                <th>Situação</th>
-                <th class="table-actions-col">Ação</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (preference of preferences(); track preference.eventType) {
+        @if (preferencesLoadFailed()) {
+          <div class="panel alert-banner alert-banner--error preferences-state" role="alert">
+            <strong>{{ preferencesLoadErrorMessage() }}</strong>
+            <button type="button" class="button-secondary" [disabled]="preferencesLoading()" (click)="retryPreferences()">{{ preferencesLoading() ? 'Carregando...' : 'Tentar novamente' }}</button>
+          </div>
+        } @else if (!preferencesHasLoaded()) {
+          <p class="preferences-state" role="status">Carregando preferências...</p>
+        } @else if (preferences().length === 0) {
+          <p class="preferences-state">Nenhuma preferência disponível.</p>
+        } @else {
+          @if (preferencesLoading()) {
+            <p class="preferences-state" role="status">Atualizando preferências...</p>
+          }
+          <div class="table-wrap">
+            <table>
+              <thead>
                 <tr>
-                  <td>{{ eventLabels[preference.eventType] }}</td>
-                  <td><span class="mini-chip" [class]="severityClass(preference.severity)">{{ severityLabels[preference.severity] }}</span></td>
-                  <td><span class="state-dot" [class.is-on]="preference.enabled && !preference.muted">{{ !preference.enabled ? 'Regra desativada' : preference.muted ? 'Silenciado' : 'Recebendo' }}</span></td>
-                  <td class="table-actions-col">
-                    @if (preference.userMutable) {
-                      <button type="button" class="button-secondary button-secondary--small" (click)="toggleMute(preference)" [disabled]="busy()">{{ preference.muted ? 'Reativar' : 'Silenciar' }}</button>
-                    } @else {
-                      <small>Obrigatório</small>
-                    }
-                  </td>
+                  <th>Alerta</th>
+                  <th>Severidade</th>
+                  <th>Situação</th>
+                  <th class="table-actions-col">Ação</th>
                 </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                @for (preference of preferences(); track preference.eventType) {
+                  <tr>
+                    <td>{{ eventLabels[preference.eventType] }}</td>
+                    <td><span class="mini-chip" [class]="severityClass(preference.severity)">{{ severityLabels[preference.severity] }}</span></td>
+                    <td><span class="state-dot" [class.is-on]="preferenceState(preference) === 'receiving' || preferenceState(preference) === 'mandatory'">{{ preferenceStateLabel(preference) }}</span></td>
+                    <td class="table-actions-col">
+                      @if (preference.userMutable) {
+                        <button
+                          type="button"
+                          class="button-secondary button-secondary--small"
+                          [attr.aria-label]="(preference.muted ? 'Reativar ' : 'Silenciar ') + eventLabels[preference.eventType]"
+                          (click)="toggleMute(preference)"
+                          [disabled]="busy()"
+                        >{{ preference.muted ? 'Reativar' : 'Silenciar' }}</button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
       </article>
     }
 
