@@ -1,6 +1,6 @@
 <section #toolbar class="bulk-toolbar" aria-label="Ações em lote" tabindex="-1">
   <div aria-live="polite">
-    <strong>{{ selection().length }} RMA(s) selecionado(s)</strong>
+    <strong>{{ countLabel(selection().length, 'RMA selecionado', 'RMAs selecionados') }}</strong>
     @if (hiddenCount()) { <small>{{ hiddenCount() }} fora dos filtros atuais</small> }
   </div>
   <div class="bulk-buttons">
@@ -18,7 +18,7 @@
 
 @if (results().length) {
   <section class="bulk-results" aria-label="Resultado da operação em lote">
-    <p role="status">{{ successCount() }} atualizado(s); {{ results().length - successCount() }} com falha.</p>
+    <p role="status">{{ countLabel(successCount(), 'atualizado', 'atualizados') }}; {{ results().length - successCount() }} com falha.</p>
     <ul>
       @for (result of results(); track result.id) {
         <li [class.bulk-result--error]="!result.success"><strong>{{ result.code }}</strong> — {{ result.success ? 'Sucesso' : 'Falha' }}: {{ result.message }}</li>
@@ -56,14 +56,14 @@
           <div class="field-group field-group--full"><label>Novo responsável</label><app-custom-select formControlName="assigneeId" ariaLabel="Responsável do lote" [options]="assigneeOptions()" /></div>
         }
         <div class="field-group--full bulk-confirm-summary">
-          <strong>{{ summary() }} em {{ pending().length }} RMA(s).</strong>
+          <strong>{{ summary() }} em {{ countLabel(pending().length, 'RMA', 'RMAs') }}.</strong>
           <p>Cada RMA será validado e terá seu resultado informado separadamente.</p>
           <ul aria-label="RMAs da operação">@for (rma of pending(); track rma.id) { <li>{{ rma.code }}</li> }</ul>
         </div>
         @if (error()) { <p role="alert" class="field-error field-group--full">{{ error() }}</p> }
         <div class="form-actions form-actions--full">
           <button type="button" class="button-secondary" [disabled]="busy()" (click)="close()">Cancelar</button>
-          <button type="submit" class="button-primary" [disabled]="busy() || (action() === 'status' && !form.controls.status.value)">{{ busy() ? 'Aplicando...' : 'Aplicar a ' + pending().length + ' RMA(s)' }}</button>
+          <button type="submit" class="button-primary" [disabled]="busy() || (action() === 'status' && !form.controls.status.value)">{{ busy() ? 'Aplicando...' : 'Aplicar a ' + countLabel(pending().length, 'RMA', 'RMAs') }}</button>
         </div>
       </form>
     </article>

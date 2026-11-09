@@ -305,6 +305,61 @@ describe('RmasComponent detail with the shared information contract', () => {
     expect(tabs()[0].getAttribute('aria-selected')).toBe('true');
   });
 
+  // Novo: mesmo contrato das abas de notificações
+  describe('tab keyboard', () => {
+    async function openTabs() {
+      const harness = await setup();
+      harness.open();
+      const tabs = () => [...harness.detail().querySelectorAll<HTMLButtonElement>('[role="tablist"] [role="tab"]')];
+      const press = (key: string) => {
+        const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+        (document.activeElement as HTMLElement).dispatchEvent(event);
+        harness.render();
+        return event;
+      };
+      const expectActive = (index: number) => {
+        expect(document.activeElement, 'focus follows the selected tab').toBe(tabs()[index]);
+        expect(tabs().map((tab) => tab.getAttribute('aria-selected') === 'true')).toEqual(tabs().map((_, i) => i === index));
+        expect(harness.tabPanel().getAttribute('aria-labelledby')).toBe(tabs()[index].id);
+      };
+      return { ...harness, tabs, press, expectActive };
+    }
+
+    it('wraps with the arrows and selects the tab that receives focus', async () => {
+      const { tabs, press, expectActive } = await openTabs();
+      tabs()[0].focus();
+      expect(press('ArrowLeft').defaultPrevented).toBe(true);
+      expectActive(5);
+      expect(press('ArrowRight').defaultPrevented).toBe(true);
+      expectActive(0);
+      press('ArrowRight');
+      expectActive(1);
+      press('ArrowLeft');
+      expectActive(0);
+    });
+
+    it('jumps to the first and last tabs with Home and End', async () => {
+      const { tabs, press, expectActive } = await openTabs();
+      tabs()[2].click();
+      tabs()[2].focus();
+      expect(press('End').defaultPrevented).toBe(true);
+      expectActive(5);
+      expect(press('Home').defaultPrevented).toBe(true);
+      expectActive(0);
+    });
+
+    it('keeps only the active tab in the Tab order and leaves other keys alone', async () => {
+      const { tabs, press, selectTab } = await openTabs();
+      expect(tabs().map((tab) => tab.getAttribute('tabindex'))).toEqual(['0', '-1', '-1', '-1', '-1', '-1']);
+      selectTab('Peças');
+      expect(tabs().map((tab) => tab.getAttribute('tabindex'))).toEqual(['-1', '-1', '0', '-1', '-1', '-1']);
+      tabs()[2].focus();
+      expect(press('ArrowDown').defaultPrevented).toBe(false);
+      expect(press('a').defaultPrevented).toBe(false);
+      expect(document.activeElement).toBe(tabs()[2]);
+    });
+  });
+
   it('renders parts, protocols and impediments panels in their tabs', async () => {
     const { open, selectTab, tabPanel, fixture, partService, protocolService } = await setup();
     open();

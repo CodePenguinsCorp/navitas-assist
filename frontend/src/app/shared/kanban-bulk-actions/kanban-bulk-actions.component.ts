@@ -45,6 +45,11 @@ export class KanbanBulkActionsComponent {
   protected readonly results = signal<BulkRmaResult[]>([]);
   protected readonly error = signal('');
   protected readonly successCount = computed(() => this.results().filter((item) => item.success).length);
+
+  /** Count with its noun: singular only for exactly one, plural for zero and several. */
+  protected countLabel(count: number, singular: string, plural: string): string {
+    return `${count} ${count === 1 ? singular : plural}`;
+  }
   protected readonly form = this.formBuilder.group({
     status: ['TRIAGE' as RmaStatus], priority: ['MEDIUM' as RmaPriority], assigneeId: [null as number | null], note: [''],
   });

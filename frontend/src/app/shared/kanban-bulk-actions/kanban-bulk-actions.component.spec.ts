@@ -26,7 +26,7 @@ describe('KanbanBulkActionsComponent', () => {
   it('requires confirmation and cancels without sending requests', () => {
     button('Alterar status').click();
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('[role="dialog"]').textContent).toContain('2 RMA(s)');
+    expect(fixture.nativeElement.querySelector('[role="dialog"]').textContent).toContain('2 RMAs');
     expect(fixture.nativeElement.querySelector('[role="dialog"]').textContent).toContain('Selecione o novo status');
     expect(button('Aplicar a').disabled).toBe(true);
     expect(service.updateStatusInBulk).not.toHaveBeenCalled();
@@ -63,7 +63,7 @@ describe('KanbanBulkActionsComponent', () => {
     expect(service.updateStatusInBulk).toHaveBeenCalledTimes(2);
     expect(service.updateStatusInBulk).toHaveBeenCalledWith(1, { status: 'TRIAGE', note: null, expectedStatus: 'RECEIVED' });
     expect(results.map((result) => [result.id, result.success])).toEqual([[1, true], [2, false]]);
-    expect(fixture.nativeElement.textContent).toContain('1 atualizado(s); 1 com falha');
+    expect(fixture.nativeElement.textContent).toContain('1 atualizado; 1 com falha');
     expect(fixture.nativeElement.textContent).toContain('Etapa inválida');
   });
 
@@ -111,7 +111,7 @@ describe('KanbanBulkActionsComponent', () => {
     for (let i = 1; i < 6; i++) { pending[i].next({ id: i } as RmaResponse); pending[i].complete(); }
     fixture.detectChanges();
     expect(service.updatePriority).toHaveBeenCalledTimes(6);
-    expect(fixture.nativeElement.textContent).toContain('5 atualizado(s); 1 com falha');
+    expect(fixture.nativeElement.textContent).toContain('5 atualizados; 1 com falha');
   });
 
   it('allows removing the assignee explicitly', () => {
@@ -122,6 +122,43 @@ describe('KanbanBulkActionsComponent', () => {
     submit();
     expect(service.updateAssignee).toHaveBeenCalledWith(1, { assigneeId: null });
     expect(service.updateAssignee).toHaveBeenCalledWith(2, { assigneeId: null });
+  });
+
+  // Novo: plurais reais, sem "(s)"
+  it('writes the selection count in singular or plural', () => {
+    const toolbar = () => fixture.nativeElement.querySelector('.bulk-toolbar strong').textContent.trim();
+    expect(toolbar()).toBe('2 RMAs selecionados');
+    fixture.componentRef.setInput('selection', [rmas[0]]);
+    fixture.detectChanges();
+    expect(toolbar()).toBe('1 RMA selecionado');
+    button('Alterar prioridade').click();
+    fixture.detectChanges();
+    const dialog = fixture.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
+    expect(dialog.querySelector('.bulk-confirm-summary strong')!.textContent).toMatch(/ em 1 RMA\.$/);
+    expect(button('Aplicar a').textContent!.trim()).toBe('Aplicar a 1 RMA');
+    expect(fixture.nativeElement.textContent).not.toContain('(s)');
+  });
+
+  it('writes the confirmation for several RMAs in plural', () => {
+    button('Alterar prioridade').click();
+    fixture.detectChanges();
+    const dialog = fixture.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
+    expect(dialog.querySelector('.bulk-confirm-summary strong')!.textContent).toMatch(/ em 2 RMAs\.$/);
+    expect(button('Aplicar a').textContent!.trim()).toBe('Aplicar a 2 RMAs');
+    expect(fixture.nativeElement.textContent).not.toContain('(s)');
+  });
+
+  it.each([
+    [0, '0 atualizados; 2 com falha.'],
+    [1, '1 atualizado; 1 com falha.'],
+    [2, '2 atualizados; 0 com falha.']
+  ])('reports %i successes with the matching plural', (successes, text) => {
+    service.updatePriority.mockImplementation((id: number) => id <= successes ? of(rmas[id - 1]) : throwError(() => ({ error: { message: 'Falha' } })));
+    button('Alterar prioridade').click();
+    fixture.detectChanges();
+    submit();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.bulk-results [role="status"]').textContent.trim()).toBe(text);
   });
 
   it('offers technicians only status changes and sends nothing for an empty selection', () => {

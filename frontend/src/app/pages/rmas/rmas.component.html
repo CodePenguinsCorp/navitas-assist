@@ -213,9 +213,9 @@
           <div><dt>Atualizado em</dt><dd>{{ dateTimeLabel(rma.updatedAt) }}</dd></div>
         </dl>
 
-        <div class="tab-list tab-list--raised" role="tablist" aria-label="Seções do RMA">
+        <div class="tab-list tab-list--raised" role="tablist" aria-label="Seções do RMA" (keydown)="onDetailTabKeydown($event)">
           @for (tab of detailTabs; track tab.id) {
-            <button type="button" role="tab" class="tab" [id]="'rma-tab-' + tab.id" [class.is-active]="detailTab() === tab.id" [attr.aria-selected]="detailTab() === tab.id" [attr.aria-controls]="'rma-panel-' + tab.id" (click)="detailTab.set(tab.id)">{{ tab.label }}</button>
+            <button type="button" role="tab" class="tab" [id]="'rma-tab-' + tab.id" [class.is-active]="detailTab() === tab.id" [attr.aria-selected]="detailTab() === tab.id" [attr.aria-controls]="'rma-panel-' + tab.id" [attr.tabindex]="detailTab() === tab.id ? 0 : -1" (click)="detailTab.set(tab.id)">{{ tab.label }}</button>
           }
         </div>
 

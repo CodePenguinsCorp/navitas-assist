@@ -702,6 +702,23 @@ export class RmasComponent {
     this.activeModal.set('details');
   }
 
+  /** Same tab contract as notifications: arrows wrap, Home/End jump to the ends; selection follows focus. */
+  protected onDetailTabKeydown(event: KeyboardEvent): void {
+    const ids = this.detailTabs.map((tab) => tab.id);
+    const current = ids.indexOf(this.detailTab());
+    let next: number;
+    switch (event.key) {
+      case 'ArrowRight': next = (current + 1) % ids.length; break;
+      case 'ArrowLeft': next = (current - 1 + ids.length) % ids.length; break;
+      case 'Home': next = 0; break;
+      case 'End': next = ids.length - 1; break;
+      default: return;
+    }
+    event.preventDefault();
+    this.detailTab.set(ids[next]);
+    this.host.nativeElement.querySelector<HTMLElement>(`#rma-tab-${ids[next]}`)?.focus();
+  }
+
   protected openDetailsFromKeyboard(event: Event, rma: RmaResponse): void {
     event.preventDefault();
     this.openDetailsModal(rma);
