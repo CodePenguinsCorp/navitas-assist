@@ -1,10 +1,6 @@
 <section class="page-surface">
   <app-page-header
     heading="Produtos"
-    singular="produto"
-    plural="produtos"
-    [count]="loadFailed() || !hasLoaded() ? null : totalElements()"
-    [total]="hasActiveFilters ? summary().total : null"
   >
     <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo produto</button>
   </app-page-header>
@@ -160,6 +156,12 @@
         (sizeChange)="changePageSize($event)"
       />
     }
+    <app-result-count
+      singular="produto"
+      plural="produtos"
+      [count]="loadFailed() || !hasLoaded() ? null : totalElements()"
+      [total]="hasActiveFilters ? summary().total : null"
+    />
   </article>
 </section>
 
@@ -245,8 +247,8 @@
           </label>
         </fieldset>
 
-        <fieldset class="form-section">
-          <legend>Garantia e observações técnicas</legend>
+        <fieldset class="form-section form-section--untitled">
+          <legend class="sr-only">Garantia e observações</legend>
 
           <label class="field-group">
             <span>Garantia padrão (meses)</span>

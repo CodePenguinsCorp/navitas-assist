@@ -69,6 +69,7 @@ import {
 } from '../../shared/form-controls/custom-select/custom-select.component';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { ResultCountComponent } from '../../shared/result-count/result-count.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { RmaBlockHistoryComponent } from '../../shared/rma-block-history/rma-block-history.component';
 import { RmaPartsPanelComponent } from '../../shared/rma-parts-panel/rma-parts-panel.component';
@@ -95,7 +96,7 @@ export interface RmaListFilters {
 
 @Component({
   selector: 'app-rmas',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlockHistoryComponent, PageHeaderComponent, RowActionComponent, RmaSlaBadgeComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlockHistoryComponent, PageHeaderComponent, ResultCountComponent, RowActionComponent, RmaSlaBadgeComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {

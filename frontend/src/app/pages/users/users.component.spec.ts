@@ -117,7 +117,7 @@ describe('UsersComponent collection layout and states', () => {
 
   afterEach(() => vi.useRealTimers());
 
-  const count = () => element.querySelector('.page-heading__count')?.textContent?.trim() ?? null;
+  const count = () => element.querySelector('.result-count')?.textContent?.trim() ?? null;
   const loadAlert = () => element.querySelector('.table-card [role="alert"]');
   const buttonByText = (text: string) => Array.from(element.querySelectorAll<HTMLButtonElement>('button'))
     .find((button) => button.textContent?.trim() === text);

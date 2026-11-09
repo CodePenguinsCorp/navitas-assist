@@ -269,11 +269,20 @@ a {
   color: var(--warning-text);
 }
 
+/* Page title band: light-to-tint wash behind the title, with the brand gradient as its one accent. */
 .page-heading {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(46, 168, 212, 0.16) 0%, rgba(46, 168, 212, 0) 55%),
+    linear-gradient(100deg, var(--surface) 35%, var(--brand-tint) 100%);
+  box-shadow: var(--shadow);
 }
 
 .page-heading h1,
@@ -283,6 +292,25 @@ a {
   font-family: var(--font-heading);
   font-size: 1.45rem;
   font-weight: 700;
+}
+
+.page-heading h1 {
+  color: var(--brand-dark);
+  font-size: clamp(1.6rem, 1.25rem + 1.2vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.page-heading h1::after {
+  content: '';
+  display: block;
+  width: 48px;
+  height: 4px;
+  margin-top: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--brand-sky), var(--brand-blue));
 }
 
 .page-heading p {
@@ -300,10 +328,22 @@ a {
   min-width: 0;
 }
 
-.page-heading__count {
-  color: var(--muted);
+/* Result count at the foot of a list, beside its pagination. */
+.result-count {
+  display: inline-flex;
+  align-items: center;
+  margin: var(--space-3) 0 0;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--brand-tint);
+  color: var(--brand-blue-deep);
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.report-summary .result-count {
+  margin: 0;
 }
 
 .shell {
@@ -1780,6 +1820,10 @@ fieldset.field-group > span {
   .form-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .page-heading {
+    padding: var(--space-4);
   }
 
   .shell-header {

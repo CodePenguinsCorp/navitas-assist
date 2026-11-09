@@ -83,7 +83,7 @@ function confirmFilters(component: ListHarness, query: string, status = ''): voi
 }
 
 function countLabel(page: HTMLElement): string | null {
-  return page.querySelector('.page-heading__count')?.textContent?.trim() ?? null;
+  return page.querySelector('.result-count')?.textContent?.trim() ?? null;
 }
 
 function summaryText(page: HTMLElement): string | null {
@@ -94,8 +94,8 @@ const httpError = new HttpErrorResponse({ status: 500, error: { message: 'Falha 
 
 describe('RmasComponent list state', () => {
   describe('header and indicators', () => {
-    it('shows the count next to the title and no statistics cards', async () => {
-      // Hoje não existe .page-heading__count e há três .stat-card.
+    it('shows the count at the foot of the list and no statistics cards', async () => {
+      // A contagem fica no rodapé da lista, não no cabeçalho.
       const { page } = await setup();
       expect(countLabel(page)).toBe('45 RMAs');
       expect(page.querySelectorAll('.stat-card').length).toBe(0);
@@ -324,7 +324,7 @@ describe('RmasComponent list state', () => {
     });
 
     it('hides the count after Buscar until the new list responds', async () => {
-      // Hoje não há contagem junto do título (.page-heading__count "45 RMAs" ausente).
+      // A contagem some durante a nova busca e volta com o novo resultado.
       const listB$ = new Subject<PageResponse<RmaResponse>>();
       let listCalls = 0;
       const { component, page, render } = await setup({ list: (f) => (listCalls++ === 0 ? defaultList(f) : listB$) });

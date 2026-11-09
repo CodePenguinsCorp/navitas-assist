@@ -78,7 +78,7 @@ describe('ProtocolsComponent', () => {
   }
 
   function count(): string | null {
-    return element().querySelector('.page-heading__count')?.textContent?.trim() ?? null;
+    return element().querySelector('.result-count')?.textContent?.trim() ?? null;
   }
 
   function buttonByText(label: string): HTMLButtonElement | undefined {
@@ -98,7 +98,7 @@ describe('ProtocolsComponent', () => {
       expectCancelBeforePrimary(element());
     });
 
-    it('shows the count next to the title and "X de Y" while searching', async () => {
+    it('shows the count at the foot of the list and "X de Y" while searching', async () => {
       await setup();
 
       expect(count()).toBe('2 protocolos');

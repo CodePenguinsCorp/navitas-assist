@@ -11,12 +11,13 @@ import { formatBusinessDateTime } from '../../core/utils/date';
 import { PROTOCOL_ITEM_TYPE_LABELS, normalizeDecimal } from '../../core/utils/protocol-ui';
 import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { ResultCountComponent } from '../../shared/result-count/result-count.component';
 
 const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
 
 @Component({
   selector: 'app-protocols',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PageHeaderComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PageHeaderComponent, ResultCountComponent],
   templateUrl: './protocols.component.html',
   styles: [`
     :host {

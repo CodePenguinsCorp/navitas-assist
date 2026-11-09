@@ -47,16 +47,16 @@ describe('PartsComponent presentation', () => {
     return parts;
   }
 
-  // Vermelho: a contagem está no campo de busca e não no cabeçalho da página.
-  it('counts parts in the heading independently of hidden stock search', async () => {
+  // A contagem fica no rodapé da lista de estoque; a aba Reposição tem a própria contagem.
+  it('counts stock parts at the foot of the list independently of the search field', async () => {
     await setup();
     search('Capacitor');
-    expect(normalized(root().querySelector('.page-heading__count'))).toBe('1 de 2 peças');
+    expect(normalized(root().querySelector('.result-count'))).toBe('1 de 2 peças');
     expect(normalized(root().querySelector('.search-field'))).not.toContain('registro(s)');
     tab('Reposição');
-    expect(normalized(root().querySelector('.page-heading__count'))).toBe('2 peças');
+    expect(root().querySelector('.result-count')).toBeNull();
     tab('Estoque');
-    expect(normalized(root().querySelector('.page-heading__count'))).toBe('1 de 2 peças');
+    expect(normalized(root().querySelector('.result-count'))).toBe('1 de 2 peças');
   });
 
   // Vermelho: cartões não identificam o escopo global dos três indicadores.
@@ -79,7 +79,7 @@ describe('PartsComponent presentation', () => {
     expect(normalized(root())).toContain('Não foi possível carregar as peças.');
     expect(normalized(root())).not.toContain('No estoque completo:');
     expect(normalized(root())).not.toContain('R$ 110,00');
-    expect(root().querySelector('.page-heading__count')).toBeNull();
+    expect(root().querySelector('.result-count')).toBeNull();
   });
 
   // Vermelho: a ação Editar não tem o código e o nome da peça no nome acessível.

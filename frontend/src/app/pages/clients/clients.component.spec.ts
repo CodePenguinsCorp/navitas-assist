@@ -97,7 +97,7 @@ describe('ClientsComponent pagination', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Nenhum cliente encontrado');
-    expect(fixture.nativeElement.querySelector('.page-heading__count')?.textContent?.trim()).toBe('0 de 45 clientes');
+    expect(fixture.nativeElement.querySelector('.result-count')?.textContent?.trim()).toBe('0 de 45 clientes');
   });
 
   it('reloads the current page and the summary after deleting a client', () => {
@@ -176,7 +176,7 @@ describe('ClientsComponent collection layout and states', () => {
 
   afterEach(() => vi.useRealTimers());
 
-  const count = () => element.querySelector('.page-heading__count')?.textContent?.trim() ?? null;
+  const count = () => element.querySelector('.result-count')?.textContent?.trim() ?? null;
   const loadAlert = () => element.querySelector('.table-card [role="alert"]');
   const buttonByText = (text: string) => Array.from(element.querySelectorAll<HTMLButtonElement>('button'))
     .find((button) => button.textContent?.trim() === text);

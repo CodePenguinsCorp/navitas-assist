@@ -11,6 +11,7 @@ import { purchaseFact, warrantyExpiryLabel, warrantyTermLabel } from '../../core
 import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { ResultCountComponent } from '../../shared/result-count/result-count.component';
 
 type ReportType = 'technical' | 'aging' | 'warranty' | 'returns';
 
@@ -19,7 +20,7 @@ const MAX_PERIOD_DAYS = 366;
 
 @Component({
   selector: 'app-reports',
-  imports: [ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, PageHeaderComponent],
+  imports: [ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, PageHeaderComponent, ResultCountComponent],
   templateUrl: './reports.component.html',
   styleUrl: './reports.component.css'
 })

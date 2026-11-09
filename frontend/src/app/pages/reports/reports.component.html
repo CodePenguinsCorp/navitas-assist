@@ -1,5 +1,5 @@
 <section class="page-surface">
-  <app-page-header heading="Relatórios" singular="RMA" plural="RMAs" [count]="report() && !loading() ? rmas().length : null" />
+  <app-page-header heading="Relatórios" />
   <form class="panel report-filters" [formGroup]="form" (ngSubmit)="loadReports()">
     <label class="filter-field"><span>Entrada a partir de</span>
       <app-date-picker ariaLabel="Data inicial de entrada" formControlName="entryFrom" [ariaDescribedBy]="periodDescribedBy()" [ariaInvalid]="!!periodError()" />
@@ -43,6 +43,7 @@
           <div><dt>Cliente</dt><dd>{{ appliedFilters()?.client }}</dd></div>
           <div><dt>Gerado em</dt><dd>{{ formatInstant(data.generatedAt) }} (São Paulo)</dd></div>
         </dl>
+        <app-result-count singular="RMA" plural="RMAs" [count]="rmas().length" />
         <p class="report-hint">Consulte novamente para atualizar.</p>
       </div>
       <div class="tab-list" role="tablist" aria-label="Relatórios">

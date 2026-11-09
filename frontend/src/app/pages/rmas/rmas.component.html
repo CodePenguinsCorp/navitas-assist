@@ -1,5 +1,5 @@
 <section class="page-surface">
-  <app-page-header heading="RMAs" singular="RMA" plural="RMAs" [count]="hasCurrentResult() ? totalElements() : null">
+  <app-page-header heading="RMAs">
     @if (canOpenRma()) {
       <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo RMA</button>
     }
@@ -177,6 +177,11 @@
         (sizeChange)="changePageSize($event)"
       />
     }
+    <app-result-count
+      singular="RMA"
+      plural="RMAs"
+      [count]="hasCurrentResult() ? totalElements() : null"
+    />
   </article>
 
 </section>

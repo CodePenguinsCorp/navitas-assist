@@ -16,6 +16,7 @@ import { PagedList } from '../../core/utils/paged-list';
 import { SEARCH_DEBOUNCE_MS, presenceToFlag } from '../../core/utils/pagination';
 import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { ResultCountComponent } from '../../shared/result-count/result-count.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
@@ -40,7 +41,7 @@ const PRODUCT_LIMITS = {
 
 @Component({
   selector: 'app-products',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PaginationComponent, PageHeaderComponent, RowActionComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PaginationComponent, PageHeaderComponent, ResultCountComponent, RowActionComponent],
   templateUrl: './products.component.html',
   styles: [`
     :host {

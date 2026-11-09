@@ -1,10 +1,6 @@
 <section class="page-surface">
   <app-page-header
     heading="Peças"
-    singular="peça"
-    plural="peças"
-    [count]="loadFailed() || !hasLoaded() ? null : activeTab() === 'stock' ? filteredParts().length : parts().length"
-    [total]="activeTab() === 'stock' && searchTerm().trim() ? parts().length : null"
   >
     @if (canManage()) {
       <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Nova peça</button>
@@ -117,6 +113,7 @@
             </table>
           </div>
         }
+        <app-result-count singular="peça" plural="peças" [count]="filteredParts().length" [total]="searchTerm().trim() ? parts().length : null" />
       </article>
     } @else {
       <article class="table-card table-card--list panel">

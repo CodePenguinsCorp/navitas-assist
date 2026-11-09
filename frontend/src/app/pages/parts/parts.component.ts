@@ -25,6 +25,7 @@ import {
 } from '../../core/utils/part-ui';
 import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { ResultCountComponent } from '../../shared/result-count/result-count.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
 type PartsTab = 'stock' | 'replenishment';
@@ -42,7 +43,7 @@ const MOVEMENT_TYPE_OPTIONS: ReadonlyArray<CustomSelectOption<ManualPartMovement
 
 @Component({
   selector: 'app-parts',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PageHeaderComponent, RowActionComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PageHeaderComponent, ResultCountComponent, RowActionComponent],
   templateUrl: './parts.component.html',
   styles: [`
     :host {

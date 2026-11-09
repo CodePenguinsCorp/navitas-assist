@@ -1,10 +1,6 @@
 <section class="page-surface">
   <app-page-header
     heading="Protocolos técnicos"
-    singular="protocolo"
-    plural="protocolos"
-    [count]="loadFailed() || !loaded() ? null : filteredTemplates().length"
-    [total]="searchTerm().trim() ? templates().length : null"
   >
     <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo protocolo</button>
   </app-page-header>
@@ -89,6 +85,12 @@
         </table>
       </div>
     }
+    <app-result-count
+      singular="protocolo"
+      plural="protocolos"
+      [count]="loadFailed() || !loaded() ? null : filteredTemplates().length"
+      [total]="searchTerm().trim() ? templates().length : null"
+    />
   </article>
 </section>
 

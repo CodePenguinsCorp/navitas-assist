@@ -22,6 +22,7 @@ import {
   CustomSelectOption
 } from '../../shared/form-controls/custom-select/custom-select.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { ResultCountComponent } from '../../shared/result-count/result-count.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
@@ -34,7 +35,7 @@ const passwordByteLengthValidator: ValidatorFn = control =>
 
 @Component({
   selector: 'app-users',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PaginationComponent, PageHeaderComponent, RowActionComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PaginationComponent, PageHeaderComponent, ResultCountComponent, RowActionComponent],
   templateUrl: './users.component.html',
   styles: [`
     :host { display: block; }

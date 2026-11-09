@@ -174,7 +174,7 @@ describe('ProductsComponent collection layout and states', () => {
 
   afterEach(() => vi.useRealTimers());
 
-  const count = () => element.querySelector('.page-heading__count')?.textContent?.trim() ?? null;
+  const count = () => element.querySelector('.result-count')?.textContent?.trim() ?? null;
   const loadAlert = () => element.querySelector('.table-card [role="alert"]');
   const buttonByText = (text: string) => Array.from(element.querySelectorAll<HTMLButtonElement>('button'))
     .find((button) => button.textContent?.trim() === text);
@@ -277,7 +277,7 @@ describe('ProductsComponent collection layout and states', () => {
     expect(remove.hasAttribute('title')).toBe(false);
   });
 
-  it('groups the form into Identificação, Versões and Garantia e observações técnicas', async () => {
+  it('groups the form into Identificação, Versões and an untitled warranty and notes section', async () => {
     await mount();
     component.openCreateModal();
     fixture.detectChanges();
@@ -287,7 +287,10 @@ describe('ProductsComponent collection layout and states', () => {
     expect(element.querySelector(`#${dialog.getAttribute('aria-labelledby')}`)?.textContent?.trim()).toBe('Novo produto');
     const sections = Array.from(dialog.querySelectorAll('fieldset.form-section'));
     expect(sections.map((section) => section.querySelector('legend')?.textContent?.trim()))
-      .toEqual(['Identificação', 'Versões', 'Garantia e observações técnicas']);
+      .toEqual(['Identificação', 'Versões', 'Garantia e observações']);
+    // The last group's fields already name themselves: its legend stays for screen readers only.
+    expect(sections[2].querySelector('legend')?.classList.contains('sr-only')).toBe(true);
+    expect(sections[0].querySelector('legend')?.classList.contains('sr-only')).toBe(false);
     const controlsIn = (section: Element) => Array.from(section.querySelectorAll('[formControlName]')).map((node) => node.getAttribute('formControlName'));
     expect(controlsIn(sections[0])).toEqual(['sku', 'name', 'category']);
     expect(controlsIn(sections[1])).toEqual(['hardwareVersion', 'firmwareVersion']);

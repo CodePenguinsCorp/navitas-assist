@@ -1,10 +1,6 @@
 <section class="page-surface">
   <app-page-header
     heading="Clientes"
-    singular="cliente"
-    plural="clientes"
-    [count]="loadFailed() || !hasLoaded() ? null : totalElements()"
-    [total]="hasActiveFilters ? summary().total : null"
   >
     <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo cliente</button>
   </app-page-header>
@@ -152,6 +148,12 @@
         (sizeChange)="changePageSize($event)"
       />
     }
+    <app-result-count
+      singular="cliente"
+      plural="clientes"
+      [count]="loadFailed() || !hasLoaded() ? null : totalElements()"
+      [total]="hasActiveFilters ? summary().total : null"
+    />
   </article>
 </section>
 

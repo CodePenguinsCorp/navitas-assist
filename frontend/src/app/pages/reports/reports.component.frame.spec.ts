@@ -187,11 +187,11 @@ describe('ReportsComponent frame', () => {
     http.expectNone((request) => request.url === REPORTS_URL);
   });
 
-  it('counts consulted RMAs in the heading', () => {
-    const count = () => root().querySelector('.page-heading__count');
+  it('counts consulted RMAs in the query summary', () => {
+    const count = () => root().querySelector('.result-count');
     expect(count()).toBeNull();
     flush();
-    // Reprova hoje: a contagem é "1 RMA(s) consultado(s)" na dica (html:37), sem .page-heading__count.
+    // A contagem fica no resumo da consulta, não no cabeçalho.
     expect(normalize(count()?.textContent)).toBe('1 RMA');
     component.loadReports();
     fixture.detectChanges();
