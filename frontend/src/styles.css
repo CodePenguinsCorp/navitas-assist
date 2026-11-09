@@ -492,11 +492,16 @@ a {
   padding-bottom: 1.15rem;
 }
 
+.brand-lockup__picture {
+  display: block;
+  width: min(100%, 192px);
+  margin-inline: auto;
+}
+
 .brand-lockup__logo {
   display: block;
-  width: min(100%, 168px);
+  width: 100%;
   height: auto;
-  margin-inline: auto;
   filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.18));
 }
 
@@ -1931,6 +1936,10 @@ fieldset.field-group > span {
     position: relative;
     height: auto;
     min-height: auto;
+  }
+
+  .brand-lockup__picture {
+    width: min(100%, 108px);
   }
 }
 
