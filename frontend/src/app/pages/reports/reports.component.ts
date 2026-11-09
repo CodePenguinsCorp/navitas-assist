@@ -7,6 +7,7 @@ import { RmaReportResponse, RmaStatus } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import { ReportService } from '../../core/services/report.service';
 import { formatDateOnly, todayInputValue } from '../../core/utils/date';
+import { purchaseFact, warrantyExpiryLabel, warrantyTermLabel } from '../../core/utils/rma-detail';
 import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
@@ -55,6 +56,9 @@ export class ReportsComponent {
   protected readonly failureLabels = FAILURE_TYPE_LABELS;
   protected readonly causeLabels = FAILURE_CAUSE_LABELS;
   protected readonly formatDate = formatDateOnly;
+  protected readonly warrantyTermLabel = warrantyTermLabel;
+  protected readonly warrantyExpiryLabel = warrantyExpiryLabel;
+  protected readonly purchaseFact = purchaseFact;
   protected readonly rmas = computed(() => this.report()?.rmas ?? []);
   protected readonly activeRmas = computed(() => this.rmas().filter((rma) => rma.sla.status !== 'CLOSED'));
   protected readonly returns = computed(() => this.rmas().filter((rma) => rma.status === 'RETURNED'));

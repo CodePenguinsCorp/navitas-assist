@@ -119,6 +119,39 @@ describe('ReportsComponent compositions', () => {
       expect(normalize(article.textContent)).toContain('Não liga');
     });
   });
+
+  describe('warranty report', () => {
+    const table = () => panel().querySelector('table')!;
+
+    it('separates purchase and entry', () => {
+      respond();
+      show('warranty');
+      // Reprova hoje: uma única coluna "Compra / Entrada" (html:115).
+      expect(headers(table())).toEqual(['RMA', 'Cliente', 'Produto', 'Série', 'Lote', 'Compra', 'Entrada', 'Prazo', 'Vencimento', 'Situação']);
+      expect(cell(table(), 0, 'Compra')).toBe('20/10/2025');
+      expect(cell(table(), 0, 'Entrada')).toBe('20/10/2026');
+      expect(cell(table(), 0, 'Cliente')).toBe('Cliente Alfa');
+      expect(table().closest('.table-wrap')).not.toBeNull();
+    });
+
+    it('keeps unknown purchase pending with explicit labels', () => {
+      respond([{ ...RMA, purchaseDateUnknown: true, purchaseDate: null,
+        items: [{ ...RMA.items[0], warrantyStatus: WarrantyStatus.PENDING, warrantyExpiresAt: null }] }]);
+      show('warranty');
+      // Reprova hoje: compra e vencimento aparecem como "Não informado".
+      expect(cell(table(), 0, 'Compra')).toBe('Desconhecida');
+      expect(cell(table(), 0, 'Vencimento')).toBe('Sem data da compra');
+      // Preservação: a situação continua pendente.
+      expect(cell(table(), 0, 'Situação')).toBe('Pendente');
+    });
+
+    it('uses the singular month', () => {
+      respond([{ ...RMA, items: [{ ...RMA.items[0], warrantyMonths: 1 }] }]);
+      show('warranty');
+      // Reprova hoje: "1 meses".
+      expect(cell(table(), 0, 'Prazo')).toBe('1 mês');
+    });
+  });
 });
 
 interface ReportsHarness {

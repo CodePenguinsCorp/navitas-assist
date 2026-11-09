@@ -136,13 +136,15 @@
               <p>Cálculo automático na data de entrada, sem override manual. Compra desconhecida mantém a garantia pendente.</p>
               <div class="table-wrap"><table>
                 <caption>Prazos e situação de cada produto do RMA</caption>
-                <thead><tr><th scope="col">RMA / Cliente</th><th scope="col">Produto</th><th scope="col">Compra / Entrada</th><th scope="col">Prazo</th><th scope="col">Vencimento</th><th scope="col">Situação</th></tr></thead>
+                <thead><tr><th scope="col">RMA</th><th scope="col">Cliente</th><th scope="col">Produto</th><th scope="col">Série</th><th scope="col">Lote</th>
+                  <th scope="col">Compra</th><th scope="col">Entrada</th><th scope="col">Prazo</th><th scope="col">Vencimento</th><th scope="col">Situação</th></tr></thead>
                 <tbody>@for (rma of rmas(); track rma.id) {
                   @for (item of rma.items; track $index) {
-                    <tr><td><strong class="code-text">{{ rma.code }}</strong><p class="report-muted">{{ rma.clientName }}</p></td>
-                      <td><strong>{{ item.productName }}</strong><p class="report-muted"><span class="code-text">{{ item.productSku }}</span> · Série {{ item.serialNumber || 'não informada' }} · Lote {{ item.batchNumber || 'não informado' }}</p></td>
-                      <td>{{ formatDate(rma.purchaseDate) }} / {{ formatDate(rma.entryDate) }}</td><td>{{ item.warrantyMonths }} meses</td>
-                      <td>{{ formatDate(item.warrantyExpiresAt) }}</td><td>{{ warrantyLabels[item.warrantyStatus] }}</td></tr>
+                    <tr><td><strong class="code-text">{{ rma.code }}</strong></td><td>{{ rma.clientName }}</td>
+                      <td><strong>{{ item.productName }}</strong><p class="report-muted code-text">{{ item.productSku }}</p></td>
+                      <td>{{ item.serialNumber || 'Não informada' }}</td><td>{{ item.batchNumber || 'Não informado' }}</td>
+                      <td>{{ purchaseFact(rma).value }}</td><td>{{ formatDate(rma.entryDate) }}</td><td>{{ warrantyTermLabel(item.warrantyMonths) }}</td>
+                      <td>{{ warrantyExpiryLabel(item).value }}</td><td>{{ warrantyLabels[item.warrantyStatus] }}</td></tr>
                   }
                 }</tbody>
               </table></div>
