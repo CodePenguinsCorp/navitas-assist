@@ -89,7 +89,8 @@ class RmaControllerIntegrationTest {
             "purchaseDateUnknown", true,
             "entryDate", LocalDate.now().toString(),
             "invoiceNumber", "NF-123",
-            "reportedFailure", "Products do not start"
+            "reportedFailure", "Products do not start",
+            "receivedBy", "admin"
         );
 
         mockMvc.perform(post("/api/rmas")
