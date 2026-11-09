@@ -433,6 +433,10 @@ export class KanbanComponent {
   }
 
   protected saveView(): void {
+    if (this.viewBusy()) {
+      return;
+    }
+
     if (this.viewForm.invalid) {
       this.viewForm.markAllAsTouched();
       return;
@@ -539,6 +543,10 @@ export class KanbanComponent {
   }
 
   protected saveAssignment(): void {
+    if (this.boardUpdatingId() !== null) {
+      return;
+    }
+
     const target = this.pendingAssignmentRmaSignal();
     if (!target) {
       return;
@@ -628,6 +636,10 @@ export class KanbanComponent {
   }
 
   protected saveStatusChange(): void {
+    if (this.boardUpdatingId() !== null) {
+      return;
+    }
+
     const target = this.pendingStatusRmaSignal();
     if (!target) {
       return;
