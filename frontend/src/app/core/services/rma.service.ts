@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
@@ -44,20 +44,6 @@ export class RmaService {
 
   getById(id: number): Observable<RmaResponse> {
     return this.http.get<RmaResponse>(`/api/rmas/${id}`);
-  }
-
-  history(filters: { batchNumber?: string; serialNumber?: string }): Observable<RmaResponse[]> {
-    let params = new HttpParams();
-
-    if (filters.batchNumber?.trim()) {
-      params = params.set('batchNumber', filters.batchNumber.trim());
-    }
-
-    if (filters.serialNumber?.trim()) {
-      params = params.set('serialNumber', filters.serialNumber.trim());
-    }
-
-    return this.http.get<RmaResponse[]>('/api/rmas/history', { params });
   }
 
   create(payload: CreateRmaRequest): Observable<RmaResponse> {

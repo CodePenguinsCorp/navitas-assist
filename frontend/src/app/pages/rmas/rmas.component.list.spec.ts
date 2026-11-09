@@ -14,13 +14,11 @@ import { RmasComponent } from './rmas.component';
 
 type ListFn = (filters: RmaFilters) => Observable<PageResponse<RmaResponse>>;
 type SummaryFn = (filters: Pick<RmaFilters, 'query' | 'status'>) => Observable<RmaSummaryResponse>;
-type HistoryFn = (filters: { batchNumber?: string; serialNumber?: string }) => Observable<RmaResponse[]>;
 
 interface SetupOptions {
   role?: UserRole;
   list?: ListFn;
   summary?: SummaryFn;
-  history?: HistoryFn;
   requestedRma?: number;
 }
 
@@ -46,7 +44,6 @@ async function setup(options: SetupOptions = {}) {
   const rmaService = {
     list: vi.fn(options.list ?? defaultList),
     getSummary: vi.fn(options.summary ?? defaultSummary),
-    history: vi.fn(options.history ?? (() => of([]))),
     getById: vi.fn((id: number) => of(buildRma({ id }))),
     create: vi.fn(),
     upsertDiagnosis: vi.fn((id: number) => of(buildRma({ id })))
@@ -387,6 +384,17 @@ describe('RmasComponent list state', () => {
 
       expect(rmaService.list).toHaveBeenLastCalledWith({ page: 0, size: 20, query: 'abc', status: 'TRIAGE' });
       expect(rmaService.getSummary).toHaveBeenLastCalledWith({ query: 'abc', status: 'TRIAGE' });
+    });
+
+    it('searches a batch or serial number through the main search query', async () => {
+      const { component, rmaService } = await setup();
+
+      confirmFilters(component, ' LOT-2026-01 ');
+      expect(rmaService.list).toHaveBeenLastCalledWith({ page: 0, size: 20, query: 'LOT-2026-01', status: undefined });
+
+      confirmFilters(component, 'SN-445512');
+      expect(rmaService.list).toHaveBeenLastCalledWith({ page: 0, size: 20, query: 'SN-445512', status: undefined });
+      expect(rmaService.getSummary).toHaveBeenLastCalledWith({ query: 'SN-445512', status: undefined });
     });
 
     it('clears to one list request on page 0 and one summary request', async () => {

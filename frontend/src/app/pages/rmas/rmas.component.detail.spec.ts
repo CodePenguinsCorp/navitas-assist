@@ -60,7 +60,6 @@ async function setup(options: { role?: UserRole } = {}) {
   const rmaService = {
     list: vi.fn(() => of(buildRmaPage([fullRma], 0, 20, 1))),
     getSummary: vi.fn(() => of({ total: 1, ongoing: 1, highPriority: 0 })),
-    history: vi.fn(() => of([])),
     getById: vi.fn(),
     create: vi.fn(),
     upsertDiagnosis: vi.fn()

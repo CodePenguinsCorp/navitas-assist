@@ -38,7 +38,6 @@ async function setup(options: { role?: UserRole; create?: CreateFn } = {}) {
   const rmaService = {
     list: vi.fn(() => of(buildRmaPage([buildRma()], 0, 20, 1))),
     getSummary: vi.fn(() => of({ total: 1, ongoing: 1, highPriority: 0 })),
-    history: vi.fn(() => of([])),
     getById: vi.fn(),
     create: vi.fn(options.create ?? ((payload: CreateRmaRequest) => of(buildRma({ id: 2, code: 'RMA-2026-000002', reportedFailure: payload.reportedFailure })))),
     upsertDiagnosis: vi.fn()

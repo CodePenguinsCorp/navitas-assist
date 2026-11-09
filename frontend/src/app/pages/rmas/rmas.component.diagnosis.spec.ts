@@ -39,7 +39,6 @@ async function setup(options: { role?: UserRole; rma?: RmaResponse; upsert?: Ups
   const rmaService = {
     list: vi.fn(() => of(buildRmaPage([rma], 0, 20, 1))),
     getSummary: vi.fn(() => of({ total: 1, ongoing: 1, highPriority: 0 })),
-    history: vi.fn(() => of([])),
     getById: vi.fn(),
     create: vi.fn(),
     upsertDiagnosis: vi.fn(options.upsert ?? ((id: number, payload: DiagnosisRequest) =>

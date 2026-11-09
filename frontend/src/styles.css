@@ -1211,37 +1211,6 @@ fieldset.form-section {
   color: var(--muted);
 }
 
-.history-stack {
-  display: grid;
-  gap: 0.6rem;
-  margin-top: 0.85rem;
-}
-
-.history-item {
-  width: 100%;
-  display: grid;
-  gap: 0.2rem;
-  padding: 0.85rem 0.9rem;
-  text-align: left;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: #ffffff;
-}
-
-.history-item:hover {
-  background: var(--surface-alt);
-  border-color: var(--line-hover);
-}
-
-.history-item strong {
-  font-size: 0.92rem;
-}
-
-.history-item span {
-  color: var(--muted);
-  font-size: 0.87rem;
-}
-
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

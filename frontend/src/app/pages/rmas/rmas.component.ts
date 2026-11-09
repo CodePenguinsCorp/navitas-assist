@@ -146,21 +146,6 @@ export interface RmaListFilters {
       color: var(--text);
     }
 
-    .rma-history {
-      display: grid;
-      gap: var(--space-3);
-    }
-
-    .rma-history h2 {
-      margin: 0;
-      font-size: 1rem;
-    }
-
-    .rma-history p {
-      margin: 0;
-    }
-
-
     .rma-items-editor,
     .rma-details {
       display: grid;
@@ -199,13 +184,6 @@ export interface RmaListFilters {
     .rma-details__note {
       margin: 0;
       color: var(--muted);
-    }
-
-    .history-item__meta {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.5rem;
     }
 
     .rma-details__chips {
@@ -452,12 +430,9 @@ export class RmasComponent {
   /** Diagnosis feedback shown inside the dialog (validation and service errors). */
   protected readonly diagnosisErrorMessage = signal('');
   protected readonly diagnosisSubmitAttempted = signal(false);
-  protected readonly historyLoading = signal(false);
 
   protected readonly pageError = signal('');
   protected readonly pageMessage = signal('');
-  protected readonly historyError = signal('');
-  protected readonly historyMessage = signal('');
   protected readonly activeModal = signal<ModalView | null>(null);
   protected readonly detailTab = signal<DetailTab>('products');
   protected readonly detailTabs: ReadonlyArray<{ id: DetailTab; label: string }> = [
@@ -500,7 +475,6 @@ export class RmasComponent {
       this.syncSelection(rmas);
     }
   );
-  private readonly historySignal = signal<RmaResponse[]>([]);
   private readonly clientsSignal = signal<ClientResponse[]>([]);
   private readonly productsSignal = signal<ProductResponse[]>([]);
   private readonly selectedRmaSignal = signal<RmaResponse | null>(null);
@@ -511,7 +485,6 @@ export class RmasComponent {
   protected readonly pageSize = this.rmaList.size;
   protected readonly totalElements = this.rmaList.totalElements;
   protected readonly totalPages = this.rmaList.totalPages;
-  protected readonly historyResults = this.historySignal.asReadonly();
   protected readonly selectedRma = this.selectedRmaSignal.asReadonly();
 
   protected readonly hasActiveFilters = computed(() =>
@@ -606,11 +579,6 @@ export class RmasComponent {
   protected readonly filtersForm = this.formBuilder.nonNullable.group({
     query: [''],
     status: ['' as SearchStatusValue]
-  });
-
-  protected readonly historyForm = this.formBuilder.nonNullable.group({
-    batchNumber: [''],
-    serialNumber: ['']
   });
 
   protected readonly createForm = this.formBuilder.nonNullable.group({
@@ -769,51 +737,10 @@ export class RmasComponent {
     this.resetModal();
   }
 
-  protected searchHistory(): void {
-    const { batchNumber, serialNumber } = this.historyForm.getRawValue();
-    const normalizedBatch = normalizeText(batchNumber);
-    const normalizedSerial = normalizeText(serialNumber);
-
-    if (!normalizedBatch && !normalizedSerial) {
-      this.historyError.set('');
-      this.historyMessage.set('Informe o lote ou a série.');
-      this.historySignal.set([]);
-      return;
-    }
-
-    this.historyLoading.set(true);
-    this.historyError.set('');
-    this.historyMessage.set('');
-
-    this.rmaService.history({
-      batchNumber: normalizedBatch ?? undefined,
-      serialNumber: normalizedSerial ?? undefined
-    }).pipe(
-      finalize(() => this.historyLoading.set(false))
-    ).subscribe({
-      next: (results) => {
-        this.historySignal.set(results);
-        this.historyMessage.set(
-          results.length === 0
-            ? 'Nenhum RMA encontrado para este lote ou série.'
-            : results.length === 1 ? '1 RMA encontrado' : `${results.length} RMAs encontrados`
-        );
-      },
-      error: (error) => {
-        this.historySignal.set([]);
-        this.historyError.set(extractHttpErrorMessage(error, 'Não foi possível consultar o histórico agora.'));
-      }
-    });
-  }
-
   protected selectRma(rma: RmaResponse): void {
     this.selectedRmaSignal.set(rma);
     this.primeDetailForms(rma);
     this.pageError.set('');
-  }
-
-  protected selectHistoryItem(rma: RmaResponse): void {
-    this.openDetailsModal(rma);
   }
 
   protected createRma(): void {
