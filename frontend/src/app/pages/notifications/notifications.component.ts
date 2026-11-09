@@ -437,6 +437,7 @@ export class NotificationsComponent {
 
   /** Every control is reset from the rule, so nothing is carried over from the previously edited one. */
   protected openRuleEditor(rule: NotificationRuleResponse): void {
+    if (this.ruleSubmitting()) return;
     this.ruleForm.reset({
       enabled: rule.enabled,
       severity: rule.severity,

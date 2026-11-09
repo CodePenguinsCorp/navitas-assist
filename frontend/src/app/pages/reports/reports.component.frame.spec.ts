@@ -117,7 +117,7 @@ describe('ReportsComponent frame', () => {
     fixture.detectChanges();
     expect(tab('Garantia por produto').getAttribute('aria-selected')).toBe('true');
     expect(tab('Laudo técnico').getAttribute('aria-selected')).toBe('false');
-    const panel = root().querySelector('[role="tabpanel"]')!;
+    const panel = root().querySelector('[role="tabpanel"]:not([hidden])')!;
     expect(panel.getAttribute('aria-labelledby')).toBe(tab('Garantia por produto').id);
     expect(tab('Garantia por produto').getAttribute('aria-controls')).toBe(panel.id);
     expect(normalize(panel.querySelector('h2')?.textContent)).toBe('Garantia por produto');
@@ -126,6 +126,40 @@ describe('ReportsComponent frame', () => {
     expect(normalize(form.textContent)).not.toContain('Relatório');
     // Preservação: a troca do tipo não faz HTTP.
     http.expectNone((request) => request.url === REPORTS_URL);
+  });
+
+  it.each([false, true])('keeps stable panels for every report tab (empty: %s)', (empty) => {
+    flush(empty ? [] : [RMA]);
+    const allTabs = tabs();
+    const panels = allTabs.map((tab) => document.getElementById(tab.getAttribute('aria-controls')!)!);
+    expect(panels.every(Boolean)).toBe(true);
+    for (const activeTab of allTabs) {
+      activeTab.click();
+      fixture.detectChanges();
+      for (const [index, tab] of allTabs.entries()) {
+        const panel = document.getElementById(tab.getAttribute('aria-controls')!)!;
+        expect(panel).toBe(panels[index]);
+        expect(panel.getAttribute('role')).toBe('tabpanel');
+        expect(panel.getAttribute('aria-labelledby')).toBe(tab.id);
+        expect(panel.hidden).toBe(tab !== activeTab);
+        expect(panel.childElementCount > 0).toBe(tab === activeTab);
+      }
+    }
+    http.expectNone((request) => request.url === REPORTS_URL);
+  });
+
+  it.each(['Laudo técnico', 'Tempo por etapa', 'Garantia por produto', 'Devoluções'])('places the %s panel after the active tab in the focus order', (label) => {
+    flush();
+    const activeTab = tab(label);
+    activeTab.click();
+    fixture.detectChanges();
+    const panel = document.getElementById(activeTab.getAttribute('aria-controls')!)!;
+    expect(panel.tabIndex).toBe(0);
+    const focusStops = Array.from(root().querySelectorAll<HTMLElement>('button, input, select, textarea, a[href], [tabindex]'))
+      .filter((element) => element.tabIndex >= 0 && !element.closest('[hidden]') && !element.hasAttribute('disabled'));
+    expect(focusStops[focusStops.indexOf(activeTab) + 1]).toBe(panel);
+    panel.focus();
+    expect(document.activeElement).toBe(panel);
   });
 
   it('moves between report tabs with the keyboard', () => {

@@ -52,10 +52,11 @@
             [attr.tabindex]="reportType() === option.value ? 0 : -1" (click)="selectReport(option.value)" (keydown)="onTabKeydown($event)">{{ option.label }}</button>
         }
       </div>
-      <div class="report-panel" role="tabpanel" [id]="'report-panel-' + reportType()" [attr.aria-labelledby]="'report-tab-' + reportType()">
-      @if (rmas().length === 0) {
+      @for (option of reportOptions; track option.value) {
+      <div class="report-panel" role="tabpanel" tabindex="0" [id]="'report-panel-' + option.value" [attr.aria-labelledby]="'report-tab-' + option.value" [hidden]="reportType() !== option.value">
+      @if (reportType() === option.value && rmas().length === 0) {
         <article class="panel empty-state"><h3>Nenhum RMA encontrado.</h3><p>Ajuste os filtros e consulte novamente.</p></article>
-      } @else {
+      } @else if (reportType() === option.value) {
         @switch (reportType()) {
           @case ('technical') {
             <section class="report-documents" aria-labelledby="report-technical-title">
@@ -175,6 +176,7 @@
         }
       }
       </div>
+      }
     }
   </section>
   <p class="report-hint">Consulta em tela.</p>

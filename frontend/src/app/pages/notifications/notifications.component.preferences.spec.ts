@@ -133,6 +133,34 @@ describe('NotificationsComponent preferences', () => {
     expect(root().querySelector('table')).toBeNull();
   });
 
+  it('announces a pending reload after an empty preference result', async () => {
+    const pending = new Subject<NotificationPreferenceResponse[]>();
+    await setup({ preferences: [of([]), pending] });
+    openPreferences();
+    expect(text()).toContain('Nenhuma preferência disponível.');
+    component.selectTab('inbox');
+    render();
+    openPreferences();
+    expect(root().querySelector('.preferences-state[role="status"]')?.textContent).toContain('Atualizando preferências...');
+    expect(text()).not.toContain('Nenhuma preferência disponível.');
+    pending.next([]);
+    pending.complete();
+    render();
+    expect(text()).toContain('Nenhuma preferência disponível.');
+    expect(root().querySelector('.preferences-state[role="status"]')).toBeNull();
+  });
+
+  it('keeps the preference failure visible during a pending retry', async () => {
+    await setup({ preferences: [failure(), new Subject<NotificationPreferenceResponse[]>()] });
+    openPreferences();
+    button('Tentar novamente')!.click();
+    render();
+    expect(root().querySelector('.preferences-state[role="alert"]')?.textContent).toContain('Não foi possível carregar as preferências.');
+    expect(button('Carregando...')!.disabled).toBe(true);
+    expect(root().querySelector('.preferences-state[role="status"]')).toBeNull();
+    expect(text()).not.toContain('Nenhuma preferência disponível.');
+  });
+
   describe('preservation', () => {
     it('keeps the mute action for a disabled preference that users may mute', async () => {
       await setup();

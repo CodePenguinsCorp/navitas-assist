@@ -43,7 +43,7 @@ describe('ReportsComponent compositions', () => {
     component.form.patchValue({ report });
     fixture.detectChanges();
   };
-  const panel = () => root().querySelector<HTMLElement>('[role="tabpanel"]')!;
+  const panel = () => root().querySelector<HTMLElement>('[role="tabpanel"]:not([hidden])')!;
   const headers = (table: Element) => Array.from(table.querySelectorAll('thead th')).map((th) => normalize(th.textContent));
   const cell = (table: Element, row: number, header: string) => {
     const index = headers(table).indexOf(header);
@@ -101,6 +101,20 @@ describe('ReportsComponent compositions', () => {
         .toEqual(['Controlador', 'SKU-1', 'SER-A', 'LOTE-A']);
       expect(cell(articles()[1].querySelector('table')!, 0, 'Série')).toBe('Não informada');
       expect(articles()[0].querySelector('table')!.closest('.table-wrap')).not.toBeNull();
+    });
+
+    it('allows long unbroken text to wrap throughout the technical document', () => {
+      const longText = `https://example.test/${'x'.repeat(400)}`;
+      respond([{ ...RMA, reportedFailure: longText, repairSummary: longText, replacedPartsSummary: longText, testSummary: longText,
+        diagnosis: { ...RMA.diagnosis!, foundFailure: longText, notes: longText, technicianName: longText } }]);
+      const article = articles()[0] as HTMLElement;
+      // Happy DOM não calcula a herança de overflow-wrap; conferimos a propriedade no contêiner.
+      expect(getComputedStyle(article).overflowWrap).toBe('anywhere');
+      expect(pair(article, 'Técnico')).toBe(longText);
+      for (const value of article.querySelectorAll<HTMLElement>('.report-text')) {
+        expect(value.textContent).toBe(longText);
+        expect(getComputedStyle(value).whiteSpace).toBe('pre-wrap');
+      }
     });
 
     it('uses the detail labels and separates technician and date', () => {

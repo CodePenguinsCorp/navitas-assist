@@ -132,6 +132,34 @@ describe('NotificationsComponent rules', () => {
     expect(rulesTable()).toBeNull();
   });
 
+  it('announces a pending reload after an empty rule result', async () => {
+    const pending = new Subject<NotificationRuleResponse[]>();
+    await setup({ rules: [of([]), pending] });
+    openRules();
+    expect(text()).toContain('Nenhuma regra disponível.');
+    component.selectTab('inbox');
+    render();
+    openRules();
+    expect(root().querySelector('.rules-state[role="status"]')?.textContent).toContain('Atualizando regras...');
+    expect(text()).not.toContain('Nenhuma regra disponível.');
+    pending.next([]);
+    pending.complete();
+    render();
+    expect(text()).toContain('Nenhuma regra disponível.');
+    expect(root().querySelector('.rules-state[role="status"]')).toBeNull();
+  });
+
+  it('keeps the rule failure visible during a pending retry', async () => {
+    await setup({ rules: [failure(), new Subject<NotificationRuleResponse[]>()] });
+    openRules();
+    button('Tentar novamente')!.click();
+    render();
+    expect(root().querySelector('.rules-state[role="alert"]')?.textContent).toContain('Não foi possível carregar as regras.');
+    expect(button('Carregando...')!.disabled).toBe(true);
+    expect(root().querySelector('.rules-state[role="status"]')).toBeNull();
+    expect(text()).not.toContain('Nenhuma regra disponível.');
+  });
+
   describe('preservation', () => {
     it.each(['TECHNICIAN', 'SERVICE_DESK', 'VIEWER'] as const)('hides rules from %s', async (role) => {
       await setup({ role });
@@ -205,6 +233,42 @@ describe('NotificationsComponent rules', () => {
       expect(field('Notificar o responsável pelo RMA').checked).toBe(false);
       expect(field('Enviar também por e-mail').checked).toBe(false);
       expect(field('Permitir que cada usuário silencie').checked).toBe(false);
+    });
+
+    it('keeps the current rule and its values when another editor is requested during a save', async () => {
+      const pending = new Subject<NotificationRuleResponse>();
+      await setup({ rules: [of([RULE, SILENT_RULE])], update: [pending] });
+      openRules();
+      openEditor('SLA vencido');
+      toggleField('Técnico');
+      submit();
+
+      (component as unknown as { openRuleEditor(rule: NotificationRuleResponse): void }).openRuleEditor(SILENT_RULE);
+      render();
+      expect(dialog()!.querySelector('h3')!.textContent).toContain('SLA vencido');
+      expect(field('Técnico').checked).toBe(true);
+      expect(field('Ativa').checked).toBe(true);
+
+      pending.next({ ...RULE, recipientRoles: ['ADMIN', 'TECHNICIAN'] });
+      pending.complete();
+      render();
+      expect(dialog()).toBeNull();
+      expect(cells(rulesTable()!, 'SLA vencido')['Destinatários']).toBe('Administrador, Técnico + responsável pelo RMA');
+      expect(cells(rulesTable()!, 'Novo RMA')['Situação']).toBe('Inativa');
+    });
+
+    it('disables every rule edit button while a save is pending', async () => {
+      const pending = new Subject<NotificationRuleResponse>();
+      await setup({ rules: [of([RULE, SILENT_RULE])], update: [pending] });
+      openRules();
+      openEditor('SLA vencido');
+      submit();
+      const editButtons = Array.from(rulesTable()!.querySelectorAll<HTMLButtonElement>('button'));
+      expect(editButtons).toHaveLength(2);
+      expect(editButtons.every((button) => button.disabled)).toBe(true);
+      editButtons[1].click();
+      render();
+      expect(dialog()!.querySelector('h3')!.textContent).toContain('SLA vencido');
     });
 
     // Vermelho: sem formulário não há Cancelar nem gravação pendente.
@@ -288,6 +352,34 @@ describe('NotificationsComponent rules', () => {
       openRules();
       expect(text()).toContain('Carregando falhas...');
       expect(text()).not.toContain('Nenhuma falha registrada.');
+    });
+
+    it('announces a pending reload after an empty failure result', async () => {
+      const pending = new Subject<NotificationFailureResponse[]>();
+      await setup({ failures: [of([]), pending] });
+      openRules();
+      expect(text()).toContain('Nenhuma falha registrada.');
+      component.selectTab('inbox');
+      render();
+      openRules();
+      expect(section()!.querySelector('.failures-state[role="status"]')?.textContent).toContain('Atualizando falhas...');
+      expect(section()!.textContent).not.toContain('Nenhuma falha registrada.');
+      pending.next([]);
+      pending.complete();
+      render();
+      expect(section()!.textContent).toContain('Nenhuma falha registrada.');
+      expect(section()!.querySelector('.failures-state[role="status"]')).toBeNull();
+    });
+
+    it('keeps the failure-list error visible during a pending retry', async () => {
+      await setup({ failures: [failure(), new Subject<NotificationFailureResponse[]>()] });
+      openRules();
+      button('Tentar carregar falhas')!.click();
+      render();
+      expect(section()!.querySelector('.failures-state[role="alert"]')?.textContent).toContain('Não foi possível carregar as falhas de processamento.');
+      expect(button('Carregando...')!.disabled).toBe(true);
+      expect(section()!.querySelector('.failures-state[role="status"]')).toBeNull();
+      expect(section()!.textContent).not.toContain('Nenhuma falha registrada.');
     });
 
     // Vermelho: não há botão para reler só as falhas.

@@ -78,13 +78,14 @@ describe('DashboardComponent load states', () => {
     fixture.detectChanges();
   }
 
-  // Vermelho: `metrics` mostra `0%` durante a carga.
   it('shows no indicators or empty sections before the first response', async () => {
     await setup({ board: new Subject<RmaResponse[]>() });
     expect(text()).toContain('Carregando dashboard...');
+    expect(root().querySelector('.dashboard-summary')).toBeNull();
+    expect(root().querySelector('.empty-state')).toBeNull();
+    expect(root().querySelector('table')).toBeNull();
     expect(text()).not.toContain('0%');
-    // Preservação: o vazio da fila já não aparece durante a carga.
-    expect(text()).not.toContain('Nenhum RMA na fila.');
+    expect(text()).not.toContain('Nenhum RMA em andamento.');
   });
 
   // Vermelho: não há botão de nova tentativa, e os vazios aparecem depois da falha.
@@ -99,7 +100,10 @@ describe('DashboardComponent load states', () => {
     // Preservação: a mensagem de erro já existe.
     expect(text()).toContain('Não foi possível carregar o dashboard.');
     expect(button('Tentar novamente')).toBeDefined();
-    expect(text()).not.toContain('Nenhum RMA na fila.');
+    expect(root().querySelector('.dashboard-summary')).toBeNull();
+    expect(root().querySelector('.empty-state')).toBeNull();
+    expect(root().querySelector('table')).toBeNull();
+    expect(text()).not.toContain('Nenhum RMA em andamento.');
     expect(text()).not.toContain('Sem alterações recentes.');
     expect(text()).not.toContain('0%');
   });
@@ -166,7 +170,6 @@ describe('DashboardComponent load states', () => {
     it('shows an empty active queue when every RMA is closed', async () => {
       await setup({ board: of([RMA_CLOSED]) });
       expect(text()).toContain('Nenhum RMA em andamento.');
-      expect(text()).not.toContain('Nenhum RMA na fila.');
     });
 
     it('preserves the queue order by priority and oldest entry', async () => {

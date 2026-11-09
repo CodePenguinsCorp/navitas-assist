@@ -28,7 +28,7 @@
     </article>
   }
 
-  <div role="tabpanel" [id]="'notifications-panel-' + activeTab()" [attr.aria-labelledby]="'notifications-tab-' + activeTab()">
+  <div role="tabpanel" tabindex="0" id="notifications-panel-inbox" aria-labelledby="notifications-tab-inbox" [hidden]="activeTab() !== 'inbox'">
     @if (activeTab() === 'inbox') {
       <article class="panel table-card">
         <div class="notification-toolbar">
@@ -109,6 +109,9 @@
       </article>
     }
 
+  </div>
+
+  <div role="tabpanel" tabindex="0" id="notifications-panel-preferences" aria-labelledby="notifications-tab-preferences" [hidden]="activeTab() !== 'preferences'">
     @if (activeTab() === 'preferences') {
       <article class="panel table-card">
         <p>Silencie os alertas que a regra permite. Alertas obrigatórios continuam chegando.</p>
@@ -119,6 +122,8 @@
           </div>
         } @else if (!preferencesHasLoaded()) {
           <p class="preferences-state" role="status">Carregando preferências...</p>
+        } @else if (preferencesLoading() && preferences().length === 0) {
+          <p class="preferences-state" role="status">Atualizando preferências...</p>
         } @else if (preferences().length === 0) {
           <p class="preferences-state">Nenhuma preferência disponível.</p>
         } @else {
@@ -161,7 +166,11 @@
       </article>
     }
 
-    @if (activeTab() === 'rules' && isAdmin()) {
+  </div>
+
+  @if (isAdmin()) {
+  <div role="tabpanel" tabindex="0" id="notifications-panel-rules" aria-labelledby="notifications-tab-rules" [hidden]="activeTab() !== 'rules'">
+    @if (activeTab() === 'rules') {
       <article class="panel table-card">
         @if (rulesLoadFailed()) {
           <div class="panel alert-banner alert-banner--error rules-state" role="alert">
@@ -170,6 +179,8 @@
           </div>
         } @else if (!rulesHasLoaded()) {
           <p class="rules-state" role="status">Carregando regras...</p>
+        } @else if (rulesLoading() && rules().length === 0) {
+          <p class="rules-state" role="status">Atualizando regras...</p>
         } @else if (rules().length === 0) {
           <p class="rules-state">Nenhuma regra disponível.</p>
         } @else {
@@ -201,7 +212,7 @@
                     <td>{{ rule.userMutable ? 'Sim' : 'Não' }}</td>
                     <td>{{ dateTime(rule.updatedAt) }} por {{ rule.updatedBy || 'sistema' }}</td>
                     <td class="table-actions-col">
-                      <button appRowAction icon="pencil" label="Editar regra" [target]="eventLabels[rule.eventType]" (click)="openRuleEditor(rule)"></button>
+                      <button appRowAction icon="pencil" label="Editar regra" [target]="eventLabels[rule.eventType]" [disabled]="ruleSubmitting()" (click)="openRuleEditor(rule)"></button>
                     </td>
                   </tr>
                 }
@@ -221,6 +232,8 @@
           </div>
         } @else if (!failuresHasLoaded()) {
           <p class="failures-state" role="status">Carregando falhas...</p>
+        } @else if (failuresLoading() && failures().length === 0) {
+          <p class="failures-state" role="status">Atualizando falhas...</p>
         } @else if (failures().length === 0) {
           <p class="failures-state">Nenhuma falha registrada.</p>
         } @else {
@@ -257,6 +270,7 @@
       </section>
     }
   </div>
+  }
 
   @if (editingRule(); as rule) {
     <div class="modal-overlay" (click)="closeRuleEditor()">

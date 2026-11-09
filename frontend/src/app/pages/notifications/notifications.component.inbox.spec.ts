@@ -270,6 +270,39 @@ describe('NotificationsComponent inbox loading', () => {
       expect(panel.getAttribute('aria-labelledby')).toBe(tabs()[0].id);
     });
 
+    it.each(['ADMIN', 'TECHNICIAN'] as const)('keeps stable panels for every notification tab for %s', async (role) => {
+      await setup({ role });
+      const allTabs = tabs();
+      const panels = allTabs.map((tab) => document.getElementById(tab.getAttribute('aria-controls')!)!);
+      expect(panels.every(Boolean)).toBe(true);
+      for (const activeTab of allTabs) {
+        activeTab.click();
+        render();
+        for (const [index, tab] of allTabs.entries()) {
+          const panel = document.getElementById(tab.getAttribute('aria-controls')!)!;
+          expect(panel).toBe(panels[index]);
+          expect(panel.getAttribute('role')).toBe('tabpanel');
+          expect(panel.getAttribute('aria-labelledby')).toBe(tab.id);
+          expect(panel.hidden).toBe(tab !== activeTab);
+          expect(panel.childElementCount > 0).toBe(tab === activeTab);
+        }
+      }
+    });
+
+    it.each(['Preferências', 'Regras'])('places the static %s panel after its active tab in the focus order', async (label) => {
+      await setup({ role: 'ADMIN' });
+      const activeTab = tabLabelled(label);
+      activeTab.click();
+      render();
+      const panel = document.getElementById(activeTab.getAttribute('aria-controls')!)!;
+      expect(panel.tabIndex).toBe(0);
+      const focusStops = Array.from(root().querySelectorAll<HTMLElement>('button, input, select, textarea, a[href], [tabindex]'))
+        .filter((element) => element.tabIndex >= 0 && !element.closest('[hidden]') && !element.hasAttribute('disabled'));
+      expect(focusStops[focusStops.indexOf(activeTab) + 1]).toBe(panel);
+      panel.focus();
+      expect(document.activeElement).toBe(panel);
+    });
+
     // Vermelho: as abas não reagem ao teclado e não têm tabindex.
     it('moves between tabs with the keyboard', async () => {
       await setup({ role: 'ADMIN' });
