@@ -53,9 +53,9 @@ describe('ClientsComponent pagination', () => {
 
   it('loads the first page with the default size and shows the total and summary', () => {
     expect(listClients).toHaveBeenLastCalledWith({ page: 0, size: 20, query: '', hasDocument: undefined, hasEmail: undefined });
-    expect(fixture.nativeElement.textContent).toContain('45 registro(s)');
+    expect(fixture.nativeElement.querySelector('.pagination__summary')?.textContent?.trim()).toBe('1–2 de 45 clientes');
+    expect(fixture.nativeElement.textContent).not.toContain('registro(s)');
     expect(fixture.nativeElement.textContent).toContain('Página 1 de 3');
-    expect(fixture.nativeElement.textContent).toContain('1–2 de 45');
     expect(getClientSummary).toHaveBeenCalledTimes(1);
   });
 
@@ -97,7 +97,7 @@ describe('ClientsComponent pagination', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Nenhum cliente encontrado');
-    expect(fixture.nativeElement.querySelector('.result-count')?.textContent?.trim()).toBe('0 de 45 clientes');
+    expect(fixture.nativeElement.querySelector('app-result-count, app-pagination')).toBeNull();
   });
 
   it('reloads the current page and the summary after deleting a client', () => {
@@ -176,7 +176,8 @@ describe('ClientsComponent collection layout and states', () => {
 
   afterEach(() => vi.useRealTimers());
 
-  const count = () => element.querySelector('.result-count')?.textContent?.trim() ?? null;
+  /** The pagination is the only total of the list. */
+  const count = () => element.querySelector('.pagination__summary')?.textContent?.replace(/\s+/g, ' ').trim() ?? null;
   const loadAlert = () => element.querySelector('.table-card [role="alert"]');
   const buttonByText = (text: string) => Array.from(element.querySelectorAll<HTMLButtonElement>('button'))
     .find((button) => button.textContent?.trim() === text);
@@ -190,29 +191,37 @@ describe('ClientsComponent collection layout and states', () => {
     expect(count()).toBeNull();
   }
 
-  it('shows the total next to the title and not in the search label', async () => {
+  it('shows a single total, in the pagination, and not in the search label', async () => {
     await mount();
     expect(element.querySelector('.page-heading h1')?.textContent?.trim()).toBe('Clientes');
-    expect(count()).toBe('45 clientes');
+    expect(element.querySelector('app-result-count')).toBeNull();
+    expect(element.querySelectorAll('.pagination__summary').length).toBe(1);
+    expect(count()).toBe('1–2 de 45 clientes');
     expect(element.querySelector('.search-field')?.textContent).not.toContain('registro(s)');
     expect(element.querySelector('.search-field')?.textContent).toContain('Buscar');
   });
 
-  it('shows "X de Y" while a filter is active', async () => {
+  it('shows the filtered total in the pagination while a filter is active', async () => {
     await mount({ list: (filters) => of(page([client(1, 'Alfa')], filters.page, filters.size, filters.hasDocument ? 12 : 45)) });
     component.updateDocumentFilter('with');
     fixture.detectChanges();
-    expect(count()).toBe('12 de 45 clientes');
+    expect(count()).toBe('1–1 de 12 clientes');
+    expect(element.querySelector('app-result-count')).toBeNull();
   });
 
-  it('shows only the count when the summary is unavailable', async () => {
+  it('uses the singular for one client', async () => {
+    await mount({ list: (filters) => of(page([client(1, 'Alfa')], filters.page, filters.size, 1)) });
+    expect(count()).toBe('1–1 de 1 cliente');
+  });
+
+  it('keeps the paginated total when the summary is unavailable', async () => {
     await mount({
       list: (filters) => of(page([client(1, 'Alfa')], filters.page, filters.size, filters.hasDocument ? 12 : 45)),
       summary: loadError
     });
     component.updateDocumentFilter('with');
     fixture.detectChanges();
-    expect(count()).toBe('12 clientes');
+    expect(count()).toBe('1–1 de 12 clientes');
   });
 
   it('does not render statistics cards', async () => {
@@ -336,12 +345,12 @@ describe('ClientsComponent collection layout and states', () => {
     expect(listClients).toHaveBeenLastCalledWith({ page: 1, size: 20, query: '', hasDocument: true, hasEmail: undefined });
     expect(loadAlert()).toBeNull();
     expect(element.querySelector('tbody')?.textContent).toContain('Alfa');
-    expect(count()).toBe('30 de 45 clientes');
+    expect(count()).toBe('21–21 de 30 clientes');
   });
 
   it('shows a disabled loading retry without the old table or count while the retry is pending, then recovers', async () => {
     await mount();
-    expect(count()).toBe('45 clientes');
+    expect(count()).toBe('1–2 de 45 clientes');
     listClients.mockImplementation(loadError);
     component.goToPage(1);
     fixture.detectChanges();
@@ -367,7 +376,7 @@ describe('ClientsComponent collection layout and states', () => {
 
     expect(loadAlert()).toBeNull();
     expect(element.querySelector('tbody')?.textContent).toContain('Gama');
-    expect(count()).toBe('45 clientes');
+    expect(count()).toBe('21–21 de 45 clientes');
   });
 
   it('keeps the failure state after opening and closing the form', async () => {
@@ -403,7 +412,7 @@ describe('ClientsComponent collection layout and states', () => {
     expect(listClients).toHaveBeenCalledWith({ page: 0, size: 50, query: '', hasDocument: undefined, hasEmail: undefined });
     expect(element.querySelector<HTMLInputElement>('.search-field input')!.value).toBe('');
     expect(element.querySelector('tbody')?.textContent).toContain('Alfa');
-    expect(count()).toBe('45 clientes');
+    expect(count()).toBe('1–1 de 45 clientes');
   });
 
   it('identifies the client in the delete confirmation', async () => {

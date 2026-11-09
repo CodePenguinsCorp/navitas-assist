@@ -79,39 +79,86 @@ function confirmFilters(component: ListHarness, query: string, status = ''): voi
   component.submitFilters();
 }
 
+const normalized = (node: Element | null | undefined) => node?.textContent?.replace(/\s+/g, ' ').trim() ?? null;
+
+/** Total at the foot of the list: only the pagination shows it. */
 function countLabel(page: HTMLElement): string | null {
-  return page.querySelector('.result-count')?.textContent?.trim() ?? null;
+  return normalized(page.querySelector('.table-card .pagination__summary'));
 }
 
+/** First indicator of the row below the header: "Y RMAs", or "X de Y RMAs" with a filter. */
+function totalIndicator(page: HTMLElement): string | null {
+  return normalized(page.querySelector('.page-summary .page-summary__item--total'));
+}
+
+/** The summary indicators that follow the total, or null while they are unavailable. */
 function summaryText(page: HTMLElement): string | null {
-  return page.querySelector('.rma-summary')?.textContent?.replace(/\s+/g, ' ').trim() ?? null;
+  const items = [...page.querySelectorAll('.page-summary .page-summary__item:not(.page-summary__item--total)')];
+  const label = (item: Element) => [...item.children].map((child) => normalized(child)).filter(Boolean).join(' ');
+  return items.length ? items.map(label).join(' | ') : null;
 }
 
 const httpError = new HttpErrorResponse({ status: 500, error: { message: 'Falha no servidor' } });
 
 describe('RmasComponent list state', () => {
   describe('header and indicators', () => {
-    it('shows the count at the foot of the list and no statistics cards', async () => {
-      // A contagem fica no rodapé da lista, não no cabeçalho.
+    it('shows a single total at the foot of the list, in the pagination, and no statistics cards', async () => {
+      // Hoje o rodapé repete o total em app-result-count ("45 RMAs") além da paginação ("registro(s)").
       const { page } = await setup();
-      expect(countLabel(page)).toBe('45 RMAs');
+      expect(page.querySelector('app-result-count')).toBeNull();
+      expect(page.querySelectorAll('.table-card .pagination__summary').length).toBe(1);
+      expect(countLabel(page)).toBe('1–1 de 45 RMAs');
       expect(page.querySelectorAll('.stat-card').length).toBe(0);
     });
 
     it('uses the singular for one RMA', async () => {
-      // Hoje o cabeçalho não mostra "1 RMA".
       const { page } = await setup({ list: (f) => of(buildRmaPage([defaultRma], f.page ?? 0, f.size ?? 20, 1)) });
-      expect(countLabel(page)).toBe('1 RMA');
+      expect(countLabel(page)).toBe('1–1 de 1 RMA');
+      expect(totalIndicator(page)).toBe('1 RMA');
     });
 
-    it('shows indicators scoped to the whole result', async () => {
-      // Hoje não há .rma-summary e o texto da página contém "nesta página".
+    it('shows the indicators in their own row below the header, outside the filters', async () => {
+      // Hoje o texto "No resultado: ..." fica dentro do painel de filtros e não há total entre os indicadores.
       const { page } = await setup();
-      const text = summaryText(page);
-      expect(text).toContain('No resultado');
-      expect(text).toContain('30');
-      expect(text).toContain('7');
+      const row = page.querySelector<HTMLElement>('.page-summary');
+      expect(row).not.toBeNull();
+      expect(row!.closest('.catalog-toolbar')).toBeNull();
+      expect(page.querySelector('.rma-summary')).toBeNull();
+      expect(row!.previousElementSibling?.tagName.toLowerCase()).toBe('app-page-header');
+      expect(totalIndicator(page)).toBe('45 RMAs');
+      expect(summaryText(page)).toBe('Em atendimento 30 | Prioridade alta 7');
+      expect(page.textContent).not.toContain('No resultado');
       expect(page.textContent).not.toContain('nesta página');
+    });
+
+    it('shows "X de Y RMAs" as the first indicator while a filter is active', async () => {
+      const { component, page, render } = await setup({
+        list: (f) => of(buildRmaPage([defaultRma], f.page ?? 0, f.size ?? 20, f.query ? 2 : 45))
+      });
+      confirmFilters(component, 'B');
+      render();
+      expect(totalIndicator(page)).toBe('2 de 45 RMAs');
+      expect(countLabel(page)).toBe('1–1 de 2 RMAs');
+
+      component.clearFilters();
+      render();
+      expect(totalIndicator(page)).toBe('45 RMAs');
+    });
+
+    it('uses the singular of the total in the filtered indicator', async () => {
+      const { component, page, render } = await setup({
+        list: (f) => of(f.query ? buildRmaPage([], f.page ?? 0, f.size ?? 20, 0) : buildRmaPage([defaultRma], f.page ?? 0, f.size ?? 20, 1))
+      });
+      confirmFilters(component, 'zzz');
+      render();
+      expect(totalIndicator(page)).toBe('0 de 1 RMA');
+      expect(page.querySelector('app-pagination, app-result-count')).toBeNull();
+    });
+
+    it('hides the whole indicator row after a list failure, without zeros', async () => {
+      const { page } = await setup({ list: () => throwError(() => httpError) });
+      expect(page.querySelector('.page-summary')).toBeNull();
+      expect(page.textContent).not.toContain('0 RMAs');
     });
 
     it('shows no count and no indicator values before the first responses', async () => {
@@ -121,6 +168,7 @@ describe('RmasComponent list state', () => {
       const { page, render } = await setup({ list: () => list$, summary: () => summary$ });
 
       expect(countLabel(page)).toBeNull();
+      expect(page.querySelector('.page-summary')).toBeNull();
       expect(page.textContent).not.toContain('0 RMAs');
       expect(page.textContent).not.toMatch(/Prioridade alta[^0-9]*0/);
       expect(summaryText(page)).toBeNull();
@@ -128,7 +176,7 @@ describe('RmasComponent list state', () => {
       list$.next(buildRmaPage([defaultRma], 0, 20, 45));
       summary$.next({ total: 45, ongoing: 30, highPriority: 7 });
       render();
-      expect(countLabel(page)).toBe('45 RMAs');
+      expect(totalIndicator(page)).toBe('45 RMAs');
       expect(summaryText(page)).toContain('30');
       expect(summaryText(page)).toContain('7');
     });
@@ -148,7 +196,8 @@ describe('RmasComponent list state', () => {
       expect(summaryText(page)).toBeNull();
       const alerts = [...page.querySelectorAll('[role="alert"]')].map((el) => el.textContent ?? '');
       expect(alerts.some((text) => text.includes('resumo') || text.includes('Falha no servidor'))).toBe(false);
-      expect(countLabel(page)).toBe('45 RMAs');
+      expect(countLabel(page)).toBe('1–1 de 45 RMAs');
+      expect(totalIndicator(page)).toBe('45 de 45 RMAs');
     });
 
     it('never shows the summary of filter A next to the list of filter B', async () => {
@@ -169,12 +218,12 @@ describe('RmasComponent list state', () => {
       expect(page.textContent).not.toContain('30');
       expect(page.textContent).not.toContain('7');
       expect(summaryText(page)).toBeNull();
-      expect(countLabel(page)).toBe('2 RMAs');
+      expect(totalIndicator(page)).toBe('2 de 45 RMAs');
 
       summaryB$.next({ total: 2, ongoing: 4, highPriority: 1 });
       render();
-      expect(summaryText(page)).toContain('4 em atendimento');
-      expect(summaryText(page)).toContain('1 com prioridade alta');
+      expect(summaryText(page)).toContain('Em atendimento 4');
+      expect(summaryText(page)).toContain('Prioridade alta 1');
     });
 
     it('discards a late summary of filter A after B was requested', async () => {
@@ -192,8 +241,8 @@ describe('RmasComponent list state', () => {
 
       expect(page.textContent).not.toContain('30');
       expect(summaryA$.observed).toBe(false);
-      expect(summaryText(page)).toContain('4 em atendimento');
-      expect(summaryText(page)).toContain('1 com prioridade alta');
+      expect(summaryText(page)).toContain('Em atendimento 4');
+      expect(summaryText(page)).toContain('Prioridade alta 1');
     });
 
     it('ignores a late error of filter A after B succeeded', async () => {
@@ -211,7 +260,7 @@ describe('RmasComponent list state', () => {
 
       expect(page.textContent).not.toContain('Falha no servidor');
       expect(page.textContent).not.toContain('Não foi possível carregar o resumo');
-      expect(summaryText(page)).toContain('4 em atendimento');
+      expect(summaryText(page)).toContain('Em atendimento 4');
     });
 
     it('waits for the list when the summary of a new filter responds first', async () => {
@@ -227,13 +276,13 @@ describe('RmasComponent list state', () => {
       confirmFilters(component, 'B');
       summaryB$.next({ total: 2, ongoing: 4, highPriority: 1 });
       render();
-      expect(countLabel(page)).toBeNull();
+      expect(totalIndicator(page)).toBeNull();
       expect(summaryText(page)).toBeNull();
 
       listB$.next(buildRmaPage([defaultRma], 0, 20, 2));
       render();
-      expect(countLabel(page)).toBe('2 RMAs');
-      expect(summaryText(page)).toContain('4 em atendimento');
+      expect(totalIndicator(page)).toBe('2 de 45 RMAs');
+      expect(summaryText(page)).toContain('Em atendimento 4');
     });
 
     it('does not reuse the previous result when the same filter is searched again', async () => {
@@ -246,22 +295,22 @@ describe('RmasComponent list state', () => {
         list: (f) => (listCalls++ === 0 ? defaultList(f) : list$),
         summary: (f) => (summaryCalls++ === 0 ? defaultSummary(f) : summary$)
       });
-      expect(countLabel(page)).toBe('45 RMAs');
+      expect(countLabel(page)).toBe('1–1 de 45 RMAs');
 
       confirmFilters(component, '');
       render();
-      expect(countLabel(page)).toBeNull();
+      expect(totalIndicator(page)).toBeNull();
       expect(summaryText(page)).toBeNull();
 
       summary$.next({ total: 2, ongoing: 4, highPriority: 1 });
       render();
-      expect(countLabel(page)).toBeNull();
+      expect(totalIndicator(page)).toBeNull();
       expect(summaryText(page)).toBeNull();
 
       list$.next(buildRmaPage([defaultRma], 0, 20, 2));
       render();
-      expect(countLabel(page)).toBe('2 RMAs');
-      expect(summaryText(page)).toContain('4 em atendimento');
+      expect(totalIndicator(page)).toBe('2 RMAs');
+      expect(summaryText(page)).toContain('Em atendimento 4');
     });
 
     it('does not mix generations on A, B, A with B still pending', async () => {
@@ -276,13 +325,13 @@ describe('RmasComponent list state', () => {
       });
       confirmFilters(component, 'A');
       render();
-      expect(countLabel(page)).toBe('45 RMAs');
-      expect(summaryText(page)).toContain('30 em atendimento');
+      expect(countLabel(page)).toBe('1–1 de 45 RMAs');
+      expect(summaryText(page)).toContain('Em atendimento 30');
 
       confirmFilters(component, 'B');
       confirmFilters(component, 'A');
       render();
-      expect(countLabel(page)).toBeNull();
+      expect(totalIndicator(page)).toBeNull();
       expect(summaryText(page)).toBeNull();
 
       const [listB$, listA$] = pendingLists;
@@ -291,14 +340,14 @@ describe('RmasComponent list state', () => {
       listB$.next(buildRmaPage([defaultRma], 0, 20, 2));
       summaryB$.next({ total: 2, ongoing: 9, highPriority: 9 });
       render();
-      expect(countLabel(page)).toBeNull();
+      expect(totalIndicator(page)).toBeNull();
       expect(summaryText(page)).toBeNull();
 
       listA$.next(buildRmaPage([defaultRma], 0, 20, 1));
       render();
-      expect(countLabel(page)).toBe('1 RMA');
-      expect(summaryText(page)).toContain('1 em atendimento');
-      expect(summaryText(page)).toContain('0 com prioridade alta');
+      expect(totalIndicator(page)).toBe('1 de 45 RMAs');
+      expect(summaryText(page)).toContain('Em atendimento 1');
+      expect(summaryText(page)).toContain('Prioridade alta 0');
     });
 
     it('shows the summary again after a failed list followed by a successful search', async () => {
@@ -315,9 +364,9 @@ describe('RmasComponent list state', () => {
       confirmFilters(component, 'B');
       render();
       expect(page.querySelector('.table-card [role="alert"]')).toBeNull();
-      expect(countLabel(page)).toBe('45 RMAs');
-      expect(summaryText(page)).toContain('4 em atendimento');
-      expect(summaryText(page)).toContain('1 com prioridade alta');
+      expect(countLabel(page)).toBe('1–1 de 45 RMAs');
+      expect(summaryText(page)).toContain('Em atendimento 4');
+      expect(summaryText(page)).toContain('Prioridade alta 1');
     });
 
     it('hides the count after Buscar until the new list responds', async () => {
@@ -325,16 +374,19 @@ describe('RmasComponent list state', () => {
       const listB$ = new Subject<PageResponse<RmaResponse>>();
       let listCalls = 0;
       const { component, page, render } = await setup({ list: (f) => (listCalls++ === 0 ? defaultList(f) : listB$) });
-      expect(countLabel(page)).toBe('45 RMAs');
+      expect(countLabel(page)).toBe('1–1 de 45 RMAs');
 
       confirmFilters(component, 'B');
       render();
       expect(countLabel(page)).toBeNull();
+      expect(totalIndicator(page)).toBeNull();
       expect(page.querySelector('.page-heading')?.textContent).not.toContain('45');
 
       listB$.next(buildRmaPage([defaultRma], 0, 20, 2));
+      listB$.complete();
       render();
-      expect(countLabel(page)).toBe('2 RMAs');
+      expect(countLabel(page)).toBe('1–1 de 2 RMAs');
+      expect(totalIndicator(page)).toBe('2 de 45 RMAs');
     });
   });
 

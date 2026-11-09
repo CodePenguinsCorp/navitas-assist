@@ -74,7 +74,7 @@ describe('RmasComponent form', () => {
   it('shows result indicators from server totals', () => {
     fixture.detectChanges();
     const page: HTMLElement = fixture.nativeElement;
-    const summary = page.querySelector('.rma-summary')?.textContent ?? '';
+    const summary = page.querySelector('.page-summary')?.textContent ?? '';
 
     expect(rmaService.getSummary).toHaveBeenCalled();
     expect(page.querySelector('.stat-card')).toBeNull();

@@ -47,7 +47,8 @@ describe('UsersComponent pagination', () => {
 
   it('loads the first page with total and summary', () => {
     expect(listUsers).toHaveBeenLastCalledWith({ page: 0, size: 20, query: '', role: undefined, active: undefined });
-    expect(fixture.nativeElement.textContent).toContain('45 registro(s)');
+    expect(fixture.nativeElement.querySelector('.pagination__summary')?.textContent?.trim()).toBe('1–2 de 45 usuários');
+    expect(fixture.nativeElement.textContent).not.toContain('registro(s)');
     expect(fixture.nativeElement.textContent).toContain('Página 1 de 3');
   });
 
@@ -117,7 +118,8 @@ describe('UsersComponent collection layout and states', () => {
 
   afterEach(() => vi.useRealTimers());
 
-  const count = () => element.querySelector('.result-count')?.textContent?.trim() ?? null;
+  /** The pagination is the only total of the list. */
+  const count = () => element.querySelector('.pagination__summary')?.textContent?.replace(/\s+/g, ' ').trim() ?? null;
   const loadAlert = () => element.querySelector('.table-card [role="alert"]');
   const buttonByText = (text: string) => Array.from(element.querySelectorAll<HTMLButtonElement>('button'))
     .find((button) => button.textContent?.trim() === text);
@@ -133,25 +135,38 @@ describe('UsersComponent collection layout and states', () => {
     expect(count()).toBeNull();
   }
 
-  it('shows the total next to the title and removes statistics cards', async () => {
+  it('shows a single total, in the pagination, and removes statistics cards', async () => {
     await mount();
-    expect(count()).toBe('45 usuários');
+    expect(element.querySelector('app-result-count')).toBeNull();
+    expect(element.querySelectorAll('.pagination__summary').length).toBe(1);
+    expect(count()).toBe('1–2 de 45 usuários');
     expect(element.querySelector('.stat-card')).toBeNull();
     expect(element.querySelector('.stats-grid')).toBeNull();
     expect(element.querySelector('.search-field')?.textContent).not.toContain('registro(s)');
   });
 
-  it('shows "X de Y" while a filter is active and only the count without the summary', async () => {
+  it('shows the filtered total in the pagination, with or without the summary', async () => {
     await mount({ list: (filters) => of(page([ana], filters.page, filters.size, filters.role ? 3 : 45)) });
     component.updateRoleFilter('ADMIN');
     fixture.detectChanges();
-    expect(count()).toBe('3 de 45 usuários');
+    expect(count()).toBe('1–1 de 3 usuários');
+    expect(element.querySelector('app-result-count')).toBeNull();
 
     TestBed.resetTestingModule();
     await mount({ list: (filters) => of(page([ana], filters.page, filters.size, filters.role ? 3 : 45)), summary: loadError });
     component.updateRoleFilter('ADMIN');
     fixture.detectChanges();
-    expect(count()).toBe('3 usuários');
+    expect(count()).toBe('1–1 de 3 usuários');
+  });
+
+  it('uses the singular for one user and shows no total for an empty result', async () => {
+    await mount({ list: (filters) => of(filters.role ? page([], filters.page, filters.size, 0) : page([ana], filters.page, filters.size, 1)) });
+    expect(count()).toBe('1–1 de 1 usuário');
+
+    component.updateRoleFilter('ADMIN');
+    fixture.detectChanges();
+    expect(element.textContent).toContain('Nenhum usuário encontrado');
+    expect(element.querySelector('app-result-count, app-pagination')).toBeNull();
   });
 
   it('keeps the own-account delete focusable with its reason, and the click guard never opens the dialog', async () => {
@@ -294,12 +309,12 @@ describe('UsersComponent collection layout and states', () => {
     expect(listUsers).toHaveBeenLastCalledWith({ page: 1, size: 20, query: '', role: undefined, active: false });
     expect(loadAlert()).toBeNull();
     expect(element.querySelector('tbody')?.textContent).toContain('Ana Souza');
-    expect(count()).toBe('30 de 45 usuários');
+    expect(count()).toBe('21–21 de 30 usuários');
   });
 
   it('shows a disabled loading retry without the old table or count while the retry is pending, then recovers', async () => {
     await mount();
-    expect(count()).toBe('45 usuários');
+    expect(count()).toBe('1–2 de 45 usuários');
     listUsers.mockImplementation(loadError);
     component.goToPage(1);
     fixture.detectChanges();
@@ -325,7 +340,7 @@ describe('UsersComponent collection layout and states', () => {
 
     expect(loadAlert()).toBeNull();
     expect(element.querySelector('tbody')?.textContent).toContain('Gabriel Lima');
-    expect(count()).toBe('45 usuários');
+    expect(count()).toBe('21–21 de 45 usuários');
   });
 
   it('keeps the failure state after opening and closing the form', async () => {
@@ -361,7 +376,7 @@ describe('UsersComponent collection layout and states', () => {
     expect(listUsers).toHaveBeenCalledWith({ page: 0, size: 100, query: '', role: undefined, active: undefined });
     expect(element.querySelector<HTMLInputElement>('.search-field input')!.value).toBe('');
     expect(element.querySelector('tbody')?.textContent).toContain('Ana Souza');
-    expect(count()).toBe('45 usuários');
+    expect(count()).toBe('1–1 de 45 usuários');
   });
 });
 

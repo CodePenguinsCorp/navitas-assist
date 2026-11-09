@@ -73,7 +73,8 @@ describe('ProductsComponent pagination', () => {
   it('loads the first page, total and category options from the backend summary', () => {
     expect(listProducts).toHaveBeenLastCalledWith({ page: 0, size: 20, ...EMPTY_FILTERS });
     expect(component.categoryFilterOptions().map((option) => option.label)).toEqual(['Todas', 'Controle', 'Sensor']);
-    expect(fixture.nativeElement.textContent).toContain('45 registro(s)');
+    expect(fixture.nativeElement.querySelector('.pagination__summary')?.textContent?.trim()).toBe('1–2 de 45 produtos');
+    expect(fixture.nativeElement.textContent).not.toContain('registro(s)');
     expect(fixture.nativeElement.textContent).toContain('Página 1 de 3');
     expect(fixture.nativeElement.querySelector('.stat-card')).toBeNull();
     expect(getProductSummary).toHaveBeenCalledTimes(1);
@@ -174,7 +175,8 @@ describe('ProductsComponent collection layout and states', () => {
 
   afterEach(() => vi.useRealTimers());
 
-  const count = () => element.querySelector('.result-count')?.textContent?.trim() ?? null;
+  /** The pagination is the only total of the list. */
+  const count = () => element.querySelector('.pagination__summary')?.textContent?.replace(/\s+/g, ' ').trim() ?? null;
   const loadAlert = () => element.querySelector('.table-card [role="alert"]');
   const buttonByText = (text: string) => Array.from(element.querySelectorAll<HTMLButtonElement>('button'))
     .find((button) => button.textContent?.trim() === text);
@@ -190,24 +192,37 @@ describe('ProductsComponent collection layout and states', () => {
     expect(count()).toBeNull();
   }
 
-  it('shows the total next to the title', async () => {
+  it('shows a single total, in the pagination, with and without filter', async () => {
     await mount({ list: (filters) => of(page([product(1, 'Alfa')], filters.page, filters.size, filters.category ? 7 : 45)) });
-    expect(count()).toBe('45 produtos');
+    expect(element.querySelector('app-result-count')).toBeNull();
+    expect(element.querySelectorAll('.pagination__summary').length).toBe(1);
+    expect(count()).toBe('1–1 de 45 produtos');
     expect(element.querySelector('.search-field')?.textContent).not.toContain('registro(s)');
 
     component.updateCategoryFilter('Sensor');
     fixture.detectChanges();
-    expect(count()).toBe('7 de 45 produtos');
+    expect(count()).toBe('1–1 de 7 produtos');
+    expect(element.querySelector('app-result-count')).toBeNull();
   });
 
-  it('shows only the count when the summary is unavailable', async () => {
+  it('uses the singular for one product and shows no total for an empty result', async () => {
+    await mount({ list: (filters) => of(filters.category ? page([], filters.page, filters.size, 0) : page([product(1, 'Alfa')], filters.page, filters.size, 1)) });
+    expect(count()).toBe('1–1 de 1 produto');
+
+    component.updateCategoryFilter('Sensor');
+    fixture.detectChanges();
+    expect(element.textContent).toContain('Nenhum produto encontrado');
+    expect(element.querySelector('app-result-count, app-pagination')).toBeNull();
+  });
+
+  it('keeps the paginated total when the summary is unavailable', async () => {
     await mount({
       list: (filters) => of(page([product(1, 'Alfa')], filters.page, filters.size, filters.hasFirmware ? 7 : 45)),
       summary: loadError
     });
     component.updateFirmwareFilter('with');
     fixture.detectChanges();
-    expect(count()).toBe('7 produtos');
+    expect(count()).toBe('1–1 de 7 produtos');
   });
 
   it('removes statistics cards', async () => {
@@ -365,12 +380,12 @@ describe('ProductsComponent collection layout and states', () => {
     expect(listProducts).toHaveBeenLastCalledWith({ page: 1, size: 20, query: '', category: 'Sensor', hasFirmware: undefined });
     expect(loadAlert()).toBeNull();
     expect(element.querySelector('tbody')?.textContent).toContain('Alfa');
-    expect(count()).toBe('30 de 45 produtos');
+    expect(count()).toBe('21–21 de 30 produtos');
   });
 
   it('shows a disabled loading retry without the old table or count while the retry is pending, then recovers', async () => {
     await mount();
-    expect(count()).toBe('45 produtos');
+    expect(count()).toBe('1–2 de 45 produtos');
     listProducts.mockImplementation(loadError);
     component.goToPage(1);
     fixture.detectChanges();
@@ -396,7 +411,7 @@ describe('ProductsComponent collection layout and states', () => {
 
     expect(loadAlert()).toBeNull();
     expect(element.querySelector('tbody')?.textContent).toContain('Gama');
-    expect(count()).toBe('45 produtos');
+    expect(count()).toBe('21–21 de 45 produtos');
   });
 
   it('keeps the failure state after opening and closing the form', async () => {
@@ -433,7 +448,7 @@ describe('ProductsComponent collection layout and states', () => {
     expect(component.categoryFilter()).toBe('');
     expect(element.querySelector<HTMLInputElement>('.search-field input')!.value).toBe('');
     expect(element.querySelector('tbody')?.textContent).toContain('Alfa');
-    expect(count()).toBe('45 produtos');
+    expect(count()).toBe('1–1 de 45 produtos');
   });
 
   it('identifies name and SKU in the delete confirmation and shows the error in the dialog', async () => {

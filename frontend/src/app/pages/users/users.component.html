@@ -127,6 +127,8 @@
         </table>
       </div>
       <app-pagination
+        singular="usuário"
+        plural="usuários"
         [page]="page()"
         [size]="pageSize()"
         [totalElements]="totalElements()"
@@ -137,12 +139,6 @@
         (sizeChange)="changePageSize($event)"
       />
     }
-    <app-result-count
-      singular="usuário"
-      plural="usuários"
-      [count]="loadFailed() || !hasLoaded() ? null : totalElements()"
-      [total]="hasActiveFilters ? summary().total : null"
-    />
   </article>
 </section>
 

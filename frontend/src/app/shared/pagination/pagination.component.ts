@@ -8,7 +8,7 @@ import { CustomSelectComponent } from '../form-controls/custom-select/custom-sel
   template: `
     <nav class="pagination" aria-label="Paginação">
       <span class="pagination__summary" aria-live="polite">
-        {{ range() }} registro(s)
+        {{ range() }} {{ totalElements() === 1 ? singular() : plural() }}
       </span>
       <div class="pagination__size">
         <span>Por página</span>
@@ -39,6 +39,9 @@ export class PaginationComponent {
   readonly totalPages = input.required<number>();
   readonly shown = input.required<number>();
   readonly loading = input(false);
+  /** Entity names for the total; the singular only applies to exactly one record. */
+  readonly singular = input('registro');
+  readonly plural = input('registros');
 
   readonly pageChange = output<number>();
   readonly sizeChange = output<number>();

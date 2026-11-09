@@ -677,6 +677,37 @@ a {
   gap: 1rem;
 }
 
+/*
+ * Row of indicators right below a page header (RMAs, Kanban): icon, label and value inline,
+ * muted text with the numbers in the text color. Items take --tone from the .tone-* classes.
+ */
+.page-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-md);
+}
+
+.page-summary__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted);
+}
+
+.page-summary__item app-icon {
+  display: inline-flex;
+  color: var(--tone, var(--brand-blue));
+}
+
+.page-summary__item strong {
+  color: var(--text);
+  font-weight: var(--font-weight-bold);
+}
+
 .status-card,
 .table-card,
 .timeline-card,

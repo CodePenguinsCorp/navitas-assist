@@ -69,7 +69,6 @@ import {
 } from '../../shared/form-controls/custom-select/custom-select.component';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
-import { ResultCountComponent } from '../../shared/result-count/result-count.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { RmaBlockHistoryComponent } from '../../shared/rma-block-history/rma-block-history.component';
 import { RmaPartsPanelComponent } from '../../shared/rma-parts-panel/rma-parts-panel.component';
@@ -96,7 +95,7 @@ export interface RmaListFilters {
 
 @Component({
   selector: 'app-rmas',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlockHistoryComponent, PageHeaderComponent, ResultCountComponent, RowActionComponent, RmaSlaBadgeComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlockHistoryComponent, PageHeaderComponent, RowActionComponent, RmaSlaBadgeComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {
@@ -132,18 +131,6 @@ export interface RmaListFilters {
       display: flex;
       align-items: center;
       gap: var(--space-3);
-    }
-
-    .rma-summary {
-      margin: 0;
-      margin-left: auto;
-      align-self: center;
-      color: var(--muted);
-      font-size: var(--font-size-md);
-    }
-
-    .rma-summary strong {
-      color: var(--text);
     }
 
     .rma-items-editor,
@@ -443,6 +430,10 @@ export class RmasComponent {
   private readonly generation = signal(0);
   /** Generation of the list request in flight; copied to resultGeneration when it responds. */
   private requestedGeneration = 0;
+  /** Whether the list request in flight has no filter, so its total is the whole registry. */
+  private requestedUnfiltered = true;
+  /** Total of RMAs without filter, from the last unfiltered list; null until one succeeds. */
+  private readonly overallTotal = signal<number | null>(null);
   /** Generation of the list result on screen. */
   private readonly resultGeneration = signal(-1);
   /** Last list query failed; independent of the cached page and of page messages. */
@@ -453,6 +444,7 @@ export class RmasComponent {
     (pageQuery) => {
       const filters = this.appliedFilters();
       this.requestedGeneration = this.generation();
+      this.requestedUnfiltered = !filters.query && !filters.status;
       return this.rmaService.list({ ...pageQuery, query: filters.query, status: filters.status });
     },
     (error) => {
@@ -462,6 +454,7 @@ export class RmasComponent {
     (rmas) => {
       this.resultGeneration.set(this.requestedGeneration);
       this.loadFailed.set(false);
+      if (this.requestedUnfiltered) this.overallTotal.set(this.rmaList.totalElements());
       this.syncSelection(rmas);
     }
   );
@@ -494,6 +487,16 @@ export class RmasComponent {
     const summary = this.summarySignal();
     return summary && this.hasCurrentResult() && summary.generation === this.resultGeneration()
       ? summary.value : null;
+  });
+  /**
+   * First indicator: "Y RMAs" without filter, "X de Y RMAs" with one (Y = whole registry), with the
+   * singular of the last number. Hidden before the first success and after a failure.
+   */
+  protected readonly totalSummary = computed(() => {
+    if (!this.hasCurrentResult()) return null;
+    const count = this.totalElements();
+    const overall = this.hasActiveFilters() ? this.overallTotal() : null;
+    return { count, overall, label: (overall ?? count) === 1 ? 'RMA' : 'RMAs' };
   });
 
   protected readonly statusLabel = statusLabel;
