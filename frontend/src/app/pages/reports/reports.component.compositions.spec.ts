@@ -152,6 +152,74 @@ describe('ReportsComponent compositions', () => {
       expect(cell(table(), 0, 'Prazo')).toBe('1 mês');
     });
   });
+
+  describe('stage time report', () => {
+    const SECOND: RmaResponse = { ...RMA, id: 2, code: 'RMA-SECOND', clientName: 'Cliente Beta', sla: { ...RMA.sla, elapsedSeconds: 14400 } };
+    const CLOSED: RmaResponse = { ...RMA, id: 3, code: 'RMA-CLOSED', status: 'COMPLETED', sla: { ...RMA.sla, status: 'CLOSED', elapsedSeconds: 0 } };
+    const tables = () => Array.from(panel().querySelectorAll('table'));
+
+    it('states how many closed RMAs were left out', () => {
+      respond([RMA, SECOND, CLOSED]);
+      show('aging');
+      // Reprova hoje: só o texto genérico, com título "Aging por etapa atual" (html:82-83).
+      expect(normalize(panel().querySelector('h2')?.textContent)).toBe('Tempo por etapa atual');
+      expect(normalize(panel().textContent)).toContain('2 RMAs em andamento considerados · 1 encerrado fora do cálculo');
+      // Preservação: média e máximo por etapa e encerrado fora.
+      const row = panel().querySelector('[data-stage="IN_DIAGNOSIS"]')!;
+      expect(normalize(row.textContent)).toContain('3h 0min');
+      expect(normalize(row.textContent)).toContain('4h 0min');
+      expect(normalize(panel().textContent)).not.toContain('RMA-CLOSED');
+    });
+
+    it('omits the closed part when none was left out and keeps the empty case', () => {
+      respond([RMA]);
+      show('aging');
+      // Reprova hoje: não há linha de escopo, e o vazio diz "Nenhum RMA ativo".
+      expect(normalize(panel().textContent)).toContain('1 RMA em andamento considerado');
+      expect(normalize(panel().textContent)).not.toContain('fora do cálculo');
+      component.loadReports();
+      respond([CLOSED]);
+      show('aging');
+      expect(normalize(panel().textContent)).toContain('Nenhum RMA em andamento nos filtros selecionados.');
+    });
+
+    it('labels average and maximum per stage', () => {
+      respond([RMA, SECOND]);
+      show('aging');
+      // Reprova hoje: "Quantidade", "Tempo médio", "Maior tempo".
+      expect(headers(tables()[0])).toEqual(['Etapa', 'RMAs', 'Tempo médio na etapa', 'Maior tempo na etapa']);
+      expect(headers(tables()[1])).toEqual(['RMA', 'Cliente', 'Etapa', 'Início na etapa (São Paulo)', 'Tempo decorrido']);
+      expect(tables().every((table) => table.closest('.table-wrap'))).toBe(true);
+    });
+
+    it('separates RMA and client in both tables', () => {
+      respond([RMA, SECOND, { ...RMA, id: 4, code: 'RMA-RETURN', status: 'RETURNED', sla: { ...RMA.sla, status: 'CLOSED' } }]);
+      show('aging');
+      // Reprova hoje: coluna única "RMA / Cliente".
+      expect(cell(tables()[1], 0, 'RMA')).toBe('RMA-REAL');
+      expect(cell(tables()[1], 0, 'Cliente')).toBe('Cliente Alfa');
+      show('returns');
+      expect(cell(tables()[0], 0, 'RMA')).toBe('RMA-RETURN');
+      expect(cell(tables()[0], 0, 'Cliente')).toBe('Cliente Alfa');
+    });
+  });
+
+  describe('returns report', () => {
+    it('explains the return scope and period inside the panel', () => {
+      respond([RMA, { ...RMA, id: 2, code: 'RMA-RETURN', status: 'RETURNED', sla: { ...RMA.sla, status: 'CLOSED' } }]);
+      show('returns');
+      // Reprova hoje: o período só aparece na dica do formulário, e não há contagem de devolvidos.
+      expect(normalize(panel().textContent)).toContain('O período filtra a data de entrada do RMA, não a data de expedição.');
+      expect(normalize(panel().textContent)).toContain('Somente RMAs com status atual Devolvido.');
+      expect(normalize(panel().textContent)).toContain('1 RMA devolvido');
+      const table = panel().querySelector('table')!;
+      expect(headers(table)).toEqual(['RMA', 'Cliente', 'Entrada', 'Expedição', 'Transportadora', 'Rastreio']);
+      // Preservação: ausências e recorte pelo status atual.
+      expect(cell(table, 0, 'Transportadora')).toBe('Não informada');
+      expect(cell(table, 0, 'Rastreio')).toBe('Não informado');
+      expect(normalize(panel().textContent)).not.toContain('RMA-REAL');
+    });
+  });
 });
 
 interface ReportsHarness {

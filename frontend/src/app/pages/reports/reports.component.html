@@ -107,23 +107,26 @@
             </section>
           }
           @case ('aging') {
+            @let activeCount = activeRmas().length;
+            @let closedCount = rmas().length - activeRmas().length;
             <article class="panel table-card">
-              <h2>Aging por etapa atual</h2>
-              <p>Tempo corrido na etapa, calculado no instante da consulta. RMAs encerrados não entram nas métricas ativas.</p>
-              @if (activeRmas().length === 0) { <p class="empty-state">Nenhum RMA ativo nos filtros selecionados.</p> }
+              <h2>Tempo por etapa atual</h2>
+              <p>Tempo corrido na etapa, calculado no instante da consulta. RMAs encerrados não entram nas métricas.</p>
+              <p class="report-scope">{{ activeCount }} {{ activeCount === 1 ? 'RMA em andamento considerado' : 'RMAs em andamento considerados' }}@if (closedCount > 0) { · {{ closedCount }} {{ closedCount === 1 ? 'encerrado' : 'encerrados' }} fora do cálculo}</p>
+              @if (activeCount === 0) { <p class="empty-state">Nenhum RMA em andamento nos filtros selecionados.</p> }
               @else {
                 <div class="table-wrap"><table>
-                  <caption>Resumo das etapas ativas</caption>
-                  <thead><tr><th scope="col">Etapa</th><th scope="col">Quantidade</th><th scope="col">Tempo médio</th><th scope="col">Maior tempo</th></tr></thead>
+                  <caption>Resumo das etapas em andamento</caption>
+                  <thead><tr><th scope="col">Etapa</th><th scope="col">RMAs</th><th scope="col">Tempo médio na etapa</th><th scope="col">Maior tempo na etapa</th></tr></thead>
                   <tbody>@for (stage of aging(); track stage.status) {
                     <tr [attr.data-stage]="stage.status"><td>{{ statusLabels[stage.status] }}</td><td>{{ stage.count }}</td><td>{{ duration(stage.average) }}</td><td>{{ duration(stage.maximum) }}</td></tr>
                   }</tbody>
                 </table></div>
                 <div class="table-wrap"><table>
                   <caption>Tempo por RMA na etapa atual</caption>
-                  <thead><tr><th scope="col">RMA / Cliente</th><th scope="col">Etapa</th><th scope="col">Início (São Paulo)</th><th scope="col">Tempo decorrido</th></tr></thead>
+                  <thead><tr><th scope="col">RMA</th><th scope="col">Cliente</th><th scope="col">Etapa</th><th scope="col">Início na etapa (São Paulo)</th><th scope="col">Tempo decorrido</th></tr></thead>
                   <tbody>@for (rma of activeRmas(); track rma.id) {
-                    <tr><td><strong class="code-text">{{ rma.code }}</strong><p class="report-muted">{{ rma.clientName }}</p></td><td><span class="status-chip" [attr.data-status]="rma.status">{{ statusLabels[rma.status] }}</span></td>
+                    <tr><td><strong class="code-text">{{ rma.code }}</strong></td><td>{{ rma.clientName }}</td><td><span class="status-chip" [attr.data-status]="rma.status">{{ statusLabels[rma.status] }}</span></td>
                       <td>{{ formatInstant(rma.sla.startedAt) }}</td><td>{{ duration(rma.sla.elapsedSeconds) }}</td></tr>
                   }</tbody>
                 </table></div>
@@ -151,15 +154,18 @@
             </article>
           }
           @case ('returns') {
+            @let returnCount = returns().length;
             <article class="panel table-card">
-              <h2>Devoluções</h2><p>Somente RMAs atualmente no status Devolvido.</p>
-              @if (returns().length === 0) { <p class="empty-state">Nenhuma devolução nos filtros selecionados.</p> }
+              <h2>Devoluções</h2>
+              <p class="report-scope">{{ returnCount }} {{ returnCount === 1 ? 'RMA devolvido' : 'RMAs devolvidos' }}</p>
+              <p>Somente RMAs com status atual Devolvido. O período filtra a data de entrada do RMA, não a data de expedição.</p>
+              @if (returnCount === 0) { <p class="empty-state">Nenhuma devolução nos filtros selecionados.</p> }
               @else {
                 <div class="table-wrap"><table>
                   <caption>Expedição dos RMAs devolvidos</caption>
-                  <thead><tr><th scope="col">RMA / Cliente</th><th scope="col">Entrada</th><th scope="col">Expedição</th><th scope="col">Transportadora</th><th scope="col">Rastreio</th></tr></thead>
+                  <thead><tr><th scope="col">RMA</th><th scope="col">Cliente</th><th scope="col">Entrada</th><th scope="col">Expedição</th><th scope="col">Transportadora</th><th scope="col">Rastreio</th></tr></thead>
                   <tbody>@for (rma of returns(); track rma.id) {
-                    <tr><td><strong class="code-text">{{ rma.code }}</strong><p class="report-muted">{{ rma.clientName }}</p></td><td>{{ formatDate(rma.entryDate) }}</td>
+                    <tr><td><strong class="code-text">{{ rma.code }}</strong></td><td>{{ rma.clientName }}</td><td>{{ formatDate(rma.entryDate) }}</td>
                       <td>{{ formatDate(rma.shippedAt) }}</td><td>{{ rma.carrier || 'Não informada' }}</td><td>{{ rma.trackingCode || 'Não informado' }}</td></tr>
                   }</tbody>
                 </table></div>
