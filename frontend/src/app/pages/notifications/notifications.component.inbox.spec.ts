@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { NotificationResponse, UserRole } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
@@ -31,6 +31,7 @@ describe('NotificationsComponent inbox loading', () => {
   let fixture: ComponentFixture<NotificationsComponent>;
   let component: Harness;
   let service: Record<string, ReturnType<typeof vi.fn>> & { unreadCount: ReturnType<typeof signal<number>> };
+  let clock: ReturnType<typeof signal<number>>;
 
   const root = (): HTMLElement => fixture.nativeElement.querySelector('.page-surface');
   const text = () => root().textContent!.replace(/[\s ]+/g, ' ').trim();
@@ -39,13 +40,14 @@ describe('NotificationsComponent inbox loading', () => {
   const checkbox = (label: string) => Array.from(root().querySelectorAll('label')).find((item) => item.textContent?.trim() === label)!.querySelector('input')!;
   const toggle = (label: string) => { checkbox(label).dispatchEvent(new Event('change')); render(); };
 
-  async function setup(sources: { role?: UserRole; list?: Source<NotificationResponse[]>[]; markAllRead?: Observable<void>; snooze?: Observable<NotificationResponse>; markRead?: Observable<NotificationResponse> } = {}) {
+  async function setup(sources: { role?: UserRole; unread?: number; list?: Source<NotificationResponse[]>[]; markAllRead?: Observable<void>; snooze?: Observable<NotificationResponse>; markRead?: Observable<NotificationResponse> } = {}) {
+    clock = signal(Date.parse('2026-10-24T13:00:00Z'));
     const list = vi.fn(() => of([NOTIFICATION]));
     for (const source of sources.list ?? []) {
       list.mockImplementationOnce(typeof source === 'function' ? source : () => source);
     }
     service = {
-      unreadCount: signal(1),
+      unreadCount: signal(sources.unread ?? 1),
       list,
       refreshSummary: vi.fn(() => of(1)),
       markRead: vi.fn(() => sources.markRead ?? of({ ...NOTIFICATION, read: true })),
@@ -63,7 +65,7 @@ describe('NotificationsComponent inbox loading', () => {
         provideRouter([]),
         { provide: NotificationService, useValue: service },
         { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(sources.role ?? 'TECHNICIAN') } },
-        { provide: SlaClockService, useValue: { now: signal(Date.parse('2026-10-24T13:00:00Z')).asReadonly() } }
+        { provide: SlaClockService, useValue: { now: clock.asReadonly() } }
       ]
     }).compileComponents();
     fixture = TestBed.createComponent(NotificationsComponent);
@@ -196,6 +198,123 @@ describe('NotificationsComponent inbox loading', () => {
       render();
       expect(text()).toContain('RMA RMA-2026-000007 atribuído a Técnico');
       expect(text()).toContain('Não foi possível concluir a ação agora.');
+    });
+  });
+
+  describe('presentation', () => {
+    const item = () => root().querySelector<HTMLElement>('.notification-item')!;
+    const tabs = () => Array.from(root().querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    const tabLabelled = (label: string) => tabs().find((tab) => tab.textContent!.trim().startsWith(label))!;
+    const key = (target: HTMLElement, value: string) => { target.dispatchEvent(new KeyboardEvent('keydown', { key: value, bubbles: true })); render(); };
+
+    // Vermelho: cada item tem "Abrir RMA" em .button-primary, inclusive para URL externa.
+    it('opens the RMA from the notification title', async () => {
+      await setup();
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const title = item().querySelector<HTMLButtonElement>('button.link-button')!;
+      expect(title.textContent!.trim()).toBe('RMA RMA-2026-000007 atribuído a Técnico');
+      expect(item().querySelector('.button-primary')).toBeNull();
+      title.click();
+      expect(service['markRead']).toHaveBeenCalledWith(5);
+      expect(navigate).toHaveBeenCalledWith(['/rmas'], { queryParams: { rma: '7' } });
+
+      TestBed.resetTestingModule();
+      await setup({ list: [of([{ ...NOTIFICATION, actionPath: 'https://externo' }])] });
+      expect(item().querySelector('button.link-button')).toBeNull();
+      expect(Array.from(item().querySelectorAll('button')).some((entry) => /abrir/i.test(entry.textContent!))).toBe(false);
+      expect(item().textContent).toContain('RMA RMA-2026-000007 atribuído a Técnico');
+    });
+
+    // Vermelho: "adiada até" aparece também depois do vencimento do adiamento.
+    it('marks only active snoozes', async () => {
+      await setup({ list: [of([{ ...NOTIFICATION, snoozedUntil: '2026-10-24T16:00:00Z' }])] });
+      expect(text()).toContain('Adiada até 24/10/2026, 13:00');
+      clock.set(Date.parse('2026-10-24T16:00:00Z'));
+      render();
+      expect(text()).not.toMatch(/adiada até/i);
+
+      TestBed.resetTestingModule();
+      await setup({ list: [of([{ ...NOTIFICATION, snoozedUntil: '2026-10-24T12:30:00Z' }])] });
+      expect(text()).not.toMatch(/adiada até/i);
+    });
+
+    // Vermelho: a mensagem é só "Notificação adiada.".
+    it('confirms when the snooze ends', async () => {
+      await setup({ snooze: of({ ...NOTIFICATION, snoozedUntil: '2026-10-24T16:00:00Z' }) });
+      component.snooze(NOTIFICATION, '240');
+      render();
+      expect(root().querySelector('[role="status"].alert-banner')!.textContent!.replace(/[\s ]+/g, ' ').trim()).toBe('Notificação adiada até 24/10/2026, 13:00.');
+      expect(service['list']).toHaveBeenCalledTimes(2);
+    });
+
+    // Vermelho: a mensagem não diz que as adiadas também foram marcadas.
+    it('states that marking all includes snoozed', async () => {
+      await setup();
+      component.markAllRead();
+      render();
+      expect(text()).toContain('Todas as notificações, inclusive as adiadas, foram marcadas como lidas.');
+    });
+
+    // Vermelho: o rótulo é "(2)" e não há tabpanel ligado à aba.
+    it('names the unread count and links tabs to their panel', async () => {
+      await setup({ unread: 2 });
+      expect(tabs()[0].textContent!.trim()).toBe('Caixa de entrada (2 não lidas)');
+      service.unreadCount.set(1);
+      render();
+      expect(tabs()[0].textContent!.trim()).toBe('Caixa de entrada (1 não lida)');
+      service.unreadCount.set(0);
+      render();
+      expect(tabs()[0].textContent!.trim()).toBe('Caixa de entrada');
+      const panel = document.getElementById(tabs()[0].getAttribute('aria-controls')!)!;
+      expect(panel.getAttribute('role')).toBe('tabpanel');
+      expect(panel.getAttribute('aria-labelledby')).toBe(tabs()[0].id);
+    });
+
+    // Vermelho: as abas não reagem ao teclado e não têm tabindex.
+    it('moves between tabs with the keyboard', async () => {
+      await setup({ role: 'ADMIN' });
+      key(tabLabelled('Caixa de entrada'), 'ArrowRight');
+      expect(document.activeElement).toBe(tabLabelled('Preferências'));
+      expect(tabLabelled('Preferências').getAttribute('aria-selected')).toBe('true');
+      expect(service['listPreferences']).toHaveBeenCalledTimes(1);
+      expect(tabs().map((tab) => tab.getAttribute('tabindex'))).toEqual(['-1', '0', '-1']);
+      key(tabLabelled('Preferências'), 'End');
+      expect(document.activeElement).toBe(tabLabelled('Regras'));
+      key(tabLabelled('Regras'), 'Home');
+      expect(document.activeElement).toBe(tabLabelled('Caixa de entrada'));
+      key(tabLabelled('Caixa de entrada'), 'ArrowLeft');
+      expect(document.activeElement).toBe(tabLabelled('Regras'));
+      expect(tabs().map((tab) => tab.getAttribute('tabindex'))).toEqual(['-1', '-1', '0']);
+
+      TestBed.resetTestingModule();
+      await setup({ role: 'TECHNICIAN' });
+      key(tabLabelled('Caixa de entrada'), 'End');
+      expect(document.activeElement).toBe(tabLabelled('Preferências'));
+    });
+
+    describe('preservation', () => {
+      it('keeps mark as read and snooze as secondary actions', async () => {
+        await setup();
+        expect(button('Marcar como lida')!.classList).toContain('button-secondary');
+        expect(item().querySelector('app-custom-select')).not.toBeNull();
+        component.snooze(NOTIFICATION, '1440');
+        expect(service['snooze']).toHaveBeenCalledWith(5, 1440);
+      });
+
+      it('disables actions while busy and mark all without unread', async () => {
+        await setup({ markRead: new Subject<NotificationResponse>() });
+        component.markRead(NOTIFICATION);
+        render();
+        expect(button('Marcar como lida')!.disabled).toBe(true);
+        TestBed.resetTestingModule();
+        await setup({ list: [of([{ ...NOTIFICATION, read: true }])] });
+        expect(button('Marcar todas como lidas')!.disabled).toBe(true);
+      });
+
+      it('hides the rules tab from technicians', async () => {
+        await setup({ role: 'TECHNICIAN' });
+        expect(tabs().map((tab) => tab.textContent!.trim())).not.toContain('Regras');
+      });
     });
   });
 });

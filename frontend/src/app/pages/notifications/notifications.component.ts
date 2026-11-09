@@ -1,5 +1,5 @@
 import { IconComponent, IconName } from '../../shared/icon/icon.component';
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { Observable, Subscription, finalize } from 'rxjs';
@@ -14,6 +14,8 @@ import {
   UserRole
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
+import { SlaClockService } from '../../core/services/sla-clock.service';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { CustomSelectComponent } from '../../shared/form-controls/custom-select/custom-select.component';
 import { NotificationService } from '../../core/services/notification.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
@@ -31,7 +33,7 @@ type NotificationsTab = 'inbox' | 'preferences' | 'rules';
 
 @Component({
   selector: 'app-notifications',
-  imports: [IconComponent, CustomSelectComponent],
+  imports: [IconComponent, CustomSelectComponent, PageHeaderComponent],
   templateUrl: './notifications.component.html',
   styles: [`
     :host {
@@ -143,6 +145,18 @@ type NotificationsTab = 'inbox' | 'preferences' | 'rules';
       color: var(--text);
     }
 
+    .notification-title.link-button {
+      justify-self: start;
+      min-height: var(--control-height-sm);
+      color: var(--brand-blue);
+      font-size: 0.95rem;
+      text-align: left;
+    }
+
+    .inbox-feedback {
+      margin-top: var(--space-3);
+    }
+
     .notification-message {
       margin: 0;
       font-size: 0.88rem;
@@ -172,6 +186,8 @@ export class NotificationsComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
+  private readonly clock = inject(SlaClockService);
   private inboxRequest?: Subscription;
 
   protected readonly activeTab = signal<NotificationsTab>('inbox');
@@ -211,6 +227,7 @@ export class NotificationsComponent {
   protected readonly isAdmin = computed(() => this.authService.hasAnyRole(['ADMIN']));
   protected readonly unreadCount = this.notificationService.unreadCount;
   protected readonly hasUnread = computed(() => this.notifications().some((notification) => !notification.read));
+  protected readonly tabs = computed<NotificationsTab[]>(() => this.isAdmin() ? ['inbox', 'preferences', 'rules'] : ['inbox', 'preferences']);
 
   constructor() {
     this.loadInbox();
@@ -226,6 +243,38 @@ export class NotificationsComponent {
     } else if (this.isAdmin()) {
       this.loadRules();
     }
+  }
+
+  protected unreadTabLabel(): string {
+    const count = this.unreadCount();
+    if (count === 0) return 'Caixa de entrada';
+    return `Caixa de entrada (${count} ${count === 1 ? 'não lida' : 'não lidas'})`;
+  }
+
+  /** Tab keyboard contract: arrows move with wrap-around, Home/End jump to the ends; selection follows focus. */
+  protected onTabKeydown(event: KeyboardEvent): void {
+    const tabs = this.tabs();
+    const current = tabs.indexOf(this.activeTab());
+    let next: number;
+    switch (event.key) {
+      case 'ArrowRight': next = (current + 1) % tabs.length; break;
+      case 'ArrowLeft': next = (current - 1 + tabs.length) % tabs.length; break;
+      case 'Home': next = 0; break;
+      case 'End': next = tabs.length - 1; break;
+      default: return;
+    }
+    event.preventDefault();
+    this.selectTab(tabs[next]);
+    this.host.nativeElement.querySelector<HTMLElement>(`#notifications-tab-${tabs[next]}`)?.focus();
+  }
+
+  protected canOpen(notification: NotificationResponse): boolean {
+    return internalRoute(notification.actionPath) !== null;
+  }
+
+  /** An expired snooze is returned by the server as visible again, so it is not shown as active. */
+  protected isSnoozed(notification: NotificationResponse): boolean {
+    return notification.snoozedUntil !== null && Date.parse(notification.snoozedUntil) > this.clock.now();
   }
 
   protected toggleUnreadOnly(): void {
@@ -266,7 +315,7 @@ export class NotificationsComponent {
 
   protected markAllRead(): void {
     this.run(this.notificationService.markAllRead(), () => {
-      this.successMessage.set('Todas as notificações foram marcadas como lidas.');
+      this.successMessage.set('Todas as notificações, inclusive as adiadas, foram marcadas como lidas.');
       this.loadInbox();
     });
   }
@@ -277,8 +326,8 @@ export class NotificationsComponent {
       return;
     }
 
-    this.run(this.notificationService.snooze(notification.id, value), () => {
-      this.successMessage.set('Notificação adiada.');
+    this.run(this.notificationService.snooze(notification.id, value), (updated) => {
+      this.successMessage.set(updated.snoozedUntil ? `Notificação adiada até ${formatNotificationDateTime(updated.snoozedUntil)}.` : 'Notificação adiada.');
       this.loadInbox();
     });
   }
