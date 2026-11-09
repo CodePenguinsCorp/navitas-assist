@@ -2,13 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
 import { AppShellComponent } from './layout/app-shell.component';
-import { DashboardComponent } from './pages/dashboard/dashboard.component';
-import { KanbanComponent } from './pages/kanban/kanban.component';
 import { LoginComponent } from './pages/login/login.component';
-import { ClientsComponent } from './pages/clients/clients.component';
-import { ProductsComponent } from './pages/products/products.component';
-import { RmasComponent } from './pages/rmas/rmas.component';
-import { UsersComponent } from './pages/users/users.component';
 
 export const routes: Routes = [
   {
@@ -28,17 +22,17 @@ export const routes: Routes = [
       },
       {
         path: 'dashboard',
-        component: DashboardComponent,
+        loadComponent: () => import('./pages/dashboard/dashboard.component').then((module) => module.DashboardComponent),
         title: 'Dashboard | Navitas Assist'
       },
       {
         path: 'rmas',
-        component: RmasComponent,
+        loadComponent: () => import('./pages/rmas/rmas.component').then((module) => module.RmasComponent),
         title: 'RMAs | Navitas Assist'
       },
       {
         path: 'kanban',
-        component: KanbanComponent,
+        loadComponent: () => import('./pages/kanban/kanban.component').then((module) => module.KanbanComponent),
         title: 'Kanban | Navitas Assist'
       },
       {
@@ -58,7 +52,7 @@ export const routes: Routes = [
       },
       {
         path: 'clientes',
-        component: ClientsComponent,
+        loadComponent: () => import('./pages/clients/clients.component').then((module) => module.ClientsComponent),
         canActivate: [roleGuard],
         data: {
           roles: ['ADMIN', 'SERVICE_DESK']
@@ -67,7 +61,7 @@ export const routes: Routes = [
       },
       {
         path: 'produtos',
-        component: ProductsComponent,
+        loadComponent: () => import('./pages/products/products.component').then((module) => module.ProductsComponent),
         canActivate: [roleGuard],
         data: {
           roles: ['ADMIN', 'SERVICE_DESK']
@@ -85,7 +79,7 @@ export const routes: Routes = [
       },
       {
         path: 'usuarios',
-        component: UsersComponent,
+        loadComponent: () => import('./pages/users/users.component').then((module) => module.UsersComponent),
         canActivate: [roleGuard],
         data: {
           roles: ['ADMIN']
