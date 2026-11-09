@@ -18,7 +18,14 @@
   </button>
 
   @if (isOpen()) {
-    <section class="date-picker__panel">
+    <section
+      class="date-picker__panel"
+      [class.is-above]="calendarPosition()?.above"
+      [style.top.px]="calendarPosition()?.top"
+      [style.left.px]="calendarPosition()?.left"
+      [style.width.px]="calendarPosition()?.width"
+      [style.max-height.px]="calendarPosition()?.maxHeight"
+    >
       <header class="date-picker__header">
         <button type="button" class="date-picker__nav" aria-label="Mês anterior" (click)="previousMonth()">‹</button>
         <strong>{{ monthLabel() }}</strong>

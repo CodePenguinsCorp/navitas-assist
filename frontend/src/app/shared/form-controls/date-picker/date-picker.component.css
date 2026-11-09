@@ -63,13 +63,15 @@
   stroke-width: 1.7;
 }
 
+/* Fixed to the viewport (placed by placeCalendar) so a dialog or table never clips it. */
 .date-picker__panel {
-  position: absolute;
-  top: calc(100% + 0.45rem);
-  left: 0;
-  z-index: 40;
-  width: min(100%, 320px);
-  padding: 0.8rem;
+  position: fixed;
+  z-index: 1100;
+  box-sizing: border-box;
+  width: min(298px, calc(100vw - 16px));
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-2);
   border: 1px solid rgba(170, 205, 229, 0.85);
   border-radius: var(--radius-popover);
   background: rgba(255, 255, 255, 0.98);
@@ -77,16 +79,20 @@
   backdrop-filter: blur(8px);
 }
 
+.date-picker__panel.is-above {
+  transform: translateY(-100%);
+}
+
 .date-picker__header,
 .date-picker__footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .date-picker__header {
-  margin-bottom: 0.8rem;
+  margin-bottom: var(--space-2);
 }
 
 .date-picker__header strong {
@@ -96,8 +102,9 @@
 
 .date-picker__nav,
 .date-picker__footer-action {
-  min-height: 32px;
-  padding: 0 0.7rem;
+  min-width: var(--control-height);
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
   border-radius: 8px;
   background: transparent;
   color: var(--brand-blue-deep);
@@ -111,15 +118,16 @@
 .date-picker__weekdays,
 .date-picker__days {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 40px));
+  justify-content: center;
 }
 
 .date-picker__weekdays {
-  margin-bottom: 0.35rem;
+  margin-bottom: var(--space-1);
 }
 
 .date-picker__weekdays span {
-  padding: 0.3rem 0;
+  padding: var(--space-1) 0;
   text-align: center;
   font-size: 0.78rem;
   font-weight: 700;
@@ -127,7 +135,7 @@
 }
 
 .date-picker__day {
-  min-height: 34px;
+  min-height: var(--control-height);
   padding: 0;
   border-radius: 9px;
   background: transparent;
@@ -163,5 +171,5 @@
 }
 
 .date-picker__footer {
-  margin-top: 0.8rem;
+  margin-top: var(--space-2);
 }

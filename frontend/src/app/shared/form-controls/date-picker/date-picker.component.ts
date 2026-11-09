@@ -1,5 +1,6 @@
 import {
   Component,
+  DestroyRef,
   ElementRef,
   EventEmitter,
   HostListener,
@@ -24,6 +25,21 @@ interface CalendarDay {
 }
 
 const WEEKDAY_LABELS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+
+/** Seven 40 px columns, 8 px padding on each side and the 1 px border. */
+const CALENDAR_WIDTH = 298;
+/** Height of a full month (header, weekdays, six weeks and footer), used to choose a side. */
+const CALENDAR_HEIGHT = 384;
+const VIEWPORT_MARGIN = 8;
+const TRIGGER_GAP = 6;
+
+interface CalendarPosition {
+  top: number;
+  left: number;
+  width: number;
+  maxHeight: number;
+  above: boolean;
+}
 
 @Component({
   selector: 'app-date-picker',
@@ -56,6 +72,8 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
 
   protected readonly weekdayLabels = WEEKDAY_LABELS;
   protected readonly isOpen = signal(false);
+  /** Panel is fixed to the viewport, inside the margins, without leaving the host's DOM. */
+  protected readonly calendarPosition = signal<CalendarPosition | null>(null);
 
   private readonly selectedValue = signal('');
   private readonly disabledByForm = signal(false);
@@ -77,6 +95,11 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
   private onTouched: () => void = () => {};
 
   constructor() {
+    // Capture: scroll does not bubble, and any scrolling ancestor moves the field away from the panel.
+    const onAnyScroll = (event: Event) => this.handleScroll(event);
+    document.addEventListener('scroll', onAnyScroll, true);
+    inject(DestroyRef).onDestroy(() => document.removeEventListener('scroll', onAnyScroll, true));
+
     effect(() => {
       if (this.isDisabled() && this.isOpen()) this.close();
     });
@@ -90,6 +113,7 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
     if (!this.isOpen()) {
       DatePickerComponent.openPicker?.close();
       this.focusCurrentMonth();
+      this.placeCalendar();
       this.isOpen.set(true);
       DatePickerComponent.openPicker = this;
     } else {
@@ -160,6 +184,39 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
     event.stopPropagation();
     this.close();
     this.hostElement.nativeElement.querySelector<HTMLButtonElement>('.date-picker__trigger')?.focus();
+  }
+
+  @HostListener('window:resize')
+  protected handleViewportChange(): void {
+    this.close();
+  }
+
+  protected handleScroll(event: Event): void {
+    const panel = this.hostElement.nativeElement.querySelector('.date-picker__panel');
+    if (panel && event.target instanceof Node && panel.contains(event.target)) return;
+    this.close();
+  }
+
+  /**
+   * Below the field when a full month fits, otherwise on the roomier side; the panel never
+   * crosses the 8 px viewport margins and scrolls internally when its side is too short.
+   */
+  private placeCalendar(): void {
+    const trigger = this.hostElement.nativeElement.querySelector<HTMLElement>('.date-picker__trigger');
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const width = Math.min(CALENDAR_WIDTH, window.innerWidth - 2 * VIEWPORT_MARGIN);
+    const left = Math.max(VIEWPORT_MARGIN, Math.min(rect.left, window.innerWidth - VIEWPORT_MARGIN - width));
+    const below = window.innerHeight - rect.bottom - TRIGGER_GAP - VIEWPORT_MARGIN;
+    const above = rect.top - TRIGGER_GAP - VIEWPORT_MARGIN;
+    const openAbove = below < CALENDAR_HEIGHT && above > below;
+    this.calendarPosition.set({
+      top: openAbove ? rect.top - TRIGGER_GAP : rect.bottom + TRIGGER_GAP,
+      left,
+      width,
+      maxHeight: Math.max(0, openAbove ? above : below),
+      above: openAbove
+    });
   }
 
   @HostListener('document:click', ['$event'])

@@ -12,7 +12,7 @@ class DateFormHost {
   readonly blocked = signal(false);
 }
 
-describe('DatePickerComponent disabled lifecycle', () => {
+describe('DatePickerComponent preservation: disabled lifecycle and civil dates', () => {
   let fixture: ComponentFixture<DatePickerComponent>;
   let page: HTMLElement;
   let onChange: ReturnType<typeof vi.fn<(value: unknown) => void>>;
@@ -149,5 +149,93 @@ describe('DatePickerComponent disabled lifecycle', () => {
     expect(onChange).toHaveBeenCalledExactlyOnceWith('2026-10-28');
     expect(emitted).toHaveBeenCalledExactlyOnceWith('2026-10-28');
     expect(page.querySelector('.date-picker__panel')).toBeNull();
+  });
+});
+
+describe('DatePickerComponent new: viewport placement and dismissal', () => {
+  let fixture: ComponentFixture<DatePickerComponent>;
+  let page: HTMLElement;
+  let trigger: HTMLButtonElement;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [DatePickerComponent] }).compileComponents();
+    fixture = TestBed.createComponent(DatePickerComponent);
+    fixture.detectChanges();
+    page = fixture.nativeElement;
+    trigger = page.querySelector('.date-picker__trigger')!;
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(320);
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(700);
+  });
+
+  afterEach(() => vi.restoreAllMocks());
+
+  function open(top = 100): HTMLElement {
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(new DOMRect(270, top, 40, 40));
+    trigger.click();
+    fixture.detectChanges();
+    return page.querySelector('.date-picker__panel')!;
+  }
+
+  it('fits a full calendar inside 8px margins beside a narrow right-edge field', () => {
+    const panel = open();
+    expect(panel.style.width).toBe('298px');
+    expect(panel.style.left).toBe('14px');
+    expect(panel.style.top).toBe('146px');
+    expect(Number.parseFloat(panel.style.maxHeight)).toBeLessThanOrEqual(546);
+    expect(page.contains(panel)).toBe(true);
+  });
+
+  it('opens above when the viewport has insufficient room below', () => {
+    const panel = open(620);
+    expect(panel.classList.contains('is-above')).toBe(true);
+    expect(panel.style.top).toBe('614px');
+    expect(Number.parseFloat(panel.style.maxHeight)).toBeLessThanOrEqual(606);
+    expect(Number.parseFloat(panel.style.maxHeight)).toBeGreaterThan(0);
+  });
+
+  it('clamps the left edge and height when neither side fits the full calendar', () => {
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(320);
+    const rect = vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(new DOMRect(-5, 100, 40, 40));
+    trigger.click();
+    fixture.detectChanges();
+    const panel = page.querySelector<HTMLElement>('.date-picker__panel')!;
+    expect(rect).toHaveBeenCalled();
+    expect(panel.style.left).toBe('8px');
+    expect(panel.style.top).toBe('146px');
+    expect(panel.style.maxHeight).toBe('166px');
+  });
+
+  it('closes on an external non-bubbling scroll but preserves internal panel scrolling', () => {
+    const panel = open();
+    panel.dispatchEvent(new Event('scroll'));
+    fixture.detectChanges();
+    expect(page.querySelector('.date-picker__panel')).toBe(panel);
+    page.dispatchEvent(new Event('scroll'));
+    fixture.detectChanges();
+    expect(page.querySelector('.date-picker__panel')).toBeNull();
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('closes on resize', () => {
+    open();
+    window.dispatchEvent(new Event('resize'));
+    fixture.detectChanges();
+    expect(page.querySelector('.date-picker__panel')).toBeNull();
+  });
+
+  it('measures the field again on each opening', () => {
+    open(620);
+    trigger.click();
+    fixture.detectChanges();
+    const panel = open(100);
+    expect(panel.classList.contains('is-above')).toBe(false);
+    expect(panel.style.top).toBe('146px');
+  });
+
+  it('limits the width to the viewport minus both margins on very narrow screens', () => {
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(280);
+    const panel = open();
+    expect(panel.style.width).toBe('264px');
+    expect(panel.style.left).toBe('8px');
   });
 });
