@@ -211,11 +211,22 @@
         }
       </article>
 
-      <article class="panel table-card">
-        <h3>Falhas de processamento</h3>
-        @if (failures().length === 0) {
-          <p>Nenhuma falha registrada.</p>
+      <section class="panel table-card failures-section" aria-labelledby="notification-failures-title">
+        <h2 id="notification-failures-title">Falhas de processamento</h2>
+        <p class="field-hint">Até 50 falhas de eventos e até 50 falhas de envio de e-mail, da mais recente para a mais antiga.</p>
+        @if (failuresLoadFailed()) {
+          <div class="panel alert-banner alert-banner--error failures-state" role="alert">
+            <strong>{{ failuresLoadErrorMessage() }}</strong>
+            <button type="button" class="button-secondary" [disabled]="failuresLoading()" (click)="retryFailures()">{{ failuresLoading() ? 'Carregando...' : 'Tentar carregar falhas' }}</button>
+          </div>
+        } @else if (!failuresHasLoaded()) {
+          <p class="failures-state" role="status">Carregando falhas...</p>
+        } @else if (failures().length === 0) {
+          <p class="failures-state">Nenhuma falha registrada.</p>
         } @else {
+          @if (failuresLoading()) {
+            <p class="failures-state" role="status">Atualizando falhas...</p>
+          }
           <div class="table-wrap">
             <table>
               <thead>
@@ -232,18 +243,18 @@
                 @for (failure of failures(); track failure.eventKey + failure.source + (failure.recipient ?? '')) {
                   <tr>
                     <td>{{ dateTime(failure.occurredAt) }}</td>
-                    <td>{{ failure.source === 'EMAIL' ? 'E-mail' : 'Evento' }}</td>
+                    <td>{{ failureSource(failure) }}</td>
                     <td>{{ eventLabels[failure.eventType] }}</td>
                     <td>{{ failure.rmaCode || '—' }}</td>
                     <td>{{ failure.recipient || '—' }}</td>
-                    <td>{{ failure.error || '—' }}</td>
+                    <td class="failure-error">{{ failure.error || '—' }}</td>
                   </tr>
                 }
               </tbody>
             </table>
           </div>
         }
-      </article>
+      </section>
     }
   </div>
 

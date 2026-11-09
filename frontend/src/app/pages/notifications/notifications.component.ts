@@ -80,17 +80,33 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
     }
 
     .preferences-state,
-    .rules-state {
+    .rules-state,
+    .failures-state {
       margin: var(--space-3) 0 0;
     }
 
     .preferences-state.alert-banner,
-    .rules-state.alert-banner {
+    .rules-state.alert-banner,
+    .failures-state.alert-banner {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
       gap: var(--space-3);
+    }
+
+    .failures-section h2 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .failures-section .field-hint {
+      margin: var(--space-1) 0 0;
+    }
+
+    .failure-error {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
     }
 
     .notification-list {
@@ -209,6 +225,7 @@ export class NotificationsComponent {
   private inboxRequest?: Subscription;
   private preferencesRequest?: Subscription;
   private rulesRequest?: Subscription;
+  private failuresRequest?: Subscription;
 
   protected readonly activeTab = signal<NotificationsTab>('inbox');
   protected readonly inboxLoading = signal(false);
@@ -223,6 +240,10 @@ export class NotificationsComponent {
   protected readonly rulesLoadFailed = signal(false);
   protected readonly rulesHasLoaded = signal(false);
   protected readonly rulesLoadErrorMessage = signal('');
+  protected readonly failuresLoading = signal(false);
+  protected readonly failuresLoadFailed = signal(false);
+  protected readonly failuresHasLoaded = signal(false);
+  protected readonly failuresLoadErrorMessage = signal('');
   protected readonly busy = signal(false);
   protected readonly errorMessage = signal('');
   protected readonly successMessage = signal('');
@@ -398,6 +419,14 @@ export class NotificationsComponent {
     if (!this.rulesLoading()) this.loadRules();
   }
 
+  protected retryFailures(): void {
+    if (!this.failuresLoading()) this.loadFailures();
+  }
+
+  protected failureSource(failure: NotificationFailureResponse): string {
+    return failure.source === 'EMAIL' ? 'Envio de e-mail' : 'Processamento do evento';
+  }
+
   /** Recipients as a fact: configured roles plus the RMA assignee, without judging the result. */
   protected recipientsSummary(rule: NotificationRuleResponse): string {
     const roles = ROLE_OPTIONS.filter((role) => rule.recipientRoles.includes(role)).map((role) => ROLE_LABELS[role]).join(', ');
@@ -540,7 +569,29 @@ export class NotificationsComponent {
         this.rulesLoadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as regras.'));
       }
     });
-    this.notificationService.listFailures().subscribe({ next: (failures) => this.failures.set(failures), error: () => this.failures.set([]) });
+    this.loadFailures();
+  }
+
+  private loadFailures(): void {
+    this.failuresRequest?.unsubscribe();
+    this.failuresLoading.set(true);
+    this.failuresRequest = this.notificationService.listFailures().pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.failuresLoading.set(false))
+    ).subscribe({
+      next: (failures) => {
+        this.failures.set(failures);
+        this.failuresHasLoaded.set(true);
+        this.failuresLoadFailed.set(false);
+        this.failuresLoadErrorMessage.set('');
+      },
+      error: (error) => {
+        this.failures.set([]);
+        this.failuresHasLoaded.set(false);
+        this.failuresLoadFailed.set(true);
+        this.failuresLoadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as falhas de processamento.'));
+      }
+    });
   }
 
   private run<T>(request$: Observable<T>, onSuccess: (result: T) => void): void {

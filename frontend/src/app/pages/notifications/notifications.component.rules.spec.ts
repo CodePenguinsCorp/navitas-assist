@@ -259,4 +259,71 @@ describe('NotificationsComponent rules', () => {
       });
     });
   });
+
+  describe('processing failures', () => {
+    const FAILURES: NotificationFailureResponse[] = [
+      { source: 'EVENT', eventKey: 'evt-1', eventType: 'SLA_OVERDUE', rmaCode: null, recipient: null, error: 'Linha 1\nLinha 2 com detalhe', occurredAt: '2026-10-24T16:00:00Z' },
+      { source: 'EMAIL', eventKey: 'evt-2', eventType: 'RMA_CREATED', rmaCode: 'RMA-2026-000007', recipient: 'tec@empresa.com', error: 'SMTP indisponível', occurredAt: '2026-10-24T15:00:00Z' }
+    ];
+    const section = () => root().querySelector<HTMLElement>('section[aria-labelledby="notification-failures-title"]');
+    const failuresColumn = (header: string) => {
+      const table = Array.from(root().querySelectorAll('table')).find((item) => Array.from(item.querySelectorAll('thead th')).some((th) => normalize(th.textContent) === 'Origem'))!;
+      const index = Array.from(table.querySelectorAll('thead th')).findIndex((th) => normalize(th.textContent) === header);
+      return Array.from(table.querySelectorAll('tbody tr')).map((tr) => tr.children[index].textContent!);
+    };
+
+    // Vermelho: o erro da lista vira [] e aparece "Nenhuma falha registrada.".
+    it('distinguishes a failure-list error from no failures', async () => {
+      await setup({ failures: [failure()] });
+      openRules();
+      expect(text()).toContain('Não foi possível carregar as falhas de processamento.');
+      expect(button('Tentar carregar falhas')).toBeDefined();
+      expect(text()).not.toContain('Nenhuma falha registrada.');
+      expect(cells(rulesTable()!, 'SLA vencido')['Situação']).toBe('Ativa');
+    });
+
+    // Vermelho: durante a carga aparece "Nenhuma falha registrada.".
+    it('shows loading instead of no failures', async () => {
+      await setup({ failures: [new Subject<NotificationFailureResponse[]>()] });
+      openRules();
+      expect(text()).toContain('Carregando falhas...');
+      expect(text()).not.toContain('Nenhuma falha registrada.');
+    });
+
+    // Vermelho: não há botão para reler só as falhas.
+    it('retries only the failures', async () => {
+      await setup({ failures: [failure(), of(FAILURES)] });
+      openRules();
+      button('Tentar carregar falhas')!.click();
+      render();
+      expect(service['listFailures']).toHaveBeenCalledTimes(2);
+      expect(service['listRules']).toHaveBeenCalledTimes(1);
+      expect(failuresColumn('Origem')).toEqual(['Processamento do evento', 'Envio de e-mail']);
+    });
+
+    // Vermelho: a origem é "Evento"/"E-mail" e não há texto do limite.
+    it('identifies the origin and the limit', async () => {
+      await setup({ failures: [of(FAILURES)] });
+      openRules();
+      expect(failuresColumn('Origem').map((value) => normalize(value))).toEqual(['Processamento do evento', 'Envio de e-mail']);
+      expect(normalize(section()!.textContent)).toContain('Até 50 falhas de eventos e até 50 falhas de envio de e-mail, da mais recente para a mais antiga.');
+    });
+
+    describe('preservation', () => {
+      it('keeps the full error, the server order, placeholders and event labels', async () => {
+        await setup({ failures: [of(FAILURES)] });
+        openRules();
+        expect(failuresColumn('Erro')).toEqual(['Linha 1\nLinha 2 com detalhe', 'SMTP indisponível']);
+        expect(failuresColumn('RMA').map((value) => normalize(value))).toEqual(['—', 'RMA-2026-000007']);
+        expect(failuresColumn('Destinatário').map((value) => normalize(value))).toEqual(['—', 'tec@empresa.com']);
+        expect(failuresColumn('Alerta').map((value) => normalize(value))).toEqual(['SLA vencido', 'Novo RMA']);
+      });
+
+      it('requests failures only for admins', async () => {
+        await setup({ role: 'TECHNICIAN' });
+        component.selectTab('rules');
+        expect(service['listFailures']).not.toHaveBeenCalled();
+      });
+    });
+  });
 });
