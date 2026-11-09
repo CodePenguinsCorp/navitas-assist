@@ -34,15 +34,36 @@
         <button type="button" class="button-secondary button-secondary--small" (click)="markAllRead()" [disabled]="busy() || !hasUnread()">Marcar todas como lidas</button>
       </div>
 
-      @if (loading() && notifications().length === 0) {
-        <p>Carregando notificações...</p>
+      @if (inboxLoadFailed()) {
+        <div class="panel alert-banner alert-banner--error inbox-state" role="alert">
+          <strong>{{ inboxLoadErrorMessage() }}</strong>
+          <button type="button" class="button-secondary" [disabled]="inboxLoading()" (click)="retryInbox()">{{ inboxLoading() ? 'Carregando...' : 'Tentar novamente' }}</button>
+        </div>
+      } @else if (!inboxHasLoaded()) {
+        <p class="inbox-state" role="status">Carregando notificações...</p>
       } @else if (notifications().length === 0) {
-        <section class="empty-state">
-          <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
-          <h3>Nenhuma notificação.</h3>
-          <p>Alertas sobre RMAs atribuídos, novos itens e SLA aparecem aqui.</p>
-        </section>
+        @if (inboxLoading()) {
+          <p class="inbox-state" role="status">Atualizando notificações...</p>
+        }
+        @if (unreadOnly()) {
+          <section class="empty-state">
+            <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
+            <h3>Nenhuma notificação não lida.</h3>
+            <p>As notificações já lidas continuam disponíveis sem o filtro.</p>
+            <button type="button" class="button-secondary" (click)="clearInboxFilters()">Mostrar todas</button>
+          </section>
+        } @else {
+          <section class="empty-state">
+            <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
+            <h3>Nenhuma notificação.</h3>
+            <p>Alertas sobre RMAs atribuídos, novos itens e SLA aparecem aqui.</p>
+          </section>
+        }
       } @else {
+        <p class="field-hint inbox-limit">Mostra até 100 notificações, das mais recentes, nos filtros selecionados.</p>
+        @if (inboxLoading()) {
+          <p class="inbox-state" role="status">Atualizando notificações...</p>
+        }
         <div class="notification-list">
           @for (notification of notifications(); track notification.id) {
             <article class="notification-item" [class.is-unread]="!notification.read">

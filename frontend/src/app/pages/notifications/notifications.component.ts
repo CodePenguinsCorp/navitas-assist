@@ -1,7 +1,8 @@
 import { IconComponent, IconName } from '../../shared/icon/icon.component';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { Observable, finalize } from 'rxjs';
+import { Observable, Subscription, finalize } from 'rxjs';
 import { ROLE_LABELS, ROLE_OPTIONS } from '../../core/mock-data';
 import {
   NotificationFailureResponse,
@@ -58,6 +59,19 @@ type NotificationsTab = 'inbox' | 'preferences' | 'rules';
 
     .notification-toolbar .button-secondary {
       margin-left: auto;
+    }
+
+    .inbox-limit,
+    .inbox-state {
+      margin: var(--space-3) 0 0;
+    }
+
+    .inbox-state.alert-banner {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
     }
 
     .notification-list {
@@ -157,9 +171,16 @@ export class NotificationsComponent {
   private readonly notificationService = inject(NotificationService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private inboxRequest?: Subscription;
 
   protected readonly activeTab = signal<NotificationsTab>('inbox');
-  protected readonly loading = signal(false);
+  protected readonly inboxLoading = signal(false);
+  protected readonly inboxLoadFailed = signal(false);
+  protected readonly inboxHasLoaded = signal(false);
+  protected readonly inboxLoadErrorMessage = signal('');
+  protected readonly preferencesLoading = signal(false);
+  protected readonly rulesLoading = signal(false);
   protected readonly busy = signal(false);
   protected readonly errorMessage = signal('');
   protected readonly successMessage = signal('');
@@ -209,12 +230,21 @@ export class NotificationsComponent {
 
   protected toggleUnreadOnly(): void {
     this.unreadOnly.update((value) => !value);
-    this.loadInbox();
+    this.reloadInboxForNewFilters();
   }
 
   protected toggleIncludeSnoozed(): void {
     this.includeSnoozed.update((value) => !value);
-    this.loadInbox();
+    this.reloadInboxForNewFilters();
+  }
+
+  protected clearInboxFilters(): void {
+    this.unreadOnly.set(false);
+    this.reloadInboxForNewFilters();
+  }
+
+  protected retryInbox(): void {
+    if (!this.inboxLoading()) this.loadInbox();
   }
 
   protected open(notification: NotificationResponse): void {
@@ -285,21 +315,42 @@ export class NotificationsComponent {
     this.updateRule(rule, { severity: severity as NotificationSeverity });
   }
 
+  /** The previous result belongs to other filters: drop it and its failure, then start a first load. */
+  private reloadInboxForNewFilters(): void {
+    this.inboxLoadFailed.set(false);
+    this.inboxLoadErrorMessage.set('');
+    this.inboxHasLoaded.set(false);
+    this.notifications.set([]);
+    this.loadInbox();
+  }
+
   private loadInbox(): void {
-    this.loading.set(true);
-    this.notificationService.list({ unreadOnly: this.unreadOnly(), includeSnoozed: this.includeSnoozed() }).pipe(
-      finalize(() => this.loading.set(false))
+    this.inboxRequest?.unsubscribe();
+    this.inboxLoading.set(true);
+    this.inboxRequest = this.notificationService.list({ unreadOnly: this.unreadOnly(), includeSnoozed: this.includeSnoozed() }).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.inboxLoading.set(false))
     ).subscribe({
-      next: (notifications) => this.notifications.set(notifications),
-      error: (error) => this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as notificações.'))
+      next: (notifications) => {
+        this.notifications.set(notifications);
+        this.inboxHasLoaded.set(true);
+        this.inboxLoadFailed.set(false);
+        this.inboxLoadErrorMessage.set('');
+      },
+      error: (error) => {
+        this.notifications.set([]);
+        this.inboxHasLoaded.set(false);
+        this.inboxLoadFailed.set(true);
+        this.inboxLoadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as notificações.'));
+      }
     });
     this.refreshSummary();
   }
 
   private loadPreferences(): void {
-    this.loading.set(true);
+    this.preferencesLoading.set(true);
     this.notificationService.listPreferences().pipe(
-      finalize(() => this.loading.set(false))
+      finalize(() => this.preferencesLoading.set(false))
     ).subscribe({
       next: (preferences) => this.preferences.set(preferences),
       error: (error) => this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as preferências.'))
@@ -307,9 +358,9 @@ export class NotificationsComponent {
   }
 
   private loadRules(): void {
-    this.loading.set(true);
+    this.rulesLoading.set(true);
     this.notificationService.listRules().pipe(
-      finalize(() => this.loading.set(false))
+      finalize(() => this.rulesLoading.set(false))
     ).subscribe({
       next: (rules) => this.rules.set(rules),
       error: (error) => this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as regras.'))
@@ -340,6 +391,7 @@ export class NotificationsComponent {
     this.notificationService.refreshSummary().subscribe();
   }
 
+  /** Clears action feedback only; load failures keep their own signals. */
   private clearMessages(): void {
     this.errorMessage.set('');
     this.successMessage.set('');
