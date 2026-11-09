@@ -149,7 +149,7 @@
 @if (activeModal() === 'details') {
   @if (selectedRma(); as rma) {
     <section class="modal-overlay" (click)="closeModal()">
-      <article class="panel modal-panel modal-panel--wide rma-details" role="dialog" aria-modal="true" [attr.aria-label]="'Detalhes do ' + rma.code" (click)="$event.stopPropagation()">
+      <article class="panel modal-panel modal-panel--wide rma-details detail-surface" role="dialog" aria-modal="true" [attr.aria-label]="'Detalhes do ' + rma.code" (click)="$event.stopPropagation()">
         <header class="rma-details__header">
           <div class="rma-details__identity">
             <span class="rma-details__code code-text">{{ rma.code }}</span>
@@ -173,25 +173,25 @@
           </div>
         </header>
 
-        <dl class="meta-list rma-details__summary">
+        <dl class="meta-list rma-details__summary detail-card detail-summary">
           <div><dt>Produtos</dt><dd>{{ itemCountLabel(rma.items.length) }}</dd></div>
           <div><dt>Entrada</dt><dd>{{ dateLabel(rma.entryDate) }}</dd></div>
           @let invoice = invoiceFact(rma);
           <div><dt>{{ invoice.label }}</dt><dd [class.is-empty]="invoice.empty">{{ invoice.value }}</dd></div>
           @let purchase = purchaseFact(rma);
           <div><dt>{{ purchase.label }}</dt><dd [class.is-empty]="purchase.empty">{{ purchase.value }}</dd></div>
-          <div><dt>Responsável</dt><dd class="person" [class.is-empty]="!rma.assigneeId"><span class="avatar" [class.avatar--empty]="!rma.assigneeId" aria-hidden="true">{{ rma.assigneeId ? initials(rma.assigneeName) : '–' }}</span><span>{{ ownerLabel(rma) }}</span></dd></div>
-          <div><dt>SLA</dt><dd><app-rma-sla-badge [sla]="rma.sla" /></dd></div>
+          <div><dt>Responsável</dt><dd class="person" [class.is-empty]="!rma.assigneeId"><span class="avatar" [class.avatar--empty]="!rma.assigneeId" aria-hidden="true">{{ rma.assigneeId ? initials(rma.assigneeName) : '–' }}</span><span [title]="ownerLabel(rma)">{{ ownerLabel(rma) }}</span></dd></div>
+          <div class="detail-summary__wide"><dt>SLA</dt><dd><app-rma-sla-badge [sla]="rma.sla" /></dd></div>
           <div><dt>Atualizado em</dt><dd>{{ dateTimeLabel(rma.updatedAt) }}</dd></div>
         </dl>
 
-        <div class="tab-list" role="tablist" aria-label="Seções do RMA">
+        <div class="tab-list tab-list--raised" role="tablist" aria-label="Seções do RMA">
           @for (tab of detailTabs; track tab.id) {
             <button type="button" role="tab" class="tab" [id]="'rma-tab-' + tab.id" [class.is-active]="detailTab() === tab.id" [attr.aria-selected]="detailTab() === tab.id" [attr.aria-controls]="'rma-panel-' + tab.id" (click)="detailTab.set(tab.id)">{{ tab.label }}</button>
           }
         </div>
 
-        <div class="rma-details__panel" role="tabpanel" [id]="'rma-panel-' + detailTab()" [attr.aria-labelledby]="'rma-tab-' + detailTab()">
+        <div class="rma-details__panel detail-card detail-card--body" role="tabpanel" [id]="'rma-panel-' + detailTab()" [attr.aria-labelledby]="'rma-tab-' + detailTab()">
           @switch (detailTab()) {
             @case ('products') {
               <section class="rma-details__section">
@@ -203,7 +203,7 @@
                 <p class="rma-detail-copy">Garantia avaliada na entrada do RMA.</p>
                 <div class="rma-items-detail">
                   @for (item of rma.items; track item.id ?? $index) {
-                    <article class="rma-item-detail">
+                    <article class="rma-item-detail detail-tile">
                       <header class="rma-item-detail__header">
                         <div>
                           <span class="rma-item-detail__sku code-text">{{ item.productSku }}</span>
@@ -244,7 +244,8 @@
                     }
                   </dl>
                 } @else {
-                  <div class="empty-state">
+                  <div class="empty-state empty-state--centered">
+                    <span class="icon-tile tone-slate" aria-hidden="true"><app-icon name="clipboard" [size]="20" /></span>
                     <h3>{{ noDiagnosisLabel }}</h3>
                     <p>Registre o diagnóstico para seguir com reparo e testes.</p>
                     @if (canRegisterDiagnosis()) {

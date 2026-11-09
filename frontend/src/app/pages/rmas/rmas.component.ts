@@ -150,7 +150,9 @@ export interface RmaListFilters {
     .rma-details {
       display: grid;
       align-content: start;
-      gap: 1.25rem;
+      /* Rows keep their content height; the fixed-height modal scrolls instead of squeezing the tabs. */
+      grid-auto-rows: max-content;
+      gap: 1.5rem;
       padding: 1.5rem 1.25rem 1.5rem 1.75rem;
     }
 
@@ -200,11 +202,6 @@ export interface RmaListFilters {
       flex-shrink: 0;
     }
 
-    .rma-details__summary {
-      grid-template-columns: repeat(7, minmax(0, 1fr));
-    }
-
-    .rma-details__summary,
     .rma-items-editor,
     .rma-diagnosis__context {
       padding: 0.9rem 1rem;
@@ -270,10 +267,6 @@ export interface RmaListFilters {
     .rma-item-detail {
       display: grid;
       gap: 0.75rem;
-      padding: 0.85rem 0.9rem;
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      background: var(--surface-alt);
     }
 
     .rma-item-detail__header {
@@ -300,8 +293,6 @@ export interface RmaListFilters {
       justify-items: start;
       gap: 0.4rem;
     }
-
-
 
 
     .rma-create-form > * {
@@ -370,7 +361,6 @@ export interface RmaListFilters {
         margin-top: 0;
       }
 
-      .rma-details__summary,
       .rma-details__pairs {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }

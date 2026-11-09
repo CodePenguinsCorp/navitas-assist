@@ -230,6 +230,35 @@ describe('RmasComponent detail with the shared information contract', () => {
     expect(section('Reparo e testes')).not.toBeNull();
   });
 
+  it('draws the empty diagnosis as a centered block with icon, text and action', async () => {
+    // Hoje o estado vazio é texto solto alinhado à esquerda, sem ícone.
+    const { open, selectTab, tabPanel } = await setup();
+    open({ ...fullRma, diagnosis: null });
+    selectTab('Diagnóstico');
+    const empty = tabPanel().querySelector('.empty-state')!;
+
+    expect(empty.classList).toContain('empty-state--centered');
+    expect(empty.querySelector(':scope > .icon-tile app-icon')).not.toBeNull();
+    expect(empty.querySelector('p')?.textContent?.trim()).toBe('Registre o diagnóstico para seguir com reparo e testes.');
+  });
+
+  it('separates header, summary card, raised tabs and the white content card over the tinted canvas', async () => {
+    // Hoje resumo, abas e conteúdo ficam colados no mesmo fundo branco e o SLA divide a linha com seis fatos.
+    const { open, detail, tabPanel } = await setup();
+    open();
+    const summary = detail().querySelector('.rma-details__summary')!;
+    const sla = [...summary.querySelectorAll(':scope > div')].find((row) => row.querySelector('dt')?.textContent?.trim() === 'SLA')!;
+
+    expect(detail().classList).toContain('detail-surface');
+    expect(summary.classList).toContain('detail-card');
+    expect(summary.classList).toContain('detail-summary');
+    expect(sla.classList).toContain('detail-summary__wide');
+    expect(detail().querySelector('[role="tablist"]')!.classList).toContain('tab-list--raised');
+    expect(tabPanel().classList).toContain('detail-card');
+    const owner = summary.querySelector('.person > span:last-child')!;
+    expect(owner.getAttribute('title')).toBe(owner.textContent?.trim());
+  });
+
   it('shows status records and assignee changes in the Histórico tab, newest first', async () => {
     // Hoje a aba só lista trocas de responsável; o registro de status não aparece.
     const { open, selectTab, tabPanel } = await setup();

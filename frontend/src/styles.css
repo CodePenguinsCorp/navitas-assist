@@ -2701,3 +2701,86 @@ app-custom-select:has(> .custom-select--status) {
   text-transform: uppercase;
   color: var(--muted);
 }
+
+.detail-card--body {
+  padding: var(--space-5) var(--space-5) var(--space-6);
+}
+
+/* Summary strip of a detail modal: label above value, three columns, then two, then one.
+   A .detail-summary__wide fact (the SLA) takes a row of its own at the end. */
+.detail-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-flow: row dense;
+  gap: var(--space-4) var(--space-6);
+  padding: var(--space-4) var(--space-5) var(--space-5);
+}
+
+.detail-summary > .detail-summary__wide {
+  grid-column: 1 / -1;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+.detail-summary > .detail-summary__wide > dd {
+  max-width: 440px;
+}
+
+.detail-summary .person > span:last-child {
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .detail-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .detail-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Raised tabs over a tinted canvas: the active one is a white tab with an accent bar. */
+.tab-list.tab-list--raised {
+  gap: var(--space-2);
+  border-bottom: 0;
+}
+
+.tab-list--raised .tab {
+  min-height: 42px;
+  padding: 0 1.1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+}
+
+.tab-list--raised .tab:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.tab-list--raised .tab.is-active {
+  border-color: #cfdbe7;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(23, 48, 77, 0.06);
+}
+
+.tab-list--raised .tab.is-active::after {
+  inset: auto 0.7rem 4px;
+  height: 3px;
+}
+
+/* An empty block that asks for the next step: icon, text and action, centered. */
+.empty-state.empty-state--centered {
+  justify-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+}
+
+.empty-state--centered p {
+  max-width: 44ch;
+}
+
+.tab-list--raised .tab:focus-visible {
+  box-shadow: var(--focus-ring);
+}
