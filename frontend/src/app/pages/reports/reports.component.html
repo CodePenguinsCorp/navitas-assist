@@ -1,14 +1,11 @@
 <section class="page-surface">
-  <section class="page-heading"><h1>Relatórios</h1></section>
+  <app-page-header heading="Relatórios" singular="RMA" plural="RMAs" [count]="report() && !loading() ? rmas().length : null" />
   <form class="panel report-filters" [formGroup]="form" (ngSubmit)="loadReports()">
-    <label class="filter-field"><span>Relatório</span>
-      <app-custom-select ariaLabel="Tipo de relatório" formControlName="report" [options]="reportOptions" />
-    </label>
     <label class="filter-field"><span>Entrada a partir de</span>
-      <app-date-picker ariaLabel="Data inicial de entrada" formControlName="entryFrom" />
+      <app-date-picker ariaLabel="Data inicial de entrada" formControlName="entryFrom" [ariaDescribedBy]="periodDescribedBy()" [ariaInvalid]="!!periodError()" />
     </label>
     <label class="filter-field"><span>Entrada até</span>
-      <app-date-picker ariaLabel="Data final de entrada" formControlName="entryTo" />
+      <app-date-picker ariaLabel="Data final de entrada" formControlName="entryTo" [ariaDescribedBy]="periodDescribedBy()" [ariaInvalid]="!!periodError()" />
     </label>
     <label class="filter-field"><span>Status atual</span>
       <app-custom-select ariaLabel="Filtrar por status" formControlName="status" [options]="statusOptions" />
@@ -17,7 +14,12 @@
       <app-custom-select ariaLabel="Filtrar por cliente" formControlName="clientId" [options]="clientOptions()" />
     </label>
     <button class="button-primary" type="submit" [disabled]="loading()">Consultar</button>
-    <p class="report-hint">O período considera a data de entrada do RMA, inclusive nas devoluções. Altere os filtros e clique em Consultar.</p>
+    <div class="report-period-messages">
+      <p class="report-hint" id="report-period-help">Período pela data de entrada do RMA, até 366 dias.</p>
+      @if (periodError()) {
+        <p class="field-error" id="report-period-error" role="alert">{{ periodError() }}</p>
+      }
+    </div>
   </form>
   @if (clientsError()) {
     <article class="panel alert-banner alert-banner--error" role="alert">
@@ -34,7 +36,23 @@
         <button type="button" class="button-secondary" (click)="loadReports()">Tentar novamente</button>
       </article>
     } @else if (report(); as data) {
-      <p class="report-hint">{{ rmas().length }} RMA(s) consultado(s). Gerado em {{ formatInstant(data.generatedAt) }} (São Paulo). Consulte novamente para atualizar.</p>
+      <div class="report-summary">
+        <dl class="meta-list" aria-label="Consulta aplicada">
+          <div><dt>Período de entrada</dt><dd>{{ formatDate(data.entryFrom) }} a {{ formatDate(data.entryTo) }}</dd></div>
+          <div><dt>Status atual</dt><dd>{{ appliedFilters()?.status }}</dd></div>
+          <div><dt>Cliente</dt><dd>{{ appliedFilters()?.client }}</dd></div>
+          <div><dt>Gerado em</dt><dd>{{ formatInstant(data.generatedAt) }} (São Paulo)</dd></div>
+        </dl>
+        <p class="report-hint">Consulte novamente para atualizar.</p>
+      </div>
+      <div class="tab-list" role="tablist" aria-label="Relatórios">
+        @for (option of reportOptions; track option.value) {
+          <button type="button" role="tab" class="tab" [id]="'report-tab-' + option.value" [class.is-active]="reportType() === option.value"
+            [attr.aria-selected]="reportType() === option.value" [attr.aria-controls]="'report-panel-' + option.value"
+            [attr.tabindex]="reportType() === option.value ? 0 : -1" (click)="selectReport(option.value)" (keydown)="onTabKeydown($event)">{{ option.label }}</button>
+        }
+      </div>
+      <div class="report-panel" role="tabpanel" [id]="'report-panel-' + reportType()" [attr.aria-labelledby]="'report-tab-' + reportType()">
       @if (rmas().length === 0) {
         <article class="panel empty-state"><h3>Nenhum RMA encontrado.</h3><p>Ajuste os filtros e consulte novamente.</p></article>
       } @else {
@@ -137,6 +155,7 @@
           }
         }
       }
+      </div>
     }
   </section>
   <p class="report-hint">Consulta em tela.</p>

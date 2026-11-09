@@ -9,6 +9,7 @@ import { ReportService } from '../../core/services/report.service';
 import { formatDateOnly, todayInputValue } from '../../core/utils/date';
 import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 
 type ReportType = 'technical' | 'aging' | 'warranty' | 'returns';
 
@@ -17,7 +18,7 @@ const MAX_PERIOD_DAYS = 366;
 
 @Component({
   selector: 'app-reports',
-  imports: [ReactiveFormsModule, CustomSelectComponent, DatePickerComponent],
+  imports: [ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, PageHeaderComponent],
   templateUrl: './reports.component.html',
   styleUrl: './reports.component.css'
 })
@@ -34,12 +35,16 @@ export class ReportsComponent {
   });
   protected readonly reportType = toSignal(this.form.controls.report.valueChanges, { initialValue: this.form.controls.report.value });
   protected readonly loading = signal(false);
+  /** Server failure only; local period validation lives in periodError. */
   protected readonly errorMessage = signal('');
+  protected readonly periodError = signal('');
+  /** Labels of the values submitted with the request that produced the current report. */
+  protected readonly appliedFilters = signal<{ status: string; client: string } | null>(null);
   protected readonly clientsError = signal('');
   protected readonly report = signal<RmaReportResponse | null>(null);
   protected readonly clientOptions = signal<CustomSelectOption[]>([{ value: null, label: 'Todos os clientes' }]);
   protected readonly reportOptions: CustomSelectOption<ReportType>[] = [
-    { value: 'technical', label: 'Laudo técnico' }, { value: 'aging', label: 'Aging por etapa' },
+    { value: 'technical', label: 'Laudo técnico' }, { value: 'aging', label: 'Tempo por etapa' },
     { value: 'warranty', label: 'Garantia por produto' }, { value: 'returns', label: 'Devoluções' }
   ];
   protected readonly statusOptions: CustomSelectOption[] = [
@@ -79,15 +84,20 @@ export class ReportsComponent {
     this.request?.unsubscribe();
     this.report.set(null);
     this.errorMessage.set('');
+    this.periodError.set('');
     const { entryFrom, entryTo, status, clientId } = this.form.getRawValue();
     if (entryFrom && entryTo && entryFrom > entryTo) {
-      this.errorMessage.set('A data inicial deve ser anterior ou igual à data final.');
+      this.periodError.set('A data inicial deve ser anterior ou igual à data final.');
       return;
     }
     if (entryFrom && entryTo && daysBetween(entryFrom, entryTo) + 1 > MAX_PERIOD_DAYS) {
-      this.errorMessage.set(`O período do relatório deve ter no máximo ${MAX_PERIOD_DAYS} dias.`);
+      this.periodError.set(`O período do relatório deve ter no máximo ${MAX_PERIOD_DAYS} dias.`);
       return;
     }
+    this.appliedFilters.set({
+      status: this.statusOptions.find((option) => option.value === status)?.label ?? 'Todos os status',
+      client: this.clientOptions().find((option) => option.value === clientId)?.label ?? 'Todos os clientes'
+    });
     this.loading.set(true);
     this.request = this.reportService.list({ entryFrom: entryFrom || undefined, entryTo: entryTo || undefined,
       status: status || undefined, clientId: clientId ?? undefined })
@@ -95,6 +105,28 @@ export class ReportsComponent {
         next: (report) => this.report.set(report),
         error: () => this.errorMessage.set('Não foi possível carregar os relatórios. Tente novamente.')
       });
+  }
+
+  protected selectReport(type: ReportType): void {
+    this.form.controls.report.setValue(type);
+  }
+
+  /** Tab keyboard contract: arrows move with wrap-around, Home and End go to the ends. */
+  protected onTabKeydown(event: KeyboardEvent): void {
+    const values = this.reportOptions.map((option) => option.value);
+    const current = values.indexOf(this.form.controls.report.value);
+    const next = event.key === 'ArrowRight' ? (current + 1) % values.length
+      : event.key === 'ArrowLeft' ? (current - 1 + values.length) % values.length
+        : event.key === 'Home' ? 0 : event.key === 'End' ? values.length - 1 : -1;
+    if (next < 0) return;
+    event.preventDefault();
+    this.selectReport(values[next]);
+    const tabs = (event.currentTarget as HTMLElement).closest('[role="tablist"]')?.querySelectorAll<HTMLElement>('[role="tab"]');
+    tabs?.[next]?.focus();
+  }
+
+  protected periodDescribedBy(): string {
+    return this.periodError() ? 'report-period-help report-period-error' : 'report-period-help';
   }
 
   protected formatInstant(value: string): string {
