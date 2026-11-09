@@ -27,9 +27,6 @@
           } @else {
             <span class="status-chip rma-detail__status" [attr.data-status]="rma().status">{{ statusLabel(rma().status) }}</span>
           }
-          @if (canUpdateAssignee()) {
-            <button type="button" class="button-secondary" [disabled]="disabled()" (click)="assigneeChange.emit(rma())">{{ rma().assigneeId ? 'Trocar responsável' : 'Atribuir' }}</button>
-          }
           <button type="button" class="button-secondary" [disabled]="disabled()" (click)="blockInspect.emit(rma())">Ver impedimentos</button>
           @if (disabled()) {
             <button type="button" class="button-secondary" disabled>Abrir RMA na lista</button>
@@ -37,6 +34,10 @@
             <a class="button-secondary" routerLink="/rmas" [queryParams]="{ rma: rma().id }">Abrir RMA na lista</a>
           }
         </div>
+
+        @if (actionError()) {
+          <p class="alert-banner alert-banner--error rma-detail__error" role="alert"><strong>{{ actionError() }}</strong></p>
+        }
 
         @if (rma().currentBlock; as block) {
           <p class="rma-detail__block"><strong>{{ blockedLabel(block, clock.now()) }}</strong>{{ block.reason }}</p>
@@ -159,10 +160,26 @@
           <dl>
             <div>
               <dt>Responsável</dt>
-              <dd class="rma-detail__assignee">
-                @if (rma().assigneeId) { <span class="avatar" aria-hidden="true">{{ initials(rma().assigneeName) }}</span> }
-                {{ ownerLabel(rma()) }}
-              </dd>
+              @if (canUpdateAssignee()) {
+                <dd>
+                  <app-custom-select
+                    class="rma-detail__assignee-picker"
+                    appearance="person"
+                    [actionMenu]="true"
+                    [ariaLabel]="'Trocar responsável, atual: ' + ownerLabel(rma())"
+                    [placeholder]="ownerLabel(rma())"
+                    [options]="assigneeOptions()"
+                    [value]="rma().assigneeId"
+                    [disabled]="disabled()"
+                    (valueChange)="chooseAssignee($event)"
+                  />
+                </dd>
+              } @else {
+                <dd class="rma-detail__assignee">
+                  @if (rma().assigneeId) { <span class="avatar" aria-hidden="true">{{ initials(rma().assigneeName) }}</span> }
+                  {{ ownerLabel(rma()) }}
+                </dd>
+              }
             </div>
             <div><dt>Prioridade</dt><dd><span class="priority-tag" [attr.data-priority]="rma().priority"><span class="priority-bars" [attr.data-priority]="rma().priority" aria-hidden="true"><i></i><i></i><i></i></span>{{ priorityLabel(rma().priority) }}</span></dd></div>
             <div><dt>SLA</dt><dd><app-rma-sla-badge [sla]="rma().sla" /></dd></div>

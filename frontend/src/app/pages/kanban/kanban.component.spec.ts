@@ -18,11 +18,15 @@ describe('KanbanComponent filters', () => {
   let now = signal(Date.parse('2026-10-20T12:00:00Z'));
   let createdViewRequest: KanbanViewRequest | null;
   let failCreateView: boolean;
+  let assigneeUpdates: Array<[number, { assigneeId: number | null }]>;
+  let failAssignee: boolean;
 
   beforeEach(async () => {
     now = signal(Date.parse('2026-10-20T12:00:00Z'));
     createdViewRequest = null;
     failCreateView = false;
+    assigneeUpdates = [];
+    failAssignee = false;
     await TestBed.configureTestingModule({
       imports: [KanbanComponent],
       providers: [
@@ -63,7 +67,18 @@ describe('KanbanComponent filters', () => {
             delete: () => of(undefined),
           },
         },
-        { provide: RmaService, useValue: { listBoard: () => of(TEST_RMAS), getById: (id: number) => of(TEST_RMAS.find((rma) => rma.id === id)) } },
+        {
+          provide: RmaService,
+          useValue: {
+            listBoard: () => of(TEST_RMAS),
+            getById: (id: number) => of(TEST_RMAS.find((rma) => rma.id === id)),
+            updateAssignee: (id: number, payload: { assigneeId: number | null }) => {
+              assigneeUpdates.push([id, payload]);
+              if (failAssignee) return throwError(() => ({ error: { message: 'Técnico inativo' } }));
+              return of({ ...TEST_RMAS.find((rma) => rma.id === id)!, assigneeId: payload.assigneeId });
+            },
+          },
+        },
       ],
     }).compileComponents();
 
@@ -270,9 +285,37 @@ describe('KanbanComponent filters', () => {
     expect(fixture.nativeElement.textContent).toContain('Novo status');
     fixture.nativeElement.querySelectorAll('.modal-overlay')[1].querySelector('.modal-close').click();
     fixture.detectChanges();
-    clickDetailButton('responsável');
-    expect(fixture.nativeElement.textContent).toContain('Novo responsável');
+    expect(fixture.nativeElement.querySelectorAll('.modal-overlay').length).toBe(1);
   });
+
+  it('saves the assignee picked in the detail selector through the existing service, without a dialog', () => {
+    fixture.detectChanges();
+    component.openDetail(TEST_RMAS[0]);
+    fixture.detectChanges();
+    chooseDetailAssignee('Sem responsável');
+    expect(assigneeUpdates).toEqual([[TEST_RMAS[0].id, { assigneeId: null }]]);
+    expect(fixture.nativeElement.querySelectorAll('.modal-overlay').length).toBe(1);
+    expect(fixture.nativeElement.textContent).not.toContain('Novo responsável');
+  });
+
+  it('shows a failed inline assignment inside the detail modal', () => {
+    failAssignee = true;
+    fixture.detectChanges();
+    component.openDetail(TEST_RMAS[0]);
+    fixture.detectChanges();
+    chooseDetailAssignee('Sem responsável');
+    expect(fixture.nativeElement.querySelector('app-rma-detail-modal [role="alert"]')?.textContent).toContain('Técnico inativo');
+    expect(fixture.nativeElement.querySelector('app-rma-detail-modal')).not.toBeNull();
+  });
+
+  function chooseDetailAssignee(name: string): void {
+    fixture.nativeElement.querySelector('app-rma-detail-modal .rma-detail__assignee-picker .custom-select__trigger').click();
+    fixture.detectChanges();
+    const option = [...fixture.nativeElement.querySelectorAll('app-rma-detail-modal .rma-detail__assignee-picker .custom-select__option')]
+      .find((item: HTMLElement) => item.querySelector('.custom-select__name')?.textContent?.trim() === name) as HTMLButtonElement;
+    option.click();
+    fixture.detectChanges();
+  }
 
   function chooseDetailStatus(status: string): void {
     fixture.nativeElement.querySelector('app-rma-detail-modal .rma-detail__status .custom-select__trigger').click();
@@ -281,11 +324,6 @@ describe('KanbanComponent filters', () => {
     fixture.detectChanges();
   }
 
-  function clickDetailButton(text: string): void {
-    const button = [...fixture.nativeElement.querySelectorAll('app-rma-detail-modal button')].find((item: HTMLButtonElement) => item.textContent?.includes(text)) as HTMLButtonElement;
-    button.click();
-    fixture.detectChanges();
-  }
 
   it('preserves selection and filters when inspecting impediments from the detail modal', () => {
     component.filtersForm.patchValue({ priority: 'HIGH' });

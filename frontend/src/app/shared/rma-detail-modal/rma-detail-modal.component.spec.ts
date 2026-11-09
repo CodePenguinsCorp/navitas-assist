@@ -49,6 +49,12 @@ const fullRma = buildRma({
   ]
 });
 
+const USERS = [
+  { id: 7, username: 'ana', fullName: 'Ana Lima' },
+  { id: 8, username: 'bruno', fullName: 'Bruno Costa' },
+  { id: 9, username: 'bia', fullName: 'Beatriz Souza' }
+];
+
 async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; canUpdateAssignee?: boolean; disabled?: boolean } = {}) {
   await TestBed.configureTestingModule({
     imports: [RmaDetailModalComponent],
@@ -62,6 +68,7 @@ async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; can
   fixture.componentRef.setInput('canUpdateStatus', inputs.canUpdateStatus ?? true);
   fixture.componentRef.setInput('canUpdateAssignee', inputs.canUpdateAssignee ?? true);
   fixture.componentRef.setInput('disabled', inputs.disabled ?? false);
+  fixture.componentRef.setInput('assignableUsers', USERS);
   fixture.detectChanges();
   const host = fixture.nativeElement as HTMLElement;
   const component = fixture.componentInstance;
@@ -244,7 +251,9 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
 
     expect(host.querySelector('app-custom-select.rma-detail__status') !== null).toBe(canUpdateStatus);
     expect(host.querySelector('span.status-chip.rma-detail__status') !== null).toBe(!canUpdateStatus);
-    expect(buttonByText('Atribuir') !== undefined).toBe(canUpdateAssignee);
+    expect(host.querySelector('.rma-detail__assignee-picker') !== null).toBe(canUpdateAssignee);
+    expect(buttonByText('Atribuir')).toBeUndefined();
+    expect(buttonByText('Trocar responsável')).toBeUndefined();
     expect(buttonByText('Ver impedimentos')).toBeDefined();
     expect(host.querySelector('.modal-close')).not.toBeNull();
   });
@@ -252,14 +261,13 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
   it('disables business actions while disabled', async () => {
     const { buttonByText, host } = await setup({ disabled: true, rma: { ...fullRma, assigneeId: 7, assigneeName: 'Ana' } });
 
-    for (const label of ['Trocar responsável', 'Ver impedimentos']) {
-      expect((buttonByText(label) as HTMLButtonElement).disabled, label).toBe(true);
-    }
+    expect((buttonByText('Ver impedimentos') as HTMLButtonElement).disabled).toBe(true);
+    expect(host.querySelector<HTMLButtonElement>('.rma-detail__assignee-picker .custom-select__trigger')!.disabled).toBe(true);
     expect(host.querySelector<HTMLButtonElement>('.rma-detail__status .custom-select__trigger')!.disabled).toBe(true);
     expect(host.querySelector<HTMLButtonElement>('.modal-close')!.disabled).toBe(false);
   });
 
-  it('emits closed, assigneeChange and blockInspect from the buttons', async () => {
+  it('emits closed and blockInspect from the buttons', async () => {
     const rma = { ...fullRma, assigneeId: 7, assigneeName: 'Ana' };
     const { component, buttonByText, host } = await setup({ rma });
     const closed = vi.fn();
@@ -271,13 +279,12 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     component.assigneeChange.subscribe(assigneeChange);
     component.blockInspect.subscribe(blockInspect);
 
-    buttonByText('Trocar responsável')!.click();
     buttonByText('Ver impedimentos')!.click();
     host.querySelector<HTMLButtonElement>('.modal-close')!.click();
     host.querySelector<HTMLElement>('.modal-overlay')!.click();
 
     expect(statusChange).not.toHaveBeenCalled();
-    expect(assigneeChange).toHaveBeenCalledWith(rma);
+    expect(assigneeChange).not.toHaveBeenCalled();
     expect(blockInspect).toHaveBeenCalledWith(rma);
     expect(closed).toHaveBeenCalledTimes(2);
   });
@@ -405,5 +412,104 @@ describe('RmaDetailModalComponent status selector', () => {
     fixture.detectChanges();
 
     expect(host.querySelector('.rma-detail__status [role="listbox"]')).toBeNull();
+  });
+});
+
+describe('RmaDetailModalComponent assignee selector', () => {
+  const assigned = { ...fullRma, assigneeId: 7, assigneeName: 'Ana Lima' };
+  const trigger = (host: HTMLElement) => host.querySelector<HTMLButtonElement>('.rma-detail__assignee-picker .custom-select__trigger')!;
+  const options = (host: HTMLElement) => [...host.querySelectorAll<HTMLButtonElement>('.rma-detail__assignee-picker [role="option"]')];
+  const name = (option: Element) => option.querySelector('.custom-select__name')?.textContent?.trim();
+  const key = (target: Element, value: string) => target.dispatchEvent(new KeyboardEvent('keydown', { key: value, bubbles: true }));
+
+  it('shows the current assignee with avatar and chevron in Informações', async () => {
+    const { host } = await setup({ rma: assigned });
+    const button = trigger(host);
+
+    expect(host.querySelector('.rma-detail__info .rma-detail__assignee-picker')).not.toBeNull();
+    expect(button.querySelector('.avatar')?.textContent?.trim()).toBe('AL');
+    expect(button.querySelector('.custom-select__label')?.textContent?.trim()).toBe('Ana Lima');
+    expect(button.querySelector('.custom-select__icon svg')).not.toBeNull();
+    expect(button.getAttribute('aria-haspopup')).toBe('listbox');
+    expect(button.getAttribute('aria-label')).toBe('Trocar responsável, atual: Ana Lima');
+  });
+
+  it('lists Sem responsável and the eligible users with avatar and username, the current one selected', async () => {
+    const { fixture, host } = await setup({ rma: assigned });
+    trigger(host).click();
+    fixture.detectChanges();
+
+    expect(options(host).map(name)).toEqual(['Sem responsável', 'Ana Lima', 'Bruno Costa', 'Beatriz Souza']);
+    expect(options(host)[0].querySelector('.avatar--empty')).not.toBeNull();
+    expect(options(host)[2].querySelector('.avatar')?.textContent?.trim()).toBe('BC');
+    expect(options(host)[2].querySelector('.custom-select__hint')?.textContent?.trim()).toBe('@bruno');
+    expect(options(host).filter((option) => option.getAttribute('aria-selected') === 'true').map(name)).toEqual(['Ana Lima']);
+  });
+
+  it('keeps a current assignee outside the eligible list visible but not choosable', async () => {
+    const { fixture, host, component } = await setup({ rma: { ...fullRma, assigneeId: 40, assigneeName: 'Carlos Antigo' } });
+    const assigneeChange = vi.fn();
+    component.assigneeChange.subscribe(assigneeChange);
+    expect(trigger(host).textContent).toContain('Carlos Antigo');
+    trigger(host).click();
+    fixture.detectChanges();
+
+    const current = options(host).find((option) => name(option) === 'Carlos Antigo')!;
+    expect(current.getAttribute('aria-disabled')).toBe('true');
+    expect(current.querySelector('.custom-select__hint')?.textContent?.trim()).toBe('Não pode receber novas atribuições');
+    current.click();
+    fixture.detectChanges();
+    expect(assigneeChange).not.toHaveBeenCalled();
+  });
+
+  it('emits the picked person (or null) and ignores the current one', async () => {
+    const { fixture, host, component } = await setup({ rma: assigned });
+    const assigneeChange = vi.fn();
+    component.assigneeChange.subscribe(assigneeChange);
+    const pick = (label: string) => {
+      trigger(host).click();
+      fixture.detectChanges();
+      options(host).find((option) => name(option) === label)!.click();
+      fixture.detectChanges();
+    };
+
+    pick('Ana Lima');
+    pick('Bruno Costa');
+    pick('Sem responsável');
+
+    expect(assigneeChange.mock.calls).toEqual([[{ rma: assigned, assigneeId: 8 }], [{ rma: assigned, assigneeId: null }]]);
+    expect(document.activeElement).toBe(trigger(host));
+  });
+
+  it('moves with arrows and typeahead, and Escape returns focus without choosing', async () => {
+    const { fixture, host, component } = await setup({ rma: assigned });
+    const assigneeChange = vi.fn();
+    component.assigneeChange.subscribe(assigneeChange);
+
+    trigger(host).focus();
+    key(trigger(host), 'ArrowDown');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(name(document.activeElement!)).toBe('Ana Lima');
+    key(document.activeElement!, 'b');
+    expect(name(document.activeElement!)).toBe('Bruno Costa');
+    key(document.activeElement!, 'e');
+    expect(name(document.activeElement!)).toBe('Beatriz Souza');
+    key(document.activeElement!, 'Home');
+    expect(name(document.activeElement!)).toBe('Sem responsável');
+
+    key(document.activeElement!, 'Escape');
+    fixture.detectChanges();
+    expect(host.querySelector('.rma-detail__assignee-picker [role="listbox"]')).toBeNull();
+    expect(document.activeElement).toBe(trigger(host));
+    expect(assigneeChange).not.toHaveBeenCalled();
+  });
+
+  it('shows the action error from the host as an alert', async () => {
+    const { fixture, host } = await setup({ rma: assigned });
+    fixture.componentRef.setInput('actionError', 'Técnico inativo');
+    fixture.detectChanges();
+
+    expect(host.querySelector('[role="alert"]')?.textContent?.trim()).toBe('Técnico inativo');
   });
 });

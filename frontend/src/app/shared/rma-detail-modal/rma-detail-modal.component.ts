@@ -1,7 +1,7 @@
 import { Component, DestroyRef, ElementRef, EventEmitter, HostListener, Output, afterNextRender, computed, inject, input, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { RMA_STATUS_FLOW } from '../../core/mock-data';
-import { RmaResponse, RmaStatus } from '../../core/models';
+import { AssignableUserResponse, RmaResponse, RmaStatus } from '../../core/models';
 import { SlaClockService } from '../../core/services/sla-clock.service';
 import {
   NO_DIAGNOSIS_LABEL,
@@ -41,10 +41,15 @@ export class RmaDetailModalComponent {
   readonly canUpdateStatus = input(false);
   readonly canUpdateAssignee = input(false);
   readonly disabled = input(false);
+  /** Users who can receive the RMA (the host's assignable-users source). */
+  readonly assignableUsers = input<readonly AssignableUserResponse[]>([]);
+  /** Failure of the last action started here, such as an assignment. */
+  readonly actionError = input('');
   @Output() readonly closed = new EventEmitter<void>();
   /** A status picked in the header selector; the host runs its usual status-change flow. */
   @Output() readonly statusChange = new EventEmitter<{ rma: RmaResponse; status: RmaStatus }>();
-  @Output() readonly assigneeChange = new EventEmitter<RmaResponse>();
+  /** A person (or null, unassigned) picked in the inline selector; the host saves it. */
+  @Output() readonly assigneeChange = new EventEmitter<{ rma: RmaResponse; assigneeId: number | null }>();
   @Output() readonly blockInspect = new EventEmitter<RmaResponse>();
   protected readonly clock = inject(SlaClockService);
   protected readonly blockedLabel = blockedLabel;
@@ -76,6 +81,25 @@ export class RmaDetailModalComponent {
       hint: status === this.rma().status ? 'Status atual' : undefined
     }))
   );
+
+  /** Same choices as the former assignment dialog: unassigned plus the eligible users. */
+  protected readonly assigneeOptions = computed<ReadonlyArray<CustomSelectOption<number | null>>>(() => {
+    const rma = this.rma();
+    const users = this.assignableUsers();
+    const options: CustomSelectOption<number | null>[] = [
+      { value: null, label: 'Sem responsável', avatar: '' },
+      ...users.map((user) => ({ value: user.id, label: user.fullName, hint: '@' + user.username, avatar: initialsOf(user.fullName) }))
+    ];
+    if (rma.assigneeId !== null && !users.some((user) => user.id === rma.assigneeId)) {
+      options.push({ value: rma.assigneeId, label: rma.assigneeName ?? 'Responsável atual', avatar: initialsOf(rma.assigneeName), hint: 'Não pode receber novas atribuições', disabled: true });
+    }
+    return options;
+  });
+
+  protected chooseAssignee(assigneeId: unknown): void {
+    const rma = this.rma();
+    if (assigneeId !== rma.assigneeId) this.assigneeChange.emit({ rma, assigneeId: assigneeId as number | null });
+  }
 
   protected chooseStatus(status: unknown): void {
     const rma = this.rma();

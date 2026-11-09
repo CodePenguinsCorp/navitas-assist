@@ -144,7 +144,8 @@ export class KanbanComponent {
   protected readonly loading = signal(true);
   protected readonly pageError = signal('');
   protected readonly statusModalError = signal('');
-  protected readonly assignmentModalError = signal('');
+  /** Failure of an assignment made from the detail selector, shown inside the detail modal. */
+  protected readonly assignmentError = signal('');
   protected readonly viewError = signal('');
   protected readonly viewBusy = signal(false);
   protected readonly activeViewId = signal<number | null>(null);
@@ -164,7 +165,6 @@ export class KanbanComponent {
   private readonly assignableUsersSignal = signal<AssignableUserResponse[]>([]);
   private readonly viewsSignal = signal<KanbanViewResponse[]>([]);
   private readonly pendingStatusRmaSignal = signal<RmaResponse | null>(null);
-  private readonly pendingAssignmentRmaSignal = signal<RmaResponse | null>(null);
 
   protected readonly filtersForm = this.formBuilder.nonNullable.group({
     blocked: ['all' as KanbanFilterValues['blocked']],
@@ -211,7 +211,7 @@ export class KanbanComponent {
     ],
   );
   protected readonly pendingStatusRma = this.pendingStatusRmaSignal.asReadonly();
-  protected readonly pendingAssignmentRma = this.pendingAssignmentRmaSignal.asReadonly();
+  protected readonly assignableUsers = this.assignableUsersSignal.asReadonly();
   protected readonly statusSelectOptions = STATUS_SELECT_OPTIONS;
   protected readonly statusFilterOptions = STATUS_FILTER_OPTIONS;
   protected readonly blockedFilterOptions: ReadonlyArray<CustomSelectOption<KanbanFilterValues['blocked']>> = [
@@ -291,10 +291,6 @@ export class KanbanComponent {
     note: [''],
   });
 
-  protected readonly assignmentForm = this.formBuilder.group({
-    assigneeId: [null as number | null],
-  });
-
   protected readonly viewForm = this.formBuilder.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(80)]],
     defaultView: [false],
@@ -333,6 +329,7 @@ export class KanbanComponent {
 
   protected closeDetail(): void {
     this.detailRmaId.set(null);
+    this.assignmentError.set('');
   }
 
   protected openStatusModal(rma: RmaResponse, status: RmaStatus): void {
@@ -519,32 +516,13 @@ export class KanbanComponent {
       });
   }
 
-  protected openAssignmentModal(rma: RmaResponse): void {
-    if (!this.canUpdateAssignee() || this.bulkBusy() || this.boardUpdatingId() !== null) {
+  /** The detail selector is the whole choice (no extra field), so a pick saves right away. */
+  protected assignFromDetail(rma: RmaResponse, assigneeId: number | null): void {
+    if (!this.canUpdateAssignee() || this.bulkBusy() || this.boardUpdatingId() !== null || assigneeId === rma.assigneeId) {
       return;
     }
 
-    this.pendingAssignmentRmaSignal.set(rma);
-    this.assignmentModalError.set('');
-    this.assignmentForm.reset({ assigneeId: rma.assigneeId });
-  }
-
-  protected closeAssignmentModal(): void {
-    if (this.boardUpdatingId() !== null) {
-      return;
-    }
-
-    this.pendingAssignmentRmaSignal.set(null);
-    this.assignmentModalError.set('');
-  }
-
-  protected saveAssignment(): void {
-    const target = this.pendingAssignmentRmaSignal();
-    if (!target) {
-      return;
-    }
-
-    this.submitAssigneeUpdate(target, this.assignmentForm.getRawValue());
+    this.submitAssigneeUpdate(rma, { assigneeId });
   }
 
   protected startCardDrag(event: DragEvent, rma: RmaResponse): void {
@@ -737,7 +715,7 @@ export class KanbanComponent {
   private submitAssigneeUpdate(target: RmaResponse, payload: RmaAssigneeUpdateRequest): void {
     this.boardUpdatingId.set(target.id);
     this.pageError.set('');
-    this.assignmentModalError.set('');
+    this.assignmentError.set('');
 
     this.rmaService
       .updateAssignee(target.id, payload)
@@ -745,11 +723,10 @@ export class KanbanComponent {
       .subscribe({
         next: (updated) => {
           this.selectedRmaId.set(updated.id);
-          this.pendingAssignmentRmaSignal.set(null);
           this.loadKanban();
         },
         error: (error) => {
-          this.assignmentModalError.set(
+          this.assignmentError.set(
             extractHttpErrorMessage(error, 'Não foi possível atualizar o responsável do RMA.'),
           );
         },

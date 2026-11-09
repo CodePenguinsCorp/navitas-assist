@@ -58,7 +58,7 @@ describe('KanbanComponent detail permissions by profile', () => {
 
     const buttons = [...(modal.nativeElement as HTMLElement).querySelectorAll('.rma-detail__actions button')].map((button) => button.textContent?.trim());
     expect((modal.nativeElement as HTMLElement).querySelector('.rma-detail__actions .rma-detail__status .custom-select__trigger') !== null).toBe(status);
-    expect(buttons.includes('Trocar responsável')).toBe(assignee);
+    expect((modal.nativeElement as HTMLElement).querySelector('.rma-detail__assignee-picker .custom-select__trigger') !== null).toBe(assignee);
     expect(buttons).toContain('Ver impedimentos');
   });
 });
