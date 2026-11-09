@@ -33,11 +33,13 @@ interface Harness {
 describe('NotificationsComponent', () => {
   let fixture: ComponentFixture<NotificationsComponent>;
   let component: Harness;
-  let service: Record<string, ReturnType<typeof vi.fn>> & { unreadCount: ReturnType<typeof signal<number>> };
+  let service: Record<string, ReturnType<typeof vi.fn>> & { unreadCount: ReturnType<typeof signal<number>>; summaryLoaded: ReturnType<typeof signal<boolean>>; summaryLoadFailed: ReturnType<typeof signal<boolean>> };
 
   async function setUp(role: UserRole): Promise<void> {
     service = {
       unreadCount: signal(1),
+      summaryLoaded: signal(true),
+      summaryLoadFailed: signal(false),
       list: vi.fn(() => of([NOTIFICATION])),
       refreshSummary: vi.fn(() => of(1)),
       markRead: vi.fn(() => of({ ...NOTIFICATION, read: true })),

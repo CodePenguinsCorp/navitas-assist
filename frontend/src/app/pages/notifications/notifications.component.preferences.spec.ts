@@ -26,7 +26,7 @@ interface Harness {
 describe('NotificationsComponent preferences', () => {
   let fixture: ComponentFixture<NotificationsComponent>;
   let component: Harness;
-  let service: Record<string, ReturnType<typeof vi.fn>> & { unreadCount: ReturnType<typeof signal<number>> };
+  let service: Record<string, ReturnType<typeof vi.fn>> & { unreadCount: ReturnType<typeof signal<number>>; summaryLoaded: ReturnType<typeof signal<boolean>>; summaryLoadFailed: ReturnType<typeof signal<boolean>> };
 
   const root = (): HTMLElement => fixture.nativeElement.querySelector('.page-surface');
   const text = () => root().textContent!.replace(/[\s ]+/g, ' ').trim();
@@ -44,6 +44,8 @@ describe('NotificationsComponent preferences', () => {
     for (const source of sources.preferences ?? []) listPreferences.mockImplementationOnce(() => source);
     service = {
       unreadCount: signal(0),
+      summaryLoaded: signal(true),
+      summaryLoadFailed: signal(false),
       list: vi.fn(() => of([])),
       refreshSummary: vi.fn(() => of(0)),
       markRead: vi.fn(),

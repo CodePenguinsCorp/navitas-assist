@@ -1,6 +1,6 @@
 import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, catchError, map, of, tap } from 'rxjs';
+import { Observable, catchError, defer, map, of, tap } from 'rxjs';
 import { SKIP_GLOBAL_LOADING } from '../interceptors/loading.interceptor';
 import {
   NotificationEventType,
@@ -19,6 +19,14 @@ export class NotificationService {
 
   /** Unread count shared by the shell badge and the notification center. */
   readonly unreadCount = this.unreadSignal.asReadonly();
+  private readonly summaryLoadedSignal = signal(false);
+  private readonly summaryLoadFailedSignal = signal(false);
+  private latestSummaryRequest = 0;
+
+  /** True once a summary response succeeded; before that the count is unknown, not zero. */
+  readonly summaryLoaded = this.summaryLoadedSignal.asReadonly();
+  /** True while the most recent summary request failed; consumers hide the stale count. */
+  readonly summaryLoadFailed = this.summaryLoadFailedSignal.asReadonly();
 
   list(options: { unreadOnly?: boolean; includeSnoozed?: boolean } = {}): Observable<NotificationResponse[]> {
     let params = new HttpParams();
@@ -32,14 +40,27 @@ export class NotificationService {
     return this.http.get<NotificationResponse[]>('/api/notifications', { params });
   }
 
+  /** Only the most recently started request updates the shared count and its state. */
   refreshSummary(): Observable<number> {
-    return this.http.get<NotificationSummaryResponse>('/api/notifications/summary', {
-      context: new HttpContext().set(SKIP_GLOBAL_LOADING, true)
-    }).pipe(
-      map((summary) => summary.unread),
-      tap((unread) => this.unreadSignal.set(unread)),
-      catchError(() => of(this.unreadSignal()))
-    );
+    return defer(() => {
+      const request = ++this.latestSummaryRequest;
+      const isLatest = () => request === this.latestSummaryRequest;
+      return this.http.get<NotificationSummaryResponse>('/api/notifications/summary', {
+        context: new HttpContext().set(SKIP_GLOBAL_LOADING, true)
+      }).pipe(
+        map((summary) => summary.unread),
+        tap((unread) => {
+          if (!isLatest()) return;
+          this.unreadSignal.set(unread);
+          this.summaryLoadedSignal.set(true);
+          this.summaryLoadFailedSignal.set(false);
+        }),
+        catchError(() => {
+          if (isLatest()) this.summaryLoadFailedSignal.set(true);
+          return of(this.unreadSignal());
+        })
+      );
+    });
   }
 
   markRead(id: number): Observable<NotificationResponse> {

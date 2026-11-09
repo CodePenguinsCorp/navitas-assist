@@ -100,6 +100,11 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
       margin: var(--space-1) 0 0;
     }
 
+    .rule-no-recipients {
+      display: block;
+      margin-top: var(--space-1);
+    }
+
     .failure-error {
       white-space: pre-wrap;
       overflow-wrap: anywhere;
@@ -282,6 +287,10 @@ export class NotificationsComponent {
 
   protected readonly isAdmin = computed(() => this.authService.hasAnyRole(['ADMIN']));
   protected readonly unreadCount = this.notificationService.unreadCount;
+  /** The summary count is real only after its latest request succeeded; the inbox list is not a total. */
+  protected readonly unreadKnown = computed(() =>
+    this.notificationService.summaryLoaded() && !this.notificationService.summaryLoadFailed());
+  protected readonly unreadUnavailable = this.notificationService.summaryLoadFailed;
   protected readonly hasUnread = computed(() => this.notifications().some((notification) => !notification.read));
   protected readonly tabs = computed<NotificationsTab[]>(() => this.isAdmin() ? ['inbox', 'preferences', 'rules'] : ['inbox', 'preferences']);
 
@@ -303,7 +312,7 @@ export class NotificationsComponent {
 
   protected unreadTabLabel(): string {
     const count = this.unreadCount();
-    if (count === 0) return 'Caixa de entrada';
+    if (!this.unreadKnown() || count === 0) return 'Caixa de entrada';
     return `Caixa de entrada (${count} ${count === 1 ? 'não lida' : 'não lidas'})`;
   }
 
@@ -431,6 +440,16 @@ export class NotificationsComponent {
     if (roles && rule.notifyAssignee) return `${roles} + responsável pelo RMA`;
     if (roles) return roles;
     return rule.notifyAssignee ? 'Responsável pelo RMA' : 'Nenhum destinatário';
+  }
+
+  protected hasNoRecipients(rule: Pick<NotificationRuleResponse, 'recipientRoles' | 'notifyAssignee'>): boolean {
+    return rule.recipientRoles.length === 0 && !rule.notifyAssignee;
+  }
+
+  /** Same check on the editor's current values; it informs without blocking the save. */
+  protected editorHasNoRecipients(): boolean {
+    const { roles, notifyAssignee } = this.ruleForm.getRawValue();
+    return this.hasNoRecipients({ recipientRoles: ROLE_OPTIONS.filter((role) => roles[role]), notifyAssignee });
   }
 
   /** Every control is reset from the rule, so nothing is carried over from the previously edited one. */

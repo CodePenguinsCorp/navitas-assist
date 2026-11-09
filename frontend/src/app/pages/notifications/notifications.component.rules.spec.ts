@@ -27,7 +27,7 @@ interface Harness {
 describe('NotificationsComponent rules', () => {
   let fixture: ComponentFixture<NotificationsComponent>;
   let component: Harness;
-  let service: Record<string, ReturnType<typeof vi.fn>> & { unreadCount: ReturnType<typeof signal<number>> };
+  let service: Record<string, ReturnType<typeof vi.fn>> & { unreadCount: ReturnType<typeof signal<number>>; summaryLoaded: ReturnType<typeof signal<boolean>>; summaryLoadFailed: ReturnType<typeof signal<boolean>> };
 
   const root = (): HTMLElement => fixture.nativeElement.querySelector('.page-surface');
   const normalize = (value: string | null | undefined) => (value ?? '').replace(/[\s ]+/g, ' ').trim();
@@ -52,6 +52,8 @@ describe('NotificationsComponent rules', () => {
     for (const source of sources.update ?? []) updateRule.mockImplementationOnce(() => source as never);
     service = {
       unreadCount: signal(0),
+      summaryLoaded: signal(true),
+      summaryLoadFailed: signal(false),
       list: vi.fn(() => of([])),
       refreshSummary: vi.fn(() => of(0)),
       markRead: vi.fn(),
@@ -93,7 +95,7 @@ describe('NotificationsComponent rules', () => {
     expect(table.querySelector('input')).toBeNull();
     expect(table.querySelector('app-custom-select')).toBeNull();
     expect(table.querySelector('button[aria-label="Editar regra SLA vencido"]')).not.toBeNull();
-    expect(cells(table, 'Novo RMA')['Destinatários']).toBe('Nenhum destinatário');
+    expect(cells(table, 'Novo RMA')['Destinatários']).toMatch(/^Nenhum destinatário\b/);
     expect(cells(table, 'Novo RMA')['Situação']).toBe('Inativa');
   });
 
@@ -208,6 +210,36 @@ describe('NotificationsComponent rules', () => {
         'Atualização': '24/10/2026, 13:00 por root'
       });
       expect(text()).toContain('Regra "SLA vencido" atualizada.');
+    });
+
+    // Vermelho: o resumo e o editor não explicam que a regra sem destinatários não entrega a ninguém.
+    it('warns only when a rule has no recipients, in the summary and in the editor, and still saves', async () => {
+      const warning = 'Esta regra não entrega notificações a ninguém.';
+      const assigneeOnly: NotificationRuleResponse = { ...RULE, eventType: 'RMA_ASSIGNED', recipientRoles: [], notifyAssignee: true };
+      await setup({ rules: [of([RULE, SILENT_RULE, assigneeOnly])] });
+      openRules();
+      const table = rulesTable()!;
+      expect(cells(table, 'Novo RMA')['Destinatários']).toContain('Nenhum destinatário');
+      expect(cells(table, 'Novo RMA')['Destinatários']).toContain(warning);
+      expect(cells(table, 'Novo RMA')['Situação']).toBe('Inativa');
+      expect(cells(table, 'SLA vencido')['Destinatários']).not.toContain(warning);
+      expect(cells(table, 'Nova atribuição')['Destinatários']).toBe('Responsável pelo RMA');
+
+      openEditor('SLA vencido');
+      expect(dialog()!.textContent).not.toContain(warning);
+      toggleField('Administrador');
+      expect(dialog()!.textContent).not.toContain(warning);
+      toggleField('Notificar o responsável');
+      expect(dialog()!.textContent).toContain(warning);
+      submit();
+      expect(service['updateRule']).toHaveBeenLastCalledWith('SLA_OVERDUE', {
+        enabled: true, severity: 'CRITICAL', recipientRoles: [], notifyAssignee: false, emailEnabled: false, userMutable: false
+      });
+
+      openEditor('Novo RMA');
+      expect(dialog()!.textContent).toContain(warning);
+      toggleField('Técnico');
+      expect(dialog()!.textContent).not.toContain(warning);
     });
 
     // Vermelho: sem formulário não há como salvar a regra inalterada.

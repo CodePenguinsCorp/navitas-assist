@@ -37,6 +37,10 @@
           <button type="button" class="button-secondary button-secondary--small" (click)="markAllRead()" [disabled]="busy() || !hasUnread()">Marcar todas como lidas</button>
         </div>
 
+        @if (unreadUnavailable()) {
+          <p class="field-hint inbox-limit">Contagem de não lidas indisponível.</p>
+        }
+
         @if (errorMessage()) {
           <div class="panel alert-banner alert-banner--error inbox-feedback" role="alert">
             <strong>{{ errorMessage() }}</strong>
@@ -194,7 +198,12 @@
                     <td>{{ eventLabels[rule.eventType] }}</td>
                     <td><span class="state-dot" [class.is-on]="rule.enabled">{{ rule.enabled ? 'Ativa' : 'Inativa' }}</span></td>
                     <td><span class="mini-chip" [class]="severityClass(rule.severity)">{{ severityLabels[rule.severity] }}</span></td>
-                    <td>{{ recipientsSummary(rule) }}</td>
+                    <td>
+                      {{ recipientsSummary(rule) }}
+                      @if (hasNoRecipients(rule)) {
+                        <small class="field-hint rule-no-recipients">Esta regra não entrega notificações a ninguém.</small>
+                      }
+                    </td>
                     <td>{{ rule.emailEnabled ? 'Sim' : 'Não' }}</td>
                     <td>{{ rule.userMutable ? 'Sim' : 'Não' }}</td>
                     <td>{{ dateTime(rule.updatedAt) }} por {{ rule.updatedBy || 'sistema' }}</td>
@@ -314,6 +323,10 @@
               <input type="checkbox" [formControl]="ruleForm.controls.notifyAssignee" />
               <span>Notificar o responsável pelo RMA</span>
             </label>
+
+            @if (editorHasNoRecipients()) {
+              <small class="field-hint rule-no-recipients">Nenhum destinatário. Esta regra não entrega notificações a ninguém.</small>
+            }
           </fieldset>
 
           <fieldset class="form-section">

@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { AuthUserResponse } from '../core/models';
 import { AuthService } from '../core/services/auth.service';
+import { NotificationService } from '../core/services/notification.service';
 import { AppShellComponent } from './app-shell.component';
 
 const AUTH_USER: AuthUserResponse = {
@@ -102,5 +103,69 @@ describe('AppShellComponent logout', () => {
       expect(button().disabled).toBe(false);
       expect(router.navigateByUrl).toHaveBeenCalledExactlyOnceWith('/login');
     });
+  });
+});
+
+describe('AppShellComponent unread summary', () => {
+  let fixture: ComponentFixture<AppShellComponent>;
+  let http: HttpTestingController;
+  let notifications: NotificationService;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [AppShellComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])]
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    notifications = TestBed.inject(NotificationService);
+    fixture = TestBed.createComponent(AppShellComponent);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => http.verify());
+
+  const bell = () => (fixture.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>('.shell-notifications')!;
+  const badge = () => bell().querySelector('.count-badge');
+  const refresh = (response: { unread: number } | 'fail') => {
+    notifications.refreshSummary().subscribe();
+    const request = http.expectOne('/api/notifications/summary');
+    if (response === 'fail') request.flush({ message: 'erro' }, { status: 500, statusText: 'Server Error' });
+    else request.flush(response);
+    fixture.detectChanges();
+  };
+
+  // Vermelho: antes da primeira resposta o sino anuncia "0 não lida(s)".
+  it('does not announce zero before the first summary response', () => {
+    expect(bell().getAttribute('aria-label')).toBe('Notificações');
+    expect(badge()).toBeNull();
+  });
+
+  // Vermelho: na falha o sino mantém o número antigo e não informa a indisponibilidade.
+  it('hides the stale count on failure and restores it with the label on recovery', () => {
+    refresh({ unread: 3 });
+    expect(bell().getAttribute('aria-label')).toBe('Notificações: 3 não lida(s)');
+    expect(badge()?.textContent?.trim()).toBe('3');
+
+    refresh('fail');
+    expect(bell().getAttribute('aria-label')).toBe('Notificações: Contagem de não lidas indisponível');
+    expect(bell().getAttribute('title')).toBe('Contagem de não lidas indisponível');
+    expect(badge()).toBeNull();
+    expect(bell().classList.contains('has-unread')).toBe(false);
+
+    refresh({ unread: 5 });
+    expect(bell().getAttribute('aria-label')).toBe('Notificações: 5 não lida(s)');
+    expect(badge()?.textContent?.trim()).toBe('5');
+  });
+
+  it('keeps the last count while a refresh after success is pending', () => {
+    refresh({ unread: 2 });
+    notifications.refreshSummary().subscribe();
+    fixture.detectChanges();
+    expect(bell().getAttribute('aria-label')).toBe('Notificações: 2 não lida(s)');
+    expect(badge()?.textContent?.trim()).toBe('2');
+    http.expectOne('/api/notifications/summary').flush({ unread: 1 });
+    fixture.detectChanges();
+    expect(bell().getAttribute('aria-label')).toBe('Notificações: 1 não lida(s)');
+    expect(badge()?.textContent?.trim()).toBe('1');
   });
 });

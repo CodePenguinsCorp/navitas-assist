@@ -8,6 +8,8 @@ import { NAV_GROUPS, ROLE_LABELS } from '../core/mock-data';
 import { AuthService } from '../core/services/auth.service';
 import { NotificationService } from '../core/services/notification.service';
 
+const UNREAD_UNAVAILABLE = 'Contagem de não lidas indisponível';
+
 @Component({
   selector: 'app-shell',
   imports: [RouterLink, RouterLinkActive, RouterOutlet, IconComponent],
@@ -21,6 +23,16 @@ export class AppShellComponent {
 
   protected readonly currentUser = this.authService.currentUser;
   protected readonly unreadNotifications = this.notificationService.unreadCount;
+  /** The count is shown only when the latest summary succeeded; otherwise it is unknown, not zero. */
+  protected readonly unreadKnown = computed(() =>
+    this.notificationService.summaryLoaded() && !this.notificationService.summaryLoadFailed());
+  protected readonly unreadUnavailable = this.notificationService.summaryLoadFailed;
+  protected readonly notificationsLabel = computed(() => {
+    if (this.unreadUnavailable()) return `Notificações: ${UNREAD_UNAVAILABLE}`;
+    if (!this.unreadKnown()) return 'Notificações';
+    return `Notificações: ${this.unreadNotifications()} não lida(s)`;
+  });
+  protected readonly unreadUnavailableMessage = UNREAD_UNAVAILABLE;
   protected readonly loggingOut = signal(false);
   protected readonly logoutError = signal('');
   protected readonly initials = initialsOf;

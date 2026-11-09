@@ -30,7 +30,7 @@ type Source<T> = Observable<T> | (() => Observable<T>);
 describe('NotificationsComponent inbox loading', () => {
   let fixture: ComponentFixture<NotificationsComponent>;
   let component: Harness;
-  let service: Record<string, ReturnType<typeof vi.fn>> & { unreadCount: ReturnType<typeof signal<number>> };
+  let service: Record<string, ReturnType<typeof vi.fn>> & { unreadCount: ReturnType<typeof signal<number>>; summaryLoaded: ReturnType<typeof signal<boolean>>; summaryLoadFailed: ReturnType<typeof signal<boolean>> };
   let clock: ReturnType<typeof signal<number>>;
 
   const root = (): HTMLElement => fixture.nativeElement.querySelector('.page-surface');
@@ -48,6 +48,8 @@ describe('NotificationsComponent inbox loading', () => {
     }
     service = {
       unreadCount: signal(sources.unread ?? 1),
+      summaryLoaded: signal(true),
+      summaryLoadFailed: signal(false),
       list,
       refreshSummary: vi.fn(() => of(1)),
       markRead: vi.fn(() => sources.markRead ?? of({ ...NOTIFICATION, read: true })),
@@ -280,6 +282,31 @@ describe('NotificationsComponent inbox loading', () => {
       const panel = document.getElementById(tabs()[0].getAttribute('aria-controls')!)!;
       expect(panel.getAttribute('role')).toBe('tabpanel');
       expect(panel.getAttribute('aria-labelledby')).toBe(tabs()[0].id);
+    });
+
+    // Vermelho: antes do resumo a aba usa o zero inicial; na falha mostra o número antigo sem avisar.
+    it('shows no count before the summary loads and hides a stale count on failure', async () => {
+      await setup({ unread: 0 });
+      service.summaryLoaded.set(false);
+      render();
+      expect(tabs()[0].textContent!.trim()).toBe('Caixa de entrada');
+      expect(text()).not.toContain('Contagem de não lidas indisponível');
+
+      service.unreadCount.set(4);
+      service.summaryLoadFailed.set(true);
+      render();
+      expect(tabs()[0].textContent!.trim()).toBe('Caixa de entrada');
+      expect(text()).toContain('Contagem de não lidas indisponível');
+
+      service.summaryLoaded.set(true);
+      render();
+      expect(tabs()[0].textContent!.trim()).toBe('Caixa de entrada');
+      expect(text()).toContain('Contagem de não lidas indisponível');
+
+      service.summaryLoadFailed.set(false);
+      render();
+      expect(tabs()[0].textContent!.trim()).toBe('Caixa de entrada (4 não lidas)');
+      expect(text()).not.toContain('Contagem de não lidas indisponível');
     });
 
     it.each(['ADMIN', 'TECHNICIAN'] as const)('keeps stable panels for every notification tab for %s', async (role) => {
