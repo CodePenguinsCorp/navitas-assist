@@ -38,6 +38,41 @@
   --control-padding-x: var(--space-4);
   --disabled-opacity: 0.65;
 
+  /* Button tones: every variant has a filled background, text >= 4.5:1 on it. */
+  --btn-primary-bg: linear-gradient(180deg, #2b78b6 0%, var(--brand-blue) 100%);
+  --btn-primary-bg-hover: var(--brand-blue-deep);
+  --btn-primary-shadow: 0 1px 2px rgba(27, 79, 122, 0.24);
+  --btn-secondary-bg: #e2eefa;
+  --btn-secondary-bg-hover: #cde2f5;
+  --btn-secondary-bg-pressed: #bcd8f0;
+  --btn-secondary-border: #9cc3e4;
+  --btn-secondary-border-hover: #6fa6d4;
+  --btn-secondary-text: var(--brand-blue-deep);
+  --btn-secondary-text-hover: #163f62;
+  --btn-neutral-bg: #eaeff5;
+  --btn-neutral-bg-hover: #dce4ed;
+  --btn-neutral-border: #c8d3df;
+  --btn-neutral-border-hover: #aebdcd;
+  --btn-neutral-text: #34495f;
+  --btn-neutral-text-hover: #263a50;
+  --btn-danger-bg: #fde4e8;
+  --btn-danger-bg-hover: #f9cfd6;
+  --btn-danger-border: #e8aab5;
+  --btn-danger-border-hover: #d98897;
+  --btn-danger-text: #8a3646;
+  --btn-danger-text-hover: #6f2a37;
+  --btn-success-bg: #e0f2e7;
+  --btn-success-bg-hover: #cbe9d6;
+  --btn-success-border: #9fd0b2;
+  --btn-success-border-hover: #78ba92;
+  --btn-success-text: #2a5f40;
+  --btn-success-text-hover: #214d34;
+  --btn-icon-bg: var(--brand-tint);
+  --btn-icon-bg-hover: #d9e9f7;
+  --btn-icon-border: #c9dceb;
+  --btn-icon-danger-bg: #fff0f2;
+  --btn-icon-danger-bg-hover: #fde0e5;
+
   /* Spacing scale. */
   --space-1: 4px;
   --space-2: 8px;
@@ -170,16 +205,17 @@ a {
   min-height: var(--control-height);
   padding: 0 var(--control-padding-x);
   border-radius: var(--radius-sm);
-  transition: background-color 160ms ease, border-color 160ms ease;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }
 
 .button-primary {
-  background: var(--brand-blue);
+  background: var(--btn-primary-bg);
   color: #ffffff;
+  box-shadow: var(--btn-primary-shadow);
 }
 
 .button-primary:hover:not(:disabled) {
-  background: var(--brand-blue-deep);
+  background: var(--btn-primary-bg-hover);
 }
 
 .button-primary:disabled,
@@ -188,15 +224,56 @@ a {
   cursor: not-allowed;
 }
 
+/* Tinted tones: each variant only swaps these local properties. */
 .button-secondary {
-  background: var(--surface);
-  color: var(--brand-blue-deep);
-  border: 1px solid var(--line);
+  --_bg: var(--btn-secondary-bg);
+  --_bg-hover: var(--btn-secondary-bg-hover);
+  --_border: var(--btn-secondary-border);
+  --_border-hover: var(--btn-secondary-border-hover);
+  --_text: var(--btn-secondary-text);
+  --_text-hover: var(--btn-secondary-text-hover);
+  background: var(--_bg);
+  color: var(--_text);
+  border: 1px solid var(--_border);
 }
 
 .button-secondary:hover:not(:disabled) {
-  background: var(--surface-alt);
-  border-color: var(--line-hover);
+  background: var(--_bg-hover);
+  border-color: var(--_border-hover);
+  color: var(--_text-hover);
+}
+
+/* Toggles that are open or on read one step darker than hover. The doubled class
+   outranks page rules such as .kanban-filters__toggle.is-open, which still use the old light tint. */
+.button-secondary.button-secondary:is([aria-expanded="true"], [aria-pressed="true"]):not(:disabled) {
+  background: var(--btn-secondary-bg-pressed);
+  border-color: var(--brand-blue);
+  color: var(--btn-secondary-text-hover);
+}
+
+/* A count chip inside a tinted button keeps its own edge. */
+.button-secondary .mini-chip {
+  background: var(--surface);
+}
+
+/* Dismiss in a dialog footer (Cancelar next to the main action): neutral slate, not blue. */
+.form-actions:has(> .button-primary) > .button-secondary:not(.button-secondary--danger, .button-secondary--success),
+.button-secondary--neutral {
+  --_bg: var(--btn-neutral-bg);
+  --_bg-hover: var(--btn-neutral-bg-hover);
+  --_border: var(--btn-neutral-border);
+  --_border-hover: var(--btn-neutral-border-hover);
+  --_text: var(--btn-neutral-text);
+  --_text-hover: var(--btn-neutral-text-hover);
+}
+
+.button-secondary--success {
+  --_bg: var(--btn-success-bg);
+  --_bg-hover: var(--btn-success-bg-hover);
+  --_border: var(--btn-success-border);
+  --_border-hover: var(--btn-success-border-hover);
+  --_text: var(--btn-success-text);
+  --_text-hover: var(--btn-success-text-hover);
 }
 
 .button-secondary--small {
@@ -213,17 +290,17 @@ a {
 }
 
 .button-secondary--danger {
-  border-color: var(--danger-line);
-  color: var(--danger-text);
-}
-
-.button-secondary--danger:hover:not(:disabled) {
-  background: var(--danger-bg);
-  border-color: var(--danger-line);
+  --_bg: var(--btn-danger-bg);
+  --_bg-hover: var(--btn-danger-bg-hover);
+  --_border: var(--btn-danger-border);
+  --_border-hover: var(--btn-danger-border-hover);
+  --_text: var(--btn-danger-text);
+  --_text-hover: var(--btn-danger-text-hover);
 }
 
 .button-primary--danger {
   background: var(--danger-text);
+  box-shadow: 0 1px 2px rgba(127, 52, 65, 0.24);
 }
 
 .button-primary--danger:hover:not(:disabled) {
@@ -1458,18 +1535,21 @@ fieldset.form-section {
   width: 40px;
   height: 40px;
   padding: 0;
-  border: 1px solid var(--line);
+  border: 1px solid var(--btn-neutral-border);
   border-radius: 999px;
-  background: #ffffff;
-  color: var(--brand-blue-deep);
+  background: var(--btn-neutral-bg);
+  color: var(--btn-neutral-text);
   font-size: 1.2rem;
   line-height: 1;
   text-align: center;
   flex-shrink: 0;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 
 .modal-close:hover {
-  background: var(--surface-alt);
+  background: var(--btn-neutral-bg-hover);
+  border-color: var(--btn-neutral-border-hover);
+  color: var(--btn-neutral-text-hover);
 }
 
 .modal-close svg {
@@ -2075,26 +2155,32 @@ fieldset.field-group > span {
   place-items: center;
   width: var(--control-height-sm);
   height: var(--control-height-sm);
-  border: 1px solid var(--line);
+  --_bg: var(--btn-icon-bg);
+  --_bg-hover: var(--btn-icon-bg-hover);
+  --_border: var(--btn-icon-border);
+  --_border-hover: var(--btn-secondary-border);
+  --_text: var(--btn-secondary-text);
+  --_text-hover: var(--btn-secondary-text-hover);
+  border: 1px solid var(--_border);
   border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--brand-blue-deep);
+  background: var(--_bg);
+  color: var(--_text);
   transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 
 .icon-button:hover:not(:disabled) {
-  background: var(--surface-alt);
-  border-color: var(--line-hover);
+  background: var(--_bg-hover);
+  border-color: var(--_border-hover);
+  color: var(--_text-hover);
 }
 
 .icon-button--danger {
-  color: var(--danger-text);
-  border-color: var(--danger-line);
-}
-
-.icon-button--danger:hover:not(:disabled) {
-  background: var(--danger-bg);
-  border-color: var(--danger-line);
+  --_bg: var(--btn-icon-danger-bg);
+  --_bg-hover: var(--btn-icon-danger-bg-hover);
+  --_border: var(--danger-line);
+  --_border-hover: var(--btn-danger-border);
+  --_text: var(--btn-danger-text);
+  --_text-hover: var(--btn-danger-text-hover);
 }
 
 .icon-button:disabled {
@@ -2122,8 +2208,11 @@ fieldset.field-group > span {
   opacity: var(--disabled-opacity);
 }
 
+/* Blocked actions keep their resting tone on hover, so hover never promises a click. */
 .row-action[aria-disabled="true"]:hover {
-  background: var(--surface);
+  background: var(--_bg);
+  border-color: var(--_border);
+  color: var(--_text);
 }
 
 /* Fixed layer (like the select menu) so .table-wrap's overflow never clips it. */
