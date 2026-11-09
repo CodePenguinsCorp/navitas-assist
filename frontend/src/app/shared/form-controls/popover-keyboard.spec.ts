@@ -140,13 +140,14 @@ describe('Shared popover keyboard dismissal', () => {
       it('does not consume an unrelated key', () => {
         const trigger = open(triggerSelector);
         const touched = host[definition.name].touched;
-        const event = key(trigger, 'ArrowDown');
+        // Arrow keys now move into the select's list, so an ordinary letter is the unrelated key.
+        const event = key(trigger, 'x');
         expect(page.querySelector(panelSelector)).not.toBeNull();
         expect(page.ownerDocument.activeElement).toBe(trigger);
         expect(host[definition.name].touched).toBe(touched);
         expect(host[definition.name].value).toBe(definition.value);
         expect(event.defaultPrevented).toBe(false);
-        expect(host.parentKeys).toEqual(['ArrowDown']);
+        expect(host.parentKeys).toEqual(['x']);
       });
 
       it('does not react to Escape in another instance of the same control', () => {

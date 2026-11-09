@@ -49,7 +49,6 @@
 .rma-detail__from { color: var(--muted); text-decoration: line-through; }
 
 .rma-detail__side { display: grid; gap: 0.8rem; }
-.rma-detail__side > .status-chip { justify-self: start; }
 .rma-detail__info { overflow: hidden; }
 .rma-detail__info-title { margin: 0; padding: 0.55rem 1rem; border-bottom: 1px solid var(--line); background: var(--surface-alt); font-size: 0.72rem; }
 .rma-detail__info dl { display: grid; gap: 0.7rem; margin: 0; padding: 0.85rem 1rem; }

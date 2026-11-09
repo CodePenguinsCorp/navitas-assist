@@ -188,11 +188,11 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
 
   it('formats status, priority, invoice and purchase like the list', async () => {
     // Hoje: span.rma-detail__status, prioridade em .mini-chip, nota "—" e compra desconhecida "Não informada".
-    const { host, sidePairs } = await setup();
+    const { host, sidePairs } = await setup({ canUpdateStatus: false });
     const side = host.querySelector('.rma-detail__side')!;
 
-    expect(side.querySelector('.status-chip[data-status="TRIAGE"]')?.textContent?.trim()).toBe('Triagem');
-    expect(side.querySelector('.rma-detail__status')).toBeNull();
+    expect(host.querySelector('.rma-detail__actions .status-chip[data-status="TRIAGE"]')?.textContent?.trim()).toBe('Triagem');
+    expect(side.querySelector('.status-chip')).toBeNull();
     expect(side.querySelector('.priority-tag[data-priority="HIGH"] .priority-bars')).not.toBeNull();
     expect(side.querySelector('.priority-tag')?.textContent?.trim()).toBe('Alta');
     const pairs = sidePairs();
@@ -242,7 +242,8 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
   ])('shows status and assignee actions only when allowed and always Ver impedimentos (status %s, assignee %s)', async (canUpdateStatus, canUpdateAssignee) => {
     const { buttonByText, host } = await setup({ canUpdateStatus, canUpdateAssignee, rma: { ...fullRma, assigneeId: null } });
 
-    expect(buttonByText('Alterar status') !== undefined).toBe(canUpdateStatus);
+    expect(host.querySelector('app-custom-select.rma-detail__status') !== null).toBe(canUpdateStatus);
+    expect(host.querySelector('span.status-chip.rma-detail__status') !== null).toBe(!canUpdateStatus);
     expect(buttonByText('Atribuir') !== undefined).toBe(canUpdateAssignee);
     expect(buttonByText('Ver impedimentos')).toBeDefined();
     expect(host.querySelector('.modal-close')).not.toBeNull();
@@ -251,13 +252,14 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
   it('disables business actions while disabled', async () => {
     const { buttonByText, host } = await setup({ disabled: true, rma: { ...fullRma, assigneeId: 7, assigneeName: 'Ana' } });
 
-    for (const label of ['Alterar status', 'Trocar responsável', 'Ver impedimentos']) {
+    for (const label of ['Trocar responsável', 'Ver impedimentos']) {
       expect((buttonByText(label) as HTMLButtonElement).disabled, label).toBe(true);
     }
+    expect(host.querySelector<HTMLButtonElement>('.rma-detail__status .custom-select__trigger')!.disabled).toBe(true);
     expect(host.querySelector<HTMLButtonElement>('.modal-close')!.disabled).toBe(false);
   });
 
-  it('emits closed, statusChange, assigneeChange and blockInspect', async () => {
+  it('emits closed, assigneeChange and blockInspect from the buttons', async () => {
     const rma = { ...fullRma, assigneeId: 7, assigneeName: 'Ana' };
     const { component, buttonByText, host } = await setup({ rma });
     const closed = vi.fn();
@@ -269,13 +271,12 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     component.assigneeChange.subscribe(assigneeChange);
     component.blockInspect.subscribe(blockInspect);
 
-    buttonByText('Alterar status')!.click();
     buttonByText('Trocar responsável')!.click();
     buttonByText('Ver impedimentos')!.click();
     host.querySelector<HTMLButtonElement>('.modal-close')!.click();
     host.querySelector<HTMLElement>('.modal-overlay')!.click();
 
-    expect(statusChange).toHaveBeenCalledWith(rma);
+    expect(statusChange).not.toHaveBeenCalled();
     expect(assigneeChange).toHaveBeenCalledWith(rma);
     expect(blockInspect).toHaveBeenCalledWith(rma);
     expect(closed).toHaveBeenCalledTimes(2);
@@ -295,5 +296,114 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     await fixture.whenStable();
 
     expect(document.activeElement).toBe(host.querySelector('.rma-detail'));
+  });
+});
+
+describe('RmaDetailModalComponent status selector', () => {
+  const trigger = (host: HTMLElement) => host.querySelector<HTMLButtonElement>('.rma-detail__status .custom-select__trigger')!;
+  const options = (host: HTMLElement) => [...host.querySelectorAll<HTMLButtonElement>('.rma-detail__status [role="option"]')];
+  const key = (target: Element, name: string) => target.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true }));
+
+  async function openMenu(fixture: ComponentFixture<RmaDetailModalComponent>, host: HTMLElement) {
+    trigger(host).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  it('shows the current status as a pill with a chevron that announces a listbox', async () => {
+    const { host } = await setup();
+    const button = trigger(host);
+
+    expect(button.textContent?.trim()).toBe('Triagem');
+    expect(button.getAttribute('data-status')).toBe('TRIAGE');
+    expect(button.getAttribute('aria-haspopup')).toBe('listbox');
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    expect(button.getAttribute('aria-label')).toBe('Alterar status, atual: Triagem');
+    expect(button.querySelector('.custom-select__icon svg')).not.toBeNull();
+  });
+
+  it('lists every stage, marking the current one, in a listbox', async () => {
+    const { fixture, host } = await setup();
+    await openMenu(fixture, host);
+
+    const menu = host.querySelector('.rma-detail__status [role="listbox"]')!;
+    expect(trigger(host).getAttribute('aria-expanded')).toBe('true');
+    expect(trigger(host).getAttribute('aria-controls')).toBe(menu.id);
+    expect(options(host).map((option) => option.getAttribute('data-status'))).toEqual([
+      'RECEIVED', 'TRIAGE', 'IN_DIAGNOSIS', 'WAITING_PART', 'IN_REPAIR', 'IN_TESTS', 'COMPLETED', 'RETURNED', 'IRREPARABLE'
+    ]);
+    const current = options(host).find((option) => option.getAttribute('aria-selected') === 'true')!;
+    expect(current.getAttribute('data-status')).toBe('TRIAGE');
+    expect(current.querySelector('.custom-select__hint')?.textContent?.trim()).toBe('Status atual');
+  });
+
+  it('emits the picked status for the existing flow and returns focus to the pill', async () => {
+    const { fixture, host, component } = await setup();
+    const statusChange = vi.fn();
+    component.statusChange.subscribe(statusChange);
+    await openMenu(fixture, host);
+
+    options(host).find((option) => option.getAttribute('data-status') === 'IN_REPAIR')!.click();
+    fixture.detectChanges();
+
+    expect(statusChange).toHaveBeenCalledExactlyOnceWith({ rma: fullRma, status: 'IN_REPAIR' });
+    expect(host.querySelector('.rma-detail__status [role="listbox"]')).toBeNull();
+    expect(document.activeElement).toBe(trigger(host));
+    expect(trigger(host).textContent?.trim()).toBe('Triagem');
+  });
+
+  it('does not emit when the current status is picked again', async () => {
+    const { fixture, host, component } = await setup();
+    const statusChange = vi.fn();
+    component.statusChange.subscribe(statusChange);
+    await openMenu(fixture, host);
+
+    options(host).find((option) => option.getAttribute('data-status') === 'TRIAGE')!.click();
+    fixture.detectChanges();
+
+    expect(statusChange).not.toHaveBeenCalled();
+  });
+
+  it('works from the keyboard: arrows open and move, Enter picks, Escape closes back to the pill', async () => {
+    const { fixture, host, component } = await setup();
+    const statusChange = vi.fn();
+    component.statusChange.subscribe(statusChange);
+
+    trigger(host).focus();
+    key(trigger(host), 'ArrowDown');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(document.activeElement?.getAttribute('data-status')).toBe('TRIAGE');
+
+    key(document.activeElement!, 'ArrowDown');
+    expect(document.activeElement?.getAttribute('data-status')).toBe('IN_DIAGNOSIS');
+    key(document.activeElement!, 'End');
+    expect(document.activeElement?.getAttribute('data-status')).toBe('IRREPARABLE');
+    key(document.activeElement!, 'ArrowDown');
+    expect(document.activeElement?.getAttribute('data-status')).toBe('RECEIVED');
+    key(document.activeElement!, 'r');
+    expect(document.activeElement?.getAttribute('data-status')).toBe('IN_REPAIR');
+
+    // A focused button turns Enter into a click.
+    (document.activeElement as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(statusChange).toHaveBeenCalledExactlyOnceWith({ rma: fullRma, status: 'IN_REPAIR' });
+
+    await openMenu(fixture, host);
+    key(document.activeElement!, 'Escape');
+    fixture.detectChanges();
+    expect(host.querySelector('.rma-detail__status [role="listbox"]')).toBeNull();
+    expect(document.activeElement).toBe(trigger(host));
+    expect(statusChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes when clicking outside', async () => {
+    const { fixture, host } = await setup();
+    await openMenu(fixture, host);
+
+    document.body.click();
+    fixture.detectChanges();
+
+    expect(host.querySelector('.rma-detail__status [role="listbox"]')).toBeNull();
   });
 });

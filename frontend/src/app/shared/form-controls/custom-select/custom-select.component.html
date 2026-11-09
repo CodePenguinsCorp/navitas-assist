@@ -1,15 +1,23 @@
-<div class="custom-select" [class.is-open]="isOpen()" [class.is-disabled]="isDisabled()" [class.custom-select--compact]="size() === 'compact'">
+@let current = selectedOption();
+<div class="custom-select" [class.is-open]="isOpen()" [class.is-disabled]="isDisabled()" [class.custom-select--compact]="size() === 'compact'" [class.custom-select--status]="appearance() === 'status'" [class.custom-select--person]="appearance() === 'person'">
   <button
     type="button"
     class="custom-select__trigger"
+    aria-haspopup="listbox"
     [disabled]="isDisabled()"
     [attr.aria-expanded]="isOpen()"
+    [attr.aria-controls]="isOpen() ? menuId : null"
     [attr.aria-label]="ariaLabel()"
     [attr.aria-describedby]="ariaDescribedBy()"
     [attr.aria-invalid]="ariaInvalid() || null"
+    [attr.data-status]="current?.status ?? null"
     (click)="toggle()"
+    (keydown)="handleTriggerKeydown($event)"
   >
-    <span class="custom-select__label">{{ selectedOption()?.label || placeholder() }}</span>
+    @if (current && current.avatar !== undefined) {
+      <span class="avatar" [class.avatar--empty]="!current.avatar" aria-hidden="true">{{ current.avatar || '–' }}</span>
+    }
+    <span class="custom-select__label">{{ current?.label || placeholder() }}</span>
     <span class="custom-select__icon" aria-hidden="true">
       <svg viewBox="0 0 20 20" focusable="false">
         <path d="M5.5 7.5 10 12l4.5-4.5" />
@@ -18,15 +26,28 @@
   </button>
 
   @if (isOpen()) {
-    <div class="custom-select__menu" role="listbox" [class.is-above]="menuPosition()?.above" [style.top.px]="menuPosition()?.top" [style.left.px]="menuPosition()?.left" [style.width.px]="menuPosition()?.width" [style.max-height.px]="menuPosition()?.maxHeight">
+    <div class="custom-select__menu" role="listbox" [id]="menuId" [attr.aria-label]="ariaLabel()" [class.is-above]="menuPosition()?.above" [style.top.px]="menuPosition()?.top" [style.left.px]="menuPosition()?.left" [style.width.px]="menuPosition()?.width" [style.max-height.px]="menuPosition()?.maxHeight" (keydown)="handleMenuKeydown($event)">
       @for (option of options(); track $index) {
         <button
           type="button"
+          role="option"
+          tabindex="-1"
           class="custom-select__option"
           [class.is-selected]="isSelected(option)"
+          [attr.aria-selected]="isSelected(option)"
+          [attr.aria-disabled]="option.disabled || null"
+          [attr.data-status]="option.status ?? null"
           (click)="selectOption(option)"
         >
-          <span>{{ option.label }}</span>
+          @if (option.avatar !== undefined) {
+            <span class="avatar" [class.avatar--empty]="!option.avatar" aria-hidden="true">{{ option.avatar || '–' }}</span>
+          }
+          <span class="custom-select__text">
+            <span class="custom-select__name">{{ option.label }}</span>
+            @if (option.hint) {
+              <small class="custom-select__hint">{{ option.hint }}</small>
+            }
+          </span>
           @if (isSelected(option)) {
             <svg class="custom-select__check" viewBox="0 0 20 20" aria-hidden="true">
               <path d="m4.5 10.5 3.2 3.2L15.5 6" />

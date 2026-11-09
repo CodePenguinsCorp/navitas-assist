@@ -1,6 +1,7 @@
 import { Component, DestroyRef, ElementRef, EventEmitter, HostListener, Output, afterNextRender, computed, inject, input, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { RmaResponse } from '../../core/models';
+import { RMA_STATUS_FLOW } from '../../core/mock-data';
+import { RmaResponse, RmaStatus } from '../../core/models';
 import { SlaClockService } from '../../core/services/sla-clock.service';
 import {
   NO_DIAGNOSIS_LABEL,
@@ -14,6 +15,7 @@ import {
   rmaItemFacts,
   sectionLabel
 } from '../../core/utils/rma-detail';
+import { CustomSelectComponent, CustomSelectOption } from '../form-controls/custom-select/custom-select.component';
 import { RmaSlaBadgeComponent } from '../rma-sla-badge/rma-sla-badge.component';
 import {
   formatDate,
@@ -30,7 +32,7 @@ import {
 
 @Component({
   selector: 'app-rma-detail-modal',
-  imports: [RmaSlaBadgeComponent, RouterLink],
+  imports: [CustomSelectComponent, RmaSlaBadgeComponent, RouterLink],
   templateUrl: './rma-detail-modal.component.html',
   styleUrl: './rma-detail-modal.component.css'
 })
@@ -40,7 +42,8 @@ export class RmaDetailModalComponent {
   readonly canUpdateAssignee = input(false);
   readonly disabled = input(false);
   @Output() readonly closed = new EventEmitter<void>();
-  @Output() readonly statusChange = new EventEmitter<RmaResponse>();
+  /** A status picked in the header selector; the host runs its usual status-change flow. */
+  @Output() readonly statusChange = new EventEmitter<{ rma: RmaResponse; status: RmaStatus }>();
   @Output() readonly assigneeChange = new EventEmitter<RmaResponse>();
   @Output() readonly blockInspect = new EventEmitter<RmaResponse>();
   protected readonly clock = inject(SlaClockService);
@@ -64,6 +67,20 @@ export class RmaDetailModalComponent {
   protected readonly repairFacts = repairFacts;
   protected readonly noDiagnosisLabel = NO_DIAGNOSIS_LABEL;
   protected readonly activity = computed(() => rmaHistory(this.rma()));
+  /** Every stage but the current one can be chosen (the same rule as the status dialog). */
+  protected readonly statusOptions = computed<ReadonlyArray<CustomSelectOption<RmaStatus>>>(() =>
+    RMA_STATUS_FLOW.map((status) => ({
+      value: status,
+      label: statusLabel(status),
+      status,
+      hint: status === this.rma().status ? 'Status atual' : undefined
+    }))
+  );
+
+  protected chooseStatus(status: unknown): void {
+    const rma = this.rma();
+    if (status !== rma.status) this.statusChange.emit({ rma, status: status as RmaStatus });
+  }
 
   private readonly panel = viewChild.required<ElementRef<HTMLElement>>('panel');
   private readonly previousFocus = document.activeElement as HTMLElement | null;

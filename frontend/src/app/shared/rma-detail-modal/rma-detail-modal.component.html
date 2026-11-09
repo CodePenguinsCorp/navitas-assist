@@ -14,7 +14,18 @@
 
         <div class="rma-detail__actions">
           @if (canUpdateStatus()) {
-            <button type="button" class="button-secondary" [disabled]="disabled()" (click)="statusChange.emit(rma())">Alterar status</button>
+            <app-custom-select
+              class="rma-detail__status"
+              appearance="status"
+              [actionMenu]="true"
+              [ariaLabel]="'Alterar status, atual: ' + statusLabel(rma().status)"
+              [options]="statusOptions()"
+              [value]="rma().status"
+              [disabled]="disabled()"
+              (valueChange)="chooseStatus($event)"
+            />
+          } @else {
+            <span class="status-chip rma-detail__status" [attr.data-status]="rma().status">{{ statusLabel(rma().status) }}</span>
           }
           @if (canUpdateAssignee()) {
             <button type="button" class="button-secondary" [disabled]="disabled()" (click)="assigneeChange.emit(rma())">{{ rma().assigneeId ? 'Trocar responsável' : 'Atribuir' }}</button>
@@ -143,7 +154,6 @@
       </div>
 
       <aside class="rma-detail__side">
-        <span class="status-chip" [attr.data-status]="rma().status">{{ statusLabel(rma().status) }}</span>
         <section class="rma-detail__info">
           <h3 class="rma-detail__info-title">Informações</h3>
           <dl>

@@ -240,7 +240,7 @@ describe('KanbanComponent filters', () => {
     fixture.detectChanges();
     component.openDetail(TEST_RMAS[0]);
     fixture.detectChanges();
-    clickDetailButton('Alterar status');
+    chooseDetailStatus('IN_REPAIR');
     expect(fixture.nativeElement.querySelectorAll('.modal-overlay').length).toBe(2);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     fixture.detectChanges();
@@ -252,17 +252,34 @@ describe('KanbanComponent filters', () => {
     expect(fixture.nativeElement.querySelector('app-rma-detail-modal')).toBeNull();
   });
 
+  it('opens the status dialog with the stage picked in the detail selector', () => {
+    fixture.detectChanges();
+    component.openDetail(TEST_RMAS[0]);
+    fixture.detectChanges();
+    chooseDetailStatus('IN_REPAIR');
+    expect(fixture.nativeElement.textContent).toContain('Novo status');
+    expect(component.statusForm.getRawValue()).toEqual({ status: 'IN_REPAIR', note: '' });
+    expect(fixture.nativeElement.querySelector('#kanbanStatusNote')).not.toBeNull();
+  });
+
   it('opens the status and assignment modals from the detail modal', () => {
     fixture.detectChanges();
     component.openDetail(TEST_RMAS[0]);
     fixture.detectChanges();
-    clickDetailButton('Alterar status');
+    chooseDetailStatus('IN_REPAIR');
     expect(fixture.nativeElement.textContent).toContain('Novo status');
     fixture.nativeElement.querySelectorAll('.modal-overlay')[1].querySelector('.modal-close').click();
     fixture.detectChanges();
     clickDetailButton('responsável');
     expect(fixture.nativeElement.textContent).toContain('Novo responsável');
   });
+
+  function chooseDetailStatus(status: string): void {
+    fixture.nativeElement.querySelector('app-rma-detail-modal .rma-detail__status .custom-select__trigger').click();
+    fixture.detectChanges();
+    fixture.nativeElement.querySelector(`app-rma-detail-modal .custom-select__option[data-status="${status}"]`).click();
+    fixture.detectChanges();
+  }
 
   function clickDetailButton(text: string): void {
     const button = [...fixture.nativeElement.querySelectorAll('app-rma-detail-modal button')].find((item: HTMLButtonElement) => item.textContent?.includes(text)) as HTMLButtonElement;
@@ -445,6 +462,7 @@ interface KanbanHarness {
   applyBulkResults(results: BulkRmaResult[]): void;
   filtersForm: FormGroup;
   viewForm: FormGroup;
+  statusForm: FormGroup;
   filteredRmas: Signal<RmaResponse[]>;
   activeViewId: Signal<number | null>;
   viewError: Signal<string>;

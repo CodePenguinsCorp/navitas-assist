@@ -2463,3 +2463,131 @@ tr:focus-visible .open-hint {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* Custom select extras: hint line, avatars, disabled options, and the status pill and person triggers.
+   Chained classes outrank the component's own rules, which load after this file. */
+.custom-select__text {
+  display: grid;
+  flex: 1;
+  gap: 0.1rem;
+  min-width: 0;
+  text-align: left;
+}
+
+.custom-select__hint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.custom-select .custom-select__option.is-selected .custom-select__hint {
+  color: inherit;
+}
+
+.custom-select .custom-select__option .avatar {
+  width: 26px;
+  height: 26px;
+}
+
+.custom-select .custom-select__option[aria-disabled='true'],
+.custom-select .custom-select__option[aria-disabled='true']:hover {
+  background: transparent;
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.custom-select .custom-select__option:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--brand-sky);
+}
+
+/* Status menu: each stage keeps its hue; the current one is tinted, not filled. */
+.custom-select__option[data-status] .custom-select__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.custom-select__option[data-status] .custom-select__name::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--tone);
+}
+
+.custom-select.custom-select--status .custom-select__option.is-selected,
+.custom-select.custom-select--person .custom-select__option.is-selected {
+  background: var(--brand-tint);
+  color: var(--brand-blue-deep);
+}
+
+.custom-select.custom-select--status .custom-select__menu,
+.custom-select.custom-select--person .custom-select__menu {
+  min-width: min(260px, calc(100vw - 32px));
+}
+
+app-custom-select:has(> .custom-select--status) {
+  display: inline-block;
+  width: auto;
+}
+
+.custom-select.custom-select--status .custom-select__trigger {
+  min-height: var(--control-height-sm);
+  gap: var(--space-2);
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border-color: color-mix(in srgb, var(--tone, #5b6c80) 42%, #ffffff);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--tone, #5b6c80) 12%, #ffffff);
+  color: color-mix(in srgb, var(--tone, #5b6c80) 66%, #000000);
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.custom-select.custom-select--status .custom-select__trigger:hover:not(:disabled),
+.custom-select.custom-select--status.is-open .custom-select__trigger {
+  border-color: color-mix(in srgb, var(--tone, #5b6c80) 70%, #ffffff);
+  background: color-mix(in srgb, var(--tone, #5b6c80) 20%, #ffffff);
+}
+
+.custom-select.custom-select--status .custom-select__trigger:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.custom-select--status .custom-select__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.custom-select--status .custom-select__label::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--tone, #5b6c80);
+}
+
+.custom-select.custom-select--person .custom-select__trigger {
+  min-height: var(--control-height-sm);
+  gap: var(--space-2);
+  padding: 0 var(--space-2) 0 var(--space-1);
+  border-color: transparent;
+  background: transparent;
+  font-weight: 600;
+}
+
+.custom-select.custom-select--person .custom-select__trigger:hover:not(:disabled),
+.custom-select.custom-select--person.is-open .custom-select__trigger {
+  border-color: var(--line);
+  background: var(--surface-alt);
+}
+
+.custom-select--person .custom-select__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

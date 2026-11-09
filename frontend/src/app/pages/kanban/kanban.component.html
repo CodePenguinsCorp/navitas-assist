@@ -275,7 +275,7 @@
     [canUpdateAssignee]="canUpdateAssignee()"
     [disabled]="bulkBusy() || boardUpdatingId() !== null"
     (closed)="closeDetail()"
-    (statusChange)="openStatusModal($event, $event.status)"
+    (statusChange)="openStatusModal($event.rma, $event.status)"
     (assigneeChange)="openAssignmentModal($event)"
     (blockInspect)="blockPanel.open($event.id)"
   />
