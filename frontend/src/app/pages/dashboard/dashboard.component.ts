@@ -1,5 +1,6 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
 import { Subscription, finalize, forkJoin, of } from 'rxjs';
 import {
   CLOSED_RMA_STATUSES,
@@ -7,11 +8,9 @@ import {
   RMA_STATUS_LABELS
 } from '../../core/mock-data';
 import {
-  MetricCard,
   RmaPriority,
   RmaResponse,
   RmaStatus,
-  RmaStatusHistoryResponse,
   UserSummaryResponse,
   WarrantyStatus
 } from '../../core/models';
@@ -19,10 +18,21 @@ import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
 import { IconComponent, IconName } from '../../shared/icon/icon.component';
-import { initialsOf } from '../../core/utils/rma-ui';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { compareRmasForQueue, initialsOf } from '../../core/utils/rma-ui';
 import { formatBusinessDateTime as formatDateTime, formatDateOnly } from '../../core/utils/date';
 
+const QUEUE_SIZE = 5;
+
+interface DashboardIndicator {
+  label: string;
+  value: string;
+  detail: string;
+  icon: IconName;
+}
+
 interface QueueRow {
+  id: number;
   code: string;
   client: string;
   entryDate: string;
@@ -34,14 +44,17 @@ interface QueueRow {
 
 interface AuditRow {
   id: string;
+  rmaId: number;
   code: string;
-  status: string;
   statusCode: RmaStatus;
-  detail: string;
+  label: string;
+  by: string;
+  note: string | null;
   time: string;
 }
 
 interface RecentRmaRow {
+  id: number;
   code: string;
   client: string;
   owner: string;
@@ -50,23 +63,82 @@ interface RecentRmaRow {
   updatedAt: string;
 }
 
-interface DashboardMetric extends MetricCard {
-  icon: IconName;
-  toneClass: string;
-  meter: number | null;
-}
-
 @Component({
   selector: 'app-dashboard',
-  imports: [IconComponent],
+  imports: [IconComponent, PageHeaderComponent, RouterLink],
   templateUrl: './dashboard.component.html',
-  styles: [':host { display: block; }']
+  styles: [`
+    :host { display: block; }
+
+    .dashboard-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: var(--space-3);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .dashboard-summary__item {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: start;
+      gap: var(--space-1) var(--space-3);
+      padding: var(--space-3) var(--space-4);
+    }
+
+    .dashboard-summary__item > .icon-tile { grid-row: span 2; }
+
+    .dashboard-summary__label {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .dashboard-summary__value {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+      overflow-wrap: anywhere;
+    }
+
+    .dashboard-summary__value strong {
+      color: var(--brand-blue-deep);
+      font-size: 1.15rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .dashboard-grid > .panel,
+    .dashboard-recent { min-width: 0; }
+
+    .dashboard-scope {
+      margin: var(--space-1) 0 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .dashboard-audit__body {
+      display: grid;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+
+    .dashboard-audit__note {
+      margin: 0;
+      padding: var(--space-1) var(--space-3);
+      border-left: 3px solid var(--line);
+      border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+      background: var(--surface-alt);
+      font-size: 0.85rem;
+      overflow-wrap: anywhere;
+    }
+  `]
 })
 export class DashboardComponent {
   private readonly authService = inject(AuthService);
   private readonly catalogService = inject(CatalogService);
   private readonly rmaService = inject(RmaService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly isAdmin = this.authService.hasAnyRole(['ADMIN']);
   private loadRequest?: Subscription;
 
   protected readonly loading = signal(true);
@@ -79,65 +151,60 @@ export class DashboardComponent {
   private readonly productTotalSignal = signal(0);
   private readonly userTotalSignal = signal(0);
 
-  protected readonly metrics = computed<DashboardMetric[]>(() => {
-    const rmas = this.rmasSignal();
-    const clients = this.clientTotalSignal();
-    const products = this.productTotalSignal();
-    const users = this.userTotalSignal();
+  private readonly activeRmas = computed(() =>
+    this.rmasSignal().filter((rma) => !CLOSED_RMA_STATUSES.includes(rma.status))
+  );
 
-    const activeRmas = rmas.filter((rma) => !CLOSED_RMA_STATUSES.includes(rma.status));
+  protected readonly indicators = computed<DashboardIndicator[]>(() => {
+    const rmas = this.rmasSignal();
+    const activeRmas = this.activeRmas();
     const initialQueue = rmas.filter((rma) => rma.status === 'RECEIVED' || rma.status === 'TRIAGE');
     const rmaItems = rmas.flatMap((rma) => rma.items);
     const inWarrantyCount = rmaItems.filter((item) => item.warrantyStatus === WarrantyStatus.IN_WARRANTY).length;
     const pendingWarrantyCount = rmaItems.filter((item) => item.warrantyStatus === WarrantyStatus.PENDING).length;
     const warrantyRate = rmaItems.length === 0 ? 0 : Math.round((inWarrantyCount / rmaItems.length) * 100);
-    const catalogTotal = clients + products + users;
+    const catalog = [
+      `${this.clientTotalSignal()} ${this.clientTotalSignal() === 1 ? 'cliente' : 'clientes'}`,
+      `${this.productTotalSignal()} ${this.productTotalSignal() === 1 ? 'produto' : 'produtos'}`,
+      ...(this.isAdmin ? [`${this.userTotalSignal()} ${this.userTotalSignal() === 1 ? 'usuário' : 'usuários'}`] : [])
+    ];
 
     return [
       {
-        label: 'RMAs ativos',
+        label: 'RMAs em andamento',
         value: String(activeRmas.length),
-        variation: `${rmas.length} registros no total`,
-        tone: 'brand',
-        icon: 'clipboard',
-        toneClass: '',
-        meter: rmas.length === 0 ? null : Math.round((activeRmas.length / rmas.length) * 100)
+        detail: `de ${rmas.length} ${rmas.length === 1 ? 'registrado' : 'registrados'}`,
+        icon: 'clipboard'
       },
       {
-        label: 'Produtos em garantia',
-        value: `${warrantyRate}%`,
-        variation: `${inWarrantyCount} de ${rmaItems.length} itens · ${pendingWarrantyCount} pendentes`,
-        tone: 'sky',
-        icon: 'shield',
-        toneClass: 'tone-success',
-        meter: warrantyRate
-      },
-      {
-        label: 'Fila inicial',
+        label: 'Fila inicial (Recebido e Triagem)',
         value: String(initialQueue.length),
-        variation: `${countHighPriority(initialQueue)} com prioridade alta`,
-        tone: 'slate',
-        icon: 'inbox',
-        toneClass: 'tone-warning',
-        meter: null
+        detail: `· ${countHighPriority(initialQueue)} com prioridade alta`,
+        icon: 'inbox'
+      },
+      {
+        label: 'Itens em garantia',
+        value: `${warrantyRate}%`,
+        detail: `· ${inWarrantyCount} de ${rmaItems.length} ${rmaItems.length === 1 ? 'item' : 'itens'} · ${pendingWarrantyCount} ${pendingWarrantyCount === 1 ? 'pendente' : 'pendentes'}, em todos os RMAs registrados`,
+        icon: 'shield'
       },
       {
         label: 'Cadastros',
-        value: String(catalogTotal),
-        variation: `${clients} clientes · ${products} produtos${users > 0 ? ` · ${users} usuários` : ''}`,
-        tone: 'light',
-        icon: 'layers',
-        toneClass: 'tone-slate',
-        meter: null
+        value: catalog.join(' · '),
+        detail: '',
+        icon: 'layers'
       }
     ];
   });
 
+  protected readonly activeCount = computed(() => this.activeRmas().length);
+
   protected readonly queue = computed<QueueRow[]>(() =>
-    [...this.rmasSignal()]
+    [...this.activeRmas()]
       .sort(compareRmasForQueue)
-      .slice(0, 5)
+      .slice(0, QUEUE_SIZE)
       .map((rma) => ({
+        id: rma.id,
         code: rma.code,
         client: rma.clientName,
         entryDate: formatDateOnly(rma.entryDate),
@@ -150,20 +217,17 @@ export class DashboardComponent {
 
   protected readonly auditEvents = computed<AuditRow[]>(() =>
     this.rmasSignal()
-      .flatMap((rma) =>
-        rma.statusHistory.map((event) => ({
-          rmaCode: rma.code,
-          event
-        }))
-      )
+      .flatMap((rma) => rma.statusHistory.map((event) => ({ rma, event })))
       .sort((left, right) => compareDateStrings(right.event.changedAt, left.event.changedAt))
       .slice(0, 4)
-      .map(({ rmaCode, event }) => ({
-        id: `${rmaCode}-${event.changedAt}-${event.status}`,
-        code: rmaCode,
-        status: RMA_STATUS_LABELS[event.status],
+      .map(({ rma, event }) => ({
+        id: `${rma.code}-${event.changedAt}-${event.status}`,
+        rmaId: rma.id,
+        code: rma.code,
         statusCode: event.status,
-        detail: event.note?.trim() || event.changedBy,
+        label: `Status registrado: ${RMA_STATUS_LABELS[event.status]}`,
+        by: event.changedBy,
+        note: event.note?.trim() || null,
         time: formatDateTime(event.changedAt)
       }))
   );
@@ -173,6 +237,7 @@ export class DashboardComponent {
       .sort((left, right) => compareDateStrings(right.updatedAt, left.updatedAt))
       .slice(0, 4)
       .map((rma) => ({
+        id: rma.id,
         code: rma.code,
         client: rma.clientName,
         owner: extractOwner(rma),
@@ -195,7 +260,7 @@ export class DashboardComponent {
     this.loadRequest?.unsubscribe();
     this.loading.set(true);
 
-    const usersRequest = this.authService.hasAnyRole(['ADMIN'])
+    const usersRequest = this.isAdmin
       ? this.catalogService.getUserSummary()
       : of<UserSummaryResponse>({ total: 0, active: 0, admins: 0, roles: 0 });
 
@@ -229,26 +294,6 @@ function countHighPriority(rmas: RmaResponse[]): number {
   return rmas.filter((rma) => rma.priority === 'HIGH').length;
 }
 
-function compareRmasForQueue(left: RmaResponse, right: RmaResponse): number {
-  const priorityDiff = priorityWeight(right.priority) - priorityWeight(left.priority);
-  if (priorityDiff !== 0) {
-    return priorityDiff;
-  }
-
-  return compareDateStrings(left.entryDate, right.entryDate);
-}
-
-function priorityWeight(priority: RmaPriority): number {
-  switch (priority) {
-    case 'HIGH':
-      return 3;
-    case 'MEDIUM':
-      return 2;
-    default:
-      return 1;
-  }
-}
-
 function compareDateStrings(left: string | null, right: string | null): number {
   return parseDateValue(left) - parseDateValue(right);
 }
@@ -263,12 +308,4 @@ function parseDateValue(value: string | null): number {
 
 function extractOwner(rma: RmaResponse): string {
   return rma.assigneeName?.trim() || 'Sem responsável';
-}
-
-function latestStatusUpdate(history: RmaStatusHistoryResponse[]): RmaStatusHistoryResponse | null {
-  if (history.length === 0) {
-    return null;
-  }
-
-  return [...history].sort((left, right) => compareDateStrings(right.changedAt, left.changedAt))[0] ?? null;
 }

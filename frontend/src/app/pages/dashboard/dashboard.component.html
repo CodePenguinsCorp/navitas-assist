@@ -1,9 +1,5 @@
 <section class="page-surface">
-  <section class="page-heading">
-    <div>
-      <h1>Dashboard</h1>
-    </div>
-  </section>
+  <app-page-header heading="Dashboard" singular="RMA" plural="RMAs" />
 
   @if (loadFailed()) {
     <article class="panel alert-banner alert-banner--error" role="alert">
@@ -13,52 +9,53 @@
   } @else if (!hasLoaded()) {
     <article class="panel" role="status">Carregando dashboard...</article>
   } @else {
-    <section class="stats-grid stats-grid--four">
-      @for (metric of metrics(); track metric.label) {
-        <article class="panel stat-card">
-          <span class="icon-tile" [class]="'icon-tile ' + metric.toneClass"><app-icon [name]="metric.icon" [size]="20" /></span>
-          <span>{{ metric.label }}</span>
-          <strong>{{ metric.value }}</strong>
-          @if (metric.meter !== null) {
-            <span class="meter" [class]="'meter ' + metric.toneClass" aria-hidden="true"><span [style.width.%]="metric.meter"></span></span>
-          }
-          <small>{{ metric.variation }}</small>
-        </article>
+    <ul class="dashboard-summary" aria-label="Indicadores do dashboard">
+      @for (indicator of indicators(); track indicator.label) {
+        <li class="panel dashboard-summary__item">
+          <span class="icon-tile" aria-hidden="true"><app-icon [name]="indicator.icon" [size]="20" /></span>
+          <span class="dashboard-summary__label">{{ indicator.label }}</span>
+          <p class="dashboard-summary__value"><strong>{{ indicator.value }}</strong> {{ indicator.detail }}</p>
+        </li>
       }
-    </section>
+    </ul>
 
-    <section class="two-column-grid">
+    <section class="two-column-grid dashboard-grid">
       <article class="table-card panel">
-        <h3>Fila</h3>
+        <h3>Fila prioritária</h3>
+        @if (activeCount() > queue().length) {
+          <p class="dashboard-scope">{{ queue().length }} primeiros de {{ activeCount() }} RMAs em andamento</p>
+        }
         @if (queue().length === 0) {
           <div class="empty-state">
             <span class="icon-tile"><app-icon name="inbox" [size]="20" /></span>
-            <p>Nenhum RMA na fila.</p>
+            <p>Nenhum RMA em andamento.</p>
           </div>
         } @else {
-          <table>
-            <thead>
-              <tr>
-                <th>RMA</th>
-                <th>Cliente</th>
-                <th>Entrada</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of queue(); track item.code) {
+          <div class="table-wrap">
+            <table>
+              <thead>
                 <tr>
-                  <td>
-                    <strong class="table-title code-text">{{ item.code }}</strong>
-                    <span class="priority-tag" [attr.data-priority]="item.priorityCode"><span class="priority-bars" [attr.data-priority]="item.priorityCode" aria-hidden="true"><i></i><i></i><i></i></span>{{ item.priority }}</span>
-                  </td>
-                  <td>{{ item.client }}</td>
-                  <td>{{ item.entryDate }}</td>
-                  <td><span class="status-chip" [attr.data-status]="item.statusCode">{{ item.status }}</span></td>
+                  <th>RMA</th>
+                  <th>Cliente</th>
+                  <th>Entrada</th>
+                  <th>Status</th>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @for (item of queue(); track item.id) {
+                  <tr>
+                    <td>
+                      <a class="table-title code-text" routerLink="/rmas" [queryParams]="{ rma: item.id }">{{ item.code }}</a>
+                      <span class="priority-tag" [attr.data-priority]="item.priorityCode"><span class="priority-bars" [attr.data-priority]="item.priorityCode" aria-hidden="true"><i></i><i></i><i></i></span>{{ item.priority }}</span>
+                    </td>
+                    <td>{{ item.client }}</td>
+                    <td>{{ item.entryDate }}</td>
+                    <td><span class="status-chip" [attr.data-status]="item.statusCode">{{ item.status }}</span></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
         }
       </article>
 
@@ -73,9 +70,12 @@
           <ol class="activity-list">
             @for (event of auditEvents(); track event.id) {
               <li class="timeline-entry activity-item" [attr.data-status]="event.statusCode">
-                <div>
-                  <strong><span class="code-text">{{ event.code }}</span><span class="status-chip" [attr.data-status]="event.statusCode">{{ event.status }}</span></strong>
-                  <span>{{ event.detail }}</span>
+                <div class="dashboard-audit__body">
+                  <strong><a class="code-text" routerLink="/rmas" [queryParams]="{ rma: event.rmaId }">{{ event.code }}</a> {{ event.label }}</strong>
+                  @if (event.note) {
+                    <blockquote class="dashboard-audit__note">{{ event.note }}</blockquote>
+                  }
+                  <dl class="meta-list"><div><dt>Alterado por</dt><dd>{{ event.by }}</dd></div></dl>
                 </div>
                 <time>{{ event.time }}</time>
               </li>
@@ -85,7 +85,7 @@
       </article>
     </section>
 
-    <article class="table-card panel">
+    <article class="table-card panel dashboard-recent">
       <h3>Últimos RMAs</h3>
       @if (recentRmas().length === 0) {
         <div class="empty-state">
@@ -93,26 +93,28 @@
           <p>Nenhum RMA registrado.</p>
         </div>
       } @else {
-        <table>
-          <thead>
-            <tr>
-              <th>RMA</th>
-              <th>Cliente</th>
-              <th>Responsável</th>
-              <th>Atualizado</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (rma of recentRmas(); track rma.code) {
+        <div class="table-wrap">
+          <table>
+            <thead>
               <tr>
-                <td><strong class="code-text">{{ rma.code }}</strong></td>
-                <td>{{ rma.client }}</td>
-                <td><span class="person"><span class="avatar" [class.avatar--empty]="!rma.hasOwner" aria-hidden="true">{{ rma.hasOwner ? rma.ownerInitials : '–' }}</span><span>{{ rma.owner }}</span></span></td>
-                <td>{{ rma.updatedAt }}</td>
+                <th>RMA</th>
+                <th>Cliente</th>
+                <th>Responsável</th>
+                <th>Atualizado</th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (rma of recentRmas(); track rma.id) {
+                <tr>
+                  <td><a class="code-text" routerLink="/rmas" [queryParams]="{ rma: rma.id }">{{ rma.code }}</a></td>
+                  <td>{{ rma.client }}</td>
+                  <td><span class="person"><span class="avatar" [class.avatar--empty]="!rma.hasOwner" aria-hidden="true">{{ rma.hasOwner ? rma.ownerInitials : '–' }}</span><span>{{ rma.owner }}</span></span></td>
+                  <td>{{ rma.updatedAt }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       }
     </article>
   }
