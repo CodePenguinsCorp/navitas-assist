@@ -1,20 +1,22 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { RmaResponse } from '../../core/models';
+import { RmaResponse, UserRole } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
+import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { RmaBlockPanelComponent } from './rma-block-panel.component';
 
 describe('RmaBlockPanelComponent', () => {
   let fixture: ComponentFixture<RmaBlockPanelComponent>;
   let http: HttpTestingController;
-  let writable: boolean;
+  let role: UserRole;
 
   beforeEach(async () => {
-    writable = true;
+    role = 'TECHNICIAN';
     await TestBed.configureTestingModule({ imports: [RmaBlockPanelComponent], providers: [
       provideHttpClient(), provideHttpClientTesting(),
-      { provide: AuthService, useValue: { hasAnyRole: () => writable } },
+      { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(role) } },
     ] }).compileComponents();
     fixture = TestBed.createComponent(RmaBlockPanelComponent);
     http = TestBed.inject(HttpTestingController);
@@ -61,7 +63,7 @@ describe('RmaBlockPanelComponent', () => {
   });
 
   it('shows current and resolved history to VIEWER without mutation controls', () => {
-    writable = false;
+    role = 'VIEWER';
     load({ ...RMA, currentBlock: BLOCK, blockHistory: [BLOCK, { ...BLOCK, id: 8, reason: 'Bloqueio anterior', resolvedBy: 'desk', resolvedAt: '2026-10-20T12:00:00Z', resolutionNote: 'Resolvido anteriormente' }] });
     expect(fixture.nativeElement.textContent).toContain('Peça pendente');
     expect(fixture.nativeElement.textContent).toContain('Resolvido anteriormente');
@@ -126,6 +128,146 @@ describe('RmaBlockPanelComponent', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('RMA-2');
     expect(fixture.nativeElement.textContent).not.toContain('RMA-2026-000001');
+  });
+
+  const render = () => { fixture.componentRef.injector.get(ChangeDetectorRef).markForCheck(); fixture.detectChanges(); };
+  const dialog = (): HTMLDialogElement => fixture.nativeElement.querySelector('dialog');
+  const form = (): HTMLFormElement => dialog().querySelector('form')!;
+  const actions = () => fixture.componentInstance as unknown as { save(): void; close(): void };
+  const cancelButton = () => [...dialog().querySelectorAll('button')].find((button) => button.textContent?.trim() === 'Cancelar');
+  const setField = (name: string, value: string) => {
+    const input = form().querySelector<HTMLInputElement | HTMLTextAreaElement>(`[formControlName="${name}"]`)!;
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    render();
+    return input;
+  };
+  const submit = () => { form().dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); render(); };
+
+  it.each((['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as UserRole[]).flatMap((role) => [false, true].map((blocked) => ({ role, blocked }))))('preserves $role permissions with blocked=$blocked', ({ role: profile, blocked }) => {
+    role = profile;
+    load(blocked ? { ...RMA, currentBlock: BLOCK, blockHistory: [BLOCK] } : RMA);
+    expect(dialog().open).toBe(true);
+    expect(dialog().querySelector('form') !== null).toBe(profile !== 'VIEWER');
+    expect(dialog().textContent).toContain('O período bloqueado continua contando no SLA.');
+    if (profile === 'VIEWER') {
+      actions().save();
+      http.expectNone((request) => request.method === 'POST' || request.method === 'PATCH');
+    }
+  });
+
+  it('preserves the save guards before loading and during a write', () => {
+    actions().save();
+    http.expectNone((request) => request.method !== 'GET');
+    load();
+    setField('reason', '  Aguardando peça  ');
+    setField('category', '  Peças  ');
+    submit();
+    const request = http.expectOne('/api/rmas/1/blocks');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ reason: 'Aguardando peça', category: 'Peças' });
+    actions().save();
+    http.expectNone('/api/rmas/1/blocks');
+    actions().close();
+    const escape = new Event('cancel', { cancelable: true });
+    dialog().dispatchEvent(escape);
+    expect(escape.defaultPrevented).toBe(true);
+    expect(dialog().open).toBe(true);
+    expect(dialog().querySelector<HTMLButtonElement>('[autofocus]')!.disabled).toBe(true);
+    request.flush({ ...RMA, currentBlock: BLOCK, blockHistory: [BLOCK] });
+    render();
+    expect(dialog().open).toBe(true);
+    expect(dialog().textContent).toContain('Peça pendente');
+  });
+
+  it.each([
+    { blocked: false, message: 'RMA is already blocked.', expected: 'O RMA já foi bloqueado. Feche e abra o painel para atualizar.' },
+    { blocked: true, message: 'RMA block is no longer active.', expected: 'Este impedimento já foi resolvido. Feche e abra o painel para atualizar.' }
+  ])('preserves the conflict message and values with blocked=$blocked', ({ blocked, message, expected }) => {
+    load(blocked ? { ...RMA, currentBlock: BLOCK, blockHistory: [BLOCK] } : RMA);
+    const input = setField(blocked ? 'resolutionNote' : 'reason', '  Texto preservado  ');
+    submit();
+    const request = http.expectOne(blocked ? '/api/rmas/1/blocks/9' : '/api/rmas/1/blocks');
+    if (blocked) expect(request.request.body).toEqual({ resolutionNote: 'Texto preservado' });
+    request.flush({ message }, { status: 400, statusText: 'Bad Request' });
+    render();
+    expect(dialog().querySelector('[role="alert"]')?.textContent).toContain(expected);
+    expect(input.value).toBe('  Texto preservado  ');
+    expect(input.disabled).toBe(false);
+    expect(dialog().open).toBe(true);
+  });
+
+  // Vermelho: não há rodapé com Cancelar antes da ação de bloquear ou desbloquear.
+  it.each([
+    { blocked: false, primary: 'Bloquear RMA', legend: 'Bloquear RMA' },
+    { blocked: true, primary: 'Desbloquear RMA', legend: 'Resolver impedimento' }
+  ])('puts Cancelar before $primary and closes without a write', ({ blocked, primary, legend }) => {
+    load(blocked ? { ...RMA, currentBlock: BLOCK, blockHistory: [BLOCK] } : RMA);
+    expect([...form().querySelectorAll('button')].map((button) => button.textContent?.trim())).toEqual(['Cancelar', primary]);
+    expectCancelBeforePrimary(dialog());
+    expect(form().querySelector('legend')?.textContent?.trim()).toBe(legend);
+    expect(form().querySelector('[type="submit"]')?.textContent?.trim()).toBe(primary);
+    cancelButton()!.click();
+    render();
+    expect(dialog().open).toBe(false);
+    http.expectNone((request) => request.method === 'POST' || request.method === 'PATCH');
+  });
+
+  // Vermelho: a validação aparece só no alerta geral, sem mensagem associada ao campo.
+  it.each([
+    { field: 'reason', value: '', expected: 'Informe o motivo do impedimento.' },
+    { field: 'reason', value: '   ', expected: 'Informe o motivo do impedimento.' },
+    { field: 'reason', value: 'x'.repeat(1001), expected: 'Use até 1000 caracteres.' },
+    { field: 'category', value: 'x'.repeat(81), expected: 'Use até 80 caracteres.' },
+    { field: 'resolutionNote', value: '', expected: 'Informe a nota de resolução.' },
+    { field: 'resolutionNote', value: '   ', expected: 'Informe a nota de resolução.' },
+    { field: 'resolutionNote', value: 'x'.repeat(1001), expected: 'Use até 1000 caracteres.' }
+  ])('shows existing validation beside $field ($expected)', ({ field, value, expected }) => {
+    load(field === 'resolutionNote' ? { ...RMA, currentBlock: BLOCK, blockHistory: [BLOCK] } : RMA);
+    expect(form().querySelector('[role="alert"]')).toBeNull();
+    if (field === 'category') setField('reason', 'Aguardando peça');
+    const input = setField(field, value);
+    submit();
+    const group = input.closest('.field-group')!;
+    expect(group.textContent).toContain(expected);
+    const error = group.querySelector<HTMLElement>('[role="alert"]')!;
+    expect(input.getAttribute('aria-describedby')?.split(' ')).toContain(error.id);
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(dialog().querySelector('p.field-error[role="alert"]')).toBeNull();
+    http.expectNone((request) => request.method === 'POST' || request.method === 'PATCH');
+    setField(field, 'Texto válido');
+    expect(group.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  // Vermelho: save grava um alerta genérico que duplicaria as mensagens locais.
+  it.each([false, true])('does not duplicate field validation with a general alert (blocked=%s)', (blocked) => {
+    load(blocked ? { ...RMA, currentBlock: BLOCK, blockHistory: [BLOCK] } : RMA);
+    submit();
+    expect(dialog().querySelector('p.field-error[role="alert"]')).toBeNull();
+    http.expectNone((request) => request.method === 'POST' || request.method === 'PATCH');
+  });
+
+  // Vermelho: o novo botão Cancelar não existe para ficar desabilitado durante a escrita.
+  it.each([false, true])('disables the new cancel action while writing (blocked=%s)', (blocked) => {
+    load(blocked ? { ...RMA, currentBlock: BLOCK, blockHistory: [BLOCK] } : RMA);
+    const input = setField(blocked ? 'resolutionNote' : 'reason', 'Texto mantido');
+    submit();
+    const request = http.expectOne(blocked ? '/api/rmas/1/blocks/9' : '/api/rmas/1/blocks');
+    try {
+      expect(cancelButton()?.disabled).toBe(true);
+      cancelButton()!.click();
+      actions().close();
+      render();
+      expect(dialog().open).toBe(true);
+    } finally {
+      request.flush({ message: 'Gravação recusada' }, { status: 400, statusText: 'Bad Request' });
+      render();
+    }
+    expect(input.value).toBe('Texto mantido');
+    expect(dialog().querySelector('[role="alert"]')?.textContent).toContain('Gravação recusada');
+    expect(cancelButton()?.disabled).toBe(false);
+    cancelButton()!.click();
+    expect(dialog().open).toBe(false);
   });
 });
 

@@ -1,6 +1,6 @@
 import { Component, DestroyRef, ElementRef, EventEmitter, Output, ViewChild, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription, finalize } from 'rxjs';
 import { RmaResponse } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
@@ -58,6 +58,16 @@ export class RmaBlockPanelComponent {
     this.dialog.nativeElement.close();
   }
 
+  protected hasError(control: AbstractControl): boolean {
+    return control.invalid && (control.dirty || control.touched);
+  }
+
+  protected textError(control: AbstractControl, requiredMessage: string): string {
+    const maxLength = control.getError('maxlength') as { requiredLength: number } | null;
+    if (maxLength) return `Use até ${maxLength.requiredLength} caracteres.`;
+    return requiredMessage;
+  }
+
   protected cancel(event: Event): void {
     event.preventDefault();
     this.close();
@@ -69,7 +79,6 @@ export class RmaBlockPanelComponent {
     const form = rma.currentBlock ? this.resolveForm : this.blockForm;
     if (form.invalid) {
       form.markAllAsTouched();
-      this.error.set('Informe o motivo ou a resolução com até 1000 caracteres e categoria com até 80.');
       return;
     }
     const request = rma.currentBlock

@@ -25,21 +25,21 @@ import { blockDateTime, blockDuration } from '../../core/utils/rma-block';
             <li class="record-card">
               <div class="record-card__title">
                 <span class="mini-chip" [class.priority-high]="!block.resolvedAt" [class.warranty-ok]="!!block.resolvedAt">{{ block.resolvedAt ? 'Resolvido' : 'Bloqueado' }}</span>
-                <strong>{{ block.category || 'Sem categoria' }}</strong>
-                <time>{{ dateTime(block.blockedAt) }}</time>
               </div>
-              <p>{{ block.reason }}</p>
               <dl class="meta-list">
+                <div class="block-history__wide"><dt>Motivo</dt><dd>{{ block.reason }}</dd></div>
+                <div><dt>Categoria</dt><dd>{{ block.category || 'Sem categoria' }}</dd></div>
+                <div><dt>Início</dt><dd><time [attr.datetime]="block.blockedAt">{{ dateTime(block.blockedAt) }}</time></dd></div>
                 <div><dt>Bloqueado por</dt><dd>{{ block.blockedBy }}</dd></div>
+                <div><dt>Duração</dt><dd>{{ duration(block, clock.now()) }}</dd></div>
                 @if (block.resolvedAt) {
-                  <div><dt>Resolvido em</dt><dd>{{ dateTime(block.resolvedAt) }}</dd></div>
+                  <div><dt>Resolvido em</dt><dd><time [attr.datetime]="block.resolvedAt">{{ dateTime(block.resolvedAt) }}</time></dd></div>
                   <div><dt>Resolvido por</dt><dd>{{ block.resolvedBy }}</dd></div>
-                  <div><dt>Tempo bloqueado</dt><dd>{{ duration(block, clock.now()) }}</dd></div>
+                  @if (block.resolutionNote) {
+                    <div class="block-history__wide"><dt>Nota de resolução</dt><dd>{{ block.resolutionNote }}</dd></div>
+                  }
                 }
               </dl>
-              @if (block.resolutionNote) {
-                <p class="block-history__hint">{{ block.resolutionNote }}</p>
-              }
             </li>
           }
         </ol>
@@ -53,6 +53,7 @@ import { blockDateTime, blockDuration } from '../../core/utils/rma-block';
     .block-history__current { display: grid; gap: 0.2rem; padding: 0.7rem 0.85rem; border-radius: var(--radius-sm); background: var(--danger-bg); color: var(--danger-text); }
     .block-history__state { color: var(--text); }
     .block-history__hint { color: var(--muted); font-size: 0.88rem; }
+    .block-history__wide { grid-column: 1 / -1; }
   `]
 })
 export class RmaBlockHistoryComponent {
