@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { NotificationFailureResponse, NotificationRuleResponse, UserRole } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
+import { LoadingService } from '../../core/services/loading.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { NotificationsComponent } from './notifications.component';
@@ -329,6 +330,72 @@ describe('NotificationsComponent rules', () => {
         openEditor('SLA vencido');
         expect(field('Enviar também por e-mail').closest('.field-group, fieldset')!.textContent).toContain('Somente endereços do domínio corporativo configurado.');
       });
+    });
+  });
+
+  describe('rule form focus', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    const dialog = () => root().querySelector<HTMLElement>('[role="dialog"]');
+    const tick = () => { render(); TestBed.tick(); };
+    const editButton = () => root().querySelector<HTMLButtonElement>('button[aria-label="Editar regra SLA vencido"]')!;
+    const openFromButton = () => { const trigger = editButton(); trigger.focus(); trigger.click(); tick(); return trigger; };
+    const escape = () => {
+      const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+      (document.activeElement ?? document.body).dispatchEvent(event);
+      tick();
+      return event;
+    };
+    const submit = () => { dialog()!.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); tick(); };
+
+    it('focuses the rule title from Editar regra and returns to it on Escape', async () => {
+      await setup();
+      openRules();
+      tick();
+      const trigger = openFromButton();
+      const title = root().querySelector<HTMLElement>('#rule-form-title')!;
+      expect(title.getAttribute('tabindex')).toBe('-1');
+      expect(document.activeElement).toBe(title);
+      expect(escape().defaultPrevented).toBe(true);
+      expect(dialog()).toBeNull();
+      expect(document.activeElement).toBe(trigger);
+    });
+
+    it('ignores Escape while the rule is saved and returns after the global overlay hides', async () => {
+      const pending = new Subject<NotificationRuleResponse>();
+      await setup({ update: [pending] });
+      openRules();
+      tick();
+      openFromButton();
+      submit();
+      expect(escape().defaultPrevented).toBe(false);
+      expect(dialog()).not.toBeNull();
+      const loading = TestBed.inject(LoadingService);
+      loading.start();
+      vi.advanceTimersByTime(200);
+      tick();
+      pending.next(RULE);
+      pending.complete();
+      tick();
+      expect(dialog()).toBeNull();
+      expect(document.activeElement).not.toBe(editButton());
+      loading.finish();
+      vi.advanceTimersByTime(400);
+      tick();
+      expect(document.activeElement).toBe(editButton());
+    });
+
+    it('falls back to the rules panel when the editor was opened without a trigger', async () => {
+      await setup();
+      openRules();
+      tick();
+      (document.activeElement as HTMLElement | null)?.blur();
+      (component as unknown as { openRuleEditor(rule: NotificationRuleResponse): void }).openRuleEditor(RULE);
+      tick();
+      escape();
+      expect(dialog()).toBeNull();
+      expect(document.activeElement).toBe(root().querySelector('#notifications-panel-rules'));
     });
   });
 

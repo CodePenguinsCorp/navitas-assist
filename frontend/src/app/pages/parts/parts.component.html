@@ -12,7 +12,7 @@
   }
 
   <div class="tab-list" role="tablist" aria-label="Seções de peças">
-    <button type="button" role="tab" class="tab" [class.is-active]="activeTab() === 'stock'" [attr.aria-selected]="activeTab() === 'stock'" (click)="selectTab('stock')">Estoque</button>
+    <button #stockTab type="button" role="tab" class="tab" [class.is-active]="activeTab() === 'stock'" [attr.aria-selected]="activeTab() === 'stock'" (click)="selectTab('stock')">Estoque</button>
     <button type="button" role="tab" class="tab" [class.is-active]="activeTab() === 'replenishment'" [attr.aria-selected]="activeTab() === 'replenishment'" (click)="selectTab('replenishment')">
       Reposição @if (hasLoaded() && !loadFailed()) { ({{ replenishment().length }}) }
     </button>
@@ -187,10 +187,21 @@
 
 @if (formOpen()) {
   <div class="modal-overlay" (click)="closeModals()">
-    <section class="modal-panel panel" (click)="$event.stopPropagation()">
+    <section
+      class="modal-panel panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="part-form-title"
+      appModalFocus
+      modalInitialFocus="[formcontrolname='code']"
+      [modalCloseBlocked]="submitting()"
+      [modalFallbackFocus]="stockTab"
+      (modalCloseRequested)="closeModals()"
+      (click)="$event.stopPropagation()"
+    >
       <header class="modal-header">
         <div>
-          <h3>{{ editingPart() ? 'Editar peça' : 'Nova peça' }}</h3>
+          <h3 id="part-form-title">{{ editingPart() ? 'Editar peça' : 'Nova peça' }}</h3>
           <p>O saldo é alterado somente por movimentos de estoque.</p>
         </div>
         <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModals()" [disabled]="submitting()">
@@ -269,10 +280,21 @@
 
 @if (movementPart(); as part) {
   <div class="modal-overlay" (click)="closeModals()">
-    <section class="modal-panel modal-panel--narrow panel" (click)="$event.stopPropagation()">
+    <section
+      class="modal-panel modal-panel--narrow panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="part-movement-title"
+      appModalFocus
+      modalInitialFocus="app-custom-select[formcontrolname='type'] .custom-select__trigger"
+      [modalCloseBlocked]="submitting()"
+      [modalFallbackFocus]="stockTab"
+      (modalCloseRequested)="closeModals()"
+      (click)="$event.stopPropagation()"
+    >
       <header class="modal-header">
         <div>
-          <h3>Movimentar estoque</h3>
+          <h3 id="part-movement-title">Movimentar estoque</h3>
         </div>
         <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModals()" [disabled]="submitting()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
@@ -340,10 +362,21 @@
 
 @if (historyPart(); as part) {
   <div class="modal-overlay" (click)="closeModals()">
-    <section class="modal-panel panel" (click)="$event.stopPropagation()">
+    <section
+      class="modal-panel panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="part-history-title"
+      appModalFocus
+      modalInitialFocus="#part-history-title"
+      [modalCloseBlocked]="submitting()"
+      [modalFallbackFocus]="stockTab"
+      (modalCloseRequested)="closeModals()"
+      (click)="$event.stopPropagation()"
+    >
       <header class="modal-header">
         <div>
-          <h3>Histórico de movimentos</h3>
+          <h3 id="part-history-title" tabindex="-1">Histórico de movimentos</h3>
           <p><span class="code-text">{{ part.code }}</span> · {{ part.name }}. Movimentos não são editados; correções geram estorno.</p>
         </div>
         <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModals()" [disabled]="submitting()">
@@ -403,7 +436,7 @@
                   @if (canManage()) {
                     <td class="table-actions-col">
                       @if (reversingMovementId() !== movement.id && canReverse(movement)) {
-                        <button type="button" class="button-secondary button-secondary--small" (click)="startReversal(movement)" [disabled]="submitting()">Estornar</button>
+                        <button type="button" class="button-secondary button-secondary--small" [attr.data-reverse]="movement.id" (click)="startReversal(movement)" [disabled]="submitting()">Estornar</button>
                       }
                     </td>
                   }

@@ -1,5 +1,5 @@
 import { IconComponent, IconName } from '../../shared/icon/icon.component';
-import { Component, DestroyRef, ElementRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -15,6 +15,7 @@ import {
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
 import { CustomSelectComponent } from '../../shared/form-controls/custom-select/custom-select.component';
@@ -42,7 +43,7 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
 
 @Component({
   selector: 'app-notifications',
-  imports: [IconComponent, CustomSelectComponent, PageHeaderComponent, RowActionComponent, ReactiveFormsModule],
+  imports: [IconComponent, CustomSelectComponent, ModalFocusDirective, PageHeaderComponent, RowActionComponent, ReactiveFormsModule],
   templateUrl: './notifications.component.html',
   styles: [`
     :host {
@@ -215,6 +216,8 @@ export class NotificationsComponent {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
+  /** Page target for the rule editor's focus return when its row button is gone. */
+  protected readonly rulesPanel = viewChild<ElementRef<HTMLElement>>('rulesPanel');
   private readonly clock = inject(SlaClockService);
   private readonly fb = inject(FormBuilder);
   private inboxRequest?: Subscription;

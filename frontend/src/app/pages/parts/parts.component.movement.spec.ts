@@ -4,6 +4,7 @@ import { FormGroup } from '@angular/forms';
 import { Subject, of, throwError } from 'rxjs';
 import { ManualPartMovementType, PartMovementResponse, PartResponse, UserRole } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
+import { LoadingService } from '../../core/services/loading.service';
 import { PartService } from '../../core/services/part.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { PartsComponent } from './parts.component';
@@ -160,5 +161,86 @@ describe('PartsComponent stock movement', () => {
     await setup(); expect(component.movementTypeOptions.map((option) => option.value)).toEqual(['ENTRY', 'EXIT', 'ADJUSTMENT']);
     expect(panel()!.querySelector('[formControlName="reason"]')!.getAttribute('maxlength')).toBe('255');
     values('ENTRY', 1, 'a'.repeat(256)); submit(); expect(service['registerMovement']).not.toHaveBeenCalled();
+  });
+});
+
+/** Focus harness shared by the three parts dialogs: real triggers, Escape and the global overlay. */
+async function setupPartsFocus(serviceOverrides: Record<string, unknown>) {
+  vi.useFakeTimers();
+  await TestBed.configureTestingModule({ imports: [PartsComponent], providers: [
+    { provide: PartService, useValue: {
+      list: vi.fn(() => of([PART])), listReplenishment: vi.fn(() => of([])), listPending: vi.fn(() => of([])),
+      ...serviceOverrides
+    } },
+    { provide: AuthService, useValue: { hasAnyRole: () => true } }
+  ] }).compileComponents();
+  const fixture = TestBed.createComponent(PartsComponent);
+  const page = fixture.nativeElement as HTMLElement;
+  const loading = TestBed.inject(LoadingService);
+  const render = () => {
+    fixture.componentRef.injector.get(ChangeDetectorRef).markForCheck();
+    fixture.detectChanges();
+    TestBed.tick();
+  };
+  const find = <T extends HTMLElement = HTMLElement>(selector: string) => {
+    const found = page.querySelector<T>(selector);
+    expect(found, selector + ' must exist').not.toBeNull();
+    return found!;
+  };
+  const activate = (target: HTMLElement) => {
+    target.focus();
+    target.click();
+    render();
+    return target;
+  };
+  const escape = () => {
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    (document.activeElement ?? document.body).dispatchEvent(event);
+    render();
+    return event;
+  };
+  const dialog = () => page.querySelector<HTMLElement>('[role="dialog"]');
+  const submit = () => {
+    find('[role="dialog"] form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    render();
+  };
+  const showOverlay = () => { loading.start(); vi.advanceTimersByTime(200); render(); };
+  const hideOverlay = () => { loading.finish(); vi.advanceTimersByTime(400); render(); };
+  render();
+  return { fixture, page, render, find, activate, escape, dialog, submit, showOverlay, hideOverlay };
+}
+
+describe('PartsComponent stock movement focus', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('names the dialog, focuses Tipo from Movimentar and returns to it on Escape', async () => {
+    const { page, find, activate, escape, dialog } = await setupPartsFocus({});
+    const trigger = activate(find('button[aria-label="Movimentar PCA-1 Capacitor"]'));
+    expect(dialog()?.getAttribute('aria-labelledby')).toBe('part-movement-title');
+    expect(find('#part-movement-title').textContent?.trim()).toBe('Movimentar estoque');
+    expect(document.activeElement).toBe(page.querySelector('app-custom-select[formControlName="type"] .custom-select__trigger'));
+    expect(escape().defaultPrevented).toBe(true);
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('ignores Escape while the movement is saved and returns after the global overlay hides', async () => {
+    const pending = new Subject<PartMovementResponse>();
+    const { fixture, find, activate, escape, dialog, submit, render, showOverlay, hideOverlay } = await setupPartsFocus({ registerMovement: vi.fn(() => pending) });
+    activate(find('button[aria-label="Movimentar PCA-1 Capacitor"]'));
+    (fixture.componentInstance as unknown as Harness).movementForm.setValue({ type: 'ENTRY', quantity: 1, reason: '' });
+    render();
+    submit();
+    expect(escape().defaultPrevented).toBe(false);
+    expect(dialog()).not.toBeNull();
+    showOverlay();
+    pending.next(MOVEMENT);
+    pending.complete();
+    render();
+    expect(dialog()).toBeNull();
+    const trigger = find('button[aria-label="Movimentar PCA-1 Capacitor"]');
+    expect(document.activeElement).not.toBe(trigger);
+    hideOverlay();
+    expect(document.activeElement).toBe(trigger);
   });
 });

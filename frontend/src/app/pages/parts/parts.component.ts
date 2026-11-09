@@ -1,5 +1,5 @@
 import { IconComponent } from '../../shared/icon/icon.component';
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, Injector, afterNextRender, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable, Subscription, finalize, forkJoin } from 'rxjs';
@@ -24,6 +24,7 @@ import {
   formatSignedQuantity
 } from '../../core/utils/part-ui';
 import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
+import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { ResultCountComponent } from '../../shared/result-count/result-count.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
@@ -43,7 +44,7 @@ const MOVEMENT_TYPE_OPTIONS: ReadonlyArray<CustomSelectOption<ManualPartMovement
 
 @Component({
   selector: 'app-parts',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, PageHeaderComponent, ResultCountComponent, RowActionComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PageHeaderComponent, ResultCountComponent, RowActionComponent],
   templateUrl: './parts.component.html',
   styles: [`
     :host {
@@ -99,6 +100,8 @@ export class PartsComponent {
   private readonly partService = inject(PartService);
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
   private loadRequest?: Subscription;
   private historyRequest?: Subscription;
 
@@ -299,10 +302,13 @@ export class PartsComponent {
     this.reversingMovementId.set(movement.id);
     this.reversalReason.reset('');
     this.modalErrorMessage.set('');
+    this.focusAfterRender(`#reversal-reason-${movement.id}`);
   }
 
   protected cancelReversal(): void {
     if (this.submitting()) return;
+    const movementId = this.reversingMovementId();
+    if (movementId !== null) this.focusAfterRender(`[data-reverse="${movementId}"]`);
     this.reversingMovementId.set(null);
     this.reversalReason.reset('');
     this.modalErrorMessage.set('');
@@ -403,6 +409,11 @@ export class PartsComponent {
         this.loadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as peças.'));
       }
     });
+  }
+
+  /** Keeps keyboard focus inside the history when the inline reversal opens or closes. */
+  private focusAfterRender(selector: string): void {
+    afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>(selector)?.focus(), { injector: this.injector });
   }
 
   private clearMessages(): void {

@@ -4,6 +4,7 @@ import { FormControl } from '@angular/forms';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { PartMovementResponse, PartResponse, UserRole } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
+import { LoadingService } from '../../core/services/loading.service';
 import { PartService } from '../../core/services/part.service';
 import { PartsComponent } from './parts.component';
 
@@ -239,3 +240,95 @@ function expectPending(root: HTMLElement): void {
   expect(busy?.hasAttribute('role')).toBe(false);
   expect(root.textContent).not.toMatch(/Carregando(?! opções)|Atualizando (estoque|notificações|preferências|regras|falhas)/);
 }
+
+/** Focus harness shared by the three parts dialogs: real triggers, Escape and the global overlay. */
+async function setupPartsFocus(serviceOverrides: Record<string, unknown>) {
+  vi.useFakeTimers();
+  await TestBed.configureTestingModule({ imports: [PartsComponent], providers: [
+    { provide: PartService, useValue: {
+      list: vi.fn(() => of([PART])), listReplenishment: vi.fn(() => of([])), listPending: vi.fn(() => of([])),
+      ...serviceOverrides
+    } },
+    { provide: AuthService, useValue: { hasAnyRole: () => true } }
+  ] }).compileComponents();
+  const fixture = TestBed.createComponent(PartsComponent);
+  const page = fixture.nativeElement as HTMLElement;
+  const loading = TestBed.inject(LoadingService);
+  const render = () => {
+    fixture.componentRef.injector.get(ChangeDetectorRef).markForCheck();
+    fixture.detectChanges();
+    TestBed.tick();
+  };
+  const find = <T extends HTMLElement = HTMLElement>(selector: string) => {
+    const found = page.querySelector<T>(selector);
+    expect(found, selector + ' must exist').not.toBeNull();
+    return found!;
+  };
+  const activate = (target: HTMLElement) => {
+    target.focus();
+    target.click();
+    render();
+    return target;
+  };
+  const escape = () => {
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    (document.activeElement ?? document.body).dispatchEvent(event);
+    render();
+    return event;
+  };
+  const dialog = () => page.querySelector<HTMLElement>('[role="dialog"]');
+  const submit = () => {
+    find('[role="dialog"] form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    render();
+  };
+  const showOverlay = () => { loading.start(); vi.advanceTimersByTime(200); render(); };
+  const hideOverlay = () => { loading.finish(); vi.advanceTimersByTime(400); render(); };
+  render();
+  return { fixture, page, render, find, activate, escape, dialog, submit, showOverlay, hideOverlay };
+}
+
+describe('PartsComponent movement history focus', () => {
+  afterEach(() => vi.useRealTimers());
+
+  const historyService = (reverse: Observable<PartMovementResponse> = of(REVERSAL)) =>
+    ({ listMovements: vi.fn(() => of([CONSUMPTION])), reverseMovement: vi.fn(() => reverse) });
+
+  it('names the dialog, focuses its title from Histórico and returns to it on Escape', async () => {
+    const { find, activate, escape, dialog } = await setupPartsFocus(historyService());
+    const trigger = activate(find('button[aria-label="Histórico PCA-1 Capacitor"]'));
+    expect(dialog()?.getAttribute('aria-labelledby')).toBe('part-history-title');
+    expect(document.activeElement).toBe(find('#part-history-title'));
+    expect(escape().defaultPrevented).toBe(true);
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('keeps focus in the history while a reversal is started and cancelled', async () => {
+    const { page, find, activate, dialog } = await setupPartsFocus(historyService());
+    activate(find('button[aria-label="Histórico PCA-1 Capacitor"]'));
+    const estornar = () => [...page.querySelectorAll<HTMLButtonElement>('[role="dialog"] tbody button')].find((item) => item.textContent?.trim() === 'Estornar');
+    activate(estornar()!);
+    expect(document.activeElement).toBe(find('#reversal-reason-9'));
+    const cancel = [...find('.movement-reversal').querySelectorAll<HTMLButtonElement>('button')].find((item) => item.textContent?.trim() === 'Cancelar')!;
+    activate(cancel);
+    expect(dialog()).not.toBeNull();
+    expect(page.querySelector('.movement-reversal')).toBeNull();
+    expect(document.activeElement).toBe(estornar());
+  });
+
+  it('ignores Escape while a reversal is saved', async () => {
+    const pending = new Subject<PartMovementResponse>();
+    const { fixture, page, find, activate, escape, dialog, render } = await setupPartsFocus(historyService(pending));
+    activate(find('button[aria-label="Histórico PCA-1 Capacitor"]'));
+    const harness = fixture.componentInstance as unknown as Harness;
+    harness.startReversal(CONSUMPTION);
+    harness.reversalReason.setValue('Lançamento duplicado');
+    render();
+    harness.confirmReversal(CONSUMPTION);
+    render();
+    expect(escape().defaultPrevented).toBe(false);
+    expect(dialog()).not.toBeNull();
+    expect(page.querySelector('.movement-reversal')).not.toBeNull();
+    pending.error(new Error('falha'));
+  });
+});

@@ -160,7 +160,7 @@
   </div>
 
   @if (isAdmin()) {
-  <div role="tabpanel" tabindex="0" id="notifications-panel-rules" aria-labelledby="notifications-tab-rules" [hidden]="activeTab() !== 'rules'">
+  <div #rulesPanel role="tabpanel" tabindex="0" id="notifications-panel-rules" aria-labelledby="notifications-tab-rules" [hidden]="activeTab() !== 'rules'">
     @if (activeTab() === 'rules') {
       <article class="panel table-card">
         @if (rulesLoadFailed()) {
@@ -262,11 +262,16 @@
         role="dialog"
         aria-modal="true"
         aria-labelledby="rule-form-title"
+        appModalFocus
+        modalInitialFocus="#rule-form-title"
+        [modalCloseBlocked]="ruleSubmitting()"
+        [modalFallbackFocus]="rulesPanel()?.nativeElement ?? null"
+        (modalCloseRequested)="closeRuleEditor()"
         (click)="$event.stopPropagation()"
       >
         <header class="modal-header">
           <div>
-            <h3 id="rule-form-title">Editar regra: {{ eventLabels[rule.eventType] }}</h3>
+            <h3 id="rule-form-title" tabindex="-1">Editar regra: {{ eventLabels[rule.eventType] }}</h3>
             <p>Vale para os próximos eventos.</p>
           </div>
           <button type="button" class="modal-close" aria-label="Fechar" (click)="closeRuleEditor()" [disabled]="ruleSubmitting()">

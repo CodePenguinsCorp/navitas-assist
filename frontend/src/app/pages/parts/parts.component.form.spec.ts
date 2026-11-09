@@ -4,6 +4,7 @@ import { FormGroup } from '@angular/forms';
 import { Subject, of, throwError } from 'rxjs';
 import { PartResponse, UserRole } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
+import { LoadingService } from '../../core/services/loading.service';
 import { PartService } from '../../core/services/part.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { PartsComponent } from './parts.component';
@@ -162,5 +163,95 @@ describe('PartsComponent part form', () => {
     const page = fixture.nativeElement.querySelector('.page-surface');
     expect(page.textContent).toContain('Não foi possível carregar as peças.');
     expect(page.textContent).toContain('Tentar novamente');
+  });
+});
+
+/** Focus harness shared by the three parts dialogs: real triggers, Escape and the global overlay. */
+async function setupPartsFocus(serviceOverrides: Record<string, unknown>) {
+  vi.useFakeTimers();
+  await TestBed.configureTestingModule({ imports: [PartsComponent], providers: [
+    { provide: PartService, useValue: {
+      list: vi.fn(() => of([PART])), listReplenishment: vi.fn(() => of([])), listPending: vi.fn(() => of([])),
+      ...serviceOverrides
+    } },
+    { provide: AuthService, useValue: { hasAnyRole: () => true } }
+  ] }).compileComponents();
+  const fixture = TestBed.createComponent(PartsComponent);
+  const page = fixture.nativeElement as HTMLElement;
+  const loading = TestBed.inject(LoadingService);
+  const render = () => {
+    fixture.componentRef.injector.get(ChangeDetectorRef).markForCheck();
+    fixture.detectChanges();
+    TestBed.tick();
+  };
+  const find = <T extends HTMLElement = HTMLElement>(selector: string) => {
+    const found = page.querySelector<T>(selector);
+    expect(found, selector + ' must exist').not.toBeNull();
+    return found!;
+  };
+  const activate = (target: HTMLElement) => {
+    target.focus();
+    target.click();
+    render();
+    return target;
+  };
+  const escape = () => {
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    (document.activeElement ?? document.body).dispatchEvent(event);
+    render();
+    return event;
+  };
+  const dialog = () => page.querySelector<HTMLElement>('[role="dialog"]');
+  const submit = () => {
+    find('[role="dialog"] form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    render();
+  };
+  const showOverlay = () => { loading.start(); vi.advanceTimersByTime(200); render(); };
+  const hideOverlay = () => { loading.finish(); vi.advanceTimersByTime(400); render(); };
+  render();
+  return { fixture, page, render, find, activate, escape, dialog, submit, showOverlay, hideOverlay };
+}
+
+describe('PartsComponent part form focus', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('names the dialog, focuses Código from Nova peça and returns to it on Escape', async () => {
+    const { page, find, activate, escape, dialog } = await setupPartsFocus({});
+    const trigger = activate(find('.page-heading .button-primary'));
+    expect(dialog()?.getAttribute('aria-modal')).toBe('true');
+    expect(dialog()?.getAttribute('aria-labelledby')).toBe('part-form-title');
+    expect(find('#part-form-title').textContent?.trim()).toBe('Nova peça');
+    expect(document.activeElement).toBe(page.querySelector('[formControlName="code"]'));
+    expect(escape().defaultPrevented).toBe(true);
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('ignores Escape while saving and returns to Editar after the global overlay hides', async () => {
+    const pending = new Subject<PartResponse>();
+    const { find, activate, escape, dialog, submit, render, showOverlay, hideOverlay } = await setupPartsFocus({ update: vi.fn(() => pending) });
+    const trigger = activate(find('button[aria-label="Editar PCA-1 Capacitor"]'));
+    submit();
+    expect(escape().defaultPrevented).toBe(false);
+    expect(dialog()).not.toBeNull();
+    showOverlay();
+    pending.next(PART);
+    pending.complete();
+    render();
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).not.toBe(find('button[aria-label="Editar PCA-1 Capacitor"]'));
+    hideOverlay();
+    expect(document.activeElement).toBe(find('button[aria-label="Editar PCA-1 Capacitor"]'));
+    expect(trigger.isConnected).toBe(true);
+  });
+
+  it('falls back to the Estoque tab when the form was opened without a trigger', async () => {
+    const { fixture, page, render, escape, dialog } = await setupPartsFocus({});
+    (document.activeElement as HTMLElement | null)?.blur();
+    (fixture.componentInstance as unknown as Harness).openCreateModal();
+    render();
+    escape();
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(page.querySelector('[role="tab"]'));
   });
 });
