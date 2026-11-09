@@ -170,7 +170,20 @@
           <legend>Itens</legend>
           <div class="field-group--full protocol-items" formArrayName="items">
             @for (item of items.controls; track item; let index = $index) {
-              <div class="protocol-item-card" [formGroupName]="index">
+              <div class="protocol-item-summary-row">
+                <button type="button" class="button-secondary protocol-item-summary" [id]="'protocol-item-summary-' + index" [attr.aria-expanded]="selectedItem() === item" [attr.aria-controls]="'protocol-item-editor-' + index" (click)="selectItem(item)" [disabled]="submitting()">
+                  <strong>Item {{ index + 1 }}</strong>
+                  <span>Etapa: {{ item.controls['stepName'].value }}</span>
+                  <span>{{ item.controls['title'].value }}</span>
+                  <span>{{ typeLabel(item) }} · {{ item.controls['required'].value ? 'Obrigatório' : 'Opcional' }}</span>
+                  @if (item.controls['evidenceRequired'].value) { <span>Exige evidência</span> }
+                </button>
+                <button type="button" class="button-secondary button-secondary--small button-secondary--danger" [attr.aria-label]="'Remover item ' + (index + 1)" (click)="removeItem(index)" [disabled]="submitting() || items.length === 1">Remover item</button>
+              </div>
+            }
+            @for (item of items.controls; track item; let index = $index) {
+              @if (selectedItem() === item) {
+              <div class="protocol-item-card" [id]="'protocol-item-editor-' + index" [formGroupName]="index">
                 <h4 class="protocol-item-card__title">Item {{ index + 1 }}</h4>
                 <label class="field-group">
                   <span>Etapa</span>
@@ -217,13 +230,13 @@
                     }
                   </label>
                 }
-                <label class="field-group">
+                <label class="field-group field-group--full">
                   <span>Resultado esperado</span>
-                  <input type="text" formControlName="expectedResult" maxlength="500" />
+                  <textarea formControlName="expectedResult" rows="3" maxlength="500"></textarea>
                 </label>
-                <label class="field-group">
+                <label class="field-group field-group--full">
                   <span>Instruções</span>
-                  <input type="text" formControlName="instructions" maxlength="1000" />
+                  <textarea formControlName="instructions" rows="3" maxlength="1000"></textarea>
                 </label>
                 <div class="protocol-item-card__footer">
                   <label class="checkbox-field">
@@ -234,17 +247,11 @@
                     <input type="checkbox" formControlName="evidenceRequired" />
                     <span>Exige evidência</span>
                   </label>
-                  <button
-                    type="button"
-                    class="button-secondary button-secondary--small button-secondary--danger"
-                    [attr.aria-label]="'Remover item ' + (index + 1)"
-                    (click)="removeItem(index)"
-                    [disabled]="items.length === 1"
-                  >Remover item</button>
                 </div>
               </div>
+              }
             }
-            <button type="button" class="button-secondary" (click)="addItem()">Adicionar item</button>
+            <button type="button" class="button-secondary" (click)="addItem()" [disabled]="submitting()">Adicionar item</button>
           </div>
         </fieldset>
 

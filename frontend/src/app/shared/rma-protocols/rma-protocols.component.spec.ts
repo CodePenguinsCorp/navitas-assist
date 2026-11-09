@@ -56,7 +56,8 @@ describe('RmaProtocolsComponent', () => {
 
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('Bancada PWM · v3');
-    expect(text).toContain('1/2 itens · 1 obrigatório(s) pendente(s)');
+    expect(text).toContain('1/2 itens registrados');
+    expect(text).toContain('1/2 obrigatórios atendidos');
     expect(text).not.toContain('Registrar');
   });
 

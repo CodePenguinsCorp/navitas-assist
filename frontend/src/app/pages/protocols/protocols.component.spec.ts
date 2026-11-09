@@ -333,9 +333,10 @@ describe('ProtocolsComponent', () => {
       buttonByText('Adicionar item')!.click();
       fixture.detectChanges();
 
-      const cards = Array.from(items.querySelectorAll('.protocol-item-card'));
-      expect(cards.map((card) => card.querySelector('.protocol-item-card__title')?.textContent?.trim())).toEqual(['Item 1', 'Item 2']);
-      const removes = cards.map((card) => Array.from(card.querySelectorAll('button')).find((button) => button.textContent?.trim() === 'Remover item'));
+      const summaries = Array.from(items.querySelectorAll('.protocol-item-summary'));
+      expect(summaries.map((summary) => summary.querySelector('strong')?.textContent?.trim())).toEqual(['Item 1', 'Item 2']);
+      expect(items.querySelectorAll('.protocol-item-card')).toHaveLength(1);
+      const removes = Array.from(items.querySelectorAll('.protocol-item-summary-row')).map((row) => Array.from(row.querySelectorAll('button')).find((button) => button.textContent?.trim() === 'Remover item'));
       expect(removes.map((button) => button?.getAttribute('aria-label'))).toEqual(['Remover item 1', 'Remover item 2']);
     });
 

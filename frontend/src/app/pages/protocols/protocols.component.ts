@@ -1,5 +1,5 @@
 import { IconComponent } from '../../shared/icon/icon.component';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, Injector, afterNextRender, computed, inject, signal } from '@angular/core';
 import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable, finalize } from 'rxjs';
 import { RMA_STATUS_LABELS } from '../../core/mock-data';
@@ -25,9 +25,9 @@ const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
 
     .protocol-item-card {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 0.75rem;
-      padding: 0.9rem;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+      gap: var(--space-3);
+      padding: var(--space-4);
       border: 1px solid var(--line);
       border-radius: var(--radius-md);
       background: var(--surface-alt);
@@ -42,13 +42,9 @@ const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 0.25rem 1.5rem;
-      padding-top: 0.75rem;
+      gap: var(--space-1) var(--space-5);
+      padding-top: var(--space-3);
       border-top: 1px solid var(--line);
-    }
-
-    .protocol-item-card__footer .button-secondary {
-      margin-left: auto;
     }
 
     .protocol-item-card__title {
@@ -60,8 +56,14 @@ const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
 
     .protocol-items {
       display: grid;
-      gap: 0.75rem;
+      gap: var(--space-3);
+      min-width: 0;
     }
+
+    .protocol-item-summary-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: start; min-width: 0; }
+    .protocol-item-summary { flex: 1 1 180px; display: grid; gap: var(--space-1); min-width: 0; padding: var(--space-3); text-align: left; white-space: normal; overflow-wrap: anywhere; }
+    .protocol-item-summary[aria-expanded="true"] { border-color: var(--brand-blue); background: var(--brand-tint); }
+    .protocol-item-summary:focus-visible { box-shadow: var(--focus-ring); }
 
     .form-section__hint {
       grid-column: 1 / -1;
@@ -76,6 +78,8 @@ export class ProtocolsComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly protocolService = inject(ProtocolService);
   private readonly catalogService = inject(CatalogService);
+  private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly loading = signal(true);
   protected readonly submitting = signal(false);
@@ -90,6 +94,7 @@ export class ProtocolsComponent {
   protected readonly loaded = signal(false);
   /** An invalid submit happened in the open form; enables the product/category message. */
   protected readonly submitAttempted = signal(false);
+  protected readonly selectedItem = signal<FormGroup | null>(null);
 
   private readonly templatesSignal = signal<ProtocolTemplateResponse[]>([]);
   private readonly productOptionsSignal = signal<ReadonlyArray<CustomSelectOption<number | null>>>([{ value: null, label: 'Por categoria' }]);
@@ -152,6 +157,7 @@ export class ProtocolsComponent {
     this.form.reset({ name: template.name, productId: template.productId, category: template.category ?? '', active: template.active, blockedStatuses: [...template.blockedStatuses] });
     this.items.clear();
     template.items.forEach((item) => this.items.push(this.itemGroup(item)));
+    this.selectedItem.set(this.items.at(0) ?? null);
     this.submitAttempted.set(false);
     this.modalOpen.set(true);
     this.clearMessages();
@@ -177,13 +183,43 @@ export class ProtocolsComponent {
   }
 
   protected addItem(): void {
-    this.items.push(this.itemGroup());
+    if (this.submitting()) return;
+    const item = this.itemGroup();
+    this.items.push(item);
+    this.selectedItem.set(item);
   }
 
   protected removeItem(index: number): void {
-    if (this.items.length > 1) {
-      this.items.removeAt(index);
+    if (this.submitting() || this.items.length <= 1) return;
+    const removed = this.items.at(index);
+    this.items.removeAt(index);
+    if (this.selectedItem() === removed) {
+      this.selectedItem.set(this.items.at(Math.min(index, this.items.length - 1)));
     }
+    afterNextRender(() => {
+      const selectedIndex = this.items.controls.indexOf(this.selectedItem()!);
+      this.host.nativeElement.querySelector<HTMLButtonElement>(`#protocol-item-summary-${selectedIndex}`)?.focus();
+    }, { injector: this.injector });
+  }
+
+  protected selectItem(item: FormGroup): void {
+    if (!this.submitting()) this.selectedItem.set(item);
+  }
+
+  protected typeLabel(item: FormGroup): string {
+    return PROTOCOL_ITEM_TYPE_LABELS[item.controls['type'].value as ProtocolItemType];
+  }
+
+  private revealFirstInvalidItem(): void {
+    const item = this.items.controls.find((item) => item.invalid);
+    if (!item) return;
+    this.selectedItem.set(item);
+    afterNextRender(() => {
+      const editor = this.host.nativeElement.querySelector<HTMLElement>('.protocol-item-card');
+      const field = editor?.querySelector<HTMLElement>('input.ng-invalid, textarea.ng-invalid')
+        ?? editor?.querySelector<HTMLElement>('app-custom-select[formcontrolname="type"] button');
+      field?.focus();
+    }, { injector: this.injector });
   }
 
   protected toggleBlockedStatus(status: RmaStatus, checked: boolean): void {
@@ -201,6 +237,7 @@ export class ProtocolsComponent {
       this.form.markAllAsTouched();
       this.submitAttempted.set(true);
       this.modalErrorMessage.set('Revise os campos e informe o produto ou a categoria do protocolo.');
+      this.revealFirstInvalidItem();
       return;
     }
 
@@ -271,6 +308,7 @@ export class ProtocolsComponent {
 
   private resetModal(): void {
     this.modalOpen.set(false);
+    this.selectedItem.set(null);
     this.modalErrorMessage.set('');
     this.submitAttempted.set(false);
   }

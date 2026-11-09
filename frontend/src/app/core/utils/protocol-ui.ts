@@ -31,13 +31,14 @@ export function protocolOutcomeClass(outcome: ProtocolItemOutcome | null): strin
   }
 }
 
-export function protocolProgressLabel(execution: Pick<ProtocolExecutionResponse, 'completedItems' | 'totalItems' | 'pendingRequiredItems'>): string {
-  const pending = execution.pendingRequiredItems > 0 ? ` · ${execution.pendingRequiredItems} obrigatório(s) pendente(s)` : '';
-  return `${execution.completedItems}/${execution.totalItems} itens${pending}`;
+export function protocolProgressLabel(execution: Pick<ProtocolExecutionResponse, 'requiredItems' | 'pendingRequiredItems'>): string {
+  const satisfied = Math.max(0, Math.min(execution.requiredItems, execution.requiredItems - execution.pendingRequiredItems));
+  return execution.requiredItems === 0 ? 'Sem itens obrigatórios' : `${satisfied}/${execution.requiredItems} obrigatórios atendidos`;
 }
 
-export function protocolProgressPercent(execution: Pick<ProtocolExecutionResponse, 'completedItems' | 'totalItems'>): number {
-  return execution.totalItems === 0 ? 0 : Math.round((execution.completedItems / execution.totalItems) * 100);
+export function protocolProgressPercent(execution: Pick<ProtocolExecutionResponse, 'requiredItems' | 'pendingRequiredItems'>): number {
+  const satisfied = Math.max(0, Math.min(execution.requiredItems, execution.requiredItems - execution.pendingRequiredItems));
+  return execution.requiredItems === 0 ? 0 : Math.round((satisfied / execution.requiredItems) * 100);
 }
 
 export function normalizeDecimal(value: string): string | null {
