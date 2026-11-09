@@ -6,7 +6,10 @@ import { ClientRequest, ClientResponse, PageResponse } from '../../core/models';
 import { CatalogService, ClientFilters } from '../../core/services/catalog.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { PresenceFilter } from '../../core/utils/catalog-ui';
+import { provideRouter } from '@angular/router';
+import { App } from '../../app';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
+import { mountUnderRoot, simulateNativeModality } from '../../testing/native-dialog';
 import { ClientsComponent } from './clients.component';
 
 function client(id: number, legalName: string): ClientResponse {
@@ -442,19 +445,21 @@ describe('ClientsComponent collection layout and states', () => {
 });
 
 describe('ClientsComponent dialog focus', () => {
-  let fixture: ComponentFixture<ClientsComponent>;
+  let fixture: ComponentFixture<App>;
   let element: HTMLElement;
   let loading: LoadingService;
   let rows: ClientResponse[];
   let save: Subject<ClientResponse>;
   let remove: Subject<void>;
+  let restoreModality: () => void;
 
   beforeEach(async () => {
-    vi.useFakeTimers();
+    // Under the real root, whose blocker takes focus on showModal() as in a browser.
+    restoreModality = simulateNativeModality();
     rows = [client(1, 'Alfa'), client(2, 'Beta')];
     await TestBed.configureTestingModule({
       imports: [ClientsComponent],
-      providers: [{ provide: CatalogService, useValue: {
+      providers: [provideRouter([{ path: '', component: ClientsComponent }]), { provide: CatalogService, useValue: {
         listClients: (filters: ClientFilters) => of(page(rows, filters.page, filters.size)),
         getClientSummary: () => of({ total: rows.length, withContact: 0, withDocument: 0, withEmail: 0 }),
         createClient: () => (save = new Subject<ClientResponse>()),
@@ -462,13 +467,17 @@ describe('ClientsComponent dialog focus', () => {
         deleteClient: () => (remove = new Subject<void>())
       } }]
     }).compileComponents();
-    fixture = TestBed.createComponent(ClientsComponent);
-    element = fixture.nativeElement as HTMLElement;
+    ({ fixture, element } = await mountUnderRoot(ClientsComponent));
+    vi.useFakeTimers();
     loading = TestBed.inject(LoadingService);
     render();
   });
 
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.useRealTimers();
+    restoreModality();
+  });
 
   function render(): void {
     fixture.detectChanges();
@@ -508,6 +517,13 @@ describe('ClientsComponent dialog focus', () => {
     loading.start();
     vi.advanceTimersByTime(200);
     render();
+    expect(blocker().open, 'the root blocker is shown').toBe(true);
+    const dialog = element.querySelector('[role="dialog"], [role="alertdialog"]');
+    expect(dialog?.contains(document.activeElement) ?? false, 'the blocker took focus away from the dialog').toBe(false);
+  }
+
+  function blocker(): HTMLDialogElement {
+    return (fixture.nativeElement as HTMLElement).querySelector<HTMLDialogElement>('dialog.global-loading-dialog')!;
   }
 
   function hideOverlay(): void {
@@ -569,6 +585,19 @@ describe('ClientsComponent dialog focus', () => {
     hideOverlay();
     expect(focus).toHaveBeenCalledTimes(1);
     expect(document.activeElement).toBe(trigger);
+  });
+
+  it('gives focus back to the focused field when the overlay hides with the dialog still open', () => {
+    activate('.page-heading button');
+    const name = find('[formControlName="legalName"]');
+    expect(document.activeElement).toBe(name);
+    fillAndSubmit();
+    showOverlay();
+    save.error(new HttpErrorResponse({ status: 500, error: { message: 'Falhou.' } }));
+    render();
+    hideOverlay();
+    expect(element.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(document.activeElement).toBe(name);
   });
 
   it('falls back to Novo cliente after the deleted row disappears, once the overlay hides', () => {

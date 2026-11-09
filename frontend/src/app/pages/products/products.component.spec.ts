@@ -11,6 +11,9 @@ import { LoadingService } from '../../core/services/loading.service';
 import { PresenceFilter } from '../../core/utils/catalog-ui';
 import { CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
+import { provideRouter } from '@angular/router';
+import { App } from '../../app';
+import { mountUnderRoot, simulateNativeModality } from '../../testing/native-dialog';
 import { ProductsComponent } from './products.component';
 
 const INITIAL_PRODUCTS: ProductResponse[] = [
@@ -659,7 +662,8 @@ function expectPending(root: HTMLElement): void {
 }
 
 describe('ProductsComponent dialog focus', () => {
-  let fixture: ComponentFixture<ProductsComponent>;
+  let fixture: ComponentFixture<App>;
+  let restoreModality: () => void;
   let element: HTMLElement;
   let loading: LoadingService;
   let rows: ProductResponse[];
@@ -667,11 +671,12 @@ describe('ProductsComponent dialog focus', () => {
   let remove: Subject<void>;
 
   beforeEach(async () => {
-    vi.useFakeTimers();
+    // Under the real root, whose blocker takes focus on showModal() as in a browser.
+    restoreModality = simulateNativeModality();
     rows = [product(1, 'Alfa'), product(2, 'Beta')];
     await TestBed.configureTestingModule({
       imports: [ProductsComponent],
-      providers: [{ provide: CatalogService, useValue: {
+      providers: [provideRouter([{ path: '', component: ProductsComponent }]), { provide: CatalogService, useValue: {
         listProducts: (filters: { page: number; size: number }) => of(page(rows, filters.page, filters.size)),
         getProductSummary: () => of({ total: rows.length, withFirmware: 0, averageWarrantyMonths: 12, categories: ['Controle'] }),
         createProduct: () => (save = new Subject<ProductResponse>()),
@@ -679,13 +684,17 @@ describe('ProductsComponent dialog focus', () => {
         deleteProduct: () => (remove = new Subject<void>())
       } }]
     }).compileComponents();
-    fixture = TestBed.createComponent(ProductsComponent);
-    element = fixture.nativeElement as HTMLElement;
+    ({ fixture, element } = await mountUnderRoot(ProductsComponent));
+    vi.useFakeTimers();
     loading = TestBed.inject(LoadingService);
     render();
   });
 
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.useRealTimers();
+    restoreModality();
+  });
 
   function render(): void {
     fixture.detectChanges();
@@ -727,6 +736,13 @@ describe('ProductsComponent dialog focus', () => {
     loading.start();
     vi.advanceTimersByTime(200);
     render();
+    expect(blocker().open, 'the root blocker is shown').toBe(true);
+    const dialog = element.querySelector('[role="dialog"], [role="alertdialog"]');
+    expect(dialog?.contains(document.activeElement) ?? false, 'the blocker took focus away from the dialog').toBe(false);
+  }
+
+  function blocker(): HTMLDialogElement {
+    return (fixture.nativeElement as HTMLElement).querySelector<HTMLDialogElement>('dialog.global-loading-dialog')!;
   }
 
   function hideOverlay(): void {

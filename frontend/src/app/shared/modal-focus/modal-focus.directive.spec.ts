@@ -4,6 +4,7 @@ import { By } from '@angular/platform-browser';
 import { LoadingService } from '../../core/services/loading.service';
 import { CustomSelectComponent } from '../form-controls/custom-select/custom-select.component';
 import { LoadingOverlayComponent } from '../loading-overlay/loading-overlay.component';
+import { simulateNativeModality } from '../../testing/native-dialog';
 import { ModalFocusDirective, modalFocusOwnsReturn } from './modal-focus.directive';
 
 @Component({
@@ -62,6 +63,20 @@ import { ModalFocusDirective, modalFocusOwnsReturn } from './modal-focus.directi
               (modalCloseRequested)="nativeRequests = nativeRequests + 1"
             >
               <button type="button" class="native-button">Nativo</button>
+              <button type="button" class="native-child-trigger" (click)="nativeChild.set(true)">Filho do nativo</button>
+              @if (nativeChild()) {
+                <div class="modal-overlay native-child-overlay">
+                  <section
+                    class="native-child-panel"
+                    role="dialog"
+                    appModalFocus
+                    [modalCloseBlocked]="true"
+                    (modalCloseRequested)="nativeChildRequests = nativeChildRequests + 1"
+                  >
+                    <button type="button" class="native-child-button">Salvando</button>
+                  </section>
+                </div>
+              }
             </dialog>
           </section>
         </div>
@@ -91,11 +106,13 @@ class ModalHost {
   readonly empty = signal(false);
   readonly blocked = signal(false);
   readonly nativeBlocked = signal(false);
+  readonly nativeChild = signal(false);
   readonly initial = signal<string | null>('.first');
   readonly options = [{ value: 'a', label: 'Alfa' }, { value: 'b', label: 'Beta' }];
   parentRequests = 0;
   childRequests = 0;
   nativeRequests = 0;
+  nativeChildRequests = 0;
 }
 
 describe('ModalFocusDirective', () => {
@@ -421,6 +438,43 @@ describe('ModalFocusDirective', () => {
       expect(host.nativeRequests).toBe(1);
     });
 
+    it('ignores cancel on the native dialog while its overlay child keeps closing blocked', () => {
+      openParent();
+      el<HTMLButtonElement>('.native-trigger').click();
+      render();
+      el<HTMLButtonElement>('.native-child-trigger').click();
+      render();
+      el('.native-child-button').focus();
+      const escape = press('Escape');
+      expect(escape.defaultPrevented, 'the blocked child does not consume Escape').toBe(false);
+      // The browser turns the unconsumed Escape into cancel on the open native dialog.
+      const cancel = new Event('cancel', { cancelable: true });
+      el<HTMLDialogElement>('dialog.native').dispatchEvent(cancel);
+      expect(cancel.defaultPrevented, 'the native dialog never closes by itself').toBe(true);
+      expect(host.nativeRequests, 'the native dialog under the blocked child stays open').toBe(0);
+      expect(host.nativeChildRequests).toBe(0);
+    });
+
+    it('closes the native dialog before returning focus, so the fallback is really focused', () => {
+      const restore = simulateNativeModality();
+      try {
+        openParent();
+        const nativeTrigger = el<HTMLButtonElement>('.native-trigger');
+        nativeTrigger.focus();
+        nativeTrigger.click();
+        render();
+        const dialog = el<HTMLDialogElement>('dialog.native');
+        expect(dialog.contains(document.activeElement), 'showModal took focus').toBe(true);
+        nativeTrigger.remove();
+        nativeDirective().closeNative();
+        render();
+        expect(dialog.open).toBe(false);
+        expect(document.activeElement, 'the dialog below receives focus once the native one is closed').toBe(el('.parent-panel'));
+      } finally {
+        restore();
+      }
+    });
+
     it('closing the native child keeps the parent registered and its background inert', () => {
       openParent();
       el<HTMLButtonElement>('.native-trigger').click();
@@ -455,7 +509,21 @@ describe('ModalFocusDirective', () => {
       expect(host.parentRequests).toBe(0);
       expect(press('Tab').defaultPrevented).toBe(false);
       expect(document.activeElement).toBe(el('.last'));
+      const outside = document.createElement('button');
+      document.body.append(outside);
+      outside.focus();
+      expect(document.activeElement, 'focus really moved outside the dialog').toBe(outside);
+      render();
+      expect(document.activeElement, 'the dialog does not pull focus back while the overlay owns the screen').toBe(outside);
+      outside.remove();
       hideLoading();
+    });
+
+    it('drops the pending return when the application is destroyed under the overlay', () => {
+      openParent();
+      showLoading();
+      TestBed.resetTestingModule();
+      expect(modalFocusOwnsReturn(), 'a destroyed application leaves no return behind').toBe(false);
     });
 
     it('returns focus to the trigger only after the overlay hides, exactly once', () => {

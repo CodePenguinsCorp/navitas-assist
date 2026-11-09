@@ -8,6 +8,9 @@ import { CatalogService } from '../../core/services/catalog.service';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
+import { provideRouter } from '@angular/router';
+import { App } from '../../app';
+import { mountUnderRoot, simulateNativeModality } from '../../testing/native-dialog';
 import { ProtocolsComponent } from './protocols.component';
 
 interface ProtocolsHarness {
@@ -527,18 +530,20 @@ describe('ProtocolsComponent', () => {
 });
 
 describe('ProtocolsComponent dialog focus', () => {
-  let fixture: ComponentFixture<ProtocolsComponent>;
+  let fixture: ComponentFixture<App>;
+  let restoreModality: () => void;
   let element: HTMLElement;
   let loading: LoadingService;
   let templates: ProtocolTemplateResponse[];
   let publish: Subject<ProtocolTemplateResponse>;
 
   beforeEach(async () => {
-    vi.useFakeTimers();
+    // Under the real root, whose blocker takes focus on showModal() as in a browser.
+    restoreModality = simulateNativeModality();
     templates = catalog();
     await TestBed.configureTestingModule({
       imports: [ProtocolsComponent],
-      providers: [
+      providers: [provideRouter([{ path: '', component: ProtocolsComponent }]), 
         { provide: ProtocolService, useValue: {
           listTemplates: () => of(templates),
           createTemplate: () => (publish = new Subject<ProtocolTemplateResponse>()),
@@ -547,13 +552,17 @@ describe('ProtocolsComponent dialog focus', () => {
         { provide: CatalogService, useValue: { listProductOptions: () => of([]) } }
       ]
     }).compileComponents();
-    fixture = TestBed.createComponent(ProtocolsComponent);
-    element = fixture.nativeElement as HTMLElement;
+    ({ fixture, element } = await mountUnderRoot(ProtocolsComponent));
+    vi.useFakeTimers();
     loading = TestBed.inject(LoadingService);
     render();
   });
 
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.useRealTimers();
+    restoreModality();
+  });
 
   function render(): void {
     fixture.detectChanges();
@@ -590,6 +599,13 @@ describe('ProtocolsComponent dialog focus', () => {
     loading.start();
     vi.advanceTimersByTime(200);
     render();
+    expect(blocker().open, 'the root blocker is shown').toBe(true);
+    const dialog = element.querySelector('[role="dialog"], [role="alertdialog"]');
+    expect(dialog?.contains(document.activeElement) ?? false, 'the blocker took focus away from the dialog').toBe(false);
+  }
+
+  function blocker(): HTMLDialogElement {
+    return (fixture.nativeElement as HTMLElement).querySelector<HTMLDialogElement>('dialog.global-loading-dialog')!;
   }
 
   function hideOverlay(): void {

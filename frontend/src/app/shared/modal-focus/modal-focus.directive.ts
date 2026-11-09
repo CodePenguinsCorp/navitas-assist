@@ -62,6 +62,8 @@ export class ModalFocusDirective {
   private trigger: HTMLElement | null = null;
   /** Focus to apply once the global overlay hides: the initial target or a control to restore. */
   private deferredFocus: 'initial' | HTMLElement | null = null;
+  /** Last element that received focus inside this dialog while registered. */
+  private lastFocused: HTMLElement | null = null;
   private destroyed = false;
 
   constructor() {
@@ -92,11 +94,12 @@ export class ModalFocusDirective {
     this.focusInitialOrDefer();
   }
 
+  /** Leaves the top layer first: while the dialog is modal, nothing outside it can take the returned focus. */
   closeNative(): void {
     if (!this.isNative) return;
-    this.unregister();
     const dialog = this.host as HTMLDialogElement;
     if (dialog.open) dialog.close();
+    this.unregister();
   }
 
   @HostListener('close')
@@ -104,11 +107,12 @@ export class ModalFocusDirective {
     if (this.isNative) this.unregister();
   }
 
+  /** A blocked overlay child leaves Escape unconsumed and the browser turns it into cancel here. */
   @HostListener('cancel', ['$event'])
   protected onNativeCancel(event: Event): void {
     if (!this.isNative) return;
     event.preventDefault();
-    if (!this.modalCloseBlocked() && !this.loading.visible()) this.modalCloseRequested.emit();
+    if (this.isTop() && !this.modalCloseBlocked() && !this.loading.visible()) this.modalCloseRequested.emit();
   }
 
   @HostListener('document:keydown', ['$event'])
@@ -120,8 +124,12 @@ export class ModalFocusDirective {
 
   @HostListener('document:focusin', ['$event'])
   protected onFocusIn(event: FocusEvent): void {
-    if (!this.isTop() || this.isNative || this.loading.visible()) return;
     const target = event.target;
+    if (target instanceof HTMLElement && stack.includes(this) && this.host.contains(target)) {
+      this.lastFocused = target;
+      return;
+    }
+    if (!this.isTop() || this.isNative || this.loading.visible()) return;
     if (!(target instanceof Node) || this.host.contains(target)) return;
     if (target instanceof Element && target.closest(GLOBAL_LOADING)) return;
     (focusableWithin(this.host)[0] ?? this.host).focus({ preventScroll: true });
@@ -172,6 +180,7 @@ export class ModalFocusDirective {
     const wasTop = index === stack.length - 1;
     stack.splice(index, 1);
     this.deferredFocus = null;
+    this.lastFocused = null;
     syncBackground();
     if (stack.length === 0 && savedOverflow !== null) {
       document.body.style.overflow = savedOverflow;
@@ -206,10 +215,14 @@ export class ModalFocusDirective {
     (target && isFocusable(target) ? target : this.host).focus({ preventScroll: true });
   }
 
+  /**
+   * The root's blocker has already taken focus through showModal() when this runs, so the
+   * control to restore comes from the last focusin inside the dialog, not from activeElement.
+   */
   private onLoadingShown(): void {
     if (!this.isTop() || this.deferredFocus) return;
-    const active = document.activeElement;
-    this.deferredFocus = active instanceof HTMLElement && this.host.contains(active) ? active : this.host;
+    const last = this.lastFocused;
+    this.deferredFocus = last && this.host.contains(last) ? last : this.host;
   }
 
   private onLoadingHidden(): void {
@@ -239,15 +252,28 @@ export class ModalFocusDirective {
   }
 }
 
+/**
+ * Outlives the dialog that queued the return, but not the application: the watcher belongs to
+ * the environment, and destroying the environment drops the return it was waiting to apply.
+ */
 function scheduleReturnAfterLoading(loading: LoadingService, environment: EnvironmentInjector): void {
+  if (environment.destroyed) {
+    pendingReturn = null;
+    return;
+  }
+  const request = pendingReturn;
+  const stopDropping = environment.get(DestroyRef).onDestroy(() => {
+    if (pendingReturn === request) pendingReturn = null;
+  });
   const watcher = effect(() => {
     if (loading.visible()) return;
     untracked(() => {
       watcher.destroy();
+      stopDropping();
       // After render so the root has already removed its own inert/blocker.
       afterNextRender(() => flushPendingReturn(), { injector: environment });
     });
-  }, { injector: environment, manualCleanup: true });
+  }, { injector: environment });
 }
 
 function flushPendingReturn(): void {

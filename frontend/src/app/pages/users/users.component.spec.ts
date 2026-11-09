@@ -5,6 +5,9 @@ import { PageResponse, UserAccountResponse, UserRole } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService, UserFilters } from '../../core/services/catalog.service';
 import { LoadingService } from '../../core/services/loading.service';
+import { provideRouter } from '@angular/router';
+import { App } from '../../app';
+import { mountUnderRoot, simulateNativeModality } from '../../testing/native-dialog';
 import { UsersComponent } from './users.component';
 
 function user(id: number, fullName: string): UserAccountResponse {
@@ -402,7 +405,8 @@ function expectPending(root: HTMLElement): void {
 }
 
 describe('UsersComponent dialog focus', () => {
-  let fixture: ComponentFixture<UsersComponent>;
+  let fixture: ComponentFixture<App>;
+  let restoreModality: () => void;
   let element: HTMLElement;
   let loading: LoadingService;
   let rows: UserAccountResponse[];
@@ -410,11 +414,12 @@ describe('UsersComponent dialog focus', () => {
   let remove: Subject<void>;
 
   beforeEach(async () => {
-    vi.useFakeTimers();
+    // Under the real root, whose blocker takes focus on showModal() as in a browser.
+    restoreModality = simulateNativeModality();
     rows = [user(1, 'Ana'), user(2, 'Bia')];
     await TestBed.configureTestingModule({
       imports: [UsersComponent],
-      providers: [{ provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }), hasAnyRole: () => true } },
+      providers: [provideRouter([{ path: '', component: UsersComponent }]), { provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }), hasAnyRole: () => true } },
         { provide: CatalogService, useValue: {
         listUsers: (filters: { page: number; size: number }) => of(page(rows, filters.page, filters.size)),
         getUserSummary: () => of({ total: rows.length, active: rows.length, admins: 1, roles: 1 }),
@@ -423,13 +428,17 @@ describe('UsersComponent dialog focus', () => {
         deleteUser: () => (remove = new Subject<void>())
       } }]
     }).compileComponents();
-    fixture = TestBed.createComponent(UsersComponent);
-    element = fixture.nativeElement as HTMLElement;
+    ({ fixture, element } = await mountUnderRoot(UsersComponent));
+    vi.useFakeTimers();
     loading = TestBed.inject(LoadingService);
     render();
   });
 
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.useRealTimers();
+    restoreModality();
+  });
 
   function render(): void {
     fixture.detectChanges();
@@ -471,6 +480,13 @@ describe('UsersComponent dialog focus', () => {
     loading.start();
     vi.advanceTimersByTime(200);
     render();
+    expect(blocker().open, 'the root blocker is shown').toBe(true);
+    const dialog = element.querySelector('[role="dialog"], [role="alertdialog"]');
+    expect(dialog?.contains(document.activeElement) ?? false, 'the blocker took focus away from the dialog').toBe(false);
+  }
+
+  function blocker(): HTMLDialogElement {
+    return (fixture.nativeElement as HTMLElement).querySelector<HTMLDialogElement>('dialog.global-loading-dialog')!;
   }
 
   function hideOverlay(): void {

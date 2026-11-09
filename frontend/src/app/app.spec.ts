@@ -4,6 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import { App } from './app';
 import { LoadingService } from './core/services/loading.service';
 import { ModalFocusDirective } from './shared/modal-focus/modal-focus.directive';
+import { simulateNativeModality } from './testing/native-dialog';
 
 @Component({ template: '<button type="button">Atualizar</button><div aria-busy="true"></div>' })
 class LoadingPage {}
@@ -148,8 +149,11 @@ describe('App global loading with dialogs', () => {
   let loading: LoadingService;
   let page: DialogPage;
   let root: HTMLElement;
+  let restoreModality: () => void;
 
   beforeEach(async () => {
+    // In a browser the blocker's showModal() takes focus; happy-dom only adds 'open'.
+    restoreModality = simulateNativeModality();
     await TestBed.configureTestingModule({ imports: [App], providers: [provideRouter([{ path: '', component: DialogPage }])] }).compileComponents();
     fixture = TestBed.createComponent(App);
     fixture.detectChanges();
@@ -164,6 +168,7 @@ describe('App global loading with dialogs', () => {
   afterEach(() => {
     TestBed.resetTestingModule();
     vi.useRealTimers();
+    restoreModality();
   });
 
   function render(): void {
