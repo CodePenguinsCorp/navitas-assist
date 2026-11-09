@@ -1,5 +1,6 @@
-import { Component, computed, inject, signal } from '@angular/core';
-import { finalize, forkJoin, of } from 'rxjs';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subscription, finalize, forkJoin, of } from 'rxjs';
 import {
   CLOSED_RMA_STATUSES,
   RMA_PRIORITY_LABELS,
@@ -65,9 +66,13 @@ export class DashboardComponent {
   private readonly authService = inject(AuthService);
   private readonly catalogService = inject(CatalogService);
   private readonly rmaService = inject(RmaService);
+  private readonly destroyRef = inject(DestroyRef);
+  private loadRequest?: Subscription;
 
   protected readonly loading = signal(true);
-  protected readonly errorMessage = signal('');
+  protected readonly loadFailed = signal(false);
+  protected readonly hasLoaded = signal(false);
+  protected readonly loadErrorMessage = signal('');
 
   private readonly rmasSignal = signal<RmaResponse[]>([]);
   private readonly clientTotalSignal = signal(0);
@@ -181,20 +186,26 @@ export class DashboardComponent {
     this.loadDashboard();
   }
 
+  protected retryLoad(): void {
+    if (this.loading()) return;
+    this.loadDashboard();
+  }
+
   private loadDashboard(): void {
+    this.loadRequest?.unsubscribe();
     this.loading.set(true);
-    this.errorMessage.set('');
 
     const usersRequest = this.authService.hasAnyRole(['ADMIN'])
       ? this.catalogService.getUserSummary()
       : of<UserSummaryResponse>({ total: 0, active: 0, admins: 0, roles: 0 });
 
-    forkJoin({
+    this.loadRequest = forkJoin({
       rmas: this.rmaService.listBoard(),
       clients: this.catalogService.getClientSummary(),
       products: this.catalogService.getProductSummary(),
       users: usersRequest
     }).pipe(
+      takeUntilDestroyed(this.destroyRef),
       finalize(() => this.loading.set(false))
     ).subscribe({
       next: ({ rmas, clients, products, users }) => {
@@ -202,9 +213,13 @@ export class DashboardComponent {
         this.clientTotalSignal.set(clients.total);
         this.productTotalSignal.set(products.total);
         this.userTotalSignal.set(users.total);
+        this.hasLoaded.set(true);
+        this.loadFailed.set(false);
+        this.loadErrorMessage.set('');
       },
       error: () => {
-        this.errorMessage.set('Não foi possível carregar o dashboard.');
+        this.loadFailed.set(true);
+        this.loadErrorMessage.set('Não foi possível carregar o dashboard.');
       }
     });
   }
