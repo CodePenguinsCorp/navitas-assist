@@ -3,6 +3,7 @@ import { Component, ElementRef, computed, effect, inject, viewChild } from '@ang
 import { RouterOutlet } from '@angular/router';
 import { LoadingService } from './core/services/loading.service';
 import { LoadingOverlayComponent } from './shared/loading-overlay/loading-overlay.component';
+import { modalFocusOwnsReturn } from './shared/modal-focus/modal-focus.directive';
 
 @Component({
   selector: 'app-root',
@@ -39,7 +40,8 @@ export class App {
         content.removeAttribute('aria-hidden');
         const previous = this.focusedElement;
         this.focusedElement = null;
-        if (previous?.isConnected) previous.focus({ preventScroll: true });
+        // Single owner: an open dialog, or one waiting to return focus, restores focus itself.
+        if (!modalFocusOwnsReturn() && previous?.isConnected) previous.focus({ preventScroll: true });
       }
     });
   }

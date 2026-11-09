@@ -1,11 +1,30 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { App } from './app';
 import { LoadingService } from './core/services/loading.service';
+import { ModalFocusDirective } from './shared/modal-focus/modal-focus.directive';
 
 @Component({ template: '<button type="button">Atualizar</button><div aria-busy="true"></div>' })
 class LoadingPage {}
+
+@Component({
+  imports: [ModalFocusDirective],
+  template: `
+    <button type="button" class="trigger" (click)="open.set(true)">Editar</button>
+    @if (open()) {
+      <div class="modal-overlay">
+        <section role="dialog" appModalFocus modalInitialFocus=".name">
+          <input class="name" />
+          <button type="button" class="save">Salvar</button>
+        </section>
+      </div>
+    }
+  `
+})
+class DialogPage {
+  readonly open = signal(false);
+}
 
 describe('App global loading', () => {
   let fixture: ComponentFixture<App>;
@@ -121,5 +140,92 @@ describe('App global loading', () => {
     expect(underlying.open).toBe(true);
     expect(document.activeElement).toBe(closeButton);
     underlying.close();
+  });
+});
+
+describe('App global loading with dialogs', () => {
+  let fixture: ComponentFixture<App>;
+  let loading: LoadingService;
+  let page: DialogPage;
+  let root: HTMLElement;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [App], providers: [provideRouter([{ path: '', component: DialogPage }])] }).compileComponents();
+    fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    await TestBed.inject(Router).navigateByUrl('/');
+    render();
+    loading = TestBed.inject(LoadingService);
+    root = fixture.nativeElement as HTMLElement;
+    page = fixture.debugElement.query((node) => node.componentInstance instanceof DialogPage).componentInstance;
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.useRealTimers();
+  });
+
+  function render(): void {
+    fixture.detectChanges();
+    TestBed.tick();
+  }
+
+  function el(selector: string): HTMLElement {
+    const found = root.querySelector<HTMLElement>(selector);
+    expect(found, selector + ' must exist').not.toBeNull();
+    return found!;
+  }
+
+  function show(): void {
+    loading.start();
+    vi.advanceTimersByTime(200);
+    render();
+  }
+
+  function hide(): void {
+    loading.finish();
+    vi.advanceTimersByTime(400);
+    render();
+  }
+
+  it('lets the dialog own the restored focus instead of the root', () => {
+    el('.trigger').click();
+    render();
+    const save = el('.save');
+    save.focus();
+    show();
+    save.blur();
+    const focus = vi.spyOn(save, 'focus');
+    hide();
+    expect(document.activeElement).toBe(save);
+    expect(focus, 'a single owner restores the control').toHaveBeenCalledTimes(1);
+  });
+
+  it('does not restore the root saved control when a dialog opened under the overlay', () => {
+    const trigger = el('.trigger');
+    trigger.focus();
+    show();
+    page.open.set(true);
+    render();
+    const focus = vi.spyOn(trigger, 'focus');
+    hide();
+    expect(focus).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(el('.name'));
+  });
+
+  it('returns once to the trigger after a dialog closed under the overlay', () => {
+    const trigger = el('.trigger');
+    trigger.focus();
+    trigger.click();
+    render();
+    el('.save').focus();
+    show();
+    page.open.set(false);
+    render();
+    const focus = vi.spyOn(trigger, 'focus');
+    hide();
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(trigger);
   });
 });
