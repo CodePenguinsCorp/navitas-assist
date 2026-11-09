@@ -4,10 +4,11 @@
   @if (loadFailed()) {
     <article class="panel alert-banner alert-banner--error" role="alert">
       <strong>{{ loadErrorMessage() }}</strong>
-      <button type="button" class="button-secondary" [disabled]="loading()" (click)="retryLoad()">{{ loading() ? 'Carregando...' : 'Tentar novamente' }}</button>
+      <button type="button" class="button-secondary" [disabled]="loading()" (click)="retryLoad()">Tentar novamente</button>
+      @if (loading()) { <div aria-busy="true"></div> }
     </article>
-  } @else if (!hasLoaded()) {
-    <article class="panel" role="status">Carregando dashboard...</article>
+  } @else if (loading() || !hasLoaded()) {
+    <div class="panel" aria-busy="true"></div>
   } @else {
     <ul class="dashboard-summary" aria-label="Indicadores do dashboard">
       @for (indicator of indicators(); track indicator.label) {

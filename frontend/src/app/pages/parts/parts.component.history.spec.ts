@@ -118,7 +118,7 @@ describe('PartsComponent movement history', () => {
     expect(text()).not.toContain('Nenhum movimento registrado.'); expect(text()).not.toContain('tech');
     const request = new Subject<PartMovementResponse[]>(); service['listMovements'].mockReturnValue(request);
     button('Tentar novamente')!.click(); render();
-    expect(button('Carregando...')!.disabled).toBe(true); expect(text()).toContain('Não foi possível carregar o histórico.');
+    expect(button('Tentar novamente')!.disabled).toBe(true); expect(text()).toContain('Não foi possível carregar o histórico.');
     expect(text()).not.toContain('tech'); expect(text()).not.toContain('Nenhum movimento registrado.');
     expect(service['listMovements']).toHaveBeenLastCalledWith(4);
     request.next([CONSUMPTION]); request.complete(); render();
@@ -182,7 +182,7 @@ describe('PartsComponent movement history', () => {
   // Vermelho: fechar não cancela a leitura pendente do histórico.
   it('cancels a pending history read on close and destroy', async () => {
     const request = new Subject<PartMovementResponse[]>(); await setup({ movements: () => request });
-    expect(text()).toContain('Carregando histórico...'); component.closeModals(); render();
+    expectPending(fixture.nativeElement); component.closeModals(); render();
     expect(request.observed).toBe(false); expect(panel()).toBeNull();
     component.openHistory(PART); render(); expect(request.observed).toBe(true);
     fixture.destroy(); expect(request.observed).toBe(false);
@@ -231,3 +231,11 @@ describe('PartsComponent movement history', () => {
     expect(service['reverseMovement']).not.toHaveBeenCalled(); expect(panel()).not.toBeNull();
   });
 });
+
+function expectPending(root: HTMLElement): void {
+  const busy = root.querySelector('[aria-busy="true"]');
+  expect(busy?.textContent?.trim()).toBe('');
+  expect(busy?.children.length).toBe(0);
+  expect(busy?.hasAttribute('role')).toBe(false);
+  expect(root.textContent).not.toMatch(/Carregando(?! opções)|Atualizando (estoque|notificações|preferências|regras|falhas)/);
+}

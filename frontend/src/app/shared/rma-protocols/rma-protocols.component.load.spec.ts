@@ -45,6 +45,15 @@ describe('RmaProtocolsComponent loading', () => {
     fixture.componentRef.setInput('rmaId', 4); render();
   }
 
+  it('renders empty busy executions until an empty success', async () => {
+    const pending = new Subject<ProtocolExecutionResponse[]>();
+    await setup({ executions: pending });
+    expectPending(fixture.nativeElement);
+    expect(text()).not.toContain('Nenhum protocolo executado');
+    pending.next([]); pending.complete(); render();
+    expect(text()).toContain('Nenhum protocolo executado');
+  });
+
   const expectFailure = () => {
     expect(text()).toContain('Não foi possível carregar os protocolos do RMA.');
     expect(text()).toContain('Tentar novamente');
@@ -74,12 +83,26 @@ describe('RmaProtocolsComponent loading', () => {
     expect(button('Tentar novamente')).toBeDefined();
     const retry = new Subject<ProtocolExecutionResponse[]>(); service.listExecutions.mockReturnValue(retry);
     button('Tentar novamente')!.click(); render();
-    expect(button('Carregando...')?.disabled).toBe(true);
+    expect(button('Tentar novamente')?.disabled).toBe(true);
     expect(text()).toContain('Não foi possível carregar os protocolos do RMA.');
     expect(text()).not.toContain('Bancada PWM · v3');
     retry.next([{ ...EXECUTION, rmaId: 5, templateName: 'Protocolo de B' }]); retry.complete(); render();
     expect(text()).toContain('Protocolo de B'); expect(text()).not.toContain('Não foi possível carregar os protocolos do RMA.');
     expect(service.listExecutions).toHaveBeenLastCalledWith(5);
+  });
+
+  it('keeps the template retry label and failure while the retry is pending', async () => {
+    await setup({ templates: throwError(() => new Error()) });
+    const retry$ = new Subject<ProtocolTemplateResponse[]>();
+    service.listTemplates.mockReturnValue(retry$);
+    button('Tentar novamente')!.click(); render();
+    const launch = fixture.nativeElement.querySelector('.protocol-launch') as HTMLElement;
+    expect(button('Tentar novamente')?.disabled).toBe(true);
+    expect(launch.textContent).toContain('Não foi possível carregar as opções de protocolos.');
+    expect(launch.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
+    retry$.next([TEMPLATE]); retry$.complete(); render();
+    expect(text()).not.toContain('Não foi possível carregar as opções de protocolos.');
   });
 
   // Vermelho: o lançador some quando o catálogo falha, sem erro/retry local.
@@ -90,7 +113,7 @@ describe('RmaProtocolsComponent loading', () => {
     expect(fixture.nativeElement.querySelector('.protocol-launch')?.textContent).toContain('Não foi possível carregar as opções de protocolos.');
     expect(text()).toContain('Bancada PWM · v3'); expect(text()).not.toContain('Nenhum protocolo ativo disponível.');
     service.listTemplates.mockReturnValue(of([TEMPLATE]));
-    button('Tentar carregar protocolos')!.click(); render();
+    button('Tentar novamente')!.click(); render();
     expect(text()).not.toContain('Não foi possível carregar as opções de protocolos.');
     expect(service.listExecutions).toHaveBeenCalledTimes(1);
   });
@@ -98,7 +121,7 @@ describe('RmaProtocolsComponent loading', () => {
   // Vermelho: não há distinção entre catálogo pendente e catálogo sem opções ativas.
   it('does not present no active templates while still loading', async () => {
     const templates = new Subject<ProtocolTemplateResponse[]>(); await setup({ templates });
-    expect(text()).toContain('Carregando opções de protocolos...'); expect(text()).not.toContain('Nenhum protocolo ativo disponível.');
+    expectPending(fixture.nativeElement); expect(text()).not.toContain('Nenhum protocolo ativo disponível.');
     templates.next([{ ...TEMPLATE, active: false }]); templates.complete(); render();
     expect(text()).toContain('Nenhum protocolo ativo disponível.'); expect(text()).not.toContain('Carregando opções de protocolos...');
   });
@@ -173,3 +196,11 @@ describe('RmaProtocolsComponent loading', () => {
     expect(executions.observed).toBe(false); expect(templates.observed).toBe(false);
   });
 });
+
+function expectPending(root: HTMLElement): void {
+  const busy = root.querySelector('[aria-busy="true"]');
+  expect(busy?.textContent?.trim()).toBe('');
+  expect(busy?.children.length).toBe(0);
+  expect(busy?.hasAttribute('role')).toBe(false);
+  expect(root.textContent).not.toMatch(/Carregando(?! opções)|Atualizando (estoque|notificações|preferências|regras|falhas)/);
+}

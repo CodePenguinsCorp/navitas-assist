@@ -4,7 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import { App } from './app';
 import { LoadingService } from './core/services/loading.service';
 
-@Component({ template: '<button type="button">Atualizar</button><p role="status">Carregando dashboard...</p>' })
+@Component({ template: '<button type="button">Atualizar</button><div aria-busy="true"></div>' })
 class LoadingPage {}
 
 describe('App global loading', () => {
@@ -46,7 +46,9 @@ describe('App global loading', () => {
     expect(content.hasAttribute('inert')).toBe(true);
     expect(content.getAttribute('aria-busy')).toBe('true');
     expect(content.getAttribute('aria-hidden')).toBe('true');
-    expect(content.textContent).toContain('Carregando dashboard...');
+    expect(content.querySelector('[aria-busy="true"]')?.textContent).toBe('');
+    expect(content.textContent).not.toContain('Carregando');
+    expect(fixture.nativeElement.querySelectorAll('[role="status"]')).toHaveLength(1);
     const status = fixture.nativeElement.querySelector('app-loading-overlay [role="status"]');
     expect(status?.textContent.trim()).toBe('Carregando...');
     expect(content.contains(status)).toBe(false);
@@ -104,6 +106,9 @@ describe('App global loading', () => {
     vi.advanceTimersByTime(200);
     fixture.detectChanges();
     const blocker = fixture.nativeElement.querySelector('dialog.global-loading-dialog') as HTMLDialogElement | null;
+    const statuses = fixture.nativeElement.querySelectorAll('[role="status"]');
+    expect(statuses).toHaveLength(1);
+    expect(statuses[0].closest('[inert], [aria-hidden="true"]')).toBeNull();
     expect(blocker?.open).toBe(true);
     const cancel = new Event('cancel', { cancelable: true });
     blocker!.dispatchEvent(cancel);

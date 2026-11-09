@@ -51,11 +51,12 @@
           <p>{{ errorMessage() }}</p>
         }
         <button type="button" class="button-secondary" (click)="retryLoad()" [disabled]="loading()">
-          {{ loading() ? 'Carregando...' : 'Tentar novamente' }}
+          Tentar novamente
         </button>
+        @if (loading()) { <div aria-busy="true"></div> }
       </section>
-    } @else if (loading() && !hasLoaded()) {
-      <p>Carregando produtos...</p>
+    } @else if (loading() || !hasLoaded()) {
+      <div aria-busy="true"></div>
     } @else if (products().length === 0 && !hasActiveFilters) {
       <section class="empty-state">
         <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>

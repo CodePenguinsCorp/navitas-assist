@@ -36,14 +36,12 @@
   @if (loadFailed()) {
     <article class="panel alert-banner alert-banner--error" role="alert">
       <strong>{{ loadErrorMessage() }}</strong>
-      <button type="button" class="button-secondary" [disabled]="loading()" (click)="retryLoad()">{{ loading() ? 'Carregando...' : 'Tentar novamente' }}</button>
+      <button type="button" class="button-secondary" [disabled]="loading()" (click)="retryLoad()">Tentar novamente</button>
+      @if (loading()) { <div aria-busy="true"></div> }
     </article>
-  } @else if (!hasLoaded()) {
-    <article class="panel" role="status">Carregando peças...</article>
+  } @else if (loading() || !hasLoaded()) {
+    <div class="panel" aria-busy="true"></div>
   } @else {
-    @if (loading()) {
-      <p role="status">Atualizando estoque...</p>
-    }
     @if (activeTab() === 'stock') {
       <article class="table-card table-card--list panel">
         @if (parts().length === 0) {
@@ -356,10 +354,11 @@
       @if (historyLoadFailed()) {
         <article class="panel alert-banner alert-banner--error" role="alert">
           <strong>{{ historyLoadErrorMessage() }}</strong>
-          <button type="button" class="button-secondary" (click)="retryHistory()" [disabled]="historyLoading()">{{ historyLoading() ? 'Carregando...' : 'Tentar novamente' }}</button>
+          <button type="button" class="button-secondary" (click)="retryHistory()" [disabled]="historyLoading()">Tentar novamente</button>
+          @if (historyLoading()) { <div aria-busy="true"></div> }
         </article>
       } @else if (historyLoading() || !historyHasLoaded()) {
-        <p role="status">Carregando histórico...</p>
+        <div aria-busy="true"></div>
       } @else if (history().length === 0) {
         <p>Nenhum movimento registrado.</p>
       } @else {

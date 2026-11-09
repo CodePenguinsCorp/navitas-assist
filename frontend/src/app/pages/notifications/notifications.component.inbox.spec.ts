@@ -73,6 +73,15 @@ describe('NotificationsComponent inbox loading', () => {
     render();
   }
 
+  it('shows an empty inbox only after the initial response', async () => {
+    const pending = new Subject<NotificationResponse[]>();
+    await setup({ list: [pending] });
+    expectPending(root());
+    expect(root().querySelector('.empty-state, .notification-list, [role="status"]')).toBeNull();
+    pending.next([]); pending.complete(); render();
+    expect(text()).toContain('Nenhuma notificação.');
+  });
+
   // Vermelho: o estado vazio "Nenhuma notificação." aparece junto do banner de falha e não há "Tentar novamente".
   it('replaces the inbox with a retryable failure instead of an empty state', async () => {
     await setup({ list: [failure()] });
@@ -97,13 +106,13 @@ describe('NotificationsComponent inbox loading', () => {
   it('starts a first load after a filter change, even after a failure', async () => {
     await setup({ list: [failure(), new Subject<NotificationResponse[]>()] });
     toggle('Mostrar adiadas');
-    expect(text()).toContain('Carregando notificações...');
+    expectPending(root());
     expect(text()).not.toContain('Não foi possível carregar as notificações.');
 
     TestBed.resetTestingModule();
     await setup({ list: [of([NOTIFICATION]), new Subject<NotificationResponse[]>()] });
     toggle('Mostrar adiadas');
-    expect(text()).toContain('Carregando notificações...');
+    expectPending(root());
     expect(text()).not.toContain('RMA RMA-2026-000007 atribuído a Técnico');
   });
 
@@ -112,7 +121,7 @@ describe('NotificationsComponent inbox loading', () => {
     await setup({ list: [failure(), new Subject<NotificationResponse[]>()] });
     button('Tentar novamente')!.click();
     render();
-    const retry = button('Carregando...');
+    const retry = button('Tentar novamente');
     expect(retry).toBeDefined();
     expect(retry!.disabled).toBe(true);
     expect(text()).toContain('Não foi possível carregar as notificações.');
@@ -126,6 +135,7 @@ describe('NotificationsComponent inbox loading', () => {
     toggle('Somente não lidas');
     expect(first.observed).toBe(false);
     second.next([NEW]);
+    second.complete();
     first.next([OLD]);
     render();
     expect(text()).toContain('Notificação nova');
@@ -166,19 +176,21 @@ describe('NotificationsComponent inbox loading', () => {
   });
 
   // Vermelho: a recarga com os mesmos filtros não anuncia "Atualizando notificações...".
-  it('announces a same-filter reload while keeping the list', async () => {
+  it('renders an empty busy inbox during a same-filter reload', async () => {
     await setup({ list: [of([NOTIFICATION]), new Subject<NotificationResponse[]>()] });
     component.snooze(NOTIFICATION, '60');
     render();
-    expect(root().querySelector('[role="status"]:not(.alert-banner)')?.textContent?.trim()).toBe('Atualizando notificações...');
+    expectPending(root());
   });
 
   describe('preservation', () => {
-    it('keeps the list visible while reloading the same filters after snoozing', async () => {
+    it('hides stale rows while reloading the same filters after snoozing', async () => {
       await setup({ list: [of([NOTIFICATION]), new Subject<NotificationResponse[]>()] });
       component.snooze(NOTIFICATION, '60');
       render();
-      expect(text()).toContain('RMA RMA-2026-000007 atribuído a Técnico');
+      expect(text()).not.toContain('RMA RMA-2026-000007 atribuído a Técnico');
+      expectPending(root());
+      expect(root().querySelector('.notification-list')).toBeNull();
       expect(service['list']).toHaveBeenCalledTimes(2);
     });
 
@@ -351,3 +363,11 @@ describe('NotificationsComponent inbox loading', () => {
     });
   });
 });
+
+function expectPending(root: HTMLElement): void {
+  const busy = root.querySelector('[aria-busy="true"]');
+  expect(busy?.textContent?.trim()).toBe('');
+  expect(busy?.children.length).toBe(0);
+  expect(busy?.hasAttribute('role')).toBe(false);
+  expect(root.textContent).not.toMatch(/Carregando(?! opções)|Atualizando (estoque|notificações|preferências|regras|falhas)/);
+}

@@ -80,7 +80,7 @@ describe('DashboardComponent load states', () => {
 
   it('shows no indicators or empty sections before the first response', async () => {
     await setup({ board: new Subject<RmaResponse[]>() });
-    expect(text()).toContain('Carregando dashboard...');
+    expectPending(root());
     expect(root().querySelector('.dashboard-summary')).toBeNull();
     expect(root().querySelector('.empty-state')).toBeNull();
     expect(root().querySelector('table')).toBeNull();
@@ -117,7 +117,8 @@ describe('DashboardComponent load states', () => {
     retry.click();
     fixture.detectChanges();
     expect(retry.disabled).toBe(true);
-    expect(retry.textContent?.trim()).toBe('Carregando...');
+    expect(retry.textContent?.trim()).toBe('Tentar novamente');
+    expect(root().querySelector('[aria-busy="true"]')).not.toBeNull();
     expect(text()).toContain('Não foi possível carregar o dashboard.');
 
     board.next([RMA_OPEN]);
@@ -257,3 +258,11 @@ describe('DashboardComponent load states', () => {
     });
   });
 });
+
+function expectPending(root: HTMLElement): void {
+  const busy = root.querySelector('[aria-busy="true"]');
+  expect(busy?.textContent?.trim()).toBe('');
+  expect(busy?.children.length).toBe(0);
+  expect(busy?.hasAttribute('role')).toBe(false);
+  expect(root.textContent).not.toMatch(/Carregando(?! opções)|Atualizando (estoque|notificações|preferências|regras|falhas)/);
+}

@@ -8,10 +8,11 @@
   @if (loadFailed()) {
     <div class="empty-state" role="alert">
       <p>{{ loadErrorMessage() }}</p>
-      <button type="button" class="button-secondary" (click)="retryLoad()" [disabled]="loading()">{{ loading() ? 'Carregando...' : 'Tentar novamente' }}</button>
+      <button type="button" class="button-secondary" (click)="retryLoad()" [disabled]="loading()">Tentar novamente</button>
+      @if (loading()) { <div aria-busy="true"></div> }
     </div>
-  } @else if (!hasLoaded()) {
-    <p class="rma-detail-copy" role="status">Carregando protocolos...</p>
+  } @else if (loading() || !hasLoaded()) {
+    <div class="rma-detail-copy" aria-busy="true"></div>
   } @else if (executions().length === 0) {
     <div class="empty-state">
       <span class="icon-tile tone-slate"><app-icon name="checklist" [size]="20" /></span>
@@ -141,9 +142,10 @@
       <span class="protocol-launch__label">Executar protocolo</span>
       @if (templatesLoadFailed()) {
         <p class="field-error" role="alert">{{ templatesLoadErrorMessage() }}</p>
-        <button type="button" class="button-secondary" (click)="retryTemplates()" [disabled]="templatesLoading()">{{ templatesLoading() ? 'Carregando...' : 'Tentar carregar protocolos' }}</button>
+        <button type="button" class="button-secondary" (click)="retryTemplates()" [disabled]="templatesLoading()">Tentar novamente</button>
+        @if (templatesLoading()) { <div aria-busy="true"></div> }
       } @else if (templatesLoading()) {
-        <p role="status">Carregando opções de protocolos...</p>
+        <div aria-busy="true"></div>
       } @else if (templateOptions().length === 0) {
         <p>Nenhum protocolo ativo disponível.</p>
       } @else {

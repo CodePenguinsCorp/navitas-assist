@@ -1,9 +1,12 @@
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RmaResponse, UserRole } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
+import { loadingInterceptor, SKIP_GLOBAL_LOADING } from '../../core/interceptors/loading.interceptor';
+import { LoadingService } from '../../core/services/loading.service';
+import { RmaService } from '../../core/services/rma.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { RmaBlockPanelComponent } from './rma-block-panel.component';
 
@@ -15,7 +18,7 @@ describe('RmaBlockPanelComponent', () => {
   beforeEach(async () => {
     role = 'TECHNICIAN';
     await TestBed.configureTestingModule({ imports: [RmaBlockPanelComponent], providers: [
-      provideHttpClient(), provideHttpClientTesting(),
+      provideHttpClient(withInterceptors([loadingInterceptor])), provideHttpClientTesting(),
       { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(role) } },
     ] }).compileComponents();
     fixture = TestBed.createComponent(RmaBlockPanelComponent);
@@ -28,10 +31,48 @@ describe('RmaBlockPanelComponent', () => {
   function load(rma = RMA) {
     fixture.componentInstance.open(rma.id);
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Carregando');
+    expect(fixture.nativeElement.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Carregando');
     http.expectOne('/api/rmas/1').flush(rma);
     fixture.detectChanges();
   }
+
+  it('uses only a decorative local indicator on initial reading and retry without global loading', () => {
+    fixture.componentInstance.open(1);
+    fixture.detectChanges();
+    const initial = http.expectOne('/api/rmas/1');
+    expect(initial.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+    expect(TestBed.inject(LoadingService).pendingCount()).toBe(0);
+    const busy = fixture.nativeElement.querySelector('dialog [aria-busy="true"]');
+    expect(busy?.querySelector('[aria-hidden="true"]')).not.toBeNull();
+    expect(busy?.textContent?.trim()).toBe('');
+    expect(fixture.nativeElement.querySelector('[role="status"], form')).toBeNull();
+    initial.flush({}, { status: 500, statusText: 'Failure' });
+    fixture.detectChanges();
+    const retry = fixture.nativeElement.querySelector('[data-retry]');
+    retry.click(); fixture.detectChanges();
+    const retried = http.expectOne('/api/rmas/1');
+    expect(retried.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+    expect(TestBed.inject(LoadingService).pendingCount()).toBe(0);
+    expect(retry.disabled).toBe(true);
+    expect(retry.isConnected).toBe(true);
+    expect(retry.textContent.trim()).toBe('Tentar novamente');
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('Não foi possível carregar os impedimentos');
+    expect(fixture.nativeElement.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
+    retried.flush(RMA); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[aria-busy="true"], [data-retry], [role="alert"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('dialog').open).toBe(true);
+  });
+
+  it('still counts ordinary getById reads in global loading', () => {
+    TestBed.inject(RmaService).getById(1).subscribe();
+    const request = http.expectOne('/api/rmas/1');
+    expect(request.request.context.get(SKIP_GLOBAL_LOADING)).toBe(false);
+    expect(TestBed.inject(LoadingService).pendingCount()).toBe(1);
+    request.flush(RMA);
+    expect(TestBed.inject(LoadingService).pendingCount()).toBe(0);
+  });
 
   it('shows load failure inside the dialog and retries the selected RMA', () => {
     fixture.componentInstance.open(1);

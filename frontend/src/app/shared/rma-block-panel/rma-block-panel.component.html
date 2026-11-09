@@ -3,9 +3,11 @@
     <h2 id="block-panel-title">Impedimentos {{ rma()?.code }}</h2>
     <button type="button" class="button-secondary" autofocus [disabled]="busy()" (click)="close()">Fechar</button>
   </div>
-  @if (loading()) { <p role="status">Carregando impedimentos...</p> }
+  @if (loading()) {
+    <div aria-busy="true"><span class="loading-indicator" aria-hidden="true"></span></div>
+  }
   @if (error()) { <p class="field-error" role="alert">{{ error() }}</p> }
-  @if (!loading() && !rma()) { <button type="button" class="button-secondary" data-retry (click)="load()">Tentar novamente</button> }
+  @if (error() && !rma()) { <button type="button" class="button-secondary" data-retry [disabled]="loading()" (click)="load()">Tentar novamente</button> }
   @if (rma(); as item) {
     <app-rma-block-history [rma]="item" />
     @if (canEdit()) {

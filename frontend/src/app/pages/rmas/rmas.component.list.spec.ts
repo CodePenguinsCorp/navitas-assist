@@ -542,30 +542,49 @@ describe('RmasComponent list composition', () => {
     expect(page.textContent).toContain('Nenhum RMA registrado');
   });
 
-  it('keeps the table while reloading a page', async () => {
-    // Hoje, com a página atual vazia, recarregar troca o estado por "Carregando RMAs...".
-    const pending$ = new Subject<PageResponse<RmaResponse>>();
-    let pendingMode = false;
-    let empty = false;
-    const { component, page, render } = await setup({
-      list: (f) => (pendingMode ? pending$ : empty ? emptyPage(f) : defaultList(f))
+  it.each(['parts', 'protocols'])('uses an empty busy placeholder before the %s detail component loads', async (tab) => {
+    const { component, page, render } = await setup();
+    component.openDetailsModal(defaultRma);
+    const state = component as unknown as { detailTab: { set(value: string): void }; protocolsComponent: { set(value: null): void } };
+    state.protocolsComponent.set(null);
+    state.detailTab.set(tab); render();
+    const busy = page.querySelector('.rma-details [aria-busy="true"]');
+    expect(busy?.textContent?.trim()).toBe('');
+    expect(busy?.children.length).toBe(0);
+    expect(page.querySelector('.rma-details')?.textContent).not.toContain('Carregando');
+  });
+
+  it.each(['initial', 'data', 'empty'])('renders an empty busy RMA list during %s loading without flashing an empty state', async (previous) => {
+    const pending = new Subject<PageResponse<RmaResponse>>();
+    const { component, page, render, rmaService } = await setup({
+      list: previous === 'initial' ? () => pending : previous === 'empty' ? emptyPage : defaultList
     });
+    if (previous !== 'initial') {
+      rmaService.list.mockImplementation(() => pending);
+      confirmFilters(component, 'zzz'); render();
+    }
+    const busy = page.querySelector('.table-card [aria-busy="true"]');
+    expect(busy?.textContent?.trim()).toBe('');
+    expect(busy?.children.length).toBe(0);
+    expect(page.querySelector('tbody, .table-card .empty-state')).toBeNull();
+    expect(page.textContent).not.toMatch(/Carregando|Nenhum RMA/);
+    pending.next(buildRmaPage([], 0, 20, 0)); pending.complete(); render();
+    expect(page.textContent).toContain(previous === 'initial' ? 'Nenhum RMA registrado' : 'Nenhum RMA encontrado');
+  });
 
-    pendingMode = true;
-    component.goToPage(1);
-    render();
-    expect(page.querySelector('tbody')).not.toBeNull();
-    expect(page.textContent).not.toContain('Carregando RMAs...');
-
-    pendingMode = false;
-    empty = true;
-    confirmFilters(component, 'zzz');
-    render();
-    pendingMode = true;
-    component.goToPage(0);
-    render();
-    expect(page.textContent).not.toContain('Carregando RMAs...');
-    expect(page.textContent).toContain('Nenhum RMA encontrado');
+  it('keeps a disabled fixed-label retry and its failure until an empty success', async () => {
+    const { page, render, rmaService } = await setup({ list: () => throwError(() => httpError) });
+    const pending = new Subject<PageResponse<RmaResponse>>();
+    rmaService.list.mockImplementation(() => pending);
+    buttonByText(page, 'Tentar novamente')!.click(); render();
+    const retry = buttonByText(page, 'Tentar novamente');
+    expect(retry?.disabled).toBe(true);
+    expect(page.querySelector('.table-card [aria-busy="true"]')).not.toBeNull();
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain('Falha no servidor');
+    expect(page.querySelector('tbody')).toBeNull();
+    pending.next(buildRmaPage([], 0, 20, 0)); pending.complete(); render();
+    expect(page.querySelector('[role="alert"]')).toBeNull();
+    expect(page.textContent).toContain('Nenhum RMA registrado');
   });
 
   it('keeps RMA codes on one line and counts products with singular and plural', async () => {

@@ -276,6 +276,27 @@ describe('ClientsComponent collection layout and states', () => {
     expect(dialog.textContent).not.toContain('Preencha os dados principais');
   });
 
+  it('renders an empty busy container until the first empty response', async () => {
+    const pending = new Subject<PageResponse<ClientResponse>>();
+    await mount({ list: () => pending });
+    expectPending(element);
+    expect(element.querySelector('tbody, .table-card .empty-state')).toBeNull();
+    expect(element.textContent).not.toContain('Nenhum cliente');
+    pending.next(page([], 0, 20, 0)); pending.complete(); fixture.detectChanges();
+    expect(element.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(element.textContent).toContain('Nenhum cliente');
+  });
+
+  it.each([false, true])('hides old rows and empty state during a filter load (empty=%s)', async (empty) => {
+    await mount(empty ? { list: (filters) => of(page([], filters.page, filters.size, 0)) } : {});
+    const pending = new Subject<PageResponse<ClientResponse>>();
+    listClients.mockImplementation(() => pending);
+    component.updateDocumentFilter('with'); fixture.detectChanges();
+    expectPending(element);
+    expect(element.querySelector('tbody, .table-card .empty-state')).toBeNull();
+    expect(element.textContent).not.toContain('Nenhum cliente');
+  });
+
   it('shows the failure state on an initial load error', async () => {
     await mount({ list: loadError });
     expectFailureState();
@@ -333,8 +354,9 @@ describe('ClientsComponent collection layout and states', () => {
 
     const retry = loadAlert()!.querySelector<HTMLButtonElement>('button')!;
     expect(retry.disabled).toBe(true);
-    expect(retry.textContent?.trim()).toBe('Carregando...');
-    expect(buttonByText('Tentar novamente')).toBeUndefined();
+    expect(retry.textContent?.trim()).toBe('Tentar novamente');
+    expect(element.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(buttonByText('Tentar novamente')?.disabled).toBe(true);
     expect(element.querySelector('tbody')).toBeNull();
     expect(element.querySelector('app-pagination')).toBeNull();
     expect(count()).toBeNull();
@@ -420,4 +442,11 @@ interface ClientsHarness {
   openCreateModal(): void;
   openDeleteModal(client: ClientResponse): void;
   confirmDeleteClient(): void;
+}
+
+function expectPending(root: HTMLElement): void {
+  const busy = root.querySelector('[aria-busy="true"]');
+  expect(busy?.textContent?.trim()).toBe('');
+  expect(busy?.children.length).toBe(0);
+  expect(root.textContent).not.toContain('Carregando');
 }

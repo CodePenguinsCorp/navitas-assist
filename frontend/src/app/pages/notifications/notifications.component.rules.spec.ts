@@ -100,7 +100,7 @@ describe('NotificationsComponent rules', () => {
   it('separates rule loading, failure and stale rows', async () => {
     await setup({ rules: [new Subject<NotificationRuleResponse[]>()] });
     openRules();
-    expect(text()).toContain('Carregando regras...');
+    expectPending(root());
     expect(rulesTable()).toBeNull();
 
     TestBed.resetTestingModule();
@@ -140,7 +140,7 @@ describe('NotificationsComponent rules', () => {
     component.selectTab('inbox');
     render();
     openRules();
-    expect(root().querySelector('.rules-state[role="status"]')?.textContent).toContain('Atualizando regras...');
+    expectPending(root());
     expect(text()).not.toContain('Nenhuma regra disponível.');
     pending.next([]);
     pending.complete();
@@ -149,13 +149,21 @@ describe('NotificationsComponent rules', () => {
     expect(root().querySelector('.rules-state[role="status"]')).toBeNull();
   });
 
+  it('hides previous rules during a pending reload', async () => {
+    await setup({ rules: [of([RULE]), new Subject<NotificationRuleResponse[]>()] });
+    openRules(); component.selectTab('preferences'); render(); openRules();
+    expectPending(root());
+    expect(rulesTable()).toBeNull();
+    expect(text()).not.toContain('SLA vencido');
+  });
+
   it('keeps the rule failure visible during a pending retry', async () => {
     await setup({ rules: [failure(), new Subject<NotificationRuleResponse[]>()] });
     openRules();
     button('Tentar novamente')!.click();
     render();
     expect(root().querySelector('.rules-state[role="alert"]')?.textContent).toContain('Não foi possível carregar as regras.');
-    expect(button('Carregando...')!.disabled).toBe(true);
+    expect(button('Tentar novamente')!.disabled).toBe(true);
     expect(root().querySelector('.rules-state[role="status"]')).toBeNull();
     expect(text()).not.toContain('Nenhuma regra disponível.');
   });
@@ -341,7 +349,7 @@ describe('NotificationsComponent rules', () => {
       await setup({ failures: [failure()] });
       openRules();
       expect(text()).toContain('Não foi possível carregar as falhas de processamento.');
-      expect(button('Tentar carregar falhas')).toBeDefined();
+      expect(button('Tentar novamente')).toBeDefined();
       expect(text()).not.toContain('Nenhuma falha registrada.');
       expect(cells(rulesTable()!, 'SLA vencido')['Situação']).toBe('Ativa');
     });
@@ -350,7 +358,7 @@ describe('NotificationsComponent rules', () => {
     it('shows loading instead of no failures', async () => {
       await setup({ failures: [new Subject<NotificationFailureResponse[]>()] });
       openRules();
-      expect(text()).toContain('Carregando falhas...');
+      expectPending(root());
       expect(text()).not.toContain('Nenhuma falha registrada.');
     });
 
@@ -362,7 +370,7 @@ describe('NotificationsComponent rules', () => {
       component.selectTab('inbox');
       render();
       openRules();
-      expect(section()!.querySelector('.failures-state[role="status"]')?.textContent).toContain('Atualizando falhas...');
+      expectPending(root());
       expect(section()!.textContent).not.toContain('Nenhuma falha registrada.');
       pending.next([]);
       pending.complete();
@@ -374,10 +382,10 @@ describe('NotificationsComponent rules', () => {
     it('keeps the failure-list error visible during a pending retry', async () => {
       await setup({ failures: [failure(), new Subject<NotificationFailureResponse[]>()] });
       openRules();
-      button('Tentar carregar falhas')!.click();
+      button('Tentar novamente')!.click();
       render();
       expect(section()!.querySelector('.failures-state[role="alert"]')?.textContent).toContain('Não foi possível carregar as falhas de processamento.');
-      expect(button('Carregando...')!.disabled).toBe(true);
+      expect(button('Tentar novamente')!.disabled).toBe(true);
       expect(section()!.querySelector('.failures-state[role="status"]')).toBeNull();
       expect(section()!.textContent).not.toContain('Nenhuma falha registrada.');
     });
@@ -386,7 +394,7 @@ describe('NotificationsComponent rules', () => {
     it('retries only the failures', async () => {
       await setup({ failures: [failure(), of(FAILURES)] });
       openRules();
-      button('Tentar carregar falhas')!.click();
+      button('Tentar novamente')!.click();
       render();
       expect(service['listFailures']).toHaveBeenCalledTimes(2);
       expect(service['listRules']).toHaveBeenCalledTimes(1);
@@ -419,3 +427,11 @@ describe('NotificationsComponent rules', () => {
     });
   });
 });
+
+function expectPending(root: HTMLElement): void {
+  const busy = root.querySelector('[aria-busy="true"]');
+  expect(busy?.textContent?.trim()).toBe('');
+  expect(busy?.children.length).toBe(0);
+  expect(busy?.hasAttribute('role')).toBe(false);
+  expect(root.textContent).not.toMatch(/Carregando(?! opções)|Atualizando (estoque|notificações|preferências|regras|falhas)/);
+}

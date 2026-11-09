@@ -45,6 +45,13 @@ function catalog(): ProtocolTemplateResponse[] {
 
 const loadError = () => throwError(() => new HttpErrorResponse({ status: 500 }));
 
+function expectPending(root: HTMLElement): void {
+  const busy = root.querySelector('[aria-busy="true"]');
+  expect(busy?.textContent?.trim()).toBe('');
+  expect(busy?.children.length).toBe(0);
+  expect(root.textContent).not.toContain('Carregando');
+}
+
 describe('ProtocolsComponent', () => {
   let fixture: ComponentFixture<ProtocolsComponent>;
   let component: ProtocolsHarness;
@@ -88,6 +95,19 @@ describe('ProtocolsComponent', () => {
   function rows(): HTMLTableRowElement[] {
     return Array.from(element().querySelectorAll<HTMLTableRowElement>('tbody tr'));
   }
+
+  it.each(['initial', 'data', 'empty'])('renders an empty busy catalog during %s loading', async (previous) => {
+    const pending = new Subject<ProtocolTemplateResponse[]>();
+    await setup(previous === 'initial' ? () => pending : previous === 'empty' ? () => of([]) : undefined);
+    if (previous !== 'initial') {
+      listTemplates.mockImplementation(() => pending); component.retryLoad(); fixture.detectChanges();
+    }
+    expectPending(element());
+    expect(element().querySelector('tbody, .table-card .empty-state')).toBeNull();
+    expect(text()).not.toContain('Nenhum protocolo cadastrado');
+    pending.next([]); pending.complete(); fixture.detectChanges();
+    expect(text()).toContain('Nenhum protocolo cadastrado');
+  });
 
   describe('catalog', () => {
     it('shows Cancelar before the primary action in the form dialog', async () => {
@@ -239,8 +259,9 @@ describe('ProtocolsComponent', () => {
 
       const retry = element().querySelector('[role="alert"]')!.querySelector<HTMLButtonElement>('button')!;
       expect(retry.disabled).toBe(true);
-      expect(retry.textContent?.trim()).toBe('Carregando...');
-      expect(buttonByText('Tentar novamente')).toBeUndefined();
+      expect(retry.textContent?.trim()).toBe('Tentar novamente');
+    expect(element().querySelector('[aria-busy="true"]')).not.toBeNull();
+      expect(buttonByText('Tentar novamente')?.disabled).toBe(true);
       expect(element().querySelector('tbody')).toBeNull();
       expect(count()).toBeNull();
 

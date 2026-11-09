@@ -46,14 +46,12 @@
         @if (inboxLoadFailed()) {
           <div class="panel alert-banner alert-banner--error inbox-state" role="alert">
             <strong>{{ inboxLoadErrorMessage() }}</strong>
-            <button type="button" class="button-secondary" [disabled]="inboxLoading()" (click)="retryInbox()">{{ inboxLoading() ? 'Carregando...' : 'Tentar novamente' }}</button>
+            <button type="button" class="button-secondary" [disabled]="inboxLoading()" (click)="retryInbox()">Tentar novamente</button>
+            @if (inboxLoading()) { <div aria-busy="true"></div> }
           </div>
-        } @else if (!inboxHasLoaded()) {
-          <p class="inbox-state" role="status">Carregando notificações...</p>
+        } @else if (inboxLoading() || !inboxHasLoaded()) {
+          <div class="inbox-state" aria-busy="true"></div>
         } @else if (notifications().length === 0) {
-          @if (inboxLoading()) {
-            <p class="inbox-state" role="status">Atualizando notificações...</p>
-          }
           @if (unreadOnly()) {
             <section class="empty-state">
               <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
@@ -70,9 +68,6 @@
           }
         } @else {
           <p class="field-hint inbox-limit">Mostra até 100 notificações, das mais recentes, nos filtros selecionados.</p>
-          @if (inboxLoading()) {
-            <p class="inbox-state" role="status">Atualizando notificações...</p>
-          }
           <div class="notification-list">
             @for (notification of notifications(); track notification.id) {
               <article class="notification-item" [class.is-unread]="!notification.read">
@@ -118,18 +113,14 @@
         @if (preferencesLoadFailed()) {
           <div class="panel alert-banner alert-banner--error preferences-state" role="alert">
             <strong>{{ preferencesLoadErrorMessage() }}</strong>
-            <button type="button" class="button-secondary" [disabled]="preferencesLoading()" (click)="retryPreferences()">{{ preferencesLoading() ? 'Carregando...' : 'Tentar novamente' }}</button>
+            <button type="button" class="button-secondary" [disabled]="preferencesLoading()" (click)="retryPreferences()">Tentar novamente</button>
+            @if (preferencesLoading()) { <div aria-busy="true"></div> }
           </div>
-        } @else if (!preferencesHasLoaded()) {
-          <p class="preferences-state" role="status">Carregando preferências...</p>
-        } @else if (preferencesLoading() && preferences().length === 0) {
-          <p class="preferences-state" role="status">Atualizando preferências...</p>
+        } @else if (preferencesLoading() || !preferencesHasLoaded()) {
+          <div class="preferences-state" aria-busy="true"></div>
         } @else if (preferences().length === 0) {
           <p class="preferences-state">Nenhuma preferência disponível.</p>
         } @else {
-          @if (preferencesLoading()) {
-            <p class="preferences-state" role="status">Atualizando preferências...</p>
-          }
           <div class="table-wrap">
             <table>
               <thead>
@@ -175,18 +166,14 @@
         @if (rulesLoadFailed()) {
           <div class="panel alert-banner alert-banner--error rules-state" role="alert">
             <strong>{{ rulesLoadErrorMessage() }}</strong>
-            <button type="button" class="button-secondary" [disabled]="rulesLoading()" (click)="retryRules()">{{ rulesLoading() ? 'Carregando...' : 'Tentar novamente' }}</button>
+            <button type="button" class="button-secondary" [disabled]="rulesLoading()" (click)="retryRules()">Tentar novamente</button>
+            @if (rulesLoading()) { <div aria-busy="true"></div> }
           </div>
-        } @else if (!rulesHasLoaded()) {
-          <p class="rules-state" role="status">Carregando regras...</p>
-        } @else if (rulesLoading() && rules().length === 0) {
-          <p class="rules-state" role="status">Atualizando regras...</p>
+        } @else if (rulesLoading() || !rulesHasLoaded()) {
+          <div class="rules-state" aria-busy="true"></div>
         } @else if (rules().length === 0) {
           <p class="rules-state">Nenhuma regra disponível.</p>
         } @else {
-          @if (rulesLoading()) {
-            <p class="rules-state" role="status">Atualizando regras...</p>
-          }
           <div class="table-wrap">
             <table>
               <thead>
@@ -228,18 +215,14 @@
         @if (failuresLoadFailed()) {
           <div class="panel alert-banner alert-banner--error failures-state" role="alert">
             <strong>{{ failuresLoadErrorMessage() }}</strong>
-            <button type="button" class="button-secondary" [disabled]="failuresLoading()" (click)="retryFailures()">{{ failuresLoading() ? 'Carregando...' : 'Tentar carregar falhas' }}</button>
+            <button type="button" class="button-secondary" [disabled]="failuresLoading()" (click)="retryFailures()">Tentar novamente</button>
+            @if (failuresLoading()) { <div aria-busy="true"></div> }
           </div>
-        } @else if (!failuresHasLoaded()) {
-          <p class="failures-state" role="status">Carregando falhas...</p>
-        } @else if (failuresLoading() && failures().length === 0) {
-          <p class="failures-state" role="status">Atualizando falhas...</p>
+        } @else if (failuresLoading() || !failuresHasLoaded()) {
+          <div class="failures-state" aria-busy="true"></div>
         } @else if (failures().length === 0) {
           <p class="failures-state">Nenhuma falha registrada.</p>
         } @else {
-          @if (failuresLoading()) {
-            <p class="failures-state" role="status">Atualizando falhas...</p>
-          }
           <div class="table-wrap">
             <table>
               <thead>

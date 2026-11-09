@@ -33,6 +33,18 @@ describe('RmaKanbanBoardComponent card', () => {
     return found!;
   }
 
+  it.each([{ rmas: [] }, { rmas: [buildRma({})] }])('renders only an empty busy container while loading instead of previous cards or column empties ($rmas.length)', ({ rmas }) => {
+    const host = render(rmas, { loading: true });
+    const busy = host.querySelector('[aria-busy="true"]');
+    expect(busy?.textContent?.trim()).toBe('');
+    expect(busy?.children.length).toBe(0);
+    expect(host.querySelector('.board-grid, .board-card, .board-empty-note, [role="status"]')).toBeNull();
+    expect(host.textContent).not.toContain('Carregando');
+    render([], { loading: false });
+    expect(host.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(host.querySelector('.board-grid')).not.toBeNull();
+  });
+
   it('does not render the reported failure in the card', () => {
     const host = render([buildRma({ reportedFailure: 'Não liga após queda de energia' })]);
     expect(host.querySelector('.board-card__failure')).toBeNull();

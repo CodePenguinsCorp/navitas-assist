@@ -57,6 +57,14 @@ describe('RmaPartsPanelComponent loading', () => {
     render();
   }
 
+  it('preserves the loading-options select placeholder without a loading status', async () => {
+    await setup({ catalog: new Subject<PartResponse[]>() });
+    const select = fixture.nativeElement.querySelector('app-custom-select');
+    expect(select?.textContent).toContain('Carregando opções...');
+    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
+    expect(text()).not.toContain('Nenhuma peça ativa disponível');
+  });
+
   const expectFailureOnly = () => {
     expect(text()).toContain('Não foi possível carregar as peças do RMA.');
     expect(text()).toContain('Tentar novamente');
@@ -99,7 +107,7 @@ describe('RmaPartsPanelComponent loading', () => {
     service.getRmaParts.mockReturnValue(retry$);
     expect(button('Tentar novamente')).toBeDefined();
     button('Tentar novamente')!.click(); render();
-    expect(button('Carregando...')?.disabled).toBe(true);
+    expect(button('Tentar novamente')?.disabled).toBe(true);
     expect(text()).toContain('Não foi possível carregar as peças do RMA.');
     expect(text()).not.toContain('R$ 20,00');
     retry$.next(rmaParts([reservation(1, 'ACTIVE')])); retry$.complete(); render();
@@ -107,6 +115,35 @@ describe('RmaPartsPanelComponent loading', () => {
     expect(text()).toContain('Capacitor');
     expect(text()).not.toContain('Não foi possível carregar as peças do RMA.');
     expect(service.getRmaParts).toHaveBeenLastCalledWith(7);
+  });
+
+  it('hides previous reservations and costs while reloading after an action', async () => {
+    await setup();
+    expect(text()).toContain('R$ 20,00');
+    const reload$ = new Subject<RmaPartsResponse>();
+    service.getRmaParts.mockReturnValue(reload$);
+    button('Consumir')!.click(); render();
+    expectPending(fixture.nativeElement);
+    expect(text()).not.toContain('R$ 20,00');
+    expect(button('Consumir')).toBeUndefined();
+    reload$.next(rmaParts([reservation(1, 'ACTIVE')])); reload$.complete(); render();
+    expect(fixture.nativeElement.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(text()).toContain('R$ 20,00');
+  });
+
+  it('keeps the catalog retry label and failure while the retry is pending', async () => {
+    await setup({ catalog: throwError(() => new Error()) });
+    const retry$ = new Subject<PartResponse[]>();
+    service.list.mockReturnValue(retry$);
+    button('Tentar novamente')!.click(); render();
+    const retry = button('Tentar novamente');
+    expect(retry?.disabled).toBe(true);
+    expect(text()).toContain('Não foi possível carregar as opções de peças.');
+    expect(fixture.nativeElement.querySelector('.parts-load-error [aria-busy="true"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
+    retry$.next([PART]); retry$.complete(); render();
+    expect(text()).not.toContain('Não foi possível carregar as opções de peças.');
+    expect(button('Reservar')!.disabled).toBe(false);
   });
 
   // Vermelho: a falha do RMA 8 não oferece nova tentativa com o RMA atual.
@@ -125,14 +162,14 @@ describe('RmaPartsPanelComponent loading', () => {
   it('distinguishes catalog failure from an empty active catalog', async () => {
     await setup({ catalog: throwError(() => new Error()) });
     expect(text()).toContain('Não foi possível carregar as opções de peças.');
-    expect(text()).toContain('Tentar carregar peças');
+    expect(text()).toContain('Tentar novamente');
     expect(text()).toContain('Capacitor');
     expect(text()).not.toContain('Não foi possível carregar as peças do RMA.');
     expect(text()).not.toContain('Nenhuma peça ativa disponível para reserva.');
     expect(button('Reservar')!.disabled).toBe(true);
 
     service.list.mockReturnValue(of([PART]));
-    button('Tentar carregar peças')!.click(); render();
+    button('Tentar novamente')!.click(); render();
     expect(text()).not.toContain('Não foi possível carregar as opções de peças.');
     expect(button('Reservar')!.disabled).toBe(false);
     expect(service.getRmaParts).toHaveBeenCalledTimes(1);
@@ -176,7 +213,7 @@ describe('RmaPartsPanelComponent loading', () => {
 
   it('shows loading without zeros or costs on the first load', async () => {
     await setup({ parts: new Subject() });
-    expect(text()).toContain('Carregando peças...');
+    expectPending(fixture.nativeElement);
     expect(text()).not.toContain('R$');
     expect(text()).not.toContain('Nenhuma peça reservada');
   });
@@ -210,3 +247,11 @@ describe('RmaPartsPanelComponent loading', () => {
     expect(service.list).toHaveBeenCalledTimes(3);
   });
 });
+
+function expectPending(root: HTMLElement): void {
+  const busy = root.querySelector('[aria-busy="true"]');
+  expect(busy?.textContent?.trim()).toBe('');
+  expect(busy?.children.length).toBe(0);
+  expect(busy?.hasAttribute('role')).toBe(false);
+  expect(root.textContent).not.toMatch(/Carregando(?! opções)|Atualizando (estoque|notificações|preferências|regras|falhas)/);
+}

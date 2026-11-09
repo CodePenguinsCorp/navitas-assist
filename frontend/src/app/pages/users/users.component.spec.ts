@@ -235,6 +235,27 @@ describe('UsersComponent collection layout and states', () => {
     expect(dialog.textContent).toContain('Deixe em branco para manter a senha atual.');
   });
 
+  it('renders an empty busy container until the first empty response', async () => {
+    const pending = new Subject<PageResponse<UserAccountResponse>>();
+    await mount({ list: () => pending });
+    expectPending(element);
+    expect(element.querySelector('tbody, .table-card .empty-state')).toBeNull();
+    expect(element.textContent).not.toContain('Nenhum usuário');
+    pending.next(page([], 0, 20, 0)); pending.complete(); fixture.detectChanges();
+    expect(element.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(element.textContent).toContain('Nenhum usuário');
+  });
+
+  it.each([false, true])('hides old rows and empty state during a filter load (empty=%s)', async (empty) => {
+    await mount(empty ? { list: (filters) => of(page([], filters.page, filters.size, 0)) } : {});
+    const pending = new Subject<PageResponse<UserAccountResponse>>();
+    listUsers.mockImplementation(() => pending);
+    component.updateRoleFilter('TECHNICIAN'); fixture.detectChanges();
+    expectPending(element);
+    expect(element.querySelector('tbody, .table-card .empty-state')).toBeNull();
+    expect(element.textContent).not.toContain('Nenhum usuário');
+  });
+
   it('shows the failure state on an initial load error', async () => {
     await mount({ list: loadError });
     expectFailureState();
@@ -291,8 +312,9 @@ describe('UsersComponent collection layout and states', () => {
 
     const retry = loadAlert()!.querySelector<HTMLButtonElement>('button')!;
     expect(retry.disabled).toBe(true);
-    expect(retry.textContent?.trim()).toBe('Carregando...');
-    expect(buttonByText('Tentar novamente')).toBeUndefined();
+    expect(retry.textContent?.trim()).toBe('Tentar novamente');
+    expect(element.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(buttonByText('Tentar novamente')?.disabled).toBe(true);
     expect(element.querySelector('tbody')).toBeNull();
     expect(element.querySelector('app-pagination')).toBeNull();
     expect(count()).toBeNull();
@@ -354,4 +376,11 @@ interface UsersHarness {
   updateStatusFilter(value: 'all' | 'active' | 'inactive'): void;
   goToPage(page: number): void;
   changePageSize(size: number): void;
+}
+
+function expectPending(root: HTMLElement): void {
+  const busy = root.querySelector('[aria-busy="true"]');
+  expect(busy?.textContent?.trim()).toBe('');
+  expect(busy?.children.length).toBe(0);
+  expect(root.textContent).not.toContain('Carregando');
 }

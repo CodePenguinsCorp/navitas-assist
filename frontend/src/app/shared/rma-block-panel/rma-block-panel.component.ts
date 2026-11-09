@@ -1,8 +1,10 @@
+import { HttpContext } from '@angular/common/http';
 import { Component, DestroyRef, ElementRef, EventEmitter, Output, ViewChild, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription, finalize } from 'rxjs';
 import { RmaResponse } from '../../core/models';
+import { SKIP_GLOBAL_LOADING } from '../../core/interceptors/loading.interceptor';
 import { AuthService } from '../../core/services/auth.service';
 import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
@@ -12,7 +14,10 @@ import { RmaBlockHistoryComponent } from '../rma-block-history/rma-block-history
   selector: 'app-rma-block-panel',
   imports: [ReactiveFormsModule, RmaBlockHistoryComponent],
   templateUrl: './rma-block-panel.component.html',
-  styles: `dialog { width: min(42rem, calc(100vw - 2rem)); max-height: 90dvh; border: 0; overflow: auto; } dialog::backdrop { background: #0f172a99; }`,
+  styles: `dialog { width: min(42rem, calc(100vw - 2rem)); max-height: 90dvh; border: 0; overflow: auto; } dialog::backdrop { background: #0f172a99; }
+    .loading-indicator { display: inline-block; width: 1rem; height: 1rem; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: block-loading-spin 1s linear infinite; }
+    @keyframes block-loading-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .loading-indicator { animation: none; } }`,
 })
 export class RmaBlockPanelComponent {
   @ViewChild('dialog', { static: true }) private dialog!: ElementRef<HTMLDialogElement>;
@@ -34,6 +39,7 @@ export class RmaBlockPanelComponent {
   open(id: number): void {
     if (this.busy()) return;
     this.selectedId = id;
+    this.error.set('');
     this.blockForm.reset();
     this.resolveForm.reset();
     if (!this.dialog.nativeElement.open) this.dialog.nativeElement.showModal();
@@ -45,9 +51,9 @@ export class RmaBlockPanelComponent {
     this.loadRequest?.unsubscribe();
     this.loading.set(true);
     this.rma.set(null);
-    this.error.set('');
-    this.loadRequest = this.service.getById(this.selectedId).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false))).subscribe({
-      next: (rma) => this.rma.set(rma),
+    const context = new HttpContext().set(SKIP_GLOBAL_LOADING, true);
+    this.loadRequest = this.service.getById(this.selectedId, context).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false))).subscribe({
+      next: (rma) => { this.rma.set(rma); this.error.set(''); },
       error: () => this.error.set('Não foi possível carregar os impedimentos do RMA.'),
     });
   }

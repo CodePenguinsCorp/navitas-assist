@@ -1,3 +1,6 @@
+@if (loading()) {
+  <div class="board-shell" aria-busy="true"></div>
+} @else {
 @if (showToolbar()) {
   <article class="panel board-toolbar">
     <div>
@@ -27,9 +30,6 @@
         </header>
 
         <div class="board-column__stack">
-          @if (loading() && totalRmas() === 0) {
-            <p class="board-empty-note">Carregando...</p>
-          } @else {
             @for (item of column.items; track item.id) {
               <article
                 class="board-card interactive-card"
@@ -75,7 +75,6 @@
                 </footer>
               </article>
             }
-          }
 
           @if (!loading() && column.items.length === 0) {
             <p class="board-empty-note">Nenhum item.</p>
@@ -85,3 +84,4 @@
     }
   </section>
 </div>
+}

@@ -4,10 +4,11 @@
   @if (loadFailed()) {
     <div class="alert-banner alert-banner--error parts-load-error" role="alert">
       <strong>{{ loadErrorMessage() }}</strong>
-      <button type="button" class="button-secondary button-secondary--small" [disabled]="loading()" (click)="retryLoad()">{{ loading() ? 'Carregando...' : 'Tentar novamente' }}</button>
+      <button type="button" class="button-secondary button-secondary--small" [disabled]="loading()" (click)="retryLoad()">Tentar novamente</button>
+      @if (loading()) { <div aria-busy="true"></div> }
     </div>
-  } @else if (!hasLoaded()) {
-    <p class="rma-detail-copy" role="status">Carregando peças...</p>
+  } @else if (loading() || !hasLoaded()) {
+    <div class="rma-detail-copy" aria-busy="true"></div>
   } @else {
     @if (parts(); as rmaParts) {
       <p class="parts-summary">
@@ -79,7 +80,8 @@
           @if (catalogLoadFailed()) {
             <div class="alert-banner alert-banner--error parts-load-error field-group--full" role="alert">
               <strong>{{ catalogLoadErrorMessage() }}</strong>
-              <button type="button" class="button-secondary button-secondary--small" [disabled]="catalogLoading()" (click)="retryCatalog()">{{ catalogLoading() ? 'Carregando...' : 'Tentar carregar peças' }}</button>
+              <button type="button" class="button-secondary button-secondary--small" [disabled]="catalogLoading()" (click)="retryCatalog()">Tentar novamente</button>
+              @if (catalogLoading()) { <div aria-busy="true"></div> }
             </div>
           } @else if (catalogHasLoaded() && partOptions().length === 0) {
             <p class="rma-detail-copy field-group--full">Nenhuma peça ativa disponível para reserva.</p>

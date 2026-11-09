@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
@@ -42,8 +42,8 @@ export class RmaService {
     return this.http.get<RmaResponse[]>('/api/rmas/board', { params });
   }
 
-  getById(id: number): Observable<RmaResponse> {
-    return this.http.get<RmaResponse>(`/api/rmas/${id}`);
+  getById(id: number, context?: HttpContext): Observable<RmaResponse> {
+    return this.http.get<RmaResponse>(`/api/rmas/${id}`, { context });
   }
 
   create(payload: CreateRmaRequest): Observable<RmaResponse> {

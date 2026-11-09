@@ -100,7 +100,7 @@ describe('NotificationsComponent preferences', () => {
   it('does not show an empty table while loading or after failure', async () => {
     await setup({ preferences: [new Subject<NotificationPreferenceResponse[]>()] });
     openPreferences();
-    expect(text()).toContain('Carregando preferências...');
+    expectPending(root());
     expect(root().querySelector('table')).toBeNull();
 
     TestBed.resetTestingModule();
@@ -141,7 +141,7 @@ describe('NotificationsComponent preferences', () => {
     component.selectTab('inbox');
     render();
     openPreferences();
-    expect(root().querySelector('.preferences-state[role="status"]')?.textContent).toContain('Atualizando preferências...');
+    expectPending(root());
     expect(text()).not.toContain('Nenhuma preferência disponível.');
     pending.next([]);
     pending.complete();
@@ -150,13 +150,21 @@ describe('NotificationsComponent preferences', () => {
     expect(root().querySelector('.preferences-state[role="status"]')).toBeNull();
   });
 
+  it('hides previous preferences during a pending reload', async () => {
+    await setup({ preferences: [of(PREFERENCES), new Subject<NotificationPreferenceResponse[]>()] });
+    openPreferences(); component.selectTab('inbox'); render(); openPreferences();
+    expectPending(root());
+    expect(root().querySelector('table')).toBeNull();
+    expect(text()).not.toContain('Novo RMA');
+  });
+
   it('keeps the preference failure visible during a pending retry', async () => {
     await setup({ preferences: [failure(), new Subject<NotificationPreferenceResponse[]>()] });
     openPreferences();
     button('Tentar novamente')!.click();
     render();
     expect(root().querySelector('.preferences-state[role="alert"]')?.textContent).toContain('Não foi possível carregar as preferências.');
-    expect(button('Carregando...')!.disabled).toBe(true);
+    expect(button('Tentar novamente')!.disabled).toBe(true);
     expect(root().querySelector('.preferences-state[role="status"]')).toBeNull();
     expect(text()).not.toContain('Nenhuma preferência disponível.');
   });
@@ -186,3 +194,11 @@ describe('NotificationsComponent preferences', () => {
     });
   });
 });
+
+function expectPending(root: HTMLElement): void {
+  const busy = root.querySelector('[aria-busy="true"]');
+  expect(busy?.textContent?.trim()).toBe('');
+  expect(busy?.children.length).toBe(0);
+  expect(busy?.hasAttribute('role')).toBe(false);
+  expect(root.textContent).not.toMatch(/Carregando(?! opções)|Atualizando (estoque|notificações|preferências|regras|falhas)/);
+}

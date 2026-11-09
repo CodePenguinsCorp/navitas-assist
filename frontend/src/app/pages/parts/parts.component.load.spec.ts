@@ -64,7 +64,7 @@ describe('PartsComponent snapshot loading', () => {
   it('never reports empty replenishment before the first response', async () => {
     await setup({ parts: new Subject(), replenishment: new Subject(), pending: new Subject() });
     tab('Reposição');
-    expect(text()).toContain('Carregando peças...');
+    expectPending(root());
     expect(text()).not.toContain('Nenhuma peça abaixo do mínimo');
     expect(text()).not.toContain('Nenhuma reserva aguardando saldo');
     expect(text()).not.toContain('R$');
@@ -72,6 +72,18 @@ describe('PartsComponent snapshot loading', () => {
   });
 
   // Vermelho: a falha mantém dados ou vazio no corpo em vez de um estado de erro recuperável.
+  it.each([false, true])('hides both stale stock and empty results during refresh (empty=%s)', async (empty) => {
+    await setup(empty ? { parts: of([]), replenishment: of([]), pending: of([]) } : {});
+    service.list.mockReturnValue(new Subject<PartResponse[]>());
+    refresh();
+    for (const label of ['Estoque', 'Reposição']) {
+      tab(label);
+      expectPending(root());
+      expect(root().querySelector('table, .empty-state')).toBeNull();
+      expect(text()).not.toMatch(/Capacitor|Nenhuma peça cadastrada|Nenhuma reserva aguardando saldo/);
+    }
+  });
+
   it.each((['list', 'listReplenishment', 'listPending'] as const).flatMap((source) => ['initial', 'data', 'empty'].map((previous) => ({ source, previous }))))('replaces both tabs after $source fails ($previous)', async ({ source, previous }) => {
     const failure = throwError(() => new Error());
     if (previous === 'initial') {
@@ -109,7 +121,7 @@ describe('PartsComponent snapshot loading', () => {
     service.list.mockReturnValue(parts); service.listReplenishment.mockReturnValue(replenishment); service.listPending.mockReturnValue(pending);
     button('Tentar novamente')?.click(); render();
     parts.next([PART]); parts.complete(); render();
-    expect(button('Carregando...')?.disabled).toBe(true);
+    expect(button('Tentar novamente')?.disabled).toBe(true);
     expect(text()).toContain('Não foi possível carregar as peças.');
     expect(text()).not.toContain('Capacitor');
     replenishment.next([REPLENISHMENT]); replenishment.complete(); render();
@@ -140,7 +152,7 @@ describe('PartsComponent snapshot loading', () => {
     const current = new Subject<PartResponse[]>();
     service.list.mockReturnValueOnce(old).mockReturnValueOnce(current);
     refresh(); refresh(); old.complete(); render();
-    expect(text()).toContain('Atualizando estoque...');
+    expectPending(root());
     expect(old.observed).toBe(false);
     expect(current.observed).toBe(true);
     fixture.destroy();
@@ -183,3 +195,11 @@ describe('PartsComponent snapshot loading', () => {
     expect(text()).toContain('Nenhuma reserva aguardando saldo');
   });
 });
+
+function expectPending(root: HTMLElement): void {
+  const busy = root.querySelector('[aria-busy="true"]');
+  expect(busy?.textContent?.trim()).toBe('');
+  expect(busy?.children.length).toBe(0);
+  expect(busy?.hasAttribute('role')).toBe(false);
+  expect(root.textContent).not.toMatch(/Carregando(?! opções)|Atualizando (estoque|notificações|preferências|regras|falhas)/);
+}
