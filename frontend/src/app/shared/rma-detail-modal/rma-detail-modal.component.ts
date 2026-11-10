@@ -99,6 +99,11 @@ export class RmaDetailModalComponent {
     return options;
   });
 
+  /** Button, backdrop and Escape close the detail only while no write is pending. */
+  protected requestClose(): void {
+    if (!this.disabled()) this.closed.emit();
+  }
+
   protected chooseAssignee(assigneeId: unknown): void {
     const rma = this.rma();
     if (assigneeId !== rma.assigneeId) this.assigneeChange.emit({ rma, assigneeId: assigneeId as number | null });

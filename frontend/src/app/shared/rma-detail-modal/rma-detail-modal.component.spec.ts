@@ -264,7 +264,18 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect((buttonByText('Ver impedimentos') as HTMLButtonElement).disabled).toBe(true);
     expect(host.querySelector<HTMLButtonElement>('.rma-detail__assignee-picker .custom-select__trigger')!.disabled).toBe(true);
     expect(host.querySelector<HTMLButtonElement>('.rma-detail__status .custom-select__trigger')!.disabled).toBe(true);
-    expect(host.querySelector<HTMLButtonElement>('.modal-close')!.disabled).toBe(false);
+    expect(host.querySelector<HTMLButtonElement>('.modal-close')!.disabled).toBe(true);
+  });
+
+  it('does not close from the button or the backdrop while a write is pending', async () => {
+    const { component, host } = await setup({ disabled: true });
+    const closed = vi.fn();
+    component.closed.subscribe(closed);
+
+    host.querySelector<HTMLButtonElement>('.modal-close')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    host.querySelector<HTMLElement>('.modal-overlay')!.click();
+
+    expect(closed).not.toHaveBeenCalled();
   });
 
   it('emits closed and blockInspect from the buttons', async () => {

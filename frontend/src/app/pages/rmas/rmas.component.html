@@ -215,11 +215,11 @@
 
         <div class="tab-list tab-list--raised" role="tablist" aria-label="Seções do RMA" (keydown)="onDetailTabKeydown($event)">
           @for (tab of detailTabs; track tab.id) {
-            <button type="button" role="tab" class="tab" [id]="'rma-tab-' + tab.id" [class.is-active]="detailTab() === tab.id" [attr.aria-selected]="detailTab() === tab.id" [attr.aria-controls]="'rma-panel-' + tab.id" [attr.tabindex]="detailTab() === tab.id ? 0 : -1" (click)="detailTab.set(tab.id)">{{ tab.label }}</button>
+            <button type="button" role="tab" class="tab" [id]="'rma-tab-' + tab.id" [class.is-active]="detailTab() === tab.id" [attr.aria-selected]="detailTab() === tab.id" aria-controls="rma-detail-panel" [attr.tabindex]="detailTab() === tab.id ? 0 : -1" (click)="detailTab.set(tab.id)">{{ tab.label }}</button>
           }
         </div>
 
-        <div class="rma-details__panel detail-card detail-card--body" role="tabpanel" [id]="'rma-panel-' + detailTab()" [attr.aria-labelledby]="'rma-tab-' + detailTab()">
+        <div class="rma-details__panel detail-card detail-card--body" role="tabpanel" id="rma-detail-panel" tabindex="0" [attr.aria-labelledby]="'rma-tab-' + detailTab()">
           @switch (detailTab()) {
             @case ('products') {
               <section class="rma-details__section">

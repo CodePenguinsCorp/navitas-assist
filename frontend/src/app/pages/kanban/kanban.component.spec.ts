@@ -12,6 +12,7 @@ import { LoadingService } from '../../core/services/loading.service';
 import { RmaService } from '../../core/services/rma.service';
 import { BulkRmaResult } from '../../shared/kanban-bulk-actions/kanban-bulk-actions.component';
 import { KanbanComponent } from './kanban.component';
+import { mountUnderRoot, simulateNativeModality } from '../../testing/native-dialog';
 
 describe('KanbanComponent filters', () => {
   let component: KanbanHarness;
@@ -495,6 +496,18 @@ describe('KanbanComponent filters', () => {
     expect(component.activeFilterCount()).toBe(0);
   });
 
+  it('does not mark the saved view as active when SLA, which views do not persist, is filtering the board', () => {
+    component.filtersForm.patchValue({ priority: 'HIGH', sla: 'OVERDUE' });
+    component.openCreateViewModal();
+    component.viewForm.patchValue({ name: 'Atrasados', defaultView: false });
+
+    component.saveView();
+
+    expect(createdViewRequest).toEqual(expect.objectContaining({ name: 'Atrasados' }));
+    expect(component.filtersForm.getRawValue().sla).toBe('OVERDUE');
+    expect(component.activeViewId()).toBeNull();
+  });
+
   it('selects across columns and filters, clears selection and patches affected cards', () => {
     component.toggleBulkSelection(TEST_RMAS[0]);
     component.toggleBulkSelection(TEST_RMAS[1]);
@@ -759,18 +772,6 @@ describe('KanbanComponent dialog focus', () => {
     render();
   }
 
-  function showOverlay(): void {
-    loading.start();
-    vi.advanceTimersByTime(200);
-    render();
-  }
-
-  function hideOverlay(): void {
-    loading.finish();
-    vi.advanceTimersByTime(400);
-    render();
-  }
-
   it('names the view and status dialogs for assistive technology', () => {
     activate(button(page, 'Salvar atual'));
     expect(viewDialog()?.getAttribute('role')).toBe('dialog');
@@ -822,25 +823,6 @@ describe('KanbanComponent dialog focus', () => {
     press('Tab');
     expect(detail()!.contains(document.activeElement)).toBe(true);
     expect((document.activeElement as HTMLElement).getAttribute('role')).not.toBe('option');
-  });
-
-  it('ignores Escape while the status change is saved and returns after the global overlay hides', () => {
-    openDetailFromCard();
-    confirmStatusFromDetail('IN_REPAIR');
-    find('[aria-labelledby="kanban-status-title"] form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    render();
-    expect(press('Escape').defaultPrevented).toBe(false);
-    expect(statusDialog()).not.toBeNull();
-    showOverlay();
-    const trigger = statusTrigger();
-    const focus = vi.spyOn(trigger, 'focus');
-    statusSave.next({ ...TEST_RMAS[0], status: 'IN_REPAIR' });
-    statusSave.complete();
-    render();
-    expect(statusDialog()).toBeNull();
-    expect(focus).not.toHaveBeenCalled();
-    hideOverlay();
-    expect(document.activeElement).toBe(statusTrigger());
   });
 
   it('keeps the detail open on Escape while its inline assignment is saved', () => {
@@ -896,5 +878,107 @@ describe('KanbanComponent dialog focus', () => {
     expect(find('.kanban-page').closest('[inert]'), 'the page stays behind the detail').not.toBeNull();
     press('Escape');
     expect(detail()).toBeNull();
+  });
+});
+
+describe('KanbanComponent dialog focus under the root blocker', () => {
+  let fixture: ComponentFixture<unknown>;
+  let page: HTMLElement;
+  let loading: LoadingService;
+  let statusSave: Subject<RmaResponse>;
+  let restoreModality: () => void;
+
+  beforeEach(async () => {
+    // Under the real root, whose blocker takes focus on showModal() as in a browser.
+    restoreModality = simulateNativeModality();
+    await TestBed.configureTestingModule({
+      imports: [KanbanComponent],
+      providers: [
+        provideRouter([{ path: '', component: KanbanComponent }]),
+        { provide: SlaClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
+        { provide: AuthService, useValue: { hasAnyRole: () => true } },
+        { provide: CatalogService, useValue: { listAssignableUsers: () => of([]) } },
+        { provide: KanbanViewService, useValue: { list: () => of([]) } },
+        {
+          provide: RmaService,
+          useValue: {
+            listBoard: () => of(TEST_RMAS),
+            getById: (id: number) => of(TEST_RMAS.find((rma) => rma.id === id)),
+            updateStatus: () => (statusSave = new Subject<RmaResponse>()),
+          },
+        },
+      ],
+    }).compileComponents();
+    ({ fixture, element: page } = await mountUnderRoot(KanbanComponent));
+    vi.useFakeTimers();
+    loading = TestBed.inject(LoadingService);
+    render();
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.useRealTimers();
+    restoreModality();
+  });
+
+  function render(): void {
+    fixture.detectChanges();
+    TestBed.tick();
+  }
+
+  function find<T extends HTMLElement = HTMLElement>(selector: string): T {
+    const found = page.querySelector<T>(selector);
+    expect(found, selector + ' must exist').not.toBeNull();
+    return found!;
+  }
+
+  function activate(target: HTMLElement): HTMLElement {
+    target.focus();
+    target.click();
+    render();
+    return target;
+  }
+
+  function press(key: string): KeyboardEvent {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+    (document.activeElement ?? document.body).dispatchEvent(event);
+    render();
+    return event;
+  }
+
+  const blocker = () => (fixture.nativeElement as HTMLElement).querySelector<HTMLDialogElement>('dialog.global-loading-dialog')!;
+  const statusTrigger = () => find<HTMLButtonElement>('app-rma-detail-modal .rma-detail__status .custom-select__trigger');
+  const statusDialog = () => page.querySelector<HTMLElement>('[aria-labelledby="kanban-status-title"]');
+
+  it('ignores Escape while the status change is saved and returns once after the global overlay hides', () => {
+    activate(find('.board-card'));
+    activate(statusTrigger());
+    find<HTMLButtonElement>('app-rma-detail-modal .custom-select__option[data-status="IN_REPAIR"]').click();
+    render();
+    find('[aria-labelledby="kanban-status-title"] form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    render();
+    expect(press('Escape').defaultPrevented).toBe(false);
+    expect(statusDialog()).not.toBeNull();
+
+    loading.start();
+    vi.advanceTimersByTime(200);
+    render();
+    expect(blocker().open, 'the root blocker is shown').toBe(true);
+    expect(statusDialog()!.contains(document.activeElement), 'the blocker took focus away from the dialog').toBe(false);
+
+    const trigger = statusTrigger();
+    const focus = vi.spyOn(trigger, 'focus');
+    statusSave.next({ ...TEST_RMAS[0], status: 'IN_REPAIR' });
+    statusSave.complete();
+    render();
+    expect(statusDialog()).toBeNull();
+    expect(document.activeElement).not.toBe(trigger);
+
+    loading.finish();
+    vi.advanceTimersByTime(400);
+    render();
+    expect(blocker().open).toBe(false);
+    expect(document.activeElement).toBe(statusTrigger());
+    expect(focus).toHaveBeenCalledTimes(1);
   });
 });

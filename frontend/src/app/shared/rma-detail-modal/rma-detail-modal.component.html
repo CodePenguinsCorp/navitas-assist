@@ -1,4 +1,4 @@
-<section class="modal-overlay" (click)="closed.emit()">
+<section class="modal-overlay" (click)="requestClose()">
   <article
     class="panel modal-panel rma-detail detail-surface"
     role="dialog"
@@ -8,12 +8,12 @@
     appModalFocus
     [modalCloseBlocked]="disabled()"
     [modalFallbackFocus]="fallbackFocus()"
-    (modalCloseRequested)="closed.emit()"
+    (modalCloseRequested)="requestClose()"
     (click)="$event.stopPropagation()"
   >
     <header class="rma-detail__bar">
       <span class="rma-detail__key code-text">{{ rma().code }}</span>
-      <button type="button" class="modal-close" aria-label="Fechar" (click)="closed.emit()">
+      <button type="button" class="modal-close" aria-label="Fechar" [disabled]="disabled()" (click)="requestClose()">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
       </button>
     </header>

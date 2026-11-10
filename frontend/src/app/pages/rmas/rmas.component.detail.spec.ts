@@ -292,9 +292,9 @@ describe('RmasComponent detail with the shared information contract', () => {
 
     expect(tabs().map((tab) => tab.textContent?.trim())).toEqual(['Produtos', 'Diagnóstico', 'Peças', 'Protocolos', 'Impedimentos', 'Histórico']);
     expect(tabs().map((tab) => tab.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false', 'false', 'false', 'false']);
-    expect(tabs().map((tab) => tab.getAttribute('aria-controls'))).toEqual([
-      'rma-panel-products', 'rma-panel-diagnosis', 'rma-panel-parts', 'rma-panel-protocols', 'rma-panel-blocks', 'rma-panel-history'
-    ]);
+    // The only panel rendered is the active one, so every tab controls the same stable id.
+    expect(tabs().map((tab) => tab.getAttribute('aria-controls'))).toEqual(Array(6).fill('rma-detail-panel'));
+    expect(detail().querySelector('[role="tabpanel"]')?.id).toBe('rma-detail-panel');
     selectTab('Histórico');
     expect(tabs()[5].getAttribute('aria-selected')).toBe('true');
 
@@ -346,6 +346,16 @@ describe('RmasComponent detail with the shared information contract', () => {
       expectActive(5);
       expect(press('Home').defaultPrevented).toBe(true);
       expectActive(0);
+    });
+
+    it('moves from the active tab into its panel with Tab, even when the panel has only static content', async () => {
+      const { tabs, press, selectTab, tabPanel } = await openTabs();
+      selectTab('Histórico');
+      tabs()[5].focus();
+      press('Tab');
+      expect(document.activeElement, 'Tab enters the panel').toBe(tabPanel());
+      expect(tabPanel().getAttribute('tabindex')).toBe('0');
+      expect(tabPanel().getAttribute('aria-labelledby')).toBe(tabs()[5].id);
     });
 
     it('keeps only the active tab in the Tab order and leaves other keys alone', async () => {

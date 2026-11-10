@@ -500,6 +500,7 @@ export class KanbanComponent {
       next: (saved) => {
         this.syncSavedView(saved);
         this.activeViewId.set(saved.id);
+        this.releaseDivergentView();
         this.viewModalMode.set(null);
       },
       error: (error) => {

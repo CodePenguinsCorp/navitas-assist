@@ -1,12 +1,15 @@
 import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
+import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { PartResponse, UserRole } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { PartService } from '../../core/services/part.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
+import { mountUnderRoot, simulateNativeModality } from '../../testing/native-dialog';
 import { PartsComponent } from './parts.component';
 
 const PART: PartResponse = {
@@ -166,21 +169,28 @@ describe('PartsComponent part form', () => {
   });
 });
 
-/** Focus harness shared by the three parts dialogs: real triggers, Escape and the global overlay. */
+/**
+ * Focus harness shared by the three parts dialogs: real triggers, Escape and the global overlay,
+ * mounted under the real root, whose blocker takes focus on showModal() as in a browser.
+ */
 async function setupPartsFocus(serviceOverrides: Record<string, unknown>) {
-  vi.useFakeTimers();
+  restoreModality = simulateNativeModality();
   await TestBed.configureTestingModule({ imports: [PartsComponent], providers: [
+    provideRouter([{ path: '', component: PartsComponent }]),
     { provide: PartService, useValue: {
       list: vi.fn(() => of([PART])), listReplenishment: vi.fn(() => of([])), listPending: vi.fn(() => of([])),
       ...serviceOverrides
     } },
     { provide: AuthService, useValue: { hasAnyRole: () => true } }
   ] }).compileComponents();
-  const fixture = TestBed.createComponent(PartsComponent);
-  const page = fixture.nativeElement as HTMLElement;
+  const { fixture, element: page } = await mountUnderRoot(PartsComponent);
+  vi.useFakeTimers();
+  const pageDebug = fixture.debugElement.query(By.directive(PartsComponent));
+  const component = pageDebug.componentInstance as Harness;
   const loading = TestBed.inject(LoadingService);
+  const blocker = () => (fixture.nativeElement as HTMLElement).querySelector<HTMLDialogElement>('dialog.global-loading-dialog')!;
   const render = () => {
-    fixture.componentRef.injector.get(ChangeDetectorRef).markForCheck();
+    pageDebug.injector.get(ChangeDetectorRef).markForCheck();
     fixture.detectChanges();
     TestBed.tick();
   };
@@ -206,14 +216,31 @@ async function setupPartsFocus(serviceOverrides: Record<string, unknown>) {
     find('[role="dialog"] form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     render();
   };
-  const showOverlay = () => { loading.start(); vi.advanceTimersByTime(200); render(); };
-  const hideOverlay = () => { loading.finish(); vi.advanceTimersByTime(400); render(); };
+  const showOverlay = () => {
+    loading.start();
+    vi.advanceTimersByTime(200);
+    render();
+    expect(blocker().open, 'the root blocker is shown').toBe(true);
+    expect(dialog()?.contains(document.activeElement) ?? false, 'the blocker took focus away from the dialog').toBe(false);
+  };
+  const hideOverlay = () => {
+    loading.finish();
+    vi.advanceTimersByTime(400);
+    render();
+    expect(blocker().open).toBe(false);
+  };
   render();
-  return { fixture, page, render, find, activate, escape, dialog, submit, showOverlay, hideOverlay };
+  return { component, page, render, find, activate, escape, dialog, submit, showOverlay, hideOverlay };
 }
 
+let restoreModality: () => void = () => undefined;
+
 describe('PartsComponent part form focus', () => {
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.useRealTimers();
+    restoreModality();
+  });
 
   it('names the dialog, focuses Código from Nova peça and returns to it on Escape', async () => {
     const { page, find, activate, escape, dialog } = await setupPartsFocus({});
@@ -235,6 +262,7 @@ describe('PartsComponent part form focus', () => {
     expect(escape().defaultPrevented).toBe(false);
     expect(dialog()).not.toBeNull();
     showOverlay();
+    const focus = vi.spyOn(trigger, 'focus');
     pending.next(PART);
     pending.complete();
     render();
@@ -243,12 +271,13 @@ describe('PartsComponent part form focus', () => {
     hideOverlay();
     expect(document.activeElement).toBe(find('button[aria-label="Editar PCA-1 Capacitor"]'));
     expect(trigger.isConnected).toBe(true);
+    expect(focus).toHaveBeenCalledTimes(1);
   });
 
   it('falls back to the Estoque tab when the form was opened without a trigger', async () => {
-    const { fixture, page, render, escape, dialog } = await setupPartsFocus({});
+    const { component, page, render, escape, dialog } = await setupPartsFocus({});
     (document.activeElement as HTMLElement | null)?.blur();
-    (fixture.componentInstance as unknown as Harness).openCreateModal();
+    component.openCreateModal();
     render();
     escape();
     expect(dialog()).toBeNull();
