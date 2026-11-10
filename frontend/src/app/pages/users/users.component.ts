@@ -45,12 +45,12 @@ const passwordByteLengthValidator: ValidatorFn = control =>
     }
 
     .user-form-modal .modal-header {
-      padding-bottom: 1rem;
+      padding-bottom: var(--space-4);
       border-bottom: 1px solid var(--line);
     }
 
     .user-form {
-      gap: 0.85rem 1rem;
+      gap: var(--space-3) var(--space-4);
     }
 
     .user-form .field-group {
@@ -59,7 +59,7 @@ const passwordByteLengthValidator: ValidatorFn = control =>
 
     .field-hint {
       color: var(--muted);
-      font-size: 0.82rem;
+      font-size: var(--font-size-sm);
       font-weight: 400;
       line-height: 1.35;
     }

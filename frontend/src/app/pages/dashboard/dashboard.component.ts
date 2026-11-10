@@ -95,9 +95,9 @@ interface RecentRmaRow {
         var(--surface);
     }
 
-    .dashboard-summary__item:nth-child(4n + 2) { --tone: #1f8fbf; }
-    .dashboard-summary__item:nth-child(4n + 3) { --tone: #2f8a5b; }
-    .dashboard-summary__item:nth-child(4n + 4) { --tone: #6d55c9; }
+    .dashboard-summary__item:nth-child(4n + 2) { --tone: var(--tone-sky); }
+    .dashboard-summary__item:nth-child(4n + 3) { --tone: var(--tone-success); }
+    .dashboard-summary__item:nth-child(4n + 4) { --tone: var(--tone-violet); }
 
     .dashboard-summary__item > .icon-tile {
       grid-row: span 2;

@@ -115,7 +115,7 @@ export interface RmaListFilters {
     }
 
     .rma-table-row:focus-visible {
-      box-shadow: inset 0 0 0 2px rgba(46, 168, 212, 0.34);
+      box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--brand-sky) 34%, transparent);
     }
 
     .rma-table-code {
@@ -143,25 +143,25 @@ export interface RmaListFilters {
     }
 
     .rma-details {
-      gap: 1.5rem;
-      padding: 1.5rem 1.25rem 1.5rem 1.75rem;
+      gap: var(--space-5);
+      padding: var(--space-5) var(--space-4) var(--space-5) var(--space-5);
     }
 
     .rma-details__header {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
-      gap: 1rem;
+      gap: var(--space-4);
     }
 
     .rma-details__identity {
       display: grid;
-      gap: 0.3rem;
+      gap: var(--space-1);
       min-width: 0;
     }
 
     .rma-details__code {
-      font-size: 0.82rem;
+      font-size: var(--font-size-sm);
       font-weight: 600;
       color: var(--muted);
     }
@@ -182,27 +182,27 @@ export interface RmaListFilters {
     .rma-details__chips {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.4rem;
-      margin-top: 0.3rem;
+      gap: var(--space-2);
+      margin-top: var(--space-1);
     }
 
     .rma-details__header-actions {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: var(--space-3);
       flex-shrink: 0;
     }
 
     .rma-items-editor,
     .rma-diagnosis__context {
-      padding: 0.9rem 1rem;
+      padding: var(--space-3) var(--space-4);
       border: 1px solid var(--line);
       border-radius: var(--radius-md);
       background: var(--surface-alt);
     }
 
     .rma-items-editor {
-      gap: 0.75rem;
+      gap: var(--space-3);
     }
 
     .rma-details__panel {
@@ -210,11 +210,11 @@ export interface RmaListFilters {
     }
 
     .rma-details__section + .rma-details__section {
-      margin-top: 1.25rem;
+      margin-top: var(--space-5);
     }
 
     .rma-details__section h4 {
-      margin: 0 0 0.4rem;
+      margin: 0 0 var(--space-2);
       font-size: 0.95rem;
     }
 
@@ -228,18 +228,18 @@ export interface RmaListFilters {
 
     .rma-items-detail {
       display: grid;
-      gap: 0.75rem;
-      margin-top: 0.75rem;
+      gap: var(--space-3);
+      margin-top: var(--space-3);
     }
 
     .rma-item-editor {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 0.85rem;
-      padding: 0.9rem;
+      gap: var(--space-3);
+      padding: var(--space-4);
       border: 1px solid var(--line);
       border-radius: var(--radius-md);
-      background: #ffffff;
+      background: var(--surface);
     }
 
     .rma-item-editor__error {
@@ -257,24 +257,24 @@ export interface RmaListFilters {
 
     /* Grid layout comes from the shared .detail-tile. */
     .rma-item-detail {
-      gap: 0.75rem;
+      gap: var(--space-3);
     }
 
     .rma-item-detail__header {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
-      gap: 0.75rem;
+      gap: var(--space-3);
     }
 
     .rma-item-detail__header > div {
       display: grid;
-      gap: 0.1rem;
+      gap: 2px;
       min-width: 0;
     }
 
     .rma-item-detail__sku {
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
       font-weight: 600;
       color: var(--muted);
     }
@@ -282,7 +282,7 @@ export interface RmaListFilters {
     .rma-item-warranties {
       display: grid;
       justify-items: start;
-      gap: 0.4rem;
+      gap: var(--space-2);
     }
 
 

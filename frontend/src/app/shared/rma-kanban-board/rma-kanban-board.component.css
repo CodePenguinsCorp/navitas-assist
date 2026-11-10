@@ -49,8 +49,8 @@
   overflow: hidden;
   min-block-size: 100%;
   padding: var(--space-5) var(--space-3) var(--space-4);
-  background: #e3eaf3;
-  border-color: #d3dde8;
+  background: var(--lane-bg);
+  border-color: var(--lane-border);
   box-shadow: none;
   transition: 160ms ease;
 }
@@ -60,23 +60,14 @@
   position: absolute;
   inset: 0 0 auto;
   block-size: 5px;
-  background: var(--column-accent, var(--brand-sky));
+  /* --tone comes from the global [data-status] rule on the column. */
+  background: var(--tone, var(--brand-sky));
 }
 
-.board-column[data-status='RECEIVED'] { --column-accent: #2ea8d4; }
-.board-column[data-status='TRIAGE'] { --column-accent: #4ea8ff; }
-.board-column[data-status='IN_DIAGNOSIS'] { --column-accent: #236da7; }
-.board-column[data-status='WAITING_PART'] { --column-accent: #d7a230; }
-.board-column[data-status='IN_REPAIR'] { --column-accent: #f06767; }
-.board-column[data-status='IN_TESTS'] { --column-accent: #8667e8; }
-.board-column[data-status='COMPLETED'] { --column-accent: #2f9f67; }
-.board-column[data-status='RETURNED'] { --column-accent: #5f87a8; }
-.board-column[data-status='IRREPARABLE'] { --column-accent: #5f6776; }
-
 .board-column.is-drop-target {
-  background: #dbe7f3;
+  background: var(--lane-drop-bg);
   border-color: var(--brand-sky);
-  box-shadow: 0 0 0 2px rgba(46, 168, 212, 0.24);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-sky) 24%, transparent);
   transform: translateY(-2px);
 }
 
@@ -100,7 +91,7 @@
 
 .board-card {
   padding: var(--space-4);
-  border: 1px solid #c3d1e0;
+  border: 1px solid var(--card-border);
   border-radius: 14px;
   background: var(--surface);
   box-shadow: 0 1px 3px rgba(23, 48, 77, 0.16);
@@ -111,11 +102,11 @@
 
 /*
  * Restated here because the encapsulated .board-card rules outrank the global .interactive-card states.
- * Lane #e3eaf3 vs white card: border #c3d1e0 plus a soft shadow carry the edge; #4a5d72 keeps 5.6:1 on the
- * lane (--muted would be 4.2:1) and 5.4:1 on the drop tint #dbe7f3.
+ * On the lane, --card-border plus a soft shadow carry the card edge; --muted-strong keeps 5.6:1 on the
+ * lane (--muted would be 4.2:1) and 5.4:1 on the drop tint.
  */
 .board-card:hover {
-  border-color: #9cc8e3;
+  border-color: var(--focus-border);
   box-shadow: 0 6px 18px rgba(23, 48, 77, 0.16);
   transform: translateY(-1px);
 }
@@ -123,7 +114,7 @@
 .board-card.is-selected,
 .board-card:focus-visible {
   border-color: var(--brand-sky);
-  box-shadow: 0 0 0 3px rgba(46, 168, 212, 0.3);
+  box-shadow: var(--focus-ring);
 }
 
 .board-card[draggable='true'] {
@@ -179,11 +170,13 @@
   font-size: 0.72rem;
 }
 
+/* 40px target around the 18px checkbox; the negative margin keeps the header height. */
 .board-card__selection {
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: var(--control-height);
+  height: var(--control-height);
+  margin: calc((22px - var(--control-height)) / 2);
   cursor: pointer;
 }
 
@@ -224,7 +217,7 @@
 
 .board-card__block {
   display: grid;
-  gap: 0.15rem;
+  gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
   border-radius: 8px;
   background: var(--danger-bg);
@@ -246,7 +239,7 @@
 /* Sits on the lane, not on a card, so it uses the lane muted tone. */
 .board-empty-note {
   margin: 0;
-  color: #4a5d72;
+  color: var(--muted-strong);
 }
 
 @media (max-width: 720px) {

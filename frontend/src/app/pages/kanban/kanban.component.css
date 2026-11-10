@@ -74,8 +74,9 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  min-block-size: var(--control-height-xs);
-  padding-inline: var(--space-3) var(--space-1);
+  /* Removable filter: the remove button is a full 40px target at the pill's end. */
+  min-block-size: var(--control-height);
+  padding-inline: var(--space-3) 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-pill);
   background: var(--brand-tint);
@@ -87,8 +88,9 @@
 .kanban-chip__remove {
   display: inline-grid;
   place-items: center;
-  inline-size: 22px;
-  block-size: 22px;
+  inline-size: var(--control-height);
+  block-size: var(--control-height);
+  margin: -1px -1px -1px 0;
   padding: 0;
   border: 0;
   border-radius: 50%;

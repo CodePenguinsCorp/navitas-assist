@@ -54,13 +54,13 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
     .notification-actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
+      gap: var(--space-2);
       align-items: center;
     }
 
 
     .notification-toolbar {
-      gap: 0.25rem 1.25rem;
+      gap: var(--space-1) var(--space-5);
     }
 
     .notification-toolbar .button-secondary {
@@ -112,8 +112,8 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
 
     .notification-list {
       display: grid;
-      gap: 0.5rem;
-      margin-top: 1rem;
+      gap: var(--space-2);
+      margin-top: var(--space-4);
     }
 
     .notification-item {
@@ -121,15 +121,15 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
       display: grid;
       grid-template-columns: auto minmax(0, 1fr) auto;
       align-items: center;
-      gap: 0.75rem 1rem;
-      padding: 0.85rem 1rem;
+      gap: var(--space-3) var(--space-4);
+      padding: var(--space-3) var(--space-4);
       border: 1px solid var(--line);
       border-radius: var(--radius-md);
-      background: #ffffff;
+      background: var(--surface);
     }
 
     .notification-item.is-unread {
-      background: #f5f9fd;
+      background: var(--surface-alt);
     }
 
     .notification-item.is-unread::before {
@@ -145,7 +145,7 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
 
     .notification-body {
       display: grid;
-      gap: 0.3rem;
+      gap: var(--space-1);
       min-width: 0;
     }
 
@@ -153,12 +153,12 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 0.5rem;
+      gap: var(--space-2);
     }
 
     .notification-meta .mini-chip {
       min-height: 22px;
-      padding-inline: 0.55rem;
+      padding-inline: var(--space-2);
       font-size: 0.72rem;
     }
 
@@ -181,7 +181,7 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
 
     .notification-title.link-button {
       justify-self: start;
-      min-height: var(--control-height-sm);
+      min-height: var(--control-height);
       color: var(--brand-blue);
       font-size: 0.95rem;
       text-align: left;

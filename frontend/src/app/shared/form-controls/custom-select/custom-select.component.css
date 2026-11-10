@@ -113,7 +113,7 @@
 }
 
 .custom-select--compact .custom-select__trigger {
-  min-height: var(--control-height-sm);
+  min-height: var(--control-height);
   padding: 0 var(--space-2) 0 var(--space-3);
   color: var(--brand-blue-deep);
   font-size: var(--font-size-md);
@@ -129,6 +129,7 @@
 }
 
 .custom-select--compact .custom-select__option {
+  min-height: var(--control-height);
   padding: var(--space-2) var(--space-3);
   font-size: var(--font-size-md);
 }
@@ -158,6 +159,6 @@
 }
 
 .custom-select__option.is-selected {
-  background: linear-gradient(180deg, #2f78c4 0%, #2b6cc2 100%);
+  background: var(--selected-bg);
   color: #ffffff;
 }

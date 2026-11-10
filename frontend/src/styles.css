@@ -31,10 +31,47 @@
   --focus-border: #9cc8e3;
   --focus-ring-soft: 0 0 0 3px rgba(46, 168, 212, 0.12);
 
-  /* Control geometry: button, field, select, date and tab share one height. */
+  /* Control geometry: button, field, select, date and tab share one height.
+     --control-height is also the minimum clickable target; -xs is only for informative chips. */
   --control-height: 40px;
-  --control-height-sm: 34px;
   --control-height-xs: 28px;
+
+  /* RMA status: one hue per stage, shared by chips, selects and the Kanban columns. */
+  --status-received: #2ea8d4;
+  --status-triage: #3b8fe0;
+  --status-in-diagnosis: #236da7;
+  --status-waiting-part: #c98d16;
+  --status-in-repair: #e05a5a;
+  --status-in-tests: #7a5fd8;
+  --status-completed: #2f9f67;
+  --status-returned: #5f87a8;
+  --status-irreparable: #5f6776;
+
+  /* Indicator tones (.tone-*, dashboard) and SLA states. */
+  --tone-success: #2f8a5b;
+  --tone-warning: #b7791f;
+  --tone-danger: #b33a4a;
+  --tone-sky: #1f8fbf;
+  --tone-slate: #5b6c80;
+  --tone-violet: #6d55c9;
+  --sla-ok: #2f7a52;
+  --sla-warning: #8a5e00;
+  --sla-overdue: #b33a3f;
+  --track-bg: #e6edf4;
+
+  /* Attention surfaces (reported failure) and the single modal backdrop. */
+  --attention-line: #e3c37a;
+  --attention-bg: #fffaf0;
+  --attention-strong: #b07a12;
+  --backdrop: rgba(13, 29, 49, 0.48);
+  --selected-bg: linear-gradient(180deg, #2f78c4 0%, #2b6cc2 100%);
+
+  /* Kanban lane and cards: values tuned for contrast (lane muted text 5.6:1, card edge visible on the lane). */
+  --lane-bg: #e3eaf3;
+  --lane-border: #d3dde8;
+  --lane-drop-bg: #dbe7f3;
+  --muted-strong: #4a5d72;
+  --card-border: #c3d1e0;
   --control-padding-x: var(--space-4);
   --disabled-opacity: 0.65;
 
@@ -277,7 +314,7 @@ a {
 }
 
 .button-secondary--small {
-  min-height: var(--control-height-sm);
+  min-height: var(--control-height);
   padding-inline: var(--space-3);
   border-radius: var(--radius-sm);
 }
@@ -1377,7 +1414,7 @@ fieldset.form-section {
   display: grid;
   place-items: center;
   padding: 1.25rem;
-  background: rgba(13, 29, 49, 0.48);
+  background: var(--backdrop);
   backdrop-filter: blur(6px);
 }
 
@@ -1828,7 +1865,7 @@ fieldset.field-group > span {
 }
 
 .link-button {
-  min-height: var(--control-height-xs);
+  min-height: var(--control-height);
   padding: 0;
   border: 0;
   border-radius: var(--radius-xs);
@@ -2055,12 +2092,12 @@ fieldset.field-group > span {
   border-radius: 9px;
 }
 
-.tone-success { --tone: #2f8a5b; }
-.tone-warning { --tone: #b7791f; }
-.tone-danger { --tone: #b33a4a; }
-.tone-sky { --tone: #1f8fbf; }
-.tone-slate { --tone: #5b6c80; }
-.tone-violet { --tone: #6d55c9; }
+.tone-success { --tone: var(--tone-success); }
+.tone-warning { --tone: var(--tone-warning); }
+.tone-danger { --tone: var(--tone-danger); }
+.tone-sky { --tone: var(--tone-sky); }
+.tone-slate { --tone: var(--tone-slate); }
+.tone-violet { --tone: var(--tone-violet); }
 
 .avatar {
   display: inline-grid;
@@ -2101,13 +2138,13 @@ fieldset.field-group > span {
 
 /* RMA status: one hue per stage, same as the Kanban column accents. */
 .status-chip {
-  --tone: #5b6c80;
+  --tone: var(--tone-slate);
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--space-2);
   min-height: 26px;
-  padding: 0 0.65rem;
-  border-radius: 999px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--tone) 11%, #ffffff);
   color: color-mix(in srgb, var(--tone) 78%, #000000);
   font-size: 0.78rem;
@@ -2123,15 +2160,15 @@ fieldset.field-group > span {
   background: var(--tone);
 }
 
-[data-status='RECEIVED'] { --tone: #2ea8d4; }
-[data-status='TRIAGE'] { --tone: #3b8fe0; }
-[data-status='IN_DIAGNOSIS'] { --tone: #236da7; }
-[data-status='WAITING_PART'] { --tone: #c98d16; }
-[data-status='IN_REPAIR'] { --tone: #e05a5a; }
-[data-status='IN_TESTS'] { --tone: #7a5fd8; }
-[data-status='COMPLETED'] { --tone: #2f9f67; }
-[data-status='RETURNED'] { --tone: #5f87a8; }
-[data-status='IRREPARABLE'] { --tone: #5f6776; }
+[data-status='RECEIVED'] { --tone: var(--status-received); }
+[data-status='TRIAGE'] { --tone: var(--status-triage); }
+[data-status='IN_DIAGNOSIS'] { --tone: var(--status-in-diagnosis); }
+[data-status='WAITING_PART'] { --tone: var(--status-waiting-part); }
+[data-status='IN_REPAIR'] { --tone: var(--status-in-repair); }
+[data-status='IN_TESTS'] { --tone: var(--status-in-tests); }
+[data-status='COMPLETED'] { --tone: var(--status-completed); }
+[data-status='RETURNED'] { --tone: var(--status-returned); }
+[data-status='IRREPARABLE'] { --tone: var(--status-irreparable); }
 
 /* Priority: signal bars, filled by level. */
 .priority-bars {
@@ -2173,8 +2210,8 @@ fieldset.field-group > span {
   --tone: var(--brand-blue);
   display: block;
   height: 6px;
-  border-radius: 999px;
-  background: #e6edf4;
+  border-radius: var(--radius-pill);
+  background: var(--track-bg);
   overflow: hidden;
 }
 
@@ -2193,8 +2230,8 @@ fieldset.field-group > span {
 .icon-button {
   display: inline-grid;
   place-items: center;
-  width: var(--control-height-sm);
-  height: var(--control-height-sm);
+  width: var(--control-height);
+  height: var(--control-height);
   --_bg: var(--btn-icon-bg);
   --_bg-hover: var(--btn-icon-bg-hover);
   --_border: var(--btn-icon-border);
@@ -2481,8 +2518,8 @@ tr:focus-visible .open-hint {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 34px;
-  height: 34px;
+  width: var(--control-height);
+  height: var(--control-height);
   border-radius: var(--radius-sm);
   background: transparent;
   color: rgba(255, 255, 255, 0.85);
@@ -2575,13 +2612,13 @@ app-custom-select:has(> .custom-select--status) {
 }
 
 .custom-select.custom-select--status .custom-select__trigger {
-  min-height: var(--control-height-sm);
+  min-height: var(--control-height);
   gap: var(--space-2);
   padding: 0 var(--space-2) 0 var(--space-3);
-  border-color: color-mix(in srgb, var(--tone, #5b6c80) 42%, #ffffff);
+  border-color: color-mix(in srgb, var(--tone, var(--tone-slate)) 42%, #ffffff);
   border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--tone, #5b6c80) 12%, #ffffff);
-  color: color-mix(in srgb, var(--tone, #5b6c80) 66%, #000000);
+  background: color-mix(in srgb, var(--tone, var(--tone-slate)) 12%, #ffffff);
+  color: color-mix(in srgb, var(--tone, var(--tone-slate)) 66%, #000000);
   font-size: 0.85rem;
   font-weight: 700;
   white-space: nowrap;
@@ -2589,8 +2626,8 @@ app-custom-select:has(> .custom-select--status) {
 
 .custom-select.custom-select--status .custom-select__trigger:hover:not(:disabled),
 .custom-select.custom-select--status.is-open .custom-select__trigger {
-  border-color: color-mix(in srgb, var(--tone, #5b6c80) 70%, #ffffff);
-  background: color-mix(in srgb, var(--tone, #5b6c80) 20%, #ffffff);
+  border-color: color-mix(in srgb, var(--tone, var(--tone-slate)) 70%, #ffffff);
+  background: color-mix(in srgb, var(--tone, var(--tone-slate)) 20%, #ffffff);
 }
 
 .custom-select.custom-select--status .custom-select__trigger:focus-visible {
@@ -2608,11 +2645,11 @@ app-custom-select:has(> .custom-select--status) {
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: var(--tone, #5b6c80);
+  background: var(--tone, var(--tone-slate));
 }
 
 .custom-select.custom-select--person .custom-select__trigger {
-  min-height: var(--control-height-sm);
+  min-height: var(--control-height);
   gap: var(--space-2);
   padding: 0 var(--space-2) 0 var(--space-1);
   border-color: transparent;
@@ -2635,7 +2672,7 @@ app-custom-select:has(> .custom-select--status) {
 /* Detail modals (Kanban and RMAs): a blue-grey canvas with white cards, so each block stands apart.
    The darker --muted keeps secondary text at 4.5:1 or more on the canvas too. */
 .detail-surface {
-  --muted: #4a5d72;
+  --muted: var(--muted-strong);
   background: #eaf0f6;
 }
 
@@ -2644,6 +2681,16 @@ app-custom-select:has(> .custom-select--status) {
   border-radius: var(--radius-md);
   background: var(--surface);
   box-shadow: 0 1px 2px rgba(23, 48, 77, 0.06), 0 6px 18px rgba(23, 48, 77, 0.06);
+}
+
+/* Reported failure in the Kanban detail: an attention card. Compound selectors outrank .detail-card rules. */
+.detail-card.rma-detail__section--failure {
+  border-color: var(--attention-line);
+  background: var(--attention-bg);
+}
+
+.rma-detail__section--failure .detail-card__title svg {
+  stroke: var(--attention-strong);
 }
 
 .detail-card__title {

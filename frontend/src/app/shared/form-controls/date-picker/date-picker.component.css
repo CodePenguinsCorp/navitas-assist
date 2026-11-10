@@ -166,7 +166,7 @@
 }
 
 .date-picker__day.is-selected {
-  background: linear-gradient(180deg, #2f78c4 0%, #2b6cc2 100%);
+  background: var(--selected-bg);
   color: #ffffff;
 }
 

@@ -7,7 +7,6 @@ import { DatePickerComponent } from './date-picker/date-picker.component';
 /* The global stylesheet is not loaded in unit tests; these mirror the :root tokens it defines. */
 const TOKENS: Record<string, string> = {
   '--control-height': '40px',
-  '--control-height-sm': '34px',
   '--control-padding-x': '16px',
   '--disabled-opacity': '0.65',
   '--line': 'rgb(217, 227, 238)',
@@ -61,7 +60,7 @@ describe('shared form control states', () => {
   it('gives select and date triggers the shared control height', () => {
     expect(getComputedStyle(trigger('.select')).minHeight).toBe('40px');
     expect(getComputedStyle(trigger('.date')).minHeight).toBe('40px');
-    expect(getComputedStyle(trigger('.compact')).minHeight).toBe('34px');
+    expect(getComputedStyle(trigger('.compact')).minHeight).toBe('40px');
   });
 
   describe.each(['select', 'date'] as const)('%s', (kind) => {

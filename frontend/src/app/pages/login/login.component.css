@@ -81,12 +81,12 @@
 .login-form {
   width: min(100%, 320px);
   display: grid;
-  gap: 0.85rem;
+  gap: var(--space-3);
 }
 
 .login-field {
   display: grid;
-  gap: 0.4rem;
+  gap: var(--space-2);
 }
 
 .login-label {
@@ -98,19 +98,19 @@
 
 .login-field input {
   width: 100%;
-  min-height: 42px;
-  padding: 0 0.9rem;
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
   border: 0;
   border-radius: 2px;
-  background: rgba(248, 245, 252, 0.92);
-  color: #163d66;
+  background: color-mix(in srgb, var(--surface-alt) 92%, transparent);
+  color: var(--text);
   transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
 }
 
 .login-field input:focus {
   outline: none;
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18);
-  background: #ffffff;
+  background: var(--surface);
 }
 
 .login-password {
@@ -118,21 +118,21 @@
 }
 
 .login-password input {
-  padding-right: 3.15rem;
+  padding-right: calc(var(--control-height) + var(--space-1));
 }
 
 .login-password__toggle {
   position: absolute;
   top: 50%;
-  right: 0.5rem;
+  right: 0;
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: var(--control-height);
+  height: var(--control-height);
   padding: 0;
   border-radius: 999px;
   background: transparent;
-  color: rgba(22, 61, 102, 0.68);
+  color: var(--muted);
   transform: translateY(-50%);
 }
 
@@ -154,8 +154,8 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  padding: 0.8rem 0.9rem;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 16px;
   background: linear-gradient(135deg, rgba(22, 84, 151, 0.56), rgba(34, 104, 176, 0.4));
@@ -196,9 +196,9 @@
 .login-submit {
   justify-self: center;
   min-width: 132px;
-  min-height: 32px;
-  padding: 0 1.25rem;
-  border-radius: 999px;
+  min-height: var(--control-height);
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-pill);
   background: linear-gradient(135deg, #36c7ef 0%, #63d8ff 100%);
   color: #0b4878;
   font-size: 0.82rem;

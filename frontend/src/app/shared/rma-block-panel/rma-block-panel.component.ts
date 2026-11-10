@@ -15,7 +15,7 @@ import { RmaBlockHistoryComponent } from '../rma-block-history/rma-block-history
   selector: 'app-rma-block-panel',
   imports: [ReactiveFormsModule, ModalFocusDirective, RmaBlockHistoryComponent],
   templateUrl: './rma-block-panel.component.html',
-  styles: `dialog { width: min(42rem, calc(100vw - 2rem)); max-height: 90dvh; border: 0; overflow: auto; } dialog::backdrop { background: #0f172a99; }
+  styles: `dialog { width: min(42rem, calc(100vw - 2rem)); max-height: 90dvh; border: 0; overflow: auto; } dialog::backdrop { background: var(--backdrop); }
     .loading-indicator { display: inline-block; width: 1rem; height: 1rem; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: block-loading-spin 1s linear infinite; }
     @keyframes block-loading-spin { to { transform: rotate(360deg); } }
     @media (prefers-reduced-motion: reduce) { .loading-indicator { animation: none; } }`,
