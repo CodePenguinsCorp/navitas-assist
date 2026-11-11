@@ -63,7 +63,7 @@ const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
     }
 
     .protocol-item-summary-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: start; min-width: 0; }
-    .protocol-item-summary { flex: 1 1 180px; display: grid; gap: var(--space-1); min-width: 0; padding: var(--space-3); text-align: left; white-space: normal; overflow-wrap: anywhere; }
+    .protocol-item-summary { flex: 1 1 180px; display: grid; justify-content: stretch; justify-items: start; align-content: start; gap: var(--space-1); min-width: 0; padding: var(--space-3); text-align: left; white-space: normal; overflow-wrap: anywhere; }
     .protocol-item-summary[aria-expanded="true"] { border-color: var(--brand-blue); background: var(--brand-tint); }
     .protocol-item-summary:focus-visible { box-shadow: var(--focus-ring); }
 
