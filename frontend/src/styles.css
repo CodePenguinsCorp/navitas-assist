@@ -1464,6 +1464,11 @@ fieldset.form-section {
   grid-template-rows: auto minmax(var(--control-height), auto) minmax(1.1rem, auto);
 }
 
+/* The screen-reader-only label is out of flow: without it the control is the first row, not the second. */
+.modal-panel .field-group:has(> .sr-only:first-child) {
+  grid-template-rows: auto;
+}
+
 .modal-panel .field-group > .field-error {
   min-height: 1.1rem;
 }
@@ -1722,8 +1727,8 @@ fieldset.form-section {
   min-width: 180px;
 }
 
-.search-field span,
-.filter-field span {
+.search-field > span,
+.filter-field > span {
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--muted);
