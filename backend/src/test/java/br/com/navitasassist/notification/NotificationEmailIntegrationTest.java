@@ -38,7 +38,6 @@ import br.com.navitasassist.rma.RmaPriority;
 import br.com.navitasassist.rma.RmaResponse;
 import br.com.navitasassist.service.RmaService;
 import br.com.navitasassist.user.UserAccount;
-import br.com.navitasassist.user.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

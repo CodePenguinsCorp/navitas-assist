@@ -20,7 +20,6 @@ import br.com.navitasassist.user.UserAccount;
 import br.com.navitasassist.user.UserAccountRequest;
 import br.com.navitasassist.user.UserAccountResponse;
 import br.com.navitasassist.user.UserAccountUpdateRequest;
-import br.com.navitasassist.user.UserRole;
 import br.com.navitasassist.user.UserSummaryResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -85,7 +84,6 @@ public class UserAccountService {
         userAccount.setUsername(trim(request.username()));
         userAccount.setFullName(trim(request.fullName()));
         userAccount.setPasswordHash(passwordEncoder.encode(request.password()));
-        userAccount.setRole(bridgeRole(profile));
         userAccount.setProfile(profile);
         userAccount.setExtraPermissions(extras);
         userAccount.setActive(request.active());
@@ -118,7 +116,6 @@ public class UserAccountService {
         if (passwordChanged) {
             userAccount.setPasswordHash(passwordEncoder.encode(request.password()));
         }
-        userAccount.setRole(bridgeRole(newProfile));
         userAccount.setProfile(newProfile);
         userAccount.getExtraPermissions().clear();
         userAccount.getExtraPermissions().addAll(newExtras);
@@ -206,11 +203,6 @@ public class UserAccountService {
     /** Anti-escalada (spec §4.4) sobre o estado resultante: permissões do perfil escolhido mais as extras. */
     private void ensureCanGrant(String actor, AccessProfile profile, Set<String> extras) {
         permissionGrantPolicy.ensureCanGrant(actor, effectivePermissionService.effectivePermissions(profile.getPermissions(), extras));
-    }
-
-    /** Ponte da etapa 8A: a coluna role segue NOT NULL até a V10; grava o legacy_code do perfil, ou VIEWER. */
-    private static UserRole bridgeRole(AccessProfile profile) {
-        return profile.getLegacyCode() != null ? UserRole.valueOf(profile.getLegacyCode()) : UserRole.VIEWER;
     }
 
     private String trim(String value) {

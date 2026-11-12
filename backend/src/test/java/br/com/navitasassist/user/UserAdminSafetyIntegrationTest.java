@@ -67,12 +67,12 @@ class UserAdminSafetyIntegrationTest {
 
     @ParameterizedTest
     @CsvSource({ "ADMIN,false", "VIEWER,true", "TECHNICIAN,false" })
-    void rejectsLossOfLastAdminAndPreservesAccount(UserRole role, boolean active) throws Exception {
+    void rejectsLossOfLastAdminAndPreservesAccount(String role, boolean active) throws Exception {
         mvc.perform(put("/api/users/{id}", admin.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(payload(admin, role, active)))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("At least one active administrator must remain."));
         UserAccount saved = users.findById(admin.getId()).orElseThrow();
-        assertEquals(UserRole.ADMIN, saved.getRole());
+        assertEquals("ADMIN", saved.getProfile().getLegacyCode());
         assertTrue(saved.isActive());
         assertEquals(admin.getPasswordHash(), saved.getPasswordHash());
     }
@@ -81,7 +81,7 @@ class UserAdminSafetyIntegrationTest {
     void inactiveAdminDoesNotCountAsReplacement() throws Exception {
         second(false);
         mvc.perform(put("/api/users/{id}", admin.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
-                .contentType(MediaType.APPLICATION_JSON).content(payload(admin, UserRole.VIEWER, true)))
+                .contentType(MediaType.APPLICATION_JSON).content(payload(admin, "VIEWER", true)))
             .andExpect(status().isBadRequest());
         assertEquals(1, activeAdmins());
     }
@@ -114,7 +114,7 @@ class UserAdminSafetyIntegrationTest {
             mvc.perform(delete("/api/users/{id}", other.getId()).with(asProfile("admin", "ADMIN")).with(csrf())).andExpect(status().isNoContent());
         } else {
             mvc.perform(put("/api/users/{id}", other.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
-                    .contentType(MediaType.APPLICATION_JSON).content(payload(other, operation.equals("demote") ? UserRole.SERVICE_DESK : UserRole.ADMIN, !operation.equals("deactivate"))))
+                    .contentType(MediaType.APPLICATION_JSON).content(payload(other, operation.equals("demote") ? "SERVICE_DESK" : "ADMIN", !operation.equals("deactivate"))))
                 .andExpect(status().isOk());
         }
         assertEquals(1, activeAdmins());
@@ -132,12 +132,12 @@ class UserAdminSafetyIntegrationTest {
                 ready.countDown();
                 if (!start.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("Barrier timed out");
                 return mvc.perform(put("/api/users/{id}", admin.getId()).with(asProfile(SECOND, "ADMIN")).with(csrf())
-                    .contentType(MediaType.APPLICATION_JSON).content(payload(admin, UserRole.VIEWER, true))).andReturn().getResponse().getStatus();
+                    .contentType(MediaType.APPLICATION_JSON).content(payload(admin, "VIEWER", true))).andReturn().getResponse().getStatus();
             });
             var second = pool.submit(() -> {
                 ready.countDown();
                 if (!start.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("Barrier timed out");
-                var request = deleteSecond ? delete("/api/users/{id}", other.getId()) : put("/api/users/{id}", other.getId()).contentType(MediaType.APPLICATION_JSON).content(payload(other, UserRole.ADMIN, false));
+                var request = deleteSecond ? delete("/api/users/{id}", other.getId()) : put("/api/users/{id}", other.getId()).contentType(MediaType.APPLICATION_JSON).content(payload(other, "ADMIN", false));
                 return mvc.perform(request.with(asProfile("admin", "ADMIN")).with(csrf())).andReturn().getResponse().getStatus();
             });
             assertTrue(ready.await(10, TimeUnit.SECONDS));
@@ -164,7 +164,7 @@ class UserAdminSafetyIntegrationTest {
         users.saveAndFlush(admin);
 
         mvc.perform(put("/api/users/{id}", byExtras.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
-                .contentType(MediaType.APPLICATION_JSON).content(payload(byExtras, UserRole.VIEWER, Set.of("usuarios.gerir"), true)))
+                .contentType(MediaType.APPLICATION_JSON).content(payload(byExtras, "VIEWER", Set.of("usuarios.gerir"), true)))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("At least one active administrator must remain."));
         assertEquals(Set.of("usuarios.gerir", "perfis.gerir"), users.findById(byExtras.getId()).orElseThrow().getExtraPermissions());
     }
@@ -173,7 +173,7 @@ class UserAdminSafetyIntegrationTest {
     void nonAdminsRemainForbidden() throws Exception {
         for (String role : new String[] { "VIEWER", "TECHNICIAN", "SERVICE_DESK" }) {
             mvc.perform(put("/api/users/{id}", admin.getId()).with(asProfile("operator", role)).with(csrf())
-                    .contentType(MediaType.APPLICATION_JSON).content(payload(admin, UserRole.VIEWER, true))).andExpect(status().isForbidden());
+                    .contentType(MediaType.APPLICATION_JSON).content(payload(admin, "VIEWER", true))).andExpect(status().isForbidden());
             mvc.perform(delete("/api/users/{id}", admin.getId()).with(asProfile("operator", role)).with(csrf())).andExpect(status().isForbidden());
         }
         assertEquals(1, activeAdmins());
@@ -189,13 +189,13 @@ class UserAdminSafetyIntegrationTest {
         return users.saveAndFlush(other);
     }
 
-    private String payload(UserAccount account, UserRole role, boolean active) throws Exception {
+    private String payload(UserAccount account, String role, boolean active) throws Exception {
         return payload(account, role, Set.of(), active);
     }
 
-    private String payload(UserAccount account, UserRole role, Set<String> extras, boolean active) throws Exception {
+    private String payload(UserAccount account, String role, Set<String> extras, boolean active) throws Exception {
         return mapper.writeValueAsString(Map.of("username", account.getUsername(), "fullName", account.getFullName(),
-            "profileId", profileId(role.name()), "extraPermissions", extras, "active", active));
+            "profileId", profileId(role), "extraPermissions", extras, "active", active));
     }
 
     private Long profileId(String legacyCode) {
@@ -203,6 +203,6 @@ class UserAdminSafetyIntegrationTest {
     }
 
     private long activeAdmins() {
-        return users.findAll().stream().filter(account -> account.isActive() && account.getRole() == UserRole.ADMIN).count();
+        return users.findAll().stream().filter(account -> account.isActive() && "ADMIN".equals(account.getProfile().getLegacyCode())).count();
     }
 }

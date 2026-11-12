@@ -27,7 +27,6 @@ import br.com.navitasassist.repository.ProductRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.user.UserAccount;
-import br.com.navitasassist.user.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -460,10 +459,10 @@ class RmaControllerIntegrationTest {
         rma.setReportedFailure("Assignment test");
         RmaRecord savedRma = rmaRecordRepository.saveAndFlush(rma);
 
-        UserAccount firstTechnician = saveUser("first.tech", "First Technician", UserRole.TECHNICIAN, true);
-        UserAccount secondTechnician = saveUser("second.tech", "Second Technician", UserRole.TECHNICIAN, true);
-        UserAccount inactiveTechnician = saveUser("inactive.tech", "Inactive Technician", UserRole.TECHNICIAN, false);
-        UserAccount serviceUser = saveUser("service.user", "Service User", UserRole.SERVICE_DESK, true);
+        UserAccount firstTechnician = saveUser("first.tech", "First Technician", "TECHNICIAN", true);
+        UserAccount secondTechnician = saveUser("second.tech", "Second Technician", "TECHNICIAN", true);
+        UserAccount inactiveTechnician = saveUser("inactive.tech", "Inactive Technician", "TECHNICIAN", false);
+        UserAccount serviceUser = saveUser("service.user", "Service User", "SERVICE_DESK", true);
 
         mockMvc.perform(get("/api/users/assignable")
                 .with(asProfile("viewer", "VIEWER")))
@@ -697,12 +696,12 @@ class RmaControllerIntegrationTest {
         return productRepository.save(product);
     }
 
-    private UserAccount saveUser(String username, String fullName, UserRole role, boolean active) {
+    private UserAccount saveUser(String username, String fullName, String role, boolean active) {
         UserAccount user = new UserAccount();
         user.setUsername(username);
         user.setFullName(fullName);
         user.setPasswordHash("not-used-in-this-test");
-        AccessTestSupport.assignProfile(accessProfiles, user, role.name());
+        AccessTestSupport.assignProfile(accessProfiles, user, role);
         user.setActive(active);
         return userAccountRepository.save(user);
     }

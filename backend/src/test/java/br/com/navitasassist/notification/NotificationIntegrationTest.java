@@ -50,7 +50,6 @@ import br.com.navitasassist.service.SlaNotificationScanner;
 import br.com.navitasassist.user.UserAccount;
 import br.com.navitasassist.user.UserAccountTestSupport;
 import br.com.navitasassist.access.AccessProfile;
-import br.com.navitasassist.user.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -142,11 +141,11 @@ class NotificationIntegrationTest {
         cleanUp();
         resetRules();
         UserAccountTestSupport.ensureAdmin(userAccountRepository, accessProfiles, passwordEncoder);
-        technician = createUser("nav40-tech", UserRole.TECHNICIAN, true);
-        otherTechnician = createUser("nav40-tech-2", UserRole.TECHNICIAN, true);
-        desk = createUser("nav40-desk", UserRole.SERVICE_DESK, true);
-        inactiveDesk = createUser("nav40-desk-off", UserRole.SERVICE_DESK, false);
-        viewer = createUser("nav40-viewer", UserRole.VIEWER, true);
+        technician = createUser("nav40-tech", "TECHNICIAN", true);
+        otherTechnician = createUser("nav40-tech-2", "TECHNICIAN", true);
+        desk = createUser("nav40-desk", "SERVICE_DESK", true);
+        inactiveDesk = createUser("nav40-desk-off", "SERVICE_DESK", false);
+        viewer = createUser("nav40-viewer", "VIEWER", true);
         client = new Client();
         client.setLegalName("Cliente notificações");
         client = clientRepository.save(client);
@@ -401,12 +400,12 @@ class NotificationIntegrationTest {
         jdbcTemplate.update("UPDATE rma_status_history SET changed_at = ? WHERE rma_id = ?", java.sql.Timestamp.from(enteredAt), rma.getId());
     }
 
-    private UserAccount createUser(String username, UserRole role, boolean active) {
+    private UserAccount createUser(String username, String role, boolean active) {
         UserAccount account = new UserAccount();
         account.setUsername(username);
         account.setFullName(username);
         account.setPasswordHash("not-used");
-        AccessTestSupport.assignProfile(accessProfiles, account, role.name());
+        AccessTestSupport.assignProfile(accessProfiles, account, role);
         account.setActive(active);
         account = userAccountRepository.save(account);
         createdUserIds.add(account.getId());
@@ -418,7 +417,7 @@ class NotificationIntegrationTest {
     }
 
     private RequestPostProcessor as(UserAccount account) {
-        return asProfile(account.getUsername(), account.getRole().name());
+        return asProfile(account.getUsername(), account.getProfile().getLegacyCode());
     }
 
     private long countFor(UserAccount account, NotificationEventType type) {
@@ -442,17 +441,17 @@ class NotificationIntegrationTest {
     }
 
     private void resetRules() {
-        reset(NotificationEventType.RMA_CREATED, NotificationSeverity.INFO, Set.of(UserRole.ADMIN, UserRole.SERVICE_DESK), false, true);
+        reset(NotificationEventType.RMA_CREATED, NotificationSeverity.INFO, Set.of("ADMIN", "SERVICE_DESK"), false, true);
         reset(NotificationEventType.RMA_ASSIGNED, NotificationSeverity.INFO, Set.of(), true, false);
-        reset(NotificationEventType.SLA_WARNING, NotificationSeverity.WARNING, Set.of(UserRole.ADMIN), true, true);
-        reset(NotificationEventType.SLA_OVERDUE, NotificationSeverity.CRITICAL, Set.of(UserRole.ADMIN, UserRole.SERVICE_DESK), true, false);
+        reset(NotificationEventType.SLA_WARNING, NotificationSeverity.WARNING, Set.of("ADMIN"), true, true);
+        reset(NotificationEventType.SLA_OVERDUE, NotificationSeverity.CRITICAL, Set.of("ADMIN", "SERVICE_DESK"), true, false);
     }
 
-    private void reset(NotificationEventType type, NotificationSeverity severity, Set<UserRole> roles, boolean notifyAssignee, boolean userMutable) {
+    private void reset(NotificationEventType type, NotificationSeverity severity, Set<String> roles, boolean notifyAssignee, boolean userMutable) {
         NotificationRule rule = notificationRuleRepository.findByEventType(type).orElseThrow();
         rule.setEnabled(true);
         rule.setSeverity(severity);
-        rule.setRecipientProfiles(new java.util.HashSet<>(roles.stream().map(role -> profile(role.name())).toList()));
+        rule.setRecipientProfiles(new java.util.HashSet<>(roles.stream().map(role -> profile(role)).toList()));
         rule.setNotifyAssignee(notifyAssignee);
         rule.setEmailEnabled(false);
         rule.setUserMutable(userMutable);

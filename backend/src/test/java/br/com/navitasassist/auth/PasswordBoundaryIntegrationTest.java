@@ -21,7 +21,6 @@ import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.user.UserAccount;
-import br.com.navitasassist.user.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -95,7 +94,7 @@ class PasswordBoundaryIntegrationTest {
         UserAccount persisted = accounts.findById(original.getId()).orElseThrow();
         assertThat(persisted.getPasswordHash()).isEqualTo(original.getPasswordHash());
         assertThat(persisted.getFullName()).isEqualTo("Original user");
-        assertThat(persisted.getRole()).isEqualTo(UserRole.VIEWER);
+        assertThat(persisted.getProfile().getLegacyCode()).isEqualTo("VIEWER");
         assertThat(persisted.isActive()).isTrue();
         login("original-password", 200);
     }

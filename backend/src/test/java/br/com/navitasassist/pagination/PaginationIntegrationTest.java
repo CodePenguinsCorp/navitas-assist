@@ -29,7 +29,6 @@ import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusHistory;
 import br.com.navitasassist.user.UserAccount;
 import br.com.navitasassist.user.UserAccountTestSupport;
-import br.com.navitasassist.user.UserRole;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -229,9 +228,9 @@ class PaginationIntegrationTest {
 
     @Test
     void shouldFilterAndSummarizeUsers() throws Exception {
-        saveUser("zoe", "Zoe Admin", UserRole.ADMIN, true);
-        saveUser("ana", "Ana Tech", UserRole.TECHNICIAN, true);
-        saveUser("bob", "Bob Tech", UserRole.TECHNICIAN, false);
+        saveUser("zoe", "Zoe Admin", "ADMIN", true);
+        saveUser("ana", "Ana Tech", "TECHNICIAN", true);
+        saveUser("bob", "Bob Tech", "TECHNICIAN", false);
 
         mockMvc.perform(get("/api/users").param("profileId", profileId("TECHNICIAN").toString()).param("size", "1").with(admin()))
             .andExpect(jsonPath("$.totalElements").value(2))
@@ -381,7 +380,6 @@ class PaginationIntegrationTest {
         account.setUsername(username);
         account.setFullName(fullName);
         account.setPasswordHash("hash");
-        account.setRole(profile.getLegacyCode() == null ? UserRole.VIEWER : UserRole.valueOf(profile.getLegacyCode()));
         account.setProfile(profile);
         account.setExtraPermissions(new HashSet<>(extras));
         account.setActive(active);
@@ -392,12 +390,12 @@ class PaginationIntegrationTest {
         return accessProfiles.findByLegacyCode(legacyCode).orElseThrow().getId();
     }
 
-    private void saveUser(String username, String fullName, UserRole role, boolean active) {
+    private void saveUser(String username, String fullName, String role, boolean active) {
         UserAccount account = new UserAccount();
         account.setUsername(username);
         account.setFullName(fullName);
         account.setPasswordHash("hash");
-        AccessTestSupport.assignProfile(accessProfiles, account, role.name());
+        AccessTestSupport.assignProfile(accessProfiles, account, role);
         account.setActive(active);
         userAccountRepository.save(account);
     }

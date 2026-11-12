@@ -34,7 +34,6 @@ import br.com.navitasassist.service.UserAccountService;
 import br.com.navitasassist.user.UserAccount;
 import br.com.navitasassist.user.UserAccountTestSupport;
 import br.com.navitasassist.user.UserAccountUpdateRequest;
-import br.com.navitasassist.user.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -193,7 +192,7 @@ class SessionRevocationIntegrationTest {
         });
         UserAccount saved = users.findById(target.getId()).orElseThrow();
         assertTrue(saved.isActive());
-        assertEquals(UserRole.ADMIN, saved.getRole());
+        assertEquals("ADMIN", saved.getProfile().getLegacyCode());
         mvc.perform(get("/api/users").session(first)).andExpect(status().isOk());
         mvc.perform(get("/api/users").session(second)).andExpect(status().isOk());
     }

@@ -21,7 +21,6 @@ import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.repository.KanbanViewRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.user.UserAccount;
-import br.com.navitasassist.user.UserRole;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;

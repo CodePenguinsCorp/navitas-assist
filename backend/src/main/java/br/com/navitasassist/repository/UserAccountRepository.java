@@ -6,7 +6,6 @@ import java.util.Optional;
 
 import br.com.navitasassist.access.AccessProfile;
 import br.com.navitasassist.user.UserAccount;
-import br.com.navitasassist.user.UserRole;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,11 +32,7 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
 
     boolean existsByUsernameIgnoreCase(String username);
 
-    List<UserAccount> findAllByActiveTrueAndRoleOrderByFullNameAsc(UserRole role);
-
     List<UserAccount> findAllByActiveTrueAndProfileInOrderByFullNameAsc(Collection<AccessProfile> profiles);
-
-    List<UserAccount> findAllByActiveTrueAndRoleNotOrderByFullNameAsc(UserRole role);
 
     List<UserAccount> findAllByActiveTrueOrderByFullNameAsc();
 
@@ -63,8 +58,6 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
     long countByActiveTrue();
 
     long countByProfile_Id(Long profileId);
-
-    long countByRole(UserRole role);
 
     @Query("select count(distinct account.profile.id) from UserAccount account")
     long countDistinctProfiles();

@@ -9,8 +9,6 @@ import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -23,8 +21,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 @Getter
 @Setter
@@ -45,11 +41,6 @@ public class UserAccount extends AuditableEntity {
 
     @Column(nullable = false, length = 255)
     private String passwordHash;
-
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.VARCHAR)
-    @Column(nullable = false, length = 30)
-    private UserRole role;
 
     // O lock do login trava só esta linha; perfil e coleções vêm em selects próprios, sem lock.
     @ManyToOne(optional = false, fetch = FetchType.EAGER)

@@ -1,6 +1,7 @@
 package br.com.navitasassist.access;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.sql.Connection;
@@ -50,7 +51,7 @@ class AccessProfileMigrationTest {
     }
 
     @Test
-    void mapsEveryUserRoleToItsProfile() throws SQLException {
+    void mapsEveryLegacyRoleToItsProfile() throws SQLException {
         String url = newDatabase();
         migrateTo(url, "7");
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
@@ -70,7 +71,7 @@ class AccessProfileMigrationTest {
         migrateTo(url, "8");
 
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
-            Map<String, String> profileByUserRole = new HashMap<>();
+            Map<String, String> profileByLegacyRole = new HashMap<>();
             try (Statement statement = connection.createStatement();
                  ResultSet rows = statement.executeQuery("""
                      SELECT u.role, p.legacy_code
@@ -78,11 +79,11 @@ class AccessProfileMigrationTest {
                      JOIN access_profiles p ON p.id = u.profile_id
                      """)) {
                 while (rows.next()) {
-                    profileByUserRole.put(rows.getString(1), rows.getString(2));
+                    profileByLegacyRole.put(rows.getString(1), rows.getString(2));
                 }
             }
             assertEquals(Map.of("ADMIN", "ADMIN", "SERVICE_DESK", "SERVICE_DESK", "TECHNICIAN", "TECHNICIAN", "VIEWER", "VIEWER"),
-                profileByUserRole);
+                profileByLegacyRole);
 
             assertThrows(SQLException.class, () -> {
                 try (Statement statement = connection.createStatement()) {
@@ -133,6 +134,39 @@ class AccessProfileMigrationTest {
                 rows.next();
                 assertEquals("ADMIN, VIEWER", rows.getString(1));
             }
+        }
+    }
+
+    /** V10 (fim do uso pelo código): as colunas legadas aceitam NULL e o CHECK de role sai. */
+    @Test
+    void relaxesLegacyColumnsAtV10() throws SQLException {
+        String url = newDatabase();
+        migrateTo(url, "10");
+
+        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD);
+             Statement statement = connection.createStatement()) {
+            statement.executeUpdate("""
+                INSERT INTO user_accounts (username, full_name, password_hash, profile_id, active, created_at, updated_at)
+                VALUES ('mig.sem.role', 'Sem role', 'hash', (SELECT id FROM access_profiles WHERE legacy_code = 'VIEWER'),
+                        TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """);
+            try (ResultSet rows = statement.executeQuery("SELECT role FROM user_accounts WHERE username = 'mig.sem.role'")) {
+                rows.next();
+                assertNull(rows.getString(1));
+            }
+
+            assertEquals(4, statement.executeUpdate("UPDATE notification_rules SET recipient_roles = NULL"));
+
+            try (ResultSet rows = statement.executeQuery("""
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+                WHERE UPPER(CONSTRAINT_NAME) = 'CK_USER_ACCOUNTS_ROLE'
+                """)) {
+                rows.next();
+                assertEquals(0, rows.getInt(1));
+            }
+
+            // Um role fora da lista antiga não é mais recusado pelo banco: a coluna é legada e sem uso.
+            statement.executeUpdate("UPDATE user_accounts SET role = 'QUALQUER' WHERE username = 'mig.sem.role'");
         }
     }
 

@@ -11,6 +11,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -44,6 +45,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -73,6 +75,9 @@ class UserControllerIntegrationTest {
 
     @Autowired
     private EffectivePermissionService effectivePermissions;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Autowired
     private UserAccountService userAccountService;
@@ -124,7 +129,7 @@ class UserControllerIntegrationTest {
     }
 
     @Test
-    void bridgeRoleFollowsProfileOnCreateAndUpdate() throws Exception {
+    void profileIsStoredAndLegacyRoleColumnStaysNull() throws Exception {
         mockMvc.perform(post("/api/users")
                 .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
@@ -139,7 +144,7 @@ class UserControllerIntegrationTest {
             .andExpect(status().isCreated());
         UserAccount created = userAccountRepository.findByUsernameIgnoreCase("bridge.user").orElseThrow();
         assertEquals("VIEWER", created.getProfile().getLegacyCode());
-        assertEquals(UserRole.VIEWER, created.getRole());
+        assertNull(legacyRoleColumn(created.getId()));
 
         mockMvc.perform(put("/api/users/{id}", created.getId())
                 .with(asProfile("admin", "ADMIN"))
@@ -154,7 +159,7 @@ class UserControllerIntegrationTest {
             .andExpect(status().isOk());
         UserAccount updated = userAccountRepository.findById(created.getId()).orElseThrow();
         assertEquals("TECHNICIAN", updated.getProfile().getLegacyCode());
-        assertEquals(UserRole.TECHNICIAN, updated.getRole());
+        assertNull(legacyRoleColumn(created.getId()));
     }
 
     @Test
@@ -451,7 +456,7 @@ class UserControllerIntegrationTest {
             .andExpect(jsonPath("$.extraPermissions", contains("rma.abrir", "relatorios.ver")))
             .andExpect(jsonPath("$.role").value(nullValue()))
             .andExpect(jsonPath("$.passwordHash").doesNotExist());
-        assertEquals(UserRole.VIEWER, userAccountRepository.findByUsernameIgnoreCase("custom.user").orElseThrow().getRole());
+        assertNull(legacyRoleColumn(userAccountRepository.findByUsernameIgnoreCase("custom.user").orElseThrow().getId()));
 
         mockMvc.perform(get("/api/users").param("query", "custom.user").with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk())
@@ -613,6 +618,11 @@ class UserControllerIntegrationTest {
     /** Principal com as authorities do gestor; a regra anti-escalada lê as permissões efetivas dele no banco. */
     private RequestPostProcessor asManager() {
         return user(MANAGER).authorities(AuthorityUtils.createAuthorityList(managerProfile.getPermissions().toArray(String[]::new)));
+    }
+
+    /** A coluna legada user_accounts.role (V10) não é mais gravada pelo código. */
+    private String legacyRoleColumn(Long id) {
+        return jdbcTemplate.queryForObject("SELECT role FROM user_accounts WHERE id = ?", String.class, id);
     }
 
     private Long profileId(String legacyCode) {

@@ -10,7 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.user.UserAccount;
-import br.com.navitasassist.user.UserRole;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -51,18 +50,14 @@ public final class AccessTestSupport {
         return users.saveAndFlush(account);
     }
 
-    /** Grava o role e o perfil migrado equivalente ({@code legacy_code}); não salva a conta. */
+    /** Grava o perfil migrado ({@code legacy_code}); não salva a conta. */
     public static UserAccount assignProfile(AccessProfileRepository profiles, UserAccount account, String legacyCode) {
-        account.setRole(UserRole.valueOf(legacyCode));
         account.setProfile(profiles.findByLegacyCode(legacyCode)
             .orElseThrow(() -> new IllegalStateException("Perfil migrado ausente: " + legacyCode)));
         return account;
     }
 
-    /**
-     * Grava um usuário ativo com um perfil qualquer (inclusive personalizado) e extras. O role da ponte segue o
-     * {@code legacy_code} do perfil, ou {@code VIEWER} quando não houver.
-     */
+    /** Grava um usuário ativo com um perfil qualquer (inclusive personalizado) e extras. */
     public static UserAccount saveAccountWithProfile(
         UserAccountRepository users,
         PasswordEncoder passwordEncoder,
@@ -74,7 +69,6 @@ public final class AccessTestSupport {
         account.setUsername(username);
         account.setFullName(username);
         account.setPasswordHash(PASSWORD_HASHES.computeIfAbsent(passwordEncoder, encoder -> encoder.encode(DEFAULT_PASSWORD)));
-        account.setRole(profile.getLegacyCode() == null ? UserRole.VIEWER : UserRole.valueOf(profile.getLegacyCode()));
         account.setProfile(profile);
         account.setExtraPermissions(new HashSet<>(extraPermissions));
         account.setActive(true);

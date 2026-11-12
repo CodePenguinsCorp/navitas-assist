@@ -84,7 +84,7 @@ public class AccessProfileService {
 
     public void delete(Long id) {
         AccessProfile profile = accessProfileRepository.findByIdForUpdate(id).orElseThrow(() -> notFound(id));
-        // Enquanto a coluna legada role existir, os perfis migrados sustentam a ponte do role e o rollback (spec §6).
+        // Enquanto a coluna legada role existir, os perfis migrados sustentam o role provisório da API e o rollback (spec §6).
         if (profile.getLegacyCode() != null) {
             throw new BusinessException("Perfil migrado não pode ser excluído.");
         }

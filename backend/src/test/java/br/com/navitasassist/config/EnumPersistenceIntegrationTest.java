@@ -20,7 +20,6 @@ import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusHistory;
 import br.com.navitasassist.rma.WarrantyStatus;
 import br.com.navitasassist.user.UserAccount;
-import br.com.navitasassist.user.UserRole;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -103,16 +102,6 @@ class EnumPersistenceIntegrationTest {
         entityManager.persist(history);
         historyId = history.getId();
         flushAndClear();
-    }
-
-    @Test
-    void shouldStoreEveryRoleAsItsName() {
-        for (UserRole role : UserRole.values()) {
-            entityManager.find(UserAccount.class, userId).setRole(role);
-            flushAndClear();
-            assertThat(entityManager.find(UserAccount.class, userId).getRole()).isEqualTo(role);
-            assertThat(column("user_accounts", "role", userId)).isEqualTo(role.name());
-        }
     }
 
     @Test

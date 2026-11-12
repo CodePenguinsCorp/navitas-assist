@@ -22,7 +22,6 @@ import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.user.UserAccount;
 import br.com.navitasassist.user.UserAccountTestSupport;
-import br.com.navitasassist.user.UserRole;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -65,9 +64,9 @@ class AuthSecurityIntegrationTest {
             .filter(user -> !user.getUsername().equalsIgnoreCase("admin"))
             .forEach(userAccountRepository::delete);
         UserAccountTestSupport.ensureAdmin(userAccountRepository, accessProfiles, passwordEncoder);
-        createUser("service.desk", UserRole.SERVICE_DESK);
-        createUser("technician", UserRole.TECHNICIAN);
-        createUser("viewer", UserRole.VIEWER);
+        createUser("service.desk", "SERVICE_DESK");
+        createUser("technician", "TECHNICIAN");
+        createUser("viewer", "VIEWER");
     }
 
     @Test
@@ -412,12 +411,12 @@ class AuthSecurityIntegrationTest {
         };
     }
 
-    private void createUser(String username, UserRole role) {
+    private void createUser(String username, String role) {
         UserAccount user = new UserAccount();
         user.setUsername(username);
         user.setFullName(username);
         user.setPasswordHash(passwordEncoder.encode("password123"));
-        AccessTestSupport.assignProfile(accessProfiles, user, role.name());
+        AccessTestSupport.assignProfile(accessProfiles, user, role);
         user.setActive(true);
         userAccountRepository.save(user);
     }
