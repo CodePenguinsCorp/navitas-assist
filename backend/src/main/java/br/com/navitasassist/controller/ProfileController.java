@@ -61,7 +61,7 @@ public class ProfileController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
-        accessProfileService.delete(id);
+    public void delete(@PathVariable Long id, Principal principal) {
+        accessProfileService.delete(id, principal.getName());
     }
 }

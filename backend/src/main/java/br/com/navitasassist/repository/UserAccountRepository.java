@@ -30,6 +30,17 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
     @Query("select account from UserAccount account where account.id = :id")
     Optional<UserAccount> findByIdForUpdate(@Param("id") Long id);
 
+    /** Conta, perfil e as duas coleções de permissões numa só consulta, sem lock (recálculo por requisição). */
+    @Query("""
+        select account
+        from UserAccount account
+        join fetch account.profile profile
+        left join fetch profile.permissions
+        left join fetch account.extraPermissions
+        where account.id = :id
+        """)
+    Optional<UserAccount> findWithAccessById(@Param("id") Long id);
+
     boolean existsByUsernameIgnoreCase(String username);
 
     List<UserAccount> findAllByActiveTrueAndProfileInOrderByFullNameAsc(Collection<AccessProfile> profiles);

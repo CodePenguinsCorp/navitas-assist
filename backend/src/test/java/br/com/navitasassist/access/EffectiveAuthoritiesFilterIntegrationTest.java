@@ -3,6 +3,7 @@ package br.com.navitasassist.access;
 import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -19,11 +20,14 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import br.com.navitasassist.auth.LoginSessionDetails;
+import jakarta.persistence.EntityManagerFactory;
 import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.user.UserAccount;
 import br.com.navitasassist.user.UserAccountTestSupport;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,6 +61,7 @@ class EffectiveAuthoritiesFilterIntegrationTest {
     @Autowired private AccessProfileRepository profiles;
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private SessionRegistry sessionRegistry;
+    @Autowired private EntityManagerFactory entityManagerFactory;
     private final List<MockHttpSession> sessions = new ArrayList<>();
 
     @BeforeEach
@@ -78,6 +83,7 @@ class EffectiveAuthoritiesFilterIntegrationTest {
             if (!session.isInvalid()) session.invalidate();
         }
         sessions.clear();
+        entityManagerFactory.unwrap(SessionFactory.class).getStatistics().setStatisticsEnabled(false);
         AccessTestSupport.deleteAccounts(users, TECH, VIEWER);
         AccessTestSupport.deleteProfiles(profiles, TECH_PROFILE, VIEWER_PROFILE);
     }
@@ -134,6 +140,75 @@ class EffectiveAuthoritiesFilterIntegrationTest {
             HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
         assertNotNull(context);
         assertTrue(context.getAuthentication().getDetails() instanceof LoginSessionDetails);
+    }
+
+    /** Conta desativada sem passar pela API (sem revogação): a sessão segue anônima já na requisição seguinte. */
+    @Test
+    void deactivatedAccountSessionBecomesAnonymous() throws Exception {
+        MockHttpSession session = login(VIEWER);
+        UserAccount account = users.findByUsernameIgnoreCase(VIEWER).orElseThrow();
+        account.setActive(false);
+        users.saveAndFlush(account);
+
+        mvc.perform(get("/api/products").session(session)).andExpect(status().isUnauthorized());
+        assertTrue(session.isInvalid());
+        assertNull(sessionRegistry.getSessionInformation(session.getId()));
+    }
+
+    @Test
+    void deletedAccountSessionBecomesAnonymous() throws Exception {
+        MockHttpSession session = login(VIEWER);
+        AccessTestSupport.deleteAccounts(users, VIEWER);
+
+        mvc.perform(get("/api/auth/me").session(session)).andExpect(status().isUnauthorized());
+        assertTrue(session.isInvalid());
+    }
+
+    /** A sessão guarda o id da conta: renomear direto no banco não desliga o recálculo. */
+    @Test
+    void recalculationFollowsTheAccountId() throws Exception {
+        MockHttpSession session = login(VIEWER);
+        UserAccount account = users.findByUsernameIgnoreCase(VIEWER).orElseThrow();
+        account.setUsername(VIEWER + ".renomeado");
+        account.setExtraPermissions(new HashSet<>(Set.of("rma.abrir")));
+        users.saveAndFlush(account);
+        try {
+            assertNotForbidden(openRma(session));
+            assertTrue(!session.isInvalid());
+        } finally {
+            AccessTestSupport.deleteAccounts(users, VIEWER + ".renomeado");
+        }
+    }
+
+    /** Custo do recálculo: uma única consulta (conta, perfil e as duas coleções) por requisição. */
+    @Test
+    void recalculationUsesASingleQuery() throws Exception {
+        MockHttpSession session = login(VIEWER);
+        Statistics statistics = statistics();
+        statistics.clear();
+
+        mvc.perform(get("/api/auth/csrf").session(session)).andExpect(status().isNoContent());
+
+        assertEquals(1, statistics.getPrepareStatementCount());
+    }
+
+    /** O filtro roda depois do ConcurrentSessionFilter: sessão expirada não chega a ser recalculada. */
+    @Test
+    void expiredSessionIsNotRecalculated() throws Exception {
+        MockHttpSession session = login(VIEWER);
+        sessionRegistry.getSessionInformation(session.getId()).expireNow();
+        Statistics statistics = statistics();
+        statistics.clear();
+
+        mvc.perform(get("/api/auth/csrf").session(session)).andExpect(status().isUnauthorized());
+
+        assertEquals(0, statistics.getPrepareStatementCount());
+    }
+
+    private Statistics statistics() {
+        Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+        statistics.setStatisticsEnabled(true);
+        return statistics;
     }
 
     @Test

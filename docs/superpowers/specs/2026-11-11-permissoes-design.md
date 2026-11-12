@@ -188,7 +188,8 @@ Com as permissões migradas, os 4 perfis produzem exatamente o comportamento atu
   3. se mudaram, troca a `Authentication` por uma com as authorities novas (mesmo principal e mesmos detalhes);
   4. grava com `securityContextRepository.saveContext` (`requireExplicitSave(true)` está ligado).
 
-  Se o usuário não existir mais, o filtro não faz nada, porque a revogação já cuida desse caso. Tokens de teste (`with(user(...))`) não trazem `LoginSessionDetails` e não são tocados. Se o custo da consulta pesar, a evolução é uma coluna `access_version` (fora do escopo).
+  O usuário é lido pelo id gravado em `LoginSessionDetails`, numa só consulta (conta, perfil e as duas coleções). Se ele não existir mais ou estiver inativo (mudança feita fora da API), o filtro limpa o contexto, invalida a sessão e a remove do registro, e a requisição segue anônima (401). O filtro roda depois do `ConcurrentSessionFilter`, então sessão expirada não é recalculada.
+- **Regra de código:** checagens de acesso usam sempre `Authentication.getAuthorities()`, nunca o principal (`UserDetails.getAuthorities()`), que guarda as permissões do momento do login e não é recalculado. Tokens de teste (`with(user(...))`) não trazem `LoginSessionDetails` e não são tocados. Se o custo da consulta pesar, a evolução é uma coluna `access_version` (fora do escopo).
 - `SecurityConfig` usa `hasAuthority`/`hasAnyAuthority` com os códigos de `Permission`, na ordem de §3.1. O catch-all usa `AuthorizationManagers.allOf(hasAuthority(usuarios.gerir), hasAuthority(perfis.gerir))`. Se a inferência falhar, escreva `AuthorizationManagers.<RequestAuthorizationContext>allOf(...)`.
 - A revogação de sessões (`AccountSessionRevoker`) fica só para desativar, excluir, mudar senha ou mudar nome de usuário. Mudar perfil ou extras não revoga.
 
@@ -381,6 +382,8 @@ Depois, volte o código para o commit anterior à etapa. Na reversão:
 - extras e perfis personalizados se perdem.
 
 Depois da V11, o rollback exige o backup.
+
+**Atenção à V9.** Depois da V9 o código grava os destinatários só em `notification_rule_recipient_profiles`; a coluna `recipient_roles` fica parada no valor da migração e desatualiza a cada edição de regra. Reverter só o código, sem aplicar o `UPDATE notification_rules … CONCAT_WS` do rollback acima, faz o código antigo voltar a ler os destinatários antigos, sem aviso. Por isso o rollback do código depois da V9 sempre inclui esse SQL (ou a restauração do backup).
 
 ## 7. Testes (TDD)
 

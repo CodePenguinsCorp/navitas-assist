@@ -63,13 +63,18 @@ public class AccessProfileService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ProfileResponse update(Long id, ProfileRequest request, String actor) {
-        // Mesma ordem de locks de toda redução de acesso: perfis, usuários ativos e só então o alvo.
+        // Mesma ordem de locks de toda redução de acesso: perfis, usuários ativos e só então o alvo. O lock precisa vir
+        // antes de qualquer leitura, inclusive das permissões do ator: assim duas edições cruzadas (cada administrador
+        // tirando perfis.gerir do perfil do outro) se serializam, e a segunda já vê o ator rebaixado.
         administratorGuard.lockAccessGraph();
         AccessProfile profile = accessProfileRepository.findByIdForUpdate(id).orElseThrow(() -> notFound(id));
         String name = request.name().trim();
         Set<Permission> permissions = validateCodes(request.permissions());
         validateName(profile, name);
-        permissionGrantPolicy.ensureCanGrant(actor, permissions);
+        // Anti-escalada sobre o conjunto atual e o novo: quem não é administrador não mexe em perfil com mais acesso.
+        Set<Permission> touched = Permission.fromCodes(profile.getPermissions());
+        touched.addAll(permissions);
+        permissionGrantPolicy.ensureCanGrant(actor, touched);
 
         Set<String> codes = new HashSet<>(Permission.codes(permissions));
         if (!codes.equals(profile.getPermissions())) {
@@ -82,8 +87,9 @@ public class AccessProfileService {
         return toResponse(save(profile));
     }
 
-    public void delete(Long id) {
+    public void delete(Long id, String actor) {
         AccessProfile profile = accessProfileRepository.findByIdForUpdate(id).orElseThrow(() -> notFound(id));
+        permissionGrantPolicy.ensureCanGrant(actor, Permission.fromCodes(profile.getPermissions()));
         // Enquanto a coluna legada role existir, os perfis migrados sustentam o role provisório da API e o rollback (spec §6).
         if (profile.getLegacyCode() != null) {
             throw new BusinessException("Perfil migrado não pode ser excluído.");

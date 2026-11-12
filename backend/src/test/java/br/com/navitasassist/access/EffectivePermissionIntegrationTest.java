@@ -1,6 +1,8 @@
 package br.com.navitasassist.access;
 
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasItem;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -10,13 +12,24 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Instant;
 import java.util.Set;
+import java.util.UUID;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import br.com.navitasassist.auth.NavitasUserDetailsService;
+import br.com.navitasassist.notification.Notification;
+import br.com.navitasassist.notification.NotificationEvent;
+import br.com.navitasassist.notification.NotificationEventStatus;
+import br.com.navitasassist.notification.NotificationEventType;
+import br.com.navitasassist.notification.NotificationSeverity;
 import br.com.navitasassist.repository.AccessProfileRepository;
+import br.com.navitasassist.repository.NotificationEventRepository;
+import br.com.navitasassist.repository.NotificationRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
+import br.com.navitasassist.user.UserAccount;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,6 +60,8 @@ class EffectivePermissionIntegrationTest {
     @Autowired private UserAccountRepository users;
     @Autowired private AccessProfileRepository profiles;
     @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private NotificationRepository notifications;
+    @Autowired private NotificationEventRepository events;
 
     @BeforeEach
     void prepare() {
@@ -59,6 +74,15 @@ class EffectivePermissionIntegrationTest {
 
     @AfterEach
     void cleanup() {
+        Set<Long> ownUsers = Stream.of(VIEWER_EXTRA, REPORTS_ONLY)
+            .flatMap(username -> users.findByUsernameIgnoreCase(username).stream())
+            .map(UserAccount::getId).collect(Collectors.toSet());
+        notifications.findAll().stream()
+            .filter(notification -> ownUsers.contains(notification.getRecipient().getId()))
+            .forEach(notifications::delete);
+        notifications.flush();
+        events.findAll().stream().filter(event -> event.getEventKey().startsWith("effective-")).forEach(events::delete);
+        events.flush();
         AccessTestSupport.deleteAccounts(users, VIEWER_EXTRA, REPORTS_ONLY);
         AccessTestSupport.deleteProfiles(profiles, REPORTS_PROFILE);
     }
@@ -95,6 +119,54 @@ class EffectivePermissionIntegrationTest {
         mvc.perform(get("/api/notifications/summary").with(as(REPORTS_ONLY)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.unread").value(0));
+    }
+
+    /** D5: uma notificação real do usuário sem rma.ver some da lista, do resumo e das ações por id. */
+    @Test
+    void customProfileWithoutRmaVerCannotSeeItsOwnNotification() throws Exception {
+        Notification hidden = saveNotification(REPORTS_ONLY);
+        Notification visible = saveNotification(VIEWER_EXTRA);
+
+        mvc.perform(get("/api/notifications").with(as(VIEWER_EXTRA)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[*].id", hasItem(visible.getId().intValue())));
+        mvc.perform(get("/api/notifications/summary").with(as(VIEWER_EXTRA)))
+            .andExpect(jsonPath("$.unread").value(greaterThan(0)));
+
+        mvc.perform(get("/api/notifications").with(as(REPORTS_ONLY)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(get("/api/notifications").param("unreadOnly", "false").param("includeSnoozed", "true").with(as(REPORTS_ONLY)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(get("/api/notifications/summary").with(as(REPORTS_ONLY)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.unread").value(0));
+        mvc.perform(post("/api/notifications/{id}/read", hidden.getId()).with(as(REPORTS_ONLY)).with(csrf()))
+            .andExpect(status().isNotFound());
+        mvc.perform(post("/api/notifications/{id}/snooze", hidden.getId()).with(as(REPORTS_ONLY)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"minutes\":60}"))
+            .andExpect(status().isNotFound());
+        assertNull(notifications.findById(hidden.getId()).orElseThrow().getReadAt());
+    }
+
+    private Notification saveNotification(String username) {
+        NotificationEvent event = new NotificationEvent();
+        event.setEventKey("effective-" + username + "-" + UUID.randomUUID());
+        event.setEventType(NotificationEventType.RMA_CREATED);
+        event.setStatus(NotificationEventStatus.PROCESSED);
+        event.setRecipientCount(1);
+        event.setOccurredAt(Instant.now());
+        event = events.saveAndFlush(event);
+        Notification notification = new Notification();
+        notification.setEvent(event);
+        notification.setRecipient(users.findByUsernameIgnoreCase(username).orElseThrow());
+        notification.setEventType(NotificationEventType.RMA_CREATED);
+        notification.setSeverity(NotificationSeverity.INFO);
+        notification.setTitle("RMA aberto");
+        notification.setMessage("Notificação de teste");
+        notification.setCreatedAt(Instant.now());
+        return notifications.saveAndFlush(notification);
     }
 
     @Test

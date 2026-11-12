@@ -67,6 +67,7 @@ class ProfileControllerIntegrationTest {
     private static final String MEMBER = "profiles.member";
     private static final String MANAGER = "profiles.manager";
     private static final String ADMIN_A = "profiles.admin.a";
+    private static final String ADMIN_B = "profiles.admin.b";
 
     @Autowired private MockMvc mvc;
     @Autowired private ObjectMapper mapper;
@@ -93,7 +94,7 @@ class ProfileControllerIntegrationTest {
             if (!session.isInvalid()) session.invalidate();
         }
         sessions.clear();
-        AccessTestSupport.deleteAccounts(users, MEMBER, MANAGER, ADMIN_A);
+        AccessTestSupport.deleteAccounts(users, MEMBER, MANAGER, ADMIN_A, ADMIN_B);
         profiles.findAll().stream().filter(profile -> profile.getName().toLowerCase().startsWith(PREFIX.toLowerCase())).forEach(profiles::delete);
         profiles.flush();
         AccessProfile adminProfile = profiles.findByLegacyCode("ADMIN").orElseThrow();
@@ -292,6 +293,34 @@ class ProfileControllerIntegrationTest {
 
     // Exclusão
 
+    /** A regra também olha o conjunto atual: quem não é administrador não reduz perfil com permissões que não tem. */
+    @Test
+    void nonAdminCannotReduceProfileWithPermissionsItLacks() throws Exception {
+        saveManager();
+        AccessProfile target = AccessTestSupport.saveProfile(profiles, PREFIX + "Alvo", "rma.ver", "rma.abrir");
+
+        mvc.perform(put("/api/profiles/{id}", target.getId()).with(as(MANAGER)).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(body(PREFIX + "Alvo", "rma.ver")))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value(GRANT_MESSAGE));
+        assertEquals(Set.of("rma.ver", "rma.abrir"), profiles.findById(target.getId()).orElseThrow().getPermissions());
+    }
+
+    @Test
+    void nonAdminCannotDeleteProfileWithPermissionsItLacks() throws Exception {
+        saveManager();
+        AccessProfile richer = AccessTestSupport.saveProfile(profiles, PREFIX + "Mais acesso", "rma.ver", "rma.abrir");
+        AccessProfile within = AccessTestSupport.saveProfile(profiles, PREFIX + "Dentro", "rma.ver");
+
+        mvc.perform(delete("/api/profiles/{id}", richer.getId()).with(as(MANAGER)).with(csrf()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value(GRANT_MESSAGE));
+        assertTrue(profiles.existsById(richer.getId()));
+        mvc.perform(delete("/api/profiles/{id}", within.getId()).with(as(MANAGER)).with(csrf()))
+            .andExpect(status().isNoContent());
+        assertFalse(profiles.existsById(within.getId()));
+    }
+
     @Test
     void deleteBlockedWhenProfileHasUsers() throws Exception {
         AccessProfile used = AccessTestSupport.saveProfile(profiles, PREFIX + "Em uso", "rma.ver");
@@ -342,6 +371,35 @@ class ProfileControllerIntegrationTest {
                 .andReturn().getResponse().getStatus(),
             () -> mvc.perform(put("/api/users/{id}", admin.getId()).with(actorA).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(demoteSeed)))
+                .andReturn().getResponse().getStatus());
+
+        assertTrue(statuses.equals(List.of(200, 400)) || statuses.equals(List.of(400, 200)),
+            "Esperava exatamente uma recusa, recebeu " + statuses);
+        assertEquals(1, users.findAll().stream()
+            .filter(account -> account.isActive() && effectivePermissions.isAdministrator(account)).count());
+    }
+
+    /**
+     * Cada administrador tira perfis.gerir do perfil do outro, ao mesmo tempo. O lock de todo o grafo vem antes de
+     * qualquer leitura (inclusive do ator), então a segunda requisição já vê o ator rebaixado: exatamente uma falha.
+     */
+    @Test
+    void concurrentCrossProfileReductionsKeepOneAdministrator() throws Exception {
+        AccessProfile profileA = AccessTestSupport.saveProfile(profiles, PREFIX + "Cruzado A", "usuarios.gerir", "perfis.gerir");
+        AccessProfile profileB = AccessTestSupport.saveProfile(profiles, PREFIX + "Cruzado B", "usuarios.gerir", "perfis.gerir");
+        AccessTestSupport.saveAccountWithProfile(users, passwordEncoder, ADMIN_A, profileA, Set.of());
+        AccessTestSupport.saveAccountWithProfile(users, passwordEncoder, ADMIN_B, profileB, Set.of());
+        admin.setActive(false);
+        users.saveAndFlush(admin);
+        RequestPostProcessor actorA = as(ADMIN_A);
+        RequestPostProcessor actorB = as(ADMIN_B);
+
+        List<Integer> statuses = runTogether(
+            () -> mvc.perform(put("/api/profiles/{id}", profileB.getId()).with(actorA).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(body(PREFIX + "Cruzado B", "usuarios.gerir")))
+                .andReturn().getResponse().getStatus(),
+            () -> mvc.perform(put("/api/profiles/{id}", profileA.getId()).with(actorB).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(body(PREFIX + "Cruzado A", "usuarios.gerir")))
                 .andReturn().getResponse().getStatus());
 
         assertTrue(statuses.equals(List.of(200, 400)) || statuses.equals(List.of(400, 200)),

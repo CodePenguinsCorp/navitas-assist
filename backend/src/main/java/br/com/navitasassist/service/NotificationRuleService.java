@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 
+import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.notification.NotificationEmailStatus;
 import br.com.navitasassist.notification.NotificationEventStatus;
@@ -17,6 +18,7 @@ import br.com.navitasassist.repository.NotificationEventRepository;
 import br.com.navitasassist.repository.NotificationRepository;
 import br.com.navitasassist.repository.NotificationRuleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,7 +51,12 @@ public class NotificationRuleService {
         rule.setNotifyAssignee(request.notifyAssignee());
         rule.setEmailEnabled(request.emailEnabled());
         rule.setUserMutable(request.userMutable());
-        return NotificationRuleResponse.from(notificationRuleRepository.saveAndFlush(rule));
+        try {
+            return NotificationRuleResponse.from(notificationRuleRepository.saveAndFlush(rule));
+        } catch (DataIntegrityViolationException exception) {
+            // Perfil apagado entre a validação e a gravação: a FK recusa e a resposta é 400, não 500.
+            throw new BusinessException("Um dos perfis destinatários não existe mais.");
+        }
     }
 
     @Transactional(readOnly = true)

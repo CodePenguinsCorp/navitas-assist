@@ -33,7 +33,6 @@ import org.springframework.security.web.authentication.logout.LogoutHandler;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.security.web.authentication.session.SessionAuthenticationException;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
-import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
@@ -73,8 +72,8 @@ public class SecurityConfig {
         http
             .addFilterBefore(expiredSessions, CsrfFilter.class)
             // D8: permissões recalculadas a cada requisição das sessões de login, sem derrubá-las.
-            .addFilterAfter(new EffectiveAuthoritiesFilter(userAccountRepository, userDetailsService, securityContextRepository),
-                SecurityContextHolderFilter.class)
+            .addFilterAfter(new EffectiveAuthoritiesFilter(userAccountRepository, userDetailsService, securityContextRepository,
+                sessionRegistry), ConcurrentSessionFilter.class)
             .csrf(csrf -> csrf
                 .csrfTokenRepository(csrfTokenRepository)
                 .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
