@@ -10,10 +10,13 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authorization.AuthorityAuthorizationManager;
+import org.springframework.security.authorization.AuthorizationManagers;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import br.com.navitasassist.access.Permission.Codes;
 import br.com.navitasassist.auth.BoundedBCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.session.SessionRegistry;
@@ -79,29 +82,36 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/users/assignable").authenticated()
                 .requestMatchers("/api/kanban-views/**").authenticated()
                 .requestMatchers("/api/notifications/**").authenticated()
-                .requestMatchers("/api/notification-rules/**").hasRole("ADMIN")
-                .requestMatchers("/api/users/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, "/api/reports/rmas").hasAnyRole("ADMIN", "TECHNICIAN", "VIEWER")
-                .requestMatchers(HttpMethod.GET, "/api/auth/me", "/api/clients/**", "/api/products/**", "/api/rmas/**").authenticated()
+                .requestMatchers("/api/notification-rules/**").hasAuthority(Codes.NOTIFICACOES_REGRAS)
+                .requestMatchers("/api/users/**").hasAuthority(Codes.USUARIOS_GERIR)
+                .requestMatchers(HttpMethod.GET, "/api/reports/rmas").hasAuthority(Codes.RELATORIOS_VER)
+                // D2: leituras auxiliares (dashboard, relatórios, RMAs e painéis) seguem abertas a quem tem login.
+                .requestMatchers(HttpMethod.GET, "/api/auth/me", "/api/clients/**", "/api/products/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/rmas/**").hasAuthority(Codes.RMA_VER)
                 .requestMatchers(HttpMethod.POST, "/api/auth/logout").authenticated()
-                .requestMatchers(HttpMethod.POST, "/api/clients", "/api/products", "/api/rmas").hasAnyRole("ADMIN", "SERVICE_DESK")
-                .requestMatchers(HttpMethod.PUT, "/api/rmas/*/diagnosis").hasAnyRole("ADMIN", "TECHNICIAN")
-                .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/status", "/api/rmas/*/bulk-status").hasAnyRole("ADMIN", "SERVICE_DESK", "TECHNICIAN")
-                .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/assignee").hasAnyRole("ADMIN", "SERVICE_DESK")
+                .requestMatchers(HttpMethod.POST, "/api/clients", "/api/products").hasAuthority(Codes.CADASTROS_EDITAR)
+                .requestMatchers(HttpMethod.POST, "/api/rmas").hasAuthority(Codes.RMA_ABRIR)
+                .requestMatchers(HttpMethod.PUT, "/api/rmas/*/diagnosis").hasAuthority(Codes.RMA_DIAGNOSTICAR)
+                .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/status", "/api/rmas/*/bulk-status").hasAuthority(Codes.RMA_STATUS)
+                .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/assignee").hasAuthority(Codes.RMA_RESPONSAVEL)
                 .requestMatchers(HttpMethod.GET, "/api/parts/**").authenticated()
-                .requestMatchers(HttpMethod.POST, "/api/rmas/*/parts", "/api/rmas/*/parts/*/*").hasAnyRole("ADMIN", "TECHNICIAN")
-                .requestMatchers(HttpMethod.POST, "/api/parts", "/api/parts/*/movements", "/api/parts/movements/*/reversal").hasAnyRole("ADMIN", "SERVICE_DESK")
-                .requestMatchers(HttpMethod.PUT, "/api/parts/*").hasAnyRole("ADMIN", "SERVICE_DESK")
-                .requestMatchers(HttpMethod.POST, "/api/rmas/*/blocks").hasAnyRole("ADMIN", "SERVICE_DESK", "TECHNICIAN")
-                .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/blocks/*").hasAnyRole("ADMIN", "SERVICE_DESK", "TECHNICIAN")
-                .requestMatchers(HttpMethod.PUT, "/api/clients/*", "/api/products/*", "/api/rmas/*").hasAnyRole("ADMIN", "SERVICE_DESK")
-                .requestMatchers(HttpMethod.DELETE, "/api/clients/*", "/api/products/*").hasAnyRole("ADMIN", "SERVICE_DESK")
+                .requestMatchers(HttpMethod.POST, "/api/rmas/*/parts", "/api/rmas/*/parts/*/*").hasAuthority(Codes.PECAS_RESERVAR)
+                .requestMatchers(HttpMethod.POST, "/api/parts", "/api/parts/*/movements", "/api/parts/movements/*/reversal").hasAuthority(Codes.PECAS_MOVIMENTAR)
+                .requestMatchers(HttpMethod.PUT, "/api/parts/*").hasAuthority(Codes.PECAS_MOVIMENTAR)
+                .requestMatchers(HttpMethod.POST, "/api/rmas/*/blocks").hasAuthority(Codes.RMA_IMPEDIMENTOS)
+                .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/blocks/*").hasAuthority(Codes.RMA_IMPEDIMENTOS)
+                .requestMatchers(HttpMethod.PUT, "/api/clients/*", "/api/products/*").hasAuthority(Codes.CADASTROS_EDITAR)
+                .requestMatchers(HttpMethod.PUT, "/api/rmas/*").hasAuthority(Codes.RMA_EDITAR)
+                .requestMatchers(HttpMethod.DELETE, "/api/clients/*", "/api/products/*").hasAuthority(Codes.CADASTROS_EDITAR)
                 .requestMatchers(HttpMethod.GET, "/api/protocols/**").authenticated()
-                .requestMatchers(HttpMethod.POST, "/api/protocols/templates").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/protocols/templates/*").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/protocols/rmas/*/executions", "/api/protocols/executions/*/items/*/results", "/api/protocols/executions/*/complete").hasAnyRole("ADMIN", "TECHNICIAN")
+                .requestMatchers(HttpMethod.POST, "/api/protocols/templates").hasAuthority(Codes.PROTOCOLOS_CATALOGO)
+                .requestMatchers(HttpMethod.PUT, "/api/protocols/templates/*").hasAuthority(Codes.PROTOCOLOS_CATALOGO)
+                .requestMatchers(HttpMethod.POST, "/api/protocols/rmas/*/executions", "/api/protocols/executions/*/items/*/results", "/api/protocols/executions/*/complete").hasAuthority(Codes.PROTOCOLOS_EXECUTAR)
                 .requestMatchers("/api/protocols/**").denyAll()
-                .requestMatchers("/api/**").hasRole("ADMIN")
+                // D3: rotas não classificadas exigem as duas permissões de administrador.
+                .requestMatchers("/api/**").access(AuthorizationManagers.allOf(
+                    AuthorityAuthorizationManager.hasAuthority(Codes.USUARIOS_GERIR),
+                    AuthorityAuthorizationManager.hasAuthority(Codes.PERFIS_GERIR)))
                 .anyRequest().authenticated())
             .exceptionHandling(exception -> exception
                 .authenticationEntryPoint(restAuthenticationEntryPoint())

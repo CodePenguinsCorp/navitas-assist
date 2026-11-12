@@ -47,7 +47,7 @@ public class NotificationService {
     public List<NotificationResponse> list(boolean unreadOnly, boolean includeSnoozed) {
         UserAccount user = currentUser();
         return notificationRepository.findForRecipient(user.getId(), unreadOnly, includeSnoozed, Instant.now(), PageRequest.of(0, PAGE_SIZE)).stream()
-            .filter(notification -> visibilityPolicy.canView(user.getRole(), notification.getEventType()))
+            .filter(notification -> visibilityPolicy.canView(user, notification.getEventType()))
             .map(NotificationResponse::from)
             .toList();
     }
@@ -56,7 +56,7 @@ public class NotificationService {
     public NotificationSummaryResponse summary() {
         UserAccount user = currentUser();
         long unread = notificationRepository.countUnreadByType(user.getId(), Instant.now()).stream()
-            .filter(row -> visibilityPolicy.canView(user.getRole(), (NotificationEventType) row[0]))
+            .filter(row -> visibilityPolicy.canView(user, (NotificationEventType) row[0]))
             .mapToLong(row -> (Long) row[1])
             .sum();
         return new NotificationSummaryResponse(unread);
@@ -85,14 +85,14 @@ public class NotificationService {
         UserAccount user = currentUser();
         Set<NotificationEventType> muted = new HashSet<>(notificationMuteRepository.findEventTypesByUserId(user.getId()));
         return notificationRuleRepository.findAllByOrderByIdAsc().stream()
-            .filter(rule -> visibilityPolicy.canView(user.getRole(), rule.getEventType()))
+            .filter(rule -> visibilityPolicy.canView(user, rule.getEventType()))
             .map(rule -> toPreference(rule, muted.contains(rule.getEventType())))
             .toList();
     }
 
     public NotificationPreferenceResponse updatePreference(NotificationEventType eventType, boolean muted) {
         UserAccount user = currentUser();
-        NotificationRule rule = notificationRuleRepository.findByEventType(eventType).filter(candidate -> visibilityPolicy.canView(user.getRole(), candidate.getEventType()))
+        NotificationRule rule = notificationRuleRepository.findByEventType(eventType).filter(candidate -> visibilityPolicy.canView(user, candidate.getEventType()))
             .orElseThrow(() -> new ResourceNotFoundException("Notification rule not found: " + eventType));
         if (muted && !rule.isUserMutable()) {
             throw new BusinessException("This notification rule cannot be muted: " + eventType);
@@ -118,7 +118,7 @@ public class NotificationService {
     private Notification getOwned(Long id) {
         UserAccount user = currentUser();
         return notificationRepository.findByIdAndRecipient_Id(id, user.getId())
-            .filter(notification -> visibilityPolicy.canView(user.getRole(), notification.getEventType()))
+            .filter(notification -> visibilityPolicy.canView(user, notification.getEventType()))
             .orElseThrow(() -> new ResourceNotFoundException("Notification not found: " + id));
     }
 
