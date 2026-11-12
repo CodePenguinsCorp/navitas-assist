@@ -230,9 +230,8 @@
           </label>
         </fieldset>
 
-        <fieldset class="form-section extra-permissions" aria-describedby="user-extras-hint">
+        <fieldset class="form-section extra-permissions">
           <legend>Permissões extras</legend>
-          <p id="user-extras-hint" class="form-section__hint field-group--full">Somam-se às permissões do perfil escolhido.</p>
           @if (catalogState() === 'loading') {
             <div class="extras-pending" aria-busy="true"></div>
           } @else if (catalogState() === 'ready') {
