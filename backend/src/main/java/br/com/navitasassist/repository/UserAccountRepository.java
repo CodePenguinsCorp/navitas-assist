@@ -57,6 +57,8 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
 
     long countByActiveTrue();
 
+    long countByProfile_Id(Long profileId);
+
     long countByRole(UserRole role);
 
     @Query("select count(distinct account.role) from UserAccount account")

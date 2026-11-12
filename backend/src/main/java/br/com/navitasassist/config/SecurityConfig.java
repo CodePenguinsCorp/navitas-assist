@@ -117,6 +117,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/protocols/templates/*").hasAuthority(Codes.PROTOCOLOS_CATALOGO)
                 .requestMatchers(HttpMethod.POST, "/api/protocols/rmas/*/executions", "/api/protocols/executions/*/items/*/results", "/api/protocols/executions/*/complete").hasAuthority(Codes.PROTOCOLOS_EXECUTAR)
                 .requestMatchers("/api/protocols/**").denyAll()
+                .requestMatchers(HttpMethod.GET, "/api/profiles/options").hasAnyAuthority(Codes.PERFIS_GERIR, Codes.USUARIOS_GERIR, Codes.NOTIFICACOES_REGRAS)
+                .requestMatchers(HttpMethod.GET, "/api/permissions").hasAnyAuthority(Codes.PERFIS_GERIR, Codes.USUARIOS_GERIR)
+                .requestMatchers("/api/profiles/**").hasAuthority(Codes.PERFIS_GERIR)
                 // D3: rotas não classificadas exigem as duas permissões de administrador.
                 .requestMatchers("/api/**").access(AuthorizationManagers.allOf(
                     AuthorityAuthorizationManager.hasAuthority(Codes.USUARIOS_GERIR),
