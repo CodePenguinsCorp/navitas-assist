@@ -544,7 +544,8 @@ export interface NavItem {
   label: string;
   route: string;
   icon: IconName;
-  roles: UserRole[];
+  /** Todas exigidas; vazio = só login. */
+  permissions: Permission[];
 }
 
 export interface NavGroup {
@@ -557,14 +558,6 @@ export interface MetricCard {
   value: string;
   variation: string;
   tone: MetricTone;
-}
-
-export interface ModuleCard {
-  title: string;
-  summary: string;
-  route: string;
-  tag: string;
-  roles: UserRole[];
 }
 
 export interface PageQuery {

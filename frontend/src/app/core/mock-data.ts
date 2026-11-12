@@ -1,7 +1,6 @@
 import {
   FailureCause,
   FailureType,
-  ModuleCard,
   NavGroup,
   RmaPriority,
   RmaStatus,
@@ -102,121 +101,27 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Operação',
     items: [
-      {
-        label: 'Dashboard',
-        route: '/dashboard',
-        icon: 'dashboard',
-        roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
-      },
-      {
-        label: 'RMAs',
-        route: '/rmas',
-        icon: 'clipboard',
-        roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
-      },
-      {
-        label: 'Kanban',
-        route: '/kanban',
-        icon: 'columns',
-        roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
-      },
-      {
-        label: 'Notificações',
-        route: '/notificacoes',
-        icon: 'bell',
-        roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
-      },
-      {
-        label: 'Peças',
-        route: '/pecas',
-        icon: 'wrench',
-        roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
-      }
+      { label: 'Dashboard', route: '/dashboard', icon: 'dashboard', permissions: ['rma.ver'] },
+      { label: 'RMAs', route: '/rmas', icon: 'clipboard', permissions: ['rma.ver'] },
+      { label: 'Kanban', route: '/kanban', icon: 'columns', permissions: ['rma.ver'] },
+      { label: 'Notificações', route: '/notificacoes', icon: 'bell', permissions: [] },
+      { label: 'Peças', route: '/pecas', icon: 'wrench', permissions: ['pecas.ver'] }
     ]
   },
   {
     label: 'Cadastros',
     items: [
-      {
-        label: 'Clientes',
-        route: '/clientes',
-        icon: 'building',
-        roles: ['ADMIN', 'SERVICE_DESK']
-      },
-      {
-        label: 'Produtos',
-        route: '/produtos',
-        icon: 'box',
-        roles: ['ADMIN', 'SERVICE_DESK']
-      },
-      {
-        label: 'Protocolos',
-        route: '/protocolos',
-        icon: 'checklist',
-        roles: ['ADMIN']
-      },
-      {
-        label: 'Usuários',
-        route: '/usuarios',
-        icon: 'users',
-        roles: ['ADMIN']
-      }
+      { label: 'Clientes', route: '/clientes', icon: 'building', permissions: ['cadastros.ver', 'cadastros.editar'] },
+      { label: 'Produtos', route: '/produtos', icon: 'box', permissions: ['cadastros.ver', 'cadastros.editar'] },
+      { label: 'Protocolos', route: '/protocolos', icon: 'checklist', permissions: ['protocolos.ver', 'protocolos.catalogo'] },
+      { label: 'Usuários', route: '/usuarios', icon: 'users', permissions: ['usuarios.gerir'] },
+      { label: 'Perfis', route: '/perfis', icon: 'shield', permissions: ['perfis.gerir'] }
     ]
   },
   {
     label: 'Relatórios',
     items: [
-      {
-        label: 'Relatórios',
-        route: '/relatorios',
-        icon: 'chart',
-        roles: ['ADMIN', 'TECHNICIAN', 'VIEWER']
-      }
+      { label: 'Relatórios', route: '/relatorios', icon: 'chart', permissions: ['relatorios.ver'] }
     ]
-  }
-];
-
-export const MODULE_CARDS: ModuleCard[] = [
-  {
-    title: 'RMAs',
-    summary: 'Fluxo operacional.',
-    route: '/rmas',
-    tag: 'Operação',
-    roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
-  },
-  {
-    title: 'Kanban',
-    summary: 'Quadro por etapa.',
-    route: '/kanban',
-    tag: 'Operação',
-    roles: ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER']
-  },
-  {
-    title: 'Clientes',
-    summary: 'Base comercial.',
-    route: '/clientes',
-    tag: 'Cadastro',
-    roles: ['ADMIN', 'SERVICE_DESK']
-  },
-  {
-    title: 'Produtos',
-    summary: 'Catálogo técnico.',
-    route: '/produtos',
-    tag: 'Cadastro',
-    roles: ['ADMIN', 'SERVICE_DESK']
-  },
-  {
-    title: 'Usuários',
-    summary: 'Perfis e acesso.',
-    route: '/usuarios',
-    tag: 'Administração',
-    roles: ['ADMIN']
-  },
-  {
-    title: 'Relatórios',
-    summary: 'Laudos e auditoria.',
-    route: '/relatorios',
-    tag: 'Consulta',
-    roles: ['ADMIN', 'TECHNICIAN', 'VIEWER']
   }
 ];

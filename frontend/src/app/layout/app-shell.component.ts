@@ -4,9 +4,10 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { finalize, switchMap, timer } from 'rxjs';
-import { NAV_GROUPS, ROLE_LABELS } from '../core/mock-data';
+import { NAV_GROUPS } from '../core/mock-data';
 import { AuthService } from '../core/services/auth.service';
 import { NotificationService } from '../core/services/notification.service';
+import { PermissionService } from '../core/services/permission.service';
 
 const UNREAD_UNAVAILABLE = 'Contagem de não lidas indisponível';
 
@@ -20,6 +21,7 @@ export class AppShellComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly notificationService = inject(NotificationService);
+  private readonly permissions = inject(PermissionService);
 
   protected readonly currentUser = this.authService.currentUser;
   protected readonly unreadNotifications = this.notificationService.unreadCount;
@@ -40,15 +42,12 @@ export class AppShellComponent {
     NAV_GROUPS
       .map((group) => ({
         ...group,
-        items: group.items.filter((item) => this.authService.hasAnyRole(item.roles))
+        items: group.items.filter((item) => this.permissions.hasAll(item.permissions))
       }))
       .filter((group) => group.items.length > 0)
   );
 
-  protected readonly currentRoleLabel = computed(() => {
-    const currentUser = this.currentUser();
-    return currentUser?.role ? ROLE_LABELS[currentUser.role] : ROLE_LABELS.VIEWER;
-  });
+  protected readonly currentProfileName = computed(() => this.currentUser()?.profileName ?? '');
 
   constructor() {
     timer(0, 60_000).pipe(

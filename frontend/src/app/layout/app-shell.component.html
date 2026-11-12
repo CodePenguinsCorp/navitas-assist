@@ -33,7 +33,7 @@
       <span class="avatar avatar--lg" aria-hidden="true">{{ initials(currentUser()?.name ?? null) }}</span>
       <div class="sidebar-user__meta">
         <strong>{{ currentUser()?.name }}</strong>
-        <span>{{ currentRoleLabel() }}</span>
+        <span>{{ currentProfileName() }}</span>
       </div>
       <button type="button" class="sidebar-user__logout" (click)="logout()" [disabled]="loggingOut()" [attr.title]="loggingOut() ? 'Saindo...' : 'Sair'">
         <app-icon name="logout" />

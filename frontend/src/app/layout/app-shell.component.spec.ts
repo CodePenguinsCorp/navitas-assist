@@ -5,6 +5,7 @@ import { Router, provideRouter } from '@angular/router';
 import { AuthUserResponse } from '../core/models';
 import { AuthService } from '../core/services/auth.service';
 import { NotificationService } from '../core/services/notification.service';
+import { LegacyProfileCode, profilePermissions } from '../testing/permission-fixtures';
 import { AppShellComponent } from './app-shell.component';
 
 const AUTH_USER: AuthUserResponse = {
@@ -168,5 +169,53 @@ describe('AppShellComponent unread summary', () => {
     fixture.detectChanges();
     expect(bell().getAttribute('aria-label')).toBe('Notificações: 1 não lida(s)');
     expect(badge()?.textContent?.trim()).toBe('1');
+  });
+});
+
+describe('AppShellComponent menu by permission', () => {
+  async function render(user: Partial<AuthUserResponse>): Promise<HTMLElement> {
+    await TestBed.configureTestingModule({
+      imports: [AppShellComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])]
+    }).compileComponents();
+    const http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthService).restoreSession().subscribe();
+    http.expectOne('/api/auth/me').flush({ ...AUTH_USER, ...user });
+    const fixture = TestBed.createComponent(AppShellComponent);
+    fixture.detectChanges();
+    http.match('/api/notifications/summary').forEach((request) => request.flush({ unread: 0 }));
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  function menu(page: HTMLElement): Record<string, string[]> {
+    return Object.fromEntries([...page.querySelectorAll('.nav-group')].map((group) => [
+      group.getAttribute('aria-label'),
+      [...group.querySelectorAll('.nav-item strong')].map((item) => item.textContent?.trim() ?? '')
+    ]));
+  }
+
+  const operation = ['Dashboard', 'RMAs', 'Kanban', 'Notificações', 'Peças'];
+
+  it.each([
+    ['ADMIN', { 'Operação': operation, Cadastros: ['Clientes', 'Produtos', 'Protocolos', 'Usuários', 'Perfis'], 'Relatórios': ['Relatórios'] }],
+    ['SERVICE_DESK', { 'Operação': operation, Cadastros: ['Clientes', 'Produtos'] }],
+    ['TECHNICIAN', { 'Operação': operation, 'Relatórios': ['Relatórios'] }],
+    ['VIEWER', { 'Operação': operation, 'Relatórios': ['Relatórios'] }],
+  ] as [LegacyProfileCode, Record<string, string[]>][])('shows the %s menu', async (code, expected) => {
+    const page = await render({ permissions: [...profilePermissions(code)], role: code });
+
+    expect(menu(page)).toEqual(expected);
+  });
+
+  it('shows only notifications when the profile grants no screen', async () => {
+    const page = await render({ permissions: [], role: null });
+
+    expect(menu(page)).toEqual({ 'Operação': ['Notificações'] });
+  });
+
+  it('shows the profile name in the sidebar footer', async () => {
+    const page = await render({ profile: { id: 9, name: 'Suporte N1' }, role: null });
+
+    expect(page.querySelector('.sidebar-user__meta span')?.textContent?.trim()).toBe('Suporte N1');
   });
 });
