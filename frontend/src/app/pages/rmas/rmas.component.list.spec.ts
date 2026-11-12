@@ -11,6 +11,7 @@ import { ProtocolService } from '../../core/services/protocol.service';
 import { RmaFilters, RmaService } from '../../core/services/rma.service';
 import { buildRma, buildRmaItem, buildRmaPage } from '../../testing/rma-fixtures';
 import { RmasComponent } from './rmas.component';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
 type ListFn = (filters: RmaFilters) => Observable<PageResponse<RmaResponse>>;
 type SummaryFn = (filters: Pick<RmaFilters, 'query' | 'status'>) => Observable<RmaSummaryResponse>;
@@ -51,9 +52,10 @@ async function setup(options: SetupOptions = {}) {
   const currentUser = signal<UserSession | null>({ username: 'tester', name: 'Tester', profileName: 'Perfil', permissions: [], role });
   const providers: unknown[] = [
     provideRouter([]),
+    providePermissions(profilePermissions(role)),
     {
       provide: AuthService,
-      useValue: { currentUser: currentUser.asReadonly(), hasAnyRole: (roles: UserRole[]) => roles.includes(role) }
+      useValue: { currentUser: currentUser.asReadonly() }
     },
     { provide: CatalogService, useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]) } },
     { provide: RmaService, useValue: rmaService },

@@ -27,6 +27,7 @@ import {
   RmaStatus
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
+import { PermissionService } from '../../core/services/permission.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
@@ -391,6 +392,7 @@ export class RmasComponent {
   protected readonly protocolsComponent = signal<Type<unknown> | null>(null);
   private readonly formBuilder = inject(FormBuilder);
   private readonly authService = inject(AuthService);
+  private readonly permissions = inject(PermissionService);
   private readonly catalogService = inject(CatalogService);
   private readonly rmaService = inject(RmaService);
   private readonly route = inject(ActivatedRoute);
@@ -565,13 +567,9 @@ export class RmasComponent {
   protected readonly failureTypeSelectOptions = FAILURE_TYPE_SELECT_OPTIONS;
   protected readonly failureCauseSelectOptions = FAILURE_CAUSE_SELECT_OPTIONS;
 
-  protected readonly canOpenRma = computed(() =>
-    this.authService.hasAnyRole(['ADMIN', 'SERVICE_DESK'])
-  );
+  protected readonly canOpenRma = computed(() => this.permissions.hasPermission('rma.abrir'));
 
-  protected readonly canRegisterDiagnosis = computed(() =>
-    this.authService.hasAnyRole(['ADMIN', 'TECHNICIAN'])
-  );
+  protected readonly canRegisterDiagnosis = computed(() => this.permissions.hasPermission('rma.diagnosticar'));
 
   protected readonly filtersForm = this.formBuilder.nonNullable.group({
     query: [''],

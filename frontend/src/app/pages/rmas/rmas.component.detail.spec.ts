@@ -14,6 +14,7 @@ import { SlaClockService } from '../../core/services/sla-clock.service';
 import { RmaPartsPanelComponent } from '../../shared/rma-parts-panel/rma-parts-panel.component';
 import { buildRma, buildRmaItem, buildRmaPage } from '../../testing/rma-fixtures';
 import { RmasComponent } from './rmas.component';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
 interface DetailHarness {
   openDetailsModal(rma: RmaResponse): void;
@@ -76,6 +77,8 @@ async function setup(options: { role?: UserRole } = {}) {
     providers: [
       provideRouter([]),
       { provide: SlaClockService, useValue: { now: signal(NOW) } },
+      providePermissions(profilePermissions(role)),
+      // Os painéis de peças, protocolos e impedimentos ainda leem hasAnyRole (até a Task 15).
       { provide: AuthService, useValue: { currentUser: currentUser.asReadonly(), hasAnyRole: (roles: UserRole[]) => roles.includes(role) } },
       { provide: CatalogService, useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]) } },
       { provide: RmaService, useValue: rmaService },

@@ -5,13 +5,13 @@ import { FormGroup } from '@angular/forms';
 import { provideRouter } from '@angular/router';
 import { Subject, of } from 'rxjs';
 import { AssignableUserResponse, RmaResponse } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { RmaService } from '../../core/services/rma.service';
 import { SlaClockService } from '../../core/services/sla-clock.service';
 import { buildRma } from '../../testing/rma-fixtures';
 import { KanbanComponent } from './kanban.component';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
 interface StatesHarness {
   filtersForm: FormGroup;
@@ -34,7 +34,7 @@ describe('KanbanComponent reading states and count', () => {
       providers: [
         provideRouter([]),
         { provide: SlaClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
-        { provide: AuthService, useValue: { hasAnyRole: () => true } },
+        providePermissions(profilePermissions('ADMIN')),
         { provide: CatalogService, useValue: { listAssignableUsers: () => { const source = new Subject<AssignableUserResponse[]>(); users.push(source); return source; } } },
         { provide: KanbanViewService, useValue: { list: () => of([]) } },
         { provide: RmaService, useValue: { listBoard: () => { const source = new Subject<RmaResponse[]>(); boards.push(source); return source; } } }

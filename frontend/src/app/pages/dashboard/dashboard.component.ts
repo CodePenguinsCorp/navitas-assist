@@ -14,7 +14,7 @@ import {
   UserSummaryResponse,
   WarrantyStatus
 } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { PermissionService } from '../../core/services/permission.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
 import { IconComponent, IconName } from '../../shared/icon/icon.component';
@@ -166,11 +166,11 @@ interface RecentRmaRow {
   `]
 })
 export class DashboardComponent {
-  private readonly authService = inject(AuthService);
+  private readonly permissions = inject(PermissionService);
   private readonly catalogService = inject(CatalogService);
   private readonly rmaService = inject(RmaService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly isAdmin = this.authService.hasAnyRole(['ADMIN']);
+  private readonly isAdmin = this.permissions.hasPermission('usuarios.gerir');
   private loadRequest?: Subscription;
 
   protected readonly loading = signal(true);

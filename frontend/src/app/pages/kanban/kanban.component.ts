@@ -35,7 +35,7 @@ import {
 } from '../../core/models';
 import { SlaClockService } from '../../core/services/sla-clock.service';
 import { SlaFilterValue, SLA_LABELS, slaStatus } from '../../core/utils/rma-sla';
-import { AuthService } from '../../core/services/auth.service';
+import { PermissionService } from '../../core/services/permission.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { RmaService } from '../../core/services/rma.service';
@@ -138,7 +138,7 @@ export class KanbanComponent {
     ...(['NORMAL', 'WARNING', 'OVERDUE', 'CLOSED'] as const).map((value) => ({ value, label: SLA_LABELS[value] }))
   ];
   private readonly formBuilder = inject(FormBuilder);
-  private readonly authService = inject(AuthService);
+  private readonly permissions = inject(PermissionService);
   private readonly catalogService = inject(CatalogService);
   private readonly kanbanViewService = inject(KanbanViewService);
   private readonly rmaService = inject(RmaService);
@@ -248,11 +248,12 @@ export class KanbanComponent {
       label: `${user.fullName} (@${user.username})`,
     })),
   ]);
-  protected readonly canUpdateStatus = computed(() =>
-    this.authService.hasAnyRole(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN']),
-  );
-  protected readonly canUpdateAssignee = computed(() =>
-    this.authService.hasAnyRole(['ADMIN', 'SERVICE_DESK']),
+  protected readonly canUpdateStatus = computed(() => this.permissions.hasPermission('rma.status'));
+  protected readonly canUpdateAssignee = computed(() => this.permissions.hasPermission('rma.responsavel'));
+  protected readonly canUpdatePriority = computed(() => this.permissions.hasPermission('rma.editar'));
+  /** Seleção e ações em lote: basta uma das ações disponíveis no lote. */
+  protected readonly canBulkEdit = computed(() =>
+    this.permissions.hasAny(['rma.status', 'rma.editar', 'rma.responsavel']),
   );
   protected readonly activeCount = computed(
     () => this.filteredRmas().filter((rma) => !CLOSED_RMA_STATUSES.includes(rma.status)).length,
@@ -341,12 +342,12 @@ export class KanbanComponent {
   }
 
   protected toggleBulkSelection(rma: RmaResponse): void {
-    if (this.bulkBusy() || this.boardUpdatingId() !== null || !this.canUpdateStatus()) return;
+    if (this.bulkBusy() || this.boardUpdatingId() !== null || !this.canBulkEdit()) return;
     this.bulkSelectedIds.update((ids) => ids.includes(rma.id) ? ids.filter((id) => id !== rma.id) : [...ids, rma.id]);
   }
 
   protected selectVisibleRmas(): void {
-    if (this.bulkBusy() || this.boardUpdatingId() !== null || !this.canUpdateStatus()) return;
+    if (this.bulkBusy() || this.boardUpdatingId() !== null || !this.canBulkEdit()) return;
     this.bulkSelectedIds.update((ids) => [...new Set([...ids, ...this.filteredRmas().map((rma) => rma.id)])]);
   }
 

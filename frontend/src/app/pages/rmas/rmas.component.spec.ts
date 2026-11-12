@@ -11,6 +11,7 @@ import { CatalogService } from '../../core/services/catalog.service';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { RmaService } from '../../core/services/rma.service';
 import { RmasComponent } from './rmas.component';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
 describe('RmasComponent form', () => {
   let component: RmaFormHarness;
@@ -34,9 +35,10 @@ describe('RmasComponent form', () => {
       imports: [RmasComponent],
       providers: [
         provideRouter([]),
+        providePermissions(profilePermissions('ADMIN')),
         {
           provide: AuthService,
-          useValue: { currentUser: currentUser.asReadonly(), hasAnyRole: () => true },
+          useValue: { currentUser: currentUser.asReadonly() },
         },
         {
           provide: CatalogService,
@@ -196,7 +198,8 @@ describe('RmasComponent pending editor lifecycle', () => {
     http = TestBed.inject(HttpTestingController);
     TestBed.inject(AuthService).restoreSession().subscribe();
     http.expectOne('/api/auth/me').flush({
-      id: 1, username: 'tester', fullName: 'Tester', role: 'ADMIN', active: true,
+      id: 1, username: 'tester', fullName: 'Tester', profile: { id: 1, name: 'Administrador' }, extraPermissions: [],
+      permissions: profilePermissions('ADMIN'), role: 'ADMIN', active: true,
       createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt
     });
     fixture = TestBed.createComponent(RmasComponent);

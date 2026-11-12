@@ -4,7 +4,7 @@ import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { RmaResponse, UserRole } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { Permission } from '../../core/permissions';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { RmaService } from '../../core/services/rma.service';
@@ -12,6 +12,7 @@ import { SlaClockService } from '../../core/services/sla-clock.service';
 import { RmaDetailModalComponent } from '../../shared/rma-detail-modal/rma-detail-modal.component';
 import { buildRma } from '../../testing/rma-fixtures';
 import { KanbanComponent } from './kanban.component';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
 interface KanbanProfileHarness {
   openDetail(rma: RmaResponse): void;
@@ -20,12 +21,16 @@ interface KanbanProfileHarness {
 const RMA = buildRma({ id: 1, code: 'NAV-0001', status: 'TRIAGE', assigneeId: 7, assigneeName: 'Técnico Responsável' });
 
 async function setup(role: UserRole) {
+  return setupWith(profilePermissions(role));
+}
+
+async function setupWith(permissions: readonly Permission[]) {
   await TestBed.configureTestingModule({
     imports: [KanbanComponent],
     providers: [
       provideRouter([]),
       { provide: SlaClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
-      { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(role) } },
+      providePermissions(permissions),
       { provide: CatalogService, useValue: { listAssignableUsers: () => of([{ id: 7, username: 'tecnico', fullName: 'Técnico Responsável' }]) } },
       {
         provide: KanbanViewService,
@@ -60,5 +65,64 @@ describe('KanbanComponent detail permissions by profile', () => {
     expect((modal.nativeElement as HTMLElement).querySelector('.rma-detail__actions .rma-detail__status .custom-select__trigger') !== null).toBe(status);
     expect((modal.nativeElement as HTMLElement).querySelector('.rma-detail__assignee-picker .custom-select__trigger') !== null).toBe(assignee);
     expect(buttons).toContain('Ver impedimentos');
+  });
+});
+
+describe('KanbanComponent bulk actions by permission', () => {
+  function bulk(fixture: ComponentFixture<KanbanComponent>) {
+    const page = fixture.nativeElement as HTMLElement;
+    const toolbar = page.querySelector('.bulk-toolbar');
+    return {
+      page,
+      toolbar,
+      actions: [...(toolbar?.querySelectorAll('.bulk-buttons button') ?? [])].map((button) => button.textContent?.trim())
+        .filter((label) => label?.startsWith('Alterar')),
+      checkbox: page.querySelector<HTMLInputElement>('.board-card__selection input'),
+    };
+  }
+
+  it.each([
+    ['ADMIN', ['Alterar status', 'Alterar prioridade', 'Alterar responsável']],
+    ['SERVICE_DESK', ['Alterar status', 'Alterar prioridade', 'Alterar responsável']],
+    ['TECHNICIAN', ['Alterar status']],
+  ] as const)('keeps the bulk actions of %s', async (role, actions) => {
+    const view = bulk(await setup(role));
+
+    expect(view.toolbar).not.toBeNull();
+    expect(view.actions).toEqual(actions);
+    expect(view.checkbox).not.toBeNull();
+  });
+
+  it('keeps bulk selection hidden for VIEWER', async () => {
+    const view = bulk(await setup('VIEWER'));
+
+    expect(view.toolbar).toBeNull();
+    expect(view.checkbox).toBeNull();
+  });
+
+  it('offers bulk assignee changes with only rma.responsavel', async () => {
+    const fixture = await setupWith(['rma.ver', 'rma.responsavel']);
+    const view = bulk(fixture);
+
+    expect(view.toolbar).not.toBeNull();
+    expect(view.actions).toEqual(['Alterar responsável']);
+    expect(view.checkbox).not.toBeNull();
+
+    view.checkbox!.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(view.toolbar!.textContent).toContain('1 RMA selecionado');
+
+    [...view.toolbar!.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.includes('Limpar seleção'))!.click();
+    fixture.detectChanges();
+    [...view.toolbar!.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.includes('Selecionar visíveis'))!.click();
+    fixture.detectChanges();
+    expect(view.toolbar!.textContent).toContain('1 RMA selecionado');
+  });
+
+  it('offers bulk priority changes with only rma.editar', async () => {
+    const view = bulk(await setupWith(['rma.ver', 'rma.editar']));
+
+    expect(view.actions).toEqual(['Alterar prioridade']);
+    expect(view.checkbox).not.toBeNull();
   });
 });

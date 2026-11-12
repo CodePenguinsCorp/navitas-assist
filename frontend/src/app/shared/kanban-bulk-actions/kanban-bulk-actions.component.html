@@ -9,8 +9,10 @@
     @if (canUpdateStatus()) {
       <button type="button" class="button-secondary" [disabled]="disabled() || busy() || !selection().length" (click)="open('status')">Alterar status</button>
     }
-    @if (canManage()) {
+    @if (canUpdatePriority()) {
       <button type="button" class="button-secondary" [disabled]="disabled() || busy() || !selection().length" (click)="open('priority')">Alterar prioridade</button>
+    }
+    @if (canUpdateAssignee()) {
       <button type="button" class="button-secondary" [disabled]="disabled() || busy() || !selection().length" (click)="open('assignee')">Alterar responsável</button>
     }
   </div>

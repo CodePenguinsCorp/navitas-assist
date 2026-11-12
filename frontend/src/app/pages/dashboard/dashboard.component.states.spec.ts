@@ -10,10 +10,10 @@ import {
   UserSummaryResponse,
   WarrantyStatus
 } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
 import { DashboardComponent } from './dashboard.component';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
 function rmaFactory(overrides: Partial<RmaResponse> = {}): RmaResponse {
   return {
@@ -69,7 +69,7 @@ describe('DashboardComponent load states', () => {
       imports: [DashboardComponent],
       providers: [
         provideRouter([]),
-        { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(sources.role ?? 'TECHNICIAN') } },
+        providePermissions(profilePermissions(sources.role ?? 'TECHNICIAN')),
         { provide: RmaService, useValue: rmaService },
         { provide: CatalogService, useValue: catalogService }
       ]

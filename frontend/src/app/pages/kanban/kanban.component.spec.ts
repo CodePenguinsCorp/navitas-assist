@@ -5,7 +5,6 @@ import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { KanbanViewRequest, KanbanViewResponse, RmaResponse, WarrantyStatus } from '../../core/models';
 import { SlaClockService } from '../../core/services/sla-clock.service';
-import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { LoadingService } from '../../core/services/loading.service';
@@ -13,6 +12,7 @@ import { RmaService } from '../../core/services/rma.service';
 import { BulkRmaResult } from '../../shared/kanban-bulk-actions/kanban-bulk-actions.component';
 import { KanbanComponent } from './kanban.component';
 import { mountUnderRoot, simulateNativeModality } from '../../testing/native-dialog';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
 describe('KanbanComponent filters', () => {
   let component: KanbanHarness;
@@ -34,7 +34,7 @@ describe('KanbanComponent filters', () => {
       providers: [
         provideRouter([]),
         { provide: SlaClockService, useValue: { now } },
-        { provide: AuthService, useValue: { hasAnyRole: () => true } },
+        providePermissions(profilePermissions('ADMIN')),
         {
           provide: CatalogService,
           useValue: {
@@ -701,7 +701,7 @@ describe('KanbanComponent dialog focus', () => {
       providers: [
         provideRouter([]),
         { provide: SlaClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
-        { provide: AuthService, useValue: { hasAnyRole: () => true } },
+        providePermissions(profilePermissions('ADMIN')),
         { provide: CatalogService, useValue: { listAssignableUsers: () => of([]) } },
         {
           provide: KanbanViewService,
@@ -896,7 +896,7 @@ describe('KanbanComponent dialog focus under the root blocker', () => {
       providers: [
         provideRouter([{ path: '', component: KanbanComponent }]),
         { provide: SlaClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
-        { provide: AuthService, useValue: { hasAnyRole: () => true } },
+        providePermissions(profilePermissions('ADMIN')),
         { provide: CatalogService, useValue: { listAssignableUsers: () => of([]) } },
         { provide: KanbanViewService, useValue: { list: () => of([]) } },
         {

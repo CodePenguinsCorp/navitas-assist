@@ -13,6 +13,7 @@ import { RmaService } from '../../core/services/rma.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { buildRma, buildRmaPage } from '../../testing/rma-fixtures';
 import { RmasComponent } from './rmas.component';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
 type CreateFn = (payload: CreateRmaRequest) => Observable<RmaResponse>;
 
@@ -48,9 +49,10 @@ async function setup(options: { role?: UserRole; create?: CreateFn } = {}) {
     imports: [RmasComponent],
     providers: [
       provideRouter([]),
+      providePermissions(profilePermissions(role)),
       {
         provide: AuthService,
-        useValue: { currentUser: currentUser.asReadonly(), hasAnyRole: (roles: UserRole[]) => roles.includes(role) }
+        useValue: { currentUser: currentUser.asReadonly() }
       },
       { provide: CatalogService, useValue: { listClientOptions: () => of([client]), listProductOptions: () => of([product]) } },
       { provide: RmaService, useValue: rmaService },

@@ -18,7 +18,8 @@ describe('KanbanBulkActionsComponent', () => {
     fixture = TestBed.createComponent(KanbanBulkActionsComponent);
     fixture.componentRef.setInput('selection', rmas);
     fixture.componentRef.setInput('canUpdateStatus', true);
-    fixture.componentRef.setInput('canManage', true);
+    fixture.componentRef.setInput('canUpdatePriority', true);
+    fixture.componentRef.setInput('canUpdateAssignee', true);
     fixture.componentRef.setInput('assigneeOptions', [{ value: null, label: 'Sem responsável' }]);
     fixture.detectChanges();
   });
@@ -162,7 +163,8 @@ describe('KanbanBulkActionsComponent', () => {
   });
 
   it('offers technicians only status changes and sends nothing for an empty selection', () => {
-    fixture.componentRef.setInput('canManage', false);
+    fixture.componentRef.setInput('canUpdatePriority', false);
+    fixture.componentRef.setInput('canUpdateAssignee', false);
     fixture.detectChanges();
     expect(button('Alterar prioridade')).toBeUndefined();
     expect(button('Alterar responsável')).toBeUndefined();
@@ -171,6 +173,43 @@ describe('KanbanBulkActionsComponent', () => {
     fixture.detectChanges();
     expect(button('Alterar status').disabled).toBe(true);
     expect(service.updateStatusInBulk).not.toHaveBeenCalled();
+  });
+});
+
+describe('KanbanBulkActionsComponent actions by permission', () => {
+  let fixture: ComponentFixture<KanbanBulkActionsComponent>;
+  const rmas = [{ id: 1, code: 'RMA-1', status: 'RECEIVED' }] as RmaResponse[];
+  const labels = () => [...(fixture.nativeElement as HTMLElement).querySelectorAll('.bulk-buttons button')]
+    .map((element) => element.textContent?.trim());
+  const dialogText = () => (fixture.nativeElement as HTMLElement).querySelector('[role="dialog"]')?.textContent ?? '';
+  function openAction(label: string): void {
+    [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('.bulk-buttons button')]
+      .find((element) => element.textContent?.trim() === label)!.click();
+    fixture.detectChanges();
+  }
+
+  async function render(inputs: { canUpdateStatus: boolean; canUpdatePriority: boolean; canUpdateAssignee: boolean }): Promise<void> {
+    await TestBed.configureTestingModule({ imports: [KanbanBulkActionsComponent], providers: [{ provide: RmaService, useValue: {} }] }).compileComponents();
+    fixture = TestBed.createComponent(KanbanBulkActionsComponent);
+    fixture.componentRef.setInput('selection', rmas);
+    for (const [name, value] of Object.entries(inputs)) fixture.componentRef.setInput(name, value);
+    fixture.detectChanges();
+  }
+
+  it('priority action follows canUpdatePriority', async () => {
+    await render({ canUpdateStatus: false, canUpdatePriority: true, canUpdateAssignee: false });
+
+    expect(labels()).toEqual(['Selecionar visíveis', 'Limpar seleção', 'Alterar prioridade']);
+    openAction('Alterar prioridade');
+    expect(dialogText()).toContain('Alterar prioridade para');
+  });
+
+  it('assignee action follows canUpdateAssignee', async () => {
+    await render({ canUpdateStatus: false, canUpdatePriority: false, canUpdateAssignee: true });
+
+    expect(labels()).toEqual(['Selecionar visíveis', 'Limpar seleção', 'Alterar responsável']);
+    openAction('Alterar responsável');
+    expect(dialogText()).toContain('Alterar responsável para');
   });
 });
 
@@ -191,7 +230,8 @@ describe('KanbanBulkActionsComponent confirmation focus', () => {
     fixture = TestBed.createComponent(KanbanBulkActionsComponent);
     fixture.componentRef.setInput('selection', rmas);
     fixture.componentRef.setInput('canUpdateStatus', true);
-    fixture.componentRef.setInput('canManage', true);
+    fixture.componentRef.setInput('canUpdatePriority', true);
+    fixture.componentRef.setInput('canUpdateAssignee', true);
     fixture.componentRef.setInput('assigneeOptions', []);
     render();
   });

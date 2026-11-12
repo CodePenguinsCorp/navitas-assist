@@ -31,7 +31,8 @@ export class KanbanBulkActionsComponent {
   readonly hiddenCount = input(0);
   readonly visibleCount = input(0);
   readonly canUpdateStatus = input(false);
-  readonly canManage = input(false);
+  readonly canUpdatePriority = input(false);
+  readonly canUpdateAssignee = input(false);
   readonly disabled = input(false);
   readonly assigneeOptions = input<ReadonlyArray<CustomSelectOption<number | null>>>([]);
   readonly selectVisible = output<void>();
@@ -127,7 +128,8 @@ export class KanbanBulkActionsComponent {
   }
 
   private allowed(action: BulkAction): boolean {
-    return action === 'status' ? this.canUpdateStatus() : this.canManage();
+    if (action === 'status') return this.canUpdateStatus();
+    return action === 'priority' ? this.canUpdatePriority() : this.canUpdateAssignee();
   }
 }
 
