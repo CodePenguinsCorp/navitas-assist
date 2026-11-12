@@ -60,7 +60,7 @@ describe('ProfilesComponent form', () => {
   const alertDialog = () => element.querySelector<HTMLElement>('[role="alertdialog"]');
   const nameInput = () => dialog()!.querySelector<HTMLInputElement>('[formcontrolname="name"]')!;
   const moduleSets = () => Array.from(dialog()!.querySelectorAll<HTMLFieldSetElement>('fieldset.permission-module'));
-  const checkbox = (label: string) => Array.from(dialog()!.querySelectorAll<HTMLLabelElement>('label.checkbox-field'))
+  const checkbox = (label: string) => Array.from(dialog()!.querySelectorAll<HTMLLabelElement>('label.permission-row'))
     .find((item) => item.textContent?.trim() === label)!.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
   const submitButton = () => dialog()!.querySelector<HTMLButtonElement>('button[type="submit"]')!;
   const setName = (value: string) => { nameInput().value = value; nameInput().dispatchEvent(new Event('input')); fixture.detectChanges(); };
@@ -80,12 +80,14 @@ describe('ProfilesComponent form', () => {
     expect(sets[0].querySelector('legend')?.textContent).toContain('4 de 8');
   });
 
-  it('uses checkbox-field for each permission', async () => {
+  it('uses a labelled switch for each permission, inside the Permissões section', async () => {
     await mount();
     open(() => component.openCreateModal());
+    const sections = Array.from(dialog()!.querySelectorAll('fieldset.form-section')).map((section) => section.querySelector('legend')?.textContent?.trim());
+    expect(sections).toEqual(['Identificação', 'Permissões']);
     const boxes = Array.from(dialog()!.querySelectorAll<HTMLInputElement>('fieldset.permission-module input[type="checkbox"]'));
     expect(boxes.length).toBe(20);
-    expect(boxes.every((box) => box.closest('label')?.classList.contains('checkbox-field'))).toBe(true);
+    expect(boxes.every((box) => box.getAttribute('role') === 'switch' && box.closest('label')?.classList.contains('permission-row'))).toBe(true);
     expect(boxes.every((box) => !box.checked)).toBe(true);
     expect(dialog()!.querySelector('h3')?.textContent?.trim()).toBe('Novo perfil');
     expectCancelBeforePrimary(dialog()!);
@@ -123,6 +125,18 @@ describe('ProfilesComponent form', () => {
     expect(element.querySelector('.alert-banner--success')?.textContent).toContain('Perfil Supervisor cadastrado com sucesso.');
     expect(service.list).toHaveBeenCalledTimes(1);
     expect(service.invalidateOptions).toHaveBeenCalled();
+  });
+
+  it('marks and clears a whole module before saving', async () => {
+    await mount();
+    open(() => component.openEditModal(TECHNICIAN));
+    const action = (index: number, label: string) => Array.from(moduleSets()[index].querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.textContent?.trim() === label)!;
+    action(2, 'Marcar todas').click();
+    action(0, 'Limpar').click();
+    fixture.detectChanges();
+    submit();
+    expect(service.update).toHaveBeenCalledWith(3, { name: 'Técnico', permissions: ['pecas.ver', 'pecas.movimentar', 'pecas.reservar'] });
   });
 
   it('edits profile and refreshes own session after save', async () => {

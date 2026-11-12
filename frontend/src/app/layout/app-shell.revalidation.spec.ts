@@ -102,7 +102,7 @@ describe('AppShellComponent revalidates the current screen when permissions chan
     http.expectOne('/api/permissions').flush(PERMISSION_CATALOG);
     await settle();
     const dialog = page.querySelector<HTMLElement>('[role="dialog"]')!;
-    const perfisBox = [...dialog.querySelectorAll<HTMLLabelElement>('label.checkbox-field')]
+    const perfisBox = [...dialog.querySelectorAll<HTMLLabelElement>('label.permission-row')]
       .find((label) => label.textContent?.trim() === 'Gerenciar perfis e permissões')!
       .querySelector<HTMLInputElement>('input')!;
     perfisBox.click();

@@ -13,6 +13,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
+import { PermissionPickerComponent } from '../../shared/permission-picker/permission-picker.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
 type ProfileModalMode = 'create' | 'edit' | 'duplicate';
@@ -28,28 +29,12 @@ const trimmedRequired = (control: AbstractControl<string>): ValidationErrors | n
 
 @Component({
   selector: 'app-profiles',
-  imports: [IconComponent, ReactiveFormsModule, ModalFocusDirective, PaginationComponent, PageHeaderComponent, RowActionComponent],
+  imports: [IconComponent, ReactiveFormsModule, ModalFocusDirective, PaginationComponent, PageHeaderComponent, PermissionPickerComponent, RowActionComponent],
   templateUrl: './profiles.component.html',
   styles: [`
     :host { display: block; }
 
     .profile-form-modal { width: min(100%, 860px); }
-
-    .permission-module__count {
-      margin-left: auto;
-      color: var(--muted);
-      font-size: var(--font-size-sm);
-      font-weight: var(--font-weight-semibold);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .permission-module .checkbox-field {
-      align-items: flex-start;
-      padding-block: 0.55rem;
-      line-height: 1.35;
-    }
-
-    .permission-module .checkbox-field input { margin-top: 0.1rem; flex-shrink: 0; }
 
     .catalog-pending { min-height: 4rem; grid-column: 1 / -1; }
   `]
@@ -161,23 +146,6 @@ export class ProfilesComponent {
     this.activeModal.set(null);
     this.modalErrorMessage.set('');
     this.nameServerError.set('');
-  }
-
-  protected isChecked(code: string): boolean {
-    return isPermission(code) && this.selected().has(code);
-  }
-
-  protected toggle(code: string, checked: boolean): void {
-    if (!isPermission(code)) {
-      return;
-    }
-    const next = new Set(this.selected());
-    if (checked) next.add(code); else next.delete(code);
-    this.selected.set(next);
-  }
-
-  protected checkedCount(module: PermissionModuleResponse): number {
-    return module.permissions.filter((item) => this.isChecked(item.code)).length;
   }
 
   protected nameError(): string {
