@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import br.com.navitasassist.access.AccessProfile;
 import br.com.navitasassist.user.UserAccount;
 import br.com.navitasassist.user.UserRole;
 import jakarta.persistence.LockModeType;
@@ -34,7 +35,8 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
 
     List<UserAccount> findAllByActiveTrueAndRoleOrderByFullNameAsc(UserRole role);
 
-    List<UserAccount> findAllByActiveTrueAndRoleInOrderByFullNameAsc(Collection<UserRole> roles);
+    List<UserAccount> findAllByActiveTrueAndProfileInOrderByFullNameAsc(Collection<AccessProfile> profiles);
+
     List<UserAccount> findAllByActiveTrueAndRoleNotOrderByFullNameAsc(UserRole role);
     @Query("""
         select account

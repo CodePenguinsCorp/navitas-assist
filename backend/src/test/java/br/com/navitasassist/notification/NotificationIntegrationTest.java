@@ -1,6 +1,8 @@
 package br.com.navitasassist.notification;
 
 import static br.com.navitasassist.access.AccessTestSupport.asProfile;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -8,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -46,6 +49,7 @@ import br.com.navitasassist.service.RmaService;
 import br.com.navitasassist.service.SlaNotificationScanner;
 import br.com.navitasassist.user.UserAccount;
 import br.com.navitasassist.user.UserAccountTestSupport;
+import br.com.navitasassist.access.AccessProfile;
 import br.com.navitasassist.user.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
@@ -122,6 +126,8 @@ class NotificationIntegrationTest {
     @Qualifier(NotificationAsyncConfig.NOTIFICATION_EXECUTOR)
     private ThreadPoolTaskExecutor notificationExecutor;
 
+    private static final String CUSTOM_PROFILE = "nav40 perfil";
+
     private final List<Long> createdUserIds = new ArrayList<>();
     private UserAccount technician;
     private UserAccount otherTechnician;
@@ -161,6 +167,8 @@ class NotificationIntegrationTest {
         userAccountRepository.findAll().stream().filter(account -> account.getUsername().startsWith("nav40-")).forEach(userAccountRepository::delete);
         createdUserIds.clear();
         resetRules();
+        accessProfiles.findAll().stream().filter(profile -> profile.getName().startsWith(CUSTOM_PROFILE)).forEach(accessProfiles::delete);
+        accessProfiles.flush();
     }
 
     @Test
@@ -340,6 +348,48 @@ class NotificationIntegrationTest {
         assertTrue(notificationRepository.findAll().stream().noneMatch(notification -> notification.getEventType() == NotificationEventType.PART_PENDING));
     }
 
+    @Test
+    void notifiesUsersOfRecipientProfiles() throws Exception {
+        AccessProfile custom = AccessTestSupport.saveProfile(accessProfiles, CUSTOM_PROFILE + " plantão", "rma.ver");
+        UserAccount onCall = AccessTestSupport.saveAccountWithProfile(userAccountRepository, passwordEncoder, "nav40-plantao", custom, Set.of());
+
+        mockMvc.perform(put("/api/notification-rules/RMA_CREATED").with(ADMIN).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(rulePayloadForProfiles(true, "INFO", List.of(custom.getId(), profile("ADMIN").getId())))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.recipientProfiles[*].name", contains("Administrador", CUSTOM_PROFILE + " plantão")))
+            .andExpect(jsonPath("$.recipientProfiles[1].id").value(custom.getId()))
+            .andExpect(jsonPath("$.recipientRoles").doesNotExist());
+
+        createRma();
+        assertEquals(1, countFor(onCall, NotificationEventType.RMA_CREATED));
+        assertEquals(1, countFor(admin(), NotificationEventType.RMA_CREATED));
+        assertEquals(0, countFor(desk, NotificationEventType.RMA_CREATED));
+    }
+
+    @Test
+    void rejectsUnknownRecipientProfile() throws Exception {
+        mockMvc.perform(put("/api/notification-rules/RMA_CREATED").with(ADMIN).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(rulePayloadForProfiles(true, "INFO", List.of(999999L)))))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Perfil não encontrado: 999999."));
+        mockMvc.perform(get("/api/notification-rules").with(ADMIN))
+            .andExpect(jsonPath("$[?(@.eventType == 'RMA_CREATED')].recipientProfiles[*].name", containsInAnyOrder("Administrador", "Atendimento")));
+    }
+
+    @Test
+    void deletingProfileRemovesItFromRules() throws Exception {
+        AccessProfile custom = AccessTestSupport.saveProfile(accessProfiles, CUSTOM_PROFILE + " temporário", "rma.ver");
+        mockMvc.perform(put("/api/notification-rules/SLA_WARNING").with(ADMIN).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(rulePayloadForProfiles(true, "WARNING", List.of(custom.getId())))))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/profiles/{id}", custom.getId()).with(ADMIN).with(csrf())).andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/notification-rules").with(ADMIN))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@.eventType == 'SLA_WARNING')].recipientProfiles[*]", hasSize(0)));
+    }
+
     private RmaResponse createRma() {
         RmaResponse created = rmaService.create(new CreateRmaRequest(client.getId(), List.of(new RmaItemRequest(product.getId(), null, "SER-NAV40-" + System.nanoTime(), null)), null, true,
             LocalDate.now(), null, "Não liga", null, null, RmaPriority.HIGH, null, null, null));
@@ -379,8 +429,16 @@ class NotificationIntegrationTest {
         return notificationEventRepository.findAll().stream().filter(event -> event.getEventKey().equals(key)).findFirst().orElseThrow();
     }
 
-    private Map<String, Object> rulePayload(boolean enabled, String severity, Set<String> roles) {
-        return Map.of("enabled", enabled, "severity", severity, "recipientRoles", roles, "notifyAssignee", false, "emailEnabled", false, "userMutable", true);
+    private Map<String, Object> rulePayload(boolean enabled, String severity, Set<String> legacyCodes) {
+        return rulePayloadForProfiles(enabled, severity, legacyCodes.stream().map(code -> profile(code).getId()).toList());
+    }
+
+    private Map<String, Object> rulePayloadForProfiles(boolean enabled, String severity, List<Long> profileIds) {
+        return Map.of("enabled", enabled, "severity", severity, "recipientProfileIds", profileIds, "notifyAssignee", false, "emailEnabled", false, "userMutable", true);
+    }
+
+    private AccessProfile profile(String legacyCode) {
+        return accessProfiles.findByLegacyCode(legacyCode).orElseThrow();
     }
 
     private void resetRules() {
@@ -394,7 +452,7 @@ class NotificationIntegrationTest {
         NotificationRule rule = notificationRuleRepository.findByEventType(type).orElseThrow();
         rule.setEnabled(true);
         rule.setSeverity(severity);
-        rule.setRecipientRoles(roles.isEmpty() ? java.util.EnumSet.noneOf(UserRole.class) : java.util.EnumSet.copyOf(roles));
+        rule.setRecipientProfiles(new java.util.HashSet<>(roles.stream().map(role -> profile(role.name())).toList()));
         rule.setNotifyAssignee(notifyAssignee);
         rule.setEmailEnabled(false);
         rule.setUserMutable(userMutable);

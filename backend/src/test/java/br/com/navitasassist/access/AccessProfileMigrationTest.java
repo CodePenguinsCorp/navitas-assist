@@ -95,6 +95,47 @@ class AccessProfileMigrationTest {
         }
     }
 
+    @Test
+    void mapsRuleRolesToProfiles() throws SQLException {
+        String url = newDatabase();
+        migrateTo(url, "8");
+        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD);
+             Statement statement = connection.createStatement()) {
+            // Regra editada com espaço depois da vírgula, como a conversão antiga aceitava.
+            statement.executeUpdate("UPDATE notification_rules SET recipient_roles = 'ADMIN, VIEWER' WHERE event_type = 'SLA_WARNING'");
+        }
+
+        migrateTo(url, "9");
+
+        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
+            Map<String, Set<String>> recipients = new HashMap<>();
+            try (Statement statement = connection.createStatement();
+                 ResultSet rows = statement.executeQuery("""
+                     SELECT r.event_type, p.name
+                     FROM notification_rules r
+                     LEFT JOIN notification_rule_recipient_profiles rp ON rp.rule_id = r.id
+                     LEFT JOIN access_profiles p ON p.id = rp.profile_id
+                     """)) {
+                while (rows.next()) {
+                    Set<String> names = recipients.computeIfAbsent(rows.getString(1), key -> new HashSet<>());
+                    if (rows.getString(2) != null) names.add(rows.getString(2));
+                }
+            }
+            assertEquals(Map.of(
+                "RMA_CREATED", Set.of("Administrador", "Atendimento"),
+                "RMA_ASSIGNED", Set.of(),
+                "SLA_WARNING", Set.of("Administrador", "Consulta"),
+                "SLA_OVERDUE", Set.of("Administrador", "Atendimento")), recipients);
+
+            // Expand: a coluna legada continua existindo até a V10/V11.
+            try (Statement statement = connection.createStatement();
+                 ResultSet rows = statement.executeQuery("SELECT recipient_roles FROM notification_rules WHERE event_type = 'SLA_WARNING'")) {
+                rows.next();
+                assertEquals("ADMIN, VIEWER", rows.getString(1));
+            }
+        }
+    }
+
     private static String newDatabase() {
         return "jdbc:h2:mem:mig_" + UUID.randomUUID().toString().replace("-", "") + ";MODE=MySQL;DB_CLOSE_DELAY=-1";
     }

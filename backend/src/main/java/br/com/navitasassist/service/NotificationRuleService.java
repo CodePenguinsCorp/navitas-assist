@@ -2,7 +2,7 @@ package br.com.navitasassist.service;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 
 import br.com.navitasassist.controller.ResourceNotFoundException;
@@ -16,7 +16,6 @@ import br.com.navitasassist.notification.NotificationRuleResponse;
 import br.com.navitasassist.repository.NotificationEventRepository;
 import br.com.navitasassist.repository.NotificationRepository;
 import br.com.navitasassist.repository.NotificationRuleRepository;
-import br.com.navitasassist.user.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -35,6 +34,7 @@ public class NotificationRuleService {
     private final NotificationRuleRepository notificationRuleRepository;
     private final NotificationEventRepository notificationEventRepository;
     private final NotificationRepository notificationRepository;
+    private final AccessProfileService accessProfileService;
 
     @Transactional(readOnly = true)
     public List<NotificationRuleResponse> list() {
@@ -45,7 +45,7 @@ public class NotificationRuleService {
         NotificationRule rule = notificationRuleRepository.findByEventType(eventType).orElseThrow(() -> new ResourceNotFoundException("Notification rule not found: " + eventType));
         rule.setEnabled(request.enabled());
         rule.setSeverity(request.severity());
-        rule.setRecipientRoles(request.recipientRoles().isEmpty() ? EnumSet.noneOf(UserRole.class) : EnumSet.copyOf(request.recipientRoles()));
+        rule.setRecipientProfiles(new HashSet<>(request.recipientProfileIds().stream().sorted().map(accessProfileService::getEntity).toList()));
         rule.setNotifyAssignee(request.notifyAssignee());
         rule.setEmailEnabled(request.emailEnabled());
         rule.setUserMutable(request.userMutable());

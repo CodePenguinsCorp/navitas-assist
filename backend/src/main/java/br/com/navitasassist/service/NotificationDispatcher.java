@@ -85,8 +85,8 @@ public class NotificationDispatcher {
 
     private List<UserAccount> recipients(NotificationRule rule, RmaRecord rma) {
         Map<Long, UserAccount> recipients = new LinkedHashMap<>();
-        if (!rule.getRecipientRoles().isEmpty()) {
-            userAccountRepository.findAllByActiveTrueAndRoleInOrderByFullNameAsc(rule.getRecipientRoles()).forEach(user -> recipients.put(user.getId(), user));
+        if (!rule.getRecipientProfiles().isEmpty()) {
+            userAccountRepository.findAllByActiveTrueAndProfileInOrderByFullNameAsc(rule.getRecipientProfiles()).forEach(user -> recipients.put(user.getId(), user));
         }
         if (rule.isNotifyAssignee() && rma.getAssignee() != null) {
             recipients.putIfAbsent(rma.getAssignee().getId(), rma.getAssignee());

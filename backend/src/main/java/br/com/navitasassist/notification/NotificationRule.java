@@ -2,19 +2,22 @@ package br.com.navitasassist.notification;
 
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Set;
 
+import br.com.navitasassist.access.AccessProfile;
 import br.com.navitasassist.config.AuditableEntity;
-import br.com.navitasassist.user.UserRole;
 import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -44,9 +47,13 @@ public class NotificationRule extends AuditableEntity {
     @Column(nullable = false, length = 20)
     private NotificationSeverity severity;
 
-    @Convert(converter = UserRoleSetConverter.class)
-    @Column(nullable = false, length = 120)
-    private Set<UserRole> recipientRoles = EnumSet.noneOf(UserRole.class);
+    // A coluna legada recipient_roles continua no banco (expand/contract), sem mapeamento.
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "notification_rule_recipient_profiles",
+        joinColumns = @JoinColumn(name = "rule_id"),
+        inverseJoinColumns = @JoinColumn(name = "profile_id"))
+    private Set<AccessProfile> recipientProfiles = new HashSet<>();
 
     @Column(nullable = false)
     private boolean notifyAssignee;
