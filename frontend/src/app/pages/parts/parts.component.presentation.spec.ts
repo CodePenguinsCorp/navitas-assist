@@ -1,9 +1,9 @@
 import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
-import { PartReplenishmentResponse, PartReservationResponse, PartResponse, UserRole } from '../../core/models';
+import { PartReplenishmentResponse, PartReservationResponse, PartResponse } from '../../core/models';
 import { Permission } from '../../core/permissions';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { PartService } from '../../core/services/part.service';
 import { PartsComponent } from './parts.component';
 
@@ -37,7 +37,7 @@ describe('PartsComponent presentation', () => {
     return new Map(Array.from(table.querySelectorAll('thead th')).map((header, index) => [normalized(header), normalized(cells[index])]));
   };
 
-  async function setup(role: UserRole | readonly Permission[] = 'ADMIN', pending = false) {
+  async function setup(role: LegacyProfileCode | readonly Permission[] = 'ADMIN', pending = false) {
     const parts = new Subject<PartResponse[]>();
     service = { list: vi.fn(() => pending ? parts : of([PART, INACTIVE])), listReplenishment: vi.fn(() => of([REPLENISHMENT])), listPending: vi.fn(() => of([PENDING])), update: vi.fn(() => of(PART)) };
     await TestBed.configureTestingModule({ imports: [PartsComponent], providers: [
@@ -137,7 +137,7 @@ describe('PartsComponent presentation', () => {
     expect(pending.get('Solicitada em')).toBe('24/10/2026, 09:00');
   });
 
-  it.each(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as UserRole[])('preserves stock actions and visible BRL costs for %s', async (role) => {
+  it.each(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as LegacyProfileCode[])('preserves stock actions and visible BRL costs for %s', async (role) => {
     await setup(role);
     const row = root().querySelector('tbody tr')!;
     const writable = role === 'ADMIN' || role === 'SERVICE_DESK';

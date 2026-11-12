@@ -4,18 +4,8 @@ import {
   NavGroup,
   RmaPriority,
   RmaStatus,
-  UserRole,
   WarrantyStatus
 } from './models';
-
-export const ROLE_LABELS: Record<UserRole, string> = {
-  ADMIN: 'Administrador',
-  TECHNICIAN: 'Técnico',
-  SERVICE_DESK: 'Atendimento',
-  VIEWER: 'Consulta'
-};
-
-export const ROLE_OPTIONS: UserRole[] = ['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER'];
 
 export const RMA_STATUS_FLOW: RmaStatus[] = [
   'RECEIVED',

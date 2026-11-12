@@ -1,8 +1,8 @@
 import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
-import { PartReservationResponse, PartResponse, RmaPartsResponse, RmaStatus, UserRole } from '../../core/models';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { PartReservationResponse, PartResponse, RmaPartsResponse, RmaStatus } from '../../core/models';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { PartService } from '../../core/services/part.service';
 import { RmaPartsPanelComponent } from './rma-parts-panel.component';
 
@@ -37,7 +37,7 @@ describe('RmaPartsPanelComponent loading', () => {
   const text = () => (fixture.nativeElement.textContent as string).replace(/\s+/g, ' ').trim();
   const button = (label: string) => Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button')).find((item) => item.textContent?.trim() === label);
 
-  async function setup(sources: { role?: UserRole; status?: RmaStatus; parts?: Observable<RmaPartsResponse>; catalog?: Observable<PartResponse[]> } = {}) {
+  async function setup(sources: { role?: LegacyProfileCode; status?: RmaStatus; parts?: Observable<RmaPartsResponse>; catalog?: Observable<PartResponse[]> } = {}) {
     service = {
       getRmaParts: vi.fn(() => sources.parts ?? of(rmaParts([reservation(1, 'ACTIVE')]))),
       list: vi.fn(() => sources.catalog ?? of([PART])),
@@ -220,7 +220,7 @@ describe('RmaPartsPanelComponent loading', () => {
 
   it.each([
     ['VIEWER', 'IN_REPAIR'], ['SERVICE_DESK', 'IN_REPAIR'], ['ADMIN', 'COMPLETED'], ['TECHNICIAN', 'RETURNED']
-  ] as Array<[UserRole, RmaStatus]>)('does not request the catalog for %s on %s', async (role, status) => {
+  ] as Array<[LegacyProfileCode, RmaStatus]>)('does not request the catalog for %s on %s', async (role, status) => {
     await setup({ role, status });
     expect(service.list).not.toHaveBeenCalled();
     expect(text()).toContain('Capacitor');

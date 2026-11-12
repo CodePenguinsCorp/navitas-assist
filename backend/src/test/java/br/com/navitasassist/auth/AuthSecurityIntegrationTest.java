@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -100,7 +99,7 @@ class AuthSecurityIntegrationTest {
                 "cadastros.ver", "pecas.ver", "pecas.reservar", "protocolos.ver", "protocolos.executar", "relatorios.ver")))
             .andExpect(jsonPath("$.profile.name").value("Técnico"))
             .andExpect(jsonPath("$.extraPermissions", hasSize(0)))
-            .andExpect(jsonPath("$.role").value("TECHNICIAN"))
+            .andExpect(jsonPath("$.role").doesNotExist())
             .andExpect(jsonPath("$.passwordHash").doesNotExist());
     }
 
@@ -117,7 +116,7 @@ class AuthSecurityIntegrationTest {
                 "rma.ver", "rma.abrir", "cadastros.ver", "pecas.ver", "protocolos.ver", "relatorios.ver")))
             .andExpect(jsonPath("$.extraPermissions", contains("rma.abrir")))
             .andExpect(jsonPath("$.profile.name").value("Consulta"))
-            .andExpect(jsonPath("$.role").value("VIEWER"));
+            .andExpect(jsonPath("$.role").doesNotExist());
     }
 
     @Test
@@ -129,7 +128,7 @@ class AuthSecurityIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.permissions", contains("relatorios.ver")))
             .andExpect(jsonPath("$.profile.name").value(CUSTOM_PROFILE))
-            .andExpect(jsonPath("$.role").value(nullValue()));
+            .andExpect(jsonPath("$.role").doesNotExist());
 
         custom.getPermissions().add("rma.ver");
         accessProfiles.saveAndFlush(custom);
@@ -275,7 +274,7 @@ class AuthSecurityIntegrationTest {
                     """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.username").value("admin"))
-            .andExpect(jsonPath("$.role").value("ADMIN"))
+            .andExpect(jsonPath("$.profile.name").value("Administrador"))
             .andReturn();
 
         MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);

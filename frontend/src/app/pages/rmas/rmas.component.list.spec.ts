@@ -4,20 +4,20 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
-import { PageResponse, RmaResponse, RmaSummaryResponse, UserRole, UserSession, WarrantyStatus } from '../../core/models';
+import { PageResponse, RmaResponse, RmaSummaryResponse, UserSession, WarrantyStatus } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { RmaFilters, RmaService } from '../../core/services/rma.service';
 import { buildRma, buildRmaItem, buildRmaPage } from '../../testing/rma-fixtures';
 import { RmasComponent } from './rmas.component';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
 type ListFn = (filters: RmaFilters) => Observable<PageResponse<RmaResponse>>;
 type SummaryFn = (filters: Pick<RmaFilters, 'query' | 'status'>) => Observable<RmaSummaryResponse>;
 
 interface SetupOptions {
-  role?: UserRole;
+  role?: LegacyProfileCode;
   list?: ListFn;
   summary?: SummaryFn;
   requestedRma?: number;
@@ -49,7 +49,7 @@ async function setup(options: SetupOptions = {}) {
     create: vi.fn(),
     upsertDiagnosis: vi.fn((id: number) => of(buildRma({ id })))
   };
-  const currentUser = signal<UserSession | null>({ username: 'tester', name: 'Tester', profileName: 'Perfil', permissions: [], role });
+  const currentUser = signal<UserSession | null>({ username: 'tester', name: 'Tester', profileName: 'Perfil', permissions: [] });
   const providers: unknown[] = [
     provideRouter([]),
     providePermissions(profilePermissions(role)),

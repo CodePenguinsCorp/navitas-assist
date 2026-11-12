@@ -3,9 +3,9 @@ import { ChangeDetectorRef, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
-import { NotificationFailureResponse, NotificationRuleResponse, UserRole } from '../../core/models';
+import { NotificationFailureResponse, NotificationRuleResponse } from '../../core/models';
 import { Permission } from '../../core/permissions';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { LoadingService } from '../../core/services/loading.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ProfileOption } from '../../core/models';
@@ -56,7 +56,7 @@ describe('NotificationsComponent rules', () => {
   };
   const openRules = () => { component.selectTab('rules'); render(); };
 
-  async function setup(sources: { role?: UserRole; permissions?: readonly Permission[]; rules?: Observable<NotificationRuleResponse[]>[]; failures?: Observable<NotificationFailureResponse[]>[]; update?: Observable<NotificationRuleResponse>[]; profiles?: Observable<ProfileOption[]>[] } = {}) {
+  async function setup(sources: { role?: LegacyProfileCode; permissions?: readonly Permission[]; rules?: Observable<NotificationRuleResponse[]>[]; failures?: Observable<NotificationFailureResponse[]>[]; update?: Observable<NotificationRuleResponse>[]; profiles?: Observable<ProfileOption[]>[] } = {}) {
     const listRules = vi.fn(() => of([RULE]));
     for (const source of sources.rules ?? []) listRules.mockImplementationOnce(() => source);
     const listFailures = vi.fn(() => of([] as NotificationFailureResponse[]));

@@ -2,8 +2,8 @@ import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormControl } from '@angular/forms';
 import { Observable, Subject, of, throwError } from 'rxjs';
-import { PartMovementResponse, PartResponse, UserRole } from '../../core/models';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { PartMovementResponse, PartResponse } from '../../core/models';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { LoadingService } from '../../core/services/loading.service';
 import { PartService } from '../../core/services/part.service';
 import { PartsComponent } from './parts.component';
@@ -46,7 +46,7 @@ describe('PartsComponent movement history', () => {
   const historyFailure = () => throwError(() => new Error());
 
   async function setup({ role = 'ADMIN', movements = () => of([CONSUMPTION]), reverse = of(REVERSAL) }: {
-    role?: UserRole; movements?: (id: number) => Observable<PartMovementResponse[]>; reverse?: Observable<PartMovementResponse>;
+    role?: LegacyProfileCode; movements?: (id: number) => Observable<PartMovementResponse[]>; reverse?: Observable<PartMovementResponse>;
   } = {}) {
     service = {
       list: vi.fn(() => of([PART, OTHER_PART])), listReplenishment: vi.fn(() => of([])), listPending: vi.fn(() => of([])),
@@ -209,7 +209,7 @@ describe('PartsComponent movement history', () => {
     expect(text()).not.toContain('Tentar novamente');
   });
 
-  it.each(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as UserRole[])('preserves history permissions for %s', async (role) => {
+  it.each(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as LegacyProfileCode[])('preserves history permissions for %s', async (role) => {
     await setup({ role }); expect(text()).toContain('tech'); expect(text()).toContain('Peça instalada');
     expect(Boolean(button('Estornar'))).toBe(['ADMIN', 'SERVICE_DESK'].includes(role));
     expect(service['reverseMovement']).not.toHaveBeenCalled();

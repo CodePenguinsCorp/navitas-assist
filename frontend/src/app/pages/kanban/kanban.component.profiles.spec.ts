@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
-import { RmaResponse, UserRole } from '../../core/models';
+import { RmaResponse } from '../../core/models';
 import { Permission } from '../../core/permissions';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
@@ -12,7 +12,7 @@ import { SlaClockService } from '../../core/services/sla-clock.service';
 import { RmaDetailModalComponent } from '../../shared/rma-detail-modal/rma-detail-modal.component';
 import { buildRma } from '../../testing/rma-fixtures';
 import { KanbanComponent } from './kanban.component';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
 interface KanbanProfileHarness {
   openDetail(rma: RmaResponse): void;
@@ -20,7 +20,7 @@ interface KanbanProfileHarness {
 
 const RMA = buildRma({ id: 1, code: 'NAV-0001', status: 'TRIAGE', assigneeId: 7, assigneeName: 'Técnico Responsável' });
 
-async function setup(role: UserRole) {
+async function setup(role: LegacyProfileCode) {
   return setupWith(profilePermissions(role));
 }
 

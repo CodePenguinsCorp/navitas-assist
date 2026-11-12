@@ -92,13 +92,11 @@ export class AuthService {
   }
 
   private toSession(user: AuthUserResponse): UserSession {
-    const session: UserSession = {
+    return {
       username: user.username,
       name: user.fullName || user.username,
       profileName: user.profile?.name ?? '',
       permissions: (user.permissions ?? []).filter(isPermission)
     };
-    if (user.role) session.role = user.role;
-    return session;
   }
 }

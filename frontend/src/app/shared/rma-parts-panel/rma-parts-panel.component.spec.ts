@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
-import { PartReservationResponse, RmaPartsResponse, UserRole } from '../../core/models';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { PartReservationResponse, RmaPartsResponse } from '../../core/models';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { PartService } from '../../core/services/part.service';
 import { RmaPartsPanelComponent } from './rma-parts-panel.component';
 
@@ -25,7 +25,7 @@ describe('RmaPartsPanelComponent', () => {
   let fixture: ComponentFixture<RmaPartsPanelComponent>;
   let partService: Record<string, ReturnType<typeof vi.fn>>;
 
-  async function setUp(role: UserRole, status: 'IN_REPAIR' | 'COMPLETED' = 'IN_REPAIR'): Promise<void> {
+  async function setUp(role: LegacyProfileCode, status: 'IN_REPAIR' | 'COMPLETED' = 'IN_REPAIR'): Promise<void> {
     partService = {
       getRmaParts: vi.fn(() => of(RMA_PARTS)),
       list: vi.fn(() => of([])),

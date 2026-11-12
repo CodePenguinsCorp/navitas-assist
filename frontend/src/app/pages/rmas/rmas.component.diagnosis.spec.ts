@@ -4,7 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
 import { provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
-import { DiagnosisRequest, DiagnosisResponse, RmaResponse, UserRole, UserSession } from '../../core/models';
+import { DiagnosisRequest, DiagnosisResponse, RmaResponse, UserSession } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { LoadingService } from '../../core/services/loading.service';
@@ -13,7 +13,7 @@ import { RmaService } from '../../core/services/rma.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { buildRma, buildRmaPage } from '../../testing/rma-fixtures';
 import { RmasComponent } from './rmas.component';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
 type UpsertFn = (id: number, payload: DiagnosisRequest) => Observable<RmaResponse>;
 
@@ -35,7 +35,7 @@ const existingDiagnosis: DiagnosisResponse = {
 const rmaWithoutDiagnosis = buildRma({ reportedFailure: 'Não liga após queda' });
 const rmaWithDiagnosis = buildRma({ reportedFailure: 'Não liga após queda', diagnosis: existingDiagnosis });
 
-async function setup(options: { role?: UserRole; rma?: RmaResponse; upsert?: UpsertFn } = {}) {
+async function setup(options: { role?: LegacyProfileCode; rma?: RmaResponse; upsert?: UpsertFn } = {}) {
   const role = options.role ?? 'ADMIN';
   const rma = options.rma ?? rmaWithoutDiagnosis;
   const rmaService = {
@@ -46,7 +46,7 @@ async function setup(options: { role?: UserRole; rma?: RmaResponse; upsert?: Ups
     upsertDiagnosis: vi.fn(options.upsert ?? ((id: number, payload: DiagnosisRequest) =>
       of(buildRma({ id, reportedFailure: rma.reportedFailure, diagnosis: { ...existingDiagnosis, ...payload } }))))
   };
-  const currentUser = signal<UserSession | null>({ username: 'tester', name: 'Tester', profileName: 'Perfil', permissions: [], role });
+  const currentUser = signal<UserSession | null>({ username: 'tester', name: 'Tester', profileName: 'Perfil', permissions: [] });
   await TestBed.configureTestingModule({
     imports: [RmasComponent],
     providers: [

@@ -2,8 +2,8 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
-import { NotificationPreferenceResponse, NotificationResponse, NotificationRuleResponse, UserRole } from '../../core/models';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { NotificationPreferenceResponse, NotificationResponse, NotificationRuleResponse } from '../../core/models';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { NotificationService } from '../../core/services/notification.service';
 import { ProfileService } from '../../core/services/profile.service';
 import { NotificationsComponent } from './notifications.component';
@@ -36,7 +36,7 @@ describe('NotificationsComponent', () => {
   let component: Harness;
   let service: Record<string, ReturnType<typeof vi.fn>> & { unreadCount: ReturnType<typeof signal<number>>; summaryLoaded: ReturnType<typeof signal<boolean>>; summaryLoadFailed: ReturnType<typeof signal<boolean>> };
 
-  async function setUp(role: UserRole): Promise<void> {
+  async function setUp(role: LegacyProfileCode): Promise<void> {
     service = {
       unreadCount: signal(1),
       summaryLoaded: signal(true),

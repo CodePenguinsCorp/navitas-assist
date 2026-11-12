@@ -1,8 +1,8 @@
 import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
-import { ProtocolExecutionItemResponse, ProtocolExecutionResponse, ProtocolItemResultResponse, UserRole } from '../../core/models';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { ProtocolExecutionItemResponse, ProtocolExecutionResponse, ProtocolItemResultResponse } from '../../core/models';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { formatBusinessDateTime } from '../../core/utils/date';
 import { RmaProtocolsComponent } from './rma-protocols.component';
@@ -34,7 +34,7 @@ describe('RmaProtocolsComponent checklist', () => {
   let complete: ReturnType<typeof vi.fn>;
   const render = () => { fixture.componentRef.injector.get(ChangeDetectorRef).markForCheck(); fixture.detectChanges(); };
   const text = () => (fixture.nativeElement.textContent as string).replace(/\s+/g, ' ').trim();
-  async function setup(execution = EXECUTION, role: UserRole = 'TECHNICIAN') {
+  async function setup(execution = EXECUTION, role: LegacyProfileCode = 'TECHNICIAN') {
     complete = vi.fn(() => of({ ...execution, status: 'FAILED' }));
     await TestBed.configureTestingModule({ imports: [RmaProtocolsComponent], providers: [
       providePermissions(profilePermissions(role)),

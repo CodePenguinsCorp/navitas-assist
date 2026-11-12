@@ -2,9 +2,9 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ChangeDetectorRef, computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { RmaResponse, UserRole } from '../../core/models';
+import { RmaResponse } from '../../core/models';
 import { Permission } from '../../core/permissions';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { loadingInterceptor, SKIP_GLOBAL_LOADING } from '../../core/interceptors/loading.interceptor';
 import { LoadingService } from '../../core/services/loading.service';
 import { RmaService } from '../../core/services/rma.service';
@@ -14,7 +14,7 @@ import { RmaBlockPanelComponent } from './rma-block-panel.component';
 describe('RmaBlockPanelComponent', () => {
   let fixture: ComponentFixture<RmaBlockPanelComponent>;
   let http: HttpTestingController;
-  const role = signal<UserRole | readonly Permission[]>('TECHNICIAN');
+  const role = signal<LegacyProfileCode | readonly Permission[]>('TECHNICIAN');
 
   beforeEach(async () => {
     role.set('TECHNICIAN');
@@ -186,7 +186,7 @@ describe('RmaBlockPanelComponent', () => {
   };
   const submit = () => { form().dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); render(); };
 
-  it.each((['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as UserRole[]).flatMap((role) => [false, true].map((blocked) => ({ role, blocked }))))('preserves $role permissions with blocked=$blocked', ({ role: profile, blocked }) => {
+  it.each((['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as LegacyProfileCode[]).flatMap((role) => [false, true].map((blocked) => ({ role, blocked }))))('preserves $role permissions with blocked=$blocked', ({ role: profile, blocked }) => {
     role.set(profile);
     load(blocked ? { ...RMA, currentBlock: BLOCK, blockHistory: [BLOCK] } : RMA);
     expect(dialog().open).toBe(true);

@@ -9,8 +9,7 @@ import br.com.navitasassist.access.ProfileSummary;
 
 /**
  * Usuário da sessão ({@code POST /api/auth/login} e {@code GET /api/auth/me}): os dados de {@link UserAccountResponse}
- * mais as permissões efetivas, na ordem do catálogo. {@code role} é provisório (etapa 8A), como em
- * {@link UserAccountResponse}.
+ * mais as permissões efetivas, na ordem do catálogo.
  */
 public record CurrentUserResponse(
     Long id,
@@ -19,7 +18,6 @@ public record CurrentUserResponse(
     ProfileSummary profile,
     List<String> extraPermissions,
     List<String> permissions,
-    String role,
     boolean active,
     Instant createdAt,
     Instant updatedAt
@@ -33,7 +31,6 @@ public record CurrentUserResponse(
             user.profile(),
             user.extraPermissions(),
             List.copyOf(Permission.codes(effectivePermissions)),
-            user.role(),
             user.active(),
             user.createdAt(),
             user.updatedAt()

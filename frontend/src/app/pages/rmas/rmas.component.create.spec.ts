@@ -4,7 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormArray, FormGroup } from '@angular/forms';
 import { provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
-import { ClientResponse, CreateRmaRequest, ProductResponse, RmaResponse, UserRole, UserSession } from '../../core/models';
+import { ClientResponse, CreateRmaRequest, ProductResponse, RmaResponse, UserSession } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { LoadingService } from '../../core/services/loading.service';
@@ -13,7 +13,7 @@ import { RmaService } from '../../core/services/rma.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { buildRma, buildRmaPage } from '../../testing/rma-fixtures';
 import { RmasComponent } from './rmas.component';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
 type CreateFn = (payload: CreateRmaRequest) => Observable<RmaResponse>;
 
@@ -35,7 +35,7 @@ const product: ProductResponse = {
   defaultWarrantyMonths: 12, technicalNotes: null, createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
 };
 
-async function setup(options: { role?: UserRole; create?: CreateFn } = {}) {
+async function setup(options: { role?: LegacyProfileCode; create?: CreateFn } = {}) {
   const role = options.role ?? 'ADMIN';
   const rmaService = {
     list: vi.fn(() => of(buildRmaPage([buildRma()], 0, 20, 1))),
@@ -44,7 +44,7 @@ async function setup(options: { role?: UserRole; create?: CreateFn } = {}) {
     create: vi.fn(options.create ?? ((payload: CreateRmaRequest) => of(buildRma({ id: 2, code: 'RMA-2026-000002', reportedFailure: payload.reportedFailure })))),
     upsertDiagnosis: vi.fn()
   };
-  const currentUser = signal<UserSession | null>({ username: 'tester', name: 'Tester', profileName: 'Perfil', permissions: [], role });
+  const currentUser = signal<UserSession | null>({ username: 'tester', name: 'Tester', profileName: 'Perfil', permissions: [] });
   await TestBed.configureTestingModule({
     imports: [RmasComponent],
     providers: [

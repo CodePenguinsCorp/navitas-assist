@@ -1,6 +1,5 @@
 import type { IconName } from '../shared/icon/icon.component';
 import type { Permission } from './permissions';
-export type UserRole = 'ADMIN' | 'TECHNICIAN' | 'SERVICE_DESK' | 'VIEWER';
 
 export type MetricTone = 'brand' | 'sky' | 'slate' | 'light';
 
@@ -49,8 +48,6 @@ export interface UserSession {
   name: string;
   profileName: string;
   permissions: Permission[];
-  /** Provisório (etapa 8A): some com o campo `role` das respostas. */
-  role?: UserRole;
 }
 
 export interface LoginPayload {
@@ -65,8 +62,6 @@ export interface UserAccountResponse {
   profile: ProfileRef;
   /** Extras do usuário, na ordem do catálogo; podem repetir permissões do perfil. */
   extraPermissions: string[];
-  /** Provisório (etapa 8A): `legacyCode` do perfil, ou `null` em perfil personalizado. */
-  role?: UserRole | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;

@@ -3,7 +3,7 @@ import { ComponentFixture, DeferBlockState, TestBed } from '@angular/core/testin
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
-import { DiagnosisResponse, RmaResponse, UserRole, UserSession, WarrantyStatus } from '../../core/models';
+import { DiagnosisResponse, RmaResponse, UserSession, WarrantyStatus } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { LoadingService } from '../../core/services/loading.service';
@@ -14,7 +14,7 @@ import { SlaClockService } from '../../core/services/sla-clock.service';
 import { RmaPartsPanelComponent } from '../../shared/rma-parts-panel/rma-parts-panel.component';
 import { buildRma, buildRmaItem, buildRmaPage } from '../../testing/rma-fixtures';
 import { RmasComponent } from './rmas.component';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
 interface DetailHarness {
   openDetailsModal(rma: RmaResponse): void;
@@ -57,7 +57,7 @@ const fullRma = buildRma({
   ]
 });
 
-async function setup(options: { role?: UserRole } = {}) {
+async function setup(options: { role?: LegacyProfileCode } = {}) {
   const role = options.role ?? 'ADMIN';
   const rmaService = {
     list: vi.fn(() => of(buildRmaPage([fullRma], 0, 20, 1))),
@@ -71,7 +71,7 @@ async function setup(options: { role?: UserRole } = {}) {
     list: vi.fn(() => of([]))
   };
   const protocolService = { listExecutions: vi.fn(() => of([])), listTemplates: vi.fn(() => of([])) };
-  const currentUser = signal<UserSession | null>({ username: 'tester', name: 'Tester', profileName: 'Perfil', permissions: [], role });
+  const currentUser = signal<UserSession | null>({ username: 'tester', name: 'Tester', profileName: 'Perfil', permissions: [] });
   await TestBed.configureTestingModule({
     imports: [RmasComponent],
     providers: [

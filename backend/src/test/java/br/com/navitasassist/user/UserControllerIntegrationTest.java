@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -122,7 +121,8 @@ class UserControllerIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.username").value("operator.updated"))
             .andExpect(jsonPath("$.fullName").value("Updated Operator"))
-            .andExpect(jsonPath("$.role").value("TECHNICIAN"));
+            .andExpect(jsonPath("$.profile.name").value("Técnico"))
+            .andExpect(jsonPath("$.role").doesNotExist());
 
         UserAccount updatedUser = userAccountRepository.findById(user.getId()).orElseThrow();
         assertTrue(passwordEncoder.matches("old-password", updatedUser.getPasswordHash()));
@@ -443,7 +443,7 @@ class UserControllerIntegrationTest {
     }
 
     @Test
-    void responseHasProfileExtrasAndProvisionalRole() throws Exception {
+    void responseHasProfileAndExtrasWithoutRole() throws Exception {
         AccessProfile custom = AccessTestSupport.saveProfile(accessProfiles, CUSTOM_PROFILE, "rma.ver");
         Map<String, Object> body = Map.of("username", "custom.user", "fullName", "Custom User", "password", "password123",
             "profileId", custom.getId(), "extraPermissions", List.of("relatorios.ver", "rma.abrir"), "active", true);
@@ -454,7 +454,7 @@ class UserControllerIntegrationTest {
             .andExpect(jsonPath("$.profile.id").value(custom.getId()))
             .andExpect(jsonPath("$.profile.name").value(CUSTOM_PROFILE))
             .andExpect(jsonPath("$.extraPermissions", contains("rma.abrir", "relatorios.ver")))
-            .andExpect(jsonPath("$.role").value(nullValue()))
+            .andExpect(jsonPath("$.role").doesNotExist())
             .andExpect(jsonPath("$.passwordHash").doesNotExist());
         assertNull(legacyRoleColumn(userAccountRepository.findByUsernameIgnoreCase("custom.user").orElseThrow().getId()));
 
@@ -462,9 +462,8 @@ class UserControllerIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.content[0].profile.name").value(CUSTOM_PROFILE))
             .andExpect(jsonPath("$.content[0].extraPermissions", contains("rma.abrir", "relatorios.ver")))
-            .andExpect(jsonPath("$.content[0].role").value(nullValue()));
+            .andExpect(jsonPath("$.content[0].role").doesNotExist());
         mockMvc.perform(get("/api/users").param("query", "admin").with(asProfile("admin", "ADMIN")))
-            .andExpect(jsonPath("$.content[0].role").value("ADMIN"))
             .andExpect(jsonPath("$.content[0].profile.name").value("Administrador"));
     }
 
@@ -577,7 +576,7 @@ class UserControllerIntegrationTest {
                     "profileId", custom.getId(), "active", true))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.profile.id").value(custom.getId()))
-            .andExpect(jsonPath("$.role").value(nullValue()));
+            .andExpect(jsonPath("$.role").doesNotExist());
         assertEquals(custom.getId(), userAccountRepository.findById(account.getId()).orElseThrow().getProfile().getId());
     }
 

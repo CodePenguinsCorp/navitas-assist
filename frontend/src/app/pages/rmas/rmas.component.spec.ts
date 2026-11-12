@@ -29,7 +29,6 @@ describe('RmasComponent form', () => {
       name: 'Tester',
       profileName: 'Administrador',
       permissions: [],
-      role: 'ADMIN',
     });
     await TestBed.configureTestingModule({
       imports: [RmasComponent],
@@ -199,7 +198,7 @@ describe('RmasComponent pending editor lifecycle', () => {
     TestBed.inject(AuthService).restoreSession().subscribe();
     http.expectOne('/api/auth/me').flush({
       id: 1, username: 'tester', fullName: 'Tester', profile: { id: 1, name: 'Administrador' }, extraPermissions: [],
-      permissions: profilePermissions('ADMIN'), role: 'ADMIN', active: true,
+      permissions: profilePermissions('ADMIN'), active: true,
       createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt
     });
     fixture = TestBed.createComponent(RmasComponent);

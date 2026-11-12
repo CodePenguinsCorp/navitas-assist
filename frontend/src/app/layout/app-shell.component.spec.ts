@@ -10,7 +10,7 @@ import { AppShellComponent } from './app-shell.component';
 
 const AUTH_USER: AuthUserResponse = {
   id: 1, username: 'admin', fullName: 'Administrador', profile: { id: 1, name: 'Administrador' }, extraPermissions: [],
-  permissions: ['rma.ver'], role: 'ADMIN', active: true,
+  permissions: ['rma.ver'], active: true,
   createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
 };
 
@@ -202,19 +202,19 @@ describe('AppShellComponent menu by permission', () => {
     ['TECHNICIAN', { 'Operação': operation, 'Relatórios': ['Relatórios'] }],
     ['VIEWER', { 'Operação': operation, 'Relatórios': ['Relatórios'] }],
   ] as [LegacyProfileCode, Record<string, string[]>][])('shows the %s menu', async (code, expected) => {
-    const page = await render({ permissions: [...profilePermissions(code)], role: code });
+    const page = await render({ permissions: [...profilePermissions(code)] });
 
     expect(menu(page)).toEqual(expected);
   });
 
   it('shows only notifications when the profile grants no screen', async () => {
-    const page = await render({ permissions: [], role: null });
+    const page = await render({ permissions: [] });
 
     expect(menu(page)).toEqual({ 'Operação': ['Notificações'] });
   });
 
   it('shows the profile name in the sidebar footer', async () => {
-    const page = await render({ profile: { id: 9, name: 'Suporte N1' }, role: null });
+    const page = await render({ profile: { id: 9, name: 'Suporte N1' } });
 
     expect(page.querySelector('.sidebar-user__meta span')?.textContent?.trim()).toBe('Suporte N1');
   });

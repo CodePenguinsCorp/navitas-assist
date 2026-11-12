@@ -3,8 +3,8 @@ import { ChangeDetectorRef, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
-import { NotificationResponse, UserRole } from '../../core/models';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { NotificationResponse } from '../../core/models';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { NotificationService } from '../../core/services/notification.service';
 import { ProfileService } from '../../core/services/profile.service';
 import { SlaClockService } from '../../core/services/sla-clock.service';
@@ -41,7 +41,7 @@ describe('NotificationsComponent inbox loading', () => {
   const checkbox = (label: string) => Array.from(root().querySelectorAll('label')).find((item) => item.textContent?.trim() === label)!.querySelector('input')!;
   const toggle = (label: string) => { checkbox(label).dispatchEvent(new Event('change')); render(); };
 
-  async function setup(sources: { role?: UserRole; unread?: number; list?: Source<NotificationResponse[]>[]; markAllRead?: Observable<void>; snooze?: Observable<NotificationResponse>; markRead?: Observable<NotificationResponse> } = {}) {
+  async function setup(sources: { role?: LegacyProfileCode; unread?: number; list?: Source<NotificationResponse[]>[]; markAllRead?: Observable<void>; snooze?: Observable<NotificationResponse>; markRead?: Observable<NotificationResponse> } = {}) {
     clock = signal(Date.parse('2026-10-24T13:00:00Z'));
     const list = vi.fn(() => of([NOTIFICATION]));
     for (const source of sources.list ?? []) {

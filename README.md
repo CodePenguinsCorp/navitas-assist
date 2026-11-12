@@ -66,7 +66,7 @@ O prazo é registrado em cada novo item para preservar a garantia quando o cadas
 
 O número da nota fiscal permanece disponível na abertura e nos detalhes do RMA. Não há campo de arquivo da NF nem de “Recebido por” na interface. O backend registra automaticamente o nome de usuário autenticado como recebedor na criação e preserva esse registro nas edições; `receivedBy` é somente leitura na API.
 
-Cada RMA pode ter um técnico responsável ou permanecer sem responsável. ADMIN e SERVICE_DESK podem atribuir, trocar ou remover o responsável diretamente no Kanban; somente usuários ativos com perfil TECHNICIAN aparecem como novas opções. A inativação posterior não apaga a atribuição existente.
+Cada RMA pode ter um técnico responsável ou permanecer sem responsável. Quem tem a permissão `rma.responsavel` pode atribuir, trocar ou remover o responsável diretamente no Kanban; somente usuários ativos com a permissão efetiva `rma.atribuivel` (do perfil ou extra) aparecem como novas opções. A inativação posterior, ou a perda da permissão, não apaga a atribuição existente.
 
 Toda alteração registra o responsável anterior, o novo responsável, o autor e o horário. O Kanban permite filtrar por técnico ativo ou por RMAs sem responsável, e os detalhes do RMA exibem o histórico completo de atribuições.
 
@@ -78,7 +78,7 @@ As rotas em `/api/kanban-views` usam sempre o usuário da sessão; o cliente nã
 
 ## Relatórios reais de RMA (NAV-27)
 
-A tela Relatórios consulta `GET /api/reports/rmas`. ADMIN, TECHNICIAN e VIEWER têm acesso; sem sessão a API responde `401`, e SERVICE_DESK recebe `403`, conforme os perfis da navegação existente.
+A tela Relatórios consulta `GET /api/reports/rmas` e exige a permissão `relatorios.ver` (nos perfis migrados: Administrador, Técnico e Consulta). Sem sessão a API responde `401`; sem a permissão, `403`.
 
 Filtros opcionais combinados: `entryFrom` e `entryTo` (`YYYY-MM-DD`, inclusivos, sobre a **data de entrada**, inclusive no relatório de devoluções), `status` (enum de RMA) e `clientId` (inteiro positivo). Sem período, a consulta usa os **últimos 90 dias** (até hoje em America/Sao_Paulo); com só uma das datas, a outra é completada (90 dias antes do fim, ou até hoje, limitado a 366 dias). O período máximo é de **366 dias**. Parâmetros inválidos, intervalo invertido ou período maior retornam `400`. O retorno é `{ generatedAt, entryFrom, entryTo, rmas }`, com o período efetivamente aplicado e os mesmos campos de `RmaResponse`; cliente inexistente retorna `rmas: []`. A ordenação é por entrada decrescente e ID decrescente. A consulta carrega cliente, produto, responsável e diagnóstico junto com os RMAs, e itens e históricos em consultas em lote, com número fixo de consultas por relatório. O seletor de clientes usa `GET /api/clients/options` (catálogo completo, como na NAV-28), independentemente do resultado filtrado.
 
@@ -92,7 +92,7 @@ Instantes são exibidos em `America/Sao_Paulo`. Datas civis preservam o dia rece
 **Exportação:** antes de implementar, validar com o produto os exemplos, colunas, volume e política de acesso para PDF A4 de laudo por RMA e CSV UTF-8 das consultas tabulares (datas ISO e proteção contra fórmulas). A especificação proposta e seus limites estão em `docs/superpowers/specs/2026-10-23-nav-27-design.md`; o formato ainda não foi homologado.
 ## Impedimentos dos RMAs (NAV-33)
 
-Use **Ver impedimentos** no card para consultar o bloqueio atual e todos os episódios anteriores, sem sair do quadro. ADMIN, SERVICE_DESK e TECHNICIAN podem bloquear com motivo obrigatório (até 1000 caracteres) e categoria opcional (até 80), ou desbloquear com nota de resolução obrigatória (até 1000). VIEWER pode consultar. A API aplica as mesmas permissões e exige CSRF nas alterações.
+Use **Ver impedimentos** no card para consultar o bloqueio atual e todos os episódios anteriores, sem sair do quadro. Quem tem a permissão `rma.impedimentos` pode bloquear com motivo obrigatório (até 1000 caracteres) e categoria opcional (até 80), ou desbloquear com nota de resolução obrigatória (até 1000). Quem tem só `rma.ver` pode consultar. A API aplica as mesmas permissões e exige CSRF nas alterações.
 
 Bloquear não muda a coluna nem impede movimentação. O SLA continua correndo; uma eventual pausa depende de decisão de produto. Cards mostram texto, motivo resumido e tempo bloqueado. O filtro de impedimentos combina com os demais filtros e é preservado nas visualizações salvas. Fechar o painel mantém os filtros e a seleção. Os detalhes do RMA também apresentam o histórico completo.
 
@@ -104,7 +104,7 @@ A tabela de episódios e o filtro salvo foram incluídos na V1, conforme o banco
 
 Marque cards em qualquer coluna e use **Selecionar visíveis** para incluir os itens mostrados pelos filtros. A seleção permanece ao mudar os filtros; o contador informa quantos selecionados estão ocultos. Use **Limpar seleção** para começar de novo. Antes de aplicar, a confirmação mostra a ação, a quantidade e os RMAs envolvidos. O resultado de cada RMA aparece separadamente; falhas continuam selecionadas para revisão. O quadro atualiza somente os itens afetados.
 
-ADMIN e SERVICE_DESK podem alterar status, prioridade e responsável em lote. TECHNICIAN pode alterar somente status. VIEWER não pode selecionar nem alterar. Cada atualização passa pelas permissões da API e registra o histórico do RMA: etapas e prioridades no histórico de status; atribuições no histórico de responsáveis.
+Cada ação em lote exige a permissão correspondente: status com `rma.status`, prioridade com `rma.editar` e responsável com `rma.responsavel`. Sem nenhuma delas não é possível selecionar nem alterar. Cada atualização passa pelas permissões da API e registra o histórico do RMA: etapas e prioridades no histórico de status; atribuições no histórico de responsáveis.
 
 Na alteração de **status em lote**, qualquer etapa pode ser escolhida para os RMAs selecionados, inclusive uma etapa anterior ou a reabertura de um RMA encerrado. O histórico registra cada mudança. A API ainda confere a etapa atual de cada card para evitar sobrescrever uma alteração feita em outra sessão depois da seleção; nesse caso, somente o card desatualizado falha e é recarregado.
 
@@ -128,7 +128,7 @@ A ordem é fixa e estável (desempate por `id`): RMAs na ordem da fila (priorida
 | `/api/rmas` | `query`, `status` |
 | `/api/clients` | `query`, `hasDocument`, `hasEmail` |
 | `/api/products` | `query`, `category`, `hasFirmware` |
-| `/api/users` (ADMIN) | `query`, `role`, `active` |
+| `/api/users` (`usuarios.gerir`) | `query`, `profileId`, `active` |
 
 Para dados que não podem ficar incompletos há rotas sem paginação: `GET /api/rmas/board` (Kanban e dashboard, aceita `query` e `status`), `GET /api/clients/options` e `GET /api/products/options` (seletores do formulário de RMA, ordenados por nome). Os totais dos cartões das telas vêm de `GET /api/clients/summary`, `/api/products/summary` (inclui `categories` para o filtro) e `/api/users/summary`, calculados sobre todos os registros. As autorizações são as mesmas dos demais `GET` do recurso.
 
@@ -339,7 +339,15 @@ Hashes BCrypt existentes permanecem inalterados. Caso exista uma senha históric
 
 ## Contas de acesso
 
-A aplicação não cria, recria ou altera usuários durante a inicialização. As contas e os hashes de senha ficam exclusivamente no banco. Em um banco novo, o primeiro administrador deve ser inserido explicitamente com um hash BCrypt; depois, o cadastro e a manutenção das contas são feitos pela tela Usuários. Recriar o banco não recria uma conta padrão.
+A aplicação não cria, recria ou altera usuários durante a inicialização. As contas e os hashes de senha ficam exclusivamente no banco. Em um banco novo, o primeiro administrador deve ser inserido explicitamente com um hash BCrypt, vinculado ao perfil migrado Administrador; depois, o cadastro e a manutenção das contas são feitos pelas telas Usuários e Perfis. Recriar o banco não recria uma conta padrão.
+
+```sql
+INSERT INTO user_accounts (username, full_name, password_hash, active, created_at, updated_at, profile_id)
+VALUES ('admin', 'Administrador', '<hash BCrypt>', TRUE, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6),
+        (SELECT id FROM access_profiles WHERE legacy_code = 'ADMIN'));
+```
+
+A coluna legada `role` não é mais preenchida (aceita `NULL` desde a V10).
 
 Fora dos profiles `local` e `test`, somente `DB_URL`, `DB_USER` e `DB_PASSWORD` são obrigatórios. O ambiente de produção usa validação de schema e não imprime SQL nem credenciais nos logs.
 
@@ -347,18 +355,97 @@ Fora dos profiles `local` e `test`, o backend recusa senhas de banco publicadas 
 
 ## Autorização da API
 
-| Recurso/operação | ADMIN | SERVICE_DESK | TECHNICIAN | VIEWER |
-|:---|:---:|:---:|:---:|:---:|
-| Consultar clientes, produtos e RMAs | Sim | Sim | Sim | Sim |
-| Criar, alterar ou excluir clientes e produtos | Sim | Sim | Não | Não |
-| Abrir ou alterar dados gerais de RMA | Sim | Sim | Não | Não |
-| Alterar o status de RMA | Sim | Sim | Sim | Não |
-| Atribuir ou remover responsável do RMA | Sim | Sim | Não | Não |
-| Registrar ou alterar diagnóstico | Sim | Não | Sim | Não |
-| Gerenciar as próprias visualizações do Kanban | Sim | Sim | Sim | Sim |
-| Gerenciar usuários | Sim | Não | Não | Não |
+A API autoriza por **permissão**, não por perfil. As permissões efetivas de um usuário são as do seu perfil mais as permissões extras dele; são recalculadas a cada requisição (ver **Autenticação e Sessão**).
 
-Requisições sem autenticação recebem `401`; usuários autenticados sem permissão recebem `403`. Operações de API não classificadas explicitamente ficam restritas a `ADMIN`.
+| Recurso/operação | Permissão |
+|:---|:---|
+| Consultar clientes, produtos, peças e protocolos (`GET`) | qualquer usuário autenticado |
+| Consultar RMAs, Kanban e dashboard (`GET /api/rmas/**`) | `rma.ver` |
+| Criar, alterar ou excluir clientes e produtos | `cadastros.editar` |
+| Abrir RMA | `rma.abrir` |
+| Alterar dados gerais de RMA | `rma.editar` |
+| Alterar o status de RMA (inclusive em lote) | `rma.status` |
+| Atribuir ou remover responsável do RMA | `rma.responsavel` |
+| Registrar ou alterar diagnóstico | `rma.diagnosticar` |
+| Registrar e resolver impedimentos | `rma.impedimentos` |
+| Cadastrar peças e movimentar estoque | `pecas.movimentar` |
+| Reservar, alocar, consumir e cancelar peças nos RMAs | `pecas.reservar` |
+| Executar protocolos nos RMAs | `protocolos.executar` |
+| Gerenciar modelos de protocolo | `protocolos.catalogo` |
+| Relatórios (`GET /api/reports/rmas`) | `relatorios.ver` |
+| Gerenciar usuários (`/api/users/**`) | `usuarios.gerir` |
+| Gerenciar perfis (`/api/profiles/**`) | `perfis.gerir` |
+| Regras de notificação (`/api/notification-rules/**`) | `notificacoes.regras` |
+| Opções de perfil (`GET /api/profiles/options`) | qualquer uma de `perfis.gerir`, `usuarios.gerir`, `notificacoes.regras` |
+| Catálogo de permissões (`GET /api/permissions`) | qualquer uma de `perfis.gerir`, `usuarios.gerir` |
+| Visualizações do Kanban, notificações pessoais, técnicos atribuíveis, `/api/auth/me` e logout | qualquer usuário autenticado |
+
+Requisições sem autenticação recebem `401`; usuários autenticados sem permissão recebem `403`. Operações de API não classificadas explicitamente exigem `usuarios.gerir` **e** `perfis.gerir`.
+
+### Perfis e permissões
+
+Um perfil é um nome mais um conjunto de permissões de um catálogo fixo; cada usuário tem um perfil e, opcionalmente, permissões extras. Perfis são gerenciados na tela **Perfis** (`perfis.gerir`), e o perfil e as extras de cada usuário na tela **Usuários**. Ninguém concede permissão que não tem, e o sistema não permite ficar sem um usuário ativo com `usuarios.gerir` e `perfis.gerir`.
+
+A migration `V8` cria os 4 perfis abaixo a partir dos antigos roles (A = Administrador/`ADMIN`, S = Atendimento/`SERVICE_DESK`, T = Técnico/`TECHNICIAN`, V = Consulta/`VIEWER`), com exatamente o acesso que cada role tinha. Esses perfis migrados não podem ser excluídos.
+
+| Código | Módulo | Rótulo | A | S | T | V |
+|:---|:---|:---|:-:|:-:|:-:|:-:|
+| `rma.ver` | RMAs | Ver RMAs, Kanban e dashboard | ✓ | ✓ | ✓ | ✓ |
+| `rma.abrir` | RMAs | Abrir RMAs | ✓ | ✓ | | |
+| `rma.editar` | RMAs | Alterar dados gerais e prioridade | ✓ | ✓ | | |
+| `rma.status` | RMAs | Alterar status | ✓ | ✓ | ✓ | |
+| `rma.responsavel` | RMAs | Atribuir responsável | ✓ | ✓ | | |
+| `rma.atribuivel` | RMAs | Pode ser responsável por RMAs | | | ✓ | |
+| `rma.diagnosticar` | RMAs | Registrar diagnóstico | ✓ | | ✓ | |
+| `rma.impedimentos` | RMAs | Registrar e resolver impedimentos | ✓ | ✓ | ✓ | |
+| `cadastros.ver` | Clientes e produtos | Consultar clientes e produtos | ✓ | ✓ | ✓ | ✓ |
+| `cadastros.editar` | Clientes e produtos | Criar, alterar e excluir clientes e produtos | ✓ | ✓ | | |
+| `pecas.ver` | Peças | Consultar peças e estoque | ✓ | ✓ | ✓ | ✓ |
+| `pecas.movimentar` | Peças | Cadastrar peças e movimentar estoque | ✓ | ✓ | | |
+| `pecas.reservar` | Peças | Reservar e aplicar peças nos RMAs | ✓ | | ✓ | |
+| `protocolos.ver` | Protocolos técnicos | Consultar protocolos e execuções | ✓ | ✓ | ✓ | ✓ |
+| `protocolos.executar` | Protocolos técnicos | Executar protocolos nos RMAs | ✓ | | ✓ | |
+| `protocolos.catalogo` | Protocolos técnicos | Gerenciar modelos de protocolo | ✓ | | | |
+| `relatorios.ver` | Relatórios | Ver relatórios | ✓ | | ✓ | ✓ |
+| `usuarios.gerir` | Administração | Gerenciar usuários | ✓ | | | |
+| `perfis.gerir` | Administração | Gerenciar perfis e permissões | ✓ | | | |
+| `notificacoes.regras` | Administração | Configurar regras de notificação | ✓ | | | |
+
+Totais: Administrador 19 (todas menos `rma.atribuivel`), Atendimento 11, Técnico 11, Consulta 5. `cadastros.ver`, `pecas.ver` e `protocolos.ver` controlam telas e menus; as leituras `GET` correspondentes na API continuam abertas a qualquer usuário autenticado.
+
+**Migrations da etapa.** `V8__create_access_profiles.sql` cria `access_profiles`, `access_profile_permissions` e `user_account_extra_permissions` e vincula cada usuário ao perfil do seu role; `V9__notification_recipient_profiles.sql` converte os destinatários das regras de notificação para perfis; `V10__relax_legacy_role_columns.sql` torna `user_accounts.role` e `notification_rules.recipient_roles` colunas legadas, nulas e sem uso pelo código. As colunas legadas só serão removidas numa migration posterior, depois da conferência da implantação.
+
+**Backup obrigatório antes da V8.** Em qualquer banco com dados, faça um `mysqldump` completo antes de subir esta versão. O DDL do MySQL não é transacional: se uma migration falhar no meio, restaure o dump ou apague os objetos criados parcialmente pela versão que falhou e remova a linha com falha (`DELETE FROM flyway_schema_history WHERE success = 0`), corrija e reaplique.
+
+**Rollback.** O Flyway Community não tem undo; restaurar o backup tirado antes da V8 é o caminho preferido. Sem backup, e enquanto as colunas legadas existirem, aplique em ordem:
+
+```sql
+UPDATE user_accounts u SET role = CASE
+  WHEN (EXISTS (SELECT 1 FROM access_profile_permissions pp WHERE pp.profile_id = u.profile_id AND pp.permission = 'usuarios.gerir')
+        OR EXISTS (SELECT 1 FROM user_account_extra_permissions ep WHERE ep.user_id = u.id AND ep.permission = 'usuarios.gerir'))
+   AND (EXISTS (SELECT 1 FROM access_profile_permissions pp WHERE pp.profile_id = u.profile_id AND pp.permission = 'perfis.gerir')
+        OR EXISTS (SELECT 1 FROM user_account_extra_permissions ep WHERE ep.user_id = u.id AND ep.permission = 'perfis.gerir'))
+  THEN 'ADMIN'
+  ELSE COALESCE((SELECT p.legacy_code FROM access_profiles p WHERE p.id = u.profile_id), 'VIEWER') END;
+ALTER TABLE user_accounts MODIFY COLUMN role VARCHAR(30) NOT NULL;
+ALTER TABLE user_accounts ADD CONSTRAINT ck_user_accounts_role CHECK (role IN ('ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER'));
+UPDATE notification_rules r SET recipient_roles = CONCAT_WS(',',
+  CASE WHEN EXISTS (SELECT 1 FROM notification_rule_recipient_profiles rp JOIN access_profiles p ON p.id = rp.profile_id WHERE rp.rule_id = r.id AND p.legacy_code = 'ADMIN') THEN 'ADMIN' END,
+  CASE WHEN EXISTS (SELECT 1 FROM notification_rule_recipient_profiles rp JOIN access_profiles p ON p.id = rp.profile_id WHERE rp.rule_id = r.id AND p.legacy_code = 'SERVICE_DESK') THEN 'SERVICE_DESK' END,
+  CASE WHEN EXISTS (SELECT 1 FROM notification_rule_recipient_profiles rp JOIN access_profiles p ON p.id = rp.profile_id WHERE rp.rule_id = r.id AND p.legacy_code = 'TECHNICIAN') THEN 'TECHNICIAN' END,
+  CASE WHEN EXISTS (SELECT 1 FROM notification_rule_recipient_profiles rp JOIN access_profiles p ON p.id = rp.profile_id WHERE rp.rule_id = r.id AND p.legacy_code = 'VIEWER') THEN 'VIEWER' END);
+ALTER TABLE notification_rules MODIFY COLUMN recipient_roles VARCHAR(120) NOT NULL;
+ALTER TABLE user_accounts DROP FOREIGN KEY fk_user_accounts_profile;
+DROP INDEX idx_user_accounts_profile ON user_accounts;
+ALTER TABLE user_accounts DROP COLUMN profile_id;
+DROP TABLE notification_rule_recipient_profiles;
+DROP TABLE user_account_extra_permissions;
+DROP TABLE access_profile_permissions;
+DROP TABLE access_profiles;
+DELETE FROM flyway_schema_history WHERE version IN ('8', '9', '10');
+```
+
+Depois, volte o código para o commit anterior à etapa. Quem tinha permissões de administrador volta como `ADMIN`; usuários de perfis personalizados viram `VIEWER`; extras e perfis personalizados se perdem. Depois da V9 o código grava os destinatários das regras só em `notification_rule_recipient_profiles`, por isso reverter o código sem o `UPDATE notification_rules … CONCAT_WS` acima faz o código antigo ler destinatários desatualizados. Depois da remoção das colunas legadas, o rollback exige o backup.
 
 ## Produção
 
@@ -381,7 +468,7 @@ Exemplo para deploy manual:
 
 ## Schema do banco
 
-O projeto ainda não possui banco de produção nem dados que precisem ser preservados. O Flyway cria o schema inicial em um banco vazio e o Hibernate apenas valida o resultado (`ddl-auto=validate`). Não existe migração ou backfill de dados legados.
+O Flyway cria o schema em um banco vazio e aplica as migrations seguintes; o Hibernate apenas valida o resultado (`ddl-auto=validate`). As migrations V8 a V10 (perfis e permissões) convertem os dados existentes; veja o backup obrigatório e o rollback em **Perfis e permissões**.
 
 Quando o schema local ficar incompatível, descarte o volume de desenvolvimento e recrie a stack. O primeiro comando remove todos os dados locais:
 
@@ -502,8 +589,8 @@ As demais etapas preservam os padrões. Prazos e substituições aceitam de 1 a 
 
 Modelos versionados de protocolo por produto ou categoria, executados durante o RMA. A migration `V6__create_technical_protocols.sql` cria `protocol_templates`, `protocol_template_versions`, `protocol_template_items`, `rma_protocol_executions` e `rma_protocol_item_results`.
 
-- **Modelos** (`/api/protocols/templates`, escrita somente ADMIN): etapas, instruções, itens obrigatórios, verificação, texto ou medição (unidade, casas decimais, mínimo e máximo), resultado esperado e exigência de evidência. Cada alteração cria uma nova versão imutável; execuções já iniciadas continuam na versão em que começaram.
-- **Execução** (`/api/protocols/rmas/{rmaId}/executions`, ADMIN e TECHNICIAN): vincula a versão atual ao RMA e registra, por item, executor, início, conclusão, resultado, medição (`BigDecimal`, devolvida como texto com a precisão configurada), texto e evidência (texto ou referência).
+- **Modelos** (`/api/protocols/templates`, escrita com `protocolos.catalogo`): etapas, instruções, itens obrigatórios, verificação, texto ou medição (unidade, casas decimais, mínimo e máximo), resultado esperado e exigência de evidência. Cada alteração cria uma nova versão imutável; execuções já iniciadas continuam na versão em que começaram.
+- **Execução** (`/api/protocols/rmas/{rmaId}/executions`, com `protocolos.executar`): vincula a versão atual ao RMA e registra, por item, executor, início, conclusão, resultado, medição (`BigDecimal`, devolvida como texto com a precisão configurada), texto e evidência (texto ou referência).
 - **Validações no backend**: obrigatórios pendentes impedem a conclusão; medições com mais casas que o configurado ou fora da faixa não podem ser aprovadas; evidência exigida e texto obrigatório são verificados.
 - **Reprovação e repetição**: reprovar ou marcar como não aplicável exige justificativa; repetir um item cria uma nova tentativa (também com justificativa) e o histórico das anteriores é mantido.
 - **Bloqueio de status**: cada versão define as etapas do RMA (`blockedStatuses`) bloqueadas enquanto a execução mais recente daquele protocolo tiver itens obrigatórios não aprovados.

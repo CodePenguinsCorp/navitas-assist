@@ -1,8 +1,8 @@
 import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
-import { ProtocolExecutionResponse, ProtocolTemplateResponse, UserRole } from '../../core/models';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { ProtocolExecutionResponse, ProtocolTemplateResponse } from '../../core/models';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { RmaProtocolsComponent } from './rma-protocols.component';
 
@@ -32,7 +32,7 @@ describe('RmaProtocolsComponent loading', () => {
   const button = (label: string) => Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button')).find((b) => b.textContent?.trim() === label);
   const component = () => fixture.componentInstance as unknown as Harness;
 
-  async function setup(sources: { role?: UserRole; executions?: Observable<ProtocolExecutionResponse[]>; templates?: Observable<ProtocolTemplateResponse[]> } = {}) {
+  async function setup(sources: { role?: LegacyProfileCode; executions?: Observable<ProtocolExecutionResponse[]>; templates?: Observable<ProtocolTemplateResponse[]> } = {}) {
     service = {
       listExecutions: vi.fn(() => sources.executions ?? of([EXECUTION])), listTemplates: vi.fn(() => sources.templates ?? of([TEMPLATE])),
       startExecution: vi.fn(() => of(EXECUTION)), recordResult: vi.fn(() => of(EXECUTION)), complete: vi.fn(() => of(EXECUTION))
@@ -171,7 +171,7 @@ describe('RmaProtocolsComponent loading', () => {
     expect(button('Salvar resultado')?.disabled).toBe(false); expect(text()).toContain('Revisar resultado de B.');
   });
 
-  it.each(['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER'] as UserRole[])('preserves catalog permission for %s', async (role) => {
+  it.each(['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER'] as LegacyProfileCode[])('preserves catalog permission for %s', async (role) => {
     await setup({ role }); expect(service.listTemplates).toHaveBeenCalledTimes(['ADMIN', 'TECHNICIAN'].includes(role) ? 1 : 0);
     expect(text()).toContain('Bancada PWM · v3');
   });

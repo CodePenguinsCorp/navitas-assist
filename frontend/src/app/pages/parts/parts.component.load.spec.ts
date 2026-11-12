@@ -1,8 +1,8 @@
 import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
-import { PartReplenishmentResponse, PartReservationResponse, PartResponse, UserRole } from '../../core/models';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { PartReplenishmentResponse, PartReservationResponse, PartResponse } from '../../core/models';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { PartService } from '../../core/services/part.service';
 import { PartsComponent } from './parts.component';
 
@@ -44,7 +44,7 @@ describe('PartsComponent snapshot loading', () => {
     return input;
   };
 
-  async function setup(sources: { role?: UserRole; parts?: Observable<PartResponse[]>; replenishment?: Observable<PartReplenishmentResponse[]>; pending?: Observable<PartReservationResponse[]> } = {}) {
+  async function setup(sources: { role?: LegacyProfileCode; parts?: Observable<PartResponse[]>; replenishment?: Observable<PartReplenishmentResponse[]>; pending?: Observable<PartReservationResponse[]> } = {}) {
     service = {
       list: vi.fn(() => sources.parts ?? of([PART])),
       listReplenishment: vi.fn(() => sources.replenishment ?? of([REPLENISHMENT])),
@@ -187,7 +187,7 @@ describe('PartsComponent snapshot loading', () => {
     pending.next([PENDING]); pending.complete(); render(); expect(text()).toContain('Capacitor');
   });
 
-  it.each(['ADMIN', 'VIEWER'] as UserRole[])('preserves a real empty catalog for %s', async (role) => {
+  it.each(['ADMIN', 'VIEWER'] as LegacyProfileCode[])('preserves a real empty catalog for %s', async (role) => {
     await setup({ role, parts: of([]), replenishment: of([]), pending: of([]) });
     expect(text()).toContain('Nenhuma peça cadastrada');
     tab('Reposição');

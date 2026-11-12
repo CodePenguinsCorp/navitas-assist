@@ -6,14 +6,13 @@ import {
   ClientSummaryResponse,
   ProductSummaryResponse,
   RmaResponse,
-  UserRole,
   UserSummaryResponse,
   WarrantyStatus
 } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
 import { DashboardComponent } from './dashboard.component';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
 function rmaFactory(overrides: Partial<RmaResponse> = {}): RmaResponse {
   return {
@@ -52,7 +51,7 @@ describe('DashboardComponent load states', () => {
   const failure = () => throwError(() => new HttpErrorResponse({ status: 500 }));
 
   async function setup(sources: {
-    role?: UserRole;
+    role?: LegacyProfileCode;
     board?: Observable<RmaResponse[]>;
     clients?: Observable<ClientSummaryResponse>;
     products?: Observable<ProductSummaryResponse>;
@@ -130,7 +129,7 @@ describe('DashboardComponent load states', () => {
     expect(catalogService.getClientSummary).toHaveBeenCalledTimes(2);
   });
 
-  it.each(['TECHNICIAN', 'SERVICE_DESK', 'VIEWER'] as UserRole[])('preserves a single unfiltered board request without user summary for %s', async (role) => {
+  it.each(['TECHNICIAN', 'SERVICE_DESK', 'VIEWER'] as LegacyProfileCode[])('preserves a single unfiltered board request without user summary for %s', async (role) => {
     await setup({ role });
     expect(rmaService.listBoard).toHaveBeenCalledTimes(1);
     expect(rmaService.listBoard).toHaveBeenCalledWith();

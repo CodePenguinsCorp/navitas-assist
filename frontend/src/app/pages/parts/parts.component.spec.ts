@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
-import { PartMovementResponse, PartResponse, UserRole } from '../../core/models';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { PartMovementResponse, PartResponse } from '../../core/models';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { PartService } from '../../core/services/part.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { PartsComponent } from './parts.component';
@@ -37,7 +37,7 @@ describe('PartsComponent', () => {
   let component: PartsHarness;
   let partService: Record<string, ReturnType<typeof vi.fn>>;
 
-  async function setUp(role: UserRole): Promise<void> {
+  async function setUp(role: LegacyProfileCode): Promise<void> {
     partService = {
       list: vi.fn(() => of([PART])),
       listReplenishment: vi.fn(() => of([])),

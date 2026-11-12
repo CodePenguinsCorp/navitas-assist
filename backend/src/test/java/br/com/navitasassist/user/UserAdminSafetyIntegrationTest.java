@@ -101,7 +101,7 @@ class UserAdminSafetyIntegrationTest {
     void allowsHarmlessEditToLastAdmin() throws Exception {
         mvc.perform(put("/api/users/{id}", admin.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(Map.of("username", admin.getUsername(), "fullName", "Administrator updated", "profileId", profileId("ADMIN"), "active", true))))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.role").value("ADMIN")).andExpect(jsonPath("$.active").value(true))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.profile.name").value("Administrador")).andExpect(jsonPath("$.active").value(true))
             .andExpect(jsonPath("$.fullName").value("Administrator updated"));
         assertEquals(1, activeAdmins());
     }

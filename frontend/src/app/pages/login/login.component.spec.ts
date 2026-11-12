@@ -103,14 +103,14 @@ describe('Login failure feedback', () => {
     expect(login.request.method).toBe('POST');
     expect(login.request.body).toEqual({ username: 'operator', password: 'fake-password' });
     login.flush({ id: 2, username: 'operator', fullName: 'Operador', profile: { id: 2, name: 'Atendimento' },
-      extraPermissions: [], permissions: ['rma.ver'], role: 'SERVICE_DESK', active: true,
+      extraPermissions: [], permissions: ['rma.ver'], active: true,
       createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' });
     fixture.detectChanges();
 
     expect(page.querySelector('[role="alert"]')).toBeNull();
     expect(page.querySelector<HTMLButtonElement>('[type="submit"]')!.disabled).toBe(false);
     expect(TestBed.inject(AuthService).currentUser()).toEqual({
-      username: 'operator', name: 'Operador', profileName: 'Atendimento', permissions: ['rma.ver'], role: 'SERVICE_DESK',
+      username: 'operator', name: 'Operador', profileName: 'Atendimento', permissions: ['rma.ver'],
     });
     expect(navigate).toHaveBeenCalledExactlyOnceWith('/rmas');
   });

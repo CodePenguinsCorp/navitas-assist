@@ -1,9 +1,9 @@
 import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, Subject, of } from 'rxjs';
-import { PartMovementResponse, PartReservationResponse, PartResponse, RmaPartsResponse, RmaStatus, UserRole } from '../../core/models';
+import { PartMovementResponse, PartReservationResponse, PartResponse, RmaPartsResponse, RmaStatus } from '../../core/models';
 import { Permission } from '../../core/permissions';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { PartService } from '../../core/services/part.service';
 import { RmaPartsPanelComponent } from './rma-parts-panel.component';
 
@@ -53,7 +53,7 @@ describe('RmaPartsPanelComponent presentation', () => {
   const facts = (item: HTMLElement) => new Map(Array.from(item.querySelectorAll('dl > div')).map((row) => [normalize(row.querySelector('dt')!.textContent), normalize(row.querySelector('dd')!.textContent)]));
   const field = (control: string) => root().querySelector(`[formcontrolname="${control}"]`)!.closest('.field-group') as HTMLElement;
 
-  async function setup(sources: { role?: UserRole; permissions?: readonly Permission[]; status?: RmaStatus; reservations?: PartReservationResponse[]; catalog?: PartResponse[]; update?: Observable<PartReservationResponse> } = {}) {
+  async function setup(sources: { role?: LegacyProfileCode; permissions?: readonly Permission[]; status?: RmaStatus; reservations?: PartReservationResponse[]; catalog?: PartResponse[]; update?: Observable<PartReservationResponse> } = {}) {
     service = {
       getRmaParts: vi.fn(() => of(rmaParts(sources.reservations ?? [reservation(1, 'ACTIVE'), reservation(2, 'CONSUMED'), reservation(3, 'PENDING')]))),
       list: vi.fn(() => of(sources.catalog ?? [part(4, 'm'), part(5, 'un')])),
@@ -148,7 +148,7 @@ describe('RmaPartsPanelComponent presentation', () => {
     return [];
   };
 
-  it.each((['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER'] as UserRole[]).flatMap((role) => (['IN_REPAIR', 'COMPLETED'] as RmaStatus[]).map((status) => ({ role, status }))))(
+  it.each((['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER'] as LegacyProfileCode[]).flatMap((role) => (['IN_REPAIR', 'COMPLETED'] as RmaStatus[]).map((status) => ({ role, status }))))(
     'preserves the reservation action matrix for $role on $status', async ({ role, status }) => {
       await setup({ role, status, reservations: STATUSES.map((value, index) => reservation(index + 1, value)) });
       const canAct = role === 'ADMIN' || role === 'TECHNICIAN';

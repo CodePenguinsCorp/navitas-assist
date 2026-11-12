@@ -2,9 +2,9 @@ import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
 import { Subject, of, throwError } from 'rxjs';
-import { ProtocolExecutionItemResponse, ProtocolExecutionResponse, ProtocolItemOutcome, ProtocolItemResultResponse, ProtocolItemType, UserRole } from '../../core/models';
+import { ProtocolExecutionItemResponse, ProtocolExecutionResponse, ProtocolItemOutcome, ProtocolItemResultResponse, ProtocolItemType } from '../../core/models';
 import { Permission } from '../../core/permissions';
-import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { RmaProtocolsComponent } from './rma-protocols.component';
@@ -33,7 +33,7 @@ describe('RmaProtocolsComponent result entry', () => {
   const button = (label: string) => Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button')).find((b) => b.textContent?.trim() === label);
   const label = (name: string) => form()!.querySelector(`[formcontrolname="${name}"]`)!.closest('label')!;
   const set = (outcome: ProtocolItemOutcome) => { component().resultForm.patchValue({ outcome }); render(); };
-  async function setup(role: UserRole | readonly Permission[] = 'TECHNICIAN', item = ITEM) {
+  async function setup(role: LegacyProfileCode | readonly Permission[] = 'TECHNICIAN', item = ITEM) {
     service = { recordResult: vi.fn(() => of({ ...EXECUTION, items: [{ ...item, latest: RESULT, attempts: [RESULT] }] })), startExecution: vi.fn(() => of(EXECUTION)), complete: vi.fn(() => of(EXECUTION)) };
     await TestBed.configureTestingModule({ imports: [RmaProtocolsComponent], providers: [
       providePermissions(typeof role === 'string' ? profilePermissions(role) : role),
@@ -113,7 +113,7 @@ describe('RmaProtocolsComponent result entry', () => {
     open(); expect(form()?.querySelector('fieldset legend')?.textContent).toBe('Resultado de Tensão'); expectCancelBeforePrimary(fixture.nativeElement);
   });
 
-  it.each(['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER'] as UserRole[])('preserves execution permission for %s', async (role) => {
+  it.each(['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER'] as LegacyProfileCode[])('preserves execution permission for %s', async (role) => {
     await setup(role);
     const writable = ['ADMIN', 'TECHNICIAN'].includes(role);
     const actions = Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button')).filter((b) => /Registrar|Repetir|Concluir|Iniciar/.test(b.textContent ?? ''));
