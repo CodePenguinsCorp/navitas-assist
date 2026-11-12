@@ -70,7 +70,7 @@ class UserAdminSafetyIntegrationTest {
     void rejectsLossOfLastAdminAndPreservesAccount(String role, boolean active) throws Exception {
         mvc.perform(put("/api/users/{id}", admin.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(payload(admin, role, active)))
-            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("At least one active administrator must remain."));
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("É preciso manter ao menos um administrador ativo."));
         UserAccount saved = users.findById(admin.getId()).orElseThrow();
         assertEquals("ADMIN", saved.getProfile().getLegacyCode());
         assertTrue(saved.isActive());
@@ -92,7 +92,7 @@ class UserAdminSafetyIntegrationTest {
         AccessTestSupport.assignProfile(accessProfiles, admin, "VIEWER");
         users.saveAndFlush(admin);
         mvc.perform(delete("/api/users/{id}", only.getId()).with(asProfile("admin", "ADMIN")).with(csrf()))
-            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("At least one active administrator must remain."));
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("É preciso manter ao menos um administrador ativo."));
         assertTrue(users.existsById(only.getId()));
         assertEquals(1, activeAdmins());
     }
@@ -165,7 +165,7 @@ class UserAdminSafetyIntegrationTest {
 
         mvc.perform(put("/api/users/{id}", byExtras.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(payload(byExtras, "VIEWER", Set.of("usuarios.gerir"), true)))
-            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("At least one active administrator must remain."));
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("É preciso manter ao menos um administrador ativo."));
         assertEquals(Set.of("usuarios.gerir", "perfis.gerir"), users.findById(byExtras.getId()).orElseThrow().getExtraPermissions());
     }
 

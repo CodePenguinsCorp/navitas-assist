@@ -45,7 +45,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @ActiveProfiles("test")
 class AdministratorGuardIntegrationTest {
 
-    private static final String MESSAGE = "At least one active administrator must remain.";
+    private static final String MESSAGE = "É preciso manter ao menos um administrador ativo.";
     private static final String SECOND = "guard.second";
     private static final String BY_EXTRAS = "guard.by.extras";
 

@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(propagation = Propagation.MANDATORY)
 public class AdministratorGuard {
 
-    static final String MESSAGE = "At least one active administrator must remain.";
+    static final String MESSAGE = "É preciso manter ao menos um administrador ativo.";
 
     private final AccessProfileRepository accessProfileRepository;
     private final UserAccountRepository userAccountRepository;

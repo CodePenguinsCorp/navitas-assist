@@ -62,7 +62,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 class ProfileControllerIntegrationTest {
 
     private static final String PREFIX = "Teste perfis ";
-    private static final String ADMIN_MESSAGE = "At least one active administrator must remain.";
+    private static final String ADMIN_MESSAGE = "É preciso manter ao menos um administrador ativo.";
     private static final String GRANT_MESSAGE = "Você não pode conceder permissões que não possui.";
     private static final String MEMBER = "profiles.member";
     private static final String MANAGER = "profiles.manager";

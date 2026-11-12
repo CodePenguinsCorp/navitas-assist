@@ -40,7 +40,7 @@ Decisões aprovadas:
   - Editar perfil ou extras vale na próxima requisição de cada usuário afetado.
   - A revogação de sessões fica só para desativar, excluir, mudar senha ou mudar nome de usuário.
 - **D9** Um novo usuário não recebe perfil pré-selecionado (hoje o padrão é `SERVICE_DESK`, em `users.component.ts:125`). O perfil é obrigatório.
-- **D10** As mensagens de erro existentes continuam idênticas, em inglês (ex.: "At least one active administrator must remain."). As novas são em português.
+- **D10** As mensagens de erro existentes continuam idênticas, em inglês (ex.: "Password must contain at most 72 UTF-8 bytes."). As novas são em português, como "É preciso manter ao menos um administrador ativo.".
 - **D11** Não há dependência entre permissões. Perfil vazio é permitido. Quem não tem nenhuma tela cai em `/notificacoes`, que só exige login.
 - **D12** O enum `UserRole` sai do código. A coluna `access_profiles.legacy_code` guarda o código antigo (`ADMIN` etc.) dos 4 perfis migrados, para rastreio, testes e rollback. Ela não aparece na tela.
 - **D13** `GET /api/users/summary` mantém os campos `admins` e `roles`:
@@ -238,7 +238,7 @@ Contratos JSON. Datas vêm em ISO, e as listas de permissões, na ordem do catá
   - Substitui `findActiveByRoleForUpdate(UserRole.ADMIN)` (`UserAccountService.java:161-165`).
   - O login trava só a linha do próprio usuário e nunca perfis, então não há ciclo de locks com `lockAccessGraph`.
 - `ensureRemainsAfterUserChange(UserAccount atual, AccessProfile novoPerfil, Set<String> novasExtras, boolean novoAtivo)`, `ensureRemainsAfterUserDeletion(UserAccount)` e `ensureRemainsAfterProfileChange(AccessProfile, Set<String> novasPermissoes)` simulam a mudança sobre os usuários ativos travados.
-  - Se havia ≥ 1 administrador ativo e passaria a haver 0, lançam `BusinessException("At least one active administrator must remain.")`.
+  - Se havia ≥ 1 administrador ativo e passaria a haver 0, lançam `BusinessException("É preciso manter ao menos um administrador ativo.")`.
   - Se já havia 0, a mudança passa, para não travar o sistema.
 - O guard é usado na atualização e na exclusão de usuário e na atualização de perfil. A exclusão de perfil não precisa dele, porque só se apaga perfil sem usuários.
 
