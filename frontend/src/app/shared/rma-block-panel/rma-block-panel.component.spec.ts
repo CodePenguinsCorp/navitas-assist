@@ -1,9 +1,10 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectorRef, computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RmaResponse, UserRole } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { Permission } from '../../core/permissions';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { loadingInterceptor, SKIP_GLOBAL_LOADING } from '../../core/interceptors/loading.interceptor';
 import { LoadingService } from '../../core/services/loading.service';
 import { RmaService } from '../../core/services/rma.service';
@@ -13,13 +14,13 @@ import { RmaBlockPanelComponent } from './rma-block-panel.component';
 describe('RmaBlockPanelComponent', () => {
   let fixture: ComponentFixture<RmaBlockPanelComponent>;
   let http: HttpTestingController;
-  let role: UserRole;
+  const role = signal<UserRole | readonly Permission[]>('TECHNICIAN');
 
   beforeEach(async () => {
-    role = 'TECHNICIAN';
+    role.set('TECHNICIAN');
     await TestBed.configureTestingModule({ imports: [RmaBlockPanelComponent], providers: [
       provideHttpClient(withInterceptors([loadingInterceptor])), provideHttpClientTesting(),
-      { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(role) } },
+      providePermissions(computed(() => { const access = role(); return typeof access === 'string' ? profilePermissions(access) : access; })),
     ] }).compileComponents();
     fixture = TestBed.createComponent(RmaBlockPanelComponent);
     http = TestBed.inject(HttpTestingController);
@@ -104,7 +105,7 @@ describe('RmaBlockPanelComponent', () => {
   });
 
   it('shows current and resolved history to VIEWER without mutation controls', () => {
-    role = 'VIEWER';
+    role.set('VIEWER');
     load({ ...RMA, currentBlock: BLOCK, blockHistory: [BLOCK, { ...BLOCK, id: 8, reason: 'Bloqueio anterior', resolvedBy: 'desk', resolvedAt: '2026-10-20T12:00:00Z', resolutionNote: 'Resolvido anteriormente' }] });
     expect(fixture.nativeElement.textContent).toContain('Peça pendente');
     expect(fixture.nativeElement.textContent).toContain('Resolvido anteriormente');
@@ -186,7 +187,7 @@ describe('RmaBlockPanelComponent', () => {
   const submit = () => { form().dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); render(); };
 
   it.each((['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as UserRole[]).flatMap((role) => [false, true].map((blocked) => ({ role, blocked }))))('preserves $role permissions with blocked=$blocked', ({ role: profile, blocked }) => {
-    role = profile;
+    role.set(profile);
     load(blocked ? { ...RMA, currentBlock: BLOCK, blockHistory: [BLOCK] } : RMA);
     expect(dialog().open).toBe(true);
     expect(dialog().querySelector('form') !== null).toBe(profile !== 'VIEWER');
@@ -195,6 +196,15 @@ describe('RmaBlockPanelComponent', () => {
       actions().save();
       http.expectNone((request) => request.method === 'POST' || request.method === 'PATCH');
     }
+  });
+
+  it.each([
+    { permissions: ['rma.ver', 'rma.impedimentos'] as Permission[], editable: true },
+    { permissions: profilePermissions('ADMIN').filter((permission) => permission !== 'rma.impedimentos'), editable: false }
+  ])('follows rma.impedimentos alone (editable=$editable)', ({ permissions, editable }) => {
+    role.set(permissions);
+    load();
+    expect(dialog().querySelector('form') !== null).toBe(editable);
   });
 
   it('preserves the save guards before loading and during a write', () => {
@@ -329,7 +339,7 @@ describe('RmaBlockPanelComponent native dialog focus', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({ imports: [RmaBlockPanelComponent], providers: [
       provideHttpClient(withInterceptors([loadingInterceptor])), provideHttpClientTesting(),
-      { provide: AuthService, useValue: { hasAnyRole: () => true } },
+      providePermissions(profilePermissions('ADMIN')),
     ] }).compileComponents();
     fixture = TestBed.createComponent(RmaBlockPanelComponent);
     http = TestBed.inject(HttpTestingController);

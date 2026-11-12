@@ -78,8 +78,7 @@ async function setup(options: { role?: UserRole } = {}) {
       provideRouter([]),
       { provide: SlaClockService, useValue: { now: signal(NOW) } },
       providePermissions(profilePermissions(role)),
-      // Os painéis de peças, protocolos e impedimentos ainda leem hasAnyRole (até a Task 15).
-      { provide: AuthService, useValue: { currentUser: currentUser.asReadonly(), hasAnyRole: (roles: UserRole[]) => roles.includes(role) } },
+      { provide: AuthService, useValue: { currentUser: currentUser.asReadonly() } },
       { provide: CatalogService, useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]) } },
       { provide: RmaService, useValue: rmaService },
       { provide: PartService, useValue: partService },

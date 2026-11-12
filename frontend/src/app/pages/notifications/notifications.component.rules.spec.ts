@@ -4,7 +4,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { NotificationFailureResponse, NotificationRuleResponse, UserRole } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { Permission } from '../../core/permissions';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { LoadingService } from '../../core/services/loading.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
@@ -43,7 +44,7 @@ describe('NotificationsComponent rules', () => {
   };
   const openRules = () => { component.selectTab('rules'); render(); };
 
-  async function setup(sources: { role?: UserRole; rules?: Observable<NotificationRuleResponse[]>[]; failures?: Observable<NotificationFailureResponse[]>[]; update?: Observable<NotificationRuleResponse>[] } = {}) {
+  async function setup(sources: { role?: UserRole; permissions?: readonly Permission[]; rules?: Observable<NotificationRuleResponse[]>[]; failures?: Observable<NotificationFailureResponse[]>[]; update?: Observable<NotificationRuleResponse>[] } = {}) {
     const listRules = vi.fn(() => of([RULE]));
     for (const source of sources.rules ?? []) listRules.mockImplementationOnce(() => source);
     const listFailures = vi.fn(() => of([] as NotificationFailureResponse[]));
@@ -70,7 +71,7 @@ describe('NotificationsComponent rules', () => {
       providers: [
         provideRouter([]),
         { provide: NotificationService, useValue: service },
-        { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(sources.role ?? 'ADMIN') } }
+        providePermissions(sources.permissions ?? profilePermissions(sources.role ?? 'ADMIN'))
       ]
     }).compileComponents();
     fixture = TestBed.createComponent(NotificationsComponent);
@@ -177,6 +178,23 @@ describe('NotificationsComponent rules', () => {
       expect(Array.from(root().querySelectorAll('[role="tab"]')).map((tab) => tab.textContent!.trim())).not.toContain('Regras');
       component.selectTab('rules');
       expect(service['listRules']).not.toHaveBeenCalled();
+    });
+
+    it.each(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as const)('offers the rules tab only to ADMIN among migrated profiles (%s)', async (role) => {
+      await setup({ role });
+      const tabs = Array.from(root().querySelectorAll('[role="tab"]')).map((tab) => tab.textContent!.trim());
+      expect(tabs.includes('Regras')).toBe(role === 'ADMIN');
+    });
+
+    it.each([
+      { permissions: ['notificacoes.regras'] as Permission[], visible: true },
+      { permissions: profilePermissions('ADMIN').filter((permission) => permission !== 'notificacoes.regras'), visible: false }
+    ])('follows notificacoes.regras alone for the rules tab (visible=$visible)', async ({ permissions, visible }) => {
+      await setup({ permissions });
+      const tabs = Array.from(root().querySelectorAll('[role="tab"]')).map((tab) => tab.textContent!.trim());
+      expect(tabs.includes('Regras')).toBe(visible);
+      component.selectTab('rules');
+      expect(service['listRules']).toHaveBeenCalledTimes(visible ? 1 : 0);
     });
   });
 

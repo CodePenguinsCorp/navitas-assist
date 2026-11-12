@@ -2,7 +2,7 @@ import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { ProtocolExecutionItemResponse, ProtocolExecutionResponse, ProtocolItemResultResponse, UserRole } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { formatBusinessDateTime } from '../../core/utils/date';
 import { RmaProtocolsComponent } from './rma-protocols.component';
@@ -37,7 +37,7 @@ describe('RmaProtocolsComponent checklist', () => {
   async function setup(execution = EXECUTION, role: UserRole = 'TECHNICIAN') {
     complete = vi.fn(() => of({ ...execution, status: 'FAILED' }));
     await TestBed.configureTestingModule({ imports: [RmaProtocolsComponent], providers: [
-      { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(role) } },
+      providePermissions(profilePermissions(role)),
       { provide: ProtocolService, useValue: { listExecutions: () => of([execution]), listTemplates: () => of([]), complete } }
     ] }).compileComponents();
     fixture = TestBed.createComponent(RmaProtocolsComponent); fixture.componentRef.setInput('rmaId', 4); render();

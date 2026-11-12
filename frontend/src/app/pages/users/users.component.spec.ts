@@ -33,7 +33,7 @@ describe('UsersComponent pagination', () => {
     await TestBed.configureTestingModule({
       imports: [UsersComponent],
       providers: [
-        { provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }), hasAnyRole: () => true } },
+        { provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }) } },
         { provide: CatalogService, useValue: {
           listUsers,
           getUserSummary: () => of({ total: 45, active: 40, admins: 3, roles: 4 }),
@@ -103,7 +103,7 @@ describe('UsersComponent collection layout and states', () => {
     await TestBed.configureTestingModule({
       imports: [UsersComponent],
       providers: [
-        { provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }), hasAnyRole: () => true } },
+        { provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }) } },
         { provide: CatalogService, useValue: {
           listUsers,
           getUserSummary: options.summary ?? (() => of({ total: 45, active: 40, admins: 3, roles: 4 })),
@@ -419,7 +419,7 @@ describe('UsersComponent dialog focus', () => {
     rows = [user(1, 'Ana'), user(2, 'Bia')];
     await TestBed.configureTestingModule({
       imports: [UsersComponent],
-      providers: [provideRouter([{ path: '', component: UsersComponent }]), { provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }), hasAnyRole: () => true } },
+      providers: [provideRouter([{ path: '', component: UsersComponent }]), { provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }) } },
         { provide: CatalogService, useValue: {
         listUsers: (filters: { page: number; size: number }) => of(page(rows, filters.page, filters.size)),
         getUserSummary: () => of({ total: rows.length, active: rows.length, admins: 1, roles: 1 }),

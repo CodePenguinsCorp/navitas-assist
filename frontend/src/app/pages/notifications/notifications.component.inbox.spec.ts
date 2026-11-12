@@ -4,7 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { NotificationResponse, UserRole } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { NotificationService } from '../../core/services/notification.service';
 import { SlaClockService } from '../../core/services/sla-clock.service';
 import { NotificationsComponent } from './notifications.component';
@@ -66,7 +66,7 @@ describe('NotificationsComponent inbox loading', () => {
       providers: [
         provideRouter([]),
         { provide: NotificationService, useValue: service },
-        { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(sources.role ?? 'TECHNICIAN') } },
+        providePermissions(profilePermissions(sources.role ?? 'TECHNICIAN')),
         { provide: SlaClockService, useValue: { now: clock.asReadonly() } }
       ]
     }).compileComponents();

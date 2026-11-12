@@ -2,7 +2,7 @@ import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { PartReservationResponse, PartResponse, RmaPartsResponse, RmaStatus, UserRole } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { PartService } from '../../core/services/part.service';
 import { RmaPartsPanelComponent } from './rma-parts-panel.component';
 
@@ -48,7 +48,7 @@ describe('RmaPartsPanelComponent loading', () => {
       imports: [RmaPartsPanelComponent],
       providers: [
         { provide: PartService, useValue: service },
-        { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(sources.role ?? 'TECHNICIAN') } }
+        providePermissions(profilePermissions(sources.role ?? 'TECHNICIAN'))
       ]
     }).compileComponents();
     fixture = TestBed.createComponent(RmaPartsPanelComponent);

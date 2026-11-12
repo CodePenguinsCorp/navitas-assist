@@ -2,7 +2,7 @@ import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { ProtocolExecutionResponse, ProtocolTemplateResponse, UserRole } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { RmaProtocolsComponent } from './rma-protocols.component';
 
@@ -38,7 +38,7 @@ describe('RmaProtocolsComponent loading', () => {
       startExecution: vi.fn(() => of(EXECUTION)), recordResult: vi.fn(() => of(EXECUTION)), complete: vi.fn(() => of(EXECUTION))
     };
     await TestBed.configureTestingModule({ imports: [RmaProtocolsComponent], providers: [
-      { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(sources.role ?? 'TECHNICIAN') } },
+      providePermissions(profilePermissions(sources.role ?? 'TECHNICIAN')),
       { provide: ProtocolService, useValue: service }
     ] }).compileComponents();
     fixture = TestBed.createComponent(RmaProtocolsComponent);

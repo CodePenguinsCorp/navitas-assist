@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription, finalize } from 'rxjs';
 import { ProtocolExecutionItemResponse, ProtocolExecutionResponse, ProtocolItemOutcome, ProtocolItemResultResponse, ProtocolTemplateResponse } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { PermissionService } from '../../core/services/permission.service';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { extractHttpErrorMessage, normalizeOptionalText } from '../../core/utils/catalog-ui';
 import { formatBusinessDateTime } from '../../core/utils/date';
@@ -115,7 +115,7 @@ interface EditingItem {
 export class RmaProtocolsComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly protocolService = inject(ProtocolService);
-  private readonly authService = inject(AuthService);
+  private readonly permissions = inject(PermissionService);
   private readonly destroyRef = inject(DestroyRef);
   private loadRequest?: Subscription;
   private templatesRequest?: Subscription;
@@ -137,7 +137,7 @@ export class RmaProtocolsComponent {
   protected readonly executions = signal<ProtocolExecutionResponse[]>([]);
   protected readonly selectedTemplateId = signal<number | null>(null);
   protected readonly editing = signal<EditingItem | null>(null);
-  protected readonly canExecute = computed(() => this.authService.hasAnyRole(['ADMIN', 'TECHNICIAN']));
+  protected readonly canExecute = computed(() => this.permissions.hasPermission('protocolos.executar'));
 
   private readonly templatesSignal = signal<ProtocolTemplateResponse[]>([]);
 

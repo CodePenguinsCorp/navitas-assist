@@ -13,7 +13,7 @@ import {
   NotificationRuleResponse,
   NotificationSeverity
 } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { PermissionService } from '../../core/services/permission.service';
 import { SlaClockService } from '../../core/services/sla-clock.service';
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
@@ -217,7 +217,7 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
 })
 export class NotificationsComponent {
   private readonly notificationService = inject(NotificationService);
-  private readonly authService = inject(AuthService);
+  private readonly permissions = inject(PermissionService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
@@ -285,14 +285,14 @@ export class NotificationsComponent {
   protected readonly severityClass = severityClass;
   protected readonly dateTime = formatNotificationDateTime;
 
-  protected readonly isAdmin = computed(() => this.authService.hasAnyRole(['ADMIN']));
+  protected readonly canManageRules = computed(() => this.permissions.hasPermission('notificacoes.regras'));
   protected readonly unreadCount = this.notificationService.unreadCount;
   /** The summary count is real only after its latest request succeeded; the inbox list is not a total. */
   protected readonly unreadKnown = computed(() =>
     this.notificationService.summaryLoaded() && !this.notificationService.summaryLoadFailed());
   protected readonly unreadUnavailable = this.notificationService.summaryLoadFailed;
   protected readonly hasUnread = computed(() => this.notifications().some((notification) => !notification.read));
-  protected readonly tabs = computed<NotificationsTab[]>(() => this.isAdmin() ? ['inbox', 'preferences', 'rules'] : ['inbox', 'preferences']);
+  protected readonly tabs = computed<NotificationsTab[]>(() => this.canManageRules() ? ['inbox', 'preferences', 'rules'] : ['inbox', 'preferences']);
 
   constructor() {
     this.loadInbox();
@@ -305,7 +305,7 @@ export class NotificationsComponent {
       this.loadInbox();
     } else if (tab === 'preferences') {
       this.loadPreferences();
-    } else if (this.isAdmin()) {
+    } else if (this.canManageRules()) {
       this.loadRules();
     }
   }

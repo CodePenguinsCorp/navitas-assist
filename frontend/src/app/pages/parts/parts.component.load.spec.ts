@@ -2,7 +2,7 @@ import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { PartReplenishmentResponse, PartReservationResponse, PartResponse, UserRole } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { PartService } from '../../core/services/part.service';
 import { PartsComponent } from './parts.component';
 
@@ -53,7 +53,7 @@ describe('PartsComponent snapshot loading', () => {
     };
     await TestBed.configureTestingModule({ imports: [PartsComponent], providers: [
       { provide: PartService, useValue: service },
-      { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(sources.role ?? 'ADMIN') } }
+      providePermissions(profilePermissions(sources.role ?? 'ADMIN'))
     ] }).compileComponents();
     fixture = TestBed.createComponent(PartsComponent);
     component = fixture.componentInstance as unknown as Harness;

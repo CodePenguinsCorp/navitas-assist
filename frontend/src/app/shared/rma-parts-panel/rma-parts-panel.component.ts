@@ -4,7 +4,7 @@ import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@
 import { Subscription, finalize } from 'rxjs';
 import { CLOSED_RMA_STATUSES } from '../../core/mock-data';
 import { PartReservationResponse, PartResponse, RmaPartsResponse, RmaStatus } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { PermissionService } from '../../core/services/permission.service';
 import { PartReservationAction, PartService } from '../../core/services/part.service';
 import { extractHttpErrorMessage, normalizeOptionalText } from '../../core/utils/catalog-ui';
 import { formatBusinessDateTime } from '../../core/utils/date';
@@ -117,7 +117,7 @@ const ACTION_MESSAGES: Record<PartReservationAction, string> = {
 export class RmaPartsPanelComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly partService = inject(PartService);
-  private readonly authService = inject(AuthService);
+  private readonly permissions = inject(PermissionService);
 
   readonly rmaId = input.required<number>();
   readonly rmaStatus = input.required<RmaStatus>();
@@ -148,7 +148,7 @@ export class RmaPartsPanelComponent {
   protected readonly currency = formatCurrency;
   protected readonly dateTime = formatBusinessDateTime;
 
-  protected readonly canReserve = computed(() => this.authService.hasAnyRole(['ADMIN', 'TECHNICIAN']));
+  protected readonly canReserve = computed(() => this.permissions.hasPermission('pecas.reservar'));
   protected readonly isClosed = computed(() => CLOSED_RMA_STATUSES.includes(this.rmaStatus()));
   protected readonly canCreateReservation = computed(() => this.canReserve() && !this.isClosed());
 

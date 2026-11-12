@@ -2,7 +2,8 @@ import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
 import { PartReplenishmentResponse, PartReservationResponse, PartResponse, UserRole } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { Permission } from '../../core/permissions';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { PartService } from '../../core/services/part.service';
 import { PartsComponent } from './parts.component';
 
@@ -36,12 +37,12 @@ describe('PartsComponent presentation', () => {
     return new Map(Array.from(table.querySelectorAll('thead th')).map((header, index) => [normalized(header), normalized(cells[index])]));
   };
 
-  async function setup(role: UserRole = 'ADMIN', pending = false) {
+  async function setup(role: UserRole | readonly Permission[] = 'ADMIN', pending = false) {
     const parts = new Subject<PartResponse[]>();
     service = { list: vi.fn(() => pending ? parts : of([PART, INACTIVE])), listReplenishment: vi.fn(() => of([REPLENISHMENT])), listPending: vi.fn(() => of([PENDING])), update: vi.fn(() => of(PART)) };
     await TestBed.configureTestingModule({ imports: [PartsComponent], providers: [
       { provide: PartService, useValue: service },
-      { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(role) } }
+      providePermissions(typeof role === 'string' ? profilePermissions(role) : role)
     ] }).compileComponents();
     fixture = TestBed.createComponent(PartsComponent); render();
     return parts;
@@ -145,5 +146,16 @@ describe('PartsComponent presentation', () => {
     expect(Boolean(action('Movimentar', row))).toBe(writable);
     expect(Boolean(action('Histórico', row))).toBe(true);
     expect(normalized(row)).toContain('R$ 10,00');
+  });
+
+  it.each([
+    { permissions: ['pecas.ver', 'pecas.movimentar'] as Permission[], writable: true },
+    { permissions: profilePermissions('ADMIN').filter((permission) => permission !== 'pecas.movimentar'), writable: false }
+  ])('follows pecas.movimentar alone for stock actions (writable=$writable)', async ({ permissions, writable }) => {
+    await setup(permissions);
+    const row = root().querySelector('tbody tr')!;
+    expect(Array.from(root().querySelectorAll('button')).some((button) => normalized(button).includes('Nova peça'))).toBe(writable);
+    expect(Boolean(action('Editar', row))).toBe(writable);
+    expect(Boolean(action('Movimentar', row))).toBe(writable);
   });
 });

@@ -4,7 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { NotificationPreferenceResponse, UserRole } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { NotificationService } from '../../core/services/notification.service';
 import { NotificationsComponent } from './notifications.component';
 
@@ -62,7 +62,7 @@ describe('NotificationsComponent preferences', () => {
       providers: [
         provideRouter([]),
         { provide: NotificationService, useValue: service },
-        { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(sources.role ?? 'TECHNICIAN') } }
+        providePermissions(profilePermissions(sources.role ?? 'TECHNICIAN'))
       ]
     }).compileComponents();
     fixture = TestBed.createComponent(NotificationsComponent);

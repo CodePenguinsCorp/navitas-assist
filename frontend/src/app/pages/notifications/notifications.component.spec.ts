@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { NotificationPreferenceResponse, NotificationResponse, NotificationRuleResponse, UserRole } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { NotificationService } from '../../core/services/notification.service';
 import { NotificationsComponent } from './notifications.component';
 
@@ -27,7 +27,7 @@ interface Harness {
   snooze(notification: NotificationResponse, minutes: string): void;
   selectTab(tab: 'inbox' | 'preferences' | 'rules'): void;
   toggleMute(preference: NotificationPreferenceResponse): void;
-  isAdmin(): boolean;
+  canManageRules(): boolean;
 }
 
 describe('NotificationsComponent', () => {
@@ -56,7 +56,7 @@ describe('NotificationsComponent', () => {
       providers: [
         provideRouter([]),
         { provide: NotificationService, useValue: service },
-        { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(role) } }
+        providePermissions(profilePermissions(role))
       ]
     }).compileComponents();
     fixture = TestBed.createComponent(NotificationsComponent);
@@ -99,7 +99,7 @@ describe('NotificationsComponent', () => {
   // Mudança deliberada de fluxo (não de contrato): a regra é editada num formulário e enviada uma vez.
   it('lets admins change recipient roles of a rule', async () => {
     await setUp('ADMIN');
-    expect(component.isAdmin()).toBe(true);
+    expect(component.canManageRules()).toBe(true);
     component.selectTab('rules');
     fixture.detectChanges();
     fixture.nativeElement.querySelector('button[aria-label="Editar regra SLA vencido"]').click();

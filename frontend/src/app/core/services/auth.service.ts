@@ -1,7 +1,7 @@
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, catchError, finalize, map, of, shareReplay, switchMap, tap } from 'rxjs';
-import { AuthUserResponse, LoginPayload, UserRole, UserSession } from '../models';
+import { AuthUserResponse, LoginPayload, UserSession } from '../models';
 import { SKIP_GLOBAL_LOADING } from '../interceptors/loading.interceptor';
 import { isPermission } from '../permissions';
 
@@ -79,15 +79,6 @@ export class AuthService {
   clearSession(): void {
     this.sessionSignal.set(null);
     this.initializedSignal.set(true);
-  }
-
-  hasAnyRole(roles: UserRole[]): boolean {
-    const session = this.sessionSignal();
-    if (!session?.role) {
-      return false;
-    }
-
-    return roles.includes(session.role);
   }
 
   private ensureCsrfToken(): Observable<unknown> {

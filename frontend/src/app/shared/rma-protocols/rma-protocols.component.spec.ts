@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
 import { of } from 'rxjs';
 import { ProtocolExecutionItemResponse, ProtocolExecutionResponse, ProtocolItemResultRequest, UserRole } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { RmaProtocolsComponent } from './rma-protocols.component';
@@ -33,7 +33,7 @@ describe('RmaProtocolsComponent', () => {
     await TestBed.configureTestingModule({
       imports: [RmaProtocolsComponent],
       providers: [
-        { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(role) } },
+        providePermissions(profilePermissions(role)),
         { provide: ProtocolService, useValue: {
           listExecutions: () => of([EXECUTION]),
           listTemplates: () => of([]),

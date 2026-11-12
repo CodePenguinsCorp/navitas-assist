@@ -11,7 +11,7 @@ import {
   PartReservationResponse,
   PartResponse
 } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { PermissionService } from '../../core/services/permission.service';
 import { PartService } from '../../core/services/part.service';
 import { extractHttpErrorMessage, includesQuery, normalizeOptionalText } from '../../core/utils/catalog-ui';
 import { formatBusinessDateTime } from '../../core/utils/date';
@@ -98,7 +98,7 @@ export class PartsComponent {
 
   private readonly formBuilder = inject(FormBuilder);
   private readonly partService = inject(PartService);
-  private readonly authService = inject(AuthService);
+  private readonly permissions = inject(PermissionService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
@@ -138,7 +138,7 @@ export class PartsComponent {
   protected readonly historyLoadErrorMessage = signal('');
   protected readonly reversingMovementId = signal<number | null>(null);
 
-  protected readonly canManage = computed(() => this.authService.hasAnyRole(['ADMIN', 'SERVICE_DESK']));
+  protected readonly canManage = computed(() => this.permissions.hasPermission('pecas.movimentar'));
 
   protected readonly filteredParts = computed(() =>
     this.parts().filter((part) => includesQuery(this.searchTerm(), part.code, part.name, part.location))

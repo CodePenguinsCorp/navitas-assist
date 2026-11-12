@@ -5,7 +5,7 @@ import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@
 import { Subscription, finalize } from 'rxjs';
 import { RmaResponse } from '../../core/models';
 import { SKIP_GLOBAL_LOADING } from '../../core/interceptors/loading.interceptor';
-import { AuthService } from '../../core/services/auth.service';
+import { PermissionService } from '../../core/services/permission.service';
 import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { ModalFocusDirective } from '../modal-focus/modal-focus.directive';
@@ -25,7 +25,7 @@ export class RmaBlockPanelComponent {
   @ViewChild(ModalFocusDirective, { static: true }) private modal!: ModalFocusDirective;
   @Output() readonly updated = new EventEmitter<RmaResponse>();
   private readonly service = inject(RmaService);
-  private readonly auth = inject(AuthService);
+  private readonly permissions = inject(PermissionService);
   private readonly builder = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
   private loadRequest?: Subscription;
@@ -34,7 +34,7 @@ export class RmaBlockPanelComponent {
   protected readonly loading = signal(false);
   protected readonly busy = signal(false);
   protected readonly error = signal('');
-  protected readonly canEdit = computed(() => this.auth.hasAnyRole(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN']));
+  protected readonly canEdit = computed(() => this.permissions.hasPermission('rma.impedimentos'));
   protected readonly blockForm = this.builder.nonNullable.group({ reason: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(1000)]], category: ['', Validators.maxLength(80)] });
   protected readonly resolveForm = this.builder.nonNullable.group({ resolutionNote: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(1000)]] });
 

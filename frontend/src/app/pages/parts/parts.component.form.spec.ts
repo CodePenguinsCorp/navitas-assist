@@ -4,8 +4,8 @@ import { FormGroup } from '@angular/forms';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
-import { PartResponse, UserRole } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { PartResponse } from '../../core/models';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { LoadingService } from '../../core/services/loading.service';
 import { PartService } from '../../core/services/part.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
@@ -47,7 +47,7 @@ describe('PartsComponent part form', () => {
     };
     await TestBed.configureTestingModule({ imports: [PartsComponent], providers: [
       { provide: PartService, useValue: service },
-      { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes('SERVICE_DESK') } }
+      providePermissions(profilePermissions('SERVICE_DESK'))
     ] }).compileComponents();
     fixture = TestBed.createComponent(PartsComponent);
     component = fixture.componentInstance as unknown as Harness;
@@ -181,7 +181,7 @@ async function setupPartsFocus(serviceOverrides: Record<string, unknown>) {
       list: vi.fn(() => of([PART])), listReplenishment: vi.fn(() => of([])), listPending: vi.fn(() => of([])),
       ...serviceOverrides
     } },
-    { provide: AuthService, useValue: { hasAnyRole: () => true } }
+    providePermissions(profilePermissions('ADMIN'))
   ] }).compileComponents();
   const { fixture, element: page } = await mountUnderRoot(PartsComponent);
   vi.useFakeTimers();

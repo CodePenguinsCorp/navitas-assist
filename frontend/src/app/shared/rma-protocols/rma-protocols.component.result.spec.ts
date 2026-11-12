@@ -3,7 +3,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
 import { Subject, of, throwError } from 'rxjs';
 import { ProtocolExecutionItemResponse, ProtocolExecutionResponse, ProtocolItemOutcome, ProtocolItemResultResponse, ProtocolItemType, UserRole } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { Permission } from '../../core/permissions';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { RmaProtocolsComponent } from './rma-protocols.component';
@@ -32,10 +33,10 @@ describe('RmaProtocolsComponent result entry', () => {
   const button = (label: string) => Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button')).find((b) => b.textContent?.trim() === label);
   const label = (name: string) => form()!.querySelector(`[formcontrolname="${name}"]`)!.closest('label')!;
   const set = (outcome: ProtocolItemOutcome) => { component().resultForm.patchValue({ outcome }); render(); };
-  async function setup(role: UserRole = 'TECHNICIAN', item = ITEM) {
+  async function setup(role: UserRole | readonly Permission[] = 'TECHNICIAN', item = ITEM) {
     service = { recordResult: vi.fn(() => of({ ...EXECUTION, items: [{ ...item, latest: RESULT, attempts: [RESULT] }] })), startExecution: vi.fn(() => of(EXECUTION)), complete: vi.fn(() => of(EXECUTION)) };
     await TestBed.configureTestingModule({ imports: [RmaProtocolsComponent], providers: [
-      { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(role) } },
+      providePermissions(typeof role === 'string' ? profilePermissions(role) : role),
       { provide: ProtocolService, useValue: { ...service, listExecutions: () => of([{ ...EXECUTION, items: [item, EXECUTION.items[1]] }]),
         listTemplates: () => of([{ id: 2, name: 'Bancada PWM', active: true, currentVersion: 4, productId: null, productName: null,
           category: 'Placas', blockedStatuses: [], items: [], updatedAt: '2026-10-20T12:00:00Z' }]) } }
@@ -117,6 +118,15 @@ describe('RmaProtocolsComponent result entry', () => {
     const writable = ['ADMIN', 'TECHNICIAN'].includes(role);
     const actions = Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button')).filter((b) => /Registrar|Repetir|Concluir|Iniciar/.test(b.textContent ?? ''));
     expect(actions.length > 0).toBe(writable); expect(fixture.nativeElement.textContent).toContain('Bancada PWM · v3');
+  });
+
+  it.each([
+    { permissions: ['rma.ver', 'protocolos.ver', 'protocolos.executar'] as Permission[], writable: true },
+    { permissions: profilePermissions('ADMIN').filter((permission) => permission !== 'protocolos.executar'), writable: false }
+  ])('follows protocolos.executar alone (writable=$writable)', async ({ permissions, writable }) => {
+    await setup(permissions);
+    const actions = Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button')).filter((b) => /Registrar|Repetir|Concluir|Iniciar/.test(b.textContent ?? ''));
+    expect(actions.length > 0).toBe(writable);
   });
 
   it.each(['MEASUREMENT', 'TEXT', 'CHECK'] as ProtocolItemType[])('preserves the %s payload and existing text limits', async (type) => {

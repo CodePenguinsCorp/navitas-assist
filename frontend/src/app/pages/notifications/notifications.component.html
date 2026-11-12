@@ -163,7 +163,7 @@
 
   </div>
 
-  @if (isAdmin()) {
+  @if (canManageRules()) {
   <div #rulesPanel role="tabpanel" tabindex="0" id="notifications-panel-rules" aria-labelledby="notifications-tab-rules" [hidden]="activeTab() !== 'rules'">
     @if (activeTab() === 'rules') {
       <article class="panel table-card">

@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { PartMovementResponse, PartResponse, UserRole } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { PartService } from '../../core/services/part.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { PartsComponent } from './parts.component';
@@ -50,7 +50,7 @@ describe('PartsComponent', () => {
       imports: [PartsComponent],
       providers: [
         { provide: PartService, useValue: partService },
-        { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(role) } }
+        providePermissions(profilePermissions(role))
       ]
     }).compileComponents();
     fixture = TestBed.createComponent(PartsComponent);

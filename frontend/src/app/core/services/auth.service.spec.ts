@@ -6,6 +6,7 @@ import { AuthUserResponse } from '../models';
 import { SKIP_GLOBAL_LOADING } from '../interceptors/loading.interceptor';
 import { profilePermissions } from '../../testing/permission-fixtures';
 import { AuthService } from './auth.service';
+import { PermissionService } from './permission.service';
 
 const ADMIN_PERMISSIONS = [...profilePermissions('ADMIN')];
 
@@ -42,7 +43,7 @@ describe('AuthService', () => {
     await expect(login).resolves.toEqual(expected);
     expect(service.currentUser()).toEqual(expected);
     expect(service.isAuthenticated()).toBe(true);
-    expect(service.hasAnyRole(['ADMIN', 'SERVICE_DESK'])).toBe(true);
+    expect(TestBed.inject(PermissionService).hasPermission('usuarios.gerir')).toBe(true);
   });
 
   it('converts a failed session restore into an anonymous initialized session', async () => {
@@ -54,7 +55,7 @@ describe('AuthService', () => {
     await expect(restored).resolves.toBeNull();
     expect(service.currentUser()).toBeNull();
     expect(service.isAuthenticated()).toBe(false);
-    expect(service.hasAnyRole(['VIEWER'])).toBe(false);
+    expect(TestBed.inject(PermissionService).hasPermission('rma.ver')).toBe(false);
 
     await expect(firstValueFrom(service.restoreSession())).resolves.toBeNull();
     httpTesting.expectNone('/api/auth/me');
@@ -163,7 +164,7 @@ describe('AuthService logout confirmation', () => {
       username: 'admin', name: 'Administrador', profileName: 'Administrador', permissions: ADMIN_PERMISSIONS, role: 'ADMIN',
     });
     expect(service.isAuthenticated()).toBe(true);
-    expect(service.hasAnyRole(['ADMIN'])).toBe(true);
+    expect(TestBed.inject(PermissionService).hasPermission('usuarios.gerir')).toBe(true);
   }
 
   function fail(request: TestRequest, kind: 'network' | number): void {
@@ -184,7 +185,7 @@ describe('AuthService logout confirmation', () => {
     expect(complete).toHaveBeenCalledOnce();
     expect(service.currentUser()).toBeNull();
     expect(service.isAuthenticated()).toBe(false);
-    expect(service.hasAnyRole(['ADMIN'])).toBe(false);
+    expect(TestBed.inject(PermissionService).hasPermission('usuarios.gerir')).toBe(false);
     let restored: unknown = 'not restored';
     service.restoreSession().subscribe((value) => restored = value);
     expect(restored).toBeNull();

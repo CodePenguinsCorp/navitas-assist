@@ -2,7 +2,8 @@ import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, Subject, of } from 'rxjs';
 import { PartMovementResponse, PartReservationResponse, PartResponse, RmaPartsResponse, RmaStatus, UserRole } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { Permission } from '../../core/permissions';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { PartService } from '../../core/services/part.service';
 import { RmaPartsPanelComponent } from './rma-parts-panel.component';
 
@@ -52,7 +53,7 @@ describe('RmaPartsPanelComponent presentation', () => {
   const facts = (item: HTMLElement) => new Map(Array.from(item.querySelectorAll('dl > div')).map((row) => [normalize(row.querySelector('dt')!.textContent), normalize(row.querySelector('dd')!.textContent)]));
   const field = (control: string) => root().querySelector(`[formcontrolname="${control}"]`)!.closest('.field-group') as HTMLElement;
 
-  async function setup(sources: { role?: UserRole; status?: RmaStatus; reservations?: PartReservationResponse[]; catalog?: PartResponse[]; update?: Observable<PartReservationResponse> } = {}) {
+  async function setup(sources: { role?: UserRole; permissions?: readonly Permission[]; status?: RmaStatus; reservations?: PartReservationResponse[]; catalog?: PartResponse[]; update?: Observable<PartReservationResponse> } = {}) {
     service = {
       getRmaParts: vi.fn(() => of(rmaParts(sources.reservations ?? [reservation(1, 'ACTIVE'), reservation(2, 'CONSUMED'), reservation(3, 'PENDING')]))),
       list: vi.fn(() => of(sources.catalog ?? [part(4, 'm'), part(5, 'un')])),
@@ -63,7 +64,7 @@ describe('RmaPartsPanelComponent presentation', () => {
       imports: [RmaPartsPanelComponent],
       providers: [
         { provide: PartService, useValue: service },
-        { provide: AuthService, useValue: { hasAnyRole: (roles: UserRole[]) => roles.includes(sources.role ?? 'TECHNICIAN') } }
+        providePermissions(sources.permissions ?? profilePermissions(sources.role ?? 'TECHNICIAN'))
       ]
     }).compileComponents();
     fixture = TestBed.createComponent(RmaPartsPanelComponent);
@@ -160,6 +161,16 @@ describe('RmaPartsPanelComponent presentation', () => {
       expect(button('Reservar') !== undefined).toBe(canAct && !closed);
       expect(text()).toContain('Custo consumido no RMA');
     });
+
+  it.each([
+    { permissions: ['rma.ver', 'pecas.ver', 'pecas.reservar'] as Permission[], canAct: true },
+    { permissions: profilePermissions('ADMIN').filter((permission) => permission !== 'pecas.reservar'), canAct: false }
+  ])('follows pecas.reservar alone for reservations (canAct=$canAct)', async ({ permissions, canAct }) => {
+    await setup({ permissions, reservations: STATUSES.map((value, index) => reservation(index + 1, value)) });
+    STATUSES.forEach((value, index) => expect(buttons(items()[index])).toEqual(expectedActions(canAct, false, value)));
+    expect(root().querySelector('form') !== null).toBe(canAct);
+    expect(button('Reservar') !== undefined).toBe(canAct);
+  });
 
   it('keeps active parts without stock among the options', async () => {
     await setup({ catalog: [part(4, 'm', 0), { ...part(5, 'un'), active: false }] });
