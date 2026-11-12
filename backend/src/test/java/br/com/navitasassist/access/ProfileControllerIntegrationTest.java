@@ -302,6 +302,19 @@ class ProfileControllerIntegrationTest {
         assertTrue(profiles.existsById(used.getId()));
     }
 
+    /** Enquanto a coluna role existir, os perfis migrados (legacy_code) sustentam a ponte e o rollback. */
+    @Test
+    void deleteBlockedForMigratedProfile() throws Exception {
+        AccessProfile migrated = AccessTestSupport.saveProfile(profiles, PREFIX + "Migrado", "rma.ver");
+        migrated.setLegacyCode("TESTE_LEGADO");
+        profiles.saveAndFlush(migrated);
+
+        mvc.perform(delete("/api/profiles/{id}", migrated.getId()).with(asProfile("admin", "ADMIN")).with(csrf()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Perfil migrado não pode ser excluído."));
+        assertTrue(profiles.existsById(migrated.getId()));
+    }
+
     @Test
     void deletesUnusedProfile() throws Exception {
         AccessProfile unused = AccessTestSupport.saveProfile(profiles, PREFIX + "Sem uso", "rma.ver");
@@ -319,7 +332,8 @@ class ProfileControllerIntegrationTest {
         AccessProfile profileA = AccessTestSupport.saveProfile(profiles, PREFIX + "Admin A", "usuarios.gerir", "perfis.gerir");
         AccessTestSupport.saveAccountWithProfile(users, passwordEncoder, ADMIN_A, profileA, Set.of());
         Map<String, Object> demoteSeed = new LinkedHashMap<>(Map.of(
-            "username", admin.getUsername(), "fullName", admin.getFullName(), "role", "VIEWER", "active", true));
+            "username", admin.getUsername(), "fullName", admin.getFullName(),
+            "profileId", profiles.findByLegacyCode("VIEWER").orElseThrow().getId(), "active", true));
         RequestPostProcessor actorA = as(ADMIN_A);
 
         List<Integer> statuses = runTogether(

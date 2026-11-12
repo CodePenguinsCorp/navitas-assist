@@ -10,7 +10,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -98,7 +100,7 @@ class UserAdminSafetyIntegrationTest {
     @Test
     void allowsHarmlessEditToLastAdmin() throws Exception {
         mvc.perform(put("/api/users/{id}", admin.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
-                .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(Map.of("username", admin.getUsername(), "fullName", "Administrator updated", "role", "ADMIN", "active", true))))
+                .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(Map.of("username", admin.getUsername(), "fullName", "Administrator updated", "profileId", profileId("ADMIN"), "active", true))))
             .andExpect(status().isOk()).andExpect(jsonPath("$.role").value("ADMIN")).andExpect(jsonPath("$.active").value(true))
             .andExpect(jsonPath("$.fullName").value("Administrator updated"));
         assertEquals(1, activeAdmins());
@@ -151,6 +153,22 @@ class UserAdminSafetyIntegrationTest {
         }
     }
 
+    /** Administrador só por extras: tirar as extras do último administrador é recusado. */
+    @Test
+    void rejectsRemovingLastAdministratorsExtras() throws Exception {
+        UserAccount byExtras = second(true);
+        AccessTestSupport.assignProfile(accessProfiles, byExtras, "VIEWER");
+        byExtras.setExtraPermissions(new HashSet<>(Set.of("usuarios.gerir", "perfis.gerir")));
+        users.saveAndFlush(byExtras);
+        AccessTestSupport.assignProfile(accessProfiles, admin, "VIEWER");
+        users.saveAndFlush(admin);
+
+        mvc.perform(put("/api/users/{id}", byExtras.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(payload(byExtras, UserRole.VIEWER, Set.of("usuarios.gerir"), true)))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("At least one active administrator must remain."));
+        assertEquals(Set.of("usuarios.gerir", "perfis.gerir"), users.findById(byExtras.getId()).orElseThrow().getExtraPermissions());
+    }
+
     @Test
     void nonAdminsRemainForbidden() throws Exception {
         for (String role : new String[] { "VIEWER", "TECHNICIAN", "SERVICE_DESK" }) {
@@ -172,7 +190,16 @@ class UserAdminSafetyIntegrationTest {
     }
 
     private String payload(UserAccount account, UserRole role, boolean active) throws Exception {
-        return mapper.writeValueAsString(Map.of("username", account.getUsername(), "fullName", account.getFullName(), "role", role, "active", active));
+        return payload(account, role, Set.of(), active);
+    }
+
+    private String payload(UserAccount account, UserRole role, Set<String> extras, boolean active) throws Exception {
+        return mapper.writeValueAsString(Map.of("username", account.getUsername(), "fullName", account.getFullName(),
+            "profileId", profileId(role.name()), "extraPermissions", extras, "active", active));
+    }
+
+    private Long profileId(String legacyCode) {
+        return accessProfiles.findByLegacyCode(legacyCode).orElseThrow().getId();
     }
 
     private long activeAdmins() {

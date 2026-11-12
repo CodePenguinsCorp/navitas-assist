@@ -188,7 +188,8 @@ class PasswordBoundaryIntegrationTest {
     }
 
     private String userJson(String password, boolean active) throws Exception {
-        Map<String, Object> body = new LinkedHashMap<>(Map.of("username", username, "fullName", "Changed user", "role", "ADMIN", "active", active));
+        Map<String, Object> body = new LinkedHashMap<>(Map.of("username", username, "fullName", "Changed user",
+            "profileId", accessProfiles.findByLegacyCode("ADMIN").orElseThrow().getId(), "active", active));
         if (password != null) {
             body.put("password", password);
         }

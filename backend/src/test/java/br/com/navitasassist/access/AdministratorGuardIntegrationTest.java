@@ -121,9 +121,13 @@ class AdministratorGuardIntegrationTest {
         assertEquals(1, activeAdministrators());
 
         UserAccount byExtras = users.findByUsernameIgnoreCase(BY_EXTRAS).orElseThrow();
-        // Único administrador, só pelas extras: trocar o perfil mantém as extras e, com elas, a administração.
-        mvc.perform(put("/api/users/{id}", byExtras.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
-                .contentType(MediaType.APPLICATION_JSON).content(payload(byExtras, "TECHNICIAN", true)))
+        // O ator é um administrador inativo: passa na regra anti-escalada e não conta como administrador restante.
+        UserAccount inactiveActor = AccessTestSupport.saveAccount(users, profiles, passwordEncoder, SECOND, "ADMIN");
+        inactiveActor.setActive(false);
+        users.saveAndFlush(inactiveActor);
+        // Único administrador, só pelas extras: trocar o perfil mantendo as extras mantém a administração.
+        mvc.perform(put("/api/users/{id}", byExtras.getId()).with(asProfile(SECOND, "ADMIN")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(payload(byExtras, "TECHNICIAN", Set.of("usuarios.gerir", "perfis.gerir"), true)))
             .andExpect(status().isOk());
         assertEquals(1, activeAdministrators());
 
@@ -227,6 +231,11 @@ class AdministratorGuardIntegrationTest {
     }
 
     private String payload(UserAccount account, String role, boolean active) throws Exception {
-        return mapper.writeValueAsString(Map.of("username", account.getUsername(), "fullName", account.getFullName(), "role", role, "active", active));
+        return payload(account, role, Set.of(), active);
+    }
+
+    private String payload(UserAccount account, String role, Set<String> extras, boolean active) throws Exception {
+        return mapper.writeValueAsString(Map.of("username", account.getUsername(), "fullName", account.getFullName(),
+            "profileId", profiles.findByLegacyCode(role).orElseThrow().getId(), "extraPermissions", extras, "active", active));
     }
 }

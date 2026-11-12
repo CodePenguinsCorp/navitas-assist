@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -131,7 +132,7 @@ class SessionRevocationIntegrationTest {
     @Test
     void profileChangeKeepsSessionsWithUpdatedAuthorities() throws Exception {
         Map<String, Object> payload = updatePayload();
-        payload.put("role", "VIEWER");
+        payload.put("profileId", profileId("VIEWER"));
         mvc.perform(put("/api/users/{id}", target.getId()).session(actor).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(payload))).andExpect(status().isOk());
         for (MockHttpSession session : List.of(first, second)) {
             mvc.perform(get("/api/users").session(session)).andExpect(status().isForbidden());
@@ -144,6 +145,31 @@ class SessionRevocationIntegrationTest {
             assertTrue(!session.isInvalid());
         }
         mvc.perform(get("/api/users").session(actor)).andExpect(status().isOk());
+    }
+
+    /** D8: mudar as permissões extras também não derruba as sessões e vale na requisição seguinte. */
+    @Test
+    void extrasChangeKeepsSessionsAndAppliesOnNextRequest() throws Exception {
+        Map<String, Object> payload = updatePayload();
+        payload.put("profileId", profileId("VIEWER"));
+        payload.put("extraPermissions", List.of("cadastros.editar"));
+        mvc.perform(put("/api/users/{id}", target.getId()).session(actor).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(payload))).andExpect(status().isOk());
+        for (MockHttpSession session : List.of(first, second)) {
+            mvc.perform(get("/api/users").session(session)).andExpect(status().isForbidden());
+            mvc.perform(post("/api/products").session(session).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest());
+            mvc.perform(post("/api/rmas").session(session).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+            assertTrue(!session.isInvalid());
+        }
+
+        payload.put("extraPermissions", List.of());
+        mvc.perform(put("/api/users/{id}", target.getId()).session(actor).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(payload))).andExpect(status().isOk());
+        for (MockHttpSession session : List.of(first, second)) {
+            mvc.perform(post("/api/products").session(session).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+            mvc.perform(get("/api/products").session(session)).andExpect(status().isOk());
+        }
     }
 
     @Test
@@ -162,7 +188,7 @@ class SessionRevocationIntegrationTest {
     @Test
     void rolledBackSecurityChangeDoesNotRevoke() throws Exception {
         new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
-            service.update(target.getId(), new UserAccountUpdateRequest(TARGET, target.getFullName(), null, UserRole.VIEWER, false));
+            service.update(target.getId(), new UserAccountUpdateRequest(TARGET, target.getFullName(), null, profileId("VIEWER"), Set.of(), false), "admin");
             transaction.setRollbackOnly();
         });
         UserAccount saved = users.findById(target.getId()).orElseThrow();
@@ -253,7 +279,11 @@ class SessionRevocationIntegrationTest {
     }
 
     private Map<String, Object> updatePayload() {
-        return new LinkedHashMap<>(Map.of("username", TARGET, "fullName", target.getFullName(), "role", "ADMIN", "active", true));
+        return new LinkedHashMap<>(Map.of("username", TARGET, "fullName", target.getFullName(), "profileId", profileId("ADMIN"), "active", true));
+    }
+
+    private Long profileId(String legacyCode) {
+        return accessProfiles.findByLegacyCode(legacyCode).orElseThrow().getId();
     }
 
     private MockHttpSession login(String username, String password) throws Exception {

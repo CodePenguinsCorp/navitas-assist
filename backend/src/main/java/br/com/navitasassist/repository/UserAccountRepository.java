@@ -38,6 +38,9 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
     List<UserAccount> findAllByActiveTrueAndProfileInOrderByFullNameAsc(Collection<AccessProfile> profiles);
 
     List<UserAccount> findAllByActiveTrueAndRoleNotOrderByFullNameAsc(UserRole role);
+
+    List<UserAccount> findAllByActiveTrueOrderByFullNameAsc();
+
     @Query("""
         select account
         from UserAccount account
@@ -46,13 +49,13 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
             or lower(account.fullName) like lower(concat('%', :query, '%'))
             or lower(account.username) like lower(concat('%', :query, '%'))
           )
-          and (:role is null or account.role = :role)
+          and (:profileId is null or account.profile.id = :profileId)
           and (:active is null or account.active = :active)
         order by lower(account.fullName), account.id
         """)
     Page<UserAccount> search(
         @Param("query") String query,
-        @Param("role") UserRole role,
+        @Param("profileId") Long profileId,
         @Param("active") Boolean active,
         Pageable pageable
     );
@@ -63,6 +66,6 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
 
     long countByRole(UserRole role);
 
-    @Query("select count(distinct account.role) from UserAccount account")
-    long countDistinctRoles();
+    @Query("select count(distinct account.profile.id) from UserAccount account")
+    long countDistinctProfiles();
 }

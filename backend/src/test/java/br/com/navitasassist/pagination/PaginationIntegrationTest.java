@@ -10,7 +10,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
+import br.com.navitasassist.access.AccessProfile;
 import br.com.navitasassist.access.AccessTestSupport;
 import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.client.Client;
@@ -27,6 +30,7 @@ import br.com.navitasassist.rma.RmaStatusHistory;
 import br.com.navitasassist.user.UserAccount;
 import br.com.navitasassist.user.UserAccountTestSupport;
 import br.com.navitasassist.user.UserRole;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,6 +66,18 @@ class PaginationIntegrationTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    private static final String CUSTOM_PROFILE = "Teste paginacao gestor";
+    private static final String OTHER_PROFILE = "Teste paginacao personalizado";
+
+    @AfterEach
+    void cleanCustomProfiles() {
+        userAccountRepository.findAll().stream()
+            .filter(account -> account.getProfile().getLegacyCode() == null)
+            .forEach(userAccountRepository::delete);
+        userAccountRepository.flush();
+        AccessTestSupport.deleteProfiles(accessProfiles, CUSTOM_PROFILE, OTHER_PROFILE);
+    }
 
     @BeforeEach
     void clean() {
@@ -148,7 +164,7 @@ class PaginationIntegrationTest {
             .andExpect(status().isBadRequest());
         mockMvc.perform(get("/api/rmas").param("size", "1000").with(admin()))
             .andExpect(status().isBadRequest());
-        mockMvc.perform(get("/api/users").param("role", "INVALID").with(admin()))
+        mockMvc.perform(get("/api/users").param("profileId", "abc").with(admin()))
             .andExpect(status().isBadRequest());
         mockMvc.perform(get("/api/clients").param("size", "100").with(admin()))
             .andExpect(status().isOk());
@@ -217,7 +233,7 @@ class PaginationIntegrationTest {
         saveUser("ana", "Ana Tech", UserRole.TECHNICIAN, true);
         saveUser("bob", "Bob Tech", UserRole.TECHNICIAN, false);
 
-        mockMvc.perform(get("/api/users").param("role", "TECHNICIAN").param("size", "1").with(admin()))
+        mockMvc.perform(get("/api/users").param("profileId", profileId("TECHNICIAN").toString()).param("size", "1").with(admin()))
             .andExpect(jsonPath("$.totalElements").value(2))
             .andExpect(jsonPath("$.totalPages").value(2))
             .andExpect(jsonPath("$.content[*].username", contains("ana")));
@@ -231,6 +247,32 @@ class PaginationIntegrationTest {
             .andExpect(jsonPath("$.active").value(3))
             .andExpect(jsonPath("$.admins").value(2))
             .andExpect(jsonPath("$.roles").value(2));
+    }
+
+    /** Perfis personalizados entram no filtro e no resumo pelo perfil e pelas permissões efetivas (D13). */
+    @Test
+    void shouldFilterAndSummarizeUsersByCustomProfileAndEffectivePermissions() throws Exception {
+        AccessProfile manager = AccessTestSupport.saveProfile(accessProfiles, CUSTOM_PROFILE, "usuarios.gerir", "perfis.gerir");
+        AccessProfile custom = AccessTestSupport.saveProfile(accessProfiles, OTHER_PROFILE, "rma.ver");
+        saveUser("carl", "Carl Custom Admin", manager, Set.of(), true);
+        saveUser("dora", "Dora Custom Inactive Admin", custom, Set.of("usuarios.gerir", "perfis.gerir"), false);
+        saveUser("eve", "Eve Custom", custom, Set.of("usuarios.gerir"), true);
+        saveUser("finn", "Finn Viewer", accessProfiles.findByLegacyCode("VIEWER").orElseThrow(), Set.of(), true);
+
+        mockMvc.perform(get("/api/users").param("profileId", custom.getId().toString()).with(admin()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalElements").value(2))
+            .andExpect(jsonPath("$.content[*].username", contains("dora", "eve")));
+        mockMvc.perform(get("/api/users").param("profileId", manager.getId().toString()).with(admin()))
+            .andExpect(jsonPath("$.content[*].username", contains("carl")));
+        mockMvc.perform(get("/api/users").param("profileId", profileId("VIEWER").toString()).with(admin()))
+            .andExpect(jsonPath("$.content[*].username", contains("finn")));
+
+        mockMvc.perform(get("/api/users/summary").with(admin()))
+            .andExpect(jsonPath("$.total").value(5))
+            .andExpect(jsonPath("$.active").value(4))
+            .andExpect(jsonPath("$.admins").value(3))
+            .andExpect(jsonPath("$.roles").value(4));
     }
 
     @Test
@@ -332,6 +374,22 @@ class PaginationIntegrationTest {
         product.setFirmwareVersion(firmwareVersion);
         product.setDefaultWarrantyMonths(12);
         return productRepository.save(product);
+    }
+
+    private void saveUser(String username, String fullName, AccessProfile profile, Set<String> extras, boolean active) {
+        UserAccount account = new UserAccount();
+        account.setUsername(username);
+        account.setFullName(fullName);
+        account.setPasswordHash("hash");
+        account.setRole(profile.getLegacyCode() == null ? UserRole.VIEWER : UserRole.valueOf(profile.getLegacyCode()));
+        account.setProfile(profile);
+        account.setExtraPermissions(new HashSet<>(extras));
+        account.setActive(active);
+        userAccountRepository.save(account);
+    }
+
+    private Long profileId(String legacyCode) {
+        return accessProfiles.findByLegacyCode(legacyCode).orElseThrow().getId();
     }
 
     private void saveUser(String username, String fullName, UserRole role, boolean active) {

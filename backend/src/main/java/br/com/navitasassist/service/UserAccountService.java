@@ -1,16 +1,18 @@
 package br.com.navitasassist.service;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 import br.com.navitasassist.access.AccessProfile;
+import br.com.navitasassist.access.Permission;
 import br.com.navitasassist.auth.AccountSessionRevoker;
 import br.com.navitasassist.auth.BoundedBCryptPasswordEncoder;
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.pagination.PageParams;
 import br.com.navitasassist.pagination.PageResponse;
-import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.user.AssignableUserResponse;
@@ -33,58 +35,74 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserAccountService {
 
     private final UserAccountRepository userAccountRepository;
-    private final AccessProfileRepository accessProfileRepository;
+    private final AccessProfileService accessProfileService;
     private final RmaRecordRepository rmaRecordRepository;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher events;
     private final AdministratorGuard administratorGuard;
+    private final PermissionGrantPolicy permissionGrantPolicy;
+    private final EffectivePermissionService effectivePermissionService;
 
     @Transactional(readOnly = true)
-    public PageResponse<UserAccountResponse> search(String query, UserRole role, Boolean active, Integer page, Integer size) {
+    public PageResponse<UserAccountResponse> search(String query, Long profileId, Boolean active, Integer page, Integer size) {
         String normalizedQuery = query == null || query.isBlank() ? null : query.trim();
         return PageResponse.from(
-            userAccountRepository.search(normalizedQuery, role, active, PageParams.of(page, size)),
+            userAccountRepository.search(normalizedQuery, profileId, active, PageParams.of(page, size)),
             UserAccountResponse::from
         );
     }
 
     @Transactional(readOnly = true)
     public UserSummaryResponse summarize() {
+        // D13: admins = usuários, ativos ou não, com usuarios.gerir e perfis.gerir efetivas; roles = perfis em uso.
+        long administrators = userAccountRepository.findAll().stream()
+            .filter(effectivePermissionService::isAdministrator)
+            .count();
         return new UserSummaryResponse(
             userAccountRepository.count(),
             userAccountRepository.countByActiveTrue(),
-            userAccountRepository.countByRole(UserRole.ADMIN),
-            userAccountRepository.countDistinctRoles()
+            administrators,
+            userAccountRepository.countDistinctProfiles()
         );
     }
 
     @Transactional(readOnly = true)
     public List<AssignableUserResponse> listAssignableTechnicians() {
-        return userAccountRepository.findAllByActiveTrueAndRoleOrderByFullNameAsc(UserRole.TECHNICIAN)
+        return userAccountRepository.findAllByActiveTrueOrderByFullNameAsc()
             .stream()
+            .filter(this::isAssignable)
             .map(AssignableUserResponse::from)
             .toList();
     }
 
-    public UserAccountResponse create(UserAccountRequest request) {
+    public UserAccountResponse create(UserAccountRequest request, String actor) {
         validateUsername(null, request.username());
+        AccessProfile profile = accessProfileService.getEntity(request.profileId());
+        Set<String> extras = validateExtras(request.extraPermissions());
+        ensureCanGrant(actor, profile, extras);
 
         UserAccount userAccount = new UserAccount();
         userAccount.setUsername(trim(request.username()));
         userAccount.setFullName(trim(request.fullName()));
         userAccount.setPasswordHash(passwordEncoder.encode(request.password()));
-        userAccount.setRole(request.role());
-        userAccount.setProfile(legacyProfile(request.role()));
+        userAccount.setRole(bridgeRole(profile));
+        userAccount.setProfile(profile);
+        userAccount.setExtraPermissions(extras);
         userAccount.setActive(request.active());
 
         return UserAccountResponse.from(userAccountRepository.save(userAccount));
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public UserAccountResponse update(Long id, UserAccountUpdateRequest request) {
+    public UserAccountResponse update(Long id, UserAccountUpdateRequest request, String actor) {
         UserAccount userAccount = getEntityForAdministration(id);
-        AccessProfile newProfile = legacyProfile(request.role());
-        administratorGuard.ensureRemainsAfterUserChange(userAccount, newProfile, userAccount.getExtraPermissions(), request.active());
+        AccessProfile newProfile = accessProfileService.getEntity(request.profileId());
+        Set<String> newExtras = validateExtras(request.extraPermissions());
+        administratorGuard.ensureRemainsAfterUserChange(userAccount, newProfile, newExtras, request.active());
+        // Anti-escalada sobre o estado atual e o resultante: quem não é administrador não mexe em quem tem mais acesso.
+        Set<Permission> touched = effectivePermissionService.effectivePermissions(userAccount);
+        touched.addAll(effectivePermissionService.effectivePermissions(newProfile.getPermissions(), newExtras));
+        permissionGrantPolicy.ensureCanGrant(actor, touched);
         validateUsername(userAccount, request.username());
         BoundedBCryptPasswordEncoder.validatePasswordLength(request.password());
 
@@ -100,8 +118,10 @@ public class UserAccountService {
         if (passwordChanged) {
             userAccount.setPasswordHash(passwordEncoder.encode(request.password()));
         }
-        userAccount.setRole(request.role());
+        userAccount.setRole(bridgeRole(newProfile));
         userAccount.setProfile(newProfile);
+        userAccount.getExtraPermissions().clear();
+        userAccount.getExtraPermissions().addAll(newExtras);
         userAccount.setActive(request.active());
 
         UserAccountResponse response = UserAccountResponse.from(userAccountRepository.save(userAccount));
@@ -119,6 +139,7 @@ public class UserAccountService {
             throw new BusinessException("You cannot delete your own user account.");
         }
         administratorGuard.ensureRemainsAfterUserDeletion(userAccount);
+        permissionGrantPolicy.ensureCanGrant(authenticatedUsername, effectivePermissionService.effectivePermissions(userAccount));
         if (rmaRecordRepository.existsByAssignee_Id(id)) {
             throw new BusinessException("User is assigned to one or more RMAs and cannot be deleted.");
         }
@@ -133,7 +154,7 @@ public class UserAccountService {
         if (!userAccount.isActive()) {
             throw new BusinessException("Inactive users cannot be assigned to an RMA.");
         }
-        if (userAccount.getRole() != UserRole.TECHNICIAN) {
+        if (!isAssignable(userAccount)) {
             throw new BusinessException("Only technicians can be assigned to an RMA.");
         }
         return userAccount;
@@ -172,10 +193,24 @@ public class UserAccountService {
         return userAccountRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
     }
 
-    /** Ponte da etapa 8A: enquanto o role existir, o perfil acompanha o role gravado. */
-    private AccessProfile legacyProfile(UserRole role) {
-        return accessProfileRepository.findByLegacyCode(role.name())
-            .orElseThrow(() -> new IllegalStateException("Legacy access profile not found: " + role));
+    /** D1: pode ser responsável por RMA quem tem {@code rma.atribuivel} efetiva. */
+    private boolean isAssignable(UserAccount userAccount) {
+        return effectivePermissionService.has(userAccount, Permission.RMA_ATRIBUIVEL);
+    }
+
+    /** Extras válidas do pedido ({@code null} vale vazio), como códigos do catálogo. */
+    private Set<String> validateExtras(Set<String> extras) {
+        return new HashSet<>(Permission.codes(accessProfileService.validateCodes(extras == null ? Set.of() : extras)));
+    }
+
+    /** Anti-escalada (spec §4.4) sobre o estado resultante: permissões do perfil escolhido mais as extras. */
+    private void ensureCanGrant(String actor, AccessProfile profile, Set<String> extras) {
+        permissionGrantPolicy.ensureCanGrant(actor, effectivePermissionService.effectivePermissions(profile.getPermissions(), extras));
+    }
+
+    /** Ponte da etapa 8A: a coluna role segue NOT NULL até a V10; grava o legacy_code do perfil, ou VIEWER. */
+    private static UserRole bridgeRole(AccessProfile profile) {
+        return profile.getLegacyCode() != null ? UserRole.valueOf(profile.getLegacyCode()) : UserRole.VIEWER;
     }
 
     private String trim(String value) {

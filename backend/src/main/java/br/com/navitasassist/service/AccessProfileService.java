@@ -51,7 +51,7 @@ public class AccessProfileService {
 
     public ProfileResponse create(ProfileRequest request, String actor) {
         String name = request.name().trim();
-        Set<Permission> permissions = validatePermissions(request.permissions());
+        Set<Permission> permissions = validateCodes(request.permissions());
         validateName(null, name);
         permissionGrantPolicy.ensureCanGrant(actor, permissions);
 
@@ -67,7 +67,7 @@ public class AccessProfileService {
         administratorGuard.lockAccessGraph();
         AccessProfile profile = accessProfileRepository.findByIdForUpdate(id).orElseThrow(() -> notFound(id));
         String name = request.name().trim();
-        Set<Permission> permissions = validatePermissions(request.permissions());
+        Set<Permission> permissions = validateCodes(request.permissions());
         validateName(profile, name);
         permissionGrantPolicy.ensureCanGrant(actor, permissions);
 
@@ -84,6 +84,10 @@ public class AccessProfileService {
 
     public void delete(Long id) {
         AccessProfile profile = accessProfileRepository.findByIdForUpdate(id).orElseThrow(() -> notFound(id));
+        // Enquanto a coluna legada role existir, os perfis migrados sustentam a ponte do role e o rollback (spec §6).
+        if (profile.getLegacyCode() != null) {
+            throw new BusinessException("Perfil migrado não pode ser excluído.");
+        }
         if (userAccountRepository.countByProfile_Id(id) > 0) {
             throw new BusinessException("Perfil possui usuários vinculados e não pode ser excluído.");
         }
@@ -97,7 +101,8 @@ public class AccessProfileService {
             .orElseThrow(() -> new BusinessException("Perfil não encontrado: " + id + "."));
     }
 
-    private Set<Permission> validatePermissions(Set<String> codes) {
+    /** Recusa códigos fora do catálogo com 400 {@code "Permissão desconhecida: {código}."}. */
+    public Set<Permission> validateCodes(Set<String> codes) {
         for (String code : new TreeSet<>(codes)) {
             if (Permission.fromCode(code).isEmpty()) {
                 throw new BusinessException("Permissão desconhecida: " + code + ".");

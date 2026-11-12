@@ -9,7 +9,6 @@ import br.com.navitasassist.user.AssignableUserResponse;
 import br.com.navitasassist.user.UserAccountRequest;
 import br.com.navitasassist.user.UserAccountResponse;
 import br.com.navitasassist.user.UserAccountUpdateRequest;
-import br.com.navitasassist.user.UserRole;
 import br.com.navitasassist.user.UserSummaryResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,12 +34,12 @@ public class UserController {
     @GetMapping
     public PageResponse<UserAccountResponse> search(
         @RequestParam(required = false) String query,
-        @RequestParam(required = false) UserRole role,
+        @RequestParam(required = false) Long profileId,
         @RequestParam(required = false) Boolean active,
         @RequestParam(required = false) Integer page,
         @RequestParam(required = false) Integer size
     ) {
-        return userAccountService.search(query, role, active, page, size);
+        return userAccountService.search(query, profileId, active, page, size);
     }
 
     @GetMapping("/summary")
@@ -55,16 +54,17 @@ public class UserController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public UserAccountResponse create(@Valid @RequestBody UserAccountRequest request) {
-        return userAccountService.create(request);
+    public UserAccountResponse create(@Valid @RequestBody UserAccountRequest request, Principal principal) {
+        return userAccountService.create(request, principal.getName());
     }
 
     @PutMapping("/{id}")
     public UserAccountResponse update(
         @PathVariable Long id,
-        @Valid @RequestBody UserAccountUpdateRequest request
+        @Valid @RequestBody UserAccountUpdateRequest request,
+        Principal principal
     ) {
-        return userAccountService.update(id, request);
+        return userAccountService.update(id, request, principal.getName());
     }
 
     @DeleteMapping("/{id}")
