@@ -94,7 +94,19 @@ const passwordByteLengthValidator: ValidatorFn = control =>
     .permission-module .checkbox-field { flex-wrap: wrap; column-gap: 0.55rem; row-gap: 0; }
     .permission-module .checkbox-field > span { flex: 1 1 0; min-width: 0; }
     .permission-module .checkbox-field > small { flex-basis: 100%; padding-left: 1.6rem; }
-    .extras-pending { min-height: 4rem; grid-column: 1 / -1; }
+    .extras-pending { min-height: 4rem; }
+    .extras-details { grid-column: 1 / -1; min-width: 0; }
+    .extras-details > summary {
+      display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+      min-height: var(--control-height); padding: 0 var(--space-3); border: 1px solid var(--btn-secondary-border, var(--line));
+      border-radius: var(--radius-sm); background: var(--brand-tint); color: var(--brand-blue-deep);
+      font-weight: var(--font-weight-semibold); cursor: pointer; list-style: none;
+    }
+    .extras-details > summary::-webkit-details-marker { display: none; }
+    .extras-details > summary::after { content: ''; width: 8px; height: 8px; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform 160ms ease; }
+    .extras-details[open] > summary::after { transform: rotate(-135deg); }
+    .extras-details > summary:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+    .extras-modules { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
   `]
 })
 export class UsersComponent {
@@ -154,6 +166,11 @@ export class UsersComponent {
   /** Extras marcadas no diálogo. As que o perfil escolhido já inclui ficam guardadas, mas não vão no envio. */
   protected readonly extras = signal<ReadonlySet<Permission>>(new Set());
   private readonly selectedProfileId = signal<number | null>(null);
+  protected readonly extrasOpen = signal(false);
+  protected readonly extrasSummary = computed(() => {
+    const count = PERMISSIONS.filter((code) => this.extras().has(code) && !this.profilePermissions().has(code)).length;
+    return count === 0 ? 'Nenhuma permissão extra' : count === 1 ? '1 permissão extra' : `${count} permissões extras`;
+  });
   protected readonly accessReady = computed(() => this.profileOptionsState() === 'ready' && this.catalogState() === 'ready');
   protected readonly accessFailed = computed(() => this.profileOptionsState() === 'failed' || this.catalogState() === 'failed');
   protected readonly profileSelectOptions = computed<ReadonlyArray<CustomSelectOption<number>>>(() =>
@@ -229,6 +246,7 @@ export class UsersComponent {
     this.configurePasswordValidation(true);
     this.form.reset(emptyUserForm());
     this.extras.set(new Set());
+    this.extrasOpen.set(false);
     this.activeModal.set('create');
     this.clearMessages();
     this.loadAccessSources();
@@ -245,6 +263,7 @@ export class UsersComponent {
       active: user.active
     });
     this.extras.set(new Set(user.extraPermissions.filter(isPermission)));
+    this.extrasOpen.set(user.extraPermissions.filter(isPermission).length > 0);
     this.selectProfile(user.profile.id);
     this.activeModal.set('edit');
     this.clearMessages();

@@ -104,6 +104,50 @@ describe('UsersComponent profile and extra permissions', () => {
     expect(free.textContent).not.toContain('Incluída no perfil');
   });
 
+  describe('collapsible extra permissions', () => {
+    const details = () => dialog().querySelector<HTMLDetailsElement>('.extra-permissions details.extras-details')!;
+    const summary = () => details().querySelector('summary')!.textContent!.replace(/\s+/g, ' ').trim();
+
+    it('starts minimized for a new user and keeps the checkboxes in the DOM', async () => {
+      await mount();
+      component.openCreateModal();
+      fixture.detectChanges();
+      expect(details().open).toBe(false);
+      expect(summary()).toContain('Nenhuma permissão extra');
+      expect(dialog().querySelectorAll('.extra-permissions fieldset.permission-module').length).toBe(6);
+    });
+
+    it('opens by itself when the user being edited already has extras, and counts them', async () => {
+      await mount();
+      component.openEditModal(account({ extraPermissions: ['rma.status', 'pecas.reservar'] }));
+      fixture.detectChanges();
+      expect(details().open).toBe(true);
+      expect(summary()).toContain('2 permissões extras');
+    });
+
+    it('counts a single extra in the singular and ignores permissions the profile already has', async () => {
+      await mount();
+      component.openEditModal(account({ extraPermissions: ['rma.ver'] }));
+      fixture.detectChanges();
+      expect(summary()).toContain('Nenhuma permissão extra');
+      extraBox('Alterar status').querySelector('input')!.click();
+      fixture.detectChanges();
+      expect(summary()).toContain('1 permissão extra');
+    });
+
+    it('is minimized again the next time a new user is created', async () => {
+      await mount();
+      component.openEditModal(account({ extraPermissions: ['rma.status'] }));
+      fixture.detectChanges();
+      expect(details().open).toBe(true);
+      component.closeModal();
+      fixture.detectChanges();
+      component.openCreateModal();
+      fixture.detectChanges();
+      expect(details().open).toBe(false);
+    });
+  });
+
   it('sends only extras not in the selected profile', async () => {
     await mount({ rows: [account({ extraPermissions: ['rma.ver', 'pecas.reservar'] })] });
     component.openEditModal(account({ extraPermissions: ['rma.ver', 'pecas.reservar'] }));

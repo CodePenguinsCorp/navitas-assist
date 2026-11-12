@@ -232,27 +232,34 @@
 
         <fieldset class="form-section extra-permissions">
           <legend>Permissões extras</legend>
-          @if (catalogState() === 'loading') {
-            <div class="extras-pending" aria-busy="true"></div>
-          } @else if (catalogState() === 'ready') {
-            @for (module of catalog(); track module.module) {
-              <fieldset class="permission-module">
-                <legend>{{ module.label }}</legend>
-                @for (item of module.permissions; track item.code) {
-                  <label class="checkbox-field">
-                    <input
-                      type="checkbox"
-                      [checked]="isExtraChecked(item.code)"
-                      [disabled]="submitting() || includedInProfile(item.code)"
-                      (change)="toggleExtra(item.code, $any($event.target).checked)"
-                    />
-                    <span>{{ item.label }}</span>
-                    @if (includedInProfile(item.code)) { <small class="field-hint">Incluída no perfil</small> }
-                  </label>
+          <details class="extras-details" [open]="extrasOpen()" (toggle)="extrasOpen.set($any($event.target).open)">
+            <summary>
+              <span>{{ extrasSummary() }}</span>
+            </summary>
+            @if (catalogState() === 'loading') {
+              <div class="extras-pending" aria-busy="true"></div>
+            } @else if (catalogState() === 'ready') {
+              <div class="extras-modules">
+                @for (module of catalog(); track module.module) {
+                  <fieldset class="permission-module">
+                    <legend>{{ module.label }}</legend>
+                    @for (item of module.permissions; track item.code) {
+                      <label class="checkbox-field">
+                        <input
+                          type="checkbox"
+                          [checked]="isExtraChecked(item.code)"
+                          [disabled]="submitting() || includedInProfile(item.code)"
+                          (change)="toggleExtra(item.code, $any($event.target).checked)"
+                        />
+                        <span>{{ item.label }}</span>
+                        @if (includedInProfile(item.code)) { <small class="field-hint">Incluída no perfil</small> }
+                      </label>
+                    }
+                  </fieldset>
                 }
-              </fieldset>
+              </div>
             }
-          }
+          </details>
         </fieldset>
 
         <fieldset class="form-section">
