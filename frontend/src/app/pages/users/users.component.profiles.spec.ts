@@ -67,8 +67,8 @@ describe('UsersComponent profile and extra permissions', () => {
   }
 
   const dialog = () => element.querySelector<HTMLElement>('[role="dialog"]')!;
-  const extraBox = (label: string) => Array.from(dialog().querySelectorAll<HTMLLabelElement>('.extra-permissions label.checkbox-field'))
-    .find((item) => item.querySelector('span')?.textContent?.trim() === label)!;
+  const extraBox = (label: string) => Array.from(dialog().querySelectorAll<HTMLLabelElement>('.extra-permissions label.permission-row'))
+    .find((item) => item.querySelector('.permission-row__label')?.textContent?.trim() === label)!;
   const fill = () => component.form.patchValue({ username: 'novo', fullName: 'Novo usuário', password: 'segredo1' });
   const selectProfile = (id: number) => { component.form.controls['profileId'].setValue(id); fixture.detectChanges(); };
 
@@ -97,16 +97,17 @@ describe('UsersComponent profile and extra permissions', () => {
     const included = extraBox('Abrir RMAs');
     expect(included.querySelector('input')!.checked).toBe(true);
     expect(included.querySelector('input')!.disabled).toBe(true);
-    expect(included.textContent).toContain('Incluída no perfil');
+    expect(included.querySelector('.permission-badge')?.textContent?.trim()).toBe('Do perfil');
     const free = extraBox('Alterar status');
     expect(free.querySelector('input')!.checked).toBe(false);
     expect(free.querySelector('input')!.disabled).toBe(false);
-    expect(free.textContent).not.toContain('Incluída no perfil');
+    expect(free.querySelector('.permission-badge')).toBeNull();
   });
 
   describe('collapsible extra permissions', () => {
-    const details = () => dialog().querySelector<HTMLDetailsElement>('.extra-permissions details.extras-details')!;
-    const summary = () => details().querySelector('summary')!.textContent!.replace(/\s+/g, ' ').trim();
+    const toggle = () => dialog().querySelector<HTMLButtonElement>('.extra-permissions button[aria-controls]')!;
+    const details = () => ({ open: toggle().getAttribute('aria-expanded') === 'true' && !dialog().querySelector<HTMLElement>(`#${toggle().getAttribute('aria-controls')}`)!.hidden });
+    const summary = () => dialog().querySelector('.extra-permissions .permission-picker__summary')!.textContent!.replace(/\s+/g, ' ').trim();
 
     it('starts minimized for a new user and keeps the checkboxes in the DOM', async () => {
       await mount();
@@ -146,6 +147,19 @@ describe('UsersComponent profile and extra permissions', () => {
       fixture.detectChanges();
       expect(details().open).toBe(false);
     });
+  });
+
+  it('removes an extra from its chip without opening the panel', async () => {
+    await mount();
+    component.openEditModal(account({ extraPermissions: ['rma.status', 'pecas.reservar'] }));
+    fixture.detectChanges();
+    const chips = () => Array.from(dialog().querySelectorAll('.extra-permissions .permission-chip')).map((chip) => chip.querySelector('.permission-chip__label')?.textContent?.trim());
+    expect(chips()).toEqual(['Alterar status', 'Reservar e aplicar peças nos RMAs']);
+    dialog().querySelector<HTMLButtonElement>('.permission-chip button[aria-label="Remover Alterar status"]')!.click();
+    fixture.detectChanges();
+    expect(chips()).toEqual(['Reservar e aplicar peças nos RMAs']);
+    component.saveUser();
+    expect(updateUser).toHaveBeenCalledWith(7, expect.objectContaining({ extraPermissions: ['pecas.reservar'] }));
   });
 
   it('sends only extras not in the selected profile', async () => {

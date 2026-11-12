@@ -23,6 +23,7 @@ import {
   CustomSelectComponent,
   CustomSelectOption
 } from '../../shared/form-controls/custom-select/custom-select.component';
+import { PermissionPickerComponent } from '../../shared/permission-picker/permission-picker.component';
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
@@ -38,7 +39,7 @@ const passwordByteLengthValidator: ValidatorFn = control =>
 
 @Component({
   selector: 'app-users',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PaginationComponent, PageHeaderComponent, RowActionComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PaginationComponent, PageHeaderComponent, PermissionPickerComponent, RowActionComponent],
   templateUrl: './users.component.html',
   styles: [`
     :host { display: block; }
@@ -67,46 +68,7 @@ const passwordByteLengthValidator: ValidatorFn = control =>
       line-height: 1.35;
     }
 
-    .permission-module {
-      grid-column: 1 / -1;
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
-      gap: 0 var(--space-4);
-      min-width: 0;
-      margin: 0;
-      padding: 0;
-      border: 0;
-    }
-
-    .permission-module > legend {
-      padding: 0;
-      margin-bottom: var(--space-1);
-      font-weight: var(--font-weight-semibold);
-    }
-
-    .permission-module .checkbox-field {
-      align-items: flex-start;
-      padding-block: 0.55rem;
-      line-height: 1.35;
-    }
-
-    .permission-module .checkbox-field input { margin-top: 0.1rem; flex-shrink: 0; }
-    .permission-module .checkbox-field { flex-wrap: wrap; column-gap: 0.55rem; row-gap: 0; }
-    .permission-module .checkbox-field > span { flex: 1 1 0; min-width: 0; }
-    .permission-module .checkbox-field > small { flex-basis: 100%; padding-left: 1.6rem; }
-    .extras-pending { min-height: 4rem; }
-    .extras-details { grid-column: 1 / -1; min-width: 0; }
-    .extras-details > summary {
-      display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
-      min-height: var(--control-height); padding: 0 var(--space-3); border: 1px solid var(--btn-secondary-border, var(--line));
-      border-radius: var(--radius-sm); background: var(--brand-tint); color: var(--brand-blue-deep);
-      font-weight: var(--font-weight-semibold); cursor: pointer; list-style: none;
-    }
-    .extras-details > summary::-webkit-details-marker { display: none; }
-    .extras-details > summary::after { content: ''; width: 8px; height: 8px; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform 160ms ease; }
-    .extras-details[open] > summary::after { transform: rotate(-135deg); }
-    .extras-details > summary:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-    .extras-modules { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
+    .extras-pending { min-height: 4rem; grid-column: 1 / -1; }
   `]
 })
 export class UsersComponent {
@@ -167,17 +129,13 @@ export class UsersComponent {
   protected readonly extras = signal<ReadonlySet<Permission>>(new Set());
   private readonly selectedProfileId = signal<number | null>(null);
   protected readonly extrasOpen = signal(false);
-  protected readonly extrasSummary = computed(() => {
-    const count = PERMISSIONS.filter((code) => this.extras().has(code) && !this.profilePermissions().has(code)).length;
-    return count === 0 ? 'Nenhuma permissão extra' : count === 1 ? '1 permissão extra' : `${count} permissões extras`;
-  });
   protected readonly accessReady = computed(() => this.profileOptionsState() === 'ready' && this.catalogState() === 'ready');
   protected readonly accessFailed = computed(() => this.profileOptionsState() === 'failed' || this.catalogState() === 'failed');
   protected readonly profileSelectOptions = computed<ReadonlyArray<CustomSelectOption<number>>>(() =>
     this.profileOptions().map((option) => ({ value: option.id, label: option.name })));
   protected readonly profileFilterOptions = computed<ReadonlyArray<CustomSelectOption<number | ''>>>(() =>
     [{ value: '', label: 'Todos' }, ...this.profileSelectOptions()]);
-  private readonly profilePermissions = computed<ReadonlySet<string>>(() =>
+  protected readonly profilePermissions = computed<ReadonlySet<string>>(() =>
     new Set(this.profileOptions().find((option) => option.id === this.selectedProfileId())?.permissions ?? []));
 
   protected readonly form = this.formBuilder.nonNullable.group({
@@ -378,23 +336,6 @@ export class UsersComponent {
   protected extrasLabel(user: UserAccountResponse): string {
     const count = user.extraPermissions.filter(isPermission).length;
     return count === 0 ? '' : count === 1 ? '+1 extra' : `+${count} extras`;
-  }
-
-  protected includedInProfile(code: string): boolean {
-    return this.profilePermissions().has(code);
-  }
-
-  protected isExtraChecked(code: string): boolean {
-    return this.includedInProfile(code) || (isPermission(code) && this.extras().has(code));
-  }
-
-  protected toggleExtra(code: string, checked: boolean): void {
-    if (!isPermission(code) || this.includedInProfile(code)) {
-      return;
-    }
-    const next = new Set(this.extras());
-    if (checked) next.add(code); else next.delete(code);
-    this.extras.set(next);
   }
 
   protected hasError(controlName: UserFormControlName): boolean {

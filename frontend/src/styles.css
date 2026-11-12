@@ -1953,6 +1953,153 @@ fieldset.field-group > span {
   background: #eef5fc;
 }
 
+/* On/off switch on a native checkbox (role="switch"): Space and click toggle it, the label stays the target. */
+input[type="checkbox"].switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  border: 1.5px solid #7b8fa5;
+  border-radius: var(--radius-pill);
+  background: var(--track-bg);
+}
+
+input[type="checkbox"].switch::before {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(23, 48, 77, 0.3);
+  clip-path: none;
+  transform: none;
+  transition: transform 140ms ease;
+}
+
+input[type="checkbox"].switch:checked {
+  border-color: var(--brand-blue);
+  background: var(--brand-blue);
+}
+
+input[type="checkbox"].switch:checked::before {
+  transform: translateX(16px);
+}
+
+/* Locked on (granted elsewhere): still reads as on, one step lighter. */
+input[type="checkbox"].switch:disabled:checked {
+  border-color: #8fb3d3;
+  background: #8fb3d3;
+}
+
+/* One permission per row: switch, label and, when locked, the origin badge. 40px target. */
+.permission-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--control-height);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-tight);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.permission-row:hover:not(.is-locked) {
+  background: var(--surface-alt);
+}
+
+.permission-row.is-extra,
+.permission-row.is-extra:hover {
+  background: var(--brand-tint);
+}
+
+.permission-row.is-locked {
+  color: var(--muted-strong);
+  cursor: default;
+}
+
+.permission-row > :not(input) {
+  min-width: 0;
+}
+
+.permission-row > span:first-of-type {
+  flex: 1 1 auto;
+}
+
+/* Small origin marker ("Do perfil"): neutral slate, lock icon. */
+.lock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  min-height: 22px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--btn-neutral-bg);
+  color: var(--btn-neutral-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+/* Chip with its own remove button; the button's hit area grows to 40px around the 24px icon. */
+.removable-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--control-height-xs);
+  max-width: 100%;
+  padding: 0 2px 0 var(--space-3);
+  border: 1px solid var(--btn-secondary-border);
+  border-radius: var(--radius-pill);
+  background: var(--brand-tint);
+  color: var(--brand-blue-deep);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.removable-chip > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.removable-chip > button {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+}
+
+.removable-chip > button::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+
+.removable-chip > button:hover:not(:disabled) {
+  background: var(--btn-secondary-bg-hover);
+}
+
+.removable-chip > button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.removable-chip > button:disabled {
+  opacity: var(--disabled-opacity);
+  cursor: not-allowed;
+}
+
 .danger-heading {
   display: flex;
   align-items: center;
