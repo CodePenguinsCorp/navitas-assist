@@ -37,6 +37,7 @@ public class UserAccountService {
     private final RmaRecordRepository rmaRecordRepository;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher events;
+    private final AdministratorGuard administratorGuard;
 
     @Transactional(readOnly = true)
     public PageResponse<UserAccountResponse> search(String query, UserRole role, Boolean active, Integer page, Integer size) {
@@ -82,7 +83,8 @@ public class UserAccountService {
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public UserAccountResponse update(Long id, UserAccountUpdateRequest request) {
         UserAccount userAccount = getEntityForAdministration(id);
-        validateAdministratorRemoval(userAccount, request.role() == UserRole.ADMIN && request.active());
+        AccessProfile newProfile = legacyProfile(request.role());
+        administratorGuard.ensureRemainsAfterUserChange(userAccount, newProfile, userAccount.getExtraPermissions(), request.active());
         validateUsername(userAccount, request.username());
         BoundedBCryptPasswordEncoder.validatePasswordLength(request.password());
 
@@ -99,7 +101,7 @@ public class UserAccountService {
             userAccount.setPasswordHash(passwordEncoder.encode(request.password()));
         }
         userAccount.setRole(request.role());
-        userAccount.setProfile(legacyProfile(request.role()));
+        userAccount.setProfile(newProfile);
         userAccount.setActive(request.active());
 
         UserAccountResponse response = UserAccountResponse.from(userAccountRepository.save(userAccount));
@@ -116,7 +118,7 @@ public class UserAccountService {
         if (userAccount.getUsername().equalsIgnoreCase(authenticatedUsername)) {
             throw new BusinessException("You cannot delete your own user account.");
         }
-        validateAdministratorRemoval(userAccount, false);
+        administratorGuard.ensureRemainsAfterUserDeletion(userAccount);
         if (rmaRecordRepository.existsByAssignee_Id(id)) {
             throw new BusinessException("User is assigned to one or more RMAs and cannot be deleted.");
         }
@@ -165,16 +167,9 @@ public class UserAccountService {
     }
 
     private UserAccount getEntityForAdministration(Long id) {
-        // All reductions take the same ordered locks before locking their target.
-        userAccountRepository.findActiveByRoleForUpdate(UserRole.ADMIN);
+        // All reductions take the same ordered locks (profiles, then active users) before locking their target.
+        administratorGuard.lockAccessGraph();
         return userAccountRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
-    }
-
-    private void validateAdministratorRemoval(UserAccount account, boolean remainsActiveAdmin) {
-        if (account.isActive() && account.getRole() == UserRole.ADMIN && !remainsActiveAdmin
-                && userAccountRepository.countByRoleAndActiveTrue(UserRole.ADMIN) <= 1) {
-            throw new BusinessException("At least one active administrator must remain.");
-        }
     }
 
     /** Ponte da etapa 8A: enquanto o role existir, o perfil acompanha o role gravado. */
