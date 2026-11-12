@@ -12,7 +12,7 @@ const SPEC_CATALOG = [
 
 const BACKEND_CATALOG = '../backend/src/main/java/br/com/navitasassist/access/Permission.java';
 const BACKEND_MODULES = '../backend/src/main/java/br/com/navitasassist/access/PermissionModule.java';
-const LEGACY_MIGRATION = '../backend/src/main/resources/db/migration/V8__create_access_profiles.sql';
+const LEGACY_MIGRATION = '../backend/src/main/resources/db/migration/V1__baseline.sql';
 
 // O teste roda no Node a partir de frontend/; ler os arquivos do backend evita que os catálogos divirjam em silêncio.
 async function readBackendFile(path: string): Promise<string> {
