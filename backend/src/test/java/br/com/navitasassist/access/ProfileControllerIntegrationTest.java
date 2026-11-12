@@ -331,7 +331,7 @@ class ProfileControllerIntegrationTest {
         assertTrue(profiles.existsById(used.getId()));
     }
 
-    /** Enquanto a coluna role existir, os perfis migrados (legacy_code) sustentam o rollback (spec §6). */
+    /** Perfis com legacy_code (os 4 prontos da migração-base) não podem ser excluídos. */
     @Test
     void deleteBlockedForMigratedProfile() throws Exception {
         AccessProfile migrated = AccessTestSupport.saveProfile(profiles, PREFIX + "Migrado", "rma.ver");

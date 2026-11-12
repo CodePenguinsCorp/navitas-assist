@@ -47,7 +47,6 @@ public class NotificationRule extends AuditableEntity {
     @Column(nullable = false, length = 20)
     private NotificationSeverity severity;
 
-    // A coluna legada recipient_roles continua no banco (expand/contract), sem mapeamento.
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "notification_rule_recipient_profiles",

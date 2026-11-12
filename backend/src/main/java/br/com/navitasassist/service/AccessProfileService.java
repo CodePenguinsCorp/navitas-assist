@@ -90,7 +90,7 @@ public class AccessProfileService {
     public void delete(Long id, String actor) {
         AccessProfile profile = accessProfileRepository.findByIdForUpdate(id).orElseThrow(() -> notFound(id));
         permissionGrantPolicy.ensureCanGrant(actor, Permission.fromCodes(profile.getPermissions()));
-        // Enquanto a coluna legada role existir, os perfis migrados (legacy_code) sustentam o rollback (spec §6).
+        // Os 4 perfis prontos da migração-base (legacy_code) não podem ser excluídos.
         if (profile.getLegacyCode() != null) {
             throw new BusinessException("Perfil migrado não pode ser excluído.");
         }
