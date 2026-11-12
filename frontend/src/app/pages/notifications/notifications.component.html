@@ -113,7 +113,7 @@
   <div role="tabpanel" tabindex="0" id="notifications-panel-preferences" aria-labelledby="notifications-tab-preferences" [hidden]="activeTab() !== 'preferences'">
     @if (activeTab() === 'preferences') {
       <article class="panel table-card">
-        <p>Silencie os alertas que a regra permite. Alertas obrigatórios continuam chegando.</p>
+        <p>Silencie os alertas recebidos. *Alertas obrigatórios continuam chegando.</p>
         @if (preferencesLoadFailed()) {
           <div class="panel alert-banner alert-banner--error preferences-state" role="alert">
             <strong>{{ preferencesLoadErrorMessage() }}</strong>
@@ -166,7 +166,8 @@
   @if (isAdmin()) {
   <div #rulesPanel role="tabpanel" tabindex="0" id="notifications-panel-rules" aria-labelledby="notifications-tab-rules" [hidden]="activeTab() !== 'rules'">
     @if (activeTab() === 'rules') {
-      <article class="panel table-card">
+      <article class="panel table-card" aria-labelledby="notification-rules-title">
+        <h2 id="notification-rules-title">Regras de notificação</h2>
         @if (rulesLoadFailed()) {
           <div class="panel alert-banner alert-banner--error rules-state" role="alert">
             <strong>{{ rulesLoadErrorMessage() }}</strong>
@@ -186,7 +187,7 @@
                   <th>Situação</th>
                   <th>Severidade</th>
                   <th>Destinatários</th>
-                  <th>E-mail</th>
+                  <th class="rule-email-heading">E-mail</th>
                   <th>Silenciável</th>
                   <th>Atualização</th>
                   <th class="table-actions-col"><span class="sr-only">Ação</span></th>

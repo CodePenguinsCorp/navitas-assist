@@ -96,8 +96,16 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
       gap: var(--space-3);
     }
 
+    .failures-section {
+      margin-top: var(--space-4);
+    }
+
     .failures-section .field-hint {
       margin: var(--space-1) 0 0;
+    }
+
+    .rule-email-heading {
+      white-space: nowrap;
     }
 
     .rule-no-recipients {

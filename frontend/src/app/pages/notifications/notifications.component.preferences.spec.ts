@@ -176,7 +176,7 @@ describe('NotificationsComponent preferences', () => {
       await setup();
       openPreferences();
       expect(Array.from(root().querySelectorAll('tbody tr'))[2].querySelector('button')!.textContent!.trim()).toBe('Silenciar');
-      expect(text()).toContain('Silencie os alertas que a regra permite. Alertas obrigatórios continuam chegando.');
+      expect(text()).toContain('Silencie os alertas recebidos. *Alertas obrigatórios continuam chegando.');
     });
 
     it('keeps the row and shows the alert when the update fails', async () => {
