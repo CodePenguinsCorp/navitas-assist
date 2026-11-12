@@ -116,6 +116,19 @@ describe('AuthService permissions session', () => {
     expect(service.currentUser()?.username).toBe('admin');
   });
 
+  it('does not bring back a session ended while a refresh was pending', async () => {
+    service.restoreSession().subscribe();
+    http.expectOne('/api/auth/me').flush(authUser());
+
+    const refreshed = firstValueFrom(service.refreshSession());
+    service.clearSession();
+    http.expectOne('/api/auth/me').flush(authUser());
+    await refreshed;
+
+    expect(service.currentUser()).toBeNull();
+    expect(service.isAuthenticated()).toBe(false);
+  });
+
   it('clears the session on demand', () => {
     service.restoreSession().subscribe();
     http.expectOne('/api/auth/me').flush(authUser());

@@ -7,7 +7,8 @@ import { PERMISSION_CATALOG } from '../../testing/profile-fixtures';
 
 const PROFILE_SERVICE = { provide: ProfileService, useValue: {
   options: () => of([{ id: 1, name: 'Administrador', permissions: [] }, { id: 3, name: 'Técnico', permissions: [] }]),
-  permissionCatalog: () => of(PERMISSION_CATALOG)
+  permissionCatalog: () => of(PERMISSION_CATALOG),
+  invalidateOptions: () => undefined
 } };
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService, UserFilters } from '../../core/services/catalog.service';

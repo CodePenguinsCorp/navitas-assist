@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectorRef, signal } from '@angular/core';
+import { ChangeDetectorRef, Signal, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
@@ -40,6 +40,7 @@ describe('NotificationsComponent rules', () => {
   let fixture: ComponentFixture<NotificationsComponent>;
   let component: Harness;
   let profileOptions: ReturnType<typeof vi.fn>;
+  let invalidateOptions: ReturnType<typeof vi.fn>;
   let service: Record<string, ReturnType<typeof vi.fn>> & { unreadCount: ReturnType<typeof signal<number>>; summaryLoaded: ReturnType<typeof signal<boolean>>; summaryLoadFailed: ReturnType<typeof signal<boolean>> };
 
   const root = (): HTMLElement => fixture.nativeElement.querySelector('.page-surface');
@@ -56,7 +57,7 @@ describe('NotificationsComponent rules', () => {
   };
   const openRules = () => { component.selectTab('rules'); render(); };
 
-  async function setup(sources: { role?: LegacyProfileCode; permissions?: readonly Permission[]; rules?: Observable<NotificationRuleResponse[]>[]; failures?: Observable<NotificationFailureResponse[]>[]; update?: Observable<NotificationRuleResponse>[]; profiles?: Observable<ProfileOption[]>[] } = {}) {
+  async function setup(sources: { role?: LegacyProfileCode; permissions?: readonly Permission[] | Signal<readonly Permission[]>; rules?: Observable<NotificationRuleResponse[]>[]; failures?: Observable<NotificationFailureResponse[]>[]; update?: Observable<NotificationRuleResponse>[]; profiles?: Observable<ProfileOption[]>[] } = {}) {
     const listRules = vi.fn(() => of([RULE]));
     for (const source of sources.rules ?? []) listRules.mockImplementationOnce(() => source);
     const listFailures = vi.fn(() => of([] as NotificationFailureResponse[]));
@@ -65,6 +66,7 @@ describe('NotificationsComponent rules', () => {
       of({ ...RULE, ...payload, recipientProfiles: profilesOf(recipientProfileIds), eventType, updatedAt: '2026-10-24T16:00:00Z', updatedBy: 'root' }));
     for (const source of sources.update ?? []) updateRule.mockImplementationOnce(() => source as never);
     profileOptions = vi.fn(() => of(PROFILES));
+    invalidateOptions = vi.fn();
     for (const source of sources.profiles ?? []) profileOptions.mockImplementationOnce(() => source);
     service = {
       unreadCount: signal(0),
@@ -86,7 +88,7 @@ describe('NotificationsComponent rules', () => {
       providers: [
         provideRouter([]),
         { provide: NotificationService, useValue: service },
-        { provide: ProfileService, useValue: { options: profileOptions } },
+        { provide: ProfileService, useValue: { options: profileOptions, invalidateOptions } },
         providePermissions(sources.permissions ?? profilePermissions(sources.role ?? 'ADMIN'))
       ]
     }).compileComponents();
@@ -188,6 +190,16 @@ describe('NotificationsComponent rules', () => {
     expect(text()).not.toContain('Nenhuma regra disponível.');
   });
 
+  it('goes back to the inbox when the rules permission is lost on the rules tab', async () => {
+    const permissions = signal<readonly Permission[]>(profilePermissions('ADMIN'));
+    await setup({ permissions });
+    openRules();
+    permissions.set(profilePermissions('ADMIN').filter((permission) => permission !== 'notificacoes.regras'));
+    render();
+    expect(root().querySelector('#notifications-tab-inbox')?.getAttribute('aria-selected')).toBe('true');
+    expect(root().querySelector<HTMLElement>('#notifications-panel-inbox')!.hidden).toBe(false);
+  });
+
   describe('preservation', () => {
     it.each(['TECHNICIAN', 'SERVICE_DESK', 'VIEWER'] as const)('hides rules from %s', async (role) => {
       await setup({ role });
@@ -276,7 +288,7 @@ describe('NotificationsComponent rules', () => {
       await setup({ profiles: [throwError(() => new HttpErrorResponse({ status: 503 }))] });
       openRules();
       openEditor('SLA vencido');
-      expect(dialog()!.querySelector('[role="alert"]')?.textContent?.trim()).toBe('Não foi possível carregar os perfis. Tente novamente.');
+      expect(dialog()!.querySelector('[role="alert"] strong')?.textContent?.trim()).toBe('Não foi possível carregar os perfis.');
       expect(dialog()!.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(true);
       submit();
       expect(service['updateRule']).not.toHaveBeenCalled();
@@ -286,6 +298,29 @@ describe('NotificationsComponent rules', () => {
       expect(dialog()!.querySelector('[role="alert"]')).toBeNull();
       expect(field('Administrador').checked).toBe(true);
       expect(profileOptions).toHaveBeenCalledTimes(2);
+    });
+
+    it('retries the profile options from the editor alert', async () => {
+      await setup({ profiles: [throwError(() => new HttpErrorResponse({ status: 503 }))] });
+      openRules();
+      openEditor('SLA vencido');
+      dialogButton('Tentar novamente').click();
+      render();
+      expect(profileOptions).toHaveBeenCalledTimes(2);
+      expect(dialog()!.querySelector('[role="alert"]')).toBeNull();
+      expect(field('Administrador').checked).toBe(true);
+      expect(dialog()!.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(false);
+    });
+
+    it('drops the app-wide profile options cache only the first time the rules tab opens', async () => {
+      await setup();
+      expect(invalidateOptions).not.toHaveBeenCalled();
+      openRules();
+      expect(invalidateOptions).toHaveBeenCalledTimes(1);
+      expect(invalidateOptions.mock.invocationCallOrder[0]).toBeLessThan(profileOptions.mock.invocationCallOrder[0]);
+      component.selectTab('inbox');
+      openRules();
+      expect(invalidateOptions).toHaveBeenCalledTimes(1);
     });
 
     it('warns only when a rule has no recipients, in the summary and in the editor, and still saves', async () => {

@@ -287,6 +287,10 @@ export class ProfilesComponent {
     this.loadCatalog();
   }
 
+  protected retryCatalog(): void {
+    this.loadCatalog();
+  }
+
   /** O serviço guarda o catálogo: só a primeira abertura (ou a seguinte a uma falha) faz a requisição. */
   private loadCatalog(): void {
     if (this.catalogState() === 'ready') {

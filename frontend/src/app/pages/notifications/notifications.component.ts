@@ -1,5 +1,5 @@
 import { IconComponent, IconName } from '../../shared/icon/icon.component';
-import { Component, DestroyRef, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -296,8 +296,15 @@ export class NotificationsComponent {
   protected readonly hasUnread = computed(() => this.notifications().some((notification) => !notification.read));
   protected readonly tabs = computed<NotificationsTab[]>(() => this.canManageRules() ? ['inbox', 'preferences', 'rules'] : ['inbox', 'preferences']);
 
+  /** O cache de opções de perfil vale o app inteiro: a primeira abertura da aba Regras busca a lista atual. */
+  private rulesOpened = false;
+
   constructor() {
     this.loadInbox();
+    // Sem a permissão (após um 403 ou ao mudar o próprio perfil), a aba Regras some: volta para a caixa de entrada.
+    effect(() => {
+      if (!this.canManageRules() && this.activeTab() === 'rules') untracked(() => this.selectTab('inbox'));
+    });
   }
 
   protected selectTab(tab: NotificationsTab): void {
@@ -308,6 +315,10 @@ export class NotificationsComponent {
     } else if (tab === 'preferences') {
       this.loadPreferences();
     } else if (this.canManageRules()) {
+      if (!this.rulesOpened) {
+        this.rulesOpened = true;
+        this.profileService.invalidateOptions();
+      }
       this.loadRules();
       this.loadProfileOptions();
     }
@@ -521,6 +532,10 @@ export class NotificationsComponent {
       },
       error: (error) => this.ruleErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível salvar a regra.'))
     });
+  }
+
+  protected retryProfileOptions(): void {
+    this.loadProfileOptions();
   }
 
   private resetRuleEditor(): void {

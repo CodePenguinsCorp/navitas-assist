@@ -170,7 +170,7 @@ export class DashboardComponent {
   private readonly catalogService = inject(CatalogService);
   private readonly rmaService = inject(RmaService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly isAdmin = this.permissions.hasPermission('usuarios.gerir');
+  private readonly isAdmin = computed(() => this.permissions.hasPermission('usuarios.gerir'));
   private loadRequest?: Subscription;
 
   protected readonly loading = signal(true);
@@ -198,7 +198,7 @@ export class DashboardComponent {
     const catalog = [
       `${this.clientTotalSignal()} ${this.clientTotalSignal() === 1 ? 'cliente' : 'clientes'}`,
       `${this.productTotalSignal()} ${this.productTotalSignal() === 1 ? 'produto' : 'produtos'}`,
-      ...(this.isAdmin ? [`${this.userTotalSignal()} ${this.userTotalSignal() === 1 ? 'usuário' : 'usuários'}`] : [])
+      ...(this.isAdmin() ? [`${this.userTotalSignal()} ${this.userTotalSignal() === 1 ? 'usuário' : 'usuários'}`] : [])
     ];
 
     return [
@@ -292,7 +292,7 @@ export class DashboardComponent {
     this.loadRequest?.unsubscribe();
     this.loading.set(true);
 
-    const usersRequest = this.isAdmin
+    const usersRequest = this.isAdmin()
       ? this.catalogService.getUserSummary()
       : of<UserSummaryResponse>({ total: 0, active: 0, admins: 0, roles: 0 });
 

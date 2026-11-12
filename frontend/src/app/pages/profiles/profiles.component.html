@@ -126,7 +126,8 @@
 
       @if (catalogState() === 'failed') {
         <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
-          <strong>Não foi possível carregar as permissões. Tente novamente.</strong>
+          <strong>Não foi possível carregar as permissões.</strong>
+          <button type="button" class="button-secondary" (click)="retryCatalog()">Tentar novamente</button>
         </article>
       } @else if (modalErrorMessage()) {
         <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">

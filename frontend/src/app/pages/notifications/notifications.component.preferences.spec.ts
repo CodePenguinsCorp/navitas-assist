@@ -63,7 +63,7 @@ describe('NotificationsComponent preferences', () => {
       providers: [
         provideRouter([]),
         { provide: NotificationService, useValue: service },
-        { provide: ProfileService, useValue: { options: () => of([]) } },
+        { provide: ProfileService, useValue: { options: () => of([]), invalidateOptions: () => undefined } },
         providePermissions(profilePermissions(sources.role ?? 'TECHNICIAN'))
       ]
     }).compileComponents();

@@ -116,7 +116,7 @@ describe('UsersComponent profile and extra permissions', () => {
     expect(updateUser.mock.calls[0][1]).not.toHaveProperty('role');
   });
 
-  it('switching profile drops extras now included', async () => {
+  it('going back to A keeps X; saving with B does not send X', async () => {
     await mount();
     component.openCreateModal();
     fixture.detectChanges();
@@ -125,12 +125,15 @@ describe('UsersComponent profile and extra permissions', () => {
     extraBox('Alterar status').querySelector('input')!.click();
     fixture.detectChanges();
     selectProfile(2);
+    expect(extraBox('Abrir RMAs').querySelector('input')!.checked).toBe(true);
     selectProfile(4);
-    expect(extraBox('Abrir RMAs').querySelector('input')!.checked).toBe(false);
+    expect(extraBox('Abrir RMAs').querySelector('input')!.checked).toBe(true);
+    expect(extraBox('Abrir RMAs').querySelector('input')!.disabled).toBe(false);
     expect(extraBox('Alterar status').querySelector('input')!.checked).toBe(true);
+    selectProfile(2);
     fill();
     component.saveUser();
-    expect(createUser).toHaveBeenCalledWith(expect.objectContaining({ profileId: 4, extraPermissions: ['rma.status'] }));
+    expect(createUser).toHaveBeenCalledWith(expect.objectContaining({ profileId: 2, extraPermissions: ['rma.status'] }));
   });
 
   it('filters list by profileId', async () => {
@@ -159,8 +162,40 @@ describe('UsersComponent profile and extra permissions', () => {
     await mount(sources);
     component.openCreateModal();
     fixture.detectChanges();
-    expect(dialog().querySelector('.modal-feedback[role="alert"]')?.textContent?.trim()).toBe('Não foi possível carregar os perfis. Tente novamente.');
+    expect(dialog().querySelector('.modal-feedback[role="alert"] strong')?.textContent?.trim()).toBe('Não foi possível carregar os perfis.');
     expect(dialog().querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(true);
+  });
+
+  // Abertura do diálogo após a falha da tela: 2 pedidos de opções; o botão faz o 3º.
+  it.each([['options', 3], ['catalog', 1]] as const)('retries the profile %s from the dialog alert', async (source, optionCalls) => {
+    let failing = true;
+    const unavailable = () => throwError(() => new HttpErrorResponse({ status: 503 }));
+    await mount({
+      options: () => source === 'options' && failing ? unavailable() : of(OPTIONS),
+      catalog: () => source === 'catalog' && failing ? unavailable() : of(PERMISSION_CATALOG)
+    });
+    component.openCreateModal();
+    fixture.detectChanges();
+    failing = false;
+    Array.from(dialog().querySelectorAll<HTMLButtonElement>('.modal-feedback button'))
+      .find((button) => button.textContent?.trim() === 'Tentar novamente')!.click();
+    fixture.detectChanges();
+    expect(options).toHaveBeenCalledTimes(optionCalls);
+    expect(dialog().querySelector('.modal-feedback[role="alert"]')).toBeNull();
+    expect(dialog().querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(false);
+  });
+
+  it('warns in the Perfil filter when the profile options fail', async () => {
+    await mount({ options: () => throwError(() => new HttpErrorResponse({ status: 503 })) });
+    const filter = element.querySelector('[aria-label="Filtrar por perfil"]')!.closest('.filter-field')!;
+    expect(filter.querySelector('.field-error')?.textContent?.trim()).toBe('Não foi possível carregar os perfis.');
+  });
+
+  it('drops the app-wide profile options cache before loading them', async () => {
+    await mount();
+    const service = TestBed.inject(ProfileService) as unknown as { invalidateOptions: ReturnType<typeof vi.fn> };
+    expect(service.invalidateOptions).toHaveBeenCalledOnce();
+    expect(service.invalidateOptions.mock.invocationCallOrder[0]).toBeLessThan(options.mock.invocationCallOrder[0]);
   });
 
   it('refreshes own session after saving', async () => {

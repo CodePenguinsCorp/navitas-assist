@@ -290,7 +290,8 @@
 
         @if (profileOptionsState() === 'failed') {
           <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
-            <strong>Não foi possível carregar os perfis. Tente novamente.</strong>
+            <strong>Não foi possível carregar os perfis.</strong>
+            <button type="button" class="button-secondary" (click)="retryProfileOptions()">Tentar novamente</button>
           </article>
         } @else if (ruleErrorMessage()) {
           <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">

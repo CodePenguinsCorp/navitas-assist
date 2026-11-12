@@ -142,8 +142,13 @@ describe('LoginComponent pending submissions', () => {
 
   it.each([
     { initial: '/login', destination: '/dashboard' },
-    { initial: '/login?redirectTo=%2Frmas', destination: '/rmas' }
-  ])('preserves the $destination redirect after one successful login', async ({ initial, destination }) => {
+    { initial: '/login?redirectTo=%2Frmas', destination: '/rmas' },
+    { initial: '/login?redirectTo=%2F%2Fevil.example', destination: '/dashboard' },
+    { initial: '/login?redirectTo=https%3A%2F%2Fevil.example%2Frmas', destination: '/dashboard' },
+    { initial: '/login?redirectTo=rmas', destination: '/dashboard' },
+    { initial: '/login?redirectTo=%2Flogin', destination: '/dashboard' },
+    { initial: '/login?redirectTo=%2Flogin%3FredirectTo%3D%252Frmas', destination: '/dashboard' }
+  ])('goes to $destination after one successful login from $initial', async ({ initial, destination }) => {
     await router.navigateByUrl(initial);
     navigations.length = 0;
     fill();

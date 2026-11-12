@@ -58,8 +58,7 @@ export class LoginComponent {
       finalize(() => this.submitting.set(false))
     ).subscribe({
       next: () => {
-        const redirectTo = this.route.snapshot.queryParamMap.get('redirectTo') ?? '/dashboard';
-        void this.router.navigateByUrl(redirectTo);
+        void this.router.navigateByUrl(safeRedirect(this.route.snapshot.queryParamMap.get('redirectTo')));
       },
       error: (error: unknown) => {
         const invalidCredentials = error instanceof HttpErrorResponse && error.status === 401 && error.url?.endsWith('/api/auth/login');
@@ -76,4 +75,14 @@ export class LoginComponent {
   protected togglePasswordVisibility(): void {
     this.passwordVisible.update((value) => !value);
   }
+}
+
+const DEFAULT_REDIRECT = '/dashboard';
+
+/** Só caminhos internos do app: começa com '/', mas não com '//' (outro host) nem com '/login'. */
+function safeRedirect(redirectTo: string | null): string {
+  if (!redirectTo || !redirectTo.startsWith('/') || redirectTo.startsWith('//') || redirectTo.startsWith('/login')) {
+    return DEFAULT_REDIRECT;
+  }
+  return redirectTo;
 }

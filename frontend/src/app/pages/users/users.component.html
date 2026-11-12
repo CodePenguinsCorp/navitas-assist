@@ -25,6 +25,9 @@
         [value]="profileFilter() ?? ''"
         (valueChange)="updateProfileFilter($any($event))"
       />
+      @if (profileOptionsState() === 'failed') {
+        <small class="field-error">Não foi possível carregar os perfis.</small>
+      }
     </label>
 
     <label class="filter-field">
@@ -170,7 +173,8 @@
 
       @if (accessFailed()) {
         <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
-          <strong>Não foi possível carregar os perfis. Tente novamente.</strong>
+          <strong>Não foi possível carregar os perfis.</strong>
+          <button type="button" class="button-secondary" (click)="retryAccessSources()">Tentar novamente</button>
         </article>
       } @else if (modalErrorMessage()) {
         <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">

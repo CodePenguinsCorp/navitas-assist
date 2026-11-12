@@ -151,7 +151,7 @@ export class UsersComponent {
   protected readonly profileOptionsState = signal<LoadState>('loading');
   protected readonly catalog = signal<PermissionModuleResponse[]>([]);
   protected readonly catalogState = signal<LoadState>('loading');
-  /** Extras marcadas no diálogo, sem as que o perfil escolhido já inclui. */
+  /** Extras marcadas no diálogo. As que o perfil escolhido já inclui ficam guardadas, mas não vão no envio. */
   protected readonly extras = signal<ReadonlySet<Permission>>(new Set());
   private readonly selectedProfileId = signal<number | null>(null);
   protected readonly accessReady = computed(() => this.profileOptionsState() === 'ready' && this.catalogState() === 'ready');
@@ -180,6 +180,8 @@ export class UsersComponent {
     this.form.controls.profileId.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((id) => this.selectProfile(id));
     this.loadUsers();
     this.loadSummary();
+    // O cache de opções vale o app inteiro: a tela começa com a lista atual de perfis.
+    this.profileService.invalidateOptions();
     this.loadProfileOptions();
   }
 
@@ -394,11 +396,9 @@ export class UsersComponent {
     this.userList.reload();
   }
 
-  /** Troca de perfil: as extras que o novo perfil já inclui deixam de ser extras. */
+  /** Troca de perfil: as extras ficam guardadas; o envio deixa de fora as que o perfil escolhido já inclui. */
   private selectProfile(id: number | null): void {
     this.selectedProfileId.set(id);
-    const included = this.profilePermissions();
-    this.extras.set(new Set([...this.extras()].filter((code) => !included.has(code))));
   }
 
   private loadProfileOptions(): void {
@@ -407,10 +407,13 @@ export class UsersComponent {
       next: (options) => {
         this.profileOptions.set(options);
         this.profileOptionsState.set('ready');
-        this.selectProfile(this.selectedProfileId());
       },
       error: () => this.profileOptionsState.set('failed')
     });
+  }
+
+  protected retryAccessSources(): void {
+    this.loadAccessSources();
   }
 
   /** Opções e catálogo ficam guardados no serviço: só a primeira abertura (ou a seguinte a uma falha) os busca. */

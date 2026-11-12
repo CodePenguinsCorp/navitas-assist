@@ -64,7 +64,10 @@ export class AuthService {
   refreshSession(): Observable<UserSession | null> {
     if (!this.refreshRequest$) {
       this.refreshRequest$ = this.fetchCurrentUser().pipe(
-        tap((session) => this.sessionSignal.set(session)),
+        // Uma sessão encerrada (logout ou 401) durante a releitura não volta.
+        tap((session) => {
+          if (this.sessionSignal()) this.sessionSignal.set(session);
+        }),
         // 401 já é tratado pelo authErrorInterceptor; nas demais falhas a sessão atual continua valendo.
         catchError(() => of(this.sessionSignal())),
         finalize(() => this.refreshRequest$ = null),

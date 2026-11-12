@@ -228,12 +228,26 @@ describe('ProfilesComponent form', () => {
   it('disables submit when catalog fails', async () => {
     await mount({ catalog: () => throwError(() => new HttpErrorResponse({ status: 503 })) });
     open(() => component.openCreateModal());
-    expect(dialog()!.querySelector('.modal-feedback[role="alert"]')?.textContent?.trim()).toBe('Não foi possível carregar as permissões. Tente novamente.');
+    expect(dialog()!.querySelector('.modal-feedback[role="alert"] strong')?.textContent?.trim()).toBe('Não foi possível carregar as permissões.');
     expect(moduleSets().length).toBe(0);
     expect(submitButton().disabled).toBe(true);
     setName('Supervisor');
     submit();
     expect(service.create).not.toHaveBeenCalled();
+  });
+
+  it('retries the catalog from the dialog alert', async () => {
+    let fail = true;
+    await mount({ catalog: () => fail ? throwError(() => new HttpErrorResponse({ status: 503 })) : of(PERMISSION_CATALOG) });
+    open(() => component.openCreateModal());
+    fail = false;
+    Array.from(dialog()!.querySelectorAll<HTMLButtonElement>('.modal-feedback button'))
+      .find((button) => button.textContent?.trim() === 'Tentar novamente')!.click();
+    fixture.detectChanges();
+    expect(service.permissionCatalog).toHaveBeenCalledTimes(2);
+    expect(dialog()!.querySelector('.modal-feedback')).toBeNull();
+    expect(moduleSets().length).toBe(6);
+    expect(submitButton().disabled).toBe(false);
   });
 
   it('retries the catalog when the dialog opens again after a failure', async () => {

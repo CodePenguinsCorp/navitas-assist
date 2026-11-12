@@ -57,7 +57,7 @@ describe('NotificationsComponent', () => {
       providers: [
         provideRouter([]),
         { provide: NotificationService, useValue: service },
-        { provide: ProfileService, useValue: { options: () => of([{ id: 1, name: 'Administrador', permissions: [] }, { id: 2, name: 'Atendimento', permissions: [] }]) } },
+        { provide: ProfileService, useValue: { options: () => of([{ id: 1, name: 'Administrador', permissions: [] }, { id: 2, name: 'Atendimento', permissions: [] }]), invalidateOptions: () => undefined } },
         providePermissions(profilePermissions(role))
       ]
     }).compileComponents();

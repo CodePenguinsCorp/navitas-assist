@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { Signal, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
@@ -12,6 +13,7 @@ import {
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
 import { DashboardComponent } from './dashboard.component';
+import { Permission } from '../../core/permissions';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
 function rmaFactory(overrides: Partial<RmaResponse> = {}): RmaResponse {
@@ -52,6 +54,7 @@ describe('DashboardComponent load states', () => {
 
   async function setup(sources: {
     role?: LegacyProfileCode;
+    permissions?: Signal<readonly Permission[]>;
     board?: Observable<RmaResponse[]>;
     clients?: Observable<ClientSummaryResponse>;
     products?: Observable<ProductSummaryResponse>;
@@ -68,7 +71,7 @@ describe('DashboardComponent load states', () => {
       imports: [DashboardComponent],
       providers: [
         provideRouter([]),
-        providePermissions(profilePermissions(sources.role ?? 'TECHNICIAN')),
+        providePermissions(sources.permissions ?? profilePermissions(sources.role ?? 'TECHNICIAN')),
         { provide: RmaService, useValue: rmaService },
         { provide: CatalogService, useValue: catalogService }
       ]
@@ -209,6 +212,16 @@ describe('DashboardComponent load states', () => {
       await setup({ role: 'TECHNICIAN', board: of([rmaFactory({ id: 1, priority: 'HIGH' }), rmaFactory({ id: 2, status: 'TRIAGE' })]) });
       expect(normalized(indicator('Fila inicial'))).toContain('2 · 1 com prioridade alta');
       expect(normalized(indicator('Cadastros'))).toContain('0 clientes · 0 produtos');
+      expect(normalized(indicator('Cadastros'))).not.toContain('usuários');
+    });
+
+    it('follows the users permission when it changes', async () => {
+      const permissions = signal<readonly Permission[]>(profilePermissions('ADMIN'));
+      await setup({ permissions, users: of({ ...USERS, total: 2 }) });
+      expect(normalized(indicator('Cadastros'))).toContain('2 usuários');
+
+      permissions.set(profilePermissions('TECHNICIAN'));
+      fixture.detectChanges();
       expect(normalized(indicator('Cadastros'))).not.toContain('usuários');
     });
 
