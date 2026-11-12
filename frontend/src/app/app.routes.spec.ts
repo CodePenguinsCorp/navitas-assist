@@ -24,6 +24,7 @@ describe('app routes', () => {
       ['clientes', 'ClientsComponent'],
       ['produtos', 'ProductsComponent'],
       ['usuarios', 'UsersComponent'],
+      ['perfis', 'ProfilesComponent'],
     ])('resolves %s lazily to %s', async (path, componentName) => {
       const route = child(path);
       expect(route.component).toBeUndefined();
@@ -52,6 +53,7 @@ describe('app routes', () => {
         produtos: { title: 'Produtos | Navitas Assist', permissions: ['cadastros.ver', 'cadastros.editar'] },
         protocolos: { title: 'Protocolos | Navitas Assist', permissions: ['protocolos.ver', 'protocolos.catalogo'] },
         usuarios: { title: 'Usuários | Navitas Assist', permissions: ['usuarios.gerir'] },
+        perfis: { title: 'Perfis | Navitas Assist', permissions: ['perfis.gerir'] },
         relatorios: { title: 'Relatórios | Navitas Assist', permissions: ['relatorios.ver'] },
       };
       for (const [path, { title, permissions }] of Object.entries(expected)) {

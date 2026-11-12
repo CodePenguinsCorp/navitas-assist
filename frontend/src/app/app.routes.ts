@@ -87,6 +87,13 @@ export const routes: Routes = [
         title: 'Usuários | Navitas Assist'
       },
       {
+        path: 'perfis',
+        loadComponent: () => import('./pages/profiles/profiles.component').then((module) => module.ProfilesComponent),
+        canActivate: [permissionGuard],
+        data: { permissions: ['perfis.gerir'] },
+        title: 'Perfis | Navitas Assist'
+      },
+      {
         path: 'relatorios',
         loadComponent: () => import('./pages/reports/reports.component').then((module) => module.ReportsComponent),
         canActivate: [permissionGuard],

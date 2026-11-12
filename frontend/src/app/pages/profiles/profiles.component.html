@@ -1,0 +1,240 @@
+<section class="page-surface">
+  <app-page-header heading="Perfis">
+    <button #createButton type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo perfil</button>
+  </app-page-header>
+
+  <section class="panel catalog-toolbar">
+    <label class="search-field">
+      <span>Buscar</span>
+      <input
+        #profileSearch
+        type="search"
+        placeholder="Nome do perfil"
+        [value]="searchTerm()"
+        (input)="updateSearch(profileSearch.value)"
+      />
+    </label>
+  </section>
+
+  @if (successMessage()) {
+    <article class="panel alert-banner alert-banner--success" role="status">
+      <strong>{{ successMessage() }}</strong>
+    </article>
+  }
+
+  <article class="table-card table-card--list panel">
+    @if (loadFailed()) {
+      <section class="empty-state" role="alert">
+        <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
+        <h3>Não foi possível carregar os perfis.</h3>
+        @if (errorMessage() && errorMessage() !== 'Não foi possível carregar os perfis.') {
+          <p>{{ errorMessage() }}</p>
+        }
+        <button type="button" class="button-secondary" (click)="retryLoad()" [disabled]="loading()">Tentar novamente</button>
+        @if (loading()) { <div aria-busy="true"></div> }
+      </section>
+    } @else if (loading() || !hasLoaded()) {
+      <div aria-busy="true"></div>
+    } @else if (profiles().length === 0 && !hasSearch) {
+      <section class="empty-state">
+        <span class="icon-tile tone-slate"><app-icon name="shield" [size]="20" /></span>
+        <h3>Nenhum perfil cadastrado</h3>
+        <p>Crie um perfil para agrupar permissões e atribuí-lo aos usuários.</p>
+        <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Cadastrar perfil</button>
+      </section>
+    } @else if (profiles().length === 0) {
+      <section class="empty-state">
+        <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
+        <h3>Nenhum perfil encontrado</h3>
+        <p>Ajuste a busca pelo nome.</p>
+        <button type="button" class="button-secondary" (click)="clearSearch()">Limpar busca</button>
+      </section>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Permissões</th>
+              <th>Usuários</th>
+              <th>Atualizado</th>
+              <th class="table-actions-col">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (profile of profiles(); track profile.id) {
+              <tr>
+                <td><strong class="table-title">{{ profile.name }}</strong></td>
+                <td>{{ permissionCount(profile) }}</td>
+                <td>{{ profile.userCount }}</td>
+                <td>{{ updatedAtLabel(profile) }}</td>
+                <td class="table-actions-col">
+                  <div class="row-actions">
+                    <button appRowAction icon="pencil" label="Editar" [target]="profile.name"
+                      [disabled]="deletingProfileId() === profile.id" (click)="openEditModal(profile)"></button>
+                    <button appRowAction icon="layers" label="Duplicar" [target]="profile.name"
+                      [disabled]="deletingProfileId() === profile.id" (click)="openDuplicateModal(profile)"></button>
+                    <button appRowAction icon="trash" tone="danger"
+                      [label]="deletingProfileId() === profile.id ? 'Excluindo...' : 'Excluir'"
+                      [target]="profile.name"
+                      [blockedReason]="deleteBlockedReason(profile)"
+                      [disabled]="deletingProfileId() !== null"
+                      (click)="openDeleteModal(profile)"></button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-pagination
+        singular="perfil"
+        plural="perfis"
+        [page]="page()"
+        [size]="pageSize()"
+        [totalElements]="totalElements()"
+        [totalPages]="totalPages()"
+        [shown]="profiles().length"
+        [loading]="loading()"
+        (pageChange)="goToPage($event)"
+        (sizeChange)="changePageSize($event)"
+      />
+    }
+  </article>
+</section>
+
+@if (activeModal()) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <section
+      class="modal-panel profile-form-modal panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="profile-form-title"
+      appModalFocus
+      modalInitialFocus="[formcontrolname='name']"
+      [modalCloseBlocked]="submitting()"
+      [modalFallbackFocus]="createButton"
+      (modalCloseRequested)="closeModal()"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="modal-header">
+        <div><h3 id="profile-form-title">{{ modalTitle() }}</h3></div>
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModal()" [disabled]="submitting()">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </header>
+
+      @if (catalogState() === 'failed') {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>Não foi possível carregar as permissões. Tente novamente.</strong>
+        </article>
+      } @else if (modalErrorMessage()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ modalErrorMessage() }}</strong>
+        </article>
+      }
+
+      <form class="form-grid" [formGroup]="form" (ngSubmit)="saveProfile()">
+        <fieldset class="form-section">
+          <legend>Identificação</legend>
+          <label class="field-group field-group--full">
+            <span>Nome</span>
+            <input
+              type="text"
+              formControlName="name"
+              autocomplete="off"
+              [attr.aria-invalid]="nameError() ? 'true' : null"
+              [attr.aria-describedby]="nameError() ? 'profile-name-error' : null"
+            />
+            @if (nameError()) {
+              <small id="profile-name-error" class="field-error" role="alert">{{ nameError() }}</small>
+            }
+          </label>
+        </fieldset>
+
+        @if (catalogState() === 'loading') {
+          <div class="catalog-pending" aria-busy="true"></div>
+        } @else if (catalogState() === 'ready') {
+          @for (module of catalog(); track module.module) {
+            <fieldset class="form-section permission-module">
+              <legend>{{ module.label }} <span class="permission-module__count">{{ checkedCount(module) }} de {{ module.permissions.length }}</span></legend>
+              @for (item of module.permissions; track item.code) {
+                <label class="checkbox-field">
+                  <input
+                    type="checkbox"
+                    [checked]="isChecked(item.code)"
+                    [disabled]="submitting()"
+                    (change)="toggle(item.code, $any($event.target).checked)"
+                  />
+                  <span>{{ item.label }}</span>
+                </label>
+              }
+            </fieldset>
+          }
+        }
+
+        <div class="form-actions form-actions--full">
+          <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="submitting()">Cancelar</button>
+          <button type="submit" class="button-primary" [disabled]="submitting() || catalogState() !== 'ready'">
+            {{ submitting() ? 'Salvando...' : activeModal() === 'edit' ? 'Salvar alterações' : 'Cadastrar perfil' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (deletingProfile(); as profile) {
+  <div class="modal-overlay" (click)="closeDeleteModal()">
+    <section
+      class="modal-panel modal-panel--narrow panel"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="delete-profile-title"
+      aria-describedby="delete-profile-description"
+      appModalFocus
+      modalInitialFocus=".form-actions .button-secondary"
+      [modalCloseBlocked]="deletingProfileId() !== null"
+      [modalFallbackFocus]="createButton"
+      (modalCloseRequested)="closeDeleteModal()"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="modal-header">
+        <div class="danger-heading">
+          <span class="icon-tile tone-danger"><app-icon name="trash" [size]="20" /></span>
+          <div>
+            <h3 id="delete-profile-title">Excluir perfil</h3>
+            <p>Esta ação não poderá ser desfeita.</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" aria-label="Fechar" (click)="closeDeleteModal()" [disabled]="deletingProfileId() !== null">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </header>
+
+      @if (deleteModalErrorMessage()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ deleteModalErrorMessage() }}</strong>
+        </article>
+      }
+
+      <div id="delete-profile-description" class="delete-confirmation">
+        <p>Tem certeza de que deseja excluir este perfil?</p>
+        <div class="delete-target">
+          <span class="icon-tile tone-slate" aria-hidden="true"><app-icon name="shield" [size]="20" /></span>
+          <div>
+            <strong>{{ profile.name }}</strong>
+            <span>{{ permissionCount(profile) }} permissões</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="button-secondary" (click)="closeDeleteModal()" [disabled]="deletingProfileId() !== null">Cancelar</button>
+        <button type="button" class="button-primary button-primary--danger" (click)="confirmDelete()" [disabled]="deletingProfileId() !== null">
+          {{ deletingProfileId() === profile.id ? 'Excluindo...' : 'Excluir perfil' }}
+        </button>
+      </div>
+    </section>
+  </div>
+}

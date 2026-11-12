@@ -79,6 +79,39 @@ export interface ProfileRef {
   name: string;
 }
 
+/** `GET /api/profiles` e `/api/profiles/{id}`: permissões na ordem do catálogo. */
+export interface ProfileResponse {
+  id: number;
+  name: string;
+  permissions: string[];
+  userCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProfileOption {
+  id: number;
+  name: string;
+  permissions: string[];
+}
+
+export interface ProfileRequest {
+  name: string;
+  permissions: Permission[];
+}
+
+export interface PermissionItem {
+  code: string;
+  label: string;
+}
+
+/** `GET /api/permissions`: os módulos do catálogo, na ordem de exibição. */
+export interface PermissionModuleResponse {
+  module: string;
+  label: string;
+  permissions: PermissionItem[];
+}
+
 /** Usuário da sessão (`POST /api/auth/login` e `GET /api/auth/me`), com as permissões efetivas na ordem do catálogo. */
 export interface CurrentUserResponse extends Omit<UserAccountResponse, 'role'> {
   profile: ProfileRef;
