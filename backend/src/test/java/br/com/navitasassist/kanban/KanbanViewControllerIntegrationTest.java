@@ -16,6 +16,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import br.com.navitasassist.access.AccessTestSupport;
+import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.repository.KanbanViewRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.user.UserAccount;
@@ -48,6 +50,9 @@ class KanbanViewControllerIntegrationTest {
 
     @Autowired
     private UserAccountRepository userAccountRepository;
+
+    @Autowired
+    private AccessProfileRepository accessProfiles;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -247,7 +252,7 @@ class KanbanViewControllerIntegrationTest {
         userAccount.setUsername(username);
         userAccount.setFullName(username);
         userAccount.setPasswordHash(passwordEncoder.encode("password123"));
-        userAccount.setRole(UserRole.VIEWER);
+        AccessTestSupport.assignProfile(accessProfiles, userAccount, "VIEWER");
         userAccount.setActive(true);
         userAccountRepository.save(userAccount);
     }

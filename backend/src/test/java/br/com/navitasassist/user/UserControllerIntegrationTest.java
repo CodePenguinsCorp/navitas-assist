@@ -4,6 +4,7 @@ import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -18,6 +19,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import br.com.navitasassist.access.AccessTestSupport;
+import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,6 +51,9 @@ class UserControllerIntegrationTest {
     private UserAccountRepository userAccountRepository;
 
     @Autowired
+    private AccessProfileRepository accessProfiles;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @BeforeEach
@@ -55,7 +61,7 @@ class UserControllerIntegrationTest {
         userAccountRepository.findAll().stream()
             .filter(user -> !user.getUsername().equalsIgnoreCase("admin"))
             .forEach(userAccountRepository::delete);
-        UserAccountTestSupport.ensureAdmin(userAccountRepository, passwordEncoder);
+        UserAccountTestSupport.ensureAdmin(userAccountRepository, accessProfiles, passwordEncoder);
     }
 
     @Test
@@ -79,6 +85,37 @@ class UserControllerIntegrationTest {
 
         UserAccount updatedUser = userAccountRepository.findById(user.getId()).orElseThrow();
         assertTrue(passwordEncoder.matches("old-password", updatedUser.getPasswordHash()));
+    }
+
+    @Test
+    void profileFollowsRoleOnCreateAndUpdate() throws Exception {
+        mockMvc.perform(post("/api/users")
+                .with(asProfile("admin", "ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                    "username", "bridge.user",
+                    "fullName", "Bridge User",
+                    "password", "password123",
+                    "role", "VIEWER",
+                    "active", true
+                ))))
+            .andExpect(status().isCreated());
+        UserAccount created = userAccountRepository.findByUsernameIgnoreCase("bridge.user").orElseThrow();
+        assertEquals("VIEWER", created.getProfile().getLegacyCode());
+
+        mockMvc.perform(put("/api/users/{id}", created.getId())
+                .with(asProfile("admin", "ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                    "username", "bridge.user",
+                    "fullName", "Bridge User",
+                    "role", "TECHNICIAN",
+                    "active", true
+                ))))
+            .andExpect(status().isOk());
+        assertEquals("TECHNICIAN", userAccountRepository.findById(created.getId()).orElseThrow().getProfile().getLegacyCode());
     }
 
     @Test
@@ -302,7 +339,7 @@ class UserControllerIntegrationTest {
         user.setUsername(username);
         user.setFullName(fullName);
         user.setPasswordHash(passwordEncoder.encode(password));
-        user.setRole(UserRole.SERVICE_DESK);
+        AccessTestSupport.assignProfile(accessProfiles, user, "SERVICE_DESK");
         user.setActive(true);
         return userAccountRepository.save(user);
     }

@@ -20,6 +20,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
+import br.com.navitasassist.access.AccessTestSupport;
+import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.config.NotificationAsyncConfig;
 import br.com.navitasassist.product.Product;
@@ -87,6 +89,9 @@ class NotificationEmailIntegrationTest {
     private UserAccountRepository userAccountRepository;
 
     @Autowired
+    private AccessProfileRepository accessProfiles;
+
+    @Autowired
     private RmaRecordRepository rmaRecordRepository;
 
     @Autowired
@@ -110,7 +115,7 @@ class NotificationEmailIntegrationTest {
         technician.setUsername("nav40-mail-tech");
         technician.setFullName("Técnico e-mail");
         technician.setPasswordHash("not-used");
-        technician.setRole(UserRole.TECHNICIAN);
+        AccessTestSupport.assignProfile(accessProfiles, technician, "TECHNICIAN");
         technician = userAccountRepository.save(technician);
         Client client = new Client();
         client.setLegalName("Cliente e-mail");

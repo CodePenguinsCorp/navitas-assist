@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import br.com.navitasassist.access.AccessTestSupport;
+import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.config.NotificationAsyncConfig;
 import br.com.navitasassist.product.Product;
@@ -102,6 +104,9 @@ class NotificationSmtpTimeoutIntegrationTest {
     private UserAccountRepository userAccountRepository;
 
     @Autowired
+    private AccessProfileRepository accessProfiles;
+
+    @Autowired
     private RmaRecordRepository rmaRecordRepository;
 
     @Autowired
@@ -137,7 +142,7 @@ class NotificationSmtpTimeoutIntegrationTest {
         technician.setUsername("nav40-smtp-tech");
         technician.setFullName("Técnico SMTP");
         technician.setPasswordHash("not-used");
-        technician.setRole(UserRole.TECHNICIAN);
+        AccessTestSupport.assignProfile(accessProfiles, technician, "TECHNICIAN");
         technician = userAccountRepository.save(technician);
         Client client = new Client();
         client.setLegalName("Cliente SMTP");

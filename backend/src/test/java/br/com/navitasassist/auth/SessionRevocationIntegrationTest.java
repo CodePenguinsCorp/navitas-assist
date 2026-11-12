@@ -26,6 +26,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import br.com.navitasassist.access.AccessTestSupport;
+import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.service.UserAccountService;
 import br.com.navitasassist.user.UserAccount;
@@ -63,6 +65,7 @@ class SessionRevocationIntegrationTest {
     @Autowired private MockMvc mvc;
     @Autowired private ObjectMapper mapper;
     @Autowired private UserAccountRepository users;
+    @Autowired private AccessProfileRepository accessProfiles;
     @Autowired private UserAccountService service;
     @Autowired private PasswordEncoder encoder;
     @Autowired private PlatformTransactionManager transactions;
@@ -77,7 +80,7 @@ class SessionRevocationIntegrationTest {
     @BeforeEach
     void prepare() throws Exception {
         users.findAll().stream().filter(account -> account.getUsername().startsWith(TARGET)).forEach(users::delete);
-        UserAccountTestSupport.ensureAdmin(users, encoder);
+        UserAccountTestSupport.ensureAdmin(users, accessProfiles, encoder);
         target = createAdmin(TARGET);
         actor = login("admin", "password123");
         first = login(TARGET, "password123");
@@ -238,7 +241,7 @@ class SessionRevocationIntegrationTest {
         account.setUsername(username);
         account.setFullName("Session target");
         account.setPasswordHash(encoder.encode("password123"));
-        account.setRole(UserRole.ADMIN);
+        AccessTestSupport.assignProfile(accessProfiles, account, "ADMIN");
         account.setActive(true);
         return users.saveAndFlush(account);
     }

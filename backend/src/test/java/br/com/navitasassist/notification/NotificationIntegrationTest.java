@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import br.com.navitasassist.access.AccessTestSupport;
+import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.config.NotificationAsyncConfig;
 import br.com.navitasassist.product.Product;
@@ -99,6 +101,9 @@ class NotificationIntegrationTest {
     private UserAccountRepository userAccountRepository;
 
     @Autowired
+    private AccessProfileRepository accessProfiles;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -130,7 +135,7 @@ class NotificationIntegrationTest {
     void setUp() {
         cleanUp();
         resetRules();
-        UserAccountTestSupport.ensureAdmin(userAccountRepository, passwordEncoder);
+        UserAccountTestSupport.ensureAdmin(userAccountRepository, accessProfiles, passwordEncoder);
         technician = createUser("nav40-tech", UserRole.TECHNICIAN, true);
         otherTechnician = createUser("nav40-tech-2", UserRole.TECHNICIAN, true);
         desk = createUser("nav40-desk", UserRole.SERVICE_DESK, true);
@@ -351,7 +356,7 @@ class NotificationIntegrationTest {
         account.setUsername(username);
         account.setFullName(username);
         account.setPasswordHash("not-used");
-        account.setRole(role);
+        AccessTestSupport.assignProfile(accessProfiles, account, role.name());
         account.setActive(active);
         account = userAccountRepository.save(account);
         createdUserIds.add(account.getId());

@@ -17,6 +17,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import br.com.navitasassist.access.AccessTestSupport;
+import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.user.UserAccount;
 import br.com.navitasassist.user.UserAccountTestSupport;
@@ -52,6 +54,9 @@ class AuthSecurityIntegrationTest {
     private UserAccountRepository userAccountRepository;
 
     @Autowired
+    private AccessProfileRepository accessProfiles;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @BeforeEach
@@ -59,7 +64,7 @@ class AuthSecurityIntegrationTest {
         userAccountRepository.findAll().stream()
             .filter(user -> !user.getUsername().equalsIgnoreCase("admin"))
             .forEach(userAccountRepository::delete);
-        UserAccountTestSupport.ensureAdmin(userAccountRepository, passwordEncoder);
+        UserAccountTestSupport.ensureAdmin(userAccountRepository, accessProfiles, passwordEncoder);
         createUser("service.desk", UserRole.SERVICE_DESK);
         createUser("technician", UserRole.TECHNICIAN);
         createUser("viewer", UserRole.VIEWER);
@@ -412,7 +417,7 @@ class AuthSecurityIntegrationTest {
         user.setUsername(username);
         user.setFullName(username);
         user.setPasswordHash(passwordEncoder.encode("password123"));
-        user.setRole(role);
+        AccessTestSupport.assignProfile(accessProfiles, user, role.name());
         user.setActive(true);
         userAccountRepository.save(user);
     }

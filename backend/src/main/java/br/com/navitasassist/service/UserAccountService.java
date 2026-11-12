@@ -3,12 +3,14 @@ package br.com.navitasassist.service;
 import java.util.List;
 import java.util.Objects;
 
+import br.com.navitasassist.access.AccessProfile;
 import br.com.navitasassist.auth.AccountSessionRevoker;
 import br.com.navitasassist.auth.BoundedBCryptPasswordEncoder;
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.pagination.PageParams;
 import br.com.navitasassist.pagination.PageResponse;
+import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.user.AssignableUserResponse;
@@ -31,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserAccountService {
 
     private final UserAccountRepository userAccountRepository;
+    private final AccessProfileRepository accessProfileRepository;
     private final RmaRecordRepository rmaRecordRepository;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher events;
@@ -70,6 +73,7 @@ public class UserAccountService {
         userAccount.setFullName(trim(request.fullName()));
         userAccount.setPasswordHash(passwordEncoder.encode(request.password()));
         userAccount.setRole(request.role());
+        userAccount.setProfile(legacyProfile(request.role()));
         userAccount.setActive(request.active());
 
         return UserAccountResponse.from(userAccountRepository.save(userAccount));
@@ -94,6 +98,7 @@ public class UserAccountService {
             userAccount.setPasswordHash(passwordEncoder.encode(request.password()));
         }
         userAccount.setRole(request.role());
+        userAccount.setProfile(legacyProfile(request.role()));
         userAccount.setActive(request.active());
 
         UserAccountResponse response = UserAccountResponse.from(userAccountRepository.save(userAccount));
@@ -169,6 +174,12 @@ public class UserAccountService {
                 && userAccountRepository.countByRoleAndActiveTrue(UserRole.ADMIN) <= 1) {
             throw new BusinessException("At least one active administrator must remain.");
         }
+    }
+
+    /** Ponte da etapa 8A: enquanto o role existir, o perfil acompanha o role gravado. */
+    private AccessProfile legacyProfile(UserRole role) {
+        return accessProfileRepository.findByLegacyCode(role.name())
+            .orElseThrow(() -> new IllegalStateException("Legacy access profile not found: " + role));
     }
 
     private String trim(String value) {

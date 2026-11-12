@@ -13,6 +13,7 @@ import java.util.TreeSet;
 import java.util.stream.Stream;
 
 import br.com.navitasassist.auth.NavitasUserDetailsService;
+import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -178,6 +179,7 @@ class PermissionEquivalenceIntegrationTest {
     @Autowired private MockMvc mvc;
     @Autowired private NavitasUserDetailsService userDetailsService;
     @Autowired private UserAccountRepository users;
+    @Autowired private AccessProfileRepository profiles;
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired @Qualifier("requestMappingHandlerMapping") private RequestMappingHandlerMapping handlerMapping;
 
@@ -185,7 +187,7 @@ class PermissionEquivalenceIntegrationTest {
     void createUsers() {
         deleteUsers();
         for (String profile : PROFILES) {
-            AccessTestSupport.saveAccount(users, passwordEncoder, usernameOf(profile), profile);
+            AccessTestSupport.saveAccount(users, profiles, passwordEncoder, usernameOf(profile), profile);
         }
     }
 

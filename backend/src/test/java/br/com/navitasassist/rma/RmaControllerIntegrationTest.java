@@ -18,6 +18,8 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 
+import br.com.navitasassist.access.AccessTestSupport;
+import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.product.Product;
 import br.com.navitasassist.repository.ClientRepository;
@@ -62,6 +64,9 @@ class RmaControllerIntegrationTest {
 
     @Autowired
     private UserAccountRepository userAccountRepository;
+
+    @Autowired
+    private AccessProfileRepository accessProfiles;
 
     @BeforeEach
     void cleanRmas() {
@@ -697,7 +702,7 @@ class RmaControllerIntegrationTest {
         user.setUsername(username);
         user.setFullName(fullName);
         user.setPasswordHash("not-used-in-this-test");
-        user.setRole(role);
+        AccessTestSupport.assignProfile(accessProfiles, user, role.name());
         user.setActive(active);
         return userAccountRepository.save(user);
     }

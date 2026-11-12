@@ -6,6 +6,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
+import br.com.navitasassist.access.AccessTestSupport;
+import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.diagnosis.Diagnosis;
 import br.com.navitasassist.diagnosis.FailureCause;
@@ -37,6 +39,9 @@ class EnumPersistenceIntegrationTest {
     private EntityManager entityManager;
 
     @Autowired
+    private AccessProfileRepository accessProfiles;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     private Long userId;
@@ -52,7 +57,7 @@ class EnumPersistenceIntegrationTest {
         owner.setUsername("enum-" + suffix);
         owner.setFullName("Enum persistence");
         owner.setPasswordHash("unused-test-password-hash");
-        owner.setRole(UserRole.VIEWER);
+        AccessTestSupport.assignProfile(accessProfiles, owner, "VIEWER");
         entityManager.persist(owner);
         userId = owner.getId();
 

@@ -11,6 +11,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Instant;
 import java.time.LocalDate;
 
+import br.com.navitasassist.access.AccessTestSupport;
+import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.product.Product;
 import br.com.navitasassist.repository.ClientRepository;
@@ -56,6 +58,9 @@ class PaginationIntegrationTest {
     private UserAccountRepository userAccountRepository;
 
     @Autowired
+    private AccessProfileRepository accessProfiles;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @BeforeEach
@@ -66,7 +71,7 @@ class PaginationIntegrationTest {
         userAccountRepository.findAll().stream()
             .filter(account -> !account.getUsername().equalsIgnoreCase("admin"))
             .forEach(userAccountRepository::delete);
-        UserAccountTestSupport.ensureAdmin(userAccountRepository, passwordEncoder);
+        UserAccountTestSupport.ensureAdmin(userAccountRepository, accessProfiles, passwordEncoder);
     }
 
     @Test
@@ -334,7 +339,7 @@ class PaginationIntegrationTest {
         account.setUsername(username);
         account.setFullName(fullName);
         account.setPasswordHash("hash");
-        account.setRole(role);
+        AccessTestSupport.assignProfile(accessProfiles, account, role.name());
         account.setActive(active);
         userAccountRepository.save(account);
     }

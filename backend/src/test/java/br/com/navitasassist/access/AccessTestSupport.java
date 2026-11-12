@@ -5,6 +5,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.user.UserAccount;
 import br.com.navitasassist.user.UserRole;
@@ -33,6 +34,7 @@ public final class AccessTestSupport {
     /** Grava um usuário ativo com senha {@value #DEFAULT_PASSWORD} e o perfil legado {@code legacyCode}. */
     public static UserAccount saveAccount(
         UserAccountRepository users,
+        AccessProfileRepository profiles,
         PasswordEncoder passwordEncoder,
         String username,
         String legacyCode
@@ -41,9 +43,17 @@ public final class AccessTestSupport {
         account.setUsername(username);
         account.setFullName(username);
         account.setPasswordHash(PASSWORD_HASHES.computeIfAbsent(passwordEncoder, encoder -> encoder.encode(DEFAULT_PASSWORD)));
-        account.setRole(UserRole.valueOf(legacyCode));
+        assignProfile(profiles, account, legacyCode);
         account.setActive(true);
         return users.saveAndFlush(account);
+    }
+
+    /** Grava o role e o perfil migrado equivalente ({@code legacy_code}); não salva a conta. */
+    public static UserAccount assignProfile(AccessProfileRepository profiles, UserAccount account, String legacyCode) {
+        account.setRole(UserRole.valueOf(legacyCode));
+        account.setProfile(profiles.findByLegacyCode(legacyCode)
+            .orElseThrow(() -> new IllegalStateException("Perfil migrado ausente: " + legacyCode)));
+        return account;
     }
 
     public static void deleteAccounts(UserAccountRepository users, String... usernames) {

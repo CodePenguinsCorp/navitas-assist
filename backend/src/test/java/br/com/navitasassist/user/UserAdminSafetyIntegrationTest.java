@@ -15,6 +15,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import br.com.navitasassist.access.AccessTestSupport;
+import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
@@ -39,6 +41,7 @@ class UserAdminSafetyIntegrationTest {
     @Autowired private MockMvc mvc;
     @Autowired private ObjectMapper mapper;
     @Autowired private UserAccountRepository users;
+    @Autowired private AccessProfileRepository accessProfiles;
     @Autowired private PasswordEncoder passwordEncoder;
     private UserAccount admin;
     private String originalAdminName;
@@ -52,8 +55,8 @@ class UserAdminSafetyIntegrationTest {
 
     @AfterEach
     void restore() {
-        UserAccount seed = UserAccountTestSupport.ensureAdmin(users, passwordEncoder);
-        seed.setRole(UserRole.ADMIN);
+        UserAccount seed = UserAccountTestSupport.ensureAdmin(users, accessProfiles, passwordEncoder);
+        AccessTestSupport.assignProfile(accessProfiles, seed, "ADMIN");
         seed.setActive(true);
         if (originalAdminName != null) seed.setFullName(originalAdminName);
         users.saveAndFlush(seed);
@@ -84,7 +87,7 @@ class UserAdminSafetyIntegrationTest {
     @Test
     void cannotDeleteLastAdminUsingAnotherPreviouslyAdministrativeSession() throws Exception {
         UserAccount only = second(true);
-        admin.setRole(UserRole.VIEWER);
+        AccessTestSupport.assignProfile(accessProfiles, admin, "VIEWER");
         users.saveAndFlush(admin);
         mvc.perform(delete("/api/users/{id}", only.getId()).with(asProfile("admin", "ADMIN")).with(csrf()))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("At least one active administrator must remain."));
@@ -163,7 +166,7 @@ class UserAdminSafetyIntegrationTest {
         other.setUsername(SECOND);
         other.setFullName("Safety test administrator");
         other.setPasswordHash(admin.getPasswordHash());
-        other.setRole(UserRole.ADMIN);
+        AccessTestSupport.assignProfile(accessProfiles, other, "ADMIN");
         other.setActive(active);
         return users.saveAndFlush(other);
     }

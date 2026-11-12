@@ -16,6 +16,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import br.com.navitasassist.access.AccessTestSupport;
+import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.user.UserAccount;
@@ -45,6 +47,7 @@ class PasswordBoundaryIntegrationTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private UserAccountRepository accounts;
+    @Autowired private AccessProfileRepository accessProfiles;
     @Autowired private PasswordEncoder encoder;
     private String username;
 
@@ -157,7 +160,7 @@ class PasswordBoundaryIntegrationTest {
         UserAccount account = new UserAccount();
         account.setUsername(username);
         account.setFullName("Original user");
-        account.setRole(UserRole.VIEWER);
+        AccessTestSupport.assignProfile(accessProfiles, account, "VIEWER");
         account.setActive(true);
         account.setPasswordHash(new BCryptPasswordEncoder().encode(password));
         return accounts.saveAndFlush(account);
