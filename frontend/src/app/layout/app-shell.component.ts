@@ -1,10 +1,12 @@
 import { IconComponent } from '../shared/icon/icon.component';
 import { initialsOf } from '../core/utils/rma-ui';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { ActivatedRouteSnapshot, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { finalize, switchMap, timer } from 'rxjs';
 import { NAV_GROUPS } from '../core/mock-data';
+import { firstAllowedRoute } from '../core/navigation';
+import { Permission } from '../core/permissions';
 import { AuthService } from '../core/services/auth.service';
 import { NotificationService } from '../core/services/notification.service';
 import { PermissionService } from '../core/services/permission.service';
@@ -54,6 +56,23 @@ export class AppShellComponent {
       switchMap(() => this.notificationService.refreshSummary()),
       takeUntilDestroyed()
     ).subscribe();
+    // As permissões mudam após um 403 ou ao salvar o próprio perfil: a tela aberta é conferida de novo.
+    effect(() => {
+      this.permissions.permissions();
+      untracked(() => this.leaveScreenIfForbidden());
+    });
+  }
+
+  private leaveScreenIfForbidden(): void {
+    let route: ActivatedRouteSnapshot | null = this.router.routerState.snapshot.root;
+    const required: Permission[] = [];
+    while (route) {
+      required.push(...((route.data['permissions'] as Permission[] | undefined) ?? []));
+      route = route.firstChild;
+    }
+    if (!this.permissions.hasAll(required)) {
+      void this.router.navigateByUrl(firstAllowedRoute(this.permissions));
+    }
   }
 
   protected logout(): void {

@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { Signal, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
@@ -24,7 +24,7 @@ async function setup(role: LegacyProfileCode) {
   return setupWith(profilePermissions(role));
 }
 
-async function setupWith(permissions: readonly Permission[]) {
+async function setupWith(permissions: readonly Permission[] | Signal<readonly Permission[]>) {
   await TestBed.configureTestingModule({
     imports: [KanbanComponent],
     providers: [
@@ -117,6 +117,23 @@ describe('KanbanComponent bulk actions by permission', () => {
     [...view.toolbar!.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.includes('Selecionar visíveis'))!.click();
     fixture.detectChanges();
     expect(view.toolbar!.textContent).toContain('1 RMA selecionado');
+  });
+
+  it('drops the bulk selection when the bulk permissions are lost', async () => {
+    const permissions = signal<readonly Permission[]>(['rma.ver', 'rma.status']);
+    const fixture = await setupWith(permissions);
+    bulk(fixture).checkbox!.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(bulk(fixture).toolbar!.textContent).toContain('1 RMA selecionado');
+
+    permissions.set(['rma.ver']);
+    fixture.detectChanges();
+    expect(bulk(fixture).toolbar).toBeNull();
+    permissions.set(['rma.ver', 'rma.status']);
+    fixture.detectChanges();
+
+    expect(bulk(fixture).toolbar!.textContent).not.toContain('1 RMA selecionado');
+    expect(bulk(fixture).checkbox!.checked).toBe(false);
   });
 
   it('offers bulk priority changes with only rma.editar', async () => {

@@ -6,8 +6,10 @@ import {
   Injector,
   afterNextRender,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
   viewChild,
   viewChildren,
 } from '@angular/core';
@@ -323,6 +325,10 @@ export class KanbanComponent {
     this.filtersForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.releaseDivergentView());
     this.loadKanban();
     this.loadViews();
+    // Sem permissão de lote (após um 403 ou ao mudar o próprio perfil), a seleção some com a barra.
+    effect(() => {
+      if (!this.canBulkEdit()) untracked(() => this.bulkSelectedIds.set([]));
+    });
   }
 
   protected retryLoad(): void {
