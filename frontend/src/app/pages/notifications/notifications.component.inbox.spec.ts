@@ -6,6 +6,7 @@ import { Observable, Subject, of, throwError } from 'rxjs';
 import { NotificationResponse, UserRole } from '../../core/models';
 import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { NotificationService } from '../../core/services/notification.service';
+import { ProfileService } from '../../core/services/profile.service';
 import { SlaClockService } from '../../core/services/sla-clock.service';
 import { NotificationsComponent } from './notifications.component';
 
@@ -66,6 +67,7 @@ describe('NotificationsComponent inbox loading', () => {
       providers: [
         provideRouter([]),
         { provide: NotificationService, useValue: service },
+        { provide: ProfileService, useValue: { options: () => of([]) } },
         providePermissions(profilePermissions(sources.role ?? 'TECHNICIAN')),
         { provide: SlaClockService, useValue: { now: clock.asReadonly() } }
       ]

@@ -4,16 +4,17 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Observable, Subscription, finalize } from 'rxjs';
-import { ROLE_LABELS, ROLE_OPTIONS } from '../../core/mock-data';
 import {
   NotificationFailureResponse,
   NotificationPreferenceResponse,
   NotificationResponse,
   NotificationRuleRequest,
   NotificationRuleResponse,
-  NotificationSeverity
+  NotificationSeverity,
+  ProfileOption
 } from '../../core/models';
 import { PermissionService } from '../../core/services/permission.service';
+import { ProfileService } from '../../core/services/profile.service';
 import { SlaClockService } from '../../core/services/sla-clock.service';
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
@@ -218,6 +219,7 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
 export class NotificationsComponent {
   private readonly notificationService = inject(NotificationService);
   private readonly permissions = inject(PermissionService);
+  private readonly profileService = inject(ProfileService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
@@ -265,8 +267,10 @@ export class NotificationsComponent {
     notifyAssignee: false,
     emailEnabled: false,
     userMutable: false,
-    roles: this.fb.nonNullable.group({ ADMIN: false, TECHNICIAN: false, SERVICE_DESK: false, VIEWER: false })
+    profiles: this.fb.nonNullable.control<number[]>([])
   });
+  protected readonly profileOptions = signal<ProfileOption[]>([]);
+  protected readonly profileOptionsState = signal<'idle' | 'loading' | 'ready' | 'failed'>('idle');
 
   protected readonly eventLabels = NOTIFICATION_EVENT_LABELS;
   protected readonly severityLabels = NOTIFICATION_SEVERITY_LABELS;
@@ -280,8 +284,6 @@ export class NotificationsComponent {
     return severity === 'CRITICAL' ? 'tone-danger' : severity === 'WARNING' ? 'tone-warning' : 'tone-sky';
   }
   protected readonly snoozeOptions = SNOOZE_OPTIONS;
-  protected readonly roleOptions = ROLE_OPTIONS;
-  protected readonly roleLabels = ROLE_LABELS;
   protected readonly severityClass = severityClass;
   protected readonly dateTime = formatNotificationDateTime;
 
@@ -307,6 +309,7 @@ export class NotificationsComponent {
       this.loadPreferences();
     } else if (this.canManageRules()) {
       this.loadRules();
+      this.loadProfileOptions();
     }
   }
 
@@ -434,22 +437,39 @@ export class NotificationsComponent {
     return failure.source === 'EMAIL' ? 'Envio de e-mail' : 'Processamento do evento';
   }
 
-  /** Recipients as a fact: configured roles plus the RMA assignee, without judging the result. */
+  /** Recipients as a fact: configured profiles plus the RMA assignee, without judging the result. */
   protected recipientsSummary(rule: NotificationRuleResponse): string {
-    const roles = ROLE_OPTIONS.filter((role) => rule.recipientRoles.includes(role)).map((role) => ROLE_LABELS[role]).join(', ');
+    const roles = rule.recipientProfiles.map((profile) => profile.name).join(', ');
     if (roles && rule.notifyAssignee) return `${roles} + responsável pelo RMA`;
     if (roles) return roles;
     return rule.notifyAssignee ? 'Responsável pelo RMA' : 'Nenhum destinatário';
   }
 
-  protected hasNoRecipients(rule: Pick<NotificationRuleResponse, 'recipientRoles' | 'notifyAssignee'>): boolean {
-    return rule.recipientRoles.length === 0 && !rule.notifyAssignee;
+  protected hasNoRecipients(rule: { recipientCount: number; notifyAssignee: boolean }): boolean {
+    return rule.recipientCount === 0 && !rule.notifyAssignee;
+  }
+
+  protected ruleHasNoRecipients(rule: NotificationRuleResponse): boolean {
+    return this.hasNoRecipients({ recipientCount: rule.recipientProfiles.length, notifyAssignee: rule.notifyAssignee });
+  }
+
+  protected isRecipient(profileId: number): boolean {
+    return this.ruleForm.controls.profiles.value.includes(profileId);
+  }
+
+  /** Mantém os ids na ordem das opções (por nome), como a API devolve. */
+  protected toggleRecipient(profileId: number, checked: boolean): void {
+    const chosen = new Set(this.ruleForm.controls.profiles.value);
+    if (checked) chosen.add(profileId); else chosen.delete(profileId);
+    const ordered = this.profileOptions().map((option) => option.id).filter((id) => chosen.has(id));
+    const unknown = [...chosen].filter((id) => !ordered.includes(id));
+    this.ruleForm.controls.profiles.setValue([...ordered, ...unknown]);
   }
 
   /** Same check on the editor's current values; it informs without blocking the save. */
   protected editorHasNoRecipients(): boolean {
-    const { roles, notifyAssignee } = this.ruleForm.getRawValue();
-    return this.hasNoRecipients({ recipientRoles: ROLE_OPTIONS.filter((role) => roles[role]), notifyAssignee });
+    const { profiles, notifyAssignee } = this.ruleForm.getRawValue();
+    return this.hasNoRecipients({ recipientCount: profiles.length, notifyAssignee });
   }
 
   /** Every control is reset from the rule, so nothing is carried over from the previously edited one. */
@@ -461,12 +481,7 @@ export class NotificationsComponent {
       notifyAssignee: rule.notifyAssignee,
       emailEnabled: rule.emailEnabled,
       userMutable: rule.userMutable,
-      roles: {
-        ADMIN: rule.recipientRoles.includes('ADMIN'),
-        TECHNICIAN: rule.recipientRoles.includes('TECHNICIAN'),
-        SERVICE_DESK: rule.recipientRoles.includes('SERVICE_DESK'),
-        VIEWER: rule.recipientRoles.includes('VIEWER')
-      }
+      profiles: rule.recipientProfiles.map((profile) => profile.id)
     });
     this.ruleErrorMessage.set('');
     this.editingRule.set(rule);
@@ -480,13 +495,13 @@ export class NotificationsComponent {
   /** Single confirmed save with the same six fields of the rule contract. */
   protected saveRule(): void {
     const rule = this.editingRule();
-    if (!rule || this.ruleSubmitting()) return;
+    if (!rule || this.ruleSubmitting() || this.profileOptionsState() !== 'ready') return;
 
-    const { enabled, severity, roles, notifyAssignee, emailEnabled, userMutable } = this.ruleForm.getRawValue();
+    const { enabled, severity, profiles, notifyAssignee, emailEnabled, userMutable } = this.ruleForm.getRawValue();
     const payload: NotificationRuleRequest = {
       enabled,
       severity,
-      recipientRoles: ROLE_OPTIONS.filter((role) => roles[role]),
+      recipientProfileIds: profiles,
       notifyAssignee,
       emailEnabled,
       userMutable
@@ -511,6 +526,8 @@ export class NotificationsComponent {
   private resetRuleEditor(): void {
     this.editingRule.set(null);
     this.ruleErrorMessage.set('');
+    // Uma falha nas opções aparece no editor aberto; a próxima abertura já encontra a nova tentativa.
+    if (this.profileOptionsState() === 'failed') this.loadProfileOptions();
   }
 
   /** The previous result belongs to other filters: drop it and its failure, then start a first load. */
@@ -564,6 +581,19 @@ export class NotificationsComponent {
         this.preferencesLoadFailed.set(true);
         this.preferencesLoadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as preferências.'));
       }
+    });
+  }
+
+  /** As opções de perfil são buscadas uma vez por tela (o serviço as guarda); depois de uma falha, de novo no próximo editor. */
+  private loadProfileOptions(): void {
+    if (this.profileOptionsState() === 'ready' || this.profileOptionsState() === 'loading') return;
+    this.profileOptionsState.set('loading');
+    this.profileService.options().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (options) => {
+        this.profileOptions.set(options);
+        this.profileOptionsState.set('ready');
+      },
+      error: () => this.profileOptionsState.set('failed')
     });
   }
 

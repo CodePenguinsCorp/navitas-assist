@@ -6,6 +6,7 @@ import { Observable, Subject, of, throwError } from 'rxjs';
 import { NotificationPreferenceResponse, UserRole } from '../../core/models';
 import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { NotificationService } from '../../core/services/notification.service';
+import { ProfileService } from '../../core/services/profile.service';
 import { NotificationsComponent } from './notifications.component';
 
 const PREFERENCES: NotificationPreferenceResponse[] = [
@@ -62,6 +63,7 @@ describe('NotificationsComponent preferences', () => {
       providers: [
         provideRouter([]),
         { provide: NotificationService, useValue: service },
+        { provide: ProfileService, useValue: { options: () => of([]) } },
         providePermissions(profilePermissions(sources.role ?? 'TECHNICIAN'))
       ]
     }).compileComponents();

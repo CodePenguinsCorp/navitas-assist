@@ -5,6 +5,7 @@ import { of } from 'rxjs';
 import { NotificationPreferenceResponse, NotificationResponse, NotificationRuleResponse, UserRole } from '../../core/models';
 import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { NotificationService } from '../../core/services/notification.service';
+import { ProfileService } from '../../core/services/profile.service';
 import { NotificationsComponent } from './notifications.component';
 
 const NOTIFICATION: NotificationResponse = {
@@ -18,7 +19,7 @@ const PREFERENCES: NotificationPreferenceResponse[] = [
 ];
 
 const RULE: NotificationRuleResponse = {
-  eventType: 'SLA_OVERDUE', enabled: true, severity: 'CRITICAL', recipientRoles: ['ADMIN'], notifyAssignee: true, emailEnabled: false,
+  eventType: 'SLA_OVERDUE', enabled: true, severity: 'CRITICAL', recipientProfiles: [{ id: 1, name: 'Administrador' }], notifyAssignee: true, emailEnabled: false,
   userMutable: false, updatedAt: '2026-10-24T12:00:00Z', updatedBy: 'admin'
 };
 
@@ -56,6 +57,7 @@ describe('NotificationsComponent', () => {
       providers: [
         provideRouter([]),
         { provide: NotificationService, useValue: service },
+        { provide: ProfileService, useValue: { options: () => of([{ id: 1, name: 'Administrador', permissions: [] }, { id: 2, name: 'Atendimento', permissions: [] }]) } },
         providePermissions(profilePermissions(role))
       ]
     }).compileComponents();
@@ -97,7 +99,7 @@ describe('NotificationsComponent', () => {
   });
 
   // Mudança deliberada de fluxo (não de contrato): a regra é editada num formulário e enviada uma vez.
-  it('lets admins change recipient roles of a rule', async () => {
+  it('lets admins change recipient profiles of a rule', async () => {
     await setUp('ADMIN');
     expect(component.canManageRules()).toBe(true);
     component.selectTab('rules');
@@ -111,7 +113,7 @@ describe('NotificationsComponent', () => {
     fixture.detectChanges();
 
     expect(service['updateRule']).toHaveBeenCalledWith('SLA_OVERDUE', {
-      enabled: true, severity: 'CRITICAL', recipientRoles: ['ADMIN', 'SERVICE_DESK'], notifyAssignee: true, emailEnabled: false, userMutable: false
+      enabled: true, severity: 'CRITICAL', recipientProfileIds: [1, 2], notifyAssignee: true, emailEnabled: false, userMutable: false
     });
   });
 });

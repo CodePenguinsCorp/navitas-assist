@@ -8,15 +8,26 @@ import { Permission } from '../../core/permissions';
 import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { LoadingService } from '../../core/services/loading.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { ProfileOption } from '../../core/models';
+import { ProfileService } from '../../core/services/profile.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { NotificationsComponent } from './notifications.component';
 
+// Opções de `GET /api/profiles/options`, ordenadas por nome como na API.
+const PROFILES: ProfileOption[] = [
+  { id: 1, name: 'Administrador', permissions: [] },
+  { id: 2, name: 'Atendimento', permissions: [] },
+  { id: 4, name: 'Consulta', permissions: [] },
+  { id: 3, name: 'Técnico', permissions: [] }
+];
+const profilesOf = (ids: number[]) => PROFILES.filter((profile) => ids.includes(profile.id)).map(({ id, name }) => ({ id, name }));
+
 const RULE: NotificationRuleResponse = {
-  eventType: 'SLA_OVERDUE', enabled: true, severity: 'CRITICAL', recipientRoles: ['ADMIN'], notifyAssignee: true, emailEnabled: false,
+  eventType: 'SLA_OVERDUE', enabled: true, severity: 'CRITICAL', recipientProfiles: profilesOf([1]), notifyAssignee: true, emailEnabled: false,
   userMutable: false, updatedAt: '2026-10-24T12:00:00Z', updatedBy: 'admin'
 };
 const SILENT_RULE: NotificationRuleResponse = {
-  ...RULE, eventType: 'RMA_CREATED', enabled: false, severity: 'INFO', recipientRoles: [], notifyAssignee: false
+  ...RULE, eventType: 'RMA_CREATED', enabled: false, severity: 'INFO', recipientProfiles: [], notifyAssignee: false
 };
 
 const failure = () => throwError(() => new HttpErrorResponse({ status: 500 }));
@@ -28,6 +39,7 @@ interface Harness {
 describe('NotificationsComponent rules', () => {
   let fixture: ComponentFixture<NotificationsComponent>;
   let component: Harness;
+  let profileOptions: ReturnType<typeof vi.fn>;
   let service: Record<string, ReturnType<typeof vi.fn>> & { unreadCount: ReturnType<typeof signal<number>>; summaryLoaded: ReturnType<typeof signal<boolean>>; summaryLoadFailed: ReturnType<typeof signal<boolean>> };
 
   const root = (): HTMLElement => fixture.nativeElement.querySelector('.page-surface');
@@ -44,13 +56,16 @@ describe('NotificationsComponent rules', () => {
   };
   const openRules = () => { component.selectTab('rules'); render(); };
 
-  async function setup(sources: { role?: UserRole; permissions?: readonly Permission[]; rules?: Observable<NotificationRuleResponse[]>[]; failures?: Observable<NotificationFailureResponse[]>[]; update?: Observable<NotificationRuleResponse>[] } = {}) {
+  async function setup(sources: { role?: UserRole; permissions?: readonly Permission[]; rules?: Observable<NotificationRuleResponse[]>[]; failures?: Observable<NotificationFailureResponse[]>[]; update?: Observable<NotificationRuleResponse>[]; profiles?: Observable<ProfileOption[]>[] } = {}) {
     const listRules = vi.fn(() => of([RULE]));
     for (const source of sources.rules ?? []) listRules.mockImplementationOnce(() => source);
     const listFailures = vi.fn(() => of([] as NotificationFailureResponse[]));
     for (const source of sources.failures ?? []) listFailures.mockImplementationOnce(() => source);
-    const updateRule = vi.fn((eventType: string, payload: object) => of({ ...RULE, ...payload, eventType, updatedAt: '2026-10-24T16:00:00Z', updatedBy: 'root' }));
+    const updateRule = vi.fn((eventType: string, { recipientProfileIds, ...payload }: { recipientProfileIds: number[] }) =>
+      of({ ...RULE, ...payload, recipientProfiles: profilesOf(recipientProfileIds), eventType, updatedAt: '2026-10-24T16:00:00Z', updatedBy: 'root' }));
     for (const source of sources.update ?? []) updateRule.mockImplementationOnce(() => source as never);
+    profileOptions = vi.fn(() => of(PROFILES));
+    for (const source of sources.profiles ?? []) profileOptions.mockImplementationOnce(() => source);
     service = {
       unreadCount: signal(0),
       summaryLoaded: signal(true),
@@ -71,6 +86,7 @@ describe('NotificationsComponent rules', () => {
       providers: [
         provideRouter([]),
         { provide: NotificationService, useValue: service },
+        { provide: ProfileService, useValue: { options: profileOptions } },
         providePermissions(sources.permissions ?? profilePermissions(sources.role ?? 'ADMIN'))
       ]
     }).compileComponents();
@@ -220,7 +236,7 @@ describe('NotificationsComponent rules', () => {
       submit();
       expect(service['updateRule']).toHaveBeenCalledTimes(1);
       expect(service['updateRule']).toHaveBeenCalledWith('SLA_OVERDUE', {
-        enabled: true, severity: 'CRITICAL', recipientRoles: ['ADMIN', 'SERVICE_DESK'], notifyAssignee: true, emailEnabled: false, userMutable: false
+        enabled: true, severity: 'CRITICAL', recipientProfileIds: [1, 2], notifyAssignee: true, emailEnabled: false, userMutable: false
       });
       expect(dialog()).toBeNull();
       expect(cells(rulesTable()!, 'SLA vencido')).toMatchObject({
@@ -231,9 +247,50 @@ describe('NotificationsComponent rules', () => {
     });
 
     // Vermelho: o resumo e o editor não explicam que a regra sem destinatários não entrega a ninguém.
+    it('lists profiles as recipient checkboxes and prefills those of the rule', async () => {
+      await setup({ profiles: [of([...PROFILES, { id: 9, name: 'Supervisor', permissions: [] }])] });
+      openRules();
+      openEditor('SLA vencido');
+      const recipients = field('Administrador').closest('fieldset')!;
+      expect(Array.from(recipients.querySelectorAll('label.checkbox-field')).map((label) => normalize(label.textContent)))
+        .toEqual(['Administrador', 'Atendimento', 'Consulta', 'Técnico', 'Supervisor', 'Notificar o responsável pelo RMA']);
+      expect(field('Administrador').checked).toBe(true);
+      expect(field('Supervisor').checked).toBe(false);
+      toggleField('Supervisor');
+      submit();
+      expect(service['updateRule']).toHaveBeenCalledWith('SLA_OVERDUE', expect.objectContaining({ recipientProfileIds: [1, 9] }));
+    });
+
+    it('loads profile options once, when the rules tab opens', async () => {
+      await setup();
+      expect(profileOptions).not.toHaveBeenCalled();
+      openRules();
+      openEditor('SLA vencido');
+      dialogButton('Cancelar').click();
+      render();
+      openEditor('SLA vencido');
+      expect(profileOptions).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows error when profiles fail to load and retries on the next editor', async () => {
+      await setup({ profiles: [throwError(() => new HttpErrorResponse({ status: 503 }))] });
+      openRules();
+      openEditor('SLA vencido');
+      expect(dialog()!.querySelector('[role="alert"]')?.textContent?.trim()).toBe('Não foi possível carregar os perfis. Tente novamente.');
+      expect(dialog()!.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(true);
+      submit();
+      expect(service['updateRule']).not.toHaveBeenCalled();
+      dialogButton('Cancelar').click();
+      render();
+      openEditor('SLA vencido');
+      expect(dialog()!.querySelector('[role="alert"]')).toBeNull();
+      expect(field('Administrador').checked).toBe(true);
+      expect(profileOptions).toHaveBeenCalledTimes(2);
+    });
+
     it('warns only when a rule has no recipients, in the summary and in the editor, and still saves', async () => {
       const warning = 'Esta regra não entrega notificações a ninguém.';
-      const assigneeOnly: NotificationRuleResponse = { ...RULE, eventType: 'RMA_ASSIGNED', recipientRoles: [], notifyAssignee: true };
+      const assigneeOnly: NotificationRuleResponse = { ...RULE, eventType: 'RMA_ASSIGNED', recipientProfiles: [], notifyAssignee: true };
       await setup({ rules: [of([RULE, SILENT_RULE, assigneeOnly])] });
       openRules();
       const table = rulesTable()!;
@@ -251,7 +308,7 @@ describe('NotificationsComponent rules', () => {
       expect(dialog()!.textContent).toContain(warning);
       submit();
       expect(service['updateRule']).toHaveBeenLastCalledWith('SLA_OVERDUE', {
-        enabled: true, severity: 'CRITICAL', recipientRoles: [], notifyAssignee: false, emailEnabled: false, userMutable: false
+        enabled: true, severity: 'CRITICAL', recipientProfileIds: [], notifyAssignee: false, emailEnabled: false, userMutable: false
       });
 
       openEditor('Novo RMA');
@@ -267,12 +324,12 @@ describe('NotificationsComponent rules', () => {
       openEditor('SLA vencido');
       submit();
       expect(service['updateRule']).toHaveBeenLastCalledWith('SLA_OVERDUE', {
-        enabled: true, severity: 'CRITICAL', recipientRoles: ['ADMIN'], notifyAssignee: true, emailEnabled: false, userMutable: false
+        enabled: true, severity: 'CRITICAL', recipientProfileIds: [1], notifyAssignee: true, emailEnabled: false, userMutable: false
       });
       openEditor('Novo RMA');
       submit();
       expect(service['updateRule']).toHaveBeenLastCalledWith('RMA_CREATED', {
-        enabled: false, severity: 'INFO', recipientRoles: [], notifyAssignee: false, emailEnabled: false, userMutable: false
+        enabled: false, severity: 'INFO', recipientProfileIds: [], notifyAssignee: false, emailEnabled: false, userMutable: false
       });
     });
 
@@ -308,7 +365,7 @@ describe('NotificationsComponent rules', () => {
       expect(field('Técnico').checked).toBe(true);
       expect(field('Ativa').checked).toBe(true);
 
-      pending.next({ ...RULE, recipientRoles: ['ADMIN', 'TECHNICIAN'] });
+      pending.next({ ...RULE, recipientProfiles: profilesOf([1, 3]) });
       pending.complete();
       render();
       expect(dialog()).toBeNull();

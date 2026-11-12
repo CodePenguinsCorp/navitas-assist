@@ -414,13 +414,15 @@ export interface NotificationPreferenceResponse {
 export interface NotificationRuleRequest {
   enabled: boolean;
   severity: NotificationSeverity;
-  recipientRoles: UserRole[];
+  recipientProfileIds: number[];
   notifyAssignee: boolean;
   emailEnabled: boolean;
   userMutable: boolean;
 }
 
-export interface NotificationRuleResponse extends NotificationRuleRequest {
+export interface NotificationRuleResponse extends Omit<NotificationRuleRequest, 'recipientProfileIds'> {
+  /** Ordenados por nome. */
+  recipientProfiles: ProfileRef[];
   eventType: NotificationEventType;
   updatedAt: string;
   updatedBy: string | null;

@@ -134,7 +134,7 @@ describe('NotificationService', () => {
     expect(preference.request.body).toEqual({ muted: true });
     preference.flush({});
 
-    const rule: NotificationRuleRequest = { enabled: false, severity: 'CRITICAL', recipientRoles: ['ADMIN'], notifyAssignee: true, emailEnabled: false, userMutable: false };
+    const rule: NotificationRuleRequest = { enabled: false, severity: 'CRITICAL', recipientProfileIds: [1], notifyAssignee: true, emailEnabled: false, userMutable: false };
     service.updateRule('SLA_OVERDUE', rule).subscribe();
     const update = httpTesting.expectOne('/api/notification-rules/SLA_OVERDUE');
     expect(update.request.method).toBe('PUT');
