@@ -87,8 +87,9 @@ public class UserAccountService {
         BoundedBCryptPasswordEncoder.validatePasswordLength(request.password());
 
         boolean passwordChanged = request.password() != null && !request.password().isBlank();
-        boolean accessChanged = !Objects.equals(userAccount.getUsername(), trim(request.username()))
-            || userAccount.getRole() != request.role()
+        // D8: perfil e extras valem na próxima requisição (EffectiveAuthoritiesFilter); só nome de usuário, situação
+        // ativa e senha encerram as sessões.
+        boolean sessionsRevoked = !Objects.equals(userAccount.getUsername(), trim(request.username()))
             || userAccount.isActive() != request.active()
             || passwordChanged;
 
@@ -102,7 +103,7 @@ public class UserAccountService {
         userAccount.setActive(request.active());
 
         UserAccountResponse response = UserAccountResponse.from(userAccountRepository.save(userAccount));
-        if (accessChanged) {
+        if (sessionsRevoked) {
             events.publishEvent(new AccountSessionRevoker.AccessChanged(id));
         }
         return response;

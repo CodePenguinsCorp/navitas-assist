@@ -98,12 +98,11 @@ class SessionRevocationIntegrationTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "inactive", "role", "username", "password", "delete" })
+    @ValueSource(strings = { "inactive", "username", "password", "delete" })
     void securityChangeRevokesAllTargetSessionsAndKeepsOtherAccounts(String change) throws Exception {
         Map<String, Object> payload = updatePayload();
         switch (change) {
             case "inactive" -> payload.put("active", false);
-            case "role" -> payload.put("role", "VIEWER");
             case "username" -> payload.put("username", TARGET + ".renamed");
             case "password" -> payload.put("password", "replacement-password");
             default -> { }
@@ -119,25 +118,32 @@ class SessionRevocationIntegrationTest {
             assertTrue(session.isInvalid());
         }
         mvc.perform(get("/api/users").session(actor)).andExpect(status().isOk());
-        if (List.of("inactive", "delete", "password", "username").contains(change)) {
-            mvc.perform(post("/api/auth/login").with(csrf()).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(Map.of("username", TARGET, "password", "password123"))))
-                .andExpect(status().isUnauthorized());
-        }
-        if (change.equals("role")) {
-            MockHttpSession refreshed = login(TARGET, "password123");
-            mvc.perform(get("/api/products").session(refreshed)).andExpect(status().isOk());
-            mvc.perform(get("/api/users").session(refreshed)).andExpect(status().isForbidden());
-            mvc.perform(put("/api/users/{id}", target.getId()).session(refreshed).with(csrf())
-                .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(updatePayload())))
-                .andExpect(status().isForbidden());
-            mvc.perform(delete("/api/users/{id}", target.getId()).session(refreshed).with(csrf()))
-                .andExpect(status().isForbidden());
-            mvc.perform(get("/api/products").session(refreshed)).andExpect(status().isOk());
-        } else if (change.equals("password")) {
+        mvc.perform(post("/api/auth/login").with(csrf()).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(Map.of("username", TARGET, "password", "password123"))))
+            .andExpect(status().isUnauthorized());
+        if (change.equals("password")) {
             mvc.perform(get("/api/auth/me").session(login(TARGET, "replacement-password"))).andExpect(status().isOk());
         } else if (change.equals("username")) {
             mvc.perform(get("/api/auth/me").session(login(TARGET + ".renamed", "password123"))).andExpect(status().isOk());
         }
+    }
+
+    /** D8: mudar o perfil não derruba as sessões; as authorities são atualizadas na requisição seguinte. */
+    @Test
+    void profileChangeKeepsSessionsWithUpdatedAuthorities() throws Exception {
+        Map<String, Object> payload = updatePayload();
+        payload.put("role", "VIEWER");
+        mvc.perform(put("/api/users/{id}", target.getId()).session(actor).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(payload))).andExpect(status().isOk());
+        for (MockHttpSession session : List.of(first, second)) {
+            mvc.perform(get("/api/users").session(session)).andExpect(status().isForbidden());
+            mvc.perform(put("/api/users/{id}", target.getId()).session(session).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(updatePayload())))
+                .andExpect(status().isForbidden());
+            mvc.perform(delete("/api/users/{id}", target.getId()).session(session).with(csrf()))
+                .andExpect(status().isForbidden());
+            mvc.perform(get("/api/products").session(session)).andExpect(status().isOk());
+            assertTrue(!session.isInvalid());
+        }
+        mvc.perform(get("/api/users").session(actor)).andExpect(status().isOk());
     }
 
     @Test
@@ -221,7 +227,7 @@ class SessionRevocationIntegrationTest {
             var loggingIn = pool.submit(() -> login(TARGET, "password123"));
             assertTrue(validated.await(10, TimeUnit.SECONDS));
             Map<String, Object> payload = updatePayload();
-            payload.put("role", "VIEWER");
+            payload.put("password", "replacement-password");
             var changing = pool.submit(() -> mvc.perform(put("/api/users/{id}", target.getId()).session(actor).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(payload))).andReturn().getResponse().getStatus());
             assertThrows(TimeoutException.class, () -> changing.get(1, TimeUnit.SECONDS));

@@ -18,6 +18,9 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import br.com.navitasassist.access.Permission.Codes;
 import br.com.navitasassist.auth.BoundedBCryptPasswordEncoder;
+import br.com.navitasassist.auth.EffectiveAuthoritiesFilter;
+import br.com.navitasassist.auth.NavitasUserDetailsService;
+import br.com.navitasassist.repository.UserAccountRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.session.SessionRegistryImpl;
@@ -30,6 +33,7 @@ import org.springframework.security.web.authentication.logout.LogoutHandler;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.security.web.authentication.session.SessionAuthenticationException;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
@@ -50,7 +54,9 @@ public class SecurityConfig {
         HttpSecurity http,
         SecurityContextRepository securityContextRepository,
         CsrfTokenRepository csrfTokenRepository,
-        SessionRegistry sessionRegistry
+        SessionRegistry sessionRegistry,
+        UserAccountRepository userAccountRepository,
+        NavitasUserDetailsService userDetailsService
     ) throws Exception {
         LogoutHandler unregisterSession = (request, response, authentication) -> {
             var session = request.getSession(false);
@@ -66,6 +72,9 @@ public class SecurityConfig {
 
         http
             .addFilterBefore(expiredSessions, CsrfFilter.class)
+            // D8: permissões recalculadas a cada requisição das sessões de login, sem derrubá-las.
+            .addFilterAfter(new EffectiveAuthoritiesFilter(userAccountRepository, userDetailsService, securityContextRepository),
+                SecurityContextHolderFilter.class)
             .csrf(csrf -> csrf
                 .csrfTokenRepository(csrfTokenRepository)
                 .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))

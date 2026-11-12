@@ -61,8 +61,13 @@ public class AuthController {
             request.changeSessionId();
         }
 
+        // Marca a sessão como criada por login real: só ela tem as permissões recalculadas a cada requisição.
+        UsernamePasswordAuthenticationToken loginSession = UsernamePasswordAuthenticationToken.authenticated(
+            authentication.getPrincipal(), null, authentication.getAuthorities());
+        loginSession.setDetails(new LoginSessionDetails(request.getRemoteAddr()));
+
         SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-        securityContext.setAuthentication(authentication);
+        securityContext.setAuthentication(loginSession);
         SecurityContextHolder.setContext(securityContext);
         securityContextRepository.saveContext(securityContext, request, response);
         sessionRegistry.registerNewSession(request.getSession().getId(), user.id());
