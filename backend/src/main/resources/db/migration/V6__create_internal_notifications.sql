@@ -44,6 +44,8 @@ CREATE TABLE notifications (
     action_path VARCHAR(200),
     created_at DATETIME(6) NOT NULL,
     read_at DATETIME(6),
+    read_batch_token VARCHAR(36),
+    read_batch_expires_at DATETIME(6),
     snoozed_until DATETIME(6),
     email_status VARCHAR(20) NOT NULL,
     email_error VARCHAR(500),

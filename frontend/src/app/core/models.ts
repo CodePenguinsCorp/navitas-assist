@@ -398,6 +398,16 @@ export interface NotificationSummaryResponse {
   unread: number;
 }
 
+export interface NotificationReadAllResponse {
+  markedCount: number;
+  undoToken: string | null;
+  expiresAt: string | null;
+}
+
+export interface NotificationReadUndoResponse {
+  restoredCount: number;
+}
+
 export interface NotificationPreferenceResponse {
   eventType: NotificationEventType;
   severity: NotificationSeverity;

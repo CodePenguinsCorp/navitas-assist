@@ -6,6 +6,8 @@ import {
   NotificationEventType,
   NotificationFailureResponse,
   NotificationPreferenceResponse,
+  NotificationReadAllResponse,
+  NotificationReadUndoResponse,
   NotificationResponse,
   NotificationRuleRequest,
   NotificationRuleResponse,
@@ -28,7 +30,7 @@ export class NotificationService {
   /** True while the most recent summary request failed; consumers hide the stale count. */
   readonly summaryLoadFailed = this.summaryLoadFailedSignal.asReadonly();
 
-  list(options: { unreadOnly?: boolean; includeSnoozed?: boolean } = {}): Observable<NotificationResponse[]> {
+  list(options: { unreadOnly?: boolean; includeSnoozed?: boolean; background?: boolean } = {}): Observable<NotificationResponse[]> {
     let params = new HttpParams();
     if (options.unreadOnly) {
       params = params.set('unreadOnly', 'true');
@@ -37,7 +39,9 @@ export class NotificationService {
       params = params.set('includeSnoozed', 'true');
     }
 
-    return this.http.get<NotificationResponse[]>('/api/notifications', { params });
+    return this.http.get<NotificationResponse[]>('/api/notifications', {
+      params, context: new HttpContext().set(SKIP_GLOBAL_LOADING, options.background ?? false)
+    });
   }
 
   /** Only the most recently started request updates the shared count and its state. */
@@ -67,8 +71,22 @@ export class NotificationService {
     return this.http.post<NotificationResponse>(`/api/notifications/${id}/read`, {});
   }
 
-  markAllRead(): Observable<void> {
-    return this.http.post<void>('/api/notifications/read-all', {});
+  markAllRead(): Observable<NotificationReadAllResponse> {
+    return this.http.post<NotificationReadAllResponse>('/api/notifications/read-all', {}, {
+      context: new HttpContext().set(SKIP_GLOBAL_LOADING, true)
+    });
+  }
+
+  undoReadAll(token: string): Observable<NotificationReadUndoResponse> {
+    return this.http.post<NotificationReadUndoResponse>('/api/notifications/read-all/undo', { token }, {
+      context: new HttpContext().set(SKIP_GLOBAL_LOADING, true)
+    });
+  }
+
+  dismissReadAll(token: string): Observable<void> {
+    return this.http.post<void>('/api/notifications/read-all/dismiss', { token }, {
+      context: new HttpContext().set(SKIP_GLOBAL_LOADING, true)
+    });
   }
 
   snooze(id: number, minutes: number): Observable<NotificationResponse> {

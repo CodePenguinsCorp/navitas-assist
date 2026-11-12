@@ -46,8 +46,27 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     Optional<Notification> findByIdAndRecipient_Id(Long id, Long recipientId);
 
     @Modifying
-    @Query("update Notification n set n.readAt = :now where n.recipient.id = :recipientId and n.readAt is null")
-    int markAllRead(@Param("recipientId") Long recipientId, @Param("now") Instant now);
+    @Query("""
+        update Notification n set n.readAt = :now, n.readBatchToken = :token, n.readBatchExpiresAt = :expiresAt
+        where n.recipient.id = :recipientId and n.readAt is null
+        """)
+    int markAllRead(@Param("recipientId") Long recipientId, @Param("now") Instant now,
+        @Param("token") String token, @Param("expiresAt") Instant expiresAt);
+
+    @Modifying
+    @Query("""
+        update Notification n set n.readAt = null, n.readBatchToken = null, n.readBatchExpiresAt = null
+        where n.recipient.id = :recipientId and n.readBatchToken = :token and n.readBatchExpiresAt > :now
+        """)
+    int undoReadBatch(@Param("recipientId") Long recipientId, @Param("token") String token, @Param("now") Instant now);
+
+    @Modifying
+    @Query("""
+        update Notification n set n.readBatchToken = null, n.readBatchExpiresAt = null
+        where n.recipient.id = :recipientId and n.readBatchToken is not null
+          and (:token is null or n.readBatchToken = :token)
+        """)
+    int dismissReadBatch(@Param("recipientId") Long recipientId, @Param("token") String token);
 
     @EntityGraph(attributePaths = { "rma", "recipient", "event" })
     List<Notification> findByEmailStatusOrderByCreatedAtDesc(NotificationEmailStatus status, Pageable pageable);

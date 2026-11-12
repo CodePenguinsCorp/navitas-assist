@@ -41,7 +41,7 @@ describe('NotificationsComponent inbox loading', () => {
   const checkbox = (label: string) => Array.from(root().querySelectorAll('label')).find((item) => item.textContent?.trim() === label)!.querySelector('input')!;
   const toggle = (label: string) => { checkbox(label).dispatchEvent(new Event('change')); render(); };
 
-  async function setup(sources: { role?: LegacyProfileCode; unread?: number; list?: Source<NotificationResponse[]>[]; markAllRead?: Observable<void>; snooze?: Observable<NotificationResponse>; markRead?: Observable<NotificationResponse> } = {}) {
+  async function setup(sources: { role?: LegacyProfileCode; unread?: number; list?: Source<NotificationResponse[]>[]; markAllRead?: Observable<unknown>; snooze?: Observable<NotificationResponse>; markRead?: Observable<NotificationResponse> } = {}) {
     clock = signal(Date.parse('2026-10-24T13:00:00Z'));
     const list = vi.fn(() => of([NOTIFICATION]));
     for (const source of sources.list ?? []) {
@@ -54,7 +54,7 @@ describe('NotificationsComponent inbox loading', () => {
       list,
       refreshSummary: vi.fn(() => of(1)),
       markRead: vi.fn(() => sources.markRead ?? of({ ...NOTIFICATION, read: true })),
-      markAllRead: vi.fn(() => sources.markAllRead ?? of(undefined)),
+      markAllRead: vi.fn(() => sources.markAllRead ?? of({ markedCount: 0, undoToken: null, expiresAt: null })),
       snooze: vi.fn(() => sources.snooze ?? of(NOTIFICATION)),
       listPreferences: vi.fn(() => of([])),
       updatePreference: vi.fn(),
@@ -162,7 +162,7 @@ describe('NotificationsComponent inbox loading', () => {
   // Vermelho: a lista não informa o limite de 100 notificações.
   it('states the inbox limit', async () => {
     await setup();
-    expect(text()).toContain('Mostra até 100 notificações, das mais recentes, nos filtros selecionados.');
+    expect(text()).toContain('Mostra as 100 notificações mais recentes, dentro dos filtros selecionados.');
   });
 
   // Vermelho: o erro da ação substitui a única mensagem e a troca de aba apaga a falha de carga.
@@ -263,12 +263,12 @@ describe('NotificationsComponent inbox loading', () => {
       expect(service['list']).toHaveBeenCalledTimes(2);
     });
 
-    // Vermelho: a mensagem não diz que as adiadas também foram marcadas.
-    it('states that marking all includes snoozed', async () => {
+    it('reloads after marking all without claiming a count for an empty batch', async () => {
       await setup();
       component.markAllRead();
       render();
-      expect(text()).toContain('Todas as notificações, inclusive as adiadas, foram marcadas como lidas.');
+      expect(service['list']).toHaveBeenCalledTimes(2);
+      expect(text()).not.toContain('mensagens marcada(s) como lida');
     });
 
     // Vermelho: o rótulo é "(2)" e não há tabpanel ligado à aba.
@@ -375,14 +375,14 @@ describe('NotificationsComponent inbox loading', () => {
         expect(service['snooze']).toHaveBeenCalledWith(5, 1440);
       });
 
-      it('disables actions while busy and mark all without unread', async () => {
+      it('disables actions while busy but keeps the global action available without visible unread', async () => {
         await setup({ markRead: new Subject<NotificationResponse>() });
         component.markRead(NOTIFICATION);
         render();
         expect(button('Marcar como lida')!.disabled).toBe(true);
         TestBed.resetTestingModule();
-        await setup({ list: [of([{ ...NOTIFICATION, read: true }])] });
-        expect(button('Marcar todas como lidas')!.disabled).toBe(true);
+        await setup({ unread: 0, list: [of([{ ...NOTIFICATION, read: true }])] });
+        expect(button('Marcar todas como lidas')!.disabled).toBe(false);
       });
 
       it('hides the rules tab from technicians', async () => {

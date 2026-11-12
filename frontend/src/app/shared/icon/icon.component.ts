@@ -29,7 +29,9 @@ const ICONS = {
   lock: ['M6 11h12v9H6z', 'M8.5 11V8a3.5 3.5 0 0 1 7 0v3'],
   user: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M4.5 20c1-3.6 3.9-5.5 7.5-5.5s6.5 1.9 7.5 5.5'],
   flag: ['M5 21V4', 'M5 4h11l-2 4 2 4H5'],
-  layers: ['m12 3 9 5-9 5-9-5z', 'm3 13 9 5 9-5']
+  layers: ['m12 3 9 5-9 5-9-5z', 'm3 13 9 5 9-5'],
+  'sort-down': ['M5 4v16', 'm2 17 3 3 3-3', 'M11 5h10', 'M11 10h8', 'M11 15h6', 'M11 20h4'],
+  'sort-up': ['M5 20V4', 'm2 7 3-3 3 3', 'M11 5h4', 'M11 10h6', 'M11 15h8', 'M11 20h10']
 } as const;
 
 export type IconName = keyof typeof ICONS;

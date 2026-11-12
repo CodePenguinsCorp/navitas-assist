@@ -1,6 +1,14 @@
 <section class="page-surface">
   <app-page-header heading="Notificações" />
 
+  @if (readBatch(); as batch) {
+    <aside class="read-batch-toast" aria-label="Leitura de notificações">
+      <p role="status" aria-live="polite" aria-atomic="true">{{ batch.markedCount }} mensagens marcada(s) como lida</p>
+      <button type="button" class="button-secondary button-secondary--small" (click)="undoReadAll()" [disabled]="busy()">Desmarcar mensagens</button>
+      <button type="button" class="icon-button read-batch-close" aria-label="Fechar aviso de leitura" title="Fechar" (click)="dismissReadAll()" [disabled]="busy()"><app-icon name="close" /></button>
+    </aside>
+  }
+
   <div class="tab-list" role="tablist" aria-label="Seções de notificações" (keydown)="onTabKeydown($event)">
     @for (tab of tabs(); track tab) {
       <button
@@ -34,7 +42,8 @@
         <div class="notification-toolbar">
           <label class="checkbox-field"><input type="checkbox" [checked]="unreadOnly()" (change)="toggleUnreadOnly()" /><span>Somente não lidas</span></label>
           <label class="checkbox-field"><input type="checkbox" [checked]="includeSnoozed()" (change)="toggleIncludeSnoozed()" /><span>Mostrar adiadas</span></label>
-          <button type="button" class="button-secondary button-secondary--small" (click)="markAllRead()" [disabled]="busy() || !hasUnread()">Marcar todas como lidas</button>
+          <button type="button" class="button-secondary button-secondary--small" [attr.aria-label]="orderLabel()" [title]="orderLabel()" [attr.aria-pressed]="!newestFirst()" (click)="toggleOrder()"><app-icon [name]="newestFirst() ? 'sort-down' : 'sort-up'" /></button>
+          <button type="button" class="button-secondary button-secondary--small mark-all-button" (click)="markAllRead()" [disabled]="busy()">Marcar todas como lidas</button>
         </div>
 
         @if (unreadUnavailable()) {
@@ -71,9 +80,9 @@
             </section>
           }
         } @else {
-          <p class="field-hint inbox-limit">Mostra até 100 notificações, das mais recentes, nos filtros selecionados.</p>
+          <p class="field-hint inbox-limit">Mostra as 100 notificações mais recentes, dentro dos filtros selecionados.</p>
           <div class="notification-list">
-            @for (notification of notifications(); track notification.id) {
+            @for (notification of orderedNotifications(); track notification.id) {
               <article class="notification-item" [class.is-unread]="!notification.read">
                 <span [class]="'icon-tile icon-tile--sm ' + severityTone(notification.severity)" aria-hidden="true"><app-icon [name]="severityIcon(notification.severity)" [size]="17" /></span>
                 <div class="notification-body">

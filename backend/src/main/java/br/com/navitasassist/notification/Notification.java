@@ -1,6 +1,7 @@
 package br.com.navitasassist.notification;
 
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 
@@ -25,6 +26,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @Entity
+@DynamicUpdate
 @Table(name = "notifications")
 public class Notification {
 
@@ -67,6 +69,11 @@ public class Notification {
     private Instant createdAt;
 
     private Instant readAt;
+
+    @Column(length = 36)
+    private String readBatchToken;
+
+    private Instant readBatchExpiresAt;
 
     private Instant snoozedUntil;
 

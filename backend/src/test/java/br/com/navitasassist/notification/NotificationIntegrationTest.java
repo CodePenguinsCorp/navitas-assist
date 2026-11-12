@@ -275,7 +275,8 @@ class NotificationIntegrationTest {
         mockMvc.perform(get("/api/notifications/summary").with(as(desk))).andExpect(jsonPath("$.unread").value(0));
 
         createRma();
-        mockMvc.perform(post("/api/notifications/read-all").with(as(desk)).with(csrf())).andExpect(status().isNoContent());
+        mockMvc.perform(post("/api/notifications/read-all").with(as(desk)).with(csrf()))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.markedCount").value(2));
         mockMvc.perform(get("/api/notifications").param("unreadOnly", "true").param("includeSnoozed", "true").with(as(desk))).andExpect(jsonPath("$", hasSize(0)));
     }
 

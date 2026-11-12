@@ -7,6 +7,7 @@ import { Observable, Subscription, finalize } from 'rxjs';
 import {
   NotificationFailureResponse,
   NotificationPreferenceResponse,
+  NotificationReadAllResponse,
   NotificationResponse,
   NotificationRuleRequest,
   NotificationRuleResponse,
@@ -64,8 +65,30 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
       gap: var(--space-1) var(--space-5);
     }
 
-    .notification-toolbar .button-secondary {
+    .notification-toolbar .mark-all-button {
       margin-left: auto;
+    }
+
+    .read-batch-toast {
+      position: fixed;
+      top: var(--space-4);
+      right: var(--space-4);
+      z-index: 1000;
+      width: min(360px, calc(100vw - 2 * var(--space-4)));
+      box-sizing: border-box;
+      padding: var(--space-4);
+      padding-right: calc(var(--space-4) + var(--control-height));
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .read-batch-toast p { margin: 0 0 var(--space-3); }
+    .read-batch-close {
+      position: absolute;
+      top: var(--space-2);
+      right: var(--space-2);
     }
 
     .inbox-limit,
@@ -130,7 +153,7 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
     }
 
     .notification-item.is-unread {
-      background: var(--surface-alt);
+      background: var(--brand-tint);
     }
 
     .notification-item.is-unread::before {
@@ -231,6 +254,7 @@ export class NotificationsComponent {
   private preferencesRequest?: Subscription;
   private rulesRequest?: Subscription;
   private failuresRequest?: Subscription;
+  private readBatchTimer?: ReturnType<typeof setTimeout>;
 
   protected readonly activeTab = signal<NotificationsTab>('inbox');
   protected readonly inboxLoading = signal(false);
@@ -255,6 +279,12 @@ export class NotificationsComponent {
   protected readonly unreadOnly = signal(false);
   protected readonly includeSnoozed = signal(false);
   protected readonly notifications = signal<NotificationResponse[]>([]);
+  protected readonly newestFirst = signal(true);
+  // The server already orders by createdAt DESC, id DESC (including sub-millisecond precision).
+  protected readonly orderedNotifications = computed(() => this.newestFirst() ? this.notifications() : [...this.notifications()].reverse());
+  protected readonly orderLabel = computed(() => this.newestFirst()
+    ? 'Ordem: mais recentes primeiro. Inverter ordem' : 'Ordem: mais antigas primeiro. Inverter ordem');
+  protected readonly readBatch = signal<NotificationReadAllResponse | null>(null);
   protected readonly preferences = signal<NotificationPreferenceResponse[]>([]);
   protected readonly rules = signal<NotificationRuleResponse[]>([]);
   protected readonly failures = signal<NotificationFailureResponse[]>([]);
@@ -293,13 +323,18 @@ export class NotificationsComponent {
   protected readonly unreadKnown = computed(() =>
     this.notificationService.summaryLoaded() && !this.notificationService.summaryLoadFailed());
   protected readonly unreadUnavailable = this.notificationService.summaryLoadFailed;
-  protected readonly hasUnread = computed(() => this.notifications().some((notification) => !notification.read));
   protected readonly tabs = computed<NotificationsTab[]>(() => this.canManageRules() ? ['inbox', 'preferences', 'rules'] : ['inbox', 'preferences']);
 
   /** O cache de opções de perfil vale o app inteiro: a primeira abertura da aba Regras busca a lista atual. */
   private rulesOpened = false;
 
   constructor() {
+    this.destroyRef.onDestroy(() => {
+      const token = this.readBatch()?.undoToken;
+      this.clearReadBatch();
+      // Best effort on navigation; the server deadline remains authoritative even if the request fails.
+      if (token) this.notificationService.dismissReadAll(token).subscribe({ error: () => undefined });
+    });
     this.loadInbox();
     // Sem a permissão (após um 403 ou ao mudar o próprio perfil), a aba Regras some: volta para a caixa de entrada.
     effect(() => {
@@ -393,10 +428,41 @@ export class NotificationsComponent {
   }
 
   protected markAllRead(): void {
-    this.run(this.notificationService.markAllRead(), () => {
-      this.successMessage.set('Todas as notificações, inclusive as adiadas, foram marcadas como lidas.');
-      this.loadInbox();
+    this.run(this.notificationService.markAllRead().pipe(takeUntilDestroyed(this.destroyRef)), (batch) => {
+      this.clearReadBatch();
+      const remaining = batch.expiresAt ? Math.min(4000, Date.parse(batch.expiresAt) - Date.now()) : 0;
+      if (batch.markedCount > 0 && batch.undoToken && remaining > 0) {
+        this.readBatch.set(batch);
+        this.readBatchTimer = setTimeout(() => this.clearReadBatch(), remaining);
+      }
+      this.loadInbox(true);
     });
+  }
+
+  protected toggleOrder(): void {
+    this.newestFirst.update(value => !value);
+  }
+
+  protected undoReadAll(): void {
+    const batch = this.readBatch();
+    if (!batch?.undoToken || !batch.expiresAt || Date.parse(batch.expiresAt) <= Date.now()) return;
+    this.run(this.notificationService.undoReadAll(batch.undoToken).pipe(takeUntilDestroyed(this.destroyRef)), () => {
+      this.clearReadBatch();
+      this.successMessage.set('Leitura desfeita.');
+      this.loadInbox(true);
+    });
+  }
+
+  protected dismissReadAll(): void {
+    const token = this.readBatch()?.undoToken;
+    if (!token) return;
+    this.run(this.notificationService.dismissReadAll(token).pipe(takeUntilDestroyed(this.destroyRef)), () => this.clearReadBatch());
+  }
+
+  private clearReadBatch(): void {
+    clearTimeout(this.readBatchTimer);
+    this.readBatchTimer = undefined;
+    this.readBatch.set(null);
   }
 
   protected snooze(notification: NotificationResponse, minutes: string | number): void {
@@ -554,10 +620,12 @@ export class NotificationsComponent {
     this.loadInbox();
   }
 
-  private loadInbox(): void {
+  private loadInbox(background = false): void {
     this.inboxRequest?.unsubscribe();
     this.inboxLoading.set(true);
-    this.inboxRequest = this.notificationService.list({ unreadOnly: this.unreadOnly(), includeSnoozed: this.includeSnoozed() }).pipe(
+    this.inboxRequest = this.notificationService.list({
+      unreadOnly: this.unreadOnly(), includeSnoozed: this.includeSnoozed(), ...(background ? { background: true } : {})
+    }).pipe(
       takeUntilDestroyed(this.destroyRef),
       finalize(() => this.inboxLoading.set(false))
     ).subscribe({
