@@ -89,7 +89,7 @@ describe('LoginComponent pending submissions', () => {
     expect(router.url).toBe(destination);
     expect(navigations).toEqual([destination]);
     expect(TestBed.inject(AuthService).currentUser()).toEqual({
-      username: 'operator', name: 'Operador', role: 'SERVICE_DESK'
+      username: 'operator', name: 'Operador', profileName: 'Atendimento', permissions: ['rma.ver'], role: 'SERVICE_DESK'
     });
     expect(TestBed.inject(AuthService).isAuthenticated()).toBe(true);
     expect(button().disabled).toBe(false);
@@ -163,6 +163,7 @@ describe('LoginComponent pending submissions', () => {
 });
 
 const authUser: AuthUserResponse = {
-  id: 1, username: 'operator', fullName: 'Operador', role: 'SERVICE_DESK', active: true,
+  id: 1, username: 'operator', fullName: 'Operador', profile: { id: 2, name: 'Atendimento' }, extraPermissions: [],
+  permissions: ['rma.ver'], role: 'SERVICE_DESK', active: true,
   createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
 };

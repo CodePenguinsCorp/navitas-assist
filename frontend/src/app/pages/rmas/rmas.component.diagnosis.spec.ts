@@ -45,7 +45,7 @@ async function setup(options: { role?: UserRole; rma?: RmaResponse; upsert?: Ups
     upsertDiagnosis: vi.fn(options.upsert ?? ((id: number, payload: DiagnosisRequest) =>
       of(buildRma({ id, reportedFailure: rma.reportedFailure, diagnosis: { ...existingDiagnosis, ...payload } }))))
   };
-  const currentUser = signal<UserSession | null>({ username: 'tester', name: 'Tester', role });
+  const currentUser = signal<UserSession | null>({ username: 'tester', name: 'Tester', profileName: 'Perfil', permissions: [], role });
   await TestBed.configureTestingModule({
     imports: [RmasComponent],
     providers: [

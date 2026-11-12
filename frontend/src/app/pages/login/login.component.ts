@@ -20,6 +20,7 @@ export class LoginComponent {
   protected readonly submitting = signal(false);
   protected readonly authError = signal('');
   protected readonly passwordVisible = signal(false);
+  protected readonly sessionExpired = signal(this.route.snapshot.queryParamMap.get('reason') === 'expired');
 
   protected readonly form = this.formBuilder.nonNullable.group({
     username: ['', [Validators.required]],
@@ -46,6 +47,7 @@ export class LoginComponent {
     }
 
     const { username, password } = this.form.getRawValue();
+    this.sessionExpired.set(false);
     this.submitting.set(true);
     this.authError.set('');
 

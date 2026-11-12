@@ -70,7 +70,7 @@ async function setup(options: { role?: UserRole } = {}) {
     list: vi.fn(() => of([]))
   };
   const protocolService = { listExecutions: vi.fn(() => of([])), listTemplates: vi.fn(() => of([])) };
-  const currentUser = signal<UserSession | null>({ username: 'tester', name: 'Tester', role });
+  const currentUser = signal<UserSession | null>({ username: 'tester', name: 'Tester', profileName: 'Perfil', permissions: [], role });
   await TestBed.configureTestingModule({
     imports: [RmasComponent],
     providers: [

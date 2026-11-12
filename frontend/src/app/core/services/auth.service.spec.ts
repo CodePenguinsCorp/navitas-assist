@@ -3,7 +3,11 @@ import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@a
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { AuthUserResponse } from '../models';
+import { SKIP_GLOBAL_LOADING } from '../interceptors/loading.interceptor';
+import { profilePermissions } from '../../testing/permission-fixtures';
 import { AuthService } from './auth.service';
+
+const ADMIN_PERMISSIONS = [...profilePermissions('ADMIN')];
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -28,16 +32,15 @@ describe('AuthService', () => {
     expect(request.request.body).toEqual({ username: 'operator', password: 'secret' });
     request.flush(authUser({ username: 'operator', fullName: 'Operador', role: 'SERVICE_DESK' }));
 
-    await expect(login).resolves.toEqual({
+    const expected = {
       username: 'operator',
       name: 'Operador',
+      profileName: 'Administrador',
+      permissions: ADMIN_PERMISSIONS,
       role: 'SERVICE_DESK',
-    });
-    expect(service.currentUser()).toEqual({
-      username: 'operator',
-      name: 'Operador',
-      role: 'SERVICE_DESK',
-    });
+    };
+    await expect(login).resolves.toEqual(expected);
+    expect(service.currentUser()).toEqual(expected);
     expect(service.isAuthenticated()).toBe(true);
     expect(service.hasAnyRole(['ADMIN', 'SERVICE_DESK'])).toBe(true);
   });
@@ -58,11 +61,81 @@ describe('AuthService', () => {
   });
 });
 
+describe('AuthService permissions session', () => {
+  let service: AuthService;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    service = TestBed.inject(AuthService);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  it('maps the profile name and drops unknown permission codes', () => {
+    service.restoreSession().subscribe();
+    http.expectOne('/api/auth/me').flush(authUser({
+      profile: { id: 7, name: 'Suporte' },
+      permissions: ['rma.ver', 'ADMIN', 'rma.apagar', 'pecas.ver'],
+      role: null,
+    }));
+
+    expect(service.currentUser()).toEqual({
+      username: 'admin', name: 'Administrador', profileName: 'Suporte', permissions: ['rma.ver', 'pecas.ver'],
+    });
+  });
+
+  it('refreshes the session with a single shared request outside the global loading', async () => {
+    service.restoreSession().subscribe();
+    http.expectOne('/api/auth/me').flush(authUser());
+
+    const first = firstValueFrom(service.refreshSession());
+    const second = firstValueFrom(service.refreshSession());
+    const request = http.expectOne('/api/auth/me');
+    expect(request.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+    request.flush(authUser({ profile: { id: 3, name: 'Técnico' }, permissions: ['rma.ver', 'rma.status'] }));
+
+    const expected = { username: 'admin', name: 'Administrador', profileName: 'Técnico', permissions: ['rma.ver', 'rma.status'], role: 'ADMIN' };
+    await expect(first).resolves.toEqual(expected);
+    await expect(second).resolves.toEqual(expected);
+    expect(service.currentUser()).toEqual(expected);
+
+    service.refreshSession().subscribe();
+    http.expectOne('/api/auth/me').flush(authUser());
+    expect(service.currentUser()?.profileName).toBe('Administrador');
+  });
+
+  it('keeps the current session when a refresh fails', async () => {
+    service.restoreSession().subscribe();
+    http.expectOne('/api/auth/me').flush(authUser());
+
+    const refreshed = firstValueFrom(service.refreshSession());
+    http.expectOne('/api/auth/me').flush({ message: 'erro' }, { status: 500, statusText: 'Server Error' });
+
+    await expect(refreshed).resolves.toEqual(service.currentUser());
+    expect(service.currentUser()?.username).toBe('admin');
+  });
+
+  it('clears the session on demand', () => {
+    service.restoreSession().subscribe();
+    http.expectOne('/api/auth/me').flush(authUser());
+
+    service.clearSession();
+
+    expect(service.currentUser()).toBeNull();
+    expect(service.isAuthenticated()).toBe(false);
+  });
+});
+
 function authUser(overrides: Partial<AuthUserResponse> = {}): AuthUserResponse {
   return {
     id: 1,
     username: 'admin',
     fullName: 'Administrador',
+    profile: { id: 1, name: 'Administrador' },
+    extraPermissions: [],
+    permissions: ADMIN_PERMISSIONS,
     role: 'ADMIN',
     active: true,
     createdAt: '2026-10-20T12:00:00Z',
@@ -86,7 +159,9 @@ describe('AuthService logout confirmation', () => {
   afterEach(() => http.verify());
 
   function expectOriginalSession(): void {
-    expect(service.currentUser()).toEqual({ username: 'admin', name: 'Administrador', role: 'ADMIN' });
+    expect(service.currentUser()).toEqual({
+      username: 'admin', name: 'Administrador', profileName: 'Administrador', permissions: ADMIN_PERMISSIONS, role: 'ADMIN',
+    });
     expect(service.isAuthenticated()).toBe(true);
     expect(service.hasAnyRole(['ADMIN'])).toBe(true);
   }

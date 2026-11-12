@@ -1,4 +1,5 @@
 import type { IconName } from '../shared/icon/icon.component';
+import type { Permission } from './permissions';
 export type UserRole = 'ADMIN' | 'TECHNICIAN' | 'SERVICE_DESK' | 'VIEWER';
 
 export type MetricTone = 'brand' | 'sky' | 'slate' | 'light';
@@ -46,7 +47,10 @@ export type FailureCause =
 export interface UserSession {
   username: string;
   name: string;
-  role: UserRole;
+  profileName: string;
+  permissions: Permission[];
+  /** Provisório (etapa 8A): some com o campo `role` das respostas. */
+  role?: UserRole;
 }
 
 export interface LoginPayload {
@@ -70,7 +74,21 @@ export interface AssignableUserResponse {
   fullName: string;
 }
 
-export type AuthUserResponse = UserAccountResponse;
+export interface ProfileRef {
+  id: number;
+  name: string;
+}
+
+/** Usuário da sessão (`POST /api/auth/login` e `GET /api/auth/me`), com as permissões efetivas na ordem do catálogo. */
+export interface CurrentUserResponse extends Omit<UserAccountResponse, 'role'> {
+  profile: ProfileRef;
+  extraPermissions: string[];
+  permissions: string[];
+  /** Provisório (etapa 8A): `legacyCode` do perfil, ou `null` em perfil personalizado. */
+  role?: UserRole | null;
+}
+
+export type AuthUserResponse = CurrentUserResponse;
 
 export interface UserAccountRequest {
   username: string;

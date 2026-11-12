@@ -37,3 +37,17 @@ describe('HTTP XSRF configuration', () => {
     request.flush([]);
   });
 });
+
+describe('HTTP auth error handling', () => {
+  it('refreshes the session when the API answers 403', () => {
+    TestBed.configureTestingModule({ providers: [...appConfig.providers, provideHttpClientTesting()] });
+    const http = TestBed.inject(HttpClient);
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    http.get('/api/rmas').subscribe({ error: () => {} });
+    httpTesting.expectOne('/api/rmas').flush({ message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
+
+    httpTesting.expectOne('/api/auth/me').flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    httpTesting.verify();
+  });
+});

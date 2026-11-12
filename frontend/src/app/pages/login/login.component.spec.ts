@@ -102,13 +102,49 @@ describe('Login failure feedback', () => {
     const login = http.expectOne('/api/auth/login');
     expect(login.request.method).toBe('POST');
     expect(login.request.body).toEqual({ username: 'operator', password: 'fake-password' });
-    login.flush({ id: 2, username: 'operator', fullName: 'Operador', role: 'SERVICE_DESK', active: true,
+    login.flush({ id: 2, username: 'operator', fullName: 'Operador', profile: { id: 2, name: 'Atendimento' },
+      extraPermissions: [], permissions: ['rma.ver'], role: 'SERVICE_DESK', active: true,
       createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' });
     fixture.detectChanges();
 
     expect(page.querySelector('[role="alert"]')).toBeNull();
     expect(page.querySelector<HTMLButtonElement>('[type="submit"]')!.disabled).toBe(false);
-    expect(TestBed.inject(AuthService).currentUser()).toEqual({ username: 'operator', name: 'Operador', role: 'SERVICE_DESK' });
+    expect(TestBed.inject(AuthService).currentUser()).toEqual({
+      username: 'operator', name: 'Operador', profileName: 'Atendimento', permissions: ['rma.ver'], role: 'SERVICE_DESK',
+    });
     expect(navigate).toHaveBeenCalledExactlyOnceWith('/rmas');
+  });
+});
+
+describe('Login expired session notice', () => {
+  async function render(queryParams: Record<string, string>): Promise<HTMLElement> {
+    await TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(),
+        { provide: Router, useValue: { navigateByUrl: vi.fn().mockResolvedValue(true) } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(queryParams) } } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(LoginComponent);
+    TestBed.inject(HttpTestingController).expectOne('/api/auth/me')
+      .flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('shows expired notice', async () => {
+    const page = await render({ redirectTo: '/rmas', reason: 'expired' });
+
+    const notice = page.querySelector('.alert-banner[role="status"]');
+    expect(notice?.textContent?.trim()).toBe('Sua sessão expirou. Entre novamente.');
+    expect(page.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('does not show the notice on a regular visit', async () => {
+    const page = await render({ redirectTo: '/rmas' });
+
+    expect(page.querySelector('.alert-banner')).toBeNull();
+    expect(page.textContent).not.toContain('Sua sessão expirou');
   });
 });

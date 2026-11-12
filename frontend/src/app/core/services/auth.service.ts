@@ -3,6 +3,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, catchError, finalize, map, of, shareReplay, switchMap, tap } from 'rxjs';
 import { AuthUserResponse, LoginPayload, UserRole, UserSession } from '../models';
 import { SKIP_GLOBAL_LOADING } from '../interceptors/loading.interceptor';
+import { isPermission } from '../permissions';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -10,6 +11,7 @@ export class AuthService {
   private readonly sessionSignal = signal<UserSession | null>(null);
   private readonly initializedSignal = signal(false);
   private restoreRequest$: Observable<UserSession | null> | null = null;
+  private refreshRequest$: Observable<UserSession | null> | null = null;
 
   readonly currentUser = this.sessionSignal.asReadonly();
   readonly isAuthenticated = computed(() => this.sessionSignal() !== null);
@@ -44,10 +46,7 @@ export class AuthService {
     }
 
     if (!this.restoreRequest$) {
-      this.restoreRequest$ = this.http.get<AuthUserResponse>('/api/auth/me', {
-        context: new HttpContext().set(SKIP_GLOBAL_LOADING, true)
-      }).pipe(
-        map((user) => this.toSession(user)),
+      this.restoreRequest$ = this.fetchCurrentUser().pipe(
         tap((session) => this.sessionSignal.set(session)),
         catchError(() => {
           this.sessionSignal.set(null);
@@ -61,9 +60,30 @@ export class AuthService {
     return this.restoreRequest$;
   }
 
+  /** Relê `/api/auth/me` (sem o pop-up global) e atualiza a sessão. Chamadas simultâneas compartilham a requisição. */
+  refreshSession(): Observable<UserSession | null> {
+    if (!this.refreshRequest$) {
+      this.refreshRequest$ = this.fetchCurrentUser().pipe(
+        tap((session) => this.sessionSignal.set(session)),
+        // 401 já é tratado pelo authErrorInterceptor; nas demais falhas a sessão atual continua valendo.
+        catchError(() => of(this.sessionSignal())),
+        finalize(() => this.refreshRequest$ = null),
+        shareReplay({ bufferSize: 1, refCount: false })
+      );
+    }
+
+    return this.refreshRequest$;
+  }
+
+  /** Encerra a sessão local sem chamar a API (sessão já expirada no servidor). */
+  clearSession(): void {
+    this.sessionSignal.set(null);
+    this.initializedSignal.set(true);
+  }
+
   hasAnyRole(roles: UserRole[]): boolean {
     const session = this.sessionSignal();
-    if (!session) {
+    if (!session?.role) {
       return false;
     }
 
@@ -74,11 +94,20 @@ export class AuthService {
     return this.http.get('/api/auth/csrf');
   }
 
+  private fetchCurrentUser(): Observable<UserSession> {
+    return this.http.get<AuthUserResponse>('/api/auth/me', {
+      context: new HttpContext().set(SKIP_GLOBAL_LOADING, true)
+    }).pipe(map((user) => this.toSession(user)));
+  }
+
   private toSession(user: AuthUserResponse): UserSession {
-    return {
+    const session: UserSession = {
       username: user.username,
       name: user.fullName || user.username,
-      role: user.role
+      profileName: user.profile?.name ?? '',
+      permissions: (user.permissions ?? []).filter(isPermission)
     };
+    if (user.role) session.role = user.role;
+    return session;
   }
 }

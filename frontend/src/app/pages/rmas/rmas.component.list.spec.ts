@@ -48,7 +48,7 @@ async function setup(options: SetupOptions = {}) {
     create: vi.fn(),
     upsertDiagnosis: vi.fn((id: number) => of(buildRma({ id })))
   };
-  const currentUser = signal<UserSession | null>({ username: 'tester', name: 'Tester', role });
+  const currentUser = signal<UserSession | null>({ username: 'tester', name: 'Tester', profileName: 'Perfil', permissions: [], role });
   const providers: unknown[] = [
     provideRouter([]),
     {

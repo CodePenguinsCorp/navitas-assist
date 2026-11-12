@@ -232,3 +232,10 @@
     width: 100%;
   }
 }
+
+.login-notice {
+  width: 100%;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  font-weight: 600;
+}

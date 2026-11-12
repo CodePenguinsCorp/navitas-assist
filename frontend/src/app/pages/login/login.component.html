@@ -12,6 +12,10 @@
       </div>
 
       <form class="login-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        @if (sessionExpired()) {
+          <article class="panel alert-banner login-notice" role="status">Sua sessão expirou. Entre novamente.</article>
+        }
+
         <div class="login-field">
           <label class="login-label" for="username">Usuário</label>
           <input

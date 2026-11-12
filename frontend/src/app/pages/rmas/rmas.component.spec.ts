@@ -26,6 +26,8 @@ describe('RmasComponent form', () => {
     const currentUser = signal<UserSession | null>({
       username: 'tester',
       name: 'Tester',
+      profileName: 'Administrador',
+      permissions: [],
       role: 'ADMIN',
     });
     await TestBed.configureTestingModule({

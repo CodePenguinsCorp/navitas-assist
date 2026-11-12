@@ -47,7 +47,7 @@ export class AppShellComponent {
 
   protected readonly currentRoleLabel = computed(() => {
     const currentUser = this.currentUser();
-    return currentUser ? ROLE_LABELS[currentUser.role] : ROLE_LABELS.VIEWER;
+    return currentUser?.role ? ROLE_LABELS[currentUser.role] : ROLE_LABELS.VIEWER;
   });
 
   constructor() {

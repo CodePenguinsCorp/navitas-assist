@@ -16,7 +16,7 @@ describe('route guards', () => {
   const auth = {
     session: null as UserSession | null,
     restoreSession: () => of(auth.session),
-    hasAnyRole: (roles: UserRole[]) => auth.session !== null && roles.includes(auth.session.role),
+    hasAnyRole: (roles: UserRole[]) => !!auth.session?.role && roles.includes(auth.session.role),
   };
 
   beforeEach(() => {
@@ -73,5 +73,5 @@ function state(url: string): RouterStateSnapshot {
 }
 
 function session(role: UserRole): UserSession {
-  return { username: 'tester', name: 'Tester', role };
+  return { username: 'tester', name: 'Tester', profileName: 'Perfil', permissions: [], role };
 }
