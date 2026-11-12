@@ -359,9 +359,9 @@ describe('ProtocolsComponent', () => {
       fixture.detectChanges();
 
       const summaries = Array.from(items.querySelectorAll('.protocol-item-summary'));
-      expect(summaries.map((summary) => summary.querySelector('strong')?.textContent?.trim())).toEqual(['Item 1', 'Item 2']);
+      expect(summaries.map((summary) => summary.querySelector('.item-row__badge')?.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['Item 1', 'Item 2']);
       expect(items.querySelectorAll('.protocol-item-card')).toHaveLength(1);
-      const removes = Array.from(items.querySelectorAll('.protocol-item-summary-row')).map((row) => Array.from(row.querySelectorAll('button')).find((button) => button.textContent?.trim() === 'Remover item'));
+      const removes = Array.from(items.querySelectorAll('.protocol-item-summary-row')).map((row) => row.querySelector<HTMLButtonElement>('button.icon-button'));
       expect(removes.map((button) => button?.getAttribute('aria-label'))).toEqual(['Remover item 1', 'Remover item 2']);
     });
 

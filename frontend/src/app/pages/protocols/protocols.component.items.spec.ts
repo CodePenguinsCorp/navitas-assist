@@ -82,7 +82,66 @@ describe('ProtocolsComponent focused items', () => {
     expect(items().at(1)).toBe(selected); expect(title().value).toBe('Observação'); expect(summaries()[1].getAttribute('aria-expanded')).toBe('true');
     component().removeItem(1); await stable(); expect(title().value).toBe('Conector'); expect(document.activeElement).toBe(summaries()[0]);
     component().removeItem(0); render(); expect(items().length).toBe(1);
-    expect(panel().querySelector<HTMLButtonElement>('[aria-label="Remover item 1"]')?.disabled).toBe(true);
+    expect(panel().querySelector<HTMLButtonElement>('[aria-label="Remover item 1"]')?.getAttribute('aria-disabled')).toBe('true');
+  });
+
+  const rows = () => Array.from<HTMLElement>(panel().querySelectorAll('.protocol-item-summary-row'));
+  const removeButton = (n: number) => panel().querySelector<HTMLButtonElement>(`[aria-label="Remover item ${n}"]`)!;
+  const chips = (row: HTMLElement) => Array.from(row.querySelectorAll('.item-row__chip')).map((chip) => chip.textContent?.trim());
+
+  // Vermelho: o resumo é um bloco de quatro linhas de texto, sem selo, chips nem X.
+  it('renders each item as a compact row with number badge, title, chips and an X sibling', async () => {
+    await setup(); expect(rows()).toHaveLength(3);
+    for (const [index, row] of rows().entries()) {
+      expect(row.querySelector('.item-row__badge')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(`Item ${index + 1}`);
+      expect(row.querySelector('.item-row__title')?.textContent?.trim()).toBe(TEMPLATE.items[index].title);
+      const remove = removeButton(index + 1);
+      expect(row.contains(remove)).toBe(true); expect(summaries()[index].contains(remove)).toBe(false);
+      expect(remove.classList).toContain('icon-button--danger'); expect(remove.querySelector('svg')).not.toBeNull();
+      expect(summaries()[index].querySelector('.item-row__chevron')).not.toBeNull();
+    }
+    expect(chips(rows()[0])).toEqual(['Medições', 'Medição', 'Obrigatório', 'Exige evidência']);
+    expect(chips(rows()[1])).toEqual(['Inspeção', 'Verificação', 'Opcional']);
+    expect(chips(rows()[2])).toEqual(['Final', 'Texto', 'Obrigatório', 'Exige evidência']);
+  });
+
+  // Vermelho: item novo mostra "Etapa: " vazio e nenhum título.
+  it('names an untitled item and hides an empty step chip', async () => {
+    await setup(); component().addItem(); await stable();
+    expect(rows()[3].querySelector('.item-row__title')?.textContent?.trim()).toBe('Sem título');
+    expect(chips(rows()[3])).toEqual(['Verificação', 'Obrigatório']);
+  });
+
+  // Vermelho: o editor fica depois de todos os resumos, desconectado do item selecionado.
+  it('opens the editor inside the selected item, right under its row', async () => {
+    await setup(); summaries()[1].click(); render();
+    const item = summaries()[1].closest<HTMLElement>('.item-row')!;
+    expect(item.classList).toContain('is-selected');
+    expect(item.querySelector('#protocol-item-editor-1')).not.toBeNull();
+    expect(summaries()[0].closest('.item-row')!.classList).not.toContain('is-selected');
+    summaries()[0].click(); render();
+    expect(item.querySelector('.protocol-item-card')).toBeNull(); expect(summaries()[0].getAttribute('aria-expanded')).toBe('true');
+  });
+
+  // Vermelho: não existe X por item.
+  it('removes the clicked item with its X and returns focus to the selected summary', async () => {
+    await setup(); summaries()[1].click(); render();
+    removeButton(3).click(); await stable();
+    expect(items().length).toBe(2); expect(items().controls.map((item) => item.controls['title'].value)).toEqual(['Tensão', 'Conector']);
+    expect(document.activeElement).toBe(summaries()[1]); expect(title().value).toBe('Conector');
+    removeButton(2).click(); await stable();
+    expect(items().controls.map((item) => item.controls['title'].value)).toEqual(['Tensão']);
+    expect(document.activeElement).toBe(summaries()[0]); expect(title().value).toBe('Tensão');
+  });
+
+  // Vermelho: o último item não explica por que não pode ser removido.
+  it('keeps the last item and explains why its X is unavailable', async () => {
+    await setup(); removeButton(3).click(); await stable(); removeButton(2).click(); await stable();
+    const last = removeButton(1);
+    expect(last.getAttribute('aria-disabled')).toBe('true');
+    const tip = panel().querySelector('#' + last.getAttribute('aria-describedby'));
+    expect(tip?.textContent?.trim()).toBe('O protocolo precisa de pelo menos um item.');
+    last.click(); await stable(); expect(items().length).toBe(1);
   });
 
   // Vermelho: publicar inválido não foca o título nem revela uma seleção específica do item inválido.

@@ -178,21 +178,26 @@
           <legend>Itens</legend>
           <div class="field-group--full protocol-items" formArrayName="items">
             @for (item of items.controls; track item; let index = $index) {
-              <div class="protocol-item-summary-row">
-                <button type="button" class="button-secondary protocol-item-summary" [id]="'protocol-item-summary-' + index" [attr.aria-expanded]="selectedItem() === item" [attr.aria-controls]="'protocol-item-editor-' + index" (click)="selectItem(item)" [disabled]="submitting()">
-                  <strong>Item {{ index + 1 }}</strong>
-                  <span>Etapa: {{ item.controls['stepName'].value }}</span>
-                  <span>{{ item.controls['title'].value }}</span>
-                  <span>{{ typeLabel(item) }} · {{ item.controls['required'].value ? 'Obrigatório' : 'Opcional' }}</span>
-                  @if (item.controls['evidenceRequired'].value) { <span>Exige evidência</span> }
+              <div class="item-row" [class.is-selected]="selectedItem() === item">
+              <div class="item-row__head protocol-item-summary-row">
+                <button type="button" class="item-row__summary protocol-item-summary" [id]="'protocol-item-summary-' + index" [attr.aria-expanded]="selectedItem() === item" [attr.aria-controls]="'protocol-item-editor-' + index" (click)="selectItem(item)" [disabled]="submitting()">
+                  <span class="item-row__badge"><span class="sr-only">Item </span>{{ index + 1 }}</span>
+                  <span class="item-row__body">
+                    <strong class="item-row__title">{{ item.controls['title'].value.trim() || 'Sem título' }}</strong>
+                    <span class="item-row__chips">
+                      @if (item.controls['stepName'].value.trim()) { <span class="item-row__chip">{{ item.controls['stepName'].value }}</span> }
+                      <span class="item-row__chip">{{ typeLabel(item) }}</span>
+                      <span class="item-row__chip" [class.item-row__chip--brand]="item.controls['required'].value">{{ item.controls['required'].value ? 'Obrigatório' : 'Opcional' }}</span>
+                      @if (item.controls['evidenceRequired'].value) { <span class="item-row__chip item-row__chip--warning">Exige evidência</span> }
+                    </span>
+                  </span>
+                  <app-icon class="item-row__chevron" name="chevron" />
                 </button>
-                <button type="button" class="button-secondary button-secondary--small button-secondary--danger" [attr.aria-label]="'Remover item ' + (index + 1)" (click)="removeItem(index)" [disabled]="submitting() || items.length === 1">Remover item</button>
+                <button appRowAction icon="close" tone="danger" label="Remover item" [target]="'' + (index + 1)" [blockedReason]="items.length === 1 ? 'O protocolo precisa de pelo menos um item.' : null" [disabled]="submitting()" (click)="removeItem(index)"></button>
               </div>
-            }
-            @for (item of items.controls; track item; let index = $index) {
               @if (selectedItem() === item) {
-              <div class="protocol-item-card" [id]="'protocol-item-editor-' + index" [formGroupName]="index">
-                <h4 class="protocol-item-card__title">Item {{ index + 1 }}</h4>
+              <div class="item-row__editor protocol-item-card" [id]="'protocol-item-editor-' + index" [formGroupName]="index">
+                <h4 class="sr-only">Item {{ index + 1 }}</h4>
                 <label class="field-group">
                   <span>Etapa</span>
                   <input type="text" formControlName="stepName" maxlength="120" />
@@ -258,8 +263,9 @@
                 </div>
               </div>
               }
+              </div>
             }
-            <button type="button" class="button-secondary" (click)="addItem()" [disabled]="submitting()">Adicionar item</button>
+            <button type="button" class="button-secondary protocol-items__add" (click)="addItem()" [disabled]="submitting()">Adicionar item</button>
           </div>
         </fieldset>
 

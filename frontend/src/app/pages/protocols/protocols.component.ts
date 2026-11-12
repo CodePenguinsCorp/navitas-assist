@@ -13,12 +13,13 @@ import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-con
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { ResultCountComponent } from '../../shared/result-count/result-count.component';
+import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
 const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
 
 @Component({
   selector: 'app-protocols',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PageHeaderComponent, ResultCountComponent],
+  imports: [IconComponent, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PageHeaderComponent, ResultCountComponent],
   templateUrl: './protocols.component.html',
   styles: [`
     :host {
@@ -29,10 +30,6 @@ const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
       gap: var(--space-3);
-      padding: var(--space-4);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      background: var(--surface-alt);
     }
 
     .protocol-item-card .field-group {
@@ -49,23 +46,16 @@ const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
       border-top: 1px solid var(--line);
     }
 
-    .protocol-item-card__title {
-      grid-column: 1 / -1;
-      margin: 0;
-      font-size: var(--font-size-md);
-      font-weight: var(--font-weight-semibold);
-    }
-
     .protocol-items {
       display: grid;
-      gap: var(--space-3);
+      gap: var(--space-2);
       min-width: 0;
     }
 
-    .protocol-item-summary-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: start; min-width: 0; }
-    .protocol-item-summary { flex: 1 1 180px; display: grid; justify-content: stretch; justify-items: start; align-content: start; gap: var(--space-1); min-width: 0; padding: var(--space-3); text-align: left; white-space: normal; overflow-wrap: anywhere; }
-    .protocol-item-summary[aria-expanded="true"] { border-color: var(--brand-blue); background: var(--brand-tint); }
-    .protocol-item-summary:focus-visible { box-shadow: var(--focus-ring); }
+    .protocol-items__add {
+      justify-self: start;
+      margin-top: var(--space-1);
+    }
 
     .form-section__hint {
       grid-column: 1 / -1;
