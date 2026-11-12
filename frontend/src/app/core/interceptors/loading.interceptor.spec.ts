@@ -48,6 +48,14 @@ describe('loadingInterceptor', () => {
     expect(loading.visible()).toBe(false);
   });
 
+  it.each(['/api/auth/csrf', '/api/auth/login', '/api/auth/logout'])('never blocks the screen for the authentication call %s', (url) => {
+    http.post(url, {}).subscribe();
+    expect(loading.pendingCount()).toBe(0);
+    vi.advanceTimersByTime(1000);
+    expect(loading.visible()).toBe(false);
+    backend.expectOne(url).flush({});
+  });
+
   it.each(['server', 'network'] as const)('finishes and forwards a %s error', (kind) => {
     let received: HttpErrorResponse | undefined;
     http.get('/failure').subscribe({ error: (error) => received = error });
