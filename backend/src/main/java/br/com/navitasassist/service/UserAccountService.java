@@ -16,6 +16,7 @@ import br.com.navitasassist.pagination.PageResponse;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.user.AssignableUserResponse;
+import br.com.navitasassist.user.CurrentUserResponse;
 import br.com.navitasassist.user.UserAccount;
 import br.com.navitasassist.user.UserAccountRequest;
 import br.com.navitasassist.user.UserAccountResponse;
@@ -170,8 +171,9 @@ public class UserAccountService {
     }
 
     @Transactional(readOnly = true)
-    public UserAccountResponse getCurrentUser(String username) {
-        return UserAccountResponse.from(getEntityByUsername(username));
+    public CurrentUserResponse getCurrentUser(String username) {
+        UserAccount userAccount = getEntityByUsername(username);
+        return CurrentUserResponse.from(userAccount, effectivePermissionService.effectivePermissions(userAccount));
     }
 
     private void validateUsername(UserAccount existing, String username) {

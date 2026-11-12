@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -17,12 +20,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.Set;
+
+import br.com.navitasassist.access.AccessProfile;
 import br.com.navitasassist.access.AccessTestSupport;
 import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.user.UserAccount;
 import br.com.navitasassist.user.UserAccountTestSupport;
 import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -58,6 +65,9 @@ class AuthSecurityIntegrationTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    private static final String CUSTOM_PROFILE = "Teste auth personalizado";
+    private static final String CUSTOM_USER = "auth.custom";
+
     @BeforeEach
     void createRoleUsers() {
         userAccountRepository.findAll().stream()
@@ -67,6 +77,77 @@ class AuthSecurityIntegrationTest {
         createUser("service.desk", "SERVICE_DESK");
         createUser("technician", "TECHNICIAN");
         createUser("viewer", "VIEWER");
+    }
+
+    @AfterEach
+    void removeCustomProfile() {
+        AccessTestSupport.deleteAccounts(userAccountRepository, CUSTOM_USER);
+        AccessTestSupport.deleteProfiles(accessProfiles, CUSTOM_PROFILE);
+    }
+
+    // Permissões efetivas no login e em /me (etapa 8A)
+
+    @Test
+    void loginReturnsEffectivePermissions() throws Exception {
+        mockMvc.perform(post("/api/auth/login").with(csrfCookie(requestCsrfCookie())).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"username":"technician","password":"password123"}
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.username").value("technician"))
+            .andExpect(jsonPath("$.permissions", contains(
+                "rma.ver", "rma.status", "rma.atribuivel", "rma.diagnosticar", "rma.impedimentos",
+                "cadastros.ver", "pecas.ver", "pecas.reservar", "protocolos.ver", "protocolos.executar", "relatorios.ver")))
+            .andExpect(jsonPath("$.profile.name").value("Técnico"))
+            .andExpect(jsonPath("$.extraPermissions", hasSize(0)))
+            .andExpect(jsonPath("$.role").value("TECHNICIAN"))
+            .andExpect(jsonPath("$.passwordHash").doesNotExist());
+    }
+
+    @Test
+    void meIncludesExtras() throws Exception {
+        UserAccount viewer = userAccountRepository.findByUsernameIgnoreCase("viewer").orElseThrow();
+        viewer.getExtraPermissions().add("rma.abrir");
+        viewer.getExtraPermissions().add("codigo.desconhecido");
+        userAccountRepository.saveAndFlush(viewer);
+
+        mockMvc.perform(get("/api/auth/me").session(login("viewer")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.permissions", contains(
+                "rma.ver", "rma.abrir", "cadastros.ver", "pecas.ver", "protocolos.ver", "relatorios.ver")))
+            .andExpect(jsonPath("$.extraPermissions", contains("rma.abrir")))
+            .andExpect(jsonPath("$.profile.name").value("Consulta"))
+            .andExpect(jsonPath("$.role").value("VIEWER"));
+    }
+
+    @Test
+    void meReflectsProfileChangeWithoutLogin() throws Exception {
+        AccessProfile custom = AccessTestSupport.saveProfile(accessProfiles, CUSTOM_PROFILE, "relatorios.ver");
+        AccessTestSupport.saveAccountWithProfile(userAccountRepository, passwordEncoder, CUSTOM_USER, custom, Set.of());
+        MockHttpSession session = login(CUSTOM_USER);
+        mockMvc.perform(get("/api/auth/me").session(session))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.permissions", contains("relatorios.ver")))
+            .andExpect(jsonPath("$.profile.name").value(CUSTOM_PROFILE))
+            .andExpect(jsonPath("$.role").value(nullValue()));
+
+        custom.getPermissions().add("rma.ver");
+        accessProfiles.saveAndFlush(custom);
+
+        mockMvc.perform(get("/api/auth/me").session(session))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.permissions", contains("rma.ver", "relatorios.ver")));
+        mockMvc.perform(get("/api/rmas").session(session)).andExpect(status().isOk());
+    }
+
+    private MockHttpSession login(String username) throws Exception {
+        MockHttpSession session = (MockHttpSession) mockMvc.perform(post("/api/auth/login").with(csrfCookie(requestCsrfCookie()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"" + username + "\",\"password\":\"password123\"}"))
+            .andExpect(status().isOk())
+            .andReturn().getRequest().getSession(false);
+        assertNotNull(session);
+        return session;
     }
 
     @Test

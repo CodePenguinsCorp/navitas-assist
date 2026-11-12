@@ -3,7 +3,7 @@ package br.com.navitasassist.auth;
 import java.util.Map;
 
 import br.com.navitasassist.service.UserAccountService;
-import br.com.navitasassist.user.UserAccountResponse;
+import br.com.navitasassist.user.CurrentUserResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -46,7 +46,7 @@ public class AuthController {
 
     @PostMapping("/login")
     @Transactional
-    public UserAccountResponse login(
+    public CurrentUserResponse login(
         @Valid @RequestBody LoginRequest loginRequest,
         HttpServletRequest request,
         HttpServletResponse response
@@ -54,7 +54,7 @@ public class AuthController {
         Authentication authentication = authenticationManager.authenticate(
             UsernamePasswordAuthenticationToken.unauthenticated(loginRequest.username().trim(), loginRequest.password())
         );
-        UserAccountResponse user = userAccountService.getCurrentUser(authentication.getName());
+        CurrentUserResponse user = userAccountService.getCurrentUser(authentication.getName());
 
         if (request.getSession(false) != null) {
             sessionRegistry.removeSessionInformation(request.getSession(false).getId());
@@ -75,7 +75,7 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public UserAccountResponse me(Authentication authentication) {
+    public CurrentUserResponse me(Authentication authentication) {
         return userAccountService.getCurrentUser(authentication.getName());
     }
 
