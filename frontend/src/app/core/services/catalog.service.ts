@@ -14,7 +14,6 @@ import {
   UserAccountRequest,
   UserAccountResponse,
   UserAccountUpdateRequest,
-  UserRole,
   UserSummaryResponse
 } from '../models';
 import { buildPageParams } from '../utils/pagination';
@@ -33,7 +32,7 @@ export interface ProductFilters extends PageQuery {
 
 export interface UserFilters extends PageQuery {
   query?: string;
-  role?: UserRole;
+  profileId?: number;
   active?: boolean;
 }
 
@@ -102,7 +101,7 @@ export class CatalogService {
   listUsers(filters: UserFilters = {}): Observable<PageResponse<UserAccountResponse>> {
     const params = buildPageParams(filters, {
       query: filters.query,
-      role: filters.role,
+      profileId: filters.profileId === undefined ? undefined : String(filters.profileId),
       active: filters.active
     });
     return this.http.get<PageResponse<UserAccountResponse>>('/api/users', { params });

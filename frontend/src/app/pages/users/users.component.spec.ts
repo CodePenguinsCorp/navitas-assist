@@ -1,18 +1,26 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
-import { PageResponse, UserAccountResponse, UserRole } from '../../core/models';
+import { PageResponse, UserAccountResponse } from '../../core/models';
+import { ProfileService } from '../../core/services/profile.service';
+import { PERMISSION_CATALOG } from '../../testing/profile-fixtures';
+
+const PROFILE_SERVICE = { provide: ProfileService, useValue: {
+  options: () => of([{ id: 1, name: 'Administrador', permissions: [] }, { id: 3, name: 'Técnico', permissions: [] }]),
+  permissionCatalog: () => of(PERMISSION_CATALOG)
+} };
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService, UserFilters } from '../../core/services/catalog.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { provideRouter } from '@angular/router';
+import { By } from '@angular/platform-browser';
 import { App } from '../../app';
 import { mountUnderRoot, simulateNativeModality } from '../../testing/native-dialog';
 import { UsersComponent } from './users.component';
 
 function user(id: number, fullName: string): UserAccountResponse {
   return {
-    id, username: `user${id}`, fullName, role: 'TECHNICIAN', active: true,
+    id, username: `user${id}`, fullName, profile: { id: 3, name: 'Técnico' }, extraPermissions: [], active: true,
     createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
   };
 }
@@ -33,7 +41,8 @@ describe('UsersComponent pagination', () => {
     await TestBed.configureTestingModule({
       imports: [UsersComponent],
       providers: [
-        { provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }) } },
+        PROFILE_SERVICE,
+        { provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }), refreshSession: () => of(null) } },
         { provide: CatalogService, useValue: {
           listUsers,
           getUserSummary: () => of({ total: 45, active: 40, admins: 3, roles: 4 }),
@@ -50,22 +59,22 @@ describe('UsersComponent pagination', () => {
   afterEach(() => vi.useRealTimers());
 
   it('loads the first page with total and summary', () => {
-    expect(listUsers).toHaveBeenLastCalledWith({ page: 0, size: 20, query: '', role: undefined, active: undefined });
+    expect(listUsers).toHaveBeenLastCalledWith({ page: 0, size: 20, query: '', profileId: undefined, active: undefined });
     expect(fixture.nativeElement.querySelector('.pagination__summary')?.textContent?.trim()).toBe('1–2 de 45 usuários');
     expect(fixture.nativeElement.textContent).not.toContain('registro(s)');
     expect(fixture.nativeElement.textContent).toContain('Página 1 de 3');
   });
 
   it('combines role and status filters with navigation', () => {
-    component.updateRoleFilter('TECHNICIAN');
+    component.updateProfileFilter(3);
     component.updateStatusFilter('inactive');
-    expect(listUsers).toHaveBeenLastCalledWith({ page: 0, size: 20, query: '', role: 'TECHNICIAN', active: false });
+    expect(listUsers).toHaveBeenLastCalledWith({ page: 0, size: 20, query: '', profileId: 3, active: false });
 
     component.goToPage(2);
-    expect(listUsers).toHaveBeenLastCalledWith({ page: 2, size: 20, query: '', role: 'TECHNICIAN', active: false });
+    expect(listUsers).toHaveBeenLastCalledWith({ page: 2, size: 20, query: '', profileId: 3, active: false });
 
     component.updateStatusFilter('active');
-    expect(listUsers).toHaveBeenLastCalledWith({ page: 0, size: 20, query: '', role: 'TECHNICIAN', active: true });
+    expect(listUsers).toHaveBeenLastCalledWith({ page: 0, size: 20, query: '', profileId: 3, active: true });
   });
 
   it('debounces the text search and honors the page size', () => {
@@ -74,10 +83,10 @@ describe('UsersComponent pagination', () => {
     component.updateSearch('ana');
     vi.advanceTimersByTime(300);
     expect(listUsers).toHaveBeenCalledTimes(1);
-    expect(listUsers).toHaveBeenLastCalledWith({ page: 0, size: 20, query: 'ana', role: undefined, active: undefined });
+    expect(listUsers).toHaveBeenLastCalledWith({ page: 0, size: 20, query: 'ana', profileId: undefined, active: undefined });
 
     component.changePageSize(100);
-    expect(listUsers).toHaveBeenLastCalledWith({ page: 0, size: 100, query: 'ana', role: undefined, active: undefined });
+    expect(listUsers).toHaveBeenLastCalledWith({ page: 0, size: 100, query: 'ana', profileId: undefined, active: undefined });
   });
 });
 
@@ -88,7 +97,7 @@ describe('UsersComponent collection layout and states', () => {
   let listUsers: ReturnType<typeof vi.fn>;
   let deleteUser: ReturnType<typeof vi.fn>;
 
-  const ownAccount: UserAccountResponse = { ...user(1, 'Administrador'), username: 'Admin', role: 'ADMIN' };
+  const ownAccount: UserAccountResponse = { ...user(1, 'Administrador'), username: 'Admin', profile: { id: 1, name: 'Administrador' } };
   const ana: UserAccountResponse = { ...user(2, 'Ana Souza'), username: 'ana' };
   const loadError = () => throwError(() => new HttpErrorResponse({ status: 503, error: { message: 'Serviço indisponível.' } }));
 
@@ -103,7 +112,8 @@ describe('UsersComponent collection layout and states', () => {
     await TestBed.configureTestingModule({
       imports: [UsersComponent],
       providers: [
-        { provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }) } },
+        PROFILE_SERVICE,
+        { provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }), refreshSession: () => of(null) } },
         { provide: CatalogService, useValue: {
           listUsers,
           getUserSummary: options.summary ?? (() => of({ total: 45, active: 40, admins: 3, roles: 4 })),
@@ -150,24 +160,24 @@ describe('UsersComponent collection layout and states', () => {
   });
 
   it('shows the filtered total in the pagination, with or without the summary', async () => {
-    await mount({ list: (filters) => of(page([ana], filters.page, filters.size, filters.role ? 3 : 45)) });
-    component.updateRoleFilter('ADMIN');
+    await mount({ list: (filters) => of(page([ana], filters.page, filters.size, filters.profileId ? 3 : 45)) });
+    component.updateProfileFilter(1);
     fixture.detectChanges();
     expect(count()).toBe('1–1 de 3 usuários');
     expect(element.querySelector('app-result-count')).toBeNull();
 
     TestBed.resetTestingModule();
-    await mount({ list: (filters) => of(page([ana], filters.page, filters.size, filters.role ? 3 : 45)), summary: loadError });
-    component.updateRoleFilter('ADMIN');
+    await mount({ list: (filters) => of(page([ana], filters.page, filters.size, filters.profileId ? 3 : 45)), summary: loadError });
+    component.updateProfileFilter(1);
     fixture.detectChanges();
     expect(count()).toBe('1–1 de 3 usuários');
   });
 
   it('uses the singular for one user and shows no total for an empty result', async () => {
-    await mount({ list: (filters) => of(filters.role ? page([], filters.page, filters.size, 0) : page([ana], filters.page, filters.size, 1)) });
+    await mount({ list: (filters) => of(filters.profileId ? page([], filters.page, filters.size, 0) : page([ana], filters.page, filters.size, 1)) });
     expect(count()).toBe('1–1 de 1 usuário');
 
-    component.updateRoleFilter('ADMIN');
+    component.updateProfileFilter(1);
     fixture.detectChanges();
     expect(element.textContent).toContain('Nenhum usuário encontrado');
     expect(element.querySelector('app-result-count, app-pagination')).toBeNull();
@@ -223,7 +233,7 @@ describe('UsersComponent collection layout and states', () => {
     expect(rowActions(1)[1].getAttribute('aria-label')).toBe('Excluindo... Ana Souza');
   });
 
-  it('groups the form into Identidade, Acesso and Senha', async () => {
+  it('groups the form into Identidade, Acesso, Permissões extras and Senha', async () => {
     await mount();
     component.openCreateModal();
     fixture.detectChanges();
@@ -232,25 +242,29 @@ describe('UsersComponent collection layout and states', () => {
     expect(dialog.getAttribute('aria-modal')).toBe('true');
     expect(element.querySelector(`#${dialog.getAttribute('aria-labelledby')}`)?.textContent?.trim()).toBe('Novo usuário');
     const sections = Array.from(dialog.querySelectorAll('fieldset.form-section'));
-    expect(sections.map((section) => section.querySelector('legend')?.textContent?.trim())).toEqual(['Identidade', 'Acesso', 'Senha']);
+    expect(sections.map((section) => section.querySelector('legend')?.textContent?.trim())).toEqual(['Identidade', 'Acesso', 'Permissões extras', 'Senha']);
     const controlsIn = (section: Element) => Array.from(section.querySelectorAll('[formControlName]')).map((node) => node.getAttribute('formControlName'));
     expect(controlsIn(sections[0])).toEqual(['fullName', 'username']);
-    expect(controlsIn(sections[1])).toEqual(['role', 'active']);
-    expect(controlsIn(sections[2])).toEqual(['password']);
+    expect(controlsIn(sections[1])).toEqual(['profileId', 'active']);
+    expect(controlsIn(sections[2])).toEqual([]);
+    expect(controlsIn(sections[3])).toEqual(['password']);
     expect(dialog.textContent).not.toContain('Deixe em branco para manter a senha atual.');
   });
 
-  it('does not mention permissions in the dialog', async () => {
+  // Spec §5: o diálogo passa a ter a seção "Permissões extras"; fora dela não se fala em permissões.
+  it('mentions permissions only in the extras section', async () => {
     await mount();
     component.openCreateModal();
     fixture.detectChanges();
-    expect(element.querySelector('[role="dialog"]')?.textContent?.toLowerCase()).not.toContain('permiss');
+    const outsideExtras = (root: Element) => Array.from(root.querySelectorAll('fieldset.form-section:not(.extra-permissions)'))
+      .map((section) => section.textContent?.toLowerCase() ?? '').join(' ');
+    expect(outsideExtras(element.querySelector('[role="dialog"]')!)).not.toContain('permiss');
 
     component.closeModal();
     component.openEditModal(ana);
     fixture.detectChanges();
     const dialog = element.querySelector('[role="dialog"]')!;
-    expect(dialog.textContent?.toLowerCase()).not.toContain('permiss');
+    expect(outsideExtras(dialog)).not.toContain('permiss');
     expect(dialog.textContent).toContain('Deixe em branco para manter a senha atual.');
   });
 
@@ -269,7 +283,7 @@ describe('UsersComponent collection layout and states', () => {
     await mount(empty ? { list: (filters) => of(page([], filters.page, filters.size, 0)) } : {});
     const pending = new Subject<PageResponse<UserAccountResponse>>();
     listUsers.mockImplementation(() => pending);
-    component.updateRoleFilter('TECHNICIAN'); fixture.detectChanges();
+    component.updateProfileFilter(3); fixture.detectChanges();
     expectPending(element);
     expect(element.querySelector('tbody, .table-card .empty-state')).toBeNull();
     expect(element.textContent).not.toContain('Nenhum usuário');
@@ -310,7 +324,7 @@ describe('UsersComponent collection layout and states', () => {
     buttonByText('Tentar novamente')!.click();
     fixture.detectChanges();
 
-    expect(listUsers).toHaveBeenLastCalledWith({ page: 1, size: 20, query: '', role: undefined, active: false });
+    expect(listUsers).toHaveBeenLastCalledWith({ page: 1, size: 20, query: '', profileId: undefined, active: false });
     expect(loadAlert()).toBeNull();
     expect(element.querySelector('tbody')?.textContent).toContain('Ana Souza');
     expect(count()).toBe('21–21 de 30 usuários');
@@ -357,16 +371,16 @@ describe('UsersComponent collection layout and states', () => {
   });
 
   it('clears search and every filter from a later page with exactly one request, keeping the page size', async () => {
-    await mount({ list: (filters) => of(filters.role || filters.query || filters.active !== undefined
+    await mount({ list: (filters) => of(filters.profileId || filters.query || filters.active !== undefined
       ? page([], filters.page, filters.size, 0)
       : page([ana], filters.page, filters.size, 45)) });
     component.changePageSize(100);
     component.updateSearch('ana');
     vi.advanceTimersByTime(300);
-    component.updateRoleFilter('TECHNICIAN');
+    component.updateProfileFilter(3);
     component.updateStatusFilter('inactive');
     component.goToPage(1);
-    expect(listUsers).toHaveBeenLastCalledWith({ page: 1, size: 100, query: 'ana', role: 'TECHNICIAN', active: false });
+    expect(listUsers).toHaveBeenLastCalledWith({ page: 1, size: 100, query: 'ana', profileId: 3, active: false });
     component.updateSearch('ana souza');
     fixture.detectChanges();
     expect(element.textContent).toContain('Nenhum usuário encontrado');
@@ -377,7 +391,7 @@ describe('UsersComponent collection layout and states', () => {
     fixture.detectChanges();
 
     expect(listUsers).toHaveBeenCalledTimes(1);
-    expect(listUsers).toHaveBeenCalledWith({ page: 0, size: 100, query: '', role: undefined, active: undefined });
+    expect(listUsers).toHaveBeenCalledWith({ page: 0, size: 100, query: '', profileId: undefined, active: undefined });
     expect(element.querySelector<HTMLInputElement>('.search-field input')!.value).toBe('');
     expect(element.querySelector('tbody')?.textContent).toContain('Ana Souza');
     expect(count()).toBe('1–1 de 45 usuários');
@@ -391,7 +405,7 @@ interface UsersHarness {
   openDeleteModal(user: UserAccountResponse): void;
   confirmDeleteUser(): void;
   updateSearch(value: string): void;
-  updateRoleFilter(value: UserRole | ''): void;
+  updateProfileFilter(value: number | null): void;
   updateStatusFilter(value: 'all' | 'active' | 'inactive'): void;
   goToPage(page: number): void;
   changePageSize(size: number): void;
@@ -419,7 +433,7 @@ describe('UsersComponent dialog focus', () => {
     rows = [user(1, 'Ana'), user(2, 'Bia')];
     await TestBed.configureTestingModule({
       imports: [UsersComponent],
-      providers: [provideRouter([{ path: '', component: UsersComponent }]), { provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }) } },
+      providers: [provideRouter([{ path: '', component: UsersComponent }]), PROFILE_SERVICE, { provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }), refreshSession: () => of(null) } },
         { provide: CatalogService, useValue: {
         listUsers: (filters: { page: number; size: number }) => of(page(rows, filters.page, filters.size)),
         getUserSummary: () => of({ total: rows.length, active: rows.length, admins: 1, roles: 1 }),
@@ -472,6 +486,8 @@ describe('UsersComponent dialog focus', () => {
       input.value = value;
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }
+    (fixture.debugElement.query(By.directive(UsersComponent)).componentInstance as { form: { controls: { profileId: { setValue(id: number): void } } } })
+      .form.controls.profileId.setValue(3);
     find('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     render();
   }

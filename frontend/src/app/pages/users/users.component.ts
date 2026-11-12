@@ -4,16 +4,18 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { Observable, Subject, debounceTime, filter, finalize } from 'rxjs';
-import { ROLE_LABELS, ROLE_OPTIONS } from '../../core/mock-data';
 import {
+  PermissionModuleResponse,
+  ProfileOption,
   UserAccountRequest,
   UserAccountResponse,
   UserAccountUpdateRequest,
-  UserRole,
   UserSummaryResponse
 } from '../../core/models';
+import { PERMISSIONS, Permission, isPermission } from '../../core/permissions';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
+import { ProfileService } from '../../core/services/profile.service';
 import { extractHttpErrorMessage, formatDateTime } from '../../core/utils/catalog-ui';
 import { PagedList } from '../../core/utils/paged-list';
 import { SEARCH_DEBOUNCE_MS } from '../../core/utils/pagination';
@@ -26,7 +28,8 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
-type UserFormControlName = 'username' | 'fullName' | 'password' | 'role' | 'active';
+type UserFormControlName = 'username' | 'fullName' | 'password' | 'profileId' | 'active';
+type LoadState = 'loading' | 'ready' | 'failed';
 type UserStatusFilter = 'all' | 'active' | 'inactive';
 type UserModalMode = 'create' | 'edit';
 
@@ -63,6 +66,35 @@ const passwordByteLengthValidator: ValidatorFn = control =>
       font-weight: 400;
       line-height: 1.35;
     }
+
+    .permission-module {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+      gap: 0 var(--space-4);
+      min-width: 0;
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+
+    .permission-module > legend {
+      padding: 0;
+      margin-bottom: var(--space-1);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    .permission-module .checkbox-field {
+      align-items: flex-start;
+      padding-block: 0.55rem;
+      line-height: 1.35;
+    }
+
+    .permission-module .checkbox-field input { margin-top: 0.1rem; flex-shrink: 0; }
+    .permission-module .checkbox-field { flex-wrap: wrap; column-gap: 0.55rem; row-gap: 0; }
+    .permission-module .checkbox-field > span { flex: 1 1 0; min-width: 0; }
+    .permission-module .checkbox-field > small { flex-basis: 100%; padding-left: 1.6rem; }
+    .extras-pending { min-height: 4rem; grid-column: 1 / -1; }
   `]
 })
 export class UsersComponent {
@@ -70,6 +102,7 @@ export class UsersComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly catalogService = inject(CatalogService);
   private readonly authService = inject(AuthService);
+  private readonly profileService = inject(ProfileService);
 
   private readonly destroyRef = inject(DestroyRef);
   protected readonly submitting = signal(false);
@@ -79,7 +112,7 @@ export class UsersComponent {
   protected readonly deleteModalErrorMessage = signal('');
   protected readonly successMessage = signal('');
   protected readonly searchTerm = signal('');
-  protected readonly roleFilter = signal<UserRole | ''>('');
+  protected readonly profileFilter = signal<number | null>(null);
   protected readonly statusFilter = signal<UserStatusFilter>('all');
   protected readonly activeModal = signal<UserModalMode | null>(null);
   /** Last list query failed; independent of the cached page and of form messages. */
@@ -90,7 +123,7 @@ export class UsersComponent {
     (pageQuery) => this.catalogService.listUsers({
       ...pageQuery,
       query: this.searchTerm(),
-      role: this.roleFilter() || undefined,
+      profileId: this.profileFilter() ?? undefined,
       active: this.statusFilter() === 'all' ? undefined : this.statusFilter() === 'active'
     }),
     (error) => {
@@ -113,16 +146,28 @@ export class UsersComponent {
   protected readonly editingUser = this.editingUserSignal.asReadonly();
   protected readonly deletingUser = this.deletingUserSignal.asReadonly();
   protected readonly hasLoaded = computed(() => this.userList.result() !== null);
-  protected readonly roleOptions = ROLE_OPTIONS;
-  protected readonly roleFilterOptions = ROLE_FILTER_OPTIONS;
   protected readonly statusFilterOptions = STATUS_FILTER_OPTIONS;
-  protected readonly userRoleOptions = USER_ROLE_OPTIONS;
+  protected readonly profileOptions = signal<ProfileOption[]>([]);
+  protected readonly profileOptionsState = signal<LoadState>('loading');
+  protected readonly catalog = signal<PermissionModuleResponse[]>([]);
+  protected readonly catalogState = signal<LoadState>('loading');
+  /** Extras marcadas no diálogo, sem as que o perfil escolhido já inclui. */
+  protected readonly extras = signal<ReadonlySet<Permission>>(new Set());
+  private readonly selectedProfileId = signal<number | null>(null);
+  protected readonly accessReady = computed(() => this.profileOptionsState() === 'ready' && this.catalogState() === 'ready');
+  protected readonly accessFailed = computed(() => this.profileOptionsState() === 'failed' || this.catalogState() === 'failed');
+  protected readonly profileSelectOptions = computed<ReadonlyArray<CustomSelectOption<number>>>(() =>
+    this.profileOptions().map((option) => ({ value: option.id, label: option.name })));
+  protected readonly profileFilterOptions = computed<ReadonlyArray<CustomSelectOption<number | ''>>>(() =>
+    [{ value: '', label: 'Todos' }, ...this.profileSelectOptions()]);
+  private readonly profilePermissions = computed<ReadonlySet<string>>(() =>
+    new Set(this.profileOptions().find((option) => option.id === this.selectedProfileId())?.permissions ?? []));
 
   protected readonly form = this.formBuilder.nonNullable.group({
     username: ['', [Validators.required, Validators.maxLength(60)]],
     fullName: ['', [Validators.required, Validators.maxLength(120)]],
     password: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(72), passwordByteLengthValidator]],
-    role: ['SERVICE_DESK' as UserRole, [Validators.required]],
+    profileId: [null as number | null, [Validators.required]],
     active: [true]
   });
 
@@ -132,12 +177,14 @@ export class UsersComponent {
       filter((kind) => kind === 'search'),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(() => this.userList.firstPage());
+    this.form.controls.profileId.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((id) => this.selectProfile(id));
     this.loadUsers();
     this.loadSummary();
+    this.loadProfileOptions();
   }
 
   protected get hasActiveFilters(): boolean {
-    return Boolean(this.searchTerm().trim()) || Boolean(this.roleFilter()) || this.statusFilter() !== 'all';
+    return Boolean(this.searchTerm().trim()) || this.profileFilter() !== null || this.statusFilter() !== 'all';
   }
 
   protected updateSearch(value: string): void {
@@ -148,7 +195,7 @@ export class UsersComponent {
   protected clearFilters(): void {
     this.searchChanges.next('cancel');
     this.searchTerm.set('');
-    this.roleFilter.set('');
+    this.profileFilter.set(null);
     this.statusFilter.set('all');
     this.userList.firstPage();
   }
@@ -157,8 +204,8 @@ export class UsersComponent {
     this.userList.reload();
   }
 
-  protected updateRoleFilter(value: UserRole | ''): void {
-    this.roleFilter.set(value);
+  protected updateProfileFilter(value: number | '' | null): void {
+    this.profileFilter.set(typeof value === 'number' ? value : null);
     this.userList.firstPage();
   }
 
@@ -179,8 +226,10 @@ export class UsersComponent {
     this.editingUserSignal.set(null);
     this.configurePasswordValidation(true);
     this.form.reset(emptyUserForm());
+    this.extras.set(new Set());
     this.activeModal.set('create');
     this.clearMessages();
+    this.loadAccessSources();
   }
 
   protected openEditModal(user: UserAccountResponse): void {
@@ -190,11 +239,14 @@ export class UsersComponent {
       username: user.username,
       fullName: user.fullName,
       password: '',
-      role: user.role,
+      profileId: user.profile.id,
       active: user.active
     });
+    this.extras.set(new Set(user.extraPermissions.filter(isPermission)));
+    this.selectProfile(user.profile.id);
     this.activeModal.set('edit');
     this.clearMessages();
+    this.loadAccessSources();
   }
 
   protected closeModal(): void {
@@ -206,6 +258,10 @@ export class UsersComponent {
   }
 
   protected saveUser(): void {
+    if (!this.accessReady() || this.submitting()) {
+      return;
+    }
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.modalErrorMessage.set('Revise os campos destacados antes de salvar o usuário.');
@@ -213,10 +269,11 @@ export class UsersComponent {
     }
 
     const rawValue = this.form.getRawValue();
+    const extraPermissions = PERMISSIONS.filter((code) => this.extras().has(code) && !this.profilePermissions().has(code));
     const currentUser = this.editingUserSignal();
     const request$: Observable<UserAccountResponse> = currentUser
-      ? this.catalogService.updateUser(currentUser.id, buildUserUpdatePayload(rawValue))
-      : this.catalogService.createUser(buildUserPayload(rawValue));
+      ? this.catalogService.updateUser(currentUser.id, buildUserUpdatePayload(rawValue, extraPermissions))
+      : this.catalogService.createUser(buildUserPayload(rawValue, extraPermissions));
 
     this.submitting.set(true);
     this.clearMessages();
@@ -233,6 +290,8 @@ export class UsersComponent {
         this.resetModal();
         this.loadUsers();
         this.loadSummary();
+        // O usuário pode ter mudado o próprio perfil ou as próprias extras.
+        this.authService.refreshSession().subscribe();
       },
       error: (error) => {
         this.modalErrorMessage.set(
@@ -295,8 +354,26 @@ export class UsersComponent {
     return this.isCurrentUser(user) ? 'Você não pode excluir a própria conta.' : null;
   }
 
-  protected roleLabel(role: UserRole): string {
-    return ROLE_LABELS[role];
+  protected extrasLabel(user: UserAccountResponse): string {
+    const count = user.extraPermissions.filter(isPermission).length;
+    return count === 0 ? '' : count === 1 ? '+1 extra' : `+${count} extras`;
+  }
+
+  protected includedInProfile(code: string): boolean {
+    return this.profilePermissions().has(code);
+  }
+
+  protected isExtraChecked(code: string): boolean {
+    return this.includedInProfile(code) || (isPermission(code) && this.extras().has(code));
+  }
+
+  protected toggleExtra(code: string, checked: boolean): void {
+    if (!isPermission(code) || this.includedInProfile(code)) {
+      return;
+    }
+    const next = new Set(this.extras());
+    if (checked) next.add(code); else next.delete(code);
+    this.extras.set(next);
   }
 
   protected hasError(controlName: UserFormControlName): boolean {
@@ -315,6 +392,43 @@ export class UsersComponent {
   private loadUsers(): void {
     this.errorMessage.set('');
     this.userList.reload();
+  }
+
+  /** Troca de perfil: as extras que o novo perfil já inclui deixam de ser extras. */
+  private selectProfile(id: number | null): void {
+    this.selectedProfileId.set(id);
+    const included = this.profilePermissions();
+    this.extras.set(new Set([...this.extras()].filter((code) => !included.has(code))));
+  }
+
+  private loadProfileOptions(): void {
+    this.profileOptionsState.set('loading');
+    this.profileService.options().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (options) => {
+        this.profileOptions.set(options);
+        this.profileOptionsState.set('ready');
+        this.selectProfile(this.selectedProfileId());
+      },
+      error: () => this.profileOptionsState.set('failed')
+    });
+  }
+
+  /** Opções e catálogo ficam guardados no serviço: só a primeira abertura (ou a seguinte a uma falha) os busca. */
+  private loadAccessSources(): void {
+    if (this.profileOptionsState() === 'failed') {
+      this.loadProfileOptions();
+    }
+    if (this.catalogState() === 'ready') {
+      return;
+    }
+    this.catalogState.set('loading');
+    this.profileService.permissionCatalog().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (catalog) => {
+        this.catalog.set(catalog);
+        this.catalogState.set('ready');
+      },
+      error: () => this.catalogState.set('failed')
+    });
   }
 
   private loadSummary(): void {
@@ -353,48 +467,38 @@ function emptyUserForm(): ReturnType<UsersComponent['form']['getRawValue']> {
     username: '',
     fullName: '',
     password: '',
-    role: 'SERVICE_DESK',
+    profileId: null,
     active: true
   };
 }
 
-function buildUserPayload(raw: ReturnType<UsersComponent['form']['getRawValue']>): UserAccountRequest {
+function buildUserPayload(raw: ReturnType<UsersComponent['form']['getRawValue']>, extraPermissions: Permission[]): UserAccountRequest {
   return {
     username: raw.username.trim(),
     fullName: raw.fullName.trim(),
     password: raw.password,
-    role: raw.role,
+    profileId: raw.profileId!,
+    extraPermissions,
     active: raw.active
   };
 }
 
 function buildUserUpdatePayload(
-  raw: ReturnType<UsersComponent['form']['getRawValue']>
+  raw: ReturnType<UsersComponent['form']['getRawValue']>,
+  extraPermissions: Permission[]
 ): UserAccountUpdateRequest {
   return {
     username: raw.username.trim(),
     fullName: raw.fullName.trim(),
     password: raw.password || null,
-    role: raw.role,
+    profileId: raw.profileId!,
+    extraPermissions,
     active: raw.active
   };
 }
-
-const ROLE_FILTER_OPTIONS: ReadonlyArray<CustomSelectOption<UserRole | ''>> = [
-  { value: '', label: 'Todos' },
-  ...ROLE_OPTIONS.map((role) => ({
-    value: role,
-    label: ROLE_LABELS[role]
-  }))
-];
 
 const STATUS_FILTER_OPTIONS: ReadonlyArray<CustomSelectOption<UserStatusFilter>> = [
   { value: 'all', label: 'Todos' },
   { value: 'active', label: 'Ativos' },
   { value: 'inactive', label: 'Inativos' }
 ];
-
-const USER_ROLE_OPTIONS: ReadonlyArray<CustomSelectOption<UserRole>> = ROLE_OPTIONS.map((role) => ({
-  value: role,
-  label: ROLE_LABELS[role]
-}));

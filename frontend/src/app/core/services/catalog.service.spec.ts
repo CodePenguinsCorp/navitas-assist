@@ -91,9 +91,10 @@ describe('CatalogService', () => {
     expect(products.request.params.keys()).toEqual([]);
     products.flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 });
 
-    service.listUsers({ role: 'ADMIN', active: false }).subscribe();
+    service.listUsers({ profileId: 3, active: false }).subscribe();
     const users = httpTesting.expectOne((candidate) => candidate.url === '/api/users');
-    expect(users.request.params.get('role')).toBe('ADMIN');
+    expect(users.request.params.get('profileId')).toBe('3');
+    expect(users.request.params.has('role')).toBe(false);
     expect(users.request.params.get('active')).toBe('false');
     users.flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 });
   });

@@ -21,9 +21,9 @@
       <span>Perfil</span>
       <app-custom-select
         ariaLabel="Filtrar por perfil"
-        [options]="roleFilterOptions"
-        [value]="roleFilter()"
-        (valueChange)="updateRoleFilter($any($event))"
+        [options]="profileFilterOptions()"
+        [value]="profileFilter() ?? ''"
+        (valueChange)="updateProfileFilter($any($event))"
       />
     </label>
 
@@ -94,7 +94,10 @@
                   <span class="person"><span class="avatar" aria-hidden="true">{{ initials(user.fullName) }}</span><strong class="table-title">{{ user.fullName }}</strong></span>
                 </td>
                 <td><span class="code-text">{{ user.username }}</span></td>
-                <td>{{ roleLabel(user.role) }}</td>
+                <td>
+                  {{ user.profile.name }}
+                  @if (extrasLabel(user)) { <span class="mini-chip">{{ extrasLabel(user) }}</span> }
+                </td>
                 <td>
                   <span class="state-dot" [class.is-on]="user.active">{{ user.active ? 'Ativo' : 'Inativo' }}</span>
                 </td>
@@ -165,7 +168,11 @@
         </button>
       </header>
 
-      @if (modalErrorMessage()) {
+      @if (accessFailed()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>Não foi possível carregar os perfis. Tente novamente.</strong>
+        </article>
+      } @else if (modalErrorMessage()) {
         <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
           <strong>{{ modalErrorMessage() }}</strong>
         </article>
@@ -198,10 +205,16 @@
           <label class="field-group">
             <span>Perfil</span>
             <app-custom-select
-              formControlName="role"
+              formControlName="profileId"
               ariaLabel="Perfil do usuário"
-              [options]="userRoleOptions"
+              placeholder="Selecione o perfil"
+              [options]="profileSelectOptions()"
+              [ariaInvalid]="hasError('profileId')"
+              [ariaDescribedBy]="hasError('profileId') ? 'user-profile-error' : null"
             />
+            @if (hasError('profileId')) {
+              <small id="user-profile-error" class="field-error">Selecione o perfil.</small>
+            }
           </label>
 
           <label class="field-group">
@@ -211,6 +224,32 @@
               <strong>Usuário ativo</strong>
             </span>
           </label>
+        </fieldset>
+
+        <fieldset class="form-section extra-permissions" aria-describedby="user-extras-hint">
+          <legend>Permissões extras</legend>
+          <p id="user-extras-hint" class="form-section__hint field-group--full">Somam-se às permissões do perfil escolhido.</p>
+          @if (catalogState() === 'loading') {
+            <div class="extras-pending" aria-busy="true"></div>
+          } @else if (catalogState() === 'ready') {
+            @for (module of catalog(); track module.module) {
+              <fieldset class="permission-module">
+                <legend>{{ module.label }}</legend>
+                @for (item of module.permissions; track item.code) {
+                  <label class="checkbox-field">
+                    <input
+                      type="checkbox"
+                      [checked]="isExtraChecked(item.code)"
+                      [disabled]="submitting() || includedInProfile(item.code)"
+                      (change)="toggleExtra(item.code, $any($event.target).checked)"
+                    />
+                    <span>{{ item.label }}</span>
+                    @if (includedInProfile(item.code)) { <small class="field-hint">Incluída no perfil</small> }
+                  </label>
+                }
+              </fieldset>
+            }
+          }
         </fieldset>
 
         <fieldset class="form-section">
@@ -233,7 +272,7 @@
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="submitting()">
             Cancelar
           </button>
-          <button type="submit" class="button-primary" [disabled]="submitting()">
+          <button type="submit" class="button-primary" [disabled]="submitting() || !accessReady()">
             {{ submitting() ? 'Salvando...' : editingUser() ? 'Salvar alterações' : 'Cadastrar usuário' }}
           </button>
         </div>

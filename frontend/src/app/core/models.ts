@@ -62,7 +62,11 @@ export interface UserAccountResponse {
   id: number;
   username: string;
   fullName: string;
-  role: UserRole;
+  profile: ProfileRef;
+  /** Extras do usuário, na ordem do catálogo; podem repetir permissões do perfil. */
+  extraPermissions: string[];
+  /** Provisório (etapa 8A): `legacyCode` do perfil, ou `null` em perfil personalizado. */
+  role?: UserRole | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -113,12 +117,8 @@ export interface PermissionModuleResponse {
 }
 
 /** Usuário da sessão (`POST /api/auth/login` e `GET /api/auth/me`), com as permissões efetivas na ordem do catálogo. */
-export interface CurrentUserResponse extends Omit<UserAccountResponse, 'role'> {
-  profile: ProfileRef;
-  extraPermissions: string[];
+export interface CurrentUserResponse extends UserAccountResponse {
   permissions: string[];
-  /** Provisório (etapa 8A): `legacyCode` do perfil, ou `null` em perfil personalizado. */
-  role?: UserRole | null;
 }
 
 export type AuthUserResponse = CurrentUserResponse;
@@ -127,7 +127,8 @@ export interface UserAccountRequest {
   username: string;
   fullName: string;
   password: string;
-  role: UserRole;
+  profileId: number;
+  extraPermissions: Permission[];
   active: boolean;
 }
 
@@ -135,7 +136,8 @@ export interface UserAccountUpdateRequest {
   username: string;
   fullName: string;
   password: string | null;
-  role: UserRole;
+  profileId: number;
+  extraPermissions: Permission[];
   active: boolean;
 }
 

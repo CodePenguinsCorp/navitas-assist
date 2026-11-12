@@ -4,9 +4,11 @@ import { of } from 'rxjs';
 import { UserAccountResponse } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
+import { ProfileService } from '../../core/services/profile.service';
+import { PERMISSION_CATALOG } from '../../testing/profile-fixtures';
 import { UsersComponent } from './users.component';
 
-const USER: UserAccountResponse = { id: 2, username: 'operator', fullName: 'Operator', role: 'VIEWER', active: true,
+const USER: UserAccountResponse = { id: 2, username: 'operator', fullName: 'Operator', profile: { id: 4, name: 'Consulta' }, extraPermissions: [], active: true,
   createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' };
 const EXCESSIVE = [{ name: 'ASCII', password: 'a'.repeat(73) }, { name: 'accented', password: 'á'.repeat(37) },
   { name: 'emoji', password: '😀'.repeat(19) }, { name: 'Unicode whitespace', password: '\u3000'.repeat(25) }];
@@ -24,7 +26,8 @@ describe('UsersComponent password boundaries', () => {
     updateUser = vi.fn(() => of(USER));
     await TestBed.configureTestingModule({ imports: [UsersComponent], providers: [
       { provide: CatalogService, useValue: { listUsers: () => of({ content: [USER], page: 0, size: 20, totalElements: 1, totalPages: 1 }), getUserSummary: () => of({ total: 1, active: 1, admins: 0, roles: 1 }), createUser, updateUser } },
-      { provide: AuthService, useValue: { currentUser: () => null } }
+      { provide: AuthService, useValue: { currentUser: () => null, refreshSession: () => of(null) } },
+      { provide: ProfileService, useValue: { options: () => of([{ id: 4, name: 'Consulta', permissions: [] }]), permissionCatalog: () => of(PERMISSION_CATALOG) } }
     ] }).compileComponents();
     fixture = TestBed.createComponent(UsersComponent);
     component = fixture.componentInstance as unknown as UsersHarness;
@@ -33,7 +36,7 @@ describe('UsersComponent password boundaries', () => {
 
   it.each(EXCESSIVE)('blocks excessive $name passwords in creation and editing', ({ password }) => {
     component.openCreateModal();
-    component.form.patchValue({ username: 'new.user', fullName: 'New user', password });
+    component.form.patchValue({ username: 'new.user', fullName: 'New user', profileId: 4, password });
     component.saveUser();
     expect(createUser).not.toHaveBeenCalled();
     expect(component.form.controls['password'].invalid).toBe(true);
@@ -49,7 +52,7 @@ describe('UsersComponent password boundaries', () => {
 
   it.each(VALID)('submits a valid $name password without trimming it', ({ password }) => {
     component.openCreateModal();
-    component.form.patchValue({ username: 'new.user', fullName: 'New user', password });
+    component.form.patchValue({ username: 'new.user', fullName: 'New user', profileId: 4, password });
     component.saveUser();
     expect(createUser).toHaveBeenCalledWith(expect.objectContaining({ password }));
 
@@ -61,7 +64,7 @@ describe('UsersComponent password boundaries', () => {
 
   it('requires a password on creation and sends null when an edited password is left empty', () => {
     component.openCreateModal();
-    component.form.patchValue({ username: 'new.user', fullName: 'New user', password: '' });
+    component.form.patchValue({ username: 'new.user', fullName: 'New user', profileId: 4, password: '' });
     component.saveUser();
     expect(createUser).not.toHaveBeenCalled();
 
@@ -72,7 +75,7 @@ describe('UsersComponent password boundaries', () => {
 
   it('keeps the existing minimum length in both modes', () => {
     component.openCreateModal();
-    component.form.patchValue({ username: 'new.user', fullName: 'New user', password: '12345' });
+    component.form.patchValue({ username: 'new.user', fullName: 'New user', profileId: 4, password: '12345' });
     component.saveUser();
     expect(createUser).not.toHaveBeenCalled();
     component.openEditModal(USER);

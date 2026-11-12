@@ -1,12 +1,14 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { of } from 'rxjs';
 import { UserAccountResponse } from '../../core/models';
+import { AuthService } from '../../core/services/auth.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { UsersComponent } from './users.component';
 
 const SAMPLE_USER: UserAccountResponse = {
-  id: 1, username: 'technician', fullName: 'Operador', role: 'TECHNICIAN', active: true,
+  id: 1, username: 'technician', fullName: 'Operador', profile: { id: 3, name: 'Técnico' }, extraPermissions: [], active: true,
   createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
 };
 
@@ -23,11 +25,12 @@ describe('UsersComponent pending save lifecycle', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [UsersComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()]
+      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: AuthService, useValue: { currentUser: () => null, refreshSession: () => of(null) } }]
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(UsersComponent);
     flushUserLists(http, [SAMPLE_USER]);
+    http.expectOne('/api/profiles/options').flush([{ id: 2, name: 'Atendimento', permissions: [] }, { id: 3, name: 'Técnico', permissions: [] }]);
     fixture.detectChanges();
     page = fixture.nativeElement as HTMLElement;
   });
@@ -38,6 +41,8 @@ describe('UsersComponent pending save lifecycle', () => {
     page.querySelector<HTMLButtonElement>(
       mode === 'create' ? '.page-heading button' : '.row-actions button'
     )!.click();
+    fixture.detectChanges();
+    http.match('/api/permissions').forEach((request) => request.flush([]));
     fixture.detectChanges();
   }
 
@@ -50,6 +55,7 @@ describe('UsersComponent pending save lifecycle', () => {
     if (mode === 'create') {
       enter('username', 'operator');
       enter('password', 'fake-password');
+      (fixture.componentInstance as unknown as { form: { controls: { profileId: { setValue(id: number): void } } } }).form.controls.profileId.setValue(2);
     }
     enter('fullName', 'Operador salvo');
   }
@@ -68,7 +74,7 @@ describe('UsersComponent pending save lifecycle', () => {
   function succeed(request: TestRequest, mode: 'create' | 'edit'): void {
     const saved: UserAccountResponse = { ...SAMPLE_USER, id: mode === 'create' ? 4 : 1,
       username: mode === 'create' ? 'operator' : SAMPLE_USER.username,
-      role: mode === 'create' ? 'SERVICE_DESK' : SAMPLE_USER.role, fullName: 'Operador salvo' };
+      profile: mode === 'create' ? { id: 2, name: 'Atendimento' } : SAMPLE_USER.profile, fullName: 'Operador salvo' };
     request.flush(saved);
     flushUserLists(http, 
       mode === 'create' ? [SAMPLE_USER, saved] : [saved]
