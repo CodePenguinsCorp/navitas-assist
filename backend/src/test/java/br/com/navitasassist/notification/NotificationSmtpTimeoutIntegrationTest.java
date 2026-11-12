@@ -1,5 +1,6 @@
 package br.com.navitasassist.notification;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -149,7 +150,7 @@ class NotificationSmtpTimeoutIntegrationTest {
         NotificationTestSupport.awaitIdle(notificationExecutor);
 
         long started = System.nanoTime();
-        mockMvc.perform(patch("/api/rmas/{id}/assignee", rma.id()).with(user("admin").roles("ADMIN")).with(csrf())
+        mockMvc.perform(patch("/api/rmas/{id}/assignee", rma.id()).with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(Map.of("assigneeId", technician.getId()))))
             .andExpect(status().isOk());

@@ -1,5 +1,6 @@
 package br.com.navitasassist.pagination;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -293,7 +294,7 @@ class PaginationIntegrationTest {
             .andExpect(jsonPath("$.total").value(5))
             .andExpect(jsonPath("$.ongoing").value(3))
             .andExpect(jsonPath("$.highPriority").value(3));
-        mockMvc.perform(get("/api/rmas/summary").param("status", "RECEIVED").with(user("viewer").roles("VIEWER")))
+        mockMvc.perform(get("/api/rmas/summary").param("status", "RECEIVED").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.total").value(2))
             .andExpect(jsonPath("$.ongoing").value(2))
@@ -307,7 +308,7 @@ class PaginationIntegrationTest {
     }
 
     private RequestPostProcessor admin() {
-        return user("admin").roles("ADMIN");
+        return asProfile("admin", "ADMIN");
     }
 
     private Client saveClient(String legalName, String documentNumber, String email) {

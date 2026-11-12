@@ -1,5 +1,6 @@
 package br.com.navitasassist.part;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -45,10 +46,10 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 @ActiveProfiles("test")
 class PartInventoryIntegrationTest {
 
-    private static final RequestPostProcessor ADMIN = user("admin").roles("ADMIN");
-    private static final RequestPostProcessor SERVICE_DESK = user("desk").roles("SERVICE_DESK");
-    private static final RequestPostProcessor TECHNICIAN = user("tech").roles("TECHNICIAN");
-    private static final RequestPostProcessor VIEWER = user("viewer").roles("VIEWER");
+    private static final RequestPostProcessor ADMIN = asProfile("admin", "ADMIN");
+    private static final RequestPostProcessor SERVICE_DESK = asProfile("desk", "SERVICE_DESK");
+    private static final RequestPostProcessor TECHNICIAN = asProfile("tech", "TECHNICIAN");
+    private static final RequestPostProcessor VIEWER = asProfile("viewer", "VIEWER");
 
     @Autowired
     private MockMvc mockMvc;

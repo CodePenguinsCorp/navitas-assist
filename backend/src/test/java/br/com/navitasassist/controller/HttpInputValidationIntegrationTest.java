@@ -1,5 +1,6 @@
 package br.com.navitasassist.controller;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -58,7 +59,7 @@ class HttpInputValidationIntegrationTest {
     @ParameterizedTest
     @MethodSource("malformedBodies")
     void malformedBodyReturnsBadRequestWithoutLeakingInput(HttpMethod method, String path, String body) throws Exception {
-        ResultActions result = mockMvc.perform(request(method, path).with(user("admin").roles("ADMIN")).with(csrf())
+        ResultActions result = mockMvc.perform(request(method, path).with(asProfile("admin", "ADMIN")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content(body));
         assertBadRequest(result, "Malformed request body").andExpect(jsonPath("$.details").isEmpty());
     }
@@ -69,7 +70,7 @@ class HttpInputValidationIntegrationTest {
         "/api/clients/sensitive-input", "/api/rmas/sensitive-input"
     })
     void malformedIdReturnsBadRequest(String path) throws Exception {
-        ResultActions result = mockMvc.perform(get(path).with(user("admin").roles("ADMIN")));
+        ResultActions result = mockMvc.perform(get(path).with(asProfile("admin", "ADMIN")));
         assertBadRequest(result, "Invalid request parameter")
             .andExpect(jsonPath("$.details[0]").value("id: invalid value"))
             .andExpect(content().string(not(containsString("9223372036854775808"))));
@@ -78,7 +79,7 @@ class HttpInputValidationIntegrationTest {
     @Test
     void invalidStatusFilterReturnsBadRequest() throws Exception {
         ResultActions result = mockMvc.perform(get("/api/rmas").param("status", "sensitive-input")
-            .with(user("viewer").roles("VIEWER")));
+            .with(asProfile("viewer", "VIEWER")));
         assertBadRequest(result, "Invalid request parameter").andExpect(jsonPath("$.details[0]").value("status: invalid value"));
     }
 
@@ -91,26 +92,26 @@ class HttpInputValidationIntegrationTest {
 
     @Test
     void forbiddenMalformedRequestsStillRequireAuthorization() throws Exception {
-        mockMvc.perform(post("/api/products").with(user("viewer").roles("VIEWER")).with(csrf())
+        mockMvc.perform(post("/api/products").with(asProfile("viewer", "VIEWER")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content("{")).andExpect(status().isForbidden());
-        mockMvc.perform(put("/api/users/sensitive-input").with(user("viewer").roles("VIEWER")).with(csrf())
+        mockMvc.perform(put("/api/users/sensitive-input").with(asProfile("viewer", "VIEWER")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content("{")).andExpect(status().isForbidden());
     }
 
     @Test
     void malformedWriteWithoutCsrfRemainsForbidden() throws Exception {
-        mockMvc.perform(post("/api/products").with(user("admin").roles("ADMIN"))
+        mockMvc.perform(post("/api/products").with(asProfile("admin", "ADMIN"))
             .contentType(MediaType.APPLICATION_JSON).content("{")).andExpect(status().isForbidden());
     }
 
     @Test
     void validInputsNotFoundAndBeanValidationKeepTheirContracts() throws Exception {
         mockMvc.perform(get("/api/rmas").param("status", "RECEIVED").param("query", "NAV-68-no-matching-rma")
-            .with(user("viewer").roles("VIEWER")))
+            .with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.content").isArray());
-        mockMvc.perform(get("/api/products/{id}", Long.MAX_VALUE).with(user("viewer").roles("VIEWER")))
+        mockMvc.perform(get("/api/products/{id}", Long.MAX_VALUE).with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isNotFound()).andExpect(jsonPath("$.status").value(404));
-        mockMvc.perform(post("/api/products").with(user("admin").roles("ADMIN")).with(csrf())
+        mockMvc.perform(post("/api/products").with(asProfile("admin", "ADMIN")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content("{}"))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Validation failed"));
     }

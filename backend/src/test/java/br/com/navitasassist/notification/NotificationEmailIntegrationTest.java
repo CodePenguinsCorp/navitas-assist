@@ -1,5 +1,6 @@
 package br.com.navitasassist.notification;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -155,8 +156,8 @@ class NotificationEmailIntegrationTest {
         assertEquals(technician.getId(), rmaRecordRepository.findById(rma.id()).orElseThrow().getAssignee().getId());
         Notification notification = assignmentNotification();
         assertEquals(NotificationEmailStatus.FAILED, notification.getEmailStatus());
-        mockMvc.perform(get("/api/notifications").with(user("nav40-mail-tech").roles("TECHNICIAN"))).andExpect(jsonPath("$[0].eventType").value("RMA_ASSIGNED"));
-        mockMvc.perform(get("/api/notification-rules/failures").with(user("admin").roles("ADMIN")))
+        mockMvc.perform(get("/api/notifications").with(asProfile("nav40-mail-tech", "TECHNICIAN"))).andExpect(jsonPath("$[0].eventType").value("RMA_ASSIGNED"));
+        mockMvc.perform(get("/api/notification-rules/failures").with(asProfile("admin", "ADMIN")))
             .andExpect(jsonPath("$[0].source").value("EMAIL"))
             .andExpect(jsonPath("$[0].recipient").value("nav40-mail-tech"));
     }
@@ -184,7 +185,7 @@ class NotificationEmailIntegrationTest {
     }
 
     private org.springframework.test.web.servlet.ResultActions assign() throws Exception {
-        return mockMvc.perform(patch("/api/rmas/{id}/assignee", rma.id()).with(user("admin").roles("ADMIN")).with(csrf())
+        return mockMvc.perform(patch("/api/rmas/{id}/assignee", rma.id()).with(asProfile("admin", "ADMIN")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(Map.of("assigneeId", technician.getId()))));
     }

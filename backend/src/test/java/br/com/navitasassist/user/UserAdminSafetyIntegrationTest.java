@@ -1,5 +1,6 @@
 package br.com.navitasassist.user;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -62,7 +63,7 @@ class UserAdminSafetyIntegrationTest {
     @ParameterizedTest
     @CsvSource({ "ADMIN,false", "VIEWER,true", "TECHNICIAN,false" })
     void rejectsLossOfLastAdminAndPreservesAccount(UserRole role, boolean active) throws Exception {
-        mvc.perform(put("/api/users/{id}", admin.getId()).with(user("admin").roles("ADMIN")).with(csrf())
+        mvc.perform(put("/api/users/{id}", admin.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(payload(admin, role, active)))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("At least one active administrator must remain."));
         UserAccount saved = users.findById(admin.getId()).orElseThrow();
@@ -74,7 +75,7 @@ class UserAdminSafetyIntegrationTest {
     @Test
     void inactiveAdminDoesNotCountAsReplacement() throws Exception {
         second(false);
-        mvc.perform(put("/api/users/{id}", admin.getId()).with(user("admin").roles("ADMIN")).with(csrf())
+        mvc.perform(put("/api/users/{id}", admin.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(payload(admin, UserRole.VIEWER, true)))
             .andExpect(status().isBadRequest());
         assertEquals(1, activeAdmins());
@@ -85,7 +86,7 @@ class UserAdminSafetyIntegrationTest {
         UserAccount only = second(true);
         admin.setRole(UserRole.VIEWER);
         users.saveAndFlush(admin);
-        mvc.perform(delete("/api/users/{id}", only.getId()).with(user("admin").roles("ADMIN")).with(csrf()))
+        mvc.perform(delete("/api/users/{id}", only.getId()).with(asProfile("admin", "ADMIN")).with(csrf()))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("At least one active administrator must remain."));
         assertTrue(users.existsById(only.getId()));
         assertEquals(1, activeAdmins());
@@ -93,7 +94,7 @@ class UserAdminSafetyIntegrationTest {
 
     @Test
     void allowsHarmlessEditToLastAdmin() throws Exception {
-        mvc.perform(put("/api/users/{id}", admin.getId()).with(user("admin").roles("ADMIN")).with(csrf())
+        mvc.perform(put("/api/users/{id}", admin.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(Map.of("username", admin.getUsername(), "fullName", "Administrator updated", "role", "ADMIN", "active", true))))
             .andExpect(status().isOk()).andExpect(jsonPath("$.role").value("ADMIN")).andExpect(jsonPath("$.active").value(true))
             .andExpect(jsonPath("$.fullName").value("Administrator updated"));
@@ -105,9 +106,9 @@ class UserAdminSafetyIntegrationTest {
     void allowsLossWhenAnotherActiveAdminRemains(String operation) throws Exception {
         UserAccount other = second(true);
         if (operation.equals("delete")) {
-            mvc.perform(delete("/api/users/{id}", other.getId()).with(user("admin").roles("ADMIN")).with(csrf())).andExpect(status().isNoContent());
+            mvc.perform(delete("/api/users/{id}", other.getId()).with(asProfile("admin", "ADMIN")).with(csrf())).andExpect(status().isNoContent());
         } else {
-            mvc.perform(put("/api/users/{id}", other.getId()).with(user("admin").roles("ADMIN")).with(csrf())
+            mvc.perform(put("/api/users/{id}", other.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
                     .contentType(MediaType.APPLICATION_JSON).content(payload(other, operation.equals("demote") ? UserRole.SERVICE_DESK : UserRole.ADMIN, !operation.equals("deactivate"))))
                 .andExpect(status().isOk());
         }
@@ -125,14 +126,14 @@ class UserAdminSafetyIntegrationTest {
             var first = pool.submit(() -> {
                 ready.countDown();
                 if (!start.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("Barrier timed out");
-                return mvc.perform(put("/api/users/{id}", admin.getId()).with(user(SECOND).roles("ADMIN")).with(csrf())
+                return mvc.perform(put("/api/users/{id}", admin.getId()).with(asProfile(SECOND, "ADMIN")).with(csrf())
                     .contentType(MediaType.APPLICATION_JSON).content(payload(admin, UserRole.VIEWER, true))).andReturn().getResponse().getStatus();
             });
             var second = pool.submit(() -> {
                 ready.countDown();
                 if (!start.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("Barrier timed out");
                 var request = deleteSecond ? delete("/api/users/{id}", other.getId()) : put("/api/users/{id}", other.getId()).contentType(MediaType.APPLICATION_JSON).content(payload(other, UserRole.ADMIN, false));
-                return mvc.perform(request.with(user("admin").roles("ADMIN")).with(csrf())).andReturn().getResponse().getStatus();
+                return mvc.perform(request.with(asProfile("admin", "ADMIN")).with(csrf())).andReturn().getResponse().getStatus();
             });
             assertTrue(ready.await(10, TimeUnit.SECONDS));
             start.countDown();
@@ -150,9 +151,9 @@ class UserAdminSafetyIntegrationTest {
     @Test
     void nonAdminsRemainForbidden() throws Exception {
         for (String role : new String[] { "VIEWER", "TECHNICIAN", "SERVICE_DESK" }) {
-            mvc.perform(put("/api/users/{id}", admin.getId()).with(user("operator").roles(role)).with(csrf())
+            mvc.perform(put("/api/users/{id}", admin.getId()).with(asProfile("operator", role)).with(csrf())
                     .contentType(MediaType.APPLICATION_JSON).content(payload(admin, UserRole.VIEWER, true))).andExpect(status().isForbidden());
-            mvc.perform(delete("/api/users/{id}", admin.getId()).with(user("operator").roles(role)).with(csrf())).andExpect(status().isForbidden());
+            mvc.perform(delete("/api/users/{id}", admin.getId()).with(asProfile("operator", role)).with(csrf())).andExpect(status().isForbidden());
         }
         assertEquals(1, activeAdmins());
     }

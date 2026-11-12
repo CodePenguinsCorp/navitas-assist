@@ -1,5 +1,6 @@
 package br.com.navitasassist.rma;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -60,7 +61,7 @@ class RmaBlockIntegrationTest {
         product.setDefaultWarrantyMonths(12);
         product = products.save(product);
         String body = mapper.writeValueAsString(Map.of("clientId", client.getId(), "items", List.of(Map.of("productId", product.getId(), "batchNumber", "BLOCK")), "purchaseDateUnknown", true, "entryDate", LocalDate.now().toString(), "reportedFailure", "Failure"));
-        id = mapper.readTree(mvc.perform(post("/api/rmas").with(user("desk").roles("SERVICE_DESK")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8)).get("id").asLong();
+        id = mapper.readTree(mvc.perform(post("/api/rmas").with(asProfile("desk", "SERVICE_DESK")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8)).get("id").asLong();
     }
 
     @Test
@@ -77,9 +78,9 @@ class RmaBlockIntegrationTest {
         assertTrue(!Instant.parse(episode.get("blockedAt").asText()).isBefore(started));
         assertEquals(before.get("sla").get("startedAt"), blocked.get("sla").get("startedAt"));
         assertEquals(before.get("sla").get("dueAt"), blocked.get("sla").get("dueAt"));
-        mvc.perform(post("/api/rmas/{id}/blocks", id).with(user("operator").roles("ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Duplicate\"}")).andExpect(status().isBadRequest());
-        mvc.perform(patch("/api/rmas/{id}/status", id).with(user("operator").roles("TECHNICIAN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"TRIAGE\"}")).andExpect(status().isOk()).andExpect(jsonPath("$.currentBlock.id").value(blockId));
-        mvc.perform(patch("/api/rmas/{id}/blocks/{blockId}", id, blockId).with(user("resolver").roles("SERVICE_DESK")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"resolutionNote\":\"  Peça recebida  \"}"))
+        mvc.perform(post("/api/rmas/{id}/blocks", id).with(asProfile("operator", "ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Duplicate\"}")).andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/rmas/{id}/status", id).with(asProfile("operator", "TECHNICIAN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"TRIAGE\"}")).andExpect(status().isOk()).andExpect(jsonPath("$.currentBlock.id").value(blockId));
+        mvc.perform(patch("/api/rmas/{id}/blocks/{blockId}", id, blockId).with(asProfile("resolver", "SERVICE_DESK")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"resolutionNote\":\"  Peça recebida  \"}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.currentBlock").isEmpty()).andExpect(jsonPath("$.status").value("TRIAGE"));
         JsonNode resolved = read().get("blockHistory").get(0);
         assertEquals("resolver", resolved.get("resolvedBy").asText());
@@ -88,27 +89,27 @@ class RmaBlockIntegrationTest {
         JsonNode next = block("ADMIN", "Outro impedimento", "");
         long nextId = next.get("currentBlock").get("id").asLong();
         assertEquals(2, next.get("blockHistory").size());
-        mvc.perform(patch("/api/rmas/{id}/blocks/{blockId}", id, blockId).with(user("operator").roles("ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"resolutionNote\":\"Stale\"}")).andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/rmas/{id}/blocks/{blockId}", id, blockId).with(asProfile("operator", "ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"resolutionNote\":\"Stale\"}")).andExpect(status().isBadRequest());
         assertEquals(nextId, read().get("currentBlock").get("id").asLong());
     }
 
     @Test
     void enforcesRolesCsrfAndInputValidation() throws Exception {
         for (String role : List.of("VIEWER")) {
-            mvc.perform(post("/api/rmas/{id}/blocks", id).with(user("viewer").roles(role)).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Denied\"}")).andExpect(status().isForbidden());
-            mvc.perform(patch("/api/rmas/{id}/blocks/1", id).with(user("viewer").roles(role)).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"resolutionNote\":\"Denied\"}")).andExpect(status().isForbidden());
+            mvc.perform(post("/api/rmas/{id}/blocks", id).with(asProfile("viewer", role)).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Denied\"}")).andExpect(status().isForbidden());
+            mvc.perform(patch("/api/rmas/{id}/blocks/1", id).with(asProfile("viewer", role)).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"resolutionNote\":\"Denied\"}")).andExpect(status().isForbidden());
         }
         mvc.perform(post("/api/rmas/{id}/blocks", id).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Denied\"}")).andExpect(status().isUnauthorized());
-        mvc.perform(post("/api/rmas/{id}/blocks", id).with(user("operator").roles("ADMIN")).contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Denied\"}")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/rmas/{id}/blocks", id).with(asProfile("operator", "ADMIN")).contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Denied\"}")).andExpect(status().isForbidden());
         for (String body : List.of("{}", "{\"reason\":\"   \"}", mapper.writeValueAsString(Map.of("reason", "x".repeat(1001))), mapper.writeValueAsString(Map.of("reason", "Valid", "category", "x".repeat(81))))) {
-            mvc.perform(post("/api/rmas/{id}/blocks", id).with(user("operator").roles("TECHNICIAN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isBadRequest());
+            mvc.perform(post("/api/rmas/{id}/blocks", id).with(asProfile("operator", "TECHNICIAN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isBadRequest());
         }
         long blockId = block("SERVICE_DESK", "x".repeat(1000), "x".repeat(80)).get("currentBlock").get("id").asLong();
         for (String note : List.of(" ", "x".repeat(1001))) {
-            mvc.perform(patch("/api/rmas/{id}/blocks/{blockId}", id, blockId).with(user("operator").roles("TECHNICIAN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(Map.of("resolutionNote", note)))).andExpect(status().isBadRequest());
+            mvc.perform(patch("/api/rmas/{id}/blocks/{blockId}", id, blockId).with(asProfile("operator", "TECHNICIAN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(Map.of("resolutionNote", note)))).andExpect(status().isBadRequest());
         }
-        mvc.perform(get("/api/rmas/{id}", id).with(user("viewer").roles("VIEWER"))).andExpect(status().isOk()).andExpect(jsonPath("$.currentBlock.id").value(blockId));
-        mvc.perform(post("/api/rmas/999999/blocks").with(user("operator").roles("ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Missing\"}")).andExpect(status().isNotFound());
+        mvc.perform(get("/api/rmas/{id}", id).with(asProfile("viewer", "VIEWER"))).andExpect(status().isOk()).andExpect(jsonPath("$.currentBlock.id").value(blockId));
+        mvc.perform(post("/api/rmas/999999/blocks").with(asProfile("operator", "ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Missing\"}")).andExpect(status().isNotFound());
     }
 
     @Test
@@ -120,7 +121,7 @@ class RmaBlockIntegrationTest {
             var jobs = java.util.stream.IntStream.range(0, 2).mapToObj(index -> pool.submit(() -> {
                 ready.countDown();
                 if (!start.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("Barrier timed out");
-                return mvc.perform(post("/api/rmas/{id}/blocks", id).with(user("operator" + index).roles("TECHNICIAN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Concurrent\"}")).andReturn().getResponse().getStatus();
+                return mvc.perform(post("/api/rmas/{id}/blocks", id).with(asProfile("operator" + index, "TECHNICIAN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Concurrent\"}")).andReturn().getResponse().getStatus();
             })).toList();
             assertTrue(ready.await(10, TimeUnit.SECONDS));
             start.countDown();
@@ -135,11 +136,11 @@ class RmaBlockIntegrationTest {
     }
 
     private JsonNode block(String role, String reason, String category) throws Exception {
-        return mapper.readTree(mvc.perform(post("/api/rmas/{id}/blocks", id).with(user("operator").roles(role)).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(Map.of("reason", reason, "category", category))))
+        return mapper.readTree(mvc.perform(post("/api/rmas/{id}/blocks", id).with(asProfile("operator", role)).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(Map.of("reason", reason, "category", category))))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8));
     }
 
     private JsonNode read() throws Exception {
-        return mapper.readTree(mvc.perform(get("/api/rmas/{id}", id).with(user("viewer").roles("VIEWER"))).andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8));
+        return mapper.readTree(mvc.perform(get("/api/rmas/{id}", id).with(asProfile("viewer", "VIEWER"))).andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8));
     }
 }

@@ -1,5 +1,6 @@
 package br.com.navitasassist.client;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -62,7 +63,7 @@ class ClientControllerIntegrationTest {
         String legalName = "A -–— ".repeat(119) + "Z";
 
         mockMvc.perform(post("/api/clients")
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(Map.of(
@@ -81,7 +82,7 @@ class ClientControllerIntegrationTest {
                 Map.of("legalName", "Client", "phone", "1".repeat(31)),
                 Map.of("legalName", "Client", "address", "A".repeat(256)))) {
             mockMvc.perform(post("/api/clients")
-                    .with(user("admin").roles("ADMIN"))
+                    .with(asProfile("admin", "ADMIN"))
                     .with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(payload)))
@@ -98,7 +99,7 @@ class ClientControllerIntegrationTest {
             "email", "cliente@example.com", "phone", "47999999999", "address", "Rua A",
             "contactName", "Contato legado");
         String createdBody = mockMvc.perform(post("/api/clients")
-                .with(user("admin").roles("ADMIN")).with(csrf())
+                .with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))
             .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
@@ -107,7 +108,7 @@ class ClientControllerIntegrationTest {
         long id = created.get("id").asLong();
 
         String updatedBody = mockMvc.perform(put("/api/clients/{id}", id)
-                .with(user("admin").roles("ADMIN")).with(csrf())
+                .with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(Map.of(
                     "legalName", "Cliente atualizado", "documentNumber", "12.345.678/0001-90",
@@ -115,7 +116,7 @@ class ClientControllerIntegrationTest {
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         assertFalse(objectMapper.readTree(updatedBody).has("contactName"));
 
-        String readBody = mockMvc.perform(get("/api/clients/{id}", id).with(user("admin").roles("ADMIN")))
+        String readBody = mockMvc.perform(get("/api/clients/{id}", id).with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.legalName").value("Cliente atualizado"))
             .andExpect(jsonPath("$.documentNumber").value("12.345.678/0001-90"))
@@ -124,7 +125,7 @@ class ClientControllerIntegrationTest {
             .andExpect(jsonPath("$.address").value("Rua A"))
             .andReturn().getResponse().getContentAsString();
         assertFalse(objectMapper.readTree(readBody).has("contactName"));
-        String listBody = mockMvc.perform(get("/api/clients").with(user("admin").roles("ADMIN")))
+        String listBody = mockMvc.perform(get("/api/clients").with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(1))
             .andReturn().getResponse().getContentAsString();
         assertFalse(objectMapper.readTree(listBody).get("content").get(0).has("contactName"));
@@ -138,7 +139,7 @@ class ClientControllerIntegrationTest {
         String legalName = "A -–— ".repeat(119) + "Z";
 
         mockMvc.perform(put("/api/clients/{id}", id)
-                .with(user("admin").roles("ADMIN")).with(csrf())
+                .with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(Map.of(
                     "legalName", legalName, "phone", "1".repeat(30), "address", "A".repeat(255)))))
@@ -163,7 +164,7 @@ class ClientControllerIntegrationTest {
                 Map.of("legalName", "Alterado", "phone", "1".repeat(31)),
                 Map.of("legalName", "Alterado", "address", "A".repeat(256)))) {
             mockMvc.perform(put("/api/clients/{id}", id)
-                    .with(user("admin").roles("ADMIN")).with(csrf())
+                    .with(asProfile("admin", "ADMIN")).with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(payload)))
                 .andExpect(status().isBadRequest());
@@ -181,7 +182,7 @@ class ClientControllerIntegrationTest {
         Client savedClient = clientRepository.save(client);
 
         mockMvc.perform(delete("/api/clients/{id}", savedClient.getId())
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf()))
             .andExpect(status().isNoContent());
 
@@ -210,7 +211,7 @@ class ClientControllerIntegrationTest {
         rmaRecordRepository.save(rma);
 
         mockMvc.perform(delete("/api/clients/{id}", savedClient.getId())
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf()))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value(

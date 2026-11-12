@@ -1,5 +1,6 @@
 package br.com.navitasassist.controller;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,7 +38,7 @@ class HttpProtocolErrorIntegrationTest {
 
     @Test
     void unsupportedMethodPreservesAllowAndApiErrorContract() throws Exception {
-        mvc.perform(patch("/api/products").with(user("admin").roles("ADMIN")).with(csrf())
+        mvc.perform(patch("/api/products").with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"secret\":\"private-payload\"}"))
             .andExpect(status().isMethodNotAllowed())
             .andExpect(header().string(HttpHeaders.ALLOW, containsString("GET")))
@@ -55,7 +56,7 @@ class HttpProtocolErrorIntegrationTest {
     @Test
     void unsupportedMediaTypePreservesAcceptAndDoesNotCreateProduct() throws Exception {
         long before = products.count();
-        mvc.perform(post("/api/products").with(user("desk").roles("SERVICE_DESK")).with(csrf())
+        mvc.perform(post("/api/products").with(asProfile("desk", "SERVICE_DESK")).with(csrf())
                 .contentType(MediaType.TEXT_PLAIN).content("private-payload"))
             .andExpect(status().isUnsupportedMediaType())
             .andExpect(header().string(HttpHeaders.ACCEPT, containsString("application/json")))
@@ -74,21 +75,21 @@ class HttpProtocolErrorIntegrationTest {
         mvc.perform(post("/api/products").with(csrf()).contentType(MediaType.TEXT_PLAIN).content("invalid"))
             .andExpect(status().isUnauthorized());
         mvc.perform(patch("/api/products").with(csrf())).andExpect(status().isUnauthorized());
-        mvc.perform(post("/api/products").with(user("viewer").roles("VIEWER")).with(csrf()).contentType(MediaType.TEXT_PLAIN).content("invalid"))
+        mvc.perform(post("/api/products").with(asProfile("viewer", "VIEWER")).with(csrf()).contentType(MediaType.TEXT_PLAIN).content("invalid"))
             .andExpect(status().isForbidden());
-        mvc.perform(patch("/api/products").with(user("desk").roles("SERVICE_DESK")).with(csrf()))
+        mvc.perform(patch("/api/products").with(asProfile("desk", "SERVICE_DESK")).with(csrf()))
             .andExpect(status().isForbidden());
-        mvc.perform(post("/api/products").with(user("admin").roles("ADMIN")).contentType(MediaType.TEXT_PLAIN).content("invalid"))
+        mvc.perform(post("/api/products").with(asProfile("admin", "ADMIN")).contentType(MediaType.TEXT_PLAIN).content("invalid"))
             .andExpect(status().isForbidden());
-        mvc.perform(patch("/api/products").with(user("admin").roles("ADMIN"))).andExpect(status().isForbidden());
+        mvc.perform(patch("/api/products").with(asProfile("admin", "ADMIN"))).andExpect(status().isForbidden());
     }
 
     @Test
     void validRequestsValidationAndNotFoundKeepExistingStatusCodes() throws Exception {
-        mvc.perform(get("/api/products").with(user("viewer").roles("VIEWER"))).andExpect(status().isOk());
-        mvc.perform(post("/api/products").with(user("admin").roles("ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{}"))
+        mvc.perform(get("/api/products").with(asProfile("viewer", "VIEWER"))).andExpect(status().isOk());
+        mvc.perform(post("/api/products").with(asProfile("admin", "ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{}"))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Validation failed"));
-        mvc.perform(get("/api/products/9223372036854775807").with(user("viewer").roles("VIEWER")))
+        mvc.perform(get("/api/products/9223372036854775807").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isNotFound());
     }
 

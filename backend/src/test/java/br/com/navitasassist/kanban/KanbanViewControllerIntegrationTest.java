@@ -1,5 +1,6 @@
 package br.com.navitasassist.kanban;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -63,7 +64,7 @@ class KanbanViewControllerIntegrationTest {
     @Test
     void shouldPersistOwnViewsAndKeepOnlyOneDefault() throws Exception {
         mockMvc.perform(post("/api/kanban-views")
-                .with(user("view.alice").roles("VIEWER"))
+                .with(asProfile("view.alice", "VIEWER"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(viewJson("  Minha visão  ", true, filters("urgente"))))
@@ -73,14 +74,14 @@ class KanbanViewControllerIntegrationTest {
             .andExpect(jsonPath("$.filters.query").value("urgente"));
 
         mockMvc.perform(post("/api/kanban-views")
-                .with(user("view.alice").roles("VIEWER"))
+                .with(asProfile("view.alice", "VIEWER"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(viewJson("Segunda", true, filters("garantia"))))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.defaultView").value(true));
 
-        mockMvc.perform(get("/api/kanban-views").with(user("view.alice").roles("VIEWER")))
+        mockMvc.perform(get("/api/kanban-views").with(asProfile("view.alice", "VIEWER")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(2))
             .andExpect(jsonPath("$[0].name").value("Minha visão"))
@@ -89,7 +90,7 @@ class KanbanViewControllerIntegrationTest {
             .andExpect(jsonPath("$[1].defaultView").value(true));
 
         mockMvc.perform(post("/api/kanban-views")
-                .with(user("view.alice").roles("VIEWER"))
+                .with(asProfile("view.alice", "VIEWER"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(viewJson("minha VISÃO", false, filters(null))))
@@ -100,7 +101,7 @@ class KanbanViewControllerIntegrationTest {
     @Test
     void shouldHideViewsOwnedByAnotherUser() throws Exception {
         String response = mockMvc.perform(post("/api/kanban-views")
-                .with(user("view.alice").roles("VIEWER"))
+                .with(asProfile("view.alice", "VIEWER"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(viewJson("Privada", false, filters(null))))
@@ -108,24 +109,24 @@ class KanbanViewControllerIntegrationTest {
             .andReturn().getResponse().getContentAsString();
         long viewId = objectMapper.readTree(response).get("id").asLong();
 
-        mockMvc.perform(get("/api/kanban-views").with(user("view.bob").roles("VIEWER")))
+        mockMvc.perform(get("/api/kanban-views").with(asProfile("view.bob", "VIEWER")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(0));
 
         mockMvc.perform(put("/api/kanban-views/{id}", viewId)
-                .with(user("view.bob").roles("VIEWER"))
+                .with(asProfile("view.bob", "VIEWER"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(viewJson("Invadida", false, filters(null))))
             .andExpect(status().isNotFound());
 
         mockMvc.perform(patch("/api/kanban-views/{id}/default", viewId)
-                .with(user("view.bob").roles("VIEWER"))
+                .with(asProfile("view.bob", "VIEWER"))
                 .with(csrf()))
             .andExpect(status().isNotFound());
 
         mockMvc.perform(delete("/api/kanban-views/{id}", viewId)
-                .with(user("view.bob").roles("VIEWER"))
+                .with(asProfile("view.bob", "VIEWER"))
                 .with(csrf()))
             .andExpect(status().isNotFound());
     }
@@ -133,7 +134,7 @@ class KanbanViewControllerIntegrationTest {
     @Test
     void shouldRenameSetDefaultAndDeleteOwnView() throws Exception {
         String response = mockMvc.perform(post("/api/kanban-views")
-                .with(user("view.alice").roles("VIEWER"))
+                .with(asProfile("view.alice", "VIEWER"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(viewJson("Original", false, filters("inicial"))))
@@ -142,7 +143,7 @@ class KanbanViewControllerIntegrationTest {
         long viewId = objectMapper.readTree(response).get("id").asLong();
 
         mockMvc.perform(put("/api/kanban-views/{id}", viewId)
-                .with(user("view.alice").roles("VIEWER"))
+                .with(asProfile("view.alice", "VIEWER"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(viewJson("Renomeada", false, filters("inicial"))))
@@ -150,17 +151,17 @@ class KanbanViewControllerIntegrationTest {
             .andExpect(jsonPath("$.name").value("Renomeada"));
 
         mockMvc.perform(patch("/api/kanban-views/{id}/default", viewId)
-                .with(user("view.alice").roles("VIEWER"))
+                .with(asProfile("view.alice", "VIEWER"))
                 .with(csrf()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.defaultView").value(true));
 
         mockMvc.perform(delete("/api/kanban-views/{id}", viewId)
-                .with(user("view.alice").roles("VIEWER"))
+                .with(asProfile("view.alice", "VIEWER"))
                 .with(csrf()))
             .andExpect(status().isNoContent());
 
-        mockMvc.perform(get("/api/kanban-views").with(user("view.alice").roles("VIEWER")))
+        mockMvc.perform(get("/api/kanban-views").with(asProfile("view.alice", "VIEWER")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(0));
     }
@@ -168,7 +169,7 @@ class KanbanViewControllerIntegrationTest {
     @Test
     void shouldValidateNamesAndFilterCombinations() throws Exception {
         mockMvc.perform(post("/api/kanban-views")
-                .with(user("view.alice").roles("VIEWER"))
+                .with(asProfile("view.alice", "VIEWER"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(viewJson(" ", false, filters(null))))
@@ -179,7 +180,7 @@ class KanbanViewControllerIntegrationTest {
         invalidFilters.put("assigneeId", 7);
         invalidFilters.put("unassignedOnly", true);
         mockMvc.perform(post("/api/kanban-views")
-                .with(user("view.alice").roles("VIEWER"))
+                .with(asProfile("view.alice", "VIEWER"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(viewJson("Conflito", false, invalidFilters)))
@@ -190,7 +191,7 @@ class KanbanViewControllerIntegrationTest {
         invalidRange.put("entryFrom", "2026-10-20");
         invalidRange.put("entryTo", "2026-10-19");
         mockMvc.perform(post("/api/kanban-views")
-                .with(user("view.alice").roles("VIEWER"))
+                .with(asProfile("view.alice", "VIEWER"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(viewJson("Datas", false, invalidRange)))
@@ -209,11 +210,11 @@ class KanbanViewControllerIntegrationTest {
         for (boolean blocked : new boolean[] { true, false }) {
             Map<String, Object> values = filters(null);
             values.put("blocked", blocked);
-            mockMvc.perform(post("/api/kanban-views").with(user("view.alice").roles("VIEWER")).with(csrf())
+            mockMvc.perform(post("/api/kanban-views").with(asProfile("view.alice", "VIEWER")).with(csrf())
                     .contentType(MediaType.APPLICATION_JSON).content(viewJson("Blocked " + blocked, false, values)))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.filters.blocked").value(blocked));
         }
-        mockMvc.perform(get("/api/kanban-views").with(user("view.alice").roles("VIEWER")))
+        mockMvc.perform(get("/api/kanban-views").with(asProfile("view.alice", "VIEWER")))
             .andExpect(status().isOk()).andExpect(jsonPath("$[0].filters.blocked").value(false))
             .andExpect(jsonPath("$[1].filters.blocked").value(true));
     }

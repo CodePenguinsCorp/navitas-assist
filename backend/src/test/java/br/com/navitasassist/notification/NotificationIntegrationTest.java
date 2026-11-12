@@ -1,5 +1,6 @@
 package br.com.navitasassist.notification;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -65,7 +66,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 @ActiveProfiles("test")
 class NotificationIntegrationTest {
 
-    private static final RequestPostProcessor ADMIN = user("admin").roles("ADMIN");
+    private static final RequestPostProcessor ADMIN = asProfile("admin", "ADMIN");
 
     @Autowired
     private MockMvc mockMvc;
@@ -362,7 +363,7 @@ class NotificationIntegrationTest {
     }
 
     private RequestPostProcessor as(UserAccount account) {
-        return user(account.getUsername()).roles(account.getRole().name());
+        return asProfile(account.getUsername(), account.getRole().name());
     }
 
     private long countFor(UserAccount account, NotificationEventType type) {

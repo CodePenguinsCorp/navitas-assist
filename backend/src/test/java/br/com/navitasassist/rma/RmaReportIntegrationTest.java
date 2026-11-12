@@ -1,5 +1,6 @@
 package br.com.navitasassist.rma;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -75,7 +76,7 @@ class RmaReportIntegrationTest {
         clients.save(other);
         saveRma("RMA-OTHER", "2026-10-10", RmaStatus.RECEIVED, other);
 
-        mockMvc.perform(get("/api/reports/rmas").with(user("viewer").roles("VIEWER"))
+        mockMvc.perform(get("/api/reports/rmas").with(asProfile("viewer", "VIEWER"))
                 .param("entryFrom", "2026-10-01").param("entryTo", "2026-10-20")
                 .param("status", "RECEIVED").param("clientId", client.getId().toString()))
             .andExpect(status().isOk())
@@ -112,7 +113,7 @@ class RmaReportIntegrationTest {
         rma.setTrackingCode("BR123");
         rmas.saveAndFlush(rma);
 
-        mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31").with(user("tech").roles("TECHNICIAN")))
+        mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31").with(asProfile("tech", "TECHNICIAN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.rmas[0].diagnosis.foundFailure").value("Conector danificado"))
             .andExpect(jsonPath("$.rmas[0].repairSummary").value("Conector substituído"))
@@ -134,7 +135,7 @@ class RmaReportIntegrationTest {
         addHistory(rma, RmaStatus.IN_DIAGNOSIS, entry);
         addHistory(rma, RmaStatus.IN_DIAGNOSIS, entry.plusSeconds(1800));
         rmas.saveAndFlush(rma);
-        var result = mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31").with(user("admin").roles("ADMIN")))
+        var result = mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31").with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk()).andReturn();
         var body = objectMapper.readTree(result.getResponse().getContentAsString());
         assertEquals(Duration.between(entry, Instant.parse(body.get("generatedAt").asText())).getSeconds(),
@@ -146,20 +147,20 @@ class RmaReportIntegrationTest {
     void supportsEmptyAndOneSidedFilters() throws Exception {
         saveRma("RMA-OLD", "2026-09-30", RmaStatus.RECEIVED, client);
         saveRma("RMA-NEW", "2026-10-01", RmaStatus.RECEIVED, client);
-        mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-10-01").with(user("a").roles("ADMIN")))
+        mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-10-01").with(asProfile("a", "ADMIN")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.rmas", hasSize(1)))
             .andExpect(jsonPath("$.rmas[0].code").value("RMA-NEW"));
-        mockMvc.perform(get("/api/reports/rmas").param("entryTo", "2026-09-30").with(user("a").roles("ADMIN")))
+        mockMvc.perform(get("/api/reports/rmas").param("entryTo", "2026-09-30").with(asProfile("a", "ADMIN")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.rmas", hasSize(1)))
             .andExpect(jsonPath("$.rmas[0].code").value("RMA-OLD"));
-        mockMvc.perform(get("/api/reports/rmas").param("clientId", "999999").with(user("a").roles("ADMIN")))
+        mockMvc.perform(get("/api/reports/rmas").param("clientId", "999999").with(asProfile("a", "ADMIN")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.rmas", hasSize(0)));
     }
 
     @ParameterizedTest
     @CsvSource({"entryFrom,2026-02-30", "entryTo,not-a-date", "status,UNKNOWN", "clientId,0", "clientId,-1", "clientId,abc"})
     void rejectsMalformedFilters(String parameter, String value) throws Exception {
-        mockMvc.perform(get("/api/reports/rmas").param(parameter, value).with(user("a").roles("ADMIN")))
+        mockMvc.perform(get("/api/reports/rmas").param(parameter, value).with(asProfile("a", "ADMIN")))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.status").value(400));
     }
 
@@ -170,7 +171,7 @@ class RmaReportIntegrationTest {
         saveRma("RMA-EDGE", today.minusDays(89).toString(), RmaStatus.RECEIVED, client);
         saveRma("RMA-OUTSIDE", today.minusDays(90).toString(), RmaStatus.RECEIVED, client);
 
-        mockMvc.perform(get("/api/reports/rmas").with(user("a").roles("ADMIN")))
+        mockMvc.perform(get("/api/reports/rmas").with(asProfile("a", "ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.entryFrom").value(today.minusDays(89).toString()))
             .andExpect(jsonPath("$.entryTo").value(today.toString()))
@@ -178,10 +179,10 @@ class RmaReportIntegrationTest {
             .andExpect(jsonPath("$.rmas[0].code").value("RMA-RECENT"))
             .andExpect(jsonPath("$.rmas[1].code").value("RMA-EDGE"));
 
-        mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2025-01-01").param("entryTo", "2026-01-02").with(user("a").roles("ADMIN")))
+        mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2025-01-01").param("entryTo", "2026-01-02").with(asProfile("a", "ADMIN")))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value("Report period must be at most 366 days."));
-        mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2025-01-01").param("entryTo", "2026-01-01").with(user("a").roles("ADMIN")))
+        mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2025-01-01").param("entryTo", "2026-01-01").with(asProfile("a", "ADMIN")))
             .andExpect(status().isOk());
     }
 
@@ -214,7 +215,7 @@ class RmaReportIntegrationTest {
         Statistics statistics = entityManager.getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
         statistics.setStatisticsEnabled(true);
         statistics.clear();
-        mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31").with(user("a").roles("ADMIN")))
+        mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31").with(asProfile("a", "ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.rmas", hasSize(count)))
             .andExpect(jsonPath("$.rmas[0].items", hasSize(2)))
@@ -230,7 +231,7 @@ class RmaReportIntegrationTest {
         other.setLegalName("Alfa cliente");
         clients.save(other);
 
-        mockMvc.perform(get("/api/clients/options").with(user("viewer").roles("VIEWER")))
+        mockMvc.perform(get("/api/clients/options").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$", hasSize(2)))
             .andExpect(jsonPath("$[0].legalName").value("Alfa cliente"))
@@ -240,20 +241,20 @@ class RmaReportIntegrationTest {
     @Test
     void rejectsReversedPeriod() throws Exception {
         mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-10-21").param("entryTo", "2026-10-20")
-                .with(user("a").roles("ADMIN")))
+                .with(asProfile("a", "ADMIN")))
             .andExpect(status().isBadRequest());
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"ADMIN", "TECHNICIAN", "VIEWER"})
     void permitsExistingReportRoles(String role) throws Exception {
-        mockMvc.perform(get("/api/reports/rmas").with(user("reader").roles(role))).andExpect(status().isOk());
+        mockMvc.perform(get("/api/reports/rmas").with(asProfile("reader", role))).andExpect(status().isOk());
     }
 
     @Test
     void rejectsUnauthenticatedAndServiceDeskRequests() throws Exception {
         mockMvc.perform(get("/api/reports/rmas")).andExpect(status().isUnauthorized());
-        mockMvc.perform(get("/api/reports/rmas").with(user("desk").roles("SERVICE_DESK")))
+        mockMvc.perform(get("/api/reports/rmas").with(asProfile("desk", "SERVICE_DESK")))
             .andExpect(status().isForbidden());
     }
 

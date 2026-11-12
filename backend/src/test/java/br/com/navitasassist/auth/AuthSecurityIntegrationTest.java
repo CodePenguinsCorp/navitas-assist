@@ -1,5 +1,6 @@
 package br.com.navitasassist.auth;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -92,7 +93,7 @@ class AuthSecurityIntegrationTest {
         Cookie token = requestCsrfCookie();
         var request = get("/api/auth/csrf").cookie(token);
         if (authenticated) {
-            request.with(user("viewer").roles("VIEWER"));
+            request.with(asProfile("viewer", "VIEWER"));
         }
 
         mockMvc.perform(request)
@@ -254,28 +255,28 @@ class AuthSecurityIntegrationTest {
     void viewerShouldReadCatalogAndRmasButNotMutateData() throws Exception {
         Cookie csrfCookie = requestCsrfCookie();
 
-        mockMvc.perform(get("/api/clients").with(user("viewer").roles("VIEWER")))
+        mockMvc.perform(get("/api/clients").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk());
-        mockMvc.perform(get("/api/products").with(user("viewer").roles("VIEWER")))
+        mockMvc.perform(get("/api/products").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk());
-        mockMvc.perform(get("/api/rmas").with(user("viewer").roles("VIEWER")))
+        mockMvc.perform(get("/api/rmas").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk());
-        mockMvc.perform(get("/api/users/assignable").with(user("viewer").roles("VIEWER")))
+        mockMvc.perform(get("/api/users/assignable").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/clients")
-                .with(user("viewer").roles("VIEWER"))
+                .with(asProfile("viewer", "VIEWER"))
                 .with(csrfCookie(csrfCookie))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"legalName\":\"Forbidden client\"}"))
             .andExpect(status().isForbidden());
         mockMvc.perform(patch("/api/rmas/999999/status")
-                .with(user("viewer").roles("VIEWER"))
+                .with(asProfile("viewer", "VIEWER"))
                 .with(csrfCookie(csrfCookie))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"status\":\"TRIAGE\"}"))
             .andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/users").with(user("viewer").roles("VIEWER")))
+        mockMvc.perform(get("/api/users").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isForbidden());
     }
 
@@ -284,53 +285,53 @@ class AuthSecurityIntegrationTest {
         Cookie csrfCookie = requestCsrfCookie();
 
         mockMvc.perform(post("/api/clients")
-                .with(user("service.desk").roles("SERVICE_DESK"))
+                .with(asProfile("service.desk", "SERVICE_DESK"))
                 .with(csrfCookie(csrfCookie))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"legalName\":\"Authorized client\"}"))
             .andExpect(status().isCreated());
         mockMvc.perform(post("/api/products")
-                .with(user("service.desk").roles("SERVICE_DESK"))
+                .with(asProfile("service.desk", "SERVICE_DESK"))
                 .with(csrfCookie(csrfCookie))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
             .andExpect(status().isBadRequest());
         mockMvc.perform(post("/api/rmas")
-                .with(user("service.desk").roles("SERVICE_DESK"))
+                .with(asProfile("service.desk", "SERVICE_DESK"))
                 .with(csrfCookie(csrfCookie))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
             .andExpect(status().isBadRequest());
         mockMvc.perform(put("/api/rmas/999999")
-                .with(user("service.desk").roles("SERVICE_DESK"))
+                .with(asProfile("service.desk", "SERVICE_DESK"))
                 .with(csrfCookie(csrfCookie))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
             .andExpect(status().isNotFound());
         mockMvc.perform(patch("/api/rmas/999999/assignee")
-                .with(user("service.desk").roles("SERVICE_DESK"))
+                .with(asProfile("service.desk", "SERVICE_DESK"))
                 .with(csrfCookie(csrfCookie))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"assigneeId\":null}"))
             .andExpect(status().isNotFound());
         mockMvc.perform(patch("/api/rmas/999999/status")
-                .with(user("service.desk").roles("SERVICE_DESK"))
+                .with(asProfile("service.desk", "SERVICE_DESK"))
                 .with(csrfCookie(csrfCookie))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"status\":\"TRIAGE\"}"))
             .andExpect(status().isNotFound());
         mockMvc.perform(delete("/api/clients/999999")
-                .with(user("service.desk").roles("SERVICE_DESK"))
+                .with(asProfile("service.desk", "SERVICE_DESK"))
                 .with(csrfCookie(csrfCookie)))
             .andExpect(status().isNotFound());
 
         mockMvc.perform(put("/api/rmas/999999/diagnosis")
-                .with(user("service.desk").roles("SERVICE_DESK"))
+                .with(asProfile("service.desk", "SERVICE_DESK"))
                 .with(csrfCookie(csrfCookie))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(validDiagnosis()))
             .andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/users").with(user("service.desk").roles("SERVICE_DESK")))
+        mockMvc.perform(get("/api/users").with(asProfile("service.desk", "SERVICE_DESK")))
             .andExpect(status().isForbidden());
     }
 
@@ -339,38 +340,38 @@ class AuthSecurityIntegrationTest {
         Cookie csrfCookie = requestCsrfCookie();
 
         mockMvc.perform(patch("/api/rmas/999999/status")
-                .with(user("technician").roles("TECHNICIAN"))
+                .with(asProfile("technician", "TECHNICIAN"))
                 .with(csrfCookie(csrfCookie))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"status\":\"IN_DIAGNOSIS\"}"))
             .andExpect(status().isNotFound());
         mockMvc.perform(patch("/api/rmas/999999/assignee")
-                .with(user("technician").roles("TECHNICIAN"))
+                .with(asProfile("technician", "TECHNICIAN"))
                 .with(csrfCookie(csrfCookie))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"assigneeId\":null}"))
             .andExpect(status().isForbidden());
         mockMvc.perform(put("/api/rmas/999999/diagnosis")
-                .with(user("technician").roles("TECHNICIAN"))
+                .with(asProfile("technician", "TECHNICIAN"))
                 .with(csrfCookie(csrfCookie))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(validDiagnosis()))
             .andExpect(status().isNotFound());
 
         mockMvc.perform(post("/api/rmas")
-                .with(user("technician").roles("TECHNICIAN"))
+                .with(asProfile("technician", "TECHNICIAN"))
                 .with(csrfCookie(csrfCookie))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
             .andExpect(status().isForbidden());
         mockMvc.perform(put("/api/rmas/999999")
-                .with(user("technician").roles("TECHNICIAN"))
+                .with(asProfile("technician", "TECHNICIAN"))
                 .with(csrfCookie(csrfCookie))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
             .andExpect(status().isForbidden());
         mockMvc.perform(post("/api/products")
-                .with(user("technician").roles("TECHNICIAN"))
+                .with(asProfile("technician", "TECHNICIAN"))
                 .with(csrfCookie(csrfCookie))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
@@ -381,10 +382,10 @@ class AuthSecurityIntegrationTest {
     void adminShouldKeepFullApiAccess() throws Exception {
         Cookie csrfCookie = requestCsrfCookie();
 
-        mockMvc.perform(get("/api/users").with(user("admin").roles("ADMIN")))
+        mockMvc.perform(get("/api/users").with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk());
         mockMvc.perform(delete("/api/products/999999")
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrfCookie(csrfCookie)))
             .andExpect(status().isNotFound());
     }

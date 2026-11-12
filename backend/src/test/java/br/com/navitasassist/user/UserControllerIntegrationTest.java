@@ -1,5 +1,6 @@
 package br.com.navitasassist.user;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
@@ -62,7 +63,7 @@ class UserControllerIntegrationTest {
         UserAccount user = createUser("operator", "Operator", "old-password");
 
         mockMvc.perform(put("/api/users/{id}", user.getId())
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(Map.of(
@@ -85,7 +86,7 @@ class UserControllerIntegrationTest {
         UserAccount user = createUser("delete.me", "Delete Me", "password123");
 
         mockMvc.perform(delete("/api/users/{id}", user.getId())
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf()))
             .andExpect(status().isNoContent());
 
@@ -97,7 +98,7 @@ class UserControllerIntegrationTest {
         UserAccount admin = userAccountRepository.findByUsernameIgnoreCase("admin").orElseThrow();
 
         mockMvc.perform(delete("/api/users/{id}", admin.getId())
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf()))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value("You cannot delete your own user account."));
@@ -112,7 +113,7 @@ class UserControllerIntegrationTest {
         long count = userAccountRepository.count();
 
         mockMvc.perform(post("/api/users")
-                .with(user("admin").roles("ADMIN")).with(csrf())
+                .with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(userJson(username, "Changed name", "changed-password", UserRole.ADMIN, false)))
             .andExpect(status().isBadRequest())
@@ -132,7 +133,7 @@ class UserControllerIntegrationTest {
         long count = userAccountRepository.count();
 
         mockMvc.perform(put("/api/users/{id}", edited.getId())
-                .with(user("admin").roles("ADMIN")).with(csrf())
+                .with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(userJson(username, "Changed name", "changed-password", UserRole.ADMIN, false)))
             .andExpect(status().isBadRequest())
@@ -152,7 +153,7 @@ class UserControllerIntegrationTest {
         long count = userAccountRepository.count();
 
         mockMvc.perform(put("/api/users/{id}", existing.getId())
-                .with(user("admin").roles("ADMIN")).with(csrf())
+                .with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(userJson(username, "Updated Operator", null, UserRole.SERVICE_DESK, true)))
             .andExpect(status().isOk())
@@ -171,7 +172,7 @@ class UserControllerIntegrationTest {
     @Test
     void shouldNormalizeUniqueUsernamesAndPreserveInternalSpaces() throws Exception {
         String response = mockMvc.perform(post("/api/users")
-                .with(user("admin").roles("ADMIN")).with(csrf())
+                .with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(userJson(" unique user ", "Unique User", "original-password", UserRole.SERVICE_DESK, true)))
             .andExpect(status().isCreated())
@@ -183,7 +184,7 @@ class UserControllerIntegrationTest {
         assertThat(userAccountRepository.findById(id).orElseThrow().getUsername()).isEqualTo("unique user");
 
         mockMvc.perform(put("/api/users/{id}", id)
-                .with(user("admin").roles("ADMIN")).with(csrf())
+                .with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(userJson(" changed user ", "Changed User", null, UserRole.SERVICE_DESK, true)))
             .andExpect(status().isOk())
@@ -200,10 +201,10 @@ class UserControllerIntegrationTest {
         long count = userAccountRepository.count();
         String body = userJson(" unauthorized.user ", "Changed name", "changed-password", UserRole.ADMIN, false);
 
-        mockMvc.perform(post("/api/users").with(user("unauthorized").roles(role)).with(csrf())
+        mockMvc.perform(post("/api/users").with(asProfile("unauthorized", role)).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isForbidden());
-        mockMvc.perform(put("/api/users/{id}", existing.getId()).with(user("unauthorized").roles(role)).with(csrf())
+        mockMvc.perform(put("/api/users/{id}", existing.getId()).with(asProfile("unauthorized", role)).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isForbidden());
 
@@ -217,10 +218,10 @@ class UserControllerIntegrationTest {
         long count = userAccountRepository.count();
         String body = userJson(" unauthorized.user ", "Changed name", "changed-password", UserRole.ADMIN, false);
 
-        mockMvc.perform(post("/api/users").with(user("admin").roles("ADMIN"))
+        mockMvc.perform(post("/api/users").with(asProfile("admin", "ADMIN"))
                 .contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isForbidden());
-        mockMvc.perform(put("/api/users/{id}", existing.getId()).with(user("admin").roles("ADMIN"))
+        mockMvc.perform(put("/api/users/{id}", existing.getId()).with(asProfile("admin", "ADMIN"))
                 .contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isForbidden());
 
@@ -249,11 +250,11 @@ class UserControllerIntegrationTest {
         long count = userAccountRepository.count();
         String body = userJson("u".repeat(61), "Changed name", "changed-password", UserRole.ADMIN, false);
 
-        mockMvc.perform(post("/api/users").with(user("admin").roles("ADMIN")).with(csrf())
+        mockMvc.perform(post("/api/users").with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.details", hasItem(startsWith("username:"))));
-        mockMvc.perform(put("/api/users/{id}", existing.getId()).with(user("admin").roles("ADMIN")).with(csrf())
+        mockMvc.perform(put("/api/users/{id}", existing.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.details", hasItem(startsWith("username:"))));

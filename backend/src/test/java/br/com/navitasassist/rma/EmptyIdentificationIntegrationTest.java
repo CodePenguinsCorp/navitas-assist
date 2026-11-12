@@ -1,5 +1,6 @@
 package br.com.navitasassist.rma;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -80,7 +81,7 @@ class EmptyIdentificationIntegrationTest {
         assertNull(before.get("manufactured_at"));
         var updatedAt = jdbc.queryForObject("select updated_at from rmas where id = ?", Object.class, saved.getId());
         for (String path : List.of("/api/rmas/" + saved.getId(), "/api/rmas/code/" + saved.getCode())) {
-            mvc.perform(get(path).with(user("viewer").roles("VIEWER")))
+            mvc.perform(get(path).with(asProfile("viewer", "VIEWER")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.batchNumber").value(nullValue()))
                 .andExpect(jsonPath("$.serialNumber").value(nullValue())).andExpect(jsonPath("$.manufacturedAt").value(nullValue()))
                 .andExpect(jsonPath("$.items[0].serialNumber").value(nullValue()))
@@ -88,7 +89,7 @@ class EmptyIdentificationIntegrationTest {
                 .andExpect(jsonPath("$.items[0].warrantyMonths").value(withItem ? 6 : 12))
                 .andExpect(jsonPath("$.items[0].warrantyStatus").value("PENDING"));
         }
-        mvc.perform(get("/api/rmas").param("query", saved.getCode()).with(user("viewer").roles("VIEWER")))
+        mvc.perform(get("/api/rmas").param("query", saved.getCode()).with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].id").value(saved.getId()));
         assertEquals(before, row("rmas", saved.getId()));
         assertEquals(updatedAt, jdbc.queryForObject("select updated_at from rmas where id = ?", Object.class, saved.getId()));
@@ -99,14 +100,14 @@ class EmptyIdentificationIntegrationTest {
     @ValueSource(booleans = {false, true})
     void invalidEditIsBusinessErrorAndIdentifiedItemsCanRepairRecord(boolean withItem) throws Exception {
         RmaRecord saved = fixture(withItem);
-        mvc.perform(put("/api/rmas/{id}", saved.getId()).with(user("admin").roles("ADMIN")).with(csrf())
+        mvc.perform(put("/api/rmas/{id}", saved.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content("{\"priority\":\"HIGH\"}"))
             .andExpect(status().isBadRequest());
         assertEquals(RmaPriority.MEDIUM, rmas.findById(saved.getId()).orElseThrow().getPriority());
-        mvc.perform(put("/api/rmas/{id}", saved.getId()).with(user("admin").roles("ADMIN")).with(csrf())
+        mvc.perform(put("/api/rmas/{id}", saved.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(Map.of("items", identifiedItems()))))
             .andExpect(status().isOk()).andExpect(jsonPath("$.serialNumber").value("NAV69-SERIAL"));
-        mvc.perform(get("/api/rmas/{id}", saved.getId()).with(user("viewer").roles("VIEWER")))
+        mvc.perform(get("/api/rmas/{id}", saved.getId()).with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].serialNumber").value("NAV69-SERIAL"));
         assertEquals("NAV69-SERIAL", row("rmas", saved.getId()).get("serial_number"));
     }
@@ -117,15 +118,15 @@ class EmptyIdentificationIntegrationTest {
             "purchaseDateUnknown", true,
             "entryDate", LocalDate.now(ZoneId.of("America/Sao_Paulo")).toString(), "reportedFailure", "Failure",
             "items", List.of(Map.of("productId", product.getId()))));
-        mvc.perform(post("/api/rmas").with(user("admin").roles("ADMIN")).with(csrf())
+        mvc.perform(post("/api/rmas").with(asProfile("admin", "ADMIN")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(payload))).andExpect(status().isBadRequest());
         payload.put("items", identifiedItems());
-        var response = mvc.perform(post("/api/rmas").with(user("admin").roles("ADMIN")).with(csrf())
+        var response = mvc.perform(post("/api/rmas").with(asProfile("admin", "ADMIN")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(payload)))
             .andExpect(status().isCreated()).andReturn();
         long id = mapper.readTree(response.getResponse().getContentAsString()).get("id").asLong();
         createdIds.add(id);
-        mvc.perform(get("/api/rmas/{id}", id).with(user("viewer").roles("VIEWER")))
+        mvc.perform(get("/api/rmas/{id}", id).with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.serialNumber").value("NAV69-SERIAL"));
     }
 
@@ -133,7 +134,7 @@ class EmptyIdentificationIntegrationTest {
     void securityStillProtectsEmptyIdentificationRecords() throws Exception {
         RmaRecord saved = fixture(false);
         mvc.perform(get("/api/rmas/{id}", saved.getId())).andExpect(status().isUnauthorized());
-        mvc.perform(put("/api/rmas/{id}", saved.getId()).with(user("viewer").roles("VIEWER")).with(csrf())
+        mvc.perform(put("/api/rmas/{id}", saved.getId()).with(asProfile("viewer", "VIEWER")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content("{\"priority\":\"HIGH\"}")).andExpect(status().isForbidden());
     }
 

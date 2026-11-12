@@ -1,5 +1,6 @@
 package br.com.navitasassist.auth;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -73,7 +74,7 @@ class PasswordBoundaryIntegrationTest {
     @MethodSource("excessivePasswords")
     void shouldRejectExcessivePasswordOnCreate(String password) throws Exception {
         long count = accounts.count();
-        MvcResult result = mockMvc.perform(post("/api/users").with(user("admin").roles("ADMIN")).with(csrf())
+        MvcResult result = mockMvc.perform(post("/api/users").with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(userJson(password)))
             .andExpect(status().isBadRequest()).andReturn();
         assertThat(result.getResponse().getContentAsString(StandardCharsets.UTF_8)).doesNotContain(password);
@@ -85,7 +86,7 @@ class PasswordBoundaryIntegrationTest {
     @MethodSource("excessiveUpdatePasswords")
     void shouldRejectExcessivePasswordOnUpdateWithoutPartialChanges(String password) throws Exception {
         UserAccount original = existingAccount("original-password");
-        mockMvc.perform(put("/api/users/{id}", original.getId()).with(user("admin").roles("ADMIN")).with(csrf())
+        mockMvc.perform(put("/api/users/{id}", original.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(userJson(password)))
             .andExpect(status().isBadRequest());
         UserAccount persisted = accounts.findById(original.getId()).orElseThrow();
@@ -99,7 +100,7 @@ class PasswordBoundaryIntegrationTest {
     @ParameterizedTest
     @MethodSource("validPasswords")
     void shouldAcceptValidPasswordsAndRejectAnAppendedSuffix(String password) throws Exception {
-        String response = mockMvc.perform(post("/api/users").with(user("admin").roles("ADMIN")).with(csrf())
+        String response = mockMvc.perform(post("/api/users").with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(userJson(password, true)))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.password").doesNotExist())
@@ -109,7 +110,7 @@ class PasswordBoundaryIntegrationTest {
         login(password, 200);
         login(password + "x", 401);
 
-        mockMvc.perform(put("/api/users/{id}", id).with(user("admin").roles("ADMIN")).with(csrf())
+        mockMvc.perform(put("/api/users/{id}", id).with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(userJson(password, true)))
             .andExpect(status().isOk());
         UserAccount updated = accounts.findById(id).orElseThrow();
@@ -129,7 +130,7 @@ class PasswordBoundaryIntegrationTest {
         UserAccount existing = existingAccount("original-password");
         String originalHash = existing.getPasswordHash();
         login("original-password", 200);
-        mockMvc.perform(put("/api/users/{id}", existing.getId()).with(user("admin").roles("ADMIN")).with(csrf())
+        mockMvc.perform(put("/api/users/{id}", existing.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(userJson(null)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.passwordHash").doesNotExist());
@@ -139,7 +140,7 @@ class PasswordBoundaryIntegrationTest {
     @Test
     void shouldPreserveAnOptionalBlankPassword() throws Exception {
         UserAccount existing = existingAccount("original-password");
-        mockMvc.perform(put("/api/users/{id}", existing.getId()).with(user("admin").roles("ADMIN")).with(csrf())
+        mockMvc.perform(put("/api/users/{id}", existing.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(userJson("      ")))
             .andExpect(status().isOk());
         assertThat(accounts.findById(existing.getId()).orElseThrow().getPasswordHash()).isEqualTo(existing.getPasswordHash());

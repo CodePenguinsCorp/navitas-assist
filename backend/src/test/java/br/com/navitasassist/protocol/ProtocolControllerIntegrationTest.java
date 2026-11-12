@@ -1,5 +1,6 @@
 package br.com.navitasassist.protocol;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -89,7 +90,7 @@ class ProtocolControllerIntegrationTest {
     @Test
     void shouldManageVersionedTemplatesOnlyAsAdminAndValidateMeasurements() throws Exception {
         mockMvc.perform(post("/api/protocols/templates")
-                .with(user("tech").roles("TECHNICIAN"))
+                .with(asProfile("tech", "TECHNICIAN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(templateJson("Teste", product.getId(), null, List.of(checkItem("Inspeção", true)))))
@@ -107,14 +108,14 @@ class ProtocolControllerIntegrationTest {
         long templateId = templateId(createTemplate(templateJson("Bancada PWM", product.getId(), null,
             List.of(measurementItem("Tensão de saída", true, "V", 2, "11.50", "12.50")))));
 
-        mockMvc.perform(get("/api/protocols/templates/{id}", templateId).with(user("viewer").roles("VIEWER")))
+        mockMvc.perform(get("/api/protocols/templates/{id}", templateId).with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.currentVersion").value(1))
             .andExpect(jsonPath("$.items[0].unit").value("V"))
             .andExpect(jsonPath("$.items[0].decimalPlaces").value(2))
             .andExpect(jsonPath("$.items[0].minValue").value(11.5));
 
-        mockMvc.perform(delete("/api/protocols/templates/{id}", templateId).with(user("admin").roles("ADMIN")).with(csrf()))
+        mockMvc.perform(delete("/api/protocols/templates/{id}", templateId).with(asProfile("admin", "ADMIN")).with(csrf()))
             .andExpect(status().isForbidden());
     }
 
@@ -126,7 +127,7 @@ class ProtocolControllerIntegrationTest {
         long executionId = execution.get("id").asLong();
 
         mockMvc.perform(put("/api/protocols/templates/{id}", templateId)
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(templateJson("Inspeção visual revisada", null, "Controladores", List.of(checkItem("Carcaça", true), checkItem("Conectores", true)))))
@@ -134,7 +135,7 @@ class ProtocolControllerIntegrationTest {
             .andExpect(jsonPath("$.currentVersion").value(2))
             .andExpect(jsonPath("$.items", hasSize(2)));
 
-        mockMvc.perform(get("/api/protocols/rmas/{rmaId}/executions", rmaId).with(user("viewer").roles("VIEWER")))
+        mockMvc.perform(get("/api/protocols/rmas/{rmaId}/executions", rmaId).with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$", hasSize(1)))
             .andExpect(jsonPath("$[0].id").value(executionId))
@@ -144,7 +145,7 @@ class ProtocolControllerIntegrationTest {
             .andExpect(jsonPath("$[0].items", hasSize(1)));
 
         mockMvc.perform(post("/api/protocols/rmas/{rmaId}/executions", rmaId)
-                .with(user("tech").roles("TECHNICIAN"))
+                .with(asProfile("tech", "TECHNICIAN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"templateId\":" + templateId + "}"))
@@ -154,7 +155,7 @@ class ProtocolControllerIntegrationTest {
         Product other = saveProduct("PROT-2", "Sensor", "Sensores");
         Long otherRmaId = saveRma("RMA-PROT-2", other);
         mockMvc.perform(post("/api/protocols/rmas/{rmaId}/executions", otherRmaId)
-                .with(user("tech").roles("TECHNICIAN"))
+                .with(asProfile("tech", "TECHNICIAN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"templateId\":" + templateId + "}"))
@@ -162,7 +163,7 @@ class ProtocolControllerIntegrationTest {
             .andExpect(jsonPath("$.message").value("This protocol does not apply to the products of the RMA."));
 
         mockMvc.perform(post("/api/protocols/rmas/{rmaId}/executions", rmaId)
-                .with(user("viewer").roles("VIEWER"))
+                .with(asProfile("viewer", "VIEWER"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"templateId\":" + templateId + "}"))
@@ -314,7 +315,7 @@ class ProtocolControllerIntegrationTest {
 
     private ResultActions createTemplate(String json) throws Exception {
         return mockMvc.perform(post("/api/protocols/templates")
-            .with(user("admin").roles("ADMIN"))
+            .with(asProfile("admin", "ADMIN"))
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content(json));
@@ -322,7 +323,7 @@ class ProtocolControllerIntegrationTest {
 
     private JsonNode startExecution(Long rmaId, long templateId, String username, String role) throws Exception {
         String response = mockMvc.perform(post("/api/protocols/rmas/{rmaId}/executions", rmaId)
-                .with(user(username).roles(role))
+                .with(asProfile(username, role))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"templateId\":" + templateId + "}"))
@@ -339,19 +340,19 @@ class ProtocolControllerIntegrationTest {
         payload.put("evidence", evidence);
         payload.put("justification", justification);
         return mockMvc.perform(post("/api/protocols/executions/{executionId}/items/{itemId}/results", executionId, itemId)
-            .with(user("tech").roles("TECHNICIAN"))
+            .with(asProfile("tech", "TECHNICIAN"))
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(payload)));
     }
 
     private ResultActions complete(long executionId) throws Exception {
-        return mockMvc.perform(post("/api/protocols/executions/{executionId}/complete", executionId).with(user("tech").roles("TECHNICIAN")).with(csrf()));
+        return mockMvc.perform(post("/api/protocols/executions/{executionId}/complete", executionId).with(asProfile("tech", "TECHNICIAN")).with(csrf()));
     }
 
     private ResultActions changeStatus(Long rmaId, String status) throws Exception {
         return mockMvc.perform(patch("/api/rmas/{id}/status", rmaId)
-            .with(user("tech").roles("TECHNICIAN"))
+            .with(asProfile("tech", "TECHNICIAN"))
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"status\":\"" + status + "\"}"));

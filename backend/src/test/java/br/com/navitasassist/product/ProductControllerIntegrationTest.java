@@ -1,5 +1,6 @@
 package br.com.navitasassist.product;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -70,7 +71,7 @@ class ProductControllerIntegrationTest {
         Product savedProduct = productRepository.save(product);
 
         mockMvc.perform(delete("/api/products/{id}", savedProduct.getId())
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf()))
             .andExpect(status().isNoContent());
 
@@ -99,7 +100,7 @@ class ProductControllerIntegrationTest {
         rmaRecordRepository.save(rma);
 
         mockMvc.perform(delete("/api/products/{id}", savedProduct.getId())
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf()))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value(
@@ -146,7 +147,7 @@ class ProductControllerIntegrationTest {
         rmaRecordRepository.saveAndFlush(rma);
 
         mockMvc.perform(delete("/api/products/{id}", savedSecondaryProduct.getId())
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf()))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value(
@@ -159,7 +160,7 @@ class ProductControllerIntegrationTest {
     @Test
     void shouldRejectSkuOverTwentyCharacters() throws Exception {
         mockMvc.perform(post("/api/products")
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(productJson("123456789012345678901", "Category", "Notes")))
@@ -170,7 +171,7 @@ class ProductControllerIntegrationTest {
     @Test
     void shouldRejectCategoryAndTechnicalNotesOverTheirLimits() throws Exception {
         mockMvc.perform(post("/api/products")
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(productJson("SKU-LIMITS", "C".repeat(81), "N".repeat(1001))))
@@ -185,7 +186,7 @@ class ProductControllerIntegrationTest {
         Product existing = createProduct("SKU-EXISTS");
 
         mockMvc.perform(post("/api/products")
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(productJson(sku, "Category", "Notes")))
@@ -205,7 +206,7 @@ class ProductControllerIntegrationTest {
         Product edited = createProduct("SKU-EDITED");
 
         mockMvc.perform(put("/api/products/{id}", edited.getId())
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(productJson(sku, "Changed category", "Changed notes")))
@@ -227,7 +228,7 @@ class ProductControllerIntegrationTest {
         Product product = createProduct("SKU-SELF");
 
         mockMvc.perform(put("/api/products/{id}", product.getId())
-                .with(user("service.desk").roles("SERVICE_DESK"))
+                .with(asProfile("service.desk", "SERVICE_DESK"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(productJson(sku, "Category", "Notes")))
@@ -242,7 +243,7 @@ class ProductControllerIntegrationTest {
     @Test
     void shouldNormalizeUniqueSkusWithoutRemovingInternalSpaces() throws Exception {
         String response = mockMvc.perform(post("/api/products")
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(productJson(" SKU NEW ", "Category", "Notes")))
@@ -253,7 +254,7 @@ class ProductControllerIntegrationTest {
         assertThat(productRepository.findById(id).orElseThrow().getSku()).isEqualTo("SKU NEW");
 
         mockMvc.perform(put("/api/products/{id}", id)
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(productJson(" SKU NEXT ", "Category", "Notes")))
@@ -271,11 +272,11 @@ class ProductControllerIntegrationTest {
         String body = productJson(" SKU NEW ", "Category", "Notes");
 
         mockMvc.perform(post("/api/products")
-                .with(user("unauthorized").roles(role)).with(csrf())
+                .with(asProfile("unauthorized", role)).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isForbidden());
         mockMvc.perform(put("/api/products/{id}", product.getId())
-                .with(user("unauthorized").roles(role)).with(csrf())
+                .with(asProfile("unauthorized", role)).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isForbidden());
 
@@ -288,10 +289,10 @@ class ProductControllerIntegrationTest {
         Product product = createProduct("SKU-CSRF");
         String body = productJson(" SKU NEW ", "Category", "Notes");
 
-        mockMvc.perform(post("/api/products").with(user("admin").roles("ADMIN"))
+        mockMvc.perform(post("/api/products").with(asProfile("admin", "ADMIN"))
                 .contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isForbidden());
-        mockMvc.perform(put("/api/products/{id}", product.getId()).with(user("admin").roles("ADMIN"))
+        mockMvc.perform(put("/api/products/{id}", product.getId()).with(asProfile("admin", "ADMIN"))
                 .contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isForbidden());
 
@@ -304,7 +305,7 @@ class ProductControllerIntegrationTest {
         Product product = createProduct("SKU-LIMIT");
 
         mockMvc.perform(put("/api/products/{id}", product.getId())
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(productJson("123456789012345678901", "Category", "Notes")))

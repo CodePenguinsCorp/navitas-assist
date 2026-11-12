@@ -1,5 +1,6 @@
 package br.com.navitasassist.rma;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -138,7 +139,7 @@ class RmaCodeConcurrencyIntegrationTest {
 
     @Test
     void invalidRequestAndRolledBackSaveDoNotConsumeCodeOrRetainLock() throws Exception {
-        mvc.perform(post("/api/rmas").with(user("admin").roles("ADMIN")).with(csrf())
+        mvc.perform(post("/api/rmas").with(asProfile("admin", "ADMIN")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isBadRequest());
         var failOnce = new AtomicBoolean(true);
         doAnswer(invocation -> {
@@ -165,7 +166,7 @@ class RmaCodeConcurrencyIntegrationTest {
         Map<String, Object> payload = Map.of("clientId", client.getId(), "purchaseDateUnknown", true,
             "entryDate", LocalDate.now(ZoneId.of("America/Sao_Paulo")).toString(), "reportedFailure", "Failure",
             "items", List.of(Map.of("productId", product.getId(), "serialNumber", "CODE-SERIAL")));
-        return mvc.perform(post("/api/rmas").with(user(username).roles("SERVICE_DESK")).with(csrf())
+        return mvc.perform(post("/api/rmas").with(asProfile(username, "SERVICE_DESK")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(payload))).andReturn();
     }
 

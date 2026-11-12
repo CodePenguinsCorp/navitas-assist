@@ -1,5 +1,6 @@
 package br.com.navitasassist.rma;
 
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
@@ -93,7 +94,7 @@ class RmaControllerIntegrationTest {
         );
 
         mockMvc.perform(post("/api/rmas")
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))
@@ -117,14 +118,14 @@ class RmaControllerIntegrationTest {
 
         mockMvc.perform(get("/api/rmas/history")
                 .param("batchNumber", "LOT-B")
-                .with(user("admin").roles("ADMIN")))
+                .with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$", hasSize(1)))
             .andExpect(jsonPath("$[0].items", hasSize(2)));
 
         mockMvc.perform(get("/api/rmas")
                 .param("query", "SKU-RMA-2")
-                .with(user("admin").roles("ADMIN")))
+                .with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.content", hasSize(1)))
             .andExpect(jsonPath("$.totalElements").value(1));
@@ -147,7 +148,7 @@ class RmaControllerIntegrationTest {
         );
 
         mockMvc.perform(post("/api/rmas")
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))
@@ -173,7 +174,7 @@ class RmaControllerIntegrationTest {
             """.formatted(savedClient.getId(), LocalDate.now());
 
         mockMvc.perform(post("/api/rmas")
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
@@ -198,7 +199,7 @@ class RmaControllerIntegrationTest {
             "reportedFailure", "Product does not start"
         );
         mockMvc.perform(post("/api/rmas")
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(futureManufacturing)))
@@ -214,7 +215,7 @@ class RmaControllerIntegrationTest {
             "reportedFailure", "Product does not start"
         );
         mockMvc.perform(post("/api/rmas")
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(purchaseBeforeManufacturing)))
@@ -230,7 +231,7 @@ class RmaControllerIntegrationTest {
             "reportedFailure", "Product does not start"
         );
         mockMvc.perform(post("/api/rmas")
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(entryBeforePurchase)))
@@ -255,7 +256,7 @@ class RmaControllerIntegrationTest {
         );
 
         mockMvc.perform(post("/api/rmas")
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))
@@ -296,7 +297,7 @@ class RmaControllerIntegrationTest {
         );
 
         mockMvc.perform(put("/api/rmas/{id}", savedRma.getId())
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))
@@ -314,13 +315,13 @@ class RmaControllerIntegrationTest {
 
         mockMvc.perform(get("/api/rmas/history")
                 .param("batchNumber", "OLD-LOT")
-                .with(user("admin").roles("ADMIN")))
+                .with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$", hasSize(0)));
 
         mockMvc.perform(get("/api/rmas/history")
                 .param("serialNumber", "NEW-SERIAL-B")
-                .with(user("admin").roles("ADMIN")))
+                .with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$", hasSize(1)));
     }
@@ -344,7 +345,7 @@ class RmaControllerIntegrationTest {
         RmaRecord savedRma = rmaRecordRepository.saveAndFlush(rma);
 
         mockMvc.perform(get("/api/rmas/{id}", savedRma.getId())
-                .with(user("admin").roles("ADMIN")))
+                .with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items", hasSize(1)))
             .andExpect(jsonPath("$.items[0].id").doesNotExist())
@@ -354,7 +355,7 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.warrantyOverridden").doesNotExist());
 
         mockMvc.perform(put("/api/rmas/{id}", savedRma.getId())
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -388,7 +389,7 @@ class RmaControllerIntegrationTest {
         );
 
         String response = mockMvc.perform(post("/api/rmas")
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))
@@ -407,14 +408,14 @@ class RmaControllerIntegrationTest {
         // Changing the catalog must not change the term registered for an existing item.
         shortProduct.setDefaultWarrantyMonths(36);
         productRepository.saveAndFlush(shortProduct);
-        mockMvc.perform(get("/api/rmas/{id}", id).with(user("admin").roles("ADMIN")))
+        mockMvc.perform(get("/api/rmas/{id}", id).with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items[0].warrantyMonths").value(12))
             .andExpect(jsonPath("$.items[0].warrantyStatus").value("OUT_OF_WARRANTY"))
             .andExpect(jsonPath("$.items[1].warrantyMonths").value(24));
 
         mockMvc.perform(put("/api/rmas/{id}", id)
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -425,7 +426,7 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.items[1].warrantyStatus").value("IN_WARRANTY"));
 
         mockMvc.perform(put("/api/rmas/{id}", id)
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"purchaseDateUnknown\":true}"))
@@ -460,19 +461,19 @@ class RmaControllerIntegrationTest {
         UserAccount serviceUser = saveUser("service.user", "Service User", UserRole.SERVICE_DESK, true);
 
         mockMvc.perform(get("/api/users/assignable")
-                .with(user("viewer").roles("VIEWER")))
+                .with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$", hasSize(2)))
             .andExpect(jsonPath("$[0].fullName").value("First Technician"))
             .andExpect(jsonPath("$[1].fullName").value("Second Technician"));
 
         mockMvc.perform(get("/api/rmas/{id}", savedRma.getId())
-                .with(user("admin").roles("ADMIN")))
+                .with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.assigneeId").doesNotExist());
 
         mockMvc.perform(patch("/api/rmas/{id}/assignee", savedRma.getId())
-                .with(user("service.desk").roles("SERVICE_DESK"))
+                .with(asProfile("service.desk", "SERVICE_DESK"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"assigneeId\":" + firstTechnician.getId() + "}"))
@@ -486,7 +487,7 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.assignmentHistory[0].changedBy").value("service.desk"));
 
         mockMvc.perform(patch("/api/rmas/{id}/assignee", savedRma.getId())
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"assigneeId\":" + inactiveTechnician.getId() + "}"))
@@ -494,7 +495,7 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.message").value("Inactive users cannot be assigned to an RMA."));
 
         mockMvc.perform(patch("/api/rmas/{id}/assignee", savedRma.getId())
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"assigneeId\":" + serviceUser.getId() + "}"))
@@ -502,7 +503,7 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.message").value("Only technicians can be assigned to an RMA."));
 
         mockMvc.perform(patch("/api/rmas/{id}/assignee", savedRma.getId())
-                .with(user("admin").roles("ADMIN"))
+                .with(asProfile("admin", "ADMIN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"assigneeId\":" + secondTechnician.getId() + "}"))
@@ -511,7 +512,7 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.assignmentHistory", hasSize(2)));
 
         mockMvc.perform(patch("/api/rmas/{id}/assignee", savedRma.getId())
-                .with(user("service.desk").roles("SERVICE_DESK"))
+                .with(asProfile("service.desk", "SERVICE_DESK"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"assigneeId\":null}"))
@@ -521,7 +522,7 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.assignmentHistory", hasSize(3)));
 
         mockMvc.perform(get("/api/rmas/{id}", savedRma.getId())
-                .with(user("admin").roles("ADMIN")))
+                .with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.assignmentHistory[?(@.previousAssigneeName == 'First Technician' && @.newAssigneeName == 'Second Technician')]", hasSize(1)));
     }
@@ -546,20 +547,20 @@ class RmaControllerIntegrationTest {
         rma.addStatusHistory(history);
         Long id = rmaRecordRepository.saveAndFlush(rma).getId();
 
-        mockMvc.perform(get("/api/rmas/{id}", id).with(user("viewer").roles("VIEWER")))
+        mockMvc.perform(get("/api/rmas/{id}", id).with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.sla.status").value("OVERDUE"))
             .andExpect(jsonPath("$.sla.startedAt").value("2020-01-01T10:00:00Z"))
             .andExpect(jsonPath("$.sla.limitSeconds").value(86400));
-        mockMvc.perform(patch("/api/rmas/{id}/status", id).with(user("tech").roles("TECHNICIAN")).with(csrf())
+        mockMvc.perform(patch("/api/rmas/{id}/status", id).with(asProfile("tech", "TECHNICIAN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"IN_DIAGNOSIS\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.sla.status").value("NORMAL"))
             .andExpect(jsonPath("$.sla.limitSeconds").value(172800));
-        mockMvc.perform(get("/api/rmas").with(user("viewer").roles("VIEWER")))
+        mockMvc.perform(get("/api/rmas").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.content[0].sla.status").value("NORMAL"));
-        mockMvc.perform(patch("/api/rmas/{id}/status", id).with(user("tech").roles("TECHNICIAN")).with(csrf())
+        mockMvc.perform(patch("/api/rmas/{id}/status", id).with(asProfile("tech", "TECHNICIAN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"COMPLETED\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.sla.status").value("CLOSED"))
@@ -573,37 +574,37 @@ class RmaControllerIntegrationTest {
         Long secondId = saveBulkTestRma("RMA-BULK-0002");
         String nextStage = "{\"status\":\"TRIAGE\",\"expectedStatus\":\"RECEIVED\",\"note\":\"Triagem em lote\"}";
 
-        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", firstId).with(user("tech").roles("TECHNICIAN"))
+        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", firstId).with(asProfile("tech", "TECHNICIAN"))
                 .with(csrf()).contentType(MediaType.APPLICATION_JSON).content(nextStage))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value("TRIAGE"))
             .andExpect(jsonPath("$.statusHistory[0].note").value("Triagem em lote"));
 
-        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", secondId).with(user("service.desk").roles("SERVICE_DESK"))
+        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", secondId).with(asProfile("service.desk", "SERVICE_DESK"))
                 .with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"status\":\"RETURNED\",\"expectedStatus\":\"RECEIVED\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value("RETURNED"));
 
-        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", firstId).with(user("tech").roles("TECHNICIAN"))
+        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", firstId).with(asProfile("tech", "TECHNICIAN"))
                 .with(csrf()).contentType(MediaType.APPLICATION_JSON).content(nextStage))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value("RMA status changed. Refresh the item before trying again."));
 
-        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", secondId).with(user("tech").roles("TECHNICIAN"))
+        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", secondId).with(asProfile("tech", "TECHNICIAN"))
                 .with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"status\":\"RECEIVED\",\"expectedStatus\":\"RETURNED\",\"note\":\"Corrigido após movimento por engano\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value("RECEIVED"))
             .andExpect(jsonPath("$.statusHistory[0].note").value("Corrigido após movimento por engano"));
 
-        mockMvc.perform(get("/api/rmas/{id}", firstId).with(user("viewer").roles("VIEWER")))
+        mockMvc.perform(get("/api/rmas/{id}", firstId).with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.statusHistory", hasSize(1)));
-        mockMvc.perform(get("/api/rmas/{id}", secondId).with(user("viewer").roles("VIEWER")))
+        mockMvc.perform(get("/api/rmas/{id}", secondId).with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("RECEIVED"))
             .andExpect(jsonPath("$.statusHistory", hasSize(2)));
 
-        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", firstId).with(user("viewer").roles("VIEWER"))
+        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", firstId).with(asProfile("viewer", "VIEWER"))
                 .with(csrf()).contentType(MediaType.APPLICATION_JSON).content(nextStage))
             .andExpect(status().isForbidden());
     }
@@ -611,10 +612,10 @@ class RmaControllerIntegrationTest {
     @Test
     void shouldRecordPriorityHistoryAndRestrictWhoCanChangeIt() throws Exception {
         Long id = saveBulkTestRma("RMA-BULK-PRIORITY");
-        mockMvc.perform(put("/api/rmas/{id}", id).with(user("tech").roles("TECHNICIAN"))
+        mockMvc.perform(put("/api/rmas/{id}", id).with(asProfile("tech", "TECHNICIAN"))
                 .with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"priority\":\"HIGH\"}"))
             .andExpect(status().isForbidden());
-        mockMvc.perform(put("/api/rmas/{id}", id).with(user("admin").roles("ADMIN"))
+        mockMvc.perform(put("/api/rmas/{id}", id).with(asProfile("admin", "ADMIN"))
                 .with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"priority\":\"HIGH\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.priority").value("HIGH"))
@@ -655,7 +656,7 @@ class RmaControllerIntegrationTest {
         );
 
         String response = mockMvc.perform(post("/api/rmas")
-                .with(user("original.operator").roles(role))
+                .with(asProfile("original.operator", role))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))
@@ -669,7 +670,7 @@ class RmaControllerIntegrationTest {
         assertEquals("NF-123", rmaRecordRepository.findById(id).orElseThrow().getInvoiceNumber());
 
         mockMvc.perform(put("/api/rmas/{id}", id)
-                .with(user("another.operator").roles(role))
+                .with(asProfile("another.operator", role))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
