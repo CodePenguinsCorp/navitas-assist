@@ -78,7 +78,7 @@ As rotas em `/api/kanban-views` usam sempre o usuário da sessão; o cliente nã
 
 ## Relatórios reais de RMA (NAV-27)
 
-A tela Relatórios consulta `GET /api/reports/rmas` e exige a permissão `relatorios.ver` (nos perfis migrados: Administrador, Técnico e Consulta). Sem sessão a API responde `401`; sem a permissão, `403`.
+A tela Relatórios consulta `GET /api/reports/rmas` e exige a permissão `relatorios.ver` (nos perfis prontos: Administrador, Técnico e Consulta). Sem sessão a API responde `401`; sem a permissão, `403`.
 
 Filtros opcionais combinados: `entryFrom` e `entryTo` (`YYYY-MM-DD`, inclusivos, sobre a **data de entrada**, inclusive no relatório de devoluções), `status` (enum de RMA) e `clientId` (inteiro positivo). Sem período, a consulta usa os **últimos 90 dias** (até hoje em America/Sao_Paulo); com só uma das datas, a outra é completada (90 dias antes do fim, ou até hoje, limitado a 366 dias). O período máximo é de **366 dias**. Parâmetros inválidos, intervalo invertido ou período maior retornam `400`. O retorno é `{ generatedAt, entryFrom, entryTo, rmas }`, com o período efetivamente aplicado e os mesmos campos de `RmaResponse`; cliente inexistente retorna `rmas: []`. A ordenação é por entrada decrescente e ID decrescente. A consulta carrega cliente, produto, responsável e diagnóstico junto com os RMAs, e itens e históricos em consultas em lote, com número fixo de consultas por relatório. O seletor de clientes usa `GET /api/clients/options` (catálogo completo, como na NAV-28), independentemente do resultado filtrado.
 
@@ -137,7 +137,7 @@ No frontend, as telas de RMAs, clientes, produtos e usuários mostram o total fi
 
 A criação usa o formato `RMA-AAAA-NNNNNN`, com ano em `America/Sao_Paulo` e sequência iniciada em `000001` a cada ano. O banco serializa a alocação e a inserção para que criações concorrentes recebam códigos distintos. Uma criação revertida não consome número. Ao atingir `999999`, novas criações desse ano recebem erro de negócio `400`.
 
-A linha de bloqueio é criada pela migration inicial em banco vazio. Alterações incompatíveis da V1 seguem a política de recriação local descrita em **Schema do banco**. O bloqueio é compartilhado pelos processos que usam o mesmo banco e serializa as criações; escritas diretas fora da API não seguem esse controle.
+A linha de bloqueio é criada pela migração-base (`V1__baseline.sql`) em banco vazio. Alterações incompatíveis da V1 seguem a política de recriação local descrita em **Schema do banco**. O bloqueio é compartilhado pelos processos que usam o mesmo banco e serializa as criações; escritas diretas fora da API não seguem esse controle.
 
 ## Estrutura do Projeto
 
@@ -339,7 +339,7 @@ Hashes BCrypt existentes permanecem inalterados. Caso exista uma senha históric
 
 ## Contas de acesso
 
-A aplicação não cria, recria ou altera usuários durante a inicialização. As contas e os hashes de senha ficam exclusivamente no banco. Em um banco novo, o primeiro administrador deve ser inserido explicitamente com um hash BCrypt, vinculado ao perfil migrado Administrador; depois, o cadastro e a manutenção das contas são feitos pelas telas Usuários e Perfis. Recriar o banco não recria uma conta padrão.
+A aplicação não cria, recria ou altera usuários durante a inicialização. As contas e os hashes de senha ficam exclusivamente no banco. Em um banco novo, o primeiro administrador deve ser inserido explicitamente com um hash BCrypt, vinculado ao perfil pronto Administrador (`legacy_code = 'ADMIN'`); depois, o cadastro e a manutenção das contas são feitos pelas telas Usuários e Perfis. Recriar o banco não recria uma conta padrão.
 
 ```sql
 INSERT INTO user_accounts (username, full_name, password_hash, active, created_at, updated_at, profile_id)
@@ -347,7 +347,7 @@ VALUES ('admin', 'Administrador', '<hash BCrypt>', TRUE, CURRENT_TIMESTAMP(6), C
         (SELECT id FROM access_profiles WHERE legacy_code = 'ADMIN'));
 ```
 
-A coluna legada `role` não é mais preenchida (aceita `NULL` desde a V10).
+Não há coluna de role em `user_accounts`: o acesso vem só do perfil (`profile_id`) e das permissões extras.
 
 Fora dos profiles `local` e `test`, somente `DB_URL`, `DB_USER` e `DB_PASSWORD` são obrigatórios. O ambiente de produção usa validação de schema e não imprime SQL nem credenciais nos logs.
 
@@ -386,7 +386,7 @@ Requisições sem autenticação recebem `401`; usuários autenticados sem permi
 
 Um perfil é um nome mais um conjunto de permissões de um catálogo fixo; cada usuário tem um perfil e, opcionalmente, permissões extras. Perfis são gerenciados na tela **Perfis** (`perfis.gerir`), e o perfil e as extras de cada usuário na tela **Usuários**. Ninguém concede permissão que não tem, e o sistema não permite ficar sem um usuário ativo com `usuarios.gerir` e `perfis.gerir`.
 
-A migration `V8` cria os 4 perfis abaixo a partir dos antigos roles (A = Administrador/`ADMIN`, S = Atendimento/`SERVICE_DESK`, T = Técnico/`TECHNICIAN`, V = Consulta/`VIEWER`), com exatamente o acesso que cada role tinha. Esses perfis migrados não podem ser excluídos.
+A migração-base `V1__baseline.sql` cria os 4 perfis prontos abaixo (A = Administrador/`ADMIN`, S = Atendimento/`SERVICE_DESK`, T = Técnico/`TECHNICIAN`, V = Consulta/`VIEWER`; o código fica em `access_profiles.legacy_code`), com o mesmo acesso dos antigos roles fixos. Esses perfis prontos não podem ser excluídos.
 
 | Código | Módulo | Rótulo | A | S | T | V |
 |:---|:---|:---|:-:|:-:|:-:|:-:|
@@ -413,39 +413,7 @@ A migration `V8` cria os 4 perfis abaixo a partir dos antigos roles (A = Adminis
 
 Totais: Administrador 19 (todas menos `rma.atribuivel`), Atendimento 11, Técnico 11, Consulta 5. `cadastros.ver`, `pecas.ver` e `protocolos.ver` controlam telas e menus; as leituras `GET` correspondentes na API continuam abertas a qualquer usuário autenticado.
 
-**Migrations da etapa.** `V8__create_access_profiles.sql` cria `access_profiles`, `access_profile_permissions` e `user_account_extra_permissions` e vincula cada usuário ao perfil do seu role; `V9__notification_recipient_profiles.sql` converte os destinatários das regras de notificação para perfis; `V10__relax_legacy_role_columns.sql` torna `user_accounts.role` e `notification_rules.recipient_roles` colunas legadas, nulas e sem uso pelo código. As colunas legadas só serão removidas numa migration posterior, depois da conferência da implantação.
-
-**Backup obrigatório antes da V8.** Em qualquer banco com dados, faça um `mysqldump` completo antes de subir esta versão. O DDL do MySQL não é transacional: se uma migration falhar no meio, restaure o dump ou apague os objetos criados parcialmente pela versão que falhou e remova a linha com falha (`DELETE FROM flyway_schema_history WHERE success = 0`), corrija e reaplique.
-
-**Rollback.** O Flyway Community não tem undo; restaurar o backup tirado antes da V8 é o caminho preferido. Sem backup, e enquanto as colunas legadas existirem, aplique em ordem:
-
-```sql
-UPDATE user_accounts u SET role = CASE
-  WHEN (EXISTS (SELECT 1 FROM access_profile_permissions pp WHERE pp.profile_id = u.profile_id AND pp.permission = 'usuarios.gerir')
-        OR EXISTS (SELECT 1 FROM user_account_extra_permissions ep WHERE ep.user_id = u.id AND ep.permission = 'usuarios.gerir'))
-   AND (EXISTS (SELECT 1 FROM access_profile_permissions pp WHERE pp.profile_id = u.profile_id AND pp.permission = 'perfis.gerir')
-        OR EXISTS (SELECT 1 FROM user_account_extra_permissions ep WHERE ep.user_id = u.id AND ep.permission = 'perfis.gerir'))
-  THEN 'ADMIN'
-  ELSE COALESCE((SELECT p.legacy_code FROM access_profiles p WHERE p.id = u.profile_id), 'VIEWER') END;
-ALTER TABLE user_accounts MODIFY COLUMN role VARCHAR(30) NOT NULL;
-ALTER TABLE user_accounts ADD CONSTRAINT ck_user_accounts_role CHECK (role IN ('ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER'));
-UPDATE notification_rules r SET recipient_roles = CONCAT_WS(',',
-  CASE WHEN EXISTS (SELECT 1 FROM notification_rule_recipient_profiles rp JOIN access_profiles p ON p.id = rp.profile_id WHERE rp.rule_id = r.id AND p.legacy_code = 'ADMIN') THEN 'ADMIN' END,
-  CASE WHEN EXISTS (SELECT 1 FROM notification_rule_recipient_profiles rp JOIN access_profiles p ON p.id = rp.profile_id WHERE rp.rule_id = r.id AND p.legacy_code = 'SERVICE_DESK') THEN 'SERVICE_DESK' END,
-  CASE WHEN EXISTS (SELECT 1 FROM notification_rule_recipient_profiles rp JOIN access_profiles p ON p.id = rp.profile_id WHERE rp.rule_id = r.id AND p.legacy_code = 'TECHNICIAN') THEN 'TECHNICIAN' END,
-  CASE WHEN EXISTS (SELECT 1 FROM notification_rule_recipient_profiles rp JOIN access_profiles p ON p.id = rp.profile_id WHERE rp.rule_id = r.id AND p.legacy_code = 'VIEWER') THEN 'VIEWER' END);
-ALTER TABLE notification_rules MODIFY COLUMN recipient_roles VARCHAR(120) NOT NULL;
-ALTER TABLE user_accounts DROP FOREIGN KEY fk_user_accounts_profile;
-DROP INDEX idx_user_accounts_profile ON user_accounts;
-ALTER TABLE user_accounts DROP COLUMN profile_id;
-DROP TABLE notification_rule_recipient_profiles;
-DROP TABLE user_account_extra_permissions;
-DROP TABLE access_profile_permissions;
-DROP TABLE access_profiles;
-DELETE FROM flyway_schema_history WHERE version IN ('8', '9', '10');
-```
-
-Depois, volte o código para o commit anterior à etapa. Quem tinha permissões de administrador volta como `ADMIN`; usuários de perfis personalizados viram `VIEWER`; extras e perfis personalizados se perdem. Depois da V9 o código grava os destinatários das regras só em `notification_rule_recipient_profiles`, por isso reverter o código sem o `UPDATE notification_rules … CONCAT_WS` acima faz o código antigo ler destinatários desatualizados. Depois da remoção das colunas legadas, o rollback exige o backup.
+**Tabelas.** `access_profiles` (nome e `legacy_code` dos perfis prontos), `access_profile_permissions` (permissões de cada perfil), `user_account_extra_permissions` (extras por usuário, além de `user_accounts.profile_id`) e `notification_rule_recipient_profiles` (perfis destinatários das regras de notificação). Os seeds das regras enviam `RMA_CREATED` e `SLA_OVERDUE` para Administrador e Atendimento, `SLA_WARNING` só para Administrador e `RMA_ASSIGNED` apenas ao responsável.
 
 ## Produção
 
@@ -468,9 +436,11 @@ Exemplo para deploy manual:
 
 ## Schema do banco
 
-O Flyway cria o schema em um banco vazio e aplica as migrations seguintes; o Hibernate apenas valida o resultado (`ddl-auto=validate`). As migrations V8 a V10 (perfis e permissões) convertem os dados existentes; veja o backup obrigatório e o rollback em **Perfis e permissões**.
+O Flyway cria o schema em um banco vazio e aplica as migrations seguintes; o Hibernate apenas valida o resultado (`ddl-auto=validate`).
 
-Quando o schema local ficar incompatível, descarte o volume de desenvolvimento e recrie a stack. O primeiro comando remove todos os dados locais:
+As migrations foram zeradas em 13 nov 2026, porque não havia dados em produção (só dados de teste): as antigas V1 a V10 deram lugar a uma única migração-base, `backend/src/main/resources/db/migration/V1__baseline.sql`, que cria todas as tabelas, índices e constraints e os seeds (trava de numeração dos RMAs, os 4 perfis prontos com suas permissões e as regras de notificação com destinatários por perfil). As colunas legadas `user_accounts.role` e `notification_rules.recipient_roles` deixaram de existir. As próximas migrations partem da V2. O PostgreSQL/Supabase do ambiente de testes terá baseline própria, no projeto desse ambiente.
+
+Um banco criado pelas migrations antigas não é compatível com a baseline (o Flyway recusa o histórico divergente). Para recriar o banco local, apague o volume do MySQL no projeto do repositório e suba a stack de novo; depois, insira o primeiro administrador (ver **Contas de acesso**). O primeiro comando remove todos os dados locais:
 
 ```powershell
 docker compose down -v
@@ -587,7 +557,7 @@ As demais etapas preservam os padrões. Prazos e substituições aceitam de 1 a 
 
 ## Protocolos técnicos e checklists (NAV-45)
 
-Modelos versionados de protocolo por produto ou categoria, executados durante o RMA. A migration `V6__create_technical_protocols.sql` cria `protocol_templates`, `protocol_template_versions`, `protocol_template_items`, `rma_protocol_executions` e `rma_protocol_item_results`.
+Modelos versionados de protocolo por produto ou categoria, executados durante o RMA. A migração-base (`V1__baseline.sql`) cria `protocol_templates`, `protocol_template_versions`, `protocol_template_items`, `rma_protocol_executions` e `rma_protocol_item_results`.
 
 - **Modelos** (`/api/protocols/templates`, escrita com `protocolos.catalogo`): etapas, instruções, itens obrigatórios, verificação, texto ou medição (unidade, casas decimais, mínimo e máximo), resultado esperado e exigência de evidência. Cada alteração cria uma nova versão imutável; execuções já iniciadas continuam na versão em que começaram.
 - **Execução** (`/api/protocols/rmas/{rmaId}/executions`, com `protocolos.executar`): vincula a versão atual ao RMA e registra, por item, executor, início, conclusão, resultado, medição (`BigDecimal`, devolvida como texto com a precisão configurada), texto e evidência (texto ou referência).

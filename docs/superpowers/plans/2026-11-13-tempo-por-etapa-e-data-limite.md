@@ -1,5 +1,7 @@
 # Tempo por etapa e data limite — plano de implementação
 
+> **Nota (13 nov 2026): migrações zeradas.** As migrações V1–V10 viraram uma única `V1__baseline.sql` (não havia dados em produção). A migração do prazo passa a ser **V2** (`V2__rma_due_date_and_remove_stage_sla.sql`), não V11, e não há V12 de colunas legadas (elas já não existem). Não há dados a preservar: os trechos de legado/descontinuado de `SLA_*` (constantes mantidas com `supported = false`, rótulo "Prazo de etapa (descontinuado)", teste de notificação SLA antiga) podem ser apagados de vez na implementação do prazo.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** trocar o SLA por etapa por duas coisas: o tempo corrido em cada etapa e uma data limite opcional do atendimento, que só destaca e filtra.

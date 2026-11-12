@@ -1,5 +1,7 @@
 # Permissões por perfil personalizado (etapa 8A): desenho
 
+> **Nota (13 nov 2026): migrações zeradas.** Não havia dados em produção, só dados de teste, e as migrações V1–V10 foram substituídas por uma única `V1__baseline.sql` com o schema final. As colunas legadas `user_accounts.role` e `notification_rules.recipient_roles` não existem mais, então não há V11 de remoção nem rollback manual: o que este documento diz sobre V8–V11, expand/contract, backup antes da V8 e rollback fica só como histórico. Perfis prontos, permissões, extras e destinatários por perfil continuam iguais, semeados pela baseline.
+
 Data: 2026-11-11. Implementação: `docs/superpowers/plans/2026-11-11-permissoes.md`. Esta versão já incorpora a revisão independente (`docs/superpowers/plans/2026-11-11-permissoes-revisao.md`) e as decisões finais delegadas pelo usuário.
 
 ## 1. Objetivo e decisões

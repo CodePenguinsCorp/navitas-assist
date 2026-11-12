@@ -1,5 +1,7 @@
 # Tempo por etapa e data limite do atendimento — design
 
+> **Nota (13 nov 2026): migrações zeradas.** As migrações V1–V10 viraram uma única `V1__baseline.sql` (não havia dados em produção). A migração do prazo passa a ser **V2** (`V2__rma_due_date_and_remove_stage_sla.sql`), não V11, e não há V12 de colunas legadas (elas já não existem). Não há dados a preservar: os trechos de legado/descontinuado de `SLA_*` (constantes mantidas com `supported = false`, rótulo "Prazo de etapa (descontinuado)", teste de notificação SLA antiga) podem ser apagados de vez na implementação do prazo.
+
 Data: 13 nov 2026. Substitui o SLA por etapa da NAV-10.
 
 ## 1. Objetivo e decisões

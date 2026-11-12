@@ -1,5 +1,7 @@
 # Permissões por perfil personalizado (etapa 8A): plano de implementação
 
+> **Nota (13 nov 2026): migrações zeradas.** Não havia dados em produção, só dados de teste, e as migrações V1–V10 foram substituídas por uma única `V1__baseline.sql` com o schema final. As colunas legadas `user_accounts.role` e `notification_rules.recipient_roles` não existem mais, então não há V11 de remoção nem rollback manual: o que este documento diz sobre V8–V11, expand/contract, backup antes da V8 e rollback fica só como histórico. Perfis prontos, permissões, extras e destinatários por perfil continuam iguais, semeados pela baseline.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Trocar o enum `UserRole` por perfis personalizados (nome + permissões de um catálogo fixo) com permissões extras por usuário, sem mudar o que os 4 perfis atuais podem fazer.
