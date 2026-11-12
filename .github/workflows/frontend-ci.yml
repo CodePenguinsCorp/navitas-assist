@@ -5,10 +5,18 @@ on:
     paths:
       - "frontend/**"
       - ".github/workflows/frontend-ci.yml"
+      # Lidos pelos testes do frontend (core/permissions.spec.ts) para conferir catálogo e fixtures.
+      - "backend/src/main/java/br/com/navitasassist/access/Permission.java"
+      - "backend/src/main/java/br/com/navitasassist/access/PermissionModule.java"
+      - "backend/src/main/resources/db/migration/V8__create_access_profiles.sql"
   pull_request:
     paths:
       - "frontend/**"
       - ".github/workflows/frontend-ci.yml"
+      # Lidos pelos testes do frontend (core/permissions.spec.ts) para conferir catálogo e fixtures.
+      - "backend/src/main/java/br/com/navitasassist/access/Permission.java"
+      - "backend/src/main/java/br/com/navitasassist/access/PermissionModule.java"
+      - "backend/src/main/resources/db/migration/V8__create_access_profiles.sql"
 
 jobs:
   test-and-build:
