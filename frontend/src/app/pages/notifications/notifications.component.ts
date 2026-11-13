@@ -33,7 +33,9 @@ import {
   SNOOZE_OPTIONS,
   formatNotificationDateTime,
   formatNotificationTime,
+  groupNotificationsByDay,
   internalRoute,
+  openNotification,
   severityClass
 } from '../../core/utils/notification-ui';
 
@@ -97,19 +99,7 @@ export class NotificationsComponent {
   protected readonly eventFilterOptions = [{ value: '', label: 'Todos os eventos' }, ...Object.entries(NOTIFICATION_EVENT_LABELS).map(([value, label]) => ({ value, label }))];
   protected readonly severityFilterOptions = [{ value: '', label: 'Todas as severidades' }, ...NOTIFICATION_SEVERITIES.map(value => ({ value, label: NOTIFICATION_SEVERITY_LABELS[value] }))];
   protected readonly hasInboxFilters = computed(() => this.unreadOnly() || this.includeSnoozed() || !!this.eventFilter() || !!this.severityFilter());
-  protected readonly notificationGroups = computed(() => {
-    const today = new Date(this.clock.now()); today.setHours(0, 0, 0, 0);
-    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-    const groups = new Map<string, { label: string; items: NotificationResponse[] }>();
-    for (const notification of this.notifications()) {
-      const day = new Date(notification.createdAt); day.setHours(0, 0, 0, 0);
-      const key = String(day.getTime());
-      const label = day.getTime() === today.getTime() ? 'Hoje' : day.getTime() === yesterday.getTime() ? 'Ontem' : day.toLocaleDateString('pt-BR');
-      if (!groups.has(key)) groups.set(key, { label, items: [] });
-      groups.get(key)!.items.push(notification);
-    }
-    return [...groups.values()];
-  });
+  protected readonly notificationGroups = computed(() => groupNotificationsByDay(this.notifications(), this.clock.now()));
   protected readonly notifications = signal<NotificationResponse[]>([]);
   protected readonly preferences = signal<NotificationPreferenceResponse[]>([]);
   protected readonly rules = signal<NotificationRuleResponse[]>([]);
@@ -258,13 +248,7 @@ export class NotificationsComponent {
   }
 
   protected open(notification: NotificationResponse): void {
-    const route = internalRoute(notification.actionPath);
-    if (!notification.read) {
-      this.notificationService.markRead(notification.id).subscribe({ next: () => this.refreshSummary() });
-    }
-    if (route) {
-      void this.router.navigate([route.path], { queryParams: route.queryParams });
-    }
+    openNotification(notification, this.notificationService, this.router);
   }
 
   protected markRead(notification: NotificationResponse): void {

@@ -1,4 +1,5 @@
-import { NotificationEventType, NotificationSeverity } from '../models';
+import { Observable } from 'rxjs';
+import { NotificationEventType, NotificationResponse, NotificationSeverity } from '../models';
 
 const APP_TIME_ZONE = 'America/Sao_Paulo';
 
@@ -67,4 +68,37 @@ export function internalRoute(actionPath: string | null): { path: string; queryP
 
   const [path, query = ''] = actionPath.split('?', 2);
   return { path, queryParams: Object.fromEntries(new URLSearchParams(query).entries()) };
+}
+
+/** Groups rows by local calendar day, keeping the given order; today and yesterday get relative labels. */
+export function groupNotificationsByDay<T extends { createdAt: string }>(items: readonly T[], now: number): Array<{ label: string; items: T[] }> {
+  const today = new Date(now); today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+  const groups = new Map<string, { label: string; items: T[] }>();
+  for (const item of items) {
+    const day = new Date(item.createdAt); day.setHours(0, 0, 0, 0);
+    const key = String(day.getTime());
+    const label = day.getTime() === today.getTime() ? 'Hoje' : day.getTime() === yesterday.getTime() ? 'Ontem' : day.toLocaleDateString('pt-BR');
+    if (!groups.has(key)) groups.set(key, { label, items: [] });
+    groups.get(key)!.items.push(item);
+  }
+  return [...groups.values()];
+}
+
+interface NotificationOpener {
+  markRead(id: number): Observable<unknown>;
+  refreshSummary(): Observable<unknown>;
+}
+
+/** Opening a notification marks it read (then refreshes the shared count) and follows its internal link, if any. */
+export function openNotification(
+  notification: Pick<NotificationResponse, 'id' | 'read' | 'actionPath'>,
+  service: NotificationOpener,
+  router: { navigate(commands: unknown[], extras: { queryParams: Record<string, string> }): Promise<boolean> }
+): void {
+  if (!notification.read) {
+    service.markRead(notification.id).subscribe({ next: () => service.refreshSummary().subscribe() });
+  }
+  const route = internalRoute(notification.actionPath);
+  if (route) void router.navigate([route.path], { queryParams: route.queryParams });
 }
