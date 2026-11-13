@@ -61,7 +61,8 @@ public class RmaService {
 
     private final RmaRecordRepository rmaRecordRepository;
     private final RmaCodeGenerationLockRepository rmaCodeGenerationLockRepository;
-    private final RmaSlaService rmaSlaService;
+    private final RmaStageTimeService rmaStageTimeService;
+    private final RmaDeadlineService rmaDeadlineService;
     private final ClientService clientService;
     private final ProductService productService;
     private final UserAccountService userAccountService;
@@ -536,7 +537,8 @@ public class RmaService {
     }
 
     private RmaResponse toResponse(RmaRecord rma) {
-        return RmaResponse.from(rma, rmaSlaService.calculate(rma, Instant.now()));
+        Instant now = Instant.now();
+        return RmaResponse.from(rma, rmaStageTimeService.periods(rma, now), rmaDeadlineService.evaluate(rma, RmaDeadlineService.businessDate(now)));
     }
 
     private String trimToNull(String value) {

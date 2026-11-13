@@ -532,18 +532,18 @@ class RmaControllerIntegrationTest {
     }
 
     @Test
-    void shouldExposeSlaAndRestartItAfterPersistedStageChange() throws Exception {
+    void shouldExposeStagePeriodsAndRestartAfterStageChange() throws Exception {
         Client client = new Client();
-        client.setLegalName("SLA client");
+        client.setLegalName("Stage client");
         RmaRecord rma = new RmaRecord();
-        rma.setCode("RMA-SLA-0001");
+        rma.setCode("RMA-STAGE-0001");
         rma.setClient(clientRepository.save(client));
-        rma.setProduct(saveProduct("SLA-PRODUCT", "SLA product", 12));
-        rma.getItemIdentification().setSerialNumber("SLA-SERIAL");
+        rma.setProduct(saveProduct("STAGE-PRODUCT", "Stage product", 12));
+        rma.getItemIdentification().setSerialNumber("STAGE-SERIAL");
         rma.setPurchaseDateUnknown(true);
         rma.setEntryDate(LocalDate.now(BUSINESS_ZONE));
         rma.setReceivedBy("Service desk");
-        rma.setReportedFailure("SLA test");
+        rma.setReportedFailure("Stage test");
         RmaStatusHistory history = new RmaStatusHistory();
         history.setStatus(RmaStatus.RECEIVED);
         history.setChangedBy("admin");
@@ -553,23 +553,49 @@ class RmaControllerIntegrationTest {
 
         mockMvc.perform(get("/api/rmas/{id}", id).with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.sla.status").value("OVERDUE"))
-            .andExpect(jsonPath("$.sla.startedAt").value("2020-01-01T10:00:00Z"))
-            .andExpect(jsonPath("$.sla.limitSeconds").value(86400));
+            .andExpect(jsonPath("$.sla").doesNotExist())
+            .andExpect(jsonPath("$.stagePeriods", hasSize(1)))
+            .andExpect(jsonPath("$.stagePeriods[0].status").value("RECEIVED"))
+            .andExpect(jsonPath("$.stagePeriods[0].enteredAt").value("2020-01-01T10:00:00Z"))
+            .andExpect(jsonPath("$.stagePeriods[0].leftAt").doesNotExist())
+            .andExpect(jsonPath("$.deadline.status").value("NO_DUE_DATE"));
         mockMvc.perform(patch("/api/rmas/{id}/status", id).with(asProfile("tech", "TECHNICIAN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"IN_DIAGNOSIS\"}"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.sla.status").value("NORMAL"))
-            .andExpect(jsonPath("$.sla.limitSeconds").value(172800));
+            .andExpect(jsonPath("$.sla").doesNotExist())
+            .andExpect(jsonPath("$.stagePeriods", hasSize(2)))
+            .andExpect(jsonPath("$.stagePeriods[0].leftAt").exists())
+            .andExpect(jsonPath("$.stagePeriods[1].status").value("IN_DIAGNOSIS"))
+            .andExpect(jsonPath("$.stagePeriods[1].leftAt").doesNotExist());
         mockMvc.perform(get("/api/rmas").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.content[0].sla.status").value("NORMAL"));
+            .andExpect(jsonPath("$.content[0].stagePeriods[1].status").value("IN_DIAGNOSIS"));
         mockMvc.perform(patch("/api/rmas/{id}/status", id).with(asProfile("tech", "TECHNICIAN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"COMPLETED\"}"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.sla.status").value("CLOSED"))
-            .andExpect(jsonPath("$.sla.elapsedSeconds").value(0))
-            .andExpect(jsonPath("$.sla.dueAt").doesNotExist());
+            .andExpect(jsonPath("$.deadline.status").value("CLOSED"))
+            .andExpect(jsonPath("$.deadline.daysUntilDue").doesNotExist())
+            .andExpect(jsonPath("$.stagePeriods[2].status").value("COMPLETED"))
+            .andExpect(jsonPath("$.sla").doesNotExist());
+    }
+
+    @Test
+    void shouldExposeDeadlineStatus() throws Exception {
+        LocalDate today = LocalDate.now(BUSINESS_ZONE);
+        long overdue = createdId(postDueDateRma("DEADLINE-LATE", today.minusDays(5), today.minusDays(1)));
+        long soon = createdId(postDueDateRma("DEADLINE-SOON", today, today.plusDays(3)));
+        long none = createdId(postDueDateRma("DEADLINE-NONE", today, null));
+
+        mockMvc.perform(get("/api/rmas/{id}", overdue).with(asProfile("viewer", "VIEWER")))
+            .andExpect(jsonPath("$.deadline.status").value("OVERDUE"))
+            .andExpect(jsonPath("$.deadline.daysUntilDue").value(-1))
+            .andExpect(jsonPath("$.deadline.dueSoonFrom").value(today.minusDays(8).toString()));
+        mockMvc.perform(get("/api/rmas/{id}", soon).with(asProfile("viewer", "VIEWER")))
+            .andExpect(jsonPath("$.deadline.status").value("DUE_SOON"))
+            .andExpect(jsonPath("$.deadline.daysUntilDue").value(3));
+        mockMvc.perform(get("/api/rmas/{id}", none).with(asProfile("viewer", "VIEWER")))
+            .andExpect(jsonPath("$.deadline.status").value("NO_DUE_DATE"))
+            .andExpect(jsonPath("$.deadline.dueSoonFrom").doesNotExist());
     }
 
     @Test

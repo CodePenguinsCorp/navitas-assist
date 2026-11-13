@@ -3,6 +3,7 @@ package br.com.navitasassist.rma;
 import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -124,7 +125,8 @@ class RmaReportIntegrationTest {
             .andExpect(jsonPath("$.rmas[0].warrantyOverridden").doesNotExist())
             .andExpect(jsonPath("$.rmas[0].shippedAt").value("2026-10-21"))
             .andExpect(jsonPath("$.rmas[0].trackingCode").value("BR123"))
-            .andExpect(jsonPath("$.rmas[0].sla.status").value("CLOSED"));
+            .andExpect(jsonPath("$.rmas[0].deadline.status").value("CLOSED"))
+            .andExpect(jsonPath("$.rmas[0].sla").doesNotExist());
     }
 
     @Test
@@ -139,8 +141,11 @@ class RmaReportIntegrationTest {
             .andExpect(status().isOk()).andReturn();
         var body = objectMapper.readTree(result.getResponse().getContentAsString());
         assertEquals(Duration.between(entry, Instant.parse(body.get("generatedAt").asText())).getSeconds(),
-            body.at("/rmas/0/sla/elapsedSeconds").asLong());
-        assertEquals("2026-10-20T23:30:00Z", body.at("/rmas/0/sla/startedAt").asText());
+            body.at("/rmas/0/stagePeriods/1/durationSeconds").asLong());
+        assertEquals("2026-10-20T23:30:00Z", body.at("/rmas/0/stagePeriods/1/enteredAt").asText());
+        assertEquals(2, body.at("/rmas/0/stagePeriods").size());
+        assertTrue(body.at("/rmas/0/stagePeriods/1/leftAt").isMissingNode() || body.at("/rmas/0/stagePeriods/1/leftAt").isNull());
+        assertEquals(3600, body.at("/rmas/0/stagePeriods/0/durationSeconds").asLong());
     }
 
     @Test

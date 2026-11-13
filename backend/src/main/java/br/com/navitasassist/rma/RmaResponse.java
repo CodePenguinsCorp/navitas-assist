@@ -29,7 +29,7 @@ public record RmaResponse(
     String physicalCondition,
     RmaPriority priority,
     RmaStatus status,
-    RmaSlaResponse sla,
+    RmaDeadlineResponse deadline,
     Long assigneeId,
     String assigneeName,
     String repairSummary,
@@ -40,6 +40,7 @@ public record RmaResponse(
     String trackingCode,
     DiagnosisResponse diagnosis,
     List<RmaStatusHistoryResponse> statusHistory,
+    List<RmaStagePeriodResponse> stagePeriods,
     List<RmaAssignmentHistoryResponse> assignmentHistory,
     List<RmaDueDateHistoryResponse> dueDateHistory,
     RmaBlockResponse currentBlock,
@@ -47,7 +48,7 @@ public record RmaResponse(
     Instant createdAt,
     Instant updatedAt
 ) {
-    public static RmaResponse from(RmaRecord rma, RmaSlaResponse sla) {
+    public static RmaResponse from(RmaRecord rma, List<RmaStagePeriodResponse> stagePeriods, RmaDeadlineResponse deadline) {
         List<RmaItemResponse> items = rma.getItems().isEmpty()
             ? List.of(RmaItemResponse.fromLegacy(rma))
             : rma.getItems().stream().map(RmaItemResponse::from).toList();
@@ -76,7 +77,7 @@ public record RmaResponse(
             rma.getPhysicalCondition(),
             rma.getPriority(),
             rma.getStatus(),
-            sla,
+            deadline,
             rma.getAssignee() == null ? null : rma.getAssignee().getId(),
             rma.getAssignee() == null ? null : rma.getAssignee().getFullName(),
             rma.getRepairSummary(),
@@ -87,6 +88,7 @@ public record RmaResponse(
             rma.getTrackingCode(),
             DiagnosisResponse.from(rma.getDiagnosis()),
             rma.getStatusHistory().stream().map(RmaStatusHistoryResponse::from).toList(),
+            stagePeriods,
             rma.getAssignmentHistory().stream().map(RmaAssignmentHistoryResponse::from).toList(),
             rma.getDueDateHistory().stream().map(RmaDueDateHistoryResponse::from).toList(),
             rma.getBlockHistory().stream().filter(block -> block.getResolvedAt() == null).findFirst().map(RmaBlockResponse::from).orElse(null),

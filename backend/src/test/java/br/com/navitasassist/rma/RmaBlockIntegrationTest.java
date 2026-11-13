@@ -65,7 +65,7 @@ class RmaBlockIntegrationTest {
     }
 
     @Test
-    void preservesStatusSlaAndEveryBlockEpisode() throws Exception {
+    void preservesStatusStagePeriodsAndEveryBlockEpisode() throws Exception {
         JsonNode before = read();
         Instant started = Instant.now();
         JsonNode blocked = block("TECHNICIAN", "  Aguardando fornecedor  ", "  Peças  ");
@@ -76,8 +76,8 @@ class RmaBlockIntegrationTest {
         assertEquals("Peças", episode.get("category").asText());
         assertEquals("operator", episode.get("blockedBy").asText());
         assertTrue(!Instant.parse(episode.get("blockedAt").asText()).isBefore(started));
-        assertEquals(before.get("sla").get("startedAt"), blocked.get("sla").get("startedAt"));
-        assertEquals(before.get("sla").get("dueAt"), blocked.get("sla").get("dueAt"));
+        assertEquals(before.get("stagePeriods").size(), blocked.get("stagePeriods").size());
+        assertEquals(before.get("stagePeriods").get(0).get("enteredAt"), blocked.get("stagePeriods").get(0).get("enteredAt"));
         mvc.perform(post("/api/rmas/{id}/blocks", id).with(asProfile("operator", "ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Duplicate\"}")).andExpect(status().isBadRequest());
         mvc.perform(patch("/api/rmas/{id}/status", id).with(asProfile("operator", "TECHNICIAN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"TRIAGE\"}")).andExpect(status().isOk()).andExpect(jsonPath("$.currentBlock.id").value(blockId));
         mvc.perform(patch("/api/rmas/{id}/blocks/{blockId}", id, blockId).with(asProfile("resolver", "SERVICE_DESK")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"resolutionNote\":\"  Peça recebida  \"}"))

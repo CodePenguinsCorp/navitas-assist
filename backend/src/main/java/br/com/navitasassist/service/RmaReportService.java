@@ -29,7 +29,8 @@ public class RmaReportService {
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
 
     private final RmaRecordRepository rmaRecordRepository;
-    private final RmaSlaService rmaSlaService;
+    private final RmaStageTimeService rmaStageTimeService;
+    private final RmaDeadlineService rmaDeadlineService;
 
     public RmaReportResponse search(RmaReportRequest filters) {
         if (filters.entryFrom() != null && filters.entryTo() != null && filters.entryFrom().isAfter(filters.entryTo())) {
@@ -55,7 +56,10 @@ public class RmaReportService {
             rmaRecordRepository.fetchDueDateHistory(records);
             rmaRecordRepository.fetchBlockHistory(records);
         }
-        List<RmaResponse> rmas = records.stream().map(rma -> RmaResponse.from(rma, rmaSlaService.calculate(rma, generatedAt))).toList();
+        LocalDate today = RmaDeadlineService.businessDate(generatedAt);
+        List<RmaResponse> rmas = records.stream()
+            .map(rma -> RmaResponse.from(rma, rmaStageTimeService.periods(rma, generatedAt), rmaDeadlineService.evaluate(rma, today)))
+            .toList();
         return new RmaReportResponse(generatedAt, entryFrom, entryTo, rmas);
     }
 
