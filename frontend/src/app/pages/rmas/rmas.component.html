@@ -209,9 +209,28 @@
           @let purchase = purchaseFact(rma);
           <div><dt>{{ purchase.label }}</dt><dd [class.is-empty]="purchase.empty">{{ purchase.value }}</dd></div>
           <div><dt>Responsável</dt><dd class="person" [class.is-empty]="!rma.assigneeId"><span class="avatar" [class.avatar--empty]="!rma.assigneeId" aria-hidden="true">{{ rma.assigneeId ? initials(rma.assigneeName) : '–' }}</span><span [title]="ownerLabel(rma)">{{ ownerLabel(rma) }}</span></dd></div>
-          <div class="detail-summary__wide"><dt>SLA</dt><dd><app-rma-sla-badge [sla]="rma.sla" /></dd></div>
+          <div class="detail-summary__wide rma-details__deadline">
+            <dt>Data limite</dt>
+            <dd [class.is-empty]="!rma.dueDate">
+              @if (rma.dueDate) {
+                <span>{{ dateLabel(rma.dueDate) }}</span>
+                <app-rma-deadline-chip [rma]="rma" mode="detail" />
+              } @else {
+                <span>Sem data limite</span>
+              }
+              @if (canEditRma()) {
+                <button type="button" class="button-secondary button-secondary--small" (click)="dueDateDialogOpen.set(true)">Alterar</button>
+              }
+            </dd>
+          </div>
+          @let stage = stageFact(rma, clock.now());
+          <div><dt>{{ stage.label }}</dt><dd>{{ stage.value }}</dd></div>
           <div><dt>Atualizado em</dt><dd>{{ dateTimeLabel(rma.updatedAt) }}</dd></div>
         </dl>
+
+        @if (dueDateDialogOpen()) {
+          <app-rma-due-date-dialog [rma]="rma" (saved)="dueDateSaved($event)" (closed)="dueDateDialogOpen.set(false)" />
+        }
 
         <div class="tab-list tab-list--raised" role="tablist" aria-label="Seções do RMA" (keydown)="onDetailTabKeydown($event)">
           @for (tab of detailTabs; track tab.id) {
@@ -312,13 +331,14 @@
               <app-rma-block-history [rma]="rma" />
             }
             @case ('history') {
+              <app-rma-stage-times class="rma-details__stage-times" [rma]="rma" />
               @let history = rmaHistory(rma);
               @if (history.length > 0) {
                 <ol class="record-list">
                   @for (entry of history; track $index) {
                     <li class="record-card">
                       <div class="record-card__title">
-                        <strong>{{ entry.kind === 'status' ? entry.label : entry.from + ' → ' + entry.to }}</strong>
+                        <strong>{{ historyEntryTitle(entry) }}</strong>
                         <time>{{ dateTimeLabel(entry.at) }}</time>
                       </div>
                       @if (entry.kind === 'status' && entry.note) {

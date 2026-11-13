@@ -157,16 +157,15 @@ describe('RmasComponent detail with the shared information contract', () => {
     expect(getComputedStyle(actions).display).toBe('flex');
   });
 
-  it('lists the summary facts in contract order with SLA', async () => {
-    // Hoje não há SLA, o rótulo é "Atualizado" e a compra vazia não marcada mostra "Não informado".
+  it('lists the summary facts in contract order with Data limite and Nesta etapa', async () => {
     const { open, detail, pairs, render, fixture } = await setup();
     open();
     const summary = detail().querySelector('.rma-details__summary')!;
 
     expect(pairs(summary).map(([label]) => label)).toEqual([
-      'Produtos', 'Entrada', 'Nota fiscal', 'Compra', 'Responsável', 'SLA', 'Atualizado em'
+      'Produtos', 'Entrada', 'Nota fiscal', 'Compra', 'Responsável', 'Data limite', 'Nesta etapa', 'Atualizado em'
     ]);
-    expect(summary.querySelector('app-rma-sla-badge')).not.toBeNull();
+    expect(summary.textContent).not.toContain('SLA');
     expect(Object.fromEntries(pairs(summary))).toEqual(expect.objectContaining({
       Produtos: '1 item', 'Nota fiscal': 'Não informada', Compra: 'Desconhecida'
     }));
@@ -246,16 +245,15 @@ describe('RmasComponent detail with the shared information contract', () => {
   });
 
   it('separates header, summary card, raised tabs and the white content card over the tinted canvas', async () => {
-    // Hoje resumo, abas e conteúdo ficam colados no mesmo fundo branco e o SLA divide a linha com seis fatos.
     const { open, detail, tabPanel } = await setup();
     open();
     const summary = detail().querySelector('.rma-details__summary')!;
-    const sla = [...summary.querySelectorAll(':scope > div')].find((row) => row.querySelector('dt')?.textContent?.trim() === 'SLA')!;
+    const deadline = [...summary.querySelectorAll(':scope > div')].find((row) => row.querySelector('dt')?.textContent?.trim() === 'Data limite')!;
 
     expect(detail().classList).toContain('detail-surface');
     expect(summary.classList).toContain('detail-card');
     expect(summary.classList).toContain('detail-summary');
-    expect(sla.classList).toContain('detail-summary__wide');
+    expect(deadline.classList).toContain('detail-summary__wide');
     expect(detail().querySelector('[role="tablist"]')!.classList).toContain('tab-list--raised');
     expect(tabPanel().classList).toContain('detail-card');
     const owner = summary.querySelector('.person > span:last-child')!;
@@ -283,7 +281,82 @@ describe('RmasComponent detail with the shared information contract', () => {
     open({ ...fullRma, statusHistory: [], assignmentHistory: [] });
     selectTab('Histórico');
 
-    expect(tabPanel().textContent?.trim()).toBe('Nenhuma alteração registrada.');
+    expect(tabPanel().querySelector('.rma-detail-copy')?.textContent?.trim()).toBe('Nenhuma alteração registrada.');
+    expect(tabPanel().querySelector('ol.record-list')).toBeNull();
+  });
+
+  it('shows Sem data limite when there is none', async () => {
+    const { open, detail, pairs } = await setup();
+    open({ ...fullRma, dueDate: null });
+    const summary = detail().querySelector('.rma-details__summary')!;
+    expect(Object.fromEntries(pairs(summary))['Data limite']).toContain('Sem data limite');
+    const row = [...summary.querySelectorAll(':scope > div')].find((item) => item.querySelector('dt')?.textContent?.trim() === 'Data limite')!;
+    expect(row.querySelector('dd')?.classList).toContain('is-empty');
+  });
+
+  it('shows the date and Atrasado há 2 dias', async () => {
+    const { open, detail } = await setup();
+    open({ ...fullRma, dueDate: '2026-10-18', deadline: { status: 'OVERDUE', dueSoonFrom: '2026-10-11', daysUntilDue: -2 } });
+    const summary = detail().querySelector('.rma-details__summary')!;
+    expect(summary.textContent).toContain('18/10/2026');
+    const chip = summary.querySelector('.deadline-chip');
+    expect(chip?.textContent?.trim()).toBe('Atrasado há 2 dias');
+    expect(chip?.getAttribute('data-deadline')).toBe('OVERDUE');
+  });
+
+  it('shows Alterar only with rma.editar and saves through the dialog', async () => {
+    let view = await setup({ role: 'TECHNICIAN' });
+    view.open();
+    expect([...view.detail().querySelectorAll('button')].some((button) => button.textContent?.trim() === 'Alterar')).toBe(false);
+    TestBed.resetTestingModule();
+
+    view = await setup({ role: 'ADMIN' });
+    const updated = { ...fullRma, dueDate: '2026-10-30' };
+    const updateDueDate = vi.fn(() => of(updated));
+    (view.rmaService as unknown as { updateDueDate: typeof updateDueDate }).updateDueDate = updateDueDate;
+    view.rmaService.list.mockReturnValue(of(buildRmaPage([updated], 0, 20, 1)));
+    view.open();
+    const change = [...view.detail().querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.trim() === 'Alterar')!;
+    change.click();
+    view.render();
+    const dialog = view.page.querySelector('app-rma-due-date-dialog [role="dialog"]')!;
+    expect(dialog.querySelector('h3')?.textContent?.trim()).toBe('Data limite');
+    dialog.querySelector('form')!.dispatchEvent(new Event('submit'));
+    view.render();
+    expect(updateDueDate).toHaveBeenCalledWith(5, null);
+    expect(view.page.querySelector('app-rma-due-date-dialog')).toBeNull();
+    expect(view.detail().querySelector('.rma-details__summary')?.textContent).toContain('30/10/2026');
+  });
+
+  it('shows há 2 d 4 h in Nesta etapa and Encerrado em for closed RMAs', async () => {
+    const { open, detail, pairs } = await setup();
+    open({ ...fullRma, stagePeriods: [{ status: 'TRIAGE', enteredAt: '2026-10-18T08:00:00Z', leftAt: null, durationSeconds: 0 }] });
+    expect(Object.fromEntries(pairs(detail().querySelector('.rma-details__summary')!))['Nesta etapa']).toBe('há 2 d 4 h');
+    open({ ...fullRma, status: 'COMPLETED', stagePeriods: [{ status: 'COMPLETED', enteredAt: '2026-10-19T13:00:00Z', leftAt: null, durationSeconds: 0 }] });
+    expect(Object.fromEntries(pairs(detail().querySelector('.rma-details__summary')!))['Nesta etapa']).toBe('Encerrado em 19/10/2026 10:00');
+  });
+
+  it('lists the time of each previous stage in Histórico', async () => {
+    const { open, selectTab, tabPanel } = await setup();
+    open({
+      ...fullRma,
+      stagePeriods: [
+        { status: 'RECEIVED', enteredAt: '2026-10-20T08:00:00Z', leftAt: '2026-10-20T10:00:00Z', durationSeconds: 7200 },
+        { status: 'TRIAGE', enteredAt: '2026-10-20T10:00:00Z', leftAt: null, durationSeconds: 0 }
+      ]
+    });
+    selectTab('Histórico');
+    const lines = [...tabPanel().querySelectorAll('app-rma-stage-times li')].map((item) => item.textContent?.trim());
+    expect(lines).toEqual(['Recebido · 2 h', 'Triagem · 2 h (atual)']);
+  });
+
+  it('shows due date changes with previous value and author', async () => {
+    const { open, selectTab, tabPanel } = await setup();
+    open({ ...fullRma, dueDateHistory: [{ previousDueDate: '2026-11-20', newDueDate: '2026-11-25', changedBy: 'carla', changedAt: '2026-10-20T11:30:00Z' }] });
+    selectTab('Histórico');
+    const entries = [...tabPanel().querySelectorAll<HTMLElement>('ol.record-list > li')];
+    expect(entries[0].querySelector('.record-card__title strong')?.textContent?.trim()).toBe('Data limite 20/11/2026 → 25/11/2026');
+    expect(entries[0].textContent).toContain('carla');
   });
 
   // Preservação

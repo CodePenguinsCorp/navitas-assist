@@ -300,6 +300,7 @@
     [rma]="rma"
     [canUpdateStatus]="canUpdateStatus()"
     [canUpdateAssignee]="canUpdateAssignee()"
+    [canEditDueDate]="canUpdatePriority()"
     [assignableUsers]="assignableUsers()"
     [actionError]="assignmentError()"
     [disabled]="bulkBusy() || boardUpdatingId() !== null"
@@ -308,6 +309,7 @@
     (statusChange)="openStatusModal($event.rma, $event.status)"
     (assigneeChange)="assignFromDetail($event.rma, $event.assigneeId)"
     (blockInspect)="blockPanel.open($event.id)"
+    (rmaUpdated)="applyBlockUpdate($event)"
   />
 }
 

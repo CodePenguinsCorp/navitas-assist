@@ -14,7 +14,8 @@ import {
   RmaSummaryResponse,
   RmaPriority,
   RmaStatus,
-  RmaStatusUpdateRequest
+  RmaStatusUpdateRequest,
+  UpdateRmaDueDateRequest
 } from '../models';
 import { buildPageParams } from '../utils/pagination';
 
@@ -60,6 +61,12 @@ export class RmaService {
 
   updatePriority(id: number, priority: RmaPriority): Observable<RmaResponse> {
     return this.http.put<RmaResponse>(`/api/rmas/${id}`, { priority });
+  }
+
+  /** A null date removes the due date with `clearDueDate`; a null `dueDate` would mean "unchanged". */
+  updateDueDate(id: number, dueDate: string | null): Observable<RmaResponse> {
+    const payload: UpdateRmaDueDateRequest = dueDate ? { dueDate } : { clearDueDate: true };
+    return this.http.put<RmaResponse>(`/api/rmas/${id}`, payload);
   }
 
   updateAssignee(id: number, payload: RmaAssigneeUpdateRequest): Observable<RmaResponse> {

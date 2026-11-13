@@ -1,5 +1,6 @@
-import { Component, EventEmitter, Output, computed, inject, input } from '@angular/core';
+import { Component, EventEmitter, Output, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { formatDateOnly } from '../../core/utils/date';
 import { RMA_STATUS_FLOW } from '../../core/mock-data';
 import { AssignableUserResponse, RmaResponse, RmaStatus } from '../../core/models';
 import { SlaClockService } from '../../core/services/sla-clock.service';
@@ -7,17 +8,21 @@ import {
   NO_DIAGNOSIS_LABEL,
   blockedLabel,
   diagnosisFacts,
+  historyEntryTitle,
   invoiceFact,
   purchaseFact,
   receiptFacts,
   repairFacts,
   rmaHistory,
   rmaItemFacts,
-  sectionLabel
+  sectionLabel,
+  stageFact
 } from '../../core/utils/rma-detail';
 import { CustomSelectComponent, CustomSelectOption } from '../form-controls/custom-select/custom-select.component';
 import { ModalFocusDirective } from '../modal-focus/modal-focus.directive';
-import { RmaSlaBadgeComponent } from '../rma-sla-badge/rma-sla-badge.component';
+import { RmaDeadlineChipComponent } from '../rma-deadline-chip/rma-deadline-chip.component';
+import { RmaDueDateDialogComponent } from '../rma-due-date-dialog/rma-due-date-dialog.component';
+import { RmaStageTimesComponent } from '../rma-stage-times/rma-stage-times.component';
 import {
   formatDate,
   formatDateTime,
@@ -33,7 +38,7 @@ import {
 
 @Component({
   selector: 'app-rma-detail-modal',
-  imports: [CustomSelectComponent, ModalFocusDirective, RmaSlaBadgeComponent, RouterLink],
+  imports: [CustomSelectComponent, ModalFocusDirective, RmaDeadlineChipComponent, RmaDueDateDialogComponent, RmaStageTimesComponent, RouterLink],
   templateUrl: './rma-detail-modal.component.html',
   styleUrl: './rma-detail-modal.component.css'
 })
@@ -41,6 +46,8 @@ export class RmaDetailModalComponent {
   readonly rma = input.required<RmaResponse>();
   readonly canUpdateStatus = input(false);
   readonly canUpdateAssignee = input(false);
+  /** `rma.editar`: shows Alterar next to the due date. */
+  readonly canEditDueDate = input(false);
   readonly disabled = input(false);
   /** Users who can receive the RMA (the host's assignable-users source). */
   readonly assignableUsers = input<readonly AssignableUserResponse[]>([]);
@@ -54,6 +61,8 @@ export class RmaDetailModalComponent {
   /** A person (or null, unassigned) picked in the inline selector; the host saves it. */
   @Output() readonly assigneeChange = new EventEmitter<{ rma: RmaResponse; assigneeId: number | null }>();
   @Output() readonly blockInspect = new EventEmitter<RmaResponse>();
+  /** The RMA returned by a save made inside the detail (due date). */
+  @Output() readonly rmaUpdated = new EventEmitter<RmaResponse>();
   protected readonly clock = inject(SlaClockService);
   protected readonly blockedLabel = blockedLabel;
   protected readonly statusLabel = statusLabel;
@@ -66,6 +75,7 @@ export class RmaDetailModalComponent {
   protected readonly initials = initialsOf;
   protected readonly dateLabel = formatDate;
   protected readonly dateTimeLabel = formatDateTime;
+  protected readonly dueDateLabel = formatDateOnly;
   protected readonly sectionLabel = sectionLabel;
   protected readonly invoiceFact = invoiceFact;
   protected readonly purchaseFact = purchaseFact;
@@ -75,6 +85,14 @@ export class RmaDetailModalComponent {
   protected readonly repairFacts = repairFacts;
   protected readonly noDiagnosisLabel = NO_DIAGNOSIS_LABEL;
   protected readonly activity = computed(() => rmaHistory(this.rma()));
+  protected readonly historyEntryTitle = historyEntryTitle;
+  protected readonly stage = computed(() => stageFact(this.rma(), this.clock.now()));
+  protected readonly dueDateDialogOpen = signal(false);
+
+  protected dueDateSaved(rma: RmaResponse): void {
+    this.dueDateDialogOpen.set(false);
+    this.rmaUpdated.emit(rma);
+  }
   /** Every stage but the current one can be chosen (the same rule as the status dialog). */
   protected readonly statusOptions = computed<ReadonlyArray<CustomSelectOption<RmaStatus>>>(() =>
     RMA_STATUS_FLOW.map((status) => ({

@@ -5,8 +5,11 @@ import {
   RmaResponse,
   RmaStatus
 } from '../models';
-import { formatDateOnly } from './date';
+import { CLOSED_RMA_STATUSES } from '../mock-data';
+import { formatBusinessDateTime, formatDateOnly } from './date';
+import { formatDuration } from './duration';
 import { blockDuration } from './rma-block';
+import { currentStagePeriod, stageElapsedSeconds } from './rma-stage';
 import { failureCauseLabel, failureTypeLabel, statusLabel } from './rma-ui';
 
 /**
@@ -107,16 +110,41 @@ export function blockedLabel(block: RmaBlockResponse, now: number): string {
   return `Bloqueado há ${blockDuration(block, now)}`;
 }
 
+/** "Nesta etapa": "há 2 d 4 h" while open, "Encerrado em dd/mm/aaaa hh:mm" once closed. */
+export function stageFact(rma: Pick<RmaResponse, 'status' | 'stagePeriods'>, now: number): RmaFact {
+  const current = currentStagePeriod(rma);
+  if (CLOSED_RMA_STATUSES.includes(rma.status)) {
+    return fact('Nesta etapa', `Encerrado em ${formatBusinessDateTime(current.enteredAt).replace(', ', ' ')}`);
+  }
+  return fact('Nesta etapa', `há ${formatDuration(stageElapsedSeconds(current, now))}`);
+}
+
 export type RmaHistoryEntry =
   | { kind: 'status'; at: string; by: string; label: string; status: RmaStatus; note: string | null }
-  | { kind: 'assignee'; at: string; by: string; from: string; to: string };
+  | { kind: 'assignee'; at: string; by: string; from: string; to: string }
+  | { kind: 'dueDate'; at: string; by: string; from: string | null; to: string | null };
+
+export function dueDateHistoryLabel(entry: { from: string | null; to: string | null }): string {
+  if (!entry.from && entry.to) return `Data limite definida: ${formatDateOnly(entry.to)}`;
+  if (entry.from && !entry.to) return `Data limite removida (era ${formatDateOnly(entry.from)})`;
+  return `Data limite ${formatDateOnly(entry.from)} → ${formatDateOnly(entry.to)}`;
+}
+
+/** Title line of a history entry, shared by both details. */
+export function historyEntryTitle(entry: RmaHistoryEntry): string {
+  switch (entry.kind) {
+    case 'status': return entry.label;
+    case 'assignee': return `${entry.from} → ${entry.to}`;
+    case 'dueDate': return dueDateHistoryLabel(entry);
+  }
+}
 
 /**
- * Status records and assignee changes, newest first. A status record may be a priority change
+ * Status records, assignee changes and due date changes, newest first. A status record may be a priority change
  * or a note with the same status, so no transition or origin is inferred from neighbours.
- * Ties keep input order (status records, then assignee changes); the input arrays are not changed.
+ * Ties keep input order (status records, assignee changes, then due date changes); the input arrays are not changed.
  */
-export function rmaHistory(rma: Pick<RmaResponse, 'statusHistory' | 'assignmentHistory'>): RmaHistoryEntry[] {
+export function rmaHistory(rma: Pick<RmaResponse, 'statusHistory' | 'assignmentHistory'> & Partial<Pick<RmaResponse, 'dueDateHistory'>>): RmaHistoryEntry[] {
   const entries: RmaHistoryEntry[] = [
     ...rma.statusHistory.map((record): RmaHistoryEntry => ({
       kind: 'status',
@@ -132,6 +160,13 @@ export function rmaHistory(rma: Pick<RmaResponse, 'statusHistory' | 'assignmentH
       by: record.changedBy,
       from: record.previousAssigneeName?.trim() || NO_ASSIGNEE,
       to: record.newAssigneeName?.trim() || NO_ASSIGNEE
+    })),
+    ...(rma.dueDateHistory ?? []).map((record): RmaHistoryEntry => ({
+      kind: 'dueDate',
+      at: record.changedAt,
+      by: record.changedBy,
+      from: record.previousDueDate,
+      to: record.newDueDate
     }))
   ];
   return entries.sort((left, right) => Date.parse(right.at) - Date.parse(left.at));

@@ -106,6 +106,19 @@ describe('RmaService', () => {
     request.flush({});
   });
 
+  it('sets the due date and clears it with clearDueDate, never with a null dueDate', () => {
+    service.updateDueDate(11, '2026-11-30').subscribe();
+    const set = httpTesting.expectOne('/api/rmas/11');
+    expect(set.request.method).toBe('PUT');
+    expect(set.request.body).toEqual({ dueDate: '2026-11-30' });
+    set.flush({});
+
+    service.updateDueDate(11, null).subscribe();
+    const clear = httpTesting.expectOne('/api/rmas/11');
+    expect(clear.request.body).toEqual({ clearDueDate: true });
+    clear.flush({});
+  });
+
   it('patches status and assignee through their dedicated endpoints', () => {
     service.updateStatus(11, { status: 'IN_REPAIR', note: 'Iniciar' }).subscribe();
     const status = httpTesting.expectOne('/api/rmas/11/status');

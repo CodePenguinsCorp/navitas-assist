@@ -142,6 +142,7 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7v5l3 2" /></svg>
             {{ sectionLabel('history') }} <span class="mini-chip">{{ activity().length }}</span>
           </h3>
+          <app-rma-stage-times [rma]="rma()" />
           @if (activity().length === 0) {
             <p class="rma-detail__muted">Nenhuma atividade registrada.</p>
           }
@@ -157,8 +158,10 @@
                   @if (entry.kind === 'status') {
                     <p>{{ entry.label }}</p>
                     @if (entry.note) { <blockquote>{{ entry.note }}</blockquote> }
-                  } @else {
+                  } @else if (entry.kind === 'assignee') {
                     <p>Responsável <span class="rma-detail__from">{{ entry.from }}</span> <span aria-hidden="true">→</span> <span class="mini-chip">{{ entry.to }}</span></p>
+                  } @else {
+                    <p class="rma-detail__due-date-event">{{ historyEntryTitle(entry) }}</p>
                   }
                 </div>
               </li>
@@ -195,7 +198,21 @@
               }
             </div>
             <div><dt>Prioridade</dt><dd><span class="priority-tag" [attr.data-priority]="rma().priority"><span class="priority-bars" [attr.data-priority]="rma().priority" aria-hidden="true"><i></i><i></i><i></i></span>{{ priorityLabel(rma().priority) }}</span></dd></div>
-            <div class="detail-facts__block"><dt>SLA</dt><dd><app-rma-sla-badge [sla]="rma().sla" /></dd></div>
+            <div class="detail-facts__block rma-detail__deadline">
+              <dt>Data limite</dt>
+              <dd [class.is-empty]="!rma().dueDate">
+                @if (rma().dueDate) {
+                  <span>{{ dueDateLabel(rma().dueDate) }}</span>
+                  <app-rma-deadline-chip [rma]="rma()" mode="detail" />
+                } @else {
+                  <span>Sem data limite</span>
+                }
+                @if (canEditDueDate()) {
+                  <button type="button" class="button-secondary button-secondary--small" [disabled]="disabled()" (click)="dueDateDialogOpen.set(true)">Alterar</button>
+                }
+              </dd>
+            </div>
+            <div><dt>{{ stage().label }}</dt><dd>{{ stage().value }}</dd></div>
           </dl>
         </section>
         <section class="rma-detail__info detail-card">
@@ -221,3 +238,7 @@
     </div>
   </article>
 </section>
+
+@if (dueDateDialogOpen()) {
+  <app-rma-due-date-dialog [rma]="rma()" (saved)="dueDateSaved($event)" (closed)="dueDateDialogOpen.set(false)" />
+}

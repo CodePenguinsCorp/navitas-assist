@@ -1,0 +1,46 @@
+<section class="modal-overlay" (click)="close()">
+  <article
+    class="panel modal-panel modal-panel--narrow"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="rma-due-date-title"
+    appModalFocus
+    modalInitialFocus="app-date-picker button"
+    [modalCloseBlocked]="busy()"
+    (modalCloseRequested)="close()"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="modal-header">
+      <div>
+        <h3 id="rma-due-date-title">Data limite</h3>
+        <p>{{ rma().code }}</p>
+      </div>
+      <button type="button" class="modal-close" (click)="close()" [disabled]="busy()" aria-label="Fechar">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+      </button>
+    </div>
+
+    @if (error(); as message) {
+      <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+        <strong>{{ message }}</strong>
+      </article>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
+      <div class="field-group field-group--full">
+        <label>Data limite</label>
+        <app-date-picker
+          formControlName="dueDate"
+          ariaLabel="Data limite"
+          [allowClear]="true"
+          [minDate]="rma().entryDate"
+        />
+      </div>
+
+      <div class="form-actions form-actions--full">
+        <button type="button" class="button-secondary" (click)="close()" [disabled]="busy()">Cancelar</button>
+        <button type="submit" class="button-primary" [disabled]="busy()">{{ busy() ? 'Salvando...' : 'Salvar' }}</button>
+      </div>
+    </form>
+  </article>
+</section>

@@ -38,13 +38,15 @@ import {
   NO_DIAGNOSIS_LABEL,
   blockedLabel,
   diagnosisFacts,
+  historyEntryTitle,
   invoiceFact,
   purchaseFact,
   receiptFacts,
   repairFacts,
   rmaHistory,
   rmaItemFacts,
-  sectionLabel
+  sectionLabel,
+  stageFact
 } from '../../core/utils/rma-detail';
 import {
   failureCauseLabel,
@@ -74,7 +76,9 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { RmaBlockHistoryComponent } from '../../shared/rma-block-history/rma-block-history.component';
 import { RmaPartsPanelComponent } from '../../shared/rma-parts-panel/rma-parts-panel.component';
-import { RmaSlaBadgeComponent } from '../../shared/rma-sla-badge/rma-sla-badge.component';
+import { RmaDeadlineChipComponent } from '../../shared/rma-deadline-chip/rma-deadline-chip.component';
+import { RmaDueDateDialogComponent } from '../../shared/rma-due-date-dialog/rma-due-date-dialog.component';
+import { RmaStageTimesComponent } from '../../shared/rma-stage-times/rma-stage-times.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
 type SearchStatusValue = RmaStatus | '';
@@ -97,7 +101,7 @@ export interface RmaListFilters {
 
 @Component({
   selector: 'app-rmas',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlockHistoryComponent, PageHeaderComponent, RowActionComponent, RmaSlaBadgeComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlockHistoryComponent, PageHeaderComponent, RowActionComponent, RmaDeadlineChipComponent, RmaDueDateDialogComponent, RmaStageTimesComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {
@@ -530,6 +534,9 @@ export class RmasComponent {
   protected readonly diagnosisFacts = diagnosisFacts;
   protected readonly repairFacts = repairFacts;
   protected readonly rmaHistory = rmaHistory;
+  protected readonly historyEntryTitle = historyEntryTitle;
+  protected readonly stageFact = stageFact;
+  protected readonly dueDateDialogOpen = signal(false);
   protected readonly noDiagnosisLabel = NO_DIAGNOSIS_LABEL;
 
   protected get todayDate(): string {
@@ -570,6 +577,9 @@ export class RmasComponent {
   protected readonly canOpenRma = computed(() => this.permissions.hasPermission('rma.abrir'));
 
   protected readonly canRegisterDiagnosis = computed(() => this.permissions.hasPermission('rma.diagnosticar'));
+
+  /** `rma.editar`: general data, including the due date. */
+  protected readonly canEditRma = computed(() => this.permissions.hasPermission('rma.editar'));
 
   protected readonly filtersForm = this.formBuilder.nonNullable.group({
     query: [''],
@@ -877,6 +887,12 @@ export class RmasComponent {
     });
   }
 
+  protected dueDateSaved(updated: RmaResponse): void {
+    this.dueDateDialogOpen.set(false);
+    this.selectedRmaSignal.set(updated);
+    this.refreshRmas();
+  }
+
   /** Opens the collapsed retroactive group and focuses its first invalid field, if any. */
   private revealInvalidRetroactiveField(): void {
     const invalid = RETROACTIVE_CONTROLS.find((name) => this.createForm.controls[name].invalid);
@@ -903,6 +919,7 @@ export class RmasComponent {
 
   private resetModal(): void {
     this.activeModal.set(null);
+    this.dueDateDialogOpen.set(false);
   }
 
   private loadWorkspace(): void {

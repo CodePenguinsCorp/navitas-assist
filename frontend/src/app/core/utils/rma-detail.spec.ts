@@ -5,6 +5,8 @@ import {
   RMA_DETAIL_SECTIONS,
   blockedLabel,
   diagnosisFacts,
+  dueDateHistoryLabel,
+  historyEntryTitle,
   invoiceFact,
   purchaseFact,
   receiptFacts,
@@ -12,6 +14,7 @@ import {
   rmaHistory,
   rmaItemFacts,
   sectionLabel,
+  stageFact,
   warrantyExpiryLabel,
   warrantyTermLabel
 } from './rma-detail';
@@ -203,5 +206,34 @@ describe('RMA detail contract', () => {
     };
     expect(blockedLabel(block, Date.parse('2026-10-20T12:05:00Z'))).toBe('Bloqueado há 2 h 5 min');
     expect(blockedLabel(block, Date.parse('2026-10-20T10:30:00Z'))).toBe('Bloqueado há 30 min');
+  });
+
+  it('merges due date changes into the history with previous value and author', () => {
+    const history = rmaHistory({
+      statusHistory: [statusRecord({ changedAt: '2026-10-20T10:00:00Z' })],
+      assignmentHistory: [],
+      dueDateHistory: [
+        { previousDueDate: '2026-11-20', newDueDate: null, changedBy: 'ana', changedAt: '2026-10-22T12:00:00Z' },
+        { previousDueDate: '2026-11-20', newDueDate: '2026-11-25', changedBy: 'bia', changedAt: '2026-10-21T12:00:00Z' },
+        { previousDueDate: null, newDueDate: '2026-11-20', changedBy: 'bia', changedAt: '2026-10-20T11:00:00Z' }
+      ]
+    });
+    expect(history.map((entry) => entry.kind)).toEqual(['dueDate', 'dueDate', 'dueDate', 'status']);
+    expect(history.map(historyEntryTitle)).toEqual([
+      'Data limite removida (era 20/11/2026)',
+      'Data limite 20/11/2026 → 25/11/2026',
+      'Data limite definida: 20/11/2026',
+      'Status registrado: Triagem'
+    ]);
+    expect(history[1].by).toBe('bia');
+    expect(dueDateHistoryLabel({ from: '2026-11-20', to: '2026-11-25' })).not.toMatch(/vencid|SLA/i);
+  });
+
+  it('shows the time in the current stage, or the closing for closed RMAs', () => {
+    const now = Date.parse('2026-10-22T16:00:00Z');
+    expect(stageFact(buildRma({ status: 'IN_REPAIR', stagePeriods: [{ status: 'IN_REPAIR', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 0 }] }), now))
+      .toEqual({ label: 'Nesta etapa', value: 'há 2 d 4 h', empty: false });
+    expect(stageFact(buildRma({ status: 'COMPLETED', stagePeriods: [{ status: 'COMPLETED', enteredAt: '2026-10-21T13:30:00Z', leftAt: null, durationSeconds: 0 }] }), now).value)
+      .toBe('Encerrado em 21/10/2026 10:30');
   });
 });

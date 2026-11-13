@@ -3,6 +3,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { DiagnosisResponse, RmaResponse, WarrantyStatus } from '../../core/models';
 import { SlaClockService } from '../../core/services/sla-clock.service';
+import { RmaService } from '../../core/services/rma.service';
+import { of } from 'rxjs';
 import { buildRma, buildRmaItem } from '../../testing/rma-fixtures';
 import { RmaDetailModalComponent } from './rma-detail-modal.component';
 
@@ -55,18 +57,20 @@ const USERS = [
   { id: 9, username: 'bia', fullName: 'Beatriz Souza' }
 ];
 
-async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; canUpdateAssignee?: boolean; disabled?: boolean } = {}) {
+async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; canUpdateAssignee?: boolean; canEditDueDate?: boolean; disabled?: boolean } = {}) {
   await TestBed.configureTestingModule({
     imports: [RmaDetailModalComponent],
     providers: [
       provideRouter([{ path: 'rmas', component: StubComponent }]),
-      { provide: SlaClockService, useValue: { now: signal(NOW) } }
+      { provide: SlaClockService, useValue: { now: signal(NOW) } },
+      { provide: RmaService, useValue: { updateDueDate: (id: number, dueDate: string | null) => of({ ...(inputs.rma ?? fullRma), id, dueDate }) } }
     ]
   }).compileComponents();
   const fixture: ComponentFixture<RmaDetailModalComponent> = TestBed.createComponent(RmaDetailModalComponent);
   fixture.componentRef.setInput('rma', inputs.rma ?? fullRma);
   fixture.componentRef.setInput('canUpdateStatus', inputs.canUpdateStatus ?? true);
   fixture.componentRef.setInput('canUpdateAssignee', inputs.canUpdateAssignee ?? true);
+  fixture.componentRef.setInput('canEditDueDate', inputs.canEditDueDate ?? false);
   fixture.componentRef.setInput('disabled', inputs.disabled ?? false);
   fixture.componentRef.setInput('assignableUsers', USERS);
   fixture.detectChanges();
@@ -300,25 +304,80 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(closed).toHaveBeenCalledTimes(2);
   });
 
-  it('shows the active block and the SLA badge', async () => {
+  it('shows the active block', async () => {
     const { host } = await setup();
     const block = host.querySelector('.rma-detail__block')!;
 
     expect(block.querySelector('strong')?.textContent?.trim()).toBe('Bloqueado há 2 h');
     expect(block.textContent).toContain('Aguardando cliente');
-    expect(host.querySelector('.rma-detail__side app-rma-sla-badge')).not.toBeNull();
+    expect(host.textContent).not.toContain('SLA');
   });
 
-  it('gives the SLA its own full-width row and never breaks the state or the times inside', async () => {
-    // Hoje o selo dividia "Atrasad / o" e "74h 14min / 24h 0min" numa coluna estreita.
-    const { host } = await setup();
-    const row = [...host.querySelectorAll('.rma-detail__side dl > div')].find((item) => item.querySelector('dt')?.textContent?.trim() === 'SLA')!;
+  it('shows Sem data limite when there is none', async () => {
+    const { host, sidePairs } = await setup({ rma: { ...fullRma, dueDate: null } });
+    expect(sidePairs()['Data limite']).toBe('Sem data limite');
+    const row = [...host.querySelectorAll('.rma-detail__side dl > div')].find((item) => item.querySelector('dt')?.textContent?.trim() === 'Data limite')!;
+    expect(row.querySelector('dd')?.classList).toContain('is-empty');
+  });
 
-    expect(row.classList).toContain('detail-facts__block');
-    for (const selector of ['.sla__state', '.sla__elapsed', '.sla__limit', '.sla__due']) {
-      expect(getComputedStyle(row.querySelector(selector)!).whiteSpace, selector).toBe('nowrap');
-    }
-    expect(getComputedStyle(row.querySelector('.sla__row')!).flexWrap).toBe('wrap');
+  it('shows the date and Atrasado há 2 dias', async () => {
+    const { host, sidePairs } = await setup({
+      rma: { ...fullRma, dueDate: '2026-10-18', deadline: { status: 'OVERDUE', dueSoonFrom: '2026-10-11', daysUntilDue: -2 } }
+    });
+    expect(sidePairs()['Data limite']).toContain('18/10/2026');
+    const chip = host.querySelector('.rma-detail__side .deadline-chip');
+    expect(chip?.textContent?.trim()).toBe('Atrasado há 2 dias');
+    expect(chip?.getAttribute('data-deadline')).toBe('OVERDUE');
+  });
+
+  it('shows Alterar only with rma.editar and emits the saved RMA', async () => {
+    let view = await setup();
+    expect(view.buttonByText('Alterar')).toBeUndefined();
+    TestBed.resetTestingModule();
+
+    view = await setup({ canEditDueDate: true });
+    const updated: RmaResponse[] = [];
+    view.component.rmaUpdated.subscribe((rma) => updated.push(rma));
+    view.buttonByText('Alterar')!.click();
+    view.fixture.detectChanges();
+    const dialog = view.host.querySelector('app-rma-due-date-dialog [role="dialog"]');
+    expect(dialog?.querySelector('h3')?.textContent?.trim()).toBe('Data limite');
+    dialog!.querySelector('form')!.dispatchEvent(new Event('submit'));
+    view.fixture.detectChanges();
+    expect(updated).toHaveLength(1);
+    expect(view.host.querySelector('app-rma-due-date-dialog')).toBeNull();
+  });
+
+  it('shows há 2 d 4 h in Nesta etapa and Encerrado em for closed RMAs', async () => {
+    let view = await setup({ rma: { ...fullRma, stagePeriods: [{ status: 'TRIAGE', enteredAt: '2026-10-18T08:00:00Z', leftAt: null, durationSeconds: 0 }] } });
+    expect(view.sidePairs()['Nesta etapa']).toBe('há 2 d 4 h');
+    TestBed.resetTestingModule();
+
+    view = await setup({ rma: { ...fullRma, status: 'COMPLETED', stagePeriods: [{ status: 'COMPLETED', enteredAt: '2026-10-19T13:00:00Z', leftAt: null, durationSeconds: 0 }] } });
+    expect(view.sidePairs()['Nesta etapa']).toBe('Encerrado em 19/10/2026 10:00');
+  });
+
+  it('lists the time of each previous stage in Histórico', async () => {
+    const { section } = await setup({
+      rma: {
+        ...fullRma,
+        stagePeriods: [
+          { status: 'RECEIVED', enteredAt: '2026-10-20T08:00:00Z', leftAt: '2026-10-20T10:00:00Z', durationSeconds: 7200 },
+          { status: 'TRIAGE', enteredAt: '2026-10-20T10:00:00Z', leftAt: null, durationSeconds: 0 }
+        ]
+      }
+    });
+    const items = [...section('Histórico')!.querySelectorAll('app-rma-stage-times li')].map((item) => item.textContent?.trim());
+    expect(items).toEqual(['Recebido · 2 h', 'Triagem · 2 h (atual)']);
+  });
+
+  it('shows due date changes with previous value and author', async () => {
+    const { section } = await setup({
+      rma: { ...fullRma, dueDateHistory: [{ previousDueDate: '2026-11-20', newDueDate: '2026-11-25', changedBy: 'carla', changedAt: '2026-10-20T11:30:00Z' }] }
+    });
+    const event = [...section('Histórico')!.querySelectorAll('.rma-detail__event')].find((item) => item.textContent?.includes('Data limite'))!;
+    expect(event.querySelector('.rma-detail__due-date-event')?.textContent?.trim()).toBe('Data limite 20/11/2026 → 25/11/2026');
+    expect(event.querySelector('strong')?.textContent?.trim()).toBe('carla');
   });
 
   it('puts every section and side card on a white card over the tinted canvas', async () => {
