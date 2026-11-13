@@ -6,6 +6,7 @@ import { ClockService } from '../../core/services/clock.service';
 import { RmaService } from '../../core/services/rma.service';
 import { of } from 'rxjs';
 import { buildRma, buildRmaItem } from '../../testing/rma-fixtures';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { RmaDetailModalComponent } from './rma-detail-modal.component';
 
 @Component({ template: '' })
@@ -63,7 +64,14 @@ async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; can
     providers: [
       provideRouter([{ path: 'rmas', component: StubComponent }]),
       { provide: ClockService, useValue: { now: signal(NOW) } },
-      { provide: RmaService, useValue: { updateDueDate: (id: number, dueDate: string | null) => of({ ...(inputs.rma ?? fullRma), id, dueDate }) } }
+      providePermissions(profilePermissions('ADMIN')),
+      { provide: RmaService, useValue: {
+        updateDueDate: (id: number, dueDate: string | null) => of({ ...(inputs.rma ?? fullRma), id, dueDate }),
+        resolveBlock: (id: number, blockId: number, body: { resolutionNote: string }) => of({
+          ...(inputs.rma ?? fullRma), id, currentBlock: null,
+          blockHistory: [{ ...(inputs.rma ?? fullRma).currentBlock!, id: blockId, resolvedBy: 'ana', resolvedAt: '2026-10-20T11:50:00Z', resolutionNote: body.resolutionNote }]
+        })
+      } }
     ]
   }).compileComponents();
   const fixture: ComponentFixture<RmaDetailModalComponent> = TestBed.createComponent(RmaDetailModalComponent);
@@ -100,7 +108,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     const { host, headingText } = await setup();
 
     expect([...host.querySelectorAll('.rma-detail__heading')].map(headingText)).toEqual([
-      'Falha relatada', 'Produtos', 'Recebimento', 'Diagnóstico', 'Reparo e testes', 'Histórico'
+      'Falha relatada', 'Impedimentos', 'Produtos', 'Recebimento', 'Diagnóstico', 'Reparo e testes', 'Histórico'
     ]);
   });
 
@@ -254,7 +262,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     [true, true],
     [true, false],
     [false, false]
-  ])('shows status and assignee actions only when allowed and always Ver impedimentos (status %s, assignee %s)', async (canUpdateStatus, canUpdateAssignee) => {
+  ])('shows status and assignee actions only when allowed and always the Impedimentos card (status %s, assignee %s)', async (canUpdateStatus, canUpdateAssignee) => {
     const { buttonByText, host } = await setup({ canUpdateStatus, canUpdateAssignee, rma: { ...fullRma, assigneeId: null } });
 
     expect(host.querySelector('app-custom-select.rma-detail__status') !== null).toBe(canUpdateStatus);
@@ -262,14 +270,15 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(host.querySelector('.rma-detail__assignee-picker') !== null).toBe(canUpdateAssignee);
     expect(buttonByText('Atribuir')).toBeUndefined();
     expect(buttonByText('Trocar responsável')).toBeUndefined();
-    expect(buttonByText('Ver impedimentos')).toBeDefined();
+    expect(buttonByText('Ver impedimentos')).toBeUndefined();
+    expect(host.querySelector('app-rma-blocks-section')).not.toBeNull();
     expect(host.querySelector('.modal-close')).not.toBeNull();
   });
 
   it('disables business actions while disabled', async () => {
     const { buttonByText, host } = await setup({ disabled: true, rma: { ...fullRma, assigneeId: 7, assigneeName: 'Ana' } });
 
-    expect((buttonByText('Ver impedimentos') as HTMLButtonElement).disabled).toBe(true);
+    expect((buttonByText('Resolver') as HTMLButtonElement).disabled).toBe(true);
     expect(host.querySelector<HTMLButtonElement>('.rma-detail__assignee-picker .custom-select__trigger')!.disabled).toBe(true);
     expect(host.querySelector<HTMLButtonElement>('.rma-detail__status .custom-select__trigger')!.disabled).toBe(true);
     expect(host.querySelector<HTMLButtonElement>('.modal-close')!.disabled).toBe(true);
@@ -286,35 +295,66 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(closed).not.toHaveBeenCalled();
   });
 
-  it('emits closed and blockInspect from the buttons', async () => {
+  it('emits closed from the close button and the backdrop, with no separate impediments button', async () => {
     const rma = { ...fullRma, assigneeId: 7, assigneeName: 'Ana' };
     const { component, buttonByText, host } = await setup({ rma });
     const closed = vi.fn();
     const statusChange = vi.fn();
     const assigneeChange = vi.fn();
-    const blockInspect = vi.fn();
     component.closed.subscribe(closed);
     component.statusChange.subscribe(statusChange);
     component.assigneeChange.subscribe(assigneeChange);
-    component.blockInspect.subscribe(blockInspect);
 
-    buttonByText('Ver impedimentos')!.click();
+    expect(buttonByText('Ver impedimentos')).toBeUndefined();
+    expect('blockInspect' in component).toBe(false);
     host.querySelector<HTMLButtonElement>('.modal-close')!.click();
     host.querySelector<HTMLElement>('.modal-overlay')!.click();
 
     expect(statusChange).not.toHaveBeenCalled();
     expect(assigneeChange).not.toHaveBeenCalled();
-    expect(blockInspect).toHaveBeenCalledWith(rma);
     expect(closed).toHaveBeenCalledTimes(2);
   });
 
-  it('shows the active block', async () => {
-    const { host } = await setup();
-    const block = host.querySelector('.rma-detail__block')!;
+  it('shows the active block inside the Impedimentos card with an inline Resolver', async () => {
+    const { host, section, buttonByText } = await setup();
+    const card = section('Impedimentos')!;
+    const current = card.querySelector('app-rma-blocks-section .blocks-section__current')!;
 
-    expect(block.querySelector('strong')?.textContent?.trim()).toBe('Bloqueado há 2 h');
-    expect(block.textContent).toContain('Aguardando cliente');
+    expect(current.querySelector('strong')?.textContent?.trim()).toBe('Bloqueado há 2 h');
+    expect(current.textContent).toContain('Aguardando cliente');
+    expect(buttonByText('Resolver')?.classList).toContain('link-button');
+    expect(host.querySelector('.rma-detail__block')).toBeNull();
+    expect(host.querySelector('dialog, app-rma-block-panel')).toBeNull();
     expect(host.textContent).not.toContain('SLA');
+  });
+
+  it('shows Sem impedimento and Sinalizar impedimento when the RMA is not blocked', async () => {
+    const { section } = await setup({ rma: { ...fullRma, currentBlock: null } });
+    const card = section('Impedimentos')!;
+    expect(card.querySelector('.blocks-section__empty')?.textContent?.trim()).toBe('Sem impedimento');
+    expect([...card.querySelectorAll('button')].some((button) => button.textContent?.trim() === 'Sinalizar impedimento')).toBe(true);
+  });
+
+  it('emits rmaUpdated with the RMA saved by the inline resolve', async () => {
+    const { fixture, component, buttonByText, section } = await setup();
+    const updated: RmaResponse[] = [];
+    component.rmaUpdated.subscribe((rma) => updated.push(rma));
+    buttonByText('Resolver')!.click();
+    fixture.detectChanges();
+    const note = section('Impedimentos')!.querySelector<HTMLTextAreaElement>('textarea')!;
+    note.value = 'Cliente respondeu';
+    note.dispatchEvent(new Event('input'));
+    note.closest('form')!.dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+
+    expect(updated).toHaveLength(1);
+    expect(updated[0].currentBlock).toBeNull();
+    expect(section('Impedimentos')!.querySelector('.blocks-section__empty')?.textContent?.trim()).toBe('Sem impedimento');
+  });
+
+  it('disables the inline impediment actions while the detail is busy', async () => {
+    const { buttonByText } = await setup({ disabled: true });
+    expect((buttonByText('Resolver') as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('shows Sem data limite when there is none', async () => {

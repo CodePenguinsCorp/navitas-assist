@@ -54,7 +54,6 @@ import { BulkRmaResult, KanbanBulkActionsComponent } from '../../shared/kanban-b
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { RmaKanbanBoardComponent } from '../../shared/rma-kanban-board/rma-kanban-board.component';
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
-import { RmaBlockPanelComponent } from '../../shared/rma-block-panel/rma-block-panel.component';
 import { RmaDetailModalComponent } from '../../shared/rma-detail-modal/rma-detail-modal.component';
 
 interface KanbanHeroStat {
@@ -124,7 +123,6 @@ const FILTER_LABELS: Record<AdvancedFilterKey, string> = {
     CustomSelectComponent,
     DatePickerComponent,
     RmaKanbanBoardComponent,
-    RmaBlockPanelComponent,
     RmaDetailModalComponent,
     KanbanBulkActionsComponent,
     ModalFocusDirective,
@@ -387,7 +385,8 @@ export class KanbanComponent {
     this.pageError.set('');
   }
 
-  protected applyBlockUpdate(updated: RmaResponse): void {
+  /** A save made inside the detail (impediment, due date) replaces the card in place. */
+  protected applyRmaUpdate(updated: RmaResponse): void {
     this.rmasSignal.update((rmas) => rmas.map((rma) => rma.id === updated.id ? updated : rma));
   }
 

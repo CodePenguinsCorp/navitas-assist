@@ -325,7 +325,7 @@
               }
             }
             @case ('blocks') {
-              <app-rma-block-history [rma]="rma" />
+              <app-rma-blocks-section [rma]="rma" (updated)="blocksUpdated($event)" />
             }
             @case ('history') {
               <app-rma-stage-times class="rma-details__stage-times" [rma]="rma" />

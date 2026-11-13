@@ -74,7 +74,7 @@ import { DatePickerComponent } from '../../shared/form-controls/date-picker/date
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
-import { RmaBlockHistoryComponent } from '../../shared/rma-block-history/rma-block-history.component';
+import { RmaBlocksSectionComponent } from '../../shared/rma-blocks-section/rma-blocks-section.component';
 import { RmaPartsPanelComponent } from '../../shared/rma-parts-panel/rma-parts-panel.component';
 import { RmaDeadlineChipComponent } from '../../shared/rma-deadline-chip/rma-deadline-chip.component';
 import { RmaDueDateDialogComponent } from '../../shared/rma-due-date-dialog/rma-due-date-dialog.component';
@@ -102,7 +102,7 @@ export interface RmaListFilters {
 
 @Component({
   selector: 'app-rmas',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlockHistoryComponent, PageHeaderComponent, RowActionComponent, RmaDeadlineChipComponent, RmaDueDateDialogComponent, RmaStageTimesComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDeadlineChipComponent, RmaDueDateDialogComponent, RmaStageTimesComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {
@@ -888,6 +888,12 @@ export class RmasComponent {
         this.diagnosisErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível salvar o diagnóstico agora.'));
       }
     });
+  }
+
+  /** A block or resolve made in the Impedimentos tab refreshes the detail and the list. */
+  protected blocksUpdated(updated: RmaResponse): void {
+    this.selectedRmaSignal.set(updated);
+    this.refreshRmas();
   }
 
   protected dueDateSaved(updated: RmaResponse): void {

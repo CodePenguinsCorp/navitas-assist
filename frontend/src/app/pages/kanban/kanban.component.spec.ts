@@ -79,6 +79,10 @@ describe('KanbanComponent filters', () => {
               if (failAssignee) return throwError(() => ({ error: { message: 'Técnico inativo' } }));
               return of({ ...TEST_RMAS.find((rma) => rma.id === id)!, assigneeId: payload.assigneeId });
             },
+            block: (id: number, payload: { reason: string; category: string | null }) => {
+              const block = { id: 77, reason: payload.reason, category: payload.category, blockedBy: 'admin', blockedAt: '2026-10-20T11:00:00Z', resolvedBy: null, resolvedAt: null, resolutionNote: null };
+              return of({ ...TEST_RMAS.find((rma) => rma.id === id)!, currentBlock: block, blockHistory: [block] });
+            },
           },
         },
       ],
@@ -372,19 +376,28 @@ describe('KanbanComponent filters', () => {
   }
 
 
-  it('preserves selection and filters when inspecting impediments from the detail modal', () => {
-    component.filtersForm.patchValue({ priority: 'HIGH' });
+  it('blocks inline from the detail and refreshes the card, keeping selection and filters', () => {
+    component.filtersForm.patchValue({ priority: TEST_RMAS[1].priority });
     fixture.detectChanges();
     component.openDetail(TEST_RMAS[1]);
     fixture.detectChanges();
-    const inspect = [...fixture.nativeElement.querySelectorAll('app-rma-detail-modal button')].find((button: HTMLButtonElement) => button.textContent?.includes('Ver impedimentos')) as HTMLButtonElement;
-    inspect.click();
+    const modal: HTMLElement = fixture.nativeElement.querySelector('app-rma-detail-modal');
+    expect([...modal.querySelectorAll('button')].some((button) => button.textContent?.includes('Ver impedimentos'))).toBe(false);
+    expect(fixture.nativeElement.querySelector('app-rma-block-panel, dialog')).toBeNull();
+    const flag = [...modal.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.trim() === 'Sinalizar impedimento')!;
+    flag.click();
     fixture.detectChanges();
-    const dialog: HTMLDialogElement = fixture.nativeElement.querySelector('app-rma-block-panel dialog');
-    expect(dialog.open).toBe(true);
-    dialog.querySelector<HTMLButtonElement>('button')!.click();
+    const reason = modal.querySelector<HTMLTextAreaElement>('#rma-block-reason')!;
+    reason.value = 'Aguardando cliente';
+    reason.dispatchEvent(new Event('input'));
+    reason.closest('form')!.dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+
+    const card = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.board-card')].find((item) => item.textContent?.includes(TEST_RMAS[1].code))!;
+    expect(card.querySelector('.board-card__block')?.textContent).toContain('Bloqueado há');
+    expect(modal.querySelector('.blocks-section__current')?.textContent).toContain('Aguardando cliente');
     expect(component.selectedRmaId()).toBe(2);
-    expect(component.filtersForm.getRawValue().priority).toBe('HIGH');
+    expect(component.filtersForm.getRawValue().priority).toBe(TEST_RMAS[1].priority);
   });
 
   it.each([
@@ -907,24 +920,15 @@ describe('KanbanComponent dialog focus', () => {
     expect(document.activeElement).toBe(trigger);
   });
 
-  it('opens impediments over the detail with focus on its title and returns to Ver impedimentos', () => {
+  it('moves focus into the inline impediment form and back to its trigger on Escape, keeping the detail open', () => {
     openDetailFromCard();
-    const inspect = activate(button(find('app-rma-detail-modal'), 'Ver impedimentos'));
-    const dialog = find<HTMLDialogElement>('app-rma-block-panel dialog');
-    expect(dialog.open).toBe(true);
-    expect(document.activeElement).toBe(find('#block-panel-title'));
-    expect(loading.visible()).toBe(false);
-    for (let node: HTMLElement | null = dialog; node; node = node.parentElement) {
-      expect(node.inert, 'the native dialog and its ancestors stay interactive').toBe(false);
-    }
-    expect(press('Escape').defaultPrevented, 'the detail below ignores Escape').toBe(false);
+    const flag = activate(button(find('app-rma-detail-modal'), 'Sinalizar impedimento'));
+    expect(document.activeElement).toBe(find('#rma-block-reason'));
+    expect(page.querySelector('app-rma-block-panel, dialog')).toBeNull();
+    expect(press('Escape').defaultPrevented, 'the inline form consumes Escape').toBe(true);
+    expect(page.querySelector('#rma-block-reason')).toBeNull();
     expect(detail()).not.toBeNull();
-    button(dialog, 'Fechar').click();
-    render();
-    expect(dialog.open).toBe(false);
-    expect(detail()).not.toBeNull();
-    expect(document.activeElement).toBe(inspect);
-    expect(find('.kanban-page').closest('[inert]'), 'the page stays behind the detail').not.toBeNull();
+    expect(document.activeElement).toBe(flag);
     press('Escape');
     expect(detail()).toBeNull();
   });

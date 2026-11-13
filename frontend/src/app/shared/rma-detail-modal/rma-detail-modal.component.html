@@ -47,15 +47,10 @@
           } @else {
             <span class="status-chip rma-detail__status" [attr.data-status]="rma().status">{{ statusLabel(rma().status) }}</span>
           }
-          <button type="button" class="button-secondary" [disabled]="disabled()" (click)="blockInspect.emit(rma())">Ver impedimentos</button>
         </div>
 
         @if (actionError()) {
           <p class="alert-banner alert-banner--error rma-detail__error" role="alert"><strong>{{ actionError() }}</strong></p>
-        }
-
-        @if (rma().currentBlock; as block) {
-          <p class="rma-detail__block"><strong>{{ blockedLabel(block, clock.now()) }}</strong>{{ block.reason }}</p>
         }
 
         <section class="rma-detail__section rma-detail__section--failure detail-card">
@@ -64,6 +59,14 @@
             {{ sectionLabel('failure') }}
           </h3>
           <p class="rma-detail__callout">{{ rma().reportedFailure }}</p>
+        </section>
+
+        <section class="rma-detail__section detail-card" aria-labelledby="rma-detail-blocks-title">
+          <h3 class="rma-detail__heading detail-card__title" id="rma-detail-blocks-title">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3" /></svg>
+            Impedimentos
+          </h3>
+          <app-rma-blocks-section [rma]="rma()" [disabled]="disabled()" (updated)="rmaUpdated.emit($event)" />
         </section>
 
         <section class="rma-detail__section detail-card">

@@ -6,17 +6,19 @@ import { blockDateTime, blockDuration } from '../../core/utils/rma-block';
 @Component({
   selector: 'app-rma-block-history',
   template: `
-    <section class="summary-block block-history" aria-label="Impedimentos do RMA">
-      <h3>Impedimentos</h3>
-      @if (rma().currentBlock; as block) {
-        <div class="block-history__current">
-          <strong>Bloqueado há {{ duration(block, clock.now()) }}</strong>
-          <p>{{ block.reason }}</p>
-        </div>
-      } @else {
-        <p class="block-history__state">Sem bloqueio atual.</p>
+    <section class="summary-block block-history" [class.block-history--previous]="previousOnly()" [attr.aria-label]="previousOnly() ? 'Impedimentos anteriores' : 'Impedimentos do RMA'">
+      @if (!previousOnly()) {
+        <h3>Impedimentos</h3>
+        @if (rma().currentBlock; as block) {
+          <div class="block-history__current">
+            <strong>Bloqueado há {{ duration(block, clock.now()) }}</strong>
+            <p>{{ block.reason }}</p>
+          </div>
+        } @else {
+          <p class="block-history__state">Sem bloqueio atual.</p>
+        }
+        <p class="block-history__hint">O período bloqueado continua contando no tempo da etapa.</p>
       }
-      <p class="block-history__hint">O período bloqueado continua contando no tempo da etapa.</p>
       @if (history().length === 0) {
         <p class="block-history__state">Nenhum impedimento registrado.</p>
       } @else {
@@ -58,8 +60,10 @@ import { blockDateTime, blockDuration } from '../../core/utils/rma-block';
 })
 export class RmaBlockHistoryComponent {
   readonly rma = input.required<RmaResponse>();
+  /** Only the resolved episodes, without title, current block or hint (the detail shows those). */
+  readonly previousOnly = input(false);
   protected readonly clock = inject(ClockService);
   protected readonly duration = blockDuration;
   protected readonly dateTime = blockDateTime;
-  protected readonly history = computed(() => [...this.rma().blockHistory].sort((a, b) => Date.parse(b.blockedAt) - Date.parse(a.blockedAt) || b.id - a.id));
+  protected readonly history = computed(() => this.rma().blockHistory.filter((block) => !this.previousOnly() || block.resolvedAt !== null).sort((a, b) => Date.parse(b.blockedAt) - Date.parse(a.blockedAt) || b.id - a.id));
 }

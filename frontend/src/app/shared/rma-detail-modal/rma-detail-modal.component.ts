@@ -6,7 +6,6 @@ import { AssignableUserResponse, RmaResponse, RmaStatus } from '../../core/model
 import { ClockService } from '../../core/services/clock.service';
 import {
   NO_DIAGNOSIS_LABEL,
-  blockedLabel,
   diagnosisFacts,
   historyEntryTitle,
   invoiceFact,
@@ -21,6 +20,7 @@ import {
 import { CustomSelectComponent, CustomSelectOption } from '../form-controls/custom-select/custom-select.component';
 import { IconComponent } from '../icon/icon.component';
 import { ModalFocusDirective } from '../modal-focus/modal-focus.directive';
+import { RmaBlocksSectionComponent } from '../rma-blocks-section/rma-blocks-section.component';
 import { RmaDeadlineChipComponent } from '../rma-deadline-chip/rma-deadline-chip.component';
 import { RmaDueDateDialogComponent } from '../rma-due-date-dialog/rma-due-date-dialog.component';
 import { RmaStageTimesComponent } from '../rma-stage-times/rma-stage-times.component';
@@ -39,7 +39,7 @@ import {
 
 @Component({
   selector: 'app-rma-detail-modal',
-  imports: [CustomSelectComponent, IconComponent, ModalFocusDirective, RmaDeadlineChipComponent, RmaDueDateDialogComponent, RmaStageTimesComponent, RouterLink],
+  imports: [CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDeadlineChipComponent, RmaDueDateDialogComponent, RmaStageTimesComponent, RouterLink],
   templateUrl: './rma-detail-modal.component.html',
   styleUrl: './rma-detail-modal.component.css'
 })
@@ -61,11 +61,9 @@ export class RmaDetailModalComponent {
   @Output() readonly statusChange = new EventEmitter<{ rma: RmaResponse; status: RmaStatus }>();
   /** A person (or null, unassigned) picked in the inline selector; the host saves it. */
   @Output() readonly assigneeChange = new EventEmitter<{ rma: RmaResponse; assigneeId: number | null }>();
-  @Output() readonly blockInspect = new EventEmitter<RmaResponse>();
-  /** The RMA returned by a save made inside the detail (due date). */
+  /** The RMA returned by a save made inside the detail (impediments, due date). */
   @Output() readonly rmaUpdated = new EventEmitter<RmaResponse>();
   protected readonly clock = inject(ClockService);
-  protected readonly blockedLabel = blockedLabel;
   protected readonly statusLabel = statusLabel;
   protected readonly priorityLabel = priorityLabel;
   protected readonly productSummary = productSummary;

@@ -64,7 +64,11 @@ async function setup(options: { role?: LegacyProfileCode } = {}) {
     getSummary: vi.fn(() => of({ total: 1, ongoing: 1, highPriority: 0 })),
     getById: vi.fn(),
     create: vi.fn(),
-    upsertDiagnosis: vi.fn()
+    upsertDiagnosis: vi.fn(),
+    resolveBlock: vi.fn((id: number, blockId: number, body: { resolutionNote: string }) => of({
+      ...fullRma, id, currentBlock: null,
+      blockHistory: [{ ...fullRma.currentBlock!, id: blockId, resolvedBy: 'tester', resolvedAt: '2026-10-20T11:50:00Z', resolutionNote: body.resolutionNote }]
+    }))
   };
   const partService = {
     getRmaParts: vi.fn(() => of({ rmaId: 5, rmaCode: fullRma.code, reservations: [], movements: [], reservedCost: 0, consumedCost: 0, pendingCount: 0 })),
@@ -467,7 +471,30 @@ describe('RmasComponent detail with the shared information contract', () => {
     });
 
     selectTab('Impedimentos');
-    expect(tabPanel().querySelector('app-rma-block-history')).not.toBeNull();
+    expect(tabPanel().querySelector('app-rma-blocks-section')).not.toBeNull();
+  });
+
+  it('resolves the current impediment inline in its tab, like the Kanban detail', async () => {
+    const { open, selectTab, tabPanel, detail, render, rmaService } = await setup();
+    open();
+    selectTab('Impedimentos');
+    expect(tabPanel().querySelector('.blocks-section__current')?.textContent).toContain('Aguardando cliente');
+    expect(detail().querySelector('dialog, app-rma-block-panel')).toBeNull();
+    const listCalls = rmaService.list.mock.calls.length;
+    // The refreshed list already carries the resolved RMA, as the server would return it.
+    rmaService.list.mockImplementation(() => of(buildRmaPage([{ ...fullRma, currentBlock: null }], 0, 20, 1)));
+    [...tabPanel().querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.trim() === 'Resolver')!.click();
+    render();
+    const note = tabPanel().querySelector<HTMLTextAreaElement>('#rma-block-resolution')!;
+    note.value = 'Cliente respondeu';
+    note.dispatchEvent(new Event('input'));
+    note.closest('form')!.dispatchEvent(new Event('submit'));
+    render();
+
+    expect(rmaService.resolveBlock).toHaveBeenCalledWith(5, 3, { resolutionNote: 'Cliente respondeu' });
+    expect(tabPanel().querySelector('.blocks-section__empty')?.textContent?.trim()).toBe('Sem impedimento');
+    expect(detail().querySelector('.rma-details__identity .mini-chip.priority-high')).toBeNull();
+    expect(rmaService.list.mock.calls.length).toBeGreaterThan(listCalls);
   });
 
   it.each([
