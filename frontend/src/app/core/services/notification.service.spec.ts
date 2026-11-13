@@ -20,6 +20,31 @@ describe('NotificationService', () => {
 
   afterEach(() => httpTesting.verify());
 
+  it('envia evento e severidade para filtro antes do limite no servidor', () => {
+    service.list({ eventType: 'RMA_CREATED', severity: 'CRITICAL' }).subscribe();
+    const request = httpTesting.expectOne(r => r.url === '/api/notifications');
+    expect(request.request.params.get('eventType')).toBe('RMA_CREATED');
+    expect(request.request.params.get('severity')).toBe('CRITICAL');
+    request.flush([]);
+  });
+
+  it('consulta status e testa sem destinatério ou payload', () => {
+    service.emailStatus().subscribe(value => expect(value).toEqual({ enabled: true, provider: 'fake' }));
+    httpTesting.expectOne('/api/notification-rules/email-status').flush({ enabled: true, provider: 'fake' });
+    service.testEmail().subscribe(value => expect(value.status).toBe('simulado'));
+    const request = httpTesting.expectOne('/api/notification-rules/emails/test');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({});
+    request.flush({ status: 'simulado', provider: 'fake' });
+  });
+
+  it('reenvia somente a notificação selecionada', () => {
+    service.retryEmail(42).subscribe();
+    const request = httpTesting.expectOne('/api/notification-rules/emails/42/retry');
+    expect(request.request.method).toBe('POST');
+    request.flush({ notificationId: 42, status: 'PENDING', provider: 'fake' });
+  });
+
   it('sends list filters only when enabled', () => {
     service.list({ unreadOnly: true }).subscribe();
     const request = httpTesting.expectOne((candidate) => candidate.url === '/api/notifications');

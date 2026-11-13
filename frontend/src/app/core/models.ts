@@ -48,6 +48,7 @@ export interface UserSession {
   name: string;
   profileName: string;
   permissions: Permission[];
+  email?: string | null;
 }
 
 export interface LoginPayload {
@@ -65,6 +66,7 @@ export interface UserAccountResponse {
   active: boolean;
   createdAt: string;
   updatedAt: string;
+  email?: string | null;
 }
 
 export interface AssignableUserResponse {
@@ -125,6 +127,7 @@ export interface UserAccountRequest {
   profileId: number;
   extraPermissions: Permission[];
   active: boolean;
+  email?: string | null;
 }
 
 export interface UserAccountUpdateRequest {
@@ -134,6 +137,7 @@ export interface UserAccountUpdateRequest {
   profileId: number;
   extraPermissions: Permission[];
   active: boolean;
+  email?: string | null;
 }
 
 export interface ClientResponse {
@@ -448,6 +452,7 @@ export interface NotificationPreferenceResponse {
 }
 
 export interface NotificationRuleRequest {
+  appEnabled?: boolean;
   enabled: boolean;
   severity: NotificationSeverity;
   recipientProfileIds: number[];
@@ -457,6 +462,7 @@ export interface NotificationRuleRequest {
 }
 
 export interface NotificationRuleResponse extends Omit<NotificationRuleRequest, 'recipientProfileIds'> {
+  supported?: boolean;
   /** Ordenados por nome. */
   recipientProfiles: ProfileRef[];
   eventType: NotificationEventType;
@@ -472,6 +478,12 @@ export interface NotificationFailureResponse {
   recipient: string | null;
   error: string | null;
   occurredAt: string;
+  notificationId?: number | null;
+  attempts?: number;
+  provider?: string | null;
+  status?: NotificationEmailStatus | null;
+  nextAttemptAt?: string | null;
+  retryAllowed?: boolean;
 }
 
 export type PartMovementType =
@@ -839,3 +851,8 @@ export interface ProtocolExecutionResponse {
   failedItems: number;
   items: ProtocolExecutionItemResponse[];
 }
+
+export type NotificationEmailStatus = 'NOT_REQUESTED' | 'PENDING' | 'SENT' | 'FAILED';
+export interface NotificationEmailStatusResponse { enabled: boolean; provider: string; }
+export interface NotificationEmailActionResponse { notificationId: number; status: NotificationEmailStatus; provider: string; }
+export interface NotificationEmailTestResponse { status: string; provider: string; }

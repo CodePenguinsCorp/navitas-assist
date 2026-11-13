@@ -4,6 +4,10 @@ import { Observable, catchError, defer, map, of, tap } from 'rxjs';
 import { SKIP_GLOBAL_LOADING } from '../interceptors/loading.interceptor';
 import {
   NotificationEventType,
+  NotificationSeverity,
+  NotificationEmailStatusResponse,
+  NotificationEmailTestResponse,
+  NotificationEmailActionResponse,
   NotificationFailureResponse,
   NotificationPreferenceResponse,
   NotificationResponse,
@@ -28,7 +32,7 @@ export class NotificationService {
   /** True while the most recent summary request failed; consumers hide the stale count. */
   readonly summaryLoadFailed = this.summaryLoadFailedSignal.asReadonly();
 
-  list(options: { unreadOnly?: boolean; includeSnoozed?: boolean } = {}): Observable<NotificationResponse[]> {
+  list(options: { unreadOnly?: boolean; includeSnoozed?: boolean; eventType?: NotificationEventType; severity?: NotificationSeverity } = {}): Observable<NotificationResponse[]> {
     let params = new HttpParams();
     if (options.unreadOnly) {
       params = params.set('unreadOnly', 'true');
@@ -37,6 +41,8 @@ export class NotificationService {
       params = params.set('includeSnoozed', 'true');
     }
 
+    if (options.eventType) params = params.set('eventType', options.eventType);
+    if (options.severity) params = params.set('severity', options.severity);
     return this.http.get<NotificationResponse[]>('/api/notifications', { params });
   }
 
@@ -94,4 +100,16 @@ export class NotificationService {
   listFailures(): Observable<NotificationFailureResponse[]> {
     return this.http.get<NotificationFailureResponse[]>('/api/notification-rules/failures');
   }
+  emailStatus(): Observable<NotificationEmailStatusResponse> {
+    return this.http.get<NotificationEmailStatusResponse>('/api/notification-rules/email-status');
+  }
+
+  testEmail(): Observable<NotificationEmailTestResponse> {
+    return this.http.post<NotificationEmailTestResponse>('/api/notification-rules/emails/test', {});
+  }
+
+  retryEmail(id: number): Observable<NotificationEmailActionResponse> {
+    return this.http.post<NotificationEmailActionResponse>(`/api/notification-rules/emails/${id}/retry`, {});
+  }
+
 }
