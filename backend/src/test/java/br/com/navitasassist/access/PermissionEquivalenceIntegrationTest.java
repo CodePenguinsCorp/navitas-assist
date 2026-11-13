@@ -81,6 +81,12 @@ class PermissionEquivalenceIntegrationTest {
     }
 
     static final List<Row> MATRIX = List.of(
+        row(HttpMethod.GET, "/api/clients/imports/template", A),
+        row(HttpMethod.POST, "/api/clients/imports/preview", A),
+        row(HttpMethod.POST, "/api/clients/imports/confirm", A),
+        row(HttpMethod.GET, "/api/products/imports/template", A),
+        row(HttpMethod.POST, "/api/products/imports/preview", A),
+        row(HttpMethod.POST, "/api/products/imports/confirm", A),
         // Públicas
         new Row(HttpMethod.GET, "/health", "/health", ALL, Kind.PUBLIC),
         new Row(HttpMethod.GET, "/api/auth/csrf", "/api/auth/csrf", ALL, Kind.PUBLIC),
@@ -241,6 +247,29 @@ class PermissionEquivalenceIntegrationTest {
     void anonymousIsUnauthorized(Row row) throws Exception {
         int status = mvc.perform(build(row).with(csrf())).andReturn().getResponse().getStatus();
         assertEquals(401, status, row + " anônimo");
+    }
+
+    @Test
+    void importsRequireTheirOwnPermissionAndPreserveCsrf() throws Exception {
+        for (String resource : List.of("clients", "products")) {
+            for (String operation : List.of("template", "preview", "confirm")) {
+                HttpMethod method = operation.equals("template") ? HttpMethod.GET : HttpMethod.POST;
+                String path = "/api/" + resource + "/imports/" + operation;
+                int denied = mvc.perform(request(method, path).with(csrf()).with(user("editor").authorities(
+                    new org.springframework.security.core.authority.SimpleGrantedAuthority("cadastros.editar"))))
+                    .andReturn().getResponse().getStatus();
+                assertEquals(403, denied, path);
+                int allowed = mvc.perform(request(method, path).with(csrf()).with(user("importer").authorities(
+                    new org.springframework.security.core.authority.SimpleGrantedAuthority("cadastros.importar"))))
+                    .andReturn().getResponse().getStatus();
+                assertTrue(allowed != 401 && allowed != 403, path + ": " + allowed);
+                if (method == HttpMethod.POST) {
+                    mvc.perform(request(method, path).with(user("importer").authorities(
+                        new org.springframework.security.core.authority.SimpleGrantedAuthority("cadastros.importar"))))
+                        .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+                }
+            }
+        }
     }
 
     @Test

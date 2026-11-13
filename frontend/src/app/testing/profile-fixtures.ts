@@ -14,7 +14,8 @@ export const PERMISSION_CATALOG: PermissionModuleResponse[] = [
   ] },
   { module: 'CADASTROS', label: 'Clientes e produtos', permissions: [
     { code: 'cadastros.ver', label: 'Consultar clientes e produtos' },
-    { code: 'cadastros.editar', label: 'Criar, alterar e excluir clientes e produtos' }
+    { code: 'cadastros.editar', label: 'Criar, alterar e excluir clientes e produtos' },
+    { code: 'cadastros.importar', label: 'Importar clientes e produtos' }
   ] },
   { module: 'PECAS', label: 'Peças', permissions: [
     { code: 'pecas.ver', label: 'Consultar peças e estoque' },

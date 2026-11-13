@@ -24,6 +24,7 @@ public enum Permission {
     RMA_IMPEDIMENTOS(Codes.RMA_IMPEDIMENTOS, PermissionModule.RMA, "Registrar e resolver impedimentos"),
     CADASTROS_VER(Codes.CADASTROS_VER, PermissionModule.CADASTROS, "Consultar clientes e produtos"),
     CADASTROS_EDITAR(Codes.CADASTROS_EDITAR, PermissionModule.CADASTROS, "Criar, alterar e excluir clientes e produtos"),
+    CADASTROS_IMPORTAR(Codes.CADASTROS_IMPORTAR, PermissionModule.CADASTROS, "Importar clientes e produtos"),
     PECAS_VER(Codes.PECAS_VER, PermissionModule.PECAS, "Consultar peças e estoque"),
     PECAS_MOVIMENTAR(Codes.PECAS_MOVIMENTAR, PermissionModule.PECAS, "Cadastrar peças e movimentar estoque"),
     PECAS_RESERVAR(Codes.PECAS_RESERVAR, PermissionModule.PECAS, "Reservar e aplicar peças nos RMAs"),
@@ -94,6 +95,7 @@ public enum Permission {
         public static final String RMA_IMPEDIMENTOS = "rma.impedimentos";
         public static final String CADASTROS_VER = "cadastros.ver";
         public static final String CADASTROS_EDITAR = "cadastros.editar";
+        public static final String CADASTROS_IMPORTAR = "cadastros.importar";
         public static final String PECAS_VER = "pecas.ver";
         public static final String PECAS_MOVIMENTAR = "pecas.movimentar";
         public static final String PECAS_RESERVAR = "pecas.reservar";

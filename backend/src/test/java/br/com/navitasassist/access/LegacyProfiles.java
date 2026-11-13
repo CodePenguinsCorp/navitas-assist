@@ -14,7 +14,7 @@ public final class LegacyProfiles {
     public static final Map<String, Set<String>> PERMISSIONS = Map.of(
         "ADMIN", ordered(
             "rma.ver", "rma.abrir", "rma.editar", "rma.status", "rma.responsavel", "rma.diagnosticar", "rma.impedimentos",
-            "cadastros.ver", "cadastros.editar",
+            "cadastros.ver", "cadastros.editar", "cadastros.importar",
             "pecas.ver", "pecas.movimentar", "pecas.reservar",
             "protocolos.ver", "protocolos.executar", "protocolos.catalogo",
             "relatorios.ver",

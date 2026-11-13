@@ -369,9 +369,10 @@ A API autoriza por **permissão**, não por perfil. As permissões efetivas de u
 
 | Recurso/operação | Permissão |
 |:---|:---|
-| Consultar clientes, produtos, peças e protocolos (`GET`) | qualquer usuário autenticado |
+| Consultar clientes, produtos, peças e protocolos (`GET`, exceto importação) | qualquer usuário autenticado |
 | Consultar RMAs, Kanban e dashboard (`GET /api/rmas/**`) | `rma.ver` |
 | Criar, alterar ou excluir clientes e produtos | `cadastros.editar` |
+| Baixar modelo, gerar prévia e confirmar importação CSV | `cadastros.importar` |
 | Abrir RMA | `rma.abrir` |
 | Alterar dados gerais de RMA e ajustar garantia dos itens | `rma.editar` |
 | Alterar o status de RMA | `rma.status` |
@@ -411,6 +412,7 @@ A migração-base `V1__baseline.sql` cria os 4 perfis prontos abaixo (A = Admini
 | `rma.impedimentos` | RMAs | Registrar e resolver impedimentos | ✓ | ✓ | ✓ | |
 | `cadastros.ver` | Clientes e produtos | Consultar clientes e produtos | ✓ | ✓ | ✓ | ✓ |
 | `cadastros.editar` | Clientes e produtos | Criar, alterar e excluir clientes e produtos | ✓ | ✓ | | |
+| `cadastros.importar` | Clientes e produtos | Importar clientes e produtos | ✓ | | | |
 | `pecas.ver` | Peças | Consultar peças e estoque | ✓ | ✓ | ✓ | ✓ |
 | `pecas.movimentar` | Peças | Cadastrar peças e movimentar estoque | ✓ | ✓ | | |
 | `pecas.reservar` | Peças | Reservar e aplicar peças nos RMAs | ✓ | | ✓ | |
@@ -422,7 +424,7 @@ A migração-base `V1__baseline.sql` cria os 4 perfis prontos abaixo (A = Admini
 | `perfis.gerir` | Administração | Gerenciar perfis e permissões | ✓ | | | |
 | `notificacoes.regras` | Administração | Configurar regras de notificação | ✓ | | | |
 
-Totais: Administrador 19 (todas menos `rma.atribuivel`), Atendimento 11, Técnico 11, Consulta 5. `cadastros.ver`, `pecas.ver` e `protocolos.ver` controlam telas e menus; as leituras `GET` correspondentes na API continuam abertas a qualquer usuário autenticado.
+Totais: Administrador 20 (todas menos `rma.atribuivel`), Atendimento 11, Técnico 11, Consulta 5. `cadastros.ver`, `pecas.ver` e `protocolos.ver` controlam telas e menus; as leituras `GET` correspondentes na API continuam abertas a qualquer usuário autenticado, exceto os modelos de importação. A migração incremental `V9__catalog_import_permission.sql` concede `cadastros.importar` somente ao Administrador; Atendimento, Técnico e Consulta não recebem essa permissão por padrão.
 
 **Tabelas.** `access_profiles` (nome e `legacy_code` dos perfis prontos), `access_profile_permissions` (permissões de cada perfil), `user_account_extra_permissions` (extras por usuário, além de `user_accounts.profile_id`) e `notification_rule_recipient_profiles` (perfis destinatários das regras de notificação). Os seeds das regras enviam `RMA_CREATED` para Administrador e Atendimento e `RMA_ASSIGNED` apenas ao responsável. As regras `SLA_*` semeadas na V1 são apagadas pela V2 (ver "Tempo por etapa e data limite").
 
@@ -632,3 +634,19 @@ Intervenções recebem `type`, `description` obrigatória (1000), `performedOn` 
 RMAs `COMPLETED`, `RETURNED` e `IRREPARABLE` recusam novos consumos, componentes externos e intervenções com erro 400 em português. A leitura permanece disponível. Não há edição, anulação nem correção após encerramento desses novos registros. O laudo `GET /api/rmas/{id}/report.pdf` inclui componentes, motivo/lote, intervenções, técnico e horas, sem custos. Os eventos de reparo não entram na linha do tempo: o histórico atual reúne eventos específicos e não oferece um registrador genérico simples.
 
 A validação isolada de migração usa `docker compose -p navitas-mig -f compose.migration-check.yaml up -d mysql`, MySQL 8 na porta local **3317**, seguida de `docker compose -p navitas-mig -f compose.migration-check.yaml run --rm flyway`. Ao concluir, remova apenas esse projeto com `docker compose -p navitas-mig -f compose.migration-check.yaml down -v`. Não use esses comandos nas pilhas de desenvolvimento existentes.
+
+## Importação CSV de clientes e produtos
+
+Em **Clientes** ou **Produtos**, use **Importar CSV** com a permissão `cadastros.importar`. Baixe o modelo e apague/substitua o exemplo fictício antes de enviar. O modelo usa UTF-8 com BOM e `;`; a importação aceita UTF-8 com ou sem BOM e separador `;` ou `,`, aspas escapadas e campos multilinha. Limites: 2 MiB por arquivo, 2.000 registros, 16 KiB por registro decodificado e 8 KiB por campo.
+
+- Clientes: `razao_social;nome_fantasia;documento;email;telefone;endereco;observacoes`; somente `razao_social` é obrigatória no cabeçalho.
+- Produtos: `sku;nome;categoria;versao_hardware;versao_firmware;garantia_meses;notas_tecnicas`; `sku`, `nome` e `garantia_meses` são obrigatórias no cabeçalho. SKU aceita até 20 caracteres e garantia deve ser um inteiro a partir de 1.
+- As colunas podem mudar de ordem e as opcionais podem ser omitidas. Colunas desconhecidas ou repetidas rejeitam o arquivo. A prévia mostra motivos e avisos por linha; linhas vazias são contadas e ignoradas.
+- Produtos duplicam por SKU sem distinguir caixa; clientes duplicam por documento não vazio, desconsiderando pontos, barras, hífens e espaços e sem distinguir caixa. Entre registros válidos, a primeira ocorrência vale. Chaves já cadastradas são ignoradas; clientes sem documento recebem aviso e podem se repetir em novo envio.
+- Valores iniciados por `=`, `+`, `-` ou `@` geram aviso de fórmula e permanecem como texto, sem alteração. Não há relatório exportável de dados enviados.
+
+Os seis endpoints são `GET /api/clients/imports/template`, `POST /api/clients/imports/preview`, `POST /api/clients/imports/confirm` e os mesmos caminhos com `products`. Todos exigem `cadastros.importar`; os POSTs preservam CSRF e recebem `multipart/form-data` com a parte `file`. Erros de formato, tamanho e tipo retornam `ApiError` com mensagens em português e status 400, 413 e 415.
+
+A prévia não grava cadastros. O navegador mantém o `File` e envia o mesmo arquivo novamente ao confirmar. O servidor reanalisa o conteúdo e os cadastros atuais, sem guardar lotes, IDs, TTL ou cotas. Somente as linhas válidas nessa nova análise são criadas, em uma transação; inválidas e duplicadas são ignoradas. O resumo final pode diferir da prévia se o banco mudar. Sem linhas válidas, a confirmação retorna 400. Qualquer falha de gravação reverte toda a transação.
+
+A interface impede confirmação simultânea por clique duplo, mas não há idempotência persistente: reenviar clientes sem documento pode criar novos cadastros. A verificação de documento é exclusiva da importação e não garante unicidade contra gravações concorrentes pelo CRUD. O SKU mantém a proteção de unicidade do banco.

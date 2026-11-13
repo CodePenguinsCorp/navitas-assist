@@ -5,7 +5,7 @@ import { PERMISSIONS, isPermission } from './permissions';
 // Lista literal da spec §3, na ordem do catálogo. A mesma lista está em PermissionTest (backend).
 const SPEC_CATALOG = [
   'rma.ver', 'rma.abrir', 'rma.editar', 'rma.status', 'rma.responsavel', 'rma.atribuivel', 'rma.diagnosticar',
-  'rma.impedimentos', 'cadastros.ver', 'cadastros.editar', 'pecas.ver', 'pecas.movimentar', 'pecas.reservar',
+  'rma.impedimentos', 'cadastros.ver', 'cadastros.editar', 'cadastros.importar', 'pecas.ver', 'pecas.movimentar', 'pecas.reservar',
   'protocolos.ver', 'protocolos.executar', 'protocolos.catalogo', 'relatorios.ver', 'usuarios.gerir',
   'perfis.gerir', 'notificacoes.regras',
 ];
@@ -35,7 +35,7 @@ describe('permission catalog', () => {
       [...source.matchAll(/public static final String ([A-Z_]+) = "([^"]+)";/g)].map((match) => [match[1], match[2]]),
     );
 
-    expect(constants).toHaveLength(20);
+    expect(constants).toHaveLength(21);
     expect(constants.map((constant) => codes[constant])).toEqual([...PERMISSIONS]);
   });
 
@@ -43,15 +43,15 @@ describe('permission catalog', () => {
     const totals = Object.fromEntries(
       Object.entries(LEGACY_PROFILE_PERMISSIONS).map(([code, permissions]) => [code, permissions.length]),
     );
-    expect(totals).toEqual({ ADMIN: 19, SERVICE_DESK: 11, TECHNICIAN: 11, VIEWER: 5 });
+    expect(totals).toEqual({ ADMIN: 20, SERVICE_DESK: 11, TECHNICIAN: 11, VIEWER: 5 });
     for (const permissions of Object.values(LEGACY_PROFILE_PERMISSIONS)) {
       expect(permissions).toEqual(PERMISSIONS.filter((permission) => permissions.includes(permission)));
     }
     expect(PERMISSIONS.filter((permission) => !LEGACY_PROFILE_PERMISSIONS.ADMIN.includes(permission))).toEqual(['rma.atribuivel']);
   });
 
-  it('keeps the legacy profile fixtures equal to the V8 migration', async () => {
-    const migration = await readBackendFile(LEGACY_MIGRATION);
+  it('keeps the legacy profile fixtures equal to the incremental migrations', async () => {
+    const migration = await readBackendFile(LEGACY_MIGRATION) + await readBackendFile('../backend/src/main/resources/db/migration/V9__catalog_import_permission.sql');
     const grants = [...migration.matchAll(/SELECT id, '([a-z.]+)' FROM access_profiles WHERE legacy_code IN \(([^)]*)\)/g)]
       .map((match) => ({ permission: match[1], profiles: [...match[2].matchAll(/'([A-Z_]+)'/g)].map((profile) => profile[1]) }));
     expect(grants).toHaveLength(PERMISSIONS.length);

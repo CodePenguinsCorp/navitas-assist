@@ -95,6 +95,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/reports/rmas", "/api/reports/rmas/summary", "/api/reports/rmas/export.csv",
                     "/api/reports/rmas/summary/export.csv").hasAuthority(Codes.RELATORIOS_VER)
                 // D2: leituras auxiliares (dashboard, relatórios, RMAs e painéis) seguem abertas a quem tem login.
+                .requestMatchers(HttpMethod.GET, "/api/clients/imports/template", "/api/products/imports/template").hasAuthority(Codes.CADASTROS_IMPORTAR)
+                .requestMatchers(HttpMethod.POST, "/api/clients/imports/preview", "/api/clients/imports/confirm",
+                    "/api/products/imports/preview", "/api/products/imports/confirm").hasAuthority(Codes.CADASTROS_IMPORTAR)
                 .requestMatchers(HttpMethod.GET, "/api/auth/me", "/api/clients/**", "/api/products/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/rmas/*/report.pdf").hasAuthority(Codes.RMA_VER)
                 .requestMatchers(HttpMethod.GET, "/api/rmas/*/repair", "/api/rmas/*/repair/external-components").hasAuthority(Codes.RMA_VER)

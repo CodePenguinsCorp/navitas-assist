@@ -23,6 +23,7 @@ class PermissionTest {
         "rma.impedimentos",
         "cadastros.ver",
         "cadastros.editar",
+        "cadastros.importar",
         "pecas.ver",
         "pecas.movimentar",
         "pecas.reservar",
