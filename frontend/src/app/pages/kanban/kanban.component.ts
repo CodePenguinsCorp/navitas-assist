@@ -6,10 +6,8 @@ import {
   Injector,
   afterNextRender,
   computed,
-  effect,
   inject,
   signal,
-  untracked,
   viewChild,
   viewChildren,
 } from '@angular/core';
@@ -49,7 +47,6 @@ import {
 } from '../../shared/form-controls/custom-select/custom-select.component';
 import { BoundedFilterPanelsDirective } from '../../shared/form-controls/bounded-filter-panels.directive';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
-import { BulkRmaResult, KanbanBulkActionsComponent } from '../../shared/kanban-bulk-actions/kanban-bulk-actions.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { RmaKanbanBoardComponent } from '../../shared/rma-kanban-board/rma-kanban-board.component';
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
@@ -125,7 +122,6 @@ const FILTER_LABELS: Record<AdvancedFilterKey, string> = {
     RmaKanbanBoardComponent,
     RmaDetailModalComponent,
     RmaStatusFieldComponent,
-    KanbanBulkActionsComponent,
     ModalFocusDirective,
     PageHeaderComponent,
   ],
@@ -161,10 +157,6 @@ export class KanbanComponent {
   protected readonly boardUpdatingId = signal<number | null>(null);
   protected readonly draggedRmaId = signal<number | null>(null);
   protected readonly dragTargetStatus = signal<RmaStatus | null>(null);
-  protected readonly bulkSelectedIds = signal<readonly number[]>([]);
-  protected readonly bulkBusy = signal(false);
-  protected readonly bulkSelectedRmas = computed(() => this.rmasSignal().filter((rma) => this.bulkSelectedIds().includes(rma.id)));
-  protected readonly hiddenSelectedCount = computed(() => this.bulkSelectedRmas().filter((rma) => !this.filteredRmas().some((visible) => visible.id === rma.id)).length);
   protected readonly selectedRmaId = signal<number | null>(null);
   protected readonly detailRmaId = signal<number | null>(null);
 
@@ -237,22 +229,10 @@ export class KanbanComponent {
     { value: 'unassigned', label: 'Sem responsável' },
     ...mergeAssigneeOptions(this.assignableUsersSignal(), this.rmasSignal()),
   ]);
-  protected readonly assigneeSelectOptions = computed<
-    ReadonlyArray<CustomSelectOption<number | null>>
-  >(() => [
-    { value: null, label: 'Sem responsável' },
-    ...this.assignableUsersSignal().map((user) => ({
-      value: user.id,
-      label: `${user.fullName} (@${user.username})`,
-    })),
-  ]);
   protected readonly canUpdateStatus = computed(() => this.permissions.hasPermission('rma.status'));
   protected readonly canUpdateAssignee = computed(() => this.permissions.hasPermission('rma.responsavel'));
-  protected readonly canUpdatePriority = computed(() => this.permissions.hasPermission('rma.editar'));
-  /** Seleção e ações em lote: basta uma das ações disponíveis no lote. */
-  protected readonly canBulkEdit = computed(() =>
-    this.permissions.hasAny(['rma.status', 'rma.editar', 'rma.responsavel']),
-  );
+  /** `rma.editar`: due date, priority and warranty become editable in the detail. */
+  protected readonly canEditRma = computed(() => this.permissions.hasPermission('rma.editar'));
   protected readonly activeCount = computed(
     () => this.filteredRmas().filter((rma) => !CLOSED_RMA_STATUSES.includes(rma.status)).length,
   );
@@ -316,10 +296,6 @@ export class KanbanComponent {
     this.filtersForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.releaseDivergentView());
     this.loadKanban();
     this.loadViews();
-    // Sem permissão de lote (após um 403 ou ao mudar o próprio perfil), a seleção some com a barra.
-    effect(() => {
-      if (!this.canBulkEdit()) untracked(() => this.bulkSelectedIds.set([]));
-    });
   }
 
   protected retryLoad(): void {
@@ -336,27 +312,6 @@ export class KanbanComponent {
       key === 'query' ? (normalizeText(current.query) ?? '') === saved.query : current[key] === saved[key],
     );
     if (!matches) this.activeViewId.set(null);
-  }
-
-  protected toggleBulkSelection(rma: RmaResponse): void {
-    if (this.bulkBusy() || this.boardUpdatingId() !== null || !this.canBulkEdit()) return;
-    this.bulkSelectedIds.update((ids) => ids.includes(rma.id) ? ids.filter((id) => id !== rma.id) : [...ids, rma.id]);
-  }
-
-  protected selectVisibleRmas(): void {
-    if (this.bulkBusy() || this.boardUpdatingId() !== null || !this.canBulkEdit()) return;
-    this.bulkSelectedIds.update((ids) => [...new Set([...ids, ...this.filteredRmas().map((rma) => rma.id)])]);
-  }
-
-  protected clearBulkSelection(): void {
-    if (!this.bulkBusy()) this.bulkSelectedIds.set([]);
-  }
-
-  protected applyBulkResults(results: BulkRmaResult[]): void {
-    const updated = new Map(results.filter((result) => result.rma).map((result) => [result.id, result.rma!]));
-    this.rmasSignal.update((rmas) => rmas.map((rma) => updated.get(rma.id) ?? rma));
-    const succeeded = new Set(results.filter((result) => result.success).map((result) => result.id));
-    this.bulkSelectedIds.update((ids) => ids.filter((id) => !succeeded.has(id)));
   }
 
   protected openDetail(rma: RmaResponse): void {
@@ -550,7 +505,7 @@ export class KanbanComponent {
 
   /** The detail selector is the whole choice (no extra field), so a pick saves right away. */
   protected assignFromDetail(rma: RmaResponse, assigneeId: number | null): void {
-    if (!this.canUpdateAssignee() || this.bulkBusy() || this.boardUpdatingId() !== null || assigneeId === rma.assigneeId) {
+    if (!this.canUpdateAssignee() || this.boardUpdatingId() !== null || assigneeId === rma.assigneeId) {
       return;
     }
 
@@ -558,7 +513,7 @@ export class KanbanComponent {
   }
 
   protected startCardDrag(event: DragEvent, rma: RmaResponse): void {
-    if (!this.canUpdateStatus() || this.bulkBusy() || this.boardUpdatingId() !== null) {
+    if (!this.canUpdateStatus() || this.boardUpdatingId() !== null) {
       event.preventDefault();
       return;
     }
@@ -581,7 +536,7 @@ export class KanbanComponent {
 
   protected allowColumnDrop(event: DragEvent, status: RmaStatus): void {
     if (
-      !this.canUpdateStatus() || this.bulkBusy() ||
+      !this.canUpdateStatus() ||
       this.boardUpdatingId() !== null ||
       this.draggedRmaId() === null
     ) {
@@ -605,7 +560,7 @@ export class KanbanComponent {
   protected dropOnColumn(event: DragEvent, status: RmaStatus): void {
     event.preventDefault();
 
-    if (!this.canUpdateStatus() || this.bulkBusy() || this.boardUpdatingId() !== null) {
+    if (!this.canUpdateStatus() || this.boardUpdatingId() !== null) {
       this.clearBoardDragState();
       return;
     }

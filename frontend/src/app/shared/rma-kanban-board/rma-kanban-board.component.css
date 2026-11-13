@@ -170,16 +170,6 @@
   font-size: 0.72rem;
 }
 
-/* 40px target around the 18px checkbox; the negative margin keeps the header height. */
-.board-card__selection {
-  display: grid;
-  place-items: center;
-  width: var(--control-height);
-  height: var(--control-height);
-  margin: calc((22px - var(--control-height)) / 2);
-  cursor: pointer;
-}
-
 .board-card__title,
 .board-card__footer {
   padding-top: var(--space-3);

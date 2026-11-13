@@ -30,10 +30,6 @@ interface RmaBoardColumn {
 })
 export class RmaKanbanBoardComponent {
   readonly rmas = input<readonly RmaResponse[]>([]);
-  readonly bulkSelectionEnabled = input(false);
-  readonly bulkSelectedIds = input<readonly number[]>([]);
-  readonly interactionDisabled = input(false);
-  @Output() readonly bulkSelectionChange = new EventEmitter<RmaResponse>();
   readonly loading = input(false);
   readonly canUpdateStatus = input(false);
   readonly canUpdateAssignee = input(false);
@@ -78,7 +74,7 @@ export class RmaKanbanBoardComponent {
   }
 
   protected isSelected(rma: RmaResponse): boolean {
-    return this.selectedRmaId() === rma.id || this.bulkSelectedIds().includes(rma.id);
+    return this.selectedRmaId() === rma.id;
   }
 
   protected isDragging(rma: RmaResponse): boolean {
@@ -91,10 +87,5 @@ export class RmaKanbanBoardComponent {
 
   protected isStatusUpdating(rma: RmaResponse): boolean {
     return this.boardUpdatingId() === rma.id;
-  }
-
-  protected preventCardDrag(event: DragEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
   }
 }

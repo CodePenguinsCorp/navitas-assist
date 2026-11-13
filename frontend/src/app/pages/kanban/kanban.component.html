@@ -250,32 +250,11 @@
       </article>
     }
 
-    <app-rma-status-field #boardStatus [rma]="statusFeedbackRma()" [showSelector]="false" [disabled]="bulkBusy()" (saved)="applyRmaUpdate($event)" (busyChange)="boardUpdatingId.set($event ? selectedRmaId() : null)" />
-
-    @if (boardReady() && canBulkEdit()) {
-      <app-kanban-bulk-actions
-        [selection]="bulkSelectedRmas()"
-        [hiddenCount]="hiddenSelectedCount()"
-        [visibleCount]="filteredRmas().length"
-        [canUpdateStatus]="canUpdateStatus()"
-        [canUpdatePriority]="canUpdatePriority()"
-        [canUpdateAssignee]="canUpdateAssignee()"
-        [assigneeOptions]="assigneeSelectOptions()"
-        [disabled]="loading() || boardUpdatingId() !== null"
-        (selectVisible)="selectVisibleRmas()"
-        (clearSelection)="clearBulkSelection()"
-        (busyChange)="bulkBusy.set($event)"
-        (applied)="applyBulkResults($event)"
-      />
-    }
+    <app-rma-status-field #boardStatus [rma]="statusFeedbackRma()" [showSelector]="false" (saved)="applyRmaUpdate($event)" (busyChange)="boardUpdatingId.set($event ? selectedRmaId() : null)" />
 
     @if (boardReady() && (loading() || filteredRmas().length > 0)) {
       <app-rma-kanban-board
         [rmas]="filteredRmas()"
-        [bulkSelectionEnabled]="canBulkEdit()"
-        [bulkSelectedIds]="bulkSelectedIds()"
-        [interactionDisabled]="bulkBusy()"
-        (bulkSelectionChange)="toggleBulkSelection($event)"
         [loading]="loading()"
         [canUpdateStatus]="canUpdateStatus()"
         [canUpdateAssignee]="canUpdateAssignee()"
@@ -300,10 +279,10 @@
     [rma]="rma"
     [canUpdateStatus]="canUpdateStatus()"
     [canUpdateAssignee]="canUpdateAssignee()"
-    [canEditDueDate]="canUpdatePriority()"
+    [canEditDueDate]="canEditRma()"
     [assignableUsers]="assignableUsers()"
     [actionError]="assignmentError()"
-    [disabled]="bulkBusy() || boardUpdatingId() !== null"
+    [disabled]="boardUpdatingId() !== null"
     [fallbackFocus]="filtersToggle"
     (closed)="closeDetail()"
     (busyChange)="boardUpdatingId.set($event ? rma.id : null)"

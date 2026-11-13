@@ -112,19 +112,6 @@ describe('RmaKanbanBoardComponent card', () => {
     expect(opened).toEqual([rma]);
   });
 
-  it('does not open the card detail when Enter or Space is pressed on the bulk checkbox', () => {
-    const rma = buildRma({});
-    const host = render([rma], { bulkSelectionEnabled: true });
-    const opened: RmaResponse[] = [];
-    fixture.componentInstance.cardSelect.subscribe((item) => opened.push(item));
-    const checkbox = host.querySelector<HTMLInputElement>('.board-card input[type="checkbox"]')!;
-    for (const key of ['Enter', ' ']) {
-      checkbox.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
-      checkbox.dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true }));
-    }
-    expect(opened).toEqual([]);
-  });
-
   it('keeps code, client, product, priority label, avatar and active block', () => {
     const host = render([
       buildRma({
@@ -151,22 +138,10 @@ describe('RmaKanbanBoardComponent card', () => {
     expect(element.querySelector('.board-card__block')?.textContent).toContain('Bloqueado há 2 h');
   });
 
-  it('does not open the card when the bulk checkbox is clicked', () => {
-    const rma = buildRma({});
-    let host = render([rma]);
+  it('has no selection checkbox on the card', () => {
+    const host = render([buildRma({})]);
     expect(host.querySelector('.board-card input[type="checkbox"]')).toBeNull();
-
-    host = render([rma], { bulkSelectionEnabled: true });
-    const opened: RmaResponse[] = [];
-    const toggled: RmaResponse[] = [];
-    fixture.componentInstance.cardSelect.subscribe((item) => opened.push(item));
-    fixture.componentInstance.bulkSelectionChange.subscribe((item) => toggled.push(item));
-    host.querySelector<HTMLInputElement>('.board-card input[type="checkbox"]')!.click();
-    expect(toggled).toEqual([rma]);
-    expect(opened).toEqual([]);
-
-    card(host, 'NAV-0100').click();
-    expect(opened).toEqual([rma]);
+    expect(host.querySelector('.board-card__selection')).toBeNull();
   });
 
   it('renders a card without assignee, failure or with a very long client name without throwing', () => {

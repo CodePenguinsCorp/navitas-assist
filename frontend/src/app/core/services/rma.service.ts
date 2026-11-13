@@ -9,7 +9,6 @@ import {
   RmaAssigneeUpdateRequest,
   RmaBlockRequest,
   RmaBlockResolveRequest,
-  RmaBulkStatusUpdateRequest,
   RmaResponse,
   RmaSummaryResponse,
   RmaPriority,
@@ -53,10 +52,6 @@ export class RmaService {
 
   updateStatus(id: number, payload: RmaStatusUpdateRequest): Observable<RmaResponse> {
     return this.http.patch<RmaResponse>(`/api/rmas/${id}/status`, payload);
-  }
-
-  updateStatusInBulk(id: number, payload: RmaBulkStatusUpdateRequest): Observable<RmaResponse> {
-    return this.http.patch<RmaResponse>(`/api/rmas/${id}/bulk-status`, payload);
   }
 
   updatePriority(id: number, priority: RmaPriority): Observable<RmaResponse> {

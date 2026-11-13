@@ -69,78 +69,17 @@ describe('KanbanComponent detail permissions by profile', () => {
   });
 });
 
-describe('KanbanComponent bulk actions by permission', () => {
-  function bulk(fixture: ComponentFixture<KanbanComponent>) {
-    const page = fixture.nativeElement as HTMLElement;
-    const toolbar = page.querySelector('.bulk-toolbar');
-    return {
-      page,
-      toolbar,
-      actions: [...(toolbar?.querySelectorAll('.bulk-buttons button') ?? [])].map((button) => button.textContent?.trim())
-        .filter((label) => label?.startsWith('Alterar')),
-      checkbox: page.querySelector<HTMLInputElement>('.board-card__selection input'),
-    };
-  }
+describe('KanbanComponent without bulk editing', () => {
+  it.each(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as const)('shows no selection bar or card checkboxes for %s', async (role) => {
+    const page = (await setup(role)).nativeElement as HTMLElement;
 
-  it.each([
-    ['ADMIN', ['Alterar status', 'Alterar prioridade', 'Alterar responsável']],
-    ['SERVICE_DESK', ['Alterar status', 'Alterar prioridade', 'Alterar responsável']],
-    ['TECHNICIAN', ['Alterar status']],
-  ] as const)('keeps the bulk actions of %s', async (role, actions) => {
-    const view = bulk(await setup(role));
-
-    expect(view.toolbar).not.toBeNull();
-    expect(view.actions).toEqual(actions);
-    expect(view.checkbox).not.toBeNull();
-  });
-
-  it('keeps bulk selection hidden for VIEWER', async () => {
-    const view = bulk(await setup('VIEWER'));
-
-    expect(view.toolbar).toBeNull();
-    expect(view.checkbox).toBeNull();
-  });
-
-  it('offers bulk assignee changes with only rma.responsavel', async () => {
-    const fixture = await setupWith(['rma.ver', 'rma.responsavel']);
-    const view = bulk(fixture);
-
-    expect(view.toolbar).not.toBeNull();
-    expect(view.actions).toEqual(['Alterar responsável']);
-    expect(view.checkbox).not.toBeNull();
-
-    view.checkbox!.dispatchEvent(new Event('change'));
-    fixture.detectChanges();
-    expect(view.toolbar!.textContent).toContain('1 RMA selecionado');
-
-    [...view.toolbar!.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.includes('Limpar seleção'))!.click();
-    fixture.detectChanges();
-    [...view.toolbar!.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.includes('Selecionar visíveis'))!.click();
-    fixture.detectChanges();
-    expect(view.toolbar!.textContent).toContain('1 RMA selecionado');
-  });
-
-  it('drops the bulk selection when the bulk permissions are lost', async () => {
-    const permissions = signal<readonly Permission[]>(['rma.ver', 'rma.status']);
-    const fixture = await setupWith(permissions);
-    bulk(fixture).checkbox!.dispatchEvent(new Event('change'));
-    fixture.detectChanges();
-    expect(bulk(fixture).toolbar!.textContent).toContain('1 RMA selecionado');
-
-    permissions.set(['rma.ver']);
-    fixture.detectChanges();
-    expect(bulk(fixture).toolbar).toBeNull();
-    permissions.set(['rma.ver', 'rma.status']);
-    fixture.detectChanges();
-
-    expect(bulk(fixture).toolbar!.textContent).not.toContain('1 RMA selecionado');
-    expect(bulk(fixture).checkbox!.checked).toBe(false);
-  });
-
-  it('offers bulk priority changes with only rma.editar', async () => {
-    const view = bulk(await setupWith(['rma.ver', 'rma.editar']));
-
-    expect(view.actions).toEqual(['Alterar prioridade']);
-    expect(view.checkbox).not.toBeNull();
+    expect(page.querySelector('app-kanban-bulk-actions')).toBeNull();
+    expect(page.querySelector('.bulk-toolbar')).toBeNull();
+    expect(page.querySelector('.board-card input[type="checkbox"]')).toBeNull();
+    const labels = [...page.querySelectorAll('button')].map((button) => button.textContent?.trim());
+    for (const label of ['Alterar status', 'Alterar prioridade', 'Alterar responsável', 'Selecionar visíveis', 'Limpar seleção']) {
+      expect(labels).not.toContain(label);
+    }
+    expect(page.querySelector('.board-card')).not.toBeNull();
   });
 });
