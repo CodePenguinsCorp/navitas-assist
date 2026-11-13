@@ -606,3 +606,26 @@ As rotas administrativas abaixo usam `notificacoes.regras` e CSRF nas mutações
 `GET /api/notifications` mantém array e limite de 100; aceita `eventType` e `severity` antes do limite. Caixa, resumo e ações pessoais ignoram linhas exclusivas de e-mail. `read-all` alcança todas as visíveis autorizadas do usuário, inclusive adiadas e além das 100 linhas. O frontend é implementado separadamente.
 
 Falhas do canal não desfazem RMA nem notificação do app. Permanece a janela de perda entre commit do RMA e distribuição pelo listener; não há outbox de negócio. O ID fixo da notificação vai em `Idempotency-Key`, inclusive no reenvio manual: o provedor pode reconhecer a tentativa anterior, e mudanças de endereço/conteúdo podem conflitar durante sua janela de retenção. Timeout após aceitação também pode duplicar fora dessa janela. Não há garantia exactly-once. Não execute mais de uma instância deste worker.
+
+
+## Componentes trocados, retrabalho e tempo de serviço
+
+O detalhe do RMA, na lista e no Kanban, oferece registros inline de reparo. A migração aditiva `V5__rma_repair.sql` mantém V1–V4 e preserva consumos antigos com metadados nulos.
+
+| Operação | Endpoint | Permissão |
+| --- | --- | --- |
+| Consumir reserva | `POST /api/rmas/{id}/parts/{reservationId}/consume` | `pecas.reservar` |
+| Adicionar componente externo | `POST /api/rmas/{id}/repair/external-components` | `pecas.reservar` |
+| Consultar componentes externos | `GET /api/rmas/{id}/repair/external-components` | `rma.ver` |
+| Registrar intervenção | `POST /api/rmas/{id}/repair/interventions` | `rma.diagnosticar` |
+| Consultar intervenções e total de horas | `GET /api/rmas/{id}/repair` | `rma.ver` |
+
+O consumo exige `{ "replacementReason": "Curto na placa", "componentBatch": "L24" }`: motivo obrigatório até 1000 caracteres e lote opcional até 120. Ambos ficam na reserva junto de `appliedAt` e `appliedBy`, definidos pelo servidor na mesma transação do movimento. `GET /api/rmas/{id}/parts` retorna esses campos e `replacedComponents` com as reservas `CONSUMED`. Consumos antigos exibem “Motivo não registrado”.
+
+Um componente externo recebe `code` opcional (60), `description` obrigatória (120), `quantity` positiva com até 3 casas decimais (`DECIMAL(12,3)`), `unit` (20, padrão `un`), `componentBatch` opcional (120) e `replacementReason` obrigatório (1000). Não altera estoque. Código já existente no catálogo, inclusive inativo e sem diferenciar maiúsculas/minúsculas, é recusado com orientação para usar a reserva. A lista “Componentes trocados” reúne estoque consumido e externos.
+
+Intervenções recebem `type`, `description` obrigatória (1000), `performedOn` (data não futura) e `hours` positivas com até 3 casas decimais (`DECIMAL(9,3)`). Os tipos são `RESOLDERING` (Ressolda), `CLEANING` (Limpeza), `REPROGRAMMING` (Regravação), `FIRMWARE_UPDATE` (Atualização de firmware), `HARNESS_REPLACEMENT` (Troca de chicote) e `OTHER` (Outra). `technicianName` guarda o usuário autenticado; horários de aplicação e auditoria vêm do servidor. O tempo é registrado exclusivamente em horas e somado em `totalServiceHours`.
+
+RMAs `COMPLETED`, `RETURNED` e `IRREPARABLE` recusam novos consumos, componentes externos e intervenções com erro 400 em português. A leitura permanece disponível. Não há edição, anulação nem correção após encerramento desses novos registros. O laudo `GET /api/rmas/{id}/report.pdf` inclui componentes, motivo/lote, intervenções, técnico e horas, sem custos. Os eventos de reparo não entram na linha do tempo: o histórico atual reúne eventos específicos e não oferece um registrador genérico simples.
+
+A validação isolada de migração usa `docker compose -p navitas-mig -f compose.migration-check.yaml up -d mysql`, MySQL 8 na porta local **3317**, seguida de `docker compose -p navitas-mig -f compose.migration-check.yaml run --rm flyway`. Ao concluir, remova apenas esse projeto com `docker compose -p navitas-mig -f compose.migration-check.yaml down -v`. Não use esses comandos nas pilhas de desenvolvimento existentes.
