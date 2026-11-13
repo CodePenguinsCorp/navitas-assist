@@ -112,4 +112,11 @@ describe('Status inline do RMA', () => {
     fixture.componentRef.setInput('disabled', true); render(); pick();
     expect(calls).toHaveLength(0);
   });
+  it('uses the current event after its note was edited from the timeline', () => {
+    pick();
+    fixture.componentRef.setInput('rma', { ...moved, statusHistory: [{ ...moved.statusHistory[0], note: 'Atualizada' }] }); render();
+    button('Editar observação').click(); render();
+    expect(host().querySelector<HTMLTextAreaElement>('textarea')?.value).toBe('Atualizada');
+  });
+
 });

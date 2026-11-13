@@ -82,7 +82,10 @@ export class RmaStatusFieldComponent {
   protected readonly message = signal('');
   protected readonly previous = signal<{ before: RmaResponse; after: RmaResponse } | null>(null);
   protected readonly editing = signal(false);
-  protected readonly noteTarget = computed(() => this.event() ?? this.previous()?.after.statusHistory.reduce<RmaStatusHistoryResponse | null>((latest, entry) => !latest || (entry.id ?? 0) > (latest.id ?? 0) ? entry : latest, null));
+  protected readonly noteTarget = computed(() => {
+    const target = this.event() ?? this.previous()?.after.statusHistory.reduce<RmaStatusHistoryResponse | null>((latest, entry) => !latest || (entry.id ?? 0) > (latest.id ?? 0) ? entry : latest, null);
+    return this.rma()?.statusHistory.find(entry => entry.id === target?.id) ?? target;
+  });
   protected readonly noteAllowed = computed(() => this.allowed() && !!this.noteTarget()?.id && !CLOSED_RMA_STATUSES.includes(this.rma()?.status ?? this.previous()?.after.status ?? 'RECEIVED'));
   protected readonly note = new FormControl('', { nonNullable: true, validators: [Validators.maxLength(255)] });
 

@@ -42,6 +42,7 @@ class RmaStatusNoteIntegrationTest {
     @Autowired private ClientRepository clients;
     @Autowired private ProductRepository products;
     @Autowired private PartRepository parts;
+    @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbc;
     private RmaRecord rma;
 
     @BeforeEach
@@ -79,4 +80,29 @@ class RmaStatusNoteIntegrationTest {
             .contentType(MediaType.APPLICATION_JSON).content("{\"note\":\"X\"}"))
             .andExpect(status().isBadRequest());
     }
+    @Test
+    void rejectsEventBelongingToAnotherRma() throws Exception {
+        RmaRecord other = new RmaRecord(); other.setCode("RMA-NOTE-OTHER"); other.setClient(rma.getClient()); other.setProduct(rma.getProduct());
+        other.setEntryDate(LocalDate.now()); other.setReceivedBy("original"); other.setReportedFailure("Falha"); other.setStatus(RmaStatus.IN_REPAIR);
+        RmaStatusHistory event = new RmaStatusHistory(); event.setStatus(other.getStatus()); event.setChangedBy("original"); event.setChangedAt(java.time.Instant.now());
+        event.setNote("Intacta"); other.addStatusHistory(event); other = rmas.saveAndFlush(other); Long eventId = other.getStatusHistory().get(0).getId();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/rmas/" + rma.getId() + "/status-history/" + eventId + "/note")
+            .with(asProfile("editor", "SERVICE_DESK")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"note\":\"Alterada\"}"))
+            .andExpect(status().isNotFound());
+        assertEquals("Intacta", jdbc.queryForObject("select note from rma_status_history where id = ?", String.class, eventId));
+    }
+
+    @Test
+    void statusChangeReturnsTheCreatedEventIdReadyForNoteEditing() throws Exception {
+        var result = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/rmas/" + rma.getId() + "/status")
+            .with(asProfile("editor", "SERVICE_DESK")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"TRIAGE\"}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.statusHistory[0].id").isNumber()).andReturn();
+        long eventId = mapper.readTree(result.getResponse().getContentAsString()).get("statusHistory").get(0).get("id").asLong();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/rmas/" + rma.getId() + "/status-history/" + eventId + "/note")
+            .with(asProfile("editor", "SERVICE_DESK")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"note\":\"Depois da mudanca\"}"))
+            .andExpect(status().isOk());
+        assertEquals("Depois da mudanca", jdbc.queryForObject("select note from rma_status_history where id = ?", String.class, eventId));
+        assertEquals("editor", jdbc.queryForObject("select note_edited_by from rma_status_history where id = ?", String.class, eventId));
+    }
+
 }
