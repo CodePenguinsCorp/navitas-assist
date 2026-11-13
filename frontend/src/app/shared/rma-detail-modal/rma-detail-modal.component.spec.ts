@@ -215,25 +215,29 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(pairs).toHaveProperty('Atualizado em');
   });
 
-  it('navigates to the RMA in the list', async () => {
-    // Hoje o link "Abrir RMA na lista" não existe.
-    const { fixture, buttonByText } = await setup();
-    const link = buttonByText('Abrir RMA na lista');
+  it('navigates to the RMA in the list from a quiet text link beside the code', async () => {
+    const { fixture, host, buttonByText } = await setup();
+    const link = buttonByText('Abrir na lista');
 
     expect(link?.tagName).toBe('A');
+    expect(link!.closest('.rma-detail__bar')).not.toBeNull();
+    expect(link!.classList).toContain('rma-detail__open-link');
+    expect(link!.className).not.toContain('button-');
+    expect(link!.querySelector('app-icon')).not.toBeNull();
+    expect(host.querySelector('.rma-detail__actions a')).toBeNull();
     link!.click();
     await fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe('/rmas?rma=5');
   });
 
   it('keeps the list link inactive while disabled', async () => {
-    // Hoje o link não existe; durante disabled() ele deve ser um botão inativo, sem href.
     const { fixture, host, buttonByText } = await setup({ disabled: true });
-    const control = buttonByText('Abrir RMA na lista');
+    const control = buttonByText('Abrir na lista');
 
     expect(control?.tagName).toBe('BUTTON');
     expect((control as HTMLButtonElement).disabled).toBe(true);
-    expect(host.querySelector('.rma-detail__actions a[href]')).toBeNull();
+    expect(control!.className).not.toContain('button-');
+    expect(host.querySelector('.rma-detail__bar a[href]')).toBeNull();
     control!.click();
     await fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe('/');

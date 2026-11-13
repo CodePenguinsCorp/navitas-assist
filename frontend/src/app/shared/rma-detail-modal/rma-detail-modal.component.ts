@@ -19,6 +19,7 @@ import {
   stageFact
 } from '../../core/utils/rma-detail';
 import { CustomSelectComponent, CustomSelectOption } from '../form-controls/custom-select/custom-select.component';
+import { IconComponent } from '../icon/icon.component';
 import { ModalFocusDirective } from '../modal-focus/modal-focus.directive';
 import { RmaDeadlineChipComponent } from '../rma-deadline-chip/rma-deadline-chip.component';
 import { RmaDueDateDialogComponent } from '../rma-due-date-dialog/rma-due-date-dialog.component';
@@ -38,7 +39,7 @@ import {
 
 @Component({
   selector: 'app-rma-detail-modal',
-  imports: [CustomSelectComponent, ModalFocusDirective, RmaDeadlineChipComponent, RmaDueDateDialogComponent, RmaStageTimesComponent, RouterLink],
+  imports: [CustomSelectComponent, IconComponent, ModalFocusDirective, RmaDeadlineChipComponent, RmaDueDateDialogComponent, RmaStageTimesComponent, RouterLink],
   templateUrl: './rma-detail-modal.component.html',
   styleUrl: './rma-detail-modal.component.css'
 })

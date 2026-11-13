@@ -29,7 +29,8 @@ const ICONS = {
   lock: ['M6 11h12v9H6z', 'M8.5 11V8a3.5 3.5 0 0 1 7 0v3'],
   user: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M4.5 20c1-3.6 3.9-5.5 7.5-5.5s6.5 1.9 7.5 5.5'],
   flag: ['M5 21V4', 'M5 4h11l-2 4 2 4H5'],
-  layers: ['m12 3 9 5-9 5-9-5z', 'm3 13 9 5 9-5']
+  layers: ['m12 3 9 5-9 5-9-5z', 'm3 13 9 5 9-5'],
+  external: ['M14 4h6v6', 'M20 4l-9 9', 'M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10']
 } as const;
 
 export type IconName = keyof typeof ICONS;

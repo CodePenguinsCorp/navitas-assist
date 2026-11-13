@@ -2,8 +2,11 @@
 /* Canvas, cards, card titles, tiles (grid) and the label/value grid come from the shared .detail-* rules. */
 .rma-detail { width: min(100%, 1080px); padding: 1.25rem 0.9rem 1.5rem 1.5rem; }
 .rma-detail:focus { outline: none; }
-.rma-detail__bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+.rma-detail__bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: 0.75rem; }
 .rma-detail__key { color: var(--brand-blue-deep); font-weight: 700; }
+/* Quiet text link beside the code (Jira style), not a button. */
+.rma-detail__bar-key { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-3); min-width: 0; }
+.rma-detail__open-link { display: inline-flex; align-items: center; gap: var(--space-1); padding-inline: var(--space-1); text-decoration: none; }
 .rma-detail__layout { display: grid; grid-template-columns: minmax(0, 1fr) 348px; gap: 1.5rem; padding-right: 0.6rem; align-items: start; }
 .rma-detail__main, .rma-detail__side { display: grid; gap: 1.25rem; min-width: 0; }
 .rma-detail__head { display: grid; gap: 0.3rem; }

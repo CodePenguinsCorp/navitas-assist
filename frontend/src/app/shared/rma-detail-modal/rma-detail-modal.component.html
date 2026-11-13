@@ -12,7 +12,14 @@
     (click)="$event.stopPropagation()"
   >
     <header class="rma-detail__bar">
-      <span class="rma-detail__key code-text">{{ rma().code }}</span>
+      <div class="rma-detail__bar-key">
+        <span class="rma-detail__key code-text">{{ rma().code }}</span>
+        @if (disabled()) {
+          <button type="button" class="link-button rma-detail__open-link" disabled>Abrir na lista <app-icon name="external" [size]="14" /></button>
+        } @else {
+          <a class="link-button rma-detail__open-link" routerLink="/rmas" [queryParams]="{ rma: rma().id }">Abrir na lista <app-icon name="external" [size]="14" /></a>
+        }
+      </div>
       <button type="button" class="modal-close" aria-label="Fechar" [disabled]="disabled()" (click)="requestClose()">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
       </button>
@@ -41,11 +48,6 @@
             <span class="status-chip rma-detail__status" [attr.data-status]="rma().status">{{ statusLabel(rma().status) }}</span>
           }
           <button type="button" class="button-secondary" [disabled]="disabled()" (click)="blockInspect.emit(rma())">Ver impedimentos</button>
-          @if (disabled()) {
-            <button type="button" class="button-secondary" disabled>Abrir RMA na lista</button>
-          } @else {
-            <a class="button-secondary" routerLink="/rmas" [queryParams]="{ rma: rma().id }">Abrir RMA na lista</a>
-          }
         </div>
 
         @if (actionError()) {
