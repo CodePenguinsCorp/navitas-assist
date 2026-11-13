@@ -91,6 +91,7 @@ interface CreateDateErrors {
   manufacturedAt: string[];
   purchaseDate: string;
   entryDate: string;
+  dueDate: string;
 }
 
 /** Filters confirmed by "Buscar"/"Limpar"; the list and the summary only read these. */
@@ -412,7 +413,7 @@ export class RmasComponent {
    * its controls stay in the DOM and in createForm.
    */
   protected readonly retroactiveOpen = signal(false);
-  protected readonly dateErrors = signal<CreateDateErrors>({ manufacturedAt: [], purchaseDate: '', entryDate: '' });
+  protected readonly dateErrors = signal<CreateDateErrors>({ manufacturedAt: [], purchaseDate: '', entryDate: '', dueDate: '' });
   protected readonly diagnosisSubmitting = signal(false);
   /** Diagnosis feedback shown inside the dialog (validation and service errors). */
   protected readonly diagnosisErrorMessage = signal('');
@@ -592,6 +593,7 @@ export class RmasComponent {
     purchaseDate: [''],
     purchaseDateUnknown: [false],
     entryDate: [todayInputValue(), [Validators.required]],
+    dueDate: [''],
     invoiceNumber: [''],
     reportedFailure: ['', [Validators.required, Validators.maxLength(1000)]],
     receivedAccessories: ['', [Validators.maxLength(500)]],
@@ -785,7 +787,7 @@ export class RmasComponent {
     const raw = this.createForm.getRawValue();
     const dateErrors = this.validateCreateDates();
     this.dateErrors.set(dateErrors);
-    if (dateErrors.manufacturedAt.some(Boolean) || dateErrors.purchaseDate || dateErrors.entryDate) {
+    if (dateErrors.manufacturedAt.some(Boolean) || dateErrors.purchaseDate || dateErrors.entryDate || dateErrors.dueDate) {
       this.createErrorMessage.set('Corrija as datas indicadas no formulário.');
       this.pageMessage.set('');
       return;
@@ -808,7 +810,8 @@ export class RmasComponent {
       priority: raw.priority,
       repairSummary: normalizeText(raw.repairSummary),
       replacedPartsSummary: normalizeText(raw.replacedPartsSummary),
-      testSummary: normalizeText(raw.testSummary)
+      testSummary: normalizeText(raw.testSummary),
+      dueDate: normalizeText(raw.dueDate)
     };
 
     this.createSubmitting.set(true);
@@ -1004,6 +1007,7 @@ export class RmasComponent {
       purchaseDate: '',
       purchaseDateUnknown: false,
       entryDate: todayInputValue(),
+      dueDate: '',
       invoiceNumber: '',
       reportedFailure: '',
       receivedAccessories: '',
@@ -1013,12 +1017,12 @@ export class RmasComponent {
       replacedPartsSummary: '',
       testSummary: ''
     });
-    this.dateErrors.set({ manufacturedAt: [], purchaseDate: '', entryDate: '' });
+    this.dateErrors.set({ manufacturedAt: [], purchaseDate: '', entryDate: '', dueDate: '' });
     this.retroactiveOpen.set(false);
   }
 
   private validateCreateDates(): CreateDateErrors {
-    const { items, purchaseDate, purchaseDateUnknown, entryDate } = this.createForm.getRawValue();
+    const { items, purchaseDate, purchaseDateUnknown, entryDate, dueDate } = this.createForm.getRawValue();
     const manufacturedDates = items.map((item) => item.manufacturedAt).filter(Boolean);
     const latestManufacturedDate = manufacturedDates.sort().at(-1) ?? '';
     const knownPurchaseDate = purchaseDateUnknown ? '' : purchaseDate;
@@ -1033,7 +1037,8 @@ export class RmasComponent {
       entryDate: knownPurchaseDate && entryDate && entryDate < knownPurchaseDate
         ? 'A entrada não pode ser anterior à compra.'
         : latestManufacturedDate && entryDate && entryDate < latestManufacturedDate
-          ? 'A entrada não pode ser anterior à fabricação.' : ''
+          ? 'A entrada não pode ser anterior à fabricação.' : '',
+      dueDate: dueDate && entryDate && dueDate < entryDate ? 'A data limite não pode ser anterior à entrada.' : ''
     };
   }
 

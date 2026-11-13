@@ -542,6 +542,15 @@
             }
           </div>
 
+          <div class="field-group col-2">
+            <label>Data limite</label>
+            <app-date-picker formControlName="dueDate" ariaLabel="Data limite" [allowClear]="true" [minDate]="createForm.controls.entryDate.value"
+              [ariaInvalid]="!!dateErrors().dueDate" [ariaDescribedBy]="dateErrors().dueDate ? 'dueDate-error' : null" />
+            @if (dateErrors().dueDate) {
+              <small class="field-error" id="dueDate-error">{{ dateErrors().dueDate }}</small>
+            }
+          </div>
+
           <div class="field-group col-3">
             <label for="receivedAccessories">Acessórios</label>
             <textarea id="receivedAccessories" formControlName="receivedAccessories" rows="3" maxlength="500"></textarea>

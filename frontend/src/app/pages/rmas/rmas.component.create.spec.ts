@@ -477,8 +477,48 @@ describe('RmasComponent creation sections', () => {
       priority: 'HIGH',
       repairSummary: 'Reparo feito',
       replacedPartsSummary: 'Tela',
-      testSummary: 'Teste ok'
+      testSummary: 'Teste ok',
+      dueDate: null
     });
+  });
+
+  it('creates without due date sending dueDate null', async () => {
+    const { open, submit, fillValid, rmaService } = await setup();
+    open();
+    fillValid();
+    submit();
+    expect(rmaService.create.mock.calls[0][0].dueDate).toBeNull();
+  });
+
+  it('sends the chosen due date', async () => {
+    const { component, open, submit, fillValid, rmaService, panel } = await setup();
+    open();
+    fillValid();
+    const field = [...panel()!.querySelectorAll('.field-group')].find((group) => group.querySelector('label')?.textContent?.trim() === 'Data limite');
+    expect(field?.querySelector('app-date-picker')).not.toBeNull();
+    component.createForm.patchValue({ entryDate: '2026-10-20', dueDate: '2026-11-30' });
+    submit();
+    expect(rmaService.create.mock.calls[0][0].dueDate).toBe('2026-11-30');
+  });
+
+  it('blocks submit and shows the error when the due date is before entry', async () => {
+    const { component, open, render, submit, fillValid, rmaService, panel } = await setup();
+    open();
+    fillValid();
+    component.createForm.patchValue({ entryDate: '2026-10-20', dueDate: '2026-10-19' });
+    render();
+    submit();
+    expect(rmaService.create).not.toHaveBeenCalled();
+    expect(panel()!.querySelector('#dueDate-error')?.textContent?.trim()).toBe('A data limite não pode ser anterior à entrada.');
+  });
+
+  it('clears the due date after a successful create', async () => {
+    const { component, open, submit, fillValid } = await setup();
+    open();
+    fillValid();
+    component.createForm.patchValue({ dueDate: '2099-12-31' });
+    submit();
+    expect(component.createForm.getRawValue().dueDate).toBe('');
   });
 
   it('sends purchaseDate null when the purchase is unknown', async () => {
