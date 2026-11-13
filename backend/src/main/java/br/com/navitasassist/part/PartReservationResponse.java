@@ -20,7 +20,11 @@ public record PartReservationResponse(
     String note,
     String createdBy,
     Instant createdAt,
-    Instant updatedAt
+    Instant updatedAt,
+    String replacementReason,
+    String componentBatch,
+    Instant appliedAt,
+    String appliedBy
 ) {
     public static PartReservationResponse from(PartReservation reservation, BigDecimal unitCost, BigDecimal totalCost) {
         Part part = reservation.getPart();
@@ -41,7 +45,11 @@ public record PartReservationResponse(
             reservation.getNote(),
             reservation.getCreatedBy(),
             reservation.getCreatedAt(),
-            reservation.getUpdatedAt()
+            reservation.getUpdatedAt(),
+            reservation.getReplacementReason(),
+            reservation.getComponentBatch(),
+            reservation.getAppliedAt(),
+            reservation.getAppliedBy()
         );
     }
 }

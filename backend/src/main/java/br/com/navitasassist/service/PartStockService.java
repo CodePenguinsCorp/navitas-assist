@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.part.Part;
+import br.com.navitasassist.part.PartConsumptionRequest;
 import br.com.navitasassist.part.PartMovement;
 import br.com.navitasassist.part.PartMovementRequest;
 import br.com.navitasassist.part.PartMovementResponse;
@@ -48,7 +49,7 @@ public class PartStockService {
 
     private static final Set<PartMovementType> MANUAL_TYPES = EnumSet.of(PartMovementType.ENTRY, PartMovementType.EXIT, PartMovementType.ADJUSTMENT);
     private static final Set<RmaStatus> CLOSED_RMA_STATUSES = EnumSet.of(RmaStatus.COMPLETED, RmaStatus.RETURNED, RmaStatus.IRREPARABLE);
-    private static final String CLOSED_RMA_RESERVATION_MESSAGE = "Parts cannot be allocated or consumed for a closed RMA.";
+    private static final String CLOSED_RMA_RESERVATION_MESSAGE = "Não é permitido reservar ou consumir peças em um RMA encerrado.";
 
     private final PartRepository partRepository;
     private final PartMovementRepository partMovementRepository;
@@ -135,6 +136,7 @@ public class PartStockService {
             movements,
             sumCost(reservationResponses, PartReservationStatus.ACTIVE),
             sumCost(reservationResponses, PartReservationStatus.CONSUMED),
+            reservationResponses.stream().filter(reservation -> reservation.status() == PartReservationStatus.CONSUMED).toList(),
             reservationResponses.stream().filter(reservation -> reservation.status() == PartReservationStatus.PENDING).count()
         );
     }
@@ -181,7 +183,7 @@ public class PartStockService {
         return toReservationResponse(partReservationRepository.save(reservation));
     }
 
-    public PartReservationResponse consume(Long rmaId, Long reservationId) {
+    public PartReservationResponse consume(Long rmaId, Long reservationId, PartConsumptionRequest request) {
         Long partId = findReservationPartId(rmaId, reservationId);
         lockOpenRma(rmaId, CLOSED_RMA_RESERVATION_MESSAGE);
         Part part = lockPart(partId);
@@ -190,6 +192,10 @@ public class PartStockService {
 
         record(part, PartMovementType.CONSUMPTION, reservation.getQuantity().negate(), reservation.getQuantity().negate(), part.getUnitCost(), reservation.getRma(), reservation, null, null);
         reservation.setStatus(PartReservationStatus.CONSUMED);
+        reservation.setReplacementReason(request.replacementReason().trim());
+        reservation.setComponentBatch(trimToNull(request.componentBatch()));
+        reservation.setAppliedAt(Instant.now());
+        reservation.setAppliedBy(currentUsername());
         return toReservationResponse(partReservationRepository.save(reservation));
     }
 

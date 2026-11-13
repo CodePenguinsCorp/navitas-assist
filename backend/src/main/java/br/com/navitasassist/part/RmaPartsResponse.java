@@ -10,6 +10,7 @@ public record RmaPartsResponse(
     List<PartMovementResponse> movements,
     BigDecimal reservedCost,
     BigDecimal consumedCost,
+    List<PartReservationResponse> replacedComponents,
     long pendingCount
 ) {
 }

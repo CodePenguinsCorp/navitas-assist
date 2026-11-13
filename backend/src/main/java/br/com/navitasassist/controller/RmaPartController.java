@@ -1,5 +1,6 @@
 package br.com.navitasassist.controller;
 
+import br.com.navitasassist.part.PartConsumptionRequest;
 import br.com.navitasassist.part.PartReservationRequest;
 import br.com.navitasassist.part.PartReservationResponse;
 import br.com.navitasassist.part.RmaPartsResponse;
@@ -39,8 +40,8 @@ public class RmaPartController {
     }
 
     @PostMapping("/{reservationId}/consume")
-    public PartReservationResponse consume(@PathVariable Long rmaId, @PathVariable Long reservationId) {
-        return partStockService.consume(rmaId, reservationId);
+    public PartReservationResponse consume(@PathVariable Long rmaId, @PathVariable Long reservationId, @Valid @RequestBody PartConsumptionRequest request) {
+        return partStockService.consume(rmaId, reservationId, request);
     }
 
     @PostMapping("/{reservationId}/cancel")

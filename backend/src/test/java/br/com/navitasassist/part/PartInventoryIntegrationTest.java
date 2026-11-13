@@ -77,6 +77,25 @@ class PartInventoryIntegrationTest {
 
     private RmaRecord rma;
 
+    @Test
+    void consumptionRequiresReasonAndPersistsReplacementMetadataAtomically() throws Exception {
+        long partId = createPart("PCA-REPLACED", "10.00", "0");
+        movement(partId, "ENTRY", "2", null, ADMIN).andExpect(status().isCreated());
+        long reservationId = id(reserve(rma.getId(), partId, "1", TECHNICIAN));
+        mockMvc.perform(post("/api/rmas/{id}/parts/{reservationId}/consume", rma.getId(), reservationId).with(TECHNICIAN).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{}"))
+            .andExpect(status().isBadRequest());
+        assertEquals(PartReservationStatus.ACTIVE, partReservationRepository.findById(reservationId).orElseThrow().getStatus());
+        assertEquals(0, partMovementRepository.findByRma_IdOrderByIdDesc(rma.getId()).stream().filter(m -> m.getType() == PartMovementType.CONSUMPTION).count());
+        mockMvc.perform(post("/api/rmas/{id}/parts/{reservationId}/consume", rma.getId(), reservationId).with(TECHNICIAN).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(json(Map.of("replacementReason", "  Curto  ", "componentBatch", " L123 "))))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.replacementReason").value("Curto"))
+            .andExpect(jsonPath("$.componentBatch").value("L123")).andExpect(jsonPath("$.appliedBy").value("tech"))
+            .andExpect(jsonPath("$.appliedAt").isNotEmpty());
+        mockMvc.perform(get("/api/rmas/{id}/parts", rma.getId()).with(VIEWER))
+            .andExpect(jsonPath("$.replacedComponents", hasSize(1))).andExpect(jsonPath("$.replacedComponents[0].replacementReason").value("Curto"));
+    }
+
     @BeforeEach
     void setUp() {
         cleanUp();
@@ -397,7 +416,7 @@ class PartInventoryIntegrationTest {
 
         action(rma.getId(), active, "consume", TECHNICIAN)
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Parts cannot be allocated or consumed for a closed RMA."));
+            .andExpect(jsonPath("$.message").value("Não é permitido reservar ou consumir peças em um RMA encerrado."));
         action(rma.getId(), pending, "allocate", TECHNICIAN).andExpect(status().isBadRequest());
 
         action(rma.getId(), active, "cancel", TECHNICIAN).andExpect(status().isOk()).andExpect(jsonPath("$.partAvailable").value(1));
@@ -488,7 +507,8 @@ class PartInventoryIntegrationTest {
     }
 
     private org.springframework.test.web.servlet.ResultActions action(long rmaId, long reservationId, String action, RequestPostProcessor role) throws Exception {
-        return mockMvc.perform(post("/api/rmas/{id}/parts/{reservationId}/{action}", rmaId, reservationId, action).with(role).with(csrf()));
+        return mockMvc.perform(post("/api/rmas/{id}/parts/{reservationId}/{action}", rmaId, reservationId, action).with(role).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(action.equals("consume") ? json(Map.of("replacementReason", "Falha confirmada")) : "{}"));
     }
 
     private long id(org.springframework.test.web.servlet.ResultActions result) throws Exception {

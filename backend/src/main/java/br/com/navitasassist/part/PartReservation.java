@@ -48,6 +48,17 @@ public class PartReservation extends AuditableEntity {
     @Column(nullable = false, length = 20)
     private PartReservationStatus status;
 
+    @Column(length = 1000)
+    private String replacementReason;
+
+    @Column(length = 120)
+    private String componentBatch;
+
+    private java.time.Instant appliedAt;
+
+    @Column(length = 120)
+    private String appliedBy;
+
     @Column(length = 255, updatable = false)
     private String note;
 }
