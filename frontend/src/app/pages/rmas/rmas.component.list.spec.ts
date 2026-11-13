@@ -12,6 +12,7 @@ import { RmaFilters, RmaService } from '../../core/services/rma.service';
 import { buildRma, buildRmaItem, buildRmaPage } from '../../testing/rma-fixtures';
 import { RmasComponent } from './rmas.component';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { settleRmaLazyChunks } from '../../testing/lazy-chunks';
 
 type ListFn = (filters: RmaFilters) => Observable<PageResponse<RmaResponse>>;
 type SummaryFn = (filters: Pick<RmaFilters, 'query' | 'status'>) => Observable<RmaSummaryResponse>;
@@ -98,6 +99,9 @@ function summaryText(page: HTMLElement): string | null {
 }
 
 const httpError = new HttpErrorResponse({ status: 500, error: { message: 'Falha no servidor' } });
+
+// Waits for the lazy chunks the detail view starts, so none is pending at environment teardown.
+afterEach(settleRmaLazyChunks);
 
 describe('RmasComponent list state', () => {
   describe('header and indicators', () => {

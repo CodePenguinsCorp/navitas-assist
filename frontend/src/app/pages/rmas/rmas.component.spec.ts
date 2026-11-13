@@ -12,6 +12,10 @@ import { ProtocolService } from '../../core/services/protocol.service';
 import { RmaService } from '../../core/services/rma.service';
 import { RmasComponent } from './rmas.component';
 import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { settleRmaLazyChunks } from '../../testing/lazy-chunks';
+
+// Waits for the lazy chunks the detail view starts, so none is pending at environment teardown.
+afterEach(settleRmaLazyChunks);
 
 describe('RmasComponent form', () => {
   let component: RmaFormHarness;

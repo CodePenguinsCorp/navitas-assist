@@ -5,8 +5,12 @@ import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
 import { providePermissions } from '../../testing/permission-fixtures';
+import { settleRmaLazyChunks } from '../../testing/lazy-chunks';
 import { buildRma, buildRmaPage } from '../../testing/rma-fixtures';
 import { RmasComponent } from './rmas.component';
+
+// Waits for the lazy chunks the detail view starts, so none is pending at environment teardown.
+afterEach(settleRmaLazyChunks);
 
 // Validation, payload, errors and focus are covered by the shared editor specs.
 describe('Diagnóstico no detalhe da lista', () => {

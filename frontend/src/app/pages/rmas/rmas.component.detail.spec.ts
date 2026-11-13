@@ -17,6 +17,7 @@ import { RmaPartsPanelComponent } from '../../shared/rma-parts-panel/rma-parts-p
 import { buildRma, buildRmaItem, buildRmaPage } from '../../testing/rma-fixtures';
 import { RmasComponent } from './rmas.component';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { settleRmaLazyChunks } from '../../testing/lazy-chunks';
 
 interface DetailHarness {
   openDetailsModal(rma: RmaResponse): void;
@@ -117,6 +118,9 @@ async function setup(options: { role?: LegacyProfileCode } = {}) {
 
   return { fixture, page, render, open, detail, tab, selectTab, tabPanel, pairs, section, rmaService, partService, protocolService };
 }
+
+// Waits for the lazy chunks the detail view starts, so none is pending at environment teardown.
+afterEach(settleRmaLazyChunks);
 
 describe('RmasComponent detail with the shared information contract', () => {
   it('renders the shared interventions panel in diagnosis without legacy repair summaries', async () => {

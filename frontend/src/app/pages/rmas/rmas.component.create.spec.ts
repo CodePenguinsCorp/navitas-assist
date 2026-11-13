@@ -14,6 +14,7 @@ import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { buildRma, buildRmaPage } from '../../testing/rma-fixtures';
 import { RmasComponent } from './rmas.component';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { settleRmaLazyChunks } from '../../testing/lazy-chunks';
 
 type CreateFn = (payload: CreateRmaRequest) => Observable<RmaResponse>;
 
@@ -91,6 +92,9 @@ function describedText(element: HTMLElement): string {
   return (element.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(Boolean)
     .map((id) => document.getElementById(id)?.textContent?.trim() ?? '').join(' ');
 }
+
+// Waits for the lazy chunks the detail view starts, so none is pending at environment teardown.
+afterEach(settleRmaLazyChunks);
 
 describe('RmasComponent creation messages', () => {
   it('marks the creation dialog for assistive technology', async () => {
