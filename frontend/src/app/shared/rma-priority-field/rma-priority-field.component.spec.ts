@@ -69,7 +69,11 @@ describe('RmaPriorityFieldComponent', () => {
     const options = [...document.querySelectorAll<HTMLButtonElement>('.custom-select__option')];
     expect(options.map((item) => text(item.querySelector('.custom-select__name')))).toEqual(['Alta', 'Média', 'Baixa']);
     expect(options.map((item) => item.querySelector('.priority-bars')?.getAttribute('data-priority'))).toEqual(['HIGH', 'MEDIUM', 'LOW']);
+    // The level colour (styles.css, keyed on the option's data-priority) reaches the bars and the label of every option.
+    expect(options.map((item) => item.getAttribute('data-priority'))).toEqual(['HIGH', 'MEDIUM', 'LOW']);
+    expect(options.every((item) => item.closest('.custom-select--priority') !== null)).toBe(true);
     expect(text(option('Média')!.querySelector('.custom-select__hint'))).toBe('Prioridade atual');
+    expect(option('Média')!.classList).toContain('is-selected');
   });
 
   it('saves right away when a different level is chosen and shows a short notice', () => {

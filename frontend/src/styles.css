@@ -3034,16 +3034,33 @@ app-custom-select:has(> .custom-select--priority) {
   background: var(--surface-alt);
 }
 
-.custom-select--priority .custom-select__trigger[data-priority='HIGH'],
-.custom-select__option .priority-bars[data-priority='HIGH'] { color: var(--danger-text); }
-.custom-select--priority .custom-select__trigger[data-priority='MEDIUM'],
-.custom-select__option .priority-bars[data-priority='MEDIUM'] { color: var(--warning-text); }
-.custom-select--priority .custom-select__trigger[data-priority='LOW'],
-.custom-select__option .priority-bars[data-priority='LOW'] { color: var(--brand-blue); }
+/* Each level carries its .priority-tag colour and a soft tint for the hover and the selected option.
+   All three text colours reach 4.5:1 on white and on their own tint (AA). */
+.custom-select--priority [data-priority='HIGH'] { --priority-tone: var(--danger-text); --priority-tint: var(--danger-bg); }
+.custom-select--priority [data-priority='MEDIUM'] { --priority-tone: var(--warning-text); --priority-tint: var(--warning-bg); }
+.custom-select--priority [data-priority='LOW'] { --priority-tone: var(--brand-blue); --priority-tint: var(--brand-tint); }
 
-.custom-select.custom-select--priority .custom-select__option.is-selected {
-  background: var(--brand-tint);
-  color: var(--brand-blue-deep);
+.custom-select.custom-select--priority .custom-select__trigger[data-priority] {
+  color: var(--priority-tone);
+}
+
+/* The doubled class outranks the select's own `.custom-select__option > span { color: inherit }`. */
+.custom-select.custom-select--priority .custom-select__option[data-priority] :is(.priority-bars, .custom-select__name, .custom-select__check) {
+  color: var(--priority-tone);
+}
+
+.custom-select.custom-select--priority .custom-select__option[data-priority] .custom-select__name {
+  font-weight: 600;
+}
+
+.custom-select.custom-select--priority .custom-select__option[data-priority] .custom-select__hint {
+  color: var(--muted-strong);
+}
+
+.custom-select.custom-select--priority .custom-select__option[data-priority]:hover,
+.custom-select.custom-select--priority .custom-select__option[data-priority].is-selected {
+  background: var(--priority-tint);
+  color: var(--priority-tone);
 }
 
 .custom-select.custom-select--priority .custom-select__menu {
