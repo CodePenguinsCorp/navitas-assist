@@ -142,6 +142,20 @@ class RmaReportSummaryIntegrationTest {
     }
 
     @Test
+    void recurrenceLooksUpOnlySerialsPresentInThePeriod() {
+        rma("RMA-S1-OLD", "2026-05-01", RmaStatus.RETURNED, beta, item(controller, "S1", null));
+        rma("RMA-S1-NEW", "2026-10-01", RmaStatus.RECEIVED, alfa, item(controller, "S1", null));
+        rma("RMA-S9-A", "2026-05-01", RmaStatus.RETURNED, beta, item(controller, "S9", null));
+        rma("RMA-S9-B", "2026-06-01", RmaStatus.RETURNED, beta, item(controller, "S9", null));
+
+        List<Object[]> rows = rmas.findRecurrentSerials(LocalDate.parse("2026-10-01"), LocalDate.parse("2026-10-31"));
+
+        assertEquals(1, rows.size());
+        assertEquals("S1", rows.get(0)[1]);
+        assertEquals(2L, ((Number) rows.get(0)[2]).longValue());
+    }
+
+    @Test
     void countsRecurrenceRegardlessOfSerialCase() throws Exception {
         rma("RMA-OLD", "2026-05-01", RmaStatus.RETURNED, beta, item(controller, "abc1", "L1"));
         rma("RMA-NEW", "2026-10-01", RmaStatus.RECEIVED, alfa, item(controller, "ABC1", "L1"));

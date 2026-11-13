@@ -84,8 +84,9 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
 
     /**
      * Product id, normalized serial number (trim + upper, the same key RmaReportService builds in Java) and RMA count of
-     * every serial with two or more RMAs entered up to {@code entryTo}. Normalizing here keeps MySQL (case-insensitive
-     * collation) and H2/Java on the same grouping.
+     * every serial with two or more RMAs entered up to {@code entryTo}, restricted to the serials that appear in the
+     * period (instead of grouping the whole rma_items). Normalizing here keeps MySQL (case-insensitive collation) and
+     * H2/Java on the same grouping.
      */
     @Query("""
         select i.product.id, upper(trim(i.itemIdentification.serialNumber)), count(distinct i.rma.id)
@@ -93,10 +94,17 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
         where i.itemIdentification.serialNumber is not null
           and i.itemIdentification.serialNumber <> ''
           and i.rma.entryDate <= :entryTo
+          and upper(trim(i.itemIdentification.serialNumber)) in (
+            select upper(trim(p.itemIdentification.serialNumber))
+            from RmaItem p
+            where p.itemIdentification.serialNumber is not null
+              and p.rma.entryDate >= :entryFrom
+              and p.rma.entryDate <= :entryTo
+          )
         group by i.product.id, upper(trim(i.itemIdentification.serialNumber))
         having count(distinct i.rma.id) > 1
         """)
-    List<Object[]> findRecurrentSerials(@Param("entryTo") LocalDate entryTo);
+    List<Object[]> findRecurrentSerials(@Param("entryFrom") LocalDate entryFrom, @Param("entryTo") LocalDate entryTo);
 
     @Query("select distinct r from RmaRecord r left join fetch r.items i left join fetch i.product where r in :rmas")
     List<RmaRecord> fetchItemsWithProducts(@Param("rmas") List<RmaRecord> rmas);

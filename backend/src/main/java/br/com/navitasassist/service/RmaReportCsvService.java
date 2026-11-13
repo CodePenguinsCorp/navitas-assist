@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.report.CsvWriter;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.ReportLabels;
@@ -24,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class RmaReportCsvService {
-    static final int MAX_EXPORT_RMAS = 5000;
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final RmaReportService rmaReportService;
@@ -32,9 +30,7 @@ public class RmaReportCsvService {
 
     public CsvFile rmas(RmaReportRequest filters) {
         Period period = rmaReportService.period(filters);
-        if (rmaRecordRepository.countReport(period.from(), period.to(), filters.status(), filters.clientId()) > MAX_EXPORT_RMAS) {
-            throw new BusinessException("Export is limited to " + MAX_EXPORT_RMAS + " RMAs. Narrow the period or the filters.");
-        }
+        rmaReportService.ensureWithinLimit(filters, period);
         List<RmaRecord> records = rmaReportService.loadPeriod(filters, period);
         CsvWriter csv = new CsvWriter().row("Código", "Entrada", "Status", "Cliente", "Produto", "SKU", "Lote", "Série", "Garantia",
             "Ajuste manual de garantia", "Falha relatada", "Falha encontrada", "Tipo de falha", "Causa provável", "Responsável", "Expedição");

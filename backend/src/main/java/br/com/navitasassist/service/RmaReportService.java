@@ -54,6 +54,8 @@ public class RmaReportService {
     static final int DEFAULT_PERIOD_DAYS = 90;
     static final int MAX_PERIOD_DAYS = 366;
     static final int TOP_LIMIT = 10;
+    /** Most RMAs the summary and the CSV exports load for one period. */
+    static final int MAX_REPORT_RMAS = 5000;
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
     private static final Set<RmaStatus> CLOSED_STATUSES = EnumSet.of(RmaStatus.COMPLETED, RmaStatus.RETURNED, RmaStatus.IRREPARABLE);
     private static final List<WarrantyStatus> WARRANTY_ORDER = List.of(WarrantyStatus.IN_WARRANTY, WarrantyStatus.OUT_OF_WARRANTY, WarrantyStatus.PENDING);
@@ -75,6 +77,7 @@ public class RmaReportService {
 
     public RmaReportSummaryResponse summary(RmaReportRequest filters) {
         Period period = period(filters);
+        ensureWithinLimit(filters, period);
         Instant generatedAt = Instant.now();
         List<RmaRecord> records = loadPeriod(filters, period);
         List<RmaRecord> open = records.stream().filter(rma -> !CLOSED_STATUSES.contains(rma.getStatus())).toList();
@@ -125,6 +128,13 @@ public class RmaReportService {
         return records;
     }
 
+    /** The summary and the CSV exports load the whole period in memory: refuse instead of truncating above the cap. */
+    void ensureWithinLimit(RmaReportRequest filters, Period period) {
+        if (rmaRecordRepository.countReport(period.from(), period.to(), filters.status(), filters.clientId()) > MAX_REPORT_RMAS) {
+            throw new BusinessException("Reduza o período: o relatório passa de 5.000 RMAs.");
+        }
+    }
+
     Period period(RmaReportRequest filters) {
         if (filters.entryFrom() != null && filters.entryTo() != null && filters.entryFrom().isAfter(filters.entryTo())) {
             throw new BusinessException("Entry start date must not be after end date.");
@@ -145,7 +155,7 @@ public class RmaReportService {
 
     private Recurrence recurrence(List<ReportItem> items, Period period) {
         Map<String, Long> recurrent = new HashMap<>();
-        for (Object[] row : rmaRecordRepository.findRecurrentSerials(period.to())) {
+        for (Object[] row : rmaRecordRepository.findRecurrentSerials(period.from(), period.to())) {
             recurrent.put(row[0] + "|" + normalizeSerial((String) row[1]), ((Number) row[2]).longValue());
         }
         List<ReportItem> withSerial = items.stream().filter(item -> hasText(item.view().serialNumber())).toList();
