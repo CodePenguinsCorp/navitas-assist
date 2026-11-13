@@ -33,12 +33,17 @@
           <p class="rma-detail__subtitle">{{ rma().clientName }}</p>
         </div>
 
-        <div class="rma-detail__actions">
+        <div class="detail-actions">
           @if (canUpdateStatus()) {
             <app-rma-status-field [rma]="rma()" [disabled]="disabled() || diagnosisBusy() || warrantyBusy()"
               (saved)="rmaUpdated.emit($event)" (busyChange)="statusBusy.set($event); busyChange.emit($event)" />
           } @else {
             <span class="status-chip rma-detail__status" [attr.data-status]="rma().status">{{ statusLabel(rma().status) }}</span>
+          }
+          @if (rma().currentBlock; as block) {
+            <button type="button" class="detail-block-flag" aria-controls="rma-detail-blocks" (click)="showBlocks(blocksSection)">
+              <app-icon name="lock" [size]="16" />{{ blockedLabel(block, clock.now()) }}<span class="sr-only"> · ver impedimento</span>
+            </button>
           }
         </div>
 
@@ -54,7 +59,7 @@
           <p class="rma-detail__callout">{{ rma().reportedFailure }}</p>
         </section>
 
-        <section class="rma-detail__section detail-card" aria-labelledby="rma-detail-blocks-title">
+        <section #blocksSection id="rma-detail-blocks" class="rma-detail__section detail-card" aria-labelledby="rma-detail-blocks-title">
           <h3 class="rma-detail__heading detail-card__title" id="rma-detail-blocks-title">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3" /></svg>
             Impedimentos

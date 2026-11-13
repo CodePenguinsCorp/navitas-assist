@@ -144,43 +144,42 @@ export interface RmaListFilters {
       padding: var(--space-5) var(--space-4) var(--space-5) var(--space-5);
     }
 
+    /* Same hierarchy as the Kanban detail: code bar, title and client, then the status row. */
     .rma-details__header {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
-      gap: var(--space-4);
-    }
-
-    .rma-details__identity {
-      display: grid;
-      gap: var(--space-1);
-      min-width: 0;
+      gap: var(--space-2);
     }
 
     .rma-details__code {
-      font-size: var(--font-size-sm);
-      font-weight: 600;
-      color: var(--muted);
+      color: var(--brand-blue-deep);
+      font-weight: 700;
     }
 
-    .rma-details__identity h3 {
+    .rma-details__head {
+      display: grid;
+      gap: 0.3rem;
+      margin-top: calc(-1 * var(--space-2));
+    }
+
+    .rma-details__head h3 {
       margin: 0;
-      font-size: 1.4rem;
+      font-size: 1.5rem;
       line-height: 1.25;
       color: var(--brand-blue-deep);
       overflow-wrap: anywhere;
     }
 
+    .rma-details__client {
+      margin: 0;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
     .rma-details__note {
       margin: 0;
       color: var(--muted);
-    }
-
-    .rma-details__chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--space-2);
-      margin-top: var(--space-1);
     }
 
     .rma-details__header-actions {

@@ -127,17 +127,35 @@ describe('RmasComponent detail with the shared information contract', () => {
     expect(tabPanel().textContent).toContain('Intervenções'); expect(tabPanel().textContent).toContain('Total de horas: 0 h');
   });
 
-  it('shows product as title, client below and the same status, priority and block formats', async () => {
-    // Hoje o h3 mostra o cliente ("Cliente X") e a etiqueta de impedimento é só "Bloqueado".
-    const { open, detail } = await setup();
+  it('follows the Kanban detail: code bar, product title, client, status row with the block flag and priority among the facts', async () => {
+    const { open, detail, pairs, tabPanel, render } = await setup();
     open();
-    const identity = detail().querySelector('.rma-details__identity')!;
+    const head = detail().querySelector('.rma-details__head')!;
+    const actions = detail().querySelector<HTMLElement>('.detail-actions')!;
 
-    expect(identity.querySelector('h3')?.textContent?.trim()).toBe('Produto A');
-    expect(identity.querySelector('.rma-details__client')?.textContent?.trim()).toBe('Cliente X');
-    expect(identity.querySelector('[data-status="RECEIVED"]')?.textContent?.trim()).toBe('Recebido');
-    expect(identity.querySelector('app-rma-priority-field [data-priority="MEDIUM"] .priority-bars[data-priority="MEDIUM"]')).not.toBeNull();
-    expect(identity.querySelector('.mini-chip.priority-high')?.textContent?.trim()).toBe('Bloqueado há 2 h');
+    expect(detail().querySelector('.rma-details__header > .rma-details__code')?.textContent?.trim()).toBe('RMA-2026-000005');
+    expect(head.querySelector('h3')?.textContent?.trim()).toBe('Produto A');
+    expect(head.querySelector('.rma-details__client')?.textContent?.trim()).toBe('Cliente X');
+    expect(actions.querySelector('[data-status="RECEIVED"]')?.textContent?.trim()).toBe('Recebido');
+    expect(actions.querySelector('app-rma-priority-field')).toBeNull();
+    const summary = detail().querySelector('.rma-details__summary')!;
+    expect(summary.querySelector('app-rma-priority-field [data-priority="MEDIUM"] .priority-bars[data-priority="MEDIUM"]')).not.toBeNull();
+    expect(Object.fromEntries(pairs(summary)).Prioridade).toContain('Média');
+
+    const flag = actions.querySelector<HTMLButtonElement>('button.detail-block-flag')!;
+    expect(flag.textContent?.replace(/\s+/g, ' ').trim()).toBe('Bloqueado há 2 h · ver impedimento');
+    expect(flag.querySelector('app-icon')).not.toBeNull();
+    expect(flag.getAttribute('aria-controls')).toBe('rma-detail-panel');
+    expect(detail().querySelector('.mini-chip.priority-high')).toBeNull();
+    flag.click();
+    render();
+    expect(tabPanel().querySelector('.blocks-section__current')?.textContent).toContain('Aguardando cliente');
+  });
+
+  it('hides the block flag when the RMA has no current block', async () => {
+    const { open, detail } = await setup();
+    open({ ...fullRma, currentBlock: null });
+    expect(detail().querySelector('.detail-actions .detail-block-flag')).toBeNull();
   });
 
   it('offers the PDF report as a quiet text link in the header actions', async () => {
@@ -153,13 +171,13 @@ describe('RmasComponent detail with the shared information contract', () => {
     const { open, detail } = await setup();
     open();
     const header = detail().querySelector<HTMLElement>('.rma-details__header')!;
-    const identity = header.querySelector<HTMLElement>(':scope > .rma-details__identity')!;
+    const code = header.querySelector<HTMLElement>(':scope > .rma-details__code')!;
     const actions = header.querySelector<HTMLElement>(':scope > .rma-details__header-actions')!;
     const close = actions.querySelector<HTMLElement>('.modal-close')!;
     expect(actions.querySelector('.button-primary')).toBeNull();
-    expect(identity).not.toBeNull();
+    expect(code).not.toBeNull();
     expect(close.getAttribute('aria-label')).toBe('Fechar');
-    expect(getComputedStyle(identity.querySelector('h3')!).overflowWrap).toBe('anywhere');
+    expect(getComputedStyle(detail().querySelector('.rma-details__head h3')!).overflowWrap).toBe('anywhere');
 
     // Computed styles are cached by the test DOM; connecting a <style> clears that cache after a resize.
     const resize = (width: number, height: number) => {
@@ -184,7 +202,7 @@ describe('RmasComponent detail with the shared information contract', () => {
     const summary = detail().querySelector('.rma-details__summary')!;
 
     expect(pairs(summary).map(([label]) => label)).toEqual([
-      'Produtos', 'Entrada', 'Nota fiscal', 'Compra', 'Responsável', 'Data limite', 'Nesta etapa', 'Atualizado em'
+      'Produtos', 'Entrada', 'Nota fiscal', 'Compra', 'Responsável', 'Prioridade', 'Data limite', 'Nesta etapa', 'Atualizado em'
     ]);
     expect(summary.textContent).not.toContain('SLA');
     expect(Object.fromEntries(pairs(summary))).toEqual(expect.objectContaining({
@@ -512,7 +530,7 @@ describe('RmasComponent detail with the shared information contract', () => {
 
     expect(rmaService.resolveBlock).toHaveBeenCalledWith(5, 3, { resolutionNote: 'Cliente respondeu' });
     expect(tabPanel().querySelector('.blocks-section__empty')?.textContent?.trim()).toBe('Sem impedimento');
-    expect(detail().querySelector('.rma-details__identity .mini-chip.priority-high')).toBeNull();
+    expect(detail().querySelector('.detail-actions .detail-block-flag')).toBeNull();
     expect(rmaService.list.mock.calls.length).toBeGreaterThan(listCalls);
   });
 
@@ -633,7 +651,7 @@ describe('RmasComponent detail priority selector', () => {
   it.each(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as const)('offers the selector only with rma.editar (%s)', async (role) => {
     const { open, detail } = await setup({ role });
     open();
-    const field = detail().querySelector('.rma-details__identity app-rma-priority-field')!;
+    const field = detail().querySelector('.rma-details__summary app-rma-priority-field')!;
     expect(field.querySelector('.custom-select__trigger') !== null).toBe(profilePermissions(role).includes('rma.editar'));
     expect(field.textContent).toContain('Média');
   });

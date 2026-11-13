@@ -7,6 +7,7 @@ import { RouterLink } from '@angular/router';
 import { AssignableUserResponse, RmaResponse } from '../../core/models';
 import { ClockService } from '../../core/services/clock.service';
 import {
+  blockedLabel,
   historyEntryTitle,
   invoiceFact,
   purchaseFact,
@@ -69,6 +70,7 @@ export class RmaDetailModalComponent {
   @Output() readonly rmaUpdated = new EventEmitter<RmaResponse>();
   protected readonly clock = inject(ClockService);
   protected readonly statusLabel = statusLabel;
+  protected readonly blockedLabel = blockedLabel;
   protected readonly productSummary = productSummary;
   protected readonly itemCountLabel = itemCountLabel;
   protected readonly warrantyLabel = warrantyLabel;
@@ -103,6 +105,12 @@ export class RmaDetailModalComponent {
   /** Button, backdrop and Escape close the detail only while no write is pending. */
   protected requestClose(): void {
     if (!this.writePending()) this.closed.emit();
+  }
+
+  /** Block flag beside the status: brings the Impedimentos section into view and moves focus there. */
+  protected showBlocks(section: HTMLElement): void {
+    section.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+    section.querySelector<HTMLElement>('.blocks-section')?.focus({ preventScroll: true });
   }
 
   protected chooseAssignee(assigneeId: unknown): void {

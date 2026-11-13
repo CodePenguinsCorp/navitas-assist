@@ -244,7 +244,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     const { host, sidePairs } = await setup({ canUpdateStatus: false });
     const side = host.querySelector('.rma-detail__side')!;
 
-    expect(host.querySelector('.rma-detail__actions .status-chip[data-status="TRIAGE"]')?.textContent?.trim()).toBe('Triagem');
+    expect(host.querySelector('.detail-actions .status-chip[data-status="TRIAGE"]')?.textContent?.trim()).toBe('Triagem');
     expect(side.querySelector('.status-chip')).toBeNull();
     expect(side.querySelector('.priority-tag[data-priority="HIGH"] .priority-bars')).not.toBeNull();
     expect(side.querySelector('.priority-tag')?.textContent?.trim()).toBe('Alta');
@@ -266,7 +266,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(link!.classList).toContain('rma-detail__open-link');
     expect(link!.className).not.toContain('button-');
     expect(link!.querySelector('app-icon')).not.toBeNull();
-    expect(host.querySelector('.rma-detail__actions a')).toBeNull();
+    expect(host.querySelector('.detail-actions a')).toBeNull();
     link!.click();
     await fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe('/rmas?rma=5');
@@ -371,8 +371,20 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(host.textContent).not.toContain('SLA');
   });
 
+  it('flags the current block beside the status, like the RMAs detail, and leads to Impedimentos', async () => {
+    const { host, section } = await setup();
+    const flag = host.querySelector<HTMLButtonElement>('.detail-actions button.detail-block-flag')!;
+    expect(flag.textContent).toContain('Bloqueado há');
+    expect(flag.querySelector('app-icon')).not.toBeNull();
+    expect(flag.getAttribute('aria-controls')).toBe('rma-detail-blocks');
+    expect(section('Impedimentos')!.id).toBe('rma-detail-blocks');
+    flag.click();
+    expect(document.activeElement).toBe(section('Impedimentos')!.querySelector('.blocks-section'));
+  });
+
   it('shows Sem impedimento and Sinalizar impedimento when the RMA is not blocked', async () => {
-    const { section } = await setup({ rma: { ...fullRma, currentBlock: null } });
+    const { host, section } = await setup({ rma: { ...fullRma, currentBlock: null } });
+    expect(host.querySelector('.detail-block-flag')).toBeNull();
     const card = section('Impedimentos')!;
     expect(card.querySelector('.blocks-section__empty')?.textContent?.trim()).toBe('Sem impedimento');
     expect([...card.querySelectorAll('button')].some((button) => button.textContent?.trim() === 'Sinalizar impedimento')).toBe(true);

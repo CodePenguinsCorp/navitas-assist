@@ -177,22 +177,7 @@
         (click)="$event.stopPropagation()"
       >
         <header class="rma-details__header">
-          <div class="rma-details__identity">
-            <span class="rma-details__code code-text">{{ rma.code }}</span>
-            <h3>{{ productSummary(rma) }}</h3>
-            <span class="table-subtitle rma-details__client">{{ rma.clientName }}</span>
-            <div class="rma-details__chips">
-              @if (canUpdateStatus()) {
-                <app-rma-status-field [rma]="rma" [disabled]="diagnosisBusy() || warrantyBusy()" (saved)="detailRmaSaved($event)" (busyChange)="statusBusy.set($event)" />
-              } @else {
-                <span class="status-chip" [attr.data-status]="rma.status">{{ statusLabel(rma.status) }}</span>
-              }
-              <app-rma-priority-field [rma]="rma" [canEdit]="canEditRma()" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy()" (saved)="detailRmaSaved($event)" />
-              @if (rma.currentBlock; as block) {
-                <span class="mini-chip priority-high">{{ blockedLabel(block, clock.now()) }}</span>
-              }
-            </div>
-          </div>
+          <span class="rma-details__code code-text">{{ rma.code }}</span>
           <div class="rma-details__header-actions">
             <app-rma-report-link [rmaId]="rma.id" [code]="rma.code" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy()" />
             <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy()">
@@ -200,6 +185,24 @@
             </button>
           </div>
         </header>
+
+        <div class="rma-details__head">
+          <h3>{{ productSummary(rma) }}</h3>
+          <p class="rma-details__client">{{ rma.clientName }}</p>
+        </div>
+
+        <div class="detail-actions">
+          @if (canUpdateStatus()) {
+            <app-rma-status-field [rma]="rma" [disabled]="diagnosisBusy() || warrantyBusy()" (saved)="detailRmaSaved($event)" (busyChange)="statusBusy.set($event)" />
+          } @else {
+            <span class="status-chip" [attr.data-status]="rma.status">{{ statusLabel(rma.status) }}</span>
+          }
+          @if (rma.currentBlock; as block) {
+            <button type="button" class="detail-block-flag" aria-controls="rma-detail-panel" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy()" (click)="detailTab.set('blocks')">
+              <app-icon name="lock" [size]="16" />{{ blockedLabel(block, clock.now()) }}<span class="sr-only"> · ver impedimento</span>
+            </button>
+          }
+        </div>
 
         <dl class="meta-list rma-details__summary detail-card detail-summary">
           <div><dt>Produtos</dt><dd>{{ itemCountLabel(rma.items.length) }}</dd></div>
@@ -209,6 +212,7 @@
           @let purchase = purchaseFact(rma);
           <div><dt>{{ purchase.label }}</dt><dd [class.is-empty]="purchase.empty">{{ purchase.value }}</dd></div>
           <div><dt>Responsável</dt><dd class="person" [class.is-empty]="!rma.assigneeId"><span class="avatar" [class.avatar--empty]="!rma.assigneeId" aria-hidden="true">{{ rma.assigneeId ? initials(rma.assigneeName) : '–' }}</span><span [title]="ownerLabel(rma)">{{ ownerLabel(rma) }}</span></dd></div>
+          <div><dt>Prioridade</dt><dd><app-rma-priority-field [rma]="rma" [canEdit]="canEditRma()" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy()" (saved)="detailRmaSaved($event)" /></dd></div>
           <div class="detail-summary__wide rma-details__deadline">
             <dt>Data limite</dt>
             <dd [class.is-empty]="!rma.dueDate">
