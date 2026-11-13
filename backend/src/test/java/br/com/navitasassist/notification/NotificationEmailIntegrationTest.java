@@ -115,6 +115,9 @@ class NotificationEmailIntegrationTest {
     void setUp() {
         cleanUp();
         properties.getEmail().setEnabled(true);
+        properties.getEmail().setProvider("fake");
+        properties.getEmail().setDailyLimit(100);
+        properties.getEmail().setMonthlyLimit(3000);
         org.mockito.Mockito.when(clock.instant()).thenReturn(now);
         br.com.navitasassist.user.UserAccountTestSupport.ensureAdmin(userAccountRepository, accessProfiles, passwordEncoder);
         setAssignmentEmail(true);
@@ -147,6 +150,7 @@ class NotificationEmailIntegrationTest {
         clientRepository.deleteAll();
         userAccountRepository.findAll().stream().filter(account -> account.getUsername().startsWith("nav40-")).forEach(userAccountRepository::delete);
         setAssignmentEmail(false);
+        properties.getEmail().setProvider("fake");
     }
 
     @Test
@@ -343,6 +347,84 @@ class NotificationEmailIntegrationTest {
         // Reservada, a linha não volta a ser devida no mesmo instante: outra varredura não a envia.
         worker.poll();
         org.mockito.Mockito.verifyNoInteractions(mailSender);
+    }
+
+    @Test
+    void dailyCapHoldsPendingWithoutConsumingAttemptsUntilTheNextSaoPauloDay() throws Exception {
+        useRealProviderWithLimits(1, 0);
+        assignAndWait();
+        worker.poll();
+        assertEquals(NotificationEmailStatus.SENT, assignmentNotifications().get(0).getEmailStatus());
+        mockMvc.perform(get("/api/notification-rules/email-status").with(asProfile("admin", "ADMIN")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.sentToday").value(1)).andExpect(jsonPath("$.dailyLimit").value(1))
+            .andExpect(jsonPath("$.sentThisMonth").value(1)).andExpect(jsonPath("$.monthlyLimit").value(0))
+            .andExpect(jsonPath("$.limitReached").value(true));
+
+        reassignAndWait();
+        worker.poll();
+        worker.poll();
+        Notification held = assignmentNotifications().get(1);
+        assertEquals(NotificationEmailStatus.PENDING, held.getEmailStatus());
+        assertEquals(0, held.getEmailAttempts());
+        verify(mailSender, org.mockito.Mockito.times(1)).send(any(), any());
+
+        // 12:00Z é 09:00 em São Paulo; 02:59Z do dia seguinte ainda é o mesmo dia lá, 03:00Z já é o próximo.
+        org.mockito.Mockito.when(clock.instant()).thenReturn(java.time.Instant.parse("2026-11-15T02:59:59Z"));
+        worker.poll();
+        assertEquals(NotificationEmailStatus.PENDING, assignmentNotifications().get(1).getEmailStatus());
+        org.mockito.Mockito.when(clock.instant()).thenReturn(java.time.Instant.parse("2026-11-15T03:00:00Z"));
+        worker.poll();
+        assertEquals(NotificationEmailStatus.SENT, assignmentNotifications().get(1).getEmailStatus());
+        assertEquals(1, assignmentNotifications().get(1).getEmailAttempts());
+        mockMvc.perform(get("/api/notification-rules/email-status").with(asProfile("admin", "ADMIN")))
+            .andExpect(jsonPath("$.sentToday").value(1)).andExpect(jsonPath("$.sentThisMonth").value(2));
+    }
+
+    @Test
+    void monthlyCapHoldsPendingUntilTheNextSaoPauloMonth() throws Exception {
+        useRealProviderWithLimits(0, 1);
+        assignAndWait();
+        worker.poll();
+        reassignAndWait();
+        org.mockito.Mockito.when(clock.instant()).thenReturn(java.time.Instant.parse("2026-12-01T02:59:59Z"));
+        worker.poll();
+        assertEquals(NotificationEmailStatus.PENDING, assignmentNotifications().get(1).getEmailStatus());
+        assertEquals(0, assignmentNotifications().get(1).getEmailAttempts());
+        org.mockito.Mockito.when(clock.instant()).thenReturn(java.time.Instant.parse("2026-12-01T03:00:00Z"));
+        worker.poll();
+        assertEquals(NotificationEmailStatus.SENT, assignmentNotifications().get(1).getEmailStatus());
+    }
+
+    @Test
+    void fakeDeliveriesDoNotCountTowardTheCap() throws Exception {
+        properties.getEmail().setDailyLimit(1);
+        assignAndWait();
+        worker.poll();
+        reassignAndWait();
+        worker.poll();
+        assertEquals(NotificationEmailStatus.SENT, assignmentNotifications().get(1).getEmailStatus());
+        mockMvc.perform(get("/api/notification-rules/email-status").with(asProfile("admin", "ADMIN")))
+            .andExpect(jsonPath("$.sentToday").value(0)).andExpect(jsonPath("$.limitReached").value(false));
+    }
+
+    private void useRealProviderWithLimits(int daily, int monthly) {
+        properties.getEmail().setProvider("resend");
+        properties.getEmail().setSendIntervalMs(0);
+        properties.getEmail().setDailyLimit(daily);
+        properties.getEmail().setMonthlyLimit(monthly);
+    }
+
+    private void reassignAndWait() throws Exception {
+        Map<String, Object> none = new java.util.HashMap<>();
+        none.put("assigneeId", null);
+        mockMvc.perform(patch("/api/rmas/{id}/assignee", rma.id()).with(asProfile("admin", "ADMIN")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(none))).andExpect(status().isOk());
+        assignAndWait().andExpect(status().isOk());
+    }
+
+    private List<Notification> assignmentNotifications() {
+        return notificationRepository.findAll().stream().filter(notification -> notification.getEventType() == NotificationEventType.RMA_ASSIGNED)
+            .sorted(java.util.Comparator.comparing(Notification::getId)).toList();
     }
 
     @Test

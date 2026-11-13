@@ -18,6 +18,15 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Query("select n.id from Notification n where n.emailStatus = br.com.navitasassist.notification.NotificationEmailStatus.PENDING and n.emailNextAttemptAt <= :now order by n.emailNextAttemptAt, n.id")
     List<Long> findDueEmailIds(@Param("now") Instant now, Pageable pageable);
 
+    /** Entregas aceitas pelo provedor real (o fake não conta) no intervalo [from, to). */
+    @Query("""
+        select count(n) from Notification n
+        where n.emailStatus = br.com.navitasassist.notification.NotificationEmailStatus.SENT
+          and n.emailProvider <> 'fake'
+          and n.emailSentAt >= :from and n.emailSentAt < :to
+        """)
+    long countRealEmailsSentBetween(@Param("from") Instant from, @Param("to") Instant to);
+
     /**
      * Reserva a tentativa: só uma instância encontra a linha ainda devida com a tentativa esperada; as demais afetam 0 linhas.
      * A próxima tentativa vai para {@code leaseUntil}, e a conclusão (ou o recuo) a substitui.
