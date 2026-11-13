@@ -70,6 +70,7 @@ async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; can
       { provide: RmaService, useValue: {
         updateStatus: (id: number, payload: { status: RmaResponse['status'] }) => of({ ...(inputs.rma ?? fullRma), id, status: payload.status }),
         updateDueDate: (id: number, dueDate: string | null) => of({ ...(inputs.rma ?? fullRma), id, dueDate }),
+        updatePriority: (id: number, priority: RmaResponse['priority']) => of({ ...(inputs.rma ?? fullRma), id, priority }),
         resolveBlock: (id: number, blockId: number, body: { resolutionNote: string }) => of({
           ...(inputs.rma ?? fullRma), id, currentBlock: null,
           blockHistory: [{ ...(inputs.rma ?? fullRma).currentBlock!, id: blockId, resolvedBy: 'ana', resolvedAt: '2026-10-20T11:50:00Z', resolutionNote: body.resolutionNote }]
@@ -671,5 +672,39 @@ describe('RmaDetailModalComponent assignee selector', () => {
     fixture.detectChanges();
 
     expect(host.querySelector('[role="alert"]')?.textContent?.trim()).toBe('Técnico inativo');
+  });
+});
+
+describe('RmaDetailModalComponent priority selector', () => {
+  const priorityRow = (host: HTMLElement) =>
+    [...host.querySelectorAll<HTMLElement>('.rma-detail__side dl > div')].find((row) => row.querySelector('dt')?.textContent?.trim() === 'Prioridade')!;
+
+  it('changes the priority from the Informações side and emits the saved RMA', async () => {
+    const { fixture, host, component } = await setup({ canEditDueDate: true });
+    const updated: RmaResponse[] = [];
+    component.rmaUpdated.subscribe((rma) => updated.push(rma));
+    const trigger = priorityRow(host).querySelector<HTMLButtonElement>('app-rma-priority-field .custom-select__trigger')!;
+    expect(trigger.getAttribute('aria-label')).toBe('Alterar prioridade, atual: Alta');
+    expect(trigger.querySelector('.priority-bars[data-priority="HIGH"]')).not.toBeNull();
+    trigger.click();
+    fixture.detectChanges();
+    [...host.querySelectorAll<HTMLButtonElement>('.custom-select__option')].find((option) => option.textContent?.includes('Baixa'))!.click();
+    fixture.detectChanges();
+    expect(updated.map((rma) => rma.priority)).toEqual(['LOW']);
+    expect(priorityRow(host).querySelector('[role="status"]')?.textContent?.trim()).toBe('Prioridade alterada para Baixa');
+  });
+
+  it('keeps the priority read only without rma.editar or for a closed RMA', async () => {
+    let view = await setup({ canEditDueDate: false });
+    expect(priorityRow(view.host).querySelector('.custom-select__trigger')).toBeNull();
+    expect(priorityRow(view.host).querySelector('.priority-tag')?.textContent?.trim()).toBe('Alta');
+    TestBed.resetTestingModule();
+    view = await setup({ canEditDueDate: true, rma: { ...fullRma, status: 'COMPLETED' } });
+    expect(priorityRow(view.host).querySelector('.custom-select__trigger')).toBeNull();
+  });
+
+  it('keeps the priority selector inactive while disabled', async () => {
+    const { host } = await setup({ canEditDueDate: true, disabled: true });
+    expect(priorityRow(host).querySelector<HTMLButtonElement>('.custom-select__trigger')!.disabled).toBe(true);
   });
 });

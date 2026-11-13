@@ -1,5 +1,5 @@
 @let current = selectedOption();
-<div class="custom-select" [class.is-open]="isOpen()" [class.is-disabled]="isDisabled()" [class.custom-select--compact]="size() === 'compact'" [class.custom-select--status]="appearance() === 'status'" [class.custom-select--person]="appearance() === 'person'">
+<div class="custom-select" [class.is-open]="isOpen()" [class.is-disabled]="isDisabled()" [class.custom-select--compact]="size() === 'compact'" [class.custom-select--status]="appearance() === 'status'" [class.custom-select--person]="appearance() === 'person'" [class.custom-select--priority]="appearance() === 'priority'">
   <button
     type="button"
     class="custom-select__trigger"
@@ -11,11 +11,15 @@
     [attr.aria-describedby]="ariaDescribedBy()"
     [attr.aria-invalid]="ariaInvalid() || null"
     [attr.data-status]="current?.status ?? null"
+    [attr.data-priority]="current?.priority ?? null"
     (click)="toggle()"
     (keydown)="handleTriggerKeydown($event)"
   >
     @if (current && current.avatar !== undefined) {
       <span class="avatar" [class.avatar--empty]="!current.avatar" aria-hidden="true">{{ current.avatar || '–' }}</span>
+    }
+    @if (current?.priority; as priority) {
+      <span class="priority-bars" [attr.data-priority]="priority" aria-hidden="true"><i></i><i></i><i></i></span>
     }
     <span class="custom-select__label">{{ current?.label || placeholder() }}</span>
     <span class="custom-select__icon" aria-hidden="true">
@@ -37,10 +41,14 @@
           [attr.aria-selected]="isSelected(option)"
           [attr.aria-disabled]="option.disabled || null"
           [attr.data-status]="option.status ?? null"
+          [attr.data-priority]="option.priority ?? null"
           (click)="selectOption(option)"
         >
           @if (option.avatar !== undefined) {
             <span class="avatar" [class.avatar--empty]="!option.avatar" aria-hidden="true">{{ option.avatar || '–' }}</span>
+          }
+          @if (option.priority) {
+            <span class="priority-bars" [attr.data-priority]="option.priority" aria-hidden="true"><i></i><i></i><i></i></span>
           }
           <span class="custom-select__text">
             <span class="custom-select__name">{{ option.label }}</span>

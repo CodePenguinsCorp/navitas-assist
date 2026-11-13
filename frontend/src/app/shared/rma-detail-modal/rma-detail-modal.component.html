@@ -176,7 +176,7 @@
                 </dd>
               }
             </div>
-            <div><dt>Prioridade</dt><dd><span class="priority-tag" [attr.data-priority]="rma().priority"><span class="priority-bars" [attr.data-priority]="rma().priority" aria-hidden="true"><i></i><i></i><i></i></span>{{ priorityLabel(rma().priority) }}</span></dd></div>
+            <div><dt>Prioridade</dt><dd><app-rma-priority-field [rma]="rma()" [canEdit]="canEditDueDate()" [disabled]="writePending()" (saved)="rmaUpdated.emit($event)" (busyChange)="busyChange.emit($event)" /></dd></div>
             <div class="detail-facts__block rma-detail__deadline">
               <dt>Data limite</dt>
               <dd [class.is-empty]="!rma().dueDate">

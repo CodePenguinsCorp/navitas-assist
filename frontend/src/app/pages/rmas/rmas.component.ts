@@ -67,6 +67,7 @@ import { PaginationComponent } from '../../shared/pagination/pagination.componen
 import { RmaBlocksSectionComponent } from '../../shared/rma-blocks-section/rma-blocks-section.component';
 import { RmaPartsPanelComponent } from '../../shared/rma-parts-panel/rma-parts-panel.component';
 import { RmaDueDateFieldComponent } from '../../shared/rma-due-date-field/rma-due-date-field.component';
+import { RmaPriorityFieldComponent } from '../../shared/rma-priority-field/rma-priority-field.component';
 import { RmaStageTimesComponent } from '../../shared/rma-stage-times/rma-stage-times.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
@@ -89,7 +90,7 @@ export interface RmaListFilters {
 
 @Component({
   selector: 'app-rmas',
-  imports: [RmaDiagnosisComponent, RmaStatusFieldComponent, IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaStageTimesComponent],
+  imports: [RmaDiagnosisComponent, RmaStatusFieldComponent, IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaStageTimesComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {

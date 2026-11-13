@@ -2999,6 +2999,46 @@ app-custom-select:has(> .custom-select--status) {
   white-space: nowrap;
 }
 
+/* Priority as an inline action menu: the level with its bars, coloured like .priority-tag, no border until hover. */
+app-custom-select:has(> .custom-select--priority) {
+  display: inline-block;
+  width: auto;
+}
+
+.custom-select.custom-select--priority .custom-select__trigger {
+  min-height: var(--control-height-xs);
+  gap: 0.4rem;
+  margin-inline: calc(-1 * var(--space-2));
+  padding: 0 var(--space-2);
+  border-color: transparent;
+  background: transparent;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.custom-select.custom-select--priority .custom-select__trigger:hover:not(:disabled),
+.custom-select.custom-select--priority.is-open .custom-select__trigger {
+  border-color: var(--line);
+  background: var(--surface-alt);
+}
+
+.custom-select--priority .custom-select__trigger[data-priority='HIGH'],
+.custom-select__option .priority-bars[data-priority='HIGH'] { color: var(--danger-text); }
+.custom-select--priority .custom-select__trigger[data-priority='MEDIUM'],
+.custom-select__option .priority-bars[data-priority='MEDIUM'] { color: var(--warning-text); }
+.custom-select--priority .custom-select__trigger[data-priority='LOW'],
+.custom-select__option .priority-bars[data-priority='LOW'] { color: var(--brand-blue); }
+
+.custom-select.custom-select--priority .custom-select__option.is-selected {
+  background: var(--brand-tint);
+  color: var(--brand-blue-deep);
+}
+
+.custom-select.custom-select--priority .custom-select__menu {
+  min-width: min(220px, calc(100vw - 32px));
+}
+
 /* Detail modals (Kanban and RMAs): a blue-grey canvas with white cards, so each block stands apart.
    The darker --muted keeps secondary text at 4.5:1 or more on the canvas too. */
 .detail-surface {

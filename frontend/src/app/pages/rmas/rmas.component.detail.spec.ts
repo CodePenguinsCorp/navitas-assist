@@ -125,7 +125,7 @@ describe('RmasComponent detail with the shared information contract', () => {
     expect(identity.querySelector('h3')?.textContent?.trim()).toBe('Produto A');
     expect(identity.querySelector('.rma-details__client')?.textContent?.trim()).toBe('Cliente X');
     expect(identity.querySelector('[data-status="RECEIVED"]')?.textContent?.trim()).toBe('Recebido');
-    expect(identity.querySelector('.priority-tag[data-priority="MEDIUM"] .priority-bars')).not.toBeNull();
+    expect(identity.querySelector('app-rma-priority-field [data-priority="MEDIUM"] .priority-bars[data-priority="MEDIUM"]')).not.toBeNull();
     expect(identity.querySelector('.mini-chip.priority-high')?.textContent?.trim()).toBe('Bloqueado há 2 h');
   });
 
@@ -581,5 +581,42 @@ describe('RmasComponent detail dialog focus', () => {
     hideOverlay();
     expect(focus).toHaveBeenCalledTimes(1);
     expect(document.activeElement).toBe(row);
+  });
+});
+
+describe('RmasComponent detail priority selector', () => {
+  it.each(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as const)('offers the selector only with rma.editar (%s)', async (role) => {
+    const { open, detail } = await setup({ role });
+    open();
+    const field = detail().querySelector('.rma-details__identity app-rma-priority-field')!;
+    expect(field.querySelector('.custom-select__trigger') !== null).toBe(profilePermissions(role).includes('rma.editar'));
+    expect(field.textContent).toContain('Média');
+  });
+
+  it('keeps the priority read only for a closed RMA', async () => {
+    const { open, detail } = await setup();
+    open({ ...fullRma, status: 'RETURNED' });
+    expect(detail().querySelector('app-rma-priority-field .custom-select__trigger')).toBeNull();
+    expect(detail().querySelector('app-rma-priority-field .priority-tag')?.textContent?.trim()).toBe('Média');
+  });
+
+  it('saves the chosen priority right away and refreshes the detail and the list', async () => {
+    const view = await setup();
+    const updated = { ...fullRma, priority: 'HIGH' as const };
+    const updatePriority = vi.fn(() => of(updated));
+    (view.rmaService as unknown as { updatePriority: typeof updatePriority }).updatePriority = updatePriority;
+    view.rmaService.list.mockReturnValue(of(buildRmaPage([updated], 0, 20, 1)));
+    view.open();
+    const listCalls = view.rmaService.list.mock.calls.length;
+    view.detail().querySelector<HTMLButtonElement>('app-rma-priority-field .custom-select__trigger')!.click();
+    view.render();
+    [...view.page.querySelectorAll<HTMLButtonElement>('app-rma-priority-field .custom-select__option')].find((option) => option.textContent?.includes('Alta'))!.click();
+    view.render();
+    expect(updatePriority).toHaveBeenCalledWith(5, 'HIGH');
+    const field = view.detail().querySelector('app-rma-priority-field')!;
+    expect(field.querySelector('.custom-select__trigger')?.getAttribute('data-priority')).toBe('HIGH');
+    expect(field.querySelector('[role="status"]')?.textContent?.trim()).toBe('Prioridade alterada para Alta');
+    expect(view.rmaService.list.mock.calls.length).toBeGreaterThan(listCalls);
+    expect(view.page.querySelector('.modal-panel--narrow')).toBeNull();
   });
 });

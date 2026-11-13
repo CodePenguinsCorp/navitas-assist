@@ -187,7 +187,7 @@
               } @else {
                 <span class="status-chip" [attr.data-status]="rma.status">{{ statusLabel(rma.status) }}</span>
               }
-              <span class="priority-tag" [attr.data-priority]="rma.priority"><span class="priority-bars" [attr.data-priority]="rma.priority" aria-hidden="true"><i></i><i></i><i></i></span>{{ priorityLabel(rma.priority) }}</span>
+              <app-rma-priority-field [rma]="rma" [canEdit]="canEditRma()" [disabled]="statusBusy() || diagnosisBusy()" (saved)="detailRmaSaved($event)" />
               @if (rma.currentBlock; as block) {
                 <span class="mini-chip priority-high">{{ blockedLabel(block, clock.now()) }}</span>
               }

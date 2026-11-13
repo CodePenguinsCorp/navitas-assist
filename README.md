@@ -114,7 +114,7 @@ A tabela de episódios e o filtro salvo foram incluídos na V1, conforme o banco
 
 ## Alterações de um RMA pelo Kanban
 
-O Kanban não tem edição em massa: cada RMA é alterado individualmente. O status muda ao arrastar o card para outra coluna ou pelo seletor do detalhe (`rma.status`); o responsável, pelo seletor do detalhe (`rma.responsavel`). O card atualiza assim que a API responde, e cada alteração registra o histórico do RMA. A rota `PATCH /api/rmas/{id}/bulk-status`, usada pela antiga seleção em lote (NAV-15), foi removida.
+O Kanban não tem edição em massa: cada RMA é alterado individualmente. O status muda ao arrastar o card para outra coluna ou pelo seletor do detalhe (`rma.status`); o responsável, pelo seletor do detalhe (`rma.responsavel`). A prioridade também é escolhida no detalhe, no Kanban e na tela de RMAs, por quem tem `rma.editar`, enquanto o RMA não está encerrado; a troca é salva na hora com `PUT /api/rmas/{id}` enviando só `{ "priority": ... }`, e a API registra no histórico de status a nota `Priority changed from X to Y`. O card atualiza assim que a API responde, e cada alteração registra o histórico do RMA. A rota `PATCH /api/rmas/{id}/bulk-status`, usada pela antiga seleção em lote (NAV-15), foi removida.
 
 ## Paginação das consultas (NAV-28)
 

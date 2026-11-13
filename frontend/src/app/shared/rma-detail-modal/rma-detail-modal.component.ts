@@ -19,6 +19,7 @@ import { IconComponent } from '../icon/icon.component';
 import { ModalFocusDirective } from '../modal-focus/modal-focus.directive';
 import { RmaBlocksSectionComponent } from '../rma-blocks-section/rma-blocks-section.component';
 import { RmaDueDateFieldComponent } from '../rma-due-date-field/rma-due-date-field.component';
+import { RmaPriorityFieldComponent } from '../rma-priority-field/rma-priority-field.component';
 import { RmaStatusFieldComponent } from '../rma-status-field/rma-status-field.component';
 import { RmaStageTimesComponent } from '../rma-stage-times/rma-stage-times.component';
 import {
@@ -27,7 +28,6 @@ import {
   initialsOf,
   itemCountLabel,
   ownerLabel,
-  priorityLabel,
   productSummary,
   statusLabel,
   warrantyClass,
@@ -36,7 +36,7 @@ import {
 
 @Component({
   selector: 'app-rma-detail-modal',
-  imports: [CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDueDateFieldComponent, RmaStageTimesComponent, RmaStatusFieldComponent, RmaDiagnosisComponent, RouterLink],
+  imports: [CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaStageTimesComponent, RmaStatusFieldComponent, RmaDiagnosisComponent, RouterLink],
   templateUrl: './rma-detail-modal.component.html',
   styleUrl: './rma-detail-modal.component.css'
 })
@@ -64,7 +64,6 @@ export class RmaDetailModalComponent {
   @Output() readonly rmaUpdated = new EventEmitter<RmaResponse>();
   protected readonly clock = inject(ClockService);
   protected readonly statusLabel = statusLabel;
-  protected readonly priorityLabel = priorityLabel;
   protected readonly productSummary = productSummary;
   protected readonly itemCountLabel = itemCountLabel;
   protected readonly warrantyLabel = warrantyLabel;
