@@ -17,7 +17,6 @@ import { blockDateTime, blockDuration } from '../../core/utils/rma-block';
         } @else {
           <p class="block-history__state">Sem bloqueio atual.</p>
         }
-        <p class="block-history__hint">O período bloqueado continua contando no tempo da etapa.</p>
       }
       @if (history().length === 0) {
         <p class="block-history__state">Nenhum impedimento registrado.</p>
@@ -54,7 +53,6 @@ import { blockDateTime, blockDuration } from '../../core/utils/rma-block';
     .block-history p { margin: 0; }
     .block-history__current { display: grid; gap: 0.2rem; padding: 0.7rem 0.85rem; border-radius: var(--radius-sm); background: var(--danger-bg); color: var(--danger-text); }
     .block-history__state { color: var(--text); }
-    .block-history__hint { color: var(--muted); font-size: 0.88rem; }
     .block-history__wide { grid-column: 1 / -1; }
   `]
 })

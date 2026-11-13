@@ -28,4 +28,3 @@
 .blocks-section__form { display: grid; gap: var(--space-3); min-width: 0; }
 .blocks-section__actions { justify-content: flex-end; }
 .blocks-section__error { margin: 0; }
-.blocks-section__hint { color: var(--muted); font-size: var(--font-size-sm); }

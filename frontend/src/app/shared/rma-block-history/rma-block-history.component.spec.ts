@@ -81,11 +81,10 @@ describe('RmaBlockHistoryComponent', () => {
     expect(history.map((block) => block.id)).toEqual([3, 5, 9, 7]);
   });
 
-  it('preserves the current block summary and the stage time hint', () => {
+  it('preserves the current block summary', () => {
     const element = render({ ...RMA, currentBlock: ACTIVE, blockHistory: [ACTIVE] });
     expect(text(element.querySelector('.block-history__current strong'))).toBe('Bloqueado há 2 h');
     expect(text(element.querySelector('.block-history__current'))).toContain('Aguardando peça');
-    expect(text(element)).toContain('O período bloqueado continua contando no tempo da etapa.');
     expect(text(element)).not.toContain('Sem bloqueio atual.');
   });
 
@@ -93,7 +92,6 @@ describe('RmaBlockHistoryComponent', () => {
     const element = render(RMA);
     expect(text(element)).toContain('Sem bloqueio atual.');
     expect(text(element)).toContain('Nenhum impedimento registrado.');
-    expect(text(element)).toContain('O período bloqueado continua contando no tempo da etapa.');
     expect(element.querySelector('ol')).toBeNull();
 
     render({ ...RMA, blockHistory: [RESOLVED] });

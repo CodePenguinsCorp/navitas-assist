@@ -67,8 +67,6 @@
     <p class="alert-banner alert-banner--error blocks-section__error" role="alert">{{ error() }}</p>
   }
 
-  <p class="blocks-section__hint">O período bloqueado continua contando no tempo da etapa.</p>
-
   @if (previousCount() > 0) {
     <button type="button" class="link-button blocks-section__history-toggle" aria-controls="rma-blocks-history" [attr.aria-expanded]="historyOpen()" (click)="historyOpen.set(!historyOpen())">
       Histórico ({{ previousCount() }})

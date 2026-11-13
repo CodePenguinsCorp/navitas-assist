@@ -227,7 +227,6 @@ describe('RmaBlocksSectionComponent', () => {
       role.set(profile);
       mount(isBlocked ? blocked() : RMA);
       expect(control(isBlocked ? 'Resolver' : 'Sinalizar impedimento') !== undefined).toBe(profile !== 'VIEWER');
-      expect(text(host())).toContain('O período bloqueado continua contando no tempo da etapa.');
     }
   );
 

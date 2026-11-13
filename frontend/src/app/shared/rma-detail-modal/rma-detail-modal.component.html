@@ -122,7 +122,6 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7v5l3 2" /></svg>
             {{ sectionLabel('history') }} <span class="mini-chip">{{ activity().length }}</span>
           </h3>
-          <app-rma-stage-times [rma]="rma()" />
           @if (activity().length === 0) {
             <p class="rma-detail__muted">Nenhuma atividade registrada.</p>
           }
@@ -187,6 +186,9 @@
             </div>
             <div><dt>{{ stage().label }}</dt><dd>{{ stage().value }}</dd></div>
           </dl>
+        </section>
+        <section class="rma-detail__info rma-detail__info--stages detail-card">
+          <app-rma-stage-times [rma]="rma()" />
         </section>
         <section class="rma-detail__info detail-card">
           <h3 class="rma-detail__info-title detail-card__header">Atendimento</h3>

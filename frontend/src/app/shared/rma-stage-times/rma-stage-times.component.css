@@ -69,6 +69,11 @@
   transition: opacity 120ms ease;
 }
 
+/* Edge segments anchor their tip to the bar's edge so the card never clips it. */
+.stage-times__segment:first-child::after { left: 0; transform: none; }
+.stage-times__segment:last-child::after { right: 0; left: auto; transform: none; }
+.stage-times__segment:only-child::after { left: 0; right: auto; transform: none; }
+
 .stage-times__segment:hover::after,
 .stage-times__segment:focus-visible::after {
   opacity: 1;

@@ -52,16 +52,16 @@ describe('Diagnóstico inline', () => {
     expect(host().querySelector('[role="dialog"]')).toBeNull();
     expect(document.activeElement).toBe(host().querySelector('[formControlName="foundFailure"]'));
     expect([...host().querySelectorAll('.form-actions button')].map(b => b.textContent?.trim())).toEqual(['Cancelar', 'Salvar diagnóstico']);
-    expect(host().querySelector<HTMLInputElement>('[formControlName="technicianName"]')?.value).toBe('Ana');
+    // Date and technician are filled in automatically: no fields for them.
+    expect(host().querySelector('[formControlName="technicianName"]')).toBeNull();
+    expect(host().querySelector('[formControlName="diagnosedAt"]')).toBeNull();
   });
 
   it('valida obrigatórios e limites sem chamar a API', () => {
-    edit(); fill('foundFailure', 'x'.repeat(2001)); fill('technicianName', 'x'.repeat(121)); submit();
+    edit(); fill('foundFailure', 'x'.repeat(2001)); submit();
     expect(host().textContent).toContain('Use até 2000 caracteres.');
-    expect(host().textContent).toContain('Use até 120 caracteres.');
-    fill('foundFailure', '   '); fill('technicianName', ''); submit();
+    fill('foundFailure', '   '); submit();
     expect(host().textContent).toContain('Descreva a falha encontrada.');
-    expect(host().textContent).toContain('Informe o técnico.');
     const field = host().querySelector('[formControlName="foundFailure"]')!;
     expect(field.getAttribute('aria-invalid')).toBe('true');
     expect(host().querySelector('#' + field.getAttribute('aria-describedby'))?.textContent).toContain('Descreva a falha encontrada.');

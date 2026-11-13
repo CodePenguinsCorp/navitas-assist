@@ -348,6 +348,7 @@ a {
 .status-pill {
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
   min-height: var(--control-height-xs);
   padding: 0 var(--space-3);
   border-radius: var(--radius-pill);
@@ -3005,7 +3006,17 @@ app-custom-select:has(> .custom-select--priority) {
   width: auto;
 }
 
+.custom-select.custom-select--priority {
+  width: auto;
+}
+
+/* Shrink-to-fit trigger: the label keeps its own width so the arrow never sits on top of the text. */
+.custom-select--priority .custom-select__label {
+  flex: 0 0 auto;
+}
+
 .custom-select.custom-select--priority .custom-select__trigger {
+  width: auto;
   min-height: var(--control-height-xs);
   gap: 0.4rem;
   margin-inline: calc(-1 * var(--space-2));
@@ -3041,6 +3052,10 @@ app-custom-select:has(> .custom-select--priority) {
 
 /* Detail modals (Kanban and RMAs): a blue-grey canvas with white cards, so each block stands apart.
    The darker --muted keeps secondary text at 4.5:1 or more on the canvas too. */
+.rma-detail__info--stages {
+  padding: 1rem 1.1rem 1.1rem;
+}
+
 .detail-surface {
   --muted: var(--muted-strong);
   background: #eaf0f6;

@@ -440,8 +440,8 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(view.sidePairs()['Nesta etapa']).toBe('Encerrado em 19/10/2026 10:00');
   });
 
-  it('lists the time of each previous stage in Histórico', async () => {
-    const { section } = await setup({
+  it('shows the time of each stage in the side column', async () => {
+    const { host } = await setup({
       rma: {
         ...fullRma,
         stagePeriods: [
@@ -450,7 +450,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
         ]
       }
     });
-    const items = [...section('Histórico')!.querySelectorAll('app-rma-stage-times li')].map((item) => item.textContent?.trim());
+    const items = [...host.querySelectorAll('.rma-detail__side app-rma-stage-times li')].map((item) => item.textContent?.trim());
     expect(items).toEqual(['Recebido · 2 h', 'Triagem · 2 h (atual)']);
   });
 

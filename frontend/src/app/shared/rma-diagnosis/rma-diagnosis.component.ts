@@ -11,12 +11,11 @@ import { todayInputValue } from '../../core/utils/date';
 import { diagnosisFacts, NO_DIAGNOSIS_LABEL } from '../../core/utils/rma-detail';
 import { normalizeText } from '../../core/utils/rma-ui';
 import { CustomSelectComponent } from '../form-controls/custom-select/custom-select.component';
-import { DatePickerComponent } from '../form-controls/date-picker/date-picker.component';
 import { IconComponent } from '../icon/icon.component';
 
 @Component({
   selector: 'app-rma-diagnosis',
-  imports: [ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, IconComponent],
+  imports: [ReactiveFormsModule, CustomSelectComponent, IconComponent],
   templateUrl: './rma-diagnosis.component.html',
   styles: [`
     :host { display: block; min-width: 0; overflow-wrap: anywhere; }
@@ -79,7 +78,7 @@ export class RmaDiagnosisComponent {
     const user = this.injector.get(AuthService).currentUser();
     this.diagnosisForm.reset({
       foundFailure: diagnosis?.foundFailure ?? '', failureType: diagnosis?.failureType ?? '', probableCause: diagnosis?.probableCause ?? '',
-      notes: diagnosis?.notes ?? '', diagnosedAt: diagnosis?.diagnosedAt ?? todayInputValue(), technicianName: diagnosis?.technicianName ?? user?.name ?? user?.username ?? ''
+      notes: diagnosis?.notes ?? '', diagnosedAt: diagnosis?.diagnosedAt ?? todayInputValue(), technicianName: diagnosis?.technicianName ?? user?.name ?? user?.username ?? 'Usuário'
     });
     this.diagnosisErrorMessage.set(''); this.message.set(''); this.diagnosisSubmitAttempted.set(false); this.editing.set(true);
     this.focus('[formControlName="foundFailure"]');
