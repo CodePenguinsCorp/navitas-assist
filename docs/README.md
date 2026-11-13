@@ -33,6 +33,12 @@
 | --- | --- |
 | [operacao-e-deploy.md](operacao-e-deploy.md) | CI, build de produção, scripts de deploy, checklist de ambiente. |
 
+## Para conversar com o dono
+
+| Documento | Conteúdo |
+| --- | --- |
+| [produto/pontos-para-conversar-com-o-dono.md](produto/pontos-para-conversar-com-o-dono.md) | Etiqueta com QR Code e custo por RMA: opções, esforço e decisões pendentes. |
+
 ## Histórico e conferência
 
 - [ux/](ux/): estudo de UI/UX (NAV-98), planos por etapa e o [roteiro de conferência manual](ux/2026-11-07-roteiro-conferencia-manual.md), usado para validar as telas em um navegador com backend real. `ux/visuals/` guarda páginas HTML de apoio.
