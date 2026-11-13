@@ -12,7 +12,7 @@
   } @else {
     <ul class="dashboard-summary" aria-label="Indicadores do dashboard">
       @for (indicator of indicators(); track indicator.label) {
-        <li class="panel dashboard-summary__item">
+        <li class="panel dashboard-summary__item" [attr.data-tone]="indicator.tone" [class.dashboard-summary__item--catalog]="indicator.catalog">
           <span class="icon-tile" aria-hidden="true"><app-icon [name]="indicator.icon" [size]="20" /></span>
           <span class="dashboard-summary__label">{{ indicator.label }}</span>
           <p class="dashboard-summary__value"><strong>{{ indicator.value }}</strong> {{ indicator.detail }}</p>

@@ -2,12 +2,14 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Subscription, finalize } from 'rxjs';
-import { FAILURE_CAUSE_LABELS, FAILURE_TYPE_LABELS, RMA_STATUS_FLOW, RMA_STATUS_LABELS, WARRANTY_STATUS_LABELS } from '../../core/mock-data';
+import { CLOSED_RMA_STATUSES, FAILURE_CAUSE_LABELS, FAILURE_TYPE_LABELS, RMA_STATUS_FLOW, RMA_STATUS_LABELS, WARRANTY_STATUS_LABELS } from '../../core/mock-data';
 import { RmaReportResponse, RmaStatus } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import { ReportService } from '../../core/services/report.service';
 import { formatDateOnly, todayInputValue } from '../../core/utils/date';
 import { purchaseFact, warrantyExpiryLabel, warrantyTermLabel } from '../../core/utils/rma-detail';
+import { formatDuration } from '../../core/utils/duration';
+import { currentStagePeriod } from '../../core/utils/rma-stage';
 import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
@@ -61,12 +63,13 @@ export class ReportsComponent {
   protected readonly warrantyExpiryLabel = warrantyExpiryLabel;
   protected readonly purchaseFact = purchaseFact;
   protected readonly rmas = computed(() => this.report()?.rmas ?? []);
-  protected readonly activeRmas = computed(() => this.rmas().filter((rma) => rma.sla.status !== 'CLOSED'));
+  protected readonly activeRmas = computed(() => this.rmas().filter((rma) => !CLOSED_RMA_STATUSES.includes(rma.status)));
   protected readonly returns = computed(() => this.rmas().filter((rma) => rma.status === 'RETURNED'));
   protected readonly aging = computed(() => RMA_STATUS_FLOW.flatMap((status) => {
     const records = this.activeRmas().filter((rma) => rma.status === status);
     if (!records.length) return [];
-    const seconds = records.map((rma) => rma.sla.elapsedSeconds);
+    // Snapshot at generatedAt: the backend measured the current period with the report instant.
+    const seconds = records.map((rma) => currentStagePeriod(rma).durationSeconds);
     return [{ status, count: records.length, average: Math.floor(seconds.reduce((sum, value) => sum + value, 0) / seconds.length),
       maximum: seconds.reduce((maximum, value) => Math.max(maximum, value), 0) }];
   }));
@@ -139,10 +142,10 @@ export class ReportsComponent {
   }
 
   protected duration(seconds: number): string {
-    const minutes = Math.floor(seconds / 60);
-    const days = Math.floor(minutes / 1440);
-    return `${days ? `${days}d ` : ''}${Math.floor(minutes % 1440 / 60)}h ${minutes % 60}min`;
+    return formatDuration(seconds);
   }
+
+  protected readonly currentStagePeriod = currentStagePeriod;
 }
 
 function shiftDate(value: string, days: number): string {

@@ -12,6 +12,7 @@ import {
 } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
+import { businessToday } from '../../core/utils/rma-deadline';
 import { DashboardComponent } from './dashboard.component';
 import { Permission } from '../../core/permissions';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
@@ -208,6 +209,33 @@ describe('DashboardComponent load states', () => {
 
     // Vermelho: a lista de indicadores e o formato `X · Y com prioridade alta` não existem.
     // Preservação: o cálculo da fila inicial e a ausência de usuários para quem não é ADMIN.
+    it('counts Atrasados and Perto do limite among open RMAs only', async () => {
+      const today = businessToday(Date.now());
+      const shift = (days: number) => {
+        const [y, m, d] = today.split('-').map(Number);
+        return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+      };
+      const due = (id: number, days: number, status: RmaResponse['status'] = 'IN_REPAIR') => rmaFactory({
+        id, status, entryDate: '2000-01-01', dueDate: shift(days),
+        deadline: { status: 'ON_TRACK', dueSoonFrom: shift(days - 7), daysUntilDue: null }
+      });
+      await setup({ board: of([due(1, -3), due(2, -1), due(3, 2), due(4, 30), due(5, -9, 'COMPLETED'), rmaFactory({ id: 6 })]) });
+      const card = indicator('Atrasados')!;
+      expect(normalized(card.querySelector('.dashboard-summary__value'))).toBe('2 · 1 perto do limite');
+      expect(card.getAttribute('data-tone')).toBe('danger');
+      const labels = Array.from(root().querySelectorAll('ul[aria-label="Indicadores do dashboard"] > li .dashboard-summary__label')).map((item) => item.textContent?.trim());
+      expect(labels[1]).toBe('Atrasados');
+      expect(root().textContent).not.toMatch(/SLA|vencid/i);
+    });
+
+    it('keeps the catalog card style regardless of position', async () => {
+      await setup();
+      const items = Array.from(root().querySelectorAll<HTMLElement>('ul[aria-label="Indicadores do dashboard"] > li'));
+      expect(items.map((item) => item.getAttribute('data-tone'))).toEqual(['brand', 'danger', 'sky', 'success', 'violet']);
+      expect(items.filter((item) => item.classList.contains('dashboard-summary__item--catalog')).map((item) => normalized(item.querySelector('.dashboard-summary__label'))))
+        .toEqual(['Cadastros']);
+    });
+
     it('keeps the initial queue indicator and omits users for non-admin profiles', async () => {
       await setup({ role: 'TECHNICIAN', board: of([rmaFactory({ id: 1, priority: 'HIGH' }), rmaFactory({ id: 2, status: 'TRIAGE' })]) });
       expect(normalized(indicator('Fila inicial'))).toContain('2 · 1 com prioridade alta');

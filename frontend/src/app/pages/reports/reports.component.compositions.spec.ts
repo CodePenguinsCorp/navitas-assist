@@ -17,7 +17,7 @@ const RMA: RmaResponse = {
   reportedFailure: 'Não liga', receivedAccessories: null, physicalCondition: null, priority: 'HIGH', status: 'IN_DIAGNOSIS',
   currentBlock: null, blockHistory: [],
   sla: { status: 'NORMAL', startedAt: '2026-10-20T12:00:00Z', warningAt: '2026-10-22T02:24:00Z',
-    dueAt: '2026-10-22T12:00:00Z', elapsedSeconds: 7200, limitSeconds: 172800 }, dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [],
+    dueAt: '2026-10-22T12:00:00Z', elapsedSeconds: 7200, limitSeconds: 172800 }, dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 7200 }], dueDateHistory: [],
   assigneeId: null, assigneeName: null, repairSummary: 'Conector substituído', replacedPartsSummary: 'Conector USB',
   testSummary: 'Teste aprovado', shippedAt: null, carrier: null, trackingCode: null,
   diagnosis: { id: 1, foundFailure: 'Conector danificado', failureType: 'COMMUNICATION', probableCause: 'INCORRECT_USAGE',
@@ -168,8 +168,8 @@ describe('ReportsComponent compositions', () => {
   });
 
   describe('stage time report', () => {
-    const SECOND: RmaResponse = { ...RMA, id: 2, code: 'RMA-SECOND', clientName: 'Cliente Beta', sla: { ...RMA.sla, elapsedSeconds: 14400 } };
-    const CLOSED: RmaResponse = { ...RMA, id: 3, code: 'RMA-CLOSED', status: 'COMPLETED', sla: { ...RMA.sla, status: 'CLOSED', elapsedSeconds: 0 } };
+    const SECOND: RmaResponse = { ...RMA, id: 2, code: 'RMA-SECOND', clientName: 'Cliente Beta', stagePeriods: [{ ...RMA.stagePeriods[0], durationSeconds: 14400 }] };
+    const CLOSED: RmaResponse = { ...RMA, id: 3, code: 'RMA-CLOSED', status: 'COMPLETED' };
     const tables = () => Array.from(panel().querySelectorAll('table'));
 
     it('states how many closed RMAs were left out', () => {
@@ -180,8 +180,8 @@ describe('ReportsComponent compositions', () => {
       expect(normalize(panel().textContent)).toContain('2 RMAs em andamento considerados · 1 encerrado fora do cálculo');
       // Preservação: média e máximo por etapa e encerrado fora.
       const row = panel().querySelector('[data-stage="IN_DIAGNOSIS"]')!;
-      expect(normalize(row.textContent)).toContain('3h 0min');
-      expect(normalize(row.textContent)).toContain('4h 0min');
+      expect(normalize(row.textContent)).toContain('3 h');
+      expect(normalize(row.textContent)).toContain('4 h');
       expect(normalize(panel().textContent)).not.toContain('RMA-CLOSED');
     });
 
@@ -207,7 +207,7 @@ describe('ReportsComponent compositions', () => {
     });
 
     it('separates RMA and client in both tables', () => {
-      respond([RMA, SECOND, { ...RMA, id: 4, code: 'RMA-RETURN', status: 'RETURNED', sla: { ...RMA.sla, status: 'CLOSED' } }]);
+      respond([RMA, SECOND, { ...RMA, id: 4, code: 'RMA-RETURN', status: 'RETURNED' }]);
       show('aging');
       // Reprova hoje: coluna única "RMA / Cliente".
       expect(cell(tables()[1], 0, 'RMA')).toBe('RMA-REAL');
@@ -220,7 +220,7 @@ describe('ReportsComponent compositions', () => {
 
   describe('returns report', () => {
     it('explains the return scope and period inside the panel', () => {
-      respond([RMA, { ...RMA, id: 2, code: 'RMA-RETURN', status: 'RETURNED', sla: { ...RMA.sla, status: 'CLOSED' } }]);
+      respond([RMA, { ...RMA, id: 2, code: 'RMA-RETURN', status: 'RETURNED' }]);
       show('returns');
       // Reprova hoje: o período só aparece na dica do formulário, e não há contagem de devolvidos.
       expect(normalize(panel().textContent)).toContain('O período filtra a data de entrada do RMA, não a data de expedição.');

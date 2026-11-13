@@ -20,6 +20,7 @@ import { RmaService } from '../../core/services/rma.service';
 import { IconComponent, IconName } from '../../shared/icon/icon.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { compareRmasForQueue, initialsOf } from '../../core/utils/rma-ui';
+import { businessToday, deadlineStatus } from '../../core/utils/rma-deadline';
 import { formatBusinessDateTime as formatDateTime, formatDateOnly } from '../../core/utils/date';
 
 const QUEUE_SIZE = 5;
@@ -29,6 +30,9 @@ interface DashboardIndicator {
   value: string;
   detail: string;
   icon: IconName;
+  tone: 'brand' | 'sky' | 'danger' | 'success' | 'violet';
+  /** The catalog card shows a text value instead of a number. */
+  catalog?: boolean;
 }
 
 interface QueueRow {
@@ -95,9 +99,10 @@ interface RecentRmaRow {
         var(--surface);
     }
 
-    .dashboard-summary__item:nth-child(4n + 2) { --tone: var(--tone-sky); }
-    .dashboard-summary__item:nth-child(4n + 3) { --tone: var(--tone-success); }
-    .dashboard-summary__item:nth-child(4n + 4) { --tone: var(--tone-violet); }
+    .dashboard-summary__item[data-tone='sky'] { --tone: var(--tone-sky); }
+    .dashboard-summary__item[data-tone='danger'] { --tone: var(--tone-danger); }
+    .dashboard-summary__item[data-tone='success'] { --tone: var(--tone-success); }
+    .dashboard-summary__item[data-tone='violet'] { --tone: var(--tone-violet); }
 
     .dashboard-summary__item > .icon-tile {
       grid-row: span 2;
@@ -133,7 +138,7 @@ interface RecentRmaRow {
       font-variant-numeric: tabular-nums;
     }
 
-    .dashboard-summary__item:nth-child(4n + 4) .dashboard-summary__value strong {
+    .dashboard-summary__item--catalog .dashboard-summary__value strong {
       font-size: 1.05rem;
       font-weight: var(--font-weight-bold);
       letter-spacing: 0;
@@ -195,6 +200,10 @@ export class DashboardComponent {
     const inWarrantyCount = rmaItems.filter((item) => item.warrantyStatus === WarrantyStatus.IN_WARRANTY).length;
     const pendingWarrantyCount = rmaItems.filter((item) => item.warrantyStatus === WarrantyStatus.PENDING).length;
     const warrantyRate = rmaItems.length === 0 ? 0 : Math.round((inWarrantyCount / rmaItems.length) * 100);
+    const today = businessToday(Date.now());
+    const deadlines = activeRmas.map((rma) => deadlineStatus(rma, today));
+    const overdueCount = deadlines.filter((status) => status === 'OVERDUE').length;
+    const dueSoonCount = deadlines.filter((status) => status === 'DUE_SOON').length;
     const catalog = [
       `${this.clientTotalSignal()} ${this.clientTotalSignal() === 1 ? 'cliente' : 'clientes'}`,
       `${this.productTotalSignal()} ${this.productTotalSignal() === 1 ? 'produto' : 'produtos'}`,
@@ -206,25 +215,37 @@ export class DashboardComponent {
         label: 'RMAs em andamento',
         value: String(activeRmas.length),
         detail: `de ${rmas.length} ${rmas.length === 1 ? 'registrado' : 'registrados'}`,
-        icon: 'clipboard'
+        icon: 'clipboard',
+        tone: 'brand'
+      },
+      {
+        label: 'Atrasados',
+        value: String(overdueCount),
+        detail: `· ${dueSoonCount} perto do limite`,
+        icon: 'clock',
+        tone: 'danger'
       },
       {
         label: 'Fila inicial (Recebido e Triagem)',
         value: String(initialQueue.length),
         detail: `· ${countHighPriority(initialQueue)} com prioridade alta`,
-        icon: 'inbox'
+        icon: 'inbox',
+        tone: 'sky'
       },
       {
         label: 'Itens em garantia',
         value: `${warrantyRate}%`,
         detail: `· ${inWarrantyCount} de ${rmaItems.length} ${rmaItems.length === 1 ? 'item' : 'itens'} · ${pendingWarrantyCount} ${pendingWarrantyCount === 1 ? 'pendente' : 'pendentes'}, em todos os RMAs registrados`,
-        icon: 'shield'
+        icon: 'shield',
+        tone: 'success'
       },
       {
         label: 'Cadastros',
         value: catalog.join(' · '),
         detail: '',
-        icon: 'layers'
+        icon: 'layers',
+        tone: 'violet',
+        catalog: true
       }
     ];
   });

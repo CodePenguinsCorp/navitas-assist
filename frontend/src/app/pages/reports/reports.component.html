@@ -129,7 +129,8 @@
                   <thead><tr><th scope="col">RMA</th><th scope="col">Cliente</th><th scope="col">Etapa</th><th scope="col">Início na etapa (São Paulo)</th><th scope="col">Tempo decorrido</th></tr></thead>
                   <tbody>@for (rma of activeRmas(); track rma.id) {
                     <tr><td><strong class="code-text">{{ rma.code }}</strong></td><td>{{ rma.clientName }}</td><td><span class="status-chip" [attr.data-status]="rma.status">{{ statusLabels[rma.status] }}</span></td>
-                      <td>{{ formatInstant(rma.sla.startedAt) }}</td><td>{{ duration(rma.sla.elapsedSeconds) }}</td></tr>
+                      @let stage = currentStagePeriod(rma);
+                      <td>{{ formatInstant(stage.enteredAt) }}</td><td>{{ duration(stage.durationSeconds) }}</td></tr>
                   }</tbody>
                 </table></div>
               }

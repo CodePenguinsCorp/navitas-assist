@@ -18,7 +18,7 @@ const RMA: RmaResponse = {
   reportedFailure: 'Não liga', receivedAccessories: null, physicalCondition: null, priority: 'HIGH', status: 'IN_DIAGNOSIS',
   currentBlock: null, blockHistory: [],
   sla: { status: 'NORMAL', startedAt: '2026-10-20T12:00:00Z', warningAt: '2026-10-22T02:24:00Z',
-    dueAt: '2026-10-22T12:00:00Z', elapsedSeconds: 7200, limitSeconds: 172800 }, dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [],
+    dueAt: '2026-10-22T12:00:00Z', elapsedSeconds: 7200, limitSeconds: 172800 }, dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 7200 }], dueDateHistory: [],
   assigneeId: null, assigneeName: null, repairSummary: 'Conector substituído', replacedPartsSummary: 'Conector USB',
   testSummary: 'Teste aprovado', shippedAt: null, carrier: null, trackingCode: null,
   diagnosis: { id: 1, foundFailure: 'Conector danificado', failureType: 'COMMUNICATION', probableCause: 'INCORRECT_USAGE',
@@ -93,20 +93,34 @@ describe('ReportsComponent', () => {
   });
 
   it('groups current-stage aging and excludes closed records from active metrics', () => {
-    respond([RMA, { ...RMA, id: 2, code: 'RMA-SECOND', sla: { ...RMA.sla, elapsedSeconds: 14400 } },
-      { ...RMA, id: 3, code: 'RMA-CLOSED', status: 'COMPLETED', sla: { ...RMA.sla, status: 'CLOSED', elapsedSeconds: 0 } }]);
+    respond([RMA, { ...RMA, id: 2, code: 'RMA-SECOND', stagePeriods: [{ ...RMA.stagePeriods[0], durationSeconds: 14400 }] },
+      { ...RMA, id: 3, code: 'RMA-CLOSED', status: 'COMPLETED' }]);
     component.form.patchValue({ report: 'aging' });
     fixture.detectChanges();
     const row = fixture.nativeElement.querySelector('[data-stage="IN_DIAGNOSIS"]');
     expect(row.textContent).toContain('2');
-    expect(row.textContent).toContain('3h 0min');
-    expect(row.textContent).toContain('4h 0min');
+    expect(row.textContent).toContain('3 h');
+    expect(row.textContent).toContain('4 h');
     expect(text()).not.toContain('RMA-CLOSED');
+  });
+
+  it('formats durations as 2 d 4 h and takes the stage start from the current period', () => {
+    respond([{ ...RMA, stagePeriods: [
+      { status: 'RECEIVED', enteredAt: '2026-10-18T08:00:00Z', leftAt: '2026-10-18T12:00:00Z', durationSeconds: 14400 },
+      { status: 'IN_DIAGNOSIS', enteredAt: '2026-10-18T12:00:00Z', leftAt: null, durationSeconds: 187200 }
+    ] }]);
+    component.form.patchValue({ report: 'aging' });
+    fixture.detectChanges();
+    const rows = [...fixture.nativeElement.querySelectorAll('tbody tr')] as HTMLElement[];
+    const perRma = rows.find((row) => row.textContent?.includes(RMA.code))!;
+    expect(perRma.textContent).toContain('2 d 4 h');
+    expect(perRma.textContent).toContain('18/10/2026, 09:00');
+    expect(text()).not.toContain('SLA');
   });
 
   it('shows shipping only for currently returned RMAs', () => {
     respond([RMA, { ...RMA, id: 2, code: 'RMA-RETURN', status: 'RETURNED', shippedAt: '2026-10-21',
-      carrier: 'Transportadora Alfa', trackingCode: 'TRACK-123', sla: { ...RMA.sla, status: 'CLOSED', elapsedSeconds: 0 } }]);
+      carrier: 'Transportadora Alfa', trackingCode: 'TRACK-123' }]);
     component.form.patchValue({ report: 'returns' });
     fixture.detectChanges();
     expect(text()).toContain('RMA-RETURN');
