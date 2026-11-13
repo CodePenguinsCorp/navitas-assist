@@ -70,6 +70,10 @@ public class RmaRecord extends AuditableEntity {
     @Column(nullable = false)
     private LocalDate entryDate;
 
+    /** Optional due date of the whole service (date only). */
+    @Column(name = "due_date")
+    private LocalDate dueDate;
+
     @Column(length = 80)
     private String invoiceNumber;
 

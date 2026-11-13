@@ -32,6 +32,8 @@ server:
         same-site: strict
 
 navitas:
+  deadline:
+    warning-days: ${DEADLINE_WARNING_DAYS:7}
   sla:
     warning-percent: ${SLA_WARNING_PERCENT:80}
     stages:
