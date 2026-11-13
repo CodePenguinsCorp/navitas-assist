@@ -49,6 +49,9 @@ class DatabaseMigrationTest {
             assertEquals(1000, columnSize(connection, "rma_blocks", "reason"));
             assertEquals(80, columnSize(connection, "rma_blocks", "category"));
             assertTrue(columnExists(connection, "kanban_views", "blocked"));
+            assertTrue(columnExists(connection, "kanban_views", "deadline_status"));
+            assertTrue(columnExists(connection, "rmas", "due_date"));
+            assertTrue(tableExists(connection, "rma_due_date_history"));
             assertTrue(tableExists(connection, "kanban_views"));
             assertTrue(tableExists(connection, "protocol_templates"));
             assertTrue(tableExists(connection, "protocol_template_versions"));
