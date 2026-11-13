@@ -60,13 +60,6 @@ const MOVEMENT_TYPE_OPTIONS: ReadonlyArray<CustomSelectOption<ManualPartMovement
       max-width: 120px;
     }
 
-    .stock-summary {
-      margin: 0;
-      color: var(--muted);
-      font-size: var(--font-size-md);
-      line-height: var(--line-height-body);
-    }
-
     .movement-context {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));

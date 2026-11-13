@@ -63,13 +63,12 @@ describe('PartsComponent presentation', () => {
   // Vermelho: cartões não identificam o escopo global dos três indicadores.
   it('shows scoped alerts and stock value without statistic cards', async () => {
     const source = await setup('ADMIN', true);
-    expect(normalized(root())).not.toContain('No estoque completo:');
+    expect(root().querySelector('.page-summary')).toBeNull();
     source.next([PART, INACTIVE]); source.complete(); render();
-    expect(normalized(root())).toContain('No estoque completo:');
-    const line = Array.from(root().querySelectorAll('p')).find((item) => normalized(item).startsWith('No estoque completo:'))!;
-    expect(normalized(line)).toContain('1 peça abaixo do mínimo');
-    expect(normalized(line)).toContain('1 reserva pendente');
-    expect(normalized(line)).toContain('Valor em estoque (saldo × custo unitário atual): R$ 110,00');
+    const line = root().querySelector('.page-summary')!;
+    expect(normalized(line)).toMatch(/Abaixo do mínimo\s*1/);
+    expect(normalized(line)).toMatch(/Reservas pendentes\s*1/);
+    expect(normalized(line)).toMatch(/Valor em estoque\s*R\$\s*110,00/);
     expect(root().querySelector('.stat-card')).toBeNull();
     const before = normalized(line);
     search('Capacitor'); expect(normalized(line)).toBe(before);
@@ -78,7 +77,7 @@ describe('PartsComponent presentation', () => {
     const component = fixture.componentInstance as unknown as { openEditModal(part: PartResponse): void; savePart(): void };
     component.openEditModal(PART); component.savePart(); render();
     expect(normalized(root())).toContain('Não foi possível carregar as peças.');
-    expect(normalized(root())).not.toContain('No estoque completo:');
+    expect(root().querySelector('.page-summary')).toBeNull();
     expect(normalized(root())).not.toContain('R$ 110,00');
     expect(root().querySelector('.result-count')).toBeNull();
   });

@@ -62,7 +62,6 @@
         <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
         <h3>Nenhum produto cadastrado</h3>
         <p>Cadastre produtos para utilizar no fluxo de abertura de RMAs.</p>
-        <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Cadastrar produto</button>
       </section>
     } @else if (products().length === 0) {
       <section class="empty-state">
@@ -249,8 +248,8 @@
           </label>
         </fieldset>
 
-        <fieldset class="form-section form-section--untitled">
-          <legend class="sr-only">Garantia e observações</legend>
+        <fieldset class="form-section">
+          <legend>Garantia e observações</legend>
 
           <label class="field-group">
             <span>Garantia padrão (meses)</span>

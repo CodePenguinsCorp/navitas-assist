@@ -162,14 +162,15 @@ describe('ProtocolsComponent', () => {
       expect(action?.getAttribute('aria-label')).toBe('Nova versão de Diagnóstico Alfa');
     });
 
-    it('shows the empty catalog with a create action', async () => {
+    it('shows the empty catalog with the create action only in the header', async () => {
       await setup(() => of([]));
 
       expect(text()).toContain('Nenhum protocolo cadastrado');
       expect(text()).not.toContain('Nenhum protocolo encontrado');
       expect(count()).toBe('0 protocolos');
 
-      buttonByText('Cadastrar protocolo')!.click();
+      expect(element().querySelector('.empty-state button')).toBeNull();
+      buttonByText('Novo protocolo')!.click();
       fixture.detectChanges();
 
       expect(element().querySelector('.modal-panel h3')?.textContent?.trim()).toBe('Novo protocolo');

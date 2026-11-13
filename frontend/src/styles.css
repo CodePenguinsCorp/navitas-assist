@@ -914,8 +914,8 @@ a {
 }
 
 .table-card--list .empty-state {
-  gap: 0.55rem;
-  padding: 0.45rem 0;
+  gap: var(--space-2);
+  padding: var(--space-6, 2rem) var(--space-4);
 }
 
 .table-card th,
@@ -1232,6 +1232,12 @@ a {
 /* Error after touch or edit, the same condition the screens use to show .field-error. */
 :is(.field-group, .search-field, .filter-field) :where(input:not([type="checkbox"]), select, textarea):is(.ng-invalid.ng-touched, .ng-invalid.ng-dirty, [aria-invalid="true"]) {
   border-color: var(--danger-text);
+}
+
+/* Focus on a field in error keeps the red border and gets a red halo instead of the blue one. */
+:is(.field-group, .search-field, .filter-field) :where(input:not([type="checkbox"]), select, textarea):is(.ng-invalid.ng-touched, .ng-invalid.ng-dirty, [aria-invalid="true"]):focus {
+  border-color: var(--danger-text);
+  box-shadow: 0 0 0 3px rgba(151, 65, 80, 0.14);
 }
 
 :is(.field-group, .search-field, .filter-field) :where(input:not([type="checkbox"]), select, textarea):disabled {
@@ -1784,15 +1790,21 @@ fieldset.form-section {
   white-space: nowrap;
 }
 
+/* Empty block: one centered column (icon, title, hint, optional action), same everywhere. */
 .empty-state {
   display: grid;
-  justify-items: start;
-  gap: 0.65rem;
-  padding: 1.25rem 0;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-7, 2.5rem) var(--space-4);
+  text-align: center;
 }
 
 .panel.empty-state {
-  padding: 1.25rem 1.5rem;
+  padding: var(--space-7, 2.5rem) var(--space-5);
+}
+
+.empty-state p {
+  max-width: 44ch;
 }
 
 .empty-state h3 {
@@ -2380,7 +2392,11 @@ input[type="checkbox"].switch:disabled:checked {
 }
 
 .empty-state > .icon-tile {
-  margin-bottom: 0.25rem;
+  width: 52px;
+  height: 52px;
+  margin-bottom: var(--space-2);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--tone) 10%, var(--surface));
 }
 
 /* Icon-only buttons for row actions; the label lives in aria-label/title. */

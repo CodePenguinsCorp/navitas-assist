@@ -296,7 +296,7 @@ describe('ProductsComponent collection layout and states', () => {
     expect(remove.hasAttribute('title')).toBe(false);
   });
 
-  it('groups the form into Identificação, Versões and an untitled warranty and notes section', async () => {
+  it('groups the form into Identificação, Versões and Garantia e observações', async () => {
     await mount();
     component.openCreateModal();
     fixture.detectChanges();
@@ -307,8 +307,8 @@ describe('ProductsComponent collection layout and states', () => {
     const sections = Array.from(dialog.querySelectorAll('fieldset.form-section'));
     expect(sections.map((section) => section.querySelector('legend')?.textContent?.trim()))
       .toEqual(['Identificação', 'Versões', 'Garantia e observações']);
-    // The last group's fields already name themselves: its legend stays for screen readers only.
-    expect(sections[2].querySelector('legend')?.classList.contains('sr-only')).toBe(true);
+    // Every group shows its title, like the others.
+    expect(sections[2].querySelector('legend')?.classList.contains('sr-only')).toBe(false);
     expect(sections[0].querySelector('legend')?.classList.contains('sr-only')).toBe(false);
     const controlsIn = (section: Element) => Array.from(section.querySelectorAll('[formControlName]')).map((node) => node.getAttribute('formControlName'));
     expect(controlsIn(sections[0])).toEqual(['sku', 'name', 'category']);

@@ -62,7 +62,6 @@
         <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
         <h3>Nenhum cliente cadastrado</h3>
         <p>Cadastre o primeiro cliente para vincular novos RMAs.</p>
-        <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Cadastrar cliente</button>
       </section>
     } @else if (clients().length === 0) {
       <section class="empty-state">

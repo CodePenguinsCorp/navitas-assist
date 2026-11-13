@@ -710,6 +710,7 @@ describe('RmasComponent list composition', () => {
     const { page } = await setup({ role, list: emptyPage });
 
     expect(buttonByText(page.querySelector('.page-heading')!, 'Novo RMA') !== undefined).toBe(allowed);
-    expect(buttonByText(page.querySelector('.table-card')!, 'Novo RMA') !== undefined).toBe(allowed);
+    // The empty state no longer repeats the header action.
+    expect(buttonByText(page.querySelector('.table-card')!, 'Novo RMA')).toBeUndefined();
   });
 });
