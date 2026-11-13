@@ -3,6 +3,7 @@ package br.com.navitasassist.service;
 import java.time.LocalDate;
 import java.util.List;
 
+import br.com.navitasassist.rma.RmaDeadlineStatus;
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.kanban.KanbanView;
@@ -85,6 +86,9 @@ public class KanbanViewService {
         if (filters.assigneeId() != null && filters.unassignedOnly()) {
             throw new BusinessException("Assignee and unassigned filters cannot be combined.");
         }
+        if (filters.deadline() == RmaDeadlineStatus.CLOSED) {
+            throw new BusinessException("Deadline filter must be OVERDUE, DUE_SOON, ON_TRACK or NO_DUE_DATE.");
+        }
         validateRange(filters.entryFrom(), filters.entryTo(), "entry");
         validateRange(filters.updatedFrom(), filters.updatedTo(), "updated");
     }
@@ -110,6 +114,7 @@ public class KanbanViewService {
         view.setUpdatedFrom(filters.updatedFrom());
         view.setUpdatedTo(filters.updatedTo());
         view.setBlocked(filters.blocked());
+        view.setDeadline(filters.deadline());
     }
 
     private UserAccount getOwner(String username) {

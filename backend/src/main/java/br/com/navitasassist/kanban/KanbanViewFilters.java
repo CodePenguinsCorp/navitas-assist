@@ -2,6 +2,7 @@ package br.com.navitasassist.kanban;
 
 import java.time.LocalDate;
 
+import br.com.navitasassist.rma.RmaDeadlineStatus;
 import br.com.navitasassist.rma.RmaPriority;
 import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.WarrantyStatus;
@@ -19,7 +20,8 @@ public record KanbanViewFilters(
     LocalDate entryTo,
     LocalDate updatedFrom,
     LocalDate updatedTo,
-    Boolean blocked
+    Boolean blocked,
+    RmaDeadlineStatus deadline
 ) {
     public static KanbanViewFilters from(KanbanView view) {
         return new KanbanViewFilters(
@@ -33,7 +35,8 @@ public record KanbanViewFilters(
             view.getEntryTo(),
             view.getUpdatedFrom(),
             view.getUpdatedTo(),
-            view.getBlocked()
+            view.getBlocked(),
+            view.getDeadline()
         );
     }
 }

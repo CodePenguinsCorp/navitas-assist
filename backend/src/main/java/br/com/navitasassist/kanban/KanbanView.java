@@ -3,6 +3,7 @@ package br.com.navitasassist.kanban;
 import java.time.LocalDate;
 
 import br.com.navitasassist.config.AuditableEntity;
+import br.com.navitasassist.rma.RmaDeadlineStatus;
 import br.com.navitasassist.rma.RmaPriority;
 import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.WarrantyStatus;
@@ -77,4 +78,9 @@ public class KanbanView extends AuditableEntity {
     private LocalDate updatedTo;
 
     private Boolean blocked;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "deadline_status", length = 20)
+    private RmaDeadlineStatus deadline;
 }
