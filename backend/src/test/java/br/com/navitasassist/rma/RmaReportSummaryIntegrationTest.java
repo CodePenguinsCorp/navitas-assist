@@ -142,6 +142,21 @@ class RmaReportSummaryIntegrationTest {
     }
 
     @Test
+    void countsRecurrenceRegardlessOfSerialCase() throws Exception {
+        rma("RMA-OLD", "2026-05-01", RmaStatus.RETURNED, beta, item(controller, "abc1", "L1"));
+        rma("RMA-NEW", "2026-10-01", RmaStatus.RECEIVED, alfa, item(controller, "ABC1", "L1"));
+
+        mockMvc.perform(get("/api/reports/rmas/summary").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31")
+                .with(asProfile("admin", "ADMIN")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.recurrence.itemsWithSerial").value(1))
+            .andExpect(jsonPath("$.recurrence.returnedItems").value(1))
+            .andExpect(jsonPath("$.recurrence.serials", hasSize(1)))
+            .andExpect(jsonPath("$.recurrence.serials[0].serialNumber").value("ABC1"))
+            .andExpect(jsonPath("$.recurrence.serials[0].rmaCount").value(2));
+    }
+
+    @Test
     void measuresTheCurrentStageOfOpenRmasAtTheReportInstant() throws Exception {
         Instant entered = Instant.parse("2026-10-20T23:30:00Z");
         RmaRecord open = rma("RMA-OPEN", "2026-10-20", RmaStatus.IN_DIAGNOSIS, alfa, item(controller, "S1", null));

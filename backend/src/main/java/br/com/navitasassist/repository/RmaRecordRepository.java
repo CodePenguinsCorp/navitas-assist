@@ -82,14 +82,18 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
     long countReport(@Param("entryFrom") LocalDate entryFrom, @Param("entryTo") LocalDate entryTo,
         @Param("status") RmaStatus status, @Param("clientId") Long clientId);
 
-    /** Product id, serial number and RMA count of every serial with two or more RMAs entered up to {@code entryTo}. */
+    /**
+     * Product id, normalized serial number (trim + upper, the same key RmaReportService builds in Java) and RMA count of
+     * every serial with two or more RMAs entered up to {@code entryTo}. Normalizing here keeps MySQL (case-insensitive
+     * collation) and H2/Java on the same grouping.
+     */
     @Query("""
-        select i.product.id, i.itemIdentification.serialNumber, count(distinct i.rma.id)
+        select i.product.id, upper(trim(i.itemIdentification.serialNumber)), count(distinct i.rma.id)
         from RmaItem i
         where i.itemIdentification.serialNumber is not null
           and i.itemIdentification.serialNumber <> ''
           and i.rma.entryDate <= :entryTo
-        group by i.product.id, i.itemIdentification.serialNumber
+        group by i.product.id, upper(trim(i.itemIdentification.serialNumber))
         having count(distinct i.rma.id) > 1
         """)
     List<Object[]> findRecurrentSerials(@Param("entryTo") LocalDate entryTo);

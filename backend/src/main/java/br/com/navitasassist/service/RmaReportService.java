@@ -146,7 +146,7 @@ public class RmaReportService {
     private Recurrence recurrence(List<ReportItem> items, Period period) {
         Map<String, Long> recurrent = new HashMap<>();
         for (Object[] row : rmaRecordRepository.findRecurrentSerials(period.to())) {
-            recurrent.put(row[0] + "|" + row[1], ((Number) row[2]).longValue());
+            recurrent.put(row[0] + "|" + normalizeSerial((String) row[1]), ((Number) row[2]).longValue());
         }
         List<ReportItem> withSerial = items.stream().filter(item -> hasText(item.view().serialNumber())).toList();
         List<ReportItem> returned = withSerial.stream().filter(item -> recurrent.containsKey(serialKey(item))).toList();
@@ -212,8 +212,13 @@ public class RmaReportService {
         return item.view().batchNumber() + " · " + productLabel(item.product());
     }
 
+    /** Same normalization as {@link RmaRecordRepository#findRecurrentSerials}: trim + upper (Locale.ROOT). */
     private static String serialKey(ReportItem item) {
-        return item.product().getId() + "|" + item.view().serialNumber();
+        return item.product().getId() + "|" + normalizeSerial(item.view().serialNumber());
+    }
+
+    static String normalizeSerial(String serial) {
+        return serial.trim().toUpperCase(java.util.Locale.ROOT);
     }
 
     private static String productKey(Product product) {
