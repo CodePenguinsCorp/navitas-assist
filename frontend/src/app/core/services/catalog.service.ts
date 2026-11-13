@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   AssignableUserResponse,
+  CatalogImportKind, CatalogImportPreview, CatalogImportResult,
   ClientRequest,
   ClientResponse,
   ClientSummaryResponse,
@@ -39,6 +40,22 @@ export interface UserFilters extends PageQuery {
 @Injectable({ providedIn: 'root' })
 export class CatalogService {
   private readonly http = inject(HttpClient);
+
+  downloadImportTemplate(kind: CatalogImportKind): Observable<Blob> {
+    return this.http.get(`/api/${kind}/imports/template`, { responseType: 'blob' });
+  }
+
+  previewImport(kind: CatalogImportKind, file: File): Observable<CatalogImportPreview> {
+    const body = new FormData();
+    body.append('file', file);
+    return this.http.post<CatalogImportPreview>(`/api/${kind}/imports/preview`, body);
+  }
+
+  confirmImport(kind: CatalogImportKind, file: File): Observable<CatalogImportResult> {
+    const body = new FormData();
+    body.append('file', file);
+    return this.http.post<CatalogImportResult>(`/api/${kind}/imports/confirm`, body);
+  }
 
   listClients(filters: ClientFilters = {}): Observable<PageResponse<ClientResponse>> {
     const params = buildPageParams(filters, {

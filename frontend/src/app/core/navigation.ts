@@ -1,3 +1,4 @@
+import { Permission } from './permissions';
 import { NAV_GROUPS } from './mock-data';
 import { PermissionService } from './services/permission.service';
 
@@ -10,6 +11,11 @@ const FALLBACK_ROUTE = '/notificacoes';
 export function firstAllowedRoute(permissions: PermissionService): string {
   const item = NAV_GROUPS
     .flatMap((group) => group.items)
-    .find((candidate) => candidate.permissions.length > 0 && permissions.hasAll(candidate.permissions));
+    .find((candidate) => candidate.permissions.length > 0 && allowsPermissions(permissions, candidate.permissions, candidate.alternativePermissions));
   return item?.route ?? FALLBACK_ROUTE;
+}
+
+/** Permissoes obrigatorias OU uma permissao alternativa explicita. */
+export function allowsPermissions(service: PermissionService, required: readonly Permission[], alternatives: readonly Permission[] = []): boolean {
+  return service.hasAll(required) || service.hasAny(alternatives);
 }

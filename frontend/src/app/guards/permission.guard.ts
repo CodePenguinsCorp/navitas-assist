@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { map } from 'rxjs';
-import { firstAllowedRoute } from '../core/navigation';
+import { allowsPermissions, firstAllowedRoute } from '../core/navigation';
 import { Permission } from '../core/permissions';
 import { AuthService } from '../core/services/auth.service';
 import { PermissionService } from '../core/services/permission.service';
@@ -13,8 +13,10 @@ export const permissionGuard: CanActivateFn = (route) => {
   const router = inject(Router);
   const required = (route.data?.['permissions'] as Permission[] | undefined) ?? [];
 
+  const alternatives = (route.data?.['alternativePermissions'] as Permission[] | undefined) ?? [];
+
   return authService.restoreSession().pipe(
-    map(() => permissions.hasAll(required)
+    map(() => allowsPermissions(permissions, required, alternatives)
       ? true
       : router.parseUrl(firstAllowedRoute(permissions)))
   );

@@ -6,7 +6,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRouteSnapshot, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { finalize, switchMap, timer } from 'rxjs';
 import { NAV_GROUPS } from '../core/mock-data';
-import { firstAllowedRoute } from '../core/navigation';
+import { allowsPermissions, firstAllowedRoute } from '../core/navigation';
 import { Permission } from '../core/permissions';
 import { AuthService } from '../core/services/auth.service';
 import { NotificationService } from '../core/services/notification.service';
@@ -32,7 +32,7 @@ export class AppShellComponent {
     NAV_GROUPS
       .map((group) => ({
         ...group,
-        items: group.items.filter((item) => this.permissions.hasAll(item.permissions))
+        items: group.items.filter((item) => allowsPermissions(this.permissions, item.permissions, item.alternativePermissions))
       }))
       .filter((group) => group.items.length > 0)
   );
@@ -53,13 +53,14 @@ export class AppShellComponent {
 
   private leaveScreenIfForbidden(): void {
     let route: ActivatedRouteSnapshot | null = this.router.routerState.snapshot.root;
-    const required: Permission[] = [];
     while (route) {
-      required.push(...((route.data['permissions'] as Permission[] | undefined) ?? []));
+      const required = (route.data['permissions'] as Permission[] | undefined) ?? [];
+      const alternatives = (route.data['alternativePermissions'] as Permission[] | undefined) ?? [];
+      if (!allowsPermissions(this.permissions, required, alternatives)) {
+        void this.router.navigateByUrl(firstAllowedRoute(this.permissions));
+        return;
+      }
       route = route.firstChild;
-    }
-    if (!this.permissions.hasAll(required)) {
-      void this.router.navigateByUrl(firstAllowedRoute(this.permissions));
     }
   }
 

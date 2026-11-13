@@ -1,0 +1,22 @@
+:host { display: block; min-width: 0; }
+.import-page { min-width: 0; overflow-wrap: anywhere; }
+.import-upload, .import-summary, .import-actions { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; }
+.import-upload { margin-block: 1.5rem; }
+.import-upload label { flex: 1; min-width: 0; }
+input[type=file] { width: 100%; max-width: 100%; }
+.import-summary { margin-top: 1.5rem; align-items: center; }
+.import-summary strong { font-size: 1.5rem; margin-right: .35rem; }
+.import-filter { max-width: 16rem; margin-block: 1rem; }
+.import-table table { width: 100%; table-layout: fixed; }
+.import-table th:first-child { width: 5rem; }
+.import-table td { overflow-wrap: anywhere; }
+.import-table td p { margin: 0 0 .3rem; }
+.import-actions { justify-content: space-between; margin-top: 2rem; }
+@media (max-width: 600px) {
+  .import-table thead { display: none; }
+  .import-table tr { display: block; border-bottom: 1px solid var(--line); padding-block: .75rem; }
+  .import-table td { display: block; width: auto; padding: .35rem 0; border: 0; }
+  .import-table td::before { content: attr(data-label); display: block; font-weight: 600; }
+  .import-upload, .import-actions { align-items: stretch; }
+  .import-upload > *, .import-actions > * { width: 100%; }
+}

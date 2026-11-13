@@ -1,5 +1,7 @@
+import { PermissionService } from '../../core/services/permission.service';
+import { RouterLink } from '@angular/router';
 import { IconComponent } from '../../shared/icon/icon.component';
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable, Subject, debounceTime, filter, finalize } from 'rxjs';
@@ -32,13 +34,18 @@ type ClientFormControlName =
 
 @Component({
   selector: 'app-clients',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PaginationComponent, PageHeaderComponent, RowActionComponent],
+  imports: [RouterLink, IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PaginationComponent, PageHeaderComponent, RowActionComponent],
   templateUrl: './clients.component.html',
   styles: [`
     :host { display: block; }
   `]
 })
 export class ClientsComponent {
+  private readonly permissions = inject(PermissionService);
+  protected readonly createButtonElement = viewChild<ElementRef<HTMLButtonElement>>('createButton');
+  protected readonly canImport = computed(() => this.permissions.hasPermission('cadastros.importar'));
+  protected readonly canEdit = computed(() => this.permissions.hasPermission('cadastros.editar'));
+
   private readonly formBuilder = inject(FormBuilder);
   private readonly catalogService = inject(CatalogService);
 
@@ -49,7 +56,7 @@ export class ClientsComponent {
   protected readonly errorMessage = signal('');
   protected readonly modalErrorMessage = signal('');
   protected readonly deleteModalErrorMessage = signal('');
-  protected readonly successMessage = signal('');
+  protected readonly successMessage = signal<string>(history.state?.importSummary ?? '');
   protected readonly searchTerm = signal('');
   protected readonly documentFilter = signal<PresenceFilter>('all');
   protected readonly emailFilter = signal<PresenceFilter>('all');
@@ -165,6 +172,7 @@ export class ClientsComponent {
   }
 
   protected openCreateModal(): void {
+    if (!this.canEdit()) return;
     this.editingClientSignal.set(null);
     this.form.reset(emptyClientForm());
     this.activeModal.set('create');
@@ -172,6 +180,7 @@ export class ClientsComponent {
   }
 
   protected openEditModal(client: ClientResponse): void {
+    if (!this.canEdit()) return;
     this.editingClientSignal.set(client);
     this.form.reset({
       legalName: client.legalName,
@@ -195,6 +204,7 @@ export class ClientsComponent {
   }
 
   protected saveClient(): void {
+    if (!this.canEdit()) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.modalErrorMessage.set('Revise os campos destacados antes de salvar o cliente.');
@@ -232,6 +242,7 @@ export class ClientsComponent {
   }
 
   protected openDeleteModal(client: ClientResponse): void {
+    if (!this.canEdit()) return;
     this.deletingClientSignal.set(client);
     this.clearMessages();
   }
@@ -245,6 +256,7 @@ export class ClientsComponent {
   }
 
   protected confirmDeleteClient(): void {
+    if (!this.canEdit()) return;
     const client = this.deletingClientSignal();
 
     if (!client || this.deletingClientId() !== null) {

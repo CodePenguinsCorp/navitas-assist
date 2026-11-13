@@ -11,6 +11,9 @@ function routeFor(permissions: readonly Permission[]): string {
 }
 
 describe('firstAllowedRoute', () => {
+  it('permite acessar cadastros somente com importacao sem edicao', () => {
+    expect(routeFor(['cadastros.importar' as Permission])).toBe('/clientes');
+  });
   it.each(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as LegacyProfileCode[])(
     'sends the %s profile to the dashboard',
     (code) => {

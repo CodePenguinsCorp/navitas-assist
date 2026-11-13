@@ -724,6 +724,7 @@ export interface NavItem {
   icon: IconName;
   /** Todas exigidas; vazio = só login. */
   permissions: Permission[];
+  alternativePermissions?: Permission[];
 }
 
 export interface NavGroup {
@@ -901,3 +902,25 @@ export interface NotificationEmailStatusResponse {
 }
 export interface NotificationEmailActionResponse { notificationId: number; status: NotificationEmailStatus; provider: string; }
 export interface NotificationEmailTestResponse { status: string; provider: string; }
+
+export type CatalogImportKind = 'clients' | 'products';
+export type CatalogImportStatus = 'VALID' | 'INVALID' | 'DUPLICATE';
+export interface CatalogImportIssue { field: string; code: string; message: string; }
+export interface CatalogImportRow {
+  lineNumber: number;
+  status: CatalogImportStatus;
+  values: Record<string, string | number | null>;
+  reasons: CatalogImportIssue[];
+  warnings: CatalogImportIssue[];
+}
+export interface CatalogImportPreview {
+  fileName: string;
+  delimiter: string;
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  duplicateRows: number;
+  blankRows: number;
+  rows: CatalogImportRow[];
+}
+export interface CatalogImportResult { importedRows: number; ignoredInvalidRows: number; ignoredDuplicateRows: number; }

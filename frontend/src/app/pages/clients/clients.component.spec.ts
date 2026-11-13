@@ -1,3 +1,4 @@
+import { providePermissions } from '../../testing/permission-fixtures';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -11,6 +12,8 @@ import { App } from '../../app';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { mountUnderRoot, simulateNativeModality } from '../../testing/native-dialog';
 import { ClientsComponent } from './clients.component';
+
+beforeEach(() => TestBed.configureTestingModule({ providers: [provideRouter([]), providePermissions(['cadastros.ver', 'cadastros.editar'])] }));
 
 function client(id: number, legalName: string): ClientResponse {
   return {

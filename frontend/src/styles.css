@@ -3327,3 +3327,8 @@ app-custom-select:has(> .custom-select--priority) {
 .repair-entry small { color: var(--muted); }
 .repair-form { margin-top: var(--space-3); }
 .repair-actions { justify-content: space-between; }
+
+@media (max-width: 600px) {
+  .import-page .pagination__controls { flex-wrap: wrap; }
+  .import-page .pagination__size { max-width: 100%; }
+}

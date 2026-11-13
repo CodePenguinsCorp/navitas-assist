@@ -2,7 +2,8 @@
   <app-page-header
     heading="Produtos"
   >
-    <button #createButton type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo produto</button>
+    @if (canEdit()) { <button #createButton type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo produto</button> }
+    @if (canImport()) { <a class="button-secondary" routerLink="/produtos/importar">Importar CSV</a> }
   </app-page-header>
 
   <section class="panel catalog-toolbar catalog-toolbar--filters">
@@ -120,6 +121,7 @@
                 <td>{{ warrantyLabel(product.defaultWarrantyMonths) }}</td>
                 <td>{{ updatedAtLabel(product) }}</td>
                 <td class="table-actions-col">
+                  @if (canEdit()) {
                   <div class="row-actions">
                     <button
                       appRowAction
@@ -139,6 +141,7 @@
                       [disabled]="deletingProductId() !== null"
                     ></button>
                   </div>
+                  }
                 </td>
               </tr>
             }
@@ -171,7 +174,7 @@
       appModalFocus
       modalInitialFocus="[formcontrolname='sku']"
       [modalCloseBlocked]="submitting()"
-      [modalFallbackFocus]="createButton"
+      [modalFallbackFocus]="createButtonElement()?.nativeElement ?? null"
       (modalCloseRequested)="closeModal()"
       (click)="$event.stopPropagation()"
     >
@@ -295,7 +298,7 @@
       appModalFocus
       modalInitialFocus=".form-actions .button-secondary"
       [modalCloseBlocked]="deletingProductId() !== null"
-      [modalFallbackFocus]="createButton"
+      [modalFallbackFocus]="createButtonElement()?.nativeElement ?? null"
       (modalCloseRequested)="closeDeleteModal()"
       (click)="$event.stopPropagation()"
     >

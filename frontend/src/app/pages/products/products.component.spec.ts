@@ -1,3 +1,4 @@
+import { providePermissions } from '../../testing/permission-fixtures';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { Signal } from '@angular/core';
@@ -28,6 +29,8 @@ const INITIAL_PRODUCTS: ProductResponse[] = [
     createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' }
 ];
 
+
+beforeEach(() => TestBed.configureTestingModule({ providers: [provideRouter([]), providePermissions(['cadastros.ver', 'cadastros.editar'])] }));
 
 function product(id: number, name: string): ProductResponse {
   return {
