@@ -103,6 +103,8 @@ class NotificationEmailIntegrationTest {
     @Autowired private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     @Autowired private br.com.navitasassist.service.NotificationEmailWorker worker;
     @Autowired private br.com.navitasassist.config.NotificationProperties properties;
+    @Autowired private br.com.navitasassist.service.NotificationEmailQueue queue;
+    @org.springframework.boot.test.mock.mockito.SpyBean private br.com.navitasassist.service.NotificationEmailContentFactory contentFactory;
     @MockBean private java.time.Clock clock;
     private final java.time.Instant now = java.time.Instant.parse("2026-11-14T12:00:00Z");
     private UserAccount technician;
@@ -306,6 +308,40 @@ class NotificationEmailIntegrationTest {
             var first = pool.submit(retry); var second = pool.submit(retry); start.countDown();
             assertEquals(java.util.Set.of(202, 409), java.util.Set.of(first.get(10, java.util.concurrent.TimeUnit.SECONDS), second.get(10, java.util.concurrent.TimeUnit.SECONDS)));
         } finally { pool.shutdownNow(); }
+    }
+
+    @Test
+    void twoInstancesPreparingTheSameDueEmailReserveItOnlyOnce() throws Exception {
+        assignAndWait();
+        Long id = assignmentNotification().getId();
+        var firstBuilding = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        doAnswer(invocation -> {
+            if (calls.incrementAndGet() == 1) {
+                firstBuilding.countDown();
+                assertTrue(release.await(10, java.util.concurrent.TimeUnit.SECONDS));
+            }
+            return invocation.callRealMethod();
+        }).when(contentFactory).build(any(), any());
+        var pool = java.util.concurrent.Executors.newSingleThreadExecutor();
+        try {
+            // A primeira instância leu a linha devida e para antes de reservar; a segunda lê a mesma linha e reserva.
+            var first = pool.submit(() -> queue.prepare(id));
+            assertTrue(firstBuilding.await(10, java.util.concurrent.TimeUnit.SECONDS));
+            var second = queue.prepare(id);
+            release.countDown();
+            var stale = first.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            org.junit.jupiter.api.Assertions.assertNotNull(second);
+            org.junit.jupiter.api.Assertions.assertNull(stale);
+            Notification n = assignmentNotification();
+            assertEquals(1, n.getEmailAttempts());
+            assertEquals(NotificationEmailStatus.PENDING, n.getEmailStatus());
+            assertTrue(n.getEmailNextAttemptAt().isAfter(now));
+        } finally { release.countDown(); pool.shutdownNow(); }
+        // Reservada, a linha não volta a ser devida no mesmo instante: outra varredura não a envia.
+        worker.poll();
+        org.mockito.Mockito.verifyNoInteractions(mailSender);
     }
 
     @Test

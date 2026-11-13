@@ -16,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class NotificationEmailQueue {
     public record Delivery(Long id, int attempt, String provider, EmailMessage message) {}
+    /** Prazo da reserva: cobre o envio (timeout do provedor) e devolve a linha à fila se a instância cair no meio. */
+    static final Duration CLAIM_LEASE = Duration.ofMinutes(5);
     private final NotificationRepository notifications;
     private final NotificationRuleRepository rules;
     private final NotificationMuteRepository mutes;
@@ -58,16 +60,21 @@ public class NotificationEmailQueue {
             n.setEmailNextAttemptAt(null);
             return null;
         }
-        n.setEmailAttempts(n.getEmailAttempts() + 1);
-        n.setEmailProvider(properties.getEmail().getProvider());
+        int attempts = n.getEmailAttempts();
+        EmailMessage message;
         try {
-            return new Delivery(id, n.getEmailAttempts(), n.getEmailProvider(), content.build(n, n.getRecipient().getEmail()));
+            message = content.build(n, n.getRecipient().getEmail());
         } catch (RuntimeException error) {
             n.setEmailStatus(NotificationEmailStatus.FAILED);
             n.setEmailNextAttemptAt(null);
             n.setEmailError(error instanceof EmailDeliveryException e ? e.code() : "CONTENT_ERROR");
             return null;
         }
+        // Reserva atômica: com mais de uma instância, só quem afetar a linha envia esta tentativa.
+        String provider = properties.getEmail().getProvider();
+        Instant now = clock.instant();
+        if (notifications.claimEmail(id, attempts, now, now.plus(CLAIM_LEASE), provider) != 1) return null;
+        return new Delivery(id, attempts + 1, provider, message);
     }
 
     @Transactional

@@ -18,6 +18,21 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Query("select n.id from Notification n where n.emailStatus = br.com.navitasassist.notification.NotificationEmailStatus.PENDING and n.emailNextAttemptAt <= :now order by n.emailNextAttemptAt, n.id")
     List<Long> findDueEmailIds(@Param("now") Instant now, Pageable pageable);
 
+    /**
+     * Reserva a tentativa: só uma instância encontra a linha ainda devida com a tentativa esperada; as demais afetam 0 linhas.
+     * A próxima tentativa vai para {@code leaseUntil}, e a conclusão (ou o recuo) a substitui.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update Notification n set n.emailAttempts = n.emailAttempts + 1, n.emailNextAttemptAt = :leaseUntil, n.emailProvider = :provider
+        where n.id = :id
+          and n.emailStatus = br.com.navitasassist.notification.NotificationEmailStatus.PENDING
+          and n.emailAttempts = :attempts
+          and n.emailNextAttemptAt <= :now
+        """)
+    int claimEmail(@Param("id") Long id, @Param("attempts") int attempts, @Param("now") Instant now,
+        @Param("leaseUntil") Instant leaseUntil, @Param("provider") String provider);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update Notification n set n.emailStatus = br.com.navitasassist.notification.NotificationEmailStatus.PENDING, n.emailAttempts = 0, n.emailError = null, n.emailNextAttemptAt = :now where n.id = :id and n.emailStatus = br.com.navitasassist.notification.NotificationEmailStatus.FAILED")
     int retryFailedEmail(@Param("id") Long id, @Param("now") Instant now);

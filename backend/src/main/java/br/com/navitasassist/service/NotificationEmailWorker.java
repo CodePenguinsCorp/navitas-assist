@@ -15,7 +15,7 @@ public class NotificationEmailWorker {
     private final EmailProvider provider;
     private final NotificationProperties properties;
 
-    // Uma instância: uma única execução sequencial, sem claim nem fila em memória.
+    // Execução sequencial por instância; entre instâncias, prepare reserva cada tentativa com UPDATE condicional.
     @Scheduled(fixedDelayString = "${navitas.notifications.email.poll-ms:5000}", initialDelayString = "${navitas.notifications.email.poll-ms:5000}")
     public synchronized void poll() {
         if (!properties.getEmail().isEnabled()) return;
