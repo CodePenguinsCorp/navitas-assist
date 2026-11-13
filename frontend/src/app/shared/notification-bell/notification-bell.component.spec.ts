@@ -11,8 +11,10 @@ import { NotificationBellComponent } from './notification-bell.component';
 @Component({ template: '' })
 class StubPageComponent {}
 
-const NOW = new Date(2026, 9, 24, 15, 0).getTime();
-const at = (day: number, hour: number) => new Date(2026, 9, day, hour).toISOString();
+// America/Sao_Paulo is UTC-3 all year: fixed UTC instants keep the specs independent of the machine's time zone.
+const SP_OFFSET = 3;
+const NOW = Date.UTC(2026, 9, 24, 15 + SP_OFFSET, 0);
+const at = (day: number, hour: number) => new Date(Date.UTC(2026, 9, day, hour + SP_OFFSET)).toISOString();
 const NOTIFICATION: NotificationResponse = {
   id: 5, eventType: 'RMA_ASSIGNED', severity: 'CRITICAL', title: 'RMA-2026-000007 atribuído', message: 'Cliente · Produto',
   rmaId: 7, rmaCode: 'RMA-2026-000007', actionPath: '/rmas?rma=7', createdAt: at(24, 10), readAt: null, snoozedUntil: null, read: false
