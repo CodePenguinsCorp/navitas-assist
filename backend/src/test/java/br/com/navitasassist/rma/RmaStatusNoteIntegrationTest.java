@@ -1,0 +1,82 @@
+package br.com.navitasassist.rma;
+
+import static br.com.navitasassist.access.AccessTestSupport.asProfile;
+import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Map;
+
+import br.com.navitasassist.client.Client;
+import br.com.navitasassist.part.Part;
+import br.com.navitasassist.product.Product;
+import br.com.navitasassist.repository.ClientRepository;
+import br.com.navitasassist.repository.PartRepository;
+import br.com.navitasassist.repository.ProductRepository;
+import br.com.navitasassist.repository.RmaRecordRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+@Transactional
+class RmaStatusNoteIntegrationTest {
+    @Autowired private MockMvc mvc;
+    @Autowired private ObjectMapper mapper;
+    @Autowired private RmaRecordRepository rmas;
+    @Autowired private ClientRepository clients;
+    @Autowired private ProductRepository products;
+    @Autowired private PartRepository parts;
+    private RmaRecord rma;
+
+    @BeforeEach
+    void setup() {
+        Client client = new Client(); client.setLegalName("Cliente reparo"); clients.save(client);
+        Product product = new Product(); product.setSku("REPAIR-TEST"); product.setName("Produto reparo"); products.save(product);
+        rma = new RmaRecord(); rma.setCode("RMA-REPAIR-TEST"); rma.setClient(client); rma.setProduct(product);
+        rma.setEntryDate(LocalDate.now()); rma.setReceivedBy("Teste"); rma.setReportedFailure("Falha"); rma.setStatus(RmaStatus.IN_REPAIR); rmas.saveAndFlush(rma);
+    }
+
+    @Test
+    void editsOnlyNoteAndPersistsAudit() throws Exception {
+        RmaStatusHistory event = new RmaStatusHistory(); event.setStatus(rma.getStatus()); event.setChangedBy("original");
+        event.setChangedAt(java.time.Instant.parse("2026-01-01T10:00:00Z")); event.setNote("Antes"); rma.addStatusHistory(event); rma = rmas.saveAndFlush(rma); event = rma.getStatusHistory().get(0);
+        String path = "/api/rmas/" + rma.getId() + "/status-history/" + event.getId() + "/note";
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(path).with(asProfile("editor", "SERVICE_DESK")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content("{\"note\":\"  Corrigida  \"}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.statusHistory[0].id").value(event.getId()))
+            .andExpect(jsonPath("$.statusHistory[0].note").value("Corrigida"))
+            .andExpect(jsonPath("$.statusHistory[0].changedBy").value("original"))
+            .andExpect(jsonPath("$.statusHistory[0].changedAt").value("2026-01-01T10:00:00Z"))
+            .andExpect(jsonPath("$.statusHistory[0].noteEditedBy").value("editor"))
+            .andExpect(jsonPath("$.statusHistory[0].noteEditedAt").isNotEmpty());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(path).with(asProfile("editor", "SERVICE_DESK")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content("{\"note\":\"   \"}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.statusHistory[0].note").isEmpty());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(path).with(asProfile("editor", "SERVICE_DESK")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(Map.of("note", "x".repeat(256)))))
+            .andExpect(status().isBadRequest());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(path.replace("/status-history/" + event.getId(), "/status-history/999999")).with(asProfile("editor", "SERVICE_DESK")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content("{\"note\":\"X\"}"))
+            .andExpect(status().isNotFound());
+        rma.setStatus(RmaStatus.COMPLETED); rmas.saveAndFlush(rma);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(path).with(asProfile("editor", "SERVICE_DESK")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content("{\"note\":\"X\"}"))
+            .andExpect(status().isBadRequest());
+    }
+}

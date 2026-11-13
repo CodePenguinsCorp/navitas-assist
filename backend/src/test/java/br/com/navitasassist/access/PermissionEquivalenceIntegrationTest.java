@@ -192,6 +192,7 @@ class PermissionEquivalenceIntegrationTest {
 
         // A, S, T
         row(HttpMethod.PATCH, "/api/rmas/{id}/status", AST),
+        row(HttpMethod.PATCH, "/api/rmas/{id}/status-history/{eventId}/note", AST),
         row(HttpMethod.POST, "/api/rmas/{id}/blocks", AST),
         row(HttpMethod.PATCH, "/api/rmas/{id}/blocks/{blockId}", AST),
 

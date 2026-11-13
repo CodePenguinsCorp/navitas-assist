@@ -55,6 +55,10 @@ export class RmaService {
     return this.http.patch<RmaResponse>(`/api/rmas/${id}/status`, payload);
   }
 
+  updateStatusNote(id: number, eventId: number, note: string): Observable<RmaResponse> {
+    return this.http.patch<RmaResponse>(`/api/rmas/${id}/status-history/${eventId}/note`, { note });
+  }
+
   updatePriority(id: number, priority: RmaPriority): Observable<RmaResponse> {
     return this.http.put<RmaResponse>(`/api/rmas/${id}`, { priority });
   }

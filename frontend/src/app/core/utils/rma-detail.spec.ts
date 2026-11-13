@@ -153,7 +153,7 @@ describe('RMA detail contract', () => {
   it('keeps a note recorded without a status change', () => {
     const [entry] = rmaHistory({ statusHistory: [statusRecord({ status: 'IN_REPAIR', note: 'Cliente avisado' })], assignmentHistory: [] });
     expect(entry).toEqual({
-      kind: 'status', at: '2026-10-20T12:00:00Z', by: 'ana', label: 'Status registrado: Reparo', status: 'IN_REPAIR', note: 'Cliente avisado'
+      kind: 'status', at: '2026-10-20T12:00:00Z', by: 'ana', label: 'Status registrado: Reparo', status: 'IN_REPAIR', note: 'Cliente avisado', event: statusRecord({ status: 'IN_REPAIR', note: 'Cliente avisado' })
     });
   });
 

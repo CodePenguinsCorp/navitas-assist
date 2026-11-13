@@ -1,8 +1,9 @@
 import { Component, ElementRef, EventEmitter, Injector, Output, afterNextRender, computed, effect, inject, input, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
-import { RMA_STATUS_FLOW } from '../../core/mock-data';
-import { RmaResponse, RmaStatus } from '../../core/models';
+import { CLOSED_RMA_STATUSES, RMA_STATUS_FLOW } from '../../core/mock-data';
+import { formatBusinessDateTime } from '../../core/utils/date';
+import { RmaResponse, RmaStatusHistoryResponse, RmaStatus } from '../../core/models';
 import { PermissionService } from '../../core/services/permission.service';
 import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
@@ -22,27 +23,32 @@ import { CustomSelectComponent } from '../form-controls/custom-select/custom-sel
         <span class="status-chip" [attr.data-status]="item.status">{{ label(item.status) }}</span>
       }
     }
+    @if (event(); as entry) {
+      @if (entry.note) { <blockquote>{{ entry.note }}</blockquote> }
+      @if (entry.noteEditedAt) { <small class="muted-inline" [title]="editedTooltip(entry)">(editada)</small> }
+      @if (noteAllowed() && !editing()) {
+        <button type="button" class="link-button status-note-trigger" [disabled]="busy() || disabled()" (click)="editNote()">{{ entry.note ? 'Editar observação' : 'Adicionar observação' }}</button>
+      }
+    }
     @if (message()) {
       <div class="status-feedback" role="status">
         <span>{{ message() }}</span>
         @if (allowed() && previous()) {
           <button type="button" class="link-button" [disabled]="busy() || disabled() || editing()" (click)="undo()">Desfazer</button>
-          <button type="button" class="link-button status-note-trigger" [disabled]="busy() || disabled() || editing()" (click)="editNote()">Adicionar observação</button>
+          @if (noteAllowed()) { <button type="button" class="link-button status-note-trigger" [disabled]="busy() || disabled() || editing()" (click)="editNote()">{{ noteTarget()?.note ? 'Editar observação' : 'Adicionar observação' }}</button> }
         }
       </div>
     }
     @if (error()) { <p class="field-error" role="alert">{{ error() }}</p> }
-    @if (draft()) { <p class="muted-inline" role="status">Observação reservada para a próxima mudança: {{ draft() }}</p> }
     @if (editing()) {
       <div class="status-note" (keydown.escape)="cancelOnEscape($event)">
-        <label>Observação para a próxima mudança
+        <label>Observação
           <textarea [formControl]="note" rows="3" maxlength="255" [attr.aria-invalid]="note.invalid || null"></textarea>
         </label>
-        <p class="muted-inline">O histórico anterior não pode ser editado. A nota será enviada na próxima mudança de status.</p>
         @if (note.invalid) { <p class="field-error" role="alert">Use até 255 caracteres.</p> }
         <div class="form-actions">
           <button type="button" class="button-secondary" (click)="cancelNote()">Cancelar</button>
-          <button type="button" class="button-primary" (click)="saveNote()">Salvar</button>
+          <button type="button" class="button-primary" [disabled]="busy() || disabled()" (click)="saveNote()">Salvar</button>
         </div>
       </div>
     }
@@ -59,6 +65,7 @@ import { CustomSelectComponent } from '../form-controls/custom-select/custom-sel
 export class RmaStatusFieldComponent {
   readonly rma = input<RmaResponse | null>(null);
   readonly showSelector = input(true);
+  readonly event = input<RmaStatusHistoryResponse | null>(null);
   readonly disabled = input(false);
   @Output() readonly saved = new EventEmitter<RmaResponse>();
   @Output() readonly busyChange = new EventEmitter<boolean>();
@@ -75,7 +82,8 @@ export class RmaStatusFieldComponent {
   protected readonly message = signal('');
   protected readonly previous = signal<{ before: RmaResponse; after: RmaResponse } | null>(null);
   protected readonly editing = signal(false);
-  protected readonly draft = signal('');
+  protected readonly noteTarget = computed(() => this.event() ?? this.previous()?.after.statusHistory.reduce<RmaStatusHistoryResponse | null>((latest, entry) => !latest || (entry.id ?? 0) > (latest.id ?? 0) ? entry : latest, null));
+  protected readonly noteAllowed = computed(() => this.allowed() && !!this.noteTarget()?.id && !CLOSED_RMA_STATUSES.includes(this.rma()?.status ?? this.previous()?.after.status ?? 'RECEIVED'));
   protected readonly note = new FormControl('', { nonNullable: true, validators: [Validators.maxLength(255)] });
 
   constructor() {
@@ -83,7 +91,7 @@ export class RmaStatusFieldComponent {
       const next = this.rma()?.id ?? null;
       if (next !== this.contextRmaId) {
         this.contextRmaId = next;
-        this.previous.set(null); this.message.set(''); this.error.set(''); this.draft.set(''); this.editing.set(false);
+        this.previous.set(null); this.message.set(''); this.error.set(''); this.editing.set(false);
       }
     });
   }
@@ -95,10 +103,10 @@ export class RmaStatusFieldComponent {
     if (!target || !this.allowed() || this.disabled() || this.busy()) return;
     if (this.contextRmaId !== target.id) {
       this.contextRmaId = target.id;
-      this.previous.set(null); this.message.set(''); this.draft.set(''); this.editing.set(false);
+      this.previous.set(null); this.message.set(''); this.editing.set(false);
     }
     if (this.editing() || status === target.status) return;
-    this.submit(target, status, this.draft(), false);
+    this.submit(target, status, '', false);
   }
 
   protected undo(): void {
@@ -120,7 +128,6 @@ export class RmaStatusFieldComponent {
       next: updated => {
         this.previous.set(undo ? null : { before: target, after: updated });
         this.message.set(undo ? 'Alteração desfeita' : `Movido para ${statusLabel(updated.status)}`);
-        this.draft.set('');
         this.saved.emit(updated);
       },
       error: error => this.error.set(extractHttpErrorMessage(error, 'Não foi possível atualizar o status do RMA.'))
@@ -128,13 +135,30 @@ export class RmaStatusFieldComponent {
   }
 
   protected editNote(): void {
-    this.note.reset(this.draft()); this.editing.set(true); this.focus('textarea');
+    if (!this.noteAllowed() || this.disabled() || this.busy()) return;
+    this.note.reset(this.noteTarget()?.note ?? ''); this.editing.set(true); this.focus('textarea');
   }
   protected cancelNote(): void { this.editing.set(false); this.focus('.status-note-trigger'); }
   protected cancelOnEscape(event: Event): void { event.preventDefault(); event.stopPropagation(); this.cancelNote(); }
   protected saveNote(): void {
     if (this.note.invalid) { this.note.markAsTouched(); return; }
-    this.draft.set(this.note.value.trim()); this.cancelNote();
+    const target = this.rma() ?? this.previous()?.after;
+    const entry = this.noteTarget();
+    if (!target || !entry?.id || !this.noteAllowed() || this.disabled() || this.busy()) return;
+    this.error.set(''); this.busy.set(true); this.busyChange.emit(true);
+    this.service.updateStatusNote(target.id, entry.id, this.note.value.trim()).pipe(finalize(() => {
+      this.busy.set(false); this.busyChange.emit(false);
+    })).subscribe({
+      next: updated => {
+        const previous = this.previous();
+        if (previous) this.previous.set({ ...previous, after: updated });
+        this.cancelNote(); this.saved.emit(updated);
+      },
+      error: error => this.error.set(extractHttpErrorMessage(error, 'Não foi possível salvar a observação.'))
+    });
+  }
+  protected editedTooltip(entry: RmaStatusHistoryResponse): string {
+    return `${entry.noteEditedBy ?? ''} · ${formatBusinessDateTime(entry.noteEditedAt ?? '')}`;
   }
   private focus(selector: string): void {
     afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>(selector)?.focus(), { injector: this.injector });

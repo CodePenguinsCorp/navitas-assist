@@ -620,6 +620,7 @@ O detalhe do RMA, na lista e no Kanban, oferece registros inline de reparo. A mi
 | Operação | Endpoint | Permissão |
 | --- | --- | --- |
 | Consumir reserva | `POST /api/rmas/{id}/parts/{reservationId}/consume` | `pecas.reservar` |
+| Editar observação de status | `PATCH /api/rmas/{id}/status-history/{eventId}/note` | `rma.status` |
 | Adicionar componente externo | `POST /api/rmas/{id}/repair/external-components` | `pecas.reservar` |
 | Consultar componentes externos | `GET /api/rmas/{id}/repair/external-components` | `rma.ver` |
 | Registrar intervenção | `POST /api/rmas/{id}/repair/interventions` | `rma.diagnosticar` |

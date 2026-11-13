@@ -318,10 +318,10 @@
                         <strong>{{ historyEntryTitle(entry) }}</strong>
                         <time>{{ dateTimeLabel(entry.at) }}</time>
                       </div>
-                      @if ((entry.kind === 'status' && entry.note) || (entry.kind === 'warranty' && entry.reason)) {
-                        <blockquote class="rma-details__note">{{ entry.kind === 'status' ? entry.note : entry.kind === 'warranty' ? entry.reason : '' }}</blockquote>
-                      }
-                      <dl class="meta-list"><div><dt>Alterado por</dt><dd>{{ entry.by }}</dd></div></dl>
+                      @if (entry.kind === 'status') {
+                        <app-rma-status-field [rma]="rma" [event]="entry.event" [showSelector]="false" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy()" (saved)="detailRmaSaved($event)" (busyChange)="statusBusy.set($event)" />
+                      } @else if (entry.kind === 'warranty' && entry.reason) { <blockquote class="rma-details__note">{{ entry.reason }}</blockquote> }
+                        <dl class="meta-list"><div><dt>Alterado por</dt><dd>{{ entry.by }}</dd></div></dl>
                     </li>
                   }
                 </ol>

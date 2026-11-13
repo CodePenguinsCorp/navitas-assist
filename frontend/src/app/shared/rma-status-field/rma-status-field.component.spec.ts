@@ -10,19 +10,21 @@ describe('Status inline do RMA', () => {
   let fixture: ComponentFixture<RmaStatusFieldComponent>;
   let request: ReturnType<RmaService['updateStatus']>;
   let calls: RmaStatusUpdateRequest[];
+  let notes: Array<{ id: number; eventId: number; note: string }> ;
   const original = buildRma();
-  const moved = buildRma({ status: 'TRIAGE' });
+  const moved = buildRma({ status: 'TRIAGE', statusHistory: [{ id: 7, status: 'TRIAGE', changedBy: 'tester', changedAt: '2026-11-13T10:00:00Z', note: null }] });
   const host = () => fixture.nativeElement as HTMLElement;
   const render = () => { fixture.detectChanges(); TestBed.tick(); };
   const button = (label: string) => [...host().querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent?.trim() === label)!;
   const pick = () => { fixture.componentInstance.move('TRIAGE'); render(); };
 
   beforeEach(async () => {
-    calls = [];
+    calls = []; notes = [];
     request = of(moved);
     await TestBed.configureTestingModule({
       imports: [RmaStatusFieldComponent],
       providers: [providePermissions(['rma.status']), { provide: RmaService, useValue: {
+        updateStatusNote: (id: number, eventId: number, note: string) => { notes.push({ id, eventId, note }); return of(moved); },
         updateStatus: (_id: number, payload: RmaStatusUpdateRequest) => { calls.push(payload); return request; }
       } }]
     }).compileComponents();
@@ -68,17 +70,14 @@ describe('Status inline do RMA', () => {
     expect(button('Desfazer')).toBeDefined();
   });
 
-  it('reserva a observação para a próxima mudança sem editar o evento anterior', () => {
-    pick();
-    button('Adicionar observação').click(); render();
-    expect(host().textContent).toContain('próxima mudança');
+  it('salva a observação no evento recém-criado sem reservar para outra mudança', () => {
+    pick(); button('Adicionar observação').click(); render();
     const textarea = host().querySelector('textarea')!;
-    textarea.value = 'Aguardando avaliação'; textarea.dispatchEvent(new Event('input'));
+    textarea.value = ' Aguardando avaliação '; textarea.dispatchEvent(new Event('input'));
     button('Salvar').click(); render();
+    expect(notes).toEqual([{ id: 1, eventId: 7, note: 'Aguardando avaliação' }]);
     expect(calls).toHaveLength(1);
-    request = of(buildRma({ status: 'IN_DIAGNOSIS' }));
-    fixture.componentInstance.move('IN_DIAGNOSIS'); render();
-    expect(calls[1]).toEqual({ status: 'IN_DIAGNOSIS', note: 'Aguardando avaliação' });
+    expect(host().textContent).not.toContain('próxima mudança');
   });
 
   it('recusa observações com mais de 255 caracteres', () => {

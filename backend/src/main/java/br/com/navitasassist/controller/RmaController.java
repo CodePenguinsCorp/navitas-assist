@@ -91,6 +91,11 @@ public class RmaController {
         return rmaService.update(id, request);
     }
 
+    @PatchMapping("/{id}/status-history/{eventId}/note")
+    public RmaResponse updateStatusNote(@PathVariable Long id, @PathVariable Long eventId, @RequestBody br.com.navitasassist.rma.RmaStatusNoteRequest request) {
+        return rmaService.updateStatusNote(id, eventId, request);
+    }
+
     @PatchMapping("/{id}/status")
     public RmaResponse updateStatus(@PathVariable Long id, @Valid @RequestBody RmaStatusUpdateRequest request) {
         return rmaService.updateStatus(id, request);

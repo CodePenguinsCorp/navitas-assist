@@ -216,6 +216,19 @@ public class RmaService {
         return toResponse(rmaRecordRepository.save(rma));
     }
 
+    public RmaResponse updateStatusNote(Long id, Long eventId, br.com.navitasassist.rma.RmaStatusNoteRequest request) {
+        RmaRecord rma = getEntityForUpdate(id);
+        RmaStatusHistory event = rma.getStatusHistory().stream().filter(item -> item.getId().equals(eventId)).findFirst()
+            .orElseThrow(() -> new ResourceNotFoundException("Evento de status não encontrado neste RMA."));
+        if (CLOSED_STATUSES.contains(rma.getStatus())) throw new BusinessException("Não é permitido editar observações de um RMA encerrado.");
+        String note = trimToNull(request.note());
+        if (note != null && note.length() > 255) throw new BusinessException("Use até 255 caracteres na observação.");
+        event.setNote(note);
+        event.setNoteEditedBy(currentUsername());
+        event.setNoteEditedAt(Instant.now());
+        return toResponse(rmaRecordRepository.saveAndFlush(rma));
+    }
+
     public RmaResponse updateStatus(Long id, RmaStatusUpdateRequest request) {
         return applyStatusChange(getEntityForUpdate(id), request);
     }

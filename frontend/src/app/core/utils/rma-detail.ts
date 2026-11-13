@@ -4,6 +4,7 @@ import {
   RmaItemResponse,
   RmaResponse,
   RmaStatus,
+  RmaStatusHistoryResponse,
   WarrantyOverrideStatus
 } from '../models';
 import { CLOSED_RMA_STATUSES } from '../mock-data';
@@ -121,7 +122,7 @@ export function stageFact(rma: Pick<RmaResponse, 'status' | 'stagePeriods'>, now
 }
 
 export type RmaHistoryEntry =
-  | { kind: 'status'; at: string; by: string; label: string; status: RmaStatus; note: string | null }
+  | { kind: 'status'; at: string; by: string; label: string; status: RmaStatus; note: string | null; event: RmaStatusHistoryResponse }
   | { kind: 'assignee'; at: string; by: string; from: string; to: string }
   | { kind: 'dueDate'; at: string; by: string; from: string | null; to: string | null }
   | { kind: 'warranty'; at: string; by: string; itemId: number; itemLabel: string; from: WarrantyOverrideStatus | null; to: WarrantyOverrideStatus | null; reason: string | null };
@@ -155,6 +156,7 @@ export function rmaHistory(rma: Pick<RmaResponse, 'statusHistory' | 'assignmentH
       by: record.changedBy,
       label: `Status registrado: ${statusLabel(record.status)}`,
       status: record.status,
+      event: record,
       note: record.note
     })),
     ...rma.assignmentHistory.map((record): RmaHistoryEntry => ({

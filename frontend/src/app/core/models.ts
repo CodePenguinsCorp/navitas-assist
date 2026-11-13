@@ -270,6 +270,9 @@ export interface DiagnosisRequest {
 }
 
 export interface RmaStatusHistoryResponse {
+  id?: number;
+  noteEditedBy?: string | null;
+  noteEditedAt?: string | null;
   status: RmaStatus;
   changedBy: string;
   changedAt: string;
