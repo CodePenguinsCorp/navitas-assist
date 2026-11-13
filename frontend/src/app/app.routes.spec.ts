@@ -43,25 +43,25 @@ describe('app routes', () => {
     });
 
     it('keeps titles and guards every page with the permissions of spec §3.2', () => {
-      const expected: Record<string, { title: string; permissions?: string[] }> = {
+      const expected: Record<string, { title: string; permissions?: string[]; alternativePermissions?: string[] }> = {
         dashboard: { title: 'Dashboard | Navitas Assist', permissions: ['rma.ver'] },
         rmas: { title: 'RMAs | Navitas Assist', permissions: ['rma.ver'] },
         kanban: { title: 'Kanban | Navitas Assist', permissions: ['rma.ver'] },
         notificacoes: { title: 'Notificações | Navitas Assist' },
         pecas: { title: 'Peças | Navitas Assist', permissions: ['pecas.ver'] },
-        clientes: { title: 'Clientes | Navitas Assist', permissions: ['cadastros.ver', 'cadastros.editar'] },
-        produtos: { title: 'Produtos | Navitas Assist', permissions: ['cadastros.ver', 'cadastros.editar'] },
+        clientes: { title: 'Clientes | Navitas Assist', permissions: ['cadastros.ver', 'cadastros.editar'], alternativePermissions: ['cadastros.importar'] },
+        produtos: { title: 'Produtos | Navitas Assist', permissions: ['cadastros.ver', 'cadastros.editar'], alternativePermissions: ['cadastros.importar'] },
         protocolos: { title: 'Protocolos | Navitas Assist', permissions: ['protocolos.ver', 'protocolos.catalogo'] },
         usuarios: { title: 'Usuários | Navitas Assist', permissions: ['usuarios.gerir'] },
         perfis: { title: 'Perfis | Navitas Assist', permissions: ['perfis.gerir'] },
         relatorios: { title: 'Relatórios | Navitas Assist', permissions: ['relatorios.ver'] },
       };
-      for (const [path, { title, permissions }] of Object.entries(expected)) {
+      for (const [path, { title, permissions, alternativePermissions }] of Object.entries(expected)) {
         const route = child(path);
         expect(route.title, path).toBe(title);
         if (permissions) {
           expect(route.canActivate, path).toEqual([permissionGuard]);
-          expect(route.data, path).toEqual({ permissions });
+          expect(route.data, path).toEqual(alternativePermissions ? { permissions, alternativePermissions } : { permissions });
         } else {
           expect(route.canActivate, path).toBeUndefined();
           expect(route.data, path).toBeUndefined();

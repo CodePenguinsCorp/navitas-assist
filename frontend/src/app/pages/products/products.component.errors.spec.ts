@@ -1,3 +1,4 @@
+import { providePermissions } from '../../testing/permission-fixtures';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { Signal } from '@angular/core';
@@ -46,7 +47,7 @@ describe('ProductsComponent HTTP error feedback', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ProductsComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()]
+      providers: [providePermissions(['cadastros.editar']), provideHttpClient(), provideHttpClientTesting()]
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(ProductsComponent);

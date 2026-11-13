@@ -73,7 +73,7 @@ describe('ProfilesComponent form', () => {
     open(() => component.openEditModal(TECHNICIAN));
     const sets = moduleSets();
     expect(sets.map((set) => set.querySelector('legend')?.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
-      'RMAs 3 de 8', 'Clientes e produtos 0 de 2', 'Peças 1 de 3', 'Protocolos técnicos 0 de 3', 'Relatórios 0 de 1', 'Administração 0 de 3'
+      'RMAs 3 de 8', 'Clientes e produtos 0 de 3', 'Peças 1 de 3', 'Protocolos técnicos 0 de 3', 'Relatórios 0 de 1', 'Administração 0 de 3'
     ]);
     checkbox('Abrir RMAs').click();
     fixture.detectChanges();
@@ -86,7 +86,7 @@ describe('ProfilesComponent form', () => {
     const sections = Array.from(dialog()!.querySelectorAll('fieldset.form-section')).map((section) => section.querySelector('legend')?.textContent?.trim());
     expect(sections).toEqual(['Identificação', 'Permissões']);
     const boxes = Array.from(dialog()!.querySelectorAll<HTMLInputElement>('fieldset.permission-module input[type="checkbox"]'));
-    expect(boxes.length).toBe(20);
+    expect(boxes.length).toBe(21);
     expect(boxes.every((box) => box.getAttribute('role') === 'switch' && box.closest('label')?.classList.contains('permission-row'))).toBe(true);
     expect(boxes.every((box) => !box.checked)).toBe(true);
     expect(dialog()!.querySelector('h3')?.textContent?.trim()).toBe('Novo perfil');

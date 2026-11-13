@@ -1,3 +1,4 @@
+import { providePermissions } from '../../testing/permission-fixtures';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { Signal } from '@angular/core';
@@ -22,7 +23,7 @@ describe('ClientsComponent pending save lifecycle', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ClientsComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [providePermissions(['cadastros.editar']), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(ClientsComponent);

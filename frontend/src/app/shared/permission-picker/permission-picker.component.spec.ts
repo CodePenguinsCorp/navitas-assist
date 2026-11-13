@@ -62,11 +62,11 @@ describe('PermissionPickerComponent', () => {
       expect(modules().map((set) => text(set.querySelector('legend .permission-module__name')))).toEqual([
         'RMAs', 'Clientes e produtos', 'Peças', 'Protocolos técnicos', 'Relatórios', 'Administração'
       ]);
-      expect([0, 1, 2].map(counter)).toEqual(['2 de 8', '0 de 2', '1 de 3']);
+      expect([0, 1, 2].map(counter)).toEqual(['2 de 8', '0 de 3', '1 de 3']);
       const switches = Array.from(element.querySelectorAll<HTMLInputElement>('fieldset.permission-module input[type="checkbox"]'));
-      expect(switches.length).toBe(20);
+      expect(switches.length).toBe(21);
       expect(switches.every((input) => input.getAttribute('role') === 'switch')).toBe(true);
-      expect(text(element.querySelector('.permission-picker__total'))).toBe('3 de 20 selecionadas');
+      expect(text(element.querySelector('.permission-picker__total'))).toBe('3 de 21 selecionadas');
       expect(panel().hidden).toBe(false);
       expect(toggleButton()).toBeNull();
     });

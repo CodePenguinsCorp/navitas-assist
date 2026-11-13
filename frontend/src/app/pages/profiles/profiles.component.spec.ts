@@ -53,8 +53,8 @@ describe('ProfilesComponent list', () => {
     expect(element.querySelector('.page-heading h1, .page-heading h2')?.textContent?.trim()).toBe('Perfis');
     expect(buttonByText('Novo perfil')).toBeDefined();
     expect(Array.from(element.querySelectorAll('thead th')).map((th) => th.textContent?.trim())).toEqual(['Nome', 'Permissões', 'Usuários', 'Atualizado', 'Ações']);
-    expect(cells(0).slice(0, 4)).toEqual(['Administrador', '19 de 20', '3', '11/11/2026, 12:30']);
-    expect(cells(1).slice(0, 3)).toEqual(['Supervisor', '2 de 20', '0']);
+    expect(cells(0).slice(0, 4)).toEqual(['Administrador', '20 de 21', '3', '11/11/2026, 12:30']);
+    expect(cells(1).slice(0, 3)).toEqual(['Supervisor', '2 de 21', '0']);
     expect(rowActions(1).map((button) => button.getAttribute('aria-label'))).toEqual(['Editar Supervisor', 'Duplicar Supervisor', 'Excluir Supervisor']);
   });
 
