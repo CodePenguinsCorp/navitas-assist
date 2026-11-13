@@ -28,9 +28,10 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
         where n.id = :id
           and n.emailStatus = br.com.navitasassist.notification.NotificationEmailStatus.PENDING
           and n.emailAttempts = :attempts
+          and n.emailGeneration = :generation
           and n.emailNextAttemptAt <= :now
         """)
-    int claimEmail(@Param("id") Long id, @Param("attempts") int attempts, @Param("now") Instant now,
+    int claimEmail(@Param("id") Long id, @Param("attempts") int attempts, @Param("generation") int generation, @Param("now") Instant now,
         @Param("leaseUntil") Instant leaseUntil, @Param("provider") String provider);
 
     /** Registra o resultado de um erro de processamento só se a linha ainda estiver PENDING na tentativa esperada. */
@@ -45,7 +46,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
         @Param("status") NotificationEmailStatus status, @Param("nextAttemptAt") Instant nextAttemptAt, @Param("error") String error);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("update Notification n set n.emailStatus = br.com.navitasassist.notification.NotificationEmailStatus.PENDING, n.emailAttempts = 0, n.emailError = null, n.emailNextAttemptAt = :now where n.id = :id and n.emailStatus = br.com.navitasassist.notification.NotificationEmailStatus.FAILED")
+    @Query("update Notification n set n.emailStatus = br.com.navitasassist.notification.NotificationEmailStatus.PENDING, n.emailAttempts = 0, n.emailGeneration = n.emailGeneration + 1, n.emailError = null, n.emailNextAttemptAt = :now where n.id = :id and n.emailStatus = br.com.navitasassist.notification.NotificationEmailStatus.FAILED")
     int retryFailedEmail(@Param("id") Long id, @Param("now") Instant now);
 
     @EntityGraph(attributePaths = { "rma" })

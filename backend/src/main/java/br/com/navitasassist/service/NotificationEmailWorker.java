@@ -25,7 +25,7 @@ public class NotificationEmailWorker {
                 delivery = queue.prepare(id);
                 if (delivery == null) continue;
                 EmailDeliveryException failure = null;
-                try { provider.send(delivery.message(), id.toString()); }
+                try { provider.send(delivery.message(), delivery.idempotencyKey()); }
                 catch (EmailDeliveryException error) { failure = error; }
                 catch (RuntimeException error) { failure = new EmailDeliveryException("PROVIDER_ERROR", true); }
                 queue.complete(delivery, failure);

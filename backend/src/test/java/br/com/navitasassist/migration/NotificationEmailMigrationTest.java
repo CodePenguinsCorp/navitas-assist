@@ -22,6 +22,9 @@ class NotificationEmailMigrationTest {
                 assertTrue(legacy.next()); assertNull(legacy.getString(1)); assertTrue(legacy.getBoolean(2));
                 assertEquals("FAILED", legacy.getString(3)); assertEquals(0, legacy.getInt(4)); assertNull(legacy.getTimestamp(5));
             }
+            try (ResultSet generation = s.executeQuery("select email_generation from notifications where title='Legacy'")) {
+                assertTrue(generation.next()); assertEquals(0, generation.getInt(1));
+            }
             s.executeUpdate("update notifications set email_status='PENDING' where title='Legacy'");
             assertThrows(SQLException.class, () -> s.executeUpdate("update notifications set email_status='UNKNOWN' where title='Legacy'"));
             s.executeQuery("select app_visible, email_attempts, email_next_attempt_at from notifications");

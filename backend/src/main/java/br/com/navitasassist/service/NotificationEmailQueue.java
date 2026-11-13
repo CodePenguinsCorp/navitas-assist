@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class NotificationEmailQueue {
-    public record Delivery(Long id, int attempt, String provider, EmailMessage message) {}
+    public record Delivery(Long id, int attempt, String provider, EmailMessage message, String idempotencyKey) {}
     /** Prazo da reserva: cobre o envio (timeout do provedor) e devolve a linha à fila se a instância cair no meio. */
     static final Duration CLAIM_LEASE = Duration.ofMinutes(5);
     static final int MAX_ATTEMPTS = 5;
@@ -77,8 +77,14 @@ public class NotificationEmailQueue {
         // Reserva atômica: com mais de uma instância, só quem afetar a linha envia esta tentativa.
         String provider = properties.getEmail().getProvider();
         Instant now = clock.instant();
-        if (notifications.claimEmail(id, attempts, now, now.plus(CLAIM_LEASE), provider) != 1) return null;
-        return new Delivery(id, attempts + 1, provider, message);
+        int generation = n.getEmailGeneration();
+        if (notifications.claimEmail(id, attempts, generation, now, now.plus(CLAIM_LEASE), provider) != 1) return null;
+        return new Delivery(id, attempts + 1, provider, message, idempotencyKey(id, generation));
+    }
+
+    /** Mesma chave entre as tentativas automáticas de uma geração; cada reenvio manual muda a geração e a chave. */
+    static String idempotencyKey(Long id, int generation) {
+        return generation == 0 ? id.toString() : id + "-" + generation;
     }
 
     @Transactional

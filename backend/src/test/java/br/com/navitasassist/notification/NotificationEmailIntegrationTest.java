@@ -346,6 +346,34 @@ class NotificationEmailIntegrationTest {
     }
 
     @Test
+    void manualRetryStartsANewIdempotencyKeyKeptAcrossItsAutomaticAttempts() throws Exception {
+        assignAndWait();
+        Long id = assignmentNotification().getId();
+        doThrow(new br.com.navitasassist.notification.email.EmailDeliveryException("HTTP_400", false)).when(mailSender).send(any(), any());
+        worker.poll();
+        verify(mailSender).send(any(), org.mockito.ArgumentMatchers.eq(id.toString()));
+        retry(id);
+        doThrow(new br.com.navitasassist.notification.email.EmailDeliveryException("HTTP_503", true)).when(mailSender).send(any(), any());
+        worker.poll();
+        org.mockito.Mockito.when(clock.instant()).thenReturn(now.plusSeconds(60));
+        worker.poll();
+        verify(mailSender, org.mockito.Mockito.times(2)).send(any(), org.mockito.ArgumentMatchers.eq(id + "-1"));
+        doThrow(new br.com.navitasassist.notification.email.EmailDeliveryException("HTTP_400", false)).when(mailSender).send(any(), any());
+        org.mockito.Mockito.when(clock.instant()).thenReturn(now.plusSeconds(360));
+        worker.poll();
+        assertEquals(NotificationEmailStatus.FAILED, assignmentNotification().getEmailStatus());
+        retry(id);
+        worker.poll();
+        verify(mailSender).send(any(), org.mockito.ArgumentMatchers.eq(id + "-2"));
+        verify(mailSender, org.mockito.Mockito.times(5)).send(any(), any());
+    }
+
+    private void retry(Long id) throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/notification-rules/emails/{id}/retry", id).with(asProfile("admin", "ADMIN")).with(csrf()))
+            .andExpect(status().isAccepted());
+    }
+
+    @Test
     void persistentErrorOutsideContentBacksOffAndFailsAfterFiveAttempts() throws Exception {
         assignAndWait();
         doThrow(new IllegalStateException("database unavailable")).when(visibility).canReceive(any(), any());

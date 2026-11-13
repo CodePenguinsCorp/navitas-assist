@@ -600,7 +600,7 @@ As rotas administrativas abaixo usam `notificacoes.regras` e CSRF nas mutações
 
 - `GET /api/notification-rules/email-status`: `{enabled, provider}`.
 - `GET /api/notification-rules/failures`: até 50 falhas recentes de EVENT/EMAIL, com erro sanitizado; EMAIL inclui ID, tentativas, provedor, status, próxima tentativa e disponibilidade de reenvio. Destinatério ? username, sem endereço.
-- `POST /api/notification-rules/emails/{notificationId}/retry`: somente FAILED; 202 ao agendar, 409 para outro estado, 400 se inelegível, 404 se inexistente. Não cria outra notificação no app.
+- `POST /api/notification-rules/emails/{notificationId}/retry`: somente FAILED; 202 ao agendar, 409 para outro estado, 400 se inelegível, 404 se inexistente. Não cria outra notificação no app. Cada reenvio manual incrementa `email_generation` (migração `V6__notification_email_generation.sql`) e o `Idempotency-Key` passa a ser `{id}-{geração}` (a geração 0 continua usando só o id); as tentativas automáticas da mesma geração repetem a mesma chave.
 - `POST /api/notification-rules/emails/test`: corpo vazio, envia imediatamente ao e-mail da própria sessão; 200 com `status=enviado/simulado`, 400 se indisponível, 502 se o provedor falhar e 429 dentro de 30 s. Não grava notificação ou evento; limite em memória por usuário.
 
 `GET /api/notifications` mantém array e limite de 100; aceita `eventType` e `severity` antes do limite. Caixa, resumo e ações pessoais ignoram linhas exclusivas de e-mail. `read-all` alcança todas as visíveis autorizadas do usuário, inclusive adiadas e além das 100 linhas. O frontend é implementado separadamente.

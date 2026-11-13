@@ -82,6 +82,10 @@ public class Notification {
     @Column(nullable = false)
     private int emailAttempts;
 
+    /** Incrementada a cada reenvio manual; compõe a chave de idempotência junto com o id. */
+    @Column(nullable = false)
+    private int emailGeneration;
+
     private Instant emailNextAttemptAt;
     private Instant emailSentAt;
 
