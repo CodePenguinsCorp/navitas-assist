@@ -3391,3 +3391,11 @@ app-custom-select:has(> .custom-select--priority) {
   .import-page .pagination__controls { flex-wrap: wrap; }
   .import-page .pagination__size { max-width: 100%; }
 }
+
+/* Shared repair rows and inline editors in both RMA details. */
+.repair-entry__head, .repair-row-actions { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.repair-entry__head { justify-content: space-between; }
+.repair-voided { text-decoration: line-through; color: var(--muted); }
+.repair-inline { display: grid; gap: var(--space-2); min-width: 0; }
+.repair-inline textarea, .repair-form input, .repair-form textarea { box-sizing: border-box; max-width: 100%; min-width: 0; }
+@media (max-width: 420px) { .repair-form { grid-template-columns: minmax(0, 1fr); } }

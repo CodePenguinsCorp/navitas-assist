@@ -37,5 +37,10 @@ class RepairMigrationTest {
             assertThrows(SQLException.class, () -> sql.executeUpdate(intervention.formatted("INVALID", "1")));
             assertThrows(SQLException.class, () -> sql.executeUpdate(intervention.formatted("CLEANING", "1").replace("(900,", "(999,")));
         }
+        Flyway.configure().dataSource(url, "sa", "").load().migrate();
+        try (var connection = DriverManager.getConnection(url, "sa", ""); var sql = connection.createStatement()) {
+            try (var rows = sql.executeQuery("SELECT COUNT(*) FROM rma_repair_history WHERE rma_id = 900")) { assertTrue(rows.next()); assertEquals(3, rows.getInt(1)); }
+            try (var rows = sql.executeQuery("SELECT voided_at, void_reason FROM rma_external_components")) { assertTrue(rows.next()); assertNull(rows.getObject(1)); assertNull(rows.getString(2)); }
+        }
     }
 }

@@ -196,6 +196,9 @@ public class PartStockService {
         reservation.setComponentBatch(trimToNull(request.componentBatch()));
         reservation.setAppliedAt(Instant.now());
         reservation.setAppliedBy(currentUsername());
+        br.com.navitasassist.rma.RmaRepairHistory.record(reservation.getRma(), "STOCK_COMPONENT", reservation.getId(), "APPLY",
+            "Peça aplicada: " + part.getCode() + " · " + part.getName() + " · " + reservation.getQuantity() + " " + part.getUnit() + " · " + reservation.getReplacementReason()
+                + (reservation.getComponentBatch() == null ? "" : " · Lote: " + reservation.getComponentBatch()), currentUsername());
         return toReservationResponse(partReservationRepository.save(reservation));
     }
 

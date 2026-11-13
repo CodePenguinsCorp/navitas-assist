@@ -1,3 +1,5 @@
+import { RmaService } from '../../core/services/rma.service';
+import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { RmaRepairPanelComponent } from '../rma-repair-panel/rma-repair-panel.component';
 import { RmaPartsPanelComponent } from '../rma-parts-panel/rma-parts-panel.component';
 import { RmaWarrantyFieldComponent } from '../rma-warranty-field/rma-warranty-field.component';
@@ -46,6 +48,16 @@ import {
   styleUrl: './rma-detail-modal.component.css'
 })
 export class RmaDetailModalComponent {
+  private readonly rmaService = inject(RmaService);
+  protected readonly repairError = signal('');
+  protected refreshRepair(): void {
+    const id = this.rma().id;
+    this.repairError.set('');
+    this.rmaService.getById(id).subscribe({
+      next: updated => { if (this.rma().id === id) this.rmaUpdated.emit(updated); },
+      error: error => this.repairError.set(extractHttpErrorMessage(error, 'Não foi possível atualizar o histórico.'))
+    });
+  }
   readonly rma = input.required<RmaResponse>();
   readonly canUpdateStatus = input(false);
   readonly canUpdateAssignee = input(false);

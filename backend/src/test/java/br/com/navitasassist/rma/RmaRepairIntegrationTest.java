@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -42,6 +43,7 @@ class RmaRepairIntegrationTest {
     @Autowired private ClientRepository clients;
     @Autowired private ProductRepository products;
     @Autowired private PartRepository parts;
+    @jakarta.persistence.PersistenceContext private jakarta.persistence.EntityManager entityManager;
     private RmaRecord rma;
 
     @BeforeEach
@@ -107,6 +109,59 @@ class RmaRepairIntegrationTest {
         mvc.perform(get("/api/rmas/999999/repair").with(asProfile("viewer", "VIEWER"))).andExpect(status().isNotFound());
         mvc.perform(post("/api/rmas/999999/repair/interventions").with(asProfile("repair-tech", "TECHNICIAN")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(intervention("1", LocalDate.now())))).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void editsAndVoidsInterventionWithoutDeletingOrCountingHours() throws Exception {
+        var created = write("interventions", intervention("1", LocalDate.now())).andExpect(status().isCreated()).andReturn();
+        long id = mapper.readTree(created.getResponse().getContentAsString()).get("id").asLong();
+        mvc.perform(put(base() + "/interventions/" + id).with(asProfile("editor", "TECHNICIAN")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(intervention("2.5", LocalDate.now()))))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.hours").value(2.5)).andExpect(jsonPath("$.editedBy").value("editor"));
+        write("interventions/" + id + "/void", Map.of("reason", "  Duplicado  ")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.voidReason").value("Duplicado")).andExpect(jsonPath("$.voidedAt").isNotEmpty());
+        entityManager.flush();
+        entityManager.clear();
+        mvc.perform(get(base()).with(asProfile("viewer", "VIEWER"))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalServiceHours").value(0)).andExpect(jsonPath("$.interventions", hasSize(1)));
+        write("interventions/" + id + "/void", Map.of("reason", "De novo")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/rmas/" + rma.getId()).with(asProfile("viewer", "VIEWER"))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.repairHistory", hasSize(3))).andExpect(jsonPath("$.repairHistory[0].changedBy").isNotEmpty())
+            .andExpect(jsonPath("$.repairHistory[0].id").isNumber()).andExpect(jsonPath("$.repairHistory[0].action").value("VOID"));
+    }
+
+    @Test
+    void externalEditsValidateAndVoidRequiresReasonAndOpenRma() throws Exception {
+        var payload = Map.of("description", "Capacitor", "quantity", "1", "replacementReason", "Falha");
+        var created = write("external-components", payload).andExpect(status().isCreated()).andReturn();
+        long id = mapper.readTree(created.getResponse().getContentAsString()).get("id").asLong();
+        String path = base() + "/external-components/" + id;
+        mvc.perform(put(path).with(asProfile("editor", "TECHNICIAN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(payload)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.editedAt").isNotEmpty());
+        mvc.perform(put(base() + "/external-components/999999").with(asProfile("editor", "TECHNICIAN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(payload)))
+            .andExpect(status().isNotFound());
+        write("external-components/" + id + "/void", Map.of("reason", " ")).andExpect(status().isBadRequest());
+        write("external-components/" + id + "/void", Map.of("reason", "x".repeat(1001))).andExpect(status().isBadRequest());
+        rma.setStatus(RmaStatus.COMPLETED); rmas.saveAndFlush(rma);
+        mvc.perform(put(path).with(asProfile("editor", "TECHNICIAN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(payload)))
+            .andExpect(status().isBadRequest());
+        write("external-components/" + id + "/void", Map.of("reason", "Erro")).andExpect(status().isBadRequest());
+        rma.setStatus(RmaStatus.IN_REPAIR); rmas.saveAndFlush(rma);
+        write("external-components/" + id + "/void", Map.of("reason", "Erro")).andExpect(status().isOk());
+    }
+
+    @Test
+    void keepsTheCompleteVoidReasonInTheTimelineWithMaximumLengthDescription() throws Exception {
+        var payload = new java.util.HashMap<>(intervention("1", LocalDate.now()));
+        payload.put("description", "D".repeat(1000));
+        var created = write("interventions", payload).andExpect(status().isCreated()).andReturn();
+        long id = mapper.readTree(created.getResponse().getContentAsString()).get("id").asLong();
+        String reason = "Motivo " + "R".repeat(993);
+        write("interventions/" + id + "/void", Map.of("reason", reason)).andExpect(status().isOk());
+        entityManager.flush();
+        entityManager.clear();
+        mvc.perform(get("/api/rmas/" + rma.getId()).with(asProfile("viewer", "VIEWER"))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.repairHistory[0].summary").value(org.hamcrest.Matchers.containsString(reason)));
     }
 
     private Map<String, Object> intervention(String hours, LocalDate date) {

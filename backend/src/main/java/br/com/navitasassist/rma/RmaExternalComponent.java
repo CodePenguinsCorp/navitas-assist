@@ -23,4 +23,9 @@ public class RmaExternalComponent extends AuditableEntity {
     @Column(nullable = false, length = 1000) private String replacementReason;
     @Column(nullable = false) private java.time.Instant appliedAt;
     @Column(nullable = false, length = 120) private String appliedBy;
+    @Column(length = 120) private String editedBy;
+    private java.time.Instant editedAt;
+    @Column(length = 120) private String voidedBy;
+    private java.time.Instant voidedAt;
+    @Column(length = 1000) private String voidReason;
 }

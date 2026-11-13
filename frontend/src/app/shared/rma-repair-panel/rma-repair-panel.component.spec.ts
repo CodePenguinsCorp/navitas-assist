@@ -7,7 +7,7 @@ import { RmaRepairPanelComponent } from './rma-repair-panel.component';
 
 describe('RmaRepairPanelComponent', () => {
   async function setup(permissions: Permission[] = ['rma.diagnosticar'], status = 'IN_REPAIR') {
-    const service = { getRepair: vi.fn(() => of({ interventions: [{ id: 1, type: 'CLEANING', description: 'Placa limpa', performedOn: '2026-11-12', hours: 1.125, technicianName: 'ana' }], totalServiceHours: 1.125 })), addIntervention: vi.fn(() => of({})) };
+    const service = { getRepair: vi.fn(() => of({ interventions: [{ id: 1, type: 'CLEANING', description: 'Placa limpa', performedOn: '2026-11-12', hours: 1.125, technicianName: 'ana' }], totalServiceHours: 1.125 })), updateIntervention: vi.fn(() => of({})), voidIntervention: vi.fn(() => of({})), addIntervention: vi.fn(() => of({})) };
     await TestBed.configureTestingModule({ imports: [RmaRepairPanelComponent], providers: [{ provide: RmaRepairService, useValue: service }, providePermissions(permissions)] }).compileComponents();
     const fixture = TestBed.createComponent(RmaRepairPanelComponent);
     fixture.componentRef.setInput('rmaId', 7); fixture.componentRef.setInput('rmaStatus', status); fixture.detectChanges();
@@ -40,4 +40,17 @@ describe('RmaRepairPanelComponent', () => {
     closed.component.form.setValue({ type: 'CLEANING', description: 'X', performedOn: '2026-11-12', hours: 1 });
     closed.component.save(); expect(closed.service.addIntervention).not.toHaveBeenCalled();
   });
+  it('edits using the same form and voids only with a reason', async () => {
+    const { component, service } = await setup();
+    const item = component.repair().interventions[0];
+    component.edit(item);
+    component.form.patchValue({ description: ' Corrigido ', hours: 2 });
+    component.save();
+    expect(service.updateIntervention).toHaveBeenCalledWith(7, 1, { type: 'CLEANING', description: 'Corrigido', performedOn: '2026-11-12', hours: 2 });
+    component.startVoid(item);
+    component.confirmVoid(); expect(service.voidIntervention).not.toHaveBeenCalled();
+    component.voidReason.setValue(' Duplicado '); component.confirmVoid();
+    expect(service.voidIntervention).toHaveBeenCalledWith(7, 1, 'Duplicado');
+  });
+
 });

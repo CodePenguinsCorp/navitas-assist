@@ -775,6 +775,15 @@ export class RmasComponent {
   }
 
   /** A save made inside the detail (impediment, due date) refreshes the detail and the list. */
+  protected refreshRepair(): void {
+    const id = this.selectedRma()?.id;
+    if (!id) return;
+    this.rmaService.getById(id).subscribe({
+      next: updated => { if (this.selectedRma()?.id === id) this.detailRmaSaved(updated); },
+      error: error => this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível atualizar o histórico.'))
+    });
+  }
+
   protected detailRmaSaved(updated: RmaResponse): void {
     this.selectedRmaSignal.set(updated);
     this.refreshRmas();

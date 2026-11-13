@@ -1,6 +1,6 @@
-import { Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { Component, EventEmitter, Output, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription, finalize } from 'rxjs';
 import { CLOSED_RMA_STATUSES } from '../../core/mock-data';
 import { ExternalComponentResponse, PartConsumptionRequest, PartReservationResponse, PartResponse, RmaPartsResponse, RmaStatus } from '../../core/models';
@@ -10,6 +10,8 @@ import { PartReservationAction, PartService } from '../../core/services/part.ser
 import { extractHttpErrorMessage, normalizeOptionalText } from '../../core/utils/catalog-ui';
 import { formatBusinessDateTime } from '../../core/utils/date';
 import { PART_MOVEMENT_LABELS, PART_RESERVATION_STATUS_LABELS, formatCurrency, formatQuantity, reservationStatusClass } from '../../core/utils/part-ui';
+import { NgTemplateOutlet } from '@angular/common';
+import { RowActionComponent } from '../row-action/row-action.component';
 import { CustomSelectComponent, CustomSelectOption } from '../form-controls/custom-select/custom-select.component';
 
 const ACTION_MESSAGES: Record<PartReservationAction, string> = {
@@ -20,7 +22,7 @@ const ACTION_MESSAGES: Record<PartReservationAction, string> = {
 
 @Component({
   selector: 'app-rma-parts-panel',
-  imports: [ReactiveFormsModule, CustomSelectComponent],
+  imports: [NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent],
   templateUrl: './rma-parts-panel.component.html',
   styles: [`
     :host {
@@ -138,6 +140,10 @@ export class RmaPartsPanelComponent {
   private readonly permissions = inject(PermissionService);
   private readonly repairService = inject(RmaRepairService);
 
+  @Output() readonly changed = new EventEmitter<void>();
+  protected readonly editingExternal = signal<ExternalComponentResponse | null>(null);
+  protected readonly voidingExternal = signal<ExternalComponentResponse | null>(null);
+  protected readonly voidReason = new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.pattern(/\S/), Validators.maxLength(1000)] });
   readonly rmaId = input.required<number>();
   readonly rmaStatus = input.required<RmaStatus>();
 
@@ -188,8 +194,8 @@ export class RmaPartsPanelComponent {
   protected readonly externalComponents = signal<ExternalComponentResponse[]>([]);
   protected readonly externalError = signal('');
   protected readonly replacedComponents = computed(() => [
-    ...(this.parts()?.replacedComponents ?? this.reservations().filter(r => r.status === 'CONSUMED')).map(r => ({ ...r, key: `stock-${r.id}`, description: r.partName, code: r.partCode, source: 'Estoque' })),
-    ...this.externalComponents().map(c => ({ ...c, key: `external-${c.id}`, source: 'Fora do estoque' }))
+    ...(this.parts()?.replacedComponents ?? this.reservations().filter(r => r.status === 'CONSUMED')).map(r => ({ ...r, key: `stock-${r.id}`, description: r.partName, code: r.partCode, source: 'Estoque', external: false as const, voidedAt: null, voidReason: null, voidedBy: null })),
+    ...this.externalComponents().map(c => ({ ...c, key: `external-${c.id}`, source: 'Fora do estoque', external: true as const }))
   ]);
   protected readonly consumptionForm = this.formBuilder.nonNullable.group({
     replacementReason: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(1000)]],
@@ -286,11 +292,37 @@ export class RmaPartsPanelComponent {
     if (this.externalForm.invalid) { this.externalForm.markAllAsTouched(); return; }
     const id = this.rmaId(); const value = this.externalForm.getRawValue();
     this.externalSaving.set(true); this.clearMessages();
-    this.repairService.addExternalComponent(id, { ...value, code: normalizeOptionalText(value.code), description: value.description.trim(), unit: value.unit.trim() || 'un', componentBatch: normalizeOptionalText(value.componentBatch), replacementReason: value.replacementReason.trim() })
+    const payload = { ...value, code: normalizeOptionalText(value.code), description: value.description.trim(), unit: value.unit.trim() || 'un', componentBatch: normalizeOptionalText(value.componentBatch), replacementReason: value.replacementReason.trim() };
+    const editing = this.editingExternal();
+    (editing ? this.repairService.updateExternalComponent(id, editing.id, payload) : this.repairService.addExternalComponent(id, payload))
       .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.externalSaving.set(false))).subscribe({
-        next: () => { if (id !== this.rmaId()) return; this.externalOpen.set(false); this.externalForm.reset(); this.successMessage.set('Componente registrado.'); this.loadExternal(id); },
+        next: () => { if (id !== this.rmaId()) return; this.cancelExternal(); this.successMessage.set('Componente salvo.'); this.loadExternal(id); this.changed.emit(); },
         error: error => { if (id === this.rmaId()) this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível registrar o componente.')); }
       });
+  }
+
+  protected editExternal(item: ExternalComponentResponse): void {
+    if (!this.canCreateReservation() || this.externalSaving() || item.voidedAt) return;
+    this.voidingExternal.set(null); this.editingExternal.set(item); this.externalOpen.set(true);
+    this.externalForm.reset({ code: item.code ?? '', description: item.description, quantity: item.quantity, unit: item.unit, componentBatch: item.componentBatch ?? '', replacementReason: item.replacementReason });
+  }
+
+  protected cancelExternal(): void { this.editingExternal.set(null); this.externalOpen.set(false); this.externalForm.reset(); }
+
+  protected startVoidExternal(item: ExternalComponentResponse): void {
+    if (!this.canCreateReservation() || this.externalSaving() || item.voidedAt) return;
+    this.cancelExternal(); this.voidingExternal.set(item); this.voidReason.reset();
+  }
+
+  protected confirmVoidExternal(): void {
+    const item = this.voidingExternal();
+    if (!item || !this.canCreateReservation() || this.externalSaving()) return;
+    if (this.voidReason.invalid) { this.voidReason.markAsTouched(); return; }
+    const id = this.rmaId(); this.externalSaving.set(true); this.clearMessages();
+    this.repairService.voidExternalComponent(id, item.id, this.voidReason.value.trim()).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.externalSaving.set(false))).subscribe({
+      next: () => { if (id !== this.rmaId()) return; this.voidingExternal.set(null); this.loadExternal(id); this.changed.emit(); },
+      error: error => { if (id === this.rmaId()) this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível anular o componente.')); }
+    });
   }
 
   protected loadExternal(id = this.rmaId()): void {
@@ -318,6 +350,7 @@ export class RmaPartsPanelComponent {
       next: () => {
         if (this.rmaId() !== rmaId) return;
         this.consuming.set(null);
+        if (action === 'consume') this.changed.emit();
         this.successMessage.set(ACTION_MESSAGES[action]);
         this.load(rmaId);
       },
@@ -332,6 +365,7 @@ export class RmaPartsPanelComponent {
     this.loadRequest?.unsubscribe();
     this.catalogRequest?.unsubscribe();
     this.externalRequest?.unsubscribe();
+    this.editingExternal.set(null); this.voidingExternal.set(null); this.voidReason.reset();
     this.consuming.set(null); this.externalOpen.set(false); this.externalComponents.set([]); this.externalError.set(''); this.externalForm.reset();
     this.parts.set(null);
     this.hasLoaded.set(false);

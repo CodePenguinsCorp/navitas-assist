@@ -404,6 +404,7 @@ export interface RmaResponse {
   carrier: string | null;
   trackingCode: string | null;
   diagnosis: DiagnosisResponse | null;
+  repairHistory?: RmaRepairHistoryResponse[];
   statusHistory: RmaStatusHistoryResponse[];
   stagePeriods: RmaStagePeriodResponse[];
   assignmentHistory: RmaAssignmentHistoryResponse[];
@@ -615,7 +616,25 @@ export interface ExternalComponentRequest extends PartConsumptionRequest {
   unit: string;
 }
 
-export interface ExternalComponentResponse extends ExternalComponentRequest {
+export interface RepairAudit {
+  editedBy?: string | null;
+  editedAt?: string | null;
+  voidedBy?: string | null;
+  voidedAt?: string | null;
+  voidReason?: string | null;
+}
+
+export interface RmaRepairHistoryResponse {
+  id: number;
+  entityType: 'EXTERNAL_COMPONENT' | 'INTERVENTION' | 'STOCK_COMPONENT';
+  entityId: number;
+  action: 'CREATE' | 'UPDATE' | 'VOID' | 'APPLY';
+  changedBy: string;
+  changedAt: string;
+  summary: string;
+}
+
+export interface ExternalComponentResponse extends ExternalComponentRequest, RepairAudit {
   id: number;
   appliedAt: string;
   appliedBy: string;
@@ -630,7 +649,7 @@ export interface InterventionRequest {
   hours: number;
 }
 
-export interface InterventionResponse extends InterventionRequest {
+export interface InterventionResponse extends InterventionRequest, RepairAudit {
   id: number;
   technicianName: string;
 }

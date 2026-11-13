@@ -136,6 +136,10 @@ public class RmaRecord extends AuditableEntity {
     @OrderBy("changedAt DESC, id DESC")
     private List<RmaDueDateHistory> dueDateHistory = new ArrayList<>();
 
+    @OneToMany(mappedBy = "rma", cascade = CascadeType.ALL)
+    @OrderBy("changedAt DESC, id DESC")
+    private List<RmaRepairHistory> repairHistory = new ArrayList<>();
+
     public ItemIdentification getItemIdentification() {
         // JPA may reconstruct an all-null embedded value as null.
         if (itemIdentification == null) {

@@ -16,8 +16,9 @@ MySQL 8, com schema gerido pelo Flyway (`backend/src/main/resources/db/migration
 | V8 | `V8__rma_item_position.sql` | `item_position`: ordem dos itens (o primeiro é o principal). |
 | V9 | `V9__catalog_import_permission.sql` | Concede `cadastros.importar` ao Administrador. |
 | V10 | `V10__status_note_audit.sql` | Auditoria da edição de observação do histórico de status (`note_edited_by`, `note_edited_at`). |
+| V11 | `V11__repair_history_and_void.sql` | Auditoria de edição e anulação lógica de componentes externos e intervenções; `rma_repair_history`, com inclusão dos registros anteriores. |
 
-Tabelas principais: `clients`, `products`, `rmas`, `rma_items`, `diagnoses`, `rma_status_history`, `rma_assignment_history`, `rma_blocks`, `parts`, `part_reservations`, `part_movements`, `access_profiles`, `access_profile_permissions`, `user_accounts`, `user_account_extra_permissions`, `kanban_views`, `notification_*`, `notifications`, `protocol_*` e `rma_protocol_*`.
+Tabelas principais: `clients`, `products`, `rmas`, `rma_items`, `diagnoses`, `rma_status_history`, `rma_assignment_history`, `rma_repair_history`, `rma_blocks`, `parts`, `part_reservations`, `part_movements`, `access_profiles`, `access_profile_permissions`, `user_accounts`, `user_account_extra_permissions`, `kanban_views`, `notification_*`, `notifications`, `protocol_*` e `rma_protocol_*`.
 
 ## Política da baseline única
 

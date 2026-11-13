@@ -1,14 +1,16 @@
-import { Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { Component, EventEmitter, Output, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription, finalize } from 'rxjs';
 import { CLOSED_RMA_STATUSES } from '../../core/mock-data';
-import { InterventionType, RmaRepairResponse, RmaStatus } from '../../core/models';
+import { InterventionResponse, InterventionType, RmaRepairResponse, RmaStatus } from '../../core/models';
 import { PermissionService } from '../../core/services/permission.service';
 import { RmaRepairService } from '../../core/services/rma-repair.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { formatDateOnly, todayInputValue } from '../../core/utils/date';
 import { CustomSelectComponent } from '../form-controls/custom-select/custom-select.component';
+import { RowActionComponent } from '../row-action/row-action.component';
 import { DatePickerComponent } from '../form-controls/date-picker/date-picker.component';
 
 export const INTERVENTION_LABELS: Record<InterventionType, string> = {
@@ -17,10 +19,14 @@ export const INTERVENTION_LABELS: Record<InterventionType, string> = {
 
 @Component({
   selector: 'app-rma-repair-panel',
-  imports: [ReactiveFormsModule, CustomSelectComponent, DatePickerComponent],
+  imports: [NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent],
   templateUrl: './rma-repair-panel.component.html'
 })
 export class RmaRepairPanelComponent {
+  @Output() readonly changed = new EventEmitter<void>();
+  protected readonly editing = signal<InterventionResponse | null>(null);
+  protected readonly voiding = signal<InterventionResponse | null>(null);
+  protected readonly voidReason = new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.pattern(/\S/), Validators.maxLength(1000)] });
   readonly rmaId = input.required<number>();
   readonly rmaStatus = input.required<RmaStatus>();
   private readonly service = inject(RmaRepairService);
@@ -49,7 +55,7 @@ export class RmaRepairPanelComponent {
   constructor() {
     effect(() => {
       const id = this.rmaId();
-      untracked(() => { this.form.reset(); this.success.set(''); this.repair.set(null); this.load(id); });
+      untracked(() => { this.form.reset(); this.editing.set(null); this.voiding.set(null); this.voidReason.reset(); this.success.set(''); this.repair.set(null); this.load(id); });
     });
   }
 
@@ -67,9 +73,34 @@ export class RmaRepairPanelComponent {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     const id = this.rmaId(); const value = this.form.getRawValue();
     this.saving.set(true); this.error.set(''); this.success.set('');
-    this.service.addIntervention(id, { ...value, description: value.description.trim() }).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.saving.set(false))).subscribe({
-      next: () => { if (id !== this.rmaId()) return; this.form.reset(); this.success.set('Intervenção registrada.'); this.load(id); },
+    const payload = { ...value, description: value.description.trim() };
+    const editing = this.editing();
+    (editing ? this.service.updateIntervention(id, editing.id, payload) : this.service.addIntervention(id, payload)).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.saving.set(false))).subscribe({
+      next: () => { if (id !== this.rmaId()) return; this.cancelEdit(); this.success.set('Intervenção salva.'); this.load(id); this.changed.emit(); },
       error: error => { if (id === this.rmaId()) this.error.set(extractHttpErrorMessage(error, 'Não foi possível registrar a intervenção.')); }
+    });
+  }
+  protected edit(item: InterventionResponse): void {
+    if (!this.canWrite() || this.saving() || item.voidedAt) return;
+    this.voiding.set(null); this.editing.set(item);
+    this.form.reset({ type: item.type, description: item.description, performedOn: item.performedOn, hours: item.hours });
+  }
+
+  protected cancelEdit(): void { this.editing.set(null); this.form.reset(); }
+
+  protected startVoid(item: InterventionResponse): void {
+    if (!this.canWrite() || this.saving() || item.voidedAt) return;
+    this.cancelEdit(); this.voiding.set(item); this.voidReason.reset();
+  }
+
+  protected confirmVoid(): void {
+    const item = this.voiding();
+    if (!item || !this.canWrite() || this.saving()) return;
+    if (this.voidReason.invalid) { this.voidReason.markAsTouched(); return; }
+    const id = this.rmaId(); this.saving.set(true); this.error.set('');
+    this.service.voidIntervention(id, item.id, this.voidReason.value.trim()).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.saving.set(false))).subscribe({
+      next: () => { if (id !== this.rmaId()) return; this.voiding.set(null); this.load(id); this.changed.emit(); },
+      error: error => { if (id === this.rmaId()) this.error.set(extractHttpErrorMessage(error, 'Não foi possível anular a intervenção.')); }
     });
   }
 }

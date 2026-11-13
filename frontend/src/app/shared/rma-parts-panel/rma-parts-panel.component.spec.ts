@@ -163,4 +163,17 @@ describe('RmaPartsPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Componente novo');
   });
 
+  it('edits external components and requires a reason before voiding', async () => {
+    await setUp('TECHNICIAN');
+    const service = TestBed.inject(RmaRepairService);
+    const update = vi.fn(() => of({})); const voidRecord = vi.fn(() => of({}));
+    Object.assign(service, { updateExternalComponent: update, voidExternalComponent: voidRecord });
+    const component = fixture.componentInstance as any;
+    const item = { id: 8, code: null, description: 'Resistor', quantity: 1, unit: 'un', componentBatch: null, replacementReason: 'Falha' };
+    component.editExternal(item); component.externalForm.patchValue({ description: ' Corrigido ' }); component.saveExternal();
+    expect(update).toHaveBeenCalledWith(7, 8, expect.objectContaining({ description: 'Corrigido' }));
+    component.startVoidExternal(item); component.confirmVoidExternal(); expect(voidRecord).not.toHaveBeenCalled();
+    component.voidReason.setValue(' Erro '); component.confirmVoidExternal(); expect(voidRecord).toHaveBeenCalledWith(7, 8, 'Erro');
+  });
+
 });

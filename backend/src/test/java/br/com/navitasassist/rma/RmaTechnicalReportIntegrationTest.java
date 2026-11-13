@@ -134,6 +134,21 @@ class RmaTechnicalReportIntegrationTest {
     }
 
     @Test
+    void excludesVoidedComponentsAndInterventionsFromPdfAndHours() throws Exception {
+        RmaExternalComponent component = new RmaExternalComponent();
+        component.setRma(rma); component.setDescription("EXTERNO-ANULADO"); component.setQuantity(BigDecimal.ONE); component.setUnit("un");
+        component.setReplacementReason("Erro"); component.setAppliedAt(java.time.Instant.now()); component.setAppliedBy("tech");
+        component.setVoidedAt(java.time.Instant.now()); component.setVoidedBy("tech"); component.setVoidReason("Duplicado"); externalComponents.saveAndFlush(component);
+        RmaIntervention item = new RmaIntervention(); item.setRma(rma); item.setType(InterventionType.CLEANING);
+        item.setDescription("INTERVENCAO-ANULADA"); item.setPerformedOn(LocalDate.now()); item.setHours(new BigDecimal("7.125")); item.setTechnicianName("tech");
+        item.setVoidedAt(java.time.Instant.now()); item.setVoidedBy("tech"); item.setVoidReason("Duplicado"); interventions.saveAndFlush(item);
+        String report = text(mockMvc.perform(get("/api/rmas/{id}/report.pdf", rma.getId()).with(asProfile("viewer", "VIEWER")))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
+        assertFalse(report.contains("EXTERNO-ANULADO"), report); assertFalse(report.contains("INTERVENCAO-ANULADA"), report);
+        assertFalse(report.contains("7,125"), report); assertTrue(report.contains("Total de horas: 0"), report);
+    }
+
+    @Test
     void returnsNotFoundAndRequiresRmaView() throws Exception {
         mockMvc.perform(get("/api/rmas/{id}/report.pdf", 999999).with(asProfile("admin", "ADMIN"))).andExpect(status().isNotFound());
         mockMvc.perform(get("/api/rmas/{id}/report.pdf", rma.getId())).andExpect(status().isUnauthorized());

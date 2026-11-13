@@ -1,4 +1,5 @@
 <section class="modal-overlay" (click)="requestClose()">
+  @if (repairError()) { <p class="field-error" role="alert">{{ repairError() }}</p> }
   <article
     class="panel modal-panel rma-detail detail-surface"
     role="dialog"
@@ -107,8 +108,8 @@
             (busyChange)="diagnosisBusy.set($event); busyChange.emit($event)" />
         </section>
 
-        @defer { <app-rma-repair-panel [rmaId]="rma().id" [rmaStatus]="rma().status" />
-        <app-rma-parts-panel [rmaId]="rma().id" [rmaStatus]="rma().status" /> } @placeholder { <div aria-busy="true"></div> }
+        @defer { <app-rma-repair-panel (changed)="refreshRepair()" [rmaId]="rma().id" [rmaStatus]="rma().status" />
+        <app-rma-parts-panel (changed)="refreshRepair()" [rmaId]="rma().id" [rmaStatus]="rma().status" /> } @placeholder { <div aria-busy="true"></div> }
         @let repair = repairFacts(rma());
         @if (repair.length > 0) {
           <section class="rma-detail__section detail-card">
@@ -147,7 +148,8 @@
                   } @else if (entry.kind === 'assignee') {
                     <p>Responsável <span class="rma-detail__from">{{ entry.from }}</span> <span aria-hidden="true">→</span> <span class="mini-chip">{{ entry.to }}</span></p>
                   } @else {
-                    <p class="rma-detail__due-date-event">{{ historyEntryTitle(entry) }}</p>
+                    <p class="rma-detail__due-date-event" [class.repair-voided]="entry.kind === 'repair' && entry.voided">{{ historyEntryTitle(entry) }}</p>
+                    @if (entry.kind === 'repair' && entry.voidReason) { <small class="muted-inline">{{ entry.voidReason }}</small> }
                     @if (entry.kind === 'warranty' && entry.reason) { <blockquote>{{ entry.reason }}</blockquote> }
                   }
                 </div>

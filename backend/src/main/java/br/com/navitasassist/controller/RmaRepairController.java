@@ -31,4 +31,23 @@ public class RmaRepairController {
     public InterventionResponse addIntervention(@PathVariable Long rmaId, @Valid @RequestBody InterventionRequest request) {
         return repairService.addIntervention(rmaId, request);
     }
+    @PutMapping("/external-components/{id}")
+    public ExternalComponentResponse updateExternalComponent(@PathVariable Long rmaId, @PathVariable Long id, @Valid @RequestBody ExternalComponentRequest request) {
+        return repairService.updateExternalComponent(rmaId, id, request);
+    }
+
+    @PutMapping("/interventions/{id}")
+    public InterventionResponse updateIntervention(@PathVariable Long rmaId, @PathVariable Long id, @Valid @RequestBody InterventionRequest request) {
+        return repairService.updateIntervention(rmaId, id, request);
+    }
+
+    @PostMapping("/external-components/{id}/void")
+    public ExternalComponentResponse voidExternalComponent(@PathVariable Long rmaId, @PathVariable Long id, @Valid @RequestBody RepairVoidRequest request) {
+        return repairService.voidExternalComponent(rmaId, id, request);
+    }
+
+    @PostMapping("/interventions/{id}/void")
+    public InterventionResponse voidIntervention(@PathVariable Long rmaId, @PathVariable Long id, @Valid @RequestBody RepairVoidRequest request) {
+        return repairService.voidIntervention(rmaId, id, request);
+    }
 }

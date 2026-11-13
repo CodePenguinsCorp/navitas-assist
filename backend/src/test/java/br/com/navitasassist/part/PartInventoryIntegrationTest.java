@@ -94,6 +94,11 @@ class PartInventoryIntegrationTest {
             .andExpect(jsonPath("$.appliedAt").isNotEmpty());
         mockMvc.perform(get("/api/rmas/{id}/parts", rma.getId()).with(VIEWER))
             .andExpect(jsonPath("$.replacedComponents", hasSize(1))).andExpect(jsonPath("$.replacedComponents[0].replacementReason").value("Curto"));
+        mockMvc.perform(get("/api/rmas/{id}", rma.getId()).with(VIEWER))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.repairHistory", hasSize(1)))
+            .andExpect(jsonPath("$.repairHistory[0].entityType").value("STOCK_COMPONENT"))
+            .andExpect(jsonPath("$.repairHistory[0].summary").value(org.hamcrest.Matchers.containsString("L123")));
+
     }
 
     @BeforeEach

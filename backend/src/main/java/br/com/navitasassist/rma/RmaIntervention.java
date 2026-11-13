@@ -22,4 +22,9 @@ public class RmaIntervention extends AuditableEntity {
     @Column(nullable = false) private java.time.LocalDate performedOn;
     @Column(nullable = false, precision = 9, scale = 3) private java.math.BigDecimal hours;
     @Column(nullable = false, length = 120) private String technicianName;
+    @Column(length = 120) private String editedBy;
+    private java.time.Instant editedAt;
+    @Column(length = 120) private String voidedBy;
+    private java.time.Instant voidedAt;
+    @Column(length = 1000) private String voidReason;
 }

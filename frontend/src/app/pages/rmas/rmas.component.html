@@ -277,7 +277,7 @@
               <section class="rma-details__section">
                 <app-rma-diagnosis [rma]="rma" [disabled]="statusBusy() || warrantyBusy()" (saved)="detailRmaSaved($event)" (busyChange)="diagnosisBusy.set($event)" />
               </section>
-              @defer { <app-rma-repair-panel [rmaId]="rma.id" [rmaStatus]="rma.status" /> } @placeholder { <div aria-busy="true"></div> }
+              @defer { <app-rma-repair-panel (changed)="refreshRepair()" [rmaId]="rma.id" [rmaStatus]="rma.status" /> } @placeholder { <div aria-busy="true"></div> }
               @let repair = repairFacts(rma);
               @if (repair.length > 0) {
                 <section class="rma-details__section">
@@ -292,7 +292,7 @@
             }
             @case ('parts') {
               @defer {
-                <app-rma-parts-panel [rmaId]="rma.id" [rmaStatus]="rma.status" />
+                <app-rma-parts-panel (changed)="refreshRepair()" [rmaId]="rma.id" [rmaStatus]="rma.status" />
               } @placeholder {
                 <div class="rma-detail-copy" aria-busy="true"></div>
               }
@@ -315,12 +315,13 @@
                   @for (entry of history; track $index) {
                     <li class="record-card">
                       <div class="record-card__title">
-                        <strong>{{ historyEntryTitle(entry) }}</strong>
+                        <strong [class.repair-voided]="entry.kind === 'repair' && entry.voided">{{ historyEntryTitle(entry) }}</strong>
                         <time>{{ dateTimeLabel(entry.at) }}</time>
                       </div>
                       @if (entry.kind === 'status') {
                         <app-rma-status-field [rma]="rma" [event]="entry.event" [showSelector]="false" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy()" (saved)="detailRmaSaved($event)" (busyChange)="statusBusy.set($event)" />
                       } @else if (entry.kind === 'warranty' && entry.reason) { <blockquote class="rma-details__note">{{ entry.reason }}</blockquote> }
+                      @if (entry.kind === 'repair' && entry.voidReason) { <small class="muted-inline">{{ entry.voidReason }}</small> }
                         <dl class="meta-list"><div><dt>Alterado por</dt><dd>{{ entry.by }}</dd></div></dl>
                     </li>
                   }

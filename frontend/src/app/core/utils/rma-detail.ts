@@ -123,6 +123,7 @@ export function stageFact(rma: Pick<RmaResponse, 'status' | 'stagePeriods'>, now
 
 export type RmaHistoryEntry =
   | { kind: 'status'; at: string; by: string; label: string; status: RmaStatus; note: string | null; event: RmaStatusHistoryResponse }
+  | { kind: 'repair'; at: string; by: string; summary: string; voided: boolean; voidReason: string | null }
   | { kind: 'assignee'; at: string; by: string; from: string; to: string }
   | { kind: 'dueDate'; at: string; by: string; from: string | null; to: string | null }
   | { kind: 'warranty'; at: string; by: string; itemId: number; itemLabel: string; from: WarrantyOverrideStatus | null; to: WarrantyOverrideStatus | null; reason: string | null };
@@ -137,6 +138,7 @@ export function dueDateHistoryLabel(entry: { from: string | null; to: string | n
 export function historyEntryTitle(entry: RmaHistoryEntry): string {
   switch (entry.kind) {
     case 'status': return entry.label;
+    case 'repair': return entry.summary;
     case 'assignee': return `${entry.from} → ${entry.to}`;
     case 'dueDate': return dueDateHistoryLabel(entry);
     case 'warranty': return `Garantia de ${entry.itemLabel}: ${entry.from ? warrantyLabel(entry.from) : 'Automático'} → ${entry.to ? warrantyLabel(entry.to) : 'Automático'}`;
@@ -144,12 +146,18 @@ export function historyEntryTitle(entry: RmaHistoryEntry): string {
 }
 
 /**
- * Status records, assignee, due date and warranty changes, newest first. A status record may be a priority change
+ * Repair events, status records, assignee, due date and warranty changes, newest first. A status record may be a priority change
  * or a note with the same status, so no transition or origin is inferred from neighbours.
- * Ties keep input order (status records, assignee changes, then due date and warranty changes); the input arrays are not changed.
+ * Ties keep input order (repair, status, assignee, due date and warranty); the input arrays are not changed.
  */
-export function rmaHistory(rma: Pick<RmaResponse, 'statusHistory' | 'assignmentHistory'> & Partial<Pick<RmaResponse, 'dueDateHistory' | 'warrantyHistory' | 'items'>>): RmaHistoryEntry[] {
+export function rmaHistory(rma: Pick<RmaResponse, 'statusHistory' | 'assignmentHistory'> & Partial<Pick<RmaResponse, 'dueDateHistory' | 'warrantyHistory' | 'items' | 'repairHistory'>>): RmaHistoryEntry[] {
+  const repairHistory = rma.repairHistory ?? [];
+  const voids = new Map(repairHistory.filter(event => event.action === 'VOID').map(event => [`${event.entityType}-${event.entityId}`, event.summary]));
   const entries: RmaHistoryEntry[] = [
+    ...repairHistory.map((event): RmaHistoryEntry => ({
+      kind: 'repair', at: event.changedAt, by: event.changedBy, summary: event.summary,
+      voided: voids.has(`${event.entityType}-${event.entityId}`), voidReason: voids.get(`${event.entityType}-${event.entityId}`) ?? null
+    })),
     ...rma.statusHistory.map((record): RmaHistoryEntry => ({
       kind: 'status',
       at: record.changedAt,

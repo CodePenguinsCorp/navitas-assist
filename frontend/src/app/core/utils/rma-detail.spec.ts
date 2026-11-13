@@ -260,3 +260,15 @@ describe('histórico de garantia', () => {
     expect(historyEntryTitle(history[0])).toBe('Garantia de Item #99: Em garantia → Fora de garantia');
   });
 });
+
+describe('repair timeline', () => {
+  it('merges repair events and marks the voided entity while preserving audit', () => {
+    const history = rmaHistory({ statusHistory: [], assignmentHistory: [], repairHistory: [
+      { id: 1, entityType: 'INTERVENTION', entityId: 8, action: 'CREATE', changedBy: 'ana', changedAt: '2026-11-12T10:00:00Z', summary: 'Limpeza' },
+      { id: 2, entityType: 'INTERVENTION', entityId: 8, action: 'VOID', changedBy: 'bia', changedAt: '2026-11-13T10:00:00Z', summary: 'Duplicado' }
+    ] } as any);
+    expect(history).toHaveLength(2);
+    expect(historyEntryTitle(history[0])).toBe('Duplicado');
+    expect(history[1]).toMatchObject({ kind: 'repair', by: 'ana', voided: true });
+  });
+});

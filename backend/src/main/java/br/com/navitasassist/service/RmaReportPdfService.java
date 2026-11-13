@@ -59,7 +59,7 @@ public class RmaReportPdfService {
             .map(reservation -> new ReplacedComponent(reservation.partCode(), reservation.partName(), reservation.quantity(), reservation.unit(),
                 reservation.componentBatch(), reservation.replacementReason(), reservation.appliedAt(), reservation.appliedBy(), "Estoque"))
             .toList());
-        repairService.listExternalComponents(rmaId).forEach(component -> components.add(new ReplacedComponent(component.code(), component.description(),
+        repairService.listExternalComponents(rmaId).stream().filter(item -> item.voidedAt() == null).forEach(component -> components.add(new ReplacedComponent(component.code(), component.description(),
             component.quantity(), component.unit(), component.componentBatch(), component.replacementReason(), component.appliedAt(), component.appliedBy(), "Fora do estoque")));
         var repair = repairService.getRepair(rmaId);
         RmaTechnicalReport report = new RmaTechnicalReport(rma, components, repair.interventions(), repair.totalServiceHours(), Instant.now());
@@ -122,7 +122,7 @@ public class RmaReportPdfService {
         section(document, "Intervenções");
         if (!report.interventions().isEmpty()) {
             PdfPTable interventions = table(new float[] {2, 3, 5, 2, 3}, "Data", "Tipo", "Descrição", "Horas", "Técnico");
-            report.interventions().forEach(item -> cells(interventions, date(item.performedOn()), interventionLabel(item.type()), item.description(), quantity(item.hours()), item.technicianName()));
+            report.interventions().stream().filter(item -> item.voidedAt() == null).forEach(item -> cells(interventions, date(item.performedOn()), interventionLabel(item.type()), item.description(), quantity(item.hours()), item.technicianName()));
             document.add(interventions);
         }
         document.add(text("Total de horas: " + quantity(report.totalServiceHours()) + " h"));

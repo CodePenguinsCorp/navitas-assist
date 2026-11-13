@@ -54,6 +54,10 @@ Convenções:
 | `GET /api/rmas/{id}/repair/external-components` | `rma.ver` | Componentes externos. |
 | `POST /api/rmas/{id}/repair/external-components` | `pecas.reservar` | Adiciona componente externo. |
 | `POST /api/rmas/{id}/repair/interventions` | `rma.diagnosticar` | Registra intervenção. |
+| `PUT /api/rmas/{rmaId}/repair/interventions/{id}` | `rma.diagnosticar` | Edita intervenção ativa em RMA aberto. |
+| `POST /api/rmas/{rmaId}/repair/interventions/{id}/void` | `rma.diagnosticar` | Anula intervenção com `{ reason }` obrigatório (até 1000). |
+| `PUT /api/rmas/{rmaId}/repair/external-components/{id}` | `pecas.reservar` | Edita componente externo ativo em RMA aberto. |
+| `POST /api/rmas/{rmaId}/repair/external-components/{id}/void` | `pecas.reservar` | Anula componente externo com `{ reason }` obrigatório (até 1000). |
 | `GET /api/protocols/rmas/{rmaId}/executions` | autenticado | Execuções de protocolo do RMA. |
 | `POST /api/protocols/rmas/{rmaId}/executions` | `protocolos.executar` | Inicia execução. |
 | `POST /api/protocols/executions/{executionId}/items/{itemId}/results` | `protocolos.executar` | Registra resultado de um item. |
