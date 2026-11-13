@@ -105,6 +105,7 @@ class NotificationEmailIntegrationTest {
     @Autowired private br.com.navitasassist.config.NotificationProperties properties;
     @Autowired private br.com.navitasassist.service.NotificationEmailQueue queue;
     @org.springframework.boot.test.mock.mockito.SpyBean private br.com.navitasassist.service.NotificationEmailContentFactory contentFactory;
+    @org.springframework.boot.test.mock.mockito.SpyBean private br.com.navitasassist.service.NotificationVisibilityPolicy visibility;
     @MockBean private java.time.Clock clock;
     private final java.time.Instant now = java.time.Instant.parse("2026-11-14T12:00:00Z");
     private UserAccount technician;
@@ -341,6 +342,31 @@ class NotificationEmailIntegrationTest {
         } finally { release.countDown(); pool.shutdownNow(); }
         // Reservada, a linha não volta a ser devida no mesmo instante: outra varredura não a envia.
         worker.poll();
+        org.mockito.Mockito.verifyNoInteractions(mailSender);
+    }
+
+    @Test
+    void persistentErrorOutsideContentBacksOffAndFailsAfterFiveAttempts() throws Exception {
+        assignAndWait();
+        doThrow(new IllegalStateException("database unavailable")).when(visibility).canReceive(any(), any());
+        java.time.Instant attemptTime = now;
+        int[] minutes = {1, 5, 30, 120};
+        for (int attempt = 1; attempt <= 5; attempt++) {
+            org.mockito.Mockito.when(clock.instant()).thenReturn(attemptTime);
+            worker.poll();
+            worker.poll();
+            Notification notification = assignmentNotification();
+            assertEquals(attempt, notification.getEmailAttempts());
+            assertEquals("PROCESSING_ERROR", notification.getEmailError());
+            if (attempt < 5) {
+                attemptTime = attemptTime.plusSeconds(minutes[attempt - 1] * 60L);
+                assertEquals(attemptTime, notification.getEmailNextAttemptAt());
+                assertEquals(NotificationEmailStatus.PENDING, notification.getEmailStatus());
+            } else {
+                assertEquals(NotificationEmailStatus.FAILED, notification.getEmailStatus());
+                org.junit.jupiter.api.Assertions.assertNull(notification.getEmailNextAttemptAt());
+            }
+        }
         org.mockito.Mockito.verifyNoInteractions(mailSender);
     }
 

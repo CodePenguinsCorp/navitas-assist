@@ -20,8 +20,9 @@ public class NotificationEmailWorker {
     public synchronized void poll() {
         if (!properties.getEmail().isEnabled()) return;
         for (Long id : queue.due()) {
+            NotificationEmailQueue.Delivery delivery = null;
             try {
-                var delivery = queue.prepare(id);
+                delivery = queue.prepare(id);
                 if (delivery == null) continue;
                 EmailDeliveryException failure = null;
                 try { provider.send(delivery.message(), id.toString()); }
@@ -31,6 +32,11 @@ public class NotificationEmailWorker {
                 log.info("notificationId={} provider={} attempt={} result={}", id, delivery.provider(), delivery.attempt(), failure == null ? "SENT" : failure.code());
             } catch (RuntimeException error) {
                 log.warn("notificationId={} result=PERSISTENCE_ERROR", id);
+                try {
+                    queue.recordProcessingError(id, delivery == null ? null : delivery.attempt());
+                } catch (RuntimeException deferError) {
+                    log.warn("notificationId={} result=DEFER_ERROR", id);
+                }
             }
         }
     }
