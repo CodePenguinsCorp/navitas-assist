@@ -10,6 +10,7 @@ import {
   RmaBlockRequest,
   RmaBlockResolveRequest,
   RmaResponse,
+  RmaItemWarrantyRequest,
   RmaSummaryResponse,
   RmaPriority,
   RmaStatus,
@@ -62,6 +63,10 @@ export class RmaService {
   updateDueDate(id: number, dueDate: string | null): Observable<RmaResponse> {
     const payload: UpdateRmaDueDateRequest = dueDate ? { dueDate } : { clearDueDate: true };
     return this.http.put<RmaResponse>(`/api/rmas/${id}`, payload);
+  }
+
+  updateWarranty(rmaId: number, itemId: number, payload: RmaItemWarrantyRequest): Observable<RmaResponse> {
+    return this.http.put<RmaResponse>(`/api/rmas/${rmaId}/items/${itemId}/warranty`, payload);
   }
 
   updateAssignee(id: number, payload: RmaAssigneeUpdateRequest): Observable<RmaResponse> {

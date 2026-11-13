@@ -10,13 +10,13 @@ const RMA: RmaResponse = {
   id: 1, code: 'RMA-REAL', clientId: 2, clientName: 'Cliente Alfa',
   items: [
     { id: 11, productId: 3, productName: 'Controlador', productSku: 'SKU-1', batchNumber: 'LOTE-A', serialNumber: 'SER-A',
-      manufacturedAt: null, warrantyMonths: 12, warrantyExpiresAt: '2026-10-20', warrantyStatus: WarrantyStatus.IN_WARRANTY }
+      manufacturedAt: null, warrantyMonths: 12, warrantyExpiresAt: '2026-10-20', calculatedWarrantyStatus: WarrantyStatus.IN_WARRANTY, warrantyOverride: null, warrantyStatus: WarrantyStatus.IN_WARRANTY }
   ],
   productId: 3, productName: 'Controlador', productSku: 'SKU-1', batchNumber: 'LOTE-A', serialNumber: 'SER-A', manufacturedAt: null,
   purchaseDate: '2025-10-20', purchaseDateUnknown: false, entryDate: '2026-10-20', invoiceNumber: 'NF-1', receivedBy: 'admin',
   reportedFailure: 'Não liga', receivedAccessories: null, physicalCondition: null, priority: 'HIGH', status: 'IN_DIAGNOSIS',
   currentBlock: null, blockHistory: [],
-  dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 7200 }], dueDateHistory: [],
+  dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 7200 }], dueDateHistory: [], warrantyHistory: [],
   assigneeId: null, assigneeName: null, repairSummary: 'Conector substituído', replacedPartsSummary: 'Conector USB',
   testSummary: 'Teste aprovado', shippedAt: null, carrier: null, trackingCode: null,
   diagnosis: { id: 1, foundFailure: 'Conector danificado', failureType: 'COMMUNICATION', probableCause: 'INCORRECT_USAGE',
@@ -149,7 +149,7 @@ describe('ReportsComponent compositions', () => {
 
     it('keeps unknown purchase pending with explicit labels', () => {
       respond([{ ...RMA, purchaseDateUnknown: true, purchaseDate: null,
-        items: [{ ...RMA.items[0], warrantyStatus: WarrantyStatus.PENDING, warrantyExpiresAt: null }] }]);
+        items: [{ ...RMA.items[0], calculatedWarrantyStatus: WarrantyStatus.PENDING, warrantyOverride: null, warrantyStatus: WarrantyStatus.PENDING, warrantyExpiresAt: null }] }]);
       show('warranty');
       // Reprova hoje: compra e vencimento aparecem como "Não informado".
       expect(cell(table(), 0, 'Compra')).toBe('Desconhecida');

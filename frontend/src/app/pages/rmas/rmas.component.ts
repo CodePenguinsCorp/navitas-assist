@@ -1,3 +1,4 @@
+import { RmaWarrantyFieldComponent } from '../../shared/rma-warranty-field/rma-warranty-field.component';
 import { RmaDiagnosisComponent } from '../../shared/rma-diagnosis/rma-diagnosis.component';
 import { RmaStatusFieldComponent } from '../../shared/rma-status-field/rma-status-field.component';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -90,7 +91,7 @@ export interface RmaListFilters {
 
 @Component({
   selector: 'app-rmas',
-  imports: [RmaDiagnosisComponent, RmaStatusFieldComponent, IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaStageTimesComponent],
+  imports: [RmaWarrantyFieldComponent, RmaDiagnosisComponent, RmaStatusFieldComponent, IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaStageTimesComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {
@@ -542,6 +543,7 @@ export class RmasComponent {
 
   protected readonly canOpenRma = computed(() => this.permissions.hasPermission('rma.abrir'));
 
+  protected readonly warrantyBusy = signal(false);
   protected readonly statusBusy = signal(false);
   protected readonly canUpdateStatus = computed(() => this.permissions.hasPermission('rma.status'));
 
@@ -670,7 +672,7 @@ export class RmasComponent {
 
   /** Same tab contract as notifications: arrows wrap, Home/End jump to the ends; selection follows focus. */
   protected onDetailTabKeydown(event: KeyboardEvent): void {
-    if (this.statusBusy() || this.diagnosisBusy()) return;
+    if (this.statusBusy() || this.diagnosisBusy() || this.warrantyBusy()) return;
     const ids = this.detailTabs.map((tab) => tab.id);
     const current = ids.indexOf(this.detailTab());
     let next: number;
@@ -692,7 +694,7 @@ export class RmasComponent {
   }
 
   protected closeModal(): void {
-    if (this.createSubmitting() || this.diagnosisBusy() || this.statusBusy()) return;
+    if (this.createSubmitting() || this.diagnosisBusy() || this.statusBusy() || this.warrantyBusy()) return;
     this.resetModal();
   }
 

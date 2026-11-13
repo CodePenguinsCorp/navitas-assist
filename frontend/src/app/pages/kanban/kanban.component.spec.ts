@@ -92,6 +92,22 @@ describe('KanbanComponent filters', () => {
     component = fixture.componentInstance as unknown as KanbanHarness;
   });
 
+  it('filtra pela garantia efetiva mesmo quando a calculada diverge', () => {
+    const original = TEST_RMAS[0].items[0];
+    TEST_RMAS[0].items[0] = { ...original, warrantyStatus: WarrantyStatus.IN_WARRANTY,
+      calculatedWarrantyStatus: WarrantyStatus.OUT_OF_WARRANTY, warrantyExpiresAt: '2020-01-01',
+      warrantyOverride: { status: WarrantyStatus.IN_WARRANTY, reason: 'Cortesia', changedBy: 'ana', changedAt: '2026-11-13T12:00:00Z' } };
+    try {
+      fixture.detectChanges();
+      component.filtersForm.patchValue({ warranty: WarrantyStatus.IN_WARRANTY });
+      fixture.detectChanges();
+      expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
+      component.filtersForm.patchValue({ warranty: WarrantyStatus.OUT_OF_WARRANTY });
+      fixture.detectChanges();
+      expect(component.filteredRmas().map((rma) => rma.id)).toEqual([2]);
+    } finally { TEST_RMAS[0].items[0] = original; }
+  });
+
   it('does not show the permanent drag instruction in the header', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).not.toContain('Arraste os cards entre as colunas');
@@ -698,6 +714,8 @@ function buildRma(values: {
         warrantyMonths: 12,
         warrantyExpiresAt: '2027-01-01',
         warrantyStatus: values.warrantyStatus,
+        calculatedWarrantyStatus: values.warrantyStatus,
+        warrantyOverride: null,
       },
     ],
     productId: values.id,
@@ -733,7 +751,7 @@ function buildRma(values: {
     deadline: values.dueDate
       ? { status: values.status === 'COMPLETED' ? 'CLOSED' : 'DUE_SOON', dueSoonFrom: shiftDate(values.dueDate, -7), daysUntilDue: 0 }
       : { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null },
-    stagePeriods: [{ status: values.status, enteredAt: '2026-10-20T11:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [],
+    stagePeriods: [{ status: values.status, enteredAt: '2026-10-20T11:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [], warrantyHistory: [],
     createdAt: '2026-10-10T12:00:00Z',
     updatedAt: values.updatedAt,
   };

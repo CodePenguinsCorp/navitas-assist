@@ -34,7 +34,7 @@
 
         <div class="rma-detail__actions">
           @if (canUpdateStatus()) {
-            <app-rma-status-field [rma]="rma()" [disabled]="disabled() || diagnosisBusy()"
+            <app-rma-status-field [rma]="rma()" [disabled]="disabled() || diagnosisBusy() || warrantyBusy()"
               (saved)="rmaUpdated.emit($event)" (busyChange)="statusBusy.set($event); busyChange.emit($event)" />
           } @else {
             <span class="status-chip rma-detail__status" [attr.data-status]="rma().status">{{ statusLabel(rma().status) }}</span>
@@ -70,7 +70,7 @@
             @for (item of rma().items; track item.id ?? $index) {
               <li class="detail-tile">
                 <strong>{{ item.productName }}</strong>
-                <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)">{{ warrantyLabel(item.warrantyStatus) }}</span>
+                <app-rma-warranty-field [rma]="rma()" [item]="item" [canEdit]="canEditDueDate()" [disabled]="writePending()" (saved)="rmaUpdated.emit($event)" (busyChange)="warrantyBusy.set($event); busyChange.emit($event)" />
                 <dl>
                   @for (fact of rmaItemFacts(item); track fact.label) {
                     <div><dt>{{ fact.label }}</dt><dd>{{ fact.value }}</dd></div>
@@ -97,7 +97,7 @@
         }
 
         <section class="rma-detail__section detail-card">
-          <app-rma-diagnosis [rma]="rma()" [disabled]="disabled() || statusBusy()" (saved)="rmaUpdated.emit($event)"
+          <app-rma-diagnosis [rma]="rma()" [disabled]="disabled() || statusBusy() || warrantyBusy()" (saved)="rmaUpdated.emit($event)"
             (busyChange)="diagnosisBusy.set($event); busyChange.emit($event)" />
         </section>
 
@@ -141,6 +141,7 @@
                     <p>Responsável <span class="rma-detail__from">{{ entry.from }}</span> <span aria-hidden="true">→</span> <span class="mini-chip">{{ entry.to }}</span></p>
                   } @else {
                     <p class="rma-detail__due-date-event">{{ historyEntryTitle(entry) }}</p>
+                    @if (entry.kind === 'warranty' && entry.reason) { <blockquote>{{ entry.reason }}</blockquote> }
                   }
                 </div>
               </li>

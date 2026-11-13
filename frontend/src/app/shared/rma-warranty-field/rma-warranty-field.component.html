@@ -1,0 +1,40 @@
+@if (editing()) {
+  <form class="warranty-field__form" [formGroup]="form" (ngSubmit)="save()" (keydown.escape)="cancel($event)">
+    <app-custom-select formControlName="override" [options]="options" ariaLabel="Garantia" [disabled]="locked() || busy()" (valueChange)="selectOverride()" />
+    @if (selected()) {
+      <div class="warranty-field__reasons" aria-label="Atalhos de motivo">
+        @for (reason of reasons; track reason) {
+          <button type="button" class="warranty-field__reason" [disabled]="busy() || locked()" (click)="chooseReason(reason)">{{ reason }}</button>
+        }
+      </div>
+      <label class="field-group">
+        <span>Motivo</span>
+        <textarea formControlName="reason" aria-label="Motivo do ajuste de garantia" rows="2" maxlength="255" [readOnly]="locked()" [attr.aria-invalid]="invalid() ? 'true' : null" [attr.aria-describedby]="invalid() ? errorId : null" (input)="invalid.set(false)"></textarea>
+      </label>
+      @if (invalid()) { <small class="field-error" [id]="errorId" role="alert">Informe um motivo de até 255 caracteres.</small> }
+    }
+    @if (error(); as message) { <p class="field-error" role="alert">{{ message }}</p> }
+    <div class="form-actions warranty-field__actions">
+      <button type="button" class="button-secondary button-secondary--small" [disabled]="busy()" (click)="cancel()">Cancelar</button>
+      <button type="submit" class="button-primary" [disabled]="busy() || locked() || !canEdit()">{{ busy() ? 'Salvando...' : 'Salvar' }}</button>
+    </div>
+  </form>
+} @else {
+  @if (canEdit()) {
+    <button type="button" class="warranty-field__trigger" [disabled]="locked()" (click)="edit()">
+      <span class="mini-chip" [class]="warrantyClass(item().warrantyStatus)">{{ warrantyLabel(item().warrantyStatus) }}</span>
+      <span class="sr-only">Alterar garantia de {{ item().productName }}</span>
+    </button>
+  } @else {
+    <span class="mini-chip" [class]="warrantyClass(item().warrantyStatus)">{{ warrantyLabel(item().warrantyStatus) }}</span>
+  }
+  @if (item().warrantyOverride; as override) {
+    <span class="warranty-field__manual" tabindex="0" [attr.aria-describedby]="tooltipId">
+      Ajustada manualmente
+      <span class="warranty-field__tooltip" role="tooltip" [id]="tooltipId">{{ override.reason }} · {{ override.changedBy }} · {{ dateTimeLabel(override.changedAt) }}</span>
+    </span>
+    @if (item().calculatedWarrantyStatus !== item().warrantyStatus) {
+      <small class="warranty-field__automatic">Automático: {{ warrantyLabel(item().calculatedWarrantyStatus) }}</small>
+    }
+  }
+}

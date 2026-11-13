@@ -301,6 +301,29 @@ export interface RmaBlockResponse {
   resolutionNote: string | null;
 }
 
+export type WarrantyOverrideStatus = WarrantyStatus.IN_WARRANTY | WarrantyStatus.OUT_OF_WARRANTY;
+
+export interface RmaItemWarrantyRequest {
+  override: WarrantyOverrideStatus | null;
+  reason: string | null;
+}
+
+export interface WarrantyOverrideResponse {
+  status: WarrantyOverrideStatus;
+  reason: string;
+  changedBy: string;
+  changedAt: string;
+}
+
+export interface RmaItemWarrantyHistoryResponse {
+  itemId: number;
+  previousOverride: WarrantyOverrideStatus | null;
+  newOverride: WarrantyOverrideStatus | null;
+  reason: string | null;
+  changedBy: string;
+  changedAt: string;
+}
+
 export interface RmaItemResponse {
   id: number | null;
   productId: number;
@@ -312,6 +335,8 @@ export interface RmaItemResponse {
   warrantyMonths: number;
   warrantyExpiresAt: string | null;
   warrantyStatus: WarrantyStatus;
+  calculatedWarrantyStatus: WarrantyStatus;
+  warrantyOverride: WarrantyOverrideResponse | null;
 }
 
 export type RmaDeadlineStatus = 'OVERDUE' | 'DUE_SOON' | 'ON_TRACK' | 'NO_DUE_DATE' | 'CLOSED';
@@ -376,6 +401,7 @@ export interface RmaResponse {
   stagePeriods: RmaStagePeriodResponse[];
   assignmentHistory: RmaAssignmentHistoryResponse[];
   dueDateHistory: RmaDueDateHistoryResponse[];
+  warrantyHistory: RmaItemWarrantyHistoryResponse[];
   currentBlock: RmaBlockResponse | null;
   blockHistory: RmaBlockResponse[];
   createdAt: string;

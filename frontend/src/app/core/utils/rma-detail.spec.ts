@@ -81,7 +81,7 @@ describe('RMA detail contract', () => {
   it('includes manufacture only when present', () => {
     const item = buildRmaItem({
       productSku: 'SKU-9', serialNumber: 'S1', batchNumber: 'L1', warrantyMonths: 1,
-      warrantyExpiresAt: '2026-11-20', warrantyStatus: WarrantyStatus.IN_WARRANTY
+      warrantyExpiresAt: '2026-11-20', calculatedWarrantyStatus: WarrantyStatus.IN_WARRANTY, warrantyOverride: null, warrantyStatus: WarrantyStatus.IN_WARRANTY
     });
     expect(rmaItemFacts(item)).toEqual([
       { label: 'SKU', value: 'SKU-9', empty: false },
@@ -235,5 +235,28 @@ describe('RMA detail contract', () => {
       .toEqual({ label: 'Nesta etapa', value: 'há 2 d 4 h', empty: false });
     expect(stageFact(buildRma({ status: 'COMPLETED', stagePeriods: [{ status: 'COMPLETED', enteredAt: '2026-10-21T13:30:00Z', leftAt: null, durationSeconds: 0 }] }), now).value)
       .toBe('Encerrado em 21/10/2026 10:30');
+  });
+});
+
+
+describe('histórico de garantia', () => {
+  it('intercala ajustes com os demais eventos e identifica o item, autor, motivo e remoção', () => {
+    const rma = buildRma({ items: [buildRmaItem({ id: 9, productName: 'Fonte', productSku: 'F-9' })],
+      dueDateHistory: [{ previousDueDate: null, newDueDate: '2026-11-20', changedBy: 'bia', changedAt: '2026-11-13T11:00:00Z' }],
+      warrantyHistory: [
+        { itemId: 9, previousOverride: null, newOverride: WarrantyStatus.IN_WARRANTY, reason: 'Cortesia', changedBy: 'ana', changedAt: '2026-11-13T10:00:00Z' },
+        { itemId: 9, previousOverride: WarrantyStatus.IN_WARRANTY, newOverride: null, reason: null, changedBy: 'carla', changedAt: '2026-11-13T12:00:00Z' }
+      ] });
+    const history = rmaHistory(rma);
+    expect(history.map((e) => e.kind)).toEqual(['warranty', 'dueDate', 'warranty']);
+    expect(historyEntryTitle(history[0])).toBe('Garantia de Fonte (F-9): Em garantia → Automático');
+    expect(historyEntryTitle(history[2])).toBe('Garantia de Fonte (F-9): Automático → Em garantia');
+    expect(history[2]).toMatchObject({ by: 'ana', reason: 'Cortesia', itemId: 9 });
+    expect(rma.warrantyHistory[0].changedBy).toBe('ana');
+  });
+  it('identifica item ausente sem perder o evento', () => {
+    const history = rmaHistory(buildRma({ warrantyHistory: [{ itemId: 99, previousOverride: WarrantyStatus.IN_WARRANTY,
+      newOverride: WarrantyStatus.OUT_OF_WARRANTY, reason: 'Mau uso', changedBy: 'ana', changedAt: '2026-11-13T12:00:00Z' }] }));
+    expect(historyEntryTitle(history[0])).toBe('Garantia de Item #99: Em garantia → Fora de garantia');
   });
 });

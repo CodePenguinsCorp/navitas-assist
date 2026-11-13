@@ -697,7 +697,7 @@ describe('RmasComponent list composition', () => {
   });
 
   it('keeps warranty per product with an accessible status', async () => {
-    const rma = buildRma({ items: [buildRmaItem({ productSku: 'SKU-9', warrantyStatus: WarrantyStatus.IN_WARRANTY })] });
+    const rma = buildRma({ items: [buildRmaItem({ productSku: 'SKU-9', calculatedWarrantyStatus: WarrantyStatus.IN_WARRANTY, warrantyOverride: null, warrantyStatus: WarrantyStatus.IN_WARRANTY })] });
     const { page } = await setup({ list: (f) => of(buildRmaPage([rma], f.page ?? 0, f.size ?? 20, 1)) });
     const tag = page.querySelector('tbody .warranty-tag')!;
 
@@ -716,5 +716,18 @@ describe('RmasComponent list composition', () => {
     expect(buttonByText(page.querySelector('.page-heading')!, 'Novo RMA') !== undefined).toBe(allowed);
     // The empty state no longer repeats the header action.
     expect(buttonByText(page.querySelector('.table-card')!, 'Novo RMA')).toBeUndefined();
+  });
+});
+
+
+describe('garantia efetiva na lista', () => {
+  it('mantém o chip efetivo apesar de cálculo e vencimento divergentes', async () => {
+    const rma = buildRma({ items: [buildRmaItem({ warrantyStatus: WarrantyStatus.IN_WARRANTY,
+      calculatedWarrantyStatus: WarrantyStatus.OUT_OF_WARRANTY, warrantyExpiresAt: '2020-01-01',
+      warrantyOverride: { status: WarrantyStatus.IN_WARRANTY, reason: 'Cortesia', changedBy: 'ana', changedAt: '2026-11-13T12:00:00Z' } })] });
+    const { page } = await setup({ list: () => of(buildRmaPage([rma])) });
+    const chip = page.querySelector('.warranty-tag')!;
+    expect(chip.classList.contains('warranty-ok')).toBe(true);
+    expect(chip.getAttribute('title')).toContain('Em garantia');
   });
 });

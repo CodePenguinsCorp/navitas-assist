@@ -172,7 +172,7 @@
         [attr.aria-label]="'Detalhes do ' + rma.code"
         appModalFocus
         [modalFallbackFocus]="listRegion"
-        [modalCloseBlocked]="statusBusy() || diagnosisBusy()"
+        [modalCloseBlocked]="statusBusy() || diagnosisBusy() || warrantyBusy()"
         (modalCloseRequested)="closeModal()"
         (click)="$event.stopPropagation()"
       >
@@ -183,18 +183,18 @@
             <span class="table-subtitle rma-details__client">{{ rma.clientName }}</span>
             <div class="rma-details__chips">
               @if (canUpdateStatus()) {
-                <app-rma-status-field [rma]="rma" [disabled]="diagnosisBusy()" (saved)="detailRmaSaved($event)" (busyChange)="statusBusy.set($event)" />
+                <app-rma-status-field [rma]="rma" [disabled]="diagnosisBusy() || warrantyBusy()" (saved)="detailRmaSaved($event)" (busyChange)="statusBusy.set($event)" />
               } @else {
                 <span class="status-chip" [attr.data-status]="rma.status">{{ statusLabel(rma.status) }}</span>
               }
-              <app-rma-priority-field [rma]="rma" [canEdit]="canEditRma()" [disabled]="statusBusy() || diagnosisBusy()" (saved)="detailRmaSaved($event)" />
+              <app-rma-priority-field [rma]="rma" [canEdit]="canEditRma()" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy()" (saved)="detailRmaSaved($event)" />
               @if (rma.currentBlock; as block) {
                 <span class="mini-chip priority-high">{{ blockedLabel(block, clock.now()) }}</span>
               }
             </div>
           </div>
           <div class="rma-details__header-actions">
-            <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar" [disabled]="statusBusy() || diagnosisBusy()">
+            <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy()">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
             </button>
           </div>
@@ -211,7 +211,7 @@
           <div class="detail-summary__wide rma-details__deadline">
             <dt>Data limite</dt>
             <dd [class.is-empty]="!rma.dueDate">
-              <app-rma-due-date-field [rma]="rma" [disabled]="statusBusy() || diagnosisBusy()" [canEdit]="canEditRma()" (saved)="detailRmaSaved($event)" />
+              <app-rma-due-date-field [rma]="rma" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy()" [canEdit]="canEditRma()" (saved)="detailRmaSaved($event)" />
             </dd>
           </div>
           @let stage = stageFact(rma, clock.now());
@@ -221,7 +221,7 @@
 
         <div class="tab-list tab-list--raised" role="tablist" aria-label="Seções do RMA" (keydown)="onDetailTabKeydown($event)">
           @for (tab of detailTabs; track tab.id) {
-            <button type="button" role="tab" class="tab" [disabled]="statusBusy() || diagnosisBusy()" [id]="'rma-tab-' + tab.id" [class.is-active]="detailTab() === tab.id" [attr.aria-selected]="detailTab() === tab.id" aria-controls="rma-detail-panel" [attr.tabindex]="detailTab() === tab.id ? 0 : -1" (click)="detailTab.set(tab.id)">{{ tab.label }}</button>
+            <button type="button" role="tab" class="tab" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy()" [id]="'rma-tab-' + tab.id" [class.is-active]="detailTab() === tab.id" [attr.aria-selected]="detailTab() === tab.id" aria-controls="rma-detail-panel" [attr.tabindex]="detailTab() === tab.id ? 0 : -1" (click)="detailTab.set(tab.id)">{{ tab.label }}</button>
           }
         </div>
 
@@ -243,7 +243,7 @@
                           <span class="rma-item-detail__sku code-text">{{ item.productSku }}</span>
                           <strong>{{ item.productName }}</strong>
                         </div>
-                        <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)">{{ warrantyLabel(item.warrantyStatus) }}</span>
+                        <app-rma-warranty-field [rma]="rma" [item]="item" [canEdit]="canEditRma()" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy()" (saved)="detailRmaSaved($event)" (busyChange)="warrantyBusy.set($event)" />
                       </header>
                       <dl class="meta-list">
                         @for (fact of rmaItemFacts(item); track fact.label) {
@@ -270,7 +270,7 @@
             }
             @case ('diagnosis') {
               <section class="rma-details__section">
-                <app-rma-diagnosis [rma]="rma" [disabled]="statusBusy()" (saved)="detailRmaSaved($event)" (busyChange)="diagnosisBusy.set($event)" />
+                <app-rma-diagnosis [rma]="rma" [disabled]="statusBusy() || warrantyBusy()" (saved)="detailRmaSaved($event)" (busyChange)="diagnosisBusy.set($event)" />
               </section>
               @let repair = repairFacts(rma);
               @if (repair.length > 0) {
@@ -299,7 +299,7 @@
               }
             }
             @case ('blocks') {
-              <app-rma-blocks-section [rma]="rma" [disabled]="statusBusy() || diagnosisBusy()" (updated)="detailRmaSaved($event)" />
+              <app-rma-blocks-section [rma]="rma" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy()" (updated)="detailRmaSaved($event)" />
             }
             @case ('history') {
               <app-rma-stage-times class="rma-details__stage-times" [rma]="rma" />
@@ -312,8 +312,8 @@
                         <strong>{{ historyEntryTitle(entry) }}</strong>
                         <time>{{ dateTimeLabel(entry.at) }}</time>
                       </div>
-                      @if (entry.kind === 'status' && entry.note) {
-                        <blockquote class="rma-details__note">{{ entry.note }}</blockquote>
+                      @if ((entry.kind === 'status' && entry.note) || (entry.kind === 'warranty' && entry.reason)) {
+                        <blockquote class="rma-details__note">{{ entry.kind === 'status' ? entry.note : entry.kind === 'warranty' ? entry.reason : '' }}</blockquote>
                       }
                       <dl class="meta-list"><div><dt>Alterado por</dt><dd>{{ entry.by }}</dd></div></dl>
                     </li>

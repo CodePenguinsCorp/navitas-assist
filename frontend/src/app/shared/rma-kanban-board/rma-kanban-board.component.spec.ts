@@ -176,7 +176,7 @@ function buildRma(values: Partial<RmaResponse>): RmaResponse {
         manufacturedAt: '2026-01-01',
         warrantyMonths: 12,
         warrantyExpiresAt: '2027-01-01',
-        warrantyStatus: WarrantyStatus.IN_WARRANTY,
+        calculatedWarrantyStatus: WarrantyStatus.IN_WARRANTY, warrantyOverride: null, warrantyStatus: WarrantyStatus.IN_WARRANTY,
       },
     ],
     productId: 1,
@@ -208,7 +208,7 @@ function buildRma(values: Partial<RmaResponse>): RmaResponse {
     assignmentHistory: [],
     currentBlock: null,
     blockHistory: [],
-    dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'TRIAGE', enteredAt: '2026-10-20T11:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [],
+    dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'TRIAGE', enteredAt: '2026-10-20T11:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [], warrantyHistory: [],
     createdAt: '2026-10-10T12:00:00Z',
     updatedAt: '2026-10-20T02:30:00Z',
   };

@@ -9,15 +9,15 @@ const RMA: RmaResponse = {
   id: 1, code: 'RMA-REAL', clientId: 2, clientName: 'Cliente Alfa',
   items: [
     { id: 11, productId: 3, productName: 'Controlador', productSku: 'SKU-1', batchNumber: 'LOTE-A', serialNumber: 'SER-A',
-      manufacturedAt: null, warrantyMonths: 12, warrantyExpiresAt: '2026-10-20', warrantyStatus: WarrantyStatus.IN_WARRANTY },
+      manufacturedAt: null, warrantyMonths: 12, warrantyExpiresAt: '2026-10-20', calculatedWarrantyStatus: WarrantyStatus.IN_WARRANTY, warrantyOverride: null, warrantyStatus: WarrantyStatus.IN_WARRANTY },
     { id: 12, productId: 3, productName: 'Controlador', productSku: 'SKU-1', batchNumber: 'LOTE-B', serialNumber: 'SER-B',
-      manufacturedAt: null, warrantyMonths: 6, warrantyExpiresAt: '2026-04-20', warrantyStatus: WarrantyStatus.OUT_OF_WARRANTY }
+      manufacturedAt: null, warrantyMonths: 6, warrantyExpiresAt: '2026-04-20', calculatedWarrantyStatus: WarrantyStatus.OUT_OF_WARRANTY, warrantyOverride: null, warrantyStatus: WarrantyStatus.OUT_OF_WARRANTY }
   ],
   productId: 3, productName: 'Controlador', productSku: 'SKU-1', batchNumber: 'LOTE-A', serialNumber: 'SER-A', manufacturedAt: null,
   purchaseDate: '2025-10-20', purchaseDateUnknown: false, entryDate: '2026-10-20', invoiceNumber: 'NF-1', receivedBy: 'admin',
   reportedFailure: 'Não liga', receivedAccessories: null, physicalCondition: null, priority: 'HIGH', status: 'IN_DIAGNOSIS',
   currentBlock: null, blockHistory: [],
-  dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 7200 }], dueDateHistory: [],
+  dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 7200 }], dueDateHistory: [], warrantyHistory: [],
   assigneeId: null, assigneeName: null, repairSummary: 'Conector substituído', replacedPartsSummary: 'Conector USB',
   testSummary: 'Teste aprovado', shippedAt: null, carrier: null, trackingCode: null,
   diagnosis: { id: 1, foundFailure: 'Conector danificado', failureType: 'COMMUNICATION', probableCause: 'INCORRECT_USAGE',

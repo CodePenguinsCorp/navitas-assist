@@ -1,3 +1,4 @@
+import { RmaWarrantyFieldComponent } from '../rma-warranty-field/rma-warranty-field.component';
 import { RmaDiagnosisComponent } from '../rma-diagnosis/rma-diagnosis.component';
 import { Component, EventEmitter, Output, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -36,7 +37,7 @@ import {
 
 @Component({
   selector: 'app-rma-detail-modal',
-  imports: [CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaStageTimesComponent, RmaStatusFieldComponent, RmaDiagnosisComponent, RouterLink],
+  imports: [RmaWarrantyFieldComponent, CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaStageTimesComponent, RmaStatusFieldComponent, RmaDiagnosisComponent, RouterLink],
   templateUrl: './rma-detail-modal.component.html',
   styleUrl: './rma-detail-modal.component.css'
 })
@@ -44,7 +45,7 @@ export class RmaDetailModalComponent {
   readonly rma = input.required<RmaResponse>();
   readonly canUpdateStatus = input(false);
   readonly canUpdateAssignee = input(false);
-  /** `rma.editar`: the due date value becomes an inline editable field. */
+  /** `rma.editar`: enables inline editing of the due date and item warranty. */
   readonly canEditDueDate = input(false);
   readonly disabled = input(false);
   /** Users who can receive the RMA (the host's assignable-users source). */
@@ -55,9 +56,10 @@ export class RmaDetailModalComponent {
   readonly fallbackFocus = input<HTMLElement | null>(null);
   @Output() readonly closed = new EventEmitter<void>();
   @Output() readonly busyChange = new EventEmitter<boolean>();
+  protected readonly warrantyBusy = signal(false);
   protected readonly statusBusy = signal(false);
   protected readonly diagnosisBusy = signal(false);
-  protected readonly writePending = computed(() => this.disabled() || this.statusBusy() || this.diagnosisBusy());
+  protected readonly writePending = computed(() => this.disabled() || this.statusBusy() || this.diagnosisBusy() || this.warrantyBusy());
   /** A person (or null, unassigned) picked in the inline selector; the host saves it. */
   @Output() readonly assigneeChange = new EventEmitter<{ rma: RmaResponse; assigneeId: number | null }>();
   /** The RMA returned by a save made inside the detail (impediments, due date). */

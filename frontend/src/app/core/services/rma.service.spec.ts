@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { CreateRmaRequest } from '../models';
+import { CreateRmaRequest, WarrantyStatus } from '../models';
 import { RmaService } from './rma.service';
 
 describe('RmaService', () => {
@@ -17,6 +17,26 @@ describe('RmaService', () => {
   });
 
   afterEach(() => httpTesting.verify());
+
+  it('envia o ajuste de garantia por item e preserva a resposta do backend', () => {
+    const payload = { override: WarrantyStatus.IN_WARRANTY, reason: 'Cortesia' } as const;
+    let result: unknown;
+    service.updateWarranty(4, 9, payload).subscribe((rma) => result = rma);
+    const request = httpTesting.expectOne('/api/rmas/4/items/9/warranty');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual(payload);
+    const response = { id: 4, items: [], warrantyHistory: [] };
+    request.flush(response);
+    expect(result).toEqual(response);
+  });
+
+  it('remove o ajuste enviando override e motivo nulos', () => {
+    service.updateWarranty(4, 9, { override: null, reason: null }).subscribe();
+    const request = httpTesting.expectOne('/api/rmas/4/items/9/warranty');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ override: null, reason: null });
+    request.flush({});
+  });
 
   it('trims search text and preserves the selected status', () => {
     service.list({ query: '  RMA-1  ', status: 'TRIAGE' }).subscribe();

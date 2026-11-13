@@ -1,3 +1,5 @@
+import { RmaWarrantyFieldComponent } from '../rma-warranty-field/rma-warranty-field.component';
+import { By } from '@angular/platform-browser';
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
@@ -26,7 +28,7 @@ const fullRma = buildRma({
   code: 'RMA-2026-000005',
   clientName: 'Cliente X',
   items: [
-    buildRmaItem({ id: 1, productName: 'Produto A', productSku: 'SKU-A', serialNumber: 'S1', batchNumber: 'L1', warrantyMonths: 12, warrantyExpiresAt: '2027-02-01', warrantyStatus: WarrantyStatus.IN_WARRANTY }),
+    buildRmaItem({ id: 1, productName: 'Produto A', productSku: 'SKU-A', serialNumber: 'S1', batchNumber: 'L1', warrantyMonths: 12, warrantyExpiresAt: '2027-02-01', calculatedWarrantyStatus: WarrantyStatus.IN_WARRANTY, warrantyOverride: null, warrantyStatus: WarrantyStatus.IN_WARRANTY }),
     buildRmaItem({ id: 2, productName: 'Produto B', productSku: 'SKU-B', serialNumber: null, batchNumber: 'L2', warrantyMonths: 1, warrantyExpiresAt: null })
   ],
   status: 'TRIAGE',
@@ -672,6 +674,33 @@ describe('RmaDetailModalComponent assignee selector', () => {
     fixture.detectChanges();
 
     expect(host.querySelector('[role="alert"]')?.textContent?.trim()).toBe('Técnico inativo');
+  });
+});
+
+
+describe('garantia no detalhe compartilhado', () => {
+  it('usa o campo em cada item com permissão e propaga o RMA salvo', async () => {
+    const { fixture, host, component } = await setup({ canEditDueDate: true });
+    const fields = host.querySelectorAll('app-rma-warranty-field');
+    expect(fields.length).toBe(fullRma.items.length);
+    expect(fields[0].querySelector('.warranty-field__trigger')).not.toBeNull();
+    const updated = vi.fn(); component.rmaUpdated.subscribe(updated);
+    const field = fixture.debugElement.queryAll(By.directive(RmaWarrantyFieldComponent))[0].componentInstance as RmaWarrantyFieldComponent;
+    field.saved.emit(fullRma);
+    expect(updated).toHaveBeenCalledWith(fullRma);
+  });
+  it('mantém garantia somente leitura sem rma.editar ou com disabled', async () => {
+    const { fixture, host } = await setup();
+    expect(host.querySelector('.warranty-field__trigger')).toBeNull();
+    fixture.componentRef.setInput('canEditDueDate', true); fixture.componentRef.setInput('disabled', true); fixture.detectChanges();
+    expect(host.querySelector<HTMLButtonElement>('.warranty-field__trigger')!.disabled).toBe(true);
+  });
+  it('exibe ajuste na linha do tempo com motivo e autor', async () => {
+    const { host } = await setup({ rma: { ...fullRma, warrantyHistory: [{ itemId: 1, previousOverride: null,
+      newOverride: WarrantyStatus.IN_WARRANTY, reason: 'Cortesia', changedBy: 'carla', changedAt: '2026-11-13T12:00:00Z' }] } });
+    const events = [...host.querySelectorAll('.rma-detail__event')];
+    expect(events[0].textContent).toContain('Garantia de Produto A (SKU-A): Automático → Em garantia');
+    expect(events[0].textContent).toContain('Cortesia'); expect(events[0].textContent).toContain('carla');
   });
 });
 

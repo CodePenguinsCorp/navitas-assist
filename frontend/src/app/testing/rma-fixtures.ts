@@ -13,6 +13,8 @@ export function buildRmaItem(overrides: Partial<RmaItemResponse> = {}): RmaItemR
     warrantyMonths: 12,
     warrantyExpiresAt: null,
     warrantyStatus: WarrantyStatus.PENDING,
+    calculatedWarrantyStatus: WarrantyStatus.PENDING,
+    warrantyOverride: null,
     ...overrides
   };
 }
@@ -55,7 +57,7 @@ export function buildRma(overrides: Partial<RmaResponse> = {}): RmaResponse {
     statusHistory: [],
     stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 0 }],
     assignmentHistory: [],
-    dueDateHistory: [],
+    dueDateHistory: [], warrantyHistory: [],
     deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null },
     currentBlock: null,
     blockHistory: [],

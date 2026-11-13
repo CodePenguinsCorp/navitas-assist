@@ -21,7 +21,7 @@ function rmaFactory(overrides: Partial<RmaResponse> = {}): RmaResponse {
   return {
     id: 1, code: 'RMA-OPEN', clientId: 1, clientName: 'Cliente',
     items: [{ id: 1, productId: 2, productName: 'Produto', productSku: 'SKU-2', batchNumber: null,
-      serialNumber: 'SER-2', manufacturedAt: null, warrantyMonths: 12, warrantyExpiresAt: null, warrantyStatus: WarrantyStatus.PENDING }],
+      serialNumber: 'SER-2', manufacturedAt: null, warrantyMonths: 12, warrantyExpiresAt: null, calculatedWarrantyStatus: WarrantyStatus.PENDING, warrantyOverride: null, warrantyStatus: WarrantyStatus.PENDING }],
     productId: 2, productName: 'Produto', productSku: 'SKU-2', batchNumber: null, serialNumber: 'SER-2',
     manufacturedAt: null, purchaseDate: null, purchaseDateUnknown: true, entryDate: '2026-10-20',
     invoiceNumber: null, receivedBy: 'tester', reportedFailure: 'Falha', receivedAccessories: null,
@@ -30,7 +30,7 @@ function rmaFactory(overrides: Partial<RmaResponse> = {}): RmaResponse {
     trackingCode: null, diagnosis: null, assignmentHistory: [],
     statusHistory: [{ status: 'RECEIVED', changedBy: 'tester', changedAt: '2026-10-20T16:00:00Z', note: null }],
     currentBlock: null, blockHistory: [],
-    dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T16:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [],
+    dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T16:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [], warrantyHistory: [],
     createdAt: '2026-10-20T16:00:00Z', updatedAt: '2026-10-20T16:00:00Z',
     ...overrides
   };
@@ -140,7 +140,7 @@ describe('DashboardComponent load states', () => {
   });
 
   describe('composition', () => {
-    const IN_WARRANTY_ITEM = { ...RMA_OPEN.items[0], id: 7, warrantyStatus: WarrantyStatus.IN_WARRANTY };
+    const IN_WARRANTY_ITEM = { ...RMA_OPEN.items[0], id: 7, calculatedWarrantyStatus: WarrantyStatus.IN_WARRANTY, warrantyOverride: null, warrantyStatus: WarrantyStatus.IN_WARRANTY };
     const RMA_CLOSED = rmaFactory({ id: 9, code: 'RMA-CLOSED', status: 'COMPLETED', priority: 'HIGH', entryDate: '2026-01-01', items: [IN_WARRANTY_ITEM] });
     const OPEN_2 = rmaFactory({ id: 2 });
     const tables = () => root().querySelectorAll('table');

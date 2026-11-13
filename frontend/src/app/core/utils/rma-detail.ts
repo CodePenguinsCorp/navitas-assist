@@ -3,14 +3,15 @@ import {
   RmaBlockResponse,
   RmaItemResponse,
   RmaResponse,
-  RmaStatus
+  RmaStatus,
+  WarrantyOverrideStatus
 } from '../models';
 import { CLOSED_RMA_STATUSES } from '../mock-data';
 import { formatBusinessDateTime, formatDateOnly } from './date';
 import { formatDuration } from './duration';
 import { blockDuration } from './rma-block';
 import { currentStagePeriod, stageElapsedSeconds } from './rma-stage';
-import { failureCauseLabel, failureTypeLabel, statusLabel } from './rma-ui';
+import { failureCauseLabel, failureTypeLabel, statusLabel, warrantyLabel } from './rma-ui';
 
 /**
  * Information contract shared by the two RMA details (list tabs and Kanban modal):
@@ -122,7 +123,8 @@ export function stageFact(rma: Pick<RmaResponse, 'status' | 'stagePeriods'>, now
 export type RmaHistoryEntry =
   | { kind: 'status'; at: string; by: string; label: string; status: RmaStatus; note: string | null }
   | { kind: 'assignee'; at: string; by: string; from: string; to: string }
-  | { kind: 'dueDate'; at: string; by: string; from: string | null; to: string | null };
+  | { kind: 'dueDate'; at: string; by: string; from: string | null; to: string | null }
+  | { kind: 'warranty'; at: string; by: string; itemId: number; itemLabel: string; from: WarrantyOverrideStatus | null; to: WarrantyOverrideStatus | null; reason: string | null };
 
 export function dueDateHistoryLabel(entry: { from: string | null; to: string | null }): string {
   if (!entry.from && entry.to) return `Data limite definida: ${formatDateOnly(entry.to)}`;
@@ -136,15 +138,16 @@ export function historyEntryTitle(entry: RmaHistoryEntry): string {
     case 'status': return entry.label;
     case 'assignee': return `${entry.from} → ${entry.to}`;
     case 'dueDate': return dueDateHistoryLabel(entry);
+    case 'warranty': return `Garantia de ${entry.itemLabel}: ${entry.from ? warrantyLabel(entry.from) : 'Automático'} → ${entry.to ? warrantyLabel(entry.to) : 'Automático'}`;
   }
 }
 
 /**
- * Status records, assignee changes and due date changes, newest first. A status record may be a priority change
+ * Status records, assignee, due date and warranty changes, newest first. A status record may be a priority change
  * or a note with the same status, so no transition or origin is inferred from neighbours.
- * Ties keep input order (status records, assignee changes, then due date changes); the input arrays are not changed.
+ * Ties keep input order (status records, assignee changes, then due date and warranty changes); the input arrays are not changed.
  */
-export function rmaHistory(rma: Pick<RmaResponse, 'statusHistory' | 'assignmentHistory'> & Partial<Pick<RmaResponse, 'dueDateHistory'>>): RmaHistoryEntry[] {
+export function rmaHistory(rma: Pick<RmaResponse, 'statusHistory' | 'assignmentHistory'> & Partial<Pick<RmaResponse, 'dueDateHistory' | 'warrantyHistory' | 'items'>>): RmaHistoryEntry[] {
   const entries: RmaHistoryEntry[] = [
     ...rma.statusHistory.map((record): RmaHistoryEntry => ({
       kind: 'status',
@@ -167,7 +170,13 @@ export function rmaHistory(rma: Pick<RmaResponse, 'statusHistory' | 'assignmentH
       by: record.changedBy,
       from: record.previousDueDate,
       to: record.newDueDate
-    }))
+    })),
+    ...(rma.warrantyHistory ?? []).map((record): RmaHistoryEntry => {
+      const item = rma.items?.find((item) => item.id === record.itemId);
+      return { kind: 'warranty', at: record.changedAt, by: record.changedBy, itemId: record.itemId,
+        itemLabel: item ? `${item.productName} (${item.productSku})` : `Item #${record.itemId}`,
+        from: record.previousOverride, to: record.newOverride, reason: record.reason };
+    })
   ];
   return entries.sort((left, right) => Date.parse(right.at) - Date.parse(left.at));
 }
