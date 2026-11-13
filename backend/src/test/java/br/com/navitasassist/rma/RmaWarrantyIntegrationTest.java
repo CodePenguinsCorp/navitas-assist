@@ -138,8 +138,11 @@ class RmaWarrantyIntegrationTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].items[0].warrantyStatus").value("IN_WARRANTY"));
         mvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-01-01").param("entryTo", "2026-01-01")
                 .param("clientId", rma.getClient().getId().toString()).with(asProfile("reader", "VIEWER")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.rmas[0].items[0].warrantyStatus").value("IN_WARRANTY"))
-            .andExpect(jsonPath("$.rmas[0].warrantyHistory", hasSize(1)));
+            .andExpect(status().isOk()).andExpect(jsonPath("$.rmas.content[0].warrantyStatuses[0]").value("IN_WARRANTY"));
+        mvc.perform(get("/api/reports/rmas/summary").param("entryFrom", "2026-01-01").param("entryTo", "2026-01-01")
+                .param("clientId", rma.getClient().getId().toString()).with(asProfile("reader", "VIEWER")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.byWarranty[0].key").value("IN_WARRANTY"))
+            .andExpect(jsonPath("$.byWarranty[0].count").value(1));
     }
 
     @Test
