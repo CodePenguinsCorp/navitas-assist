@@ -244,7 +244,7 @@ describe('RmasComponent pending editor lifecycle', () => {
       enterField('reportedFailure', 'Falha mantida');
     } else {
       enterField('foundFailure', 'Falha mantida');
-      enterField('technicianName', 'Tecnico');
+      // Data e técnico do diagnóstico são preenchidos automaticamente; não há campo para digitar.
     }
     fixture.detectChanges();
   }
