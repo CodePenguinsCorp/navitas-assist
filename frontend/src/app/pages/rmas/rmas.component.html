@@ -209,25 +209,13 @@
           <div class="detail-summary__wide rma-details__deadline">
             <dt>Data limite</dt>
             <dd [class.is-empty]="!rma.dueDate">
-              @if (rma.dueDate) {
-                <span>{{ dateLabel(rma.dueDate) }}</span>
-                <app-rma-deadline-chip [rma]="rma" mode="detail" />
-              } @else {
-                <span>Sem data limite</span>
-              }
-              @if (canEditRma()) {
-                <button type="button" class="button-secondary button-secondary--small" (click)="dueDateDialogOpen.set(true)">Alterar</button>
-              }
+              <app-rma-due-date-field [rma]="rma" [canEdit]="canEditRma()" (saved)="detailRmaSaved($event)" />
             </dd>
           </div>
           @let stage = stageFact(rma, clock.now());
           <div><dt>{{ stage.label }}</dt><dd>{{ stage.value }}</dd></div>
           <div><dt>Atualizado em</dt><dd>{{ dateTimeLabel(rma.updatedAt) }}</dd></div>
         </dl>
-
-        @if (dueDateDialogOpen()) {
-          <app-rma-due-date-dialog [rma]="rma" (saved)="dueDateSaved($event)" (closed)="dueDateDialogOpen.set(false)" />
-        }
 
         <div class="tab-list tab-list--raised" role="tablist" aria-label="Seções do RMA" (keydown)="onDetailTabKeydown($event)">
           @for (tab of detailTabs; track tab.id) {
@@ -325,7 +313,7 @@
               }
             }
             @case ('blocks') {
-              <app-rma-blocks-section [rma]="rma" (updated)="blocksUpdated($event)" />
+              <app-rma-blocks-section [rma]="rma" (updated)="detailRmaSaved($event)" />
             }
             @case ('history') {
               <app-rma-stage-times class="rma-details__stage-times" [rma]="rma" />

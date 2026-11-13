@@ -1,6 +1,5 @@
-import { Component, EventEmitter, Output, computed, inject, input, signal } from '@angular/core';
+import { Component, EventEmitter, Output, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { formatDateOnly } from '../../core/utils/date';
 import { RMA_STATUS_FLOW } from '../../core/mock-data';
 import { AssignableUserResponse, RmaResponse, RmaStatus } from '../../core/models';
 import { ClockService } from '../../core/services/clock.service';
@@ -21,8 +20,7 @@ import { CustomSelectComponent, CustomSelectOption } from '../form-controls/cust
 import { IconComponent } from '../icon/icon.component';
 import { ModalFocusDirective } from '../modal-focus/modal-focus.directive';
 import { RmaBlocksSectionComponent } from '../rma-blocks-section/rma-blocks-section.component';
-import { RmaDeadlineChipComponent } from '../rma-deadline-chip/rma-deadline-chip.component';
-import { RmaDueDateDialogComponent } from '../rma-due-date-dialog/rma-due-date-dialog.component';
+import { RmaDueDateFieldComponent } from '../rma-due-date-field/rma-due-date-field.component';
 import { RmaStageTimesComponent } from '../rma-stage-times/rma-stage-times.component';
 import {
   formatDate,
@@ -39,7 +37,7 @@ import {
 
 @Component({
   selector: 'app-rma-detail-modal',
-  imports: [CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDeadlineChipComponent, RmaDueDateDialogComponent, RmaStageTimesComponent, RouterLink],
+  imports: [CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDueDateFieldComponent, RmaStageTimesComponent, RouterLink],
   templateUrl: './rma-detail-modal.component.html',
   styleUrl: './rma-detail-modal.component.css'
 })
@@ -47,7 +45,7 @@ export class RmaDetailModalComponent {
   readonly rma = input.required<RmaResponse>();
   readonly canUpdateStatus = input(false);
   readonly canUpdateAssignee = input(false);
-  /** `rma.editar`: shows Alterar next to the due date. */
+  /** `rma.editar`: the due date value becomes an inline editable field. */
   readonly canEditDueDate = input(false);
   readonly disabled = input(false);
   /** Users who can receive the RMA (the host's assignable-users source). */
@@ -74,7 +72,6 @@ export class RmaDetailModalComponent {
   protected readonly initials = initialsOf;
   protected readonly dateLabel = formatDate;
   protected readonly dateTimeLabel = formatDateTime;
-  protected readonly dueDateLabel = formatDateOnly;
   protected readonly sectionLabel = sectionLabel;
   protected readonly invoiceFact = invoiceFact;
   protected readonly purchaseFact = purchaseFact;
@@ -86,12 +83,6 @@ export class RmaDetailModalComponent {
   protected readonly activity = computed(() => rmaHistory(this.rma()));
   protected readonly historyEntryTitle = historyEntryTitle;
   protected readonly stage = computed(() => stageFact(this.rma(), this.clock.now()));
-  protected readonly dueDateDialogOpen = signal(false);
-
-  protected dueDateSaved(rma: RmaResponse): void {
-    this.dueDateDialogOpen.set(false);
-    this.rmaUpdated.emit(rma);
-  }
   /** Every stage but the current one can be chosen (the same rule as the status dialog). */
   protected readonly statusOptions = computed<ReadonlyArray<CustomSelectOption<RmaStatus>>>(() =>
     RMA_STATUS_FLOW.map((status) => ({

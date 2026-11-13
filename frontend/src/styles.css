@@ -3145,7 +3145,7 @@ app-custom-select:has(> .custom-select--status) {
   max-width: 440px;
 }
 
-/* Due date fact: date, situation chip and Alterar wrap as whole pieces at 320 px. */
+/* Due date fact: the inline field (app-rma-due-date-field) takes the whole row and wraps its pieces at 320 px. */
 .detail-summary > .rma-details__deadline > dd {
   display: flex;
   flex-wrap: wrap;

@@ -1,0 +1,42 @@
+@if (editing()) {
+  <form class="due-date-field__form" [formGroup]="form" (ngSubmit)="save()" (keydown.escape)="cancelOnEscape($event)">
+    <div class="field-group due-date-field__group">
+      <div class="due-date-field__control">
+        <input
+          type="date"
+          aria-label="Data limite"
+          formControlName="dueDate"
+          [min]="rma().entryDate"
+          [attr.aria-invalid]="invalid() ? 'true' : null"
+          [attr.aria-describedby]="invalid() ? 'rma-due-date-error' : null"
+          (input)="invalid.set(false)"
+        />
+        <button type="button" class="due-date-field__clear" aria-label="Limpar data limite" [disabled]="busy() || !control.value" (click)="clear()">
+          <app-icon name="close" [size]="16" />
+        </button>
+      </div>
+      @if (invalid()) {
+        <small id="rma-due-date-error" class="field-error" role="alert">A data limite não pode ser anterior à entrada.</small>
+      }
+    </div>
+    @if (error(); as message) {
+      <p class="field-error due-date-field__error" role="alert">{{ message }}</p>
+    }
+    <div class="form-actions due-date-field__actions">
+      <button type="button" class="button-secondary button-secondary--small" [disabled]="busy()" (click)="cancel()">Cancelar</button>
+      <button type="submit" class="button-primary due-date-field__save" [disabled]="busy()">{{ busy() ? 'Salvando...' : 'Salvar' }}</button>
+    </div>
+  </form>
+} @else if (canEdit()) {
+  <button type="button" class="due-date-field__trigger" [class.is-empty]="!rma().dueDate" [disabled]="disabled()" (click)="edit()">
+    <app-icon class="due-date-field__icon" name="calendar" [size]="16" />
+    <span class="due-date-field__text">{{ rma().dueDate ? dateLabel(rma().dueDate) : 'Sem data limite' }}</span>
+    @if (rma().dueDate) { <app-rma-deadline-chip [rma]="rma()" mode="detail" /> }
+    <span class="sr-only">Alterar data limite</span>
+  </button>
+} @else {
+  <span class="due-date-field__static" [class.is-empty]="!rma().dueDate">
+    <span class="due-date-field__text">{{ rma().dueDate ? dateLabel(rma().dueDate) : 'Sem data limite' }}</span>
+    @if (rma().dueDate) { <app-rma-deadline-chip [rma]="rma()" mode="detail" /> }
+  </span>
+}

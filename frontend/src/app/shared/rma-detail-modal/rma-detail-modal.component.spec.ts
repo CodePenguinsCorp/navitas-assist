@@ -374,22 +374,32 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(chip?.getAttribute('data-deadline')).toBe('OVERDUE');
   });
 
-  it('shows Alterar only with rma.editar and emits the saved RMA', async () => {
+  it('makes the due date value clickable only with rma.editar and emits the RMA saved inline', async () => {
     let view = await setup();
     expect(view.buttonByText('Alterar')).toBeUndefined();
+    expect(view.host.querySelector('.rma-detail__deadline .due-date-field__trigger')).toBeNull();
     TestBed.resetTestingModule();
 
-    view = await setup({ canEditDueDate: true });
+    view = await setup({ canEditDueDate: true, rma: { ...fullRma, dueDate: null } });
     const updated: RmaResponse[] = [];
     view.component.rmaUpdated.subscribe((rma) => updated.push(rma));
-    view.buttonByText('Alterar')!.click();
+    expect(view.buttonByText('Alterar')).toBeUndefined();
+    const trigger = view.host.querySelector<HTMLButtonElement>('.rma-detail__deadline .due-date-field__trigger')!;
+    expect(trigger.querySelector('.due-date-field__text')?.textContent?.trim()).toBe('Sem data limite');
+    trigger.click();
     view.fixture.detectChanges();
-    const dialog = view.host.querySelector('app-rma-due-date-dialog [role="dialog"]');
-    expect(dialog?.querySelector('h3')?.textContent?.trim()).toBe('Data limite');
-    dialog!.querySelector('form')!.dispatchEvent(new Event('submit'));
+    expect(view.host.querySelector('app-rma-due-date-dialog, [role="dialog"] [role="dialog"]')).toBeNull();
+    const input = view.host.querySelector<HTMLInputElement>('.rma-detail__deadline input[type="date"]')!;
+    input.value = '2026-10-30';
+    input.dispatchEvent(new Event('input'));
+    input.closest('form')!.dispatchEvent(new Event('submit'));
     view.fixture.detectChanges();
-    expect(updated).toHaveLength(1);
-    expect(view.host.querySelector('app-rma-due-date-dialog')).toBeNull();
+    expect(updated.map((rma) => rma.dueDate)).toEqual(['2026-10-30']);
+  });
+
+  it('keeps the due date trigger inactive while disabled', async () => {
+    const { host } = await setup({ canEditDueDate: true, disabled: true });
+    expect(host.querySelector<HTMLButtonElement>('.rma-detail__deadline .due-date-field__trigger')!.disabled).toBe(true);
   });
 
   it('shows há 2 d 4 h in Nesta etapa and Encerrado em for closed RMAs', async () => {

@@ -76,8 +76,7 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { RmaBlocksSectionComponent } from '../../shared/rma-blocks-section/rma-blocks-section.component';
 import { RmaPartsPanelComponent } from '../../shared/rma-parts-panel/rma-parts-panel.component';
-import { RmaDeadlineChipComponent } from '../../shared/rma-deadline-chip/rma-deadline-chip.component';
-import { RmaDueDateDialogComponent } from '../../shared/rma-due-date-dialog/rma-due-date-dialog.component';
+import { RmaDueDateFieldComponent } from '../../shared/rma-due-date-field/rma-due-date-field.component';
 import { RmaStageTimesComponent } from '../../shared/rma-stage-times/rma-stage-times.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
@@ -102,7 +101,7 @@ export interface RmaListFilters {
 
 @Component({
   selector: 'app-rmas',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDeadlineChipComponent, RmaDueDateDialogComponent, RmaStageTimesComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaStageTimesComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {
@@ -537,7 +536,6 @@ export class RmasComponent {
   protected readonly rmaHistory = rmaHistory;
   protected readonly historyEntryTitle = historyEntryTitle;
   protected readonly stageFact = stageFact;
-  protected readonly dueDateDialogOpen = signal(false);
   protected readonly noDiagnosisLabel = NO_DIAGNOSIS_LABEL;
 
   protected get todayDate(): string {
@@ -890,14 +888,8 @@ export class RmasComponent {
     });
   }
 
-  /** A block or resolve made in the Impedimentos tab refreshes the detail and the list. */
-  protected blocksUpdated(updated: RmaResponse): void {
-    this.selectedRmaSignal.set(updated);
-    this.refreshRmas();
-  }
-
-  protected dueDateSaved(updated: RmaResponse): void {
-    this.dueDateDialogOpen.set(false);
+  /** A save made inside the detail (impediment, due date) refreshes the detail and the list. */
+  protected detailRmaSaved(updated: RmaResponse): void {
     this.selectedRmaSignal.set(updated);
     this.refreshRmas();
   }
@@ -928,7 +920,6 @@ export class RmasComponent {
 
   private resetModal(): void {
     this.activeModal.set(null);
-    this.dueDateDialogOpen.set(false);
   }
 
   private loadWorkspace(): void {

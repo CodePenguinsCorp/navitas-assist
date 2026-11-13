@@ -206,15 +206,7 @@
             <div class="detail-facts__block rma-detail__deadline">
               <dt>Data limite</dt>
               <dd [class.is-empty]="!rma().dueDate">
-                @if (rma().dueDate) {
-                  <span>{{ dueDateLabel(rma().dueDate) }}</span>
-                  <app-rma-deadline-chip [rma]="rma()" mode="detail" />
-                } @else {
-                  <span>Sem data limite</span>
-                }
-                @if (canEditDueDate()) {
-                  <button type="button" class="button-secondary button-secondary--small" [disabled]="disabled()" (click)="dueDateDialogOpen.set(true)">Alterar</button>
-                }
+                <app-rma-due-date-field [rma]="rma()" [canEdit]="canEditDueDate()" [disabled]="disabled()" (saved)="rmaUpdated.emit($event)" />
               </dd>
             </div>
             <div><dt>{{ stage().label }}</dt><dd>{{ stage().value }}</dd></div>
@@ -243,7 +235,3 @@
     </div>
   </article>
 </section>
-
-@if (dueDateDialogOpen()) {
-  <app-rma-due-date-dialog [rma]="rma()" (saved)="dueDateSaved($event)" (closed)="dueDateDialogOpen.set(false)" />
-}

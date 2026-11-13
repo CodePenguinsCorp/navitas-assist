@@ -308,10 +308,12 @@ describe('RmasComponent detail with the shared information contract', () => {
     expect(chip?.getAttribute('data-deadline')).toBe('OVERDUE');
   });
 
-  it('shows Alterar only with rma.editar and saves through the dialog', async () => {
+  it('makes the due date value clickable only with rma.editar and saves it inline', async () => {
     let view = await setup({ role: 'TECHNICIAN' });
     view.open();
     expect([...view.detail().querySelectorAll('button')].some((button) => button.textContent?.trim() === 'Alterar')).toBe(false);
+    expect(view.detail().querySelector('.rma-details__deadline .due-date-field__trigger')).toBeNull();
+    expect(view.detail().querySelector('.rma-details__deadline')?.textContent).toContain('Sem data limite');
     TestBed.resetTestingModule();
 
     view = await setup({ role: 'ADMIN' });
@@ -320,15 +322,18 @@ describe('RmasComponent detail with the shared information contract', () => {
     (view.rmaService as unknown as { updateDueDate: typeof updateDueDate }).updateDueDate = updateDueDate;
     view.rmaService.list.mockReturnValue(of(buildRmaPage([updated], 0, 20, 1)));
     view.open();
-    const change = [...view.detail().querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.trim() === 'Alterar')!;
-    change.click();
+    const deadline = view.detail().querySelector<HTMLElement>('.rma-details__deadline')!;
+    expect([...deadline.querySelectorAll('button')].some((button) => button.textContent?.trim() === 'Alterar')).toBe(false);
+    deadline.querySelector<HTMLButtonElement>('.due-date-field__trigger')!.click();
     view.render();
-    const dialog = view.page.querySelector('app-rma-due-date-dialog [role="dialog"]')!;
-    expect(dialog.querySelector('h3')?.textContent?.trim()).toBe('Data limite');
-    dialog.querySelector('form')!.dispatchEvent(new Event('submit'));
+    expect(view.page.querySelector('app-rma-due-date-dialog, .modal-panel--narrow')).toBeNull();
+    const input = deadline.querySelector<HTMLInputElement>('input[type="date"]')!;
+    input.value = '2026-10-30';
+    input.dispatchEvent(new Event('input'));
+    input.closest('form')!.dispatchEvent(new Event('submit'));
     view.render();
-    expect(updateDueDate).toHaveBeenCalledWith(5, null);
-    expect(view.page.querySelector('app-rma-due-date-dialog')).toBeNull();
+    expect(updateDueDate).toHaveBeenCalledWith(5, '2026-10-30');
+    expect(deadline.querySelector('input[type="date"]')).toBeNull();
     expect(view.detail().querySelector('.rma-details__summary')?.textContent).toContain('30/10/2026');
   });
 
