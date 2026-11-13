@@ -78,13 +78,36 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
       box-sizing: border-box;
       padding: var(--space-4);
       padding-right: calc(var(--space-4) + var(--control-height));
-      border: 1px solid var(--line);
+      border-width: 1px;
+      border-style: solid;
       border-radius: var(--radius-md);
-      background: var(--surface);
       box-shadow: var(--shadow);
+      overflow: hidden;
     }
 
     .read-batch-toast p { margin: 0 0 var(--space-3); }
+    .read-batch-toast button {
+      --_bg: var(--btn-success-bg);
+      --_bg-hover: var(--btn-success-bg-hover);
+      --_border: var(--btn-success-border);
+      --_border-hover: var(--btn-success-border-hover);
+      --_text: var(--btn-success-text);
+      --_text-hover: var(--btn-success-text-hover);
+    }
+
+    .read-batch-progress {
+      position: absolute;
+      inset: auto 0 0;
+      height: 4px;
+      background: var(--tone-success);
+      transform-origin: left;
+      animation: read-batch-countdown linear forwards;
+    }
+
+    @keyframes read-batch-countdown {
+      to { transform: scaleX(0); }
+    }
+
     .read-batch-close {
       position: absolute;
       top: var(--space-2);
@@ -285,6 +308,7 @@ export class NotificationsComponent {
   protected readonly orderLabel = computed(() => this.newestFirst()
     ? 'Ordem: mais recentes primeiro. Inverter ordem' : 'Ordem: mais antigas primeiro. Inverter ordem');
   protected readonly readBatch = signal<NotificationReadAllResponse | null>(null);
+  protected readonly readBatchDurationMs = signal(0);
   protected readonly preferences = signal<NotificationPreferenceResponse[]>([]);
   protected readonly rules = signal<NotificationRuleResponse[]>([]);
   protected readonly failures = signal<NotificationFailureResponse[]>([]);
@@ -432,6 +456,7 @@ export class NotificationsComponent {
       this.clearReadBatch();
       const remaining = batch.expiresAt ? Math.min(4000, Date.parse(batch.expiresAt) - Date.now()) : 0;
       if (batch.markedCount > 0 && batch.undoToken && remaining > 0) {
+        this.readBatchDurationMs.set(remaining);
         this.readBatch.set(batch);
         this.readBatchTimer = setTimeout(() => this.clearReadBatch(), remaining);
       }

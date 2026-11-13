@@ -163,6 +163,44 @@ class NotificationReadBatchIntegrationTest {
     }
 
     @Test
+    void recipientsOfTheSameEventKeepIndependentReadStatesAndUndoBatches() throws Exception {
+        Notification own = notification(owner, false, false);
+        Notification foreign = notification(other, false, false, own.getEvent());
+        assertEquals(notifications.findById(own.getId()).orElseThrow().getEvent().getId(),
+            notifications.findById(foreign.getId()).orElseThrow().getEvent().getId());
+
+        mvc.perform(get("/api/notifications").with(asProfile(owner.getUsername(), "ADMIN")))
+            .andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].id").value(own.getId()));
+        mvc.perform(get("/api/notifications").with(asProfile(other.getUsername(), "ADMIN")))
+            .andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].id").value(foreign.getId()));
+        mvc.perform(post("/api/notifications/{id}/read", foreign.getId())
+            .with(asProfile(owner.getUsername(), "ADMIN")).with(csrf())).andExpect(status().isNotFound());
+        mvc.perform(post("/api/notifications/{id}/read", own.getId())
+            .with(asProfile(owner.getUsername(), "ADMIN")).with(csrf())).andExpect(status().isOk());
+        assertNull(notifications.findById(foreign.getId()).orElseThrow().getReadAt());
+
+        Notification second = notification(owner, false, false);
+        JsonNode ownBatch = markAll(owner);
+        assertEquals(1, ownBatch.path("markedCount").asInt());
+        assertNull(notifications.findById(foreign.getId()).orElseThrow().getReadAt());
+        JsonNode otherBatch = markAll(other);
+        assertEquals(1, otherBatch.path("markedCount").asInt());
+        String otherToken = otherBatch.path("undoToken").asText();
+        batchAction("undo", owner, otherToken).andExpect(status().isBadRequest());
+        batchAction("dismiss", owner, otherToken).andExpect(status().isNoContent());
+
+        batchAction("undo", owner, ownBatch.path("undoToken").asText())
+            .andExpect(status().isOk()).andExpect(jsonPath("$.restoredCount").value(1));
+        assertNotNull(notifications.findById(own.getId()).orElseThrow().getReadAt());
+        assertNull(notifications.findById(second.getId()).orElseThrow().getReadAt());
+        assertNotNull(notifications.findById(foreign.getId()).orElseThrow().getReadAt());
+        batchAction("undo", other, otherToken).andExpect(status().isOk()).andExpect(jsonPath("$.restoredCount").value(1));
+        assertNull(notifications.findById(foreign.getId()).orElseThrow().getReadAt());
+        assertNotNull(notifications.findById(own.getId()).orElseThrow().getReadAt());
+        assertNull(notifications.findById(second.getId()).orElseThrow().getReadAt());
+    }
+
+    @Test
     void protectsAllBatchOperationsWithAuthenticationCsrfAndTokenValidation() throws Exception {
         for (String path : List.of("/read-all", "/read-all/undo", "/read-all/dismiss")) {
             mvc.perform(post("/api/notifications" + path).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{}"))
@@ -252,6 +290,10 @@ class NotificationReadBatchIntegrationTest {
         event.setStatus(NotificationEventStatus.PROCESSED);
         event.setOccurredAt(NOW);
         event = events.saveAndFlush(event);
+        return notification(recipient, read, snoozed, event);
+    }
+
+    private Notification notification(UserAccount recipient, boolean read, boolean snoozed, NotificationEvent event) {
         Notification notification = new Notification();
         notification.setEvent(event);
         notification.setRecipient(recipient);

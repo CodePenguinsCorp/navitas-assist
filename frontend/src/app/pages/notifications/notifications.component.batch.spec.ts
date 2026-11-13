@@ -117,6 +117,21 @@ describe('Notifications inbox ordering and batch undo', () => {
     vi.advanceTimersByTime(1); render(); expect(root().querySelector('.read-batch-toast')).toBeNull();
   });
 
+  it('runs the countdown for the remaining popup lifetime and restarts it for a new batch', () => {
+    mark(1, TOKEN, 1200);
+    const first = root().querySelector<HTMLElement>('.read-batch-progress');
+    expect(first).not.toBeNull();
+    expect(first!.style.animationDuration).toBe('1200ms');
+    vi.advanceTimersByTime(500);
+    button('Caixa de entrada').click(); flushInbox(); mark(1, NEXT_TOKEN);
+    const next = root().querySelector<HTMLElement>('.read-batch-progress');
+    expect(next).not.toBe(first);
+    expect(next!.style.animationDuration).toBe('4000ms');
+    expect(next!.getAttribute('aria-hidden')).toBe('true');
+    vi.advanceTimersByTime(3999); render(); expect(root().querySelector('.read-batch-progress')).toBe(next);
+    vi.advanceTimersByTime(1); render(); expect(root().querySelector('.read-batch-progress')).toBeNull();
+  });
+
   it('does not offer an already expired response or a zero-change undo', () => {
     mark(1, TOKEN, 0); expect(root().querySelector('.read-batch-toast')).toBeNull();
     button('Caixa de entrada').click(); flushInbox(); mark(0);
