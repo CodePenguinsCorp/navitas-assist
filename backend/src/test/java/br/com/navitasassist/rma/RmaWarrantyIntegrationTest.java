@@ -237,24 +237,34 @@ class RmaWarrantyIntegrationTest {
     }
 
     @Test
-    void generalEditKeepsPrimaryItemConsistentWithPersistentItemOrder() throws Exception {
+    void generalEditKeepsTheRequestOrderAndItsFirstItemAsPrimary() throws Exception {
         RmaRecord rma = saveRma();
         RmaItem second = new RmaItem();
         second.setProduct(rma.getProduct());
         second.getItemIdentification().setSerialNumber("SECOND");
         rma.addItem(second);
         em.flush();
+        Long secondId = second.getId();
+        Long product = rma.getProduct().getId();
         mvc.perform(put("/api/rmas/{id}", rma.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"items\":[{\"productId\":" + rma.getProduct().getId()
-                    + ",\"serialNumber\":\"NEW\"},{\"productId\":" + rma.getProduct().getId() + ",\"serialNumber\":\"SECOND\"}]}"))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].serialNumber").value("SECOND"))
-            .andExpect(jsonPath("$.serialNumber").value("SECOND"));
+                .contentType(MediaType.APPLICATION_JSON).content("{\"items\":[{\"productId\":" + product
+                    + ",\"serialNumber\":\"NEW\"},{\"productId\":" + product + ",\"serialNumber\":\"SECOND\"},{\"productId\":" + product
+                    + ",\"serialNumber\":\"SERIAL\"}]}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items[0].serialNumber").value("NEW"))
+            .andExpect(jsonPath("$.items[1].serialNumber").value("SECOND"))
+            .andExpect(jsonPath("$.items[1].id").value(secondId))
+            .andExpect(jsonPath("$.items[2].serialNumber").value("SERIAL"))
+            .andExpect(jsonPath("$.serialNumber").value("NEW"));
         em.flush();
         em.clear();
         mvc.perform(get("/api/rmas/{id}", rma.getId()).with(asProfile("reader", "VIEWER")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].serialNumber").value("SECOND"))
-            .andExpect(jsonPath("$.serialNumber").value("SECOND"));
-        assertThat(jdbc.queryForObject("select serial_number from rmas where id = ?", String.class, rma.getId())).isEqualTo("SECOND");
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items[0].serialNumber").value("NEW"))
+            .andExpect(jsonPath("$.items[1].serialNumber").value("SECOND"))
+            .andExpect(jsonPath("$.items[2].serialNumber").value("SERIAL"))
+            .andExpect(jsonPath("$.serialNumber").value("NEW"));
+        assertThat(jdbc.queryForObject("select serial_number from rmas where id = ?", String.class, rma.getId())).isEqualTo("NEW");
     }
 
     private RmaRecord saveRma() {

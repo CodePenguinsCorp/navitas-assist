@@ -390,7 +390,8 @@ public class RmaService {
             available.remove(existing);
             existing.getItemIdentification().setManufacturedAt(candidate.getItemIdentification().getManufacturedAt());
             return existing;
-        }).sorted(java.util.Comparator.comparing(RmaItem::getId, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))).toList();
+        }).toList();
+        // A ordem do request é mantida (replaceItems grava a posição): o primeiro continua sendo o item principal.
         if (available.stream().anyMatch(item -> !item.getWarrantyHistory().isEmpty())) {
             throw new BusinessException("Não é possível remover um item com histórico de ajuste de garantia.");
         }

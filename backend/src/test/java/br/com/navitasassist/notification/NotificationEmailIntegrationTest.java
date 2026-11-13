@@ -103,6 +103,9 @@ class NotificationEmailIntegrationTest {
     @Autowired private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     @Autowired private br.com.navitasassist.service.NotificationEmailWorker worker;
     @Autowired private br.com.navitasassist.config.NotificationProperties properties;
+    @Autowired private br.com.navitasassist.service.NotificationEmailQueue queue;
+    @org.springframework.boot.test.mock.mockito.SpyBean private br.com.navitasassist.service.NotificationEmailContentFactory contentFactory;
+    @org.springframework.boot.test.mock.mockito.SpyBean private br.com.navitasassist.service.NotificationVisibilityPolicy visibility;
     @MockBean private java.time.Clock clock;
     private final java.time.Instant now = java.time.Instant.parse("2026-11-14T12:00:00Z");
     private UserAccount technician;
@@ -112,6 +115,9 @@ class NotificationEmailIntegrationTest {
     void setUp() {
         cleanUp();
         properties.getEmail().setEnabled(true);
+        properties.getEmail().setProvider("fake");
+        properties.getEmail().setDailyLimit(100);
+        properties.getEmail().setMonthlyLimit(3000);
         org.mockito.Mockito.when(clock.instant()).thenReturn(now);
         br.com.navitasassist.user.UserAccountTestSupport.ensureAdmin(userAccountRepository, accessProfiles, passwordEncoder);
         setAssignmentEmail(true);
@@ -144,6 +150,7 @@ class NotificationEmailIntegrationTest {
         clientRepository.deleteAll();
         userAccountRepository.findAll().stream().filter(account -> account.getUsername().startsWith("nav40-")).forEach(userAccountRepository::delete);
         setAssignmentEmail(false);
+        properties.getEmail().setProvider("fake");
     }
 
     @Test
@@ -306,6 +313,171 @@ class NotificationEmailIntegrationTest {
             var first = pool.submit(retry); var second = pool.submit(retry); start.countDown();
             assertEquals(java.util.Set.of(202, 409), java.util.Set.of(first.get(10, java.util.concurrent.TimeUnit.SECONDS), second.get(10, java.util.concurrent.TimeUnit.SECONDS)));
         } finally { pool.shutdownNow(); }
+    }
+
+    @Test
+    void twoInstancesPreparingTheSameDueEmailReserveItOnlyOnce() throws Exception {
+        assignAndWait();
+        Long id = assignmentNotification().getId();
+        var firstBuilding = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        doAnswer(invocation -> {
+            if (calls.incrementAndGet() == 1) {
+                firstBuilding.countDown();
+                assertTrue(release.await(10, java.util.concurrent.TimeUnit.SECONDS));
+            }
+            return invocation.callRealMethod();
+        }).when(contentFactory).build(any(), any());
+        var pool = java.util.concurrent.Executors.newSingleThreadExecutor();
+        try {
+            // A primeira instância leu a linha devida e para antes de reservar; a segunda lê a mesma linha e reserva.
+            var first = pool.submit(() -> queue.prepare(id));
+            assertTrue(firstBuilding.await(10, java.util.concurrent.TimeUnit.SECONDS));
+            var second = queue.prepare(id);
+            release.countDown();
+            var stale = first.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            org.junit.jupiter.api.Assertions.assertNotNull(second);
+            org.junit.jupiter.api.Assertions.assertNull(stale);
+            Notification n = assignmentNotification();
+            assertEquals(1, n.getEmailAttempts());
+            assertEquals(NotificationEmailStatus.PENDING, n.getEmailStatus());
+            assertTrue(n.getEmailNextAttemptAt().isAfter(now));
+        } finally { release.countDown(); pool.shutdownNow(); }
+        // Reservada, a linha não volta a ser devida no mesmo instante: outra varredura não a envia.
+        worker.poll();
+        org.mockito.Mockito.verifyNoInteractions(mailSender);
+    }
+
+    @Test
+    void dailyCapHoldsPendingWithoutConsumingAttemptsUntilTheNextSaoPauloDay() throws Exception {
+        useRealProviderWithLimits(1, 0);
+        assignAndWait();
+        worker.poll();
+        assertEquals(NotificationEmailStatus.SENT, assignmentNotifications().get(0).getEmailStatus());
+        mockMvc.perform(get("/api/notification-rules/email-status").with(asProfile("admin", "ADMIN")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.sentToday").value(1)).andExpect(jsonPath("$.dailyLimit").value(1))
+            .andExpect(jsonPath("$.sentThisMonth").value(1)).andExpect(jsonPath("$.monthlyLimit").value(0))
+            .andExpect(jsonPath("$.limitReached").value(true));
+
+        reassignAndWait();
+        worker.poll();
+        worker.poll();
+        Notification held = assignmentNotifications().get(1);
+        assertEquals(NotificationEmailStatus.PENDING, held.getEmailStatus());
+        assertEquals(0, held.getEmailAttempts());
+        verify(mailSender, org.mockito.Mockito.times(1)).send(any(), any());
+
+        // 12:00Z é 09:00 em São Paulo; 02:59Z do dia seguinte ainda é o mesmo dia lá, 03:00Z já é o próximo.
+        org.mockito.Mockito.when(clock.instant()).thenReturn(java.time.Instant.parse("2026-11-15T02:59:59Z"));
+        worker.poll();
+        assertEquals(NotificationEmailStatus.PENDING, assignmentNotifications().get(1).getEmailStatus());
+        org.mockito.Mockito.when(clock.instant()).thenReturn(java.time.Instant.parse("2026-11-15T03:00:00Z"));
+        worker.poll();
+        assertEquals(NotificationEmailStatus.SENT, assignmentNotifications().get(1).getEmailStatus());
+        assertEquals(1, assignmentNotifications().get(1).getEmailAttempts());
+        mockMvc.perform(get("/api/notification-rules/email-status").with(asProfile("admin", "ADMIN")))
+            .andExpect(jsonPath("$.sentToday").value(1)).andExpect(jsonPath("$.sentThisMonth").value(2));
+    }
+
+    @Test
+    void monthlyCapHoldsPendingUntilTheNextSaoPauloMonth() throws Exception {
+        useRealProviderWithLimits(0, 1);
+        assignAndWait();
+        worker.poll();
+        reassignAndWait();
+        org.mockito.Mockito.when(clock.instant()).thenReturn(java.time.Instant.parse("2026-12-01T02:59:59Z"));
+        worker.poll();
+        assertEquals(NotificationEmailStatus.PENDING, assignmentNotifications().get(1).getEmailStatus());
+        assertEquals(0, assignmentNotifications().get(1).getEmailAttempts());
+        org.mockito.Mockito.when(clock.instant()).thenReturn(java.time.Instant.parse("2026-12-01T03:00:00Z"));
+        worker.poll();
+        assertEquals(NotificationEmailStatus.SENT, assignmentNotifications().get(1).getEmailStatus());
+    }
+
+    @Test
+    void fakeDeliveriesDoNotCountTowardTheCap() throws Exception {
+        properties.getEmail().setDailyLimit(1);
+        assignAndWait();
+        worker.poll();
+        reassignAndWait();
+        worker.poll();
+        assertEquals(NotificationEmailStatus.SENT, assignmentNotifications().get(1).getEmailStatus());
+        mockMvc.perform(get("/api/notification-rules/email-status").with(asProfile("admin", "ADMIN")))
+            .andExpect(jsonPath("$.sentToday").value(0)).andExpect(jsonPath("$.limitReached").value(false));
+    }
+
+    private void useRealProviderWithLimits(int daily, int monthly) {
+        properties.getEmail().setProvider("resend");
+        properties.getEmail().setSendIntervalMs(0);
+        properties.getEmail().setDailyLimit(daily);
+        properties.getEmail().setMonthlyLimit(monthly);
+    }
+
+    private void reassignAndWait() throws Exception {
+        Map<String, Object> none = new java.util.HashMap<>();
+        none.put("assigneeId", null);
+        mockMvc.perform(patch("/api/rmas/{id}/assignee", rma.id()).with(asProfile("admin", "ADMIN")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(none))).andExpect(status().isOk());
+        assignAndWait().andExpect(status().isOk());
+    }
+
+    private List<Notification> assignmentNotifications() {
+        return notificationRepository.findAll().stream().filter(notification -> notification.getEventType() == NotificationEventType.RMA_ASSIGNED)
+            .sorted(java.util.Comparator.comparing(Notification::getId)).toList();
+    }
+
+    @Test
+    void manualRetryStartsANewIdempotencyKeyKeptAcrossItsAutomaticAttempts() throws Exception {
+        assignAndWait();
+        Long id = assignmentNotification().getId();
+        doThrow(new br.com.navitasassist.notification.email.EmailDeliveryException("HTTP_400", false)).when(mailSender).send(any(), any());
+        worker.poll();
+        verify(mailSender).send(any(), org.mockito.ArgumentMatchers.eq(id.toString()));
+        retry(id);
+        doThrow(new br.com.navitasassist.notification.email.EmailDeliveryException("HTTP_503", true)).when(mailSender).send(any(), any());
+        worker.poll();
+        org.mockito.Mockito.when(clock.instant()).thenReturn(now.plusSeconds(60));
+        worker.poll();
+        verify(mailSender, org.mockito.Mockito.times(2)).send(any(), org.mockito.ArgumentMatchers.eq(id + "-1"));
+        doThrow(new br.com.navitasassist.notification.email.EmailDeliveryException("HTTP_400", false)).when(mailSender).send(any(), any());
+        org.mockito.Mockito.when(clock.instant()).thenReturn(now.plusSeconds(360));
+        worker.poll();
+        assertEquals(NotificationEmailStatus.FAILED, assignmentNotification().getEmailStatus());
+        retry(id);
+        worker.poll();
+        verify(mailSender).send(any(), org.mockito.ArgumentMatchers.eq(id + "-2"));
+        verify(mailSender, org.mockito.Mockito.times(5)).send(any(), any());
+    }
+
+    private void retry(Long id) throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/notification-rules/emails/{id}/retry", id).with(asProfile("admin", "ADMIN")).with(csrf()))
+            .andExpect(status().isAccepted());
+    }
+
+    @Test
+    void persistentErrorOutsideContentBacksOffAndFailsAfterFiveAttempts() throws Exception {
+        assignAndWait();
+        doThrow(new IllegalStateException("database unavailable")).when(visibility).canReceive(any(), any());
+        java.time.Instant attemptTime = now;
+        int[] minutes = {1, 5, 30, 120};
+        for (int attempt = 1; attempt <= 5; attempt++) {
+            org.mockito.Mockito.when(clock.instant()).thenReturn(attemptTime);
+            worker.poll();
+            worker.poll();
+            Notification notification = assignmentNotification();
+            assertEquals(attempt, notification.getEmailAttempts());
+            assertEquals("PROCESSING_ERROR", notification.getEmailError());
+            if (attempt < 5) {
+                attemptTime = attemptTime.plusSeconds(minutes[attempt - 1] * 60L);
+                assertEquals(attemptTime, notification.getEmailNextAttemptAt());
+                assertEquals(NotificationEmailStatus.PENDING, notification.getEmailStatus());
+            } else {
+                assertEquals(NotificationEmailStatus.FAILED, notification.getEmailStatus());
+                org.junit.jupiter.api.Assertions.assertNull(notification.getEmailNextAttemptAt());
+            }
+        }
+        org.mockito.Mockito.verifyNoInteractions(mailSender);
     }
 
     @Test

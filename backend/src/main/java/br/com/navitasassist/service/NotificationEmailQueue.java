@@ -15,7 +15,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class NotificationEmailQueue {
-    public record Delivery(Long id, int attempt, String provider, EmailMessage message) {}
+    public record Delivery(Long id, int attempt, String provider, EmailMessage message, String idempotencyKey) {}
+    /** Prazo da reserva: cobre o envio (timeout do provedor) e devolve a linha à fila se a instância cair no meio. */
+    static final Duration CLAIM_LEASE = Duration.ofMinutes(5);
+    static final int MAX_ATTEMPTS = 5;
+    /** Recuo após a tentativa 1, 2, 3 e 4: 1 min, 5 min, 30 min e 2 h. */
+    private static final long[] RETRY_DELAYS_SECONDS = {60, 300, 1800, 7200};
+    static final String PROCESSING_ERROR = "PROCESSING_ERROR";
     private final NotificationRepository notifications;
     private final NotificationRuleRepository rules;
     private final NotificationMuteRepository mutes;
@@ -52,22 +58,33 @@ public class NotificationEmailQueue {
             n.setEmailError(null);
             return null;
         }
-        if (n.getEmailAttempts() >= 5) {
+        if (n.getEmailAttempts() >= MAX_ATTEMPTS) {
             n.setEmailStatus(NotificationEmailStatus.FAILED);
             n.setEmailError("ATTEMPTS_EXHAUSTED");
             n.setEmailNextAttemptAt(null);
             return null;
         }
-        n.setEmailAttempts(n.getEmailAttempts() + 1);
-        n.setEmailProvider(properties.getEmail().getProvider());
+        int attempts = n.getEmailAttempts();
+        EmailMessage message;
         try {
-            return new Delivery(id, n.getEmailAttempts(), n.getEmailProvider(), content.build(n, n.getRecipient().getEmail()));
+            message = content.build(n, n.getRecipient().getEmail());
         } catch (RuntimeException error) {
             n.setEmailStatus(NotificationEmailStatus.FAILED);
             n.setEmailNextAttemptAt(null);
             n.setEmailError(error instanceof EmailDeliveryException e ? e.code() : "CONTENT_ERROR");
             return null;
         }
+        // Reserva atômica: com mais de uma instância, só quem afetar a linha envia esta tentativa.
+        String provider = properties.getEmail().getProvider();
+        Instant now = clock.instant();
+        int generation = n.getEmailGeneration();
+        if (notifications.claimEmail(id, attempts, generation, now, now.plus(CLAIM_LEASE), provider) != 1) return null;
+        return new Delivery(id, attempts + 1, provider, message, idempotencyKey(id, generation));
+    }
+
+    /** Mesma chave entre as tentativas automáticas de uma geração; cada reenvio manual muda a geração e a chave. */
+    static String idempotencyKey(Long id, int generation) {
+        return generation == 0 ? id.toString() : id + "-" + generation;
     }
 
     @Transactional
@@ -81,13 +98,39 @@ public class NotificationEmailQueue {
             n.setEmailNextAttemptAt(null);
         } else {
             n.setEmailError(error.code());
-            if (!error.retryable() || n.getEmailAttempts() >= 5) {
+            if (!error.retryable() || n.getEmailAttempts() >= MAX_ATTEMPTS) {
                 n.setEmailStatus(NotificationEmailStatus.FAILED);
                 n.setEmailNextAttemptAt(null);
             } else {
-                long[] delays = {60, 300, 1800, 7200};
-                n.setEmailNextAttemptAt(clock.instant().plusSeconds(delays[n.getEmailAttempts() - 1]));
+                n.setEmailNextAttemptAt(clock.instant().plusSeconds(RETRY_DELAYS_SECONDS[n.getEmailAttempts() - 1]));
             }
         }
+    }
+
+    /**
+     * Erro fora do envio (leitura, elegibilidade ou conclusão), em transação própria: conta a tentativa, se ainda não
+     * contada pela reserva, e recua como uma falha transitória; ao esgotar as tentativas, vira FAILED. Sem isso a linha
+     * continuaria devida e seria reprocessada a cada varredura, à frente das demais.
+     *
+     * @param claimedAttempt tentativa já reservada por {@link #prepare}, ou null se o erro ocorreu antes da reserva
+     */
+    @Transactional
+    public void recordProcessingError(Long id, Integer claimedAttempt) {
+        Notification n = notifications.findById(id).orElse(null);
+        if (n == null || n.getEmailStatus() != NotificationEmailStatus.PENDING) return;
+        Instant now = clock.instant();
+        int attempts = n.getEmailAttempts();
+        int counted;
+        if (claimedAttempt != null) {
+            if (attempts != claimedAttempt) return;
+            counted = attempts;
+        } else {
+            // Antes da reserva: só mexe na linha ainda devida (outra instância pode tê-la reservado).
+            if (n.getEmailNextAttemptAt() == null || n.getEmailNextAttemptAt().isAfter(now)) return;
+            counted = attempts + 1;
+        }
+        boolean exhausted = counted >= MAX_ATTEMPTS;
+        notifications.deferEmail(id, attempts, counted, exhausted ? NotificationEmailStatus.FAILED : NotificationEmailStatus.PENDING,
+            exhausted ? null : now.plusSeconds(RETRY_DELAYS_SECONDS[counted - 1]), PROCESSING_ERROR);
     }
 }

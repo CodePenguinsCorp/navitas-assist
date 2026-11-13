@@ -24,21 +24,49 @@ class EmailProviderTest {
 
     @Test void configIsDisabledAndFakeByDefaultAndRequiresExplicitSettingsWhenEnabled() {
         NotificationProperties.Email config = new NotificationProperties.Email();
-        config.validate();
+        config.validate(true);
         assertFalse(config.isEnabled());
         assertEquals("fake", config.getProvider());
         config.setEnabled(true);
-        assertThrows(IllegalStateException.class, config::validate);
+        assertThrows(IllegalStateException.class, () -> config.validate(true));
         config.setFrom("from@example.invalid");
         config.setAppBaseUrl("http://localhost:4200");
-        config.validate();
+        config.validate(true);
         config.setProvider("resend");
-        assertThrows(IllegalStateException.class, config::validate);
+        assertThrows(IllegalStateException.class, () -> config.validate(true));
         config.setApiKey("synthetic-key");
         config.setAppBaseUrl("https://app.example.invalid");
-        config.validate();
+        config.validate(true);
         config.setProvider("unknown");
-        assertThrows(IllegalStateException.class, config::validate);
+        assertThrows(IllegalStateException.class, () -> config.validate(true));
+    }
+
+    @Test void enabledFakeProviderIsRefusedOutsideLocalAndTestProfiles() {
+        NotificationProperties.Email config = new NotificationProperties.Email();
+        config.validate(false);
+        config.setEnabled(true);
+        config.setFrom("from@example.invalid");
+        config.setAppBaseUrl("https://app.example.invalid");
+        config.validate(true);
+        IllegalStateException error = assertThrows(IllegalStateException.class, () -> config.validate(false));
+        assertEquals("O provedor de e-mail falso só é permitido nos perfis local e test; ajuste NOTIFICATIONS_EMAIL_PROVIDER.", error.getMessage());
+        config.setProvider("resend");
+        config.setApiKey("synthetic-key");
+        config.validate(false);
+    }
+
+    @Test void startupFailsWhenFakeEmailIsEnabledWithoutLocalOrTestProfile() {
+        var environment = new org.springframework.mock.env.MockEnvironment();
+        environment.setActiveProfiles("prod");
+        NotificationProperties properties = new NotificationProperties();
+        properties.getEmail().setEnabled(true);
+        properties.getEmail().setFrom("from@example.invalid");
+        properties.getEmail().setAppBaseUrl("https://app.example.invalid");
+        var config = new br.com.navitasassist.config.NotificationEmailConfig();
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        assertThrows(IllegalStateException.class, () -> config.emailProvider(properties, mapper, environment));
+        environment.setActiveProfiles("local");
+        config.emailProvider(properties, mapper, environment);
     }
 
     @Test void resendUsesPostBearerSingleRecipientAndStableKey() throws Exception {

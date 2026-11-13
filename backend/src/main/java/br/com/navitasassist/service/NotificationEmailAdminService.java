@@ -28,10 +28,13 @@ public class NotificationEmailAdminService {
     private final EmailProvider provider;
     private final EffectivePermissionService permissions;
     private final Clock clock;
+    private final NotificationEmailQuota quota;
     private final Map<Long, Instant> lastTests = new ConcurrentHashMap<>();
 
     public NotificationEmailStatusResponse status() {
-        return new NotificationEmailStatusResponse(properties.getEmail().isEnabled(), properties.getEmail().getProvider());
+        NotificationEmailQuota.Usage usage = quota.usage();
+        return new NotificationEmailStatusResponse(properties.getEmail().isEnabled(), properties.getEmail().getProvider(),
+            usage.sentToday(), usage.dailyLimit(), usage.sentThisMonth(), usage.monthlyLimit(), usage.limitReached());
     }
 
     @Transactional
@@ -49,6 +52,10 @@ public class NotificationEmailAdminService {
     public NotificationEmailTestResponse test(String actor) {
         UserAccount user = requireActor(actor);
         if (!properties.getEmail().isEnabled() || !EmailMessage.validAddress(user.getEmail())) throw new BusinessException("Email channel disabled or no email registered.");
+        // O teste não é gravado nem contado, mas consome a cota do provedor real: com o teto atingido, não sai.
+        if (NotificationEmailQuota.countsTowardQuota(properties.getEmail().getProvider()) && quota.usage().limitReached()) {
+            throw new NotificationEmailActionException(HttpStatus.TOO_MANY_REQUESTS, "Email sending limit reached.");
+        }
         Instant now = clock.instant();
         lastTests.entrySet().removeIf(entry -> !entry.getValue().plusSeconds(30).isAfter(now));
         if (lastTests.putIfAbsent(user.getId(), now) != null) throw new NotificationEmailActionException(HttpStatus.TOO_MANY_REQUESTS, "Wait 30 seconds before another email test.");

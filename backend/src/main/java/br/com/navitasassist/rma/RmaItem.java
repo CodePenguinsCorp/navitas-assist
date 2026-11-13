@@ -47,6 +47,10 @@ public class RmaItem {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
+    /** Posição informada pelo usuário; a de menor valor é o item principal (RmaRecord.items ordena por ela). */
+    @Column(name = "item_position", nullable = false)
+    private int position;
+
     @Column
     private Integer warrantyMonths;
 

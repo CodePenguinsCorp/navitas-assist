@@ -42,6 +42,9 @@ navitas:
       app-base-url: ${APP_BASE_URL:}
       poll-ms: ${NOTIFICATIONS_EMAIL_POLL_MS:5000}
       batch-size: ${NOTIFICATIONS_EMAIL_BATCH_SIZE:50}
+      daily-limit: ${NOTIFICATIONS_EMAIL_DAILY_LIMIT:100}
+      monthly-limit: ${NOTIFICATIONS_EMAIL_MONTHLY_LIMIT:3000}
+      send-interval-ms: ${NOTIFICATIONS_EMAIL_SEND_INTERVAL_MS:500}
   security:
     cookie-secure: ${SESSION_COOKIE_SECURE:true}
 
