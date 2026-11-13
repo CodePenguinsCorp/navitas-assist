@@ -19,7 +19,7 @@ import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 
 /**
- * Perfis, permissões e regras de notificação semeados pela migração-base (V1), num H2 próprio por teste.
+ * Perfis, permissões e regras de notificação semeados pelas migrações (V1 e a limpeza do SLA na V2), num H2 próprio por teste.
  */
 class AccessProfileMigrationTest {
 
@@ -64,9 +64,7 @@ class AccessProfileMigrationTest {
             }
             assertEquals(Map.of(
                 "RMA_CREATED", "true,INFO,false,false,true",
-                "RMA_ASSIGNED", "true,INFO,true,false,false",
-                "SLA_WARNING", "true,WARNING,true,false,true",
-                "SLA_OVERDUE", "true,CRITICAL,true,false,false"), rules);
+                "RMA_ASSIGNED", "true,INFO,true,false,false"), rules);
 
             Map<String, Set<String>> recipients = new HashMap<>();
             try (Statement statement = connection.createStatement();
@@ -83,9 +81,7 @@ class AccessProfileMigrationTest {
             }
             assertEquals(Map.of(
                 "RMA_CREATED", Set.of("ADMIN", "SERVICE_DESK"),
-                "RMA_ASSIGNED", Set.of(),
-                "SLA_WARNING", Set.of("ADMIN"),
-                "SLA_OVERDUE", Set.of("ADMIN", "SERVICE_DESK")), recipients);
+                "RMA_ASSIGNED", Set.of()), recipients);
         }
     }
 

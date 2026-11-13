@@ -18,7 +18,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -42,11 +41,9 @@ import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.rma.CreateRmaRequest;
 import br.com.navitasassist.rma.RmaItemRequest;
 import br.com.navitasassist.rma.RmaPriority;
-import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaResponse;
 import br.com.navitasassist.service.NotificationProcessor;
 import br.com.navitasassist.service.RmaService;
-import br.com.navitasassist.service.SlaNotificationScanner;
 import br.com.navitasassist.user.UserAccount;
 import br.com.navitasassist.user.UserAccountTestSupport;
 import br.com.navitasassist.access.AccessProfile;
@@ -84,9 +81,6 @@ class NotificationIntegrationTest {
 
     @Autowired
     private NotificationProcessor notificationProcessor;
-
-    @Autowired
-    private SlaNotificationScanner slaNotificationScanner;
 
     @Autowired
     private NotificationRepository notificationRepository;
@@ -283,7 +277,7 @@ class NotificationIntegrationTest {
     void usersCanMuteOnlyRulesThatAllowIt() throws Exception {
         mockMvc.perform(get("/api/notifications/preferences").with(as(desk)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(4)));
+            .andExpect(jsonPath("$", hasSize(2)));
 
         mockMvc.perform(put("/api/notifications/preferences/RMA_ASSIGNED").with(as(technician)).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"muted\":true}"))
             .andExpect(status().isBadRequest())
@@ -304,23 +298,14 @@ class NotificationIntegrationTest {
     }
 
     @Test
-    void slaScanAlertsOverdueRmasOncePerStage() throws Exception {
-        RmaResponse created = createRma();
-        rmaService.updateAssignee(created.id(), new br.com.navitasassist.rma.RmaAssigneeUpdateRequest(technician.getId()));
-        NotificationTestSupport.awaitIdle(notificationExecutor);
-        RmaRecord rma = rmaRecordRepository.findById(created.id()).orElseThrow();
-        backdateStage(rma, Instant.now().minus(Duration.ofDays(30)));
-
-        slaNotificationScanner.scan(Instant.now());
-        slaNotificationScanner.scan(Instant.now());
-
-        assertEquals(1, countFor(technician, NotificationEventType.SLA_OVERDUE));
-        assertEquals(1, countFor(admin(), NotificationEventType.SLA_OVERDUE));
-        assertEquals(1, countFor(desk, NotificationEventType.SLA_OVERDUE));
-        assertEquals(0, countFor(viewer, NotificationEventType.SLA_OVERDUE));
-        mockMvc.perform(get("/api/notifications").param("unreadOnly", "true").with(as(technician)))
-            .andExpect(jsonPath("$[0].eventType").value("SLA_OVERDUE"))
-            .andExpect(jsonPath("$[0].severity").value("CRITICAL"));
+    void stageSlaAlertsNoLongerExist() throws Exception {
+        assertTrue(java.util.Arrays.stream(NotificationEventType.values()).noneMatch(type -> type.name().startsWith("SLA_")));
+        mockMvc.perform(get("/api/notification-rules").with(ADMIN))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[*].eventType", containsInAnyOrder("RMA_CREATED", "RMA_ASSIGNED")));
+        mockMvc.perform(get("/api/notifications/preferences").with(as(desk)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@.eventType =~ /SLA_.*/)]", hasSize(0)));
     }
 
     @Test
@@ -378,15 +363,15 @@ class NotificationIntegrationTest {
     @Test
     void deletingProfileRemovesItFromRules() throws Exception {
         AccessProfile custom = AccessTestSupport.saveProfile(accessProfiles, CUSTOM_PROFILE + " temporário", "rma.ver");
-        mockMvc.perform(put("/api/notification-rules/SLA_WARNING").with(ADMIN).with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(rulePayloadForProfiles(true, "WARNING", List.of(custom.getId())))))
+        mockMvc.perform(put("/api/notification-rules/RMA_CREATED").with(ADMIN).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(rulePayloadForProfiles(true, "INFO", List.of(custom.getId())))))
             .andExpect(status().isOk());
 
         mockMvc.perform(delete("/api/profiles/{id}", custom.getId()).with(ADMIN).with(csrf())).andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/notification-rules").with(ADMIN))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[?(@.eventType == 'SLA_WARNING')].recipientProfiles[*]", hasSize(0)));
+            .andExpect(jsonPath("$[?(@.eventType == 'RMA_CREATED')].recipientProfiles[*]", hasSize(0)));
     }
 
     private RmaResponse createRma() {
@@ -394,10 +379,6 @@ class NotificationIntegrationTest {
             LocalDate.now(), null, "Não liga", null, null, RmaPriority.HIGH, null, null, null));
         NotificationTestSupport.awaitIdle(notificationExecutor);
         return created;
-    }
-
-    private void backdateStage(RmaRecord rma, Instant enteredAt) {
-        jdbcTemplate.update("UPDATE rma_status_history SET changed_at = ? WHERE rma_id = ?", java.sql.Timestamp.from(enteredAt), rma.getId());
     }
 
     private UserAccount createUser(String username, String role, boolean active) {
@@ -443,8 +424,6 @@ class NotificationIntegrationTest {
     private void resetRules() {
         reset(NotificationEventType.RMA_CREATED, NotificationSeverity.INFO, Set.of("ADMIN", "SERVICE_DESK"), false, true);
         reset(NotificationEventType.RMA_ASSIGNED, NotificationSeverity.INFO, Set.of(), true, false);
-        reset(NotificationEventType.SLA_WARNING, NotificationSeverity.WARNING, Set.of("ADMIN"), true, true);
-        reset(NotificationEventType.SLA_OVERDUE, NotificationSeverity.CRITICAL, Set.of("ADMIN", "SERVICE_DESK"), true, false);
     }
 
     private void reset(NotificationEventType type, NotificationSeverity severity, Set<String> roles, boolean notifyAssignee, boolean userMutable) {

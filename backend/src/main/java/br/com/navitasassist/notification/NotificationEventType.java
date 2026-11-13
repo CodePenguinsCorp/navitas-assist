@@ -8,8 +8,6 @@ package br.com.navitasassist.notification;
 public enum NotificationEventType {
     RMA_CREATED(true),
     RMA_ASSIGNED(true),
-    SLA_WARNING(true),
-    SLA_OVERDUE(true),
     RMA_BLOCKED(false),
     WIP_LIMIT_EXCEEDED(false),
     PART_PENDING(false),

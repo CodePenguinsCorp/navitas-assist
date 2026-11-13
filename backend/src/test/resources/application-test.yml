@@ -22,8 +22,5 @@ server:
         secure: false
 
 navitas:
-  notifications:
-    sla-scan:
-      enabled: false
   security:
     cookie-secure: false
