@@ -37,3 +37,10 @@ backend/.env
 backend/.env.*
 !.env.example
 !.env.prod.example
+
+# Ferramentas e agentes locais
+.claude/
+.playwright-cli/
+.playwright-mcp/
+output/
+.superpowers/
