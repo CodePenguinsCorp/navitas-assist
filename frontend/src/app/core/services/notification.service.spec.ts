@@ -29,8 +29,9 @@ describe('NotificationService', () => {
   });
 
   it('consulta status e testa sem destinatério ou payload', () => {
-    service.emailStatus().subscribe(value => expect(value).toEqual({ enabled: true, provider: 'fake' }));
-    httpTesting.expectOne('/api/notification-rules/email-status').flush({ enabled: true, provider: 'fake' });
+    const status = { enabled: true, provider: 'smtp', sentToday: 3, dailyLimit: 100, sentThisMonth: 9, monthlyLimit: 3000, limitReached: false };
+    service.emailStatus().subscribe(value => expect(value).toEqual(status));
+    httpTesting.expectOne('/api/notification-rules/email-status').flush(status);
     service.testEmail().subscribe(value => expect(value.status).toBe('simulado'));
     const request = httpTesting.expectOne('/api/notification-rules/emails/test');
     expect(request.request.method).toBe('POST');

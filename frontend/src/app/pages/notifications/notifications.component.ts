@@ -322,6 +322,10 @@ export class NotificationsComponent {
     });
   }
 
+  protected monthlyUsage(status: NotificationEmailStatusResponse): string {
+    return `No mês ${status.sentThisMonth ?? 0}${status.monthlyLimit ? '/' + status.monthlyLimit : ''}`;
+  }
+
   protected sendTestEmail(): void {
     if (!this.canManageRules() || this.emailTestBusy() || !this.emailStatus()?.enabled) return;
     const epoch = this.adminEpoch;

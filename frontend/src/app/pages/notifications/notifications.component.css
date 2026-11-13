@@ -65,3 +65,6 @@ th { white-space: nowrap; }
   td[data-label]::before { content: attr(data-label) ': '; color: var(--muted); }
   .rule-updated { white-space: normal; }
 }
+
+.email-usage--limit { background: var(--warning-bg); color: var(--warning-text); }
+.email-usage-note { color: var(--warning-text); }

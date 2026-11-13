@@ -256,6 +256,10 @@
           @if (emailStatus(); as status) {
             @if (!status.enabled) { <span class="mini-chip">Desligado</span> }
             @else if (status.provider === 'fake') { <span class="mini-chip">Simulado</span> }
+            @else if (status.sentToday != null) {
+              <span class="mini-chip email-usage" [class.email-usage--limit]="status.limitReached" [title]="monthlyUsage(status)">Enviados hoje {{ status.sentToday }}{{ status.dailyLimit ? '/' + status.dailyLimit : '' }}</span>
+              @if (status.limitReached) { <span class="field-hint email-usage-note" role="status">Limite atingido: os envios retomam no próximo período</span> }
+            }
           }
           <div class="section-head__actions">
             <button type="button" class="link-button" [disabled]="emailTestBusy() || !emailStatus()?.enabled" (click)="sendTestEmail()">{{ emailTestBusy() ? 'Enviando...' : 'Enviar e-mail de teste' }}</button>

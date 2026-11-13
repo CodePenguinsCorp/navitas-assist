@@ -9,7 +9,7 @@ import { Permission } from '../../core/permissions';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { LoadingService } from '../../core/services/loading.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { ProfileOption } from '../../core/models';
+import { NotificationEmailStatusResponse, ProfileOption } from '../../core/models';
 import { ProfileService } from '../../core/services/profile.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { NotificationsComponent } from './notifications.component';
@@ -58,7 +58,7 @@ describe('NotificationsComponent rules', () => {
   };
   const openRules = () => { component.selectTab('rules'); render(); };
 
-  async function setup(sources: { role?: LegacyProfileCode; permissions?: readonly Permission[] | Signal<readonly Permission[]>; rules?: Observable<NotificationRuleResponse[]>[]; failures?: Observable<NotificationFailureResponse[]>[]; update?: Observable<NotificationRuleResponse>[]; profiles?: Observable<ProfileOption[]>[] } = {}) {
+  async function setup(sources: { role?: LegacyProfileCode; permissions?: readonly Permission[] | Signal<readonly Permission[]>; rules?: Observable<NotificationRuleResponse[]>[]; failures?: Observable<NotificationFailureResponse[]>[]; update?: Observable<NotificationRuleResponse>[]; profiles?: Observable<ProfileOption[]>[]; emailStatus?: NotificationEmailStatusResponse } = {}) {
     const listRules = vi.fn(() => of([RULE]));
     for (const source of sources.rules ?? []) listRules.mockImplementationOnce(() => source);
     const listFailures = vi.fn(() => of([] as NotificationFailureResponse[]));
@@ -82,7 +82,7 @@ describe('NotificationsComponent rules', () => {
       updatePreference: vi.fn(),
       listRules,
       updateRule,
-      emailStatus: vi.fn(() => of({ enabled: true, provider: 'fake' })),
+      emailStatus: vi.fn(() => of(sources.emailStatus ?? { enabled: true, provider: 'fake' })),
       testEmail: vi.fn(() => of({ status: 'simulado', provider: 'fake' })),
       retryEmail: vi.fn(() => of({ notificationId: 42, status: 'PENDING', provider: 'fake' })),
       listFailures
@@ -138,6 +138,34 @@ describe('NotificationsComponent rules', () => {
     pending.next({ status: 'simulado', provider: 'fake' }); pending.complete(); render();
     expect(root().querySelector('.email-failures-section')).toBeNull();
     expect(text()).not.toContain('Simulação registrada');
+  });
+
+  const REAL = { enabled: true, provider: 'smtp', sentToday: 12, dailyLimit: 100, sentThisMonth: 340, monthlyLimit: 3000, limitReached: false };
+
+  it('mostra o consumo diário com o mensal no tooltip quando o provedor é real', async () => {
+    await setup({ emailStatus: REAL }); openRules();
+    const usage = root().querySelector<HTMLElement>('.email-usage')!;
+    expect(normalize(usage.textContent)).toBe('Enviados hoje 12/100');
+    expect(usage.title).toBe('No mês 340/3000');
+    expect(text()).not.toContain('Limite atingido');
+  });
+
+  it('omite o limite quando é zero e a contagem com provedor falso', async () => {
+    await setup({ emailStatus: { ...REAL, dailyLimit: 0, monthlyLimit: 0 } }); openRules();
+    const usage = root().querySelector<HTMLElement>('.email-usage')!;
+    expect(normalize(usage.textContent)).toBe('Enviados hoje 12');
+    expect(usage.title).toBe('No mês 340');
+  });
+
+  it('não mostra contagem com provedor falso', async () => {
+    await setup({ emailStatus: { ...REAL, provider: 'fake' } }); openRules();
+    expect(root().querySelector('.email-usage')).toBeNull();
+  });
+
+  it('destaca o limite atingido com aviso curto', async () => {
+    await setup({ emailStatus: { ...REAL, sentToday: 100, limitReached: true } }); openRules();
+    expect(root().querySelector('.email-usage--limit')).not.toBeNull();
+    expect(text()).toContain('Limite atingido: os envios retomam no próximo período');
   });
 
   it.each([400, 429, 502])('mostra erro inline do teste %s sem feedback de sucesso', async status => {

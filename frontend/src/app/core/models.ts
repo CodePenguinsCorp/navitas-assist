@@ -895,6 +895,9 @@ export interface ProtocolExecutionResponse {
 }
 
 export type NotificationEmailStatus = 'NOT_REQUESTED' | 'PENDING' | 'SENT' | 'FAILED';
-export interface NotificationEmailStatusResponse { enabled: boolean; provider: string; }
+export interface NotificationEmailStatusResponse {
+  enabled: boolean; provider: string;
+  sentToday?: number; dailyLimit?: number; sentThisMonth?: number; monthlyLimit?: number; limitReached?: boolean;
+}
 export interface NotificationEmailActionResponse { notificationId: number; status: NotificationEmailStatus; provider: string; }
 export interface NotificationEmailTestResponse { status: string; provider: string; }
