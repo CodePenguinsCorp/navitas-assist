@@ -58,7 +58,7 @@ public class RmaRecord extends AuditableEntity {
     private ItemIdentification itemIdentification = new ItemIdentification();
 
     @OneToMany(mappedBy = "rma", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("id ASC")
+    @OrderBy("position ASC, id ASC")
     private List<RmaItem> items = new ArrayList<>();
 
     @Column
@@ -185,6 +185,7 @@ public class RmaRecord extends AuditableEntity {
 
     public void addItem(RmaItem item) {
         item.setRma(this);
+        item.setPosition(this.items.size());
         this.items.add(item);
     }
 }
