@@ -97,6 +97,7 @@ public class SecurityConfig {
                 // D2: leituras auxiliares (dashboard, relatórios, RMAs e painéis) seguem abertas a quem tem login.
                 .requestMatchers(HttpMethod.GET, "/api/auth/me", "/api/clients/**", "/api/products/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/rmas/*/report.pdf").hasAuthority(Codes.RMA_VER)
+                .requestMatchers(HttpMethod.GET, "/api/rmas/*/repair", "/api/rmas/*/repair/external-components").hasAuthority(Codes.RMA_VER)
                 .requestMatchers(HttpMethod.GET, "/api/rmas/**").hasAuthority(Codes.RMA_VER)
                 .requestMatchers(HttpMethod.POST, "/api/auth/logout").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/clients", "/api/products").hasAuthority(Codes.CADASTROS_EDITAR)
@@ -105,6 +106,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/status").hasAuthority(Codes.RMA_STATUS)
                 .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/assignee").hasAuthority(Codes.RMA_RESPONSAVEL)
                 .requestMatchers(HttpMethod.GET, "/api/parts/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/rmas/*/repair/external-components", "/api/rmas/*/parts/*/consume").hasAuthority(Codes.PECAS_RESERVAR)
+                .requestMatchers(HttpMethod.POST, "/api/rmas/*/repair/interventions").hasAuthority(Codes.RMA_DIAGNOSTICAR)
                 .requestMatchers(HttpMethod.POST, "/api/rmas/*/parts", "/api/rmas/*/parts/*/*").hasAuthority(Codes.PECAS_RESERVAR)
                 .requestMatchers(HttpMethod.POST, "/api/parts", "/api/parts/*/movements", "/api/parts/movements/*/reversal").hasAuthority(Codes.PECAS_MOVIMENTAR)
                 .requestMatchers(HttpMethod.PUT, "/api/parts/*").hasAuthority(Codes.PECAS_MOVIMENTAR)

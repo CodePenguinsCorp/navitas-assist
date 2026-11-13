@@ -124,6 +124,8 @@ class PermissionEquivalenceIntegrationTest {
         row(HttpMethod.GET, "/api/rmas/{id}/report.pdf", ALL),
         row(HttpMethod.GET, "/api/rmas/code/{code}", ALL),
         row(HttpMethod.GET, "/api/rmas/{rmaId}/parts", ALL),
+        row(HttpMethod.GET, "/api/rmas/{rmaId}/repair", ALL),
+        row(HttpMethod.GET, "/api/rmas/{rmaId}/repair/external-components", ALL),
         row(HttpMethod.GET, "/api/users/assignable", ALL),
 
         // Só A
@@ -172,6 +174,8 @@ class PermissionEquivalenceIntegrationTest {
 
         // A, T
         row(HttpMethod.PUT, "/api/rmas/{id}/diagnosis", AT),
+        row(HttpMethod.POST, "/api/rmas/{rmaId}/repair/external-components", AT),
+        row(HttpMethod.POST, "/api/rmas/{rmaId}/repair/interventions", AT),
         row(HttpMethod.POST, "/api/rmas/{rmaId}/parts", AT),
         row(HttpMethod.POST, "/api/rmas/{rmaId}/parts/{reservationId}/allocate", AT),
         row(HttpMethod.POST, "/api/rmas/{rmaId}/parts/{reservationId}/consume", AT),
@@ -240,6 +244,34 @@ class PermissionEquivalenceIntegrationTest {
     }
 
     @Test
+    void repairWritesUseIndependentExistingPermissions() throws Exception {
+        for (String[] entry : List.of(
+            new String[] {"external-components", Permission.Codes.PECAS_RESERVAR, Permission.Codes.RMA_DIAGNOSTICAR},
+            new String[] {"interventions", Permission.Codes.RMA_DIAGNOSTICAR, Permission.Codes.PECAS_RESERVAR},
+            new String[] {"consume", Permission.Codes.PECAS_RESERVAR, Permission.Codes.RMA_DIAGNOSTICAR})) {
+            String path = entry[0].equals("consume") ? "/api/rmas/999999/parts/999999/consume" : "/api/rmas/999999/repair/" + entry[0];
+            int allowed = mvc.perform(request(HttpMethod.POST, path).with(csrf())
+                .with(user("isolated").authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority(entry[1])))
+                .contentType(MediaType.APPLICATION_JSON).content("{}")).andReturn().getResponse().getStatus();
+            assertTrue(allowed != 401 && allowed != 403, path + " exige somente " + entry[1] + ", recebeu " + allowed);
+            int denied = mvc.perform(request(HttpMethod.POST, path).with(csrf())
+                .with(user("isolated").authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority(entry[2])))
+                .contentType(MediaType.APPLICATION_JSON).content("{}")).andReturn().getResponse().getStatus();
+            assertEquals(403, denied, path);
+        }
+    }
+
+    @Test
+    void repairReadsRequireOnlyRmaView() throws Exception {
+        for (String path : List.of("/api/rmas/999999/repair", "/api/rmas/999999/repair/external-components")) {
+            mvc.perform(request(HttpMethod.GET, path).with(user("viewer").authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority(Permission.Codes.RMA_VER))))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
+            mvc.perform(request(HttpMethod.GET, path).with(user("writer").authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority(Permission.Codes.PECAS_RESERVAR))))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        }
+    }
+
+    @Test
     void everyHandlerMappingIsInMatrix() {
         Set<String> inMatrix = new TreeSet<>();
         MATRIX.stream()
@@ -270,7 +302,7 @@ class PermissionEquivalenceIntegrationTest {
         Set<String> stale = new TreeSet<>(inMatrix);
         stale.removeAll(mapped);
         assertTrue(stale.isEmpty(), "Linhas MAPPED/PUBLIC sem mapeamento de controller: " + stale);
-        assertEquals(90, mapped.size(), "Total de mapeamentos de controller");
+        assertEquals(inMatrix.size(), mapped.size(), "Total de mapeamentos de controller");
     }
 
     private static MockHttpServletRequestBuilder build(Row row) {
