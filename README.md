@@ -88,20 +88,22 @@ Cada usuário autenticado pode salvar combinações dos filtros avançados do Ka
 
 As rotas em `/api/kanban-views` usam sempre o usuário da sessão; o cliente não informa nem escolhe o proprietário. Nomes são únicos por usuário, e falhas de persistência não alteram os filtros que já estão aplicados na tela.
 
-## Relatórios reais de RMA (NAV-27)
+## Relatórios, laudo em PDF e exportação CSV
 
-A tela Relatórios consulta `GET /api/reports/rmas` e exige a permissão `relatorios.ver` (nos perfis prontos: Administrador, Técnico e Consulta). Sem sessão a API responde `401`; sem a permissão, `403`.
+A tela Relatórios exige `relatorios.ver` (Administrador, Técnico e Consulta). Sem sessão a API responde `401`; sem a permissão, `403`. Todas as rotas usam os mesmos filtros opcionais: `entryFrom` e `entryTo` (`YYYY-MM-DD`, inclusivos, sobre a **data de entrada**; sem período, os **últimos 90 dias** até hoje em America/Sao_Paulo; com uma só data, a outra é completada; máximo **366 dias**), `status` e `clientId`. Parâmetros inválidos, intervalo invertido ou período maior retornam `400`. Cada resposta traz o período aplicado e um `generatedAt` único.
 
-Filtros opcionais combinados: `entryFrom` e `entryTo` (`YYYY-MM-DD`, inclusivos, sobre a **data de entrada**, inclusive no relatório de devoluções), `status` (enum de RMA) e `clientId` (inteiro positivo). Sem período, a consulta usa os **últimos 90 dias** (até hoje em America/Sao_Paulo); com só uma das datas, a outra é completada (90 dias antes do fim, ou até hoje, limitado a 366 dias). O período máximo é de **366 dias**. Parâmetros inválidos, intervalo invertido ou período maior retornam `400`. O retorno é `{ generatedAt, entryFrom, entryTo, rmas }`, com o período efetivamente aplicado e os mesmos campos de `RmaResponse`; cliente inexistente retorna `rmas: []`. A ordenação é por entrada decrescente e ID decrescente. A consulta carrega cliente, produto, responsável e diagnóstico junto com os RMAs, e itens e históricos em consultas em lote, com número fixo de consultas por relatório. O seletor de clientes usa `GET /api/clients/options` (catálogo completo, como na NAV-28), independentemente do resultado filtrado.
+- `GET /api/reports/rmas/summary`: total de RMAs e itens; RMAs por status atual; itens por garantia **efetiva** (`items[].warrantyStatus`, com ajuste manual); RMAs por mês de entrada; top 10 de falhas por produto, por lote e por cliente (quantidade de itens) e por tipo de falha do diagnóstico; recorrência; e tempo médio e maior tempo na etapa atual dos RMAs em andamento, medidos em `generatedAt` (encerrados ficam fora).
+- **Recorrência:** um item **retornou** quando o mesmo produto e número de série têm 2 ou mais RMAs com entrada até o fim do período, inclusive RMAs anteriores ao período e de outros clientes. A taxa é itens que retornaram ÷ itens com série no período, no total, por modelo e por lote (top 10), mais a lista dos seriais. Série vazia fica fora da base; RMAs legados sem `rma_items` não entram na busca de RMAs anteriores.
+- `GET /api/reports/rmas?page&size`: lista paginada no servidor (página padrão 20, máximo 100), em ordem de entrada e ID decrescentes, com `{ generatedAt, entryFrom, entryTo, rmas: { content, page, size, totalElements, totalPages } }`. Cada linha traz código, entrada, status, cliente, produto, SKU, série e lote do item principal, quantidade de itens, situações de garantia efetiva distintas e tipo de falha.
+- `GET /api/reports/rmas/export.csv`: uma linha por item de RMA (código, entrada, status, cliente, produto, SKU, lote, série, garantia, ajuste manual, falha relatada, falha encontrada, tipo, causa, responsável, expedição). Limite de **5.000 RMAs**; acima disso responde `400` pedindo para reduzir o período ou os filtros.
+- `GET /api/reports/rmas/summary/export.csv`: o resumo em tabela longa `Seção;Item;Quantidade;Base;Percentual;Tempo médio (h);Maior tempo (h)`.
 
-- **Laudo técnico:** falha relatada, produtos, diagnóstico, tipo de falha, causa, observações, técnico, reparo, peças e testes. Diagnóstico ausente aparece como pendente.
-- **Tempo por etapa:** tempo corrido na etapa atual por RMA, quantidade, média e maior tempo por etapa ativa. Usa o período atual de `stagePeriods` (registros consecutivos da mesma etapa formam um período, então notas não reiniciam a etapa) e deixa os encerrados fora das métricas ativas. É uma fotografia no instante `generatedAt`, atualizada ao consultar novamente.
-- **Garantia:** prazo e vencimento por produto, considerando os snapshots e a data de entrada. A situação é a efetiva, incluindo ajustes manuais; o cálculo automático permanece disponível separadamente na API.
-- **Devoluções:** RMAs atualmente em `RETURNED`, com expedição, transportadora e rastreio; não é uma contagem histórica de passagens pelo status.
+Os CSV saem em UTF-8 **com BOM**, separador `;` e fim de linha CRLF, para abrir direto no Excel. Campos com `;`, aspas ou quebra de linha vão entre aspas. Texto que começa com `=`, `+`, `-`, `@`, tab ou CR recebe um apóstrofo na frente, para a planilha não executar fórmulas. Datas em `dd/MM/aaaa` e decimais com vírgula.
 
-Instantes são exibidos em `America/Sao_Paulo`. Datas civis preservam o dia recebido. Os relatórios são consultas em tela, sem alteração de schema e sem download de arquivos nesta entrega.
+**Laudo final:** `GET /api/rmas/{id}/report.pdf` (`rma.ver`) gera o PDF do RMA com código, cliente, entrada, status, produtos (lote, série e garantia efetiva), falha relatada, diagnóstico (falha encontrada, tipo, causa, técnico, data e notas), ações executadas (reparo e testes), peças trocadas (resumo em texto e reservas consumidas, sem custo) e observações (estado físico e acessórios). Usa OpenPDF com a fonte Helvetica padrão (Cp1252, cobre os acentos), sem baixar nada em tempo de execução. O nome do arquivo é `laudo-<código>.pdf` com o código reduzido a letras, números, `_` e `-`. Na interface, o link "Laudo (PDF)" fica no cabeçalho do detalhe do RMA, no modal e na tela RMAs, e na lista do relatório.
 
-**Exportação:** antes de implementar, validar com o produto os exemplos, colunas, volume e política de acesso para PDF A4 de laudo por RMA e CSV UTF-8 das consultas tabulares (datas ISO e proteção contra fórmulas). A especificação proposta e seus limites estão em `docs/superpowers/specs/2026-10-23-nav-27-design.md`; o formato ainda não foi homologado.
+Não há custo por RMA nos relatórios nem no laudo.
+
 ## Impedimentos dos RMAs (NAV-33)
 
 Use **Ver impedimentos** no card para consultar o bloqueio atual e todos os episódios anteriores, sem sair do quadro. Quem tem a permissão `rma.impedimentos` pode bloquear com motivo obrigatório (até 1000 caracteres) e categoria opcional (até 80), ou desbloquear com nota de resolução obrigatória (até 1000). Quem tem só `rma.ver` pode consultar. A API aplica as mesmas permissões e exige CSRF nas alterações.
@@ -380,7 +382,8 @@ A API autoriza por **permissão**, não por perfil. As permissões efetivas de u
 | Reservar, alocar, consumir e cancelar peças nos RMAs | `pecas.reservar` |
 | Executar protocolos nos RMAs | `protocolos.executar` |
 | Gerenciar modelos de protocolo | `protocolos.catalogo` |
-| Relatórios (`GET /api/reports/rmas`) | `relatorios.ver` |
+| Relatórios e exportação CSV (`GET /api/reports/rmas/**`) | `relatorios.ver` |
+| Laudo final em PDF (`GET /api/rmas/{id}/report.pdf`) | `rma.ver` |
 | Gerenciar usuários (`/api/users/**`) | `usuarios.gerir` |
 | Gerenciar perfis (`/api/profiles/**`) | `perfis.gerir` |
 | Regras de notificação (`/api/notification-rules/**`) | `notificacoes.regras` |

@@ -121,6 +121,7 @@ class PermissionEquivalenceIntegrationTest {
         row(HttpMethod.GET, "/api/rmas/board", ALL),
         row(HttpMethod.GET, "/api/rmas/history", ALL),
         row(HttpMethod.GET, "/api/rmas/{id}", ALL),
+        row(HttpMethod.GET, "/api/rmas/{id}/report.pdf", ALL),
         row(HttpMethod.GET, "/api/rmas/code/{code}", ALL),
         row(HttpMethod.GET, "/api/rmas/{rmaId}/parts", ALL),
         row(HttpMethod.GET, "/api/users/assignable", ALL),
@@ -146,6 +147,9 @@ class PermissionEquivalenceIntegrationTest {
 
         // A, T, V
         row(HttpMethod.GET, "/api/reports/rmas", ATV),
+        row(HttpMethod.GET, "/api/reports/rmas/summary", ATV),
+        row(HttpMethod.GET, "/api/reports/rmas/export.csv", ATV),
+        row(HttpMethod.GET, "/api/reports/rmas/summary/export.csv", ATV),
 
         // A, S
         row(HttpMethod.POST, "/api/clients", AS),
@@ -263,7 +267,7 @@ class PermissionEquivalenceIntegrationTest {
         Set<String> stale = new TreeSet<>(inMatrix);
         stale.removeAll(mapped);
         assertTrue(stale.isEmpty(), "Linhas MAPPED/PUBLIC sem mapeamento de controller: " + stale);
-        assertEquals(83, mapped.size(), "Total de mapeamentos de controller");
+        assertEquals(87, mapped.size(), "Total de mapeamentos de controller");
     }
 
     private static MockHttpServletRequestBuilder build(Row row) {
