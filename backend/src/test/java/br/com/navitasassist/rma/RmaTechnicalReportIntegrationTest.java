@@ -47,6 +47,8 @@ class RmaTechnicalReportIntegrationTest {
     @Autowired private ProductRepository products;
     @Autowired private PartRepository parts;
     @Autowired private PartReservationRepository reservations;
+    @Autowired private br.com.navitasassist.repository.RmaExternalComponentRepository externalComponents;
+    @Autowired private br.com.navitasassist.repository.RmaInterventionRepository interventions;
     private RmaRecord rma;
 
     @BeforeEach
@@ -105,11 +107,30 @@ class RmaTechnicalReportIntegrationTest {
         for (String expected : List.of("Laudo técnico", "RMA-2026/0001", "Cliente Ação Ltda", "Controlador térmico", "CTRL-LAUDO", "LOTE-9",
             "SN-123", "Pendente", "Não liga após queda de energia", "Regulador queimado", "Fonte", "Sobrecarga", "João Técnico",
             "Substituição do regulador", "Teste de bancada aprovado", "Regulador 5V", "REG-5V", "Regulador de tensão", "Carcaça riscada",
-            "Fonte original", "Concluído")) {
+            "Fonte original", "Concluído", "Motivo não registrado", "Intervenções", "Total de horas")) {
             assertTrue(text.contains(expected), "PDF sem \"" + expected + "\":\n" + text);
         }
         assertFalse(text.contains("Capacitor cancelado"), text);
         assertFalse(text.contains("12,50") || text.contains("25,00"), "O laudo não mostra custo");
+    }
+
+    @Test
+    void includesStructuredComponentsAndInterventionsWithHours() throws Exception {
+        PartReservation consumed = reservations.findByRma_IdOrderByIdAsc(rma.getId()).get(0);
+        consumed.setReplacementReason("Curto na alimentação"); consumed.setComponentBatch("REG-LOTE");
+        consumed.setAppliedAt(java.time.Instant.now()); consumed.setAppliedBy("maria"); reservations.saveAndFlush(consumed);
+        RmaExternalComponent component = new RmaExternalComponent();
+        component.setRma(rma); component.setCode("EXT-9"); component.setDescription("Conector externo"); component.setQuantity(new BigDecimal("1.125"));
+        component.setUnit("un"); component.setComponentBatch("EXT-LOTE"); component.setReplacementReason("Oxidação dos contatos");
+        component.setAppliedAt(java.time.Instant.now()); component.setAppliedBy("maria"); externalComponents.saveAndFlush(component);
+        RmaIntervention intervention = new RmaIntervention();
+        intervention.setRma(rma); intervention.setType(InterventionType.RESOLDERING); intervention.setDescription("Ressolda do circuito");
+        intervention.setPerformedOn(LocalDate.parse("2026-10-07")); intervention.setHours(new BigDecimal("1.125")); intervention.setTechnicianName("maria"); interventions.saveAndFlush(intervention);
+        String report = text(mockMvc.perform(get("/api/rmas/{id}/report.pdf", rma.getId()).with(asProfile("viewer", "VIEWER")))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
+        for (String expected : List.of("Curto na alimentação", "REG-LOTE", "Conector externo", "EXT-9", "EXT-LOTE", "Oxidação dos contatos", "Ressolda", "Ressolda do circuito", "1,125", "maria", "07/10/2026")) {
+            assertTrue(report.contains(expected), "PDF sem " + expected + ": " + report);
+        }
     }
 
     @Test

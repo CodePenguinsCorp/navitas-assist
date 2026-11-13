@@ -10,9 +10,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import br.com.navitasassist.diagnosis.DiagnosisResponse;
-import br.com.navitasassist.part.PartReservationStatus;
 import br.com.navitasassist.report.RmaTechnicalReport;
-import br.com.navitasassist.report.RmaTechnicalReport.ConsumedPart;
+import br.com.navitasassist.report.RmaTechnicalReport.ReplacedComponent;
+import br.com.navitasassist.rma.InterventionType;
 import br.com.navitasassist.rma.ReportLabels;
 import br.com.navitasassist.rma.RmaItemResponse;
 import br.com.navitasassist.rma.RmaResponse;
@@ -51,14 +51,18 @@ public class RmaReportPdfService {
 
     private final RmaService rmaService;
     private final PartStockService partStockService;
+    private final RmaRepairService repairService;
 
     public PdfFile laudo(Long rmaId) {
         RmaResponse rma = rmaService.getById(rmaId);
-        List<ConsumedPart> consumed = partStockService.getRmaParts(rmaId).reservations().stream()
-            .filter(reservation -> reservation.status() == PartReservationStatus.CONSUMED)
-            .map(reservation -> new ConsumedPart(reservation.partCode(), reservation.partName(), reservation.quantity(), reservation.unit()))
-            .toList();
-        RmaTechnicalReport report = new RmaTechnicalReport(rma, consumed, Instant.now());
+        List<ReplacedComponent> components = new java.util.ArrayList<>(partStockService.getRmaParts(rmaId).replacedComponents().stream()
+            .map(reservation -> new ReplacedComponent(reservation.partCode(), reservation.partName(), reservation.quantity(), reservation.unit(),
+                reservation.componentBatch(), reservation.replacementReason(), reservation.appliedAt(), reservation.appliedBy(), "Estoque"))
+            .toList());
+        repairService.listExternalComponents(rmaId).forEach(component -> components.add(new ReplacedComponent(component.code(), component.description(),
+            component.quantity(), component.unit(), component.componentBatch(), component.replacementReason(), component.appliedAt(), component.appliedBy(), "Fora do estoque")));
+        var repair = repairService.getRepair(rmaId);
+        RmaTechnicalReport report = new RmaTechnicalReport(rma, components, repair.interventions(), repair.totalServiceHours(), Instant.now());
         return new PdfFile("laudo-" + rma.code().replaceAll("[^A-Za-z0-9_-]", "-") + ".pdf", render(report));
     }
 
@@ -106,16 +110,38 @@ public class RmaReportPdfService {
 
         section(document, "Peças trocadas");
         document.add(text(rma.replacedPartsSummary()));
-        if (!report.consumedParts().isEmpty()) {
-            PdfPTable parts = table(new float[] {2, 5, 2}, "Código", "Peça", "Quantidade");
-            report.consumedParts().forEach(part -> cells(parts, part.code(), part.name(), quantity(part.quantity()) + " " + part.unit()));
+        if (!report.replacedComponents().isEmpty()) {
+            PdfPTable parts = table(new float[] {2, 4, 2, 2, 5}, "Código", "Componente / origem", "Quantidade", "Lote", "Motivo da troca / aplicação");
+            report.replacedComponents().forEach(part -> cells(parts, part.code(), part.description() + "\n" + part.source(),
+                quantity(part.quantity()) + " " + part.unit(), part.componentBatch(),
+                (part.replacementReason() == null ? "Motivo não registrado" : part.replacementReason())
+                    + (part.appliedAt() == null ? "" : "\n" + INSTANT.format(part.appliedAt()) + " · " + value(part.appliedBy()))));
             document.add(parts);
         }
+
+        section(document, "Intervenções");
+        if (!report.interventions().isEmpty()) {
+            PdfPTable interventions = table(new float[] {2, 3, 5, 2, 3}, "Data", "Tipo", "Descrição", "Horas", "Técnico");
+            report.interventions().forEach(item -> cells(interventions, date(item.performedOn()), interventionLabel(item.type()), item.description(), quantity(item.hours()), item.technicianName()));
+            document.add(interventions);
+        }
+        document.add(text("Total de horas: " + quantity(report.totalServiceHours()) + " h"));
 
         section(document, "Observações");
         document.add(fields("Estado físico", value(rma.physicalCondition()), "Acessórios recebidos", value(rma.receivedAccessories())));
         document.close();
         return output.toByteArray();
+    }
+
+    private static String interventionLabel(InterventionType type) {
+        return switch (type) {
+            case RESOLDERING -> "Ressolda";
+            case CLEANING -> "Limpeza";
+            case REPROGRAMMING -> "Regravação";
+            case FIRMWARE_UPDATE -> "Atualização de firmware";
+            case HARNESS_REPLACEMENT -> "Troca de chicote";
+            case OTHER -> "Outra";
+        };
     }
 
     private static void section(Document document, String name) {
