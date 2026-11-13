@@ -26,15 +26,32 @@ const ACTION_MESSAGES: Record<PartReservationAction, string> = {
       display: block;
     }
 
-    .parts-summary {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--space-2);
-      margin: var(--space-2) 0 var(--space-3);
+    /* One strip of figures, label over value, no boxes: counts first, then costs. */
+    .parts-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5rem), 1fr));
+      gap: var(--space-3) var(--space-5);
+      margin: var(--space-3) 0 var(--space-4);
+      padding-bottom: var(--space-3);
+      border-bottom: 1px solid var(--line);
     }
 
-    .parts-costs {
-      margin-bottom: 0.75rem;
+    .parts-stats div {
+      display: grid;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .parts-stats dt {
+      color: var(--muted);
+      font-size: var(--font-size-sm);
+    }
+
+    .parts-stats dd {
+      margin: 0;
+      font-size: var(--font-size-lg, 1.05rem);
+      font-weight: var(--font-weight-bold);
+      font-variant-numeric: tabular-nums;
     }
 
     .parts-load-error {

@@ -47,4 +47,21 @@ describe('RmaStageTimesComponent', () => {
     expect(rendered[1]).toBe('Concluído · Encerrado em 10/11/2026 10:00');
     expect(rendered.join(' ')).not.toContain('(atual)');
   });
+
+  it('draws one proportional bar segment per stage with the total and a hover tip', () => {
+    fixture.componentRef.setInput('rma', {
+      status: 'IN_DIAGNOSIS',
+      stagePeriods: [
+        { status: 'RECEIVED', enteredAt: '2026-11-10T10:00:00Z', leftAt: '2026-11-10T12:00:00Z', durationSeconds: 7200 },
+        { status: 'IN_DIAGNOSIS', enteredAt: '2026-11-10T12:00:00Z', leftAt: null, durationSeconds: 0 }
+      ]
+    });
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const segments = [...element.querySelectorAll<HTMLElement>('.stage-times__segment')];
+    expect(segments.map((segment) => segment.dataset['tip'])).toEqual(['Recebido · 2 h', 'Diagnóstico · 3 d (atual)']);
+    expect(segments.map((segment) => segment.dataset['status'])).toEqual(['RECEIVED', 'IN_DIAGNOSIS']);
+    expect(Number(segments[1].style.flexGrow)).toBeGreaterThan(Number(segments[0].style.flexGrow));
+    expect(element.querySelector('.stage-times__total')?.textContent?.trim()).toBe('3 d 2 h');
+  });
 });

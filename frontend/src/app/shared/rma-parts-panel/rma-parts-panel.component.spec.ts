@@ -50,10 +50,10 @@ describe('RmaPartsPanelComponent', () => {
     const text: string = fixture.nativeElement.textContent;
 
     expect(partService['getRmaParts']).toHaveBeenCalledWith(7);
-    expect(text).toContain('Reservas ativas: 1');
-    expect(text).toContain('Consumidas: 1');
-    expect(text).toContain('Pendentes: 1');
-    expect(text).toContain('Custo consumido no RMA');
+    expect(text).toMatch(/Ativas\s*1/);
+    expect(text).toMatch(/Consumidas\s*1/);
+    expect(text).toMatch(/Pendentes\s*1/);
+    expect(text).toContain('Custo consumido');
     expect(text).not.toContain('Consumir');
     expect(fixture.nativeElement.querySelector('form')).toBeNull();
     expect(partService['list']).not.toHaveBeenCalled();

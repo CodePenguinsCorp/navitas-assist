@@ -10,9 +10,14 @@ interface StageRow {
   key: string;
   status: RmaResponse['status'];
   text: string;
+  /** Share of the bar; the closing stage of a closed RMA takes no space. */
+  weight: number;
 }
 
-/** Compact "Tempo por etapa" list, oldest stage first; the last line is the current stage (or the closing). */
+/** Share below which a stage would be invisible on the bar; it still gets a thin, hoverable segment. */
+const MIN_SHARE = 0.05;
+
+/** "Tempo por etapa": one proportional bar with the total on the right; hovering a segment names its stage and time. */
 @Component({
   selector: 'app-rma-stage-times',
   templateUrl: './rma-stage-times.component.html',
@@ -26,13 +31,37 @@ export class RmaStageTimesComponent {
     const periods = this.rma().stagePeriods;
     const closed = CLOSED_RMA_STATUSES.includes(this.rma().status);
     const now = this.clock.now();
-    return periods.map((period, index) => {
+    const rows = periods.map((period, index) => {
       const current = index === periods.length - 1;
       const label = statusLabel(period.status);
-      const text = current && closed
+      const closing = current && closed;
+      const seconds = closing ? 0 : stageElapsedSeconds(period, now);
+      const text = closing
         ? `${label} · Encerrado em ${formatDateTime(period.enteredAt).replace(", ", " ")}`
-        : `${label} · ${formatDuration(stageElapsedSeconds(period, now))}${current ? ' (atual)' : ''}`;
-      return { key: `${period.status}-${period.enteredAt}-${index}`, status: period.status, text };
+        : `${label} · ${formatDuration(seconds)}${current ? ' (atual)' : ''}`;
+      return { key: `${period.status}-${period.enteredAt}-${index}`, status: period.status, text, seconds, closing };
     });
+    const total = rows.reduce((sum, row) => sum + row.seconds, 0);
+    return rows.map((row) => ({
+      key: row.key,
+      status: row.status,
+      text: row.text,
+      weight: row.closing ? 0 : Math.max(row.seconds, total * MIN_SHARE, 1)
+    }));
   });
+
+  /** Segments of the bar: every stage that took time. */
+  protected readonly segments = computed(() => this.rows().filter((row) => row.weight > 0));
+
+  /** Total time spent in stages, shown next to the title. */
+  protected readonly totalLabel = computed(() => {
+    const now = this.clock.now();
+    const closed = CLOSED_RMA_STATUSES.includes(this.rma().status);
+    const periods = this.rma().stagePeriods;
+    const seconds = periods.reduce((sum, period, index) =>
+      closed && index === periods.length - 1 ? sum : sum + stageElapsedSeconds(period, now), 0);
+    return formatDuration(seconds);
+  });
+
+  protected readonly closingRow = computed(() => this.rows().find((row) => row.weight === 0) ?? null);
 }

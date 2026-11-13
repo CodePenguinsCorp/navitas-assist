@@ -76,14 +76,13 @@ interface EditingItem {
     .protocol-facts dd { margin: 0; white-space: pre-wrap; }
     .protocol-attempts { display: grid; gap: var(--space-3); padding-left: var(--space-5); }
 
+    /* No box inside the tab: a divider and the same label/control rhythm as a form row. */
     .protocol-launch {
       display: grid;
-      gap: 0.4rem;
-      margin-top: 1rem;
-      padding: 0.85rem 0.9rem;
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      background: var(--surface-alt);
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--line);
     }
 
     .protocol-launch__label {

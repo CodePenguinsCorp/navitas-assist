@@ -1,6 +1,17 @@
 <section class="stage-times" aria-label="Tempo por etapa">
-  <h4>Tempo por etapa</h4>
-  <ol>
+  <header class="stage-times__head">
+    <h4>Tempo por etapa</h4>
+    <span class="stage-times__total" title="Tempo total nas etapas">{{ totalLabel() }}</span>
+  </header>
+  <div class="stage-times__bar" aria-hidden="true">
+    @for (row of segments(); track row.key) {
+      <span class="stage-times__segment" [attr.data-status]="row.status" [attr.data-tip]="row.text" [style.flex-grow]="row.weight" tabindex="0"></span>
+    }
+  </div>
+  @if (closingRow(); as closing) {
+    <p class="stage-times__closing">{{ closing.text }}</p>
+  }
+  <ol class="sr-only">
     @for (row of rows(); track row.key) {
       <li [attr.data-stage]="row.status">{{ row.text }}</li>
     }

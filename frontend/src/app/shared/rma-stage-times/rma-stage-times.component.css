@@ -5,26 +5,77 @@
   gap: var(--space-2);
 }
 
+.stage-times__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 .stage-times h4 {
   margin: 0;
   font-size: var(--font-size-sm);
 }
 
-.stage-times ol {
-  display: grid;
-  gap: var(--space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.stage-times li {
-  color: var(--text);
+.stage-times__total {
+  color: var(--muted);
   font-size: var(--font-size-sm);
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
+  font-weight: var(--font-weight-semibold);
 }
 
-.stage-times li:last-child {
-  font-weight: var(--font-weight-semibold);
+/* One bar, one segment per stage, width proportional to the time spent. */
+.stage-times__bar {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+}
+
+.stage-times__segment {
+  position: relative;
+  flex-basis: 0;
+  min-width: 6px;
+  border-radius: 3px;
+  background: var(--tone, var(--brand-blue));
+  cursor: default;
+}
+
+.stage-times__segment:first-child { border-radius: 999px 3px 3px 999px; }
+.stage-times__segment:last-child { border-radius: 3px 999px 999px 3px; }
+.stage-times__segment:only-child { border-radius: 999px; }
+
+.stage-times__segment:focus-visible {
+  outline: 2px solid var(--focus-border);
+  outline-offset: 2px;
+}
+
+/* Tooltip: names the stage and its time; follows hover and keyboard focus. */
+.stage-times__segment::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 5;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--text);
+  color: var(--surface);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.stage-times__segment:hover::after,
+.stage-times__segment:focus-visible::after {
+  opacity: 1;
+}
+
+.stage-times__closing {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--font-size-sm);
 }

@@ -11,16 +11,12 @@
     <div class="rma-detail-copy" aria-busy="true"></div>
   } @else {
     @if (parts(); as rmaParts) {
-      <p class="parts-summary">
-        <span>Reservas ativas: {{ activeCount() }}</span>
-        <span aria-hidden="true">·</span>
-        <span>Consumidas: {{ consumedCount() }}</span>
-        <span aria-hidden="true">·</span>
-        <span>Pendentes: {{ rmaParts.pendingCount }}</span>
-      </p>
-      <dl class="meta-list parts-costs">
-        <div><dt>Custo consumido no RMA</dt><dd>{{ currency(rmaParts.consumedCost) }}</dd></div>
-        <div><dt>Custo reservado no RMA</dt><dd>{{ currency(rmaParts.reservedCost) }}</dd></div>
+      <dl class="parts-stats" aria-label="Resumo das peças do RMA">
+        <div><dt>Ativas</dt><dd>{{ activeCount() }}</dd></div>
+        <div><dt>Consumidas</dt><dd>{{ consumedCount() }}</dd></div>
+        <div><dt>Pendentes</dt><dd>{{ rmaParts.pendingCount }}</dd></div>
+        <div><dt>Custo consumido</dt><dd>{{ currency(rmaParts.consumedCost) }}</dd></div>
+        <div><dt>Custo reservado</dt><dd>{{ currency(rmaParts.reservedCost) }}</dd></div>
       </dl>
     }
 

@@ -99,12 +99,12 @@ describe('RmaPartsPanelComponent presentation', () => {
   // Vermelho: contagens usam plurais artificiais e custos não declaram escopo.
   it('states reservation count and RMA cost scope', async () => {
     await setup();
-    expect(text()).toContain('Reservas ativas: 1');
-    expect(text()).toContain('Consumidas: 1');
-    expect(text()).toContain('Pendentes: 1');
-    const costs = facts(root().querySelector<HTMLElement>('.parts-costs')!);
-    expect(costs.get('Custo consumido no RMA')).toBe('R$ 20,00');
-    expect(costs.get('Custo reservado no RMA')).toBe('R$ 20,00');
+    const stats = facts(root().querySelector<HTMLElement>('.parts-stats')!);
+    expect(stats.get('Ativas')).toBe('1');
+    expect(stats.get('Consumidas')).toBe('1');
+    expect(stats.get('Pendentes')).toBe('1');
+    expect(stats.get('Custo consumido')).toBe('R$ 20,00');
+    expect(stats.get('Custo reservado')).toBe('R$ 20,00');
     expect(facts(items()[0]).get('Custo da reserva')).toBe('R$ 20,00');
     expect(text()).not.toContain('reservada(s)');
     expect(text()).not.toContain('consumida(s)');
@@ -159,7 +159,7 @@ describe('RmaPartsPanelComponent presentation', () => {
       });
       expect(root().querySelector('form') !== null).toBe(canAct && !closed);
       expect(button('Reservar') !== undefined).toBe(canAct && !closed);
-      expect(text()).toContain('Custo consumido no RMA');
+      expect(text()).toContain('Custo consumido');
     });
 
   it.each([
