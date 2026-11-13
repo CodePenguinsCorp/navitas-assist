@@ -605,11 +605,62 @@ export interface RmaReportFilters {
   clientId?: number;
 }
 
-export interface RmaReportResponse {
+export interface RmaReportRow {
+  id: number;
+  code: string;
+  entryDate: string;
+  status: RmaStatus;
+  clientName: string;
+  productName: string;
+  productSku: string;
+  serialNumber: string | null;
+  batchNumber: string | null;
+  itemCount: number;
+  warrantyStatuses: WarrantyStatus[];
+  failureType: FailureType | null;
+}
+
+export interface RmaReportPageResponse {
   generatedAt: string;
   entryFrom: string;
   entryTo: string;
-  rmas: RmaResponse[];
+  rmas: PageResponse<RmaReportRow>;
+}
+
+export interface RmaReportCountRow {
+  key: string;
+  label: string;
+  count: number;
+}
+
+export interface RmaReportRateRow {
+  key: string;
+  label: string;
+  items: number;
+  returnedItems: number;
+}
+
+export interface RmaReportSummaryResponse {
+  generatedAt: string;
+  entryFrom: string;
+  entryTo: string;
+  totalRmas: number;
+  totalItems: number;
+  byStatus: RmaReportCountRow[];
+  byWarranty: RmaReportCountRow[];
+  byMonth: RmaReportCountRow[];
+  topProducts: RmaReportCountRow[];
+  topBatches: RmaReportCountRow[];
+  topClients: RmaReportCountRow[];
+  topFailureTypes: RmaReportCountRow[];
+  recurrence: {
+    itemsWithSerial: number;
+    returnedItems: number;
+    byProduct: RmaReportRateRow[];
+    byBatch: RmaReportRateRow[];
+    serials: { serialNumber: string; productName: string; productSku: string; rmaCount: number }[];
+  };
+  stages: { status: RmaStatus; label: string; count: number; averageSeconds: number; maximumSeconds: number }[];
 }
 
 

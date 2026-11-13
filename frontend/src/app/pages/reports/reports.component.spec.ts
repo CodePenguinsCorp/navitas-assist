@@ -1,210 +1,142 @@
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { FormGroup } from '@angular/forms';
-import { RmaResponse, WarrantyStatus } from '../../core/models';
+import { provideRouter } from '@angular/router';
+import { RmaReportPageResponse, RmaReportSummaryResponse, WarrantyStatus } from '../../core/models';
+import { providePermissions } from '../../testing/permission-fixtures';
 import { ReportsComponent } from './reports.component';
 
-const RMA: RmaResponse = {
-  id: 1, code: 'RMA-REAL', clientId: 2, clientName: 'Cliente Alfa',
-  items: [
-    { id: 11, productId: 3, productName: 'Controlador', productSku: 'SKU-1', batchNumber: 'LOTE-A', serialNumber: 'SER-A',
-      manufacturedAt: null, warrantyMonths: 12, warrantyExpiresAt: '2026-10-20', calculatedWarrantyStatus: WarrantyStatus.IN_WARRANTY, warrantyOverride: null, warrantyStatus: WarrantyStatus.IN_WARRANTY },
-    { id: 12, productId: 3, productName: 'Controlador', productSku: 'SKU-1', batchNumber: 'LOTE-B', serialNumber: 'SER-B',
-      manufacturedAt: null, warrantyMonths: 6, warrantyExpiresAt: '2026-04-20', calculatedWarrantyStatus: WarrantyStatus.OUT_OF_WARRANTY, warrantyOverride: null, warrantyStatus: WarrantyStatus.OUT_OF_WARRANTY }
-  ],
-  productId: 3, productName: 'Controlador', productSku: 'SKU-1', batchNumber: 'LOTE-A', serialNumber: 'SER-A', manufacturedAt: null,
-  purchaseDate: '2025-10-20', purchaseDateUnknown: false, entryDate: '2026-10-20', invoiceNumber: 'NF-1', receivedBy: 'admin',
-  reportedFailure: 'Não liga', receivedAccessories: null, physicalCondition: null, priority: 'HIGH', status: 'IN_DIAGNOSIS',
-  currentBlock: null, blockHistory: [],
-  dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 7200 }], dueDateHistory: [], warrantyHistory: [],
-  assigneeId: null, assigneeName: null, repairSummary: 'Conector substituído', replacedPartsSummary: 'Conector USB',
-  testSummary: 'Teste aprovado', shippedAt: null, carrier: null, trackingCode: null,
-  diagnosis: { id: 1, foundFailure: 'Conector danificado', failureType: 'COMMUNICATION', probableCause: 'INCORRECT_USAGE',
-    notes: 'Inspeção visual', diagnosedAt: '2026-10-20', technicianName: 'Técnico Alfa',
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' },
-  statusHistory: [], assignmentHistory: [], createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+const SUMMARY: RmaReportSummaryResponse = {
+  generatedAt: '2026-10-21T01:00:00Z', entryFrom: '2026-07-24', entryTo: '2026-10-21', totalRmas: 4, totalItems: 5,
+  byStatus: [{ key: 'RECEIVED', label: 'Recebido', count: 3 }, { key: 'RETURNED', label: 'Devolvido', count: 1 }],
+  byWarranty: [{ key: 'IN_WARRANTY', label: 'Em garantia', count: 4 }, { key: 'OUT_OF_WARRANTY', label: 'Fora de garantia', count: 1 },
+    { key: 'PENDING', label: 'Pendente', count: 0 }],
+  byMonth: [{ key: '2026-09', label: '09/2026', count: 1 }, { key: '2026-10', label: '10/2026', count: 3 }],
+  topProducts: [{ key: '3', label: 'Controlador (SKU-1)', count: 4 }], topBatches: [{ key: '3|L1', label: 'L1 · Controlador (SKU-1)', count: 2 }],
+  topClients: [{ key: '2', label: 'Cliente Alfa', count: 4 }], topFailureTypes: [{ key: 'SENSOR', label: 'Sensor', count: 2 }],
+  recurrence: { itemsWithSerial: 4, returnedItems: 1, byProduct: [{ key: '3', label: 'Controlador (SKU-1)', items: 4, returnedItems: 1 }],
+    byBatch: [], serials: [{ serialNumber: 'SER-A', productName: 'Controlador', productSku: 'SKU-1', rmaCount: 2 }] },
+  stages: [{ status: 'RECEIVED', label: 'Recebido', count: 3, averageSeconds: 7200, maximumSeconds: 90000 }]
 };
+
+const PAGE: RmaReportPageResponse = {
+  generatedAt: '2026-10-21T01:00:00Z', entryFrom: '2026-07-24', entryTo: '2026-10-21',
+  rmas: { content: [{ id: 1, code: 'RMA-REAL', entryDate: '2026-10-20', status: 'RECEIVED', clientName: 'Cliente Alfa', productName: 'Controlador',
+    productSku: 'SKU-1', serialNumber: 'SER-A', batchNumber: null, itemCount: 2, warrantyStatuses: [WarrantyStatus.IN_WARRANTY, WarrantyStatus.OUT_OF_WARRANTY],
+    failureType: 'SENSOR' }], page: 0, size: 20, totalElements: 21, totalPages: 2 }
+};
+
+interface Harness {
+  form: ReportsComponent['form'];
+  consult(): void;
+  selectTab(tab: string): void;
+}
 
 describe('ReportsComponent', () => {
   let fixture: ComponentFixture<ReportsComponent>;
-  let component: ReportsHarness;
+  let component: Harness;
   let http: HttpTestingController;
-  const text = () => fixture.nativeElement.textContent as string;
-  const respond = (rmas: RmaResponse[] = [RMA]) => {
-    http.expectOne((request) => request.url === '/api/reports/rmas').flush({ generatedAt: '2026-10-21T01:00:00Z', entryFrom: '2026-07-24', entryTo: '2026-10-21', rmas });
+  const text = () => (fixture.nativeElement as HTMLElement).textContent as string;
+  const summaryRequest = () => http.expectOne((request) => request.url === '/api/reports/rmas/summary');
+  const listRequest = () => http.expectOne((request) => request.url === '/api/reports/rmas');
+  const respond = () => {
+    summaryRequest().flush(SUMMARY);
+    listRequest().flush(PAGE);
+    fixture.detectChanges();
+  };
+  const show = (tab: string) => {
+    component.selectTab(tab);
     fixture.detectChanges();
   };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ReportsComponent], providers: [provideHttpClient(), provideHttpClientTesting()]
+      imports: [ReportsComponent], providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), providePermissions(['relatorios.ver', 'rma.ver'])]
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(ReportsComponent);
-    component = fixture.componentInstance as unknown as ReportsHarness;
+    component = fixture.componentInstance as unknown as Harness;
     fixture.detectChanges();
-    http.expectOne('/api/clients/options').flush([{ id: 2, legalName: 'Cliente Alfa', tradeName: null, documentNumber: null,
-      email: null, phone: null, address: null, notes: null,
-      createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' }]);
+    http.expectOne('/api/clients/options').flush([{ id: 2, legalName: 'Cliente Alfa' }]);
   });
 
   afterEach(() => http.verify());
 
-  it('starts with the last 90 days and blocks periods longer than 366 days', () => {
-    const initial = http.expectOne((request) => request.url === '/api/reports/rmas');
-    const from = initial.request.params.get('entryFrom') as string;
-    const to = initial.request.params.get('entryTo') as string;
+  it('starts with the last 90 days, loads summary and first page together and blocks long periods', () => {
+    const summary = summaryRequest();
+    const list = listRequest();
+    const from = summary.request.params.get('entryFrom') as string;
+    const to = summary.request.params.get('entryTo') as string;
     expect((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000).toBe(89);
-    initial.flush({ generatedAt: '2026-10-21T01:00:00Z', entryFrom: from, entryTo: to, rmas: [] });
+    expect(list.request.params.get('page')).toBe('0');
+    expect(list.request.params.get('size')).toBe('20');
+    summary.flush(SUMMARY);
+    list.flush(PAGE);
 
     component.form.patchValue({ entryFrom: '2025-01-01', entryTo: '2026-01-02' });
-    component.loadReports();
+    component.consult();
     fixture.detectChanges();
-    http.expectNone((request) => request.url === '/api/reports/rmas');
+    http.expectNone((request) => request.url.startsWith('/api/reports/'));
     expect(text()).toContain('no máximo 366 dias');
   });
 
-  it('loads real technical details and formats civil dates and the snapshot in Sao Paulo', () => {
-    expect(text()).toContain('Carregando relatórios');
+  it('shows the summary with shares, months and stage times', () => {
     respond();
-    expect(text()).toContain('RMA-REAL');
-    expect(text()).toContain('Conector danificado');
-    expect(text()).toContain('Conector substituído');
-    expect(text()).toContain('Conector USB');
-    expect(text()).toContain('Teste aprovado');
-    expect(text()).toContain('Técnico Alfa');
-    expect(text()).toContain('20/10/2026');
-    expect(text()).toContain('22:00');
-  });
-
-  it('shows every warranty item and distinguishes a pending diagnosis', () => {
-    respond([{ ...RMA, diagnosis: null }]);
-    expect(text()).toContain('Diagnóstico pendente');
-    component.form.patchValue({ report: 'warranty' });
-    fixture.detectChanges();
-    expect(text()).toContain('SER-A');
-    expect(text()).toContain('SER-B');
+    expect(text()).toContain('4 RMAs');
+    expect(text()).toContain('5 itens');
+    expect(text()).toContain('Recebido');
+    expect(text()).toContain('75,0%');
     expect(text()).toContain('Em garantia');
-    expect(text()).toContain('Fora de garantia');
-    expect(text()).toContain('20/04/2026');
-    expect(text()).toContain('sem override manual');
+    expect(text()).toContain('80,0%');
+    expect(text()).toContain('10/2026');
+    expect(text()).toContain('2 h');
+    expect(text()).toContain('1 d 1 h');
   });
 
-  it('groups current-stage aging and excludes closed records from active metrics', () => {
-    respond([RMA, { ...RMA, id: 2, code: 'RMA-SECOND', stagePeriods: [{ ...RMA.stagePeriods[0], durationSeconds: 14400 }] },
-      { ...RMA, id: 3, code: 'RMA-CLOSED', status: 'COMPLETED' }]);
-    component.form.patchValue({ report: 'aging' });
-    fixture.detectChanges();
-    const row = fixture.nativeElement.querySelector('[data-stage="IN_DIAGNOSIS"]');
-    expect(row.textContent).toContain('2');
-    expect(row.textContent).toContain('3 h');
-    expect(row.textContent).toContain('4 h');
-    expect(text()).not.toContain('RMA-CLOSED');
-  });
-
-  it('formats durations as 2 d 4 h and takes the stage start from the current period', () => {
-    respond([{ ...RMA, stagePeriods: [
-      { status: 'RECEIVED', enteredAt: '2026-10-18T08:00:00Z', leftAt: '2026-10-18T12:00:00Z', durationSeconds: 14400 },
-      { status: 'IN_DIAGNOSIS', enteredAt: '2026-10-18T12:00:00Z', leftAt: null, durationSeconds: 187200 }
-    ] }]);
-    component.form.patchValue({ report: 'aging' });
-    fixture.detectChanges();
-    const rows = [...fixture.nativeElement.querySelectorAll('tbody tr')] as HTMLElement[];
-    const perRma = rows.find((row) => row.textContent?.includes(RMA.code))!;
-    expect(perRma.textContent).toContain('2 d 4 h');
-    expect(perRma.textContent).toContain('18/10/2026, 09:00');
-    expect(text()).not.toContain('SLA');
-  });
-
-  it('shows shipping only for currently returned RMAs', () => {
-    respond([RMA, { ...RMA, id: 2, code: 'RMA-RETURN', status: 'RETURNED', shippedAt: '2026-10-21',
-      carrier: 'Transportadora Alfa', trackingCode: 'TRACK-123' }]);
-    component.form.patchValue({ report: 'returns' });
-    fixture.detectChanges();
-    expect(text()).toContain('RMA-RETURN');
-    expect(text()).toContain('21/10/2026');
-    expect(text()).toContain('TRACK-123');
-    expect(text()).toContain('Transportadora Alfa');
-    expect(text()).not.toContain('RMA-REAL');
-  });
-
-  it('combines filters in the HTTP query and rejects a reversed interval without displaying stale results', () => {
+  it('shows the failure rankings and the recurrence', () => {
     respond();
-    component.form.patchValue({ entryFrom: '2026-10-01', entryTo: '2026-10-20', status: 'IN_DIAGNOSIS', clientId: 2 });
-    component.loadReports();
-    const request = http.expectOne((candidate) => candidate.url === '/api/reports/rmas');
-    expect(request.request.method).toBe('GET');
-    expect(request.request.params.get('entryFrom')).toBe('2026-10-01');
-    expect(request.request.params.get('entryTo')).toBe('2026-10-20');
-    expect(request.request.params.get('status')).toBe('IN_DIAGNOSIS');
-    expect(request.request.params.get('clientId')).toBe('2');
-    request.flush({ generatedAt: '2026-10-21T01:00:00Z', rmas: [RMA] });
-    component.form.patchValue({ entryFrom: '2026-10-21' });
-    component.loadReports();
-    fixture.detectChanges();
-    expect(text()).toContain('data inicial');
-    expect(text()).not.toContain('RMA-REAL');
-    http.expectNone((candidate) => candidate.url === '/api/reports/rmas');
+    show('failures');
+    expect(text()).toContain('L1 · Controlador (SKU-1)');
+    expect(text()).toContain('Sensor');
+    show('recurrence');
+    expect(text()).toContain('1 de 4 itens com série retornaram (25,0%)');
+    expect(text()).toContain('SER-A');
+    expect(text()).toContain('Nenhum lote com retorno');
   });
 
-  it('handles an empty report and a failed refresh with a working retry', () => {
-    respond([]);
-    expect(text()).toContain('Nenhum RMA encontrado');
-    component.loadReports();
+  it('pages the RMA list on the server and links the PDF report', () => {
     respond();
-    component.loadReports();
-    http.expectOne((candidate) => candidate.url === '/api/reports/rmas').flush({}, { status: 500, statusText: 'Server error' });
-    fixture.detectChanges();
-    expect(text()).toContain('Não foi possível carregar os relatórios');
-    expect(text()).not.toContain('RMA-REAL');
-    const retry = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
-      .find((button) => button.textContent?.includes('Tentar novamente'))!;
-    retry.click();
-    respond();
+    show('rmas');
     expect(text()).toContain('RMA-REAL');
-  });
-
-  it('cancels an older query so its response cannot overwrite newer filters', () => {
-    const oldRequest = http.expectOne((request) => request.url === '/api/reports/rmas');
-    component.form.patchValue({ status: 'RETURNED' });
-    component.loadReports();
-    expect(oldRequest.cancelled).toBe(true);
-    const current = http.expectOne((request) => request.url === '/api/reports/rmas');
-    expect(current.request.params.get('status')).toBe('RETURNED');
-    current.flush({ generatedAt: '2026-10-21T01:00:00Z', rmas: [] });
+    expect(text()).toContain('Controlador +1');
+    expect(text()).toContain('Em garantia, Fora de garantia');
+    expect(text()).toContain('1–1 de 21');
+    expect((fixture.nativeElement as HTMLElement).querySelector('[aria-label="Baixar laudo de RMA-REAL"]')).not.toBeNull();
+    const next = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((button) => button.textContent?.includes('Próxima'));
+    next?.click();
+    const request: TestRequest = listRequest();
+    expect(request.request.params.get('page')).toBe('1');
+    request.flush({ ...PAGE, rmas: { ...PAGE.rmas, content: [], page: 1 } });
     fixture.detectChanges();
-    expect(text()).toContain('Nenhum RMA encontrado');
+    expect(text()).toContain('Nenhum RMA encontrado.');
   });
 
-  it('does not expose export implementation details in the report hint', () => {
+  it('exports the CSV of the current tab with the applied filters', () => {
     respond();
-    const surface = fixture.nativeElement.querySelector('section.page-surface') as HTMLElement;
-    const hint = surface.querySelector(':scope > p.report-hint');
-    expect(hint?.textContent?.trim()).toBe('Consulta em tela.');
-    expect(text()).not.toContain('PDF');
-    expect(text()).not.toContain('CSV');
-    expect(text()).not.toContain('documentação');
+    const exportButton = () => (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('[data-export]');
+    exportButton()?.click();
+    const summary = http.expectOne((request) => request.url === '/api/reports/rmas/summary/export.csv');
+    expect(summary.request.params.get('entryFrom')).toBeTruthy();
+    summary.flush(new Blob(['x']));
+    show('rmas');
+    exportButton()?.click();
+    http.expectOne((request) => request.url === '/api/reports/rmas/export.csv').flush(new Blob(['x']));
   });
 
-  it('keeps report access available when the client selector fails and allows retrying it', () => {
-    respond();
-    component.loadClients();
-    http.expectOne('/api/clients/options').flush({}, { status: 500, statusText: 'Server error' });
+  it('keeps the error visible with a retry when the report fails', () => {
+    summaryRequest().flush({ message: 'erro' }, { status: 500, statusText: 'Erro' });
+    listRequest().flush(PAGE);
     fixture.detectChanges();
-    expect(text()).toContain('Não foi possível carregar os clientes');
-    expect(text()).toContain('RMA-REAL');
-    const retry = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
-      .find((button) => button.textContent?.includes('Recarregar clientes'))!;
-    retry.click();
-    http.expectOne('/api/clients/options').flush([]);
-    fixture.detectChanges();
-    expect(text()).not.toContain('Não foi possível carregar os clientes');
+    expect(text()).toContain('Não foi possível carregar os relatórios.');
   });
 });
-
-interface ReportsHarness {
-  form: FormGroup;
-  loadReports(): void;
-  loadClients(): void;
-}
