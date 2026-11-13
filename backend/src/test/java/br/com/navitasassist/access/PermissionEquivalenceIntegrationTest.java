@@ -175,7 +175,6 @@ class PermissionEquivalenceIntegrationTest {
 
         // A, S, T
         row(HttpMethod.PATCH, "/api/rmas/{id}/status", AST),
-        row(HttpMethod.PATCH, "/api/rmas/{id}/bulk-status", AST),
         row(HttpMethod.POST, "/api/rmas/{id}/blocks", AST),
         row(HttpMethod.PATCH, "/api/rmas/{id}/blocks/{blockId}", AST),
 
@@ -264,7 +263,7 @@ class PermissionEquivalenceIntegrationTest {
         Set<String> stale = new TreeSet<>(inMatrix);
         stale.removeAll(mapped);
         assertTrue(stale.isEmpty(), "Linhas MAPPED/PUBLIC sem mapeamento de controller: " + stale);
-        assertEquals(84, mapped.size(), "Total de mapeamentos de controller");
+        assertEquals(83, mapped.size(), "Total de mapeamentos de controller");
     }
 
     private static MockHttpServletRequestBuilder build(Row row) {

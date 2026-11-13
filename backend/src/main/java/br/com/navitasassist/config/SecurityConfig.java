@@ -100,7 +100,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/clients", "/api/products").hasAuthority(Codes.CADASTROS_EDITAR)
                 .requestMatchers(HttpMethod.POST, "/api/rmas").hasAuthority(Codes.RMA_ABRIR)
                 .requestMatchers(HttpMethod.PUT, "/api/rmas/*/diagnosis").hasAuthority(Codes.RMA_DIAGNOSTICAR)
-                .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/status", "/api/rmas/*/bulk-status").hasAuthority(Codes.RMA_STATUS)
+                .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/status").hasAuthority(Codes.RMA_STATUS)
                 .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/assignee").hasAuthority(Codes.RMA_RESPONSAVEL)
                 .requestMatchers(HttpMethod.GET, "/api/parts/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/rmas/*/parts", "/api/rmas/*/parts/*/*").hasAuthority(Codes.PECAS_RESERVAR)

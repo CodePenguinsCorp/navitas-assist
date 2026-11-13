@@ -28,7 +28,6 @@ import br.com.navitasassist.rma.RmaAssigneeUpdateRequest;
 import br.com.navitasassist.rma.RmaBlock;
 import br.com.navitasassist.rma.RmaBlockRequest;
 import br.com.navitasassist.rma.RmaBlockResolveRequest;
-import br.com.navitasassist.rma.RmaBulkStatusUpdateRequest;
 import br.com.navitasassist.rma.RmaAssignmentHistory;
 import br.com.navitasassist.rma.RmaDueDateHistory;
 import br.com.navitasassist.rma.RmaItem;
@@ -255,15 +254,6 @@ public class RmaService {
         item.setWarrantyOverrideAt(next == null ? null : now);
         rma.setUpdatedAt(now);
         return toResponse(rmaRecordRepository.save(rma));
-    }
-
-    public RmaResponse updateStatusInBulk(Long id, RmaBulkStatusUpdateRequest request) {
-        RmaRecord rma = rmaRecordRepository.findByIdForUpdate(id)
-            .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
-        if (rma.getStatus() != request.expectedStatus()) {
-            throw new BusinessException("RMA status changed. Refresh the item before trying again.");
-        }
-        return applyStatusChange(rma, new RmaStatusUpdateRequest(request.status(), request.note()));
     }
 
     private RmaResponse applyStatusChange(RmaRecord rma, RmaStatusUpdateRequest request) {

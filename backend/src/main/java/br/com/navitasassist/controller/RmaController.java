@@ -8,7 +8,6 @@ import br.com.navitasassist.rma.CreateRmaRequest;
 import br.com.navitasassist.rma.RmaAssigneeUpdateRequest;
 import br.com.navitasassist.rma.RmaBlockRequest;
 import br.com.navitasassist.rma.RmaBlockResolveRequest;
-import br.com.navitasassist.rma.RmaBulkStatusUpdateRequest;
 import br.com.navitasassist.rma.RmaResponse;
 import br.com.navitasassist.rma.RmaItemWarrantyRequest;
 import br.com.navitasassist.rma.RmaStatus;
@@ -100,11 +99,6 @@ public class RmaController {
     @PutMapping("/{id}/items/{itemId}/warranty")
     public RmaResponse updateWarranty(@PathVariable Long id, @PathVariable Long itemId, @RequestBody RmaItemWarrantyRequest request) {
         return rmaService.updateWarranty(id, itemId, request);
-    }
-
-    @PatchMapping("/{id}/bulk-status")
-    public RmaResponse updateStatusInBulk(@PathVariable Long id, @Valid @RequestBody RmaBulkStatusUpdateRequest request) {
-        return rmaService.updateStatusInBulk(id, request);
     }
 
     @PatchMapping("/{id}/assignee")

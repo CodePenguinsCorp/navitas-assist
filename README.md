@@ -112,13 +112,9 @@ Cada episódio registra autor e instante de início e de resolução, mantendo a
 
 A tabela de episódios e o filtro salvo foram incluídos na V1, conforme o banco recriável do projeto. Um banco de desenvolvimento criado com a V1 anterior precisa ser recriado antes de aplicar a nova versão; este fluxo não remove bancos ou volumes. O painel geral da NAV-21 ainda não está na main; seu desenvolvimento pode reutilizar `RmaBlockHistoryComponent` e `RmaBlockPanelComponent`.
 
-## Ações em lote no Kanban (NAV-15)
+## Alterações de um RMA pelo Kanban
 
-Marque cards em qualquer coluna e use **Selecionar visíveis** para incluir os itens mostrados pelos filtros. A seleção permanece ao mudar os filtros; o contador informa quantos selecionados estão ocultos. Use **Limpar seleção** para começar de novo. Antes de aplicar, a confirmação mostra a ação, a quantidade e os RMAs envolvidos. O resultado de cada RMA aparece separadamente; falhas continuam selecionadas para revisão. O quadro atualiza somente os itens afetados.
-
-Cada ação em lote exige a permissão correspondente: status com `rma.status`, prioridade com `rma.editar` e responsável com `rma.responsavel`. Sem nenhuma delas não é possível selecionar nem alterar. Cada atualização passa pelas permissões da API e registra o histórico do RMA: etapas e prioridades no histórico de status; atribuições no histórico de responsáveis.
-
-Na alteração de **status em lote**, qualquer etapa pode ser escolhida para os RMAs selecionados, inclusive uma etapa anterior ou a reabertura de um RMA encerrado. O histórico registra cada mudança. A API ainda confere a etapa atual de cada card para evitar sobrescrever uma alteração feita em outra sessão depois da seleção; nesse caso, somente o card desatualizado falha e é recarregado.
+O Kanban não tem edição em massa: cada RMA é alterado individualmente. O status muda ao arrastar o card para outra coluna ou pelo seletor do detalhe (`rma.status`); o responsável, pelo seletor do detalhe (`rma.responsavel`). O card atualiza assim que a API responde, e cada alteração registra o histórico do RMA. A rota `PATCH /api/rmas/{id}/bulk-status`, usada pela antiga seleção em lote (NAV-15), foi removida.
 
 ## Paginação das consultas (NAV-28)
 
@@ -376,7 +372,7 @@ A API autoriza por **permissão**, não por perfil. As permissões efetivas de u
 | Criar, alterar ou excluir clientes e produtos | `cadastros.editar` |
 | Abrir RMA | `rma.abrir` |
 | Alterar dados gerais de RMA e ajustar garantia dos itens | `rma.editar` |
-| Alterar o status de RMA (inclusive em lote) | `rma.status` |
+| Alterar o status de RMA | `rma.status` |
 | Atribuir ou remover responsável do RMA | `rma.responsavel` |
 | Registrar ou alterar diagnóstico | `rma.diagnosticar` |
 | Registrar e resolver impedimentos | `rma.impedimentos` |

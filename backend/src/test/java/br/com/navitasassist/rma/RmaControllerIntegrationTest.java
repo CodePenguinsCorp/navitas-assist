@@ -599,47 +599,6 @@ class RmaControllerIntegrationTest {
     }
 
     @Test
-    void shouldAllowAnyBulkStageIncludingBackwardMovesAndKeepHistoryPerRma() throws Exception {
-        Long firstId = saveBulkTestRma("RMA-BULK-0001");
-        Long secondId = saveBulkTestRma("RMA-BULK-0002");
-        String nextStage = "{\"status\":\"TRIAGE\",\"expectedStatus\":\"RECEIVED\",\"note\":\"Triagem em lote\"}";
-
-        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", firstId).with(asProfile("tech", "TECHNICIAN"))
-                .with(csrf()).contentType(MediaType.APPLICATION_JSON).content(nextStage))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.status").value("TRIAGE"))
-            .andExpect(jsonPath("$.statusHistory[0].note").value("Triagem em lote"));
-
-        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", secondId).with(asProfile("service.desk", "SERVICE_DESK"))
-                .with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"status\":\"RETURNED\",\"expectedStatus\":\"RECEIVED\"}"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.status").value("RETURNED"));
-
-        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", firstId).with(asProfile("tech", "TECHNICIAN"))
-                .with(csrf()).contentType(MediaType.APPLICATION_JSON).content(nextStage))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("RMA status changed. Refresh the item before trying again."));
-
-        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", secondId).with(asProfile("tech", "TECHNICIAN"))
-                .with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"status\":\"RECEIVED\",\"expectedStatus\":\"RETURNED\",\"note\":\"Corrigido após movimento por engano\"}"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.status").value("RECEIVED"))
-            .andExpect(jsonPath("$.statusHistory[0].note").value("Corrigido após movimento por engano"));
-
-        mockMvc.perform(get("/api/rmas/{id}", firstId).with(asProfile("viewer", "VIEWER")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.statusHistory", hasSize(1)));
-        mockMvc.perform(get("/api/rmas/{id}", secondId).with(asProfile("viewer", "VIEWER")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("RECEIVED"))
-            .andExpect(jsonPath("$.statusHistory", hasSize(2)));
-
-        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", firstId).with(asProfile("viewer", "VIEWER"))
-                .with(csrf()).contentType(MediaType.APPLICATION_JSON).content(nextStage))
-            .andExpect(status().isForbidden());
-    }
-
-    @Test
     void shouldRecordPriorityHistoryAndRestrictWhoCanChangeIt() throws Exception {
         Long id = saveBulkTestRma("RMA-BULK-PRIORITY");
         mockMvc.perform(put("/api/rmas/{id}", id).with(asProfile("tech", "TECHNICIAN"))
