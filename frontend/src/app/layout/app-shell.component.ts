@@ -1,4 +1,5 @@
 import { IconComponent } from '../shared/icon/icon.component';
+import { NotificationBellComponent } from '../shared/notification-bell/notification-bell.component';
 import { initialsOf } from '../core/utils/rma-ui';
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -11,11 +12,9 @@ import { AuthService } from '../core/services/auth.service';
 import { NotificationService } from '../core/services/notification.service';
 import { PermissionService } from '../core/services/permission.service';
 
-const UNREAD_UNAVAILABLE = 'Contagem de não lidas indisponível';
-
 @Component({
   selector: 'app-shell',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet, IconComponent],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, IconComponent, NotificationBellComponent],
   templateUrl: './app-shell.component.html',
   styles: [':host { display: block; }']
 })
@@ -26,17 +25,6 @@ export class AppShellComponent {
   private readonly permissions = inject(PermissionService);
 
   protected readonly currentUser = this.authService.currentUser;
-  protected readonly unreadNotifications = this.notificationService.unreadCount;
-  /** The count is shown only when the latest summary succeeded; otherwise it is unknown, not zero. */
-  protected readonly unreadKnown = computed(() =>
-    this.notificationService.summaryLoaded() && !this.notificationService.summaryLoadFailed());
-  protected readonly unreadUnavailable = this.notificationService.summaryLoadFailed;
-  protected readonly notificationsLabel = computed(() => {
-    if (this.unreadUnavailable()) return `Notificações: ${UNREAD_UNAVAILABLE}`;
-    if (!this.unreadKnown()) return 'Notificações';
-    return `Notificações: ${this.unreadNotifications()} não lida(s)`;
-  });
-  protected readonly unreadUnavailableMessage = UNREAD_UNAVAILABLE;
   protected readonly loggingOut = signal(false);
   protected readonly logoutError = signal('');
   protected readonly initials = initialsOf;

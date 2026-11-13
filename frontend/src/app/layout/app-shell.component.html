@@ -45,12 +45,7 @@
   <div class="shell-main">
     <header class="shell-header">
       <div class="shell-actions">
-        <a routerLink="/notificacoes" class="shell-notifications" [class.has-unread]="unreadKnown() && unreadNotifications() > 0" [attr.aria-label]="notificationsLabel()" [attr.title]="unreadUnavailable() ? unreadUnavailableMessage : 'Notificações'">
-          <app-icon name="bell" [size]="22" />
-          @if (unreadKnown() && unreadNotifications() > 0) {
-            <span class="count-badge" aria-hidden="true">{{ unreadNotifications() > 99 ? '99+' : unreadNotifications() }}</span>
-          }
-        </a>
+        <app-notification-bell />
       </div>
     </header>
 
