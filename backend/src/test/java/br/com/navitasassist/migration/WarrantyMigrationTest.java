@@ -27,7 +27,7 @@ class WarrantyMigrationTest {
                 """);
             sql.executeUpdate("INSERT INTO rma_items (id, rma_id, product_id, warranty_months) VALUES (900, 900, 900, 12)");
         }
-        assertEquals(1, Flyway.configure().dataSource(url, "sa", "").load().migrate().migrationsExecuted);
+        assertEquals(1, Flyway.configure().dataSource(url, "sa", "").target("3").load().migrate().migrationsExecuted);
         try (var connection = DriverManager.getConnection(url, "sa", ""); var sql = connection.createStatement()) {
             try (var rows = sql.executeQuery("SELECT warranty_override, warranty_override_reason, warranty_override_by, warranty_override_at, warranty_months FROM rma_items WHERE id = 900")) {
                 assertTrue(rows.next());

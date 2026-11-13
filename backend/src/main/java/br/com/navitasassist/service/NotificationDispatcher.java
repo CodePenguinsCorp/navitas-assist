@@ -44,7 +44,7 @@ public class NotificationDispatcher {
     private final UserAccountRepository userAccountRepository;
     private final NotificationVisibilityPolicy visibilityPolicy;
     private final NotificationContentFactory contentFactory;
-    private final NotificationEmailService emailService;
+    private final br.com.navitasassist.config.NotificationProperties properties;
 
     /**
      * Returns the ids of notifications that should also go out by e-mail.
@@ -61,9 +61,9 @@ public class NotificationDispatcher {
         RmaRecord rma = rmaRecordRepository.findById(event.rmaId()).orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + event.rmaId()));
         record.setRma(rma);
         NotificationContentFactory.Content content = contentFactory.build(event, rma);
-        boolean sendEmail = rule.get().isEmailEnabled() && emailService.isAvailable();
+        boolean sendEmail = rule.get().isEmailEnabled() && properties.getEmail().isEnabled();
 
-        List<Notification> notifications = recipients(rule.get(), rma).stream().map(recipient -> {
+        List<Notification> notifications = recipients(rule.get(), rma).stream().filter(recipient -> rule.get().isAppEnabled() || (sendEmail && recipient.getEmail() != null)).map(recipient -> {
             Notification notification = new Notification();
             notification.setEvent(record);
             notification.setRecipient(recipient);
@@ -73,14 +73,17 @@ public class NotificationDispatcher {
             notification.setTitle(content.title());
             notification.setMessage(content.message());
             notification.setActionPath(content.actionPath());
-            notification.setCreatedAt(Instant.now());
-            notification.setEmailStatus(NotificationEmailStatus.NOT_REQUESTED);
+            notification.setCreatedAt(record.getOccurredAt());
+            notification.setAppVisible(rule.get().isAppEnabled());
+            boolean eligibleEmail = sendEmail && recipient.getEmail() != null;
+            notification.setEmailStatus(eligibleEmail ? NotificationEmailStatus.PENDING : NotificationEmailStatus.NOT_REQUESTED);
+            if (eligibleEmail) notification.setEmailNextAttemptAt(record.getOccurredAt());
             return notification;
         }).toList();
 
         List<Notification> saved = notificationRepository.saveAll(notifications);
         finish(record, NotificationEventStatus.PROCESSED, saved.size());
-        return sendEmail ? saved.stream().map(Notification::getId).toList() : List.of();
+        return List.of();
     }
 
     private List<UserAccount> recipients(NotificationRule rule, RmaRecord rma) {

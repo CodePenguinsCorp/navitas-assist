@@ -54,7 +54,7 @@ class AccessProfileMigrationTest {
             Map<String, String> rules = new HashMap<>();
             try (Statement statement = connection.createStatement();
                  ResultSet rows = statement.executeQuery("""
-                     SELECT event_type, enabled, severity, notify_assignee, email_enabled, user_mutable FROM notification_rules
+                     SELECT event_type, enabled, severity, notify_assignee, email_enabled, user_mutable FROM notification_rules WHERE event_type IN ('RMA_CREATED', 'RMA_ASSIGNED')
                      """)) {
                 while (rows.next()) {
                     rules.put(rows.getString(1), String.join(",", List.of(
@@ -73,6 +73,7 @@ class AccessProfileMigrationTest {
                      FROM notification_rules r
                      LEFT JOIN notification_rule_recipient_profiles rp ON rp.rule_id = r.id
                      LEFT JOIN access_profiles p ON p.id = rp.profile_id
+                     WHERE r.event_type IN ('RMA_CREATED', 'RMA_ASSIGNED')
                      """)) {
                 while (rows.next()) {
                     Set<String> codes = recipients.computeIfAbsent(rows.getString(1), key -> new HashSet<>());

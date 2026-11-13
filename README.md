@@ -572,3 +572,37 @@ Modelos versionados de protocolo por produto ou categoria, executados durante o 
 - **Bloqueio de status**: cada versão define as etapas do RMA (`blockedStatuses`) bloqueadas enquanto a execução mais recente daquele protocolo tiver itens obrigatórios não aprovados.
 - **Laudo (NAV-27)**: `GET /api/protocols/rmas/{rmaId}/executions` expõe protocolo, versão, executor e todas as tentativas de cada item; é o ponto de integração do laudo técnico.
 
+
+
+## E-mails e notificações internas (Projeto B)
+
+O backend usa o e-mail opcional de `user_accounts`, nunca o e-mail do cliente nem um endereço derivado do username. POST/PUT de usuários aceitam `email`; branco/null/ausente no PUT limpa o endereço. A API normaliza para minúsculas, limita a 254 caracteres e garante unicidade sem diferenciar caixa. Sessão e respostas de usuários incluem `email`; opções de atribuíveis não o expõem.
+
+A migração aditiva `V4__notification_email_delivery.sql` preserva V1–V3, o histórico e a visibilidade do app. Nenhuma notificação legada é agendada retroativamente. Cada regra tem interruptores geral (`enabled`), App (`appEnabled`) e E-mail (`emailEnabled`); e-mail inicia desligado nas regras existentes. `supported=false` identifica os eventos reservados sem produtor. O silenciamento existente vale para ambos os canais quando a regra permite. Ler ou adiar no app não cancela um envio pendente.
+
+| Variável | Padrão / uso |
+| --- | --- |
+| `NOTIFICATIONS_EMAIL_ENABLED` | `false`; desligado pausa a fila sem consumir tentativas |
+| `NOTIFICATIONS_EMAIL_PROVIDER` | `fake`; valores aceitos: `fake`, `resend` |
+| `MAIL_FROM` | vazio; endereço único obrigatório com canal ligado |
+| `APP_BASE_URL` | vazio; URL absoluta sem credenciais, query ou fragmento; HTTPS no Resend, HTTP local permitido no fake |
+| `RESEND_API_KEY` | vazio; obrigatório somente com Resend ligado |
+| `NOTIFICATIONS_EMAIL_POLL_MS` | `5000`, positivo |
+| `NOTIFICATIONS_EMAIL_BATCH_SIZE` | `50`, entre 1 e 100 |
+
+Em desenvolvimento, habilite explicitamente `fake`, `MAIL_FROM=notificacoes@example.invalid` e `APP_BASE_URL=http://localhost:4200`. O fake retém apenas as últimas 100 mensagens em memória, acessíveis por método Java, sem endpoint de captura. Reiniciar limpa essas capturas. A configuração inválida falha na inicialização sem mostrar segredos. SMTP foi removido. Os exemplos e ambos os Compose mantém o canal desligado.
+
+Para produção, configure o remetente/domínio verificado e a chave no ambiente, escolha `resend` e só então habilite o canal. O adaptador usa HTTP nativo, sem redirects, conexão de 3 s e limite total de 10 s, com resposta limitada a 16 KiB. Contrato conferido na [referência oficial Resend](https://github.com/resend/resend-openapi/blob/main/resend.yaml). Testes usam exclusivamente servidor HTTP local e dados sintéticos.
+
+A fila persistente usa `PENDING`, `SENT`, `FAILED` e `NOT_REQUESTED` na própria notificação. O worker sequencial pressupõe **uma única instância**, revalida usuário/permissão/regra/silenciamento/endereço e faz até cinco tentativas: imediata, depois 1 min, 5 min, 30 min e 2 h. HTTP 4xx permanente falha imediatamente; 429, 5xx e rede repetem. `SENT` significa aceito pelo provedor; com fake significa **simulado**, sem entrega postal. Não há lease, geração, hash ou preferência separada de e-mail.
+
+As rotas administrativas abaixo usam `notificacoes.regras` e CSRF nas mutações:
+
+- `GET /api/notification-rules/email-status`: `{enabled, provider}`.
+- `GET /api/notification-rules/failures`: até 50 falhas recentes de EVENT/EMAIL, com erro sanitizado; EMAIL inclui ID, tentativas, provedor, status, próxima tentativa e disponibilidade de reenvio. Destinatério ? username, sem endereço.
+- `POST /api/notification-rules/emails/{notificationId}/retry`: somente FAILED; 202 ao agendar, 409 para outro estado, 400 se inelegível, 404 se inexistente. Não cria outra notificação no app.
+- `POST /api/notification-rules/emails/test`: corpo vazio, envia imediatamente ao e-mail da própria sessão; 200 com `status=enviado/simulado`, 400 se indisponível, 502 se o provedor falhar e 429 dentro de 30 s. Não grava notificação ou evento; limite em memória por usuário.
+
+`GET /api/notifications` mantém array e limite de 100; aceita `eventType` e `severity` antes do limite. Caixa, resumo e ações pessoais ignoram linhas exclusivas de e-mail. `read-all` alcança todas as visíveis autorizadas do usuário, inclusive adiadas e além das 100 linhas. O frontend é implementado separadamente.
+
+Falhas do canal não desfazem RMA nem notificação do app. Permanece a janela de perda entre commit do RMA e distribuição pelo listener; não há outbox de negócio. O ID fixo da notificação vai em `Idempotency-Key`, inclusive no reenvio manual: o provedor pode reconhecer a tentativa anterior, e mudanças de endereço/conteúdo podem conflitar durante sua janela de retenção. Timeout após aceitação também pode duplicar fora dessa janela. Não há garantia exactly-once. Não execute mais de uma instância deste worker.

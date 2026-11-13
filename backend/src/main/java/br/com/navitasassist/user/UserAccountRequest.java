@@ -12,8 +12,13 @@ public record UserAccountRequest(
     @NotBlank @Size(min = 6, max = 72) String password,
     @NotNull Long profileId,
     Set<@NotBlank String> extraPermissions,
-    boolean active
+    boolean active,
+    @Size(max = 254) String email
 ) {
+
+    public UserAccountRequest(String username, String fullName, String password, Long profileId, Set<String> extraPermissions, boolean active) {
+        this(username, fullName, password, profileId, extraPermissions, active, null);
+    }
 
     @Override
     public String toString() {

@@ -44,10 +44,10 @@ public class NotificationService {
     private final NotificationVisibilityPolicy visibilityPolicy;
 
     @Transactional(readOnly = true)
-    public List<NotificationResponse> list(boolean unreadOnly, boolean includeSnoozed) {
+    public List<NotificationResponse> list(boolean unreadOnly, boolean includeSnoozed, NotificationEventType eventType, br.com.navitasassist.notification.NotificationSeverity severity) {
         UserAccount user = currentUser();
-        return notificationRepository.findForRecipient(user.getId(), unreadOnly, includeSnoozed, Instant.now(), PageRequest.of(0, PAGE_SIZE)).stream()
-            .filter(notification -> visibilityPolicy.canView(user, notification.getEventType()))
+        return notificationRepository.findForRecipient(user.getId(), unreadOnly, includeSnoozed, Instant.now(), visibleTypes(user), eventType, severity, PageRequest.of(0, PAGE_SIZE)).stream()
+            .filter(notification -> notification.isAppVisible() && visibilityPolicy.canView(user, notification.getEventType()))
             .map(NotificationResponse::from)
             .toList();
     }
@@ -71,7 +71,8 @@ public class NotificationService {
     }
 
     public void markAllRead() {
-        notificationRepository.markAllRead(currentUser().getId(), Instant.now());
+        UserAccount user = currentUser();
+        notificationRepository.markAllRead(user.getId(), Instant.now(), visibleTypes(user));
     }
 
     public NotificationResponse snooze(Long id, int minutes) {
@@ -118,8 +119,12 @@ public class NotificationService {
     private Notification getOwned(Long id) {
         UserAccount user = currentUser();
         return notificationRepository.findByIdAndRecipient_Id(id, user.getId())
-            .filter(notification -> visibilityPolicy.canView(user, notification.getEventType()))
+            .filter(notification -> notification.isAppVisible() && visibilityPolicy.canView(user, notification.getEventType()))
             .orElseThrow(() -> new ResourceNotFoundException("Notification not found: " + id));
+    }
+
+    private List<NotificationEventType> visibleTypes(UserAccount user) {
+        return java.util.Arrays.stream(NotificationEventType.values()).filter(type -> visibilityPolicy.canView(user, type)).toList();
     }
 
     private UserAccount currentUser() {

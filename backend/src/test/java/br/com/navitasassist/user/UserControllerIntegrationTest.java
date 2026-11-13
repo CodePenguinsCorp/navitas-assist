@@ -100,6 +100,91 @@ class UserControllerIntegrationTest {
     }
 
     @Test
+    void createsNormalizesUpdatesAndClearsEmail() throws Exception {
+        UserAccount existing = createUser("email.user", "Email user", "password123");
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("username", existing.getUsername());
+        body.put("fullName", existing.getFullName());
+        body.put("profileId", existing.getProfile().getId());
+        body.put("active", true);
+        body.put("email", "  Test@Example.invalid  ");
+        mockMvc.perform(put("/api/users/{id}", existing.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.email").value("test@example.invalid"));
+
+        body.put("email", " ");
+        mockMvc.perform(put("/api/users/{id}", existing.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.email").isEmpty());
+    }
+
+    @Test
+    void enforcesEmailLengthCaseInsensitiveUniquenessAndSessionContract() throws Exception {
+        UserAccount existing = createUser("email.length", "Email user", "password123");
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("username", existing.getUsername()); body.put("fullName", existing.getFullName());
+        body.put("profileId", existing.getProfile().getId()); body.put("active", true);
+        String maxEmail = "a".repeat(240) + "@example.test";
+        assertEquals(253, maxEmail.length());
+        maxEmail = "a" + maxEmail;
+        body.put("email", maxEmail);
+        mockMvc.perform(put("/api/users/{id}", existing.getId()).with(asProfile("admin", "ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.email").value(maxEmail));
+        mockMvc.perform(get("/api/auth/me").with(asProfile(existing.getUsername(), "TECHNICIAN"))).andExpect(status().isOk()).andExpect(jsonPath("$.email").value(maxEmail));
+        body.put("email", "a" + maxEmail);
+        mockMvc.perform(put("/api/users/{id}", existing.getId()).with(asProfile("admin", "ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body))).andExpect(status().isBadRequest());
+        UserAccount other = createUser("email.duplicate", "Other", "password123");
+        body.put("username", other.getUsername()); body.put("email", maxEmail.toUpperCase(java.util.Locale.ROOT));
+        mockMvc.perform(put("/api/users/{id}", other.getId()).with(asProfile("admin", "ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body))).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void concurrentEmailCollisionReturnsOne400AndNoPartialUser() throws Exception {
+        long profileId = accessProfiles.findByLegacyCode("TECHNICIAN").orElseThrow().getId();
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+        java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+        try {
+            java.util.function.Function<String, java.util.concurrent.Callable<Integer>> create = name -> () -> {
+                start.await();
+                Map<String, Object> body = Map.of("username", name, "fullName", "Concurrent", "password", "password123", "profileId", profileId, "active", true, "email", name.endsWith("a") ? "SAME@example.invalid" : "same@example.invalid");
+                return mockMvc.perform(post("/api/users").with(asProfile("admin", "ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body))).andReturn().getResponse().getStatus();
+            };
+            var first = pool.submit(create.apply("collision.a")); var second = pool.submit(create.apply("collision.b")); start.countDown();
+            assertEquals(Set.of(201, 400), Set.of(first.get(15, java.util.concurrent.TimeUnit.SECONDS), second.get(15, java.util.concurrent.TimeUnit.SECONDS)));
+            assertEquals(1, userAccountRepository.findAll().stream().filter(u -> u.getUsername().startsWith("collision.")).count());
+        } finally { pool.shutdownNow(); }
+    }
+
+    @Test
+    void duplicateEmailDoesNotLeakAddressThroughHibernateLogs() {
+        var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger("org.hibernate.engine.jdbc.spi.SqlExceptionHelper");
+        var appender = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        appender.start(); logger.addAppender(appender);
+        try {
+            UserAccount first = createUser("email.log.first", "First", "password123");
+            first.setEmail("private@example.invalid"); userAccountRepository.saveAndFlush(first);
+            UserAccount second = createUser("email.log.second", "Second", "password123");
+            second.setEmail("private@example.invalid");
+            org.junit.jupiter.api.Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, () -> userAccountRepository.saveAndFlush(second));
+            assertTrue(appender.list.stream().noneMatch(event -> event.getFormattedMessage().contains("private@example.invalid")), "Database diagnostics leaked an email address");
+        } finally { logger.detachAppender(appender); appender.stop(); }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"\r\n", "invalid", "a@example.invalid\r\nBcc: x@y.invalid", "a@b.invalid,c@d.invalid"})
+    void rejectsInvalidEmail(String email) throws Exception {
+        UserAccount existing = createUser("email.invalid", "Email user", "password123");
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("username", existing.getUsername());
+        body.put("fullName", existing.getFullName());
+        body.put("profileId", existing.getProfile().getId());
+        body.put("active", true);
+        body.put("email", email);
+        mockMvc.perform(put("/api/users/{id}", existing.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body))).andExpect(status().isBadRequest());
+    }
+
+    @Test
     void shouldUpdateUserAndKeepPasswordWhenItIsOmitted() throws Exception {
         UserAccount user = createUser("operator", "Operator", "old-password");
 

@@ -41,6 +41,8 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
         """)
     Optional<UserAccount> findWithAccessById(@Param("id") Long id);
 
+    Optional<UserAccount> findByEmailIgnoreCase(String email);
+
     boolean existsByUsernameIgnoreCase(String username);
 
     List<UserAccount> findAllByActiveTrueAndProfileInOrderByFullNameAsc(Collection<AccessProfile> profiles);

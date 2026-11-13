@@ -15,11 +15,22 @@ import org.springframework.data.repository.query.Param;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
+    @Query("select n.id from Notification n where n.emailStatus = br.com.navitasassist.notification.NotificationEmailStatus.PENDING and n.emailNextAttemptAt <= :now order by n.emailNextAttemptAt, n.id")
+    List<Long> findDueEmailIds(@Param("now") Instant now, Pageable pageable);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Notification n set n.emailStatus = br.com.navitasassist.notification.NotificationEmailStatus.PENDING, n.emailAttempts = 0, n.emailError = null, n.emailNextAttemptAt = :now where n.id = :id and n.emailStatus = br.com.navitasassist.notification.NotificationEmailStatus.FAILED")
+    int retryFailedEmail(@Param("id") Long id, @Param("now") Instant now);
+
     @EntityGraph(attributePaths = { "rma" })
     @Query("""
         select n
         from Notification n
         where n.recipient.id = :recipientId
+          and n.appVisible = true
+          and n.eventType in :visibleTypes
+          and (:eventType is null or n.eventType = :eventType)
+          and (:severity is null or n.severity = :severity)
           and (:unreadOnly = false or n.readAt is null)
           and (:includeSnoozed = true or n.snoozedUntil is null or n.snoozedUntil <= :now)
         order by n.createdAt desc, n.id desc
@@ -29,6 +40,9 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
         @Param("unreadOnly") boolean unreadOnly,
         @Param("includeSnoozed") boolean includeSnoozed,
         @Param("now") Instant now,
+        @Param("visibleTypes") java.util.Collection<br.com.navitasassist.notification.NotificationEventType> visibleTypes,
+        @Param("eventType") br.com.navitasassist.notification.NotificationEventType eventType,
+        @Param("severity") br.com.navitasassist.notification.NotificationSeverity severity,
         Pageable pageable
     );
 
@@ -36,6 +50,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
         select n.eventType, count(n)
         from Notification n
         where n.recipient.id = :recipientId
+          and n.appVisible = true
           and n.readAt is null
           and (n.snoozedUntil is null or n.snoozedUntil <= :now)
         group by n.eventType
@@ -46,8 +61,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     Optional<Notification> findByIdAndRecipient_Id(Long id, Long recipientId);
 
     @Modifying
-    @Query("update Notification n set n.readAt = :now where n.recipient.id = :recipientId and n.readAt is null")
-    int markAllRead(@Param("recipientId") Long recipientId, @Param("now") Instant now);
+    @Query("update Notification n set n.readAt = :now where n.recipient.id = :recipientId and n.appVisible = true and n.eventType in :visibleTypes and n.readAt is null")
+    int markAllRead(@Param("recipientId") Long recipientId, @Param("now") Instant now, @Param("visibleTypes") java.util.Collection<br.com.navitasassist.notification.NotificationEventType> visibleTypes);
 
     @EntityGraph(attributePaths = { "rma", "recipient", "event" })
     List<Notification> findByEmailStatusOrderByCreatedAtDesc(NotificationEmailStatus status, Pageable pageable);

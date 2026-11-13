@@ -15,11 +15,6 @@ spring:
         format_sql: false
   flyway:
     validate-on-migrate: true
-  mail:
-    properties:
-      "[mail.smtp.connectiontimeout]": ${MAIL_SMTP_CONNECTION_TIMEOUT_MS:5000}
-      "[mail.smtp.timeout]": ${MAIL_SMTP_READ_TIMEOUT_MS:10000}
-      "[mail.smtp.writetimeout]": ${MAIL_SMTP_WRITE_TIMEOUT_MS:10000}
 
 server:
   port: ${SERVER_PORT:8080}
@@ -41,7 +36,17 @@ navitas:
       queue-capacity: ${NOTIFICATIONS_ASYNC_QUEUE_CAPACITY:500}
     email:
       enabled: ${NOTIFICATIONS_EMAIL_ENABLED:false}
-      domain: ${NOTIFICATIONS_EMAIL_DOMAIN:}
-      from: ${NOTIFICATIONS_EMAIL_FROM:navitas-assist@localhost}
+      provider: ${NOTIFICATIONS_EMAIL_PROVIDER:fake}
+      api-key: ${RESEND_API_KEY:}
+      from: ${MAIL_FROM:}
+      app-base-url: ${APP_BASE_URL:}
+      poll-ms: ${NOTIFICATIONS_EMAIL_POLL_MS:5000}
+      batch-size: ${NOTIFICATIONS_EMAIL_BATCH_SIZE:50}
   security:
     cookie-secure: ${SESSION_COOKIE_SECURE:true}
+
+# Drivers podem incluir o endereço duplicado no diagnóstico de constraints.
+# A API traduz colisões conhecidas para mensagens seguras.
+logging:
+  level:
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: "OFF"

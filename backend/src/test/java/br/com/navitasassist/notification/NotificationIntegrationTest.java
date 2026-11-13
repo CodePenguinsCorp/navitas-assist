@@ -277,7 +277,7 @@ class NotificationIntegrationTest {
     void usersCanMuteOnlyRulesThatAllowIt() throws Exception {
         mockMvc.perform(get("/api/notifications/preferences").with(as(desk)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(2)));
+            .andExpect(jsonPath("$", hasSize(8)));
 
         mockMvc.perform(put("/api/notifications/preferences/RMA_ASSIGNED").with(as(technician)).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"muted\":true}"))
             .andExpect(status().isBadRequest())
@@ -302,7 +302,7 @@ class NotificationIntegrationTest {
         assertTrue(java.util.Arrays.stream(NotificationEventType.values()).noneMatch(type -> type.name().startsWith("SLA_")));
         mockMvc.perform(get("/api/notification-rules").with(ADMIN))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[*].eventType", containsInAnyOrder("RMA_CREATED", "RMA_ASSIGNED")));
+            .andExpect(jsonPath("$[?(@.eventType =~ /SLA_.*/)]", hasSize(0)));
         mockMvc.perform(get("/api/notifications/preferences").with(as(desk)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[?(@.eventType =~ /SLA_.*/)]", hasSize(0)));
@@ -372,6 +372,34 @@ class NotificationIntegrationTest {
         mockMvc.perform(get("/api/notification-rules").with(ADMIN))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[?(@.eventType == 'RMA_CREATED')].recipientProfiles[*]", hasSize(0)));
+    }
+
+    @Test
+    void appliesFiltersBeforeLimitAndReadAllIncludesSnoozedOutsideFirstPage() throws Exception {
+        createRma();
+        Notification original = notificationRepository.findAll().stream().filter(n -> n.getRecipient().getId().equals(desk.getId())).findFirst().orElseThrow();
+        for (int i = 0; i < 105; i++) {
+            NotificationEvent event = new NotificationEvent();
+            event.setEventKey("filter-" + i);
+            event.setEventType(NotificationEventType.RMA_CREATED);
+            event.setStatus(NotificationEventStatus.PROCESSED);
+            event.setOccurredAt(Instant.now());
+            event = notificationEventRepository.save(event);
+            Notification n = new Notification();
+            n.setEvent(event);
+            n.setRecipient(desk);
+            n.setEventType(i == 0 ? NotificationEventType.RMA_ASSIGNED : NotificationEventType.RMA_CREATED);
+            n.setSeverity(i == 0 ? NotificationSeverity.CRITICAL : NotificationSeverity.INFO);
+            n.setTitle("Test"); n.setMessage("Test");
+            n.setCreatedAt(original.getCreatedAt().plusSeconds(i + 1));
+            n.setSnoozedUntil(Instant.now().plusSeconds(3600));
+            notificationRepository.save(n);
+        }
+        mockMvc.perform(get("/api/notifications").param("eventType", "RMA_ASSIGNED").param("severity", "CRITICAL").param("includeSnoozed", "true").with(as(desk)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1))).andExpect(jsonPath("$[0].eventType").value("RMA_ASSIGNED"));
+        mockMvc.perform(post("/api/notifications/read-all").with(as(desk)).with(csrf())).andExpect(status().isNoContent());
+        assertEquals(0, notificationRepository.findAll().stream().filter(n -> n.getRecipient().getId().equals(desk.getId()) && n.getReadAt() == null).count());
+        mockMvc.perform(get("/api/notifications").param("severity", "INVALID").with(as(desk))).andExpect(status().isBadRequest());
     }
 
     private RmaResponse createRma() {

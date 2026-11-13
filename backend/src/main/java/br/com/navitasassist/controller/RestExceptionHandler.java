@@ -20,6 +20,11 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RestControllerAdvice
 public class RestExceptionHandler {
 
+    @ExceptionHandler(NotificationEmailActionException.class)
+    public ResponseEntity<ApiError> handleEmailAction(NotificationEmailActionException exception) {
+        return buildResponse(exception.getStatus(), exception.getMessage(), List.of());
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(ResourceNotFoundException exception) {
         return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage(), List.of());

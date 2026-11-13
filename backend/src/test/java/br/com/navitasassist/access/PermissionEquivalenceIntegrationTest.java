@@ -130,6 +130,9 @@ class PermissionEquivalenceIntegrationTest {
         row(HttpMethod.GET, "/api/notification-rules", A),
         row(HttpMethod.PUT, "/api/notification-rules/{eventType}", A),
         row(HttpMethod.GET, "/api/notification-rules/failures", A),
+        row(HttpMethod.GET, "/api/notification-rules/email-status", A),
+        row(HttpMethod.POST, "/api/notification-rules/emails/test", A),
+        row(HttpMethod.POST, "/api/notification-rules/emails/{notificationId}/retry", A),
         row(HttpMethod.GET, "/api/users", A),
         row(HttpMethod.GET, "/api/users/summary", A),
         row(HttpMethod.POST, "/api/users", A),
@@ -267,7 +270,7 @@ class PermissionEquivalenceIntegrationTest {
         Set<String> stale = new TreeSet<>(inMatrix);
         stale.removeAll(mapped);
         assertTrue(stale.isEmpty(), "Linhas MAPPED/PUBLIC sem mapeamento de controller: " + stale);
-        assertEquals(87, mapped.size(), "Total de mapeamentos de controller");
+        assertEquals(90, mapped.size(), "Total de mapeamentos de controller");
     }
 
     private static MockHttpServletRequestBuilder build(Row row) {

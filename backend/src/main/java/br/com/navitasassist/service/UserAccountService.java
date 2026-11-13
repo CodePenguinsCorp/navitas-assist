@@ -84,12 +84,13 @@ public class UserAccountService {
         UserAccount userAccount = new UserAccount();
         userAccount.setUsername(trim(request.username()));
         userAccount.setFullName(trim(request.fullName()));
+        userAccount.setEmail(validateEmail(userAccount.getId(), request.email()));
         userAccount.setPasswordHash(passwordEncoder.encode(request.password()));
         userAccount.setProfile(profile);
         userAccount.setExtraPermissions(extras);
         userAccount.setActive(request.active());
 
-        return UserAccountResponse.from(userAccountRepository.save(userAccount));
+        return UserAccountResponse.from(saveWithEmailConstraint(userAccount));
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -114,6 +115,7 @@ public class UserAccountService {
 
         userAccount.setUsername(trim(request.username()));
         userAccount.setFullName(trim(request.fullName()));
+        userAccount.setEmail(validateEmail(userAccount.getId(), request.email()));
         if (passwordChanged) {
             userAccount.setPasswordHash(passwordEncoder.encode(request.password()));
         }
@@ -122,7 +124,7 @@ public class UserAccountService {
         userAccount.getExtraPermissions().addAll(newExtras);
         userAccount.setActive(request.active());
 
-        UserAccountResponse response = UserAccountResponse.from(userAccountRepository.save(userAccount));
+        UserAccountResponse response = UserAccountResponse.from(saveWithEmailConstraint(userAccount));
         if (sessionsRevoked) {
             events.publishEvent(new AccountSessionRevoker.AccessChanged(id));
         }
@@ -174,6 +176,31 @@ public class UserAccountService {
     public CurrentUserResponse getCurrentUser(String username) {
         UserAccount userAccount = getEntityByUsername(username);
         return CurrentUserResponse.from(userAccount, effectivePermissionService.effectivePermissions(userAccount));
+    }
+
+    private String validateEmail(Long id, String email) {
+        if (email == null) return null;
+        if (email.indexOf('\r') >= 0 || email.indexOf('\n') >= 0 || email.length() > 254) throw new BusinessException("Invalid email address.");
+        if (email.isBlank()) return null;
+        String normalized = email.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!br.com.navitasassist.notification.email.EmailMessage.validAddress(normalized)) throw new BusinessException("Invalid email address.");
+        if (userAccountRepository.findByEmailIgnoreCase(normalized).filter(user -> !Objects.equals(user.getId(), id)).isPresent()) throw new BusinessException("Email already registered.");
+        return normalized;
+    }
+
+    private UserAccount saveWithEmailConstraint(UserAccount user) {
+        try { return userAccountRepository.saveAndFlush(user); }
+        catch (org.springframework.dao.DataIntegrityViolationException error) {
+            Throwable cause = error;
+            while (cause != null) {
+                if (cause instanceof org.hibernate.exception.ConstraintViolationException violation
+                    && violation.getConstraintName() != null && violation.getConstraintName().toLowerCase(java.util.Locale.ROOT).contains("uk_user_accounts_email")) {
+                    throw new BusinessException("Email already registered.");
+                }
+                cause = cause.getCause();
+            }
+            throw error;
+        }
     }
 
     private void validateUsername(UserAccount existing, String username) {

@@ -25,6 +25,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @Entity
+@org.hibernate.annotations.DynamicUpdate
 @Table(name = "notifications")
 public class Notification {
 
@@ -74,6 +75,18 @@ public class Notification {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private NotificationEmailStatus emailStatus = NotificationEmailStatus.NOT_REQUESTED;
+
+    @Column(nullable = false)
+    private boolean appVisible = true;
+
+    @Column(nullable = false)
+    private int emailAttempts;
+
+    private Instant emailNextAttemptAt;
+    private Instant emailSentAt;
+
+    @Column(length = 20)
+    private String emailProvider;
 
     @Column(length = 500)
     private String emailError;

@@ -28,7 +28,7 @@ class DatabaseMigrationTest {
 
         int executedMigrations = Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate().migrationsExecuted;
 
-        assertEquals(3, executedMigrations);
+        assertEquals(4, executedMigrations);
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
             assertTrue(tableExists(connection, "rmas"));
             assertTrue(tableExists(connection, "rma_code_generation_lock"));
@@ -236,8 +236,8 @@ class DatabaseMigrationTest {
             assertTrue(tableExists(connection, "notification_events"));
             assertTrue(tableExists(connection, "notifications"));
             assertTrue(tableExists(connection, "notification_mutes"));
-            assertEquals(Set.of("idx_notifications_recipient_id", "idx_notifications_rma_id"), applicationIndexes(connection, "notifications"));
-            assertEquals(2, count(connection, "notification_rules"));
+            assertEquals(Set.of("idx_notifications_recipient_id", "idx_notifications_rma_id", "idx_notifications_email_due"), applicationIndexes(connection, "notifications"));
+            assertEquals(8, count(connection, "notification_rules"));
 
             try (Statement statement = connection.createStatement()) {
                 String insert = "INSERT INTO notification_events (event_key, event_type, status, recipient_count, occurred_at) VALUES ('KEY-1', 'RMA_CREATED', 'RECEIVED', 0, CURRENT_TIMESTAMP)";

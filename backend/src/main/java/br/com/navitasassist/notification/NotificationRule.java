@@ -61,5 +61,8 @@ public class NotificationRule extends AuditableEntity {
     private boolean emailEnabled;
 
     @Column(nullable = false)
+    private boolean appEnabled = true;
+
+    @Column(nullable = false)
     private boolean userMutable;
 }
