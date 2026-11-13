@@ -99,7 +99,10 @@ describe('ReportsComponent', () => {
     expect(text()).toContain('L1 · Controlador (SKU-1)');
     expect(text()).toContain('Sensor');
     show('recurrence');
-    expect(text()).toContain('1 de 4 itens com série retornaram (25,0%)');
+    const indicators = (fixture.nativeElement as HTMLElement).querySelector('.page-summary')!.textContent!;
+    expect(indicators).toContain('Retornaram');
+    expect(indicators).toContain('1 de 4');
+    expect(indicators).toContain('itens com série (25,0%)');
     expect(text()).toContain('SER-A');
     expect(text()).toContain('Nenhum lote com retorno');
   });
@@ -134,6 +137,59 @@ describe('ReportsComponent', () => {
     http.expectOne((request) => request.url === '/api/reports/rmas/export.csv').flush(new Blob(['x']));
     expect(click).toHaveBeenCalledTimes(2);
     click.mockRestore();
+  });
+
+  it('shows the period totals in the indicator strip', () => {
+    respond();
+    const indicators = (fixture.nativeElement as HTMLElement).querySelector('.page-summary')!.textContent!.replace(/\s+/g, ' ');
+    expect(indicators).toContain('24/07/2026 a 21/10/2026');
+    expect(indicators).toContain('4 RMAs');
+    expect(indicators).toContain('5 itens');
+    expect(indicators).not.toContain('Retornaram');
+  });
+
+  it('hides the previous page while a new consultation loads or fails', () => {
+    respond();
+    show('rmas');
+    expect(text()).toContain('RMA-REAL');
+    component.form.patchValue({ status: 'RETURNED' });
+    component.consult();
+    fixture.detectChanges();
+    expect(text()).not.toContain('RMA-REAL');
+    expect((fixture.nativeElement as HTMLElement).querySelector('#report-panel [aria-busy="true"]')).not.toBeNull();
+    summaryRequest().flush({ message: 'erro' }, { status: 500, statusText: 'Erro' });
+    listRequest().flush({ message: 'erro' }, { status: 500, statusText: 'Erro' });
+    fixture.detectChanges();
+    expect(text()).not.toContain('RMA-REAL');
+    expect(text()).toContain('Não foi possível carregar os relatórios.');
+  });
+
+  it('clears the filters back to the last 90 days and consults again', () => {
+    respond();
+    component.form.patchValue({ entryFrom: '2026-01-01', status: 'RETURNED', clientId: 2 });
+    Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((button) => button.textContent?.trim() === 'Limpar filtros')!.click();
+    const summary = summaryRequest();
+    const from = summary.request.params.get('entryFrom') as string;
+    const to = summary.request.params.get('entryTo') as string;
+    expect((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000).toBe(89);
+    expect(summary.request.params.has('status')).toBe(false);
+    expect(summary.request.params.has('clientId')).toBe(false);
+    summary.flush(SUMMARY);
+    listRequest().flush(PAGE);
+  });
+
+  it('shows the backend message of a failed CSV export, with a generic fallback', async () => {
+    respond();
+    const exportButton = () => (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('[data-export]')!;
+    exportButton().click();
+    http.expectOne((request) => request.url === '/api/reports/rmas/summary/export.csv')
+      .flush(new Blob([JSON.stringify({ message: 'A exportação está limitada a 5.000 linhas.' })], { type: 'application/json' }), { status: 400, statusText: 'Bad Request' });
+    await vi.waitFor(() => { fixture.detectChanges(); expect(text()).toContain('A exportação está limitada a 5.000 linhas.'); });
+
+    exportButton().click();
+    http.expectOne((request) => request.url === '/api/reports/rmas/summary/export.csv')
+      .flush(new Blob(['<html>erro</html>'], { type: 'text/html' }), { status: 502, statusText: 'Bad Gateway' });
+    await vi.waitFor(() => { fixture.detectChanges(); expect(text()).toContain('Não foi possível exportar o CSV. Reduza o período ou os filtros e tente novamente.'); });
   });
 
   it('keeps the error visible with a retry when the report fails', () => {

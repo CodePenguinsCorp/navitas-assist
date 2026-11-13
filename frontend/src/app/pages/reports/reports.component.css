@@ -1,17 +1,19 @@
 :host { display: block; }
-.report-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: var(--space-4); padding: var(--space-4); align-items: end; }
-.report-filters .filter-field { min-width: 0; }
-.report-period-error { grid-column: 1 / -1; margin: 0; }
-.report-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-4); }
-.report-bar .tab-list { margin: 0; }
-.report-bar .button-secondary { display: inline-flex; align-items: center; gap: var(--space-2); }
-.report-meta { margin: var(--space-4) 0; color: var(--muted); }
-.report-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.report-filters .filter-field { flex: 1 1 170px; min-width: 0; max-width: 240px; }
+.report-filters__actions { display: flex; align-items: center; gap: var(--space-4); margin-left: auto; }
+.report-period-error { flex-basis: 100%; margin: 0; }
+.report-panel, .report-filters { min-width: 0; }
+.report-panel:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-sm); }
 .report-grid .table-card { min-width: 0; }
-h2 { font-size: 1rem; margin: 0; }
-td { vertical-align: top; overflow-wrap: anywhere; }
-.report-muted { color: var(--muted); }
-.report-count { display: flex; align-items: center; gap: var(--space-2); min-width: 8rem; }
+.report-loading { min-height: 160px; }
+td { vertical-align: top; overflow-wrap: break-word; }
+.code-text, .status-chip { white-space: nowrap; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.report-muted { margin: var(--space-3) 0 0; color: var(--muted); }
+.report-count { display: flex; align-items: center; gap: var(--space-2); min-width: 8rem; font-variant-numeric: tabular-nums; }
 .report-count__bar { height: 6px; border-radius: 3px; background: var(--brand-blue); opacity: 0.35; }
-@media (max-width: 1100px) { .report-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 760px) { .report-filters, .report-grid { grid-template-columns: 1fr; } }
+@media (max-width: 760px) {
+  .report-grid { grid-template-columns: 1fr; }
+  .report-filters .filter-field { max-width: none; }
+  .report-filters__actions { flex-basis: 100%; justify-content: space-between; margin-left: 0; }
+}

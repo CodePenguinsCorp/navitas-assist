@@ -10,6 +10,7 @@ import { PermissionService } from '../../core/services/permission.service';
 import { ReportService } from '../../core/services/report.service';
 import { formatDateOnly, todayInputValue } from '../../core/utils/date';
 import { saveDownload } from '../../core/utils/download';
+import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { formatDuration } from '../../core/utils/duration';
 import { DEFAULT_PAGE_SIZE } from '../../core/utils/pagination';
 import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
@@ -100,6 +101,8 @@ export class ReportsComponent {
     this.errorMessage.set('');
     this.exportError.set('');
     this.summary.set(null);
+    // A página anterior pertence a outros filtros: some até a nova chegar (ou falhar).
+    this.list.set(null);
     this.loading.set(true);
     this.summaryRequest = this.reportService.summary(this.applied)
       .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false))).subscribe({
@@ -107,6 +110,12 @@ export class ReportsComponent {
         error: () => this.errorMessage.set('Não foi possível carregar os relatórios.')
       });
     this.loadPage(0);
+  }
+
+  /** Volta aos filtros iniciais (últimos 90 dias, todos os status e clientes) e consulta. */
+  protected clearFilters(): void {
+    this.form.reset({ entryFrom: shiftDate(todayInputValue(), -(DEFAULT_PERIOD_DAYS - 1)), entryTo: todayInputValue(), status: '', clientId: null });
+    this.consult();
   }
 
   protected loadPage(page: number): void {
@@ -149,7 +158,9 @@ export class ReportsComponent {
     (rmas ? this.reportService.exportRmas(this.applied) : this.reportService.exportSummary(this.applied))
       .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.exporting.set(false))).subscribe({
         next: (response) => saveDownload(response, rmas ? 'rmas.csv' : 'resumo-rmas.csv'),
-        error: () => this.exportError.set('Não foi possível exportar o CSV. Reduza o período ou os filtros e tente novamente.')
+        error: (error: unknown) => {
+          void exportErrorMessage(error).then((message) => this.exportError.set(message));
+        }
       });
   }
 
@@ -173,6 +184,21 @@ export class ReportsComponent {
   protected periodLabel(data: { entryFrom: string; entryTo: string }): string {
     return `${formatDateOnly(data.entryFrom)} a ${formatDateOnly(data.entryTo)}`;
   }
+}
+
+const EXPORT_FALLBACK = 'Não foi possível exportar o CSV. Reduza o período ou os filtros e tente novamente.';
+
+/** The CSV request expects a blob, so the backend's JSON error arrives as a blob too: read it for the real message. */
+async function exportErrorMessage(error: unknown): Promise<string> {
+  const body = (error as { error?: unknown } | null)?.error;
+  if (body instanceof Blob) {
+    try {
+      return extractHttpErrorMessage({ error: JSON.parse(await body.text()) }, EXPORT_FALLBACK);
+    } catch {
+      return EXPORT_FALLBACK;
+    }
+  }
+  return extractHttpErrorMessage(error, EXPORT_FALLBACK);
 }
 
 function shiftDate(value: string, days: number): string {

@@ -1,54 +1,81 @@
 <section class="page-surface">
-  <app-page-header heading="Relatórios" />
-  <form class="panel report-filters" [formGroup]="form" (ngSubmit)="consult()">
-    <label class="filter-field"><span>Entrada a partir de</span>
+  <app-page-header heading="Relatórios">
+    <button type="button" class="button-secondary" data-export [disabled]="exporting() || loading() || !summary()" (click)="exportCsv()">
+      <app-icon name="download" [size]="16" />{{ exporting() ? 'Exportando...' : 'Exportar CSV' }}
+    </button>
+  </app-page-header>
+
+  @if (summary(); as data) {
+    <ul class="page-summary" aria-label="Indicadores do período">
+      <li class="page-summary__item">
+        <app-icon name="calendar" [size]="16" />
+        <span>{{ periodLabel(data) }}</span>
+      </li>
+      <li class="page-summary__item">
+        <app-icon name="inbox" [size]="16" />
+        <span><strong>{{ data.totalRmas }}</strong> {{ data.totalRmas === 1 ? 'RMA' : 'RMAs' }}</span>
+      </li>
+      <li class="page-summary__item">
+        <app-icon name="box" [size]="16" />
+        <span><strong>{{ data.totalItems }}</strong> {{ data.totalItems === 1 ? 'item' : 'itens' }}</span>
+      </li>
+      @if (tab() === 'recurrence') {
+        <li class="page-summary__item" [class.tone-warning]="data.recurrence.returnedItems > 0" title="Itens com número de série que voltaram em outro RMA">
+          <app-icon name="history" [size]="16" />
+          <span>Retornaram</span>
+          <strong>{{ data.recurrence.returnedItems }} de {{ data.recurrence.itemsWithSerial }}</strong>
+          <span>itens com série ({{ percent(data.recurrence.returnedItems, data.recurrence.itemsWithSerial) }})</span>
+        </li>
+      }
+    </ul>
+  }
+  @if (exportError()) {
+    <article class="panel alert-banner alert-banner--error" role="alert">
+      <strong>{{ exportError() }}</strong>
+    </article>
+  }
+
+  <form class="panel catalog-toolbar catalog-toolbar--filters report-filters" [formGroup]="form" (ngSubmit)="consult()">
+    <label class="filter-field"><span>Entrada de</span>
       <app-date-picker ariaLabel="Data inicial de entrada" formControlName="entryFrom" [ariaDescribedBy]="periodError() ? 'report-period-error' : ''" [ariaInvalid]="!!periodError()" />
     </label>
-    <label class="filter-field"><span>Entrada até</span>
+    <label class="filter-field"><span>Até</span>
       <app-date-picker ariaLabel="Data final de entrada" formControlName="entryTo" [ariaDescribedBy]="periodError() ? 'report-period-error' : ''" [ariaInvalid]="!!periodError()" />
     </label>
-    <label class="filter-field"><span>Status atual</span>
+    <label class="filter-field"><span>Status</span>
       <app-custom-select ariaLabel="Filtrar por status" formControlName="status" [options]="statusOptions" />
     </label>
     <label class="filter-field"><span>Cliente</span>
       <app-custom-select ariaLabel="Filtrar por cliente" formControlName="clientId" [options]="clientOptions()" />
     </label>
-    <button class="button-primary" type="submit" [disabled]="loading()">Consultar</button>
+    <div class="report-filters__actions">
+      <button type="button" class="link-button" (click)="clearFilters()">Limpar filtros</button>
+      <button class="button-primary" type="submit" [disabled]="loading()">Consultar</button>
+    </div>
     @if (periodError()) {
       <p class="field-error report-period-error" id="report-period-error" role="alert">{{ periodError() }}</p>
     }
+    @if (clientsError()) {
+      <p class="field-error report-period-error" role="alert">{{ clientsError() }} <button type="button" class="link-button" (click)="loadClients()">Recarregar clientes</button></p>
+    }
   </form>
-  @if (clientsError()) {
-    <article class="panel alert-banner alert-banner--error" role="alert">
-      <span>{{ clientsError() }}</span>
-      <button type="button" class="button-secondary" (click)="loadClients()">Recarregar clientes</button>
-    </article>
-  }
 
-  <div class="report-bar">
-    <div class="tab-list" role="tablist" aria-label="Relatórios">
-      @for (option of tabs; track option.value) {
-        <button type="button" role="tab" class="tab" [id]="'report-tab-' + option.value" [class.is-active]="tab() === option.value"
-          [attr.aria-selected]="tab() === option.value" [attr.aria-controls]="'report-panel'"
-          [attr.tabindex]="tab() === option.value ? 0 : -1" (click)="selectTab(option.value)" (keydown)="onTabKeydown($event)">{{ option.label }}</button>
-      }
-    </div>
-    <button type="button" class="button-secondary" data-export [disabled]="exporting() || loading() || !summary()" (click)="exportCsv()">
-      <app-icon name="download" [size]="16" />Exportar CSV
-    </button>
+  <div class="tab-list" role="tablist" aria-label="Relatórios">
+    @for (option of tabs; track option.value) {
+      <button type="button" role="tab" class="tab" [id]="'report-tab-' + option.value" [class.is-active]="tab() === option.value"
+        [attr.aria-selected]="tab() === option.value" [attr.aria-controls]="'report-panel'"
+        [attr.tabindex]="tab() === option.value ? 0 : -1" (click)="selectTab(option.value)" (keydown)="onTabKeydown($event)">{{ option.label }}</button>
+    }
   </div>
-  @if (exportError()) {
-    <p class="field-error" role="alert">{{ exportError() }}</p>
-  }
 
-  <section id="report-panel" role="tabpanel" tabindex="0" [attr.aria-labelledby]="'report-tab-' + tab()" aria-live="polite" [attr.aria-busy]="loading()">
+  <section id="report-panel" class="report-panel" role="tabpanel" tabindex="0" [attr.aria-labelledby]="'report-tab-' + tab()" aria-live="polite" [attr.aria-busy]="loading()">
     @if (errorMessage()) {
-      <article class="panel alert-banner alert-banner--error" role="alert">
-        <span>{{ errorMessage() }}</span>
-        <button type="button" class="button-secondary" (click)="consult()">Tentar novamente</button>
+      <article class="panel empty-state" role="alert">
+        <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
+        <h3>{{ errorMessage() }}</h3>
+        <button type="button" class="button-secondary" [disabled]="loading()" (click)="consult()">Tentar novamente</button>
       </article>
     } @else if (summary(); as data) {
-      <p class="report-meta">{{ periodLabel(data) }} · {{ data.totalRmas }} {{ data.totalRmas === 1 ? 'RMA' : 'RMAs' }} · {{ data.totalItems }} {{ data.totalItems === 1 ? 'item' : 'itens' }}</p>
       @switch (tab()) {
         @case ('summary') {
           <div class="report-grid">
@@ -68,9 +95,9 @@
               <h2>Tempo na etapa atual</h2>
               @if (data.stages.length) {
                 <div class="table-wrap"><table>
-                  <thead><tr><th scope="col">Etapa</th><th scope="col">RMAs</th><th scope="col">Médio</th><th scope="col">Maior</th></tr></thead>
+                  <thead><tr><th scope="col">Etapa</th><th scope="col" class="num">RMAs</th><th scope="col" class="num">Médio</th><th scope="col" class="num">Maior</th></tr></thead>
                   <tbody>@for (stage of data.stages; track stage.status) {
-                    <tr><td>{{ stage.label }}</td><td>{{ stage.count }}</td><td>{{ duration(stage.averageSeconds) }}</td><td>{{ duration(stage.maximumSeconds) }}</td></tr>
+                    <tr><td>{{ stage.label }}</td><td class="num">{{ stage.count }}</td><td class="num">{{ duration(stage.averageSeconds) }}</td><td class="num">{{ duration(stage.maximumSeconds) }}</td></tr>
                   }</tbody>
                 </table></div>
               } @else { <p class="report-muted">Nenhum RMA em andamento.</p> }
@@ -91,7 +118,6 @@
         }
         @case ('recurrence') {
           @let recurrence = data.recurrence;
-          <p class="report-meta">{{ recurrence.returnedItems }} de {{ recurrence.itemsWithSerial }} itens com série retornaram ({{ percent(recurrence.returnedItems, recurrence.itemsWithSerial) }})</p>
           <div class="report-grid">
             <article class="panel table-card"><h2>Por modelo</h2>
               <ng-container [ngTemplateOutlet]="rates" [ngTemplateOutletContext]="{ rows: recurrence.byProduct, head: 'Modelo', empty: 'Nenhum modelo com retorno.' }" /></article>
@@ -100,9 +126,9 @@
             <article class="panel table-card"><h2>Séries que retornaram</h2>
               @if (recurrence.serials.length) {
                 <div class="table-wrap"><table>
-                  <thead><tr><th scope="col">Série</th><th scope="col">Produto</th><th scope="col">RMAs</th></tr></thead>
+                  <thead><tr><th scope="col">Série</th><th scope="col">Produto</th><th scope="col" class="num">RMAs</th></tr></thead>
                   <tbody>@for (serial of recurrence.serials; track serial.serialNumber + serial.productSku) {
-                    <tr><td class="code-text">{{ serial.serialNumber }}</td><td>{{ serial.productName }}</td><td>{{ serial.rmaCount }}</td></tr>
+                    <tr><td class="code-text">{{ serial.serialNumber }}</td><td>{{ serial.productName }}</td><td class="num">{{ serial.rmaCount }}</td></tr>
                   }</tbody>
                 </table></div>
               } @else { <p class="report-muted">Nenhuma série com retorno.</p> }
@@ -114,38 +140,50 @@
             <article class="panel table-card table-card--list">
               @if (page.rmas.content.length) {
                 <div class="table-wrap"><table>
-                  <thead><tr><th scope="col">RMA</th><th scope="col">Entrada</th><th scope="col">Cliente</th><th scope="col">Produto</th><th scope="col">Série</th>
-                    <th scope="col">Lote</th><th scope="col">Status</th><th scope="col">Garantia</th><th scope="col">Falha</th>
-                    @if (canViewRma()) { <th scope="col"><span class="sr-only">Laudo</span></th> }</tr></thead>
+                  <thead><tr><th scope="col">RMA</th><th scope="col">Cliente</th><th scope="col">Produto</th>
+                    <th scope="col">Status</th><th scope="col">Garantia</th><th scope="col">Falha</th>
+                    @if (canViewRma()) { <th scope="col" class="table-actions-col">Laudo</th> }</tr></thead>
                   <tbody>@for (row of page.rmas.content; track row.id) {
                     <tr>
-                      <td><strong class="code-text">{{ row.code }}</strong></td><td>{{ formatDate(row.entryDate) }}</td><td>{{ row.clientName }}</td>
-                      <td>{{ productLabel(row) }}</td><td>{{ row.serialNumber || '—' }}</td><td>{{ row.batchNumber || '—' }}</td>
+                      <td><strong class="table-title code-text">{{ row.code }}</strong><span class="table-subtitle">{{ formatDate(row.entryDate) }}</span></td>
+                      <td>{{ row.clientName }}</td>
+                      <td>
+                        <span class="table-title">{{ productLabel(row) }}</span>
+                        <span class="table-subtitle">Série {{ row.serialNumber || '—' }} · Lote {{ row.batchNumber || '—' }}</span>
+                      </td>
                       <td><span class="status-chip" [attr.data-status]="row.status">{{ statusLabels[row.status] }}</span></td>
                       <td>{{ warrantyLabel(row) }}</td><td>{{ row.failureType ? failureLabels[row.failureType] : '—' }}</td>
-                      @if (canViewRma()) { <td><app-rma-report-link [rmaId]="row.id" [code]="row.code" label="PDF" /></td> }
+                      @if (canViewRma()) { <td class="table-actions-col"><app-rma-report-link [rmaId]="row.id" [code]="row.code" label="PDF" /></td> }
                     </tr>
                   }</tbody>
                 </table></div>
               } @else {
-                <p class="report-muted">Nenhum RMA encontrado.</p>
+                <section class="empty-state">
+                  <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
+                  <h3>Nenhum RMA encontrado.</h3>
+                  <p>Ajuste o período ou os filtros.</p>
+                </section>
               }
               <app-pagination singular="RMA" plural="RMAs" [page]="page.rmas.page" [size]="pageSize()" [totalElements]="page.rmas.totalElements"
                 [totalPages]="page.rmas.totalPages" [shown]="page.rmas.content.length" [loading]="listLoading()"
                 (pageChange)="loadPage($event)" (sizeChange)="changePageSize($event)" />
             </article>
+          } @else {
+            <div class="panel" aria-busy="true"></div>
           }
         }
       }
+    } @else {
+      <div class="panel report-loading" aria-busy="true"></div>
     }
   </section>
 </section>
 
 <ng-template #shares let-rows="rows" let-base="base" let-unit="unit">
   <div class="table-wrap"><table>
-    <thead><tr><th scope="col">Situação</th><th scope="col">{{ unit }}</th><th scope="col">%</th></tr></thead>
+    <thead><tr><th scope="col">Situação</th><th scope="col" class="num">{{ unit }}</th><th scope="col" class="num">%</th></tr></thead>
     <tbody>@for (row of rows; track row.key) {
-      <tr><td>{{ row.label }}</td><td>{{ row.count }}</td><td>{{ percent(row.count, base) }}</td></tr>
+      <tr><td>{{ row.label }}</td><td class="num">{{ row.count }}</td><td class="num">{{ percent(row.count, base) }}</td></tr>
     } @empty { <tr><td colspan="3" class="report-muted">Sem dados no período.</td></tr> }</tbody>
   </table></div>
 </ng-template>
@@ -165,9 +203,9 @@
 <ng-template #rates let-rows="rows" let-head="head" let-empty="empty">
   @if (rows.length) {
     <div class="table-wrap"><table>
-      <thead><tr><th scope="col">{{ head }}</th><th scope="col">Itens</th><th scope="col">Retornos</th><th scope="col">Taxa</th></tr></thead>
+      <thead><tr><th scope="col">{{ head }}</th><th scope="col" class="num">Itens</th><th scope="col" class="num">Retornos</th><th scope="col" class="num">Taxa</th></tr></thead>
       <tbody>@for (row of rows; track row.key) {
-        <tr><td>{{ row.label }}</td><td>{{ row.items }}</td><td>{{ row.returnedItems }}</td><td>{{ percent(row.returnedItems, row.items) }}</td></tr>
+        <tr><td>{{ row.label }}</td><td class="num">{{ row.items }}</td><td class="num">{{ row.returnedItems }}</td><td class="num">{{ percent(row.returnedItems, row.items) }}</td></tr>
       }</tbody>
     </table></div>
   } @else { <p class="report-muted">{{ empty }}</p> }
