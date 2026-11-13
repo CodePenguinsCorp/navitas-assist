@@ -219,10 +219,10 @@ public class RmaService {
     public RmaResponse updateStatusNote(Long id, Long eventId, br.com.navitasassist.rma.RmaStatusNoteRequest request) {
         RmaRecord rma = getEntityForUpdate(id);
         RmaStatusHistory event = rma.getStatusHistory().stream().filter(item -> item.getId().equals(eventId)).findFirst()
-            .orElseThrow(() -> new ResourceNotFoundException("Evento de status n„o encontrado neste RMA."));
-        if (CLOSED_STATUSES.contains(rma.getStatus())) throw new BusinessException("N„o È permitido editar observaÁıes de um RMA encerrado.");
+            .orElseThrow(() -> new ResourceNotFoundException("Evento de status n√£o encontrado neste RMA."));
+        if (CLOSED_STATUSES.contains(rma.getStatus())) throw new BusinessException("N√£o √© permitido editar observa√ß√µes de um RMA encerrado.");
         String note = trimToNull(request.note());
-        if (note != null && note.length() > 255) throw new BusinessException("Use atÈ 255 caracteres na observaÁ„o.");
+        if (note != null && note.length() > 255) throw new BusinessException("Use at√© 255 caracteres na observa√ß√£o.");
         event.setNote(note);
         event.setNoteEditedBy(currentUsername());
         event.setNoteEditedAt(Instant.now());
