@@ -6,6 +6,7 @@ import { Router, provideRouter } from '@angular/router';
 import { DiagnosisResponse, RmaResponse, WarrantyStatus } from '../../core/models';
 import { ClockService } from '../../core/services/clock.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ReportService } from '../../core/services/report.service';
 import { RmaService } from '../../core/services/rma.service';
 import { of } from 'rxjs';
 import { buildRma, buildRmaItem } from '../../testing/rma-fixtures';
@@ -69,6 +70,7 @@ async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; can
       { provide: AuthService, useValue: { currentUser: () => ({ name: 'Ana' }) } },
       { provide: ClockService, useValue: { now: signal(NOW) } },
       providePermissions(profilePermissions('ADMIN')),
+      { provide: ReportService, useValue: { downloadTechnicalReport: () => of() } },
       { provide: RmaService, useValue: {
         updateStatus: (id: number, payload: { status: RmaResponse['status'] }) => of({ ...(inputs.rma ?? fullRma), id, status: payload.status }),
         updateDueDate: (id: number, dueDate: string | null) => of({ ...(inputs.rma ?? fullRma), id, dueDate }),
@@ -254,6 +256,15 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     link!.click();
     await fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe('/rmas?rma=5');
+  });
+
+  it('offers the PDF report as a quiet text link beside Abrir na lista', async () => {
+    const { host } = await setup();
+    const link = host.querySelector<HTMLButtonElement>('.rma-detail__bar-key app-rma-report-link button')!;
+
+    expect(link.textContent).toContain('Laudo (PDF)');
+    expect(link.className).not.toContain('button-');
+    expect(link.querySelector('app-icon')).not.toBeNull();
   });
 
   it('keeps the list link inactive while disabled', async () => {

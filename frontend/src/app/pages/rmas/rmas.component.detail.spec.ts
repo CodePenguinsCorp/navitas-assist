@@ -130,6 +130,14 @@ describe('RmasComponent detail with the shared information contract', () => {
     expect(identity.querySelector('.mini-chip.priority-high')?.textContent?.trim()).toBe('Bloqueado há 2 h');
   });
 
+  it('offers the PDF report as a quiet text link in the header actions', async () => {
+    const { open, detail } = await setup();
+    open();
+    const link = detail().querySelector<HTMLButtonElement>('.rma-details__header-actions app-rma-report-link button')!;
+    expect(link.textContent).toContain('Laudo (PDF)');
+    expect(link.className).toContain('link-button');
+  });
+
   it('stacks identity and actions on narrow screens and keeps Fechar in the header', async () => {
     // Hoje, em 320 px, o cabeçalho continua flex em linha e as ações (flex-shrink: 0) disputam a largura com a identidade.
     const { open, detail } = await setup();

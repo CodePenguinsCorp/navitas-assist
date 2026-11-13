@@ -22,6 +22,7 @@ import {
   RmaSummaryResponse,
   RmaStatus
 } from '../../core/models';
+import { RmaReportLinkComponent } from '../../shared/rma-report-link/rma-report-link.component';
 import { PermissionService } from '../../core/services/permission.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
@@ -91,7 +92,7 @@ export interface RmaListFilters {
 
 @Component({
   selector: 'app-rmas',
-  imports: [RmaWarrantyFieldComponent, RmaDiagnosisComponent, RmaStatusFieldComponent, IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaStageTimesComponent],
+  imports: [RmaWarrantyFieldComponent, RmaDiagnosisComponent, RmaStatusFieldComponent, IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {

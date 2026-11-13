@@ -21,6 +21,7 @@ import { ModalFocusDirective } from '../modal-focus/modal-focus.directive';
 import { RmaBlocksSectionComponent } from '../rma-blocks-section/rma-blocks-section.component';
 import { RmaDueDateFieldComponent } from '../rma-due-date-field/rma-due-date-field.component';
 import { RmaPriorityFieldComponent } from '../rma-priority-field/rma-priority-field.component';
+import { RmaReportLinkComponent } from '../rma-report-link/rma-report-link.component';
 import { RmaStatusFieldComponent } from '../rma-status-field/rma-status-field.component';
 import { RmaStageTimesComponent } from '../rma-stage-times/rma-stage-times.component';
 import {
@@ -37,7 +38,7 @@ import {
 
 @Component({
   selector: 'app-rma-detail-modal',
-  imports: [RmaWarrantyFieldComponent, CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaStageTimesComponent, RmaStatusFieldComponent, RmaDiagnosisComponent, RouterLink],
+  imports: [RmaWarrantyFieldComponent, CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaStatusFieldComponent, RmaDiagnosisComponent, RouterLink],
   templateUrl: './rma-detail-modal.component.html',
   styleUrl: './rma-detail-modal.component.css'
 })

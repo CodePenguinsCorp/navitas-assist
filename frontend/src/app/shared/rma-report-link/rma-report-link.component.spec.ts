@@ -22,8 +22,8 @@ describe('RmaReportLinkComponent', () => {
   afterEach(() => http.verify());
 
   it('downloads the PDF as an authenticated blob and saves it with the server file name', () => {
-    const createObjectURL = vi.fn(() => 'blob:laudo');
-    Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() });
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:laudo');
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
 
     expect(button().textContent).toContain('Laudo (PDF)');
@@ -40,6 +40,8 @@ describe('RmaReportLinkComponent', () => {
     expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe('laudo-RMA-2026-7.pdf');
     expect(button().disabled).toBe(false);
     click.mockRestore();
+    createObjectURL.mockRestore();
+    revokeObjectURL.mockRestore();
   });
 
   it('shows a short error when the download fails', () => {

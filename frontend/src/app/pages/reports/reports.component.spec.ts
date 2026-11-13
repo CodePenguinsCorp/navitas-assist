@@ -122,6 +122,7 @@ describe('ReportsComponent', () => {
   });
 
   it('exports the CSV of the current tab with the applied filters', () => {
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
     respond();
     const exportButton = () => (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('[data-export]');
     exportButton()?.click();
@@ -131,6 +132,8 @@ describe('ReportsComponent', () => {
     show('rmas');
     exportButton()?.click();
     http.expectOne((request) => request.url === '/api/reports/rmas/export.csv').flush(new Blob(['x']));
+    expect(click).toHaveBeenCalledTimes(2);
+    click.mockRestore();
   });
 
   it('keeps the error visible with a retry when the report fails', () => {

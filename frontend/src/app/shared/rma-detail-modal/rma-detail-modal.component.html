@@ -19,6 +19,7 @@
         } @else {
           <a class="link-button rma-detail__open-link" routerLink="/rmas" [queryParams]="{ rma: rma().id }">Abrir na lista <app-icon name="external" [size]="14" /></a>
         }
+        <app-rma-report-link [rmaId]="rma().id" [code]="rma().code" [disabled]="writePending()" />
       </div>
       <button type="button" class="modal-close" aria-label="Fechar" [disabled]="writePending()" (click)="requestClose()">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>

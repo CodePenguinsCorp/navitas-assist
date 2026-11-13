@@ -194,6 +194,7 @@
             </div>
           </div>
           <div class="rma-details__header-actions">
+            <app-rma-report-link [rmaId]="rma.id" [code]="rma.code" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy()" />
             <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy()">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
             </button>
