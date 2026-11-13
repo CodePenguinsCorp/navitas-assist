@@ -46,7 +46,7 @@ O projeto foi dividido em duas aplicações:
 - Regras de negócio que dependem de "hoje" e o ano do código do RMA usam `America/Sao_Paulo`, independentemente do fuso do navegador ou servidor.
 - Datas sem horário (`YYYY-MM-DD` / `LocalDate`) preservam o dia informado, sem conversão de fuso.
 - No frontend, reutilize os utilitários de `core/utils/date.ts` para calcular o dia atual e exibir datas civis.
-- Instantes de auditoria, atualizações de cadastros e prazos de SLA são exibidos em `America/Sao_Paulo`, com data/hora curta `pt-BR`, independentemente do fuso do dispositivo. Use `formatBusinessDateTime` do mesmo utilitário; os valores da API não são alterados.
+- Instantes de auditoria, atualizações de cadastros e entradas nas etapas são exibidos em `America/Sao_Paulo`, com data/hora curta `pt-BR`, independentemente do fuso do dispositivo. Use `formatBusinessDateTime` do mesmo utilitário; os valores da API não são alterados.
 
 ## Garantia dos produtos no RMA
 
@@ -83,7 +83,7 @@ A tela Relatórios consulta `GET /api/reports/rmas` e exige a permissão `relato
 Filtros opcionais combinados: `entryFrom` e `entryTo` (`YYYY-MM-DD`, inclusivos, sobre a **data de entrada**, inclusive no relatório de devoluções), `status` (enum de RMA) e `clientId` (inteiro positivo). Sem período, a consulta usa os **últimos 90 dias** (até hoje em America/Sao_Paulo); com só uma das datas, a outra é completada (90 dias antes do fim, ou até hoje, limitado a 366 dias). O período máximo é de **366 dias**. Parâmetros inválidos, intervalo invertido ou período maior retornam `400`. O retorno é `{ generatedAt, entryFrom, entryTo, rmas }`, com o período efetivamente aplicado e os mesmos campos de `RmaResponse`; cliente inexistente retorna `rmas: []`. A ordenação é por entrada decrescente e ID decrescente. A consulta carrega cliente, produto, responsável e diagnóstico junto com os RMAs, e itens e históricos em consultas em lote, com número fixo de consultas por relatório. O seletor de clientes usa `GET /api/clients/options` (catálogo completo, como na NAV-28), independentemente do resultado filtrado.
 
 - **Laudo técnico:** falha relatada, produtos, diagnóstico, tipo de falha, causa, observações, técnico, reparo, peças e testes. Diagnóstico ausente aparece como pendente.
-- **Aging por etapa:** tempo corrido na etapa atual por RMA, quantidade, média e maior tempo por etapa ativa. Reutiliza o SLA existente; notas não reiniciam o prazo e encerrados não entram nas métricas ativas. É uma fotografia no instante `generatedAt`, atualizada ao consultar novamente.
+- **Tempo por etapa:** tempo corrido na etapa atual por RMA, quantidade, média e maior tempo por etapa ativa. Usa o período atual de `stagePeriods` (registros consecutivos da mesma etapa formam um período, então notas não reiniciam a etapa) e deixa os encerrados fora das métricas ativas. É uma fotografia no instante `generatedAt`, atualizada ao consultar novamente.
 - **Garantia:** prazo, vencimento e situação por produto, considerando os snapshots e a data de entrada. A regra atual é automática; não existem overrides manuais.
 - **Devoluções:** RMAs atualmente em `RETURNED`, com expedição, transportadora e rastreio; não é uma contagem histórica de passagens pelo status.
 
@@ -94,7 +94,7 @@ Instantes são exibidos em `America/Sao_Paulo`. Datas civis preservam o dia rece
 
 Use **Ver impedimentos** no card para consultar o bloqueio atual e todos os episódios anteriores, sem sair do quadro. Quem tem a permissão `rma.impedimentos` pode bloquear com motivo obrigatório (até 1000 caracteres) e categoria opcional (até 80), ou desbloquear com nota de resolução obrigatória (até 1000). Quem tem só `rma.ver` pode consultar. A API aplica as mesmas permissões e exige CSRF nas alterações.
 
-Bloquear não muda a coluna nem impede movimentação. O SLA continua correndo; uma eventual pausa depende de decisão de produto. Cards mostram texto, motivo resumido e tempo bloqueado. O filtro de impedimentos combina com os demais filtros e é preservado nas visualizações salvas. Fechar o painel mantém os filtros e a seleção. Os detalhes do RMA também apresentam o histórico completo.
+Bloquear não muda a coluna nem impede movimentação. O tempo da etapa continua correndo; uma eventual pausa depende de decisão de produto. Cards mostram texto, motivo resumido e tempo bloqueado. O filtro de impedimentos combina com os demais filtros e é preservado nas visualizações salvas. Fechar o painel mantém os filtros e a seleção. Os detalhes do RMA também apresentam o histórico completo.
 
 Cada episódio registra autor e instante de início e de resolução, mantendo as notas anteriores. Instantes são apresentados em `America/Sao_Paulo`. A API retorna `currentBlock` e `blockHistory`; POST `/api/rmas/{id}/blocks` inicia um episódio e PATCH `/api/rmas/{id}/blocks/{blockId}` resolve somente aquele episódio. Bloqueios concorrentes são serializados pelo lock do RMA; uma resolução desatualizada não encerra um episódio posterior.
 
@@ -266,16 +266,15 @@ npm start
 
 ### Testes automatizados do frontend
 
-O frontend possui duas suítes: a Angular usa Vitest com DOM emulado por happy-dom, e a de SLA usa Node 22. Para instalar as dependências e executar ambas uma vez:
+O frontend usa Vitest com DOM emulado por happy-dom. Para instalar as dependências e executar a suíte uma vez:
 
 ```powershell
 cd .\frontend
 npm ci
 npm test -- --watch=false
-npm run test:sla
 ```
 
-Para desenvolvimento, `npm test` mantém o runner em modo interativo quando o terminal oferece TTY. A suíte de SLA valida os limites de prazo e os filtros. O workflow `Frontend CI` executa ambas as suítes e valida o build de produção em pushes e pull requests que alterem o frontend.
+Para desenvolvimento, `npm test` mantém o runner em modo interativo quando o terminal oferece TTY. O workflow `Frontend CI` executa a suíte e valida o build de produção em pushes e pull requests que alterem o frontend.
 
 ## Testes automatizados do backend
 
@@ -305,6 +304,7 @@ O setup local reconhece estas variáveis principais:
 - `SERVER_PORT`
 - `SESSION_TIMEOUT`
 - `SESSION_COOKIE_SECURE`
+- `DEADLINE_WARNING_DAYS` (janela "Perto do limite" da data limite, de 0 a 90 dias, padrão 7)
 
 Sem sobrescrever nada:
 
@@ -413,7 +413,7 @@ A migração-base `V1__baseline.sql` cria os 4 perfis prontos abaixo (A = Admini
 
 Totais: Administrador 19 (todas menos `rma.atribuivel`), Atendimento 11, Técnico 11, Consulta 5. `cadastros.ver`, `pecas.ver` e `protocolos.ver` controlam telas e menus; as leituras `GET` correspondentes na API continuam abertas a qualquer usuário autenticado.
 
-**Tabelas.** `access_profiles` (nome e `legacy_code` dos perfis prontos), `access_profile_permissions` (permissões de cada perfil), `user_account_extra_permissions` (extras por usuário, além de `user_accounts.profile_id`) e `notification_rule_recipient_profiles` (perfis destinatários das regras de notificação). Os seeds das regras enviam `RMA_CREATED` e `SLA_OVERDUE` para Administrador e Atendimento, `SLA_WARNING` só para Administrador e `RMA_ASSIGNED` apenas ao responsável.
+**Tabelas.** `access_profiles` (nome e `legacy_code` dos perfis prontos), `access_profile_permissions` (permissões de cada perfil), `user_account_extra_permissions` (extras por usuário, além de `user_accounts.profile_id`) e `notification_rule_recipient_profiles` (perfis destinatários das regras de notificação). Os seeds das regras enviam `RMA_CREATED` para Administrador e Atendimento e `RMA_ASSIGNED` apenas ao responsável. As regras `SLA_*` semeadas na V1 são apagadas pela V2 (ver "Tempo por etapa e data limite").
 
 ## Produção
 
@@ -509,51 +509,46 @@ Disponibilizar um fluxo funcional de gerenciamento de assistência técnica, per
 - [ ] **Homologação e Deploy:** Validar os scripts de ambiente de produção, preparando o sistema para o primeiro ciclo de uso e feedback do cliente.
 
 
-## SLA do Kanban (NAV-10)
+## Tempo por etapa e data limite
 
-O backend calcula o SLA de cada RMA e o inclui no campo `sla` das respostas de consulta e atualização. Os cards mostram situação por texto e cor, tempo decorrido na etapa, limite e data/hora do prazo. O filtro de SLA combina-se com o de responsável. A tela recalcula situação e tempo a cada 30 segundos sem recarregar; datas são exibidas no fuso `America/Sao_Paulo`, a partir dos instantes da API.
+Substitui o antigo SLA por etapa (prazos de 24/48/72/120 h e alertas `SLA_WARNING`/`SLA_OVERDUE`), retirado por decisão do dono do produto em 13 nov 2026. O sistema mostra duas coisas: quanto tempo o RMA está em cada etapa e uma data limite opcional do atendimento inteiro.
 
-### Regras e valores iniciais
+### Tempo por etapa
 
-Os valores abaixo são padrões operacionais iniciais, ajustáveis pelo administrador da implantação. São **minutos corridos**, incluindo noites, fins de semana e feriados; `WAITING_PART` também conta tempo.
+- O backend devolve `stagePeriods` em cada RMA: os períodos em ordem cronológica, cada um com `status`, `enteredAt`, `leftAt` (nulo na etapa atual) e `durationSeconds`. O último item é a etapa atual.
+- Registros consecutivos com o mesmo status formam um período só: notas e trocas de prioridade não reiniciam a etapa. Sair e voltar abre um período novo. Empates de instante usam o ID do histórico.
+- Legados sem histórico começam em `createdAt`; se faltar, em `entryDate` à meia-noite de `America/Sao_Paulo`. Durações nunca são negativas.
+- Cards do Kanban mostram "há 2 d 4 h nesta etapa" para RMAs abertos. Os detalhes mostram "Nesta etapa" (ou "Encerrado em ..." para RMAs encerrados) e, no Histórico, a lista "Tempo por etapa". O tempo do impedimento continua contando na etapa.
+- A tela recalcula os tempos a cada 30 segundos (`ClockService`), sem recarregar.
 
-| Etapa | Prazo padrão | Variável do backend |
+### Data limite
+
+- Opcional e só data (`dueDate`, `YYYY-MM-DD`). Quem abre o RMA (`rma.abrir`, `POST /api/rmas`) pode preenchê-la; depois, quem tem `rma.editar` altera ou remove pelo botão "Alterar" dos detalhes (`PUT /api/rmas/{id}` com `{"dueDate": "..."}` ou `{"clearDueDate": true}`; mandar os dois dá 400). Não há endpoint nem permissão novos.
+- A data limite não pode ser anterior à entrada, inclusive quando a edição muda só a entrada. Datas no passado são aceitas, porque um RMA antigo pode já estar atrasado.
+- Cada mudança fica em `dueDateHistory` (tabela `rma_due_date_history`) com autor, instante, valor anterior e novo, e aparece no Histórico dos detalhes.
+- A situação vem em `deadline` (`status`, `dueSoonFrom`, `daysUntilDue`), com "hoje" sempre na data civil de `America/Sao_Paulo`:
+
+| Situação | Código | Regra |
 | --- | --- | --- |
-| RECEIVED | 1440 min (24h) | SLA_RECEIVED_MINUTES |
-| TRIAGE | 1440 min (24h) | SLA_TRIAGE_MINUTES |
-| IN_DIAGNOSIS | 2880 min (48h) | SLA_DIAGNOSIS_MINUTES |
-| WAITING_PART | 7200 min (120h) | SLA_WAITING_PART_MINUTES |
-| IN_REPAIR | 4320 min (72h) | SLA_REPAIR_MINUTES |
-| IN_TESTS | 1440 min (24h) | SLA_TESTS_MINUTES |
+| Atrasado | `OVERDUE` | RMA não encerrado e hoje depois da data limite |
+| Perto do limite | `DUE_SOON` | RMA não encerrado e hoje entre `dataLimite - N` e a data limite, inclusive |
+| No prazo | `ON_TRACK` | RMA não encerrado e hoje antes de `dataLimite - N` |
+| Sem data limite | `NO_DUE_DATE` | RMA não encerrado e sem data limite |
+| Encerrado | `CLOSED` | `COMPLETED`, `RETURNED` ou `IRREPARABLE`, com ou sem data limite; nunca é atrasado |
 
-- `NORMAL`: antes de 80% do prazo; `WARNING`: a partir de 80%, inclusive; `OVERDUE`: no instante do prazo e depois dele. `SLA_WARNING_PERCENT` pode variar de 1 a 99.
-- A entrada na etapa é a primeira ocorrência do bloco mais recente dessa etapa no histórico. Observações repetindo o status não reiniciam o relógio. Sair e voltar inicia um novo prazo. Empates de timestamp usam o ID do histórico.
-- `COMPLETED`, `RETURNED` e `IRREPARABLE` retornam `CLOSED`, sem prazo e sem acumular tempo (zero na etapa encerrada). O card mostra a data de entrada no estado encerrado. Reabrir reinicia o SLA da nova etapa.
-- Legados sem histórico da etapa usam `createdAt`; se ausente, `entryDate` à meia-noite de America/Sao_Paulo. Esse fallback é aproximado; registros com histórico usam os instantes reais. Tempos futuros nunca produzem duração negativa.
-- Não há pausa automática, calendário comercial ou SLA total do atendimento. A regra atual é aplicada a todos os registros, sem snapshots de políticas antigas.
+- `N` é `navitas.deadline.warning-days` (variável `DEADLINE_WARNING_DAYS`), de 0 a 90, padrão 7. Com 0, só o próprio dia fica "Perto do limite". Valor inválido impede a inicialização. Em Docker, a variável vai no `environment` do container backend (já previsto em `compose.yaml` e `compose.prod.yaml`).
+- O frontend recalcula a situação a cada tique do relógio, a partir de `dueDate` e `dueSoonFrom`, então a virada da meia-noite não exige recarga.
+- A data limite só destaca e filtra: **não gera notificação**. O card mostra "Atrasado há N dias" ou "Vence em N dias"/"Vence hoje" só nesses dois casos.
+- O Kanban tem o filtro "Prazo" (Todos, Atrasados, Perto do limite, No prazo, Sem data limite). Encerrados aparecem só em "Todos". O filtro é salvo nas visualizações (`kanban_views.deadline_status`); visualizações antigas sem o campo abrem com "Todos". O dashboard mostra o indicador "Atrasados", com o detalhe "perto do limite".
 
-### Configuração por etapa e prioridade
+### Migração
 
-Configure `navitas.sla` em um arquivo Spring externo (ou `SPRING_APPLICATION_JSON`). Por padrão todas as prioridades usam o prazo da etapa. Uma substituição afeta apenas a prioridade informada:
-
-```yaml
-navitas:
-  sla:
-    warning-percent: 80
-    stages:
-      IN_DIAGNOSIS:
-        minutes: 2880
-        priority-minutes:
-          HIGH: 1440
-```
-
-As demais etapas preservam os padrões. Prazos e substituições aceitam de 1 a 5256000 minutos; configuração inválida impede a inicialização. Reinicie o backend após alterar a configuração e recarregue o Kanban. Em Docker, as variáveis precisam estar no ambiente do **container backend** (por `environment`/`env_file` de um override Compose); apenas adicionar ao `.env` do host não as injeta automaticamente. Não há endpoint de edição nem alteração de permissões.
+`V2__rma_due_date_and_remove_stage_sla.sql` acrescenta `rmas.due_date`, a tabela `rma_due_date_history` e `kanban_views.deadline_status` (com CHECK), e apaga todas as linhas `SLA_WARNING`/`SLA_OVERDUE` de `notification_rules` (destinatários junto), `notification_mutes`, `notifications` e `notification_events`, porque esses tipos saíram do código. Não havia dados em produção. Sessões, perfis e permissões não são tocados. O Flyway Community não tem undo: para voltar, restaure o backup anterior à implantação.
 
 ### Validação
 
-- Backend: `mvn test` em `backend/` (limiares, notas, reentrada, encerramento/reabertura, prioridade, configuração e contrato HTTP).
-- Filtros e apresentação: `npm run test:sla` em `frontend/`, com Node 22.14+ (runner nativo, sem framework adicional).
-- Templates e tipos Angular: `npm run build` em `frontend/`.
+- Backend: `RmaStageTimeServiceTest`, `RmaDeadlineServiceTest`, `RmaDeadlinePropertiesTest`, `DeadlineMigrationTest` e os testes de integração de RMA, relatório, visualizações e notificações (`mvn -B -ntp verify` em `backend/`).
+- Frontend: `duration.spec.ts`, `rma-stage.spec.ts`, `rma-deadline.spec.ts` e os specs dos componentes, na suíte Vitest normal (`npm test -- --watch=false` em `frontend/`).
 
 ## Protocolos técnicos e checklists (NAV-45)
 
