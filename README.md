@@ -583,7 +583,7 @@ A migração aditiva `V4__notification_email_delivery.sql` preserva V1–V3, o h
 | Variável | Padrão / uso |
 | --- | --- |
 | `NOTIFICATIONS_EMAIL_ENABLED` | `false`; desligado pausa a fila sem consumir tentativas |
-| `NOTIFICATIONS_EMAIL_PROVIDER` | `fake`; valores aceitos: `fake`, `resend` |
+| `NOTIFICATIONS_EMAIL_PROVIDER` | `fake`; valores aceitos: `fake`, `resend`; com o canal ligado, `fake` só é aceito nos perfis `local` e `test` (fora deles a inicialização falha) |
 | `MAIL_FROM` | vazio; endereço único obrigatório com canal ligado |
 | `APP_BASE_URL` | vazio; URL absoluta sem credenciais, query ou fragmento; HTTPS no Resend, HTTP local permitido no fake |
 | `RESEND_API_KEY` | vazio; obrigatório somente com Resend ligado |

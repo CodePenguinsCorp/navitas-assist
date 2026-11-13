@@ -25,10 +25,14 @@ public class NotificationProperties {
         private long pollMs = 5000;
         private int batchSize = 50;
 
-        public void validate() {
+        /** @param fakeAllowed true só nos perfis local e test, onde o provedor falso pode ficar ligado. */
+        public void validate(boolean fakeAllowed) {
             if (!java.util.Set.of("fake", "resend").contains(provider)) throw new IllegalStateException("Invalid notifications email provider");
             if (pollMs <= 0 || batchSize < 1 || batchSize > 100) throw new IllegalStateException("Invalid notifications email polling limits");
             if (!enabled) return;
+            if ("fake".equals(provider) && !fakeAllowed) {
+                throw new IllegalStateException("O provedor de e-mail falso só é permitido nos perfis local e test; ajuste NOTIFICATIONS_EMAIL_PROVIDER.");
+            }
             if (!br.com.navitasassist.notification.email.EmailMessage.validAddress(from)) throw new IllegalStateException("MAIL_FROM is required and must be a single email address");
             try {
                 java.net.URI uri = java.net.URI.create(appBaseUrl == null ? "" : appBaseUrl);
