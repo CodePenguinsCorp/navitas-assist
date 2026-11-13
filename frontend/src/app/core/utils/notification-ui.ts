@@ -52,6 +52,13 @@ export function formatNotificationDateTime(value: string | null): string {
   return new Intl.DateTimeFormat('pt-BR', { timeZone: APP_TIME_ZONE, dateStyle: 'short', timeStyle: 'short' }).format(date);
 }
 
+/** Time of day only (the inbox groups rows by day), in the business time zone. */
+export function formatNotificationTime(value: string | null): string {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('pt-BR', { timeZone: APP_TIME_ZONE, timeStyle: 'short' }).format(date);
+}
+
 /** Splits an internal action path such as "/rmas?rma=7" into router commands and query params; external URLs are rejected. */
 export function internalRoute(actionPath: string | null): { path: string; queryParams: Record<string, string> } | null {
   if (!actionPath || !actionPath.startsWith('/') || actionPath.startsWith('//')) {

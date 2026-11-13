@@ -91,16 +91,36 @@ describe('NotificationsComponent preferences', () => {
     expect(column('Situação')).toEqual(['Recebendo', 'Silenciado', 'Desligado', 'Obrigatório', 'Obrigatório']);
   });
 
-  // Vermelho: o nome acessível do botão é só "Silenciar".
-  it('names the preference action with its alert', async () => {
+  // Cada alerta silenciável tem um interruptor nomeado pelo alerta; ligado = recebendo.
+  it('names the preference switch with its alert', async () => {
     await setup();
     openPreferences();
     const rows = Array.from(root().querySelectorAll('tbody tr'));
-    expect(rows[0].querySelector('button')!.getAttribute('aria-label')).toBe('Silenciar Novo RMA');
-    expect(rows[1].querySelector('button')!.getAttribute('aria-label')).toBe('Reativar Nova atribuição');
-    // Preservação: linhas obrigatórias não têm botão.
+    const toggle = (index: number) => rows[index].querySelector<HTMLInputElement>('input.switch[role="switch"]');
+    expect(toggle(0)!.getAttribute('aria-label')).toBe('Receber Novo RMA');
+    expect(toggle(0)!.checked).toBe(true);
+    expect(toggle(1)!.getAttribute('aria-label')).toBe('Receber Nova atribuição');
+    expect(toggle(1)!.checked).toBe(false);
+    // Preservação: linhas obrigatórias não têm interruptor nem botão.
+    expect(toggle(3)).toBeNull();
+    expect(toggle(4)).toBeNull();
     expect(rows[3].querySelector('button')).toBeNull();
-    expect(rows[4].querySelector('button')).toBeNull();
+  });
+
+  it('keeps the switch on the saved value until the server answers', async () => {
+    const pending = new Subject<NotificationPreferenceResponse>();
+    await setup({ update: pending });
+    openPreferences();
+    const toggle = root().querySelector<HTMLInputElement>('tbody tr input.switch')!;
+    toggle.click();
+    render();
+    expect(service['updatePreference']).toHaveBeenCalledWith('RMA_CREATED', true);
+    expect(toggle.checked).toBe(true);
+    expect(toggle.disabled).toBe(true);
+    pending.next({ ...PREFERENCES[0], muted: true }); pending.complete();
+    render();
+    expect(root().querySelector<HTMLInputElement>('tbody tr input.switch')!.checked).toBe(false);
+    expect(column('Situação')[0]).toBe('Silenciado');
   });
 
   // Vermelho: não há mensagem de status depois de silenciar.
@@ -189,8 +209,8 @@ describe('NotificationsComponent preferences', () => {
     it('keeps the mute action for a disabled preference that users may mute', async () => {
       await setup();
       openPreferences();
-      expect(Array.from(root().querySelectorAll('tbody tr'))[2].querySelector('button')!.textContent!.trim()).toBe('Silenciar');
-      expect(text()).toContain('Silenciar vale para App e E-mail.');
+      expect(Array.from(root().querySelectorAll('tbody tr'))[2].querySelector('input.switch')).not.toBeNull();
+      expect(text()).toContain('Desligar vale para App e E-mail.');
     });
 
     it('keeps the row and shows the alert when the update fails', async () => {
@@ -205,7 +225,7 @@ describe('NotificationsComponent preferences', () => {
     it('lets viewers mute their own preferences', async () => {
       await setup({ role: 'VIEWER' });
       openPreferences();
-      Array.from(root().querySelectorAll('tbody tr'))[0].querySelector('button')!.click();
+      Array.from(root().querySelectorAll('tbody tr'))[0].querySelector<HTMLInputElement>('input.switch')!.click();
       expect(service['updatePreference']).toHaveBeenCalledWith('RMA_CREATED', true);
     });
   });

@@ -1,6 +1,6 @@
 <section class="page-surface">
   <app-page-header heading="Notificações">
-    <button type="button" class="button-secondary" (click)="markAllRead()" [disabled]="busy() || (unreadKnown() && unreadCount() === 0 && !hasUnread())">Marcar todas como lidas</button>
+    <button type="button" class="button-secondary" (click)="markAllRead()" [disabled]="busy() || (unreadKnown() && unreadCount() === 0 && !hasUnread())"><app-icon name="check" [size]="16" />Marcar todas como lidas</button>
   </app-page-header>
 
   <div class="tab-list" role="tablist" aria-label="Seções de notificações" (keydown)="onTabKeydown($event)">
@@ -19,7 +19,7 @@
     }
   </div>
 
-  @if (errorMessage() && activeTab() !== 'inbox') {
+  @if (errorMessage()) {
     <article class="panel alert-banner alert-banner--error" role="alert">
       <strong>{{ errorMessage() }}</strong>
     </article>
@@ -30,33 +30,30 @@
     </article>
   }
 
-  <div role="tabpanel" tabindex="0" id="notifications-panel-inbox" aria-labelledby="notifications-tab-inbox" [hidden]="activeTab() !== 'inbox'">
+  <div class="notifications-panel" role="tabpanel" tabindex="0" id="notifications-panel-inbox" aria-labelledby="notifications-tab-inbox" [hidden]="activeTab() !== 'inbox'">
     @if (activeTab() === 'inbox') {
-      <article class="panel table-card">
-        <div class="notification-toolbar">
-          <label class="checkbox-field"><input type="checkbox" [checked]="unreadOnly()" (change)="toggleUnreadOnly()" /><span>Somente não lidas</span></label>
-          <label class="checkbox-field"><input type="checkbox" [checked]="includeSnoozed()" (change)="toggleIncludeSnoozed()" /><span>Mostrar adiadas</span></label>
-          <label class="filter-field"><span>Evento</span><app-custom-select ariaLabel="Filtrar por evento" [options]="eventFilterOptions" [value]="eventFilter()" (valueChange)="updateEventFilter($any($event))" /></label>
-          <label class="filter-field"><span>Severidade</span><app-custom-select ariaLabel="Filtrar por severidade" [options]="severityFilterOptions" [value]="severityFilter()" (valueChange)="updateSeverityFilter($any($event))" /></label>
-          <button type="button" class="button-secondary" (click)="clearInboxFilters()">Limpar filtros</button>
-        </div>
+      <section class="panel catalog-toolbar catalog-toolbar--filters inbox-filters" aria-label="Filtros da caixa de entrada">
+        <label class="filter-field">
+          <span class="sr-only">Evento</span>
+          <app-custom-select ariaLabel="Filtrar por evento" [options]="eventFilterOptions" [value]="eventFilter()" (valueChange)="updateEventFilter($any($event))" />
+        </label>
+        <label class="filter-field">
+          <span class="sr-only">Severidade</span>
+          <app-custom-select ariaLabel="Filtrar por severidade" [options]="severityFilterOptions" [value]="severityFilter()" (valueChange)="updateSeverityFilter($any($event))" />
+        </label>
+        <label class="checkbox-field inbox-switch"><input type="checkbox" class="switch" role="switch" [checked]="unreadOnly()" (change)="toggleUnreadOnly()" /><span>Somente não lidas</span></label>
+        <label class="checkbox-field inbox-switch"><input type="checkbox" class="switch" role="switch" [checked]="includeSnoozed()" (change)="toggleIncludeSnoozed()" /><span>Mostrar adiadas</span></label>
+        <button type="button" class="link-button inbox-clear" [disabled]="!hasInboxFilters()" (click)="clearInboxFilters()">Limpar filtros</button>
+      </section>
 
-        @if (unreadUnavailable()) {
-          <p class="field-hint inbox-limit">Contagem de não lidas indisponível.</p>
-        }
-
-        @if (errorMessage()) {
-          <div class="panel alert-banner alert-banner--error inbox-feedback" role="alert">
-            <strong>{{ errorMessage() }}</strong>
-          </div>
-        }
-
+      <article class="panel table-card table-card--list inbox-card">
         @if (inboxLoadFailed()) {
-          <div class="panel alert-banner alert-banner--error inbox-state" role="alert">
-            <strong>{{ inboxLoadErrorMessage() }}</strong>
+          <section class="empty-state inbox-state" role="alert">
+            <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
+            <h3>{{ inboxLoadErrorMessage() }}</h3>
             <button type="button" class="button-secondary" [disabled]="inboxLoading()" (click)="retryInbox()">Tentar novamente</button>
             @if (inboxLoading()) { <div aria-busy="true"></div> }
-          </div>
+          </section>
         } @else if (inboxLoading() || !inboxHasLoaded()) {
           <div class="inbox-state" aria-busy="true"></div>
         } @else if (notifications().length === 0) {
@@ -64,8 +61,15 @@
             <section class="empty-state">
               <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
               <h3>Nenhuma notificação não lida.</h3>
-              <p>As notificações já lidas continuam disponíveis sem o filtro.</p>
+              <p>As já lidas aparecem sem o filtro.</p>
               <button type="button" class="button-secondary" (click)="clearInboxFilters()">Mostrar todas</button>
+            </section>
+          } @else if (hasInboxFilters()) {
+            <section class="empty-state">
+              <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
+              <h3>Nenhuma notificação encontrada.</h3>
+              <p>Ajuste os filtros.</p>
+              <button type="button" class="button-secondary" (click)="clearInboxFilters()">Limpar filtros</button>
             </section>
           } @else {
             <section class="empty-state">
@@ -75,63 +79,72 @@
             </section>
           }
         } @else {
-          <p class="field-hint inbox-limit">Mostra até 100 notificações, das mais recentes, nos filtros selecionados.</p>
           <div class="notification-list">
             @for (group of notificationGroups(); track group.label) {
-            <h3 class="notification-day">{{ group.label }}</h3>
-            @for (notification of group.items; track notification.id) {
-              <article class="notification-item" [class.is-unread]="!notification.read">
-                <span [class]="'icon-tile icon-tile--sm ' + severityTone(notification.severity)" aria-hidden="true"><app-icon [name]="severityIcon(notification.severity)" [size]="17" /></span>
-                <div class="notification-body">
-                  <div class="notification-meta">
-                    <span class="mini-chip" [class]="severityClass(notification.severity)">{{ severityLabels[notification.severity] }}</span>
-                    <span class="notification-event">{{ eventLabels[notification.eventType] }}</span>
-                    @if (notification.rmaCode) {
-                      <span class="notification-time">{{ notification.rmaCode }}</span>
-                    }
-                    <time class="notification-time">{{ dateTime(notification.createdAt) }}</time>
-                    @if (isSnoozed(notification)) {
-                      <span class="notification-time">Adiada até {{ dateTime(notification.snoozedUntil) }}</span>
-                    }
-                  </div>
-                  @if (canOpen(notification)) {
-                    <button type="button" class="link-button notification-title" (click)="open(notification)">{{ notification.title }}</button>
-                  } @else {
-                    <strong class="notification-title">{{ notification.title }}</strong>
+              <section class="notification-group" [attr.aria-label]="group.label">
+                <h3 class="notification-day">{{ group.label }}</h3>
+                <ul class="notification-rows">
+                  @for (notification of group.items; track notification.id) {
+                    <li class="notification-item" [class.is-unread]="!notification.read">
+                      <span class="notification-dot" aria-hidden="true"></span>
+                      <div class="notification-body">
+                        <div class="notification-headline">
+                          @if (!notification.read) { <span class="sr-only">Não lida: </span> }
+                          @if (canOpen(notification)) {
+                            <button type="button" class="link-button notification-title" (click)="open(notification)">{{ notification.title }}</button>
+                          } @else {
+                            <strong class="notification-title">{{ notification.title }}</strong>
+                          }
+                          <span class="mini-chip notification-severity" [class]="severityClass(notification.severity)">{{ severityLabels[notification.severity] }}</span>
+                        </div>
+                        <p class="notification-meta">
+                          <span class="notification-event">{{ eventLabels[notification.eventType] }}</span>
+                          @if (isSnoozed(notification)) {
+                            <span class="notification-snoozed"><app-icon name="clock" [size]="13" />Adiada até {{ dateTime(notification.snoozedUntil) }}</span>
+                          }
+                          <span class="notification-message">{{ notification.message }}</span>
+                        </p>
+                      </div>
+                      <time class="notification-time" [attr.datetime]="notification.createdAt" [title]="dateTime(notification.createdAt)">{{ timeOf(notification.createdAt) }}</time>
+                      <div class="notification-actions">
+                        @if (!notification.read) {
+                          <button appRowAction icon="check" label="Marcar como lida" [target]="notification.title" (click)="markRead(notification)" [disabled]="busy()"></button>
+                        }
+                        <app-custom-select size="compact" [actionMenu]="true" [ariaLabel]="'Adiar ' + notification.title" placeholder="Adiar" [options]="snoozeOptions" [disabled]="busy()" (valueChange)="snooze(notification, $any($event))" />
+                      </div>
+                    </li>
                   }
-                  <p class="notification-message">{{ notification.message }}</p>
-                </div>
-                <div class="notification-actions">
-                  @if (!notification.read) {
-                    <button type="button" class="button-secondary button-secondary--small" (click)="markRead(notification)" [disabled]="busy()">Marcar como lida</button>
-                  }
-                  <app-custom-select size="compact" [actionMenu]="true" ariaLabel="Adiar notificação" placeholder="Adiar" [options]="snoozeOptions" [disabled]="busy()" (valueChange)="snooze(notification, $any($event))" />
-                </div>
-              </article>
+                </ul>
+              </section>
             }
-            }
+          </div>
+          <div class="list-foot">
+            <app-result-count singular="notificação" plural="notificações" [count]="notifications().length" />
+            <span class="list-foot__note">Exibe as 100 mais recentes</span>
+            @if (unreadUnavailable()) { <span class="list-foot__note">Contagem de não lidas indisponível</span> }
           </div>
         }
       </article>
     }
-
   </div>
 
-  <div role="tabpanel" tabindex="0" id="notifications-panel-preferences" aria-labelledby="notifications-tab-preferences" [hidden]="activeTab() !== 'preferences'">
+  <div class="notifications-panel" role="tabpanel" tabindex="0" id="notifications-panel-preferences" aria-labelledby="notifications-tab-preferences" [hidden]="activeTab() !== 'preferences'">
     @if (activeTab() === 'preferences') {
-      <article class="panel table-card">
-        <p class="field-hint">Silenciar vale para App e E-mail.</p>
-        @if (auth.currentUser()?.email === null) { <p class="field-hint">Sem e-mail cadastrado</p> }
+      <article class="panel table-card table-card--list">
         @if (preferencesLoadFailed()) {
-          <div class="panel alert-banner alert-banner--error preferences-state" role="alert">
-            <strong>{{ preferencesLoadErrorMessage() }}</strong>
+          <section class="empty-state preferences-state" role="alert">
+            <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
+            <h3>{{ preferencesLoadErrorMessage() }}</h3>
             <button type="button" class="button-secondary" [disabled]="preferencesLoading()" (click)="retryPreferences()">Tentar novamente</button>
             @if (preferencesLoading()) { <div aria-busy="true"></div> }
-          </div>
+          </section>
         } @else if (preferencesLoading() || !preferencesHasLoaded()) {
           <div class="preferences-state" aria-busy="true"></div>
         } @else if (preferences().length === 0) {
-          <p class="preferences-state">Nenhuma preferência disponível.</p>
+          <section class="empty-state preferences-state">
+            <span class="icon-tile tone-slate"><app-icon name="bell" [size]="20" /></span>
+            <h3>Nenhuma preferência disponível.</h3>
+          </section>
         } @else {
           <div class="table-wrap">
             <table>
@@ -140,7 +153,6 @@
                   <th>Alerta</th>
                   <th>Severidade</th>
                   <th>Situação</th>
-                  <th class="table-actions-col">Ação</th>
                 </tr>
               </thead>
               <tbody>
@@ -148,16 +160,22 @@
                   <tr>
                     <td data-label="Alerta">{{ eventLabels[preference.eventType] }}</td>
                     <td data-label="Severidade"><span class="mini-chip" [class]="severityClass(preference.severity)">{{ severityLabels[preference.severity] }}</span></td>
-                    <td data-label="Situação"><span class="state-dot" [class.is-on]="preferenceState(preference) === 'receiving' || preferenceState(preference) === 'mandatory'">{{ preferenceStateLabel(preference) }}</span></td>
-                    <td class="table-actions-col" data-label="Ação">
+                    <td data-label="Situação">
                       @if (preference.userMutable) {
-                        <button
-                          type="button"
-                          class="button-secondary button-secondary--small"
-                          [attr.aria-label]="(preference.muted ? 'Reativar ' : 'Silenciar ') + eventLabels[preference.eventType]"
-                          (click)="toggleMute(preference)"
-                          [disabled]="busy()"
-                        >{{ preference.muted ? 'Reativar' : 'Silenciar' }}</button>
+                        <label class="switch-cell">
+                          <input
+                            type="checkbox"
+                            class="switch"
+                            role="switch"
+                            [checked]="!preference.muted"
+                            [disabled]="busy()"
+                            [attr.aria-label]="'Receber ' + eventLabels[preference.eventType]"
+                            (click)="$event.preventDefault(); toggleMute(preference)"
+                          />
+                          <span class="state-dot" [class.is-on]="preferenceState(preference) === 'receiving'" [attr.title]="preference.enabled ? null : 'Regra desligada pelo administrador; sua escolha vale quando ela for ligada.'">{{ preferenceStateLabel(preference) }}</span>
+                        </label>
+                      } @else {
+                        <span class="state-dot" [class.is-on]="preferenceState(preference) === 'mandatory'">{{ preferenceStateLabel(preference) }}</span>
                       }
                     </td>
                   </tr>
@@ -165,26 +183,30 @@
               </tbody>
             </table>
           </div>
+          <p class="list-foot__note table-note">Desligar vale para App e E-mail.@if (auth.currentUser()?.email === null) { Sem e-mail cadastrado: os alertas chegam só pelo App.}</p>
         }
       </article>
     }
-
   </div>
 
   @if (canManageRules()) {
-  <div #rulesPanel role="tabpanel" tabindex="0" id="notifications-panel-rules" aria-labelledby="notifications-tab-rules" [hidden]="activeTab() !== 'rules'">
+  <div #rulesPanel class="notifications-panel" role="tabpanel" tabindex="0" id="notifications-panel-rules" aria-labelledby="notifications-tab-rules" [hidden]="activeTab() !== 'rules'">
     @if (activeTab() === 'rules') {
-      <article class="panel table-card">
+      <article class="panel table-card table-card--list">
         @if (rulesLoadFailed()) {
-          <div class="panel alert-banner alert-banner--error rules-state" role="alert">
-            <strong>{{ rulesLoadErrorMessage() }}</strong>
+          <section class="empty-state rules-state" role="alert">
+            <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
+            <h3>{{ rulesLoadErrorMessage() }}</h3>
             <button type="button" class="button-secondary" [disabled]="rulesLoading()" (click)="retryRules()">Tentar novamente</button>
             @if (rulesLoading()) { <div aria-busy="true"></div> }
-          </div>
+          </section>
         } @else if (rulesLoading() || !rulesHasLoaded()) {
           <div class="rules-state" aria-busy="true"></div>
         } @else if (rules().length === 0) {
-          <p class="rules-state">Nenhuma regra disponível.</p>
+          <section class="empty-state rules-state">
+            <span class="icon-tile tone-slate"><app-icon name="bell" [size]="20" /></span>
+            <h3>Nenhuma regra disponível.</h3>
+          </section>
         } @else {
           <div class="table-wrap">
             <table>
@@ -211,12 +233,12 @@
                     <td data-label="Destinatários">
                       {{ recipientsSummary(rule) }}
                       @if (ruleHasNoRecipients(rule)) {
-                        <small class="field-hint rule-no-recipients">Esta regra não entrega notificações a ninguém.</small>
+                        <small class="table-subtitle rule-no-recipients">Esta regra não entrega notificações a ninguém.</small>
                       }
                     </td>
                     <td data-label="Severidade"><span class="mini-chip" [class]="severityClass(rule.severity)">{{ severityLabels[rule.severity] }}</span></td>
                     <td data-label="Silenciável">{{ rule.userMutable ? 'Sim' : 'Não' }}</td>
-                    <td data-label="Atualização">{{ dateTime(rule.updatedAt) }} por {{ rule.updatedBy || 'sistema' }}</td>
+                    <td data-label="Atualização" class="rule-updated">{{ dateTime(rule.updatedAt) }} por {{ rule.updatedBy || 'sistema' }}</td>
                     <td class="table-actions-col" data-label="Ação">
                       <button appRowAction icon="pencil" label="Editar regra" [target]="eventLabels[rule.eventType]" [disabled]="ruleSubmitting() || rule.supported === false" (click)="openRuleEditor(rule)"></button>
                     </td>
@@ -228,53 +250,76 @@
         }
       </article>
 
-      <section class="panel table-card email-failures-section" aria-labelledby="email-failures-title">
-        <div class="notification-toolbar">
+      <section class="panel table-card table-card--list email-failures-section" aria-labelledby="email-failures-title">
+        <div class="section-head">
           <h2 id="email-failures-title">Falhas de e-mail</h2>
           @if (emailStatus(); as status) {
             @if (!status.enabled) { <span class="mini-chip">Desligado</span> }
             @else if (status.provider === 'fake') { <span class="mini-chip">Simulado</span> }
           }
-          <button type="button" class="button-secondary" [disabled]="emailTestBusy() || !emailStatus()?.enabled" (click)="sendTestEmail()">{{ emailTestBusy() ? 'Enviando...' : 'Enviar e-mail de teste' }}</button>
-          <button type="button" class="button-secondary" [disabled]="failuresLoading() || emailStatusLoading()" (click)="retryFailures(); loadEmailStatus()">Atualizar</button>
+          <div class="section-head__actions">
+            <button type="button" class="link-button" [disabled]="emailTestBusy() || !emailStatus()?.enabled" (click)="sendTestEmail()">{{ emailTestBusy() ? 'Enviando...' : 'Enviar e-mail de teste' }}</button>
+            <button type="button" class="link-button" [disabled]="failuresLoading() || emailStatusLoading()" (click)="retryFailures(); loadEmailStatus()">Atualizar</button>
+          </div>
         </div>
         @if (emailStatusError()) { <p class="field-error" role="alert">{{ emailStatusError() }}</p> }
         @if (emailError()) { <p class="field-error" role="alert">{{ emailError() }}</p> }
         @if (emailFeedback()) { <p class="field-hint" role="status">{{ emailFeedback() }}</p> }
         @if (failuresLoading()) { <div aria-busy="true"></div> }
-        @else if (!failuresLoadFailed() && emailFailures().length === 0) { <p class="field-hint">Nenhuma falha de e-mail.</p> }
+        @else if (!failuresLoadFailed() && emailFailures().length === 0) { <p class="section-empty">Nenhuma falha de e-mail.</p> }
         @else if (!failuresLoadFailed()) {
-          <div class="email-failure-list">
-            @for (failure of emailFailures(); track failure.notificationId ?? failure.eventKey + failure.recipient) {
-              <div class="email-failure-row">
-                <time>{{ dateTime(failure.occurredAt) }}</time>
-                <span>{{ failure.rmaCode || '—' }}</span>
-                <span>{{ failure.recipient || '—' }}</span>
-                <span>{{ failure.attempts ?? 0 }} tentativas</span>
-                <span class="failure-error">{{ failure.error || '—' }}</span>
-                @if (canRetryEmail(failure)) {
-                  <button type="button" class="button-secondary button-secondary--small" [attr.aria-label]="'Reenviar e-mail para ' + failure.recipient" [disabled]="retryingEmails().has(failure.notificationId!)" (click)="retryEmail(failure)">{{ retryingEmails().has(failure.notificationId!) ? 'Reenviando...' : 'Reenviar' }}</button>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>RMA</th>
+                  <th>Destinatário</th>
+                  <th>Tentativas</th>
+                  <th>Erro</th>
+                  <th class="table-actions-col"><span class="sr-only">Ação</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (failure of emailFailures(); track failure.notificationId ?? failure.eventKey + failure.recipient) {
+                  <tr>
+                    <td data-label="Data"><time>{{ dateTime(failure.occurredAt) }}</time></td>
+                    <td data-label="RMA">{{ failure.rmaCode || '—' }}</td>
+                    <td data-label="Destinatário">{{ failure.recipient || '—' }}</td>
+                    <td data-label="Tentativas">{{ failure.attempts ?? 0 }}</td>
+                    <td class="failure-error" data-label="Erro">
+                      {{ failure.error || '—' }}
+                      @if (failure.notificationId != null && retryErrors()[failure.notificationId!]) { <small class="field-error" role="alert">{{ retryErrors()[failure.notificationId!] }}</small> }
+                    </td>
+                    <td class="table-actions-col" data-label="Ação">
+                      @if (canRetryEmail(failure)) {
+                        <button appRowAction icon="send" [label]="retryingEmails().has(failure.notificationId!) ? 'Reenviando...' : 'Reenviar'" [target]="'e-mail para ' + failure.recipient" [disabled]="retryingEmails().has(failure.notificationId!)" (click)="retryEmail(failure)"></button>
+                      }
+                    </td>
+                  </tr>
                 }
-                @if (failure.notificationId != null && retryErrors()[failure.notificationId!]) { <p class="field-error" role="alert">{{ retryErrors()[failure.notificationId!] }}</p> }
-              </div>
-            }
+              </tbody>
+            </table>
           </div>
         }
       </section>
 
-      <section class="panel table-card failures-section" aria-labelledby="notification-failures-title">
-        <h2 id="notification-failures-title">Falhas de processamento</h2>
-        <p class="field-hint">Até 50 falhas, da mais recente para a mais antiga.</p>
+      <section class="panel table-card table-card--list failures-section" aria-labelledby="notification-failures-title">
+        <div class="section-head">
+          <h2 id="notification-failures-title">Falhas de processamento</h2>
+          <span class="section-head__note">últimas 50</span>
+        </div>
         @if (failuresLoadFailed()) {
-          <div class="panel alert-banner alert-banner--error failures-state" role="alert">
-            <strong>{{ failuresLoadErrorMessage() }}</strong>
+          <section class="empty-state failures-state" role="alert">
+            <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
+            <h3>{{ failuresLoadErrorMessage() }}</h3>
             <button type="button" class="button-secondary" [disabled]="failuresLoading()" (click)="retryFailures()">Tentar novamente</button>
             @if (failuresLoading()) { <div aria-busy="true"></div> }
-          </div>
+          </section>
         } @else if (failuresLoading() || !failuresHasLoaded()) {
           <div class="failures-state" aria-busy="true"></div>
         } @else if (eventFailures().length === 0) {
-          <p class="failures-state">Nenhuma falha registrada.</p>
+          <p class="section-empty failures-state">Nenhuma falha registrada.</p>
         } @else {
           <div class="table-wrap">
             <table>
@@ -347,12 +392,9 @@
           @if (rule.supported === false) { <p class="field-hint field-group--full">Indisponível: este evento ainda não gera notificações.</p> }
           <fieldset class="form-section" [disabled]="ruleSubmitting() || rule.supported === false">
             <legend>Entrega</legend>
-            <label class="checkbox-field">
-              <input type="checkbox" formControlName="enabled" />
-              <span>Ativa</span>
-            </label>
-            <label class="checkbox-field"><input type="checkbox" formControlName="appEnabled" /><span>App</span></label>
-            <label class="checkbox-field"><input type="checkbox" formControlName="emailEnabled" /><span>E-mail</span></label>
+            <label class="checkbox-field"><input type="checkbox" class="switch" role="switch" formControlName="enabled" /><span>Ativa</span></label>
+            <label class="checkbox-field"><input type="checkbox" class="switch" role="switch" formControlName="appEnabled" /><span>App</span></label>
+            <label class="checkbox-field"><input type="checkbox" class="switch" role="switch" formControlName="emailEnabled" /><span>E-mail</span></label>
 
             <label class="field-group">
               <span>Severidade</span>
@@ -392,7 +434,7 @@
             <legend>Silenciamento</legend>
 
             <label class="checkbox-field">
-              <input type="checkbox" formControlName="userMutable" />
+              <input type="checkbox" class="switch" role="switch" formControlName="userMutable" />
               <span>Permitir que cada usuário silencie</span>
             </label>
           </fieldset>

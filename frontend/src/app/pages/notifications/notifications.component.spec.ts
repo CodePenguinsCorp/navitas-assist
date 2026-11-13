@@ -95,7 +95,7 @@ describe('NotificationsComponent', () => {
     fixture.detectChanges();
     const text: string = fixture.nativeElement.textContent;
 
-    expect(text).toContain('Silenciar');
+    expect(fixture.nativeElement.querySelector('input.switch[aria-label="Receber Novo RMA"]')).not.toBeNull();
     expect(text).toContain('Obrigatório');
     component.toggleMute(PREFERENCES[0]);
     expect(service['updatePreference']).toHaveBeenCalledWith('RMA_CREATED', true);

@@ -195,7 +195,31 @@ describe('NotificationsComponent inbox loading', () => {
   // Vermelho: a lista não informa o limite de 100 notificações.
   it('states the inbox limit', async () => {
     await setup();
-    expect(text()).toContain('Mostra até 100 notificações, das mais recentes, nos filtros selecionados.');
+    expect(text()).toContain('1 notificação');
+    expect(text()).toContain('Exibe as 100 mais recentes');
+  });
+
+  it('distinguishes an inbox emptied by event or severity filters and clears them', async () => {
+    await setup({ list: [of([NOTIFICATION]), of([]), of([])] });
+    expect(button('Limpar filtros')!.disabled).toBe(true);
+    component.updateSeverityFilter('CRITICAL');
+    render();
+    expect(text()).toContain('Nenhuma notificação encontrada.');
+    expect(button('Limpar filtros')!.disabled).toBe(false);
+    button('Limpar filtros')!.click();
+    render();
+    expect(service['list']).toHaveBeenLastCalledWith({ unreadOnly: false, includeSnoozed: false });
+    expect(text()).toContain('Nenhuma notificação.');
+  });
+
+  it('marks unread rows, shows the severity chip and the time of day', async () => {
+    await setup({ list: [of([NOTIFICATION, { ...OLD, read: true, severity: 'CRITICAL' }])] });
+    const rows = Array.from(root().querySelectorAll<HTMLElement>('.notification-item'));
+    expect(rows.map((row) => row.classList.contains('is-unread'))).toEqual([true, false]);
+    expect(rows[0].textContent).toContain('Não lida:');
+    expect(rows[1].querySelector('.mini-chip')!.textContent!.trim()).toBe('Crítico');
+    expect(rows[0].querySelector('time')!.textContent!.trim()).toBe('09:00');
+    expect(rows[0].querySelector('time')!.getAttribute('title')).toBe('24/10/2026, 09:00');
   });
 
   // Vermelho: o erro da ação substitui a única mensagem e a troca de aba apaga a falha de carga.
@@ -400,10 +424,12 @@ describe('NotificationsComponent inbox loading', () => {
     });
 
     describe('preservation', () => {
-      it('keeps mark as read and snooze as secondary actions', async () => {
+      it('keeps mark as read and snooze as discreet row actions', async () => {
         await setup();
-        expect(button('Marcar como lida')!.classList).toContain('button-secondary');
+        expect(button('Marcar como lida')!.classList).toContain('row-action');
+        expect(button('Marcar como lida')!.getAttribute('aria-label')).toBe('Marcar como lida RMA RMA-2026-000007 atribuído a Técnico');
         expect(item().querySelector('app-custom-select')).not.toBeNull();
+        expect(item().querySelector('.button-secondary')).toBeNull();
         component.snooze(NOTIFICATION, '1440');
         expect(service['snooze']).toHaveBeenCalledWith(5, 1440);
       });

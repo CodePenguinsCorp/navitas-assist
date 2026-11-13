@@ -1,0 +1,67 @@
+:host { display: block; }
+.notifications-panel { display: grid; gap: var(--space-4); min-width: 0; }
+
+.inbox-filters { align-items: center; gap: var(--space-3) var(--space-5); }
+.inbox-filters .filter-field { flex: 0 1 220px; min-width: 160px; }
+.inbox-switch { font-size: var(--font-size-sm); }
+.inbox-clear { margin-left: auto; }
+
+.notification-list { display: grid; gap: var(--space-2); }
+.notification-day { margin: var(--space-2) 0 var(--space-1); padding: 0 var(--space-2); color: var(--muted); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.notification-rows { margin: 0; padding: 0; list-style: none; }
+.notification-item {
+  display: grid; grid-template-columns: 10px minmax(0, 1fr) auto auto; align-items: center;
+  gap: var(--space-1) var(--space-3); padding: var(--space-2); border-bottom: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.notification-item:hover { background: color-mix(in srgb, var(--brand-tint) 60%, var(--surface)); }
+.notification-dot { align-self: start; width: 8px; height: 8px; margin-top: 0.5rem; border-radius: 50%; }
+.notification-item.is-unread .notification-dot { background: var(--brand-blue); }
+.notification-body { display: grid; gap: 2px; min-width: 0; }
+.notification-headline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); min-width: 0; }
+.notification-title { color: var(--text); font-size: var(--font-size-md); font-weight: 500; text-align: left; overflow-wrap: anywhere; }
+.is-unread .notification-title { font-weight: 700; }
+.notification-title.link-button { min-height: 0; padding-block: 2px; color: var(--brand-blue-deep); }
+.notification-severity { min-height: 20px; padding-inline: var(--space-2); font-size: 0.7rem; }
+.notification-meta { display: flex; flex-wrap: wrap; gap: 0 var(--space-2); margin: 0; color: var(--muted); font-size: var(--font-size-sm); line-height: 1.45; min-width: 0; }
+.notification-event { color: var(--muted-strong); font-weight: 600; }
+.notification-snoozed { display: inline-flex; align-items: center; gap: 4px; color: var(--warning-text); }
+.notification-message { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
+.notification-time { color: var(--muted); font-size: var(--font-size-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.notification-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-1); min-width: 124px; }
+
+.list-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.list-foot__note, .section-head__note { color: var(--muted); font-size: var(--font-size-sm); }
+.list-foot .list-foot__note { margin-top: var(--space-3); }
+.table-note, 
+th { white-space: nowrap; }
+.switch-cell { display: inline-flex; align-items: center; gap: var(--space-3); min-height: var(--control-height); cursor: pointer; }
+.rule-no-recipients { display: block; margin-top: var(--space-1); }
+.rule-updated { white-space: nowrap; }
+.failure-error { white-space: pre-wrap; overflow-wrap: anywhere; }
+.failure-error .field-error { display: block; margin-top: var(--space-1); white-space: normal; }
+
+.section-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding-bottom: var(--space-2); border-bottom: 1px solid var(--line); }
+.section-head h2 { margin: 0; color: var(--brand-dark); font-size: 1rem; }
+.section-head__actions { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-left: auto; }
+.section-empty { margin: var(--space-3) 0 0; }
+
+@media (max-width: 720px) {
+  .notification-item { grid-template-columns: 10px minmax(0, 1fr) auto; }
+  .notification-body { grid-column: 2 / -1; }
+  .notification-time { grid-column: 2; }
+  .notification-actions { min-width: 0; }
+  .inbox-filters { gap: var(--space-2) var(--space-4); }
+  .inbox-filters .filter-field { flex: 1 1 100%; }
+  .inbox-clear { margin-left: 0; }
+}
+
+@media (max-width: 600px) {
+  .table-wrap { overflow: visible; }
+  table, tbody, tr, td { display: block; width: auto; min-width: 0; }
+  thead { display: none; }
+  tbody tr { padding-block: var(--space-3); border-bottom: 1px solid var(--line); }
+  td { border: 0; padding: var(--space-1) 0; overflow-wrap: anywhere; }
+  td[data-label]::before { content: attr(data-label) ': '; color: var(--muted); }
+  .rule-updated { white-space: normal; }
+}

@@ -1,4 +1,4 @@
-import { IconComponent, IconName } from '../../shared/icon/icon.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import { Component, DestroyRef, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
@@ -21,6 +21,7 @@ import { ProfileService } from '../../core/services/profile.service';
 import { ClockService } from '../../core/services/clock.service';
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { ResultCountComponent } from '../../shared/result-count/result-count.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
 import { CustomSelectComponent } from '../../shared/form-controls/custom-select/custom-select.component';
 import { NotificationService } from '../../core/services/notification.service';
@@ -31,6 +32,7 @@ import {
   NOTIFICATION_SEVERITY_LABELS,
   SNOOZE_OPTIONS,
   formatNotificationDateTime,
+  formatNotificationTime,
   internalRoute,
   severityClass
 } from '../../core/utils/notification-ui';
@@ -47,192 +49,9 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
 
 @Component({
   selector: 'app-notifications',
-  imports: [IconComponent, CustomSelectComponent, ModalFocusDirective, PageHeaderComponent, RowActionComponent, ReactiveFormsModule],
+  imports: [IconComponent, CustomSelectComponent, ModalFocusDirective, PageHeaderComponent, ResultCountComponent, RowActionComponent, ReactiveFormsModule],
   templateUrl: './notifications.component.html',
-  styles: [`
-    :host {
-      display: block;
-    }
-
-    .notification-toolbar .filter-field { flex: 1 1 160px; min-width: 0; max-width: 260px; }
-    .notification-day { margin: var(--space-3) 0 0; font-size: var(--font-size-sm); color: var(--muted); }
-    .email-failure-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); padding-block: var(--space-3); border-bottom: 1px solid var(--line); }
-    .email-failure-row > * { min-width: 0; overflow-wrap: anywhere; }
-    .email-failure-row .failure-error { flex: 1 1 180px; }
-    .notification-title, .notification-message { overflow-wrap: anywhere; }
-    .notification-toolbar,
-    .notification-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--space-2);
-      align-items: center;
-    }
-
-
-    .notification-toolbar {
-      gap: var(--space-1) var(--space-5);
-    }
-
-    .notification-toolbar .button-secondary {
-      margin-left: auto;
-    }
-
-    .inbox-limit,
-    .inbox-state {
-      margin: var(--space-3) 0 0;
-    }
-
-    .inbox-state.alert-banner {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-3);
-    }
-
-    .preferences-state,
-    .rules-state,
-    .failures-state {
-      margin: var(--space-3) 0 0;
-    }
-
-    .preferences-state.alert-banner,
-    .rules-state.alert-banner,
-    .failures-state.alert-banner {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-3);
-    }
-
-    .failures-section .field-hint {
-      margin: var(--space-1) 0 0;
-    }
-
-    .rule-no-recipients {
-      display: block;
-      margin-top: var(--space-1);
-    }
-
-    .failure-error {
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-    }
-
-    .notification-list {
-      display: grid;
-      gap: var(--space-2);
-      margin-top: var(--space-4);
-    }
-
-    .notification-item {
-      position: relative;
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr) auto;
-      align-items: center;
-      gap: var(--space-3) var(--space-4);
-      padding: var(--space-3) var(--space-4);
-      border-bottom: 1px solid var(--line);
-      border-radius: 0;
-      background: var(--surface);
-    }
-
-    .notification-item.is-unread {
-      background: var(--surface-alt);
-    }
-
-    .notification-item.is-unread::before {
-      content: '';
-      position: absolute;
-      left: -1px;
-      top: 12px;
-      bottom: 12px;
-      width: 3px;
-      border-radius: 0 3px 3px 0;
-      background: var(--brand-blue);
-    }
-
-    .notification-body {
-      display: grid;
-      gap: var(--space-1);
-      min-width: 0;
-    }
-
-    .notification-meta {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: var(--space-2);
-    }
-
-    .notification-meta .mini-chip {
-      min-height: 22px;
-      padding-inline: var(--space-2);
-      font-size: 0.72rem;
-    }
-
-    .notification-event {
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--brand-blue-deep);
-    }
-
-    .notification-time {
-      font-size: 0.78rem;
-      color: var(--muted);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .notification-title {
-      font-size: 0.95rem;
-      color: var(--text);
-    }
-
-    .notification-title.link-button {
-      justify-self: start;
-      min-height: var(--control-height);
-      color: var(--brand-blue);
-      font-size: 0.95rem;
-      text-align: left;
-    }
-
-    .inbox-feedback {
-      margin-top: var(--space-3);
-    }
-
-    .notification-message {
-      margin: 0;
-      font-size: 0.88rem;
-      line-height: 1.45;
-      color: var(--muted);
-    }
-
-    .notification-actions {
-      justify-content: flex-end;
-      flex-wrap: nowrap;
-    }
-
-    @media (max-width: 600px) {
-      .table-wrap { overflow: visible; }
-      table, tbody, tr, td { display: block; width: auto; min-width: 0; }
-      thead { display: none; }
-      tbody tr { padding-block: var(--space-3); border-bottom: 1px solid var(--line); }
-      td { border: 0; padding: var(--space-1) 0; overflow-wrap: anywhere; }
-      td[data-label]::before { content: attr(data-label) ': '; color: var(--muted); }
-      .notification-toolbar .filter-field { max-width: none; }
-    }
-    @media (max-width: 720px) {
-      .notification-item {
-        grid-template-columns: 1fr;
-      }
-
-      .notification-actions {
-        justify-content: flex-start;
-        flex-wrap: wrap;
-      }
-    }
-  `]
+  styleUrl: './notifications.component.css'
 })
 export class NotificationsComponent {
   private readonly notificationService = inject(NotificationService);
@@ -275,8 +94,9 @@ export class NotificationsComponent {
   protected readonly includeSnoozed = signal(false);
   protected readonly eventFilter = signal<NotificationEventType | ''>('');
   protected readonly severityFilter = signal<NotificationSeverity | ''>('');
-  protected readonly eventFilterOptions = [{ value: '', label: 'Todos' }, ...Object.entries(NOTIFICATION_EVENT_LABELS).map(([value, label]) => ({ value, label }))];
-  protected readonly severityFilterOptions = [{ value: '', label: 'Todas' }, ...NOTIFICATION_SEVERITIES.map(value => ({ value, label: NOTIFICATION_SEVERITY_LABELS[value] }))];
+  protected readonly eventFilterOptions = [{ value: '', label: 'Todos os eventos' }, ...Object.entries(NOTIFICATION_EVENT_LABELS).map(([value, label]) => ({ value, label }))];
+  protected readonly severityFilterOptions = [{ value: '', label: 'Todas as severidades' }, ...NOTIFICATION_SEVERITIES.map(value => ({ value, label: NOTIFICATION_SEVERITY_LABELS[value] }))];
+  protected readonly hasInboxFilters = computed(() => this.unreadOnly() || this.includeSnoozed() || !!this.eventFilter() || !!this.severityFilter());
   protected readonly notificationGroups = computed(() => {
     const today = new Date(this.clock.now()); today.setHours(0, 0, 0, 0);
     const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
@@ -324,16 +144,10 @@ export class NotificationsComponent {
   protected readonly severityLabels = NOTIFICATION_SEVERITY_LABELS;
   protected readonly severities = NOTIFICATION_SEVERITIES;
   protected readonly severityOptions = NOTIFICATION_SEVERITIES.map((severity) => ({ value: severity, label: NOTIFICATION_SEVERITY_LABELS[severity] }));
-  protected severityIcon(severity: NotificationSeverity): IconName {
-    return severity === 'CRITICAL' ? 'alert' : severity === 'WARNING' ? 'clock' : 'info';
-  }
-
-  protected severityTone(severity: NotificationSeverity): string {
-    return severity === 'CRITICAL' ? 'tone-danger' : severity === 'WARNING' ? 'tone-warning' : 'tone-sky';
-  }
   protected readonly snoozeOptions = SNOOZE_OPTIONS;
   protected readonly severityClass = severityClass;
   protected readonly dateTime = formatNotificationDateTime;
+  protected readonly timeOf = formatNotificationTime;
 
   protected readonly canManageRules = computed(() => this.permissions.hasPermission('notificacoes.regras'));
   protected readonly unreadCount = this.notificationService.unreadCount;
