@@ -36,7 +36,7 @@ async function setupWith(permissions: readonly Permission[] | Signal<readonly Pe
         provide: KanbanViewService,
         useValue: { list: () => of([]), create: vi.fn(), update: vi.fn(), setDefault: () => of({}), delete: () => of(undefined) }
       },
-      { provide: RmaService, useValue: { listBoard: () => of([RMA]), getById: () => of(RMA) } }
+      { provide: RmaService, useValue: { listBoard: () => of([RMA]), getById: () => of(RMA), updatePriority: (id: number, priority: RmaResponse['priority']) => of({ ...RMA, id, priority }) } }
     ]
   }).compileComponents();
   const fixture: ComponentFixture<KanbanComponent> = TestBed.createComponent(KanbanComponent);
@@ -81,5 +81,24 @@ describe('KanbanComponent without bulk editing', () => {
       expect(labels).not.toContain(label);
     }
     expect(page.querySelector('.board-card')).not.toBeNull();
+  });
+});
+
+describe('KanbanComponent priority from the detail', () => {
+  it('updates the card when the priority changes in the detail modal', async () => {
+    const fixture = await setup('ADMIN');
+    const page = fixture.nativeElement as HTMLElement;
+    const cardPriority = () => page.querySelector('.board-card .priority-tag')!;
+    expect(cardPriority().getAttribute('data-priority')).toBe(RMA.priority);
+    const next = RMA.priority === 'HIGH' ? 'Baixa' : 'Alta';
+    (fixture.componentInstance as unknown as KanbanProfileHarness).openDetail(RMA);
+    fixture.detectChanges();
+
+    page.querySelector<HTMLButtonElement>('app-rma-detail-modal app-rma-priority-field .custom-select__trigger')!.click();
+    fixture.detectChanges();
+    [...page.querySelectorAll<HTMLButtonElement>('app-rma-priority-field .custom-select__option')].find((option) => option.textContent?.includes(next))!.click();
+    fixture.detectChanges();
+
+    expect(cardPriority().textContent?.trim()).toBe(next);
   });
 });
