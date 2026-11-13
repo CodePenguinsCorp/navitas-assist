@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { UserAccountResponse } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
@@ -32,6 +32,41 @@ describe('UsersComponent password boundaries', () => {
     fixture = TestBed.createComponent(UsersComponent);
     component = fixture.componentInstance as unknown as UsersHarness;
     fixture.detectChanges();
+  });
+
+  it('envia email normalizado e limpa com null na edição', () => {
+    component.openCreateModal();
+    component.form.patchValue({ username: 'new.user', fullName: 'New user', profileId: 4, password: '123456', email: ' Test@Example.com ' });
+    component.saveUser();
+    expect(createUser).toHaveBeenCalledWith(expect.objectContaining({ email: 'test@example.com' }));
+    component.openEditModal({ ...USER, email: 'test@example.com' });
+    expect(component.form.get('email')?.value).toBe('test@example.com');
+    component.form.patchValue({ email: '' });
+    component.saveUser();
+    expect(updateUser).toHaveBeenCalledWith(USER.id, expect.objectContaining({ email: null, password: null }));
+  });
+
+  it.each(['a@b', 'a@example.com\r\n', 'a,b@example.com', 'a'.repeat(243) + '@example.com'])('bloqueia email inválido %s', (email) => {
+    component.openEditModal(USER);
+    component.form.patchValue({ email });
+    component.saveUser();
+    expect(updateUser).not.toHaveBeenCalled();
+    expect(component.form.get('email')?.invalid).toBe(true);
+  });
+
+  it('aceita email com 254 caracteres', () => {
+    component.openEditModal(USER);
+    component.form.patchValue({ email: 'a'.repeat(242) + '@example.com' });
+    component.saveUser();
+    expect(updateUser).toHaveBeenCalled();
+  });
+
+  it('mantém o modal e mostra erro do backend inline', () => {
+    updateUser.mockReturnValueOnce(throwError(() => ({ error: { message: 'Email already registered.' } })));
+    component.openEditModal(USER);
+    component.form.patchValue({ email: 'test@example.com' }); component.saveUser(); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role="dialog"] [role="alert"]')?.textContent).toContain('Email already registered.');
+    expect(component.form.get('email')?.value).toBe('test@example.com');
   });
 
   it.each(EXCESSIVE)('blocks excessive $name passwords in creation and editing', ({ password }) => {

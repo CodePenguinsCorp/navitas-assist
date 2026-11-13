@@ -245,7 +245,7 @@ describe('UsersComponent collection layout and states', () => {
     const sections = Array.from(dialog.querySelectorAll('fieldset.form-section'));
     expect(sections.map((section) => section.querySelector('legend')?.textContent?.trim())).toEqual(['Identidade', 'Acesso', 'Permissões extras', 'Senha']);
     const controlsIn = (section: Element) => Array.from(section.querySelectorAll('[formControlName]')).map((node) => node.getAttribute('formControlName'));
-    expect(controlsIn(sections[0])).toEqual(['fullName', 'username']);
+    expect(controlsIn(sections[0])).toEqual(['fullName', 'username', 'email']);
     expect(controlsIn(sections[1])).toEqual(['profileId', 'active']);
     expect(controlsIn(sections[2])).toEqual([]);
     expect(controlsIn(sections[3])).toEqual(['password']);

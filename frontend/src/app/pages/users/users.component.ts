@@ -29,7 +29,7 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
-type UserFormControlName = 'username' | 'fullName' | 'password' | 'profileId' | 'active';
+type UserFormControlName = 'email' | 'username' | 'fullName' | 'password' | 'profileId' | 'active';
 type LoadState = 'loading' | 'ready' | 'failed';
 type UserStatusFilter = 'all' | 'active' | 'inactive';
 type UserModalMode = 'create' | 'edit';
@@ -68,6 +68,7 @@ const passwordByteLengthValidator: ValidatorFn = control =>
       line-height: 1.35;
     }
 
+    .user-email { max-width: 200px; overflow-wrap: anywhere; font-size: var(--font-size-sm); }
     .extras-pending { min-height: 4rem; grid-column: 1 / -1; }
   `]
 })
@@ -139,6 +140,7 @@ export class UsersComponent {
     new Set(this.profileOptions().find((option) => option.id === this.selectedProfileId())?.permissions ?? []));
 
   protected readonly form = this.formBuilder.nonNullable.group({
+    email: ['', [Validators.maxLength(254), emailValidator]],
     username: ['', [Validators.required, Validators.maxLength(60)]],
     fullName: ['', [Validators.required, Validators.maxLength(120)]],
     password: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(72), passwordByteLengthValidator]],
@@ -214,6 +216,7 @@ export class UsersComponent {
     this.editingUserSignal.set(user);
     this.configurePasswordValidation(false);
     this.form.reset({
+      email: user.email ?? '',
       username: user.username,
       fullName: user.fullName,
       password: '',
@@ -427,6 +430,7 @@ export class UsersComponent {
 
 function emptyUserForm(): ReturnType<UsersComponent['form']['getRawValue']> {
   return {
+    email: '',
     username: '',
     fullName: '',
     password: '',
@@ -437,6 +441,7 @@ function emptyUserForm(): ReturnType<UsersComponent['form']['getRawValue']> {
 
 function buildUserPayload(raw: ReturnType<UsersComponent['form']['getRawValue']>, extraPermissions: Permission[]): UserAccountRequest {
   return {
+    email: raw.email.trim().toLowerCase() || null,
     username: raw.username.trim(),
     fullName: raw.fullName.trim(),
     password: raw.password,
@@ -451,6 +456,7 @@ function buildUserUpdatePayload(
   extraPermissions: Permission[]
 ): UserAccountUpdateRequest {
   return {
+    email: raw.email.trim().toLowerCase() || null,
     username: raw.username.trim(),
     fullName: raw.fullName.trim(),
     password: raw.password || null,
@@ -465,3 +471,11 @@ const STATUS_FILTER_OPTIONS: ReadonlyArray<CustomSelectOption<UserStatusFilter>>
   { value: 'active', label: 'Ativos' },
   { value: 'inactive', label: 'Inativos' }
 ];
+
+// Mesmo formato simples de EmailMessage.validAddress, validando CR/LF antes do trim.
+const emailValidator: ValidatorFn = control => {
+  const value: string = control.value || '';
+  if (/[\r\n]/.test(value)) return { email: true };
+  if (!value.trim()) return null;
+  return /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,}$/.test(value.trim()) ? null : { email: true };
+};

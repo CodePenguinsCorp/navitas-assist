@@ -207,7 +207,7 @@ describe('UsersComponent profile and extra permissions', () => {
   it('shows profile name and extras count', async () => {
     await mount({ rows: [account(), account({ id: 8, fullName: 'Bia', username: 'bia', extraPermissions: ['rma.status'] }),
       account({ id: 9, fullName: 'Caio', username: 'caio', extraPermissions: ['rma.status', 'pecas.reservar'] })] });
-    const profileCell = (row: number) => element.querySelectorAll('tbody tr')[row].querySelectorAll('td')[2].textContent?.replace(/\s+/g, ' ').trim();
+    const profileCell = (row: number) => element.querySelectorAll('tbody tr')[row].querySelectorAll('td')[3].textContent?.replace(/\s+/g, ' ').trim();
     expect(profileCell(0)).toBe('Consulta');
     expect(profileCell(1)).toBe('Consulta +1 extra');
     expect(profileCell(2)).toBe('Consulta +2 extras');
