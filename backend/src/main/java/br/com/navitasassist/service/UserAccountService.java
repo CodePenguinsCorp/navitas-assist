@@ -115,7 +115,10 @@ public class UserAccountService {
 
         userAccount.setUsername(trim(request.username()));
         userAccount.setFullName(trim(request.fullName()));
-        userAccount.setEmail(validateEmail(userAccount.getId(), request.email()));
+        // Campo ausente preserva o e-mail; null explícito ou branco limpa (o frontend sempre envia o campo).
+        if (request.email() != null) {
+            userAccount.setEmail(validateEmail(userAccount.getId(), request.email().orElse(null)));
+        }
         if (passwordChanged) {
             userAccount.setPasswordHash(passwordEncoder.encode(request.password()));
         }

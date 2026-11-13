@@ -576,7 +576,7 @@ Modelos versionados de protocolo por produto ou categoria, executados durante o 
 
 ## E-mails e notificações internas (Projeto B)
 
-O backend usa o e-mail opcional de `user_accounts`, nunca o e-mail do cliente nem um endereço derivado do username. POST/PUT de usuários aceitam `email`; branco/null/ausente no PUT limpa o endereço. A API normaliza para minúsculas, limita a 254 caracteres e garante unicidade sem diferenciar caixa. Sessão e respostas de usuários incluem `email`; opções de atribuíveis não o expõem.
+O backend usa o e-mail opcional de `user_accounts`, nunca o e-mail do cliente nem um endereço derivado do username. POST/PUT de usuários aceitam `email`; no PUT, campo **ausente preserva** o endereço atual, enquanto `null` explícito ou texto em branco o limpa (o frontend sempre envia o campo). A API normaliza para minúsculas, limita a 254 caracteres e garante unicidade sem diferenciar caixa. Sessão e respostas de usuários incluem `email`; opções de atribuíveis não o expõem.
 
 A migração aditiva `V4__notification_email_delivery.sql` preserva V1–V3, o histórico e a visibilidade do app. Nenhuma notificação legada é agendada retroativamente. Cada regra tem interruptores geral (`enabled`), App (`appEnabled`) e E-mail (`emailEnabled`); e-mail inicia desligado nas regras existentes. `supported=false` identifica os eventos reservados sem produtor. O silenciamento existente vale para ambos os canais quando a regra permite. Ler ou adiar no app não cancela um envio pendente.
 

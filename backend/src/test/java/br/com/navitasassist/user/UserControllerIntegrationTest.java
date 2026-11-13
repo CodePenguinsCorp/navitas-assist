@@ -100,6 +100,30 @@ class UserControllerIntegrationTest {
     }
 
     @Test
+    void putWithoutEmailFieldPreservesItWhileExplicitNullClears() throws Exception {
+        UserAccount existing = createUser("email.absent", "Email user", "password123");
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("username", existing.getUsername());
+        body.put("fullName", existing.getFullName());
+        body.put("profileId", existing.getProfile().getId());
+        body.put("active", true);
+        body.put("email", "absent@example.invalid");
+        putUser(existing, body).andExpect(jsonPath("$.email").value("absent@example.invalid"));
+
+        body.remove("email");
+        putUser(existing, body).andExpect(jsonPath("$.email").value("absent@example.invalid"));
+
+        body.put("email", null);
+        putUser(existing, body).andExpect(jsonPath("$.email").isEmpty());
+    }
+
+    private org.springframework.test.web.servlet.ResultActions putUser(UserAccount user, Map<String, Object> body) throws Exception {
+        return mockMvc.perform(put("/api/users/{id}", user.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body)))
+            .andExpect(status().isOk());
+    }
+
+    @Test
     void createsNormalizesUpdatesAndClearsEmail() throws Exception {
         UserAccount existing = createUser("email.user", "Email user", "password123");
         Map<String, Object> body = new LinkedHashMap<>();
