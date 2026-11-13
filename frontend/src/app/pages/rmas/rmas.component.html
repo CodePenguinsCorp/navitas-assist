@@ -273,6 +273,7 @@
               <section class="rma-details__section">
                 <app-rma-diagnosis [rma]="rma" [disabled]="statusBusy() || warrantyBusy()" (saved)="detailRmaSaved($event)" (busyChange)="diagnosisBusy.set($event)" />
               </section>
+              @defer { <app-rma-repair-panel [rmaId]="rma.id" [rmaStatus]="rma.status" /> } @placeholder { <div aria-busy="true"></div> }
               @let repair = repairFacts(rma);
               @if (repair.length > 0) {
                 <section class="rma-details__section">

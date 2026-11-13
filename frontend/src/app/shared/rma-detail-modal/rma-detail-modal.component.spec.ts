@@ -1,11 +1,15 @@
 import { RmaWarrantyFieldComponent } from '../rma-warranty-field/rma-warranty-field.component';
 import { By } from '@angular/platform-browser';
 import { Component, signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, DeferBlockState, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { DiagnosisResponse, RmaResponse, WarrantyStatus } from '../../core/models';
 import { ClockService } from '../../core/services/clock.service';
 import { AuthService } from '../../core/services/auth.service';
+import { RmaRepairPanelComponent } from '../rma-repair-panel/rma-repair-panel.component';
+import { RmaPartsPanelComponent } from '../rma-parts-panel/rma-parts-panel.component';
+import { RmaRepairService } from '../../core/services/rma-repair.service';
+import { PartService } from '../../core/services/part.service';
 import { ReportService } from '../../core/services/report.service';
 import { RmaService } from '../../core/services/rma.service';
 import { of } from 'rxjs';
@@ -70,6 +74,8 @@ async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; can
       { provide: AuthService, useValue: { currentUser: () => ({ name: 'Ana' }) } },
       { provide: ClockService, useValue: { now: signal(NOW) } },
       providePermissions(profilePermissions('ADMIN')),
+      { provide: RmaRepairService, useValue: { getRepair: () => of({ interventions: [], totalServiceHours: 0 }), listExternalComponents: () => of([]) } },
+      { provide: PartService, useValue: { getRmaParts: () => of({ reservations: [], movements: [], reservedCost: 0, consumedCost: 0, pendingCount: 0 }), list: () => of([]) } },
       { provide: ReportService, useValue: { downloadTechnicalReport: () => of() } },
       { provide: RmaService, useValue: {
         updateStatus: (id: number, payload: { status: RmaResponse['status'] }) => of({ ...(inputs.rma ?? fullRma), id, status: payload.status }),
@@ -111,6 +117,14 @@ async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; can
 }
 
 describe('RmaDetailModalComponent with the shared information contract', () => {
+  it('renders shared repair and parts panels even without legacy summaries', async () => {
+    const { fixture, host } = await setup({ rma: { ...fullRma, repairSummary: null, replacedPartsSummary: null, testSummary: null } });
+    const [block] = await fixture.getDeferBlocks(); await block.render(DeferBlockState.Complete); fixture.detectChanges();
+    expect(fixture.debugElement.query(By.directive(RmaRepairPanelComponent)).componentInstance.rmaId()).toBe(5);
+    expect(fixture.debugElement.query(By.directive(RmaPartsPanelComponent)).componentInstance.rmaStatus()).toBe(fullRma.status);
+    expect(host.textContent).toContain('Intervenções'); expect(host.textContent).toContain('Componentes trocados');
+  });
+
   it('edita o diagnóstico no mesmo cartão e cancela sem fechar o detalhe', async () => {
     const { fixture, host, section } = await setup();
     const card = section('Diagnóstico')!;

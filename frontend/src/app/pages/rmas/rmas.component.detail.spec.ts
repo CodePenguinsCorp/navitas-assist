@@ -8,6 +8,7 @@ import { DiagnosisResponse, RmaResponse, UserSession, WarrantyStatus } from '../
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { LoadingService } from '../../core/services/loading.service';
+import { RmaRepairService } from '../../core/services/rma-repair.service';
 import { PartService } from '../../core/services/part.service';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { RmaService } from '../../core/services/rma.service';
@@ -87,6 +88,7 @@ async function setup(options: { role?: LegacyProfileCode } = {}) {
       { provide: CatalogService, useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]) } },
       { provide: RmaService, useValue: rmaService },
       { provide: PartService, useValue: partService },
+      { provide: RmaRepairService, useValue: { listExternalComponents: () => of([]), getRepair: () => of({ interventions: [], totalServiceHours: 0 }) } },
       { provide: ProtocolService, useValue: protocolService }
     ]
   }).compileComponents();
@@ -117,6 +119,14 @@ async function setup(options: { role?: LegacyProfileCode } = {}) {
 }
 
 describe('RmasComponent detail with the shared information contract', () => {
+  it('renders the shared interventions panel in diagnosis without legacy repair summaries', async () => {
+    const { open, selectTab, tabPanel, fixture } = await setup();
+    open({ ...fullRma, repairSummary: null, replacedPartsSummary: null, testSummary: null }); selectTab('Diagnóstico');
+    const [block] = await fixture.getDeferBlocks(); await block.render(DeferBlockState.Complete); fixture.detectChanges();
+    expect(tabPanel().querySelector('app-rma-repair-panel')).not.toBeNull();
+    expect(tabPanel().textContent).toContain('Intervenções'); expect(tabPanel().textContent).toContain('Total de horas: 0 h');
+  });
+
   it('shows product as title, client below and the same status, priority and block formats', async () => {
     // Hoje o h3 mostra o cliente ("Cliente X") e a etiqueta de impedimento é só "Bloqueado".
     const { open, detail } = await setup();

@@ -580,6 +580,10 @@ export interface PartReservationResponse {
   unitCost: number;
   totalCost: number;
   note: string | null;
+  replacementReason?: string | null;
+  componentBatch?: string | null;
+  appliedAt?: string | null;
+  appliedBy?: string | null;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -589,10 +593,48 @@ export interface RmaPartsResponse {
   rmaId: number;
   rmaCode: string;
   reservations: PartReservationResponse[];
+  replacedComponents?: PartReservationResponse[];
   movements: PartMovementResponse[];
   reservedCost: number;
   consumedCost: number;
   pendingCount: number;
+}
+
+export interface PartConsumptionRequest {
+  replacementReason: string;
+  componentBatch: string | null;
+}
+
+export interface ExternalComponentRequest extends PartConsumptionRequest {
+  code: string | null;
+  description: string;
+  quantity: number;
+  unit: string;
+}
+
+export interface ExternalComponentResponse extends ExternalComponentRequest {
+  id: number;
+  appliedAt: string;
+  appliedBy: string;
+}
+
+export type InterventionType = 'RESOLDERING' | 'CLEANING' | 'REPROGRAMMING' | 'FIRMWARE_UPDATE' | 'HARNESS_REPLACEMENT' | 'OTHER';
+
+export interface InterventionRequest {
+  type: InterventionType;
+  description: string;
+  performedOn: string;
+  hours: number;
+}
+
+export interface InterventionResponse extends InterventionRequest {
+  id: number;
+  technicianName: string;
+}
+
+export interface RmaRepairResponse {
+  interventions: InterventionResponse[];
+  totalServiceHours: number;
 }
 
 export interface PartReplenishmentResponse {

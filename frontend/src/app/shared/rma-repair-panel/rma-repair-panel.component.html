@@ -1,0 +1,22 @@
+<section class="repair-panel">
+  <h4>Intervenções</h4>
+  @if (error()) { <p class="field-error" role="alert">{{ error() }}</p><button type="button" class="button-secondary button-secondary--small" (click)="load()" [disabled]="loading()">Tentar novamente</button> }
+  @if (success()) { <p class="muted-inline" role="status">{{ success() }}</p> }
+  @if (loading()) { <div aria-busy="true"></div> }
+  @if (repair(); as data) {
+    <p><strong>Total de horas: {{ hours(data.totalServiceHours) }} h</strong></p>
+    @for (item of data.interventions; track item.id) {
+      <div class="repair-entry"><strong>{{ labels[item.type] }} · {{ hours(item.hours) }} h</strong><p>{{ item.description }}</p><small>{{ date(item.performedOn) }} · {{ item.technicianName }}</small></div>
+    } @empty { <p class="muted-inline">Nenhuma intervenção registrada.</p> }
+  }
+  @if (canWrite()) {
+    <form class="form-grid repair-form" [formGroup]="form" (ngSubmit)="save()">
+      <label class="field-group"><span>Tipo</span><app-custom-select ariaLabel="Tipo de intervenção" [options]="options" formControlName="type" /></label>
+      <label class="field-group"><span>Data</span><app-date-picker ariaLabel="Data da intervenção" [maxDate]="today()" formControlName="performedOn" /></label>
+      <label class="field-group"><span>Horas</span><input type="number" min="0.001" max="999999.999" step="0.001" formControlName="hours" /></label>
+      <label class="field-group field-group--full"><span>Descrição</span><textarea rows="2" maxlength="1000" formControlName="description"></textarea></label>
+      @if (form.invalid && form.touched) { <p class="field-error field-group--full" role="alert">Informe descrição, data não futura e horas positivas com até 3 casas decimais.</p> }
+      <div class="form-actions form-actions--full"><button class="button-primary" type="submit" [disabled]="saving()">Registrar intervenção</button></div>
+    </form>
+  }
+</section>

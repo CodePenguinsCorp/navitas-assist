@@ -1,3 +1,5 @@
+import { RmaRepairPanelComponent } from '../rma-repair-panel/rma-repair-panel.component';
+import { RmaPartsPanelComponent } from '../rma-parts-panel/rma-parts-panel.component';
 import { RmaWarrantyFieldComponent } from '../rma-warranty-field/rma-warranty-field.component';
 import { RmaDiagnosisComponent } from '../rma-diagnosis/rma-diagnosis.component';
 import { Component, EventEmitter, Output, computed, inject, input, signal } from '@angular/core';
@@ -38,7 +40,7 @@ import {
 
 @Component({
   selector: 'app-rma-detail-modal',
-  imports: [RmaWarrantyFieldComponent, CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaStatusFieldComponent, RmaDiagnosisComponent, RouterLink],
+  imports: [RmaRepairPanelComponent, RmaPartsPanelComponent, RmaWarrantyFieldComponent, CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaStatusFieldComponent, RmaDiagnosisComponent, RouterLink],
   templateUrl: './rma-detail-modal.component.html',
   styleUrl: './rma-detail-modal.component.css'
 })

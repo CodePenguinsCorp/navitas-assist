@@ -54,7 +54,7 @@
             @if (canReserve()) {
               <div class="parts-item__actions">
                 @if (reservation.status === 'ACTIVE' && !isClosed()) {
-                  <button type="button" class="button-secondary button-secondary--small" (click)="runAction(reservation, 'consume')" [disabled]="busyReservationId() !== null">Consumir</button>
+                  <button type="button" class="button-secondary button-secondary--small" (click)="startConsumption(reservation)" [disabled]="busyReservationId() !== null">Consumir</button>
                 }
                 @if (reservation.status === 'PENDING' && !isClosed()) {
                   <button type="button" class="button-secondary button-secondary--small" (click)="runAction(reservation, 'allocate')" [disabled]="busyReservationId() !== null">Efetivar reserva</button>
@@ -68,6 +68,47 @@
         }
       </div>
     }
+
+    @if (consuming(); as reservation) {
+      @if (canCreateReservation()) {
+        <form class="form-grid repair-form" [formGroup]="consumptionForm" (ngSubmit)="confirmConsumption()">
+          <strong class="field-group--full">Consumir {{ reservation.partCode }} · {{ reservation.partName }}</strong>
+          <label class="field-group field-group--full"><span>Motivo da troca</span><textarea rows="2" maxlength="1000" formControlName="replacementReason"></textarea></label>
+          <label class="field-group"><span>Lote do componente (opcional)</span><input maxlength="120" formControlName="componentBatch" /></label>
+          @if (consumptionForm.invalid && consumptionForm.touched) { <p class="field-error field-group--full" role="alert">Informe o motivo da troca (até 1000 caracteres).</p> }
+          <div class="form-actions form-actions--full repair-actions"><button type="button" class="button-secondary" [disabled]="busyReservationId() !== null" (click)="consuming.set(null)">Cancelar</button><button type="submit" class="button-primary" [disabled]="busyReservationId() !== null">Confirmar</button></div>
+        </form>
+      }
+    }
+
+    <section class="repair-panel">
+      <h4>Componentes trocados</h4>
+      @if (externalError()) { <p class="field-error" role="alert">{{ externalError() }}</p><button type="button" class="button-secondary button-secondary--small" (click)="loadExternal()">Tentar novamente</button> }
+      @for (component of replacedComponents(); track component.key) {
+        <div class="repair-entry">
+          <strong>@if (component.code) { {{ component.code }} · }{{ component.description }}</strong>
+          <small>{{ quantity(component.quantity, component.unit) }} · {{ component.source }}</small>
+          <p>{{ component.replacementReason || 'Motivo não registrado' }}</p>
+          @if (component.componentBatch) { <small>Lote: {{ component.componentBatch }}</small> }
+          @if (component.appliedAt) { <small>{{ dateTime(component.appliedAt) }} · {{ component.appliedBy }}</small> }
+        </div>
+      } @empty { <p class="muted-inline">Nenhum componente trocado.</p> }
+      @if (canCreateReservation()) {
+        @if (!externalOpen()) { <button type="button" class="button-secondary button-secondary--small" (click)="externalOpen.set(true)">Adicionar fora do estoque</button> }
+        @else {
+          <form class="form-grid repair-form" [formGroup]="externalForm" (ngSubmit)="saveExternal()">
+            <label class="field-group"><span>Código (opcional)</span><input maxlength="60" formControlName="code" /></label>
+            <label class="field-group"><span>Descrição</span><input maxlength="120" formControlName="description" /></label>
+            <label class="field-group"><span>Quantidade</span><input type="number" min="0.001" max="999999999.999" step="0.001" formControlName="quantity" /></label>
+            <label class="field-group"><span>Unidade</span><input maxlength="20" formControlName="unit" /></label>
+            <label class="field-group"><span>Lote (opcional)</span><input maxlength="120" formControlName="componentBatch" /></label>
+            <label class="field-group field-group--full"><span>Motivo da troca</span><textarea rows="2" maxlength="1000" formControlName="replacementReason"></textarea></label>
+            @if (externalForm.invalid && externalForm.touched) { <p class="field-error field-group--full" role="alert">Informe descrição, motivo e quantidade positiva com até 3 casas decimais.</p> }
+            <div class="form-actions form-actions--full repair-actions"><button type="button" class="button-secondary" [disabled]="externalSaving()" (click)="externalOpen.set(false)">Cancelar</button><button type="submit" class="button-primary" [disabled]="externalSaving()">Confirmar</button></div>
+          </form>
+        }
+      }
+    </section>
 
     @if (canCreateReservation()) {
       <form class="form-grid parts-reserve-form"[formGroup]="reserveForm" (ngSubmit)="reserve()">

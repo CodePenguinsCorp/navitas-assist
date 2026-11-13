@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { PartReservationResponse, PartResponse, RmaPartsResponse, RmaStatus } from '../../core/models';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { RmaRepairService } from '../../core/services/rma-repair.service';
 import { PartService } from '../../core/services/part.service';
 import { RmaPartsPanelComponent } from './rma-parts-panel.component';
 
@@ -48,6 +49,7 @@ describe('RmaPartsPanelComponent loading', () => {
       imports: [RmaPartsPanelComponent],
       providers: [
         { provide: PartService, useValue: service },
+        { provide: RmaRepairService, useValue: { listExternalComponents: () => of([]) } },
         providePermissions(profilePermissions(sources.role ?? 'TECHNICIAN'))
       ]
     }).compileComponents();
@@ -96,6 +98,8 @@ describe('RmaPartsPanelComponent loading', () => {
     expect(text()).toContain('R$ 20,00');
     service.getRmaParts.mockReturnValue(throwError(() => new Error()));
     button('Consumir')!.click(); render();
+    (fixture.componentInstance as any).consumptionForm.setValue({ replacementReason: 'Falha', componentBatch: '' });
+    button('Confirmar')!.click(); render();
     expectFailureOnly();
     expect(button('Consumir')).toBeUndefined();
   });
@@ -123,6 +127,8 @@ describe('RmaPartsPanelComponent loading', () => {
     const reload$ = new Subject<RmaPartsResponse>();
     service.getRmaParts.mockReturnValue(reload$);
     button('Consumir')!.click(); render();
+    (fixture.componentInstance as any).consumptionForm.setValue({ replacementReason: 'Falha', componentBatch: '' });
+    button('Confirmar')!.click(); render();
     expectPending(fixture.nativeElement);
     expect(text()).not.toContain('R$ 20,00');
     expect(button('Consumir')).toBeUndefined();
@@ -230,6 +236,8 @@ describe('RmaPartsPanelComponent loading', () => {
     await setup();
     service.updateReservation.mockReturnValue(throwError(() => ({ error: { message: 'Saldo insuficiente.' } })));
     button('Consumir')!.click(); render();
+    (fixture.componentInstance as any).consumptionForm.setValue({ replacementReason: 'Falha', componentBatch: '' });
+    button('Confirmar')!.click(); render();
     expect(text()).toContain('Saldo insuficiente.');
     expect(text()).toContain('Capacitor');
     expect(text()).not.toContain('Não foi possível carregar as peças do RMA.');
@@ -243,6 +251,8 @@ describe('RmaPartsPanelComponent loading', () => {
     expect(service.getRmaParts).toHaveBeenCalledTimes(2);
     expect(service.list).toHaveBeenCalledTimes(2);
     button('Consumir')!.click(); render();
+    (fixture.componentInstance as any).consumptionForm.setValue({ replacementReason: 'Falha', componentBatch: '' });
+    button('Confirmar')!.click(); render();
     expect(service.getRmaParts).toHaveBeenCalledTimes(3);
     expect(service.list).toHaveBeenCalledTimes(3);
   });

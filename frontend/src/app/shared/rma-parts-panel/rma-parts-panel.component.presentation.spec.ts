@@ -4,6 +4,7 @@ import { Observable, Subject, of } from 'rxjs';
 import { PartMovementResponse, PartReservationResponse, PartResponse, RmaPartsResponse, RmaStatus } from '../../core/models';
 import { Permission } from '../../core/permissions';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { RmaRepairService } from '../../core/services/rma-repair.service';
 import { PartService } from '../../core/services/part.service';
 import { RmaPartsPanelComponent } from './rma-parts-panel.component';
 
@@ -64,6 +65,7 @@ describe('RmaPartsPanelComponent presentation', () => {
       imports: [RmaPartsPanelComponent],
       providers: [
         { provide: PartService, useValue: service },
+        { provide: RmaRepairService, useValue: { listExternalComponents: () => of([]) } },
         providePermissions(sources.permissions ?? profilePermissions(sources.role ?? 'TECHNICIAN'))
       ]
     }).compileComponents();
@@ -189,6 +191,8 @@ describe('RmaPartsPanelComponent presentation', () => {
     const pending = new Subject<PartReservationResponse>();
     await setup({ update: pending });
     button('Consumir')!.click(); render();
+    (fixture.componentInstance as any).consumptionForm.setValue({ replacementReason: 'Falha', componentBatch: '' });
+    button('Confirmar')!.click(); render();
     for (const label of ['Consumir', 'Efetivar reserva', 'Cancelar reserva']) expect(button(label)!.disabled).toBe(true);
     (items()[0].querySelectorAll('button')[1] as HTMLButtonElement).click();
     expect(service.updateReservation).toHaveBeenCalledTimes(1);

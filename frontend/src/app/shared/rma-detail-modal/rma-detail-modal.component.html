@@ -102,6 +102,8 @@
             (busyChange)="diagnosisBusy.set($event); busyChange.emit($event)" />
         </section>
 
+        @defer { <app-rma-repair-panel [rmaId]="rma().id" [rmaStatus]="rma().status" />
+        <app-rma-parts-panel [rmaId]="rma().id" [rmaStatus]="rma().status" /> } @placeholder { <div aria-busy="true"></div> }
         @let repair = repairFacts(rma());
         @if (repair.length > 0) {
           <section class="rma-detail__section detail-card">
