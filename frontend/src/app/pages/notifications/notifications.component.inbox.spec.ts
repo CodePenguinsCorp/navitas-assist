@@ -165,6 +165,42 @@ describe('NotificationsComponent inbox loading', () => {
     expect(text()).toContain('Mostra as 100 notificações mais recentes, dentro dos filtros selecionados.');
   });
 
+  it.each([
+    ['baixa', 'Baixa', 'LOW'], ['média', 'Média', 'MEDIUM'], ['alta', 'Alta', 'HIGH'],
+    ['low', 'Baixa', 'LOW'], ['medium', 'Média', 'MEDIUM'], ['high', 'Alta', 'HIGH']
+  ])('highlights the complete priority label for new RMA messages containing %s', async (value, label, priority) => {
+    await setup({ list: [of([{ ...NOTIFICATION, eventType: 'RMA_CREATED', message: `Cliente · Produto · prioridade ${value}. Aberto por admin.` }])] });
+    const highlight = root().querySelector('.notification-priority');
+    expect(highlight?.textContent).toBe(`Prioridade ${label}`);
+    expect(highlight?.getAttribute('data-priority')).toBe(priority);
+    expect(root().querySelector('.notification-message')?.textContent).toBe(`Cliente · Produto · Prioridade ${label}. Aberto por admin.`);
+  });
+
+  it('leaves assignment and SLA notifications unchanged even if their text mentions a priority', async () => {
+    const message = 'Cliente · Produto · prioridade alta.';
+    const items: NotificationResponse[] = ['RMA_ASSIGNED', 'SLA_WARNING', 'SLA_OVERDUE'].map((eventType, index) =>
+      ({ ...NOTIFICATION, id: index + 1, eventType: eventType as NotificationResponse['eventType'], message }));
+    await setup({ list: [of(items)] });
+    expect(root().querySelector('.notification-priority')).toBeNull();
+    expect([...root().querySelectorAll('.notification-message')].map(item => item.textContent)).toEqual([message, message, message]);
+  });
+
+  it('keeps a priority phrase in the actor name outside the highlighted RMA priority', async () => {
+    const message = 'Cliente · Produto · Prioridade Alta. Aberto por maria · prioridade baixa.';
+    await setup({ list: [of([{ ...NOTIFICATION, eventType: 'RMA_CREATED', message }])] });
+    const highlight = root().querySelector('.notification-priority');
+    expect(highlight?.textContent).toBe('Prioridade Alta');
+    expect(highlight?.getAttribute('data-priority')).toBe('HIGH');
+    expect(root().querySelector('.notification-message')?.textContent).toBe(message);
+  });
+
+  it('preserves unrecognized new RMA message text without interpreting HTML', async () => {
+    const message = '<img src=x onerror=alert(1)> · prioridade urgente.';
+    await setup({ list: [of([{ ...NOTIFICATION, eventType: 'RMA_CREATED', message }])] });
+    expect(root().querySelector('.notification-priority, .notification-message img')).toBeNull();
+    expect(root().querySelector('.notification-message')?.textContent).toBe(message);
+  });
+
   // Vermelho: o erro da ação substitui a única mensagem e a troca de aba apaga a falha de carga.
   it('keeps a load failure after an action error', async () => {
     await setup({ list: [failure(), failure(), failure()], markAllRead: failure() as never });

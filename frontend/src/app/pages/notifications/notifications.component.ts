@@ -23,6 +23,7 @@ import { RowActionComponent } from '../../shared/row-action/row-action.component
 import { CustomSelectComponent } from '../../shared/form-controls/custom-select/custom-select.component';
 import { NotificationService } from '../../core/services/notification.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
+import { priorityLabel } from '../../core/utils/rma-ui';
 import {
   NOTIFICATION_EVENT_LABELS,
   NOTIFICATION_SEVERITIES,
@@ -30,6 +31,7 @@ import {
   SNOOZE_OPTIONS,
   formatNotificationDateTime,
   internalRoute,
+  newRmaMessagePriority,
   severityClass
 } from '../../core/utils/notification-ui';
 
@@ -245,6 +247,11 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
       color: var(--muted);
     }
 
+    .notification-priority { font-weight: 600; }
+    .notification-priority[data-priority='LOW'] { color: var(--success-text); }
+    .notification-priority[data-priority='MEDIUM'] { color: var(--warning-text); }
+    .notification-priority[data-priority='HIGH'] { color: var(--danger-text); }
+
     .notification-actions {
       justify-content: flex-end;
       flex-wrap: nowrap;
@@ -327,6 +334,8 @@ export class NotificationsComponent {
   protected readonly profileOptionsState = signal<'idle' | 'loading' | 'ready' | 'failed'>('idle');
 
   protected readonly eventLabels = NOTIFICATION_EVENT_LABELS;
+  protected readonly newRmaMessagePriority = newRmaMessagePriority;
+  protected readonly priorityLabel = priorityLabel;
   protected readonly severityLabels = NOTIFICATION_SEVERITY_LABELS;
   protected readonly severities = NOTIFICATION_SEVERITIES;
   protected readonly severityOptions = NOTIFICATION_SEVERITIES.map((severity) => ({ value: severity, label: NOTIFICATION_SEVERITY_LABELS[severity] }));

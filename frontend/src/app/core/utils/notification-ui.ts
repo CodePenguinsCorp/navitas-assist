@@ -1,6 +1,21 @@
-import { NotificationEventType, NotificationSeverity } from '../models';
+import { NotificationEventType, NotificationResponse, NotificationSeverity, RmaPriority } from '../models';
 
 const APP_TIME_ZONE = 'America/Sao_Paulo';
+
+const NEW_RMA_PRIORITY_VALUES: Record<string, RmaPriority> = {
+  baixa: 'LOW', low: 'LOW', média: 'MEDIUM', medium: 'MEDIUM', alta: 'HIGH', high: 'HIGH'
+};
+
+/** Keep the priority recorded in the message, including older lowercase/English test data. */
+export function newRmaMessagePriority(notification: Pick<NotificationResponse, 'eventType' | 'message'>): { before: string; priority: RmaPriority; after: string } | null {
+  if (notification.eventType !== 'RMA_CREATED') return null;
+  const actorStart = notification.message.indexOf('. Aberto por ');
+  const context = actorStart < 0 ? notification.message : notification.message.slice(0, actorStart);
+  const match = [...context.matchAll(/(?:^| · )(prioridade\s+(baixa|média|alta|low|medium|high))(?=[.;]|$)/gi)].at(-1);
+  if (!match) return null;
+  const end = match.index + match[0].length;
+  return { before: notification.message.slice(0, end - match[1].length), priority: NEW_RMA_PRIORITY_VALUES[match[2].toLowerCase()], after: notification.message.slice(end) };
+}
 
 export const NOTIFICATION_EVENT_LABELS: Record<NotificationEventType, string> = {
   RMA_CREATED: 'Novo RMA',

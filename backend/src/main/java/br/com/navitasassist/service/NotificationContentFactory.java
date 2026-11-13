@@ -34,7 +34,7 @@ public class NotificationContentFactory {
         RmaStatus.RETURNED, "Devolvido",
         RmaStatus.IRREPARABLE, "Sem conserto"
     );
-    private static final Map<RmaPriority, String> PRIORITY_LABELS = Map.of(RmaPriority.HIGH, "alta", RmaPriority.MEDIUM, "média", RmaPriority.LOW, "baixa");
+    private static final Map<RmaPriority, String> PRIORITY_LABELS = Map.of(RmaPriority.HIGH, "Alta", RmaPriority.MEDIUM, "Média", RmaPriority.LOW, "Baixa");
 
     private final RmaSlaService rmaSlaService;
 
@@ -44,7 +44,7 @@ public class NotificationContentFactory {
         String stage = STATUS_LABELS.get(rma.getStatus());
 
         return switch (event.type()) {
-            case RMA_CREATED -> new Content("Novo RMA " + rma.getCode(), context + " · prioridade " + PRIORITY_LABELS.get(rma.getPriority()) + ". Aberto por " + event.actor() + ".", actionPath(rma));
+            case RMA_CREATED -> new Content("Novo RMA " + rma.getCode(), context + " · Prioridade " + PRIORITY_LABELS.get(rma.getPriority()) + ". Aberto por " + event.actor() + ".", actionPath(rma));
             case RMA_ASSIGNED -> new Content("RMA " + rma.getCode() + " atribuído a " + assignee, context + " · etapa " + stage + ". Atribuído por " + event.actor() + ".", actionPath(rma));
             case SLA_WARNING -> new Content("SLA do RMA " + rma.getCode() + " perto do limite", context + " · etapa " + stage + " vence em " + dueAt(rma) + ". Responsável: " + assignee + ".", actionPath(rma));
             case SLA_OVERDUE -> new Content("SLA do RMA " + rma.getCode() + " vencido", context + " · etapa " + stage + " venceu em " + dueAt(rma) + ". Responsável: " + assignee + ".", actionPath(rma));

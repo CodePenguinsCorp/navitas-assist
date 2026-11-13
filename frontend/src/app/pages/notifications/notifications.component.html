@@ -106,7 +106,11 @@
                   } @else {
                     <strong class="notification-title">{{ notification.title }}</strong>
                   }
-                  <p class="notification-message">{{ notification.message }}</p>
+                  @if (newRmaMessagePriority(notification); as priority) {
+                    <p class="notification-message">{{ priority.before }}<span class="notification-priority" [attr.data-priority]="priority.priority">Prioridade {{ priorityLabel(priority.priority) }}</span>{{ priority.after }}</p>
+                  } @else {
+                    <p class="notification-message">{{ notification.message }}</p>
+                  }
                 </div>
                 <div class="notification-actions">
                   @if (!notification.read) {
