@@ -626,6 +626,128 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.statusHistory[0].note").value("Priority changed from MEDIUM to HIGH"));
     }
 
+    @Test
+    void shouldCreateWithOptionalDueDateAndRecordIt() throws Exception {
+        LocalDate entry = LocalDate.now(BUSINESS_ZONE);
+        String created = postDueDateRma("DUE-CREATE", entry, entry.plusDays(10))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.dueDate").value(entry.plusDays(10).toString()))
+            .andExpect(jsonPath("$.dueDateHistory", hasSize(1)))
+            .andExpect(jsonPath("$.dueDateHistory[0].previousDueDate").doesNotExist())
+            .andExpect(jsonPath("$.dueDateHistory[0].newDueDate").value(entry.plusDays(10).toString()))
+            .andExpect(jsonPath("$.dueDateHistory[0].changedBy").value("admin"))
+            .andExpect(jsonPath("$.dueDateHistory[0].changedAt").exists())
+            .andReturn().getResponse().getContentAsString();
+        mockMvc.perform(get("/api/rmas/{id}", objectMapper.readTree(created).get("id").asLong()).with(asProfile("viewer", "VIEWER")))
+            .andExpect(jsonPath("$.dueDate").value(entry.plusDays(10).toString()));
+
+        postDueDateRma("DUE-NONE", entry, null)
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.dueDate").doesNotExist())
+            .andExpect(jsonPath("$.dueDateHistory", hasSize(0)));
+    }
+
+    @Test
+    void shouldChangeAndClearDueDateWithHistory() throws Exception {
+        LocalDate entry = LocalDate.now(BUSINESS_ZONE);
+        LocalDate first = entry.plusDays(5);
+        LocalDate second = entry.plusDays(9);
+        long id = createdId(postDueDateRma("DUE-EDIT", entry, first));
+
+        putJson(id, "{\"dueDate\":\"" + second + "\"}").andExpect(status().isOk())
+            .andExpect(jsonPath("$.dueDate").value(second.toString()))
+            .andExpect(jsonPath("$.dueDateHistory", hasSize(2)));
+        putJson(id, "{\"dueDate\":\"" + second + "\"}").andExpect(status().isOk())
+            .andExpect(jsonPath("$.dueDateHistory", hasSize(2)));
+        putJson(id, "{\"invoiceNumber\":\"NF-9\"}").andExpect(status().isOk())
+            .andExpect(jsonPath("$.dueDate").value(second.toString()))
+            .andExpect(jsonPath("$.dueDateHistory", hasSize(2)));
+        putJson(id, "{\"clearDueDate\":true}").andExpect(status().isOk())
+            .andExpect(jsonPath("$.dueDate").doesNotExist())
+            .andExpect(jsonPath("$.dueDateHistory", hasSize(3)))
+            .andExpect(jsonPath("$.dueDateHistory[0].previousDueDate").value(second.toString()))
+            .andExpect(jsonPath("$.dueDateHistory[0].newDueDate").doesNotExist())
+            .andExpect(jsonPath("$.dueDateHistory[0].changedBy").value("admin"))
+            .andExpect(jsonPath("$.dueDateHistory[1].previousDueDate").value(first.toString()))
+            .andExpect(jsonPath("$.dueDateHistory[1].newDueDate").value(second.toString()));
+        putJson(id, "{\"clearDueDate\":true}").andExpect(status().isOk())
+            .andExpect(jsonPath("$.dueDateHistory", hasSize(3)));
+    }
+
+    @Test
+    void shouldRejectDueDateAndClearTogether() throws Exception {
+        LocalDate entry = LocalDate.now(BUSINESS_ZONE);
+        long id = createdId(postDueDateRma("DUE-BOTH", entry, null));
+
+        putJson(id, "{\"dueDate\":\"" + entry.plusDays(2) + "\",\"clearDueDate\":true}")
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Provide a due date or clear it, not both."));
+    }
+
+    @Test
+    void shouldRejectDueDateBeforeEntryDate() throws Exception {
+        LocalDate entry = LocalDate.now(BUSINESS_ZONE);
+        postDueDateRma("DUE-BEFORE", entry, entry.minusDays(1))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Due date cannot be before entry date."));
+
+        long id = createdId(postDueDateRma("DUE-BEFORE-2", entry, null));
+        putJson(id, "{\"dueDate\":\"" + entry.minusDays(1) + "\"}")
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Due date cannot be before entry date."));
+        // A past due date is accepted when it is not before the entry date.
+        putJson(id, "{\"entryDate\":\"" + entry.minusDays(20) + "\",\"dueDate\":\"" + entry.minusDays(3) + "\"}")
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.dueDate").value(entry.minusDays(3).toString()));
+    }
+
+    @Test
+    void shouldRejectEntryDateAfterExistingDueDate() throws Exception {
+        LocalDate entry = LocalDate.now(BUSINESS_ZONE).minusDays(10);
+        long id = createdId(postDueDateRma("DUE-ENTRY", entry, entry.plusDays(2)));
+
+        putJson(id, "{\"entryDate\":\"" + entry.plusDays(3) + "\"}")
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Due date cannot be before entry date."));
+    }
+
+    @Test
+    void shouldRequireEditPermissionToChangeDueDate() throws Exception {
+        LocalDate entry = LocalDate.now(BUSINESS_ZONE);
+        long id = createdId(postDueDateRma("DUE-PERM", entry, null));
+
+        mockMvc.perform(put("/api/rmas/{id}", id).with(asProfile("viewer", "VIEWER")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"dueDate\":\"" + entry.plusDays(1) + "\"}"))
+            .andExpect(status().isForbidden());
+        assertEquals(null, rmaRecordRepository.findById(id).orElseThrow().getDueDate());
+    }
+
+    private org.springframework.test.web.servlet.ResultActions postDueDateRma(String sku, LocalDate entry, LocalDate dueDate) throws Exception {
+        Client client = new Client();
+        client.setLegalName("Due date client " + sku);
+        Client savedClient = clientRepository.save(client);
+        Product product = saveProduct(sku, "Due date product", 12);
+        Map<String, Object> payload = new java.util.HashMap<>(Map.of(
+            "clientId", savedClient.getId(),
+            "items", List.of(Map.of("productId", product.getId(), "serialNumber", sku)),
+            "purchaseDateUnknown", true,
+            "entryDate", entry.toString(),
+            "reportedFailure", "Não liga"
+        ));
+        if (dueDate != null) payload.put("dueDate", dueDate.toString());
+        return mockMvc.perform(post("/api/rmas").with(asProfile("admin", "ADMIN")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(payload)));
+    }
+
+    private org.springframework.test.web.servlet.ResultActions putJson(long id, String body) throws Exception {
+        return mockMvc.perform(put("/api/rmas/{id}", id).with(asProfile("admin", "ADMIN")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    private long createdId(org.springframework.test.web.servlet.ResultActions result) throws Exception {
+        return objectMapper.readTree(result.andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asLong();
+    }
+
     private Long saveBulkTestRma(String code) {
         Client client = new Client();
         client.setLegalName("Bulk test client " + code);

@@ -29,6 +29,7 @@ import br.com.navitasassist.rma.RmaBlockRequest;
 import br.com.navitasassist.rma.RmaBlockResolveRequest;
 import br.com.navitasassist.rma.RmaBulkStatusUpdateRequest;
 import br.com.navitasassist.rma.RmaAssignmentHistory;
+import br.com.navitasassist.rma.RmaDueDateHistory;
 import br.com.navitasassist.rma.RmaItem;
 import br.com.navitasassist.rma.RmaItemRequest;
 import br.com.navitasassist.rma.RmaPriority;
@@ -141,8 +142,12 @@ public class RmaService {
             null,
             null
         );
+        rma.setDueDate(request.dueDate());
         validateMandatoryFields(rma);
         validateDates(rma);
+        if (rma.getDueDate() != null) {
+            addDueDateHistory(rma, null, rma.getDueDate());
+        }
         rma.setCode(generateNextCode());
         addStatusHistory(rma, RmaStatus.RECEIVED, "RMA created");
 
@@ -152,6 +157,9 @@ public class RmaService {
     }
 
     public RmaResponse update(Long id, UpdateRmaRequest request) {
+        if (Boolean.TRUE.equals(request.clearDueDate()) && request.dueDate() != null) {
+            throw new BusinessException("Provide a due date or clear it, not both.");
+        }
         RmaRecord rma = getEntityForUpdate(id);
 
         if (request.clientId() != null) {
@@ -183,8 +191,16 @@ public class RmaService {
             request.trackingCode()
         );
 
+        LocalDate previousDueDate = rma.getDueDate();
+        LocalDate nextDueDate = Boolean.TRUE.equals(request.clearDueDate()) ? null
+            : request.dueDate() != null ? request.dueDate() : previousDueDate;
+        rma.setDueDate(nextDueDate);
+
         validateMandatoryFields(rma);
         validateDates(rma);
+        if (!Objects.equals(previousDueDate, nextDueDate)) {
+            addDueDateHistory(rma, previousDueDate, nextDueDate);
+        }
 
         return toResponse(rmaRecordRepository.save(rma));
     }
@@ -448,6 +464,9 @@ public class RmaService {
         if (manufacturedDates.stream().anyMatch(date -> rma.getEntryDate().isBefore(date))) {
             throw new BusinessException("Entry date cannot be before manufacturing date.");
         }
+        if (rma.getDueDate() != null && rma.getDueDate().isBefore(rma.getEntryDate())) {
+            throw new BusinessException("Due date cannot be before entry date.");
+        }
     }
 
     private void addStatusHistory(RmaRecord rma, RmaStatus status, String note) {
@@ -469,6 +488,15 @@ public class RmaService {
         history.setChangedAt(Instant.now());
         rma.addAssignmentHistory(history);
         return history;
+    }
+
+    private void addDueDateHistory(RmaRecord rma, LocalDate previous, LocalDate next) {
+        RmaDueDateHistory history = new RmaDueDateHistory();
+        history.setPreviousDueDate(previous);
+        history.setNewDueDate(next);
+        history.setChangedBy(currentUsername());
+        history.setChangedAt(Instant.now());
+        rma.addDueDateHistory(history);
     }
 
     private String generateNextCode() {

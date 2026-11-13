@@ -23,6 +23,8 @@ public record UpdateRmaRequest(
     @Size(max = 800) String testSummary,
     LocalDate shippedAt,
     @Size(max = 120) String carrier,
-    @Size(max = 120) String trackingCode
+    @Size(max = 120) String trackingCode,
+    LocalDate dueDate,
+    Boolean clearDueDate
 ) {
 }

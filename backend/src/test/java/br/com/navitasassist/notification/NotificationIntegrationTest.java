@@ -376,7 +376,7 @@ class NotificationIntegrationTest {
 
     private RmaResponse createRma() {
         RmaResponse created = rmaService.create(new CreateRmaRequest(client.getId(), List.of(new RmaItemRequest(product.getId(), null, "SER-NAV40-" + System.nanoTime(), null)), null, true,
-            LocalDate.now(), null, "Não liga", null, null, RmaPriority.HIGH, null, null, null));
+            LocalDate.now(), null, "Não liga", null, null, RmaPriority.HIGH, null, null, null, null));
         NotificationTestSupport.awaitIdle(notificationExecutor);
         return created;
     }

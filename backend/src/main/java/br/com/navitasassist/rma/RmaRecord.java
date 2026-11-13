@@ -132,6 +132,10 @@ public class RmaRecord extends AuditableEntity {
     @OrderBy("changedAt DESC")
     private List<RmaAssignmentHistory> assignmentHistory = new ArrayList<>();
 
+    @OneToMany(mappedBy = "rma", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("changedAt DESC, id DESC")
+    private List<RmaDueDateHistory> dueDateHistory = new ArrayList<>();
+
     public ItemIdentification getItemIdentification() {
         // JPA may reconstruct an all-null embedded value as null.
         if (itemIdentification == null) {
@@ -167,6 +171,11 @@ public class RmaRecord extends AuditableEntity {
     public void addAssignmentHistory(RmaAssignmentHistory history) {
         history.setRma(this);
         this.assignmentHistory.add(history);
+    }
+
+    public void addDueDateHistory(RmaDueDateHistory history) {
+        history.setRma(this);
+        this.dueDateHistory.add(0, history);
     }
 
     public void replaceItems(List<RmaItem> items) {

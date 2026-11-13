@@ -123,7 +123,7 @@ class NotificationEmailIntegrationTest {
         product.setSku("SKU-NAV40-MAIL");
         product.setName("Produto e-mail");
         product = productRepository.save(product);
-        rma = rmaService.create(new CreateRmaRequest(client.getId(), List.of(new RmaItemRequest(product.getId(), null, "SER-MAIL", null)), null, true, LocalDate.now(), null, "Falha", null, null, RmaPriority.LOW, null, null, null));
+        rma = rmaService.create(new CreateRmaRequest(client.getId(), List.of(new RmaItemRequest(product.getId(), null, "SER-MAIL", null)), null, true, LocalDate.now(), null, "Falha", null, null, RmaPriority.LOW, null, null, null, null));
         NotificationTestSupport.awaitIdle(notificationExecutor);
         reset(mailSender);
     }

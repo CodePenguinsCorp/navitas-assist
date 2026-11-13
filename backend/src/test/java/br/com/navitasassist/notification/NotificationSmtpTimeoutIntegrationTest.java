@@ -150,7 +150,7 @@ class NotificationSmtpTimeoutIntegrationTest {
         product.setSku("SKU-NAV40-SMTP");
         product.setName("Produto SMTP");
         product = productRepository.save(product);
-        RmaResponse rma = rmaService.create(new CreateRmaRequest(client.getId(), List.of(new RmaItemRequest(product.getId(), null, "SER-SMTP", null)), null, true, LocalDate.now(), null, "Falha", null, null, RmaPriority.LOW, null, null, null));
+        RmaResponse rma = rmaService.create(new CreateRmaRequest(client.getId(), List.of(new RmaItemRequest(product.getId(), null, "SER-SMTP", null)), null, true, LocalDate.now(), null, "Falha", null, null, RmaPriority.LOW, null, null, null, null));
         NotificationTestSupport.awaitIdle(notificationExecutor);
 
         long started = System.nanoTime();

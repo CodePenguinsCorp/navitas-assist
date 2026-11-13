@@ -52,6 +52,7 @@ public class RmaReportService {
             rmaRecordRepository.fetchItemsWithProducts(records);
             rmaRecordRepository.fetchStatusHistory(records);
             rmaRecordRepository.fetchAssignmentHistory(records);
+            rmaRecordRepository.fetchDueDateHistory(records);
             rmaRecordRepository.fetchBlockHistory(records);
         }
         List<RmaResponse> rmas = records.stream().map(rma -> RmaResponse.from(rma, rmaSlaService.calculate(rma, generatedAt))).toList();
