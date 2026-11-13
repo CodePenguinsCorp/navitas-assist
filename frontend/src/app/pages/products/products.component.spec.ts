@@ -315,12 +315,23 @@ describe('ProductsComponent collection layout and states', () => {
     expect(controlsIn(sections[1])).toEqual(['hardwareVersion', 'firmwareVersion']);
     expect(controlsIn(sections[2])).toEqual(['defaultWarrantyMonths', 'technicalNotes']);
 
-    const category = sections[0].querySelector<HTMLInputElement>('[formControlName="category"]')!;
-    expect(category.type).toBe('text');
-    expect(category.getAttribute('list')).toBe('product-categories');
-    expect(sections[0].querySelector('datalist#product-categories')).not.toBeNull();
+    // Categoria: campo de texto com sugestões no estilo do app, sem o datalist nativo.
+    const category = sections[0].querySelector<HTMLElement>('[formControlName="category"]')!;
+    expect(category.tagName.toLowerCase()).toBe('app-suggest-input');
+    const categoryInput = category.querySelector<HTMLInputElement>('input')!;
+    expect(categoryInput.type).toBe('text');
+    expect(categoryInput.getAttribute('list')).toBeNull();
+    expect(categoryInput.getAttribute('maxlength')).toBe('80');
+    expect(element.querySelector(`#${categoryInput.getAttribute('aria-labelledby')}`)?.textContent?.trim()).toBe('Categoria');
+    expect(dialog.querySelector('datalist')).toBeNull();
+    categoryInput.dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
+    expect(Array.from(category.querySelectorAll('[role="option"]')).map((option) => option.textContent?.trim())).toEqual(['Controle', 'Sensor']);
+    (category.querySelector('[role="option"]') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(categoryInput.value).toBe('Controle');
     expect(dialog.textContent).toContain('SKU (máx. 20 caracteres)');
-    expect(dialog.textContent).toContain('Categoria (máx. 80 caracteres)');
+    expect(dialog.textContent).not.toContain('Categoria (máx.');
     expect(dialog.textContent).toContain('Observações técnicas (máx. 1000 caracteres)');
     expect(dialog.textContent).not.toContain('Preencha os dados mínimos');
   });
@@ -562,10 +573,13 @@ describe('ProductsComponent pending save lifecycle', () => {
   describe.each(['create', 'edit'] as const)('%s', (mode) => {
     it.each(['Sensor', 'Robótica'])('suggests existing categories and saves the typed category %s', (category) => {
       openEditor(mode);
-      const input = page.querySelector<HTMLInputElement>('[formControlName="category"]')!;
-      const suggestions = page.querySelector<HTMLDataListElement>(`datalist[id="${input.getAttribute('list')}"]`);
-      expect(suggestions).not.toBeNull();
-      expect(Array.from(suggestions!.options, (option) => option.value)).toEqual(['Controle', 'Sensor']);
+      const input = page.querySelector<HTMLInputElement>('[formControlName="category"] input')!;
+      const suggestions = () => {
+        page.querySelector<HTMLInputElement>('[formControlName="category"] input')!.dispatchEvent(new Event('focus'));
+        fixture.detectChanges();
+        return Array.from(page.querySelectorAll('[formControlName="category"] [role="option"]'), (option) => option.textContent?.trim());
+      };
+      expect(suggestions()).toEqual(['Controle', 'Sensor']);
       if (mode === 'edit') expect(input.value).toBe('Controle');
 
       enterFields(mode);
@@ -583,9 +597,8 @@ describe('ProductsComponent pending save lifecycle', () => {
       expect(page.querySelector('.modal-overlay')).toBeNull();
 
       openEditor(mode);
-      const refreshed = page.querySelector<HTMLDataListElement>('datalist')!;
-      expect(Array.from(refreshed.options, (option) => option.value)).toEqual(categories);
-      if (mode === 'edit') expect(page.querySelector<HTMLInputElement>('[formControlName="category"]')!.value).toBe(category);
+      expect(suggestions()).toEqual(categories);
+      if (mode === 'edit') expect(page.querySelector<HTMLInputElement>('[formControlName="category"] input')!.value).toBe(category);
     });
 
     it.each(['overlay', 'close'] as const)('keeps a pending save open through %s and closes on success', (control) => {

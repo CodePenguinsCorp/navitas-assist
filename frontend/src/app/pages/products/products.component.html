@@ -214,18 +214,21 @@
             }
           </label>
 
-          <label class="field-group field-group--full">
-            <span>Categoria (máx. {{ limits.category }} caracteres)</span>
-            <input type="text" formControlName="category" list="product-categories" placeholder="Selecione ou digite uma categoria" [attr.maxlength]="limits.category" />
-            <datalist id="product-categories">
-              @for (category of summary().categories; track category) {
-                <option [value]="category"></option>
-              }
-            </datalist>
+          <div class="field-group field-group--full">
+            <span id="product-category-label">Categoria</span>
+            <app-suggest-input
+              formControlName="category"
+              labelledBy="product-category-label"
+              listLabel="Categorias existentes"
+              placeholder="Digite ou escolha uma categoria"
+              [suggestions]="summary().categories"
+              [maxlength]="limits.category"
+              [invalid]="hasError('category')"
+            />
             @if (hasError('category')) {
               <small class="field-error">A categoria excede o limite permitido.</small>
             }
-          </label>
+          </div>
         </fieldset>
 
         <fieldset class="form-section">
