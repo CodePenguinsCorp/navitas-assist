@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.EnumSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -31,6 +32,9 @@ import br.com.navitasassist.rma.RmaBulkStatusUpdateRequest;
 import br.com.navitasassist.rma.RmaAssignmentHistory;
 import br.com.navitasassist.rma.RmaDueDateHistory;
 import br.com.navitasassist.rma.RmaItem;
+import br.com.navitasassist.rma.RmaItemWarrantyRequest;
+import br.com.navitasassist.rma.RmaItemWarrantyHistory;
+import br.com.navitasassist.rma.WarrantyStatus;
 import br.com.navitasassist.rma.RmaItemRequest;
 import br.com.navitasassist.rma.RmaPriority;
 import br.com.navitasassist.rma.RmaRecord;
@@ -72,15 +76,16 @@ public class RmaService {
 
     @Transactional(readOnly = true)
     public List<RmaResponse> search(String query, RmaStatus status) {
-        return rmaRecordRepository.search(trimToNull(query), status).stream().map(this::toResponse).toList();
+        List<RmaRecord> records = rmaRecordRepository.search(trimToNull(query), status);
+        loadWarrantyHistory(records);
+        return records.stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
     public PageResponse<RmaResponse> searchPage(String query, RmaStatus status, Integer page, Integer size) {
-        return PageResponse.from(
-            rmaRecordRepository.searchPage(trimToNull(query), status, PageParams.of(page, size)),
-            this::toResponse
-        );
+        var records = rmaRecordRepository.searchPage(trimToNull(query), status, PageParams.of(page, size));
+        loadWarrantyHistory(records.getContent());
+        return PageResponse.from(records, this::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -108,10 +113,16 @@ public class RmaService {
             throw new BusinessException("Provide a batch number or a serial number to load history.");
         }
 
-        return rmaRecordRepository.findHistory(normalizedBatch, normalizedSerial)
-            .stream()
-            .map(this::toResponse)
-            .toList();
+        List<RmaRecord> records = rmaRecordRepository.findHistory(normalizedBatch, normalizedSerial);
+        loadWarrantyHistory(records);
+        return records.stream().map(this::toResponse).toList();
+    }
+
+    private void loadWarrantyHistory(List<RmaRecord> records) {
+        if (!records.isEmpty()) {
+            rmaRecordRepository.fetchItemsWithProducts(records);
+            rmaRecordRepository.fetchItemWarrantyHistory(records);
+        }
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -167,7 +178,7 @@ public class RmaService {
             rma.setClient(clientService.getEntityById(request.clientId()));
         }
         if (request.items() != null) {
-            rma.replaceItems(buildItems(request.items()));
+            replaceItemsPreservingWarranty(rma, request.items());
             syncLegacyItem(rma);
         }
         if (request.priority() != null && request.priority() != rma.getPriority()) {
@@ -208,6 +219,42 @@ public class RmaService {
 
     public RmaResponse updateStatus(Long id, RmaStatusUpdateRequest request) {
         return applyStatusChange(getEntityForUpdate(id), request);
+    }
+
+    public RmaResponse updateWarranty(Long id, Long itemId, RmaItemWarrantyRequest request) {
+        RmaRecord rma = getEntityForUpdate(id);
+        RmaItem item = rma.getItems().stream().filter(candidate -> candidate.getId().equals(itemId)).findFirst()
+            .orElseThrow(() -> new ResourceNotFoundException("Item não encontrado neste RMA: " + itemId));
+        if (CLOSED_STATUSES.contains(rma.getStatus())) {
+            throw new BusinessException("Não é possível ajustar a garantia de um RMA encerrado.");
+        }
+        WarrantyStatus next = null;
+        if (request.override() != null) {
+            if (!request.override().equals("IN_WARRANTY") && !request.override().equals("OUT_OF_WARRANTY")) {
+                throw new BusinessException("Garantia manual deve ser IN_WARRANTY ou OUT_OF_WARRANTY.");
+            }
+            next = WarrantyStatus.valueOf(request.override());
+        }
+        String reason = trimToNull(request.reason());
+        if ((next != null && reason == null) || (reason != null && reason.length() > 255)) {
+            throw new BusinessException("Informe um motivo de até 255 caracteres para ajustar a garantia.");
+        }
+        if (next == null && item.getWarrantyOverride() == null) return toResponse(rma);
+
+        Instant now = Instant.now();
+        RmaItemWarrantyHistory history = new RmaItemWarrantyHistory();
+        history.setPreviousOverride(item.getWarrantyOverride());
+        history.setNewOverride(next);
+        history.setReason(reason);
+        history.setChangedBy(currentUsername());
+        history.setChangedAt(now);
+        item.addWarrantyHistory(history);
+        item.setWarrantyOverride(next);
+        item.setWarrantyOverrideReason(next == null ? null : reason);
+        item.setWarrantyOverrideBy(next == null ? null : history.getChangedBy());
+        item.setWarrantyOverrideAt(next == null ? null : now);
+        rma.setUpdatedAt(now);
+        return toResponse(rmaRecordRepository.save(rma));
     }
 
     public RmaResponse updateStatusInBulk(Long id, RmaBulkStatusUpdateRequest request) {
@@ -339,6 +386,25 @@ public class RmaService {
             }
             return item;
         }).toList();
+    }
+
+    private void replaceItemsPreservingWarranty(RmaRecord rma, List<RmaItemRequest> requests) {
+        List<RmaItem> available = new ArrayList<>(rma.getItems());
+        List<RmaItem> replacements = buildItems(requests).stream().map(candidate -> {
+            RmaItem existing = available.stream().filter(item ->
+                Objects.equals(item.getProduct().getId(), candidate.getProduct().getId())
+                    && Objects.equals(item.getItemIdentification().getBatchNumber(), candidate.getItemIdentification().getBatchNumber())
+                    && Objects.equals(item.getItemIdentification().getSerialNumber(), candidate.getItemIdentification().getSerialNumber()))
+                .findFirst().orElse(null);
+            if (existing == null) return candidate;
+            available.remove(existing);
+            existing.getItemIdentification().setManufacturedAt(candidate.getItemIdentification().getManufacturedAt());
+            return existing;
+        }).sorted(java.util.Comparator.comparing(RmaItem::getId, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))).toList();
+        if (available.stream().anyMatch(item -> !item.getWarrantyHistory().isEmpty())) {
+            throw new BusinessException("Não é possível remover um item com histórico de ajuste de garantia.");
+        }
+        rma.replaceItems(replacements);
     }
 
     private void syncLegacyItem(RmaRecord rma) {

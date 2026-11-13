@@ -51,6 +51,7 @@ public class RmaReportService {
         List<RmaRecord> records = rmaRecordRepository.searchReport(entryFrom, entryTo, filters.status(), filters.clientId());
         if (!records.isEmpty()) {
             rmaRecordRepository.fetchItemsWithProducts(records);
+            rmaRecordRepository.fetchItemWarrantyHistory(records);
             rmaRecordRepository.fetchStatusHistory(records);
             rmaRecordRepository.fetchAssignmentHistory(records);
             rmaRecordRepository.fetchDueDateHistory(records);

@@ -60,7 +60,19 @@ O enum `WarrantyStatus`, usado no backend e no frontend, representa três situa�
 | `IN_WARRANTY` | Em garantia | Entrada até o vencimento, inclusive. |
 | `OUT_OF_WARRANTY` | Fora de garantia | Entrada após o vencimento. |
 
-O prazo é registrado em cada novo item para preservar a garantia quando o cadastro do produto mudar. A API disponibiliza prazo, vencimento e situação em `items[]`; as telas exibem esses dados por produto. O cálculo é automático, sem edição manual da situação.
+O prazo é registrado em cada novo item para preservar a garantia quando o cadastro do produto mudar. Em `items[]`, `warrantyStatus` é a situação efetiva (ajuste manual, quando existe; caso contrário, cálculo automático). `calculatedWarrantyStatus` mantém a situação calculada e `warrantyOverride` contém `{ status, reason, changedBy, changedAt }`, ou `null`. O cálculo do vencimento permanece automático.
+
+Quem tem `rma.editar` pode ajustar um item com `PUT /api/rmas/{rmaId}/items/{itemId}/warranty`:
+
+```json
+{ "override": "IN_WARRANTY", "reason": "Cortesia" }
+```
+
+`override` aceita `IN_WARRANTY`, `OUT_OF_WARRANTY` ou `null` (voltar ao automático). Ao definir o ajuste, o motivo é obrigatório, com até 255 caracteres após remover espaços das extremidades; na remoção ele é opcional, com o mesmo limite. RMAs encerrados (`COMPLETED`, `RETURNED`, `IRREPARABLE`) retornam 400, e item que não pertence ao RMA retorna 404. Valores e motivos inválidos retornam 400 com mensagem em português.
+
+Cada ajuste ou remoção é registrado na mesma transação e exposto em `RmaResponse.warrantyHistory[]`, do mais recente para o mais antigo, com `itemId`, `previousOverride`, `newOverride`, `reason`, `changedBy` e `changedAt`. A edição geral preserva o ajuste e o prazo original dos itens reconhecidos por produto, lote e série; não permite remover ou substituir um item com histórico de ajuste, para preservar a auditoria.
+
+O Kanban (inclusive filtros de visões salvas), listagens e relatórios consomem a situação efetiva em `items[].warrantyStatus`. Esses filtros e os indicadores de garantia são aplicados pelos consumidores da API; não há fórmula paralela em SQL/JPQL. O backend carrega o histórico de garantia em lote nas listagens e relatórios. A migração aditiva `V3__rma_item_warranty_override.sql` adiciona as colunas anuláveis e a tabela de auditoria, preservando V1/V2 e os itens existentes.
 
 ## Responsáveis pelos RMAs
 
@@ -84,7 +96,7 @@ Filtros opcionais combinados: `entryFrom` e `entryTo` (`YYYY-MM-DD`, inclusivos,
 
 - **Laudo técnico:** falha relatada, produtos, diagnóstico, tipo de falha, causa, observações, técnico, reparo, peças e testes. Diagnóstico ausente aparece como pendente.
 - **Tempo por etapa:** tempo corrido na etapa atual por RMA, quantidade, média e maior tempo por etapa ativa. Usa o período atual de `stagePeriods` (registros consecutivos da mesma etapa formam um período, então notas não reiniciam a etapa) e deixa os encerrados fora das métricas ativas. É uma fotografia no instante `generatedAt`, atualizada ao consultar novamente.
-- **Garantia:** prazo, vencimento e situação por produto, considerando os snapshots e a data de entrada. A regra atual é automática; não existem overrides manuais.
+- **Garantia:** prazo e vencimento por produto, considerando os snapshots e a data de entrada. A situação é a efetiva, incluindo ajustes manuais; o cálculo automático permanece disponível separadamente na API.
 - **Devoluções:** RMAs atualmente em `RETURNED`, com expedição, transportadora e rastreio; não é uma contagem histórica de passagens pelo status.
 
 Instantes são exibidos em `America/Sao_Paulo`. Datas civis preservam o dia recebido. Os relatórios são consultas em tela, sem alteração de schema e sem download de arquivos nesta entrega.
@@ -363,7 +375,7 @@ A API autoriza por **permissão**, não por perfil. As permissões efetivas de u
 | Consultar RMAs, Kanban e dashboard (`GET /api/rmas/**`) | `rma.ver` |
 | Criar, alterar ou excluir clientes e produtos | `cadastros.editar` |
 | Abrir RMA | `rma.abrir` |
-| Alterar dados gerais de RMA | `rma.editar` |
+| Alterar dados gerais de RMA e ajustar garantia dos itens | `rma.editar` |
 | Alterar o status de RMA (inclusive em lote) | `rma.status` |
 | Atribuir ou remover responsável do RMA | `rma.responsavel` |
 | Registrar ou alterar diagnóstico | `rma.diagnosticar` |

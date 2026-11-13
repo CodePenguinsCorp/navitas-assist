@@ -109,6 +109,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/rmas/*/blocks").hasAuthority(Codes.RMA_IMPEDIMENTOS)
                 .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/blocks/*").hasAuthority(Codes.RMA_IMPEDIMENTOS)
                 .requestMatchers(HttpMethod.PUT, "/api/clients/*", "/api/products/*").hasAuthority(Codes.CADASTROS_EDITAR)
+                .requestMatchers(HttpMethod.PUT, "/api/rmas/*/items/*/warranty").hasAuthority(Codes.RMA_EDITAR)
                 .requestMatchers(HttpMethod.PUT, "/api/rmas/*").hasAuthority(Codes.RMA_EDITAR)
                 .requestMatchers(HttpMethod.DELETE, "/api/clients/*", "/api/products/*").hasAuthority(Codes.CADASTROS_EDITAR)
                 .requestMatchers(HttpMethod.GET, "/api/protocols/**").authenticated()

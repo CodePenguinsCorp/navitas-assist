@@ -15,18 +15,20 @@ public record RmaItemResponse(
     LocalDate manufacturedAt,
     int warrantyMonths,
     LocalDate warrantyExpiresAt,
-    WarrantyStatus warrantyStatus
+    WarrantyStatus warrantyStatus,
+    WarrantyStatus calculatedWarrantyStatus,
+    WarrantyOverrideResponse warrantyOverride
 ) {
     public static RmaItemResponse from(RmaItem item) {
         int months = item.getWarrantyMonths() == null ? item.getProduct().getDefaultWarrantyMonths() : item.getWarrantyMonths();
-        return from(item.getId(), item.getProduct(), item.getItemIdentification(), ItemWarranty.calculate(item.getRma(), months));
+        return from(item.getId(), item.getProduct(), item.getItemIdentification(), ItemWarranty.calculate(item.getRma(), months), WarrantyOverrideResponse.from(item));
     }
 
     public static RmaItemResponse fromLegacy(RmaRecord rma) {
-        return from(null, rma.getProduct(), rma.getItemIdentification(), ItemWarranty.calculate(rma, rma.getProduct().getDefaultWarrantyMonths()));
+        return from(null, rma.getProduct(), rma.getItemIdentification(), ItemWarranty.calculate(rma, rma.getProduct().getDefaultWarrantyMonths()), null);
     }
 
-    private static RmaItemResponse from(Long id, Product product, ItemIdentification identification, ItemWarranty warranty) {
+    private static RmaItemResponse from(Long id, Product product, ItemIdentification identification, ItemWarranty warranty, WarrantyOverrideResponse override) {
         return new RmaItemResponse(
             id,
             product.getId(),
@@ -37,7 +39,9 @@ public record RmaItemResponse(
             identification.getManufacturedAt(),
             warranty.months(),
             warranty.expiresAt(),
-            warranty.status()
+            override == null ? warranty.status() : override.status(),
+            warranty.status(),
+            override
         );
     }
 }

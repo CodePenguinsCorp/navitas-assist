@@ -55,6 +55,9 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
     @Query("select distinct r from RmaRecord r left join fetch r.items i left join fetch i.product where r in :rmas")
     List<RmaRecord> fetchItemsWithProducts(@Param("rmas") List<RmaRecord> rmas);
 
+    @Query("select distinct i from RmaItem i left join fetch i.warrantyHistory where i.rma in :rmas")
+    List<br.com.navitasassist.rma.RmaItem> fetchItemWarrantyHistory(@Param("rmas") List<RmaRecord> rmas);
+
     @Query("select distinct r from RmaRecord r left join fetch r.statusHistory where r in :rmas")
     List<RmaRecord> fetchStatusHistory(@Param("rmas") List<RmaRecord> rmas);
 

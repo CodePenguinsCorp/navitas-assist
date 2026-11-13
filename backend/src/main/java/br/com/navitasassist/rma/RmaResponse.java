@@ -43,6 +43,7 @@ public record RmaResponse(
     List<RmaStagePeriodResponse> stagePeriods,
     List<RmaAssignmentHistoryResponse> assignmentHistory,
     List<RmaDueDateHistoryResponse> dueDateHistory,
+    List<RmaItemWarrantyHistoryResponse> warrantyHistory,
     RmaBlockResponse currentBlock,
     List<RmaBlockResponse> blockHistory,
     Instant createdAt,
@@ -91,6 +92,10 @@ public record RmaResponse(
             stagePeriods,
             rma.getAssignmentHistory().stream().map(RmaAssignmentHistoryResponse::from).toList(),
             rma.getDueDateHistory().stream().map(RmaDueDateHistoryResponse::from).toList(),
+            rma.getItems().stream().flatMap(item -> item.getWarrantyHistory().stream())
+                .sorted(java.util.Comparator.comparing(RmaItemWarrantyHistory::getChangedAt).thenComparing(RmaItemWarrantyHistory::getId,
+                    java.util.Comparator.nullsFirst(java.util.Comparator.naturalOrder())).reversed())
+                .map(RmaItemWarrantyHistoryResponse::from).toList(),
             rma.getBlockHistory().stream().filter(block -> block.getResolvedAt() == null).findFirst().map(RmaBlockResponse::from).orElse(null),
             rma.getBlockHistory().stream().map(RmaBlockResponse::from).toList(),
             rma.getCreatedAt(),
