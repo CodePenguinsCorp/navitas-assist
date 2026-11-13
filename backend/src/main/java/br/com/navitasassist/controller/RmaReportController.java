@@ -1,7 +1,7 @@
 package br.com.navitasassist.controller;
 
+import br.com.navitasassist.rma.RmaReportPageResponse;
 import br.com.navitasassist.rma.RmaReportRequest;
-import br.com.navitasassist.rma.RmaReportResponse;
 import br.com.navitasassist.service.RmaReportService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ public class RmaReportController {
     private final RmaReportService rmaReportService;
 
     @GetMapping
-    public RmaReportResponse search(@Valid @ModelAttribute RmaReportRequest filters) {
+    public RmaReportPageResponse search(@Valid @ModelAttribute RmaReportRequest filters) {
         return rmaReportService.search(filters);
     }
 }

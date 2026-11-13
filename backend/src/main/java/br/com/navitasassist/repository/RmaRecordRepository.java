@@ -52,6 +52,36 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
     List<RmaRecord> searchReport(@Param("entryFrom") LocalDate entryFrom, @Param("entryTo") LocalDate entryTo,
         @Param("status") RmaStatus status, @Param("clientId") Long clientId);
 
+    @Query(value = """
+        select r from RmaRecord r
+        join fetch r.client
+        join fetch r.product
+        left join fetch r.diagnosis
+        where r.entryDate >= :entryFrom
+          and r.entryDate <= :entryTo
+          and (:status is null or r.status = :status)
+          and (:clientId is null or r.client.id = :clientId)
+        order by r.entryDate desc, r.id desc
+        """, countQuery = """
+        select count(r) from RmaRecord r
+        where r.entryDate >= :entryFrom
+          and r.entryDate <= :entryTo
+          and (:status is null or r.status = :status)
+          and (:clientId is null or r.client.id = :clientId)
+        """)
+    Page<RmaRecord> searchReportPage(@Param("entryFrom") LocalDate entryFrom, @Param("entryTo") LocalDate entryTo,
+        @Param("status") RmaStatus status, @Param("clientId") Long clientId, Pageable pageable);
+
+    @Query("""
+        select count(r) from RmaRecord r
+        where r.entryDate >= :entryFrom
+          and r.entryDate <= :entryTo
+          and (:status is null or r.status = :status)
+          and (:clientId is null or r.client.id = :clientId)
+        """)
+    long countReport(@Param("entryFrom") LocalDate entryFrom, @Param("entryTo") LocalDate entryTo,
+        @Param("status") RmaStatus status, @Param("clientId") Long clientId);
+
     @Query("select distinct r from RmaRecord r left join fetch r.items i left join fetch i.product where r in :rmas")
     List<RmaRecord> fetchItemsWithProducts(@Param("rmas") List<RmaRecord> rmas);
 

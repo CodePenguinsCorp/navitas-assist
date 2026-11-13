@@ -9,7 +9,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -81,15 +80,15 @@ class RmaReportIntegrationTest {
                 .param("entryFrom", "2026-10-01").param("entryTo", "2026-10-20")
                 .param("status", "RECEIVED").param("clientId", client.getId().toString()))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.rmas", hasSize(3)))
-            .andExpect(jsonPath("$.rmas[0].code").value("RMA-END-2"))
-            .andExpect(jsonPath("$.rmas[1].entryDate").value("2026-10-20"))
-            .andExpect(jsonPath("$.rmas[2].entryDate").value("2026-10-01"))
+            .andExpect(jsonPath("$.rmas.content", hasSize(3)))
+            .andExpect(jsonPath("$.rmas.content[0].code").value("RMA-END-2"))
+            .andExpect(jsonPath("$.rmas.content[1].entryDate").value("2026-10-20"))
+            .andExpect(jsonPath("$.rmas.content[2].entryDate").value("2026-10-01"))
             .andExpect(jsonPath("$.generatedAt").isNotEmpty());
     }
 
     @Test
-    void returnsPersistedDiagnosisWarrantyPerItemAndShippingWithoutInventedOverrides() throws Exception {
+    void returnsALeanRowWithPrimaryItemEffectiveWarrantyAndFailureType() throws Exception {
         RmaRecord rma = saveRma("RMA-DETAIL", "2026-10-20", RmaStatus.RETURNED, client);
         rma.setPurchaseDateUnknown(false);
         rma.setPurchaseDate(LocalDate.parse("2025-10-20"));
@@ -97,6 +96,7 @@ class RmaReportIntegrationTest {
         covered.setProduct(product);
         covered.setWarrantyMonths(12);
         covered.getItemIdentification().setSerialNumber("SERIAL-A");
+        covered.getItemIdentification().setBatchNumber("LOTE-A");
         RmaItem expired = new RmaItem();
         expired.setProduct(product);
         expired.setWarrantyMonths(6);
@@ -104,48 +104,50 @@ class RmaReportIntegrationTest {
         rma.replaceItems(List.of(covered, expired));
         Diagnosis diagnosis = new Diagnosis();
         diagnosis.setFoundFailure("Conector danificado");
+        diagnosis.setFailureType(br.com.navitasassist.diagnosis.FailureType.COMMUNICATION);
         diagnosis.setDiagnosedAt(LocalDate.parse("2026-10-20"));
         diagnosis.setTechnicianName("Técnico responsável");
         rma.setDiagnosis(diagnosis);
-        rma.setRepairSummary("Conector substituído");
-        rma.setTestSummary("Teste funcional aprovado");
-        rma.setShippedAt(LocalDate.parse("2026-10-21"));
-        rma.setCarrier("Transportadora");
-        rma.setTrackingCode("BR123");
         rmas.saveAndFlush(rma);
 
         mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31").with(asProfile("tech", "TECHNICIAN")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.rmas[0].diagnosis.foundFailure").value("Conector danificado"))
-            .andExpect(jsonPath("$.rmas[0].repairSummary").value("Conector substituído"))
-            .andExpect(jsonPath("$.rmas[0].testSummary").value("Teste funcional aprovado"))
-            .andExpect(jsonPath("$.rmas[0].items", hasSize(2)))
-            .andExpect(jsonPath("$.rmas[0].items[0].warrantyStatus").value("IN_WARRANTY"))
-            .andExpect(jsonPath("$.rmas[0].items[1].warrantyStatus").value("OUT_OF_WARRANTY"))
-            .andExpect(jsonPath("$.rmas[0].warrantyOverridden").doesNotExist())
-            .andExpect(jsonPath("$.rmas[0].shippedAt").value("2026-10-21"))
-            .andExpect(jsonPath("$.rmas[0].trackingCode").value("BR123"))
-            .andExpect(jsonPath("$.rmas[0].deadline.status").value("CLOSED"))
-            .andExpect(jsonPath("$.rmas[0].sla").doesNotExist());
+            .andExpect(jsonPath("$.rmas.content[0].code").value("RMA-DETAIL"))
+            .andExpect(jsonPath("$.rmas.content[0].clientName").value("Cliente de relatórios"))
+            .andExpect(jsonPath("$.rmas.content[0].productName").value("Controlador"))
+            .andExpect(jsonPath("$.rmas.content[0].serialNumber").value("SERIAL-A"))
+            .andExpect(jsonPath("$.rmas.content[0].batchNumber").value("LOTE-A"))
+            .andExpect(jsonPath("$.rmas.content[0].itemCount").value(2))
+            .andExpect(jsonPath("$.rmas.content[0].warrantyStatuses", hasSize(2)))
+            .andExpect(jsonPath("$.rmas.content[0].warrantyStatuses[0]").value("IN_WARRANTY"))
+            .andExpect(jsonPath("$.rmas.content[0].warrantyStatuses[1]").value("OUT_OF_WARRANTY"))
+            .andExpect(jsonPath("$.rmas.content[0].failureType").value("COMMUNICATION"))
+            .andExpect(jsonPath("$.rmas.content[0].statusHistory").doesNotExist())
+            .andExpect(jsonPath("$.rmas.content[0].items").doesNotExist());
     }
 
     @Test
-    void measuresCurrentStageAtTheSingleReportInstantWithoutResettingOnNotes() throws Exception {
-        RmaRecord rma = saveRma("RMA-AGING", "2026-10-20", RmaStatus.IN_DIAGNOSIS, client);
-        Instant entry = Instant.parse("2026-10-20T23:30:00Z");
-        addHistory(rma, RmaStatus.RECEIVED, entry.minusSeconds(3600));
-        addHistory(rma, RmaStatus.IN_DIAGNOSIS, entry);
-        addHistory(rma, RmaStatus.IN_DIAGNOSIS, entry.plusSeconds(1800));
-        rmas.saveAndFlush(rma);
-        var result = mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31").with(asProfile("admin", "ADMIN")))
-            .andExpect(status().isOk()).andReturn();
-        var body = objectMapper.readTree(result.getResponse().getContentAsString());
-        assertEquals(Duration.between(entry, Instant.parse(body.get("generatedAt").asText())).getSeconds(),
-            body.at("/rmas/0/stagePeriods/1/durationSeconds").asLong());
-        assertEquals("2026-10-20T23:30:00Z", body.at("/rmas/0/stagePeriods/1/enteredAt").asText());
-        assertEquals(2, body.at("/rmas/0/stagePeriods").size());
-        assertTrue(body.at("/rmas/0/stagePeriods/1/leftAt").isMissingNode() || body.at("/rmas/0/stagePeriods/1/leftAt").isNull());
-        assertEquals(3600, body.at("/rmas/0/stagePeriods/0/durationSeconds").asLong());
+    void paginatesOnTheServerWithDefaultAndBoundedSize() throws Exception {
+        for (int index = 0; index < 25; index++) {
+            saveRma("RMA-P" + String.format("%02d", index), "2026-10-01", RmaStatus.RECEIVED, client);
+        }
+        mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31").with(asProfile("a", "ADMIN")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.rmas.content", hasSize(20)))
+            .andExpect(jsonPath("$.rmas.page").value(0))
+            .andExpect(jsonPath("$.rmas.size").value(20))
+            .andExpect(jsonPath("$.rmas.totalElements").value(25))
+            .andExpect(jsonPath("$.rmas.totalPages").value(2))
+            .andExpect(jsonPath("$.rmas.content[0].code").value("RMA-P24"));
+        mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31")
+                .param("page", "1").param("size", "20").with(asProfile("a", "ADMIN")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.rmas.content", hasSize(5)))
+            .andExpect(jsonPath("$.rmas.content[4].code").value("RMA-P00"));
+        mockMvc.perform(get("/api/reports/rmas").param("size", "101").with(asProfile("a", "ADMIN")))
+            .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/reports/rmas").param("page", "-1").with(asProfile("a", "ADMIN")))
+            .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -153,13 +155,13 @@ class RmaReportIntegrationTest {
         saveRma("RMA-OLD", "2026-09-30", RmaStatus.RECEIVED, client);
         saveRma("RMA-NEW", "2026-10-01", RmaStatus.RECEIVED, client);
         mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-10-01").with(asProfile("a", "ADMIN")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.rmas", hasSize(1)))
-            .andExpect(jsonPath("$.rmas[0].code").value("RMA-NEW"));
+            .andExpect(status().isOk()).andExpect(jsonPath("$.rmas.content", hasSize(1)))
+            .andExpect(jsonPath("$.rmas.content[0].code").value("RMA-NEW"));
         mockMvc.perform(get("/api/reports/rmas").param("entryTo", "2026-09-30").with(asProfile("a", "ADMIN")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.rmas", hasSize(1)))
-            .andExpect(jsonPath("$.rmas[0].code").value("RMA-OLD"));
+            .andExpect(status().isOk()).andExpect(jsonPath("$.rmas.content", hasSize(1)))
+            .andExpect(jsonPath("$.rmas.content[0].code").value("RMA-OLD"));
         mockMvc.perform(get("/api/reports/rmas").param("clientId", "999999").with(asProfile("a", "ADMIN")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.rmas", hasSize(0)));
+            .andExpect(status().isOk()).andExpect(jsonPath("$.rmas.content", hasSize(0)));
     }
 
     @ParameterizedTest
@@ -180,9 +182,9 @@ class RmaReportIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.entryFrom").value(today.minusDays(89).toString()))
             .andExpect(jsonPath("$.entryTo").value(today.toString()))
-            .andExpect(jsonPath("$.rmas", hasSize(2)))
-            .andExpect(jsonPath("$.rmas[0].code").value("RMA-RECENT"))
-            .andExpect(jsonPath("$.rmas[1].code").value("RMA-EDGE"));
+            .andExpect(jsonPath("$.rmas.content", hasSize(2)))
+            .andExpect(jsonPath("$.rmas.content[0].code").value("RMA-RECENT"))
+            .andExpect(jsonPath("$.rmas.content[1].code").value("RMA-EDGE"));
 
         mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2025-01-01").param("entryTo", "2026-01-02").with(asProfile("a", "ADMIN")))
             .andExpect(status().isBadRequest())
@@ -222,9 +224,8 @@ class RmaReportIntegrationTest {
         statistics.clear();
         mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31").with(asProfile("a", "ADMIN")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.rmas", hasSize(count)))
-            .andExpect(jsonPath("$.rmas[0].items", hasSize(2)))
-            .andExpect(jsonPath("$.rmas[0].statusHistory", hasSize(2)));
+            .andExpect(jsonPath("$.rmas.content", hasSize(count)))
+            .andExpect(jsonPath("$.rmas.content[0].itemCount").value(2));
         long statements = statistics.getPrepareStatementCount();
         statistics.setStatisticsEnabled(false);
         return statements;
