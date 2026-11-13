@@ -1,4 +1,5 @@
 import { IconComponent } from '../../shared/icon/icon.component';
+import { SuggestInputComponent } from '../../shared/form-controls/suggest-input/suggest-input.component';
 import { Component, ElementRef, Injector, afterNextRender, computed, inject, signal } from '@angular/core';
 import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable, finalize } from 'rxjs';
@@ -19,7 +20,7 @@ const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
 
 @Component({
   selector: 'app-protocols',
-  imports: [IconComponent, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PageHeaderComponent, ResultCountComponent],
+  imports: [IconComponent, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PageHeaderComponent, ResultCountComponent, SuggestInputComponent],
   templateUrl: './protocols.component.html',
   styles: [`
     :host {
@@ -50,6 +51,11 @@ const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
       display: grid;
       gap: var(--space-2);
       min-width: 0;
+    }
+
+    .protocol-items__head {
+      display: flex;
+      justify-content: flex-end;
     }
 
     .protocol-items__add {
@@ -86,13 +92,18 @@ export class ProtocolsComponent {
   protected readonly loaded = signal(false);
   /** An invalid submit happened in the open form; enables the product/category message. */
   protected readonly submitAttempted = signal(false);
-  protected readonly selectedItem = signal<FormGroup | null>(null);
+  /** Itens abertos no editor. Cada seta abre e fecha o próprio item; zero itens abertos é válido. */
+  protected readonly expandedItems = signal<ReadonlySet<FormGroup>>(new Set());
 
   private readonly templatesSignal = signal<ProtocolTemplateResponse[]>([]);
   private readonly productOptionsSignal = signal<ReadonlyArray<CustomSelectOption<number | null>>>([{ value: null, label: 'Por categoria' }]);
   private readonly editingTemplateSignal = signal<ProtocolTemplateResponse | null>(null);
 
   protected readonly templates = this.templatesSignal.asReadonly();
+  /** Categorias já usadas nos protocolos, em ordem alfabética, como sugestão no formulário. */
+  protected readonly categorySuggestions = computed(() =>
+    [...new Set(this.templatesSignal().map((template) => template.category?.trim()).filter((category): category is string => Boolean(category)))]
+      .sort((a, b) => a.localeCompare(b, 'pt-BR')));
   protected readonly productOptions = this.productOptionsSignal.asReadonly();
   protected readonly editingTemplate = this.editingTemplateSignal.asReadonly();
   protected readonly statusOptions = Object.keys(RMA_STATUS_LABELS) as RmaStatus[];
@@ -138,6 +149,7 @@ export class ProtocolsComponent {
     this.editingTemplateSignal.set(null);
     this.form.reset({ name: '', productId: null, category: '', active: true, blockedStatuses: [] });
     this.items.clear();
+    this.expandedItems.set(new Set());
     this.addItem();
     this.submitAttempted.set(false);
     this.modalOpen.set(true);
@@ -149,7 +161,8 @@ export class ProtocolsComponent {
     this.form.reset({ name: template.name, productId: template.productId, category: template.category ?? '', active: template.active, blockedStatuses: [...template.blockedStatuses] });
     this.items.clear();
     template.items.forEach((item) => this.items.push(this.itemGroup(item)));
-    this.selectedItem.set(this.items.at(0) ?? null);
+    // Ao publicar nova versão, a lista começa recolhida e mostra só os resumos.
+    this.expandedItems.set(new Set());
     this.submitAttempted.set(false);
     this.modalOpen.set(true);
     this.clearMessages();
@@ -178,24 +191,39 @@ export class ProtocolsComponent {
     if (this.submitting()) return;
     const item = this.itemGroup();
     this.items.push(item);
-    this.selectedItem.set(item);
+    // O item novo abre já recolhendo os demais, para a lista continuar curta.
+    this.expandedItems.set(new Set([item]));
   }
 
   protected removeItem(index: number): void {
     if (this.submitting() || this.items.length <= 1) return;
     const removed = this.items.at(index);
     this.items.removeAt(index);
-    if (this.selectedItem() === removed) {
-      this.selectedItem.set(this.items.at(Math.min(index, this.items.length - 1)));
-    }
+    this.expandedItems.update((open) => { const next = new Set(open); next.delete(removed); return next; });
+    // O foco vai para o item que ocupou a posição removida (ou o anterior, quando era o último).
+    const neighbour = Math.min(index, this.items.length - 1);
     afterNextRender(() => {
-      const selectedIndex = this.items.controls.indexOf(this.selectedItem()!);
-      this.host.nativeElement.querySelector<HTMLButtonElement>(`#protocol-item-summary-${selectedIndex}`)?.focus();
+      this.host.nativeElement.querySelector<HTMLButtonElement>(`#protocol-item-summary-${neighbour}`)?.focus();
     }, { injector: this.injector });
   }
 
-  protected selectItem(item: FormGroup): void {
-    if (!this.submitting()) this.selectedItem.set(item);
+  protected isExpanded(item: FormGroup): boolean {
+    return this.expandedItems().has(item);
+  }
+
+  protected toggleItem(item: FormGroup): void {
+    if (this.submitting()) return;
+    this.expandedItems.update((open) => {
+      const next = new Set(open);
+      if (!next.delete(item)) next.add(item);
+      return next;
+    });
+  }
+
+  /** Recolhe todos quando há algum aberto; senão, expande todos. */
+  protected toggleAllItems(): void {
+    if (this.submitting()) return;
+    this.expandedItems.set(this.expandedItems().size > 0 ? new Set() : new Set(this.items.controls));
   }
 
   protected typeLabel(item: FormGroup): string {
@@ -203,11 +231,12 @@ export class ProtocolsComponent {
   }
 
   private revealFirstInvalidItem(): void {
-    const item = this.items.controls.find((item) => item.invalid);
-    if (!item) return;
-    this.selectedItem.set(item);
+    const invalid = this.items.controls.filter((item) => item.invalid);
+    if (!invalid.length) return;
+    const index = this.items.controls.indexOf(invalid[0]);
+    this.expandedItems.update((open) => new Set([...open, ...invalid]));
     afterNextRender(() => {
-      const editor = this.host.nativeElement.querySelector<HTMLElement>('.protocol-item-card');
+      const editor = this.host.nativeElement.querySelector<HTMLElement>(`#protocol-item-editor-${index}`);
       const field = editor?.querySelector<HTMLElement>('input.ng-invalid, textarea.ng-invalid')
         ?? editor?.querySelector<HTMLElement>('app-custom-select[formcontrolname="type"] button');
       field?.focus();
@@ -300,7 +329,7 @@ export class ProtocolsComponent {
 
   private resetModal(): void {
     this.modalOpen.set(false);
-    this.selectedItem.set(null);
+    this.expandedItems.set(new Set());
     this.modalErrorMessage.set('');
     this.submitAttempted.set(false);
   }

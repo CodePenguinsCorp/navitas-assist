@@ -157,9 +157,15 @@ describe('ProtocolsComponent', () => {
     it('names the Nova versão action with the protocol', async () => {
       await setup();
 
-      const action = rows()[0].querySelector<HTMLButtonElement>('.table-actions-col button');
-      expect(action?.textContent?.trim()).toBe('Nova versão');
-      expect(action?.getAttribute('aria-label')).toBe('Nova versão de Diagnóstico Alfa');
+      const actions = rows()[0].querySelectorAll<HTMLButtonElement>('.table-actions-col button');
+      expect(actions.length).toBe(1);
+      const action = actions[0];
+      // Ação só com ícone, no mesmo padrão de Clientes e Produtos: o nome vai no aria-label e na dica.
+      expect(action.classList).toContain('row-action');
+      expect(action.classList).not.toContain('button-secondary');
+      expect(action.querySelector('app-icon')).not.toBeNull();
+      expect(action.querySelector('[role="tooltip"]')?.textContent?.trim()).toBe('Nova versão');
+      expect(action.getAttribute('aria-label')).toBe('Nova versão de Diagnóstico Alfa');
     });
 
     it('shows the empty catalog with the create action only in the header', async () => {

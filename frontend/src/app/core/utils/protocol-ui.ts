@@ -3,7 +3,7 @@ import { ProtocolExecutionResponse, ProtocolExecutionStatus, ProtocolItemOutcome
 export const PROTOCOL_ITEM_TYPE_LABELS: Record<ProtocolItemType, string> = {
   CHECK: 'Verificação',
   MEASUREMENT: 'Medição',
-  TEXT: 'Texto'
+  TEXT: 'Anotação'
 };
 
 export const PROTOCOL_OUTCOME_LABELS: Record<ProtocolItemOutcome, string> = {
