@@ -1,0 +1,18 @@
+services:
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "127.0.0.1:3317:3306"
+    environment:
+      MYSQL_DATABASE: navitas_migration
+      MYSQL_ROOT_PASSWORD: migration_local_only
+    volumes:
+      - migration_data:/var/lib/mysql
+  flyway:
+    image: flyway/flyway:9.22.3
+    profiles: [validation]
+    volumes:
+      - ./backend/src/main/resources/db/migration:/flyway/sql:ro
+    command: ["-url=jdbc:mysql://mysql:3306/navitas_migration?allowPublicKeyRetrieval=true&useSSL=false", "-user=root", "-password=migration_local_only", "-connectRetries=60", "migrate"]
+volumes:
+  migration_data:
