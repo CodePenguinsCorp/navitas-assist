@@ -92,7 +92,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/notifications/**").authenticated()
                 .requestMatchers("/api/notification-rules/**").hasAuthority(Codes.NOTIFICACOES_REGRAS)
                 .requestMatchers("/api/users/**").hasAuthority(Codes.USUARIOS_GERIR)
-                .requestMatchers(HttpMethod.GET, "/api/reports/rmas").hasAuthority(Codes.RELATORIOS_VER)
+                .requestMatchers(HttpMethod.GET, "/api/reports/rmas", "/api/reports/rmas/summary", "/api/reports/rmas/export.csv",
+                    "/api/reports/rmas/summary/export.csv").hasAuthority(Codes.RELATORIOS_VER)
                 // D2: leituras auxiliares (dashboard, relatórios, RMAs e painéis) seguem abertas a quem tem login.
                 .requestMatchers(HttpMethod.GET, "/api/auth/me", "/api/clients/**", "/api/products/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/rmas/**").hasAuthority(Codes.RMA_VER)

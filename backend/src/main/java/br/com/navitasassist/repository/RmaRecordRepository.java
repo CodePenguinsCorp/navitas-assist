@@ -82,6 +82,18 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
     long countReport(@Param("entryFrom") LocalDate entryFrom, @Param("entryTo") LocalDate entryTo,
         @Param("status") RmaStatus status, @Param("clientId") Long clientId);
 
+    /** Product id, serial number and RMA count of every serial with two or more RMAs entered up to {@code entryTo}. */
+    @Query("""
+        select i.product.id, i.itemIdentification.serialNumber, count(distinct i.rma.id)
+        from RmaItem i
+        where i.itemIdentification.serialNumber is not null
+          and i.itemIdentification.serialNumber <> ''
+          and i.rma.entryDate <= :entryTo
+        group by i.product.id, i.itemIdentification.serialNumber
+        having count(distinct i.rma.id) > 1
+        """)
+    List<Object[]> findRecurrentSerials(@Param("entryTo") LocalDate entryTo);
+
     @Query("select distinct r from RmaRecord r left join fetch r.items i left join fetch i.product where r in :rmas")
     List<RmaRecord> fetchItemsWithProducts(@Param("rmas") List<RmaRecord> rmas);
 
