@@ -420,11 +420,8 @@ export type NotificationEventType =
   | 'RMA_CREATED'
   | 'RMA_ASSIGNED'
   | 'RMA_BLOCKED'
-  | 'WIP_LIMIT_EXCEEDED'
   | 'PART_PENDING'
-  | 'INTERNAL_APPROVAL_REQUIRED'
-  | 'TEST_FAILED'
-  | 'RECURRENCE_DETECTED';
+  | 'TEST_FAILED';
 
 export type NotificationSeverity = 'INFO' | 'WARNING' | 'CRITICAL';
 

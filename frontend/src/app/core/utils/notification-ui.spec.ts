@@ -16,6 +16,10 @@ describe('Notification UI utilities', () => {
     expect(Object.values(NOTIFICATION_EVENT_LABELS).some((label) => /SLA|vencid/i.test(label))).toBe(false);
   });
 
+  it('lista apenas os cinco eventos com produtor', () => {
+    expect(Object.keys(NOTIFICATION_EVENT_LABELS)).toEqual(['RMA_CREATED', 'RMA_ASSIGNED', 'RMA_BLOCKED', 'PART_PENDING', 'TEST_FAILED']);
+  });
+
   it('formats timestamps in America/Sao_Paulo', () => {
     expect(formatNotificationDateTime('2026-10-24T02:30:00Z')).toBe('23/10/2026, 23:30');
     expect(formatNotificationDateTime(null)).toBe('Não informado');

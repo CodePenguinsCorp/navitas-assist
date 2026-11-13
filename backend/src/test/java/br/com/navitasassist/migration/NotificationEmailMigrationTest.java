@@ -29,7 +29,7 @@ class NotificationEmailMigrationTest {
             assertThrows(SQLException.class, () -> s.executeUpdate("update notifications set email_status='UNKNOWN' where title='Legacy'"));
             s.executeQuery("select app_visible, email_attempts, email_next_attempt_at from notifications");
             s.executeQuery("select app_enabled from notification_rules");
-            try (ResultSet rows = s.executeQuery("select count(*) from notification_rules")) { rows.next(); assertEquals(8, rows.getInt(1)); }
+            try (ResultSet rows = s.executeQuery("select count(*) from notification_rules")) { rows.next(); assertEquals(5, rows.getInt(1)); }
 
             s.executeUpdate("insert into access_profiles(name, created_at, updated_at) values ('Email migration', current_timestamp, current_timestamp)");
             String insert = "insert into user_accounts(username, full_name, password_hash, profile_id, active, created_at, updated_at, email) values ('%s','Test','hash',(select id from access_profiles where name='Email migration'),true,current_timestamp,current_timestamp,%s)";

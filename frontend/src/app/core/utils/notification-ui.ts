@@ -7,11 +7,8 @@ export const NOTIFICATION_EVENT_LABELS: Record<NotificationEventType, string> = 
   RMA_CREATED: 'Novo RMA',
   RMA_ASSIGNED: 'Nova atribuição',
   RMA_BLOCKED: 'Bloqueio',
-  WIP_LIMIT_EXCEEDED: 'Limite de WIP',
   PART_PENDING: 'Peça pendente',
-  INTERNAL_APPROVAL_REQUIRED: 'Aprovação interna',
-  TEST_FAILED: 'Falha de teste',
-  RECURRENCE_DETECTED: 'Recorrência'
+  TEST_FAILED: 'Falha de teste'
 };
 
 export const NOTIFICATION_SEVERITY_LABELS: Record<NotificationSeverity, string> = {

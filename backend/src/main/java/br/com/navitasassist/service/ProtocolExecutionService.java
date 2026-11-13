@@ -30,6 +30,9 @@ import br.com.navitasassist.repository.RmaProtocolItemResultRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaStatus;
+import br.com.navitasassist.notification.NotificationEventType;
+import br.com.navitasassist.notification.RmaNotificationEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -48,6 +51,7 @@ public class ProtocolExecutionService {
     private final RmaProtocolExecutionRepository rmaProtocolExecutionRepository;
     private final RmaProtocolItemResultRepository rmaProtocolItemResultRepository;
     private final RmaRecordRepository rmaRecordRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final ProtocolTemplateService protocolTemplateService;
 
     @Transactional(readOnly = true)
@@ -119,6 +123,11 @@ public class ProtocolExecutionService {
         result.setExecutedBy(currentUsername());
 
         execution.getResults().add(rmaProtocolItemResultRepository.save(result));
+        if (result.getOutcome() == ProtocolItemOutcome.FAILED) {
+            eventPublisher.publishEvent(new RmaNotificationEvent(NotificationEventType.TEST_FAILED,
+                "TEST_FAILED:" + result.getId(), execution.getRma().getId(), now, currentUsername(),
+                "Item " + item.getTitle() + " reprovado · tentativa " + result.getAttempt() + "."));
+        }
         return toResponse(execution);
     }
 

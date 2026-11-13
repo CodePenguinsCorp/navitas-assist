@@ -31,6 +31,9 @@ import br.com.navitasassist.repository.PartReservationRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaStatus;
+import br.com.navitasassist.notification.NotificationEventType;
+import br.com.navitasassist.notification.RmaNotificationEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.Authentication;
@@ -55,6 +58,7 @@ public class PartStockService {
     private final PartMovementRepository partMovementRepository;
     private final PartReservationRepository partReservationRepository;
     private final RmaRecordRepository rmaRecordRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final RmaService rmaService;
 
     @Transactional(readOnly = true)
@@ -164,6 +168,10 @@ public class PartStockService {
 
         if (available) {
             record(part, PartMovementType.RESERVATION, BigDecimal.ZERO, request.quantity(), part.getUnitCost(), rma, reservation, null, reservation.getNote());
+        } else {
+            eventPublisher.publishEvent(new RmaNotificationEvent(NotificationEventType.PART_PENDING,
+                "PART_PENDING:" + reservation.getId(), rma.getId(), Instant.now(), currentUsername(),
+                "Peça " + part.getCode() + " · " + reservation.getQuantity().toPlainString() + " " + part.getUnit() + " sem saldo disponível."));
         }
         return toReservationResponse(reservation);
     }

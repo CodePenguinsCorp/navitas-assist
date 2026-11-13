@@ -355,7 +355,10 @@ public class RmaService {
         block.setBlockedAt(Instant.now());
         rma.addBlock(block);
         rma.setUpdatedAt(block.getBlockedAt());
-        return toResponse(rmaRecordRepository.save(rma));
+        rmaRecordRepository.flush();
+        eventPublisher.publishEvent(new RmaNotificationEvent(NotificationEventType.RMA_BLOCKED,
+            "RMA_BLOCKED:" + block.getId(), rma.getId(), block.getBlockedAt(), currentUsername(), block.getReason()));
+        return toResponse(rma);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)

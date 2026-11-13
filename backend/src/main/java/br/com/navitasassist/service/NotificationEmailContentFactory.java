@@ -16,7 +16,9 @@ public class NotificationEmailContentFactory {
         String event = switch (notification.getEventType()) {
             case RMA_CREATED -> "RMA criado";
             case RMA_ASSIGNED -> "RMA atribuído";
-            default -> "Atualização de RMA";
+            case RMA_BLOCKED -> "Impedimento aberto";
+            case PART_PENDING -> "Peça pendente";
+            case TEST_FAILED -> "Teste reprovado";
         };
         String code = notification.getRma().getCode();
         String subject = "[Navitas Assist] " + event + " — " + code;

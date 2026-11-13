@@ -2,7 +2,6 @@ package br.com.navitasassist.service;
 
 import java.util.Map;
 
-import br.com.navitasassist.notification.NotificationEventType;
 import br.com.navitasassist.notification.RmaNotificationEvent;
 import br.com.navitasassist.rma.RmaPriority;
 import br.com.navitasassist.rma.RmaRecord;
@@ -37,24 +36,19 @@ public class NotificationContentFactory {
         return switch (event.type()) {
             case RMA_CREATED -> new Content("Novo RMA " + rma.getCode(), context + " · prioridade " + PRIORITY_LABELS.get(rma.getPriority()) + ". Aberto por " + event.actor() + ".", actionPath(rma));
             case RMA_ASSIGNED -> new Content("RMA " + rma.getCode() + " atribuído a " + assignee, context + " · etapa " + stage + ". Atribuído por " + event.actor() + ".", actionPath(rma));
-            default -> new Content(label(event.type()) + " no RMA " + rma.getCode(), context + " · etapa " + stage + ".", actionPath(rma));
+            case RMA_BLOCKED -> new Content("Impedimento no RMA " + rma.getCode(), detail(event, "Impedimento aberto."), actionPath(rma));
+            case PART_PENDING -> new Content("Peça pendente no RMA " + rma.getCode(), detail(event, "Reserva pendente por falta de saldo."), actionPath(rma));
+            case TEST_FAILED -> new Content("Teste reprovado no RMA " + rma.getCode(), detail(event, "Item de protocolo reprovado."), actionPath(rma));
         };
+    }
+
+    private String detail(RmaNotificationEvent event, String fallback) {
+        String detail = event.detail() == null || event.detail().isBlank() ? fallback : event.detail().trim();
+        return detail.substring(0, Math.min(detail.length(), 500));
     }
 
     private String actionPath(RmaRecord rma) {
         return "/rmas?rma=" + rma.getId();
-    }
-
-    private String label(NotificationEventType type) {
-        return switch (type) {
-            case RMA_BLOCKED -> "Bloqueio";
-            case WIP_LIMIT_EXCEEDED -> "Limite de WIP excedido";
-            case PART_PENDING -> "Peça pendente";
-            case INTERNAL_APPROVAL_REQUIRED -> "Aprovação interna pendente";
-            case TEST_FAILED -> "Falha de teste";
-            case RECURRENCE_DETECTED -> "Recorrência";
-            default -> "Evento";
-        };
     }
 
     public record Content(String title, String message, String actionPath) {

@@ -9,12 +9,14 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 class NotificationEmailContentFactoryTest {
-    @Test void rendersPortugueseSafeHtmlWithoutClientDetailsWithStableLink() {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(NotificationEventType.class)
+    void rendersPortugueseSafeHtmlWithoutClientDetailsWithStableLink(NotificationEventType type) {
         NotificationProperties properties = new NotificationProperties();
         properties.getEmail().setFrom("from@example.invalid");
         properties.getEmail().setAppBaseUrl("http://localhost:4200");
         Notification n = new Notification();
-        n.setEventType(NotificationEventType.RMA_CREATED);
+        n.setEventType(type);
         n.setCreatedAt(Instant.parse("2026-11-13T12:00:00Z"));
         n.setMessage("Secret client name");
         RmaRecord rma = new RmaRecord();
@@ -23,7 +25,16 @@ class NotificationEmailContentFactoryTest {
         n.setRma(rma);
         var factory = new NotificationEmailContentFactory(properties);
         var message = factory.build(n, "to@example.invalid");
-        assertTrue(message.subject().startsWith("[Navitas Assist] RMA criado"));
+        String label = switch (type) {
+            case RMA_CREATED -> "RMA criado";
+            case RMA_ASSIGNED -> "RMA atribuído";
+            case RMA_BLOCKED -> "Impedimento aberto";
+            case PART_PENDING -> "Peça pendente";
+            case TEST_FAILED -> "Teste reprovado";
+        };
+        assertTrue(message.subject().startsWith("[Navitas Assist] " + label));
+        assertTrue(message.text().contains(label));
+        assertFalse(message.text().contains("Secret client"));
         assertTrue(message.html().contains("RMA&lt;&amp;&quot;42"));
         assertTrue(message.text().contains("http://localhost:4200/rmas?rma=42"));
         assertFalse(message.html().contains("Secret client"));

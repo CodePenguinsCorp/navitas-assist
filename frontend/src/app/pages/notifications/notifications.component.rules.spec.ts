@@ -102,11 +102,14 @@ describe('NotificationsComponent rules', () => {
     render();
   }
 
-  it('mostra canais e impede edição dos eventos indisponíveis', async () => {
-    await setup({ rules: [of([{ ...RULE, appEnabled: false, supported: false }])] }); openRules();
-    expect(text()).toContain('Indisponível');
-    expect(rulesTable()!.querySelectorAll('tbody td')[2].textContent?.trim()).toBe('Não');
-    expect(root().querySelector<HTMLButtonElement>('button[aria-label="Editar regra Bloqueio"]')?.disabled).toBe(true);
+  it.each(['RMA_BLOCKED', 'PART_PENDING', 'TEST_FAILED'] as const)('permite editar o evento suportado %s', async (eventType) => {
+    const labels = { RMA_BLOCKED: 'Bloqueio', PART_PENDING: 'Peça pendente', TEST_FAILED: 'Falha de teste' };
+    await setup({ rules: [of([{ ...RULE, eventType, supported: true, severity: 'WARNING', emailEnabled: false }])] }); openRules();
+    expect(text()).not.toContain('Indisponível');
+    const edit = root().querySelector<HTMLButtonElement>(`button[aria-label="Editar regra ${labels[eventType]}"]`);
+    expect(edit?.disabled).toBe(false);
+    edit!.click(); render();
+    expect(root().querySelector('[role="dialog"]')).not.toBeNull();
   });
 
   it('envia teste para si e informa simulação sem alegar entrega', async () => {

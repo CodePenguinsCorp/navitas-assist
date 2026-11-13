@@ -8,14 +8,17 @@ Tipos (`NotificationEventType`):
 | --- | --- | --- |
 | `RMA_CREATED` | Sim, ao abrir um RMA | Ligada, severidade `INFO`, destinatários: perfis Administrador e Atendimento. |
 | `RMA_ASSIGNED` | Sim, ao atribuir ou trocar o responsável | Ligada, `INFO`, avisa só o responsável (`notifyAssignee`); o usuário não pode silenciá-la. |
-| `RMA_BLOCKED`, `WIP_LIMIT_EXCEEDED`, `PART_PENDING`, `INTERNAL_APPROVAL_REQUIRED`, `TEST_FAILED`, `RECURRENCE_DETECTED` | Não (`supported=false`: reservados, sem produtor) | Desligadas. |
+| `RMA_BLOCKED` | Sim, ao abrir um impedimento | App ligado, `WARNING`, responsável pelo RMA e perfil Administrador; permite silenciamento. |
+| `PART_PENDING` | Sim, ao reservar uma peça sem saldo suficiente | App ligado, `WARNING`, perfil Administrador; permite silenciamento. |
+| `TEST_FAILED` | Sim, ao registrar cada tentativa reprovada de um item de protocolo | App ligado, `WARNING`, responsável pelo RMA e perfil Administrador; permite silenciamento. |
 
 Os alertas `SLA_*` foram removidos; a data limite não gera notificação ([prazo-e-garantia.md](prazo-e-garantia.md)).
 
 - Cada regra (`notification_rules`) tem interruptores geral (`enabled`), App (`appEnabled`) e E-mail (`emailEnabled`), severidade (`INFO`, `WARNING`, `CRITICAL`) e destinatários **por perfil**. A configuração é feita por quem tem `notificacoes.regras`. A regra pode ficar sem destinatário (avisa na tela que não entrega a ninguém, mas salva).
 - Só recebe e vê a notificação quem está ativo e tem `rma.ver`; a regra é reavaliada ao gerar e ao listar, então mudanças de permissão valem na hora.
-- O e-mail inicia **desligado** em todas as regras existentes.
+- O e-mail inicia **desligado** em todas as regras existentes. O administrador pode ligá-lo na aba Regras.
 - Cada usuário pode silenciar tipos permitidos pela regra (`/api/notifications/preferences`); o silenciamento vale para os dois canais. Ler ou adiar no app não cancela um envio de e-mail pendente.
+- Cada ocorrência usa uma chave por ID do impedimento, reserva ou resultado; reprocessar a mesma chave não duplica a entrega. Resolver impedimento, alocar reserva ou aprovar item não gera esses alertas.
 - O texto sai em português e o link aponta só para rotas internas (`/rmas?rma=<id>`); não há links públicos.
 
 ## Notificações no app
