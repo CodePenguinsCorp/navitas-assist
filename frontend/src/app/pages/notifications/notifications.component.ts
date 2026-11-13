@@ -6,6 +6,8 @@ import { Router } from '@angular/router';
 import { Observable, Subscription, finalize } from 'rxjs';
 import {
   NotificationFailureResponse,
+  NotificationEventType,
+  NotificationEmailStatusResponse,
   NotificationPreferenceResponse,
   NotificationResponse,
   NotificationRuleRequest,
@@ -13,6 +15,7 @@ import {
   NotificationSeverity,
   ProfileOption
 } from '../../core/models';
+import { AuthService } from '../../core/services/auth.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { ProfileService } from '../../core/services/profile.service';
 import { ClockService } from '../../core/services/clock.service';
@@ -36,7 +39,7 @@ type NotificationsTab = 'inbox' | 'preferences' | 'rules';
 type PreferenceState = 'disabled' | 'mandatory' | 'muted' | 'receiving';
 
 const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
-  disabled: 'Desativado pela administração',
+  disabled: 'Desligado',
   mandatory: 'Obrigatório',
   muted: 'Silenciado',
   receiving: 'Recebendo'
@@ -51,6 +54,12 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
       display: block;
     }
 
+    .notification-toolbar .filter-field { flex: 1 1 160px; min-width: 0; max-width: 260px; }
+    .notification-day { margin: var(--space-3) 0 0; font-size: var(--font-size-sm); color: var(--muted); }
+    .email-failure-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); padding-block: var(--space-3); border-bottom: 1px solid var(--line); }
+    .email-failure-row > * { min-width: 0; overflow-wrap: anywhere; }
+    .email-failure-row .failure-error { flex: 1 1 180px; }
+    .notification-title, .notification-message { overflow-wrap: anywhere; }
     .notification-toolbar,
     .notification-actions {
       display: flex;
@@ -124,8 +133,8 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
       align-items: center;
       gap: var(--space-3) var(--space-4);
       padding: var(--space-3) var(--space-4);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
+      border-bottom: 1px solid var(--line);
+      border-radius: 0;
       background: var(--surface);
     }
 
@@ -204,6 +213,15 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
       flex-wrap: nowrap;
     }
 
+    @media (max-width: 600px) {
+      .table-wrap { overflow: visible; }
+      table, tbody, tr, td { display: block; width: auto; min-width: 0; }
+      thead { display: none; }
+      tbody tr { padding-block: var(--space-3); border-bottom: 1px solid var(--line); }
+      td { border: 0; padding: var(--space-1) 0; overflow-wrap: anywhere; }
+      td[data-label]::before { content: attr(data-label) ': '; color: var(--muted); }
+      .notification-toolbar .filter-field { max-width: none; }
+    }
     @media (max-width: 720px) {
       .notification-item {
         grid-template-columns: 1fr;
@@ -219,6 +237,7 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
 export class NotificationsComponent {
   private readonly notificationService = inject(NotificationService);
   private readonly permissions = inject(PermissionService);
+  protected readonly auth = inject(AuthService);
   private readonly profileService = inject(ProfileService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -254,10 +273,38 @@ export class NotificationsComponent {
   protected readonly successMessage = signal('');
   protected readonly unreadOnly = signal(false);
   protected readonly includeSnoozed = signal(false);
+  protected readonly eventFilter = signal<NotificationEventType | ''>('');
+  protected readonly severityFilter = signal<NotificationSeverity | ''>('');
+  protected readonly eventFilterOptions = [{ value: '', label: 'Todos' }, ...Object.entries(NOTIFICATION_EVENT_LABELS).map(([value, label]) => ({ value, label }))];
+  protected readonly severityFilterOptions = [{ value: '', label: 'Todas' }, ...NOTIFICATION_SEVERITIES.map(value => ({ value, label: NOTIFICATION_SEVERITY_LABELS[value] }))];
+  protected readonly notificationGroups = computed(() => {
+    const today = new Date(this.clock.now()); today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+    const groups = new Map<string, { label: string; items: NotificationResponse[] }>();
+    for (const notification of this.notifications()) {
+      const day = new Date(notification.createdAt); day.setHours(0, 0, 0, 0);
+      const key = String(day.getTime());
+      const label = day.getTime() === today.getTime() ? 'Hoje' : day.getTime() === yesterday.getTime() ? 'Ontem' : day.toLocaleDateString('pt-BR');
+      if (!groups.has(key)) groups.set(key, { label, items: [] });
+      groups.get(key)!.items.push(notification);
+    }
+    return [...groups.values()];
+  });
   protected readonly notifications = signal<NotificationResponse[]>([]);
   protected readonly preferences = signal<NotificationPreferenceResponse[]>([]);
   protected readonly rules = signal<NotificationRuleResponse[]>([]);
   protected readonly failures = signal<NotificationFailureResponse[]>([]);
+  protected readonly emailStatus = signal<NotificationEmailStatusResponse | null>(null);
+  protected readonly emailStatusLoading = signal(false);
+  protected readonly emailStatusError = signal('');
+  protected readonly emailTestBusy = signal(false);
+  protected readonly emailFeedback = signal('');
+  protected readonly emailError = signal('');
+  protected readonly retryingEmails = signal<ReadonlySet<number>>(new Set());
+  protected readonly retryErrors = signal<Record<number, string>>({});
+  protected readonly emailFailures = computed(() => this.failures().filter(item => item.source === 'EMAIL'));
+  protected readonly eventFailures = computed(() => this.failures().filter(item => item.source === 'EVENT'));
+  private adminEpoch = 0;
   protected readonly editingRule = signal<NotificationRuleResponse | null>(null);
   protected readonly ruleSubmitting = signal(false);
   protected readonly ruleErrorMessage = signal('');
@@ -265,6 +312,7 @@ export class NotificationsComponent {
     enabled: false,
     severity: 'INFO' as NotificationSeverity,
     notifyAssignee: false,
+    appEnabled: true,
     emailEnabled: false,
     userMutable: false,
     profiles: this.fb.nonNullable.control<number[]>([])
@@ -303,11 +351,19 @@ export class NotificationsComponent {
     this.loadInbox();
     // Sem a permissão (após um 403 ou ao mudar o próprio perfil), a aba Regras some: volta para a caixa de entrada.
     effect(() => {
-      if (!this.canManageRules() && this.activeTab() === 'rules') untracked(() => this.selectTab('inbox'));
+      if (!this.canManageRules()) untracked(() => {
+        this.adminEpoch++;
+        this.rulesRequest?.unsubscribe(); this.failuresRequest?.unsubscribe();
+        this.rules.set([]); this.failures.set([]); this.emailStatus.set(null);
+        this.editingRule.set(null); this.emailError.set(''); this.emailFeedback.set('');
+        this.retryErrors.set({});
+        if (this.activeTab() === 'rules') this.selectTab('inbox');
+      });
     });
   }
 
   protected selectTab(tab: NotificationsTab): void {
+    if (tab === 'rules' && !this.canManageRules()) return;
     this.activeTab.set(tab);
     this.clearMessages();
     if (tab === 'inbox') {
@@ -320,6 +376,7 @@ export class NotificationsComponent {
         this.profileService.invalidateOptions();
       }
       this.loadRules();
+      this.loadEmailStatus();
       this.loadProfileOptions();
     }
   }
@@ -368,7 +425,18 @@ export class NotificationsComponent {
 
   protected clearInboxFilters(): void {
     this.unreadOnly.set(false);
+    this.includeSnoozed.set(false);
+    this.eventFilter.set('');
+    this.severityFilter.set('');
     this.reloadInboxForNewFilters();
+  }
+
+  protected updateEventFilter(value: NotificationEventType | ''): void {
+    this.eventFilter.set(value); this.reloadInboxForNewFilters();
+  }
+
+  protected updateSeverityFilter(value: NotificationSeverity | ''): void {
+    this.severityFilter.set(value); this.reloadInboxForNewFilters();
   }
 
   protected retryInbox(): void {
@@ -393,6 +461,7 @@ export class NotificationsComponent {
   }
 
   protected markAllRead(): void {
+    if (this.busy()) return;
     this.run(this.notificationService.markAllRead(), () => {
       this.successMessage.set('Todas as notificações, inclusive as adiadas, foram marcadas como lidas.');
       this.loadInbox();
@@ -430,6 +499,7 @@ export class NotificationsComponent {
   }
 
   protected toggleMute(preference: NotificationPreferenceResponse): void {
+    if (!preference.userMutable || this.busy()) return;
     this.run(this.notificationService.updatePreference(preference.eventType, !preference.muted), (updated) => {
       this.preferences.update((items) => items.map((item) => item.eventType === updated.eventType ? updated : item));
       this.successMessage.set(`${NOTIFICATION_EVENT_LABELS[updated.eventType]} ${updated.muted ? 'silenciado' : 'reativado'}.`);
@@ -442,6 +512,58 @@ export class NotificationsComponent {
 
   protected retryFailures(): void {
     if (!this.failuresLoading()) this.loadFailures();
+  }
+
+  protected loadEmailStatus(): void {
+    if (!this.canManageRules()) return;
+    const epoch = this.adminEpoch;
+    this.emailStatusLoading.set(true); this.emailStatusError.set(''); this.emailStatus.set(null);
+    this.notificationService.emailStatus().pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.emailStatusLoading.set(false))).subscribe({
+      next: status => { if (this.canManageRules() && epoch === this.adminEpoch) this.emailStatus.set(status); },
+      error: error => { if (this.canManageRules() && epoch === this.adminEpoch) this.emailStatusError.set(extractHttpErrorMessage(error, 'Não foi possível consultar o canal.')); }
+    });
+  }
+
+  protected sendTestEmail(): void {
+    if (!this.canManageRules() || this.emailTestBusy() || !this.emailStatus()?.enabled) return;
+    const epoch = this.adminEpoch;
+    this.emailTestBusy.set(true); this.emailError.set(''); this.emailFeedback.set('');
+    this.notificationService.testEmail().pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.emailTestBusy.set(false))).subscribe({
+      next: result => {
+        if (this.canManageRules() && epoch === this.adminEpoch) this.emailFeedback.set(result.status === 'simulado' ? 'Simulação registrada' : 'Teste enviado');
+      },
+      error: error => { if (this.canManageRules() && epoch === this.adminEpoch) this.emailError.set(extractHttpErrorMessage(error, 'Não foi possível enviar o teste.')); }
+    });
+  }
+
+  protected canRetryEmail(failure: NotificationFailureResponse): boolean {
+    return this.canManageRules() && failure.source === 'EMAIL' && failure.status === 'FAILED' && failure.retryAllowed === true && failure.notificationId != null;
+  }
+
+  protected retryEmail(failure: NotificationFailureResponse): void {
+    const id = failure.notificationId;
+    if (id == null || !this.canRetryEmail(failure) || this.retryingEmails().has(id)) return;
+    const epoch = this.adminEpoch;
+    this.retryingEmails.update(ids => new Set([...ids, id]));
+    this.emailError.set(''); this.emailFeedback.set('');
+    this.retryErrors.update(errors => ({ ...errors, [id]: '' }));
+    this.notificationService.retryEmail(id).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => {
+      this.retryingEmails.update(ids => { const next = new Set(ids); next.delete(id); return next; });
+    })).subscribe({
+      next: () => {
+        if (!this.canManageRules() || epoch !== this.adminEpoch) return;
+        this.emailFeedback.set('Reenvio agendado'); this.loadFailures();
+      },
+      error: error => {
+        if (!this.canManageRules() || epoch !== this.adminEpoch) return;
+        const message = extractHttpErrorMessage(error, 'Não foi possível reenviar.');
+        this.retryErrors.update(errors => ({ ...errors, [id]: message }));
+        if (error.status === 409) {
+          this.emailError.set(message);
+          this.loadFailures();
+        }
+      }
+    });
   }
 
   protected failureSource(failure: NotificationFailureResponse): string {
@@ -485,11 +607,12 @@ export class NotificationsComponent {
 
   /** Every control is reset from the rule, so nothing is carried over from the previously edited one. */
   protected openRuleEditor(rule: NotificationRuleResponse): void {
-    if (this.ruleSubmitting()) return;
+    if (this.ruleSubmitting() || !this.canManageRules()) return;
     this.ruleForm.reset({
       enabled: rule.enabled,
       severity: rule.severity,
       notifyAssignee: rule.notifyAssignee,
+      appEnabled: rule.appEnabled ?? true,
       emailEnabled: rule.emailEnabled,
       userMutable: rule.userMutable,
       profiles: rule.recipientProfiles.map((profile) => profile.id)
@@ -503,20 +626,22 @@ export class NotificationsComponent {
     this.resetRuleEditor();
   }
 
-  /** Single confirmed save with the same six fields of the rule contract. */
+  /** Salva os canais e destinatários no contrato da regra. */
   protected saveRule(): void {
     const rule = this.editingRule();
-    if (!rule || this.ruleSubmitting() || this.profileOptionsState() !== 'ready') return;
+    if (!rule || rule.supported === false || !this.canManageRules() || this.ruleSubmitting() || this.profileOptionsState() !== 'ready') return;
 
-    const { enabled, severity, profiles, notifyAssignee, emailEnabled, userMutable } = this.ruleForm.getRawValue();
+    const { enabled, appEnabled, severity, profiles, notifyAssignee, emailEnabled, userMutable } = this.ruleForm.getRawValue();
     const payload: NotificationRuleRequest = {
       enabled,
+      appEnabled,
       severity,
       recipientProfileIds: profiles,
       notifyAssignee,
       emailEnabled,
       userMutable
     };
+    const epoch = this.adminEpoch;
 
     this.ruleSubmitting.set(true);
     this.ruleErrorMessage.set('');
@@ -526,11 +651,14 @@ export class NotificationsComponent {
       finalize(() => this.ruleSubmitting.set(false))
     ).subscribe({
       next: (updated) => {
+        if (!this.canManageRules() || epoch !== this.adminEpoch) return;
         this.rules.update((items) => items.map((item) => item.eventType === updated.eventType ? updated : item));
         this.successMessage.set(`Regra "${NOTIFICATION_EVENT_LABELS[updated.eventType]}" atualizada.`);
         this.resetRuleEditor();
       },
-      error: (error) => this.ruleErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível salvar a regra.'))
+      error: (error) => {
+        if (this.canManageRules() && epoch === this.adminEpoch) this.ruleErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível salvar a regra.'));
+      }
     });
   }
 
@@ -557,7 +685,7 @@ export class NotificationsComponent {
   private loadInbox(): void {
     this.inboxRequest?.unsubscribe();
     this.inboxLoading.set(true);
-    this.inboxRequest = this.notificationService.list({ unreadOnly: this.unreadOnly(), includeSnoozed: this.includeSnoozed() }).pipe(
+    this.inboxRequest = this.notificationService.list({ unreadOnly: this.unreadOnly(), includeSnoozed: this.includeSnoozed(), ...(this.eventFilter() ? { eventType: this.eventFilter() as NotificationEventType } : {}), ...(this.severityFilter() ? { severity: this.severityFilter() as NotificationSeverity } : {}) }).pipe(
       takeUntilDestroyed(this.destroyRef),
       finalize(() => this.inboxLoading.set(false))
     ).subscribe({
@@ -620,6 +748,7 @@ export class NotificationsComponent {
       finalize(() => this.rulesLoading.set(false))
     ).subscribe({
       next: (rules) => {
+        if (!this.canManageRules()) return;
         this.rules.set(rules);
         this.rulesHasLoaded.set(true);
         this.rulesLoadFailed.set(false);
@@ -643,6 +772,7 @@ export class NotificationsComponent {
       finalize(() => this.failuresLoading.set(false))
     ).subscribe({
       next: (failures) => {
+        if (!this.canManageRules()) return;
         this.failures.set(failures);
         this.failuresHasLoaded.set(true);
         this.failuresLoadFailed.set(false);

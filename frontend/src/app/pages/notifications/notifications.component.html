@@ -1,5 +1,7 @@
 <section class="page-surface">
-  <app-page-header heading="Notificações" />
+  <app-page-header heading="Notificações">
+    <button type="button" class="button-secondary" (click)="markAllRead()" [disabled]="busy() || (unreadKnown() && unreadCount() === 0 && !hasUnread())">Marcar todas como lidas</button>
+  </app-page-header>
 
   <div class="tab-list" role="tablist" aria-label="Seções de notificações" (keydown)="onTabKeydown($event)">
     @for (tab of tabs(); track tab) {
@@ -34,7 +36,9 @@
         <div class="notification-toolbar">
           <label class="checkbox-field"><input type="checkbox" [checked]="unreadOnly()" (change)="toggleUnreadOnly()" /><span>Somente não lidas</span></label>
           <label class="checkbox-field"><input type="checkbox" [checked]="includeSnoozed()" (change)="toggleIncludeSnoozed()" /><span>Mostrar adiadas</span></label>
-          <button type="button" class="button-secondary button-secondary--small" (click)="markAllRead()" [disabled]="busy() || !hasUnread()">Marcar todas como lidas</button>
+          <label class="filter-field"><span>Evento</span><app-custom-select ariaLabel="Filtrar por evento" [options]="eventFilterOptions" [value]="eventFilter()" (valueChange)="updateEventFilter($any($event))" /></label>
+          <label class="filter-field"><span>Severidade</span><app-custom-select ariaLabel="Filtrar por severidade" [options]="severityFilterOptions" [value]="severityFilter()" (valueChange)="updateSeverityFilter($any($event))" /></label>
+          <button type="button" class="button-secondary" (click)="clearInboxFilters()">Limpar filtros</button>
         </div>
 
         @if (unreadUnavailable()) {
@@ -73,12 +77,14 @@
         } @else {
           <p class="field-hint inbox-limit">Mostra até 100 notificações, das mais recentes, nos filtros selecionados.</p>
           <div class="notification-list">
-            @for (notification of notifications(); track notification.id) {
+            @for (group of notificationGroups(); track group.label) {
+            <h3 class="notification-day">{{ group.label }}</h3>
+            @for (notification of group.items; track notification.id) {
               <article class="notification-item" [class.is-unread]="!notification.read">
                 <span [class]="'icon-tile icon-tile--sm ' + severityTone(notification.severity)" aria-hidden="true"><app-icon [name]="severityIcon(notification.severity)" [size]="17" /></span>
                 <div class="notification-body">
                   <div class="notification-meta">
-                    <span class="sr-only">{{ severityLabels[notification.severity] }}</span>
+                    <span class="mini-chip" [class]="severityClass(notification.severity)">{{ severityLabels[notification.severity] }}</span>
                     <span class="notification-event">{{ eventLabels[notification.eventType] }}</span>
                     @if (notification.rmaCode) {
                       <span class="notification-time">{{ notification.rmaCode }}</span>
@@ -103,6 +109,7 @@
                 </div>
               </article>
             }
+            }
           </div>
         }
       </article>
@@ -113,7 +120,8 @@
   <div role="tabpanel" tabindex="0" id="notifications-panel-preferences" aria-labelledby="notifications-tab-preferences" [hidden]="activeTab() !== 'preferences'">
     @if (activeTab() === 'preferences') {
       <article class="panel table-card">
-        <p>Silencie os alertas que a regra permite. Alertas obrigatórios continuam chegando.</p>
+        <p class="field-hint">Silenciar vale para App e E-mail.</p>
+        @if (auth.currentUser()?.email === null) { <p class="field-hint">Sem e-mail cadastrado</p> }
         @if (preferencesLoadFailed()) {
           <div class="panel alert-banner alert-banner--error preferences-state" role="alert">
             <strong>{{ preferencesLoadErrorMessage() }}</strong>
@@ -138,10 +146,10 @@
               <tbody>
                 @for (preference of preferences(); track preference.eventType) {
                   <tr>
-                    <td>{{ eventLabels[preference.eventType] }}</td>
-                    <td><span class="mini-chip" [class]="severityClass(preference.severity)">{{ severityLabels[preference.severity] }}</span></td>
-                    <td><span class="state-dot" [class.is-on]="preferenceState(preference) === 'receiving' || preferenceState(preference) === 'mandatory'">{{ preferenceStateLabel(preference) }}</span></td>
-                    <td class="table-actions-col">
+                    <td data-label="Alerta">{{ eventLabels[preference.eventType] }}</td>
+                    <td data-label="Severidade"><span class="mini-chip" [class]="severityClass(preference.severity)">{{ severityLabels[preference.severity] }}</span></td>
+                    <td data-label="Situação"><span class="state-dot" [class.is-on]="preferenceState(preference) === 'receiving' || preferenceState(preference) === 'mandatory'">{{ preferenceStateLabel(preference) }}</span></td>
+                    <td class="table-actions-col" data-label="Ação">
                       @if (preference.userMutable) {
                         <button
                           type="button"
@@ -183,10 +191,11 @@
               <thead>
                 <tr>
                   <th>Alerta</th>
-                  <th>Situação</th>
-                  <th>Severidade</th>
-                  <th>Destinatários</th>
+                  <th>Ativa</th>
+                  <th>App</th>
                   <th>E-mail</th>
+                  <th>Destinatários</th>
+                  <th>Severidade</th>
                   <th>Silenciável</th>
                   <th>Atualização</th>
                   <th class="table-actions-col"><span class="sr-only">Ação</span></th>
@@ -195,20 +204,21 @@
               <tbody>
                 @for (rule of rules(); track rule.eventType) {
                   <tr>
-                    <td>{{ eventLabels[rule.eventType] }}</td>
-                    <td><span class="state-dot" [class.is-on]="rule.enabled">{{ rule.enabled ? 'Ativa' : 'Inativa' }}</span></td>
-                    <td><span class="mini-chip" [class]="severityClass(rule.severity)">{{ severityLabels[rule.severity] }}</span></td>
-                    <td>
+                    <td data-label="Alerta">{{ eventLabels[rule.eventType] }} @if (rule.supported === false) { <span class="mini-chip">Indisponível</span> }</td>
+                    <td data-label="Ativa"><span class="state-dot" [class.is-on]="rule.enabled">{{ rule.enabled ? 'Ativa' : 'Inativa' }}</span></td>
+                    <td data-label="App">{{ rule.appEnabled !== false ? 'Sim' : 'Não' }}</td>
+                    <td data-label="E-mail">{{ rule.emailEnabled ? 'Sim' : 'Não' }}</td>
+                    <td data-label="Destinatários">
                       {{ recipientsSummary(rule) }}
                       @if (ruleHasNoRecipients(rule)) {
                         <small class="field-hint rule-no-recipients">Esta regra não entrega notificações a ninguém.</small>
                       }
                     </td>
-                    <td>{{ rule.emailEnabled ? 'Sim' : 'Não' }}</td>
-                    <td>{{ rule.userMutable ? 'Sim' : 'Não' }}</td>
-                    <td>{{ dateTime(rule.updatedAt) }} por {{ rule.updatedBy || 'sistema' }}</td>
-                    <td class="table-actions-col">
-                      <button appRowAction icon="pencil" label="Editar regra" [target]="eventLabels[rule.eventType]" [disabled]="ruleSubmitting()" (click)="openRuleEditor(rule)"></button>
+                    <td data-label="Severidade"><span class="mini-chip" [class]="severityClass(rule.severity)">{{ severityLabels[rule.severity] }}</span></td>
+                    <td data-label="Silenciável">{{ rule.userMutable ? 'Sim' : 'Não' }}</td>
+                    <td data-label="Atualização">{{ dateTime(rule.updatedAt) }} por {{ rule.updatedBy || 'sistema' }}</td>
+                    <td class="table-actions-col" data-label="Ação">
+                      <button appRowAction icon="pencil" label="Editar regra" [target]="eventLabels[rule.eventType]" [disabled]="ruleSubmitting() || rule.supported === false" (click)="openRuleEditor(rule)"></button>
                     </td>
                   </tr>
                 }
@@ -218,9 +228,43 @@
         }
       </article>
 
+      <section class="panel table-card email-failures-section" aria-labelledby="email-failures-title">
+        <div class="notification-toolbar">
+          <h2 id="email-failures-title">Falhas de e-mail</h2>
+          @if (emailStatus(); as status) {
+            @if (!status.enabled) { <span class="mini-chip">Desligado</span> }
+            @else if (status.provider === 'fake') { <span class="mini-chip">Simulado</span> }
+          }
+          <button type="button" class="button-secondary" [disabled]="emailTestBusy() || !emailStatus()?.enabled" (click)="sendTestEmail()">{{ emailTestBusy() ? 'Enviando...' : 'Enviar e-mail de teste' }}</button>
+          <button type="button" class="button-secondary" [disabled]="failuresLoading() || emailStatusLoading()" (click)="retryFailures(); loadEmailStatus()">Atualizar</button>
+        </div>
+        @if (emailStatusError()) { <p class="field-error" role="alert">{{ emailStatusError() }}</p> }
+        @if (emailError()) { <p class="field-error" role="alert">{{ emailError() }}</p> }
+        @if (emailFeedback()) { <p class="field-hint" role="status">{{ emailFeedback() }}</p> }
+        @if (failuresLoading()) { <div aria-busy="true"></div> }
+        @else if (!failuresLoadFailed() && emailFailures().length === 0) { <p class="field-hint">Nenhuma falha de e-mail.</p> }
+        @else if (!failuresLoadFailed()) {
+          <div class="email-failure-list">
+            @for (failure of emailFailures(); track failure.notificationId ?? failure.eventKey + failure.recipient) {
+              <div class="email-failure-row">
+                <time>{{ dateTime(failure.occurredAt) }}</time>
+                <span>{{ failure.rmaCode || '—' }}</span>
+                <span>{{ failure.recipient || '—' }}</span>
+                <span>{{ failure.attempts ?? 0 }} tentativas</span>
+                <span class="failure-error">{{ failure.error || '—' }}</span>
+                @if (canRetryEmail(failure)) {
+                  <button type="button" class="button-secondary button-secondary--small" [attr.aria-label]="'Reenviar e-mail para ' + failure.recipient" [disabled]="retryingEmails().has(failure.notificationId!)" (click)="retryEmail(failure)">{{ retryingEmails().has(failure.notificationId!) ? 'Reenviando...' : 'Reenviar' }}</button>
+                }
+                @if (failure.notificationId != null && retryErrors()[failure.notificationId!]) { <p class="field-error" role="alert">{{ retryErrors()[failure.notificationId!] }}</p> }
+              </div>
+            }
+          </div>
+        }
+      </section>
+
       <section class="panel table-card failures-section" aria-labelledby="notification-failures-title">
         <h2 id="notification-failures-title">Falhas de processamento</h2>
-        <p class="field-hint">Até 50 falhas de eventos e até 50 falhas de envio de e-mail, da mais recente para a mais antiga.</p>
+        <p class="field-hint">Até 50 falhas, da mais recente para a mais antiga.</p>
         @if (failuresLoadFailed()) {
           <div class="panel alert-banner alert-banner--error failures-state" role="alert">
             <strong>{{ failuresLoadErrorMessage() }}</strong>
@@ -229,7 +273,7 @@
           </div>
         } @else if (failuresLoading() || !failuresHasLoaded()) {
           <div class="failures-state" aria-busy="true"></div>
-        } @else if (failures().length === 0) {
+        } @else if (eventFailures().length === 0) {
           <p class="failures-state">Nenhuma falha registrada.</p>
         } @else {
           <div class="table-wrap">
@@ -245,14 +289,14 @@
                 </tr>
               </thead>
               <tbody>
-                @for (failure of failures(); track failure.eventKey + failure.source + (failure.recipient ?? '')) {
+                @for (failure of eventFailures(); track failure.eventKey + failure.source + (failure.recipient ?? '')) {
                   <tr>
-                    <td>{{ dateTime(failure.occurredAt) }}</td>
-                    <td>{{ failureSource(failure) }}</td>
-                    <td>{{ eventLabels[failure.eventType] }}</td>
-                    <td>{{ failure.rmaCode || '—' }}</td>
-                    <td>{{ failure.recipient || '—' }}</td>
-                    <td class="failure-error">{{ failure.error || '—' }}</td>
+                    <td data-label="Data">{{ dateTime(failure.occurredAt) }}</td>
+                    <td data-label="Origem">{{ failureSource(failure) }}</td>
+                    <td data-label="Alerta">{{ eventLabels[failure.eventType] }}</td>
+                    <td data-label="RMA">{{ failure.rmaCode || '—' }}</td>
+                    <td data-label="Destinatário">{{ failure.recipient || '—' }}</td>
+                    <td class="failure-error" data-label="Erro">{{ failure.error || '—' }}</td>
                   </tr>
                 }
               </tbody>
@@ -300,13 +344,15 @@
         }
 
         <form class="form-grid" [formGroup]="ruleForm" (ngSubmit)="saveRule()">
-          <fieldset class="form-section">
+          @if (rule.supported === false) { <p class="field-hint field-group--full">Indisponível: este evento ainda não gera notificações.</p> }
+          <fieldset class="form-section" [disabled]="ruleSubmitting() || rule.supported === false">
             <legend>Entrega</legend>
-
             <label class="checkbox-field">
               <input type="checkbox" formControlName="enabled" />
               <span>Ativa</span>
             </label>
+            <label class="checkbox-field"><input type="checkbox" formControlName="appEnabled" /><span>App</span></label>
+            <label class="checkbox-field"><input type="checkbox" formControlName="emailEnabled" /><span>E-mail</span></label>
 
             <label class="field-group">
               <span>Severidade</span>
@@ -314,7 +360,7 @@
             </label>
           </fieldset>
 
-          <fieldset class="form-section">
+          <fieldset class="form-section" [disabled]="ruleSubmitting() || rule.supported === false">
             <legend>Destinatários</legend>
 
             @if (profileOptionsState() === 'loading') {
@@ -342,16 +388,8 @@
             }
           </fieldset>
 
-          <fieldset class="form-section">
-            <legend>E-mail e silenciamento</legend>
-
-            <div class="field-group">
-              <label class="checkbox-field">
-                <input type="checkbox" formControlName="emailEnabled" aria-describedby="rule-email-hint" />
-                <span>Enviar também por e-mail</span>
-              </label>
-              <small class="field-hint" id="rule-email-hint">Somente endereços do domínio corporativo configurado.</small>
-            </div>
+          <fieldset class="form-section" [disabled]="ruleSubmitting() || rule.supported === false">
+            <legend>Silenciamento</legend>
 
             <label class="checkbox-field">
               <input type="checkbox" formControlName="userMutable" />
@@ -361,7 +399,7 @@
 
           <div class="form-actions form-actions--full">
             <button type="button" class="button-secondary" (click)="closeRuleEditor()" [disabled]="ruleSubmitting()">Cancelar</button>
-            <button type="submit" class="button-primary" [disabled]="ruleSubmitting() || profileOptionsState() !== 'ready'">{{ ruleSubmitting() ? 'Salvando...' : 'Salvar regra' }}</button>
+            <button type="submit" class="button-primary" [disabled]="ruleSubmitting() || rule.supported === false || profileOptionsState() !== 'ready'">{{ ruleSubmitting() ? 'Salvando...' : 'Salvar regra' }}</button>
           </div>
         </form>
       </section>

@@ -1,3 +1,4 @@
+import { AuthService } from '../../core/services/auth.service';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
@@ -50,12 +51,14 @@ describe('NotificationsComponent', () => {
       updatePreference: vi.fn(() => of({ ...PREFERENCES[0], muted: true })),
       listRules: vi.fn(() => of([RULE])),
       updateRule: vi.fn(() => of(RULE)),
+      emailStatus: vi.fn(() => of({ enabled: true, provider: 'fake' })),
       listFailures: vi.fn(() => of([]))
     } as never;
     await TestBed.configureTestingModule({
       imports: [NotificationsComponent],
       providers: [
         provideRouter([]),
+        { provide: AuthService, useValue: { currentUser: () => ({ email: 'user@example.com' }) } },
         { provide: NotificationService, useValue: service },
         { provide: ProfileService, useValue: { options: () => of([{ id: 1, name: 'Administrador', permissions: [] }, { id: 2, name: 'Atendimento', permissions: [] }]), invalidateOptions: () => undefined } },
         providePermissions(profilePermissions(role))
@@ -113,7 +116,7 @@ describe('NotificationsComponent', () => {
     fixture.detectChanges();
 
     expect(service['updateRule']).toHaveBeenCalledWith('RMA_ASSIGNED', {
-      enabled: true, severity: 'CRITICAL', recipientProfileIds: [1, 2], notifyAssignee: true, emailEnabled: false, userMutable: false
+      enabled: true, appEnabled: true, severity: 'CRITICAL', recipientProfileIds: [1, 2], notifyAssignee: true, emailEnabled: false, userMutable: false
     });
   });
 });

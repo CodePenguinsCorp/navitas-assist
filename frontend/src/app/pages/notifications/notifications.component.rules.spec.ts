@@ -1,3 +1,4 @@
+import { AuthService } from '../../core/services/auth.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Signal, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -81,12 +82,16 @@ describe('NotificationsComponent rules', () => {
       updatePreference: vi.fn(),
       listRules,
       updateRule,
+      emailStatus: vi.fn(() => of({ enabled: true, provider: 'fake' })),
+      testEmail: vi.fn(() => of({ status: 'simulado', provider: 'fake' })),
+      retryEmail: vi.fn(() => of({ notificationId: 42, status: 'PENDING', provider: 'fake' })),
       listFailures
     } as never;
     await TestBed.configureTestingModule({
       imports: [NotificationsComponent],
       providers: [
         provideRouter([]),
+        { provide: AuthService, useValue: { currentUser: () => ({ email: 'user@example.com' }) } },
         { provide: NotificationService, useValue: service },
         { provide: ProfileService, useValue: { options: profileOptions, invalidateOptions } },
         providePermissions(sources.permissions ?? profilePermissions(sources.role ?? 'ADMIN'))
@@ -97,6 +102,65 @@ describe('NotificationsComponent rules', () => {
     render();
   }
 
+  it('mostra canais e impede edição dos eventos indisponíveis', async () => {
+    await setup({ rules: [of([{ ...RULE, appEnabled: false, supported: false }])] }); openRules();
+    expect(text()).toContain('Indisponível');
+    expect(rulesTable()!.querySelectorAll('tbody td')[2].textContent?.trim()).toBe('Não');
+    expect(root().querySelector<HTMLButtonElement>('button[aria-label="Editar regra Bloqueio"]')?.disabled).toBe(true);
+  });
+
+  it('envia teste para si e informa simulação sem alegar entrega', async () => {
+    await setup(); openRules();
+    button('Enviar e-mail de teste')!.click(); render();
+    expect(service['testEmail']).toHaveBeenCalledTimes(1);
+    expect(text()).toContain('Simulação registrada');
+    expect(text()).not.toContain('Entregue');
+  });
+
+  it.each([400, 409])('mostra erro inline de reenvio %s e permite nova tentativa', async (status) => {
+    const email: NotificationFailureResponse = { source: 'EMAIL', eventKey: 'e', eventType: 'RMA_CREATED', rmaCode: 'RMA-1', recipient: 'admin', error: 'Falha', occurredAt: RULE.updatedAt, notificationId: 42, status: 'FAILED', retryAllowed: true, attempts: 5 };
+    await setup({ failures: [of([email]), of([email])] }); openRules();
+    service['retryEmail'].mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status, error: { message: 'Reenvio recusado' } })));
+    button('Reenviar')!.click(); render();
+    expect(text()).toContain('Reenvio recusado');
+    expect(button('Reenviar')!.disabled).toBe(false);
+    expect(service['listFailures']).toHaveBeenCalledTimes(status === 409 ? 2 : 1);
+  });
+
+  it('bloqueia teste duplicado e ignora resposta depois da perda de permissão', async () => {
+    const permissions = signal<readonly Permission[]>(profilePermissions('ADMIN'));
+    const pending = new Subject<{ status: string; provider: string }>();
+    await setup({ permissions }); openRules();
+    service['testEmail'].mockReturnValue(pending);
+    button('Enviar e-mail de teste')!.click(); render();
+    expect(button('Enviando...')!.disabled).toBe(true);
+    permissions.set(profilePermissions('TECHNICIAN')); render();
+    pending.next({ status: 'simulado', provider: 'fake' }); pending.complete(); render();
+    expect(root().querySelector('.email-failures-section')).toBeNull();
+    expect(text()).not.toContain('Simulação registrada');
+  });
+
+  it.each([400, 429, 502])('mostra erro inline do teste %s sem feedback de sucesso', async status => {
+    await setup(); openRules();
+    service['testEmail'].mockReturnValue(throwError(() => new HttpErrorResponse({ status, error: { message: 'Teste recusado' } })));
+    button('Enviar e-mail de teste')!.click(); render();
+    expect(text()).toContain('Teste recusado');
+    expect(text()).not.toContain('Teste enviado');
+    expect(button('Enviar e-mail de teste')!.disabled).toBe(false);
+  });
+
+  it('permite salvar os dois canais independentemente', async () => {
+    await setup(); openRules();
+    const editor = component as unknown as { openRuleEditor(rule: NotificationRuleResponse): void; ruleForm: { patchValue(value: object): void }; saveRule(): void };
+    editor.openRuleEditor(RULE); editor.ruleForm.patchValue({ appEnabled: false, emailEnabled: true }); editor.saveRule();
+    expect(service['updateRule']).toHaveBeenCalledWith(RULE.eventType, expect.objectContaining({ appEnabled: false, emailEnabled: true }));
+  });
+
+  it('não oferece reenvio para email pendente ou falha de evento', async () => {
+    await setup({ failures: [of([{ source: 'EMAIL', eventKey: 'e', eventType: 'RMA_CREATED', rmaCode: null, recipient: null, error: 'Erro', occurredAt: RULE.updatedAt, notificationId: 42, status: 'PENDING', retryAllowed: true }])] });
+    openRules(); expect(button('Reenviar')).toBeUndefined();
+  });
+
   // Vermelho: a tabela tem checkboxes e selects por linha e nenhum botão "Editar regra".
   it('summarizes each rule without inline controls', async () => {
     await setup({ rules: [of([RULE, SILENT_RULE])] });
@@ -104,7 +168,7 @@ describe('NotificationsComponent rules', () => {
     const table = rulesTable()!;
     expect(cells(table, 'Bloqueio')).toMatchObject({
       'Alerta': 'Bloqueio',
-      'Situação': 'Ativa',
+      'Ativa': 'Ativa',
       'Severidade': 'Crítico',
       'Destinatários': 'Administrador + responsável pelo RMA',
       'E-mail': 'Não',
@@ -115,7 +179,7 @@ describe('NotificationsComponent rules', () => {
     expect(table.querySelector('app-custom-select')).toBeNull();
     expect(table.querySelector('button[aria-label="Editar regra Bloqueio"]')).not.toBeNull();
     expect(cells(table, 'Novo RMA')['Destinatários']).toMatch(/^Nenhum destinatário\b/);
-    expect(cells(table, 'Novo RMA')['Situação']).toBe('Inativa');
+    expect(cells(table, 'Novo RMA')['Ativa']).toBe('Inativa');
   });
 
   // Vermelho: a tabela aparece vazia durante a carga e antiga depois da falha.
@@ -240,15 +304,18 @@ describe('NotificationsComponent rules', () => {
       await setup();
       openRules();
       openEditor('Bloqueio');
-      expect(Array.from(dialog()!.querySelectorAll('fieldset legend')).map((legend) => normalize(legend.textContent))).toEqual(['Entrega', 'Destinatários', 'E-mail e silenciamento']);
+      expect(Array.from(dialog()!.querySelectorAll('fieldset legend')).map((legend) => normalize(legend.textContent))).toEqual(['Entrega', 'Destinatários', 'Silenciamento']);
       expect(normalize(field('Atendimento').closest('fieldset')!.querySelector('legend')!.textContent)).toBe('Destinatários');
+      // Os dois canais ficam juntos na seção de entrega.
+      expect(normalize(field('App').closest('fieldset')!.querySelector('legend')!.textContent)).toBe('Entrega');
+      expect(normalize(field('E-mail').closest('fieldset')!.querySelector('legend')!.textContent)).toBe('Entrega');
       expect(dialog()!.textContent).toContain('Vale para os próximos eventos.');
       expectCancelBeforePrimary(dialog()!);
       toggleField('Atendimento');
       submit();
       expect(service['updateRule']).toHaveBeenCalledTimes(1);
       expect(service['updateRule']).toHaveBeenCalledWith('RMA_BLOCKED', {
-        enabled: true, severity: 'CRITICAL', recipientProfileIds: [1, 2], notifyAssignee: true, emailEnabled: false, userMutable: false
+        enabled: true, appEnabled: true, severity: 'CRITICAL', recipientProfileIds: [1, 2], notifyAssignee: true, emailEnabled: false, userMutable: false
       });
       expect(dialog()).toBeNull();
       expect(cells(rulesTable()!, 'Bloqueio')).toMatchObject({
@@ -331,7 +398,7 @@ describe('NotificationsComponent rules', () => {
       const table = rulesTable()!;
       expect(cells(table, 'Novo RMA')['Destinatários']).toContain('Nenhum destinatário');
       expect(cells(table, 'Novo RMA')['Destinatários']).toContain(warning);
-      expect(cells(table, 'Novo RMA')['Situação']).toBe('Inativa');
+      expect(cells(table, 'Novo RMA')['Ativa']).toBe('Inativa');
       expect(cells(table, 'Bloqueio')['Destinatários']).not.toContain(warning);
       expect(cells(table, 'Nova atribuição')['Destinatários']).toBe('Responsável pelo RMA');
 
@@ -343,7 +410,7 @@ describe('NotificationsComponent rules', () => {
       expect(dialog()!.textContent).toContain(warning);
       submit();
       expect(service['updateRule']).toHaveBeenLastCalledWith('RMA_BLOCKED', {
-        enabled: true, severity: 'CRITICAL', recipientProfileIds: [], notifyAssignee: false, emailEnabled: false, userMutable: false
+        enabled: true, appEnabled: true, severity: 'CRITICAL', recipientProfileIds: [], notifyAssignee: false, emailEnabled: false, userMutable: false
       });
 
       openEditor('Novo RMA');
@@ -359,12 +426,12 @@ describe('NotificationsComponent rules', () => {
       openEditor('Bloqueio');
       submit();
       expect(service['updateRule']).toHaveBeenLastCalledWith('RMA_BLOCKED', {
-        enabled: true, severity: 'CRITICAL', recipientProfileIds: [1], notifyAssignee: true, emailEnabled: false, userMutable: false
+        enabled: true, appEnabled: true, severity: 'CRITICAL', recipientProfileIds: [1], notifyAssignee: true, emailEnabled: false, userMutable: false
       });
       openEditor('Novo RMA');
       submit();
       expect(service['updateRule']).toHaveBeenLastCalledWith('RMA_CREATED', {
-        enabled: false, severity: 'INFO', recipientProfileIds: [], notifyAssignee: false, emailEnabled: false, userMutable: false
+        enabled: false, appEnabled: true, severity: 'INFO', recipientProfileIds: [], notifyAssignee: false, emailEnabled: false, userMutable: false
       });
     });
 
@@ -382,7 +449,7 @@ describe('NotificationsComponent rules', () => {
       expect(field('Administrador').checked).toBe(false);
       expect(field('Ativa').checked).toBe(false);
       expect(field('Notificar o responsável pelo RMA').checked).toBe(false);
-      expect(field('Enviar também por e-mail').checked).toBe(false);
+      expect(field('E-mail').checked).toBe(false);
       expect(field('Permitir que cada usuário silencie').checked).toBe(false);
     });
 
@@ -405,7 +472,7 @@ describe('NotificationsComponent rules', () => {
       render();
       expect(dialog()).toBeNull();
       expect(cells(rulesTable()!, 'Bloqueio')['Destinatários']).toBe('Administrador, Técnico + responsável pelo RMA');
-      expect(cells(rulesTable()!, 'Novo RMA')['Situação']).toBe('Inativa');
+      expect(cells(rulesTable()!, 'Novo RMA')['Ativa']).toBe('Inativa');
     });
 
     it('disables every rule edit button while a save is pending', async () => {
@@ -466,11 +533,13 @@ describe('NotificationsComponent rules', () => {
         expect(service['updateRule']).toHaveBeenCalledWith('RMA_BLOCKED', expect.objectContaining({ severity: 'WARNING', enabled: false }));
       });
 
-      it('explains the e-mail restriction next to its checkbox', async () => {
+      it('usa canais app e email sem pressupor domínio corporativo', async () => {
         await setup();
         openRules();
         openEditor('Bloqueio');
-        expect(field('Enviar também por e-mail').closest('.field-group, fieldset')!.textContent).toContain('Somente endereços do domínio corporativo configurado.');
+        expect(field('App')).not.toBeNull();
+        expect(field('E-mail')).not.toBeNull();
+        expect(dialog()!.textContent).not.toContain('domínio corporativo');
       });
     });
   });
@@ -560,7 +629,7 @@ describe('NotificationsComponent rules', () => {
       expect(text()).toContain('Não foi possível carregar as falhas de processamento.');
       expect(button('Tentar novamente')).toBeDefined();
       expect(text()).not.toContain('Nenhuma falha registrada.');
-      expect(cells(rulesTable()!, 'Bloqueio')['Situação']).toBe('Ativa');
+      expect(cells(rulesTable()!, 'Bloqueio')['Ativa']).toBe('Ativa');
     });
 
     // Vermelho: durante a carga aparece "Nenhuma falha registrada.".
@@ -607,25 +676,25 @@ describe('NotificationsComponent rules', () => {
       render();
       expect(service['listFailures']).toHaveBeenCalledTimes(2);
       expect(service['listRules']).toHaveBeenCalledTimes(1);
-      expect(failuresColumn('Origem')).toEqual(['Processamento do evento', 'Envio de e-mail']);
+      expect(failuresColumn('Origem')).toEqual(['Processamento do evento']);
     });
 
     // Vermelho: a origem é "Evento"/"E-mail" e não há texto do limite.
     it('identifies the origin and the limit', async () => {
       await setup({ failures: [of(FAILURES)] });
       openRules();
-      expect(failuresColumn('Origem').map((value) => normalize(value))).toEqual(['Processamento do evento', 'Envio de e-mail']);
-      expect(normalize(section()!.textContent)).toContain('Até 50 falhas de eventos e até 50 falhas de envio de e-mail, da mais recente para a mais antiga.');
+      expect(failuresColumn('Origem').map((value) => normalize(value))).toEqual(['Processamento do evento']);
+      expect(root().querySelector('.email-failures-section')?.textContent).toContain('SMTP indisponível');
     });
 
     describe('preservation', () => {
       it('keeps the full error, the server order, placeholders and event labels', async () => {
         await setup({ failures: [of(FAILURES)] });
         openRules();
-        expect(failuresColumn('Erro')).toEqual(['Linha 1\nLinha 2 com detalhe', 'SMTP indisponível']);
-        expect(failuresColumn('RMA').map((value) => normalize(value))).toEqual(['—', 'RMA-2026-000007']);
-        expect(failuresColumn('Destinatário').map((value) => normalize(value))).toEqual(['—', 'tec@empresa.com']);
-        expect(failuresColumn('Alerta').map((value) => normalize(value))).toEqual(['Bloqueio', 'Novo RMA']);
+        expect(failuresColumn('Erro')).toEqual(['Linha 1\nLinha 2 com detalhe']);
+        expect(failuresColumn('RMA').map((value) => normalize(value))).toEqual(['—']);
+        expect(failuresColumn('Destinatário').map((value) => normalize(value))).toEqual(['—']);
+        expect(failuresColumn('Alerta').map((value) => normalize(value))).toEqual(['Bloqueio']);
       });
 
       it('requests failures only for admins', async () => {

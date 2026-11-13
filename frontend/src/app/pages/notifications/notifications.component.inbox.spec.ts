@@ -1,3 +1,4 @@
+import { AuthService } from '../../core/services/auth.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -20,6 +21,9 @@ const NEW: NotificationResponse = { ...NOTIFICATION, id: 9, title: 'Notificaçã
 const failure = () => throwError(() => new HttpErrorResponse({ status: 500 }));
 
 interface Harness {
+  updateEventFilter(value: 'RMA_CREATED' | ''): void;
+  updateSeverityFilter(value: 'CRITICAL' | ''): void;
+  clearInboxFilters(): void;
   markAllRead(): void;
   markRead(notification: NotificationResponse): void;
   snooze(notification: NotificationResponse, minutes: string): void;
@@ -60,12 +64,14 @@ describe('NotificationsComponent inbox loading', () => {
       updatePreference: vi.fn(),
       listRules: vi.fn(() => of([])),
       updateRule: vi.fn(),
+      emailStatus: vi.fn(() => of({ enabled: true, provider: 'fake' })),
       listFailures: vi.fn(() => of([]))
     } as never;
     await TestBed.configureTestingModule({
       imports: [NotificationsComponent],
       providers: [
         provideRouter([]),
+        { provide: AuthService, useValue: { currentUser: () => ({ email: 'user@example.com' }) } },
         { provide: NotificationService, useValue: service },
         { provide: ProfileService, useValue: { options: () => of([]), invalidateOptions: () => undefined } },
         providePermissions(profilePermissions(sources.role ?? 'TECHNICIAN')),
@@ -76,6 +82,33 @@ describe('NotificationsComponent inbox loading', () => {
     component = fixture.componentInstance as unknown as Harness;
     render();
   }
+
+  it('agrupa por dia e recalcula os rótulos na virada pelo ClockService', async () => {
+    await setup({ list: [of([
+      { ...NOTIFICATION, createdAt: new Date(2026, 9, 24, 10).toISOString() },
+      { ...OLD, createdAt: new Date(2026, 9, 23, 10).toISOString() }
+    ])] });
+    clock.set(new Date(2026, 9, 24, 23, 59).getTime()); render();
+    expect(text()).toContain('Hoje'); expect(text()).toContain('Ontem');
+    clock.set(new Date(2026, 9, 25, 0, 1).getTime()); render();
+    expect(root().querySelectorAll('.notification-day')[0].textContent).toBe('Ontem');
+    expect(root().querySelectorAll('.notification-day')[1].textContent).toBe('23/10/2026');
+  });
+
+  it('envia filtros ao servidor e limpa evento, severidade e adiadas juntos', async () => {
+    await setup();
+    component.updateEventFilter('RMA_CREATED');
+    component.updateSeverityFilter('CRITICAL');
+    toggle('Mostrar adiadas');
+    expect(service['list']).toHaveBeenLastCalledWith({ unreadOnly: false, includeSnoozed: true, eventType: 'RMA_CREATED', severity: 'CRITICAL' });
+    component.clearInboxFilters();
+    expect(service['list']).toHaveBeenLastCalledWith({ unreadOnly: false, includeSnoozed: false });
+  });
+
+  it('mantém leitura em massa habilitada quando o filtro não contém não lidas', async () => {
+    await setup({ unread: 8, list: [of([])] });
+    expect(button('Marcar todas como lidas')?.disabled).toBe(false);
+  });
 
   it('shows an empty inbox only after the initial response', async () => {
     const pending = new Subject<NotificationResponse[]>();
@@ -381,7 +414,8 @@ describe('NotificationsComponent inbox loading', () => {
         render();
         expect(button('Marcar como lida')!.disabled).toBe(true);
         TestBed.resetTestingModule();
-        await setup({ list: [of([{ ...NOTIFICATION, read: true }])] });
+        // Sem não lidas no resumo do servidor nem na lista, a leitura em massa fica desabilitada.
+        await setup({ unread: 0, list: [of([{ ...NOTIFICATION, read: true }])] });
         expect(button('Marcar todas como lidas')!.disabled).toBe(true);
       });
 

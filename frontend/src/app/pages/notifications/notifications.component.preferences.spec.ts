@@ -1,3 +1,4 @@
+import { AuthService } from '../../core/services/auth.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -56,12 +57,14 @@ describe('NotificationsComponent preferences', () => {
       updatePreference: vi.fn(() => sources.update ?? of({ ...PREFERENCES[0], muted: true })),
       listRules: vi.fn(() => of([])),
       updateRule: vi.fn(),
+      emailStatus: vi.fn(() => of({ enabled: true, provider: 'fake' })),
       listFailures: vi.fn(() => of([]))
     } as never;
     await TestBed.configureTestingModule({
       imports: [NotificationsComponent],
       providers: [
         provideRouter([]),
+        { provide: AuthService, useValue: { currentUser: () => ({ email: 'user@example.com' }) } },
         { provide: NotificationService, useValue: service },
         { provide: ProfileService, useValue: { options: () => of([]), invalidateOptions: () => undefined } },
         providePermissions(profilePermissions(sources.role ?? 'TECHNICIAN'))
@@ -72,11 +75,20 @@ describe('NotificationsComponent preferences', () => {
     render();
   }
 
+  it('informa falta de email sem remover o silenciamento salvo', async () => {
+    await setup();
+    vi.spyOn(TestBed.inject(AuthService), 'currentUser').mockReturnValue({ email: null } as never);
+    openPreferences();
+    expect(text()).toContain('Sem e-mail cadastrado');
+    expect(column('Situação')[1]).toBe('Silenciado');
+    expect(service['updatePreference']).not.toHaveBeenCalled();
+  });
+
   // Vermelho: a quarta linha mostra "Silenciado", a quinta "Recebendo" e a terceira "Regra desativada".
   it('labels each preference with one of four states', async () => {
     await setup();
     openPreferences();
-    expect(column('Situação')).toEqual(['Recebendo', 'Silenciado', 'Desativado pela administração', 'Obrigatório', 'Obrigatório']);
+    expect(column('Situação')).toEqual(['Recebendo', 'Silenciado', 'Desligado', 'Obrigatório', 'Obrigatório']);
   });
 
   // Vermelho: o nome acessível do botão é só "Silenciar".
@@ -178,7 +190,7 @@ describe('NotificationsComponent preferences', () => {
       await setup();
       openPreferences();
       expect(Array.from(root().querySelectorAll('tbody tr'))[2].querySelector('button')!.textContent!.trim()).toBe('Silenciar');
-      expect(text()).toContain('Silencie os alertas que a regra permite. Alertas obrigatórios continuam chegando.');
+      expect(text()).toContain('Silenciar vale para App e E-mail.');
     });
 
     it('keeps the row and shows the alert when the update fails', async () => {
