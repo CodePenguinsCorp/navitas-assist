@@ -8,8 +8,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-.sla[data-sla='WARNING'] { --sla-tone: var(--sla-warning); }
-.sla[data-sla='OVERDUE'] { --sla-tone: var(--sla-overdue); }
+.sla[data-sla='WARNING'] { --sla-tone: var(--deadline-soon); }
+.sla[data-sla='OVERDUE'] { --sla-tone: var(--deadline-overdue); }
 .sla[data-sla='CLOSED'] { --sla-tone: var(--tone-slate); }
 
 /* In a narrow cell the row wraps between whole pieces; no piece ever breaks inside. */

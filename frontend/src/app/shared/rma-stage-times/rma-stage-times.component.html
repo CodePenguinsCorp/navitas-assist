@@ -1,0 +1,8 @@
+<section class="stage-times" aria-label="Tempo por etapa">
+  <h4>Tempo por etapa</h4>
+  <ol>
+    @for (row of rows(); track row.key) {
+      <li [attr.data-stage]="row.status">{{ row.text }}</li>
+    }
+  </ol>
+</section>

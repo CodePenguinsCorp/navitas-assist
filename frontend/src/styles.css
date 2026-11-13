@@ -47,7 +47,7 @@
   --status-returned: #5f87a8;
   --status-irreparable: #5f6776;
 
-  /* Indicator tones (.tone-*, dashboard) and SLA states. */
+  /* Indicator tones (.tone-*, dashboard) and due date states. */
   --tone-success: #2f8a5b;
   --tone-warning: #b7791f;
   --tone-danger: #b33a4a;
@@ -55,8 +55,8 @@
   --tone-slate: #5b6c80;
   --tone-violet: #6d55c9;
   --sla-ok: #2f7a52;
-  --sla-warning: #8a5e00;
-  --sla-overdue: #b33a3f;
+  --deadline-soon: #8a5e00;
+  --deadline-overdue: #b33a3f;
   --track-bg: #e6edf4;
 
   /* Attention surfaces (reported failure) and the single modal backdrop. */
