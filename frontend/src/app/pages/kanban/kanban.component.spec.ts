@@ -104,11 +104,14 @@ describe('KanbanComponent filters', () => {
     }
   });
 
-  it('shows search, SLA and assignee as quick filters and hides the other eight controls until Filtros is opened', () => {
+  it('shows search, Prazo and assignee as quick filters and hides the other eight controls until Filtros is opened', () => {
     fixture.detectChanges();
     const host: HTMLElement = fixture.nativeElement;
     const panel = host.querySelector<HTMLElement>('#kanbanAdvancedFilters');
-    const quick = ['query', 'sla', 'assignee'];
+    const quick = ['query', 'deadline', 'assignee'];
+    const prazo = host.querySelector('[formcontrolname="deadline"]')?.closest('.field-group');
+    expect(prazo?.querySelector('label')?.textContent?.trim()).toBe('Prazo');
+    expect(host.textContent).not.toContain('SLA');
     const advanced = ['priority', 'status', 'blocked', 'warranty', 'entryFrom', 'entryTo', 'updatedFrom', 'updatedTo'];
     for (const name of quick) {
       const control = host.querySelector(`[formcontrolname="${name}"]`);
@@ -212,12 +215,12 @@ describe('KanbanComponent filters', () => {
     expect(createdViewRequest?.filters).toEqual(expect.objectContaining({ warranty: WarrantyStatus.IN_WARRANTY }));
   });
 
-  it('deselects the saved view on a manual edit, including SLA, and keeps it when the values come back equal', () => {
+  it('deselects the saved view on a manual edit, including Prazo, and keeps it when the values come back equal', () => {
     component.filtersForm.patchValue({ priority: 'HIGH', query: 'árvore' });
     saveCurrentAsView('Críticos');
     component.filtersForm.patchValue({ query: '  árvore  ' });
     expect(component.activeViewId(), 'surrounding spaces are not a different search').toBe(5);
-    component.filtersForm.patchValue({ sla: 'OVERDUE' });
+    component.filtersForm.patchValue({ deadline: 'OVERDUE' });
     expect(component.activeViewId()).toBeNull();
     component.applyView(5);
     expect(component.activeViewId()).toBe(5);
@@ -434,22 +437,41 @@ describe('KanbanComponent filters', () => {
     expect(component.activeCount()).toBe(1);
   });
 
-  it('combines SLA with advanced filters and clears the entire form', () => {
-    component.filtersForm.patchValue({ sla: 'NORMAL', priority: 'HIGH', assignee: 7, query: 'arvore' });
+  it('combines Prazo with advanced filters and clears the entire form', () => {
+    component.filtersForm.patchValue({ deadline: 'DUE_SOON', priority: 'HIGH', assignee: 7, query: 'arvore' });
     expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
     expect(component.activeFilterCount()).toBe(4);
-    component.filtersForm.patchValue({ sla: 'CLOSED' });
+    component.filtersForm.patchValue({ deadline: 'NO_DUE_DATE' });
     expect(component.filteredRmas()).toEqual([]);
     component.clearFilters();
     expect(component.filteredRmas()).toHaveLength(2);
-    expect(component.filtersForm.getRawValue().sla).toBe('all');
+    expect(component.filtersForm.getRawValue().deadline).toBe('all');
     expect(component.activeFilterCount()).toBe(0);
   });
 
-  it('updates the combined SLA filter as its deadline passes', () => {
-    component.filtersForm.patchValue({ sla: 'OVERDUE', priority: 'HIGH', assignee: 7 });
+  it('filters by each deadline option and keeps closed RMAs only under Todos', () => {
+    const extra = (id: number, dueDate: string | null, status: RmaResponse['status'] = 'TRIAGE'): RmaResponse => ({
+      ...TEST_RMAS[0], id, code: `NAV-00${id}`, status, dueDate,
+      deadline: { status: 'ON_TRACK', dueSoonFrom: dueDate ? shiftDate(dueDate, -7) : null, daysUntilDue: null },
+    });
+    (component as unknown as { rmasSignal: { set(value: RmaResponse[]): void } }).rmasSignal.set([
+      extra(11, '2026-10-19'), extra(12, '2026-10-22'), extra(13, '2026-12-01'), extra(14, null), extra(15, '2026-10-01', 'COMPLETED'),
+    ]);
+    const ids = (deadline: 'all' | 'OVERDUE' | 'DUE_SOON' | 'ON_TRACK' | 'NO_DUE_DATE') => {
+      component.filtersForm.patchValue({ deadline });
+      return component.filteredRmas().map((rma) => rma.id);
+    };
+    expect(ids('OVERDUE')).toEqual([11]);
+    expect(ids('DUE_SOON')).toEqual([12]);
+    expect(ids('ON_TRACK')).toEqual([13]);
+    expect(ids('NO_DUE_DATE')).toEqual([14]);
+    expect(ids('all')).toEqual([11, 12, 13, 14, 15]);
+  });
+
+  it('updates the Prazo filter when the day turns', () => {
+    component.filtersForm.patchValue({ deadline: 'OVERDUE', priority: 'HIGH', assignee: 7 });
     expect(component.filteredRmas()).toEqual([]);
-    now.set(Date.parse('2026-10-20T13:00:00Z'));
+    now.set(Date.parse('2026-10-21T03:00:00Z'));
     expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
   });
 
@@ -483,9 +505,9 @@ describe('KanbanComponent filters', () => {
     );
     expect(component.activeViewId()).toBe(5);
 
-    component.filtersForm.patchValue({ priority: 'all', query: '', sla: 'CLOSED' });
+    component.filtersForm.patchValue({ priority: 'all', query: '', deadline: 'NO_DUE_DATE' });
     component.applyView(5);
-    expect(component.filtersForm.getRawValue().sla).toBe('all');
+    expect(component.filtersForm.getRawValue().deadline).toBe('all');
     expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
     expect(component.filtersForm.getRawValue()).toEqual(
       expect.objectContaining({ priority: 'HIGH', query: 'árvore' }),
@@ -496,16 +518,38 @@ describe('KanbanComponent filters', () => {
     expect(component.activeFilterCount()).toBe(0);
   });
 
-  it('does not mark the saved view as active when SLA, which views do not persist, is filtering the board', () => {
-    component.filtersForm.patchValue({ priority: 'HIGH', sla: 'OVERDUE' });
-    component.openCreateViewModal();
-    component.viewForm.patchValue({ name: 'Atrasados', defaultView: false });
+  it('saves and restores the deadline filter in a view', () => {
+    component.filtersForm.patchValue({ priority: 'HIGH', deadline: 'DUE_SOON' });
+    saveCurrentAsView('Perto do limite');
 
-    component.saveView();
-
-    expect(createdViewRequest).toEqual(expect.objectContaining({ name: 'Atrasados' }));
-    expect(component.filtersForm.getRawValue().sla).toBe('OVERDUE');
+    expect(createdViewRequest?.filters).toEqual(expect.objectContaining({ priority: 'HIGH', deadline: 'DUE_SOON' }));
+    expect(component.activeViewId()).toBe(5);
+    component.filtersForm.patchValue({ deadline: 'all' });
     expect(component.activeViewId()).toBeNull();
+    component.applyView(5);
+    expect(component.filtersForm.getRawValue().deadline).toBe('DUE_SOON');
+    expect(component.activeViewId()).toBe(5);
+  });
+
+  it('saves Todos as a null deadline', () => {
+    component.filtersForm.patchValue({ priority: 'HIGH' });
+    saveCurrentAsView('Todos os prazos');
+    expect(createdViewRequest?.filters.deadline).toBeNull();
+  });
+
+  it('opens a view saved without deadline as Todos', () => {
+    const views = (component as unknown as { viewsSignal: { set(value: KanbanViewResponse[]): void } }).viewsSignal;
+    const legacyFilters = {
+      query: null, priority: 'HIGH', status: null, warranty: null, assigneeId: null, unassignedOnly: false,
+      entryFrom: null, entryTo: null, updatedFrom: null, updatedTo: null,
+    } as KanbanViewResponse['filters'];
+    views.set([{ id: 9, name: 'Antiga', defaultView: false, filters: legacyFilters, createdAt: '2026-10-01T12:00:00Z', updatedAt: '2026-10-01T12:00:00Z' }]);
+    component.filtersForm.patchValue({ deadline: 'OVERDUE' });
+
+    component.applyView(9);
+
+    expect(component.filtersForm.getRawValue()).toEqual(expect.objectContaining({ deadline: 'all', priority: 'HIGH' }));
+    expect(component.activeViewId()).toBe(9);
   });
 
   it('selects across columns and filters, clears selection and patches affected cards', () => {
@@ -585,6 +629,7 @@ const TEST_RMAS: RmaResponse[] = [
     serialNumber: 'SERIE-ALFA',
     entryDate: '2026-10-10',
     updatedAt: '2026-10-20T02:30:00Z',
+    dueDate: '2026-10-20',
     priority: 'HIGH',
     status: 'TRIAGE',
     assigneeId: 7,
@@ -601,6 +646,7 @@ const TEST_RMAS: RmaResponse[] = [
     serialNumber: 'SERIE-BETA',
     entryDate: '2026-10-15',
     updatedAt: '2026-10-20T15:00:00Z',
+    dueDate: '2026-10-12',
     priority: 'LOW',
     status: 'COMPLETED',
     assigneeId: null,
@@ -619,6 +665,7 @@ function buildRma(values: {
   serialNumber: string;
   entryDate: string;
   updatedAt: string;
+  dueDate?: string;
   priority: RmaResponse['priority'];
   status: RmaResponse['status'];
   assigneeId: number | null;
@@ -680,10 +727,19 @@ function buildRma(values: {
       dueAt: values.status === 'COMPLETED' ? null : '2026-10-20T13:00:00Z',
       elapsedSeconds: 0,
       limitSeconds: values.status === 'COMPLETED' ? null : 7200,
-    }, dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T11:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [],
+    }, dueDate: values.dueDate ?? null,
+    deadline: values.dueDate
+      ? { status: values.status === 'COMPLETED' ? 'CLOSED' : 'DUE_SOON', dueSoonFrom: shiftDate(values.dueDate, -7), daysUntilDue: 0 }
+      : { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null },
+    stagePeriods: [{ status: values.status, enteredAt: '2026-10-20T11:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [],
     createdAt: '2026-10-10T12:00:00Z',
     updatedAt: values.updatedAt,
   };
+}
+
+function shiftDate(date: string, days: number): string {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
 describe('KanbanComponent dialog focus', () => {

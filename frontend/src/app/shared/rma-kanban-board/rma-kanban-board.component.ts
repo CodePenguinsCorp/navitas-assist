@@ -1,8 +1,8 @@
 import { Component, EventEmitter, Output, computed, inject, input } from '@angular/core';
 import { SlaClockService } from '../../core/services/sla-clock.service';
 import { blockDuration } from '../../core/utils/rma-block';
-import { slaStatus } from '../../core/utils/rma-sla';
-import { RmaSlaBadgeComponent } from '../rma-sla-badge/rma-sla-badge.component';
+import { stageTimeLabel } from '../../core/utils/rma-stage';
+import { RmaDeadlineChipComponent } from '../rma-deadline-chip/rma-deadline-chip.component';
 import { RMA_STATUS_FLOW } from '../../core/mock-data';
 import { RmaResponse, RmaStatus } from '../../core/models';
 import {
@@ -24,7 +24,7 @@ interface RmaBoardColumn {
 
 @Component({
   selector: 'app-rma-kanban-board',
-  imports: [RmaSlaBadgeComponent],
+  imports: [RmaDeadlineChipComponent],
   templateUrl: './rma-kanban-board.component.html',
   styleUrl: './rma-kanban-board.component.css'
 })
@@ -72,10 +72,9 @@ export class RmaKanbanBoardComponent {
   protected readonly ownerLabel = ownerLabel;
   protected readonly dateLabel = formatDate;
 
-  /** Healthy and closed SLAs stay in the detail; the card only flags attention or delay. */
-  protected showSla(rma: RmaResponse): boolean {
-    const state = slaStatus(rma.sla, this.clock.now());
-    return state === 'WARNING' || state === 'OVERDUE';
+  /** "há 2 d 4 h nesta etapa" for open RMAs; null for closed ones. */
+  protected stageTime(rma: RmaResponse): string | null {
+    return stageTimeLabel(rma, this.clock.now());
   }
 
   protected isSelected(rma: RmaResponse): boolean {

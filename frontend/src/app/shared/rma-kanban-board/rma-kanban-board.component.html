@@ -58,8 +58,10 @@
 
                 <strong class="board-card__title">{{ productSummary(item) }}</strong>
 
-                @if (showSla(item)) {
-                  <app-rma-sla-badge [sla]="item.sla" />
+                <app-rma-deadline-chip [rma]="item" mode="card" />
+
+                @if (stageTime(item); as stage) {
+                  <p class="board-card__stage">{{ stage }}</p>
                 }
 
                 @if (item.currentBlock; as block) {

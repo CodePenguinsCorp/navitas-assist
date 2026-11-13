@@ -36,7 +36,7 @@ import {
   WarrantyStatus,
 } from '../../core/models';
 import { SlaClockService } from '../../core/services/sla-clock.service';
-import { SlaFilterValue, SLA_LABELS, slaStatus } from '../../core/utils/rma-sla';
+import { DEADLINE_FILTER_OPTIONS, DeadlineFilterValue, businessToday, deadlineStatus } from '../../core/utils/rma-deadline';
 import { PermissionService } from '../../core/services/permission.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
@@ -72,7 +72,7 @@ type WarrantyFilterValue = 'all' | WarrantyStatus;
 
 interface KanbanFilterValues {
   blocked: 'all' | 'blocked' | 'unblocked';
-  sla: SlaFilterValue;
+  deadline: DeadlineFilterValue;
   query: string;
   priority: PriorityFilterValue;
   status: StatusFilterValue;
@@ -86,7 +86,7 @@ interface KanbanFilterValues {
 
 type ViewModalMode = 'create' | 'rename' | null;
 
-/** Filters kept behind the "Filtros" toggle; search, SLA and assignee stay in the quick row. */
+/** Filters kept behind the "Filtros" toggle; search, Prazo and assignee stay in the quick row. */
 const ADVANCED_FILTER_KEYS = [
   'priority',
   'status',
@@ -134,11 +134,8 @@ const FILTER_LABELS: Record<AdvancedFilterKey, string> = {
   styleUrl: './kanban.component.css',
 })
 export class KanbanComponent {
-  private readonly slaClock = inject(SlaClockService);
-  protected readonly slaFilterOptions: ReadonlyArray<CustomSelectOption<SlaFilterValue>> = [
-    { value: 'all', label: 'Todas as situações' },
-    ...(['NORMAL', 'WARNING', 'OVERDUE', 'CLOSED'] as const).map((value) => ({ value, label: SLA_LABELS[value] }))
-  ];
+  private readonly clock = inject(SlaClockService);
+  protected readonly deadlineFilterOptions = DEADLINE_FILTER_OPTIONS;
   private readonly formBuilder = inject(FormBuilder);
   private readonly permissions = inject(PermissionService);
   private readonly catalogService = inject(CatalogService);
@@ -181,7 +178,7 @@ export class KanbanComponent {
 
   protected readonly filtersForm = this.formBuilder.nonNullable.group({
     blocked: ['all' as KanbanFilterValues['blocked']],
-    sla: ['all' as SlaFilterValue],
+    deadline: ['all' as DeadlineFilterValue],
     query: [''],
     priority: ['all' as PriorityFilterValue],
     status: ['all' as StatusFilterValue],
@@ -199,7 +196,7 @@ export class KanbanComponent {
     },
   );
   protected readonly filteredRmas = computed(() =>
-    filterKanbanRmas(this.rmasSignal(), this.filters(), this.slaClock.now()),
+    filterKanbanRmas(this.rmasSignal(), this.filters(), this.clock.now()),
   );
   protected readonly activeFilterCount = computed(() => countActiveFilters(this.filters()));
   protected readonly advancedFiltersOpen = signal(false);
@@ -800,7 +797,7 @@ const STATUS_SELECT_OPTIONS: ReadonlyArray<CustomSelectOption<RmaStatus>> = RMA_
 
 const DEFAULT_KANBAN_FILTERS: KanbanFilterValues = {
   blocked: 'all',
-  sla: 'all',
+  deadline: 'all',
   query: '',
   priority: 'all',
   status: 'all',
@@ -835,6 +832,7 @@ const WARRANTY_FILTER_OPTIONS: ReadonlyArray<CustomSelectOption<WarrantyFilterVa
 
 function filterKanbanRmas(rmas: RmaResponse[], filters: KanbanFilterValues, now: number): RmaResponse[] {
   const query = normalizeSearch(filters.query);
+  const today = businessToday(now);
 
   return rmas.filter((rma) => {
     const matchesQuery = !query || rmaSearchText(rma).includes(query);
@@ -854,7 +852,7 @@ function filterKanbanRmas(rmas: RmaResponse[], filters: KanbanFilterValues, now:
 
     return (
       (filters.blocked === 'all' || Boolean(rma.currentBlock) === (filters.blocked === 'blocked')) &&
-      (filters.sla === 'all' || slaStatus(rma.sla, now) === filters.sla) &&
+      (filters.deadline === 'all' || deadlineStatus(rma, today) === filters.deadline) &&
       matchesQuery &&
       matchesPriority &&
       matchesStatus &&
@@ -940,13 +938,14 @@ function toPersistedFilters(filters: KanbanFilterValues): KanbanViewFilters {
     entryTo: filters.entryTo || null,
     updatedFrom: filters.updatedFrom || null,
     updatedTo: filters.updatedTo || null,
+    deadline: filters.deadline === 'all' ? null : filters.deadline,
   };
 }
 
 function fromPersistedFilters(filters: KanbanViewFilters): KanbanFilterValues {
   return {
     blocked: filters.blocked == null ? 'all' : filters.blocked ? 'blocked' : 'unblocked',
-    sla: 'all',
+    deadline: filters.deadline ?? 'all',
     query: filters.query ?? '',
     priority: filters.priority ?? 'all',
     status: filters.status ?? 'all',
