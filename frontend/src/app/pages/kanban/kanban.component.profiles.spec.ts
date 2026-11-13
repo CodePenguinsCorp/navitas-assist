@@ -8,7 +8,7 @@ import { Permission } from '../../core/permissions';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { RmaService } from '../../core/services/rma.service';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { RmaDetailModalComponent } from '../../shared/rma-detail-modal/rma-detail-modal.component';
 import { buildRma } from '../../testing/rma-fixtures';
 import { KanbanComponent } from './kanban.component';
@@ -29,7 +29,7 @@ async function setupWith(permissions: readonly Permission[] | Signal<readonly Pe
     imports: [KanbanComponent],
     providers: [
       provideRouter([]),
-      { provide: SlaClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
+      { provide: ClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
       providePermissions(permissions),
       { provide: CatalogService, useValue: { listAssignableUsers: () => of([{ id: 7, username: 'tecnico', fullName: 'Técnico Responsável' }]) } },
       {

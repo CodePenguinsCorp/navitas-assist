@@ -1,4 +1,4 @@
-import { formatNotificationDateTime, internalRoute, severityClass } from './notification-ui';
+import { NOTIFICATION_EVENT_LABELS, formatNotificationDateTime, internalRoute, severityClass } from './notification-ui';
 
 describe('Notification UI utilities', () => {
   it('maps internal action paths to router navigation and rejects external links', () => {
@@ -7,6 +7,11 @@ describe('Notification UI utilities', () => {
     expect(internalRoute('https://exemplo.com/rmas')).toBeNull();
     expect(internalRoute('//exemplo.com')).toBeNull();
     expect(internalRoute(null)).toBeNull();
+  });
+
+  it('has no stage SLA alerts and never labels anything as vencido', () => {
+    expect(Object.keys(NOTIFICATION_EVENT_LABELS).some((type) => type.startsWith('SLA_'))).toBe(false);
+    expect(Object.values(NOTIFICATION_EVENT_LABELS).some((label) => /SLA|vencid/i.test(label))).toBe(false);
   });
 
   it('formats timestamps in America/Sao_Paulo', () => {

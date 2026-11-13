@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RmaResponse } from '../../core/models';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { buildRma } from '../../testing/rma-fixtures';
 import { RmaDeadlineChipComponent } from './rma-deadline-chip.component';
 
@@ -13,7 +13,7 @@ describe('RmaDeadlineChipComponent', () => {
     clock = signal(Date.parse('2026-11-13T15:00:00Z'));
     await TestBed.configureTestingModule({
       imports: [RmaDeadlineChipComponent],
-      providers: [{ provide: SlaClockService, useValue: { now: clock.asReadonly() } }]
+      providers: [{ provide: ClockService, useValue: { now: clock.asReadonly() } }]
     }).compileComponents();
     fixture = TestBed.createComponent(RmaDeadlineChipComponent);
   });

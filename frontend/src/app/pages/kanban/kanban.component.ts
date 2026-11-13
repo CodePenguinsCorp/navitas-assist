@@ -35,7 +35,7 @@ import {
   RmaStatusUpdateRequest,
   WarrantyStatus,
 } from '../../core/models';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { DEADLINE_FILTER_OPTIONS, DeadlineFilterValue, businessToday, deadlineStatus } from '../../core/utils/rma-deadline';
 import { PermissionService } from '../../core/services/permission.service';
 import { CatalogService } from '../../core/services/catalog.service';
@@ -134,7 +134,7 @@ const FILTER_LABELS: Record<AdvancedFilterKey, string> = {
   styleUrl: './kanban.component.css',
 })
 export class KanbanComponent {
-  private readonly clock = inject(SlaClockService);
+  private readonly clock = inject(ClockService);
   protected readonly deadlineFilterOptions = DEADLINE_FILTER_OPTIONS;
   private readonly formBuilder = inject(FormBuilder);
   private readonly permissions = inject(PermissionService);

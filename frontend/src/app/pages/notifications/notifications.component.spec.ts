@@ -15,11 +15,11 @@ const NOTIFICATION: NotificationResponse = {
 
 const PREFERENCES: NotificationPreferenceResponse[] = [
   { eventType: 'RMA_CREATED', severity: 'INFO', enabled: true, userMutable: true, muted: false },
-  { eventType: 'SLA_OVERDUE', severity: 'CRITICAL', enabled: true, userMutable: false, muted: false }
+  { eventType: 'TEST_FAILED', severity: 'CRITICAL', enabled: true, userMutable: false, muted: false }
 ];
 
 const RULE: NotificationRuleResponse = {
-  eventType: 'SLA_OVERDUE', enabled: true, severity: 'CRITICAL', recipientProfiles: [{ id: 1, name: 'Administrador' }], notifyAssignee: true, emailEnabled: false,
+  eventType: 'RMA_ASSIGNED', enabled: true, severity: 'CRITICAL', recipientProfiles: [{ id: 1, name: 'Administrador' }], notifyAssignee: true, emailEnabled: false,
   userMutable: false, updatedAt: '2026-10-24T12:00:00Z', updatedBy: 'admin'
 };
 
@@ -104,7 +104,7 @@ describe('NotificationsComponent', () => {
     expect(component.canManageRules()).toBe(true);
     component.selectTab('rules');
     fixture.detectChanges();
-    fixture.nativeElement.querySelector('button[aria-label="Editar regra SLA vencido"]').click();
+    fixture.nativeElement.querySelector('button[aria-label="Editar regra Nova atribuição"]').click();
     fixture.detectChanges();
     const dialog: HTMLElement = fixture.nativeElement.querySelector('[role="dialog"]');
     const serviceDesk = Array.from(dialog.querySelectorAll('label')).find((label) => label.textContent?.trim() === 'Atendimento')!.querySelector('input')!;
@@ -112,7 +112,7 @@ describe('NotificationsComponent', () => {
     dialog.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     fixture.detectChanges();
 
-    expect(service['updateRule']).toHaveBeenCalledWith('SLA_OVERDUE', {
+    expect(service['updateRule']).toHaveBeenCalledWith('RMA_ASSIGNED', {
       enabled: true, severity: 'CRITICAL', recipientProfileIds: [1, 2], notifyAssignee: true, emailEnabled: false, userMutable: false
     });
   });

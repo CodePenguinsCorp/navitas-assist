@@ -12,8 +12,8 @@ import { NotificationsComponent } from './notifications.component';
 const PREFERENCES: NotificationPreferenceResponse[] = [
   { eventType: 'RMA_CREATED', severity: 'INFO', enabled: true, userMutable: true, muted: false },
   { eventType: 'RMA_ASSIGNED', severity: 'INFO', enabled: true, userMutable: true, muted: true },
-  { eventType: 'SLA_WARNING', severity: 'WARNING', enabled: false, userMutable: true, muted: false },
-  { eventType: 'SLA_OVERDUE', severity: 'CRITICAL', enabled: true, userMutable: false, muted: true },
+  { eventType: 'PART_PENDING', severity: 'WARNING', enabled: false, userMutable: true, muted: false },
+  { eventType: 'TEST_FAILED', severity: 'CRITICAL', enabled: true, userMutable: false, muted: true },
   { eventType: 'RMA_BLOCKED', severity: 'WARNING', enabled: true, userMutable: false, muted: false }
 ];
 

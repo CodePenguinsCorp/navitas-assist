@@ -33,7 +33,7 @@ import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { PagedList } from '../../core/utils/paged-list';
 import { todayInputValue } from '../../core/utils/date';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import {
   NO_DIAGNOSIS_LABEL,
   blockedLabel,
@@ -525,7 +525,7 @@ export class RmasComponent {
   protected readonly itemCountLabel = itemCountLabel;
   protected readonly itemTrackableLabel = rmaItemTrackableLabel;
   protected readonly initials = initialsOf;
-  protected readonly clock = inject(SlaClockService);
+  protected readonly clock = inject(ClockService);
   protected readonly blockedLabel = blockedLabel;
   protected readonly sectionLabel = sectionLabel;
   protected readonly invoiceFact = invoiceFact;

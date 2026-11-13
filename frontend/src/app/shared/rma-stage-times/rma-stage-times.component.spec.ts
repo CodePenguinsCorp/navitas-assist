@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RmaResponse } from '../../core/models';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { RmaStageTimesComponent } from './rma-stage-times.component';
 
 describe('RmaStageTimesComponent', () => {
@@ -11,7 +11,7 @@ describe('RmaStageTimesComponent', () => {
     const clock = signal(Date.parse('2026-11-13T12:00:00Z'));
     await TestBed.configureTestingModule({
       imports: [RmaStageTimesComponent],
-      providers: [{ provide: SlaClockService, useValue: { now: clock.asReadonly() } }]
+      providers: [{ provide: ClockService, useValue: { now: clock.asReadonly() } }]
     }).compileComponents();
     fixture = TestBed.createComponent(RmaStageTimesComponent);
   });

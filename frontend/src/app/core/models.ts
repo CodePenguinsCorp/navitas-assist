@@ -318,17 +318,6 @@ export interface RmaItemResponse {
   warrantyStatus: WarrantyStatus;
 }
 
-export type RmaSlaStatus = 'NORMAL' | 'WARNING' | 'OVERDUE' | 'CLOSED';
-
-export interface RmaSlaResponse {
-  status: RmaSlaStatus;
-  startedAt: string;
-  warningAt: string | null;
-  dueAt: string | null;
-  elapsedSeconds: number;
-  limitSeconds: number | null;
-}
-
 export type RmaDeadlineStatus = 'OVERDUE' | 'DUE_SOON' | 'ON_TRACK' | 'NO_DUE_DATE' | 'CLOSED';
 
 export interface RmaDeadlineResponse {
@@ -377,7 +366,6 @@ export interface RmaResponse {
   physicalCondition: string | null;
   priority: RmaPriority;
   status: RmaStatus;
-  sla: RmaSlaResponse;
   deadline: RmaDeadlineResponse;
   assigneeId: number | null;
   assigneeName: string | null;
@@ -401,8 +389,6 @@ export interface RmaResponse {
 export type NotificationEventType =
   | 'RMA_CREATED'
   | 'RMA_ASSIGNED'
-  | 'SLA_WARNING'
-  | 'SLA_OVERDUE'
   | 'RMA_BLOCKED'
   | 'WIP_LIMIT_EXCEEDED'
   | 'PART_PENDING'

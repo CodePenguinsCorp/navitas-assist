@@ -10,7 +10,7 @@ import { LoadingService } from '../../core/services/loading.service';
 import { PartService } from '../../core/services/part.service';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { RmaService } from '../../core/services/rma.service';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { RmaPartsPanelComponent } from '../../shared/rma-parts-panel/rma-parts-panel.component';
 import { buildRma, buildRmaItem, buildRmaPage } from '../../testing/rma-fixtures';
 import { RmasComponent } from './rmas.component';
@@ -76,7 +76,7 @@ async function setup(options: { role?: LegacyProfileCode } = {}) {
     imports: [RmasComponent],
     providers: [
       provideRouter([]),
-      { provide: SlaClockService, useValue: { now: signal(NOW) } },
+      { provide: ClockService, useValue: { now: signal(NOW) } },
       providePermissions(profilePermissions(role)),
       { provide: AuthService, useValue: { currentUser: currentUser.asReadonly() } },
       { provide: CatalogService, useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]) } },

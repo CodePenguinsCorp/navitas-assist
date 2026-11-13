@@ -5,8 +5,6 @@ const APP_TIME_ZONE = 'America/Sao_Paulo';
 export const NOTIFICATION_EVENT_LABELS: Record<NotificationEventType, string> = {
   RMA_CREATED: 'Novo RMA',
   RMA_ASSIGNED: 'Nova atribuição',
-  SLA_WARNING: 'SLA perto do limite',
-  SLA_OVERDUE: 'SLA vencido',
   RMA_BLOCKED: 'Bloqueio',
   WIP_LIMIT_EXCEEDED: 'Limite de WIP',
   PART_PENDING: 'Peça pendente',

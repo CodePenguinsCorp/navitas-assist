@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Output, computed, inject, input } from '@angular/core';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { blockDuration } from '../../core/utils/rma-block';
 import { stageTimeLabel } from '../../core/utils/rma-stage';
 import { RmaDeadlineChipComponent } from '../rma-deadline-chip/rma-deadline-chip.component';
@@ -46,7 +46,7 @@ export class RmaKanbanBoardComponent {
   readonly toolbarDescription = input('Arraste os cards entre as colunas para atualizar o status do RMA.');
 
   @Output() readonly cardSelect = new EventEmitter<RmaResponse>();
-  protected readonly clock = inject(SlaClockService);
+  protected readonly clock = inject(ClockService);
   protected readonly blockedDuration = blockDuration;
   @Output() readonly cardDragStart = new EventEmitter<{ event: DragEvent; rma: RmaResponse }>();
   @Output() readonly cardDragEnd = new EventEmitter<void>();

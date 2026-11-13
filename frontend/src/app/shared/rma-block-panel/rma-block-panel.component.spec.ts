@@ -191,7 +191,7 @@ describe('RmaBlockPanelComponent', () => {
     load(blocked ? { ...RMA, currentBlock: BLOCK, blockHistory: [BLOCK] } : RMA);
     expect(dialog().open).toBe(true);
     expect(dialog().querySelector('form') !== null).toBe(profile !== 'VIEWER');
-    expect(dialog().textContent).toContain('O período bloqueado continua contando no SLA.');
+    expect(dialog().textContent).toContain('O período bloqueado continua contando no tempo da etapa.');
     if (profile === 'VIEWER') {
       actions().save();
       http.expectNone((request) => request.method === 'POST' || request.method === 'PATCH');
@@ -326,7 +326,7 @@ const BLOCK = { id: 9, reason: 'Peça pendente', category: 'Peças', blockedBy: 
 const RMA: RmaResponse = {
   id: 1, code: 'RMA-2026-000001', clientId: 1, clientName: 'Cliente', items: [], productId: 1, productName: 'Produto', productSku: 'P1', batchNumber: 'L1', serialNumber: null, manufacturedAt: null,
   purchaseDate: null, purchaseDateUnknown: true, entryDate: '2026-10-20', invoiceNumber: null, receivedBy: 'desk', reportedFailure: 'Falha', receivedAccessories: null, physicalCondition: null,
-  priority: 'MEDIUM', status: 'TRIAGE', sla: { status: 'NORMAL', startedAt: '2026-10-20T10:00:00Z', warningAt: null, dueAt: null, elapsedSeconds: 0, limitSeconds: null }, dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T10:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [],
+  priority: 'MEDIUM', status: 'TRIAGE', dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T10:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [],
   assigneeId: null, assigneeName: null, repairSummary: null, replacedPartsSummary: null, testSummary: null, shippedAt: null, carrier: null, trackingCode: null, diagnosis: null, statusHistory: [], assignmentHistory: [],
   currentBlock: null, blockHistory: [], createdAt: '2026-10-20T10:00:00Z', updatedAt: '2026-10-20T10:00:00Z',
 };

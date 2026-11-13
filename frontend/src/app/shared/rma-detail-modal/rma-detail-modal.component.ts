@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { formatDateOnly } from '../../core/utils/date';
 import { RMA_STATUS_FLOW } from '../../core/mock-data';
 import { AssignableUserResponse, RmaResponse, RmaStatus } from '../../core/models';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import {
   NO_DIAGNOSIS_LABEL,
   blockedLabel,
@@ -63,7 +63,7 @@ export class RmaDetailModalComponent {
   @Output() readonly blockInspect = new EventEmitter<RmaResponse>();
   /** The RMA returned by a save made inside the detail (due date). */
   @Output() readonly rmaUpdated = new EventEmitter<RmaResponse>();
-  protected readonly clock = inject(SlaClockService);
+  protected readonly clock = inject(ClockService);
   protected readonly blockedLabel = blockedLabel;
   protected readonly statusLabel = statusLabel;
   protected readonly priorityLabel = priorityLabel;

@@ -1,6 +1,6 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { RmaResponse } from '../../core/models';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { blockDateTime, blockDuration } from '../../core/utils/rma-block';
 
 @Component({
@@ -16,7 +16,7 @@ import { blockDateTime, blockDuration } from '../../core/utils/rma-block';
       } @else {
         <p class="block-history__state">Sem bloqueio atual.</p>
       }
-      <p class="block-history__hint">O período bloqueado continua contando no SLA.</p>
+      <p class="block-history__hint">O período bloqueado continua contando no tempo da etapa.</p>
       @if (history().length === 0) {
         <p class="block-history__state">Nenhum impedimento registrado.</p>
       } @else {
@@ -58,7 +58,7 @@ import { blockDateTime, blockDuration } from '../../core/utils/rma-block';
 })
 export class RmaBlockHistoryComponent {
   readonly rma = input.required<RmaResponse>();
-  protected readonly clock = inject(SlaClockService);
+  protected readonly clock = inject(ClockService);
   protected readonly duration = blockDuration;
   protected readonly dateTime = blockDateTime;
   protected readonly history = computed(() => [...this.rma().blockHistory].sort((a, b) => Date.parse(b.blockedAt) - Date.parse(a.blockedAt) || b.id - a.id));

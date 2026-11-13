@@ -8,7 +8,7 @@ import { AssignableUserResponse, RmaResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { RmaService } from '../../core/services/rma.service';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { buildRma } from '../../testing/rma-fixtures';
 import { KanbanComponent } from './kanban.component';
 import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
@@ -33,7 +33,7 @@ describe('KanbanComponent reading states and count', () => {
       imports: [KanbanComponent],
       providers: [
         provideRouter([]),
-        { provide: SlaClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
+        { provide: ClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
         providePermissions(profilePermissions('ADMIN')),
         { provide: CatalogService, useValue: { listAssignableUsers: () => { const source = new Subject<AssignableUserResponse[]>(); users.push(source); return source; } } },
         { provide: KanbanViewService, useValue: { list: () => of([]) } },

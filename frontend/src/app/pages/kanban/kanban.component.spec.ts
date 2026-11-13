@@ -4,7 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { KanbanViewRequest, KanbanViewResponse, RmaResponse, WarrantyStatus } from '../../core/models';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { LoadingService } from '../../core/services/loading.service';
@@ -33,7 +33,7 @@ describe('KanbanComponent filters', () => {
       imports: [KanbanComponent],
       providers: [
         provideRouter([]),
-        { provide: SlaClockService, useValue: { now } },
+        { provide: ClockService, useValue: { now } },
         providePermissions(profilePermissions('ADMIN')),
         {
           provide: CatalogService,
@@ -720,14 +720,7 @@ function buildRma(values: {
     assignmentHistory: [],
     currentBlock: null,
     blockHistory: [],
-    sla: {
-      status: values.status === 'COMPLETED' ? 'CLOSED' : 'NORMAL',
-      startedAt: '2026-10-20T11:00:00Z',
-      warningAt: values.status === 'COMPLETED' ? null : '2026-10-20T12:30:00Z',
-      dueAt: values.status === 'COMPLETED' ? null : '2026-10-20T13:00:00Z',
-      elapsedSeconds: 0,
-      limitSeconds: values.status === 'COMPLETED' ? null : 7200,
-    }, dueDate: values.dueDate ?? null,
+    dueDate: values.dueDate ?? null,
     deadline: values.dueDate
       ? { status: values.status === 'COMPLETED' ? 'CLOSED' : 'DUE_SOON', dueSoonFrom: shiftDate(values.dueDate, -7), daysUntilDue: 0 }
       : { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null },
@@ -756,7 +749,7 @@ describe('KanbanComponent dialog focus', () => {
       imports: [KanbanComponent],
       providers: [
         provideRouter([]),
-        { provide: SlaClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
+        { provide: ClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
         providePermissions(profilePermissions('ADMIN')),
         { provide: CatalogService, useValue: { listAssignableUsers: () => of([]) } },
         {
@@ -951,7 +944,7 @@ describe('KanbanComponent dialog focus under the root blocker', () => {
       imports: [KanbanComponent],
       providers: [
         provideRouter([{ path: '', component: KanbanComponent }]),
-        { provide: SlaClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
+        { provide: ClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
         providePermissions(profilePermissions('ADMIN')),
         { provide: CatalogService, useValue: { listAssignableUsers: () => of([]) } },
         { provide: KanbanViewService, useValue: { list: () => of([]) } },

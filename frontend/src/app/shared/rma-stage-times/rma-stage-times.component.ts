@@ -1,7 +1,7 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { CLOSED_RMA_STATUSES } from '../../core/mock-data';
 import { RmaResponse } from '../../core/models';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { formatDuration } from '../../core/utils/duration';
 import { stageElapsedSeconds } from '../../core/utils/rma-stage';
 import { formatDateTime, statusLabel } from '../../core/utils/rma-ui';
@@ -20,7 +20,7 @@ interface StageRow {
 })
 export class RmaStageTimesComponent {
   readonly rma = input.required<Pick<RmaResponse, 'status' | 'stagePeriods'>>();
-  private readonly clock = inject(SlaClockService);
+  private readonly clock = inject(ClockService);
 
   protected readonly rows = computed<StageRow[]>(() => {
     const periods = this.rma().stagePeriods;

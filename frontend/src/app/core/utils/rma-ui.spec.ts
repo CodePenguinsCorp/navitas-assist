@@ -57,7 +57,7 @@ describe('RMA UI utilities', () => {
 });
 
 describe.each([
-  ['RMA/SLA', formatRmaDateTime],
+  ['RMA', formatRmaDateTime],
   ['cadastros', formatCatalogDateTime],
 ] as const)('%s date/time display', (_area, format) => {
   it.each([

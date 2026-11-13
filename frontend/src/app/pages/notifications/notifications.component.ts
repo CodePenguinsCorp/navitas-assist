@@ -15,7 +15,7 @@ import {
 } from '../../core/models';
 import { PermissionService } from '../../core/services/permission.service';
 import { ProfileService } from '../../core/services/profile.service';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
@@ -225,7 +225,7 @@ export class NotificationsComponent {
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
   /** Page target for the rule editor's focus return when its row button is gone. */
   protected readonly rulesPanel = viewChild<ElementRef<HTMLElement>>('rulesPanel');
-  private readonly clock = inject(SlaClockService);
+  private readonly clock = inject(ClockService);
   private readonly fb = inject(FormBuilder);
   private inboxRequest?: Subscription;
   private preferencesRequest?: Subscription;

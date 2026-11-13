@@ -59,14 +59,6 @@ export function buildRma(overrides: Partial<RmaResponse> = {}): RmaResponse {
     deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null },
     currentBlock: null,
     blockHistory: [],
-    sla: {
-      status: 'NORMAL',
-      startedAt: '2026-10-20T12:00:00Z',
-      warningAt: '2026-10-21T07:12:00Z',
-      dueAt: '2026-10-21T12:00:00Z',
-      elapsedSeconds: 0,
-      limitSeconds: 86400
-    },
     createdAt: '2026-10-20T12:00:00Z',
     updatedAt: '2026-10-20T12:00:00Z',
     ...overrides

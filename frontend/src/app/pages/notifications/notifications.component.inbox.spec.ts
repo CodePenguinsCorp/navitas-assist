@@ -7,7 +7,7 @@ import { NotificationResponse } from '../../core/models';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { NotificationService } from '../../core/services/notification.service';
 import { ProfileService } from '../../core/services/profile.service';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { NotificationsComponent } from './notifications.component';
 
 const NOTIFICATION: NotificationResponse = {
@@ -69,7 +69,7 @@ describe('NotificationsComponent inbox loading', () => {
         { provide: NotificationService, useValue: service },
         { provide: ProfileService, useValue: { options: () => of([]), invalidateOptions: () => undefined } },
         providePermissions(profilePermissions(sources.role ?? 'TECHNICIAN')),
-        { provide: SlaClockService, useValue: { now: clock.asReadonly() } }
+        { provide: ClockService, useValue: { now: clock.asReadonly() } }
       ]
     }).compileComponents();
     fixture = TestBed.createComponent(NotificationsComponent);

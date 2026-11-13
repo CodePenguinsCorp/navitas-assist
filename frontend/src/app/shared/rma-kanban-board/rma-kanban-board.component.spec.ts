@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { RmaResponse, RmaSlaResponse, WarrantyStatus } from '../../core/models';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { RmaResponse, WarrantyStatus } from '../../core/models';
+import { ClockService } from '../../core/services/clock.service';
 import { RmaKanbanBoardComponent } from './rma-kanban-board.component';
 
 describe('RmaKanbanBoardComponent card', () => {
@@ -12,7 +12,7 @@ describe('RmaKanbanBoardComponent card', () => {
     now = signal(Date.parse('2026-10-20T12:00:00Z'));
     await TestBed.configureTestingModule({
       imports: [RmaKanbanBoardComponent],
-      providers: [{ provide: SlaClockService, useValue: { now } }],
+      providers: [{ provide: ClockService, useValue: { now } }],
     }).compileComponents();
     fixture = TestBed.createComponent(RmaKanbanBoardComponent);
   });
@@ -184,17 +184,6 @@ describe('RmaKanbanBoardComponent card', () => {
   });
 });
 
-function openSla(): RmaSlaResponse {
-  return {
-    status: 'NORMAL',
-    startedAt: '2026-10-20T11:00:00Z',
-    warningAt: '2026-10-20T12:30:00Z',
-    dueAt: '2026-10-20T13:00:00Z',
-    elapsedSeconds: 0,
-    limitSeconds: 7200,
-  };
-}
-
 function buildRma(values: Partial<RmaResponse>): RmaResponse {
   const base: RmaResponse = {
     id: 100,
@@ -244,7 +233,7 @@ function buildRma(values: Partial<RmaResponse>): RmaResponse {
     assignmentHistory: [],
     currentBlock: null,
     blockHistory: [],
-    sla: openSla(), dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'TRIAGE', enteredAt: '2026-10-20T11:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [],
+    dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'TRIAGE', enteredAt: '2026-10-20T11:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [],
     createdAt: '2026-10-10T12:00:00Z',
     updatedAt: '2026-10-20T02:30:00Z',
   };

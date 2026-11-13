@@ -21,8 +21,7 @@ describe('Dashboard timestamp display', () => {
       trackingCode: null, diagnosis: null, assignmentHistory: [],
       statusHistory: [{ status: 'RECEIVED', changedBy: 'tester', changedAt: '2026-10-20T02:30:00Z', note: null }],
       currentBlock: null, blockHistory: [],
-      sla: { status: 'NORMAL', startedAt: '2026-10-20T02:30:00Z', warningAt: '2026-10-20T21:42:00Z',
-        dueAt: '2026-10-21T02:30:00Z', elapsedSeconds: 0, limitSeconds: 86400 }, dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T02:30:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [],
+      dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T02:30:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [],
       createdAt: '2026-10-20T02:30:00Z', updatedAt: '2026-12-31T23:15:00-02:00',
     };
     await TestBed.configureTestingModule({

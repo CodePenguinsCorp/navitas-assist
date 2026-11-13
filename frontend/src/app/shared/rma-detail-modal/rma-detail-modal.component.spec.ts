@@ -2,7 +2,7 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { DiagnosisResponse, RmaResponse, WarrantyStatus } from '../../core/models';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { RmaService } from '../../core/services/rma.service';
 import { of } from 'rxjs';
 import { buildRma, buildRmaItem } from '../../testing/rma-fixtures';
@@ -62,7 +62,7 @@ async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; can
     imports: [RmaDetailModalComponent],
     providers: [
       provideRouter([{ path: 'rmas', component: StubComponent }]),
-      { provide: SlaClockService, useValue: { now: signal(NOW) } },
+      { provide: ClockService, useValue: { now: signal(NOW) } },
       { provide: RmaService, useValue: { updateDueDate: (id: number, dueDate: string | null) => of({ ...(inputs.rma ?? fullRma), id, dueDate }) } }
     ]
   }).compileComponents();
