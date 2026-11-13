@@ -42,8 +42,10 @@ describe('NotificationsComponent inbox loading', () => {
   const text = () => root().textContent!.replace(/[\s ]+/g, ' ').trim();
   const render = () => { fixture.componentRef.injector.get(ChangeDetectorRef).markForCheck(); fixture.detectChanges(); };
   const button = (label: string) => Array.from(root().querySelectorAll('button')).find((item) => item.textContent?.trim() === label);
-  const checkbox = (label: string) => Array.from(root().querySelectorAll('label')).find((item) => item.textContent?.trim() === label)!.querySelector('input')!;
-  const toggle = (label: string) => { checkbox(label).dispatchEvent(new Event('change')); render(); };
+  const filterBar = () => root().querySelector<HTMLElement>('.inbox-filters')!;
+  const filterToggle = (label: string) => Array.from(filterBar().querySelectorAll<HTMLButtonElement>('button[aria-pressed]')).find((item) => item.textContent?.trim() === label)!;
+  const clearFiltersButton = () => filterBar().querySelector<HTMLButtonElement>('.inbox-clear')!;
+  const toggle = (label: string) => { filterToggle(label).click(); render(); };
 
   async function setup(sources: { role?: LegacyProfileCode; unread?: number; list?: Source<NotificationResponse[]>[]; markAllRead?: Observable<void>; snooze?: Observable<NotificationResponse>; markRead?: Observable<NotificationResponse> } = {}) {
     clock = signal(Date.parse('2026-10-24T13:00:00Z'));
@@ -187,7 +189,7 @@ describe('NotificationsComponent inbox loading', () => {
     button('Mostrar todas')!.click();
     render();
     expect(service['list']).toHaveBeenLastCalledWith({ unreadOnly: false, includeSnoozed: false });
-    expect(checkbox('Somente não lidas').checked).toBe(false);
+    expect(filterToggle('Somente não lidas').getAttribute('aria-pressed')).toBe('false');
     expect(text()).toContain('Nenhuma notificação.');
     expect(text()).not.toContain('Nenhuma notificação não lida.');
   });
@@ -201,15 +203,41 @@ describe('NotificationsComponent inbox loading', () => {
 
   it('distinguishes an inbox emptied by event or severity filters and clears them', async () => {
     await setup({ list: [of([NOTIFICATION]), of([]), of([])] });
-    expect(button('Limpar filtros')!.disabled).toBe(true);
+    expect(clearFiltersButton().disabled).toBe(true);
+    expect(clearFiltersButton().textContent?.trim()).toBe('Limpar filtros');
     component.updateSeverityFilter('CRITICAL');
     render();
     expect(text()).toContain('Nenhuma notificação encontrada.');
-    expect(button('Limpar filtros')!.disabled).toBe(false);
+    expect(clearFiltersButton().disabled).toBe(false);
+    expect(clearFiltersButton().textContent?.trim()).toBe('Limpar filtros (1)');
     button('Limpar filtros')!.click();
     render();
     expect(service['list']).toHaveBeenLastCalledWith({ unreadOnly: false, includeSnoozed: false });
     expect(text()).toContain('Nenhuma notificação.');
+  });
+
+  it('lays out the filter bar like the Kanban: labelled selects, pressed toggles and a counted Limpar filtros', async () => {
+    await setup();
+    const labels = Array.from(filterBar().querySelectorAll('.field-group > label')).map((label) => label.textContent?.trim());
+    expect(labels).toEqual(['Evento', 'Severidade']);
+    expect(filterBar().querySelector('input.switch')).toBeNull();
+    const actions = Array.from(filterBar().querySelectorAll<HTMLButtonElement>('.inbox-filters__actions > button'));
+    expect(actions.map((item) => item.textContent?.trim())).toEqual(['Somente não lidas', 'Mostrar adiadas', 'Limpar filtros']);
+    expect(actions.every((item) => item.classList.contains('button-secondary'))).toBe(true);
+    expect(filterToggle('Somente não lidas').getAttribute('aria-pressed')).toBe('false');
+
+    toggle('Somente não lidas');
+    toggle('Mostrar adiadas');
+    expect(filterToggle('Somente não lidas').getAttribute('aria-pressed')).toBe('true');
+    expect(filterToggle('Mostrar adiadas').getAttribute('aria-pressed')).toBe('true');
+    expect(filterToggle('Somente não lidas').querySelector('app-icon')).not.toBeNull();
+    expect(clearFiltersButton().textContent?.trim()).toBe('Limpar filtros (2)');
+    expect(service['list']).toHaveBeenLastCalledWith({ unreadOnly: true, includeSnoozed: true });
+
+    clearFiltersButton().click();
+    render();
+    expect(filterToggle('Mostrar adiadas').getAttribute('aria-pressed')).toBe('false');
+    expect(clearFiltersButton().disabled).toBe(true);
   });
 
   it('marks unread rows, shows the severity chip and the time of day', async () => {

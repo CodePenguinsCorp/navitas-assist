@@ -98,7 +98,8 @@ export class NotificationsComponent {
   protected readonly severityFilter = signal<NotificationSeverity | ''>('');
   protected readonly eventFilterOptions = [{ value: '', label: 'Todos os eventos' }, ...Object.entries(NOTIFICATION_EVENT_LABELS).map(([value, label]) => ({ value, label }))];
   protected readonly severityFilterOptions = [{ value: '', label: 'Todas as severidades' }, ...NOTIFICATION_SEVERITIES.map(value => ({ value, label: NOTIFICATION_SEVERITY_LABELS[value] }))];
-  protected readonly hasInboxFilters = computed(() => this.unreadOnly() || this.includeSnoozed() || !!this.eventFilter() || !!this.severityFilter());
+  protected readonly inboxFilterCount = computed(() => [this.unreadOnly(), this.includeSnoozed(), !!this.eventFilter(), !!this.severityFilter()].filter(Boolean).length);
+  protected readonly hasInboxFilters = computed(() => this.inboxFilterCount() > 0);
   protected readonly notificationGroups = computed(() => groupNotificationsByDay(this.notifications(), this.clock.now()));
   protected readonly notifications = signal<NotificationResponse[]>([]);
   protected readonly preferences = signal<NotificationPreferenceResponse[]>([]);

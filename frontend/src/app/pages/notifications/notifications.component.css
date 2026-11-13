@@ -1,10 +1,10 @@
 :host { display: block; }
 .notifications-panel { display: grid; gap: var(--space-4); min-width: 0; }
 
-.inbox-filters { align-items: center; gap: var(--space-3) var(--space-5); }
-.inbox-filters .filter-field { flex: 0 1 220px; min-width: 160px; }
-.inbox-switch { font-size: var(--font-size-sm); }
-.inbox-clear { margin-left: auto; }
+/* Kanban filter bar: labelled 40 px selects, then the toggles and Limpar filtros as secondary buttons at the end. */
+.inbox-filters { gap: var(--space-3); }
+.inbox-filters .field-group { flex: 0 1 240px; }
+.inbox-filters__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-left: auto; }
 
 .notification-list { display: grid; gap: var(--space-2); }
 .notification-day { margin: var(--space-2) 0 var(--space-1); padding: 0 var(--space-2); color: var(--muted); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
@@ -51,9 +51,8 @@ th { white-space: nowrap; }
   .notification-body { grid-column: 2 / -1; }
   .notification-time { grid-column: 2; }
   .notification-actions { min-width: 0; }
-  .inbox-filters { gap: var(--space-2) var(--space-4); }
-  .inbox-filters .filter-field { flex: 1 1 100%; }
-  .inbox-clear { margin-left: 0; }
+  .inbox-filters .field-group { flex: 1 1 100%; }
+  .inbox-filters__actions { margin-left: 0; }
 }
 
 @media (max-width: 600px) {

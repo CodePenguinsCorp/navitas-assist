@@ -33,17 +33,19 @@
   <div class="notifications-panel" role="tabpanel" tabindex="0" id="notifications-panel-inbox" aria-labelledby="notifications-tab-inbox" [hidden]="activeTab() !== 'inbox'">
     @if (activeTab() === 'inbox') {
       <section class="panel catalog-toolbar catalog-toolbar--filters inbox-filters" aria-label="Filtros da caixa de entrada">
-        <label class="filter-field">
-          <span class="sr-only">Evento</span>
+        <div class="field-group">
+          <label>Evento</label>
           <app-custom-select ariaLabel="Filtrar por evento" [options]="eventFilterOptions" [value]="eventFilter()" (valueChange)="updateEventFilter($any($event))" />
-        </label>
-        <label class="filter-field">
-          <span class="sr-only">Severidade</span>
+        </div>
+        <div class="field-group">
+          <label>Severidade</label>
           <app-custom-select ariaLabel="Filtrar por severidade" [options]="severityFilterOptions" [value]="severityFilter()" (valueChange)="updateSeverityFilter($any($event))" />
-        </label>
-        <label class="checkbox-field inbox-switch"><input type="checkbox" class="switch" role="switch" [checked]="unreadOnly()" (change)="toggleUnreadOnly()" /><span>Somente não lidas</span></label>
-        <label class="checkbox-field inbox-switch"><input type="checkbox" class="switch" role="switch" [checked]="includeSnoozed()" (change)="toggleIncludeSnoozed()" /><span>Mostrar adiadas</span></label>
-        <button type="button" class="link-button inbox-clear" [disabled]="!hasInboxFilters()" (click)="clearInboxFilters()">Limpar filtros</button>
+        </div>
+        <div class="inbox-filters__actions">
+          <button type="button" class="button-secondary inbox-toggle" [attr.aria-pressed]="unreadOnly()" (click)="toggleUnreadOnly()">@if (unreadOnly()) {<app-icon name="check" [size]="16" />}Somente não lidas</button>
+          <button type="button" class="button-secondary inbox-toggle" [attr.aria-pressed]="includeSnoozed()" (click)="toggleIncludeSnoozed()">@if (includeSnoozed()) {<app-icon name="check" [size]="16" />}Mostrar adiadas</button>
+          <button type="button" class="button-secondary inbox-clear" [disabled]="inboxFilterCount() === 0" (click)="clearInboxFilters()">Limpar filtros{{ inboxFilterCount() ? ' (' + inboxFilterCount() + ')' : '' }}</button>
+        </div>
       </section>
 
       <article class="panel table-card table-card--list inbox-card">
