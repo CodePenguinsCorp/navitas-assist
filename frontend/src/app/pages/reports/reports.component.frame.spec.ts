@@ -16,7 +16,7 @@ const RMA: RmaResponse = {
   reportedFailure: 'Não liga', receivedAccessories: null, physicalCondition: null, priority: 'HIGH', status: 'IN_DIAGNOSIS',
   currentBlock: null, blockHistory: [],
   sla: { status: 'NORMAL', startedAt: '2026-10-20T12:00:00Z', warningAt: '2026-10-22T02:24:00Z',
-    dueAt: '2026-10-22T12:00:00Z', elapsedSeconds: 7200, limitSeconds: 172800 },
+    dueAt: '2026-10-22T12:00:00Z', elapsedSeconds: 7200, limitSeconds: 172800 }, dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [],
   assigneeId: null, assigneeName: null, repairSummary: null, replacedPartsSummary: null,
   testSummary: null, shippedAt: null, carrier: null, trackingCode: null, diagnosis: null,
   statusHistory: [], assignmentHistory: [], createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'

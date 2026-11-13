@@ -215,6 +215,8 @@ export interface CreateRmaRequest {
   repairSummary: string | null;
   replacedPartsSummary: string | null;
   testSummary: string | null;
+  /** Optional due date of the whole service (YYYY-MM-DD). */
+  dueDate?: string | null;
 }
 
 export interface RmaStatusUpdateRequest {
@@ -242,6 +244,8 @@ export interface KanbanViewFilters {
   entryTo: string | null;
   updatedFrom: string | null;
   updatedTo: string | null;
+  /** Saved "Prazo" filter; null (or absent in older views) means "Todos". */
+  deadline?: 'OVERDUE' | 'DUE_SOON' | 'ON_TRACK' | 'NO_DUE_DATE' | null;
 }
 
 export interface KanbanViewRequest {
@@ -325,6 +329,31 @@ export interface RmaSlaResponse {
   limitSeconds: number | null;
 }
 
+export type RmaDeadlineStatus = 'OVERDUE' | 'DUE_SOON' | 'ON_TRACK' | 'NO_DUE_DATE' | 'CLOSED';
+
+export interface RmaDeadlineResponse {
+  status: RmaDeadlineStatus;
+  dueSoonFrom: string | null;
+  daysUntilDue: number | null;
+}
+
+/** One continuous stay in a stage; `leftAt` is null for the current stage. */
+export interface RmaStagePeriodResponse {
+  status: RmaStatus;
+  enteredAt: string;
+  leftAt: string | null;
+  durationSeconds: number;
+}
+
+export interface RmaDueDateHistoryResponse {
+  previousDueDate: string | null;
+  newDueDate: string | null;
+  changedBy: string;
+  changedAt: string;
+}
+
+export type UpdateRmaDueDateRequest = { dueDate: string } | { clearDueDate: true };
+
 export interface RmaResponse {
   id: number;
   code: string;
@@ -340,6 +369,7 @@ export interface RmaResponse {
   purchaseDate: string | null;
   purchaseDateUnknown: boolean;
   entryDate: string;
+  dueDate: string | null;
   invoiceNumber: string | null;
   receivedBy: string;
   reportedFailure: string;
@@ -348,6 +378,7 @@ export interface RmaResponse {
   priority: RmaPriority;
   status: RmaStatus;
   sla: RmaSlaResponse;
+  deadline: RmaDeadlineResponse;
   assigneeId: number | null;
   assigneeName: string | null;
   repairSummary: string | null;
@@ -358,7 +389,9 @@ export interface RmaResponse {
   trackingCode: string | null;
   diagnosis: DiagnosisResponse | null;
   statusHistory: RmaStatusHistoryResponse[];
+  stagePeriods: RmaStagePeriodResponse[];
   assignmentHistory: RmaAssignmentHistoryResponse[];
+  dueDateHistory: RmaDueDateHistoryResponse[];
   currentBlock: RmaBlockResponse | null;
   blockHistory: RmaBlockResponse[];
   createdAt: string;

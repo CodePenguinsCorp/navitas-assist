@@ -171,7 +171,7 @@ const createdRma: RmaResponse = {
   repairSummary: null, replacedPartsSummary: null, testSummary: null, shippedAt: null, carrier: null,
   trackingCode: null, diagnosis: null, statusHistory: [], assignmentHistory: [], currentBlock: null, blockHistory: [],
   sla: { status: 'NORMAL', startedAt: '2026-10-20T12:00:00Z', warningAt: '2026-10-21T07:12:00Z',
-    dueAt: '2026-10-21T12:00:00Z', elapsedSeconds: 0, limitSeconds: 86400 },
+    dueAt: '2026-10-21T12:00:00Z', elapsedSeconds: 0, limitSeconds: 86400 }, dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [],
   createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z',
 };
 

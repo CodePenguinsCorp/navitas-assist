@@ -35,6 +35,7 @@ export function buildRma(overrides: Partial<RmaResponse> = {}): RmaResponse {
     purchaseDate: null,
     purchaseDateUnknown: true,
     entryDate: '2026-10-20',
+    dueDate: null,
     invoiceNumber: 'NF-123',
     receivedBy: 'tester',
     reportedFailure: 'Falha',
@@ -52,7 +53,10 @@ export function buildRma(overrides: Partial<RmaResponse> = {}): RmaResponse {
     trackingCode: null,
     diagnosis: null,
     statusHistory: [],
+    stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 0 }],
     assignmentHistory: [],
+    dueDateHistory: [],
+    deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null },
     currentBlock: null,
     blockHistory: [],
     sla: {

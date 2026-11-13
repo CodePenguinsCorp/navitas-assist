@@ -130,7 +130,7 @@ describe('RmaKanbanBoardComponent card', () => {
     const avatar = element.querySelector('.board-card__avatar');
     expect(avatar?.getAttribute('aria-label')).toBe('Responsável: Técnico Responsável');
     expect(avatar?.textContent?.trim()).toBe('TR');
-    expect(element.querySelector('.board-card__block')?.textContent).toContain('Bloqueado há 2h 0min');
+    expect(element.querySelector('.board-card__block')?.textContent).toContain('Bloqueado há 2 h');
   });
 
   it('does not open the card when the bulk checkbox is clicked', () => {
@@ -237,7 +237,7 @@ function buildRma(values: Partial<RmaResponse>): RmaResponse {
     assignmentHistory: [],
     currentBlock: null,
     blockHistory: [],
-    sla: openSla(),
+    sla: openSla(), dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [],
     createdAt: '2026-10-10T12:00:00Z',
     updatedAt: '2026-10-20T02:30:00Z',
   };

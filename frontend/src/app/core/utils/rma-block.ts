@@ -1,5 +1,5 @@
 import { RmaBlockResponse } from '../models';
-import { slaDuration } from './rma-sla';
+import { formatDuration } from './duration';
 
 const BLOCK_DATE_FORMAT = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' });
 
@@ -8,5 +8,5 @@ export function blockDateTime(value: string): string {
 }
 
 export function blockDuration(block: RmaBlockResponse, now: number): string {
-  return slaDuration(Math.max(0, ((block.resolvedAt ? Date.parse(block.resolvedAt) : now) - Date.parse(block.blockedAt)) / 1000));
+  return formatDuration(Math.max(0, ((block.resolvedAt ? Date.parse(block.resolvedAt) : now) - Date.parse(block.blockedAt)) / 1000));
 }

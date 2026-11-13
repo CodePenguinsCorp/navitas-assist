@@ -201,7 +201,7 @@ describe('RMA detail contract', () => {
       id: 1, reason: 'Peça pendente', category: null, blockedBy: 'ana', blockedAt: '2026-10-20T10:00:00Z',
       resolvedBy: null, resolvedAt: null, resolutionNote: null
     };
-    expect(blockedLabel(block, Date.parse('2026-10-20T12:05:00Z'))).toBe('Bloqueado há 2h 5min');
+    expect(blockedLabel(block, Date.parse('2026-10-20T12:05:00Z'))).toBe('Bloqueado há 2 h 5 min');
     expect(blockedLabel(block, Date.parse('2026-10-20T10:30:00Z'))).toBe('Bloqueado há 30 min');
   });
 });

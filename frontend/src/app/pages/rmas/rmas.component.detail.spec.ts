@@ -122,7 +122,7 @@ describe('RmasComponent detail with the shared information contract', () => {
     expect(identity.querySelector('.rma-details__client')?.textContent?.trim()).toBe('Cliente X');
     expect(identity.querySelector('.status-chip[data-status="RECEIVED"]')?.textContent?.trim()).toBe('Recebido');
     expect(identity.querySelector('.priority-tag[data-priority="MEDIUM"] .priority-bars')).not.toBeNull();
-    expect(identity.querySelector('.mini-chip.priority-high')?.textContent?.trim()).toBe('Bloqueado há 2h 0min');
+    expect(identity.querySelector('.mini-chip.priority-high')?.textContent?.trim()).toBe('Bloqueado há 2 h');
   });
 
   it('stacks identity and actions on narrow screens and keeps Fechar in the header', async () => {

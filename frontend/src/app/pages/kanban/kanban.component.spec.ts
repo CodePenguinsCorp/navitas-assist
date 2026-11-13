@@ -680,7 +680,7 @@ function buildRma(values: {
       dueAt: values.status === 'COMPLETED' ? null : '2026-10-20T13:00:00Z',
       elapsedSeconds: 0,
       limitSeconds: values.status === 'COMPLETED' ? null : 7200,
-    },
+    }, dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T11:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [],
     createdAt: '2026-10-10T12:00:00Z',
     updatedAt: values.updatedAt,
   };

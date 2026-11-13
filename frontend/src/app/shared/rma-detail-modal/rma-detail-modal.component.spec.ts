@@ -304,7 +304,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     const { host } = await setup();
     const block = host.querySelector('.rma-detail__block')!;
 
-    expect(block.querySelector('strong')?.textContent?.trim()).toBe('Bloqueado há 2h 0min');
+    expect(block.querySelector('strong')?.textContent?.trim()).toBe('Bloqueado há 2 h');
     expect(block.textContent).toContain('Aguardando cliente');
     expect(host.querySelector('.rma-detail__side app-rma-sla-badge')).not.toBeNull();
   });

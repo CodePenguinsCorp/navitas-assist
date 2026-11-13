@@ -30,7 +30,7 @@ function rmaFactory(overrides: Partial<RmaResponse> = {}): RmaResponse {
     statusHistory: [{ status: 'RECEIVED', changedBy: 'tester', changedAt: '2026-10-20T16:00:00Z', note: null }],
     currentBlock: null, blockHistory: [],
     sla: { status: 'NORMAL', startedAt: '2026-10-20T16:00:00Z', warningAt: '2026-10-21T11:12:00Z',
-      dueAt: '2026-10-21T16:00:00Z', elapsedSeconds: 0, limitSeconds: 86400 },
+      dueAt: '2026-10-21T16:00:00Z', elapsedSeconds: 0, limitSeconds: 86400 }, dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T16:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [],
     createdAt: '2026-10-20T16:00:00Z', updatedAt: '2026-10-20T16:00:00Z',
     ...overrides
   };

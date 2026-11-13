@@ -39,7 +39,7 @@ describe('RmaBlockHistoryComponent', () => {
     expect(text(activeFacts.get('Motivo'))).toBe('Aguardando peça');
     expect(text(activeFacts.get('Categoria'))).toBe('Peças');
     expect(text(activeFacts.get('Bloqueado por'))).toBe('tech');
-    expect(text(activeFacts.get('Duração'))).toBe('2h 0min');
+    expect(text(activeFacts.get('Duração'))).toBe('2 h');
     const start = activeFacts.get('Início')!.querySelector('time');
     expect(start?.getAttribute('datetime')).toBe('2026-10-20T10:00:00Z');
     expect(text(start)).toBe('20/10/2026, 07:00');
@@ -48,7 +48,7 @@ describe('RmaBlockHistoryComponent', () => {
     const resolvedFacts = facts(resolved);
     expect([...resolvedFacts.keys()]).toEqual(['Motivo', 'Categoria', 'Início', 'Bloqueado por', 'Duração', 'Resolvido em', 'Resolvido por', 'Nota de resolução']);
     expect(text(resolvedFacts.get('Categoria'))).toBe('Sem categoria');
-    expect(text(resolvedFacts.get('Duração'))).toBe('1h 0min');
+    expect(text(resolvedFacts.get('Duração'))).toBe('1 h');
     expect(resolvedFacts.get('Resolvido em')!.querySelector('time')?.getAttribute('datetime')).toBe('2026-10-19T09:00:00Z');
     expect(text(resolvedFacts.get('Resolvido em'))).toBe('19/10/2026, 06:00');
     expect(text(resolvedFacts.get('Resolvido por'))).toBe('desk');
@@ -61,14 +61,14 @@ describe('RmaBlockHistoryComponent', () => {
     const rma = { ...RMA, currentBlock: ACTIVE, blockHistory: [ACTIVE, RESOLVED] };
     render(rma);
     const duration = (index: number) => text(facts(episodes()[index]).get('Duração'));
-    expect(duration(0)).toBe('2h 0min');
-    expect(duration(1)).toBe('1h 0min');
+    expect(duration(0)).toBe('2 h');
+    expect(duration(1)).toBe('1 h');
 
     clock.set(Date.parse('2026-10-20T12:30:00Z'));
     fixture.detectChanges();
 
-    expect(duration(0)).toBe('2h 30min');
-    expect(duration(1)).toBe('1h 0min');
+    expect(duration(0)).toBe('2 h 30 min');
+    expect(duration(1)).toBe('1 h');
     expect(fixture.componentInstance.rma()).toBe(rma);
   });
 
@@ -83,7 +83,7 @@ describe('RmaBlockHistoryComponent', () => {
 
   it('preserves the current block summary and the SLA hint', () => {
     const element = render({ ...RMA, currentBlock: ACTIVE, blockHistory: [ACTIVE] });
-    expect(text(element.querySelector('.block-history__current strong'))).toBe('Bloqueado há 2h 0min');
+    expect(text(element.querySelector('.block-history__current strong'))).toBe('Bloqueado há 2 h');
     expect(text(element.querySelector('.block-history__current'))).toContain('Aguardando peça');
     expect(text(element)).toContain('O período bloqueado continua contando no SLA.');
     expect(text(element)).not.toContain('Sem bloqueio atual.');
@@ -117,7 +117,7 @@ const RESOLVED: RmaBlockResponse = { id: 5, reason: 'Falha no fornecedor', categ
 const RMA: RmaResponse = {
   id: 1, code: 'RMA-2026-000001', clientId: 1, clientName: 'Cliente', items: [], productId: 1, productName: 'Produto', productSku: 'P1', batchNumber: 'L1', serialNumber: null, manufacturedAt: null,
   purchaseDate: null, purchaseDateUnknown: true, entryDate: '2026-10-20', invoiceNumber: null, receivedBy: 'desk', reportedFailure: 'Falha', receivedAccessories: null, physicalCondition: null,
-  priority: 'MEDIUM', status: 'TRIAGE', sla: { status: 'NORMAL', startedAt: '2026-10-20T10:00:00Z', warningAt: null, dueAt: null, elapsedSeconds: 0, limitSeconds: null },
+  priority: 'MEDIUM', status: 'TRIAGE', sla: { status: 'NORMAL', startedAt: '2026-10-20T10:00:00Z', warningAt: null, dueAt: null, elapsedSeconds: 0, limitSeconds: null }, dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T10:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [],
   assigneeId: null, assigneeName: null, repairSummary: null, replacedPartsSummary: null, testSummary: null, shippedAt: null, carrier: null, trackingCode: null, diagnosis: null, statusHistory: [], assignmentHistory: [],
   currentBlock: null, blockHistory: [], createdAt: '2026-10-20T10:00:00Z', updatedAt: '2026-10-20T10:00:00Z',
 };
