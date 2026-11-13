@@ -172,6 +172,7 @@
         [attr.aria-label]="'Detalhes do ' + rma.code"
         appModalFocus
         [modalFallbackFocus]="listRegion"
+        [modalCloseBlocked]="statusBusy() || diagnosisBusy()"
         (modalCloseRequested)="closeModal()"
         (click)="$event.stopPropagation()"
       >
@@ -181,7 +182,11 @@
             <h3>{{ productSummary(rma) }}</h3>
             <span class="table-subtitle rma-details__client">{{ rma.clientName }}</span>
             <div class="rma-details__chips">
-              <span class="status-chip" [attr.data-status]="rma.status">{{ statusLabel(rma.status) }}</span>
+              @if (canUpdateStatus()) {
+                <app-rma-status-field [rma]="rma" [disabled]="diagnosisBusy()" (saved)="detailRmaSaved($event)" (busyChange)="statusBusy.set($event)" />
+              } @else {
+                <span class="status-chip" [attr.data-status]="rma.status">{{ statusLabel(rma.status) }}</span>
+              }
               <span class="priority-tag" [attr.data-priority]="rma.priority"><span class="priority-bars" [attr.data-priority]="rma.priority" aria-hidden="true"><i></i><i></i><i></i></span>{{ priorityLabel(rma.priority) }}</span>
               @if (rma.currentBlock; as block) {
                 <span class="mini-chip priority-high">{{ blockedLabel(block, clock.now()) }}</span>
@@ -189,10 +194,7 @@
             </div>
           </div>
           <div class="rma-details__header-actions">
-            @if (canRegisterDiagnosis()) {
-              <button type="button" class="button-primary" (click)="openDiagnosisModal()">{{ rma.diagnosis ? 'Editar diagnóstico' : 'Registrar diagnóstico' }}</button>
-            }
-            <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar">
+            <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar" [disabled]="statusBusy() || diagnosisBusy()">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
             </button>
           </div>
@@ -209,7 +211,7 @@
           <div class="detail-summary__wide rma-details__deadline">
             <dt>Data limite</dt>
             <dd [class.is-empty]="!rma.dueDate">
-              <app-rma-due-date-field [rma]="rma" [canEdit]="canEditRma()" (saved)="detailRmaSaved($event)" />
+              <app-rma-due-date-field [rma]="rma" [disabled]="statusBusy() || diagnosisBusy()" [canEdit]="canEditRma()" (saved)="detailRmaSaved($event)" />
             </dd>
           </div>
           @let stage = stageFact(rma, clock.now());
@@ -219,7 +221,7 @@
 
         <div class="tab-list tab-list--raised" role="tablist" aria-label="Seções do RMA" (keydown)="onDetailTabKeydown($event)">
           @for (tab of detailTabs; track tab.id) {
-            <button type="button" role="tab" class="tab" [id]="'rma-tab-' + tab.id" [class.is-active]="detailTab() === tab.id" [attr.aria-selected]="detailTab() === tab.id" aria-controls="rma-detail-panel" [attr.tabindex]="detailTab() === tab.id ? 0 : -1" (click)="detailTab.set(tab.id)">{{ tab.label }}</button>
+            <button type="button" role="tab" class="tab" [disabled]="statusBusy() || diagnosisBusy()" [id]="'rma-tab-' + tab.id" [class.is-active]="detailTab() === tab.id" [attr.aria-selected]="detailTab() === tab.id" aria-controls="rma-detail-panel" [attr.tabindex]="detailTab() === tab.id ? 0 : -1" (click)="detailTab.set(tab.id)">{{ tab.label }}</button>
           }
         </div>
 
@@ -267,24 +269,8 @@
               }
             }
             @case ('diagnosis') {
-              <!-- The tab names this section; the wrapper only keeps the spacing of the next one. -->
               <section class="rma-details__section">
-                @if (rma.diagnosis; as diagnosis) {
-                  <dl class="meta-list rma-details__pairs">
-                    @for (fact of diagnosisFacts(diagnosis); track fact.label) {
-                      <div><dt>{{ fact.label }}</dt><dd [class.is-empty]="fact.empty">{{ fact.value }}</dd></div>
-                    }
-                  </dl>
-                } @else {
-                  <div class="empty-state empty-state--centered">
-                    <span class="icon-tile tone-slate" aria-hidden="true"><app-icon name="clipboard" [size]="20" /></span>
-                    <h3>{{ noDiagnosisLabel }}</h3>
-                    <p>Registre o diagnóstico para seguir com reparo e testes.</p>
-                    @if (canRegisterDiagnosis()) {
-                      <button type="button" class="button-secondary" (click)="openDiagnosisModal()">Registrar diagnóstico</button>
-                    }
-                  </div>
-                }
+                <app-rma-diagnosis [rma]="rma" [disabled]="statusBusy()" (saved)="detailRmaSaved($event)" (busyChange)="diagnosisBusy.set($event)" />
               </section>
               @let repair = repairFacts(rma);
               @if (repair.length > 0) {
@@ -313,7 +299,7 @@
               }
             }
             @case ('blocks') {
-              <app-rma-blocks-section [rma]="rma" (updated)="detailRmaSaved($event)" />
+              <app-rma-blocks-section [rma]="rma" [disabled]="statusBusy() || diagnosisBusy()" (updated)="detailRmaSaved($event)" />
             }
             @case ('history') {
               <app-rma-stage-times class="rma-details__stage-times" [rma]="rma" />
@@ -589,118 +575,6 @@
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="createSubmitting()">Cancelar</button>
           <button type="submit" class="button-primary" [disabled]="createSubmitting()">
             {{ createSubmitting() ? 'Abrindo...' : 'Abrir RMA' }}
-          </button>
-        </div>
-      </form>
-    </article>
-  </section>
-}
-
-@if (activeModal() === 'diagnosis') {
-  <section class="modal-overlay" (click)="closeModal()">
-    <article
-      class="panel modal-panel modal-panel--narrow"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="rma-diagnosis-title"
-      appModalFocus
-      modalInitialFocus="#foundFailure"
-      [modalCloseBlocked]="diagnosisSubmitting()"
-      [modalFallbackFocus]="listRegion"
-      (modalCloseRequested)="closeModal()"
-      (click)="$event.stopPropagation()"
-    >
-      <div class="modal-header">
-        <div>
-          <h3 id="rma-diagnosis-title">Diagnóstico</h3>
-          <p><span class="code-text">{{ selectedRma()?.code }}</span> · {{ selectedRma()?.clientName }}</p>
-        </div>
-        <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar" [disabled]="diagnosisSubmitting()">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
-        </button>
-      </div>
-
-      <section class="rma-details__section rma-diagnosis__context" aria-labelledby="rma-diagnosis-reported">
-        <h4 id="rma-diagnosis-reported">Falha relatada</h4>
-        <p>{{ selectedRma()?.reportedFailure }}</p>
-      </section>
-
-      @if (diagnosisErrorMessage()) {
-        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
-          <strong>{{ diagnosisErrorMessage() }}</strong>
-        </article>
-      }
-
-      <form [formGroup]="diagnosisForm" (ngSubmit)="saveDiagnosis()" class="form-grid">
-        <fieldset class="form-section">
-          <legend>Falha encontrada</legend>
-
-          <div class="field-group field-group--full">
-            <label for="foundFailure" class="sr-only">Falha encontrada</label>
-            <textarea id="foundFailure" formControlName="foundFailure" rows="4"
-              [attr.aria-invalid]="showDiagnosisError(diagnosisForm.controls.foundFailure) || null"
-              [attr.aria-describedby]="showDiagnosisError(diagnosisForm.controls.foundFailure) ? 'foundFailure-error' : null"></textarea>
-            @if (showDiagnosisError(diagnosisForm.controls.foundFailure)) {
-              <small class="field-error" id="foundFailure-error">{{ diagnosisForm.controls.foundFailure.hasError('maxlength') ? 'Use até 2000 caracteres.' : 'Descreva a falha encontrada.' }}</small>
-            }
-          </div>
-
-          <div class="field-group">
-            <label>Tipo de falha</label>
-            <app-custom-select
-              formControlName="failureType"
-              ariaLabel="Tipo de falha"
-              [options]="failureTypeSelectOptions"
-            />
-          </div>
-
-          <div class="field-group">
-            <label>Causa provável</label>
-            <app-custom-select
-              formControlName="probableCause"
-              ariaLabel="Causa provável"
-              [options]="failureCauseSelectOptions"
-            />
-          </div>
-        </fieldset>
-
-        <fieldset class="form-section">
-          <legend>Registro</legend>
-
-          <div class="field-group">
-            <label>Data do diagnóstico</label>
-            <app-date-picker formControlName="diagnosedAt" ariaLabel="Data do diagnóstico" [allowClear]="false"
-              [ariaInvalid]="showDiagnosisError(diagnosisForm.controls.diagnosedAt)"
-              [ariaDescribedBy]="showDiagnosisError(diagnosisForm.controls.diagnosedAt) ? 'diagnosedAt-error' : null" />
-            @if (showDiagnosisError(diagnosisForm.controls.diagnosedAt)) {
-              <small class="field-error" id="diagnosedAt-error">Informe a data do diagnóstico.</small>
-            }
-          </div>
-
-          <div class="field-group">
-            <label for="technicianName">Técnico</label>
-            <input id="technicianName" type="text" formControlName="technicianName"
-              [attr.aria-invalid]="showDiagnosisError(diagnosisForm.controls.technicianName) || null"
-              [attr.aria-describedby]="showDiagnosisError(diagnosisForm.controls.technicianName) ? 'technicianName-error' : null" />
-            @if (showDiagnosisError(diagnosisForm.controls.technicianName)) {
-              <small class="field-error" id="technicianName-error">{{ diagnosisForm.controls.technicianName.hasError('maxlength') ? 'Use até 120 caracteres.' : 'Informe o técnico.' }}</small>
-            }
-          </div>
-        </fieldset>
-
-        <fieldset class="form-section">
-          <legend>Notas</legend>
-
-          <div class="field-group field-group--full">
-            <label for="diagnosisNotes" class="sr-only">Notas</label>
-            <textarea id="diagnosisNotes" formControlName="notes" rows="4"></textarea>
-          </div>
-        </fieldset>
-
-        <div class="form-actions form-actions--full">
-          <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="diagnosisSubmitting()">Cancelar</button>
-          <button type="submit" class="button-primary" [disabled]="diagnosisSubmitting()">
-            {{ diagnosisSubmitting() ? 'Salvando...' : 'Salvar diagnóstico' }}
           </button>
         </div>
       </form>

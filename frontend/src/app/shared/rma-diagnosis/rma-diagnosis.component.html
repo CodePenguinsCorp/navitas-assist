@@ -1,0 +1,99 @@
+<header class="diagnosis-header">
+  <h3 class="detail-card__title"><app-icon name="clipboard" [size]="16" /> Diagnóstico</h3>
+  @if (canEdit() && rma().diagnosis && !editing()) {
+    <button type="button" class="link-button diagnosis-trigger" [disabled]="disabled()" (click)="edit()">Editar</button>
+  }
+</header>
+@if (editing() && canEdit()) {
+  @if (diagnosisErrorMessage()) { <p class="field-error" role="alert">{{ diagnosisErrorMessage() }}</p> }
+      <form [formGroup]="diagnosisForm" (ngSubmit)="saveDiagnosis()" class="form-grid" (keydown.escape)="cancelOnEscape($event)">
+        <fieldset class="diagnosis-fields">
+          <legend>Falha encontrada</legend>
+
+          <div class="field-group field-group--full">
+            <label [for]="fieldId('foundFailure')" class="sr-only">Falha encontrada</label>
+            <textarea [id]="fieldId('foundFailure')" formControlName="foundFailure" rows="4"
+              [attr.aria-invalid]="showDiagnosisError(diagnosisForm.controls.foundFailure) || null"
+              [attr.aria-describedby]="showDiagnosisError(diagnosisForm.controls.foundFailure) ? fieldId('foundFailure-error') : null"></textarea>
+            @if (showDiagnosisError(diagnosisForm.controls.foundFailure)) {
+              <small class="field-error" [id]="fieldId('foundFailure-error')">{{ diagnosisForm.controls.foundFailure.hasError('maxlength') ? 'Use até 2000 caracteres.' : 'Descreva a falha encontrada.' }}</small>
+            }
+          </div>
+
+          <div class="field-group">
+            <label>Tipo de falha</label>
+            <app-custom-select
+              formControlName="failureType"
+              ariaLabel="Tipo de falha"
+              [options]="failureTypeSelectOptions"
+            />
+          </div>
+
+          <div class="field-group">
+            <label>Causa provável</label>
+            <app-custom-select
+              formControlName="probableCause"
+              ariaLabel="Causa provável"
+              [options]="failureCauseSelectOptions"
+            />
+          </div>
+        </fieldset>
+
+        <fieldset class="diagnosis-fields">
+          <legend>Registro</legend>
+
+          <div class="field-group">
+            <label>Data do diagnóstico</label>
+            <app-date-picker formControlName="diagnosedAt" ariaLabel="Data do diagnóstico" [allowClear]="false"
+              [ariaInvalid]="showDiagnosisError(diagnosisForm.controls.diagnosedAt)"
+              [ariaDescribedBy]="showDiagnosisError(diagnosisForm.controls.diagnosedAt) ? fieldId('diagnosedAt-error') : null" />
+            @if (showDiagnosisError(diagnosisForm.controls.diagnosedAt)) {
+              <small class="field-error" [id]="fieldId('diagnosedAt-error')">Informe a data do diagnóstico.</small>
+            }
+          </div>
+
+          <div class="field-group">
+            <label [for]="fieldId('technicianName')">Técnico</label>
+            <input [id]="fieldId('technicianName')" type="text" formControlName="technicianName"
+              [attr.aria-invalid]="showDiagnosisError(diagnosisForm.controls.technicianName) || null"
+              [attr.aria-describedby]="showDiagnosisError(diagnosisForm.controls.technicianName) ? fieldId('technicianName-error') : null" />
+            @if (showDiagnosisError(diagnosisForm.controls.technicianName)) {
+              <small class="field-error" [id]="fieldId('technicianName-error')">{{ diagnosisForm.controls.technicianName.hasError('maxlength') ? 'Use até 120 caracteres.' : 'Informe o técnico.' }}</small>
+            }
+          </div>
+        </fieldset>
+
+        <fieldset class="diagnosis-fields">
+          <legend>Notas</legend>
+
+          <div class="field-group field-group--full">
+            <label [for]="fieldId('notes')" class="sr-only">Notas</label>
+            <textarea [id]="fieldId('notes')" formControlName="notes" rows="4" maxlength="2000"
+              [attr.aria-invalid]="showDiagnosisError(diagnosisForm.controls.notes) || null"
+              [attr.aria-describedby]="showDiagnosisError(diagnosisForm.controls.notes) ? fieldId('notes-error') : null"></textarea>
+            @if (showDiagnosisError(diagnosisForm.controls.notes)) {
+              <small class="field-error" [id]="fieldId('notes-error')">Use até 2000 caracteres.</small>
+            }
+          </div>
+        </fieldset>
+
+        <div class="form-actions form-actions--full">
+          <button type="button" class="button-secondary" (click)="cancel()" [disabled]="diagnosisSubmitting()">Cancelar</button>
+          <button type="submit" class="button-primary" [disabled]="diagnosisSubmitting()">
+            {{ diagnosisSubmitting() ? 'Salvando...' : 'Salvar diagnóstico' }}
+          </button>
+        </div>
+      </form>
+} @else if (rma().diagnosis; as diagnosis) {
+  <dl class="meta-list rma-details__pairs diagnosis-facts">
+    @for (fact of diagnosisFacts(diagnosis); track fact.label) {
+      <div><dt>{{ fact.label }}</dt><dd [class.is-empty]="fact.empty">{{ fact.value }}</dd></div>
+    }
+  </dl>
+} @else {
+  <p class="muted-inline">{{ noDiagnosisLabel }}</p>
+  @if (canEdit()) {
+    <button type="button" class="link-button diagnosis-trigger" [disabled]="disabled()" (click)="edit()">Registrar diagnóstico</button>
+  }
+}
+@if (message()) { <p role="status" class="muted-inline">{{ message() }}</p> }

@@ -33,7 +33,7 @@
       </div>
       <div class="form-actions blocks-section__actions">
         <button type="button" class="button-secondary" [disabled]="busy()" (click)="cancel()">Cancelar</button>
-        <button type="submit" class="button-primary" [disabled]="busy()">{{ busy() ? 'Salvando...' : 'Desbloquear' }}</button>
+        <button type="submit" class="button-primary" [disabled]="disabled() || busy()">{{ busy() ? 'Salvando...' : 'Desbloquear' }}</button>
       </div>
     </form>
   } @else if (mode() === 'block' && !current().currentBlock) {
@@ -58,7 +58,7 @@
       </div>
       <div class="form-actions blocks-section__actions">
         <button type="button" class="button-secondary" [disabled]="busy()" (click)="cancel()">Cancelar</button>
-        <button type="submit" class="button-primary" [disabled]="busy()">{{ busy() ? 'Salvando...' : 'Bloquear' }}</button>
+        <button type="submit" class="button-primary" [disabled]="disabled() || busy()">{{ busy() ? 'Salvando...' : 'Bloquear' }}</button>
       </div>
     </form>
   }

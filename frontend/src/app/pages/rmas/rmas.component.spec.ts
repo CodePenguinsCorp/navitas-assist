@@ -216,7 +216,9 @@ describe('RmasComponent pending editor lifecycle', () => {
     else {
       page.querySelector<HTMLElement>('.rma-table-row')!.click();
       fixture.detectChanges();
-      page.querySelector<HTMLButtonElement>('.rma-details__header-actions .button-primary')!.click();
+      [...page.querySelectorAll<HTMLButtonElement>('.tab')].find(b => b.textContent?.trim() === 'Diagnóstico')!.click();
+      fixture.detectChanges();
+      page.querySelector<HTMLButtonElement>('app-rma-diagnosis .diagnosis-trigger')!.click();
     }
     fixture.detectChanges();
   }
@@ -280,6 +282,7 @@ describe('RmasComponent pending editor lifecycle', () => {
       : { ...createdRma, diagnosis: { id: 1, ...request.request.body,
         createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt } };
     request.flush(saved);
+    if (mode === 'diagnosis') http.expectOne('/api/rmas/1').flush(saved);
     const reloaded = mode === 'create' ? [createdRma, saved] : [saved];
     http.expectOne(r => r.method === 'GET' && r.url.split('?')[0] === '/api/rmas').flush({ content: reloaded, page: 0, size: 20, totalElements: reloaded.length, totalPages: 1 });
     http.expectOne('/api/rmas/summary').flush({ total: reloaded.length, ongoing: reloaded.length, highPriority: 0 });
@@ -287,12 +290,14 @@ describe('RmasComponent pending editor lifecycle', () => {
   }
 
   function expectSuccess(mode: 'create' | 'diagnosis'): void {
-    expect(page.querySelector('.modal-overlay')).toBeNull();
+    expect(page.querySelector('.modal-overlay') === null).toBe(mode === 'create');
+    if (mode === 'diagnosis') { exitControl('close').click(); fixture.detectChanges(); }
     expect(page.querySelector('tbody')?.textContent).toContain(mode === 'create' ? 'RMA-2026-000002' : createdRma.code);
     openEditor(mode);
     expect(fieldValue(mode)).toBe(mode === 'create' ? '' : 'Falha mantida');
     exitControl('cancel').click();
     fixture.detectChanges();
+    if (mode === 'diagnosis') { exitControl('close').click(); fixture.detectChanges(); }
     expect(page.querySelector('.modal-overlay')).toBeNull();
   }
 
@@ -344,7 +349,7 @@ describe('RmasComponent pending editor lifecycle', () => {
       openEditor(mode);
       exitControl(control).click();
       fixture.detectChanges();
-      expect(page.querySelector('.modal-overlay')).toBeNull();
+      expect(page.querySelector('.modal-overlay') === null).toBe(mode === 'create' || control !== 'cancel');
     });
 
     it('does not send an invalid editor form', () => {

@@ -85,7 +85,7 @@ export class RmaBlocksSectionComponent {
   protected save(): void {
     const rma = this.current();
     const resolving = this.mode() === 'resolve';
-    if (this.busy() || !this.canEdit() || this.mode() === 'idle' || (resolving && !rma.currentBlock)) return;
+    if (this.busy() || this.disabled() || !this.canEdit() || this.mode() === 'idle' || (resolving && !rma.currentBlock)) return;
     const form = resolving ? this.resolveForm : this.blockForm;
     if (form.invalid) {
       form.markAllAsTouched();

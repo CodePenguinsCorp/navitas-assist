@@ -25,14 +25,11 @@ interface SetupOptions {
 
 interface ListHarness {
   filtersForm: FormGroup;
-  diagnosisForm: FormGroup;
   submitFilters(): void;
   clearFilters(): void;
   goToPage(page: number): void;
   changePageSize(size: number): void;
   openDetailsModal(rma: RmaResponse): void;
-  openDiagnosisModal(): void;
-  saveDiagnosis(): void;
   page(): number;
 }
 
@@ -415,16 +412,23 @@ describe('RmasComponent list state', () => {
 
     it('refreshes with the confirmed filter after saving a diagnosis', async () => {
       // Hoje a recarga após salvar usa a busca não enviada ("y").
-      const { component, rmaService } = await setup();
+      const { component, rmaService, page, render } = await setup();
       confirmFilters(component, 'x');
       component.filtersForm.setValue({ query: 'y', status: '' });
 
       component.openDetailsModal(defaultRma);
-      component.openDiagnosisModal();
-      component.diagnosisForm.patchValue({ foundFailure: 'Falha encontrada', technicianName: 'Tecnico' });
+      render();
+      [...page.querySelectorAll<HTMLButtonElement>('.tab')].find(tab => tab.textContent?.trim() === 'Diagnóstico')!.click();
+      render();
+      page.querySelector<HTMLButtonElement>('app-rma-diagnosis .diagnosis-trigger')!.click();
+      render();
+      const failure = page.querySelector<HTMLTextAreaElement>('[formControlName="foundFailure"]')!;
+      failure.value = 'Falha encontrada';
+      failure.dispatchEvent(new Event('input'));
       rmaService.list.mockClear();
       rmaService.getSummary.mockClear();
-      component.saveDiagnosis();
+      page.querySelector('app-rma-diagnosis form')!.dispatchEvent(new Event('submit', { cancelable: true }));
+      render();
 
       expect(rmaService.upsertDiagnosis).toHaveBeenCalledOnce();
       expect(rmaService.list).toHaveBeenLastCalledWith(expect.objectContaining({ query: 'x' }));

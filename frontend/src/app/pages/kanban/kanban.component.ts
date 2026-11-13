@@ -32,7 +32,6 @@ import {
   RmaAssigneeUpdateRequest,
   RmaResponse,
   RmaStatus,
-  RmaStatusUpdateRequest,
   WarrantyStatus,
 } from '../../core/models';
 import { ClockService } from '../../core/services/clock.service';
@@ -54,6 +53,7 @@ import { BulkRmaResult, KanbanBulkActionsComponent } from '../../shared/kanban-b
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { RmaKanbanBoardComponent } from '../../shared/rma-kanban-board/rma-kanban-board.component';
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
+import { RmaStatusFieldComponent } from '../../shared/rma-status-field/rma-status-field.component';
 import { RmaDetailModalComponent } from '../../shared/rma-detail-modal/rma-detail-modal.component';
 
 interface KanbanHeroStat {
@@ -124,6 +124,7 @@ const FILTER_LABELS: Record<AdvancedFilterKey, string> = {
     DatePickerComponent,
     RmaKanbanBoardComponent,
     RmaDetailModalComponent,
+    RmaStatusFieldComponent,
     KanbanBulkActionsComponent,
     ModalFocusDirective,
     PageHeaderComponent,
@@ -151,7 +152,6 @@ export class KanbanComponent {
   protected readonly loadFailed = signal(false);
   protected readonly loadErrorMessage = signal('');
   protected readonly pageError = signal('');
-  protected readonly statusModalError = signal('');
   /** Failure of an assignment made from the detail selector, shown inside the detail modal. */
   protected readonly assignmentError = signal('');
   protected readonly viewError = signal('');
@@ -170,9 +170,11 @@ export class KanbanComponent {
 
   private readonly rmasSignal = signal<RmaResponse[]>([]);
   protected readonly detailRma = computed(() => this.rmasSignal().find((rma) => rma.id === this.detailRmaId()) ?? null);
+  private readonly statusFeedbackRmaId = signal<number | null>(null);
+  protected readonly statusFeedbackRma = computed(() => this.rmasSignal().find(rma => rma.id === this.statusFeedbackRmaId()) ?? null);
   private readonly assignableUsersSignal = signal<AssignableUserResponse[]>([]);
   private readonly viewsSignal = signal<KanbanViewResponse[]>([]);
-  private readonly pendingStatusRmaSignal = signal<RmaResponse | null>(null);
+  private readonly boardStatus = viewChild.required<RmaStatusFieldComponent>('boardStatus');
 
   protected readonly filtersForm = this.formBuilder.nonNullable.group({
     blocked: ['all' as KanbanFilterValues['blocked']],
@@ -218,7 +220,6 @@ export class KanbanComponent {
       })),
     ],
   );
-  protected readonly pendingStatusRma = this.pendingStatusRmaSignal.asReadonly();
   protected readonly assignableUsers = this.assignableUsersSignal.asReadonly();
   protected readonly statusSelectOptions = STATUS_SELECT_OPTIONS;
   protected readonly statusFilterOptions = STATUS_FILTER_OPTIONS;
@@ -306,11 +307,6 @@ export class KanbanComponent {
     },
   ]);
 
-  protected readonly statusForm = this.formBuilder.nonNullable.group({
-    status: ['RECEIVED' as RmaStatus, [Validators.required]],
-    note: [''],
-  });
-
   protected readonly viewForm = this.formBuilder.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(80)]],
     defaultView: [false],
@@ -371,13 +367,6 @@ export class KanbanComponent {
   protected closeDetail(): void {
     this.detailRmaId.set(null);
     this.assignmentError.set('');
-  }
-
-  protected openStatusModal(rma: RmaResponse, status: RmaStatus): void {
-    if (!this.canUpdateStatus() || this.bulkBusy() || this.boardUpdatingId() !== null) return;
-    this.pendingStatusRmaSignal.set(rma);
-    this.statusModalError.set('');
-    this.statusForm.reset({ status, note: '' });
   }
 
   protected selectRma(rma: RmaResponse): void {
@@ -634,42 +623,9 @@ export class KanbanComponent {
       return;
     }
 
-    this.openStatusModal(dragged, status);
+    this.statusFeedbackRmaId.set(dragged.id);
+    this.boardStatus().move(status, dragged);
     this.clearBoardDragState();
-  }
-
-  protected closeStatusModal(): void {
-    if (this.boardUpdatingId() !== null) {
-      return;
-    }
-
-    this.pendingStatusRmaSignal.set(null);
-    this.statusModalError.set('');
-    this.clearBoardDragState();
-  }
-
-  protected saveStatusChange(): void {
-    const target = this.pendingStatusRmaSignal();
-    if (!target) {
-      return;
-    }
-
-    if (this.statusForm.invalid) {
-      this.statusForm.markAllAsTouched();
-      this.statusModalError.set('Informe um status válido.');
-      return;
-    }
-
-    const raw = this.statusForm.getRawValue();
-    if (raw.status === target.status) {
-      this.statusModalError.set('Escolha uma fase diferente da atual.');
-      return;
-    }
-
-    this.submitStatusUpdate(target, {
-      status: raw.status,
-      note: normalizeText(raw.note),
-    });
   }
 
   /** Only the latest read counts: a newer one (retry or reload) cancels the previous, as does destroy. */
@@ -736,28 +692,6 @@ export class KanbanComponent {
     if (!refreshed) {
       this.selectedRmaId.set(null);
     }
-  }
-
-  private submitStatusUpdate(target: RmaResponse, payload: RmaStatusUpdateRequest): void {
-    this.boardUpdatingId.set(target.id);
-    this.pageError.set('');
-    this.statusModalError.set('');
-
-    this.rmaService
-      .updateStatus(target.id, payload)
-      .pipe(finalize(() => this.boardUpdatingId.set(null)))
-      .subscribe({
-        next: (updated) => {
-          this.selectedRmaId.set(updated.id);
-          this.pendingStatusRmaSignal.set(null);
-          this.loadKanban();
-        },
-        error: (error) => {
-          this.statusModalError.set(
-            extractHttpErrorMessage(error, 'Não foi possível atualizar o status do RMA.'),
-          );
-        },
-      });
   }
 
   private submitAssigneeUpdate(target: RmaResponse, payload: RmaAssigneeUpdateRequest): void {

@@ -124,7 +124,7 @@ describe('RmasComponent detail with the shared information contract', () => {
 
     expect(identity.querySelector('h3')?.textContent?.trim()).toBe('Produto A');
     expect(identity.querySelector('.rma-details__client')?.textContent?.trim()).toBe('Cliente X');
-    expect(identity.querySelector('.status-chip[data-status="RECEIVED"]')?.textContent?.trim()).toBe('Recebido');
+    expect(identity.querySelector('[data-status="RECEIVED"]')?.textContent?.trim()).toBe('Recebido');
     expect(identity.querySelector('.priority-tag[data-priority="MEDIUM"] .priority-bars')).not.toBeNull();
     expect(identity.querySelector('.mini-chip.priority-high')?.textContent?.trim()).toBe('Bloqueado há 2 h');
   });
@@ -137,10 +137,9 @@ describe('RmasComponent detail with the shared information contract', () => {
     const identity = header.querySelector<HTMLElement>(':scope > .rma-details__identity')!;
     const actions = header.querySelector<HTMLElement>(':scope > .rma-details__header-actions')!;
     const close = actions.querySelector<HTMLElement>('.modal-close')!;
-    const diagnose = actions.querySelector<HTMLElement>('.button-primary')!;
+    expect(actions.querySelector('.button-primary')).toBeNull();
     expect(identity).not.toBeNull();
     expect(close.getAttribute('aria-label')).toBe('Fechar');
-    expect(diagnose.textContent?.trim()).toBe('Editar diagnóstico');
     expect(getComputedStyle(identity.querySelector('h3')!).overflowWrap).toBe('anywhere');
 
     // Computed styles are cached by the test DOM; connecting a <style> clears that cache after a resize.
@@ -153,7 +152,6 @@ describe('RmasComponent detail with the shared information contract', () => {
       expect(getComputedStyle(header).display).toBe('grid');
       expect(getComputedStyle(actions).display).toBe('contents');
       expect(getComputedStyle(close).getPropertyValue('grid-row')).toBe('1');
-      expect(getComputedStyle(diagnose).getPropertyValue('grid-row')).toBe('2');
     } finally {
       resize(1024, 768);
     }
@@ -215,7 +213,7 @@ describe('RmasComponent detail with the shared information contract', () => {
     open();
     selectTab('Diagnóstico');
 
-    expect(pairs(tabPanel().querySelector('.rma-details__pairs')!)).toEqual([
+    expect(pairs(tabPanel().querySelector('app-rma-diagnosis dl')!)).toEqual([
       ['Falha encontrada', 'Capacitor estufado'], ['Tipo', 'Fonte'], ['Causa provável', 'Componente'],
       ['Data do diagnóstico', '21/10/2026'], ['Técnico', 'Bia'], ['Notas', 'Trocar lote']
     ]);
@@ -232,20 +230,17 @@ describe('RmasComponent detail with the shared information contract', () => {
     open({ ...fullRma, diagnosis: null });
     selectTab('Diagnóstico');
 
-    expect(tabPanel().querySelector('.empty-state h3')?.textContent?.trim()).toBe('Sem diagnóstico registrado.');
+    expect(tabPanel().querySelector('app-rma-diagnosis')?.textContent).toContain('Sem diagnóstico registrado.');
     expect(section('Reparo e testes')).not.toBeNull();
   });
 
-  it('draws the empty diagnosis as a centered block with icon, text and action', async () => {
-    // Hoje o estado vazio é texto solto alinhado à esquerda, sem ícone.
+  it('shows the empty diagnosis with a text action in the card', async () => {
     const { open, selectTab, tabPanel } = await setup();
-    open({ ...fullRma, diagnosis: null });
-    selectTab('Diagnóstico');
-    const empty = tabPanel().querySelector('.empty-state')!;
-
-    expect(empty.classList).toContain('empty-state--centered');
-    expect(empty.querySelector(':scope > .icon-tile app-icon')).not.toBeNull();
-    expect(empty.querySelector('p')?.textContent?.trim()).toBe('Registre o diagnóstico para seguir com reparo e testes.');
+    open({ ...fullRma, diagnosis: null }); selectTab('Diagnóstico');
+    const editor = tabPanel().querySelector('app-rma-diagnosis')!;
+    expect(editor.textContent).toContain('Sem diagnóstico registrado.');
+    expect(editor.querySelector('button.link-button')?.textContent?.trim()).toBe('Registrar diagnóstico');
+    expect(editor.querySelector('.panel, .detail-card')).toBeNull();
   });
 
   it('separates header, summary card, raised tabs and the white content card over the tinted canvas', async () => {
@@ -511,7 +506,7 @@ describe('RmasComponent detail with the shared information contract', () => {
     const { open, detail, selectTab, tabPanel } = await setup({ role });
     open({ ...fullRma, diagnosis: null });
 
-    expect(detail().querySelector('.rma-details__header-actions .button-primary') !== null).toBe(allowed);
+    expect(detail().querySelector('.rma-details__header-actions .button-primary')).toBeNull();
     selectTab('Diagnóstico');
     const cta = [...tabPanel().querySelectorAll('button')].find((button) => button.textContent?.trim() === 'Registrar diagnóstico');
     expect(cta !== undefined).toBe(allowed);

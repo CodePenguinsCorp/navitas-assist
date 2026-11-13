@@ -74,6 +74,7 @@ describe('KanbanComponent filters', () => {
           useValue: {
             listBoard: () => of(TEST_RMAS),
             getById: (id: number) => of(TEST_RMAS.find((rma) => rma.id === id)),
+            updateStatus: (id: number, payload: { status: RmaResponse['status'] }) => of({ ...TEST_RMAS.find(rma => rma.id === id)!, status: payload.status }),
             updateAssignee: (id: number, payload: { assigneeId: number | null }) => {
               assigneeUpdates.push([id, payload]);
               if (failAssignee) return throwError(() => ({ error: { message: 'Técnico inativo' } }));
@@ -307,36 +308,60 @@ describe('KanbanComponent filters', () => {
     component.openDetail(TEST_RMAS[0]);
     fixture.detectChanges();
     chooseDetailStatus('IN_REPAIR');
-    expect(fixture.nativeElement.querySelectorAll('.modal-overlay').length).toBe(2);
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-    fixture.detectChanges();
-    // Only the status confirmation on top reacts; the detail below stays open.
-    expect(fixture.nativeElement.querySelector('app-rma-detail-modal')).not.toBeNull();
     expect(fixture.nativeElement.querySelectorAll('.modal-overlay').length).toBe(1);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('app-rma-detail-modal')).toBeNull();
   });
 
-  it('opens the status dialog with the stage picked in the detail selector', () => {
-    fixture.detectChanges();
-    component.openDetail(TEST_RMAS[0]);
-    fixture.detectChanges();
+  it('saves the selected stage immediately inside the detail', () => {
+    fixture.detectChanges(); component.openDetail(TEST_RMAS[0]); fixture.detectChanges();
     chooseDetailStatus('IN_REPAIR');
-    expect(fixture.nativeElement.textContent).toContain('Novo status');
-    expect(component.statusForm.getRawValue()).toEqual({ status: 'IN_REPAIR', note: '' });
-    expect(fixture.nativeElement.querySelector('#kanbanStatusNote')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Movido para Reparo');
+    expect(fixture.nativeElement.querySelectorAll('.modal-overlay')).toHaveLength(1);
+    expect(fixture.nativeElement.querySelector('#kanbanStatusNote')).toBeNull();
   });
 
-  it('opens the status and assignment modals from the detail modal', () => {
+  it('moves a dropped card immediately and shows feedback without a status dialog', () => {
     fixture.detectChanges();
-    component.openDetail(TEST_RMAS[0]);
+    const actions = fixture.componentInstance as unknown as {
+      startCardDrag(event: DragEvent, rma: RmaResponse): void;
+      dropOnColumn(event: DragEvent, status: RmaResponse['status']): void;
+    };
+    actions.startCardDrag(new Event('dragstart') as DragEvent, TEST_RMAS[0]);
+    actions.dropOnColumn(new Event('drop') as DragEvent, 'IN_REPAIR');
     fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Movido para Reparo');
+    expect(component.filteredRmas().find(rma => rma.id === TEST_RMAS[0].id)?.status).toBe('IN_REPAIR');
+    expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it('does not undo an old drop after the same RMA changes again in the detail', () => {
+    fixture.detectChanges();
+    const actions = fixture.componentInstance as unknown as {
+      startCardDrag(event: DragEvent, rma: RmaResponse): void;
+      dropOnColumn(event: DragEvent, status: RmaResponse['status']): void;
+    };
+    actions.startCardDrag(new Event('dragstart') as DragEvent, TEST_RMAS[0]);
+    actions.dropOnColumn(new Event('drop') as DragEvent, 'IN_REPAIR');
+    fixture.detectChanges();
+    component.openDetail(component.filteredRmas().find(rma => rma.id === TEST_RMAS[0].id)!);
+    fixture.detectChanges();
+    chooseDetailStatus('IN_TESTS');
+    fixture.nativeElement.querySelector('app-rma-detail-modal .modal-close').click();
+    fixture.detectChanges();
+    const feedback = fixture.nativeElement.querySelector('.kanban-stage > app-rma-status-field') as HTMLElement;
+    [...feedback.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent?.trim() === 'Desfazer')!.click();
+    fixture.detectChanges();
+    expect(component.filteredRmas().find(rma => rma.id === TEST_RMAS[0].id)?.status).toBe('IN_TESTS');
+    expect(feedback.querySelector('[role="alert"]')?.textContent).toContain('O status mudou.');
+  });
+
+  it('keeps the detail open after changing status', () => {
+    fixture.detectChanges(); component.openDetail(TEST_RMAS[0]); fixture.detectChanges();
     chooseDetailStatus('IN_REPAIR');
-    expect(fixture.nativeElement.textContent).toContain('Novo status');
-    fixture.nativeElement.querySelectorAll('.modal-overlay')[1].querySelector('.modal-close').click();
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelectorAll('.modal-overlay').length).toBe(1);
+    expect(fixture.nativeElement.querySelector('app-rma-detail-modal')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.modal-overlay')).toHaveLength(1);
   });
 
   it('saves the assignee picked in the detail selector through the existing service, without a dialog', () => {
@@ -613,7 +638,6 @@ interface KanbanHarness {
   applyBulkResults(results: BulkRmaResult[]): void;
   filtersForm: FormGroup;
   viewForm: FormGroup;
-  statusForm: FormGroup;
   filteredRmas: Signal<RmaResponse[]>;
   activeViewId: Signal<number | null>;
   viewError: Signal<string>;
@@ -843,9 +867,8 @@ describe('KanbanComponent dialog focus', () => {
     render();
     openDetailFromCard();
     confirmStatusFromDetail('IN_REPAIR');
-    expect(statusDialog()?.getAttribute('role')).toBe('dialog');
-    expect(statusDialog()?.getAttribute('aria-modal')).toBe('true');
-    expect(find('#kanban-status-title').textContent?.trim()).toBe('Status');
+    expect(statusDialog()).toBeNull();
+    expect(detail()).not.toBeNull();
   });
 
   it('focuses the detail panel from its card and returns to the card on Escape', () => {
@@ -856,19 +879,11 @@ describe('KanbanComponent dialog focus', () => {
     expect(document.activeElement).toBe(card);
   });
 
-  it('closes only the status selector, then only the confirmation, returning to the detail selector', () => {
-    openDetailFromCard();
-    activate(statusTrigger());
+  it('closes only the open status selector on Escape and retains focus', () => {
+    openDetailFromCard(); activate(statusTrigger());
     expect(page.querySelector('app-rma-detail-modal .custom-select__menu')).not.toBeNull();
     press('Escape');
     expect(page.querySelector('app-rma-detail-modal .custom-select__menu')).toBeNull();
-    expect(detail()).not.toBeNull();
-    expect(document.activeElement).toBe(statusTrigger());
-
-    confirmStatusFromDetail('IN_REPAIR');
-    expect(document.activeElement).toBe(find('[aria-labelledby="kanban-status-title"] app-custom-select .custom-select__trigger'));
-    expect(press('Escape').defaultPrevented).toBe(true);
-    expect(statusDialog()).toBeNull();
     expect(detail()).not.toBeNull();
     expect(document.activeElement).toBe(statusTrigger());
   });
@@ -1008,16 +1023,14 @@ describe('KanbanComponent dialog focus under the root blocker', () => {
     activate(statusTrigger());
     find<HTMLButtonElement>('app-rma-detail-modal .custom-select__option[data-status="IN_REPAIR"]').click();
     render();
-    find('[aria-labelledby="kanban-status-title"] form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    render();
     expect(press('Escape').defaultPrevented).toBe(false);
-    expect(statusDialog()).not.toBeNull();
+    expect(page.querySelector('app-rma-detail-modal')).not.toBeNull();
 
     loading.start();
     vi.advanceTimersByTime(200);
     render();
     expect(blocker().open, 'the root blocker is shown').toBe(true);
-    expect(statusDialog()!.contains(document.activeElement), 'the blocker took focus away from the dialog').toBe(false);
+    expect(page.querySelector('app-rma-detail-modal')!.contains(document.activeElement), 'the blocker took focus away from the detail').toBe(false);
 
     const trigger = statusTrigger();
     const focus = vi.spyOn(trigger, 'focus');

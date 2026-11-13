@@ -1,3 +1,5 @@
+import { RmaDiagnosisComponent } from '../../shared/rma-diagnosis/rma-diagnosis.component';
+import { RmaStatusFieldComponent } from '../../shared/rma-status-field/rma-status-field.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { NgComponentOutlet } from '@angular/common';
 import { Component, ElementRef, Injector, Type, afterNextRender, computed, inject, signal } from '@angular/core';
@@ -6,10 +8,6 @@ import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Va
 import { ActivatedRoute } from '@angular/router';
 import { Subject, catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 import {
-  FAILURE_CAUSE_LABELS,
-  FAILURE_CAUSE_OPTIONS,
-  FAILURE_TYPE_LABELS,
-  FAILURE_TYPE_OPTIONS,
   RMA_PRIORITY_LABELS,
   RMA_STATUS_FLOW,
   RMA_STATUS_LABELS
@@ -17,16 +15,12 @@ import {
 import {
   ClientResponse,
   CreateRmaRequest,
-  DiagnosisRequest,
-  FailureCause,
-  FailureType,
   ProductResponse,
   RmaPriority,
   RmaResponse,
   RmaSummaryResponse,
   RmaStatus
 } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
@@ -35,9 +29,7 @@ import { PagedList } from '../../core/utils/paged-list';
 import { todayInputValue } from '../../core/utils/date';
 import { ClockService } from '../../core/services/clock.service';
 import {
-  NO_DIAGNOSIS_LABEL,
   blockedLabel,
-  diagnosisFacts,
   historyEntryTitle,
   invoiceFact,
   purchaseFact,
@@ -49,8 +41,6 @@ import {
   stageFact
 } from '../../core/utils/rma-detail';
 import {
-  failureCauseLabel,
-  failureTypeLabel,
   formatDate,
   formatDateTime,
   normalizeText,
@@ -81,9 +71,7 @@ import { RmaStageTimesComponent } from '../../shared/rma-stage-times/rma-stage-t
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
 type SearchStatusValue = RmaStatus | '';
-type FailureTypeValue = FailureType | '';
-type FailureCauseValue = FailureCause | '';
-type ModalView = 'create' | 'details' | 'diagnosis';
+type ModalView = 'create' | 'details';
 type DetailTab = 'products' | 'diagnosis' | 'parts' | 'protocols' | 'blocks' | 'history';
 
 interface CreateDateErrors {
@@ -101,7 +89,7 @@ export interface RmaListFilters {
 
 @Component({
   selector: 'app-rmas',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaStageTimesComponent],
+  imports: [RmaDiagnosisComponent, RmaStatusFieldComponent, IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaStageTimesComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {
@@ -198,8 +186,7 @@ export interface RmaListFilters {
       flex-shrink: 0;
     }
 
-    .rma-items-editor,
-    .rma-diagnosis__context {
+    .rma-items-editor {
       padding: var(--space-3) var(--space-4);
       border: 1px solid var(--line);
       border-radius: var(--radius-md);
@@ -290,7 +277,6 @@ export interface RmaListFilters {
       gap: var(--space-2);
     }
 
-
     .rma-create-form > * {
       grid-column: 1 / -1;
     }
@@ -334,11 +320,6 @@ export interface RmaListFilters {
       grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr)) auto;
     }
 
-    /* Read-only context the technician compares with the found failure. */
-    .rma-diagnosis__context {
-      margin-bottom: var(--space-4);
-    }
-
     @media (max-width: 900px) {
       .rma-create-form__receipt {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -369,7 +350,7 @@ export interface RmaListFilters {
         grid-template-columns: 1fr;
       }
 
-      /* Identity and Fechar share the first row; the diagnosis action takes its own row below. */
+      /* Identity and Fechar share the first row. */
       .rma-details__header {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
@@ -384,18 +365,12 @@ export interface RmaListFilters {
         grid-row: 1;
       }
 
-      .rma-details__header-actions .button-primary {
-        grid-column: 1 / -1;
-        grid-row: 2;
-        justify-self: start;
-      }
     }
   `]
 })
 export class RmasComponent {
   protected readonly protocolsComponent = signal<Type<unknown> | null>(null);
   private readonly formBuilder = inject(FormBuilder);
-  private readonly authService = inject(AuthService);
   private readonly permissions = inject(PermissionService);
   private readonly catalogService = inject(CatalogService);
   private readonly rmaService = inject(RmaService);
@@ -413,10 +388,7 @@ export class RmasComponent {
    */
   protected readonly retroactiveOpen = signal(false);
   protected readonly dateErrors = signal<CreateDateErrors>({ manufacturedAt: [], purchaseDate: '', entryDate: '', dueDate: '' });
-  protected readonly diagnosisSubmitting = signal(false);
-  /** Diagnosis feedback shown inside the dialog (validation and service errors). */
-  protected readonly diagnosisErrorMessage = signal('');
-  protected readonly diagnosisSubmitAttempted = signal(false);
+  protected readonly diagnosisBusy = signal(false);
 
   protected readonly pageError = signal('');
   protected readonly pageMessage = signal('');
@@ -514,8 +486,6 @@ export class RmasComponent {
   protected readonly priorityClass = priorityChipClass;
   protected readonly warrantyLabel = warrantyLabel;
   protected readonly warrantyClass = warrantyClass;
-  protected readonly failureTypeLabel = failureTypeLabel;
-  protected readonly failureCauseLabel = failureCauseLabel;
   protected readonly dateLabel = formatDate;
   protected readonly dateTimeLabel = formatDateTime;
   protected readonly trackableLabel = trackableLabel;
@@ -531,12 +501,10 @@ export class RmasComponent {
   protected readonly purchaseFact = purchaseFact;
   protected readonly rmaItemFacts = rmaItemFacts;
   protected readonly receiptFacts = receiptFacts;
-  protected readonly diagnosisFacts = diagnosisFacts;
   protected readonly repairFacts = repairFacts;
   protected readonly rmaHistory = rmaHistory;
   protected readonly historyEntryTitle = historyEntryTitle;
   protected readonly stageFact = stageFact;
-  protected readonly noDiagnosisLabel = NO_DIAGNOSIS_LABEL;
 
   protected get todayDate(): string {
     return todayInputValue();
@@ -570,12 +538,11 @@ export class RmasComponent {
 
   protected readonly statusFilterOptions = STATUS_FILTER_OPTIONS;
   protected readonly prioritySelectOptions = PRIORITY_SELECT_OPTIONS;
-  protected readonly failureTypeSelectOptions = FAILURE_TYPE_SELECT_OPTIONS;
-  protected readonly failureCauseSelectOptions = FAILURE_CAUSE_SELECT_OPTIONS;
 
   protected readonly canOpenRma = computed(() => this.permissions.hasPermission('rma.abrir'));
 
-  protected readonly canRegisterDiagnosis = computed(() => this.permissions.hasPermission('rma.diagnosticar'));
+  protected readonly statusBusy = signal(false);
+  protected readonly canUpdateStatus = computed(() => this.permissions.hasPermission('rma.status'));
 
   /** `rma.editar`: general data, including the due date. */
   protected readonly canEditRma = computed(() => this.permissions.hasPermission('rma.editar'));
@@ -602,15 +569,6 @@ export class RmasComponent {
     testSummary: ['', [Validators.maxLength(800)]]
   });
 
-  protected readonly diagnosisForm = this.formBuilder.nonNullable.group({
-    foundFailure: ['', [Validators.required, Validators.maxLength(2000)]],
-    failureType: ['' as FailureTypeValue],
-    probableCause: ['' as FailureCauseValue],
-    notes: [''],
-    diagnosedAt: [todayInputValue(), [Validators.required]],
-    technicianName: ['', [Validators.required, Validators.maxLength(120)]]
-  });
-
   constructor() {
     this.createForm.valueChanges.subscribe(() => {
       if (this.createForm.controls.purchaseDateUnknown.value && this.createForm.controls.purchaseDate.value) {
@@ -629,7 +587,6 @@ export class RmasComponent {
       }),
       takeUntilDestroyed()
     ).subscribe((summary) => this.summarySignal.set(summary));
-    this.seedOperatorDefaults();
     this.loadWorkspace();
     this.openRequestedRma();
   }
@@ -712,6 +669,7 @@ export class RmasComponent {
 
   /** Same tab contract as notifications: arrows wrap, Home/End jump to the ends; selection follows focus. */
   protected onDetailTabKeydown(event: KeyboardEvent): void {
+    if (this.statusBusy() || this.diagnosisBusy()) return;
     const ids = this.detailTabs.map((tab) => tab.id);
     const current = ids.indexOf(this.detailTab());
     let next: number;
@@ -732,36 +690,13 @@ export class RmasComponent {
     this.openDetailsModal(rma);
   }
 
-  protected openDiagnosisModal(): void {
-    if (!this.selectedRmaSignal()) {
-      this.pageError.set('Selecione um RMA para registrar diagnóstico.');
-      return;
-    }
-
-    if (!this.canRegisterDiagnosis()) {
-      this.pageError.set('Seu perfil não pode registrar diagnóstico técnico.');
-      return;
-    }
-
-    this.pageError.set('');
-    this.pageMessage.set('');
-    this.diagnosisErrorMessage.set('');
-    this.diagnosisSubmitAttempted.set(false);
-    this.activeModal.set('diagnosis');
-  }
-
-  protected showDiagnosisError(control: AbstractControl): boolean {
-    return control.invalid && (control.touched || this.diagnosisSubmitAttempted());
-  }
-
   protected closeModal(): void {
-    if (this.createSubmitting() || this.diagnosisSubmitting()) return;
+    if (this.createSubmitting() || this.diagnosisBusy() || this.statusBusy()) return;
     this.resetModal();
   }
 
   protected selectRma(rma: RmaResponse): void {
     this.selectedRmaSignal.set(rma);
-    this.primeDetailForms(rma);
     this.pageError.set('');
   }
 
@@ -821,7 +756,6 @@ export class RmasComponent {
     ).subscribe({
       next: (rma) => {
         this.selectedRmaSignal.set(rma);
-        this.primeDetailForms(rma);
         this.resetCreateForm();
         this.createSubmitAttempted.set(false);
         this.filtersForm.setValue({ query: '', status: '' });
@@ -832,58 +766,6 @@ export class RmasComponent {
       },
       error: (error) => {
         this.createErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível abrir o RMA agora.'));
-      }
-    });
-  }
-
-  protected saveDiagnosis(): void {
-    const selected = this.selectedRmaSignal();
-    if (!selected) {
-      this.pageError.set('Selecione um RMA para registrar diagnóstico.');
-      return;
-    }
-
-    if (!this.canRegisterDiagnosis()) {
-      this.pageError.set('Seu perfil não pode registrar diagnóstico técnico.');
-      return;
-    }
-
-    this.diagnosisErrorMessage.set('');
-
-    if (this.diagnosisForm.invalid) {
-      this.diagnosisForm.markAllAsTouched();
-      this.diagnosisSubmitAttempted.set(true);
-      this.diagnosisErrorMessage.set('Preencha os campos obrigatórios do diagnóstico.');
-      return;
-    }
-
-    const raw = this.diagnosisForm.getRawValue();
-    const payload: DiagnosisRequest = {
-      foundFailure: raw.foundFailure.trim(),
-      failureType: raw.failureType || null,
-      probableCause: raw.probableCause || null,
-      notes: normalizeText(raw.notes),
-      diagnosedAt: raw.diagnosedAt,
-      technicianName: raw.technicianName.trim()
-    };
-
-    this.diagnosisSubmitting.set(true);
-    this.pageError.set('');
-    this.pageMessage.set('');
-
-    this.rmaService.upsertDiagnosis(selected.id, payload).pipe(
-      finalize(() => this.diagnosisSubmitting.set(false))
-    ).subscribe({
-      next: (updated) => {
-        this.selectedRmaSignal.set(updated);
-        this.primeDetailForms(updated);
-        this.diagnosisSubmitAttempted.set(false);
-        this.resetModal();
-        this.pageMessage.set(`Diagnóstico do ${updated.code} salvo com sucesso.`);
-        this.refreshRmas();
-      },
-      error: (error) => {
-        this.diagnosisErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível salvar o diagnóstico agora.'));
       }
     });
   }
@@ -961,38 +843,14 @@ export class RmasComponent {
       const refreshed = rmas.find((item) => item.id === selected.id);
       if (refreshed) {
         this.selectedRmaSignal.set(refreshed);
-        this.primeDetailForms(refreshed);
         return;
       }
 
-      this.primeDetailForms(selected);
       return;
     }
 
     const firstRma = rmas[0] ?? null;
     this.selectedRmaSignal.set(firstRma);
-    if (firstRma) {
-      this.primeDetailForms(firstRma);
-    }
-  }
-
-  private primeDetailForms(rma: RmaResponse): void {
-    this.diagnosisForm.setValue({
-      foundFailure: rma.diagnosis?.foundFailure ?? '',
-      failureType: (rma.diagnosis?.failureType ?? '') as FailureTypeValue,
-      probableCause: (rma.diagnosis?.probableCause ?? '') as FailureCauseValue,
-      notes: rma.diagnosis?.notes ?? '',
-      diagnosedAt: rma.diagnosis?.diagnosedAt ?? todayInputValue(),
-      technicianName: rma.diagnosis?.technicianName ?? this.currentOperatorName()
-    });
-  }
-
-  private seedOperatorDefaults(): void {
-    const operatorName = this.currentOperatorName();
-
-    this.diagnosisForm.patchValue({
-      technicianName: operatorName
-    });
   }
 
   private resetCreateForm(): void {
@@ -1066,10 +924,6 @@ export class RmasComponent {
     }, { validators: atLeastOneItemIdentification });
   }
 
-  private currentOperatorName(): string {
-    const user = this.authService.currentUser();
-    return user?.name ?? user?.username ?? '';
-  }
 }
 
 function atLeastOneItemIdentification(control: AbstractControl): ValidationErrors | null {
@@ -1093,20 +947,4 @@ const PRIORITY_SELECT_OPTIONS: ReadonlyArray<CustomSelectOption<RmaPriority>> = 
   { value: 'HIGH', label: RMA_PRIORITY_LABELS.HIGH },
   { value: 'MEDIUM', label: RMA_PRIORITY_LABELS.MEDIUM },
   { value: 'LOW', label: RMA_PRIORITY_LABELS.LOW }
-];
-
-const FAILURE_TYPE_SELECT_OPTIONS: ReadonlyArray<CustomSelectOption<FailureTypeValue>> = [
-  { value: '', label: 'Não classificado' },
-  ...FAILURE_TYPE_OPTIONS.map((option) => ({
-    value: option,
-    label: FAILURE_TYPE_LABELS[option]
-  }))
-];
-
-const FAILURE_CAUSE_SELECT_OPTIONS: ReadonlyArray<CustomSelectOption<FailureCauseValue>> = [
-  { value: '', label: 'Não classificada' },
-  ...FAILURE_CAUSE_OPTIONS.map((option) => ({
-    value: option,
-    label: FAILURE_CAUSE_LABELS[option]
-  }))
 ];

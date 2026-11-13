@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { DiagnosisResponse, RmaResponse, WarrantyStatus } from '../../core/models';
 import { ClockService } from '../../core/services/clock.service';
+import { AuthService } from '../../core/services/auth.service';
 import { RmaService } from '../../core/services/rma.service';
 import { of } from 'rxjs';
 import { buildRma, buildRmaItem } from '../../testing/rma-fixtures';
@@ -63,9 +64,11 @@ async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; can
     imports: [RmaDetailModalComponent],
     providers: [
       provideRouter([{ path: 'rmas', component: StubComponent }]),
+      { provide: AuthService, useValue: { currentUser: () => ({ name: 'Ana' }) } },
       { provide: ClockService, useValue: { now: signal(NOW) } },
       providePermissions(profilePermissions('ADMIN')),
       { provide: RmaService, useValue: {
+        updateStatus: (id: number, payload: { status: RmaResponse['status'] }) => of({ ...(inputs.rma ?? fullRma), id, status: payload.status }),
         updateDueDate: (id: number, dueDate: string | null) => of({ ...(inputs.rma ?? fullRma), id, dueDate }),
         resolveBlock: (id: number, blockId: number, body: { resolutionNote: string }) => of({
           ...(inputs.rma ?? fullRma), id, currentBlock: null,
@@ -91,9 +94,9 @@ async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; can
     return clone.textContent?.trim();
   };
   const section = (title: string) =>
-    [...host.querySelectorAll<HTMLElement>('.rma-detail__section')].find((item) => headingText(item.querySelector('.rma-detail__heading')!) === title) ?? null;
+    [...host.querySelectorAll<HTMLElement>('.rma-detail__section')].find((item) => headingText(item.querySelector('.rma-detail__heading, app-rma-diagnosis h3')!) === title) ?? null;
   const tiles = (root: Element) =>
-    [...root.querySelectorAll('.rma-detail__tile')].map((tile) => [tile.querySelector('span')?.textContent?.trim(), tile.querySelector('strong, em')?.textContent?.trim()]);
+    [...root.querySelectorAll('.rma-detail__tile, app-rma-diagnosis dl > div')].map((tile) => [tile.querySelector('span, dt')?.textContent?.trim(), tile.querySelector('strong, em, dd')?.textContent?.trim()]);
   const sidePairs = () =>
     Object.fromEntries([...host.querySelectorAll('.rma-detail__side dl > div')].map((row) => [row.querySelector('dt')?.textContent?.trim(), row.querySelector('dd')?.textContent?.trim()]));
   const buttonByText = (text: string) =>
@@ -103,11 +106,23 @@ async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; can
 }
 
 describe('RmaDetailModalComponent with the shared information contract', () => {
+  it('edita o diagnóstico no mesmo cartão e cancela sem fechar o detalhe', async () => {
+    const { fixture, host, section } = await setup();
+    const card = section('Diagnóstico')!;
+    card.querySelector<HTMLButtonElement>('.diagnosis-trigger')!.click();
+    fixture.detectChanges(); TestBed.tick();
+    expect(card.querySelector('[formControlName="foundFailure"]')).not.toBeNull();
+    expect(host.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+    card.querySelector<HTMLButtonElement>('.form-actions .button-secondary')!.click();
+    fixture.detectChanges(); TestBed.tick();
+    expect(card.querySelector('form')).toBeNull();
+    expect(host.querySelector('.rma-detail')).not.toBeNull();
+  });
   it('shows the blocks in contract order with the shared names', async () => {
     // Hoje os títulos são "Itens", "Reparo" e "Atividade".
     const { host, headingText } = await setup();
 
-    expect([...host.querySelectorAll('.rma-detail__heading')].map(headingText)).toEqual([
+    expect([...host.querySelectorAll('.rma-detail__heading, app-rma-diagnosis h3')].map(headingText)).toEqual([
       'Falha relatada', 'Impedimentos', 'Produtos', 'Recebimento', 'Diagnóstico', 'Reparo e testes', 'Histórico'
     ]);
   });
@@ -164,8 +179,8 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     const empty = await setup({ rma: { ...fullRma, diagnosis: null } });
     const block = empty.section('Diagnóstico');
     expect(block).not.toBeNull();
-    expect(block!.querySelector('.rma-detail__muted')?.textContent?.trim()).toBe('Sem diagnóstico registrado.');
-    expect(block!.querySelector('button, a')).toBeNull();
+    expect(block!.querySelector('.muted-inline')?.textContent?.trim()).toBe('Sem diagnóstico registrado.');
+    expect(block!.querySelector('button.link-button')?.textContent?.trim()).toBe('Registrar diagnóstico');
   });
 
   it('uses the creation labels for retroactive repair records', async () => {
@@ -302,7 +317,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     const statusChange = vi.fn();
     const assigneeChange = vi.fn();
     component.closed.subscribe(closed);
-    component.statusChange.subscribe(statusChange);
+    component.rmaUpdated.subscribe(statusChange);
     component.assigneeChange.subscribe(assigneeChange);
 
     expect(buttonByText('Ver impedimentos')).toBeUndefined();
@@ -492,13 +507,13 @@ describe('RmaDetailModalComponent status selector', () => {
   it('emits the picked status for the existing flow and returns focus to the pill', async () => {
     const { fixture, host, component } = await setup();
     const statusChange = vi.fn();
-    component.statusChange.subscribe(statusChange);
+    component.rmaUpdated.subscribe(statusChange);
     await openMenu(fixture, host);
 
     options(host).find((option) => option.getAttribute('data-status') === 'IN_REPAIR')!.click();
     fixture.detectChanges();
 
-    expect(statusChange).toHaveBeenCalledExactlyOnceWith({ rma: fullRma, status: 'IN_REPAIR' });
+    expect(statusChange).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: fullRma.id, status: 'IN_REPAIR' }));
     expect(host.querySelector('.rma-detail__status [role="listbox"]')).toBeNull();
     expect(document.activeElement).toBe(trigger(host));
     expect(trigger(host).textContent?.trim()).toBe('Triagem');
@@ -507,7 +522,7 @@ describe('RmaDetailModalComponent status selector', () => {
   it('does not emit when the current status is picked again', async () => {
     const { fixture, host, component } = await setup();
     const statusChange = vi.fn();
-    component.statusChange.subscribe(statusChange);
+    component.rmaUpdated.subscribe(statusChange);
     await openMenu(fixture, host);
 
     options(host).find((option) => option.getAttribute('data-status') === 'TRIAGE')!.click();
@@ -519,7 +534,7 @@ describe('RmaDetailModalComponent status selector', () => {
   it('works from the keyboard: arrows open and move, Enter picks, Escape closes back to the pill', async () => {
     const { fixture, host, component } = await setup();
     const statusChange = vi.fn();
-    component.statusChange.subscribe(statusChange);
+    component.rmaUpdated.subscribe(statusChange);
 
     trigger(host).focus();
     key(trigger(host), 'ArrowDown');
@@ -539,7 +554,7 @@ describe('RmaDetailModalComponent status selector', () => {
     // A focused button turns Enter into a click.
     (document.activeElement as HTMLButtonElement).click();
     fixture.detectChanges();
-    expect(statusChange).toHaveBeenCalledExactlyOnceWith({ rma: fullRma, status: 'IN_REPAIR' });
+    expect(statusChange).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: fullRma.id, status: 'IN_REPAIR' }));
 
     await openMenu(fixture, host);
     key(document.activeElement!, 'Escape');

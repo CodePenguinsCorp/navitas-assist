@@ -6,7 +6,7 @@
     tabindex="-1"
     [attr.aria-label]="'Detalhes do ' + rma().code"
     appModalFocus
-    [modalCloseBlocked]="disabled()"
+    [modalCloseBlocked]="writePending()"
     [modalFallbackFocus]="fallbackFocus()"
     (modalCloseRequested)="requestClose()"
     (click)="$event.stopPropagation()"
@@ -14,13 +14,13 @@
     <header class="rma-detail__bar">
       <div class="rma-detail__bar-key">
         <span class="rma-detail__key code-text">{{ rma().code }}</span>
-        @if (disabled()) {
+        @if (writePending()) {
           <button type="button" class="link-button rma-detail__open-link" disabled>Abrir na lista <app-icon name="external" [size]="14" /></button>
         } @else {
           <a class="link-button rma-detail__open-link" routerLink="/rmas" [queryParams]="{ rma: rma().id }">Abrir na lista <app-icon name="external" [size]="14" /></a>
         }
       </div>
-      <button type="button" class="modal-close" aria-label="Fechar" [disabled]="disabled()" (click)="requestClose()">
+      <button type="button" class="modal-close" aria-label="Fechar" [disabled]="writePending()" (click)="requestClose()">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
       </button>
     </header>
@@ -34,16 +34,8 @@
 
         <div class="rma-detail__actions">
           @if (canUpdateStatus()) {
-            <app-custom-select
-              class="rma-detail__status"
-              appearance="status"
-              [actionMenu]="true"
-              [ariaLabel]="'Alterar status, atual: ' + statusLabel(rma().status)"
-              [options]="statusOptions()"
-              [value]="rma().status"
-              [disabled]="disabled()"
-              (valueChange)="chooseStatus($event)"
-            />
+            <app-rma-status-field [rma]="rma()" [disabled]="disabled() || diagnosisBusy()"
+              (saved)="rmaUpdated.emit($event)" (busyChange)="statusBusy.set($event); busyChange.emit($event)" />
           } @else {
             <span class="status-chip rma-detail__status" [attr.data-status]="rma().status">{{ statusLabel(rma().status) }}</span>
           }
@@ -66,7 +58,7 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3" /></svg>
             Impedimentos
           </h3>
-          <app-rma-blocks-section [rma]="rma()" [disabled]="disabled()" (updated)="rmaUpdated.emit($event)" />
+          <app-rma-blocks-section [rma]="rma()" [disabled]="writePending()" (updated)="rmaUpdated.emit($event)" />
         </section>
 
         <section class="rma-detail__section detail-card">
@@ -105,26 +97,8 @@
         }
 
         <section class="rma-detail__section detail-card">
-          <h3 class="rma-detail__heading detail-card__title">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15ZM16 16l5 5" /></svg>
-            {{ sectionLabel('diagnosis') }}
-          </h3>
-          @if (rma().diagnosis; as diagnosis) {
-            <div class="rma-detail__tiles">
-              @for (fact of diagnosisFacts(diagnosis); track fact.label) {
-                <div class="rma-detail__tile detail-tile" [class.rma-detail__tile--wide]="fact.label === 'Falha encontrada' || fact.label === 'Notas'">
-                  <span>{{ fact.label }}</span>
-                  @if (fact.label === 'Tipo' || fact.label === 'Causa provável') {
-                    <em class="mini-chip">{{ fact.value }}</em>
-                  } @else {
-                    <strong>{{ fact.value }}</strong>
-                  }
-                </div>
-              }
-            </div>
-          } @else {
-            <p class="rma-detail__muted">{{ noDiagnosisLabel }}</p>
-          }
+          <app-rma-diagnosis [rma]="rma()" [disabled]="disabled() || statusBusy()" (saved)="rmaUpdated.emit($event)"
+            (busyChange)="diagnosisBusy.set($event); busyChange.emit($event)" />
         </section>
 
         @let repair = repairFacts(rma());
@@ -191,7 +165,7 @@
                     [placeholder]="ownerLabel(rma())"
                     [options]="assigneeOptions()"
                     [value]="rma().assigneeId"
-                    [disabled]="disabled()"
+                    [disabled]="writePending()"
                     (valueChange)="chooseAssignee($event)"
                   />
                 </dd>
@@ -206,7 +180,7 @@
             <div class="detail-facts__block rma-detail__deadline">
               <dt>Data limite</dt>
               <dd [class.is-empty]="!rma().dueDate">
-                <app-rma-due-date-field [rma]="rma()" [canEdit]="canEditDueDate()" [disabled]="disabled()" (saved)="rmaUpdated.emit($event)" />
+                <app-rma-due-date-field [rma]="rma()" [canEdit]="canEditDueDate()" [disabled]="writePending()" (saved)="rmaUpdated.emit($event)" />
               </dd>
             </div>
             <div><dt>{{ stage().label }}</dt><dd>{{ stage().value }}</dd></div>

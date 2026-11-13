@@ -1,11 +1,9 @@
-import { Component, EventEmitter, Output, computed, inject, input } from '@angular/core';
+import { RmaDiagnosisComponent } from '../rma-diagnosis/rma-diagnosis.component';
+import { Component, EventEmitter, Output, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { RMA_STATUS_FLOW } from '../../core/mock-data';
-import { AssignableUserResponse, RmaResponse, RmaStatus } from '../../core/models';
+import { AssignableUserResponse, RmaResponse } from '../../core/models';
 import { ClockService } from '../../core/services/clock.service';
 import {
-  NO_DIAGNOSIS_LABEL,
-  diagnosisFacts,
   historyEntryTitle,
   invoiceFact,
   purchaseFact,
@@ -21,6 +19,7 @@ import { IconComponent } from '../icon/icon.component';
 import { ModalFocusDirective } from '../modal-focus/modal-focus.directive';
 import { RmaBlocksSectionComponent } from '../rma-blocks-section/rma-blocks-section.component';
 import { RmaDueDateFieldComponent } from '../rma-due-date-field/rma-due-date-field.component';
+import { RmaStatusFieldComponent } from '../rma-status-field/rma-status-field.component';
 import { RmaStageTimesComponent } from '../rma-stage-times/rma-stage-times.component';
 import {
   formatDate,
@@ -37,7 +36,7 @@ import {
 
 @Component({
   selector: 'app-rma-detail-modal',
-  imports: [CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDueDateFieldComponent, RmaStageTimesComponent, RouterLink],
+  imports: [CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDueDateFieldComponent, RmaStageTimesComponent, RmaStatusFieldComponent, RmaDiagnosisComponent, RouterLink],
   templateUrl: './rma-detail-modal.component.html',
   styleUrl: './rma-detail-modal.component.css'
 })
@@ -55,8 +54,10 @@ export class RmaDetailModalComponent {
   /** Page control that receives focus when the card that opened the detail is gone on close. */
   readonly fallbackFocus = input<HTMLElement | null>(null);
   @Output() readonly closed = new EventEmitter<void>();
-  /** A status picked in the header selector; the host runs its usual status-change flow. */
-  @Output() readonly statusChange = new EventEmitter<{ rma: RmaResponse; status: RmaStatus }>();
+  @Output() readonly busyChange = new EventEmitter<boolean>();
+  protected readonly statusBusy = signal(false);
+  protected readonly diagnosisBusy = signal(false);
+  protected readonly writePending = computed(() => this.disabled() || this.statusBusy() || this.diagnosisBusy());
   /** A person (or null, unassigned) picked in the inline selector; the host saves it. */
   @Output() readonly assigneeChange = new EventEmitter<{ rma: RmaResponse; assigneeId: number | null }>();
   /** The RMA returned by a save made inside the detail (impediments, due date). */
@@ -77,22 +78,10 @@ export class RmaDetailModalComponent {
   protected readonly purchaseFact = purchaseFact;
   protected readonly rmaItemFacts = rmaItemFacts;
   protected readonly receiptFacts = receiptFacts;
-  protected readonly diagnosisFacts = diagnosisFacts;
   protected readonly repairFacts = repairFacts;
-  protected readonly noDiagnosisLabel = NO_DIAGNOSIS_LABEL;
   protected readonly activity = computed(() => rmaHistory(this.rma()));
   protected readonly historyEntryTitle = historyEntryTitle;
   protected readonly stage = computed(() => stageFact(this.rma(), this.clock.now()));
-  /** Every stage but the current one can be chosen (the same rule as the status dialog). */
-  protected readonly statusOptions = computed<ReadonlyArray<CustomSelectOption<RmaStatus>>>(() =>
-    RMA_STATUS_FLOW.map((status) => ({
-      value: status,
-      label: statusLabel(status),
-      status,
-      hint: status === this.rma().status ? 'Status atual' : undefined
-    }))
-  );
-
   /** Same choices as the former assignment dialog: unassigned plus the eligible users. */
   protected readonly assigneeOptions = computed<ReadonlyArray<CustomSelectOption<number | null>>>(() => {
     const rma = this.rma();
@@ -109,16 +98,11 @@ export class RmaDetailModalComponent {
 
   /** Button, backdrop and Escape close the detail only while no write is pending. */
   protected requestClose(): void {
-    if (!this.disabled()) this.closed.emit();
+    if (!this.writePending()) this.closed.emit();
   }
 
   protected chooseAssignee(assigneeId: unknown): void {
     const rma = this.rma();
     if (assigneeId !== rma.assigneeId) this.assigneeChange.emit({ rma, assigneeId: assigneeId as number | null });
-  }
-
-  protected chooseStatus(status: unknown): void {
-    const rma = this.rma();
-    if (status !== rma.status) this.statusChange.emit({ rma, status: status as RmaStatus });
   }
 }

@@ -250,6 +250,8 @@
       </article>
     }
 
+    <app-rma-status-field #boardStatus [rma]="statusFeedbackRma()" [showSelector]="false" [disabled]="bulkBusy()" (saved)="applyRmaUpdate($event)" (busyChange)="boardUpdatingId.set($event ? selectedRmaId() : null)" />
+
     @if (boardReady() && canBulkEdit()) {
       <app-kanban-bulk-actions
         [selection]="bulkSelectedRmas()"
@@ -304,7 +306,7 @@
     [disabled]="bulkBusy() || boardUpdatingId() !== null"
     [fallbackFocus]="filtersToggle"
     (closed)="closeDetail()"
-    (statusChange)="openStatusModal($event.rma, $event.status)"
+    (busyChange)="boardUpdatingId.set($event ? rma.id : null)"
     (assigneeChange)="assignFromDetail($event.rma, $event.assigneeId)"
     (rmaUpdated)="applyRmaUpdate($event)"
   />
@@ -379,77 +381,6 @@
           </button>
           <button type="submit" class="button-primary" [disabled]="viewBusy()">
             {{ viewBusy() ? 'Salvando...' : 'Salvar' }}
-          </button>
-        </div>
-      </form>
-    </article>
-  </section>
-}
-
-@if (pendingStatusRma(); as rma) {
-  <section class="modal-overlay" (click)="closeStatusModal()">
-    <article
-      class="panel modal-panel modal-panel--narrow"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="kanban-status-title"
-      appModalFocus
-      modalInitialFocus="app-custom-select[formcontrolname='status'] .custom-select__trigger"
-      [modalCloseBlocked]="boardUpdatingId() !== null"
-      [modalFallbackFocus]="filtersToggle"
-      (modalCloseRequested)="closeStatusModal()"
-      (click)="$event.stopPropagation()"
-    >
-      <div class="modal-header">
-        <div>
-          <h3 id="kanban-status-title">Status</h3>
-          <p>{{ rma.code }}</p>
-        </div>
-        <button
-          type="button"
-          class="modal-close"
-          (click)="closeStatusModal()"
-          [disabled]="boardUpdatingId() !== null"
-          aria-label="Fechar"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M6 6l12 12M18 6 6 18" />
-          </svg>
-        </button>
-      </div>
-
-      @if (statusModalError()) {
-        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
-          <strong>{{ statusModalError() }}</strong>
-        </article>
-      }
-
-      <form [formGroup]="statusForm" (ngSubmit)="saveStatusChange()" class="form-grid">
-        <div class="field-group">
-          <label>Novo status</label>
-          <app-custom-select
-            formControlName="status"
-            ariaLabel="Novo status do RMA"
-            [options]="statusSelectOptions"
-          />
-        </div>
-
-        <div class="field-group field-group--full">
-          <label for="kanbanStatusNote">Observação</label>
-          <textarea id="kanbanStatusNote" formControlName="note" rows="4"></textarea>
-        </div>
-
-        <div class="form-actions form-actions--full">
-          <button
-            type="button"
-            class="button-secondary"
-            (click)="closeStatusModal()"
-            [disabled]="boardUpdatingId() !== null"
-          >
-            Cancelar
-          </button>
-          <button type="submit" class="button-primary" [disabled]="boardUpdatingId() !== null">
-            {{ boardUpdatingId() !== null ? 'Salvando...' : 'Salvar status' }}
           </button>
         </div>
       </form>

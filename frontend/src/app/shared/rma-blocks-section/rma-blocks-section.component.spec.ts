@@ -58,6 +58,17 @@ describe('RmaBlocksSectionComponent', () => {
   const submit = () => { form()!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); render(); };
   const blocked = (extra: Partial<RmaResponse> = {}): RmaResponse => ({ ...RMA, currentBlock: BLOCK, blockHistory: [BLOCK], ...extra });
 
+  it.each([false, true])('não envia um formulário já aberto quando outra ação bloqueia o detalhe (resolver: %s)', resolving => {
+    mount(resolving ? blocked() : RMA);
+    control(resolving ? 'Resolver' : 'Sinalizar impedimento')!.click(); render();
+    setField(resolving ? 'resolutionNote' : 'reason', 'Justificativa');
+    fixture.componentRef.setInput('disabled', true); render();
+    expect(form()!.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(true);
+    submit();
+    http.expectNone(request => request.method === 'POST' || request.method === 'PATCH');
+    expect(form()).not.toBeNull();
+  });
+
   it('shows Sem impedimento with a quiet Sinalizar impedimento action and no form until asked', () => {
     mount();
     expect(text(host().querySelector('.blocks-section__empty'))).toBe('Sem impedimento');
