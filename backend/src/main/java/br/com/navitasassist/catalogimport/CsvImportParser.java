@@ -18,7 +18,7 @@ public final class CsvImportParser {
     private CsvImportParser() {
     }
 
-    public record ParsedCsv(char delimiter, List<String> header, List<ParsedRow> rows) {
+    public record ParsedCsv(char delimiter, List<String> header, List<ParsedRow> rows, int blankRows) {
     }
 
     public record ParsedRow(int lineNumber, List<String> fields) {
@@ -153,7 +153,7 @@ public final class CsvImportParser {
             throw new CsvImportException("Aspas sem fechamento na linha " + quoteStartLine);
         }
 
-        if ((commaCount > 0 && semicolonCount > 0) || (commaCount == 0 && semicolonCount == 0)) {
+        if (commaCount > 0 && semicolonCount > 0) {
             throw new CsvImportException("Não foi possível identificar o separador");
         }
 
@@ -167,15 +167,21 @@ public final class CsvImportParser {
         boolean inQuotes = false;
         int quoteStartLine = 1;
         boolean seenDelimiterInRecord = false;
+        boolean closedQuote = false;
 
         List<String> header = null;
         List<ParsedRow> rows = new ArrayList<>();
+        int blankRows = 0;
         List<String> currentFields = new ArrayList<>();
         StringBuilder fieldBuilder = new StringBuilder();
 
         int i = 0;
         while (i < len) {
             char c = text.charAt(i);
+
+            if (closedQuote && c != delimiter && c != '\r' && c != '\n' && !Character.isWhitespace(c)) {
+                throw new CsvImportException("Estrutura CSV inválida na linha " + recordStartLine);
+            }
 
             if (c == '"') {
                 if (inQuotes) {
@@ -184,6 +190,7 @@ public final class CsvImportParser {
                         i++;
                     } else {
                         inQuotes = false;
+                        closedQuote = true;
                     }
                 } else {
                     if (fieldBuilder.toString().isBlank()) {
@@ -199,10 +206,10 @@ public final class CsvImportParser {
                     fieldBuilder.append(c);
                 } else {
                     seenDelimiterInRecord = true;
-                    String val = fieldBuilder.toString().trim();
-                    checkFieldSize(val, recordStartLine);
-                    currentFields.add(val);
+                    checkFieldSize(fieldBuilder.toString(), recordStartLine);
+                    currentFields.add(fieldBuilder.toString());
                     fieldBuilder.setLength(0);
+                    closedQuote = false;
                 }
             } else if (c == '\r' || c == '\n') {
                 String newlineStr = "\n";
@@ -219,24 +226,25 @@ public final class CsvImportParser {
                 if (inQuotes) {
                     fieldBuilder.append(newlineStr);
                 } else {
-                    String val = fieldBuilder.toString().trim();
-                    checkFieldSize(val, recordStartLine);
-                    currentFields.add(val);
+                    checkFieldSize(fieldBuilder.toString(), recordStartLine);
+                    currentFields.add(fieldBuilder.toString());
                     fieldBuilder.setLength(0);
 
+                    checkRecordSize(currentFields, recordStartLine);
                     if (!isLineEmpty(currentFields, seenDelimiterInRecord)) {
                         if (header == null) {
-                            header = List.copyOf(currentFields);
+                            header = currentFields.stream().map(String::trim).toList();
                         } else {
-                            rows.add(new ParsedRow(recordStartLine, List.copyOf(currentFields)));
+                            rows.add(new ParsedRow(recordStartLine, currentFields.stream().map(String::trim).toList()));
                             if (rows.size() > MAX_ROWS) {
                                 throw new CsvImportException("O arquivo excede 2.000 registros");
                             }
                         }
-                    }
+                    } else if (header != null) blankRows++;
 
                     currentFields.clear();
                     seenDelimiterInRecord = false;
+                    closedQuote = false;
                     recordStartLine = currentLine;
                 }
             } else {
@@ -251,33 +259,36 @@ public final class CsvImportParser {
         }
 
         if (!currentFields.isEmpty() || fieldBuilder.length() > 0 || seenDelimiterInRecord) {
-            String val = fieldBuilder.toString().trim();
-            checkFieldSize(val, recordStartLine);
-            currentFields.add(val);
+            checkFieldSize(fieldBuilder.toString(), recordStartLine);
+            currentFields.add(fieldBuilder.toString());
+            checkRecordSize(currentFields, recordStartLine);
             if (!isLineEmpty(currentFields, seenDelimiterInRecord)) {
                 if (header == null) {
-                    header = List.copyOf(currentFields);
+                    header = currentFields.stream().map(String::trim).toList();
                 } else {
-                    rows.add(new ParsedRow(recordStartLine, List.copyOf(currentFields)));
+                    rows.add(new ParsedRow(recordStartLine, currentFields.stream().map(String::trim).toList()));
                     if (rows.size() > MAX_ROWS) {
                         throw new CsvImportException("O arquivo excede 2.000 registros");
                     }
                 }
-            }
+            } else if (header != null) blankRows++;
         }
 
         if (header == null) {
             throw new CsvImportException("Não foi possível identificar o separador");
         }
 
-        return new ParsedCsv(delimiter, header, Collections.unmodifiableList(rows));
+        return new ParsedCsv(delimiter, header, Collections.unmodifiableList(rows), blankRows);
     }
 
     private static boolean isLineEmpty(List<String> fields, boolean seenDelimiter) {
-        if (seenDelimiter) {
-            return false;
-        }
-        return fields.size() == 1 && fields.get(0).isEmpty();
+        return fields.stream().allMatch(String::isBlank);
+    }
+
+    private static void checkRecordSize(List<String> fields, int lineNumber) {
+        int size = fields.size() - 1;
+        for (String field : fields) size += field.getBytes(StandardCharsets.UTF_8).length;
+        if (size > 16384) throw new CsvImportException("Registro excede o limite de 16 KiB na linha " + lineNumber);
     }
 
     private static void checkFieldSize(String val, int lineNumber) {

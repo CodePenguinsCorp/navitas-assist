@@ -99,10 +99,7 @@ class CsvImportParserTest {
     void shouldThrowWhenDelimiterIsAbsentInHeaderOrEmptyFile() {
         // Apenas uma coluna sem delimitador
         String singleCol = "nome_completo\nJoão Silva";
-        CsvImportException ex1 = assertThrows(CsvImportException.class, () ->
-                CsvImportParser.parse(singleCol.getBytes(StandardCharsets.UTF_8))
-        );
-        assertEquals("Não foi possível identificar o separador", ex1.getMessage());
+        assertEquals(1, CsvImportParser.parse(singleCol.getBytes(StandardCharsets.UTF_8)).rows().size());
 
         // Arquivo vazio
         CsvImportException ex2 = assertThrows(CsvImportException.class, () ->

@@ -12,6 +12,9 @@ import org.springframework.data.repository.query.Param;
 
 public interface ClientRepository extends JpaRepository<Client, Long> {
 
+    @Query("select c.documentNumber from Client c where c.documentNumber is not null")
+    List<String> findImportDocuments();
+
     @Query("""
         select c
         from Client c

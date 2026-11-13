@@ -11,6 +11,9 @@ import org.springframework.data.repository.query.Param;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
+    @Query("select p.sku from Product p")
+    List<String> findImportSkus();
+
     boolean existsBySkuIgnoreCase(String sku);
 
     @Query("""
