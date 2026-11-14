@@ -250,6 +250,17 @@ describe('NotificationsComponent inbox loading', () => {
     expect(rows[0].querySelector('time')!.getAttribute('title')).toBe('24/10/2026, 09:00');
   });
 
+  it('keeps the same columns in read and unread rows, with the time last', async () => {
+    await setup({ list: [of([NOTIFICATION, { ...OLD, read: true }])] });
+    const rows = Array.from(root().querySelectorAll<HTMLElement>('.notification-item'));
+    const slots = rows.map((row) => row.querySelector('.notification-actions .notification-action-slot'));
+    expect(slots.every(Boolean)).toBe(true);
+    expect(slots[0]!.querySelector('button')).not.toBeNull();
+    expect(slots[1]!.querySelector('button')).toBeNull();
+    expect(slots[1]!.getAttribute('aria-hidden')).toBe('true');
+    expect(rows.every((row) => row.lastElementChild!.matches('time.notification-time'))).toBe(true);
+  });
+
   // Vermelho: o erro da ação substitui a única mensagem e a troca de aba apaga a falha de carga.
   it('keeps a load failure after an action error', async () => {
     await setup({ list: [failure(), failure(), failure()], markAllRead: failure() as never });

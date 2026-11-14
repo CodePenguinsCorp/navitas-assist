@@ -61,12 +61,14 @@
                     <span class="bell-item__title">{{ notification.title }}</span>
                     <span class="bell-item__meta">
                       <span class="mini-chip" [class]="severityClass(notification.severity)">{{ severityLabels[notification.severity] }}</span>
-                      <time [attr.datetime]="notification.createdAt" [title]="dateTime(notification.createdAt)">{{ timeOf(notification.createdAt) }}</time>
                     </span>
                   </button>
-                  @if (!notification.read) {
-                    <button appRowAction icon="check" label="Marcar como lida" [target]="notification.title" [disabled]="busy()" (click)="markRead(notification)"></button>
-                  }
+                  <span class="bell-item__action" [attr.aria-hidden]="notification.read ? 'true' : null">
+                    @if (!notification.read) {
+                      <button appRowAction icon="check" label="Marcar como lida" [target]="notification.title" [disabled]="busy()" (click)="markRead(notification)"></button>
+                    }
+                  </span>
+                  <time class="bell-item__time" [attr.datetime]="notification.createdAt" [title]="dateTime(notification.createdAt)">{{ timeOf(notification.createdAt) }}</time>
                 </li>
               }
             </ul>

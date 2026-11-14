@@ -4,6 +4,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { NotificationResponse } from '../../core/models';
+import { SKIP_GLOBAL_LOADING } from '../../core/interceptors/loading.interceptor';
+import { LoadingService } from '../../core/services/loading.service';
 import { ClockService } from '../../core/services/clock.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { NotificationBellComponent } from './notification-bell.component';
@@ -93,9 +95,48 @@ describe('NotificationBellComponent', () => {
     expect(Array.from(host().querySelectorAll('.bell-day')).map((day) => day.textContent?.trim())).toEqual(['Hoje', 'Ontem', '20/10/2026']);
     expect(items().map((item) => item.querySelector('.bell-item__title')?.textContent?.trim())).toEqual([NOTIFICATION.title, READ.title, OLD.title]);
     expect(items()[0].querySelector('.mini-chip')?.textContent?.trim()).toBe('Crítico');
-    expect(items()[0].querySelector('time')?.textContent?.trim()).toBe('10:00');
+    expect(host().querySelector('.bell-item time')?.textContent?.trim()).toBe('10:00');
     expect(host().querySelectorAll('.bell-item.is-unread').length).toBe(1);
     expect(panel()!.querySelector<HTMLAnchorElement>('a[href="/notificacoes"]')?.textContent?.trim()).toBe('Ver todas');
+  });
+
+  it('never opens the global loading while the panel loads or acts', async () => {
+    const loading = TestBed.inject(LoadingService);
+    bell().click();
+    await render();
+    const request = listRequest();
+    expect(request.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+    const summary = http.expectOne('/api/notifications/summary');
+    expect(loading.pendingCount()).toBe(0);
+    expect(panel()!.textContent).toContain('Carregando notificações...');
+    request.flush([NOTIFICATION]);
+    summary.flush({ unread: 1 });
+    await render();
+
+    panel()!.querySelector<HTMLButtonElement>('button[aria-label="Marcar como lida RMA-2026-000007 atribuído"]')!.click();
+    const read = http.expectOne({ method: 'POST', url: '/api/notifications/5/read' });
+    expect(read.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+    read.flush({ ...NOTIFICATION, read: true });
+    flushSummary(0);
+    await render();
+
+    buttonByText('Marcar todas como lidas').disabled = false;
+    unreadSwitch().click();
+    await render();
+    expect(listRequest().request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+    flushSummary(0);
+    expect(loading.pendingCount()).toBe(0);
+    expect(panel()).not.toBeNull();
+  });
+
+  it('keeps the action column in read and unread rows so the time stays aligned', async () => {
+    await openWith([NOTIFICATION, READ]);
+    const rows = Array.from(host().querySelectorAll<HTMLElement>('.bell-item'));
+    const slots = rows.map((row) => row.querySelector('.bell-item__action'));
+    expect(slots.every(Boolean)).toBe(true);
+    expect(slots[0]!.querySelector('button')).not.toBeNull();
+    expect(slots[1]!.querySelector('button')).toBeNull();
+    expect(slots[1]!.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('reloads with only unread items when the switch is turned on', async () => {

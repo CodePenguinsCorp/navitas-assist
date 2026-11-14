@@ -107,13 +107,15 @@
                           <span class="notification-message">{{ notification.message }}</span>
                         </p>
                       </div>
-                      <time class="notification-time" [attr.datetime]="notification.createdAt" [title]="dateTime(notification.createdAt)">{{ timeOf(notification.createdAt) }}</time>
                       <div class="notification-actions">
-                        @if (!notification.read) {
-                          <button appRowAction icon="check" label="Marcar como lida" [target]="notification.title" (click)="markRead(notification)" [disabled]="busy()"></button>
-                        }
+                        <span class="notification-action-slot" [attr.aria-hidden]="notification.read ? 'true' : null">
+                          @if (!notification.read) {
+                            <button appRowAction icon="check" label="Marcar como lida" [target]="notification.title" (click)="markRead(notification)" [disabled]="busy()"></button>
+                          }
+                        </span>
                         <app-custom-select size="compact" [actionMenu]="true" [ariaLabel]="'Adiar ' + notification.title" placeholder="Adiar" [options]="snoozeOptions" [disabled]="busy()" (valueChange)="snooze(notification, $any($event))" />
                       </div>
+                      <time class="notification-time" [attr.datetime]="notification.createdAt" [title]="dateTime(notification.createdAt)">{{ timeOf(notification.createdAt) }}</time>
                     </li>
                   }
                 </ul>
