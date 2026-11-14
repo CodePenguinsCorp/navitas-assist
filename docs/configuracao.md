@@ -6,8 +6,8 @@ Fontes: `backend/src/main/resources/application.yml`, `application-local.yml`, `
 
 | Profile | Uso | Efeito |
 | --- | --- | --- |
-| `local` | Docker de desenvolvimento e `mvn spring-boot:run` | Padrões de banco locais, cookie sem `Secure`, SQL nos logs, `ddl-auto=update`. |
-| `test` | Testes automatizados | H2 em memória, porta aleatória. |
+| `local` | Docker de desenvolvimento e `mvn spring-boot:run` | Padrões de banco locais, cookie sem `Secure`, SQL nos logs; valida o schema (`ddl-auto=validate`) como os demais. |
+| `test` | Testes automatizados | PostgreSQL real (Testcontainers ou `TEST_DB_*`), porta aleatória. |
 | `prod` | `compose.prod.yaml` | Sem padrões de banco; valida schema (`ddl-auto=validate`), não imprime SQL. |
 
 Fora de `local` e `test`, `DB_URL`, `DB_USER` e `DB_PASSWORD` são obrigatórias e a aplicação recusa, em `DB_PASSWORD`, as senhas publicadas nos exemplos (`admin123`, `navitas123`, `root123`, `troque-esta-senha`, `troque-esta-senha-root`). A mensagem cita só o nome da variável. Essa checagem não altera contas nem senhas dos usuários da aplicação.
@@ -16,19 +16,21 @@ Fora de `local` e `test`, `DB_URL`, `DB_USER` e `DB_PASSWORD` são obrigatórias
 
 | Variável | Padrão | Obrigatória | Observação |
 | --- | --- | --- | --- |
-| `DB_URL` | local: `jdbc:mysql://127.0.0.1:3306/navitas_assist?...` | Fora de `local`/`test` | URL JDBC do MySQL. |
+| `DB_URL` | local: `jdbc:postgresql://127.0.0.1:5432/navitas_assist` | Fora de `local`/`test` | URL JDBC do PostgreSQL. Remoto: `?sslmode=require`; atrás de pooler em modo transaction, também `&prepareThreshold=0`. |
 | `DB_USER` | local: `navitas_app` | Fora de `local`/`test` | |
 | `DB_PASSWORD` | local: `navitas123` | Fora de `local`/`test` | Não pode ser senha de exemplo. |
+| `MIGRATION_DB_URL`, `MIGRATION_DB_USER`, `MIGRATION_DB_PASSWORD` | os de `DB_*` | Não | Conexão própria do Flyway (ex.: endpoint direto quando o app usa pooler). Não as defina vazias. |
+| `DB_POOL_MAX` | `5` | Não | Máximo de conexões do Hikari (sem conexão ociosa obrigatória; 30 s para conectar). |
+| `TEST_DB_URL`, `TEST_DB_USER`, `TEST_DB_PASSWORD` | sem padrão | Só nos testes | Com elas, a suíte usa esse PostgreSQL em vez de subir um contêiner (CI). O usuário precisa poder criar bancos. |
 
 Só do Docker Compose (não chegam ao Spring diretamente; o Compose monta `DB_URL`, `DB_USER` e `DB_PASSWORD` a partir delas):
 
 | Variável | Padrão (`compose.yaml`) | Observação |
 | --- | --- | --- |
-| `MYSQL_DATABASE` | `navitas_assist` | Obrigatória em `compose.prod.yaml`. |
-| `MYSQL_USER` | `navitas_app` | Obrigatória em produção. |
-| `MYSQL_PASSWORD` | `navitas123` | Obrigatória em produção; troque. |
-| `MYSQL_ROOT_PASSWORD` | `root123` | Obrigatória em produção; troque. |
-| `MYSQL_PORT` | `3306` | Porta publicada no host (só `compose.yaml`). |
+| `POSTGRES_DB` | `navitas_assist` | Obrigatória em `compose.prod.yaml`. |
+| `POSTGRES_USER` | `navitas_app` | Obrigatória em produção; é o dono do banco (cria a extensão `unaccent` na V1). |
+| `POSTGRES_PASSWORD` | `navitas123` | Obrigatória em produção; troque. |
+| `POSTGRES_PORT` | `5432` | Porta publicada no host (só `compose.yaml`). |
 | `BACKEND_PORT` | `8080` | Porta publicada do backend (só `compose.yaml`; em produção o backend não é publicado). |
 | `FRONTEND_PORT` | `4200` (dev) / `80` (prod) | Porta publicada do frontend. |
 | `BACKEND_IMAGE`, `FRONTEND_IMAGE` | sem padrão | Obrigatórias em `compose.prod.yaml`. |

@@ -1,6 +1,6 @@
 # Migração para PostgreSQL — plano de execução
 
-Fonte de requisitos: decisão do dono do produto (13 nov 2026): PostgreSQL passa a ser o único banco, em todos os ambientes (local, CI, testes automatizados, ambiente de testes remoto e futuro). Esta é a **última etapa do projeto**: assume o ambiente de testes (Vercel/Render) e a validação do dono já concluídos, e a branch `main` estável. Este documento é só o plano; nada foi executado.
+Fonte de requisitos: decisão do dono do produto (13 nov 2026): PostgreSQL passa a ser o único banco, em todos os ambientes (local, CI, testes automatizados, ambiente de testes remoto e futuro). Esta é a **última etapa do projeto**: assume o ambiente de testes (Vercel/Render) e a validação do dono já concluídos, e a branch `main` estável. **Executado em 14 nov 2026** (ver "Execução" no fim); os itens marcados foram feitos e verificados, os desmarcados dependem do ambiente remoto ou do CI real.
 
 Independente de provedor: o app e o Flyway leem `DB_URL`, `DB_USER` e `DB_PASSWORD`. Neon é o candidato para o ambiente de testes gratuito; Supabase também serve. Nada no código pode citar um provedor.
 
@@ -102,101 +102,101 @@ Decisão:
 
 **Arquivos:** `backend/pom.xml`, `backend/src/main/resources/application.yml`, `application-local.yml`, `backend/src/test/resources/application-test.yml`.
 
-- [ ] Passo 1 (vermelho): rodar `mvn -q dependency:tree -Dincludes=org.flywaydb,org.postgresql,org.testcontainers` e registrar as versões; confirmar que `flyway-core` é 9.22.x e que o BOM gerencia `org.postgresql:postgresql` e `org.testcontainers`.
-- [ ] Passo 2: em `pom.xml`, trocar `mysql-connector-j` (linhas 40-43) por `org.postgresql:postgresql` (runtime); remover `flyway-mysql` (57-60); trocar `h2` (72-76) por `spring-boot-testcontainers`, `org.testcontainers:postgresql`, `org.testcontainers:junit-jupiter` (test). Não adicionar `flyway-database-postgresql` (D6).
-- [ ] Passo 3: `application.yml` — remover `driver-class-name` (linha 10); acrescentar `hikari` (D6), `spring.flyway.url/user/password` com `${MIGRATION_DB_URL:${DB_URL}}` etc., e `hibernate.jdbc.time_zone: UTC`.
-- [ ] Passo 4: `application-local.yml` — padrão `jdbc:postgresql://127.0.0.1:5432/navitas_assist` e usuário/senha locais; remover `ddl-auto: update` (herda `validate`); manter `show-sql`.
-- [ ] Passo 5: `application-test.yml` — remover URL e driver do H2 e a propriedade `preferred_instant_jdbc_type`; a URL vem do inicializador (Tarefa 4).
-- [ ] Verificação: `mvn -q -DskipTests compile` passa (o contexto só sobe depois das Tarefas 2 e 4).
+- [x] Passo 1 (vermelho): rodar `mvn -q dependency:tree -Dincludes=org.flywaydb,org.postgresql,org.testcontainers` e registrar as versões; confirmar que `flyway-core` é 9.22.x e que o BOM gerencia `org.postgresql:postgresql` e `org.testcontainers`.
+- [x] Passo 2: em `pom.xml`, trocar `mysql-connector-j` (linhas 40-43) por `org.postgresql:postgresql` (runtime); remover `flyway-mysql` (57-60); trocar `h2` (72-76) por `spring-boot-testcontainers`, `org.testcontainers:postgresql`, `org.testcontainers:junit-jupiter` (test). Não adicionar `flyway-database-postgresql` (D6).
+- [x] Passo 3: `application.yml` — remover `driver-class-name` (linha 10); acrescentar `hikari` (D6), `spring.flyway.url/user/password` com `${MIGRATION_DB_URL:${DB_URL}}` etc., e `hibernate.jdbc.time_zone: UTC`.
+- [x] Passo 4: `application-local.yml` — padrão `jdbc:postgresql://127.0.0.1:5432/navitas_assist` e usuário/senha locais; remover `ddl-auto: update` (herda `validate`); manter `show-sql`.
+- [x] Passo 5: `application-test.yml` — remover URL e driver do H2 e a propriedade `preferred_instant_jdbc_type`; a URL vem do inicializador (Tarefa 4).
+- [x] Verificação: `mvn -q -DskipTests compile` passa (o contexto só sobe depois das Tarefas 2 e 4).
 
 ## Tarefa 2. Baseline PostgreSQL consolidada
 
 **Arquivos:** apagar `V2..V10` (`backend/src/main/resources/db/migration/V2__*.sql` a `V10__*.sql`) e reescrever `V1__baseline.sql`.
 
-- [ ] Passo 1 (vermelho): escrever primeiro o teste `SchemaEquivalenceTest` e o `PostgresTestDatabase` da Tarefa 4/5 (falham porque a baseline ainda é MySQL).
-- [ ] Passo 2: `V1__baseline.sql` em PostgreSQL com o schema final de V1..V10: identity (D2), `timestamptz` (D2), `CREATE EXTENSION IF NOT EXISTS unaccent`, índices únicos funcionais (D3), colunas e checks da V2 (`rmas.due_date`, `rma_due_date_history`, `kanban_views.deadline_status` com `ck_kanban_views_deadline`), V3 (`warranty_override*`, `rma_item_warranty_history`), V4 sem `email_normalized` (`email` + `uk_user_accounts_email` em `lower(email)`, `app_enabled`, `app_visible`, colunas e índice `idx_notifications_email_due`, check `ck_notifications_email_status` já final), V5 (tabelas de reparo), V6 (`email_generation`), V7 (`idx_notifications_email_sent`), V8 (`item_position`), V9 (permissão `cadastros.importar` ao `ADMIN`), V10 (`note_edited_by`, `note_edited_at`).
-- [ ] Passo 3: seeds: manter perfis, permissões e regras de notificação **no estado final**: sem `SLA_WARNING`/`SLA_OVERDUE` (a V2 os apagava), com os tipos reservados da V4 e `cadastros.importar`; linha de trava da numeração dos RMAs.
-- [ ] Passo 4: na V1, manter as convenções do cabeçalho atual (todo índice e constraint com nome; índice de FK com o nome da FK antes dela) e reescrever o cabeçalho: dialeto PostgreSQL, histórico consolidado, sem referência a MySQL/H2.
-- [ ] Verificação: subir um Postgres vazio (Tarefa 8) e `mvn -q test -Dtest=SchemaEquivalenceTest` passa; `flyway info` lista só a V1.
+- [x] Passo 1 (vermelho): escrever primeiro o teste `SchemaEquivalenceTest` e o `PostgresTestDatabase` da Tarefa 4/5 (falham porque a baseline ainda é MySQL).
+- [x] Passo 2: `V1__baseline.sql` em PostgreSQL com o schema final de V1..V10: identity (D2), `timestamptz` (D2), `CREATE EXTENSION IF NOT EXISTS unaccent`, índices únicos funcionais (D3), colunas e checks da V2 (`rmas.due_date`, `rma_due_date_history`, `kanban_views.deadline_status` com `ck_kanban_views_deadline`), V3 (`warranty_override*`, `rma_item_warranty_history`), V4 sem `email_normalized` (`email` + `uk_user_accounts_email` em `lower(email)`, `app_enabled`, `app_visible`, colunas e índice `idx_notifications_email_due`, check `ck_notifications_email_status` já final), V5 (tabelas de reparo), V6 (`email_generation`), V7 (`idx_notifications_email_sent`), V8 (`item_position`), V9 (permissão `cadastros.importar` ao `ADMIN`), V10 (`note_edited_by`, `note_edited_at`).
+- [x] Passo 3: seeds: manter perfis, permissões e regras de notificação **no estado final**: sem `SLA_WARNING`/`SLA_OVERDUE` (a V2 os apagava), com os tipos reservados da V4 e `cadastros.importar`; linha de trava da numeração dos RMAs.
+- [x] Passo 4: na V1, manter as convenções do cabeçalho atual (todo índice e constraint com nome; índice de FK com o nome da FK antes dela) e reescrever o cabeçalho: dialeto PostgreSQL, histórico consolidado, sem referência a MySQL/H2.
+- [x] Verificação: subir um Postgres vazio (Tarefa 8) e `mvn -q test -Dtest=SchemaEquivalenceTest` passa; `flyway info` lista só a V1.
 
 ## Tarefa 3. Repositórios: busca, ordenação e travas
 
 **Arquivos:** `ClientRepository.java`, `ProductRepository.java`, `PartRepository.java`, `AccessProfileRepository.java`, `ProtocolTemplateRepository.java`, `RmaRecordRepository.java` (em `backend/src/main/java/br/com/navitasassist/repository/`); novo `config/PostgresFunctions.java` e `backend/src/main/resources/META-INF/services/org.hibernate.boot.model.FunctionContributor`.
 
-- [ ] Passo 1 (vermelho): os testes de busca da Tarefa 6 (`busca ignora acento e caixa`, `ordenação sem depender de collation`) falham.
-- [ ] Passo 2: registrar `unaccent` no Hibernate; trocar todo `lower(x) like lower(concat('%', :query, '%'))` por `lower(unaccent(x)) like lower(unaccent(concat('%', :query, '%')))` e todo `order by lower(x)` por `order by lower(unaccent(x))`, mantendo o desempate por `id`.
-- [ ] Passo 3: `ProductRepository.java:30` (`lower(trim(coalesce(p.category, ''))) = lower(:category)`) fica como está (igualdade de categoria, não busca); decidir com o dono se acentos devem igualar (Q4).
-- [ ] Passo 4: ajustar o comentário em `RmaRecordRepository.java:88-89` ("H2/Java") e o de `AccessProfileService.java:128`.
-- [ ] Verificação: testes de busca verdes com `query` nulo, vazio, com acento e em maiúsculas.
+- [x] Passo 1 (vermelho): os testes de busca da Tarefa 6 (`busca ignora acento e caixa`, `ordenação sem depender de collation`) falham.
+- [x] Passo 2: registrar `unaccent` no Hibernate; trocar todo `lower(x) like lower(concat('%', :query, '%'))` por `lower(unaccent(x)) like lower(unaccent(concat('%', :query, '%')))` e todo `order by lower(x)` por `order by lower(unaccent(x))`, mantendo o desempate por `id`.
+- [x] Passo 3: `ProductRepository.java:30` (`lower(trim(coalesce(p.category, ''))) = lower(:category)`) fica como está (igualdade de categoria, não busca); decidir com o dono se acentos devem igualar (Q4).
+- [x] Passo 4: ajustar o comentário em `RmaRecordRepository.java:88-89` ("H2/Java") e o de `AccessProfileService.java:128`.
+- [x] Verificação: testes de busca verdes com `query` nulo, vazio, com acento e em maiúsculas.
 
 ## Tarefa 4. Infraestrutura de teste (Testcontainers)
 
 **Arquivos:** novos `backend/src/test/java/br/com/navitasassist/support/PostgresTestContainer.java` (singleton), `PostgresContextInitializer.java`, `PostgresTestDatabase.java` e `backend/src/test/resources/META-INF/spring.factories`.
 
-- [ ] Passo 1: singleton estático `PostgreSQLContainer<>("postgres:16-alpine")` com `.withReuse(true)`; se `TEST_DB_URL` estiver definida, não sobe contêiner e usa as variáveis (CI).
-- [ ] Passo 2: `ApplicationContextInitializer` que injeta `spring.datasource.*` (e, no contêiner, `spring.datasource.hikari.maximum-pool-size=5`).
-- [ ] Passo 3: `PostgresTestDatabase.create()` roda `CREATE DATABASE mig_<uuid>` e devolve URL/usuário/senha para os testes que chamam o Flyway à mão.
-- [ ] Verificação: `mvn -q test -Dtest=NavitasAssistApplicationTests` sobe o contexto com `ddl-auto=validate` sobre a baseline (esse é o primeiro teste de equivalência: o Hibernate `validate` aprova o schema).
+- [x] Passo 1: singleton estático `PostgreSQLContainer<>("postgres:16-alpine")` com `.withReuse(true)`; se `TEST_DB_URL` estiver definida, não sobe contêiner e usa as variáveis (CI).
+- [x] Passo 2: `ApplicationContextInitializer` que injeta `spring.datasource.*` (e, no contêiner, `spring.datasource.hikari.maximum-pool-size=5`).
+- [x] Passo 3: `PostgresTestDatabase.create()` roda `CREATE DATABASE mig_<uuid>` e devolve URL/usuário/senha para os testes que chamam o Flyway à mão.
+- [x] Verificação: `mvn -q test -Dtest=NavitasAssistApplicationTests` sobe o contexto com `ddl-auto=validate` sobre a baseline (esse é o primeiro teste de equivalência: o Hibernate `validate` aprova o schema).
 
 ## Tarefa 5. Migrar os testes que usam H2
 
 **Arquivos:** `NavitasAssistApplicationTests.java:11` (remover a URL H2); `AccessProfileMigrationTest.java:132` e sua consulta a `INFORMATION_SCHEMA` (linhas 99-104; trocar `UPPER(CONSTRAINT_NAME)` por consulta em minúsculas do Postgres); `DatabaseMigrationTest.java`, `DeadlineMigrationTest.java`, `NotificationEmailMigrationTest.java`, `RepairMigrationTest.java`, `WarrantyMigrationTest.java`; `RequiredSecretsEnvironmentPostProcessorTest.java:28,147` (URLs `jdbc:postgresql://...`, só texto); `PartEnumMappingTest.java:15` (comentário); `EnumPersistenceIntegrationTest.java` (usa `JdbcTemplate`; revisar SQL com sintaxe MySQL).
 
-- [ ] Passo 1: trocar `jdbc:h2:mem:...;MODE=MySQL` por `PostgresTestDatabase.create()` em todos; remover `DATABASE_TO_LOWER`.
-- [ ] Passo 2: os testes que migram "até a versão N" (`target("2")`, `target("3")`, `target("4")`, `target("5")` em `DeadlineMigrationTest.java:30,47,63`, `NotificationEmailMigrationTest.java:12`, `RepairMigrationTest.java:14,22`, `WarrantyMigrationTest.java:20,30`) não têm mais versões intermediárias. Reescrever como asserções sobre o schema final (colunas, checks, índices e seeds existem; `INSERT` com valor inválido de `deadline_status`/`warranty_override` falha; `email` único sem caixa). Testes de transformação de dados antigos (backfill) saem: não há dados antigos.
-- [ ] Passo 3: grep por `H2`, `MODE=MySQL`, `INFORMATION_SCHEMA`, `AUTO_INCREMENT`, `DATETIME`, `ON DUPLICATE`, `LIMIT ?,` e por ids fixos em asserções (as sequências do Postgres não reiniciam); corrigir o que aparecer.
-- [ ] Verificação: `mvn -q test` completo verde, sem nenhuma referência a H2 no repositório de testes.
+- [x] Passo 1: trocar `jdbc:h2:mem:...;MODE=MySQL` por `PostgresTestDatabase.create()` em todos; remover `DATABASE_TO_LOWER`.
+- [x] Passo 2: os testes que migram "até a versão N" (`target("2")`, `target("3")`, `target("4")`, `target("5")` em `DeadlineMigrationTest.java:30,47,63`, `NotificationEmailMigrationTest.java:12`, `RepairMigrationTest.java:14,22`, `WarrantyMigrationTest.java:20,30`) não têm mais versões intermediárias. Reescrever como asserções sobre o schema final (colunas, checks, índices e seeds existem; `INSERT` com valor inválido de `deadline_status`/`warranty_override` falha; `email` único sem caixa). Testes de transformação de dados antigos (backfill) saem: não há dados antigos.
+- [x] Passo 3: grep por `H2`, `MODE=MySQL`, `INFORMATION_SCHEMA`, `AUTO_INCREMENT`, `DATETIME`, `ON DUPLICATE`, `LIMIT ?,` e por ids fixos em asserções (as sequências do Postgres não reiniciam); corrigir o que aparecer.
+- [x] Verificação: `mvn -q test` completo verde, sem nenhuma referência a H2 no repositório de testes.
 
 ## Tarefa 6. Testes novos de Postgres real
 
 **Arquivos:** novos em `backend/src/test/java/br/com/navitasassist/migration/` (`SchemaEquivalenceTest`, `UniquenessCaseTest`) e `.../search/AccentInsensitiveSearchTest`, `.../concurrency/AbortedTransactionTest` (nomes indicativos).
 
-- [ ] `SchemaEquivalenceTest`: criar um segundo banco vazio, deixar o Hibernate gerar o schema (`SchemaExport` em `CREATE` a partir dos metadados das entidades) e comparar com o banco migrado pelo Flyway via `information_schema.columns` (tabela, coluna, tipo, nulabilidade, tamanho/precisão) e `table_constraints` (existência de PK, FK, UNIQUE, CHECK por nome). Ignora diferenças de índices extras e nomes gerados. Complementa o `validate` da Tarefa 4.
-- [ ] `UniquenessCaseTest`: para cada coluna da D3 (SKU de produto, nome e código legado de perfil, usuário, e-mail, código de peça, código de RMA, nome de visualização por dono), inserir `X` e depois `x` e esperar a violação, com o **nome da constraint** correto; verificar que `UserAccountService` ainda devolve "Email already registered." para o e-mail duplicado com caixa diferente, e que dois donos diferentes aceitam o mesmo nome de visualização. Variação de acento: o teste documenta a decisão da Q4 (por padrão, "Técnico" e "Tecnico" coexistem).
-- [ ] `AccentInsensitiveSearchTest`: clientes, produtos, peças, perfis e RMAs encontrados por termo sem acento e em outra caixa ("tecnico" encontra "Técnico"); `query` nula e vazia; ordenação de uma lista com "Ábaco", "Zebra", "abelha" resulta em ordem alfabética sem depender da collation.
-- [ ] `AbortedTransactionTest`: nome de perfil duplicado concorrente, reversão de movimento concorrente (`PartStockConcurrencyTest` já existe, agora com locking real), regra de notificação com perfil apagado, e-mail duplicado concorrente: todos retornam 400/409 e a transação seguinte da mesma conexão funciona.
-- [ ] Um teste por repositório com lock confirma que a consulta tem `for update` e não tem `join fetch` (leitura do SQL gerado ou execução com dois threads).
-- [ ] Verificação: classes novas verdes; `PartStockConcurrencyTest`, `RmaCodeConcurrencyIntegrationTest`, `NotificationRuleProfileRaceIntegrationTest` verdes em Postgres real (se falharem, é bug real de concorrência que o H2 escondia).
+- [x] `SchemaEquivalenceTest`: criar um segundo banco vazio, deixar o Hibernate gerar o schema (`SchemaExport` em `CREATE` a partir dos metadados das entidades) e comparar com o banco migrado pelo Flyway via `information_schema.columns` (tabela, coluna, tipo, nulabilidade, tamanho/precisão) e `table_constraints` (existência de PK, FK, UNIQUE, CHECK por nome). Ignora diferenças de índices extras e nomes gerados. Complementa o `validate` da Tarefa 4.
+- [x] `UniquenessCaseTest`: para cada coluna da D3 (SKU de produto, nome e código legado de perfil, usuário, e-mail, código de peça, código de RMA, nome de visualização por dono), inserir `X` e depois `x` e esperar a violação, com o **nome da constraint** correto; verificar que `UserAccountService` ainda devolve "Email already registered." para o e-mail duplicado com caixa diferente, e que dois donos diferentes aceitam o mesmo nome de visualização. Variação de acento: o teste documenta a decisão da Q4 (por padrão, "Técnico" e "Tecnico" coexistem).
+- [x] `AccentInsensitiveSearchTest`: clientes, produtos, peças, perfis e RMAs encontrados por termo sem acento e em outra caixa ("tecnico" encontra "Técnico"); `query` nula e vazia; ordenação de uma lista com "Ábaco", "Zebra", "abelha" resulta em ordem alfabética sem depender da collation.
+- [x] `AbortedTransactionTest`: nome de perfil duplicado concorrente, reversão de movimento concorrente (`PartStockConcurrencyTest` já existe, agora com locking real), regra de notificação com perfil apagado, e-mail duplicado concorrente: todos retornam 400/409 e a transação seguinte da mesma conexão funciona.
+- [ ] Um teste por repositório com lock confirma que a consulta tem `for update` e não tem `join fetch` (leitura do SQL gerado ou execução com dois threads). *(não feito como teste dedicado: todas as consultas com lock rodam na suíte contra PostgreSQL real, que recusaria FOR UPDATE com outer join; nenhuma tem `join fetch`)*
+- [x] Verificação: classes novas verdes; `PartStockConcurrencyTest`, `RmaCodeConcurrencyIntegrationTest`, `NotificationRuleProfileRaceIntegrationTest` verdes em Postgres real (se falharem, é bug real de concorrência que o H2 escondia).
 
 ## Tarefa 7. Compose, scripts e ambiente local
 
 **Arquivos:** `compose.yaml`, `compose.prod.yaml`, `compose.migration-check.yaml`, `.env.example`, `.env.prod.example`, `.env` (local, não versionado: ajustar na máquina), `run-local.ps1` (linhas 49, 57, 189-191, 214-244), `stop-local.ps1` (47, 137), `scripts/init-prod-env.ps1` (28-37), `scripts/init-prod-env.sh` (27-36), `scripts/setup-xampp-db.ps1` (apagar: o XAMPP é MySQL/MariaDB), `scripts/deploy-prod.ps1`/`deploy-prod.sh` (conferir referências).
 
-- [ ] Passo 1: `compose.yaml`: serviço `mysql` vira `postgres` (`postgres:16-alpine`, `POSTGRES_DB/USER/PASSWORD`, `TZ`, volume `postgres_data`, healthcheck `pg_isready -U ... -d ...`, porta `${POSTGRES_PORT:-5432}`); backend com `DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-navitas_assist}`, `depends_on: postgres`.
-- [ ] Passo 2: `compose.prod.yaml` na mesma linha; variáveis obrigatórias `POSTGRES_DB/USER/PASSWORD` (sem usuário root separado); atualizar `init-prod-env.*` e `.env.prod.example`.
-- [ ] Passo 3: `compose.migration-check.yaml`: serviço `postgres` na porta `127.0.0.1:5417` e `flyway/flyway:9.22.3` (mesma versão do app) apontando para ele, com a pasta `db/migration` somente leitura; `down -v` encerra só esse projeto.
-- [ ] Passo 4: `run-local.ps1` e `stop-local.ps1`: nomes do serviço, variáveis `POSTGRES_*` e mensagens ("Parando o PostgreSQL Docker...").
-- [ ] Passo 5: o provedor remoto (Neon/Supabase) entra só por variável de ambiente no Render: `DB_URL=jdbc:postgresql://<host>/<db>?sslmode=require[&prepareThreshold=0]`, `DB_USER`, `DB_PASSWORD`, opcionalmente `MIGRATION_DB_*` com o endpoint direto. Nenhum arquivo do repositório cita o provedor.
-- [ ] Verificação: `docker compose config` e `docker compose -f compose.prod.yaml config` sem erros (com `.env` de exemplo); `docker compose up -d postgres` e `pg_isready` saudável.
+- [x] Passo 1: `compose.yaml`: serviço `mysql` vira `postgres` (`postgres:16-alpine`, `POSTGRES_DB/USER/PASSWORD`, `TZ`, volume `postgres_data`, healthcheck `pg_isready -U ... -d ...`, porta `${POSTGRES_PORT:-5432}`); backend com `DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-navitas_assist}`, `depends_on: postgres`.
+- [x] Passo 2: `compose.prod.yaml` na mesma linha; variáveis obrigatórias `POSTGRES_DB/USER/PASSWORD` (sem usuário root separado); atualizar `init-prod-env.*` e `.env.prod.example`.
+- [x] Passo 3: `compose.migration-check.yaml`: serviço `postgres` na porta `127.0.0.1:5417` e `flyway/flyway:9.22.3` (mesma versão do app) apontando para ele, com a pasta `db/migration` somente leitura; `down -v` encerra só esse projeto.
+- [x] Passo 4: `run-local.ps1` e `stop-local.ps1`: nomes do serviço, variáveis `POSTGRES_*` e mensagens ("Parando o PostgreSQL Docker...").
+- [x] Passo 5: o provedor remoto (Neon/Supabase) entra só por variável de ambiente no Render: `DB_URL=jdbc:postgresql://<host>/<db>?sslmode=require[&prepareThreshold=0]`, `DB_USER`, `DB_PASSWORD`, opcionalmente `MIGRATION_DB_*` com o endpoint direto. Nenhum arquivo do repositório cita o provedor.
+- [x] Verificação: `docker compose config` e `docker compose -f compose.prod.yaml config` sem erros (com `.env` de exemplo); `docker compose up -d postgres` e `pg_isready` saudável.
 
 ## Tarefa 8. CI
 
 **Arquivo:** `.github/workflows/backend-ci.yml`.
 
-- [ ] Passo 1: serviço `postgres:16` (`POSTGRES_DB: navitas_ci`, usuário e senha de CI, `--health-cmd "pg_isready -U navitas_ci -d navitas_ci"`) no lugar do `mysql` (linhas 20-32).
-- [ ] Passo 2: o passo `mvn -B -ntp verify` recebe `TEST_DB_URL=jdbc:postgresql://postgres:5432/navitas_ci`, `TEST_DB_USER`, `TEST_DB_PASSWORD` (Tarefa 4); apagar o passo "Validate MySQL schema and enum persistence" (linhas 41-49): agora toda a suíte roda em Postgres e `EnumPersistenceIntegrationTest` é parte dela.
-- [ ] Passo 3: o usuário de CI precisa criar bancos (`CREATE DATABASE mig_*` do `PostgresTestDatabase`) e a extensão `unaccent`: usar o usuário dono do banco (ou superusuário) no serviço.
-- [ ] Verificação: workflow verde numa branch de teste (sem merge); tempo total comparado com o de hoje.
+- [x] Passo 1: serviço `postgres:16` (`POSTGRES_DB: navitas_ci`, usuário e senha de CI, `--health-cmd "pg_isready -U navitas_ci -d navitas_ci"`) no lugar do `mysql` (linhas 20-32).
+- [x] Passo 2: o passo `mvn -B -ntp verify` recebe `TEST_DB_URL=jdbc:postgresql://postgres:5432/navitas_ci`, `TEST_DB_USER`, `TEST_DB_PASSWORD` (Tarefa 4); apagar o passo "Validate MySQL schema and enum persistence" (linhas 41-49): agora toda a suíte roda em Postgres e `EnumPersistenceIntegrationTest` é parte dela.
+- [x] Passo 3: o usuário de CI precisa criar bancos (`CREATE DATABASE mig_*` do `PostgresTestDatabase`) e a extensão `unaccent`: usar o usuário dono do banco (ou superusuário) no serviço.
+- [ ] Verificação: workflow verde numa branch de teste (sem merge); tempo total comparado com o de hoje. *(não executado: sem push; o equivalente local com `TEST_DB_*` contra `postgres:16` com max_connections=100 passou)*
 
 ## Tarefa 9. Documentação e recriação do banco local
 
 **Arquivos:** `README.md` (linhas 42, 158, 200, 265, 306-308 e seção "Schema do banco" ~450-460), `docs/banco-de-dados.md` (cabeçalho, tabela de migrações, política da baseline), `docs/configuracao.md` (perfis, tabela de `DB_*` e variáveis `MYSQL_*` → `POSTGRES_*`, `prepareThreshold`/`sslmode`), `docs/desenvolvimento.md`, `docs/visao-geral.md`, `docs/README.md`.
 
-- [ ] Passo 1: trocar MySQL por PostgreSQL 16 em todos esses arquivos e descrever D1 (baseline única Postgres), D3 (unicidade por `lower`) e D4 (`unaccent`).
-- [ ] Passo 2: documentar a recriação do banco local, sem migração de dados (os dados de demonstração vêm de `scripts/dev-seed/seed.mjs` e o primeiro administrador vem do `INSERT` documentado em "Contas de acesso" do README):
+- [x] Passo 1: trocar MySQL por PostgreSQL 16 em todos esses arquivos e descrever D1 (baseline única Postgres), D3 (unicidade por `lower`) e D4 (`unaccent`).
+- [x] Passo 2: documentar a recriação do banco local, sem migração de dados (os dados de demonstração vêm de `scripts/dev-seed/seed.mjs` e o primeiro administrador vem do `INSERT` documentado em "Contas de acesso" do README):
   1. `docker compose down -v` (remove o volume do MySQL antigo e do Postgres, se houver; apaga todos os dados locais);
   2. `docker compose up -d postgres`;
   3. subir o backend (o Flyway cria o schema na V1);
   4. inserir o primeiro administrador como no README e, se quiser dados de demonstração, rodar `node scripts/dev-seed/seed.mjs`.
-- [ ] Verificação: o roteiro acima, seguido do zero numa máquina limpa, termina com login do administrador funcionando.
+- [ ] Verificação: o roteiro acima, seguido do zero numa máquina limpa, termina com login do administrador funcionando. *(parcial: roteiro seguido com banco vazio isolado e backend em JAR, não com o compose completo)*
 
 ## Tarefa 10. Verificação integrada e fechamento
 
-- [ ] `mvn -B -ntp verify` verde (Testcontainers, e o equivalente do CI com `TEST_DB_*`).
-- [ ] `docker compose up -d --build` sobe `postgres`, `backend` e `frontend`; login, criação de um RMA, reserva de peça e busca por termo sem acento funcionam pelo front.
-- [ ] Ensaio no provedor do ambiente de testes (Neon ou Supabase) com banco vazio: o backend no Render aplica a V1 sobre o endpoint direto, o app roda pelo pooler (se houver) e `ddl-auto=validate` passa.
-- [ ] Varredura final: `grep -ri "mysql\|h2\|MODE=MySQL\|AUTO_INCREMENT\|DATETIME\|xampp"` em `backend/`, `compose*`, `scripts/`, `.github/`, `README.md`, `docs/` (exceto planos históricos em `docs/superpowers/`) sem ocorrências vivas.
-- [ ] Commits locais por tarefa lógica, staging por caminho, sem push até o dono validar.
+- [x] `mvn -B -ntp verify` verde (Testcontainers, e o equivalente do CI com `TEST_DB_*`).
+- [ ] `docker compose up -d --build` sobe `postgres`, `backend` e `frontend`; login, criação de um RMA, reserva de peça e busca por termo sem acento funcionam pelo front. *(não executado: a pilha do repositório não foi tocada; o backend foi subido como JAR no profile local contra um PostgreSQL isolado, com login e dev-seed)*
+- [ ] Ensaio no provedor do ambiente de testes (Neon ou Supabase) com banco vazio: o backend no Render aplica a V1 sobre o endpoint direto, o app roda pelo pooler (se houver) e `ddl-auto=validate` passa. *(não executado: depende do provedor e do Render)*
+- [x] Varredura final: `grep -ri "mysql\|h2\|MODE=MySQL\|AUTO_INCREMENT\|DATETIME\|xampp"` em `backend/`, `compose*`, `scripts/`, `.github/`, `README.md`, `docs/` (exceto planos históricos em `docs/superpowers/`) sem ocorrências vivas.
+- [x] Commits locais por tarefa lógica, staging por caminho, sem push até o dono validar.
 
 ---
 
@@ -229,13 +229,15 @@ Não há produção. Tudo acontece numa branch dedicada (`migracao-postgres`) a 
 | Ids fixos em testes | Falhas com sequência que não reinicia | Grep e correção na Tarefa 5. |
 | Fuso horário | Datas deslocadas | `timestamptz`, `hibernate.jdbc.time_zone=UTC`, teste de ida e volta de `Instant` em `EnumPersistenceIntegrationTest`. |
 
-## Perguntas abertas (para o dono)
+## Perguntas abertas (respondidas em 14 nov 2026)
 
 - Q1. Provedor do Postgres do ambiente de testes (Neon ou Supabase) e se haverá pooler na frente do app.
 - Q2. Região do banco e do Render (latência: ficar na mesma região, ex.: leste dos EUA ou São Paulo se o plano permitir).
 - Q3. Versão do Postgres do provedor (o plano usa 16 localmente; 17 serve) e se a extensão `unaccent` está habilitada e pode ser criada pelo usuário da aplicação.
 - Q4. Nomes que diferem só por acento ("Técnico" e "Tecnico") devem continuar colidindo como hoje no MySQL, ou basta ignorar a caixa? (Padrão proposto: só caixa.) Vale o mesmo para a igualdade de categoria no filtro de produtos.
 - Q5. Já existe uma baseline Postgres criada pelo plano do ambiente Vercel/Render? Se existir, a Tarefa 2 parte dela.
+
+Respostas: **Q1** sem depender de provedor (Neon é o candidato); URL/usuário/senha por variável, `sslmode=require` e `MIGRATION_DB_*` opcionais para o Flyway. **Q2** fora de escopo. **Q3** `unaccent` criada na V1 com `CREATE EXTENSION IF NOT EXISTS`; o provedor precisa permitir (no PostgreSQL 13+ é *trusted*, basta ser dono do banco: verificado com usuário não superusuário). **Q4** unicidade ignora só a caixa (índices em `lower(col)` com os mesmos nomes); acento distingue; a igualdade de categoria no filtro de produtos continua só sem caixa. **Q5** não havia baseline Postgres: a V1 foi reescrita em PostgreSQL com o schema final de V1..V13; as próximas migrações recomeçam em V2.
 
 ## Esforço realista
 
@@ -283,3 +285,28 @@ docker compose -p navitas-mig -f compose.migration-check.yaml down -v
 docker compose config && docker compose -f compose.prod.yaml --env-file .env.prod.example config
 docker compose up -d --build
 ```
+
+---
+
+## Execução (14 nov 2026)
+
+Commits na branch do worktree (sem push): `feat(banco)` (pom, configuração, baseline, repositórios, infraestrutura de teste e testes de migração reescritos), `test(banco)` (testes novos), `chore(banco)` (compose, scripts, CI), `docs(banco)` (documentação e este plano).
+
+Diferenças em relação ao plano:
+
+- O plano previa V1..V10; consolidou-se V1..V13 (V11 histórico de reparo e anulação, V12 produtores de eventos, V13 auditoria). Regras de notificação no estado final da V12 (5 tipos, e-mail desligado); permissões com `cadastros.importar` e `auditoria.ver` só no Administrador.
+- Parâmetro nulo: o risco do plano se confirmou; `concat('%', :query, '%')` e `lower(:p)` viraram `concat('%', cast(:query as String), '%')` e `lower(cast(:p as String))`.
+- `ProductRepository.findDistinctCategories` dependia do `distinct` sem caixa do MySQL; passou a agrupar por grafia na ordem do primeiro cadastro (o serviço já juntava as grafias).
+- `AuditInstantConverter` (Instant ↔ LocalDateTime UTC) saiu: com `timestamptz` o `Instant` é mapeado direto.
+- `PartStockService.reverse` ficou com `save`: com IDENTITY o INSERT sai na hora, dentro do `try`, e a violação vira `BusinessException` (a transação é revertida).
+- Testcontainers 1.19.7 (do BOM) não fala com o Docker Engine 29 (API mínima acima de 1.32): `src/test/resources/docker-java.properties` fixa `api.version=1.44`. Sem reuso de contêiner (exigiria configuração global): um contêiner por execução, parado por shutdown hook; o Ryuk fica desligado no Surefire.
+- Contexto Spring com banco próprio: `@SpringBootTest(properties = "navitas.test.database=<prefixo>")` (usado por `NavitasAssistApplicationTests` e `SchemaEquivalenceTest`).
+- Testes novos: `SchemaEquivalenceTest` (Hibernate `ddl-auto=create` num banco vazio comparado com a baseline: tabelas, colunas, tipos e NOT NULL), `UniquenessCaseTest` (nome do índice violado), `DuplicateCaseMessageIntegrationTest` (mensagens de negócio e `getConstraintName()` com `uk_user_accounts_email`), `AccentInsensitiveSearchTest`, `AbortedTransactionTest` (perfil e e-mail concorrentes).
+
+Verificação:
+
+- `mvn -B -ntp -f backend/pom.xml verify` verde com Testcontainers (1117 testes, 0 falhas) e verde no modo do CI (`TEST_DB_*` contra `postgres:16` com `max_connections=100`).
+- Flyway CLI 9.22.3 no projeto isolado `navitas-mig`: aplica e valida só a V1.
+- Backend em JAR, profile `local`, contra PostgreSQL 16 isolado com usuário dono do banco (não superusuário): Flyway aplica a V1, `validate` passa, login do administrador inserido por SQL funciona e `scripts/dev-seed/seed.mjs` roda.
+
+Riscos que ficam: extensão `unaccent` no provedor escolhido; pooler em modo transaction (`prepareThreshold=0` e `MIGRATION_DB_*` não foram ensaiados num provedor real); CI real ainda não rodou.

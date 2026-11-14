@@ -8,7 +8,7 @@ Dois workflows em `.github/workflows`, disparados em `push` e `pull_request` por
 
 | Workflow | Dispara quando muda | O que roda |
 | --- | --- | --- |
-| `Backend CI` | `backend/**` ou o próprio workflow | Em contêiner Maven 3.9.9 / Java 17: `mvn -B -ntp verify` (testes com H2 e JAR); depois, contra um MySQL 8 de serviço, `mvn test -Dtest=EnumPersistenceIntegrationTest`. Não precisa de credenciais da aplicação. |
+| `Backend CI` | `backend/**` ou o próprio workflow | Em contêiner Maven 3.9.9 / Java 17: `mvn -B -ntp verify` (testes e JAR) contra um PostgreSQL 16 de serviço, passado por `TEST_DB_URL`/`TEST_DB_USER`/`TEST_DB_PASSWORD` (o job roda dentro de contêiner, sem Docker para o Testcontainers). Não precisa de credenciais da aplicação. |
 | `Frontend CI` | `frontend/**`, o próprio workflow, `Permission.java`, `PermissionModule.java` e `V1__baseline.sql` (lidos por `permissions.spec.ts`) | Node 22: `npm ci`, `npm test -- --watch=false` e `npm run build`. |
 
 Não há workflow de entrega (CD) no repositório: nada publica as imagens Docker. O `compose.prod.yaml` espera que `BACKEND_IMAGE` e `FRONTEND_IMAGE` apontem para imagens já publicadas em algum registro.
@@ -20,7 +20,7 @@ Não há workflow de entrega (CD) no repositório: nada publica as imagens Docke
 
 ## Stack de produção
 
-`compose.prod.yaml` sobe MySQL 8.0, backend (profile `prod`, cookie `Secure`, porta 8080 apenas exposta na rede interna) e frontend (porta `FRONTEND_PORT`, padrão 80). Os dados do MySQL ficam no volume `mysql_data`. Como o cookie é `Secure`, o acesso real precisa de HTTPS na frente do Nginx (por exemplo, um proxy reverso com TLS); isso não é provisionado pelo repositório.
+`compose.prod.yaml` sobe PostgreSQL 16, backend (profile `prod`, cookie `Secure`, porta 8080 apenas exposta na rede interna) e frontend (porta `FRONTEND_PORT`, padrão 80). Os dados do PostgreSQL ficam no volume `postgres_data`. Como o cookie é `Secure`, o acesso real precisa de HTTPS na frente do Nginx (por exemplo, um proxy reverso com TLS); isso não é provisionado pelo repositório.
 
 1. Gere o `.env.prod` com segredos fortes (não sobrescreve arquivo existente; PowerShell aceita `-Force`, `-OutputPath`, `-BackendImage` e `-FrontendImage`):
 
@@ -28,7 +28,7 @@ Não há workflow de entrega (CD) no repositório: nada publica as imagens Docke
    .\scripts\init-prod-env.ps1        # ou: sh scripts/init-prod-env.sh
    ```
 
-   O script grava `FRONTEND_PORT`, `MYSQL_*` e as duas imagens (padrão `navitas-assist-*:ci`; ajuste para as imagens publicadas). As demais variáveis têm padrão no Compose; use `.env.prod.example` como referência ([configuracao.md](configuracao.md)).
+   O script grava `FRONTEND_PORT`, `POSTGRES_*` e as duas imagens (padrão `navitas-assist-*:ci`; ajuste para as imagens publicadas). As demais variáveis têm padrão no Compose; use `.env.prod.example` como referência ([configuracao.md](configuracao.md)).
 
 2. Faça o deploy (pull das imagens e `up -d`; parâmetros `-ComposeFile` e `-EnvFile` no PowerShell, argumentos posicionais no `sh`):
 
@@ -41,7 +41,7 @@ Não há workflow de entrega (CD) no repositório: nada publica as imagens Docke
 ## Checklist de ambiente (testes ou produção)
 
 - [ ] `DB_URL`, `DB_USER`, `DB_PASSWORD` definidos; senha própria, nunca a dos exemplos (o backend recusa).
-- [ ] `MYSQL_PASSWORD` e `MYSQL_ROOT_PASSWORD` trocadas; `.env.prod` fora do Git (`.env.*` está no `.gitignore`).
+- [ ] `POSTGRES_PASSWORD` trocada; `.env.prod` fora do Git (`.env.*` está no `.gitignore`).
 - [ ] HTTPS na frente do frontend (cookies `Secure`); `SESSION_COOKIE_SECURE=true`.
 - [ ] Backup do banco antes de implantar versão com migração nova (o Flyway não tem *undo*).
 - [ ] Banco migrado e primeiro administrador criado; login conferido.

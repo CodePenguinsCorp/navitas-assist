@@ -1,43 +1,45 @@
 # Banco de dados
 
-MySQL 8, com schema gerido pelo Flyway (`backend/src/main/resources/db/migration`). O Hibernate só valida o resultado (`ddl-auto=validate`; o profile `local` usa `update`, mas o Flyway continua rodando antes). Os testes usam H2 em modo MySQL, aplicando as mesmas migrações.
+PostgreSQL 16, em todos os ambientes (local, CI, testes automatizados e ambiente remoto), com schema gerido pelo Flyway (`backend/src/main/resources/db/migration`). O Hibernate só valida o resultado (`ddl-auto=validate`, inclusive no profile `local`). Os testes rodam contra um PostgreSQL real, aplicando as mesmas migrações (ver [desenvolvimento.md](desenvolvimento.md)).
 
 ## Migrações
 
 | Versão | Arquivo | O que faz |
 | --- | --- | --- |
-| V1 | `V1__baseline.sql` | Baseline única: todas as tabelas, índices e constraints e os seeds (linha de bloqueio da numeração dos RMAs, 4 perfis prontos com permissões, regras de notificação com destinatários por perfil). |
-| V2 | `V2__rma_due_date_and_remove_stage_sla.sql` | Data limite (`rmas.due_date`, `rma_due_date_history`, `kanban_views.deadline_status`) e remoção dos alertas `SLA_WARNING`/`SLA_OVERDUE` (regras, silenciamentos, eventos e notificações desses tipos). |
-| V3 | `V3__rma_item_warranty_override.sql` | Ajuste manual de garantia por item e tabela de auditoria `rma_item_warranty_history`. |
-| V4 | `V4__notification_email_delivery.sql` | E-mail opcional e único do usuário; canal App/E-mail por regra; colunas e índice da fila de e-mail; regras dos tipos reservados. |
-| V5 | `V5__rma_repair.sql` | Motivo, lote e aplicação nas reservas aplicadas; `rma_external_components` e `rma_interventions`. |
-| V6 | `V6__notification_email_generation.sql` | `email_generation`: chave de idempotência por reenvio manual. |
-| V7 | `V7__notification_email_sent_index.sql` | Índice usado pela contagem dos tetos diário e mensal. |
-| V8 | `V8__rma_item_position.sql` | `item_position`: ordem dos itens (o primeiro é o principal). |
-| V9 | `V9__catalog_import_permission.sql` | Concede `cadastros.importar` ao Administrador. |
-| V10 | `V10__status_note_audit.sql` | Auditoria da edição de observação do histórico de status (`note_edited_by`, `note_edited_at`). |
-| V11 | `V11__repair_history_and_void.sql` | Auditoria de edição e anulação lógica de componentes externos e intervenções; `rma_repair_history`, com inclusão dos registros anteriores. |
-| V12 | `V12__notification_event_producers.sql` | Ativa impedimentos, reservas pendentes e testes reprovados (e-mail desligado); remove regras, destinatários, silenciamentos, eventos e notificações dos tipos sem produtor. |
-| V13 | `V13__audit_events.sql` | Trilha imutável `audit_events` com instante DATETIME(6) em UTC; índices por instante, registro e ator/instante; concede `auditoria.ver` somente ao Administrador. |
+| V1 | `V1__baseline.sql` | Baseline única em PostgreSQL: extensão `unaccent`, todas as tabelas, índices e constraints e os seeds (linha de bloqueio da numeração dos RMAs, 4 perfis prontos com permissões, 5 regras de notificação com destinatários por perfil). |
 
-Tabelas principais: `audit_events`, `clients`, `products`, `rmas`, `rma_items`, `diagnoses`, `rma_status_history`, `rma_assignment_history`, `rma_repair_history`, `rma_blocks`, `parts`, `part_reservations`, `part_movements`, `access_profiles`, `access_profile_permissions`, `user_accounts`, `user_account_extra_permissions`, `kanban_views`, `notification_*`, `notifications`, `protocol_*` e `rma_protocol_*`.
+Tabelas principais: `audit_events`, `clients`, `products`, `rmas`, `rma_items`, `rma_item_warranty_history`, `rma_due_date_history`, `diagnoses`, `rma_status_history`, `rma_assignment_history`, `rma_repair_history`, `rma_blocks`, `rma_external_components`, `rma_interventions`, `parts`, `part_reservations`, `part_movements`, `access_profiles`, `access_profile_permissions`, `user_accounts`, `user_account_extra_permissions`, `kanban_views`, `notification_*`, `notifications`, `protocol_*` e `rma_protocol_*`.
 
 ## Política da baseline única
 
-As migrações foram zeradas em 13 de novembro de 2026, porque não havia dados em produção (só dados de teste): as antigas V1 a V10 deram lugar à `V1__baseline.sql`. As colunas legadas `user_accounts.role` e `notification_rules.recipient_roles` deixaram de existir. Depois da baseline, as migrações são **sempre novas e aditivas** (V2 em diante); nunca edite uma migração já aplicada. O Flyway Community não tem *undo*: para voltar, restaure o backup anterior à implantação.
+Em 14 de novembro de 2026 o MySQL foi aposentado e as migrações MySQL V1 a V13 deram lugar a uma única `V1__baseline.sql` em dialeto PostgreSQL, com o schema final consolidado (as antigas continuam no histórico do git). Não havia dados em produção, então nada foi migrado: os dados de demonstração vêm de `scripts/dev-seed` e o primeiro administrador do `INSERT` abaixo.
 
-Alterações incompatíveis na V1 só valem para bancos recriáveis (desenvolvimento). Um banco criado por migrações antigas não é compatível: o Flyway recusa o histórico divergente.
+Depois da baseline, as migrações são **sempre novas e aditivas** (V2 em diante, próximo número livre); nunca edite uma migração já aplicada. O Flyway Community não tem *undo*: para voltar, restaure o backup anterior à implantação. Um banco criado pelas migrações MySQL não serve: recrie-o vazio.
+
+Convenções da baseline, que as próximas migrações seguem:
+
+- Chave primária `BIGINT GENERATED BY DEFAULT AS IDENTITY` (as entidades usam `GenerationType.IDENTITY`).
+- Data e hora em `TIMESTAMP WITH TIME ZONE` (`Instant` no Java; o Hibernate grava em UTC, `hibernate.jdbc.time_zone=UTC`). Datas de negócio (`DATE`) seguem `America/Sao_Paulo` no código.
+- Enums como `VARCHAR` com `CHECK` nomeado; decimais em `NUMERIC(p, s)`.
+- Todo índice e constraint com nome explícito (`uk_`, `fk_`, `ck_`, `idx_`, `pk_`), e cada FK com índice.
+
+## Unicidade e busca
+
+- **Unicidade ignora só a caixa.** SKU, nome e código legado de perfil, usuário, e-mail, código de peça, código de RMA e nome da visualização do Kanban (por dono) têm índice único funcional em `lower(coluna)`, com o nome que o código e as mensagens esperam (ex.: `uk_user_accounts_email`). `Técnico` e `Tecnico` são valores distintos (no MySQL antigo a collation fazia os dois colidirem). O e-mail é opcional: vários usuários podem ficar sem e-mail.
+- **Busca ignora caixa e acento.** As consultas de listagem usam `lower(unaccent(coluna)) like lower(unaccent('%termo%'))` (função registrada no Hibernate em `config/PostgresFunctions.java`), e a ordenação por nome usa `lower(unaccent(nome))`, sem depender da collation do banco. "tecnica" encontra "Técnica".
+- A extensão `unaccent` é criada pela V1 (`CREATE EXTENSION IF NOT EXISTS unaccent`). No PostgreSQL 13+ ela é *trusted*: basta o usuário das migrações ser dono do banco. Em provedor gerenciado, confirme que ela está na lista de extensões permitidas; se não puder ser criada pelo usuário, crie-a pelo painel antes da primeira subida.
 
 ## Recriar o banco local
 
-Remove todos os dados locais (apaga o volume do MySQL do projeto):
+Remove todos os dados locais (apaga o volume do PostgreSQL do projeto e, se ainda existir, o do MySQL antigo):
 
 ```powershell
 docker compose down -v
+docker compose up -d postgres
 docker compose up --build -d
 ```
 
-Depois, insira o primeiro administrador.
+O backend aplica a V1 na primeira subida. Depois, insira o primeiro administrador e, se quiser dados de demonstração, rode `node scripts/dev-seed/seed.mjs` (ver `scripts/dev-seed/README.md`).
 
 ## Primeiro administrador
 
@@ -45,25 +47,26 @@ A aplicação não cria, recria ou altera usuários na inicialização; contas e
 
 ```sql
 INSERT INTO user_accounts (username, full_name, password_hash, active, created_at, updated_at, profile_id)
-VALUES ('admin', 'Administrador', '<hash BCrypt>', TRUE, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6),
+VALUES ('admin', 'Administrador', '<hash BCrypt>', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
         (SELECT id FROM access_profiles WHERE legacy_code = 'ADMIN'));
 ```
 
-Depois, usuários e perfis são mantidos pelas telas Usuários e Perfis. Não há coluna de role: o acesso vem do perfil e das permissões extras ([acesso-e-permissoes.md](acesso-e-permissoes.md)). Senha: 6 a 72 bytes (UTF-8).
+No banco do compose: `docker compose exec postgres psql -U navitas_app -d navitas_assist`. Depois, usuários e perfis são mantidos pelas telas Usuários e Perfis. Não há coluna de role: o acesso vem do perfil e das permissões extras ([acesso-e-permissoes.md](acesso-e-permissoes.md)). Senha: 6 a 72 bytes (UTF-8).
 
-## Validar migrações em um MySQL isolado
+## Validar migrações em um PostgreSQL isolado
 
-`compose.migration-check.yaml` sobe um MySQL 8 na porta local **3317** e roda o Flyway 9.22.3 contra a pasta de migrações. Use um projeto à parte para não tocar nas pilhas de desenvolvimento:
+`compose.migration-check.yaml` sobe um PostgreSQL 16 na porta local **5417** e roda o Flyway 9.22.3 (a mesma versão do backend) contra a pasta de migrações (`migrate`, `info` e `validate`). Use um projeto à parte para não tocar nas pilhas de desenvolvimento:
 
 ```powershell
-docker compose -p navitas-mig -f compose.migration-check.yaml up -d mysql
+docker compose -p navitas-mig -f compose.migration-check.yaml up -d postgres
 docker compose -p navitas-mig -f compose.migration-check.yaml run --rm flyway
 docker compose -p navitas-mig -f compose.migration-check.yaml down -v
 ```
 
-## MySQL, H2 e PostgreSQL
+## Conexão em provedor gerenciado
 
-- A produção e o desenvolvimento usam MySQL 8; o `pom.xml` traz o driver e o módulo do Flyway só para MySQL.
-- Os testes rodam em H2 com `MODE=MySQL`. A V4 usa comentários condicionais do MySQL 8 (`/*!80000 ... */`) para a collation do e-mail; o H2 os ignora.
-- Hoje não há suporte a PostgreSQL no código. Por decisão do dono do produto (13 de novembro de 2026), o PostgreSQL passará a ser o único banco, em todos os ambientes, com uma nova baseline em dialeto PostgreSQL; o plano está em [superpowers/plans/2026-11-13-migracao-para-postgres.md](superpowers/plans/2026-11-13-migracao-para-postgres.md) e ainda não foi executado. Quando for, este documento, `configuracao.md` e `desenvolvimento.md` precisam ser atualizados.
-- As URLs JDBC de desenvolvimento usam `serverTimezone=UTC`; as regras de negócio por dia usam `America/Sao_Paulo` no código, não no banco.
+Nada no código cita um provedor; tudo entra por variável de ambiente ([configuracao.md](configuracao.md)):
+
+- `DB_URL=jdbc:postgresql://<host>/<banco>?sslmode=require`, `DB_USER`, `DB_PASSWORD`.
+- Com pooler em modo *transaction* (PgBouncer) na frente do app: acrescente `&prepareThreshold=0` ao `DB_URL` do app e aponte `MIGRATION_DB_URL`/`MIGRATION_DB_USER`/`MIGRATION_DB_PASSWORD` para o endpoint direto, porque o Flyway usa *advisory locks* de sessão.
+- O pool do Hikari é pequeno (`DB_POOL_MAX`, padrão 5; nenhuma conexão ociosa obrigatória; 30 s para conectar), para caber no plano gratuito e tolerar a suspensão automática do banco ocioso.
