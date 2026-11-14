@@ -30,6 +30,8 @@ import { CustomSelectComponent } from '../form-controls/custom-select/custom-sel
     .pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1.25rem; padding-top: 1rem; color: var(--muted); font-size: 0.92rem; }
     .pagination__size { display: inline-flex; align-items: center; gap: 0.5rem; }
     .pagination__controls { display: inline-flex; align-items: center; gap: 0.75rem; }
+    /* Beside the 64px menu rail a 320px screen leaves ~224px: the page buttons wrap instead of widening the page. */
+    @media (max-width: 480px) { .pagination__controls { flex-wrap: wrap; } }
   `]
 })
 export class PaginationComponent {

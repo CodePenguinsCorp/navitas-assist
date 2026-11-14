@@ -2,10 +2,10 @@ import { DOCUMENT } from '@angular/common';
 import { IconComponent } from '../shared/icon/icon.component';
 import { NotificationBellComponent } from '../shared/notification-bell/notification-bell.component';
 import { initialsOf } from '../core/utils/rma-ui';
-import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Component, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRouteSnapshot, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { EMPTY, distinctUntilChanged, finalize, fromEvent, map, startWith, switchMap, timer } from 'rxjs';
+import { ActivatedRouteSnapshot, NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { EMPTY, distinctUntilChanged, filter, finalize, fromEvent, map, startWith, switchMap, timer } from 'rxjs';
 import { NAV_GROUPS } from '../core/mock-data';
 import { allowsPermissions, firstAllowedRoute } from '../core/navigation';
 import { Permission } from '../core/permissions';
@@ -13,11 +13,33 @@ import { AuthService } from '../core/services/auth.service';
 import { NotificationService } from '../core/services/notification.service';
 import { PermissionService } from '../core/services/permission.service';
 
+/** Same width as the CSS breakpoint where the expanded menu floats over the content. */
+const NARROW_QUERY = '(max-width: 900px)';
+const SIDEBAR_STORAGE_KEY = 'navitas.sidebar';
+
+function readSidebarChoice(): boolean | null {
+  try {
+    const value = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+    return value === 'expanded' ? true : value === 'collapsed' ? false : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSidebarChoice(expanded: boolean): void {
+  try {
+    localStorage.setItem(SIDEBAR_STORAGE_KEY, expanded ? 'expanded' : 'collapsed');
+  } catch {
+    // Storage unavailable: the choice lasts until the page is closed.
+  }
+}
+
 @Component({
   selector: 'app-shell',
   imports: [RouterLink, RouterLinkActive, RouterOutlet, IconComponent, NotificationBellComponent],
   templateUrl: './app-shell.component.html',
-  styles: [':host { display: block; }']
+  styles: [':host { display: block; }'],
+  host: { '(document:keydown.escape)': 'closeOverlay(true)' }
 })
 export class AppShellComponent {
   private readonly document = inject(DOCUMENT);
@@ -41,6 +63,14 @@ export class AppShellComponent {
 
   protected readonly currentProfileName = computed(() => this.currentUser()?.profileName ?? '');
 
+  private readonly toggleButton = viewChild<ElementRef<HTMLButtonElement>>('sidebarToggle');
+  private readonly narrowQuery = this.document.defaultView?.matchMedia?.(NARROW_QUERY) ?? null;
+  /** Up to 900px the menu is a rail; expanding it opens an overlay that closes on its own. */
+  protected readonly narrow = signal(this.narrowQuery?.matches ?? false);
+  private readonly wideExpanded = signal(readSidebarChoice() ?? true);
+  private readonly overlayOpen = signal(false);
+  protected readonly expanded = computed(() => this.narrow() ? this.overlayOpen() : this.wideExpanded());
+
   constructor() {
     fromEvent(this.document, 'visibilitychange').pipe(
       startWith(null),
@@ -51,6 +81,16 @@ export class AppShellComponent {
         : EMPTY),
       takeUntilDestroyed()
     ).subscribe();
+    if (this.narrowQuery) {
+      fromEvent<MediaQueryListEvent>(this.narrowQuery, 'change').pipe(takeUntilDestroyed()).subscribe((event) => {
+        this.overlayOpen.set(false);
+        this.narrow.set(event.matches);
+      });
+    }
+    this.router.events.pipe(
+      filter((event) => event instanceof NavigationEnd),
+      takeUntilDestroyed()
+    ).subscribe(() => this.closeOverlay());
     // As permissões mudam após um 403 ou ao salvar o próprio perfil: a tela aberta é conferida de novo.
     effect(() => {
       this.permissions.permissions();
@@ -69,6 +109,23 @@ export class AppShellComponent {
       }
       route = route.firstChild;
     }
+  }
+
+  protected toggleSidebar(): void {
+    if (this.narrow()) {
+      this.overlayOpen.update((open) => !open);
+      return;
+    }
+    const next = !this.wideExpanded();
+    this.wideExpanded.set(next);
+    writeSidebarChoice(next);
+  }
+
+  /** Closes the narrow-screen overlay (no-op on wide screens); Escape hands the focus back to the toggle. */
+  protected closeOverlay(returnFocus = false): void {
+    if (!this.overlayOpen()) return;
+    this.overlayOpen.set(false);
+    if (returnFocus) this.toggleButton()?.nativeElement.focus();
   }
 
   protected logout(): void {

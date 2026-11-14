@@ -243,10 +243,185 @@ describe('AppShellComponent menu by permission', () => {
     };
 
     expect(rule('.shell')).toMatch(/grid-template-columns:\s*272px minmax\(0, 1fr\)/);
+    expect(rule('.shell.is-collapsed')).toMatch(/grid-template-columns:\s*64px minmax\(0, 1fr\)/);
+    expect(rule('.shell-main')).toMatch(/grid-column:\s*2/);
     expect(rule('.shell-content')).toMatch(/grid-template-columns:\s*minmax\(0, 1fr\)/);
     expect(rule('.page-surface')).toMatch(/grid-template-columns:\s*minmax\(0, 1fr\)/);
     expect(rule('.table-wrap')).toMatch(/position:\s*relative/);
     expect(rule('.table-wrap')).toMatch(/overflow-x:\s*auto/);
-    expect(css).toMatch(/@media \(max-width: 900px\) \{\s*\.shell \{\s*grid-template-columns:\s*minmax\(0, 1fr\);\s*\}\s*\/\*[^*]*\*\/\s*\.shell-sidebar \{[^}]*overflow-x:\s*clip/);
+    // Up to 900px the sidebar stays a thin rail beside the content; expanded, it floats over it.
+    expect(css).toMatch(/@media \(max-width: 900px\) \{\s*\.shell,\s*\.shell\.is-collapsed \{\s*grid-template-columns:\s*64px minmax\(0, 1fr\);\s*\}\s*\/\*[^*]*\*\/\s*\.shell\.is-expanded \.shell-sidebar \{[^}]*position:\s*fixed[^}]*overflow-x:\s*clip/);
+    expect(css).not.toMatch(/\.shell-sidebar \{\s*position:\s*relative;\s*height:\s*auto/);
+  });
+});
+
+describe('AppShellComponent collapsible sidebar', () => {
+  let fixture: ComponentFixture<AppShellComponent>;
+  let page: HTMLElement;
+  let viewport: { set(narrow: boolean): void };
+  const STORAGE_KEY = 'navitas.sidebar';
+
+  function mockViewport(narrow: boolean): { set(narrow: boolean): void } {
+    const listeners = new Set<(event: { matches: boolean }) => void>();
+    const query = {
+      matches: narrow,
+      media: '(max-width: 900px)',
+      addEventListener: (_: string, listener: (event: { matches: boolean }) => void) => listeners.add(listener),
+      removeEventListener: (_: string, listener: (event: { matches: boolean }) => void) => listeners.delete(listener)
+    };
+    Object.defineProperty(window, 'matchMedia', { configurable: true, writable: true, value: vi.fn(() => query) });
+    return {
+      set(next: boolean) {
+        query.matches = next;
+        listeners.forEach((listener) => listener({ matches: next }));
+      }
+    };
+  }
+
+  async function render(narrow: boolean): Promise<void> {
+    viewport = mockViewport(narrow);
+    await TestBed.configureTestingModule({
+      imports: [AppShellComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([{ path: '**', children: [] }])]
+    }).compileComponents();
+    const http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthService).restoreSession().subscribe();
+    http.expectOne('/api/auth/me').flush(AUTH_USER);
+    fixture = TestBed.createComponent(AppShellComponent);
+    fixture.detectChanges();
+    page = fixture.nativeElement as HTMLElement;
+  }
+
+  beforeEach(() => localStorage.clear());
+  afterEach(() => {
+    localStorage.clear();
+    vi.restoreAllMocks();
+    delete (window as { matchMedia?: unknown }).matchMedia;
+  });
+
+  const toggle = () => page.querySelector<HTMLButtonElement>('.sidebar-toggle')!;
+  const shell = () => page.querySelector<HTMLElement>('.shell')!;
+  const backdrop = () => page.querySelector<HTMLElement>('.shell-backdrop');
+  const items = () => [...page.querySelectorAll<HTMLAnchorElement>('.nav-item')];
+  const press = (key: string) => {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+    fixture.detectChanges();
+  };
+  const click = (element: HTMLElement) => {
+    element.click();
+    fixture.detectChanges();
+  };
+
+  it('starts expanded on wide screens, with the toggle naming the next action', async () => {
+    await render(false);
+
+    expect(shell().classList).toContain('is-expanded');
+    expect(toggle().type).toBe('button');
+    expect(toggle().getAttribute('aria-expanded')).toBe('true');
+    expect(toggle().getAttribute('aria-label')).toBe('Recolher menu');
+    expect(toggle().getAttribute('aria-controls')).toBe(page.querySelector('.shell-sidebar')?.id);
+    expect(items()[0].getAttribute('title')).toBeNull();
+    expect(backdrop()).toBeNull();
+  });
+
+  it('starts collapsed up to 900px and names each icon-only item by title and aria-label', async () => {
+    localStorage.setItem(STORAGE_KEY, 'expanded');
+    await render(true);
+
+    expect(shell().classList).toContain('is-collapsed');
+    expect(toggle().getAttribute('aria-expanded')).toBe('false');
+    expect(toggle().getAttribute('aria-label')).toBe('Expandir menu');
+    const first = items()[0];
+    expect(first.getAttribute('title')).toBe('Dashboard');
+    expect(first.getAttribute('aria-label')).toBe('Dashboard');
+    expect(page.querySelector('.sidebar-user__logout')).not.toBeNull();
+    expect(page.querySelector('.brand-lockup__logo')?.getAttribute('src')).toContain('navitas-symbol-white.svg');
+  });
+
+  it('collapses and expands on wide screens and remembers the choice', async () => {
+    await render(false);
+
+    click(toggle());
+    expect(shell().classList).toContain('is-collapsed');
+    expect(toggle().getAttribute('aria-label')).toBe('Expandir menu');
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('collapsed');
+    expect(backdrop()).toBeNull();
+
+    click(toggle());
+    expect(shell().classList).toContain('is-expanded');
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('expanded');
+  });
+
+  it('restores a remembered collapsed menu on wide screens', async () => {
+    localStorage.setItem(STORAGE_KEY, 'collapsed');
+    await render(false);
+
+    expect(shell().classList).toContain('is-collapsed');
+  });
+
+  it('falls back to the width default when storage throws', async () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked'); });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked'); });
+    await render(false);
+
+    expect(shell().classList).toContain('is-expanded');
+    click(toggle());
+    expect(shell().classList).toContain('is-collapsed');
+  });
+
+  it('opens over the content on narrow screens and closes with Escape, keeping the focus on the toggle', async () => {
+    await render(true);
+
+    click(toggle());
+    expect(shell().classList).toContain('is-expanded');
+    expect(backdrop()).not.toBeNull();
+    expect(toggle().getAttribute('aria-label')).toBe('Recolher menu');
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+
+    toggle().focus();
+    press('Escape');
+    expect(shell().classList).toContain('is-collapsed');
+    expect(backdrop()).toBeNull();
+    expect(document.activeElement).toBe(toggle());
+  });
+
+  it('closes the overlay on a tap outside it', async () => {
+    await render(true);
+
+    click(toggle());
+    click(backdrop()!);
+    expect(shell().classList).toContain('is-collapsed');
+  });
+
+  it('closes the overlay when a screen is chosen or the route changes', async () => {
+    await render(true);
+
+    click(toggle());
+    click(items()[1]);
+    expect(shell().classList).toContain('is-collapsed');
+
+    click(toggle());
+    await TestBed.inject(Router).navigateByUrl('/clientes');
+    fixture.detectChanges();
+    expect(shell().classList).toContain('is-collapsed');
+  });
+
+  it('ignores Escape on wide screens', async () => {
+    await render(false);
+
+    press('Escape');
+    expect(shell().classList).toContain('is-expanded');
+  });
+
+  it('follows the viewport: collapses when it narrows and restores the wide choice when it widens', async () => {
+    await render(false);
+
+    viewport.set(true);
+    fixture.detectChanges();
+    expect(shell().classList).toContain('is-collapsed');
+
+    viewport.set(false);
+    fixture.detectChanges();
+    expect(shell().classList).toContain('is-expanded');
   });
 });

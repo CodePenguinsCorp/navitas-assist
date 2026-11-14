@@ -1,10 +1,25 @@
-<div class="shell">
-  <aside class="shell-sidebar" aria-label="Barra lateral">
-    <div class="brand-lockup brand-lockup--logo-only">
-      <picture class="brand-lockup__picture">
-        <source media="(max-width: 900px)" srcset="brand/navitas-symbol-white.svg" width="108" height="36" />
-        <img class="brand-lockup__logo" src="brand/navitas-logo-white.svg" alt="Navitas" width="192" height="108" />
-      </picture>
+<div class="shell" [class.is-expanded]="expanded()" [class.is-collapsed]="!expanded()">
+  <aside id="shell-sidebar" class="shell-sidebar" aria-label="Barra lateral">
+    <div class="sidebar-head">
+      <button
+        #sidebarToggle
+        type="button"
+        class="sidebar-toggle"
+        aria-controls="shell-sidebar"
+        [attr.aria-expanded]="expanded()"
+        [attr.aria-label]="expanded() ? 'Recolher menu' : 'Expandir menu'"
+        [attr.title]="expanded() ? 'Recolher menu' : 'Expandir menu'"
+        (click)="toggleSidebar()"
+      >
+        <app-icon name="chevron" [size]="18" />
+      </button>
+      <div class="brand-lockup brand-lockup--logo-only">
+        @if (expanded()) {
+          <img class="brand-lockup__logo" src="brand/navitas-logo-white.svg" alt="Navitas" width="192" height="108" />
+        } @else {
+          <img class="brand-lockup__logo brand-lockup__logo--symbol" src="brand/navitas-symbol-white.svg" alt="Navitas" width="108" height="36" />
+        }
+      </div>
     </div>
 
     <div class="nav-groups">
@@ -19,6 +34,9 @@
                 routerLinkActive="is-active"
                 class="nav-item"
                 ariaCurrentWhenActive="page"
+                [attr.title]="expanded() ? null : item.label"
+                [attr.aria-label]="expanded() ? null : item.label"
+                (click)="closeOverlay()"
               >
                 <app-icon [name]="item.icon" [size]="19" />
                 <strong>{{ item.label }}</strong>
@@ -41,6 +59,10 @@
       </button>
     </div>
   </aside>
+
+  @if (narrow() && expanded()) {
+    <div class="shell-backdrop" aria-hidden="true" (click)="closeOverlay()"></div>
+  }
 
   <div class="shell-main">
     <header class="shell-header">

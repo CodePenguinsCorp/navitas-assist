@@ -52,7 +52,7 @@
 .bell-item__action { display: inline-flex; justify-content: flex-end; width: 28px; min-height: 28px; }
 .bell-item__action .row-action { width: 28px; height: 28px; border-radius: var(--radius-xs); }
 
-/* Narrow shell: the bell sits at the left, so the panel opens from there. */
+/* Narrow shell: the bell sits at the left of the content, after the 64px menu rail and the 1rem gutter. */
 @media (max-width: 720px) {
-  .bell-panel { right: auto; left: 0; width: min(400px, calc(100vw - 32px)); }
+  .bell-panel { right: auto; left: 0; width: min(400px, calc(100vw - 64px - 2rem)); }
 }
