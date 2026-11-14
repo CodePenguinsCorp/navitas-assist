@@ -31,7 +31,9 @@ function writeChoice(key: string | null, open: boolean): void {
   selector: 'app-collapsible-section',
   imports: [IconComponent],
   templateUrl: './collapsible-section.component.html',
-  styleUrl: './collapsible-section.component.css'
+  styleUrl: './collapsible-section.component.css',
+  // `title` is an input: without this the host would keep it as a native tooltip over the whole section.
+  host: { '[attr.title]': 'null' }
 })
 export class CollapsibleSectionComponent {
   readonly title = input.required<string>();
@@ -53,6 +55,12 @@ export class CollapsibleSectionComponent {
 
   toggle(): void {
     this.setOpen(!this.expanded());
+  }
+
+  /** A header action (e.g. "Registrar") always shows its result: it unfolds a folded section. */
+  protected unfoldForAction(event: Event): void {
+    const target = event.target as Element | null;
+    if (target?.closest('button:not(:disabled), a[href]')) this.setOpen(true);
   }
 
   setOpen(open: boolean): void {

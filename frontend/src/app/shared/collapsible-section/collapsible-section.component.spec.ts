@@ -89,6 +89,20 @@ describe('CollapsibleSectionComponent', () => {
     expect(toggle().getAttribute('aria-expanded')).toBe('true');
   });
 
+  it('unfolds a folded section when a header action is used, so its form shows up', () => {
+    create((h) => h.open.set(false));
+    el.querySelector<HTMLButtonElement>('.act')!.click();
+    fixture.detectChanges();
+    expect(host.acted).toBe(true);
+    expect(toggle().getAttribute('aria-expanded')).toBe('true');
+    expect(body().hidden).toBe(false);
+  });
+
+  it('does not leave the title as a tooltip over the whole section', () => {
+    create();
+    expect(el.querySelector('app-collapsible-section')!.hasAttribute('title')).toBe(false);
+  });
+
   it('remembers the choice under navitas.section.<key> and restores it', () => {
     create((h) => h.key.set('rma.history'));
     toggle().click();

@@ -1,6 +1,7 @@
 :host { display: block; min-width: 0; }
-/* The row is the card's .detail-card__title; a folded section drops the rule and the gap under it. */
-.collapsible__head { gap: var(--space-3); }
+/* The row is the card's .detail-card__title; a folded section drops the rule and the gap under it.
+   It takes the card's width and never widens it (a long title or action would push the modal sideways at 320 px). */
+.collapsible__head { gap: var(--space-3); contain: inline-size; }
 .collapsible__head.is-collapsed { margin-bottom: 0; padding-bottom: 0; border-bottom-color: transparent; }
 .collapsible__heading { display: flex; flex: 1 1 auto; min-width: 0; margin: 0; font: inherit; letter-spacing: inherit; text-transform: inherit; }
 .collapsible__toggle {
@@ -16,14 +17,18 @@
   border-radius: var(--radius-pill); background: var(--brand-tint); color: var(--brand-blue-deep);
   font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); letter-spacing: 0; text-transform: none;
 }
-.collapsible__actions { display: inline-flex; flex-shrink: 0; align-items: center; gap: var(--space-2); letter-spacing: 0; text-transform: none; }
+.collapsible__actions { display: inline-flex; flex-shrink: 1; min-width: 0; align-items: center; gap: var(--space-2); letter-spacing: 0; text-transform: none; }
 .collapsible__actions:empty { display: none; }
-.collapsible__chevron { display: inline-flex; color: var(--muted); cursor: pointer; transition: transform 160ms ease; }
-.collapsible__chevron.is-open { transform: rotate(90deg); }
+/* Fold control, set apart from the actions by a rule so it never reads as part of them. */
+.collapsible__actions:not(:empty) + .collapsible__chevron { margin-inline-start: calc(-1 * var(--space-1)); padding-inline-start: var(--space-3); border-inline-start: 1px solid var(--line); }
+.collapsible__chevron { display: inline-flex; align-items: center; align-self: stretch; color: var(--muted); cursor: pointer; }
+.collapsible__chevron app-icon { display: inline-flex; transition: transform 160ms ease; }
+.collapsible__chevron.is-open app-icon { transform: rotate(90deg); }
+.collapsible__chevron:hover { color: var(--brand-blue-deep); }
 .collapsible__body:not([hidden]) { animation: collapsible-in 160ms ease; }
 .collapsible__body[hidden] { display: none; }
 @keyframes collapsible-in { from { opacity: 0; transform: translateY(-4px); } }
 @media (prefers-reduced-motion: reduce) {
-  .collapsible__chevron { transition: none; }
+  .collapsible__chevron app-icon { transition: none; }
   .collapsible__body:not([hidden]) { animation: none; }
 }

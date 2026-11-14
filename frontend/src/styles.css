@@ -2033,6 +2033,34 @@ fieldset.field-group > span {
   cursor: not-allowed;
 }
 
+/* Header actions of a folding section (Registrar diagnóstico, Registrar, Reservar peça…): one ghost-button look,
+   icon and text on one line, a soft tint on hover instead of an underline. */
+.collapsible__actions .link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--brand-blue);
+  text-align: start;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.collapsible__actions .link-button:hover:not(:disabled) {
+  background: var(--brand-tint);
+  color: var(--brand-blue-deep);
+  text-decoration: none;
+}
+
+/* Narrow screens: a long action ("Adicionar fora do estoque") wraps instead of pushing the card sideways. */
+@media (max-width: 480px) {
+  .collapsible__actions .link-button.link-button {
+    padding-block: var(--space-1);
+    line-height: 1.2;
+    white-space: normal;
+  }
+}
+
 .count-badge {
   display: inline-grid;
   place-items: center;
