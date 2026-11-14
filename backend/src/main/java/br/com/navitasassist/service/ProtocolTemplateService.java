@@ -40,11 +40,6 @@ public class ProtocolTemplateService {
         return protocolTemplateRepository.findAllOrderByName().stream().map(ProtocolTemplateResponse::from).toList();
     }
 
-    @Transactional(readOnly = true)
-    public ProtocolTemplateResponse getById(Long id) {
-        return ProtocolTemplateResponse.from(getEntityById(id));
-    }
-
     public ProtocolTemplateResponse create(ProtocolTemplateRequest request) {
         ProtocolTemplate template = new ProtocolTemplate();
         applyMetadata(template, request);

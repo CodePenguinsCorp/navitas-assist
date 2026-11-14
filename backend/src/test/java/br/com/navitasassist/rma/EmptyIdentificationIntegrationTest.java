@@ -80,7 +80,7 @@ class EmptyIdentificationIntegrationTest {
         assertNull(before.get("serial_number"));
         assertNull(before.get("manufactured_at"));
         var updatedAt = jdbc.queryForObject("select updated_at from rmas where id = ?", Object.class, saved.getId());
-        for (String path : List.of("/api/rmas/" + saved.getId(), "/api/rmas/code/" + saved.getCode())) {
+        for (String path : List.of("/api/rmas/" + saved.getId())) {
             mvc.perform(get(path).with(asProfile("viewer", "VIEWER")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.batchNumber").value(nullValue()))
                 .andExpect(jsonPath("$.serialNumber").value(nullValue())).andExpect(jsonPath("$.manufacturedAt").value(nullValue()))

@@ -55,6 +55,37 @@ class DataMinimizationIntegrationTest {
             .andExpect(jsonPath("$[0].available").exists());
     }
     @Test
+    void readsWithoutConsumersAreNoLongerServed() throws Exception {
+        var viewer = user("reader").authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("rma.ver"));
+        assertNotServed(get("/api/rmas/history").param("serialNumber", "X").with(viewer));
+        assertNotServed(get("/api/rmas/code/OS-2026-000001").with(viewer));
+        Product product = new Product();
+        product.setSku("MIN-REMOVED");
+        product.setName("Produto sem detalhe");
+        product.setDefaultWarrantyMonths(12);
+        products.saveAndFlush(product);
+        Part part = new Part();
+        part.setCode("MIN-REMOVED");
+        part.setName("Peça sem detalhe");
+        part.setUnit("UN");
+        parts.saveAndFlush(part);
+        var admin = user("admin").authorities(
+            new org.springframework.security.core.authority.SimpleGrantedAuthority("usuarios.gerir"),
+            new org.springframework.security.core.authority.SimpleGrantedAuthority("perfis.gerir"));
+        assertNotServed(get("/api/products/" + product.getId()).with(admin));
+        assertNotServed(get("/api/parts/" + part.getId()).with(admin));
+        assertNotServed(get("/api/profiles/1").with(admin));
+        assertNotServed(get("/api/protocols/templates/1").with(admin));
+    }
+
+    /** Sem handler de leitura: nunca 2xx nem dados do registro. */
+    private void assertNotServed(org.springframework.test.web.servlet.RequestBuilder request) throws Exception {
+        var response = mvc.perform(request).andReturn().getResponse();
+        org.junit.jupiter.api.Assertions.assertTrue(response.getStatus() >= 400, "status " + response.getStatus());
+        org.junit.jupiter.api.Assertions.assertFalse(response.getContentAsString().contains("MIN-REMOVED"));
+    }
+
+    @Test
     void summariesExposeOnlyTheCountersDisplayed() throws Exception {
         mvc.perform(get("/api/clients/summary").with(user("reader")))
             .andExpect(status().isOk()).andExpect(jsonPath("$", aMapWithSize(1)));

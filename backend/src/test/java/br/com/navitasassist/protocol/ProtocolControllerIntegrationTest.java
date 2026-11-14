@@ -108,12 +108,13 @@ class ProtocolControllerIntegrationTest {
         long templateId = templateId(createTemplate(templateJson("Bancada PWM", product.getId(), null,
             List.of(measurementItem("Tensão de saída", true, "V", 2, "11.50", "12.50")))));
 
-        mockMvc.perform(get("/api/protocols/templates/{id}", templateId).with(asProfile("viewer", "VIEWER")))
+        String created = "$[?(@.id == " + templateId + ")]";
+        mockMvc.perform(get("/api/protocols/templates").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.currentVersion").value(1))
-            .andExpect(jsonPath("$.items[0].unit").value("V"))
-            .andExpect(jsonPath("$.items[0].decimalPlaces").value(2))
-            .andExpect(jsonPath("$.items[0].minValue").value(11.5));
+            .andExpect(jsonPath(created + ".currentVersion").value(1))
+            .andExpect(jsonPath(created + ".items[0].unit").value("V"))
+            .andExpect(jsonPath(created + ".items[0].decimalPlaces").value(2))
+            .andExpect(jsonPath(created + ".items[0].minValue").value(11.5));
 
         mockMvc.perform(delete("/api/protocols/templates/{id}", templateId).with(asProfile("admin", "ADMIN")).with(csrf()))
             .andExpect(status().isForbidden());

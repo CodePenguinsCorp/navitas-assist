@@ -30,11 +30,6 @@ public class PartService {
         return partRepository.search(null).stream().map(PartOptionResponse::from).toList();
     }
 
-    @Transactional(readOnly = true)
-    public PartResponse getById(Long id) {
-        return PartResponse.from(getEntityById(id));
-    }
-
     public PartResponse create(PartRequest request) {
         validateCode(null, request.code());
 

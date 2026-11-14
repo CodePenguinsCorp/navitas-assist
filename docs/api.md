@@ -28,9 +28,7 @@ Convenções:
 | `GET /api/rmas` | `rma.ver` | Lista paginada (`query`, `status`, `page`, `size`). |
 | `GET /api/rmas/summary` | `rma.ver` | Totais para os indicadores (`query`, `status`). |
 | `GET /api/rmas/board` | `rma.ver` | Todos as ordens de serviço do Kanban e do dashboard, sem paginação. |
-| `GET /api/rmas/history` | `rma.ver` | Histórico por `batchNumber` ou `serialNumber`. |
 | `GET /api/rmas/{id}` | `rma.ver` | Detalhe. |
-| `GET /api/rmas/code/{code}` | `rma.ver` | Detalhe pelo código `OS-AAAA-NNNNNN`. |
 | `GET /api/rmas/{id}/report.pdf` | `rma.ver` | Laudo final em PDF. |
 | `POST /api/rmas` | `rma.abrir` | Abre uma OS. |
 | `PUT /api/rmas/{id}` | `rma.editar` | Altera dados gerais, prioridade e data limite (`dueDate` / `clearDueDate`). |
@@ -71,7 +69,7 @@ Convenções:
 | `GET /api/clients` · `/api/products` | autenticado | Lista paginada com filtros. |
 | `GET /api/clients/options` · `/api/products/options` | autenticado | Opções para seletores, sem paginação: clientes `{id, legalName}`, produtos `{id, sku, name}`. |
 | `GET /api/clients/summary` · `/api/products/summary` | autenticado | Totais dos cartões: clientes `{total}`, produtos `{total, categories}`. |
-| `GET /api/clients/{id}` · `/api/products/{id}` | autenticado | Detalhe. |
+| `GET /api/clients/{id}` | autenticado | Detalhe do cliente. |
 | `POST /api/clients` · `/api/products` | `cadastros.editar` | Cria. |
 | `PUT /api/clients/{id}` · `/api/products/{id}` | `cadastros.editar` | Altera. |
 | `DELETE /api/clients/{id}` · `/api/products/{id}` | `cadastros.editar` | Exclui. |
@@ -87,7 +85,6 @@ Convenções:
 | `GET /api/parts` | autenticado | Busca peças (`query`). |
 | `GET /api/parts/pending` | autenticado | Reservas pendentes. |
 | `GET /api/parts/replenishment` | autenticado | Peças a repor. |
-| `GET /api/parts/{id}` | autenticado | Detalhe. |
 | `GET /api/parts/{id}/movements` | autenticado | Movimentações. |
 | `POST /api/parts` | `pecas.movimentar` | Cadastra peça. |
 | `PUT /api/parts/{id}` | `pecas.movimentar` | Altera peça. |
@@ -98,7 +95,7 @@ Convenções:
 
 | Rota | Permissão | Descrição |
 | --- | --- | --- |
-| `GET /api/protocols/templates` · `/{id}` | autenticado | Lista e detalhe dos modelos. |
+| `GET /api/protocols/templates` | autenticado | Lista dos modelos. |
 | `POST /api/protocols/templates` | `protocolos.catalogo` | Cria modelo. |
 | `PUT /api/protocols/templates/{id}` | `protocolos.catalogo` | Altera (cria nova versão). |
 
@@ -124,7 +121,6 @@ Qualquer outra rota de `/api/protocols/**` é negada.
 | `DELETE /api/users/{id}` | `usuarios.gerir` | Exclui usuário. |
 | `GET /api/users/assignable` | autenticado | Técnicos que podem ser responsáveis (`rma.atribuivel`). |
 | `GET /api/profiles` | `perfis.gerir` | Lista paginada de perfis. |
-| `GET /api/profiles/{id}` | `perfis.gerir` | Detalhe. |
 | `POST /api/profiles` | `perfis.gerir` | Cria perfil. |
 | `PUT /api/profiles/{id}` | `perfis.gerir` | Altera perfil. |
 | `DELETE /api/profiles/{id}` | `perfis.gerir` | Exclui (não vale para perfis prontos nem com usuários). |

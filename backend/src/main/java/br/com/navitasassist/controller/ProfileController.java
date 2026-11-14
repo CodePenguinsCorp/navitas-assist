@@ -43,11 +43,6 @@ public class ProfileController {
         return accessProfileService.options();
     }
 
-    @GetMapping("/{id}")
-    public ProfileResponse get(@PathVariable Long id) {
-        return accessProfileService.get(id);
-    }
-
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ProfileResponse create(@Valid @RequestBody ProfileRequest request, Principal principal) {

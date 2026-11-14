@@ -128,10 +128,6 @@ class ProfileControllerIntegrationTest {
             .andExpect(jsonPath("$.content[0].permissions", contains("rma.ver", "relatorios.ver")))
             .andExpect(jsonPath("$.content[0].createdAt").isNotEmpty())
             .andExpect(jsonPath("$.content[0].updatedAt").isNotEmpty());
-        mvc.perform(get("/api/profiles/{id}", used.getId()).with(asProfile("admin", "ADMIN")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.userCount").value(1));
-        mvc.perform(get("/api/profiles/{id}", 999999).with(asProfile("admin", "ADMIN")))
-            .andExpect(status().isNotFound());
     }
 
     @Test

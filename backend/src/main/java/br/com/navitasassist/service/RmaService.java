@@ -98,26 +98,6 @@ public class RmaService {
         return toResponse(getEntityById(id));
     }
 
-    @Transactional(readOnly = true)
-    public RmaResponse getByCode(String code) {
-        return toResponse(rmaRecordRepository.findByCodeIgnoreCase(code)
-            .orElseThrow(() -> new ResourceNotFoundException("OS não encontrada: " + code)));
-    }
-
-    @Transactional(readOnly = true)
-    public List<RmaResponse> findHistory(String batchNumber, String serialNumber) {
-        String normalizedBatch = trimToNull(batchNumber);
-        String normalizedSerial = trimToNull(serialNumber);
-
-        if (normalizedBatch == null && normalizedSerial == null) {
-            throw new BusinessException("Provide a batch number or a serial number to load history.");
-        }
-
-        List<RmaRecord> records = rmaRecordRepository.findHistory(normalizedBatch, normalizedSerial);
-        loadWarrantyHistory(records);
-        return records.stream().map(this::toResponse).toList();
-    }
-
     private void loadWarrantyHistory(List<RmaRecord> records) {
         if (!records.isEmpty()) {
             rmaRecordRepository.fetchItemsWithProducts(records);

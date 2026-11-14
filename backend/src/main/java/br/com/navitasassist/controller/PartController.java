@@ -53,11 +53,6 @@ public class PartController {
         return partStockService.listReplenishment();
     }
 
-    @GetMapping("/{id}")
-    public PartResponse getById(@PathVariable Long id) {
-        return partService.getById(id);
-    }
-
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PartResponse create(@Valid @RequestBody PartRequest request) {

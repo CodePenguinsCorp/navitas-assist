@@ -66,11 +66,6 @@ public class ProductService {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
-    @Transactional(readOnly = true)
-    public ProductResponse getById(Long id) {
-        return ProductResponse.from(getEntityById(id));
-    }
-
     public ProductResponse create(ProductRequest request) {
         validateSku(null, request.sku());
 

@@ -66,7 +66,7 @@ class HttpInputValidationIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
-        "/api/products/sensitive-input", "/api/products/9223372036854775808",
+        "/api/parts/sensitive-input/movements", "/api/clients/9223372036854775808",
         "/api/clients/sensitive-input", "/api/rmas/sensitive-input"
     })
     void malformedIdReturnsBadRequest(String path) throws Exception {
@@ -109,7 +109,7 @@ class HttpInputValidationIntegrationTest {
         mockMvc.perform(get("/api/rmas").param("status", "RECEIVED").param("query", "NAV-68-no-matching-rma")
             .with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.content").isArray());
-        mockMvc.perform(get("/api/products/{id}", Long.MAX_VALUE).with(asProfile("viewer", "VIEWER")))
+        mockMvc.perform(get("/api/clients/{id}", Long.MAX_VALUE).with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isNotFound()).andExpect(jsonPath("$.status").value(404));
         mockMvc.perform(post("/api/products").with(asProfile("admin", "ADMIN")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content("{}"))

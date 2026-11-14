@@ -62,22 +62,9 @@ public class RmaController {
         return rmaService.search(query, status);
     }
 
-    @GetMapping("/history")
-    public List<RmaResponse> history(
-        @RequestParam(required = false) String batchNumber,
-        @RequestParam(required = false) String serialNumber
-    ) {
-        return rmaService.findHistory(batchNumber, serialNumber);
-    }
-
     @GetMapping("/{id}")
     public RmaResponse getById(@PathVariable Long id) {
         return rmaService.getById(id);
-    }
-
-    @GetMapping("/code/{code}")
-    public RmaResponse getByCode(@PathVariable String code) {
-        return rmaService.getByCode(code);
     }
 
     @PostMapping

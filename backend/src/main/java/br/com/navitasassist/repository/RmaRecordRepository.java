@@ -30,8 +30,6 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
 
     boolean existsByAssignee_Id(Long assigneeId);
 
-    Optional<RmaRecord> findByCodeIgnoreCase(String code);
-
     Optional<RmaRecord> findTopByCodeStartingWithOrderByCodeDesc(String prefix);
 
     // Report rows with their to-one relations; collections are loaded by the fetch* queries below for the same RMAs.
@@ -236,19 +234,4 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
           )
         """)
     RmaSummaryResponse summarize(@Param("query") String query, @Param("status") RmaStatus status, @Param("terminalStatuses") Collection<RmaStatus> terminalStatuses);
-
-    @Query("""
-        select distinct r
-        from RmaRecord r
-        left join r.items i
-        where (:batchNumber is not null and lower(i.itemIdentification.batchNumber) = lower(:batchNumber))
-           or (:serialNumber is not null and lower(i.itemIdentification.serialNumber) = lower(:serialNumber))
-           or (:batchNumber is not null and lower(r.itemIdentification.batchNumber) = lower(:batchNumber))
-           or (:serialNumber is not null and lower(r.itemIdentification.serialNumber) = lower(:serialNumber))
-        order by r.entryDate desc, r.id desc
-        """)
-    List<RmaRecord> findHistory(
-        @Param("batchNumber") String batchNumber,
-        @Param("serialNumber") String serialNumber
-    );
 }

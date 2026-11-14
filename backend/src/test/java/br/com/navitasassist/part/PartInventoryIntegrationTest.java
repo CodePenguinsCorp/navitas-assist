@@ -155,11 +155,11 @@ class PartInventoryIntegrationTest {
             .andExpect(jsonPath("$.status").value("ACTIVE"))
             .andExpect(jsonPath("$.partAvailable").value(3));
 
-        mockMvc.perform(get("/api/parts/{id}", partId).with(VIEWER))
+        mockMvc.perform(get("/api/parts").param("query", "PCA-RES").with(VIEWER))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.onHand").value(5))
-            .andExpect(jsonPath("$.reserved").value(2))
-            .andExpect(jsonPath("$.available").value(3));
+            .andExpect(jsonPath("$[0].onHand").value(5))
+            .andExpect(jsonPath("$[0].reserved").value(2))
+            .andExpect(jsonPath("$[0].available").value(3));
     }
 
     @Test
@@ -257,10 +257,10 @@ class PartInventoryIntegrationTest {
             .andExpect(jsonPath("$.unitCost").value(12.35))
             .andExpect(jsonPath("$.totalCost").value(37.05));
 
-        mockMvc.perform(get("/api/parts/{id}", partId).with(VIEWER))
-            .andExpect(jsonPath("$.onHand").value(2))
-            .andExpect(jsonPath("$.reserved").value(0))
-            .andExpect(jsonPath("$.available").value(2));
+        mockMvc.perform(get("/api/parts").param("query", "PCA-CONS").with(VIEWER))
+            .andExpect(jsonPath("$[0].onHand").value(2))
+            .andExpect(jsonPath("$[0].reserved").value(0))
+            .andExpect(jsonPath("$[0].available").value(2));
 
         mockMvc.perform(get("/api/rmas/{id}/parts", rma.getId()).with(VIEWER))
             .andExpect(status().isOk())
@@ -299,7 +299,7 @@ class PartInventoryIntegrationTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value("Movement has already been reversed: " + consumptionId));
 
-        mockMvc.perform(get("/api/parts/{id}", partId).with(VIEWER)).andExpect(jsonPath("$.onHand").value(5));
+        mockMvc.perform(get("/api/parts").param("query", "PCA-REV").with(VIEWER)).andExpect(jsonPath("$[0].onHand").value(5));
 
         mockMvc.perform(get("/api/rmas/{id}/parts", rma.getId()).with(VIEWER))
             .andExpect(jsonPath("$.reservations[0].status").value("REVERSED"))

@@ -121,12 +121,12 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.warrantyStatus").doesNotExist())
             .andExpect(jsonPath("$.warrantyOverridden").doesNotExist());
 
-        mockMvc.perform(get("/api/rmas/history")
-                .param("batchNumber", "LOT-B")
+        mockMvc.perform(get("/api/rmas")
+                .param("query", "LOT-B")
                 .with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(1)))
-            .andExpect(jsonPath("$[0].items", hasSize(2)));
+            .andExpect(jsonPath("$.content", hasSize(1)))
+            .andExpect(jsonPath("$.content[0].items", hasSize(2)));
 
         mockMvc.perform(get("/api/rmas")
                 .param("query", "SKU-OS-2")
@@ -318,17 +318,17 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.items[1].warrantyExpiresAt").value("2026-01-01"))
             .andExpect(jsonPath("$.warrantyStatus").doesNotExist());
 
-        mockMvc.perform(get("/api/rmas/history")
-                .param("batchNumber", "OLD-LOT")
+        mockMvc.perform(get("/api/rmas")
+                .param("query", "OLD-LOT")
                 .with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(0)));
+            .andExpect(jsonPath("$.content", hasSize(0)));
 
-        mockMvc.perform(get("/api/rmas/history")
-                .param("serialNumber", "NEW-SERIAL-B")
+        mockMvc.perform(get("/api/rmas")
+                .param("query", "NEW-SERIAL-B")
                 .with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(1)));
+            .andExpect(jsonPath("$.content", hasSize(1)));
     }
 
     @Test

@@ -45,11 +45,6 @@ public class AccessProfileService {
         return accessProfileRepository.findAllByOrderByNameAscIdAsc().stream().map(ProfileOptionResponse::from).toList();
     }
 
-    @Transactional(readOnly = true)
-    public ProfileResponse get(Long id) {
-        return toResponse(accessProfileRepository.findById(id).orElseThrow(() -> notFound(id)));
-    }
-
     public ProfileResponse create(ProfileRequest request, String actor) {
         String name = request.name().trim();
         Set<Permission> permissions = validateCodes(request.permissions());

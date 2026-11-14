@@ -50,11 +50,6 @@ public class ProductController {
         return productService.summarize();
     }
 
-    @GetMapping("/{id}")
-    public ProductResponse getById(@PathVariable Long id) {
-        return productService.getById(id);
-    }
-
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ProductResponse create(@Valid @RequestBody ProductRequest request) {
