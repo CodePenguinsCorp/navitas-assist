@@ -51,3 +51,7 @@ Não há workflow de entrega (CD) no repositório: nada publica as imagens Docke
 - [ ] Roteiro de conferência manual percorrido no ambiente ([ux/2026-11-07-roteiro-conferencia-manual.md](ux/2026-11-07-roteiro-conferencia-manual.md)).
 
 Limitação conhecida: o registro de sessões é em memória, por instância; reiniciar o backend encerra as sessões e a revogação não é sincronizada entre réplicas ([acesso-e-permissoes.md](acesso-e-permissoes.md)).
+
+## Desempenho do navegador
+
+- P17: o resumo do sino é consultado a cada 60 segundos somente enquanto a aba está visível. Ao voltar, a consulta ocorre imediatamente; ocultar a aba cancela o temporizador e a consulta pendente. Isso reduz chamadas sem atrasar a atualização na volta.

@@ -1,10 +1,11 @@
+import { DOCUMENT } from '@angular/common';
 import { IconComponent } from '../shared/icon/icon.component';
 import { NotificationBellComponent } from '../shared/notification-bell/notification-bell.component';
 import { initialsOf } from '../core/utils/rma-ui';
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRouteSnapshot, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { finalize, switchMap, timer } from 'rxjs';
+import { EMPTY, distinctUntilChanged, finalize, fromEvent, map, startWith, switchMap, timer } from 'rxjs';
 import { NAV_GROUPS } from '../core/mock-data';
 import { allowsPermissions, firstAllowedRoute } from '../core/navigation';
 import { Permission } from '../core/permissions';
@@ -19,6 +20,7 @@ import { PermissionService } from '../core/services/permission.service';
   styles: [':host { display: block; }']
 })
 export class AppShellComponent {
+  private readonly document = inject(DOCUMENT);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly notificationService = inject(NotificationService);
@@ -40,8 +42,13 @@ export class AppShellComponent {
   protected readonly currentProfileName = computed(() => this.currentUser()?.profileName ?? '');
 
   constructor() {
-    timer(0, 60_000).pipe(
-      switchMap(() => this.notificationService.refreshSummary()),
+    fromEvent(this.document, 'visibilitychange').pipe(
+      startWith(null),
+      map(() => this.document.visibilityState === 'visible'),
+      distinctUntilChanged(),
+      switchMap((visible) => visible
+        ? timer(0, 60_000).pipe(switchMap(() => this.notificationService.refreshSummary()))
+        : EMPTY),
       takeUntilDestroyed()
     ).subscribe();
     // As permissões mudam após um 403 ou ao salvar o próprio perfil: a tela aberta é conferida de novo.
