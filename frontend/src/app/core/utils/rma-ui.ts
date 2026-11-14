@@ -64,9 +64,9 @@ export function formatDate(value: string | null): string {
   return formatDateOnly(value);
 }
 
-export function trackableLabel(rma: Pick<RmaResponse, 'items' | 'serialNumber' | 'batchNumber'>): string {
-  const firstItem = rma.items[0] ?? rma;
-  const label = rmaItemTrackableLabel(firstItem);
+export function trackableLabel(rma: Pick<RmaResponse, 'items'>): string {
+  const firstItem = rma.items[0];
+  const label = firstItem ? rmaItemTrackableLabel(firstItem) : 'Item sem identificação';
   const additionalItems = rma.items.length - 1;
   return additionalItems > 0 ? `${label} + ${additionalItems} item(ns)` : label;
 }
@@ -87,8 +87,8 @@ export function rmaItemTrackableLabel(item: Pick<RmaItemResponse, 'serialNumber'
   return 'Item sem identifica\u00e7\u00e3o';
 }
 
-export function productSummary(rma: Pick<RmaResponse, 'items' | 'productName'>): string {
-  const firstProductName = rma.items[0]?.productName ?? rma.productName;
+export function productSummary(rma: Pick<RmaResponse, 'items'>): string {
+  const firstProductName = rma.items[0]?.productName ?? '';
   const additionalItems = rma.items.length - 1;
   return additionalItems > 0 ? `${firstProductName} + ${additionalItems} item(ns)` : firstProductName;
 }

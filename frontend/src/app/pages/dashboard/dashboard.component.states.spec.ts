@@ -19,18 +19,17 @@ import { LegacyProfileCode, profilePermissions, providePermissions } from '../..
 
 function rmaFactory(overrides: Partial<RmaResponse> = {}): RmaResponse {
   return {
-    id: 1, code: 'OS-OPEN', clientId: 1, clientName: 'Cliente',
-    items: [{ id: 1, productId: 2, productName: 'Produto', productSku: 'SKU-2', batchNumber: null,
+    id: 1, code: 'OS-OPEN', clientName: 'Cliente',
+    items: [{ id: 1, productName: 'Produto', productSku: 'SKU-2', batchNumber: null,
       serialNumber: 'SER-2', manufacturedAt: null, warrantyMonths: 12, warrantyExpiresAt: null, calculatedWarrantyStatus: WarrantyStatus.PENDING, warrantyOverride: null, warrantyStatus: WarrantyStatus.PENDING }],
-    productId: 2, productName: 'Produto', productSku: 'SKU-2', batchNumber: null, serialNumber: 'SER-2',
-    manufacturedAt: null, purchaseDate: null, purchaseDateUnknown: true, entryDate: '2026-10-20',
+    purchaseDate: null, purchaseDateUnknown: true, entryDate: '2026-10-20',
     invoiceNumber: null, receivedBy: 'tester', reportedFailure: 'Falha', receivedAccessories: null,
     physicalCondition: null, priority: 'MEDIUM', status: 'RECEIVED', assigneeId: null, assigneeName: null,
-    repairSummary: null, replacedPartsSummary: null, testSummary: null, shippedAt: null, carrier: null,
+    repairSummary: null, replacedPartsSummary: null, testSummary: null, carrier: null,
     trackingCode: null, diagnosis: null, assignmentHistory: [],
     statusHistory: [{ status: 'RECEIVED', changedBy: 'tester', changedAt: '2026-10-20T16:00:00Z', note: null }],
     currentBlock: null, blockHistory: [],
-    dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T16:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [], warrantyHistory: [],
+    dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T16:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [], warrantyHistory: [],
     createdAt: '2026-10-20T16:00:00Z', updatedAt: '2026-10-20T16:00:00Z',
     ...overrides
   };
@@ -216,7 +215,7 @@ describe('DashboardComponent load states', () => {
       };
       const due = (id: number, days: number, status: RmaResponse['status'] = 'IN_REPAIR') => rmaFactory({
         id, status, entryDate: '2000-01-01', dueDate: shift(days),
-        deadline: { status: 'ON_TRACK', dueSoonFrom: shift(days - 7), daysUntilDue: null }
+        deadline: { status: 'ON_TRACK', dueSoonFrom: shift(days - 7) }
       });
       await setup({ board: of([due(1, -3), due(2, -1), due(3, 2), due(4, 30), due(5, -9, 'COMPLETED'), rmaFactory({ id: 6 })]) });
       const card = indicator('Atrasadas')!;

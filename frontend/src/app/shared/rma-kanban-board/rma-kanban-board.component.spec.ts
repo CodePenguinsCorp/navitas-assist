@@ -54,7 +54,7 @@ describe('RmaKanbanBoardComponent card', () => {
   function due(dueDate: string | null, overrides: Partial<RmaResponse> = {}): Partial<RmaResponse> {
     const [y, m, d] = (dueDate ?? '2026-01-01').split('-').map(Number);
     const dueSoonFrom = new Date(Date.UTC(y, m - 1, d - 7)).toISOString().slice(0, 10);
-    return { dueDate, deadline: { status: dueDate ? 'ON_TRACK' : 'NO_DUE_DATE', dueSoonFrom: dueDate ? dueSoonFrom : null, daysUntilDue: null }, ...overrides };
+    return { dueDate, deadline: { status: dueDate ? 'ON_TRACK' : 'NO_DUE_DATE', dueSoonFrom: dueDate ? dueSoonFrom : null }, ...overrides };
   }
 
   it('hides the deadline when on track, without due date and when closed', () => {
@@ -162,12 +162,10 @@ function buildRma(values: Partial<RmaResponse>): RmaResponse {
   const base: RmaResponse = {
     id: 100,
     code: 'NAV-0100',
-    clientId: 1,
     clientName: 'Árvore Equipamentos',
     items: [
       {
         id: 1,
-        productId: 1,
         productName: 'Controlador Premium',
         productSku: 'CTRL-01',
         batchNumber: 'LOTE-ALFA',
@@ -178,12 +176,6 @@ function buildRma(values: Partial<RmaResponse>): RmaResponse {
         calculatedWarrantyStatus: WarrantyStatus.IN_WARRANTY, warrantyOverride: null, warrantyStatus: WarrantyStatus.IN_WARRANTY,
       },
     ],
-    productId: 1,
-    productName: 'Controlador Premium',
-    productSku: 'CTRL-01',
-    batchNumber: 'LOTE-ALFA',
-    serialNumber: 'SERIE-ALFA',
-    manufacturedAt: '2026-01-01',
     purchaseDate: '2026-02-01',
     purchaseDateUnknown: false,
     entryDate: '2026-10-10',
@@ -199,7 +191,6 @@ function buildRma(values: Partial<RmaResponse>): RmaResponse {
     repairSummary: null,
     replacedPartsSummary: null,
     testSummary: null,
-    shippedAt: null,
     carrier: null,
     trackingCode: null,
     diagnosis: null,
@@ -207,7 +198,7 @@ function buildRma(values: Partial<RmaResponse>): RmaResponse {
     assignmentHistory: [],
     currentBlock: null,
     blockHistory: [],
-    dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'TRIAGE', enteredAt: '2026-10-20T11:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [], warrantyHistory: [],
+    dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null }, stagePeriods: [{ status: 'TRIAGE', enteredAt: '2026-10-20T11:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [], warrantyHistory: [],
     createdAt: '2026-10-10T12:00:00Z',
     updatedAt: '2026-10-20T02:30:00Z',
   };

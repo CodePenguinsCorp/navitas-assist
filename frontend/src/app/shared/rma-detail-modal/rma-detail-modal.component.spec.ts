@@ -23,9 +23,8 @@ class StubComponent {}
 const NOW = Date.parse('2026-10-20T12:00:00Z');
 
 const diagnosis: DiagnosisResponse = {
-  id: 9, foundFailure: 'Capacitor estufado', failureType: 'POWER_SUPPLY', probableCause: 'COMPONENT',
+  foundFailure: 'Capacitor estufado', failureType: 'POWER_SUPPLY', probableCause: 'COMPONENT',
   notes: 'Trocar lote', diagnosedAt: '2026-10-21', technicianName: 'Bia',
-  createdAt: '2026-10-21T12:00:00Z', updatedAt: '2026-10-21T12:00:00Z'
 };
 
 const fullRma = buildRma({
@@ -56,7 +55,7 @@ const fullRma = buildRma({
     { status: 'TRIAGE', changedBy: 'ana', changedAt: '2026-10-20T11:00:00Z', note: 'Prioridade alterada para Alta' }
   ],
   assignmentHistory: [
-    { previousAssigneeId: null, previousAssigneeName: null, newAssigneeId: 7, newAssigneeName: 'Ana', changedBy: 'bia', changedAt: '2026-10-20T10:30:00Z' }
+    { previousAssigneeName: null, newAssigneeName: 'Ana', changedBy: 'bia', changedAt: '2026-10-20T10:30:00Z' }
   ]
 });
 
@@ -484,7 +483,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
 
   it('shows the date and Atrasado há 2 dias', async () => {
     const { host, sidePairs } = await setup({
-      rma: { ...fullRma, dueDate: '2026-10-18', deadline: { status: 'OVERDUE', dueSoonFrom: '2026-10-11', daysUntilDue: -2 } }
+      rma: { ...fullRma, dueDate: '2026-10-18', deadline: { status: 'OVERDUE', dueSoonFrom: '2026-10-11' } }
     });
     expect(sidePairs()['Data limite']).toContain('18/10/2026');
     const chip = host.querySelector('.rma-detail__side .deadline-chip');

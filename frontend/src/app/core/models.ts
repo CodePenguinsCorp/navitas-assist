@@ -183,15 +183,12 @@ export interface ProductRequest {
 }
 
 export interface DiagnosisResponse {
-  id: number;
   foundFailure: string | null;
   failureType: FailureType | null;
   probableCause: FailureCause | null;
   notes: string | null;
   diagnosedAt: string | null;
   technicianName: string | null;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface RmaItemRequest {
@@ -274,9 +271,7 @@ export interface RmaStatusHistoryResponse {
 }
 
 export interface RmaAssignmentHistoryResponse {
-  previousAssigneeId: number | null;
   previousAssigneeName: string | null;
-  newAssigneeId: number | null;
   newAssigneeName: string | null;
   changedBy: string;
   changedAt: string;
@@ -327,7 +322,6 @@ export interface RmaItemWarrantyHistoryResponse {
 
 export interface RmaItemResponse {
   id: number | null;
-  productId: number;
   productName: string;
   productSku: string;
   batchNumber: string | null;
@@ -345,7 +339,6 @@ export type RmaDeadlineStatus = 'OVERDUE' | 'DUE_SOON' | 'ON_TRACK' | 'NO_DUE_DA
 export interface RmaDeadlineResponse {
   status: RmaDeadlineStatus;
   dueSoonFrom: string | null;
-  daysUntilDue: number | null;
 }
 
 /** One continuous stay in a stage; `leftAt` is null for the current stage. */
@@ -368,15 +361,8 @@ export type UpdateRmaDueDateRequest = { dueDate: string } | { clearDueDate: true
 export interface RmaResponse {
   id: number;
   code: string;
-  clientId: number;
   clientName: string;
   items: RmaItemResponse[];
-  productId: number;
-  productName: string;
-  productSku: string;
-  batchNumber: string | null;
-  serialNumber: string | null;
-  manufacturedAt: string | null;
   purchaseDate: string | null;
   purchaseDateUnknown: boolean;
   entryDate: string;
@@ -394,7 +380,6 @@ export interface RmaResponse {
   repairSummary: string | null;
   replacedPartsSummary: string | null;
   testSummary: string | null;
-  shippedAt: string | null;
   carrier: string | null;
   trackingCode: string | null;
   diagnosis: DiagnosisResponse | null;
@@ -536,11 +521,7 @@ export interface PartMovementResponse {
   reservedChange: number;
   onHandAfter: number;
   reservedAfter: number;
-  unitCost: number;
-  totalCost: number;
-  rmaId: number | null;
   rmaCode: string | null;
-  reservationId: number | null;
   reversedMovementId: number | null;
   reversed: boolean;
   reason: string | null;

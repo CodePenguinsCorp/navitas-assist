@@ -20,12 +20,11 @@ class RmaDeadlineServiceTest {
     private final RmaDeadlineService service = new RmaDeadlineService(properties);
 
     @ParameterizedTest
-    @CsvSource({"2026-11-21,ON_TRACK,8", "2026-11-20,DUE_SOON,7", "2026-11-13,DUE_SOON,0", "2026-11-12,OVERDUE,-1"})
-    void classifiesBoundaries(LocalDate dueDate, RmaDeadlineStatus status, long days) {
+    @CsvSource({"2026-11-21,ON_TRACK", "2026-11-20,DUE_SOON", "2026-11-13,DUE_SOON", "2026-11-12,OVERDUE"})
+    void classifiesBoundaries(LocalDate dueDate, RmaDeadlineStatus status) {
         RmaDeadlineResponse deadline = service.evaluate(rma(RmaStatus.IN_REPAIR, dueDate), TODAY);
 
         assertEquals(status, deadline.status());
-        assertEquals(days, deadline.daysUntilDue());
         assertEquals(dueDate.minusDays(7), deadline.dueSoonFrom());
     }
 
@@ -43,16 +42,15 @@ class RmaDeadlineServiceTest {
         RmaDeadlineResponse deadline = service.evaluate(rma(status, TODAY.minusDays(30)), TODAY);
 
         assertEquals(RmaDeadlineStatus.CLOSED, deadline.status());
-        assertNull(deadline.daysUntilDue());
         assertEquals(TODAY.minusDays(37), deadline.dueSoonFrom());
     }
 
     @Test
     void withoutDueDate() {
         RmaDeadlineResponse open = service.evaluate(rma(RmaStatus.RECEIVED, null), TODAY);
-        assertEquals(new RmaDeadlineResponse(RmaDeadlineStatus.NO_DUE_DATE, null, null), open);
+        assertEquals(new RmaDeadlineResponse(RmaDeadlineStatus.NO_DUE_DATE, null), open);
 
-        assertEquals(new RmaDeadlineResponse(RmaDeadlineStatus.CLOSED, null, null), service.evaluate(rma(RmaStatus.COMPLETED, null), TODAY));
+        assertEquals(new RmaDeadlineResponse(RmaDeadlineStatus.CLOSED, null), service.evaluate(rma(RmaStatus.COMPLETED, null), TODAY));
     }
 
     @Test

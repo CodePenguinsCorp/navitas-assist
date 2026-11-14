@@ -82,10 +82,10 @@ class EmptyIdentificationIntegrationTest {
         var updatedAt = jdbc.queryForObject("select updated_at from rmas where id = ?", Object.class, saved.getId());
         for (String path : List.of("/api/rmas/" + saved.getId())) {
             mvc.perform(get(path).with(asProfile("viewer", "VIEWER")))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.batchNumber").value(nullValue()))
-                .andExpect(jsonPath("$.serialNumber").value(nullValue())).andExpect(jsonPath("$.manufacturedAt").value(nullValue()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].batchNumber").value(nullValue()))
+                .andExpect(jsonPath("$.serialNumber").doesNotExist()).andExpect(jsonPath("$.items[0].manufacturedAt").value(nullValue()))
                 .andExpect(jsonPath("$.items[0].serialNumber").value(nullValue()))
-                .andExpect(jsonPath("$.items[0].productId").value(product.getId()))
+                .andExpect(jsonPath("$.items[0].productSku").value(product.getSku()))
                 .andExpect(jsonPath("$.items[0].warrantyMonths").value(withItem ? 6 : 12))
                 .andExpect(jsonPath("$.items[0].warrantyStatus").value("PENDING"));
         }
@@ -106,7 +106,7 @@ class EmptyIdentificationIntegrationTest {
         assertEquals(RmaPriority.MEDIUM, rmas.findById(saved.getId()).orElseThrow().getPriority());
         mvc.perform(put("/api/rmas/{id}", saved.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(Map.of("items", identifiedItems()))))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.serialNumber").value("NAV69-SERIAL"));
+            .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].serialNumber").value("NAV69-SERIAL"));
         mvc.perform(get("/api/rmas/{id}", saved.getId()).with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].serialNumber").value("NAV69-SERIAL"));
         assertEquals("NAV69-SERIAL", row("rmas", saved.getId()).get("serial_number"));
@@ -127,7 +127,7 @@ class EmptyIdentificationIntegrationTest {
         long id = mapper.readTree(response.getResponse().getContentAsString()).get("id").asLong();
         createdIds.add(id);
         mvc.perform(get("/api/rmas/{id}", id).with(asProfile("viewer", "VIEWER")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.serialNumber").value("NAV69-SERIAL"));
+            .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].serialNumber").value("NAV69-SERIAL"));
     }
 
     @Test

@@ -18,7 +18,7 @@ const reservation = (id: number, status: ReservationStatus): PartReservationResp
 
 const MOVEMENT: PartMovementResponse = {
   id: 30, partId: 4, partCode: 'PCA-1', partName: 'Capacitor', type: 'CONSUMPTION', quantity: 2,
-  onHandChange: -2, reservedChange: -2, onHandAfter: 3, reservedAfter: 0, unitCost: 10, totalCost: 20, rmaId: 7, rmaCode: 'OS-7', reservationId: 2,
+  onHandChange: -2, reservedChange: -2, onHandAfter: 3, reservedAfter: 0, rmaCode: 'OS-7', 
   reason: 'Troca da placa', reversed: true, reversedMovementId: null, createdBy: 'tech', createdAt: '2026-10-24T13:00:00Z'
 };
 

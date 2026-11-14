@@ -7,7 +7,6 @@ import br.com.navitasassist.product.Product;
 
 public record RmaItemResponse(
     Long id,
-    Long productId,
     String productName,
     String productSku,
     String batchNumber,
@@ -31,7 +30,6 @@ public record RmaItemResponse(
     private static RmaItemResponse from(Long id, Product product, ItemIdentification identification, ItemWarranty warranty, WarrantyOverrideResponse override) {
         return new RmaItemResponse(
             id,
-            product.getId(),
             product.getName(),
             product.getSku(),
             identification.getBatchNumber(),

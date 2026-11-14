@@ -165,16 +165,15 @@ interface RmaFormHarness {
 }
 
 const createdRma: RmaResponse = {
-  id: 1, code: 'OS-2026-000001', clientId: 1, clientName: 'Cliente',
-  items: [{ id: 1, productId: 2, productName: 'Produto', productSku: 'SKU-2', batchNumber: null,
+  id: 1, code: 'OS-2026-000001', clientName: 'Cliente',
+  items: [{ id: 1, productName: 'Produto', productSku: 'SKU-2', batchNumber: null,
     serialNumber: 'SER-2', manufacturedAt: null, warrantyMonths: 12, warrantyExpiresAt: null, calculatedWarrantyStatus: WarrantyStatus.PENDING, warrantyOverride: null, warrantyStatus: WarrantyStatus.PENDING }],
-  productId: 2, productName: 'Produto', productSku: 'SKU-2', batchNumber: null, serialNumber: 'SER-2',
-  manufacturedAt: null, purchaseDate: null, purchaseDateUnknown: true, entryDate: '2026-10-20',
+  purchaseDate: null, purchaseDateUnknown: true, entryDate: '2026-10-20',
   invoiceNumber: 'NF-123', receivedBy: 'tester', reportedFailure: 'Falha', receivedAccessories: null,
   physicalCondition: null, priority: 'MEDIUM', status: 'RECEIVED', assigneeId: null, assigneeName: null,
-  repairSummary: null, replacedPartsSummary: null, testSummary: null, shippedAt: null, carrier: null,
+  repairSummary: null, replacedPartsSummary: null, testSummary: null, carrier: null,
   trackingCode: null, diagnosis: null, statusHistory: [], assignmentHistory: [], currentBlock: null, blockHistory: [],
-  dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [], warrantyHistory: [],
+  dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [], warrantyHistory: [],
   createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z',
 };
 

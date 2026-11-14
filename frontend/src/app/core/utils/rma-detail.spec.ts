@@ -21,9 +21,8 @@ import {
 // Hoje o módulo ./rma-detail não existe: o vermelho é de resolução do import (compilação).
 
 const diagnosis: DiagnosisResponse = {
-  id: 1, foundFailure: 'Capacitor estufado', failureType: 'POWER_SUPPLY', probableCause: 'COMPONENT',
+  foundFailure: 'Capacitor estufado', failureType: 'POWER_SUPPLY', probableCause: 'COMPONENT',
   notes: 'Trocar lote', diagnosedAt: '2026-10-21', technicianName: 'Bia',
-  createdAt: '2026-10-21T12:00:00Z', updatedAt: '2026-10-21T12:00:00Z'
 };
 
 function statusRecord(overrides: Partial<RmaStatusHistoryResponse> = {}): RmaStatusHistoryResponse {
@@ -32,7 +31,7 @@ function statusRecord(overrides: Partial<RmaStatusHistoryResponse> = {}): RmaSta
 
 function assigneeRecord(overrides: Partial<RmaAssignmentHistoryResponse> = {}): RmaAssignmentHistoryResponse {
   return {
-    previousAssigneeId: null, previousAssigneeName: null, newAssigneeId: 7, newAssigneeName: 'Ana',
+    previousAssigneeName: null, newAssigneeName: 'Ana',
     changedBy: 'bia', changedAt: '2026-10-20T12:00:00Z', ...overrides
   };
 }

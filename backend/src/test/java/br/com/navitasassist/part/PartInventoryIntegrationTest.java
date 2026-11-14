@@ -148,7 +148,10 @@ class PartInventoryIntegrationTest {
     @Test
     void shouldReserveWithoutConsumingBalanceAndReduceAvailability() throws Exception {
         long partId = createPart("PCA-RES", "10.00", "0");
-        movement(partId, "ENTRY", "5", null, ADMIN).andExpect(status().isCreated());
+        movement(partId, "ENTRY", "5", null, ADMIN).andExpect(status().isCreated())
+            .andExpect(jsonPath("$.partCode").value("PCA-RES"))
+            .andExpect(jsonPath("$.unitCost").doesNotExist()).andExpect(jsonPath("$.totalCost").doesNotExist())
+            .andExpect(jsonPath("$.rmaId").doesNotExist()).andExpect(jsonPath("$.reservationId").doesNotExist());
 
         reserve(rma.getId(), partId, "2", TECHNICIAN)
             .andExpect(status().isCreated())

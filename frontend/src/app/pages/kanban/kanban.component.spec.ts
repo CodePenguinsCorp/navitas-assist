@@ -505,7 +505,7 @@ describe('KanbanComponent filters', () => {
   it('filters by each deadline option and keeps closed ordens de serviço only under Todos', () => {
     const extra = (id: number, dueDate: string | null, status: RmaResponse['status'] = 'TRIAGE'): RmaResponse => ({
       ...TEST_RMAS[0], id, code: `NAV-00${id}`, status, dueDate,
-      deadline: { status: 'ON_TRACK', dueSoonFrom: dueDate ? shiftDate(dueDate, -7) : null, daysUntilDue: null },
+      deadline: { status: 'ON_TRACK', dueSoonFrom: dueDate ? shiftDate(dueDate, -7) : null },
     });
     (component as unknown as { rmasSignal: { set(value: RmaResponse[]): void } }).rmasSignal.set([
       extra(11, '2026-10-19'), extra(12, '2026-10-22'), extra(13, '2026-12-01'), extra(14, null), extra(15, '2026-10-01', 'COMPLETED'),
@@ -700,12 +700,10 @@ function buildRma(values: {
   return {
     id: values.id,
     code: values.code,
-    clientId: values.id,
     clientName: values.clientName,
     items: [
       {
         id: values.id,
-        productId: values.id,
         productName: values.productName,
         productSku: values.productSku,
         batchNumber: values.batchNumber,
@@ -718,12 +716,6 @@ function buildRma(values: {
         warrantyOverride: null,
       },
     ],
-    productId: values.id,
-    productName: values.productName,
-    productSku: values.productSku,
-    batchNumber: values.batchNumber,
-    serialNumber: values.serialNumber,
-    manufacturedAt: '2026-01-01',
     purchaseDate: '2026-02-01',
     purchaseDateUnknown: false,
     entryDate: values.entryDate,
@@ -739,7 +731,6 @@ function buildRma(values: {
     repairSummary: null,
     replacedPartsSummary: null,
     testSummary: null,
-    shippedAt: null,
     carrier: null,
     trackingCode: null,
     diagnosis: null,
@@ -749,8 +740,8 @@ function buildRma(values: {
     blockHistory: [],
     dueDate: values.dueDate ?? null,
     deadline: values.dueDate
-      ? { status: values.status === 'COMPLETED' ? 'CLOSED' : 'DUE_SOON', dueSoonFrom: shiftDate(values.dueDate, -7), daysUntilDue: 0 }
-      : { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null },
+      ? { status: values.status === 'COMPLETED' ? 'CLOSED' : 'DUE_SOON', dueSoonFrom: shiftDate(values.dueDate, -7) }
+      : { status: 'NO_DUE_DATE', dueSoonFrom: null },
     stagePeriods: [{ status: values.status, enteredAt: '2026-10-20T11:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [], warrantyHistory: [],
     createdAt: '2026-10-10T12:00:00Z',
     updatedAt: values.updatedAt,

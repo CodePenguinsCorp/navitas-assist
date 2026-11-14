@@ -85,7 +85,7 @@ Convenções:
 | `GET /api/parts` | autenticado | Busca peças (`query`). |
 | `GET /api/parts/pending` | autenticado | Reservas pendentes. |
 | `GET /api/parts/replenishment` | autenticado | Peças a repor. |
-| `GET /api/parts/{id}/movements` | autenticado | Movimentações. |
+| `GET /api/parts/{id}/movements` | autenticado | Movimentações, sem custos (os custos ficam na peça e nas reservas). |
 | `POST /api/parts` | `pecas.movimentar` | Cadastra peça. |
 | `PUT /api/parts/{id}` | `pecas.movimentar` | Altera peça. |
 | `POST /api/parts/{id}/movements` | `pecas.movimentar` | Registra movimentação. |

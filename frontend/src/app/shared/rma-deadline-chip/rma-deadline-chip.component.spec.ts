@@ -22,7 +22,7 @@ describe('RmaDeadlineChipComponent', () => {
     return buildRma({
       status: 'IN_REPAIR',
       dueDate,
-      deadline: { status: dueDate ? 'ON_TRACK' : 'NO_DUE_DATE', dueSoonFrom: dueDate ? shift(dueDate, -7) : null, daysUntilDue: null },
+      deadline: { status: dueDate ? 'ON_TRACK' : 'NO_DUE_DATE', dueSoonFrom: dueDate ? shift(dueDate, -7) : null },
       ...overrides
     });
   }
@@ -42,7 +42,7 @@ describe('RmaDeadlineChipComponent', () => {
   it('hides on the card when on track, without due date or closed', () => {
     expect(render(withDue('2026-12-30'))).toBeNull();
     expect(render(withDue(null))).toBeNull();
-    expect(render(withDue('2026-11-01', { status: 'COMPLETED', deadline: { status: 'CLOSED', dueSoonFrom: '2026-10-25', daysUntilDue: null } }))).toBeNull();
+    expect(render(withDue('2026-11-01', { status: 'COMPLETED', deadline: { status: 'CLOSED', dueSoonFrom: '2026-10-25' } }))).toBeNull();
   });
 
   it('shows Atrasado há 2 dias with its state', () => {

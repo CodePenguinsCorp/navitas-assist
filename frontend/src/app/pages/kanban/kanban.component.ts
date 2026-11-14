@@ -764,10 +764,6 @@ function rmaSearchText(rma: RmaResponse): string {
     [
       rma.code,
       rma.clientName,
-      rma.productName,
-      rma.productSku,
-      rma.batchNumber,
-      rma.serialNumber,
       ...itemValues,
     ].join(' '),
   );

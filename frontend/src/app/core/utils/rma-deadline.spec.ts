@@ -19,7 +19,7 @@ function rma(dueDate: string | null, status: RmaStatus = 'IN_REPAIR', backend: R
   return {
     status,
     dueDate,
-    deadline: { status: dueDate ? backend : 'NO_DUE_DATE', dueSoonFrom: dueDate ? minusDays(dueDate, 7) : null, daysUntilDue: null }
+    deadline: { status: dueDate ? backend : 'NO_DUE_DATE', dueSoonFrom: dueDate ? minusDays(dueDate, 7) : null }
   };
 }
 

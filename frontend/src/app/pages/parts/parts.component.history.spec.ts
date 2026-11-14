@@ -15,8 +15,8 @@ const PART: PartResponse = {
 const OTHER_PART: PartResponse = { ...PART, id: 5, code: 'PCB-2', name: 'Peça B', unit: 'un' };
 const CONSUMPTION: PartMovementResponse = {
   id: 9, partId: 4, partCode: 'PCA-1', partName: 'Capacitor', type: 'CONSUMPTION', quantity: 1.5,
-  onHandChange: -1.5, reservedChange: -1.5, onHandAfter: 10, reservedAfter: 4, unitCost: 10, totalCost: 15,
-  rmaId: 7, rmaCode: 'OS-7', reservationId: 2, reversedMovementId: null, reversed: false,
+  onHandChange: -1.5, reservedChange: -1.5, onHandAfter: 10, reservedAfter: 4, 
+  rmaCode: 'OS-7', reversedMovementId: null, reversed: false,
   reason: 'Peça instalada', createdBy: 'tech', createdAt: '2026-10-24T12:00:00Z'
 };
 const REVERSAL: PartMovementResponse = {

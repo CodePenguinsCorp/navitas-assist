@@ -108,9 +108,9 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.invoiceNumber").value("NF-123"))
             .andExpect(jsonPath("$.invoiceFileName").doesNotExist())
             .andExpect(jsonPath("$.items", hasSize(2)))
-            .andExpect(jsonPath("$.items[0].productId").value(firstProduct.getId()))
+            .andExpect(jsonPath("$.items[0].productSku").value(firstProduct.getSku()))
             .andExpect(jsonPath("$.items[0].batchNumber").value("LOT-A"))
-            .andExpect(jsonPath("$.items[1].productId").value(secondProduct.getId()))
+            .andExpect(jsonPath("$.items[1].productSku").value(secondProduct.getSku()))
             .andExpect(jsonPath("$.items[1].batchNumber").value("LOT-B"))
             .andExpect(jsonPath("$.items[1].serialNumber").value("SERIAL-B"))
             .andExpect(jsonPath("$.items[0].warrantyMonths").value(12))
@@ -308,10 +308,12 @@ class RmaControllerIntegrationTest {
                 .content(objectMapper.writeValueAsString(payload)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items", hasSize(2)))
-            .andExpect(jsonPath("$.items[0].productId").value(longWarrantyProduct.getId()))
-            .andExpect(jsonPath("$.items[1].productId").value(shortWarrantyProduct.getId()))
-            .andExpect(jsonPath("$.productId").value(longWarrantyProduct.getId()))
-            .andExpect(jsonPath("$.batchNumber").value("NEW-LOT-A"))
+            .andExpect(jsonPath("$.items[0].productSku").value(longWarrantyProduct.getSku()))
+            .andExpect(jsonPath("$.items[1].productSku").value(shortWarrantyProduct.getSku()))
+            .andExpect(jsonPath("$.productId").doesNotExist())
+            .andExpect(jsonPath("$.clientId").doesNotExist())
+            .andExpect(jsonPath("$.shippedAt").doesNotExist())
+            .andExpect(jsonPath("$.items[0].batchNumber").value("NEW-LOT-A"))
             .andExpect(jsonPath("$.items[0].warrantyStatus").value("IN_WARRANTY"))
             .andExpect(jsonPath("$.items[0].warrantyExpiresAt").value("2027-01-01"))
             .andExpect(jsonPath("$.items[1].warrantyStatus").value("OUT_OF_WARRANTY"))
@@ -354,7 +356,7 @@ class RmaControllerIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items", hasSize(1)))
             .andExpect(jsonPath("$.items[0].id").doesNotExist())
-            .andExpect(jsonPath("$.items[0].productId").value(product.getId()))
+            .andExpect(jsonPath("$.items[0].productSku").value(product.getSku()))
             .andExpect(jsonPath("$.items[0].serialNumber").value("LEGACY-SERIAL"))
             .andExpect(jsonPath("$.items[0].warrantyStatus").value("PENDING"))
             .andExpect(jsonPath("$.warrantyOverridden").doesNotExist());
@@ -486,8 +488,8 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.assigneeId").value(firstTechnician.getId()))
             .andExpect(jsonPath("$.assigneeName").value("First Technician"))
             .andExpect(jsonPath("$.assignmentHistory", hasSize(1)))
-            .andExpect(jsonPath("$.assignmentHistory[0].previousAssigneeId").doesNotExist())
-            .andExpect(jsonPath("$.assignmentHistory[0].newAssigneeId").value(firstTechnician.getId()))
+            .andExpect(jsonPath("$.assignmentHistory[0].previousAssigneeName").doesNotExist())
+            .andExpect(jsonPath("$.assignmentHistory[0].newAssigneeId").doesNotExist())
             .andExpect(jsonPath("$.assignmentHistory[0].newAssigneeName").value("First Technician"))
             .andExpect(jsonPath("$.assignmentHistory[0].changedBy").value("service.desk"));
 
@@ -581,6 +583,21 @@ class RmaControllerIntegrationTest {
     }
 
     @Test
+    void diagnosisResponseCarriesOnlyTheFieldsShown() throws Exception {
+        LocalDate today = LocalDate.now(BUSINESS_ZONE);
+        long id = createdId(postDueDateRma("DIAG-MIN", today, null));
+        mockMvc.perform(put("/api/rmas/{id}/diagnosis", id).with(asProfile("tech", "TECHNICIAN")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("foundFailure", "Capacitor", "diagnosedAt", today.toString(), "technicianName", "Tec"))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.diagnosis.foundFailure").value("Capacitor"))
+            .andExpect(jsonPath("$.diagnosis.technicianName").value("Tec"))
+            .andExpect(jsonPath("$.diagnosis.id").doesNotExist())
+            .andExpect(jsonPath("$.diagnosis.createdAt").doesNotExist())
+            .andExpect(jsonPath("$.diagnosis.updatedAt").doesNotExist());
+    }
+
+    @Test
     void shouldExposeDeadlineStatus() throws Exception {
         LocalDate today = LocalDate.now(BUSINESS_ZONE);
         long overdue = createdId(postDueDateRma("DEADLINE-LATE", today.minusDays(5), today.minusDays(1)));
@@ -589,11 +606,10 @@ class RmaControllerIntegrationTest {
 
         mockMvc.perform(get("/api/rmas/{id}", overdue).with(asProfile("viewer", "VIEWER")))
             .andExpect(jsonPath("$.deadline.status").value("OVERDUE"))
-            .andExpect(jsonPath("$.deadline.daysUntilDue").value(-1))
+            .andExpect(jsonPath("$.deadline.daysUntilDue").doesNotExist())
             .andExpect(jsonPath("$.deadline.dueSoonFrom").value(today.minusDays(8).toString()));
         mockMvc.perform(get("/api/rmas/{id}", soon).with(asProfile("viewer", "VIEWER")))
-            .andExpect(jsonPath("$.deadline.status").value("DUE_SOON"))
-            .andExpect(jsonPath("$.deadline.daysUntilDue").value(3));
+            .andExpect(jsonPath("$.deadline.status").value("DUE_SOON"));
         mockMvc.perform(get("/api/rmas/{id}", none).with(asProfile("viewer", "VIEWER")))
             .andExpect(jsonPath("$.deadline.status").value("NO_DUE_DATE"))
             .andExpect(jsonPath("$.deadline.dueSoonFrom").doesNotExist());

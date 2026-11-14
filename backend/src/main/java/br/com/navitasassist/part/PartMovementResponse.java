@@ -3,6 +3,7 @@ package br.com.navitasassist.part;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+/** Movimento de estoque sem custos: o código e o nome da peça aparecem na OS e na mensagem de sucesso da tela Peças. */
 public record PartMovementResponse(
     Long id,
     Long partId,
@@ -14,11 +15,7 @@ public record PartMovementResponse(
     BigDecimal reservedChange,
     BigDecimal onHandAfter,
     BigDecimal reservedAfter,
-    BigDecimal unitCost,
-    BigDecimal totalCost,
-    Long rmaId,
     String rmaCode,
-    Long reservationId,
     Long reversedMovementId,
     boolean reversed,
     String reason,
@@ -37,11 +34,7 @@ public record PartMovementResponse(
             movement.getReservedChange(),
             movement.getOnHandAfter(),
             movement.getReservedAfter(),
-            movement.getUnitCost(),
-            movement.getTotalCost(),
-            movement.getRma() == null ? null : movement.getRma().getId(),
             movement.getRma() == null ? null : movement.getRma().getCode(),
-            movement.getReservation() == null ? null : movement.getReservation().getId(),
             movement.getReversedMovement() == null ? null : movement.getReversedMovement().getId(),
             reversed,
             movement.getReason(),

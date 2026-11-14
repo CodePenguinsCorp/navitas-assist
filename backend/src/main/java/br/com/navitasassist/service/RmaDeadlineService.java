@@ -3,7 +3,6 @@ package br.com.navitasassist.service;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -33,14 +32,13 @@ public class RmaDeadlineService {
         LocalDate dueDate = rma.getDueDate();
         LocalDate dueSoonFrom = dueDate == null ? null : dueDate.minusDays(properties.getWarningDays());
         if (CLOSED_STATUSES.contains(rma.getStatus())) {
-            return new RmaDeadlineResponse(RmaDeadlineStatus.CLOSED, dueSoonFrom, null);
+            return new RmaDeadlineResponse(RmaDeadlineStatus.CLOSED, dueSoonFrom);
         }
         if (dueDate == null) {
-            return new RmaDeadlineResponse(RmaDeadlineStatus.NO_DUE_DATE, null, null);
+            return new RmaDeadlineResponse(RmaDeadlineStatus.NO_DUE_DATE, null);
         }
-        long days = ChronoUnit.DAYS.between(today, dueDate);
         RmaDeadlineStatus status = today.isAfter(dueDate) ? RmaDeadlineStatus.OVERDUE
             : today.isBefore(dueSoonFrom) ? RmaDeadlineStatus.ON_TRACK : RmaDeadlineStatus.DUE_SOON;
-        return new RmaDeadlineResponse(status, dueSoonFrom, days);
+        return new RmaDeadlineResponse(status, dueSoonFrom);
     }
 }

@@ -13,7 +13,7 @@ describe('RmaDueDateFieldComponent', () => {
   let response: () => ReturnType<RmaService['updateDueDate']>;
   let saved: RmaResponse[];
 
-  const RMA = buildRma({ id: 4, code: 'OS-2026-000004', entryDate: '2026-11-02', dueDate: '2026-11-20', deadline: { status: 'ON_TRACK', dueSoonFrom: '2026-11-13', daysUntilDue: 10 } });
+  const RMA = buildRma({ id: 4, code: 'OS-2026-000004', entryDate: '2026-11-02', dueDate: '2026-11-20', deadline: { status: 'ON_TRACK', dueSoonFrom: '2026-11-13' } });
 
   beforeEach(async () => {
     calls = [];
@@ -64,7 +64,7 @@ describe('RmaDueDateFieldComponent', () => {
   });
 
   it('shows Sem data limite in the muted empty state', () => {
-    mount({ rma: { ...RMA, dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null } } });
+    mount({ rma: { ...RMA, dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null } } });
     expect(text(trigger()!.querySelector('.due-date-field__text'))).toBe('Sem data limite');
     expect(trigger()!.classList).toContain('is-empty');
   });

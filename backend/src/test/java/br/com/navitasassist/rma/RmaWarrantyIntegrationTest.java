@@ -257,7 +257,7 @@ class RmaWarrantyIntegrationTest {
             .andExpect(jsonPath("$.items[1].serialNumber").value("SECOND"))
             .andExpect(jsonPath("$.items[1].id").value(secondId))
             .andExpect(jsonPath("$.items[2].serialNumber").value("SERIAL"))
-            .andExpect(jsonPath("$.serialNumber").value("NEW"));
+            .andExpect(jsonPath("$.serialNumber").doesNotExist());
         em.flush();
         em.clear();
         mvc.perform(get("/api/rmas/{id}", rma.getId()).with(asProfile("reader", "VIEWER")))
@@ -265,7 +265,7 @@ class RmaWarrantyIntegrationTest {
             .andExpect(jsonPath("$.items[0].serialNumber").value("NEW"))
             .andExpect(jsonPath("$.items[1].serialNumber").value("SECOND"))
             .andExpect(jsonPath("$.items[2].serialNumber").value("SERIAL"))
-            .andExpect(jsonPath("$.serialNumber").value("NEW"));
+            .andExpect(jsonPath("$.serialNumber").doesNotExist());
         assertThat(jdbc.queryForObject("select serial_number from rmas where id = ?", String.class, rma.getId())).isEqualTo("NEW");
     }
 

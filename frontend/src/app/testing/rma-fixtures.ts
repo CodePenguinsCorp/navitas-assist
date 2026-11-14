@@ -4,7 +4,6 @@ import { PageResponse, RmaItemResponse, RmaResponse, WarrantyStatus } from '../c
 export function buildRmaItem(overrides: Partial<RmaItemResponse> = {}): RmaItemResponse {
   return {
     id: 1,
-    productId: 2,
     productName: 'Produto',
     productSku: 'SKU-2',
     batchNumber: null,
@@ -21,19 +20,11 @@ export function buildRmaItem(overrides: Partial<RmaItemResponse> = {}): RmaItemR
 
 export function buildRma(overrides: Partial<RmaResponse> = {}): RmaResponse {
   const items = overrides.items ?? [buildRmaItem()];
-  const first = items[0];
   return {
     id: 1,
     code: 'OS-2026-000001',
-    clientId: 1,
     clientName: 'Cliente',
     items,
-    productId: first?.productId ?? 2,
-    productName: first?.productName ?? 'Produto',
-    productSku: first?.productSku ?? 'SKU-2',
-    batchNumber: first?.batchNumber ?? null,
-    serialNumber: first?.serialNumber ?? null,
-    manufacturedAt: first?.manufacturedAt ?? null,
     purchaseDate: null,
     purchaseDateUnknown: true,
     entryDate: '2026-10-20',
@@ -50,7 +41,6 @@ export function buildRma(overrides: Partial<RmaResponse> = {}): RmaResponse {
     repairSummary: null,
     replacedPartsSummary: null,
     testSummary: null,
-    shippedAt: null,
     carrier: null,
     trackingCode: null,
     diagnosis: null,
@@ -58,7 +48,7 @@ export function buildRma(overrides: Partial<RmaResponse> = {}): RmaResponse {
     stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 0 }],
     assignmentHistory: [],
     dueDateHistory: [], warrantyHistory: [],
-    deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null },
+    deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null },
     currentBlock: null,
     blockHistory: [],
     createdAt: '2026-10-20T12:00:00Z',

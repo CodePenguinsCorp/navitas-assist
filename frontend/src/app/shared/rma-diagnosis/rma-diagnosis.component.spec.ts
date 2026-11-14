@@ -9,8 +9,8 @@ import { buildRma } from '../../testing/rma-fixtures';
 import { RmaDiagnosisComponent } from './rma-diagnosis.component';
 
 const diagnosis: DiagnosisResponse = {
-  id: 1, foundFailure: 'Falha na fonte', failureType: 'POWER_SUPPLY', probableCause: 'COMPONENT', notes: 'Trocar capacitor',
-  diagnosedAt: '2026-11-12', technicianName: 'Ana', createdAt: '', updatedAt: ''
+  foundFailure: 'Falha na fonte', failureType: 'POWER_SUPPLY', probableCause: 'COMPONENT', notes: 'Trocar capacitor',
+  diagnosedAt: '2026-11-12', technicianName: 'Ana'
 };
 
 describe('Diagnóstico inline', () => {
