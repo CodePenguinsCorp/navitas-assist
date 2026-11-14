@@ -18,6 +18,16 @@ describe('RmaRepairPanelComponent', () => {
     const r = await setup(['rma.diagnosticar'], 'IN_REPAIR', []);
     return r.fixture;
   }
+  it('folds empty interventions and opens the form from the header', async () => {
+    const fixture = await setupEmpty();
+    const host = fixture.nativeElement as HTMLElement;
+    const toggle = host.querySelector<HTMLButtonElement>('.collapsible__toggle')!;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    host.querySelector<HTMLButtonElement>('.collapsible__actions button')!.click(); fixture.detectChanges();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(host.querySelector('form')).not.toBeNull();
+  });
+
   it('shows Portuguese labels, technician and total hours', async () => {
     const { fixture } = await setup([]);
     expect(fixture.nativeElement.textContent).toContain('Limpeza');

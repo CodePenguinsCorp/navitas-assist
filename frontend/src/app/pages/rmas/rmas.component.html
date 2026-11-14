@@ -232,11 +232,12 @@
           @switch (detailTab()) {
             @case ('products') {
               <section class="rma-details__section">
-                <h4>Falha relatada</h4>
+                <app-collapsible-section title="Falha relatada" icon="alert" [open]="!!rma.reportedFailure" storageKey="rma.failure">
                 <p class="rma-detail-copy">{{ rma.reportedFailure }}</p>
+                </app-collapsible-section>
               </section>
               <section class="rma-details__section">
-                <h4>{{ sectionLabel('products') }}</h4>
+                <app-collapsible-section title="Produtos" icon="box" [count]="rma.items.length" [open]="rma.items.length > 0" storageKey="rma.products">
                 <p class="rma-detail-copy">Garantia avaliada na entrada da OS.</p>
                 <div class="rma-items-detail">
                   @for (item of rma.items; track item.id ?? $index) {
@@ -256,19 +257,21 @@
                         }
                       </dl>
                     </article>
-                  }
+                  } @empty { <p class="repair-empty">Nenhum produto registrado.</p> }
                 </div>
+                </app-collapsible-section>
               </section>
               @let receipt = receiptFacts(rma);
               @if (receipt.length > 0) {
                 <section class="rma-details__section">
-                  <h4>{{ sectionLabel('receipt') }}</h4>
+                  <app-collapsible-section title="Recebimento" icon="inbox" [open]="receipt.length > 0" storageKey="rma.receipt">
                   <dl class="meta-list rma-details__pairs">
                     @for (fact of receipt; track fact.label) {
                       <div><dt>{{ fact.label }}</dt><dd>{{ fact.value }}</dd></div>
                     }
                   </dl>
-                </section>
+                  </app-collapsible-section>
+              </section>
               }
             }
             @case ('diagnosis') {
@@ -279,13 +282,14 @@
               @let repair = repairFacts(rma);
               @if (repair.length > 0) {
                 <section class="rma-details__section">
-                  <h4>{{ sectionLabel('repair') }}</h4>
+                  <app-collapsible-section title="Reparo e testes" icon="wrench" [open]="repair.length > 0" storageKey="rma.repair">
                   <dl class="meta-list rma-details__pairs">
                     @for (fact of repair; track fact.label) {
                       <div><dt>{{ fact.label }}</dt><dd>{{ fact.value }}</dd></div>
                     }
                   </dl>
-                </section>
+                  </app-collapsible-section>
+              </section>
               }
             }
             @case ('parts') {
@@ -307,7 +311,8 @@
             }
             @case ('history') {
               <app-rma-stage-times class="rma-details__stage-times" [rma]="rma" />
-              <app-rma-history-list #historyList="rmaHistoryList" [rma]="rma" [showHeading]="true">
+              <app-collapsible-section title="Histórico" icon="history" [count]="rmaHistory(rma).length" [open]="rmaHistory(rma).length > 0" storageKey="rma.history">
+              <app-rma-history-list #historyList="rmaHistoryList" [rma]="rma">
               @let history = historyList.entries();
               @if (history.length > 0) {
                 <ol class="record-list">
@@ -326,9 +331,10 @@
                   }
                 </ol>
               } @else {
-                <p class="rma-detail-copy">Nenhuma alteração registrada.</p>
+                <p class="repair-empty">Nenhuma alteração registrada.</p>
               }
               </app-rma-history-list>
+              </app-collapsible-section>
             }
           }
         </div>

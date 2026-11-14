@@ -1,6 +1,6 @@
 <div class="parts-panel">
 <section class="detail-card">
-  <app-collapsible-section title="Peças" icon="chip" storageKey="rma.parts">
+  <app-collapsible-section title="Peças" icon="chip" [open]="reservations().length > 0 || reserveOpen() || loadFailed()" storageKey="rma.parts">
     @if (canCreateReservation()) {
       <button sectionActions type="button" id="reserve-trigger" class="link-button" [attr.aria-expanded]="reserveOpen()" aria-controls="reserve-form" (click)="toggleReserve()"><app-icon name="plus" [size]="14" /> Reservar peça</button>
     }
@@ -133,7 +133,7 @@
 
 @if (hasLoaded() && !loading() && !loadFailed()) {
 <section class="repair-panel detail-card">
-  <app-collapsible-section title="Componentes trocados" icon="wrench" storageKey="rma.components">
+  <app-collapsible-section title="Componentes trocados" icon="wrench" [open]="replacedComponents().length > 0 || externalOpen() || !!externalError()" storageKey="rma.components">
       @if (canCreateReservation()) {
         <button sectionActions type="button" id="external-trigger" class="link-button" [attr.aria-expanded]="externalOpen() && !editingExternal()" aria-controls="external-form" (click)="toggleExternal()"><app-icon name="plus" [size]="14" /> Adicionar fora do estoque</button>
       }
@@ -171,7 +171,7 @@
 
 @if (parts()?.movements?.length) {
 <section class="detail-card">
-  <app-collapsible-section title="Movimentos de peças" icon="history" [count]="parts()!.movements.length" [open]="false" storageKey="rma.part-movements">
+  <app-collapsible-section title="Movimentos de peças" icon="history" [count]="parts()!.movements.length" [open]="parts()!.movements.length > 0" storageKey="rma.part-movements">
     <ul class="movements__list" id="parts-movements">
       @for (movement of parts()!.movements; track movement.id) {
         <li [class.is-reversed]="movement.reversed">

@@ -1,4 +1,6 @@
-import { Component, DestroyRef, ElementRef, EventEmitter, Injector, Output, afterNextRender, computed, inject, input, linkedSignal, signal } from '@angular/core';
+import { CollapsibleSectionComponent } from '../collapsible-section/collapsible-section.component';
+import { IconComponent } from '../icon/icon.component';
+import { Component, DestroyRef, ElementRef, EventEmitter, Injector, Output, afterNextRender, computed, inject, input, linkedSignal, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
@@ -18,11 +20,12 @@ type BlocksMode = 'idle' | 'block' | 'resolve';
  */
 @Component({
   selector: 'app-rma-blocks-section',
-  imports: [ReactiveFormsModule, RmaBlockHistoryComponent],
+  imports: [CollapsibleSectionComponent, IconComponent, ReactiveFormsModule, RmaBlockHistoryComponent],
   templateUrl: './rma-blocks-section.component.html',
   styleUrl: './rma-blocks-section.component.css'
 })
 export class RmaBlocksSectionComponent {
+  readonly section = viewChild(CollapsibleSectionComponent);
   readonly rma = input.required<RmaResponse>();
   /** The host is writing something else (status, assignment): the inline actions wait. */
   readonly disabled = input(false);

@@ -1,3 +1,4 @@
+import { ProtocolService } from '../../core/services/protocol.service';
 import { RmaWarrantyFieldComponent } from '../rma-warranty-field/rma-warranty-field.component';
 import { By } from '@angular/platform-browser';
 import { Component, signal } from '@angular/core';
@@ -73,6 +74,7 @@ async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; can
       { provide: AuthService, useValue: { currentUser: () => ({ name: 'Ana' }) } },
       { provide: ClockService, useValue: { now: signal(NOW) } },
       providePermissions(profilePermissions('ADMIN')),
+      { provide: ProtocolService, useValue: { listExecutions: () => of([]), listTemplates: () => of([]) } },
       { provide: RmaRepairService, useValue: { getRepair: () => of({ interventions: [], totalServiceHours: 0 }), listExternalComponents: () => of([]) } },
       { provide: PartService, useValue: { getRmaParts: () => of({ reservations: [], movements: [], reservedCost: 0, consumedCost: 0, pendingCount: 0 }), listOptions: () => of([]) } },
       { provide: ReportService, useValue: { downloadTechnicalReport: () => of() } },
@@ -139,10 +141,22 @@ describe('RmaDetailModalComponent collapsible sections', () => {
     expect(history().querySelectorAll('li.rma-detail__event')).toHaveLength(5);
   });
 
-  it('opens failure, blocks (active) and diagnosis; folds products (several), receipt, repair and history', async () => {
+  it('includes deferred panels in expand and fold all', async () => {
+    const { fixture, host, buttonByText } = await setup();
+    const [block] = await fixture.getDeferBlocks();
+    await block.render(DeferBlockState.Complete); fixture.detectChanges();
+    const headers = () => [...host.querySelectorAll<HTMLButtonElement>('.collapsible__toggle')];
+    expect(host.querySelector('app-rma-protocols')).not.toBeNull();
+    buttonByText('Expandir tudo')!.click(); fixture.detectChanges();
+    expect(headers().every(header => header.getAttribute('aria-expanded') === 'true')).toBe(true);
+    buttonByText('Recolher tudo')!.click(); fixture.detectChanges();
+    expect(headers().every(header => header.getAttribute('aria-expanded') === 'false')).toBe(true);
+  });
+
+  it('opens sections with content, including several products and history', async () => {
     const { host } = await setup();
     expect(states(host)).toEqual({
-      'Falha relatada': 'true', Impedimentos: 'true', Produtos: 'false', Recebimento: 'false', Diagnóstico: 'true', 'Reparo e testes': 'false', Histórico: 'false'
+      'Falha relatada': 'true', Impedimentos: 'true', Produtos: 'true', Recebimento: 'true', Diagnóstico: 'true', 'Reparo e testes': 'true', Histórico: 'true'
     });
   });
 
@@ -162,6 +176,7 @@ describe('RmaDetailModalComponent collapsible sections', () => {
 
   it('Recolher tudo folds every section and Expandir tudo opens them, remembering the choice', async () => {
     const { fixture, host, buttonByText } = await setup();
+    if (buttonByText('Recolher tudo')) { buttonByText('Recolher tudo')!.click(); fixture.detectChanges(); }
     expect(buttonByText('Expandir tudo')).toBeDefined();
     buttonByText('Expandir tudo')!.click();
     fixture.detectChanges();
@@ -222,7 +237,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     const { host, headingText } = await setup();
 
     expect([...host.querySelectorAll('.rma-detail__heading, .collapsible__heading, app-rma-diagnosis h3')].map(headingText)).toEqual([
-      'Falha relatada', 'Impedimentos', 'Produtos', 'Recebimento', 'Diagnóstico', 'Reparo e testes', 'Histórico'
+      'Falha relatada', 'Impedimentos', 'Produtos', 'Recebimento', 'Diagnóstico', 'Reparo e testes', 'Histórico', 'Tempo por etapa'
     ]);
   });
 
@@ -557,7 +572,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
         ]
       }
     });
-    const items = [...host.querySelectorAll('.rma-detail__side app-rma-stage-times li')].map((item) => item.textContent?.trim());
+    const items = [...host.querySelectorAll('.rma-detail__side app-rma-stage-times ol.sr-only li')].map((item) => item.textContent?.trim());
     expect(items).toEqual(['Recebida · 2 h', 'Triagem · 2 h (atual)']);
   });
 

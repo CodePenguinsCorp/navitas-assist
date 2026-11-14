@@ -110,6 +110,7 @@ describe('RmaProtocolsComponent result entry', () => {
   // Vermelho: as ações atuais dizem somente Iniciar/Registrar/Repetir/Concluir.
   it('uses explicit execution action labels and a named result section', async () => {
     await setup();
+    button('Executar protocolo')!.click(); render();
     for (const expected of ['Iniciar protocolo', 'Registrar resultado', 'Repetir registro', 'Concluir protocolo']) expect(button(expected)?.textContent?.trim() ?? '').toBe(expected);
     open(); expect(form()?.querySelector('fieldset legend')?.textContent).toBe('Resultado de Tensão'); expectCancelBeforePrimary(fixture.nativeElement);
   });

@@ -1,5 +1,6 @@
+import { CollapsibleSectionComponent } from '../collapsible-section/collapsible-section.component';
 import { IconComponent } from '../icon/icon.component';
-import { Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { viewChild, Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription, finalize } from 'rxjs';
@@ -28,11 +29,12 @@ interface EditingItem {
 
 @Component({
   selector: 'app-rma-protocols',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent],
+  imports: [CollapsibleSectionComponent, IconComponent, ReactiveFormsModule, CustomSelectComponent],
   templateUrl: './rma-protocols.component.html',
   styleUrl: './rma-protocols.component.css'
 })
 export class RmaProtocolsComponent {
+  readonly section = viewChild(CollapsibleSectionComponent);
   private readonly formBuilder = inject(FormBuilder);
   private readonly protocolService = inject(ProtocolService);
   private readonly permissions = inject(PermissionService);
@@ -44,6 +46,7 @@ export class RmaProtocolsComponent {
 
   readonly rmaId = input.required<number>();
 
+  protected readonly launchOpen = signal(false);
   protected readonly loading = signal(false);
   protected readonly loadFailed = signal(false);
   protected readonly hasLoaded = signal(false);

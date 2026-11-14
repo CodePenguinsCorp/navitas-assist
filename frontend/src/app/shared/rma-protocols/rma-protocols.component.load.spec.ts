@@ -93,6 +93,7 @@ describe('RmaProtocolsComponent loading', () => {
 
   it('keeps the template retry label and failure while the retry is pending', async () => {
     await setup({ templates: throwError(() => new Error()) });
+    button('Executar protocolo')!.click(); render();
     const retry$ = new Subject<ProtocolTemplateResponse[]>();
     service.listTemplates.mockReturnValue(retry$);
     button('Tentar novamente')!.click(); render();
@@ -109,6 +110,7 @@ describe('RmaProtocolsComponent loading', () => {
   it('reports template failure locally and retries without losing executions', async () => {
     const templates = new Subject<ProtocolTemplateResponse[]>();
     await setup({ templates });
+    button('Executar protocolo')!.click(); render();
     templates.error(new Error()); render();
     expect(fixture.nativeElement.querySelector('.protocol-launch')?.textContent).toContain('Não foi possível carregar as opções de protocolos.');
     expect(text()).toContain('Bancada PWM · v3'); expect(text()).not.toContain('Nenhum protocolo ativo disponível.');
@@ -121,6 +123,7 @@ describe('RmaProtocolsComponent loading', () => {
   // Vermelho: não há distinção entre catálogo pendente e catálogo sem opções ativas.
   it('does not present no active templates while still loading', async () => {
     const templates = new Subject<ProtocolTemplateResponse[]>(); await setup({ templates });
+    button('Executar protocolo')!.click(); render();
     expectPending(fixture.nativeElement); expect(text()).not.toContain('Nenhum protocolo ativo disponível.');
     templates.next([{ ...TEMPLATE, active: false }]); templates.complete(); render();
     expect(text()).toContain('Nenhum protocolo ativo disponível.'); expect(text()).not.toContain('Carregando opções de protocolos...');

@@ -1,3 +1,4 @@
+import { RmaProtocolsComponent } from '../rma-protocols/rma-protocols.component';
 import { RmaHistoryListComponent } from '../rma-history-list/rma-history-list.component';
 import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
@@ -45,7 +46,7 @@ import {
 
 @Component({
   selector: 'app-rma-detail-modal',
-  imports: [RmaHistoryListComponent, CollapsibleSectionComponent, RmaRepairPanelComponent, RmaPartsPanelComponent, RmaWarrantyFieldComponent, CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaStatusFieldComponent, RmaDiagnosisComponent, RouterLink],
+  imports: [RmaProtocolsComponent, RmaHistoryListComponent, CollapsibleSectionComponent, RmaRepairPanelComponent, RmaPartsPanelComponent, RmaWarrantyFieldComponent, CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaStatusFieldComponent, RmaDiagnosisComponent, RouterLink],
   templateUrl: './rma-detail-modal.component.html',
   styleUrl: './rma-detail-modal.component.css'
 })
@@ -113,7 +114,7 @@ export class RmaDetailModalComponent {
 
   /** Block flag beside the status: brings the Impedimentos section into view and moves focus there. */
   protected showBlocks(section: HTMLElement): void {
-    const fold = this.blocksFold();
+    const fold = this.blocks()?.section();
     const wasOpen = fold?.isOpen() ?? true;
     fold?.setOpen(true);
     section.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
@@ -123,13 +124,23 @@ export class RmaDetailModalComponent {
   }
 
   private readonly injector = inject(Injector);
-  private readonly blocksFold = viewChild<CollapsibleSectionComponent>('blocksFold');
+  private readonly blocks = viewChild(RmaBlocksSectionComponent);
   private readonly ownSections = viewChildren(CollapsibleSectionComponent);
+  private readonly interventions = viewChild(RmaRepairPanelComponent);
+  private readonly partsPanel = viewChild(RmaPartsPanelComponent);
+  private readonly protocols = viewChild(RmaProtocolsComponent);
+  private readonly stageTimes = viewChild(RmaStageTimesComponent);
   private readonly diagnosis = viewChild(RmaDiagnosisComponent);
-  /** Every folding section of the main column, the diagnosis row included. */
+  /** Every folding section, including the shared panels and stage times. */
   private readonly sections = computed(() => {
     const diagnosis = this.diagnosis()?.section();
-    return diagnosis ? [...this.ownSections(), diagnosis] : [...this.ownSections()];
+    return [
+      ...this.ownSections(),
+      ...(this.interventions()?.sections() ?? []),
+      ...(this.partsPanel()?.sections() ?? []),
+      ...[diagnosis, this.blocks()?.section(), this.protocols()?.section(), this.stageTimes()?.section()]
+        .filter((section): section is CollapsibleSectionComponent => !!section)
+    ];
   });
   protected readonly allOpen = computed(() => this.sections().every((section) => section.isOpen()));
   /** "Recolher tudo" while every section is open; otherwise "Expandir tudo". */

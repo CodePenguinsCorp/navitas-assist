@@ -16,6 +16,7 @@ describe('RmaBlocksSectionComponent', () => {
   const role = signal<LegacyProfileCode | readonly Permission[]>('TECHNICIAN');
 
   beforeEach(async () => {
+    localStorage.clear();
     role.set('TECHNICIAN');
     await TestBed.configureTestingModule({
       imports: [RmaBlocksSectionComponent],
@@ -57,6 +58,30 @@ describe('RmaBlocksSectionComponent', () => {
   };
   const submit = () => { form()!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); render(); };
   const blocked = (extra: Partial<RmaResponse> = {}): RmaResponse => ({ ...RMA, currentBlock: BLOCK, blockHistory: [BLOCK], ...extra });
+
+  it('keeps the header action visible when empty and unfolds its inline form', () => {
+    mount();
+    const toggle = host().querySelector<HTMLButtonElement>('.collapsible__toggle')!;
+    expect(toggle).not.toBeNull();
+    expect(text(toggle)).toContain('Impedimentos');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(host().querySelector('.collapsible__actions [data-blocks-trigger]')).not.toBeNull();
+    control('Sinalizar impedimento')!.click(); render();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(form()).not.toBeNull();
+    toggle.click(); render();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(host().querySelector<HTMLElement>('.collapsible__body')!.hidden).toBe(true);
+    toggle.click(); render();
+    expect(form()).not.toBeNull();
+    expect(localStorage.getItem('navitas.section.rma.blocks')).toBe('1');
+  });
+
+  it('opens an active impediment and puts Resolver in the header', () => {
+    mount(blocked());
+    expect(host().querySelector('.collapsible__toggle')?.getAttribute('aria-expanded')).toBe('true');
+    expect(text(host().querySelector('.collapsible__actions'))).toContain('Resolver');
+  });
 
   it.each([false, true])('não envia um formulário já aberto quando outra ação bloqueia o detalhe (resolver: %s)', resolving => {
     mount(resolving ? blocked() : RMA);

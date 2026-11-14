@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, Injector, Output, DestroyRef, afterNextRender, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { viewChildren, Component, ElementRef, EventEmitter, Injector, Output, DestroyRef, afterNextRender, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription, finalize } from 'rxjs';
@@ -148,6 +148,7 @@ const ACTION_MESSAGES: Record<PartReservationAction, string> = {
   `]
 })
 export class RmaPartsPanelComponent {
+  readonly sections = viewChildren(CollapsibleSectionComponent);
   private readonly formBuilder = inject(FormBuilder);
   private readonly partService = inject(PartService);
   private readonly permissions = inject(PermissionService);

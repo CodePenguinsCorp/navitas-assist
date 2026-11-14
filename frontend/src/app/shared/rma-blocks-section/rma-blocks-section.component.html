@@ -1,3 +1,7 @@
+<app-collapsible-section title="Impedimentos" icon="lock" [open]="!!current().currentBlock" storageKey="rma.blocks">
+  @if (canEdit()) {
+    <button sectionActions type="button" class="link-button blocks-section__action" data-blocks-trigger aria-controls="rma-blocks-form" [attr.aria-expanded]="mode() !== 'idle'" [disabled]="disabled() || busy() || mode() !== 'idle'" (click)="start(current().currentBlock ? 'resolve' : 'block')">@if (!current().currentBlock) { <app-icon name="plus" [size]="14" /> }{{ current().currentBlock ? 'Resolver' : 'Sinalizar impedimento' }}</button>
+  }
 <div class="blocks-section" tabindex="-1">
   @if (current().currentBlock; as block) {
     <div class="blocks-section__current">
@@ -7,17 +11,9 @@
       </div>
       <p class="blocks-section__reason">{{ block.reason }}</p>
       <p class="blocks-section__meta">Sinalizado por {{ block.blockedBy }}</p>
-      @if (canEdit()) {
-        <button type="button" class="link-button blocks-section__action" data-blocks-trigger aria-controls="rma-blocks-form" [attr.aria-expanded]="mode() === 'resolve'" [disabled]="disabled() || busy() || mode() === 'resolve'" (click)="start('resolve')">Resolver</button>
-      }
     </div>
   } @else {
-    <div class="blocks-section__state">
-      <p class="blocks-section__empty">Sem impedimento</p>
-      @if (canEdit()) {
-        <button type="button" class="link-button blocks-section__action" data-blocks-trigger aria-controls="rma-blocks-form" [attr.aria-expanded]="mode() === 'block'" [disabled]="disabled() || busy() || mode() === 'block'" (click)="start('block')">Sinalizar impedimento</button>
-      }
-    </div>
+    <p class="blocks-section__empty repair-empty">Sem impedimento</p>
   }
 
   @if (mode() === 'resolve' && current().currentBlock) {
@@ -76,3 +72,5 @@
     }
   }
 </div>
+
+</app-collapsible-section>

@@ -54,19 +54,17 @@
         }
 
         <section class="rma-detail__section rma-detail__section--failure detail-card">
-          <app-collapsible-section [title]="sectionLabel('failure')" icon="alert" storageKey="rma.failure">
+          <app-collapsible-section [title]="sectionLabel('failure')" icon="alert" [open]="!!rma().reportedFailure" storageKey="rma.failure">
             <p class="rma-detail__callout">{{ rma().reportedFailure }}</p>
           </app-collapsible-section>
         </section>
 
         <section #blocksSection id="rma-detail-blocks" class="rma-detail__section detail-card">
-          <app-collapsible-section #blocksFold title="Impedimentos" icon="lock" [open]="!!rma().currentBlock" storageKey="rma.blocks">
-            <app-rma-blocks-section [rma]="rma()" [disabled]="writePending()" (updated)="rmaUpdated.emit($event)" />
-          </app-collapsible-section>
+          <app-rma-blocks-section [rma]="rma()" [disabled]="writePending()" (updated)="rmaUpdated.emit($event)" />
         </section>
 
         <section class="rma-detail__section detail-card">
-          <app-collapsible-section [title]="sectionLabel('products')" icon="box" [count]="rma().items.length" [open]="rma().items.length <= 1" storageKey="rma.products">
+          <app-collapsible-section [title]="sectionLabel('products')" icon="box" [count]="rma().items.length" [open]="rma().items.length > 0" storageKey="rma.products">
           <ul class="rma-detail__items">
             @for (item of rma().items; track item.id ?? $index) {
               <li class="detail-tile">
@@ -78,7 +76,7 @@
                   }
                 </dl>
               </li>
-            }
+            } @empty { <li class="repair-empty">Nenhum produto registrado.</li> }
           </ul>
           </app-collapsible-section>
         </section>
@@ -86,7 +84,7 @@
         @let receipt = receiptFacts(rma());
         @if (receipt.length > 0) {
           <section class="rma-detail__section detail-card">
-            <app-collapsible-section [title]="sectionLabel('receipt')" icon="inbox" [open]="false" storageKey="rma.receipt">
+            <app-collapsible-section [title]="sectionLabel('receipt')" icon="inbox" [open]="receipt.length > 0" storageKey="rma.receipt">
               <div class="rma-detail__tiles">
                 @for (fact of receipt; track fact.label) {
                   <div class="rma-detail__tile detail-tile"><span>{{ fact.label }}</span><strong>{{ fact.value }}</strong></div>
@@ -102,11 +100,12 @@
         </section>
 
         @defer { <app-rma-repair-panel (changed)="refreshRepair()" [rmaId]="rma().id" [rmaStatus]="rma().status" />
-        <app-rma-parts-panel (changed)="refreshRepair()" [rmaId]="rma().id" [rmaStatus]="rma().status" /> } @placeholder { <div aria-busy="true"></div> }
+        <app-rma-parts-panel (changed)="refreshRepair()" [rmaId]="rma().id" [rmaStatus]="rma().status" />
+        <app-rma-protocols [rmaId]="rma().id" /> } @placeholder { <div aria-busy="true"></div> }
         @let repair = repairFacts(rma());
         @if (repair.length > 0) {
           <section class="rma-detail__section detail-card">
-            <app-collapsible-section [title]="sectionLabel('repair')" icon="wrench" [open]="false" storageKey="rma.repair">
+            <app-collapsible-section [title]="sectionLabel('repair')" icon="wrench" [open]="repair.length > 0" storageKey="rma.repair">
               <div class="rma-detail__tiles">
                 @for (fact of repair; track fact.label) {
                   <div class="rma-detail__tile detail-tile" [class.rma-detail__tile--wide]="fact.label === 'Reparo'"><span>{{ fact.label }}</span><strong>{{ fact.value }}</strong></div>
@@ -117,10 +116,10 @@
         }
 
         <section class="rma-detail__section detail-card">
-          <app-collapsible-section [title]="sectionLabel('history')" icon="history" [count]="activity().length" [open]="false" storageKey="rma.history">
+          <app-collapsible-section [title]="sectionLabel('history')" icon="history" [count]="activity().length" [open]="activity().length > 0" storageKey="rma.history">
             <app-rma-history-list #historyList="rmaHistoryList" [rma]="rma()">
             @if (activity().length === 0) {
-              <p class="rma-detail__muted">Nenhuma atividade registrada.</p>
+              <p class="repair-empty">Nenhuma atividade registrada.</p>
             }
             <ol class="rma-detail__timeline">
               @for (entry of historyList.entries(); track $index) {

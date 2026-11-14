@@ -8,6 +8,7 @@ describe('RmaStageTimesComponent', () => {
   let fixture: ComponentFixture<RmaStageTimesComponent>;
 
   beforeEach(async () => {
+    localStorage.clear();
     const clock = signal(Date.parse('2026-11-13T12:00:00Z'));
     await TestBed.configureTestingModule({
       imports: [RmaStageTimesComponent],
@@ -21,7 +22,7 @@ describe('RmaStageTimesComponent', () => {
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
     expect(element.querySelector('section')?.getAttribute('aria-label')).toBe('Tempo por etapa');
-    return [...element.querySelectorAll('li')].map((item) => (item.textContent ?? '').replace(/\s+/g, ' ').trim());
+    return [...element.querySelectorAll('ol.sr-only li')].map((item) => (item.textContent ?? '').replace(/\s+/g, ' ').trim());
   }
 
   it('lists every period in order and marks only the current one', () => {
@@ -64,7 +65,7 @@ describe('RmaStageTimesComponent', () => {
     expect(element.querySelector('.stage-times__total')?.textContent?.trim()).toBe('3 d 2 h');
   });
 
-  it('keeps the per-stage list collapsed until the arrow is used, then shows colour, name and time of every stage', () => {
+  it('opens stages with content and lets the header fold and unfold the list', () => {
     fixture.componentRef.setInput('rma', {
       status: 'IN_REPAIR',
       stagePeriods: [
@@ -75,11 +76,7 @@ describe('RmaStageTimesComponent', () => {
     });
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
-    const toggle = element.querySelector<HTMLButtonElement>('.stage-times__toggle')!;
-    expect(toggle.getAttribute('aria-expanded')).toBe('false');
-    expect(element.querySelector('.stage-times__list')).toBeNull();
-    toggle.click();
-    fixture.detectChanges();
+    const toggle = element.querySelector<HTMLButtonElement>('.collapsible__toggle')!;
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     const rows = [...element.querySelectorAll('.stage-times__list li')].map((item) => [
       item.getAttribute('data-status'),
@@ -93,6 +90,8 @@ describe('RmaStageTimesComponent', () => {
     ]);
     toggle.click();
     fixture.detectChanges();
-    expect(element.querySelector('.stage-times__list')).toBeNull();
+    expect(element.querySelector<HTMLElement>('.collapsible__body')!.hidden).toBe(true);
+    toggle.click(); fixture.detectChanges();
+    expect(element.querySelector<HTMLElement>('.collapsible__body')!.hidden).toBe(false);
   });
 });

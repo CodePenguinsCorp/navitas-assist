@@ -27,7 +27,8 @@ describe('RmaProtocolsComponent', () => {
   let role: LegacyProfileCode;
   let results: ProtocolItemResultRequest[];
 
-  async function setup(currentRole: LegacyProfileCode): Promise<void> {
+  async function setup(currentRole: LegacyProfileCode, executions = [EXECUTION]): Promise<void> {
+    localStorage.clear();
     role = currentRole;
     results = [];
     await TestBed.configureTestingModule({
@@ -35,7 +36,7 @@ describe('RmaProtocolsComponent', () => {
       providers: [
         providePermissions(profilePermissions(role)),
         { provide: ProtocolService, useValue: {
-          listExecutions: () => of([EXECUTION]),
+          listExecutions: () => of(executions),
           listTemplates: () => of([]),
           recordResult: (_executionId: number, _itemId: number, payload: ProtocolItemResultRequest) => {
             results.push(payload);
@@ -50,6 +51,21 @@ describe('RmaProtocolsComponent', () => {
     component = fixture.componentInstance as unknown as RmaProtocolsHarness;
     fixture.detectChanges();
   }
+
+  it('folds an empty protocol section and unfolds the launcher from its header action', async () => {
+    await setup('TECHNICIAN', []);
+    const host = fixture.nativeElement as HTMLElement;
+    const toggle = host.querySelector<HTMLButtonElement>('.collapsible__toggle')!;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    const action = host.querySelector<HTMLButtonElement>('.collapsible__actions button')!;
+    expect(action.textContent).toContain('Executar protocolo');
+    expect(host.querySelector('.protocol-launch')).toBeNull();
+    action.click(); fixture.detectChanges();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(host.querySelector('.protocol-launch')).not.toBeNull();
+    toggle.click(); fixture.detectChanges();
+    expect(host.querySelector<HTMLElement>('.collapsible__body')!.hidden).toBe(true);
+  });
 
   it('shows protocol, version and progress without execution actions for viewers', async () => {
     await setup('VIEWER');

@@ -124,7 +124,7 @@ describe('RmaProtocolsComponent checklist', () => {
     expect(history.textContent).toContain(formatBusinessDateTime(LATEST.completedAt));
     expect(history.textContent).toContain('12.10 V'); expect(history.textContent).toContain('0 V');
     expect(text()).toContain('Reprovado');
-    expect(Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button')).every((b) => b.classList.contains('protocol-row__toggle'))).toBe(true);
+    expect(Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('.protocol-execution button')).every((b) => b.classList.contains('protocol-row__toggle'))).toBe(true);
   });
 
   it('preserves API item order and allows completion with a failed required item', async () => {

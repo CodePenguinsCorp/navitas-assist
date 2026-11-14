@@ -208,14 +208,11 @@ describe('RmaPartsPanelComponent presentation', () => {
     expect(service.updateReservation).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the movement history collapsed by default and lists aligned columns with reversal and reason', async () => {
+  it('opens the movement history with content and lists aligned columns with reversal and reason', async () => {
     await setup();
     const section = Array.from(root().querySelectorAll('app-collapsible-section')).find((item) => normalize(item.querySelector('h3')!.textContent).startsWith('Movimentos de peças'))!;
     const toggle = section.querySelector<HTMLButtonElement>('.collapsible__toggle')!;
     expect(normalize(toggle.textContent)).toBe('Movimentos de peças1');
-    expect(toggle.getAttribute('aria-expanded')).toBe('false');
-    expect(section.querySelector<HTMLElement>('.collapsible__body')!.hidden).toBe(true);
-    toggle.click(); render();
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     expect(section.querySelector<HTMLElement>('.collapsible__body')!.hidden).toBe(false);
     const row = section.querySelector('.movements__list li')!;
@@ -224,5 +221,7 @@ describe('RmaPartsPanelComponent presentation', () => {
     expect(normalize(row.querySelector('.movements__user')!.textContent)).toBe('tech');
     expect(normalize(row.querySelector('.movements__note')!.textContent)).toBe('estornado · Troca da placa');
     expect(root().querySelector('details')).toBeNull();
+    toggle.click(); render();
+    expect(section.querySelector<HTMLElement>('.collapsible__body')!.hidden).toBe(true);
   });
 });

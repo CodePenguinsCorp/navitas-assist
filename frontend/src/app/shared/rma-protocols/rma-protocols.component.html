@@ -1,5 +1,8 @@
-<div class="summary-block">
-  <strong>Protocolos técnicos</strong>
+<section class="repair-panel detail-card">
+  <app-collapsible-section title="Protocolos técnicos" icon="checklist" [open]="executions().length > 0 || launchOpen() || loadFailed()" storageKey="rma.protocols">
+    @if (canExecute()) {
+      <button sectionActions type="button" class="link-button" [attr.aria-expanded]="launchOpen()" (click)="launchOpen.set(!launchOpen())"><app-icon name="plus" [size]="14" /> Executar protocolo</button>
+    }
 
   @if (errorMessage()) {
     <p class="field-error" role="alert">{{ errorMessage() }}</p>
@@ -14,10 +17,7 @@
   } @else if (loading() || !hasLoaded()) {
     <div class="rma-detail-copy" aria-busy="true"></div>
   } @else if (executions().length === 0) {
-    <div class="empty-state">
-      <span class="icon-tile tone-slate"><app-icon name="checklist" [size]="20" /></span>
-      <p>Nenhum protocolo executado nesta OS.</p>
-    </div>
+    <p class="repair-empty">Nenhum protocolo executado nesta OS.</p>
   }
 
   @for (view of views(); track view.execution.id) {
@@ -128,7 +128,7 @@
     </section>
   }
 
-  @if (canExecute()) {
+  @if (canExecute() && launchOpen()) {
     <div class="protocol-launch">
       <span class="protocol-launch__label">Executar protocolo</span>
       @if (templatesLoadFailed()) {
@@ -147,4 +147,5 @@
       }
     </div>
   }
-</div>
+  </app-collapsible-section>
+</section>

@@ -1,4 +1,5 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { CollapsibleSectionComponent } from '../collapsible-section/collapsible-section.component';
+import { viewChild, Component, computed, inject, input } from '@angular/core';
 import { CLOSED_RMA_STATUSES } from '../../core/mock-data';
 import { RmaResponse } from '../../core/models';
 import { ClockService } from '../../core/services/clock.service';
@@ -23,10 +24,12 @@ const MIN_SHARE = 0.05;
 /** "Tempo por etapa": one proportional bar with the total on the right; hovering a segment names its stage and time. */
 @Component({
   selector: 'app-rma-stage-times',
+  imports: [CollapsibleSectionComponent],
   templateUrl: './rma-stage-times.component.html',
   styleUrl: './rma-stage-times.component.css'
 })
 export class RmaStageTimesComponent {
+  readonly section = viewChild(CollapsibleSectionComponent);
   readonly rma = input.required<Pick<RmaResponse, 'status' | 'stagePeriods'>>();
   private readonly clock = inject(ClockService);
 
@@ -70,10 +73,4 @@ export class RmaStageTimesComponent {
 
   protected readonly closingRow = computed(() => this.rows().find((row) => row.weight === 0) ?? null);
 
-  /** The per-stage list below the bar is collapsed until the user opens it with the arrow. */
-  protected readonly expanded = signal(false);
-
-  protected toggle(): void {
-    this.expanded.update((value) => !value);
-  }
 }

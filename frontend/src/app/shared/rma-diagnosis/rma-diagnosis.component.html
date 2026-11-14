@@ -1,5 +1,5 @@
 @if (collapsible()) {
-  <app-collapsible-section title="Diagnóstico" icon="clipboard" [open]="true" storageKey="rma.diagnosis">
+  <app-collapsible-section title="Diagnóstico" icon="clipboard" [open]="!!rma().diagnosis || editing()" storageKey="rma.diagnosis">
     @if (canEdit() && !editing()) {
       <button sectionActions type="button" class="link-button diagnosis-trigger" [disabled]="disabled()" (click)="edit()">
         @if (rma().diagnosis) { Editar } @else { <app-icon name="plus" [size]="14" /> Registrar diagnóstico }

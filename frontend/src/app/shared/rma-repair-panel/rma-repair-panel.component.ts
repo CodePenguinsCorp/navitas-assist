@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, ElementRef, viewChild, EventEmitter, Injector, Output, DestroyRef, afterNextRender, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { viewChildren, Component, ElementRef, viewChild, EventEmitter, Injector, Output, DestroyRef, afterNextRender, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription, finalize } from 'rxjs';
@@ -25,6 +25,7 @@ export const INTERVENTION_LABELS: Record<InterventionType, string> = {
   templateUrl: './rma-repair-panel.component.html'
 })
 export class RmaRepairPanelComponent {
+  readonly sections = viewChildren(CollapsibleSectionComponent);
   @Output() readonly changed = new EventEmitter<void>();
   protected readonly formOpen = signal(false);
   private readonly fold = viewChild(CollapsibleSectionComponent);

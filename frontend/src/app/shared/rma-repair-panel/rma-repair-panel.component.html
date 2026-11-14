@@ -1,5 +1,5 @@
 <section class="repair-panel detail-card">
-  <app-collapsible-section title="Intervenções" icon="wrench" storageKey="rma.interventions">
+  <app-collapsible-section title="Intervenções" icon="wrench" [open]="!!repair()?.interventions?.length || formOpen() || !!error()" storageKey="rma.interventions">
   @if (totalHours() > 0) { <span sectionActions class="repair-total" title="Total de horas de serviço">{{ hours(totalHours()) }} h</span> }
   @if (canWrite()) {
     <button sectionActions type="button" class="link-button repair-trigger" [attr.aria-expanded]="formOpen() && !editing()" aria-controls="repair-form" (click)="toggleForm()"><app-icon name="plus" [size]="14" /> Registrar</button>

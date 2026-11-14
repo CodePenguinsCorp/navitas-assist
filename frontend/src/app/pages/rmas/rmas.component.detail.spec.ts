@@ -114,7 +114,7 @@ async function setup(options: { role?: LegacyProfileCode } = {}) {
   const pairs = (root: Element) =>
     [...root.querySelectorAll(':scope > div')].map((row) => [row.querySelector('dt')?.textContent?.trim(), row.querySelector('dd')?.textContent?.trim()]);
   const section = (title: string) =>
-    [...tabPanel().querySelectorAll<HTMLElement>('.rma-details__section')].find((item) => item.querySelector('h4')?.textContent?.trim() === title) ?? null;
+    [...tabPanel().querySelectorAll<HTMLElement>('.rma-details__section')].find((item) => item.querySelector('.collapsible__title, h4')?.textContent?.trim() === title) ?? null;
 
   return { fixture, page, render, open, detail, tab, selectTab, tabPanel, pairs, section, rmaService, partService, protocolService };
 }
@@ -123,6 +123,21 @@ async function setup(options: { role?: LegacyProfileCode } = {}) {
 afterEach(settleRmaLazyChunks);
 
 describe('RmasComponent detail with the shared information contract', () => {
+  it('opens products with content and folds empty products and diagnosis', async () => {
+    localStorage.clear();
+    const view = await setup(); view.open();
+    const toggle = () => view.section('Produtos')!.querySelector<HTMLButtonElement>('.collapsible__toggle')!;
+    expect(toggle().getAttribute('aria-expanded')).toBe('true');
+    toggle().click(); view.render();
+    expect(toggle().getAttribute('aria-expanded')).toBe('false');
+    toggle().click(); view.render();
+    localStorage.clear();
+    view.open({ ...fullRma, items: [], diagnosis: null });
+    expect(toggle().getAttribute('aria-expanded')).toBe('false');
+    view.selectTab('Diagnóstico');
+    expect(view.tabPanel().querySelector('.collapsible__toggle')?.getAttribute('aria-expanded')).toBe('false');
+  });
+
   it('limits history through the shared Ver mais control and resets for another OS', async () => {
     const { open, selectTab, tabPanel, render } = await setup();
     const rma: RmaResponse = { ...fullRma, assignmentHistory: [], statusHistory: Array.from({ length: 12 }, (_, i) => ({
@@ -358,7 +373,7 @@ describe('RmasComponent detail with the shared information contract', () => {
     open({ ...fullRma, statusHistory: [], assignmentHistory: [] });
     selectTab('Histórico');
 
-    expect(tabPanel().querySelector('.rma-detail-copy')?.textContent?.trim()).toBe('Nenhuma alteração registrada.');
+    expect(tabPanel().querySelector('.repair-empty')?.textContent?.trim()).toBe('Nenhuma alteração registrada.');
     expect(tabPanel().querySelector('ol.record-list')).toBeNull();
   });
 
@@ -428,7 +443,7 @@ describe('RmasComponent detail with the shared information contract', () => {
       ]
     });
     selectTab('Histórico');
-    const lines = [...tabPanel().querySelectorAll('app-rma-stage-times li')].map((item) => item.textContent?.trim());
+    const lines = [...tabPanel().querySelectorAll('app-rma-stage-times ol.sr-only li')].map((item) => item.textContent?.trim());
     expect(lines).toEqual(['Recebida · 2 h', 'Triagem · 2 h (atual)']);
   });
 
