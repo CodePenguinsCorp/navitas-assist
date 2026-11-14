@@ -4,7 +4,7 @@ import { blockDuration } from '../../core/utils/rma-block';
 import { stageTimeLabel } from '../../core/utils/rma-stage';
 import { RmaDeadlineChipComponent } from '../rma-deadline-chip/rma-deadline-chip.component';
 import { RMA_STATUS_FLOW } from '../../core/mock-data';
-import { RmaResponse, RmaStatus } from '../../core/models';
+import { RmaBoardCardResponse, RmaStatus } from '../../core/models';
 import {
   compareRmasForBoard,
   formatDate,
@@ -19,7 +19,7 @@ import {
 interface RmaBoardColumn {
   status: RmaStatus;
   label: string;
-  items: RmaResponse[];
+  items: RmaBoardCardResponse[];
 }
 
 @Component({
@@ -29,7 +29,7 @@ interface RmaBoardColumn {
   styleUrl: './rma-kanban-board.component.css'
 })
 export class RmaKanbanBoardComponent {
-  readonly rmas = input<readonly RmaResponse[]>([]);
+  readonly rmas = input<readonly RmaBoardCardResponse[]>([]);
   readonly loading = input(false);
   readonly canUpdateStatus = input(false);
   readonly canUpdateAssignee = input(false);
@@ -41,10 +41,10 @@ export class RmaKanbanBoardComponent {
   readonly toolbarTitle = input('Quadro Kanban');
   readonly toolbarDescription = input('Arraste os cards entre as colunas para atualizar o status da OS.');
 
-  @Output() readonly cardSelect = new EventEmitter<RmaResponse>();
+  @Output() readonly cardSelect = new EventEmitter<RmaBoardCardResponse>();
   protected readonly clock = inject(ClockService);
   protected readonly blockedDuration = blockDuration;
-  @Output() readonly cardDragStart = new EventEmitter<{ event: DragEvent; rma: RmaResponse }>();
+  @Output() readonly cardDragStart = new EventEmitter<{ event: DragEvent; rma: RmaBoardCardResponse }>();
   @Output() readonly cardDragEnd = new EventEmitter<void>();
   @Output() readonly columnDragOver = new EventEmitter<{ event: DragEvent; status: RmaStatus }>();
   @Output() readonly columnDragLeave = new EventEmitter<RmaStatus>();
@@ -69,15 +69,15 @@ export class RmaKanbanBoardComponent {
   protected readonly dateLabel = formatDate;
 
   /** "há 2 d 4 h nesta etapa" for open RMAs; null for closed ones. */
-  protected stageTime(rma: RmaResponse): string | null {
+  protected stageTime(rma: RmaBoardCardResponse): string | null {
     return stageTimeLabel(rma, this.clock.now());
   }
 
-  protected isSelected(rma: RmaResponse): boolean {
+  protected isSelected(rma: RmaBoardCardResponse): boolean {
     return this.selectedRmaId() === rma.id;
   }
 
-  protected isDragging(rma: RmaResponse): boolean {
+  protected isDragging(rma: RmaBoardCardResponse): boolean {
     return this.draggedRmaId() === rma.id;
   }
 
@@ -85,7 +85,7 @@ export class RmaKanbanBoardComponent {
     return this.dragTargetStatus() === status;
   }
 
-  protected isStatusUpdating(rma: RmaResponse): boolean {
+  protected isStatusUpdating(rma: RmaBoardCardResponse): boolean {
     return this.boardUpdatingId() === rma.id;
   }
 }

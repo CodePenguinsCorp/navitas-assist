@@ -64,7 +64,7 @@ async function setup(options: { role?: LegacyProfileCode } = {}) {
   const rmaService = {
     list: vi.fn(() => of(buildRmaPage([fullRma], 0, 20, 1))),
     getSummary: vi.fn(() => of({ total: 1, ongoing: 1, highPriority: 0 })),
-    getById: vi.fn(),
+    getById: vi.fn((id: number) => of({ ...fullRma, id })),
     create: vi.fn(),
     upsertDiagnosis: vi.fn(),
     resolveBlock: vi.fn((id: number, blockId: number, body: { resolutionNote: string }) => of({
@@ -98,6 +98,7 @@ async function setup(options: { role?: LegacyProfileCode } = {}) {
   const page = fixture.nativeElement as HTMLElement;
   const render = () => fixture.detectChanges();
   const open = (rma: RmaResponse = fullRma) => {
+    rmaService.getById.mockImplementation(() => of(rma));
     component.openDetailsModal(rma);
     render();
   };
@@ -200,7 +201,7 @@ describe('RmasComponent detail with the shared information contract', () => {
   });
 
   it('lists the summary facts in contract order with Data limite and Nesta etapa', async () => {
-    const { open, detail, pairs, render, fixture } = await setup();
+    const { open, detail, pairs } = await setup();
     open();
     const summary = detail().querySelector('.rma-details__summary')!;
 
@@ -211,8 +212,7 @@ describe('RmasComponent detail with the shared information contract', () => {
       Produtos: '1 item', 'Nota fiscal': 'Não informada', Compra: 'Desconhecida'
     }));
 
-    (fixture.componentInstance as unknown as DetailHarness).openDetailsModal({ ...fullRma, purchaseDateUnknown: false, purchaseDate: null });
-    render();
+    open({ ...fullRma, purchaseDateUnknown: false, purchaseDate: null });
     expect(Object.fromEntries(pairs(detail().querySelector('.rma-details__summary')!))['Compra']).toBe('Não informada');
   });
 

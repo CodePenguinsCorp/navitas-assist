@@ -11,6 +11,7 @@ import {
   viewChild,
   viewChildren,
 } from '@angular/core';
+import { HttpContext } from '@angular/common/http';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription, finalize, forkJoin, map } from 'rxjs';
@@ -28,6 +29,7 @@ import {
   KanbanViewResponse,
   RmaPriority,
   RmaAssigneeUpdateRequest,
+  RmaBoardCardResponse,
   RmaResponse,
   RmaStatus,
   WarrantyStatus,
@@ -40,7 +42,8 @@ import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { businessDateInputValue } from '../../core/utils/date';
-import { formatDate, normalizeText } from '../../core/utils/rma-ui';
+import { formatDate, normalizeText, toBoardCard } from '../../core/utils/rma-ui';
+import { SKIP_GLOBAL_LOADING } from '../../core/interceptors/loading.interceptor';
 import {
   CustomSelectComponent,
   CustomSelectOption,
@@ -139,6 +142,7 @@ export class KanbanComponent {
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private loadRequest?: Subscription;
+  private detailRequest?: Subscription;
   private readonly filtersToggle = viewChild.required<ElementRef<HTMLButtonElement>>('filtersToggle');
   private readonly chipRemoveButtons = viewChildren<ElementRef<HTMLButtonElement>>('chipRemove');
 
@@ -160,8 +164,14 @@ export class KanbanComponent {
   protected readonly selectedRmaId = signal<number | null>(null);
   protected readonly detailRmaId = signal<number | null>(null);
 
-  private readonly rmasSignal = signal<RmaResponse[]>([]);
-  protected readonly detailRma = computed(() => this.rmasSignal().find((rma) => rma.id === this.detailRmaId()) ?? null);
+  private readonly rmasSignal = signal<RmaBoardCardResponse[]>([]);
+  /** Full detail of the open card, read from `GET /api/rmas/{id}` when the modal opens. */
+  private readonly detailSignal = signal<RmaResponse | null>(null);
+  protected readonly detailRma = computed(() => {
+    const detail = this.detailSignal();
+    return detail && detail.id === this.detailRmaId() ? detail : null;
+  });
+  protected readonly detailError = signal('');
   private readonly statusFeedbackRmaId = signal<number | null>(null);
   protected readonly statusFeedbackRma = computed(() => this.rmasSignal().find(rma => rma.id === this.statusFeedbackRmaId()) ?? null);
   private readonly assignableUsersSignal = signal<AssignableUserResponse[]>([]);
@@ -314,24 +324,48 @@ export class KanbanComponent {
     if (!matches) this.activeViewId.set(null);
   }
 
-  protected openDetail(rma: RmaResponse): void {
+  protected openDetail(rma: RmaBoardCardResponse): void {
     this.selectRma(rma);
     this.detailRmaId.set(rma.id);
+    this.loadDetail(rma.id);
+  }
+
+  protected retryDetail(): void {
+    const id = this.detailRmaId();
+    if (id !== null) this.loadDetail(id);
   }
 
   protected closeDetail(): void {
+    this.detailRequest?.unsubscribe();
     this.detailRmaId.set(null);
+    this.detailSignal.set(null);
+    this.detailError.set('');
     this.assignmentError.set('');
   }
 
-  protected selectRma(rma: RmaResponse): void {
+  /** Only the latest detail read counts; it skips the global loading because the modal shows its own state. */
+  private loadDetail(id: number): void {
+    this.detailRequest?.unsubscribe();
+    this.detailSignal.set(null);
+    this.detailError.set('');
+    this.detailRequest = this.rmaService.getById(id, new HttpContext().set(SKIP_GLOBAL_LOADING, true))
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (detail) => { if (this.detailRmaId() === id) this.detailSignal.set(detail); },
+        error: (error) => { if (this.detailRmaId() === id) this.detailError.set(extractHttpErrorMessage(error, 'Não foi possível carregar a OS.')); },
+      });
+  }
+
+  protected selectRma(rma: RmaBoardCardResponse): void {
     this.selectedRmaId.set(rma.id);
     this.pageError.set('');
   }
 
   /** Each write (assignee, status, priority, impediment, due date) replaces only its card with the response. */
   protected applyRmaUpdate(updated: RmaResponse): void {
-    this.rmasSignal.update((rmas) => rmas.map((rma) => rma.id === updated.id ? updated : rma));
+    const card = toBoardCard(updated);
+    this.rmasSignal.update((rmas) => rmas.map((rma) => rma.id === updated.id ? card : rma));
+    if (this.detailRmaId() === updated.id) this.detailSignal.set(updated);
   }
 
   protected clearFilters(): void {
@@ -512,7 +546,7 @@ export class KanbanComponent {
     this.submitAssigneeUpdate(rma, { assigneeId });
   }
 
-  protected startCardDrag(event: DragEvent, rma: RmaResponse): void {
+  protected startCardDrag(event: DragEvent, rma: RmaBoardCardResponse): void {
     if (!this.canUpdateStatus() || this.boardUpdatingId() !== null) {
       event.preventDefault();
       return;
@@ -637,7 +671,7 @@ export class KanbanComponent {
     );
   }
 
-  private syncSelection(rmas: RmaResponse[]): void {
+  private syncSelection(rmas: RmaBoardCardResponse[]): void {
     const selectedId = this.selectedRmaId();
     if (selectedId === null) {
       return;
@@ -649,7 +683,7 @@ export class KanbanComponent {
     }
   }
 
-  private submitAssigneeUpdate(target: RmaResponse, payload: RmaAssigneeUpdateRequest): void {
+  private submitAssigneeUpdate(target: Pick<RmaResponse, 'id'>, payload: RmaAssigneeUpdateRequest): void {
     this.boardUpdatingId.set(target.id);
     this.pageError.set('');
     this.assignmentError.set('');
@@ -718,7 +752,7 @@ const WARRANTY_FILTER_OPTIONS: ReadonlyArray<CustomSelectOption<WarrantyFilterVa
   })),
 ];
 
-function filterKanbanRmas(rmas: RmaResponse[], filters: KanbanFilterValues, now: number): RmaResponse[] {
+function filterKanbanRmas(rmas: RmaBoardCardResponse[], filters: KanbanFilterValues, now: number): RmaBoardCardResponse[] {
   const query = normalizeSearch(filters.query);
   const today = businessToday(now);
 
@@ -752,7 +786,7 @@ function filterKanbanRmas(rmas: RmaResponse[], filters: KanbanFilterValues, now:
   });
 }
 
-function rmaSearchText(rma: RmaResponse): string {
+function rmaSearchText(rma: RmaBoardCardResponse): string {
   const itemValues = rma.items.flatMap((item) => [
     item.productName,
     item.productSku,
@@ -792,7 +826,7 @@ function countActiveFilters(filters: KanbanFilterValues): number {
 
 function mergeAssigneeOptions(
   assignableUsers: AssignableUserResponse[],
-  rmas: RmaResponse[],
+  rmas: RmaBoardCardResponse[],
 ): ReadonlyArray<CustomSelectOption<number>> {
   const options = new Map<number, string>(
     assignableUsers.map((user) => [user.id, `${user.fullName} (@${user.username})`]),

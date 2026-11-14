@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { RmaResponse, WarrantyStatus } from '../../core/models';
+import { RmaBoardCardResponse, RmaResponse, WarrantyStatus } from '../../core/models';
 import { ClockService } from '../../core/services/clock.service';
 import { RmaKanbanBoardComponent } from './rma-kanban-board.component';
 
@@ -105,7 +105,7 @@ describe('RmaKanbanBoardComponent card', () => {
   it('opens the card detail with Enter', () => {
     const rma = buildRma({});
     const host = render([rma]);
-    const opened: RmaResponse[] = [];
+    const opened: RmaBoardCardResponse[] = [];
     fixture.componentInstance.cardSelect.subscribe((item) => opened.push(item));
     card(host, 'NAV-0100').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     expect(opened).toEqual([rma]);

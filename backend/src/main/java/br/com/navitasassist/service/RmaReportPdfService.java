@@ -15,7 +15,7 @@ import br.com.navitasassist.report.RmaTechnicalReport.ReplacedComponent;
 import br.com.navitasassist.rma.InterventionType;
 import br.com.navitasassist.rma.ReportLabels;
 import br.com.navitasassist.rma.RmaItemResponse;
-import br.com.navitasassist.rma.RmaResponse;
+import br.com.navitasassist.rma.RmaDetailResponse;
 import com.lowagie.text.Document;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
@@ -54,7 +54,7 @@ public class RmaReportPdfService {
     private final RmaRepairService repairService;
 
     public PdfFile laudo(Long rmaId) {
-        RmaResponse rma = rmaService.getById(rmaId);
+        RmaDetailResponse rma = rmaService.getById(rmaId);
         List<ReplacedComponent> components = new java.util.ArrayList<>(partStockService.getRmaParts(rmaId).replacedComponents().stream()
             .map(reservation -> new ReplacedComponent(reservation.partCode(), reservation.partName(), reservation.quantity(), reservation.unit(),
                 reservation.componentBatch(), reservation.replacementReason(), reservation.appliedAt(), reservation.appliedBy(), "Estoque"))
@@ -67,7 +67,7 @@ public class RmaReportPdfService {
     }
 
     byte[] render(RmaTechnicalReport report) {
-        RmaResponse rma = report.rma();
+        RmaDetailResponse rma = report.rma();
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         Document document = new Document(PageSize.A4, 40, 40, 40, 40);
         PdfWriter.getInstance(document, output);

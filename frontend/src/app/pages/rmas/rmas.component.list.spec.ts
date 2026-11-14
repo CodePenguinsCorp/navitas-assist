@@ -489,7 +489,7 @@ describe('RmasComponent list state', () => {
     it('opens the OS requested by a notification link on the Produtos tab', async () => {
       const { page, rmaService } = await setup({ requestedRma: 1 });
 
-      expect(rmaService.getById).toHaveBeenCalledWith(1);
+      expect(rmaService.getById).toHaveBeenCalledWith(1, expect.anything());
       expect(page.querySelector('.rma-details')).not.toBeNull();
       const selected = page.querySelector('[role="tab"][aria-selected="true"]');
       expect(selected?.textContent?.trim()).toBe('Produtos');

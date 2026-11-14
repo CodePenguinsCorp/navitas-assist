@@ -173,7 +173,8 @@ class RmaWarrantyIntegrationTest {
         var row = mapper.readTree(board.getResponse().getContentAsString()).get(0);
         // The Kanban applies the saved filter to items[].warrantyStatus from this response.
         assertThat(row.path("items").findValuesAsText("warrantyStatus")).contains(warrantyFilter);
-        assertThat(row.path("items").findValuesAsText("calculatedWarrantyStatus")).containsExactly("OUT_OF_WARRANTY");
+        // O card leva só a garantia efetiva; a calculada fica no detalhe.
+        assertThat(row.path("items").findValuesAsText("calculatedWarrantyStatus")).isEmpty();
     }
 
     @Test

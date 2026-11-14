@@ -7,7 +7,9 @@ import { Component, ElementRef, Injector, Type, afterNextRender, computed, injec
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { Subject, catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
+import { HttpContext } from '@angular/common/http';
+import { Subject, Subscription, catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
+import { SKIP_GLOBAL_LOADING } from '../../core/interceptors/loading.interceptor';
 import {
   RMA_PRIORITY_LABELS,
   RMA_STATUS_FLOW,
@@ -18,6 +20,7 @@ import {
   CreateRmaRequest,
   ProductOptionResponse,
   RmaPriority,
+  RmaListItemResponse,
   RmaResponse,
   RmaSummaryResponse,
   RmaStatus
@@ -421,7 +424,7 @@ export class RmasComponent {
   protected readonly loadFailed = signal(false);
   protected readonly listErrorMessage = signal('');
 
-  private readonly rmaList = new PagedList<RmaResponse>(
+  private readonly rmaList = new PagedList<RmaListItemResponse>(
     (pageQuery) => {
       const filters = this.appliedFilters();
       this.requestedGeneration = this.generation();
@@ -436,12 +439,15 @@ export class RmasComponent {
       this.resultGeneration.set(this.requestedGeneration);
       this.loadFailed.set(false);
       if (this.requestedUnfiltered) this.overallTotal.set(this.rmaList.totalElements());
-      this.syncSelection(rmas);
     }
   );
   private readonly clientsSignal = signal<ClientOptionResponse[]>([]);
   private readonly productsSignal = signal<ProductOptionResponse[]>([]);
+  /** Full detail of the open OS, read from `GET /api/rmas/{id}` when the modal opens. */
   private readonly selectedRmaSignal = signal<RmaResponse | null>(null);
+  private readonly detailRmaId = signal<number | null>(null);
+  protected readonly detailError = signal('');
+  private detailRequest?: Subscription;
 
   protected readonly rmas = this.rmaList.items;
   protected readonly loading = this.rmaList.loading;
@@ -659,12 +665,34 @@ export class RmasComponent {
     return ids.filter(Boolean).join(' ') || null;
   }
 
-  protected openDetailsModal(rma: RmaResponse): void {
+  protected openDetailsModal(rma: Pick<RmaListItemResponse, 'id'>): void {
+    this.openDetailById(rma.id);
+  }
+
+  /** Opens the modal at once and reads the detail without the global loading; the modal shows its own state. */
+  private openDetailById(id: number): void {
     void import('../../shared/rma-protocols/rma-protocols.component').then((module) => this.protocolsComponent.set(module.RmaProtocolsComponent));
-    this.selectRma(rma);
+    this.pageError.set('');
     this.pageMessage.set('');
     this.detailTab.set('products');
     this.activeModal.set('details');
+    this.loadDetail(id);
+  }
+
+  protected retryDetail(): void {
+    const id = this.detailRmaId();
+    if (id !== null) this.loadDetail(id);
+  }
+
+  private loadDetail(id: number): void {
+    this.detailRequest?.unsubscribe();
+    this.detailRmaId.set(id);
+    this.selectedRmaSignal.set(null);
+    this.detailError.set('');
+    this.detailRequest = this.rmaService.getById(id, new HttpContext().set(SKIP_GLOBAL_LOADING, true)).subscribe({
+      next: (rma) => { if (this.detailRmaId() === id) this.selectedRmaSignal.set(rma); },
+      error: (error) => { if (this.detailRmaId() === id) this.detailError.set(extractHttpErrorMessage(error, 'Não foi possível carregar a OS.')); }
+    });
   }
 
   /** Same tab contract as notifications: arrows wrap, Home/End jump to the ends; selection follows focus. */
@@ -685,7 +713,7 @@ export class RmasComponent {
     this.host.nativeElement.querySelector<HTMLElement>(`#rma-tab-${ids[next]}`)?.focus();
   }
 
-  protected openDetailsFromKeyboard(event: Event, rma: RmaResponse): void {
+  protected openDetailsFromKeyboard(event: Event, rma: RmaListItemResponse): void {
     event.preventDefault();
     this.openDetailsModal(rma);
   }
@@ -693,11 +721,6 @@ export class RmasComponent {
   protected closeModal(): void {
     if (this.createSubmitting() || this.diagnosisBusy() || this.statusBusy() || this.warrantyBusy()) return;
     this.resetModal();
-  }
-
-  protected selectRma(rma: RmaResponse): void {
-    this.selectedRmaSignal.set(rma);
-    this.pageError.set('');
   }
 
   protected createRma(): void {
@@ -755,6 +778,7 @@ export class RmasComponent {
       finalize(() => this.createSubmitting.set(false))
     ).subscribe({
       next: (rma) => {
+        this.detailRmaId.set(rma.id);
         this.selectedRmaSignal.set(rma);
         this.resetCreateForm();
         this.createSubmitAttempted.set(false);
@@ -803,14 +827,13 @@ export class RmasComponent {
       return;
     }
 
-    this.rmaService.getById(rmaId).subscribe({
-      next: (rma) => this.openDetailsModal(rma),
-      error: (error) => this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível abrir a OS da notificação.'))
-    });
+    this.openDetailById(rmaId);
   }
 
   private resetModal(): void {
     this.activeModal.set(null);
+    this.detailRequest?.unsubscribe();
+    this.detailError.set('');
   }
 
   private loadWorkspace(): void {
@@ -843,23 +866,6 @@ export class RmasComponent {
     else this.rmaList.reload();
     const { query, status } = this.appliedFilters();
     this.summaryRequests.next({ generation: this.generation(), filters: { query, status } });
-  }
-
-  private syncSelection(rmas: RmaResponse[]): void {
-    const selected = this.selectedRmaSignal();
-
-    if (selected) {
-      const refreshed = rmas.find((item) => item.id === selected.id);
-      if (refreshed) {
-        this.selectedRmaSignal.set(refreshed);
-        return;
-      }
-
-      return;
-    }
-
-    const firstRma = rmas[0] ?? null;
-    this.selectedRmaSignal.set(firstRma);
   }
 
   private resetCreateForm(): void {

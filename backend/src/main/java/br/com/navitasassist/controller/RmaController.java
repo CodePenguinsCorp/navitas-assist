@@ -9,7 +9,9 @@ import br.com.navitasassist.rma.RmaAssigneeUpdateRequest;
 import br.com.navitasassist.rma.RmaBlockRequest;
 import br.com.navitasassist.rma.RmaBlockResolveRequest;
 import br.com.navitasassist.rma.RmaDashboardResponse;
-import br.com.navitasassist.rma.RmaResponse;
+import br.com.navitasassist.rma.RmaBoardCardResponse;
+import br.com.navitasassist.rma.RmaDetailResponse;
+import br.com.navitasassist.rma.RmaListItemResponse;
 import br.com.navitasassist.rma.RmaItemWarrantyRequest;
 import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusUpdateRequest;
@@ -40,7 +42,7 @@ public class RmaController {
     private final RmaDashboardService rmaDashboardService;
 
     @GetMapping
-    public PageResponse<RmaResponse> searchPage(
+    public PageResponse<RmaListItemResponse> searchPage(
         @RequestParam(required = false) @jakarta.validation.constraints.Size(max = 100, message = "A busca deve ter no máximo 100 caracteres.") String query,
         @RequestParam(required = false) RmaStatus status,
         @RequestParam(required = false) Integer page,
@@ -58,7 +60,7 @@ public class RmaController {
     }
 
     @GetMapping("/board")
-    public List<RmaResponse> search(
+    public List<RmaBoardCardResponse> search(
         @RequestParam(required = false) @jakarta.validation.constraints.Size(max = 100, message = "A busca deve ter no máximo 100 caracteres.") String query,
         @RequestParam(required = false) RmaStatus status
     ) {
@@ -71,53 +73,53 @@ public class RmaController {
     }
 
     @GetMapping("/{id}")
-    public RmaResponse getById(@PathVariable Long id) {
+    public RmaDetailResponse getById(@PathVariable Long id) {
         return rmaService.getById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public RmaResponse create(@Valid @RequestBody CreateRmaRequest request) {
+    public RmaDetailResponse create(@Valid @RequestBody CreateRmaRequest request) {
         return rmaService.create(request);
     }
 
     @PutMapping("/{id}")
-    public RmaResponse update(@PathVariable Long id, @Valid @RequestBody UpdateRmaRequest request) {
+    public RmaDetailResponse update(@PathVariable Long id, @Valid @RequestBody UpdateRmaRequest request) {
         return rmaService.update(id, request);
     }
 
     @PatchMapping("/{id}/status-history/{eventId}/note")
-    public RmaResponse updateStatusNote(@PathVariable Long id, @PathVariable Long eventId, @RequestBody br.com.navitasassist.rma.RmaStatusNoteRequest request) {
+    public RmaDetailResponse updateStatusNote(@PathVariable Long id, @PathVariable Long eventId, @RequestBody br.com.navitasassist.rma.RmaStatusNoteRequest request) {
         return rmaService.updateStatusNote(id, eventId, request);
     }
 
     @PatchMapping("/{id}/status")
-    public RmaResponse updateStatus(@PathVariable Long id, @Valid @RequestBody RmaStatusUpdateRequest request) {
+    public RmaDetailResponse updateStatus(@PathVariable Long id, @Valid @RequestBody RmaStatusUpdateRequest request) {
         return rmaService.updateStatus(id, request);
     }
 
     @PutMapping("/{id}/items/{itemId}/warranty")
-    public RmaResponse updateWarranty(@PathVariable Long id, @PathVariable Long itemId, @RequestBody RmaItemWarrantyRequest request) {
+    public RmaDetailResponse updateWarranty(@PathVariable Long id, @PathVariable Long itemId, @RequestBody RmaItemWarrantyRequest request) {
         return rmaService.updateWarranty(id, itemId, request);
     }
 
     @PatchMapping("/{id}/assignee")
-    public RmaResponse updateAssignee(@PathVariable Long id, @RequestBody RmaAssigneeUpdateRequest request) {
+    public RmaDetailResponse updateAssignee(@PathVariable Long id, @RequestBody RmaAssigneeUpdateRequest request) {
         return rmaService.updateAssignee(id, request);
     }
 
     @PutMapping("/{id}/diagnosis")
-    public RmaResponse upsertDiagnosis(@PathVariable Long id, @Valid @RequestBody DiagnosisRequest request) {
+    public RmaDetailResponse upsertDiagnosis(@PathVariable Long id, @Valid @RequestBody DiagnosisRequest request) {
         return rmaService.upsertDiagnosis(id, request);
     }
 
     @PostMapping("/{id}/blocks")
-    public RmaResponse block(@PathVariable Long id, @Valid @RequestBody RmaBlockRequest request) {
+    public RmaDetailResponse block(@PathVariable Long id, @Valid @RequestBody RmaBlockRequest request) {
         return rmaService.block(id, request);
     }
 
     @PatchMapping("/{id}/blocks/{blockId}")
-    public RmaResponse resolveBlock(@PathVariable Long id, @PathVariable Long blockId, @Valid @RequestBody RmaBlockResolveRequest request) {
+    public RmaDetailResponse resolveBlock(@PathVariable Long id, @PathVariable Long blockId, @Valid @RequestBody RmaBlockResolveRequest request) {
         return rmaService.resolveBlock(id, blockId, request);
     }
 }

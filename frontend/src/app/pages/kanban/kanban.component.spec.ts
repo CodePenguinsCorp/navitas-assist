@@ -9,6 +9,7 @@ import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { RmaService } from '../../core/services/rma.service';
+import { SKIP_GLOBAL_LOADING } from '../../core/interceptors/loading.interceptor';
 import { KanbanComponent } from './kanban.component';
 import { mountUnderRoot, simulateNativeModality } from '../../testing/native-dialog';
 import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
@@ -387,6 +388,24 @@ describe('KanbanComponent filters', () => {
     expect(assigneeUpdates).toEqual([[TEST_RMAS[0].id, { assigneeId: null }]]);
     expect(fixture.nativeElement.querySelectorAll('.modal-overlay').length).toBe(1);
     expect(fixture.nativeElement.textContent).not.toContain('Novo responsável');
+  });
+
+  it('reads the full detail on open, outside the global loading, and retries a failed read inside the modal', () => {
+    fixture.detectChanges();
+    const service = TestBed.inject(RmaService);
+    const reads = vi.spyOn(service, 'getById').mockReturnValueOnce(throwError(() => ({ error: { message: 'Falha de rede' } })));
+    component.openDetail(TEST_RMAS[0]);
+    fixture.detectChanges();
+    const [id, context] = reads.mock.calls[0];
+    expect(id).toBe(TEST_RMAS[0].id);
+    expect(context?.get(SKIP_GLOBAL_LOADING)).toBe(true);
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('app-rma-detail-modal')).toBeNull();
+    expect(host.querySelector('[role="dialog"] [role="alert"]')?.textContent).toContain('Falha de rede');
+    [...host.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find((button) => button.textContent?.trim() === 'Tentar novamente')!.click();
+    fixture.detectChanges();
+    expect(reads).toHaveBeenCalledTimes(2);
+    expect(host.querySelector('app-rma-detail-modal')).not.toBeNull();
   });
 
   it('replaces only the assigned card with the response instead of reloading the board', () => {

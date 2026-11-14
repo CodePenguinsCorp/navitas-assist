@@ -41,7 +41,7 @@ import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.rma.CreateRmaRequest;
 import br.com.navitasassist.rma.RmaItemRequest;
 import br.com.navitasassist.rma.RmaPriority;
-import br.com.navitasassist.rma.RmaResponse;
+import br.com.navitasassist.rma.RmaDetailResponse;
 import br.com.navitasassist.service.NotificationProcessor;
 import br.com.navitasassist.service.RmaService;
 import br.com.navitasassist.user.UserAccount;
@@ -185,7 +185,7 @@ class NotificationIntegrationTest {
 
     @Test
     void newRmaNotifiesConfiguredActiveRolesOnlyOnce() throws Exception {
-        RmaResponse rma = createRma();
+        RmaDetailResponse rma = createRma();
 
         assertEquals(1, countFor(desk, NotificationEventType.RMA_CREATED));
         assertEquals(1, countFor(admin(), NotificationEventType.RMA_CREATED));
@@ -213,7 +213,7 @@ class NotificationIntegrationTest {
 
     @Test
     void assignmentNotifiesOnlyTheNewAssigneeWithInternalAction() throws Exception {
-        RmaResponse rma = createRma();
+        RmaDetailResponse rma = createRma();
 
         mockMvc.perform(patch("/api/rmas/{id}/assignee", rma.id()).with(as(desk)).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -244,7 +244,7 @@ class NotificationIntegrationTest {
             .andExpect(jsonPath("$.updatedBy").value("admin"));
         org.assertj.core.api.Assertions.assertThat(auditJdbc.queryForObject("select count(*) from audit_events where action = 'RULE_UPDATE' and entity_type = 'NOTIFICATION_RULE'", Long.class)).isPositive();
 
-        RmaResponse skipped = createRma();
+        RmaDetailResponse skipped = createRma();
         assertEquals(0, countFor(desk, NotificationEventType.RMA_CREATED));
         assertEquals(NotificationEventStatus.SKIPPED, eventFor("RMA_CREATED:" + skipped.id()).getStatus());
 
@@ -416,7 +416,7 @@ class NotificationIntegrationTest {
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "PART_PENDING", "TEST_FAILED"})
     void realProducersNotifyDefaultRecipientsAndDeduplicate(NotificationEventType type) {
-        RmaResponse rma = assignedRma();
+        RmaDetailResponse rma = assignedRma();
         produce(type, rma.id());
         NotificationEvent event = latestEvent(type);
         assertEquals(NotificationEventStatus.PROCESSED, event.getStatus());
@@ -449,7 +449,7 @@ class NotificationIntegrationTest {
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "PART_PENDING", "TEST_FAILED"})
     void realProducersRespectDisabledRules(NotificationEventType type) {
-        RmaResponse rma = assignedRma();
+        RmaDetailResponse rma = assignedRma();
         NotificationRule rule = notificationRuleRepository.findByEventType(type).orElseThrow();
         rule.setEnabled(false);
         notificationRuleRepository.save(rule);
@@ -478,7 +478,7 @@ class NotificationIntegrationTest {
         NotificationRule rule = notificationRuleRepository.findByEventType(type).orElseThrow();
         rule.setRecipientProfiles(new java.util.HashSet<>(Set.of(hidden)));
         notificationRuleRepository.save(rule);
-        RmaResponse rma = createRma();
+        RmaDetailResponse rma = createRma();
         jdbcTemplate.update("UPDATE rmas SET assignee_id=? WHERE id=?", hiddenUser.getId(), rma.id());
         produce(type, rma.id());
         assertEquals(0, latestEvent(type).getRecipientCount());
@@ -488,7 +488,7 @@ class NotificationIntegrationTest {
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "PART_PENDING", "TEST_FAILED"})
     void notificationFailureCannotUndoBusinessOperation(NotificationEventType type) {
-        RmaResponse rma = assignedRma();
+        RmaDetailResponse rma = assignedRma();
         org.mockito.Mockito.doThrow(new IllegalStateException("Falha simulada"))
             .when(dispatcher).dispatch(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.argThat(e -> e.type() == type));
         produce(type, rma.id());
@@ -504,7 +504,7 @@ class NotificationIntegrationTest {
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "PART_PENDING", "TEST_FAILED"})
     void producersWaitForCommitAndIgnoreRollback(NotificationEventType type) {
-        RmaResponse rma = assignedRma();
+        RmaDetailResponse rma = assignedRma();
         new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(tx -> {
             produce(type, rma.id());
             assertTrue(notificationEventRepository.findAll().stream().noneMatch(e -> e.getEventType() == type));
@@ -517,7 +517,7 @@ class NotificationIntegrationTest {
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "PART_PENDING", "TEST_FAILED"})
     void assigneeInAdministratorProfileReceivesOnlyOnce(NotificationEventType type) {
-        RmaResponse rma = createRma();
+        RmaDetailResponse rma = createRma();
         jdbcTemplate.update("UPDATE rmas SET assignee_id=? WHERE id=?", admin().getId(), rma.id());
         produce(type, rma.id());
         assertEquals(1, latestEvent(type).getRecipientCount());
@@ -526,7 +526,7 @@ class NotificationIntegrationTest {
 
     @Test
     void stockAvailableAndPassingOrInapplicableResultsDoNotRaiseWarnings() {
-        RmaResponse rma = assignedRma();
+        RmaDetailResponse rma = assignedRma();
         br.com.navitasassist.part.Part part = new br.com.navitasassist.part.Part();
         part.setCode("nav40-available"); part.setName("Fusível"); part.setUnit("UN");
         part.setOnHand(java.math.BigDecimal.TEN);
@@ -544,8 +544,8 @@ class NotificationIntegrationTest {
         assertTrue(notificationEventRepository.findAll().stream().noneMatch(e -> e.getEventType() == NotificationEventType.PART_PENDING || e.getEventType() == NotificationEventType.TEST_FAILED));
     }
 
-    private RmaResponse assignedRma() {
-        RmaResponse rma = createRma();
+    private RmaDetailResponse assignedRma() {
+        RmaDetailResponse rma = createRma();
         jdbcTemplate.update("UPDATE rmas SET assignee_id=? WHERE id=?", technician.getId(), rma.id());
         return rma;
     }
@@ -584,8 +584,8 @@ class NotificationIntegrationTest {
         NotificationTestSupport.awaitIdle(notificationExecutor);
     }
 
-    private RmaResponse createRma() {
-        RmaResponse created = rmaService.create(new CreateRmaRequest(client.getId(), List.of(new RmaItemRequest(product.getId(), null, "SER-NAV40-" + System.nanoTime(), null)), null, true,
+    private RmaDetailResponse createRma() {
+        RmaDetailResponse created = rmaService.create(new CreateRmaRequest(client.getId(), List.of(new RmaItemRequest(product.getId(), null, "SER-NAV40-" + System.nanoTime(), null)), null, true,
             LocalDate.now(), null, "Não liga", null, null, RmaPriority.HIGH, null, null, null, null));
         NotificationTestSupport.awaitIdle(notificationExecutor);
         return created;

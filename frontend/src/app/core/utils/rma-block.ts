@@ -7,6 +7,6 @@ export function blockDateTime(value: string): string {
   return BLOCK_DATE_FORMAT.format(new Date(value));
 }
 
-export function blockDuration(block: RmaBlockResponse, now: number): string {
+export function blockDuration(block: Pick<RmaBlockResponse, 'blockedAt'> & { resolvedAt?: string | null }, now: number): string {
   return formatDuration(Math.max(0, ((block.resolvedAt ? Date.parse(block.resolvedAt) : now) - Date.parse(block.blockedAt)) / 1000));
 }

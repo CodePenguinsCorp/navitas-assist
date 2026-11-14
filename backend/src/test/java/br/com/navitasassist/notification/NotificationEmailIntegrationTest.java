@@ -35,7 +35,7 @@ import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.rma.CreateRmaRequest;
 import br.com.navitasassist.rma.RmaItemRequest;
 import br.com.navitasassist.rma.RmaPriority;
-import br.com.navitasassist.rma.RmaResponse;
+import br.com.navitasassist.rma.RmaDetailResponse;
 import br.com.navitasassist.service.RmaService;
 import br.com.navitasassist.user.UserAccount;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -110,7 +110,7 @@ class NotificationEmailIntegrationTest {
     @MockBean private java.time.Clock clock;
     private final java.time.Instant now = java.time.Instant.parse("2026-11-14T12:00:00Z");
     private UserAccount technician;
-    private RmaResponse rma;
+    private RmaDetailResponse rma;
 
     @BeforeEach
     void setUp() {

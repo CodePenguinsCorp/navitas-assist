@@ -8,8 +8,11 @@ import {
 import {
   FailureCause,
   FailureType,
-  RmaPriority,
+  RmaBoardCardResponse,
   RmaItemResponse,
+  RmaItemSummaryResponse,
+  RmaListItemResponse,
+  RmaPriority,
   RmaResponse,
   RmaStatus,
   WarrantyStatus
@@ -64,7 +67,7 @@ export function formatDate(value: string | null): string {
   return formatDateOnly(value);
 }
 
-export function trackableLabel(rma: Pick<RmaResponse, 'items'>): string {
+export function trackableLabel(rma: { items: ReadonlyArray<Pick<RmaItemSummaryResponse, 'serialNumber' | 'batchNumber'>> }): string {
   const firstItem = rma.items[0];
   const label = firstItem ? rmaItemTrackableLabel(firstItem) : 'Item sem identificação';
   const additionalItems = rma.items.length - 1;
@@ -87,7 +90,7 @@ export function rmaItemTrackableLabel(item: Pick<RmaItemResponse, 'serialNumber'
   return 'Item sem identifica\u00e7\u00e3o';
 }
 
-export function productSummary(rma: Pick<RmaResponse, 'items'>): string {
+export function productSummary(rma: { items: ReadonlyArray<Pick<RmaItemSummaryResponse, 'productName'>> }): string {
   const firstProductName = rma.items[0]?.productName ?? '';
   const additionalItems = rma.items.length - 1;
   return additionalItems > 0 ? `${firstProductName} + ${additionalItems} item(ns)` : firstProductName;
@@ -108,7 +111,7 @@ export function initialsOf(name: string | null): string {
   return parts.length === 0 ? '?' : ((parts[0][0] ?? '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
 }
 
-export function compareRmasForBoard(left: RmaResponse, right: RmaResponse): number {
+export function compareRmasForBoard(left: Pick<RmaResponse, 'priority' | 'updatedAt'>, right: Pick<RmaResponse, 'priority' | 'updatedAt'>): number {
   const priorityDiff = priorityWeight(right.priority) - priorityWeight(left.priority);
   if (priorityDiff !== 0) {
     return priorityDiff;
@@ -117,13 +120,40 @@ export function compareRmasForBoard(left: RmaResponse, right: RmaResponse): numb
   return compareDateStrings(right.updatedAt, left.updatedAt);
 }
 
-export function compareRmasForQueue(left: RmaResponse, right: RmaResponse): number {
+export function compareRmasForQueue(left: Pick<RmaResponse, 'priority' | 'entryDate'>, right: Pick<RmaResponse, 'priority' | 'entryDate'>): number {
   const priorityDiff = priorityWeight(right.priority) - priorityWeight(left.priority);
   if (priorityDiff !== 0) {
     return priorityDiff;
   }
 
   return compareDateStrings(left.entryDate, right.entryDate);
+}
+
+/** Projeção explícita do detalhe devolvido por uma escrita no item resumido das coleções. */
+export function toItemSummary(item: RmaItemResponse): RmaItemSummaryResponse {
+  return {
+    id: item.id, productName: item.productName, productSku: item.productSku,
+    batchNumber: item.batchNumber, serialNumber: item.serialNumber, warrantyStatus: item.warrantyStatus
+  };
+}
+
+/** Linha da lista a partir do detalhe, com os mesmos campos de `GET /api/rmas`. */
+export function toListItem(rma: RmaResponse): RmaListItemResponse {
+  return {
+    id: rma.id, code: rma.code, clientName: rma.clientName, items: rma.items.map(toItemSummary),
+    status: rma.status, priority: rma.priority, entryDate: rma.entryDate
+  };
+}
+
+/** Card do Kanban a partir do detalhe, com os mesmos campos de `GET /api/rmas/board`. */
+export function toBoardCard(rma: RmaResponse): RmaBoardCardResponse {
+  return {
+    id: rma.id, code: rma.code, clientName: rma.clientName, items: rma.items.map(toItemSummary),
+    status: rma.status, priority: rma.priority, entryDate: rma.entryDate, dueDate: rma.dueDate,
+    deadline: rma.deadline, updatedAt: rma.updatedAt, assigneeId: rma.assigneeId, assigneeName: rma.assigneeName,
+    currentBlock: rma.currentBlock ? { reason: rma.currentBlock.reason, blockedAt: rma.currentBlock.blockedAt } : null,
+    stagePeriods: rma.stagePeriods
+  };
 }
 
 export function normalizeText(value: string): string | null {

@@ -440,6 +440,54 @@ export interface RmaResponse {
   updatedAt: string;
 }
 
+/** Detalhe completo da OS: `GET /api/rmas/{id}` e as respostas de todas as escritas. */
+export type RmaDetailResponse = RmaResponse;
+
+/** Item resumido da OS nas coleções: rótulos, garantia por produto e busca. */
+export interface RmaItemSummaryResponse {
+  id: number | null;
+  productName: string;
+  productSku: string;
+  batchNumber: string | null;
+  serialNumber: string | null;
+  warrantyStatus: WarrantyStatus;
+}
+
+/** Impedimento ativo resumido no card do Kanban. */
+export interface RmaBlockSummaryResponse {
+  reason: string;
+  blockedAt: string;
+}
+
+/** Linha da lista paginada de OS (`GET /api/rmas`). */
+export interface RmaListItemResponse {
+  id: number;
+  code: string;
+  clientName: string;
+  items: RmaItemSummaryResponse[];
+  status: RmaStatus;
+  priority: RmaPriority;
+  entryDate: string;
+}
+
+/** Card do Kanban (`GET /api/rmas/board`): o que o card, os filtros e a busca usam, sem históricos nem textos livres. */
+export interface RmaBoardCardResponse {
+  id: number;
+  code: string;
+  clientName: string;
+  items: RmaItemSummaryResponse[];
+  status: RmaStatus;
+  priority: RmaPriority;
+  entryDate: string;
+  dueDate: string | null;
+  deadline: RmaDeadlineResponse;
+  updatedAt: string;
+  assigneeId: number | null;
+  assigneeName: string | null;
+  currentBlock: RmaBlockSummaryResponse | null;
+  stagePeriods: RmaStagePeriodResponse[];
+}
+
 export type NotificationEventType =
   | 'RMA_CREATED'
   | 'RMA_ASSIGNED'

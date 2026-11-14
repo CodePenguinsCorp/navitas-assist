@@ -20,13 +20,14 @@ afterEach(settleRmaLazyChunks);
 describe('RmasComponent form', () => {
   let component: RmaFormHarness;
   let fixture: ComponentFixture<RmasComponent>;
-  let rmaService: { list: ReturnType<typeof vi.fn>; getSummary: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
+  let rmaService: { list: ReturnType<typeof vi.fn>; getSummary: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn>; getById: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     rmaService = {
       list: vi.fn(() => of({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 })),
       getSummary: vi.fn(() => of({ total: 45, ongoing: 30, highPriority: 7 })),
       create: vi.fn(() => of(createdRma)),
+      getById: vi.fn(() => of(createdRma)),
     };
     const currentUser = signal<UserSession | null>({
       username: 'tester',
@@ -212,11 +213,21 @@ describe('RmasComponent pending editor lifecycle', () => {
 
   afterEach(() => http.verify());
 
+  /** Detail served by `GET /api/rmas/1` when the row opens; follows the last saved response. */
+  let detailBody: RmaResponse = createdRma;
+  beforeEach(() => { detailBody = createdRma; });
+
+  function openRow(): void {
+    page.querySelector<HTMLElement>('.rma-table-row')!.click();
+    fixture.detectChanges();
+    http.expectOne('/api/rmas/1').flush(detailBody);
+    fixture.detectChanges();
+  }
+
   function openEditor(mode: 'create' | 'diagnosis'): void {
     if (mode === 'create') page.querySelector<HTMLButtonElement>('.page-heading .button-primary')!.click();
     else {
-      page.querySelector<HTMLElement>('.rma-table-row')!.click();
-      fixture.detectChanges();
+      openRow();
       [...page.querySelectorAll<HTMLButtonElement>('.tab')].find(b => b.textContent?.trim() === 'Diagnóstico')!.click();
       fixture.detectChanges();
       page.querySelector<HTMLButtonElement>('app-rma-diagnosis .diagnosis-trigger')!.click();
@@ -283,7 +294,7 @@ describe('RmasComponent pending editor lifecycle', () => {
       : { ...createdRma, diagnosis: { id: 1, ...request.request.body,
         createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt } };
     request.flush(saved);
-    if (mode === 'diagnosis') http.expectOne('/api/rmas/1').flush(saved);
+    if (mode === 'diagnosis') { detailBody = saved; http.expectOne('/api/rmas/1').flush(saved); }
     const reloaded = mode === 'create' ? [createdRma, saved] : [saved];
     http.expectOne(r => r.method === 'GET' && r.url.split('?')[0] === '/api/rmas').flush({ content: reloaded, page: 0, size: 20, totalElements: reloaded.length, totalPages: 1 });
     http.expectOne('/api/rmas/summary').flush({ total: reloaded.length, ongoing: reloaded.length, highPriority: 0 });
@@ -365,8 +376,7 @@ describe('RmasComponent pending editor lifecycle', () => {
   });
 
   it('preserves read-only detail closure', () => {
-    page.querySelector<HTMLElement>('.rma-table-row')!.click();
-    fixture.detectChanges();
+    openRow();
     exitControl('close').click();
     fixture.detectChanges();
     expect(page.querySelector('.modal-overlay')).toBeNull();

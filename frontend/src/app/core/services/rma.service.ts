@@ -9,9 +9,11 @@ import {
   RmaAssigneeUpdateRequest,
   RmaBlockRequest,
   RmaBlockResolveRequest,
+  RmaBoardCardResponse,
   RmaDashboardResponse,
   RmaResponse,
   RmaItemWarrantyRequest,
+  RmaListItemResponse,
   RmaSummaryResponse,
   RmaPriority,
   RmaStatus,
@@ -29,9 +31,9 @@ export interface RmaFilters extends PageQuery {
 export class RmaService {
   private readonly http = inject(HttpClient);
 
-  list(filters: RmaFilters = {}): Observable<PageResponse<RmaResponse>> {
+  list(filters: RmaFilters = {}): Observable<PageResponse<RmaListItemResponse>> {
     const params = buildPageParams(filters, { query: filters.query, status: filters.status });
-    return this.http.get<PageResponse<RmaResponse>>('/api/rmas', { params });
+    return this.http.get<PageResponse<RmaListItemResponse>>('/api/rmas', { params });
   }
 
   getSummary(filters: Pick<RmaFilters, 'query' | 'status'> = {}): Observable<RmaSummaryResponse> {
@@ -39,9 +41,9 @@ export class RmaService {
     return this.http.get<RmaSummaryResponse>('/api/rmas/summary', { params });
   }
 
-  listBoard(filters: Pick<RmaFilters, 'query' | 'status'> = {}): Observable<RmaResponse[]> {
+  listBoard(filters: Pick<RmaFilters, 'query' | 'status'> = {}): Observable<RmaBoardCardResponse[]> {
     const params = buildPageParams({}, { query: filters.query, status: filters.status });
-    return this.http.get<RmaResponse[]>('/api/rmas/board', { params });
+    return this.http.get<RmaBoardCardResponse[]>('/api/rmas/board', { params });
   }
 
   getDashboard(): Observable<RmaDashboardResponse> {

@@ -570,9 +570,9 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.stagePeriods[0].leftAt").exists())
             .andExpect(jsonPath("$.stagePeriods[1].status").value("IN_DIAGNOSIS"))
             .andExpect(jsonPath("$.stagePeriods[1].leftAt").doesNotExist());
-        mockMvc.perform(get("/api/rmas").with(asProfile("viewer", "VIEWER")))
+        mockMvc.perform(get("/api/rmas/board").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.content[0].stagePeriods[1].status").value("IN_DIAGNOSIS"));
+            .andExpect(jsonPath("$[0].stagePeriods[1].status").value("IN_DIAGNOSIS"));
         mockMvc.perform(patch("/api/rmas/{id}/status", id).with(asProfile("tech", "TECHNICIAN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"COMPLETED\"}"))
             .andExpect(status().isOk())

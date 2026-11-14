@@ -10,6 +10,8 @@ import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { statusLabel } from '../../core/utils/rma-ui';
 import { CustomSelectComponent } from '../form-controls/custom-select/custom-select.component';
 
+type StatusTarget = Pick<RmaResponse, 'id' | 'status'> & { statusHistory?: RmaStatusHistoryResponse[] };
+
 @Component({
   selector: 'app-rma-status-field',
   imports: [CustomSelectComponent, ReactiveFormsModule],
@@ -63,7 +65,8 @@ import { CustomSelectComponent } from '../form-controls/custom-select/custom-sel
   `]
 })
 export class RmaStatusFieldComponent {
-  readonly rma = input<RmaResponse | null>(null);
+  /** The open detail or a board card: id and status drive the request; the history, when present, the note. */
+  readonly rma = input<StatusTarget | null>(null);
   readonly showSelector = input(true);
   readonly event = input<RmaStatusHistoryResponse | null>(null);
   readonly disabled = input(false);
@@ -80,11 +83,11 @@ export class RmaStatusFieldComponent {
   protected readonly busy = signal(false);
   protected readonly error = signal('');
   protected readonly message = signal('');
-  protected readonly previous = signal<{ before: RmaResponse; after: RmaResponse } | null>(null);
+  protected readonly previous = signal<{ before: StatusTarget; after: RmaResponse } | null>(null);
   protected readonly editing = signal(false);
   protected readonly noteTarget = computed(() => {
     const target = this.event() ?? this.previous()?.after.statusHistory.reduce<RmaStatusHistoryResponse | null>((latest, entry) => !latest || (entry.id ?? 0) > (latest.id ?? 0) ? entry : latest, null);
-    return this.rma()?.statusHistory.find(entry => entry.id === target?.id) ?? target;
+    return this.rma()?.statusHistory?.find(entry => entry.id === target?.id) ?? target;
   });
   protected readonly noteAllowed = computed(() => this.allowed() && !!this.noteTarget()?.id && !CLOSED_RMA_STATUSES.includes(this.rma()?.status ?? this.previous()?.after.status ?? 'RECEIVED'));
   protected readonly note = new FormControl('', { nonNullable: true, validators: [Validators.maxLength(255)] });
@@ -123,7 +126,7 @@ export class RmaStatusFieldComponent {
     this.submit(current, change.before.status, '', true);
   }
 
-  private submit(target: RmaResponse, status: RmaStatus, note: string, undo: boolean): void {
+  private submit(target: StatusTarget, status: RmaStatus, note: string, undo: boolean): void {
     this.error.set(''); this.busy.set(true); this.busyChange.emit(true);
     this.service.updateStatus(target.id, { status, note }).pipe(finalize(() => {
       this.busy.set(false); this.busyChange.emit(false);

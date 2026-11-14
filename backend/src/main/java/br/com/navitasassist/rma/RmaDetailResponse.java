@@ -6,7 +6,7 @@ import java.util.List;
 
 import br.com.navitasassist.diagnosis.DiagnosisResponse;
 
-public record RmaResponse(
+public record RmaDetailResponse(
     Long id,
     String code,
     String clientName,
@@ -42,12 +42,12 @@ public record RmaResponse(
     Instant createdAt,
     Instant updatedAt
 ) {
-    public static RmaResponse from(RmaRecord rma, List<RmaStagePeriodResponse> stagePeriods, RmaDeadlineResponse deadline) {
+    public static RmaDetailResponse from(RmaRecord rma, List<RmaStagePeriodResponse> stagePeriods, RmaDeadlineResponse deadline) {
         List<RmaItemResponse> items = rma.getItems().isEmpty()
             ? List.of(RmaItemResponse.fromLegacy(rma))
             : rma.getItems().stream().map(RmaItemResponse::from).toList();
 
-        return new RmaResponse(
+        return new RmaDetailResponse(
             rma.getId(),
             rma.getCode(),
             rma.getClient().getLegalName(),
