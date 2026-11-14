@@ -21,8 +21,8 @@ import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 
 /**
- * Perfil de acesso: nome e conjunto de códigos de {@link Permission}. Os 4 perfis migrados guardam o role antigo em
- * {@code legacyCode}.
+ * Perfil de acesso: nome e conjunto de códigos de {@link Permission}. Os 4 perfis prontos da migração-base guardam um
+ * código fixo em {@code legacyCode} (ADMIN, SERVICE_DESK, TECHNICIAN, VIEWER) e não podem ser excluídos.
  */
 @Getter
 @Setter

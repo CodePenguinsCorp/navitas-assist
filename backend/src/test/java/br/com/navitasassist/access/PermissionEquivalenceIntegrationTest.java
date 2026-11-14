@@ -76,17 +76,24 @@ class PermissionEquivalenceIntegrationTest {
     private static String sample(String pattern) {
         return pattern
             .replace("{eventType}", "INVALID")
-            .replace("{code}", "RMA-INEXISTENTE")
+            .replace("{code}", "OS-INEXISTENTE")
             .replaceAll("\\{[A-Za-z]+}", ID);
     }
 
     static final List<Row> MATRIX = List.of(
+        row(HttpMethod.GET, "/api/audit-events", A),
+        row(HttpMethod.GET, "/api/clients/imports/template", A),
+        row(HttpMethod.POST, "/api/clients/imports/preview", A),
+        row(HttpMethod.POST, "/api/clients/imports/confirm", A),
+        row(HttpMethod.GET, "/api/products/imports/template", A),
+        row(HttpMethod.POST, "/api/products/imports/preview", A),
+        row(HttpMethod.POST, "/api/products/imports/confirm", A),
         // Públicas
         new Row(HttpMethod.GET, "/health", "/health", ALL, Kind.PUBLIC),
         new Row(HttpMethod.GET, "/api/auth/csrf", "/api/auth/csrf", ALL, Kind.PUBLIC),
         new Row(HttpMethod.POST, "/api/auth/login", "/api/auth/login", ALL, Kind.PUBLIC),
 
-        // Todos (autenticado)
+        // Todos os perfis prontos (autenticado ou permissão que os quatro têm: rma.ver, cadastros.ver, pecas.ver, protocolos.ver)
         row(HttpMethod.GET, "/api/auth/me", ALL),
         row(HttpMethod.GET, "/api/clients", ALL),
         row(HttpMethod.GET, "/api/clients/options", ALL),
@@ -95,7 +102,6 @@ class PermissionEquivalenceIntegrationTest {
         row(HttpMethod.GET, "/api/products", ALL),
         row(HttpMethod.GET, "/api/products/options", ALL),
         row(HttpMethod.GET, "/api/products/summary", ALL),
-        row(HttpMethod.GET, "/api/products/{id}", ALL),
         row(HttpMethod.GET, "/api/kanban-views", ALL),
         row(HttpMethod.POST, "/api/kanban-views", ALL),
         row(HttpMethod.PUT, "/api/kanban-views/{id}", ALL),
@@ -111,26 +117,30 @@ class PermissionEquivalenceIntegrationTest {
         row(HttpMethod.GET, "/api/notifications/preferences", ALL),
         row(HttpMethod.PUT, "/api/notifications/preferences/{eventType}", ALL),
         row(HttpMethod.GET, "/api/parts", ALL),
+        row(HttpMethod.GET, "/api/parts/options", ALL),
         row(HttpMethod.GET, "/api/parts/pending", ALL),
         row(HttpMethod.GET, "/api/parts/replenishment", ALL),
-        row(HttpMethod.GET, "/api/parts/{id}", ALL),
         row(HttpMethod.GET, "/api/parts/{id}/movements", ALL),
         row(HttpMethod.GET, "/api/protocols/templates", ALL),
-        row(HttpMethod.GET, "/api/protocols/templates/{id}", ALL),
         row(HttpMethod.GET, "/api/protocols/rmas/{rmaId}/executions", ALL),
         row(HttpMethod.GET, "/api/rmas", ALL),
         row(HttpMethod.GET, "/api/rmas/summary", ALL),
         row(HttpMethod.GET, "/api/rmas/board", ALL),
-        row(HttpMethod.GET, "/api/rmas/history", ALL),
+        row(HttpMethod.GET, "/api/rmas/dashboard", ALL),
         row(HttpMethod.GET, "/api/rmas/{id}", ALL),
-        row(HttpMethod.GET, "/api/rmas/code/{code}", ALL),
+        row(HttpMethod.GET, "/api/rmas/{id}/report.pdf", ALL),
         row(HttpMethod.GET, "/api/rmas/{rmaId}/parts", ALL),
+        row(HttpMethod.GET, "/api/rmas/{rmaId}/repair", ALL),
+        row(HttpMethod.GET, "/api/rmas/{rmaId}/repair/external-components", ALL),
         row(HttpMethod.GET, "/api/users/assignable", ALL),
 
         // Só A
         row(HttpMethod.GET, "/api/notification-rules", A),
         row(HttpMethod.PUT, "/api/notification-rules/{eventType}", A),
         row(HttpMethod.GET, "/api/notification-rules/failures", A),
+        row(HttpMethod.GET, "/api/notification-rules/email-status", A),
+        row(HttpMethod.POST, "/api/notification-rules/emails/test", A),
+        row(HttpMethod.POST, "/api/notification-rules/emails/{notificationId}/retry", A),
         row(HttpMethod.GET, "/api/users", A),
         row(HttpMethod.GET, "/api/users/summary", A),
         row(HttpMethod.POST, "/api/users", A),
@@ -140,7 +150,6 @@ class PermissionEquivalenceIntegrationTest {
         row(HttpMethod.PUT, "/api/protocols/templates/{id}", A),
         row(HttpMethod.GET, "/api/profiles", A),
         row(HttpMethod.GET, "/api/profiles/options", A),
-        row(HttpMethod.GET, "/api/profiles/{id}", A),
         row(HttpMethod.POST, "/api/profiles", A),
         row(HttpMethod.PUT, "/api/profiles/{id}", A),
         row(HttpMethod.DELETE, "/api/profiles/{id}", A),
@@ -148,6 +157,9 @@ class PermissionEquivalenceIntegrationTest {
 
         // A, T, V
         row(HttpMethod.GET, "/api/reports/rmas", ATV),
+        row(HttpMethod.GET, "/api/reports/rmas/summary", ATV),
+        row(HttpMethod.GET, "/api/reports/rmas/export.csv", ATV),
+        row(HttpMethod.GET, "/api/reports/rmas/summary/export.csv", ATV),
 
         // A, S
         row(HttpMethod.POST, "/api/clients", AS),
@@ -158,6 +170,7 @@ class PermissionEquivalenceIntegrationTest {
         row(HttpMethod.DELETE, "/api/products/{id}", AS),
         row(HttpMethod.POST, "/api/rmas", AS),
         row(HttpMethod.PUT, "/api/rmas/{id}", AS),
+        row(HttpMethod.PUT, "/api/rmas/{id}/items/{itemId}/warranty", AS),
         row(HttpMethod.PATCH, "/api/rmas/{id}/assignee", AS),
         row(HttpMethod.POST, "/api/parts", AS),
         row(HttpMethod.PUT, "/api/parts/{id}", AS),
@@ -166,6 +179,12 @@ class PermissionEquivalenceIntegrationTest {
 
         // A, T
         row(HttpMethod.PUT, "/api/rmas/{id}/diagnosis", AT),
+        row(HttpMethod.POST, "/api/rmas/{rmaId}/repair/external-components", AT),
+        row(HttpMethod.POST, "/api/rmas/{rmaId}/repair/interventions", AT),
+        row(HttpMethod.PUT, "/api/rmas/{rmaId}/repair/interventions/{id}", AT),
+        row(HttpMethod.POST, "/api/rmas/{rmaId}/repair/interventions/{id}/void", AT),
+        row(HttpMethod.PUT, "/api/rmas/{rmaId}/repair/external-components/{id}", AT),
+        row(HttpMethod.POST, "/api/rmas/{rmaId}/repair/external-components/{id}/void", AT),
         row(HttpMethod.POST, "/api/rmas/{rmaId}/parts", AT),
         row(HttpMethod.POST, "/api/rmas/{rmaId}/parts/{reservationId}/allocate", AT),
         row(HttpMethod.POST, "/api/rmas/{rmaId}/parts/{reservationId}/consume", AT),
@@ -176,7 +195,7 @@ class PermissionEquivalenceIntegrationTest {
 
         // A, S, T
         row(HttpMethod.PATCH, "/api/rmas/{id}/status", AST),
-        row(HttpMethod.PATCH, "/api/rmas/{id}/bulk-status", AST),
+        row(HttpMethod.PATCH, "/api/rmas/{id}/status-history/{eventId}/note", AST),
         row(HttpMethod.POST, "/api/rmas/{id}/blocks", AST),
         row(HttpMethod.PATCH, "/api/rmas/{id}/blocks/{blockId}", AST),
 
@@ -235,6 +254,68 @@ class PermissionEquivalenceIntegrationTest {
     }
 
     @Test
+    void importsRequireTheirOwnPermissionAndPreserveCsrf() throws Exception {
+        for (String resource : List.of("clients", "products")) {
+            for (String operation : List.of("template", "preview", "confirm")) {
+                HttpMethod method = operation.equals("template") ? HttpMethod.GET : HttpMethod.POST;
+                String path = "/api/" + resource + "/imports/" + operation;
+                int denied = mvc.perform(request(method, path).with(csrf()).with(user("editor").authorities(
+                    new org.springframework.security.core.authority.SimpleGrantedAuthority("cadastros.editar"))))
+                    .andReturn().getResponse().getStatus();
+                assertEquals(403, denied, path);
+                int allowed = mvc.perform(request(method, path).with(csrf()).with(user("importer").authorities(
+                    new org.springframework.security.core.authority.SimpleGrantedAuthority("cadastros.importar"))))
+                    .andReturn().getResponse().getStatus();
+                assertTrue(allowed != 401 && allowed != 403, path + ": " + allowed);
+                if (method == HttpMethod.POST) {
+                    mvc.perform(request(method, path).with(user("importer").authorities(
+                        new org.springframework.security.core.authority.SimpleGrantedAuthority("cadastros.importar"))))
+                        .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+                }
+            }
+        }
+    }
+
+    @Test
+    void repairWritesUseIndependentExistingPermissions() throws Exception {
+        for (String[] entry : List.of(
+            new String[] {"external-components", Permission.Codes.PECAS_RESERVAR, Permission.Codes.RMA_DIAGNOSTICAR},
+            new String[] {"interventions", Permission.Codes.RMA_DIAGNOSTICAR, Permission.Codes.PECAS_RESERVAR},
+            new String[] {"consume", Permission.Codes.PECAS_RESERVAR, Permission.Codes.RMA_DIAGNOSTICAR})) {
+            String path = entry[0].equals("consume") ? "/api/rmas/999999/parts/999999/consume" : "/api/rmas/999999/repair/" + entry[0];
+            int allowed = mvc.perform(request(HttpMethod.POST, path).with(csrf())
+                .with(user("isolated").authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority(entry[1])))
+                .contentType(MediaType.APPLICATION_JSON).content("{}")).andReturn().getResponse().getStatus();
+            assertTrue(allowed != 401 && allowed != 403, path + " exige somente " + entry[1] + ", recebeu " + allowed);
+            int denied = mvc.perform(request(HttpMethod.POST, path).with(csrf())
+                .with(user("isolated").authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority(entry[2])))
+                .contentType(MediaType.APPLICATION_JSON).content("{}")).andReturn().getResponse().getStatus();
+            assertEquals(403, denied, path);
+        }
+    }
+
+    @Test
+    void repairReadsRequireOnlyRmaView() throws Exception {
+        for (String path : List.of("/api/rmas/999999/repair", "/api/rmas/999999/repair/external-components")) {
+            mvc.perform(request(HttpMethod.GET, path).with(user("viewer").authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority(Permission.Codes.RMA_VER))))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
+            mvc.perform(request(HttpMethod.GET, path).with(user("writer").authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority(Permission.Codes.PECAS_RESERVAR))))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        }
+    }
+
+    @Test
+    void protocolExecutionReadsRequireRmaView() throws Exception {
+        String path = "/api/protocols/rmas/999999/executions";
+        mvc.perform(request(HttpMethod.GET, path).with(user("reader").authorities(
+                new org.springframework.security.core.authority.SimpleGrantedAuthority(Permission.Codes.RMA_VER))))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
+        mvc.perform(request(HttpMethod.GET, path).with(user("catalog").authorities(
+                new org.springframework.security.core.authority.SimpleGrantedAuthority(Permission.Codes.PROTOCOLOS_VER))))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+    }
+
+    @Test
     void everyHandlerMappingIsInMatrix() {
         Set<String> inMatrix = new TreeSet<>();
         MATRIX.stream()
@@ -265,7 +346,7 @@ class PermissionEquivalenceIntegrationTest {
         Set<String> stale = new TreeSet<>(inMatrix);
         stale.removeAll(mapped);
         assertTrue(stale.isEmpty(), "Linhas MAPPED/PUBLIC sem mapeamento de controller: " + stale);
-        assertEquals(85, mapped.size(), "Total de mapeamentos de controller");
+        assertEquals(inMatrix.size(), mapped.size(), "Total de mapeamentos de controller");
     }
 
     private static MockHttpServletRequestBuilder build(Row row) {

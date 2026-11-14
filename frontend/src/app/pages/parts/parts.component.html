@@ -8,7 +8,23 @@
   </app-page-header>
 
   @if (hasLoaded() && !loadFailed()) {
-    <p class="stock-summary">No estoque completo: {{ belowMinimumCount() }} {{ belowMinimumCount() === 1 ? 'peça abaixo' : 'peças abaixo' }} do mínimo · {{ pending().length }} {{ pending().length === 1 ? 'reserva pendente' : 'reservas pendentes' }} · Valor em estoque (saldo × custo unitário atual): {{ currency(stockValue()) }}</p>
+    <ul class="page-summary" aria-label="Indicadores do estoque">
+      <li class="page-summary__item" [class.tone-danger]="belowMinimumCount() > 0" title="Peças com saldo abaixo do mínimo, em todo o estoque">
+        <app-icon name="alert" [size]="16" />
+        <span>Abaixo do mínimo</span>
+        <strong>{{ belowMinimumCount() }}</strong>
+      </li>
+      <li class="page-summary__item" [class.tone-warning]="pending().length > 0" title="Reservas ainda não aplicadas nem canceladas">
+        <app-icon name="clock" [size]="16" />
+        <span>Reservas pendentes</span>
+        <strong>{{ pending().length }}</strong>
+      </li>
+      <li class="page-summary__item tone-success" title="Saldo × custo unitário atual">
+        <app-icon name="box" [size]="16" />
+        <span>Valor em estoque</span>
+        <strong>{{ currency(stockValue()) }}</strong>
+      </li>
+    </ul>
   }
 
   <div class="tab-list" role="tablist" aria-label="Seções de peças">
@@ -48,10 +64,7 @@
           <section class="empty-state">
             <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
             <h3>Nenhuma peça cadastrada</h3>
-            <p>Cadastre peças de reposição para reservá-las nos RMAs.</p>
-            @if (canManage()) {
-              <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Nova peça</button>
-            }
+            <p>Cadastre peças de reposição para reservá-las nas ordens de serviço.</p>
           </section>
         } @else if (filteredParts().length === 0) {
           <section class="empty-state">
@@ -127,7 +140,7 @@
                   <th>Localização</th>
                   <th>Disponível</th>
                   <th>Mínimo</th>
-                  <th>Pendente em RMAs</th>
+                  <th>Pendente em ordens de serviço</th>
                   <th>Sugestão de compra</th>
                 </tr>
               </thead>
@@ -149,7 +162,7 @@
       </article>
 
       <article class="table-card table-card--list panel">
-        <h3>Peças pendentes por RMA</h3>
+        <h3>Peças pendentes por OS</h3>
         @if (pending().length === 0) {
           <p>Nenhuma reserva aguardando saldo.</p>
         } @else {
@@ -157,7 +170,7 @@
             <table>
               <thead>
                 <tr>
-                  <th>RMA</th>
+                  <th>OS</th>
                   <th>Nome / Código</th>
                   <th>Localização</th>
                   <th>Quantidade</th>
@@ -363,7 +376,7 @@
 @if (historyPart(); as part) {
   <div class="modal-overlay" (click)="closeModals()">
     <section
-      class="modal-panel panel"
+      class="modal-panel panel history-panel"
       role="dialog"
       aria-modal="true"
       aria-labelledby="part-history-title"
@@ -377,7 +390,7 @@
       <header class="modal-header">
         <div>
           <h3 id="part-history-title" tabindex="-1">Histórico de movimentos</h3>
-          <p><span class="code-text">{{ part.code }}</span> · {{ part.name }}. Movimentos não são editados; correções geram estorno.</p>
+          <p><span class="code-text">{{ part.code }}</span> · {{ part.name }}</p>
         </div>
         <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModals()" [disabled]="submitting()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
@@ -395,78 +408,64 @@
       } @else if (history().length === 0) {
         <p>Nenhum movimento registrado.</p>
       } @else {
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Instante</th>
-                <th>Tipo</th>
-                <th>Variação em estoque</th>
-                <th>Variação reservada</th>
-                <th>Em estoque após</th>
-                <th>Reservado após</th>
-                <th>RMA</th>
-                <th>Autor</th>
-                <th>Motivo</th>
-                @if (canManage()) {
-                  <th class="table-actions-col">Ações</th>
+        <ol class="movement-list" aria-label="Movimentos">
+          @for (movement of history(); track movement.id) {
+            <li class="movement-item">
+              <div class="movement-item__head">
+                <span class="mini-chip tone-chip movement-item__type" [class]="movementTone(movement.type)">{{ movementLabels[movement.type] }}</span>
+                @if (movement.reversed) {
+                  <span class="mini-chip warranty-off">Estornado</span>
                 }
-              </tr>
-            </thead>
-            <tbody>
-              @for (movement of history(); track movement.id) {
-                <tr>
-                  <td><time [attr.datetime]="movement.createdAt">{{ dateTime(movement.createdAt) }}</time></td>
-                  <td>
-                    {{ movementLabels[movement.type] }}
-                    @if (movement.reversedMovementId) {
-                      <span class="table-subtitle">do movimento {{ movement.reversedMovementId }}</span>
-                    }
-                    @if (movement.reversed) {
-                      <span class="mini-chip warranty-off">Estornado</span>
-                    }
-                  </td>
-                  <td>{{ signedQuantity(movement.onHandChange) }} {{ part.unit }}</td>
-                  <td>{{ signedQuantity(movement.reservedChange) }} {{ part.unit }}</td>
-                  <td>{{ quantity(movement.onHandAfter, part.unit) }}</td>
-                  <td>{{ quantity(movement.reservedAfter, part.unit) }}</td>
-                  <td>{{ movement.rmaCode || '—' }}</td>
-                  <td>{{ movement.createdBy }}</td>
-                  <td>{{ movement.reason || '—' }}</td>
-                  @if (canManage()) {
-                    <td class="table-actions-col">
-                      @if (reversingMovementId() !== movement.id && canReverse(movement)) {
-                        <button type="button" class="button-secondary button-secondary--small" [attr.data-reverse]="movement.id" (click)="startReversal(movement)" [disabled]="submitting()">Estornar</button>
-                      }
-                    </td>
-                  }
-                </tr>
-                @if (canManage() && reversingMovementId() === movement.id) {
-                  <tr>
-                    <td [attr.colspan]="10">
-                      <section class="movement-reversal" [attr.aria-labelledby]="'reversal-title-' + movement.id">
-                        <h4 [id]="'reversal-title-' + movement.id">Estornar movimento {{ movement.id }}</h4>
-                        <p>{{ movementLabels[movement.type] }} · {{ dateTime(movement.createdAt) }} · {{ part.code }} · {{ part.name }}</p>
-                        <p>O movimento original será mantido.</p>
-                        <label class="field-group" [attr.for]="'reversal-reason-' + movement.id">
-                          <span>Motivo do estorno (obrigatório)</span>
-                          <input [id]="'reversal-reason-' + movement.id" type="text" [formControl]="reversalReason" [attr.maxlength]="limits.reason" [attr.aria-describedby]="modalErrorMessage() ? 'reversal-error-' + movement.id : null" />
-                        </label>
-                        @if (modalErrorMessage()) {
-                          <p class="field-error" role="alert" [id]="'reversal-error-' + movement.id">{{ modalErrorMessage() }}</p>
-                        }
-                        <div class="form-actions">
-                          <button type="button" class="button-secondary" (click)="cancelReversal()" [disabled]="submitting()">Cancelar</button>
-                          <button type="button" class="button-primary" (click)="confirmReversal(movement)" [disabled]="submitting()">Confirmar estorno</button>
-                        </div>
-                      </section>
-                    </td>
-                  </tr>
+                @if (movement.reversedMovementId) {
+                  <span class="movement-item__muted">do movimento {{ movement.reversedMovementId }}</span>
                 }
+                <time class="movement-item__muted" [attr.datetime]="movement.createdAt">{{ dateTime(movement.createdAt) }}</time>
+              </div>
+              @if (canManage() && reversingMovementId() !== movement.id && canReverse(movement)) {
+                <button
+                  appRowAction
+                  icon="undo"
+                  label="Estornar"
+                  class="movement-item__action"
+                  [target]="'movimento ' + movement.id + ' ' + movementLabels[movement.type] + ' ' + dateTime(movement.createdAt)"
+                  [attr.data-reverse]="movement.id"
+                  (click)="startReversal(movement)"
+                  [disabled]="submitting()"
+                ></button>
               }
-            </tbody>
-          </table>
-        </div>
+              <p class="movement-item__change">
+                @for (change of changes(movement); track change.label; let last = $last) {
+                  <strong>{{ change.amount }} {{ part.unit }}</strong> {{ change.label }}@if (!last) {<span aria-hidden="true"> · </span>}
+                }
+              </p>
+              <p class="movement-item__balance"><span>Em estoque {{ quantity(movement.onHandAfter, part.unit) }}</span> · <span>Reservado {{ quantity(movement.reservedAfter, part.unit) }}</span></p>
+              <p class="movement-item__meta">
+                @if (movement.rmaCode) {<span class="code-text">{{ movement.rmaCode }}</span> · }{{ movement.createdBy }}
+              </p>
+              @if (movement.reason) {
+                <p class="movement-item__reason">{{ movement.reason }}</p>
+              }
+              @if (canManage() && reversingMovementId() === movement.id) {
+                <section class="movement-reversal" [attr.aria-labelledby]="'reversal-title-' + movement.id">
+                  <h4 [id]="'reversal-title-' + movement.id">Estornar movimento {{ movement.id }}</h4>
+                  <p>{{ movementLabels[movement.type] }} · {{ dateTime(movement.createdAt) }} · {{ part.code }} · {{ part.name }}</p>
+                  <p>O movimento original será mantido.</p>
+                  <label class="field-group" [attr.for]="'reversal-reason-' + movement.id">
+                    <span>Motivo do estorno (obrigatório)</span>
+                    <input [id]="'reversal-reason-' + movement.id" type="text" [formControl]="reversalReason" [attr.maxlength]="limits.reason" [attr.aria-describedby]="modalErrorMessage() ? 'reversal-error-' + movement.id : null" />
+                  </label>
+                  @if (modalErrorMessage()) {
+                    <p class="field-error" role="alert" [id]="'reversal-error-' + movement.id">{{ modalErrorMessage() }}</p>
+                  }
+                  <div class="form-actions">
+                    <button type="button" class="button-secondary" (click)="cancelReversal()" [disabled]="submitting()">Cancelar</button>
+                    <button type="button" class="button-primary" (click)="confirmReversal(movement)" [disabled]="submitting()">Confirmar estorno</button>
+                  </div>
+                </section>
+              }
+            </li>
+          }
+        </ol>
       }
     </section>
   </div>

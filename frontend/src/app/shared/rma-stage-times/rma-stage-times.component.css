@@ -1,0 +1,125 @@
+:host { display: block; }
+
+.stage-times {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.stage-times__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.stage-times h4 {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.stage-times__total {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-semibold);
+}
+
+/* One bar, one segment per stage, width proportional to the time spent. */
+.stage-times__bar {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+}
+
+.stage-times__segment {
+  position: relative;
+  flex-basis: 0;
+  min-width: 6px;
+  border-radius: 3px;
+  background: var(--tone, var(--brand-blue));
+  cursor: default;
+}
+
+.stage-times__segment:first-child { border-radius: 999px 3px 3px 999px; }
+.stage-times__segment:last-child { border-radius: 3px 999px 999px 3px; }
+.stage-times__segment:only-child { border-radius: 999px; }
+
+.stage-times__segment:focus-visible {
+  outline: 2px solid var(--focus-border);
+  outline-offset: 2px;
+}
+
+/* The arrow opens the per-stage list: colour dot, stage name and time. */
+.stage-times__toggle {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--muted);
+}
+
+.stage-times__toggle:hover,
+.stage-times__toggle:focus-visible {
+  background: var(--brand-tint);
+  color: var(--brand-blue-deep);
+}
+
+.stage-times__toggle svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  transition: transform 160ms ease;
+}
+
+.stage-times__toggle.is-open svg {
+  transform: rotate(180deg);
+}
+
+.stage-times__list {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-sm);
+}
+
+.stage-times__list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.stage-times__dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tone, var(--brand-blue));
+}
+
+.stage-times__name {
+  flex: 1;
+  min-width: 0;
+}
+
+.stage-times__value {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stage-times__closing {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}

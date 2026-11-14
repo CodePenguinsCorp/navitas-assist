@@ -23,12 +23,13 @@ import {
   CustomSelectComponent,
   CustomSelectOption
 } from '../../shared/form-controls/custom-select/custom-select.component';
+import { PermissionPickerComponent } from '../../shared/permission-picker/permission-picker.component';
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
-type UserFormControlName = 'username' | 'fullName' | 'password' | 'profileId' | 'active';
+type UserFormControlName = 'email' | 'username' | 'fullName' | 'password' | 'profileId' | 'active';
 type LoadState = 'loading' | 'ready' | 'failed';
 type UserStatusFilter = 'all' | 'active' | 'inactive';
 type UserModalMode = 'create' | 'edit';
@@ -38,7 +39,7 @@ const passwordByteLengthValidator: ValidatorFn = control =>
 
 @Component({
   selector: 'app-users',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PaginationComponent, PageHeaderComponent, RowActionComponent],
+  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PaginationComponent, PageHeaderComponent, PermissionPickerComponent, RowActionComponent],
   templateUrl: './users.component.html',
   styles: [`
     :host { display: block; }
@@ -67,33 +68,7 @@ const passwordByteLengthValidator: ValidatorFn = control =>
       line-height: 1.35;
     }
 
-    .permission-module {
-      grid-column: 1 / -1;
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
-      gap: 0 var(--space-4);
-      min-width: 0;
-      margin: 0;
-      padding: 0;
-      border: 0;
-    }
-
-    .permission-module > legend {
-      padding: 0;
-      margin-bottom: var(--space-1);
-      font-weight: var(--font-weight-semibold);
-    }
-
-    .permission-module .checkbox-field {
-      align-items: flex-start;
-      padding-block: 0.55rem;
-      line-height: 1.35;
-    }
-
-    .permission-module .checkbox-field input { margin-top: 0.1rem; flex-shrink: 0; }
-    .permission-module .checkbox-field { flex-wrap: wrap; column-gap: 0.55rem; row-gap: 0; }
-    .permission-module .checkbox-field > span { flex: 1 1 0; min-width: 0; }
-    .permission-module .checkbox-field > small { flex-basis: 100%; padding-left: 1.6rem; }
+    .user-email { max-width: 200px; overflow-wrap: anywhere; font-size: var(--font-size-sm); }
     .extras-pending { min-height: 4rem; grid-column: 1 / -1; }
   `]
 })
@@ -132,7 +107,7 @@ export class UsersComponent {
     },
     () => this.loadFailed.set(false)
   );
-  private readonly summarySignal = signal<UserSummaryResponse>({ total: 0, active: 0, admins: 0, roles: 0 });
+  private readonly summarySignal = signal<UserSummaryResponse>({ total: 0 });
   private readonly editingUserSignal = signal<UserAccountResponse | null>(null);
   private readonly deletingUserSignal = signal<UserAccountResponse | null>(null);
 
@@ -154,16 +129,18 @@ export class UsersComponent {
   /** Extras marcadas no diálogo. As que o perfil escolhido já inclui ficam guardadas, mas não vão no envio. */
   protected readonly extras = signal<ReadonlySet<Permission>>(new Set());
   private readonly selectedProfileId = signal<number | null>(null);
+  protected readonly extrasOpen = signal(false);
   protected readonly accessReady = computed(() => this.profileOptionsState() === 'ready' && this.catalogState() === 'ready');
   protected readonly accessFailed = computed(() => this.profileOptionsState() === 'failed' || this.catalogState() === 'failed');
   protected readonly profileSelectOptions = computed<ReadonlyArray<CustomSelectOption<number>>>(() =>
     this.profileOptions().map((option) => ({ value: option.id, label: option.name })));
   protected readonly profileFilterOptions = computed<ReadonlyArray<CustomSelectOption<number | ''>>>(() =>
     [{ value: '', label: 'Todos' }, ...this.profileSelectOptions()]);
-  private readonly profilePermissions = computed<ReadonlySet<string>>(() =>
+  protected readonly profilePermissions = computed<ReadonlySet<string>>(() =>
     new Set(this.profileOptions().find((option) => option.id === this.selectedProfileId())?.permissions ?? []));
 
   protected readonly form = this.formBuilder.nonNullable.group({
+    email: ['', [Validators.maxLength(254), emailValidator]],
     username: ['', [Validators.required, Validators.maxLength(60)]],
     fullName: ['', [Validators.required, Validators.maxLength(120)]],
     password: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(72), passwordByteLengthValidator]],
@@ -229,6 +206,7 @@ export class UsersComponent {
     this.configurePasswordValidation(true);
     this.form.reset(emptyUserForm());
     this.extras.set(new Set());
+    this.extrasOpen.set(false);
     this.activeModal.set('create');
     this.clearMessages();
     this.loadAccessSources();
@@ -238,6 +216,7 @@ export class UsersComponent {
     this.editingUserSignal.set(user);
     this.configurePasswordValidation(false);
     this.form.reset({
+      email: user.email ?? '',
       username: user.username,
       fullName: user.fullName,
       password: '',
@@ -245,6 +224,7 @@ export class UsersComponent {
       active: user.active
     });
     this.extras.set(new Set(user.extraPermissions.filter(isPermission)));
+    this.extrasOpen.set(user.extraPermissions.filter(isPermission).length > 0);
     this.selectProfile(user.profile.id);
     this.activeModal.set('edit');
     this.clearMessages();
@@ -361,23 +341,6 @@ export class UsersComponent {
     return count === 0 ? '' : count === 1 ? '+1 extra' : `+${count} extras`;
   }
 
-  protected includedInProfile(code: string): boolean {
-    return this.profilePermissions().has(code);
-  }
-
-  protected isExtraChecked(code: string): boolean {
-    return this.includedInProfile(code) || (isPermission(code) && this.extras().has(code));
-  }
-
-  protected toggleExtra(code: string, checked: boolean): void {
-    if (!isPermission(code) || this.includedInProfile(code)) {
-      return;
-    }
-    const next = new Set(this.extras());
-    if (checked) next.add(code); else next.delete(code);
-    this.extras.set(next);
-  }
-
   protected hasError(controlName: UserFormControlName): boolean {
     const control = this.form.controls[controlName];
     return control.invalid && (control.dirty || control.touched);
@@ -467,6 +430,7 @@ export class UsersComponent {
 
 function emptyUserForm(): ReturnType<UsersComponent['form']['getRawValue']> {
   return {
+    email: '',
     username: '',
     fullName: '',
     password: '',
@@ -477,6 +441,7 @@ function emptyUserForm(): ReturnType<UsersComponent['form']['getRawValue']> {
 
 function buildUserPayload(raw: ReturnType<UsersComponent['form']['getRawValue']>, extraPermissions: Permission[]): UserAccountRequest {
   return {
+    email: raw.email.trim().toLowerCase() || null,
     username: raw.username.trim(),
     fullName: raw.fullName.trim(),
     password: raw.password,
@@ -491,6 +456,7 @@ function buildUserUpdatePayload(
   extraPermissions: Permission[]
 ): UserAccountUpdateRequest {
   return {
+    email: raw.email.trim().toLowerCase() || null,
     username: raw.username.trim(),
     fullName: raw.fullName.trim(),
     password: raw.password || null,
@@ -505,3 +471,11 @@ const STATUS_FILTER_OPTIONS: ReadonlyArray<CustomSelectOption<UserStatusFilter>>
   { value: 'active', label: 'Ativos' },
   { value: 'inactive', label: 'Inativos' }
 ];
+
+// Mesmo formato simples de EmailMessage.validAddress, validando CR/LF antes do trim.
+const emailValidator: ValidatorFn = control => {
+  const value: string = control.value || '';
+  if (/[\r\n]/.test(value)) return { email: true };
+  if (!value.trim()) return null;
+  return /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,}$/.test(value.trim()) ? null : { email: true };
+};

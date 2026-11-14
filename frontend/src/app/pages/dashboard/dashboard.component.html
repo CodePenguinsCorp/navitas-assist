@@ -12,7 +12,7 @@
   } @else {
     <ul class="dashboard-summary" aria-label="Indicadores do dashboard">
       @for (indicator of indicators(); track indicator.label) {
-        <li class="panel dashboard-summary__item">
+        <li class="panel dashboard-summary__item" [attr.data-tone]="indicator.tone" [class.dashboard-summary__item--catalog]="indicator.catalog">
           <span class="icon-tile" aria-hidden="true"><app-icon [name]="indicator.icon" [size]="20" /></span>
           <span class="dashboard-summary__label">{{ indicator.label }}</span>
           <p class="dashboard-summary__value"><strong>{{ indicator.value }}</strong> {{ indicator.detail }}</p>
@@ -24,19 +24,19 @@
       <article class="table-card panel">
         <h3>Fila prioritária</h3>
         @if (activeCount() > queue().length) {
-          <p class="dashboard-scope">{{ queue().length }} primeiros de {{ activeCount() }} RMAs em andamento</p>
+          <p class="dashboard-scope">{{ queue().length }} primeiras de {{ activeCount() }} ordens de serviço em andamento</p>
         }
         @if (queue().length === 0) {
           <div class="empty-state">
             <span class="icon-tile"><app-icon name="inbox" [size]="20" /></span>
-            <p>Nenhum RMA em andamento.</p>
+            <p>Nenhuma OS em andamento.</p>
           </div>
         } @else {
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>RMA</th>
+                  <th>OS</th>
                   <th>Cliente</th>
                   <th>Entrada</th>
                   <th>Status</th>
@@ -87,18 +87,18 @@
     </section>
 
     <article class="table-card panel dashboard-recent">
-      <h3>Últimos RMAs</h3>
+      <h3>Últimas ordens de serviço</h3>
       @if (recentRmas().length === 0) {
         <div class="empty-state">
           <span class="icon-tile"><app-icon name="clipboard" [size]="20" /></span>
-          <p>Nenhum RMA registrado.</p>
+          <p>Nenhuma OS registrada.</p>
         </div>
       } @else {
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>RMA</th>
+                <th>OS</th>
                 <th>Cliente</th>
                 <th>Responsável</th>
                 <th>Atualizado</th>

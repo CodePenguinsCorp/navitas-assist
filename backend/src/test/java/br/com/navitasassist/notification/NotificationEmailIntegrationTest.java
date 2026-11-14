@@ -35,23 +35,19 @@ import br.com.navitasassist.repository.UserAccountRepository;
 import br.com.navitasassist.rma.CreateRmaRequest;
 import br.com.navitasassist.rma.RmaItemRequest;
 import br.com.navitasassist.rma.RmaPriority;
-import br.com.navitasassist.rma.RmaResponse;
+import br.com.navitasassist.rma.RmaDetailResponse;
 import br.com.navitasassist.service.RmaService;
 import br.com.navitasassist.user.UserAccount;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.mail.MailSendException;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
@@ -60,11 +56,12 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@TestPropertySource(properties = { "navitas.notifications.email.enabled=true", "navitas.notifications.email.domain=empresa.com.br", "navitas.notifications.email.from=alertas@empresa.com.br" })
+@TestPropertySource(properties = { "navitas.notifications.email.enabled=true", "navitas.notifications.email.from=from@example.invalid", "navitas.notifications.email.app-base-url=http://localhost:4200", "navitas.notifications.email.poll-ms=600000" })
 class NotificationEmailIntegrationTest {
+    @Autowired org.springframework.jdbc.core.JdbcTemplate auditJdbc;
 
     @MockBean
-    private JavaMailSender mailSender;
+    private br.com.navitasassist.notification.email.EmailProvider mailSender;
 
     @Autowired
     private MockMvc mockMvc;
@@ -103,15 +100,31 @@ class NotificationEmailIntegrationTest {
     @Qualifier(NotificationAsyncConfig.NOTIFICATION_EXECUTOR)
     private ThreadPoolTaskExecutor notificationExecutor;
 
+    @Autowired private org.springframework.transaction.PlatformTransactionManager transactionManager;
+    @Autowired private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    @Autowired private br.com.navitasassist.service.NotificationEmailWorker worker;
+    @Autowired private br.com.navitasassist.config.NotificationProperties properties;
+    @Autowired private br.com.navitasassist.service.NotificationEmailQueue queue;
+    @org.springframework.boot.test.mock.mockito.SpyBean private br.com.navitasassist.service.NotificationEmailContentFactory contentFactory;
+    @org.springframework.boot.test.mock.mockito.SpyBean private br.com.navitasassist.service.NotificationVisibilityPolicy visibility;
+    @MockBean private java.time.Clock clock;
+    private final java.time.Instant now = java.time.Instant.parse("2026-11-14T12:00:00Z");
     private UserAccount technician;
-    private RmaResponse rma;
+    private RmaDetailResponse rma;
 
     @BeforeEach
     void setUp() {
         cleanUp();
+        properties.getEmail().setEnabled(true);
+        properties.getEmail().setProvider("fake");
+        properties.getEmail().setDailyLimit(100);
+        properties.getEmail().setMonthlyLimit(3000);
+        org.mockito.Mockito.when(clock.instant()).thenReturn(now);
+        br.com.navitasassist.user.UserAccountTestSupport.ensureAdmin(userAccountRepository, accessProfiles, passwordEncoder);
         setAssignmentEmail(true);
         technician = new UserAccount();
         technician.setUsername("nav40-mail-tech");
+        technician.setEmail("tech@example.invalid");
         technician.setFullName("Técnico e-mail");
         technician.setPasswordHash("not-used");
         AccessTestSupport.assignProfile(accessProfiles, technician, "TECHNICIAN");
@@ -123,9 +136,10 @@ class NotificationEmailIntegrationTest {
         product.setSku("SKU-NAV40-MAIL");
         product.setName("Produto e-mail");
         product = productRepository.save(product);
-        rma = rmaService.create(new CreateRmaRequest(client.getId(), List.of(new RmaItemRequest(product.getId(), null, "SER-MAIL", null)), null, true, LocalDate.now(), null, "Falha", null, null, RmaPriority.LOW, null, null, null));
+        rma = rmaService.create(new CreateRmaRequest(client.getId(), List.of(new RmaItemRequest(product.getId(), null, "SER-MAIL", null)), null, true, LocalDate.now(), null, "Falha", null, null, RmaPriority.LOW, null, null, null, null));
         NotificationTestSupport.awaitIdle(notificationExecutor);
         reset(mailSender);
+        org.mockito.Mockito.when(mailSender.send(any(), any())).thenReturn(new br.com.navitasassist.notification.email.EmailSendResult("accepted"));
     }
 
     @AfterEach
@@ -137,54 +151,371 @@ class NotificationEmailIntegrationTest {
         clientRepository.deleteAll();
         userAccountRepository.findAll().stream().filter(account -> account.getUsername().startsWith("nav40-")).forEach(userAccountRepository::delete);
         setAssignmentEmail(false);
+        properties.getEmail().setProvider("fake");
     }
 
     @Test
-    void sendsOnlyToTheCorporateDomainWithoutLinks() throws Exception {
+    void queuesAndSendsWithFixedNotificationKeyWithoutWaitingInRmaRequest() throws Exception {
         assignAndWait().andExpect(status().isOk());
-
-        ArgumentCaptor<SimpleMailMessage> message = ArgumentCaptor.forClass(SimpleMailMessage.class);
-        verify(mailSender).send(message.capture());
-        assertEquals("nav40-mail-tech@empresa.com.br", message.getValue().getTo()[0]);
-        assertEquals("alertas@empresa.com.br", message.getValue().getFrom());
-        assertFalse(message.getValue().getText().contains("http"));
-        assertEquals(NotificationEmailStatus.SENT, assignmentNotification().getEmailStatus());
-    }
-
-    @Test
-    void emailFailureDoesNotUndoTheRmaOperation() throws Exception {
-        doThrow(new MailSendException("SMTP indisponível")).when(mailSender).send(any(SimpleMailMessage.class));
-
-        assignAndWait().andExpect(status().isOk()).andExpect(jsonPath("$.assigneeId").value(technician.getId()));
-
-        assertEquals(technician.getId(), rmaRecordRepository.findById(rma.id()).orElseThrow().getAssignee().getId());
         Notification notification = assignmentNotification();
-        assertEquals(NotificationEmailStatus.FAILED, notification.getEmailStatus());
-        mockMvc.perform(get("/api/notifications").with(asProfile("nav40-mail-tech", "TECHNICIAN"))).andExpect(jsonPath("$[0].eventType").value("RMA_ASSIGNED"));
-        mockMvc.perform(get("/api/notification-rules/failures").with(asProfile("admin", "ADMIN")))
-            .andExpect(jsonPath("$[0].source").value("EMAIL"))
-            .andExpect(jsonPath("$[0].recipient").value("nav40-mail-tech"));
+        assertEquals(NotificationEmailStatus.PENDING, notification.getEmailStatus());
+        worker.poll();
+        assertEquals(NotificationEmailStatus.SENT, assignmentNotification().getEmailStatus());
+        verify(mailSender).send(any(), org.mockito.ArgumentMatchers.eq(notification.getId().toString()));
     }
 
     @Test
-    void slowEmailDeliveryDoesNotHoldTheRmaRequest() throws Exception {
+    void transientFailuresRetryAtExactIntervalsThenFailWithoutUndoingRma() throws Exception {
+        doThrow(new br.com.navitasassist.notification.email.EmailDeliveryException("HTTP_503", true)).when(mailSender).send(any(), any());
+        assignAndWait().andExpect(status().isOk());
+        java.time.Instant attemptTime = now;
+        int[] minutes = {1, 5, 30, 120};
+        for (int attempt = 1; attempt <= 5; attempt++) {
+            org.mockito.Mockito.when(clock.instant()).thenReturn(attemptTime);
+            worker.poll();
+            Notification notification = assignmentNotification();
+            assertEquals(attempt, notification.getEmailAttempts());
+            if (attempt < 5) {
+                attemptTime = attemptTime.plusSeconds(minutes[attempt - 1] * 60L);
+                assertEquals(attemptTime, notification.getEmailNextAttemptAt());
+                assertEquals(NotificationEmailStatus.PENDING, notification.getEmailStatus());
+            } else assertEquals(NotificationEmailStatus.FAILED, notification.getEmailStatus());
+        }
+        assertEquals(technician.getId(), rmaRecordRepository.findById(rma.id()).orElseThrow().getAssignee().getId());
+        mockMvc.perform(get("/api/notifications").with(asProfile("nav40-mail-tech", "TECHNICIAN"))).andExpect(jsonPath("$[0].eventType").value("RMA_ASSIGNED"));
+    }
+
+    @Test
+    void disabledPausesPendingAndRevokedRuleCancelsWithoutSending() throws Exception {
+        assignAndWait();
+        properties.getEmail().setEnabled(false);
+        worker.poll();
+        assertEquals(0, assignmentNotification().getEmailAttempts());
+        assertEquals(NotificationEmailStatus.PENDING, assignmentNotification().getEmailStatus());
+        properties.getEmail().setEnabled(true);
+        setAssignmentEmail(false);
+        worker.poll();
+        assertEquals(NotificationEmailStatus.NOT_REQUESTED, assignmentNotification().getEmailStatus());
+        org.mockito.Mockito.verifyNoInteractions(mailSender);
+    }
+
+    @Test
+    void emailOnlyIsAbsentFromInboxSummaryAndPersonalActions() throws Exception {
+        NotificationRule rule = notificationRuleRepository.findByEventType(NotificationEventType.RMA_ASSIGNED).orElseThrow();
+        rule.setAppEnabled(false);
+        notificationRuleRepository.save(rule);
+        assignAndWait();
+        assertFalse(assignmentNotification().isAppVisible());
+        mockMvc.perform(get("/api/notifications").with(asProfile("nav40-mail-tech", "TECHNICIAN"))).andExpect(jsonPath("$[?(@.eventType == 'RMA_ASSIGNED')]").isEmpty());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/notifications/{id}/read", assignmentNotification().getId()).with(asProfile("nav40-mail-tech", "TECHNICIAN")).with(csrf())).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void restartAfterLastPersistedAttemptDoesNotSendSixthAttempt() throws Exception {
+        assignAndWait();
+        Notification n = assignmentNotification();
+        n.setEmailAttempts(5);
+        notificationRepository.saveAndFlush(n);
+        worker.poll();
+        assertEquals(NotificationEmailStatus.FAILED, assignmentNotification().getEmailStatus());
+        org.mockito.Mockito.verifyNoInteractions(mailSender);
+    }
+
+    @Test
+    void testEmailIsImmediateForSelfThrottledAndNeverStored() throws Exception {
+        technician.setExtraPermissions(new java.util.HashSet<>(java.util.Set.of("notificacoes.regras")));
+        userAccountRepository.saveAndFlush(technician);
+        long count = notificationRepository.count();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/notification-rules/emails/test").with(user(technician.getUsername()).authorities(org.springframework.security.core.authority.AuthorityUtils.createAuthorityList("notificacoes.regras"))).with(csrf()))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("simulado"));
+        assertEquals(count, notificationRepository.count());
+        var message = org.mockito.ArgumentCaptor.forClass(br.com.navitasassist.notification.email.EmailMessage.class);
+        verify(mailSender).send(message.capture(), any());
+        assertEquals("tech@example.invalid", message.getValue().to());
+        org.assertj.core.api.Assertions.assertThat(auditJdbc.queryForObject("select count(*) from audit_events where action = 'EMAIL_TEST' and actor_username = ?", Long.class, technician.getUsername())).isPositive();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/notification-rules/emails/test").with(user(technician.getUsername()).authorities(org.springframework.security.core.authority.AuthorityUtils.createAuthorityList("notificacoes.regras"))).with(csrf()))
+            .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    void retryOnlyFailedAndRevalidatesEligibilityWithoutCreatingAnotherAppNotification() throws Exception {
+        assignAndWait();
+        Long id = assignmentNotification().getId();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/notification-rules/emails/{id}/retry", id).with(asProfile("admin", "ADMIN")).with(csrf()))
+            .andExpect(status().isConflict());
+        doThrow(new br.com.navitasassist.notification.email.EmailDeliveryException("HTTP_400", false)).when(mailSender).send(any(), any());
+        worker.poll();
+        assertEquals(NotificationEmailStatus.FAILED, assignmentNotification().getEmailStatus());
+        long count = notificationRepository.count();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/notification-rules/emails/{id}/retry", id).with(asProfile("admin", "ADMIN")).with(csrf()))
+            .andExpect(status().isAccepted()).andExpect(jsonPath("$.status").value("PENDING"));
+        assertEquals(count, notificationRepository.count());
+        assertEquals(0, assignmentNotification().getEmailAttempts());
+        assertEquals(1, auditJdbc.queryForObject("select count(*) from audit_events where action = 'EMAIL_RETRY' and entity_id = ?", Integer.class, id));
+        mockMvc.perform(get("/api/notification-rules/email-status").with(asProfile("admin", "ADMIN")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.enabled").value(true)).andExpect(jsonPath("$.provider").value("fake"));
+    }
+
+    @Test
+    void testEmailRejectsForeignRecipientsAndRequiresCsrfAndPermission() throws Exception {
+        var request = org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/notification-rules/emails/test");
+        mockMvc.perform(request.with(csrf())).andExpect(status().isUnauthorized());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/notification-rules/emails/test").with(asProfile(technician.getUsername(), "TECHNICIAN")).with(csrf())).andExpect(status().isForbidden());
+        technician.setExtraPermissions(new java.util.HashSet<>(java.util.Set.of("notificacoes.regras")));
+        userAccountRepository.saveAndFlush(technician);
+        var privileged = user(technician.getUsername()).authorities(org.springframework.security.core.authority.AuthorityUtils.createAuthorityList("notificacoes.regras"));
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/notification-rules/emails/test").with(privileged)).andExpect(status().isForbidden());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/notification-rules/emails/test").with(privileged).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"to\":\"foreign@example.invalid\"}"))
+            .andExpect(status().isBadRequest());
+        org.mockito.Mockito.verifyNoInteractions(mailSender);
+    }
+
+    @Test
+    void testFailureIsSafe502AndNeverCreatesNotification() throws Exception {
+        technician.setExtraPermissions(new java.util.HashSet<>(java.util.Set.of("notificacoes.regras")));
+        userAccountRepository.saveAndFlush(technician);
+        doThrow(new IllegalStateException("secret-key tech@example.invalid")).when(mailSender).send(any(), any());
+        long count = notificationRepository.count();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/notification-rules/emails/test")
+            .with(user(technician.getUsername()).authorities(org.springframework.security.core.authority.AuthorityUtils.createAuthorityList("notificacoes.regras"))).with(csrf()))
+            .andExpect(status().isBadGateway()).andExpect(jsonPath("$.message").value("Email provider could not accept the test."));
+        assertEquals(count, notificationRepository.count());
+    }
+
+    @Test
+    void workerUsesCurrentEmailAndCancelsInactiveRecipient() throws Exception {
+        assignAndWait();
+        technician.setEmail("current@example.invalid");
+        userAccountRepository.saveAndFlush(technician);
+        worker.poll();
+        var message = org.mockito.ArgumentCaptor.forClass(br.com.navitasassist.notification.email.EmailMessage.class);
+        verify(mailSender).send(message.capture(), any());
+        assertEquals("current@example.invalid", message.getValue().to());
+        Notification n = assignmentNotification();
+        n.setEmailStatus(NotificationEmailStatus.PENDING); n.setEmailNextAttemptAt(now);
+        notificationRepository.saveAndFlush(n);
+        technician.setActive(false); userAccountRepository.saveAndFlush(technician);
+        reset(mailSender);
+        worker.poll();
+        assertEquals(NotificationEmailStatus.NOT_REQUESTED, assignmentNotification().getEmailStatus());
+        org.mockito.Mockito.verifyNoInteractions(mailSender);
+    }
+
+    @Test
+    void concurrentRetriesAcceptOnlyOneTransition() throws Exception {
+        assignAndWait();
+        Notification n = assignmentNotification();
+        n.setEmailStatus(NotificationEmailStatus.FAILED); notificationRepository.saveAndFlush(n);
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+        java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+        try {
+            java.util.concurrent.Callable<Integer> retry = () -> {
+                start.await();
+                return mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/notification-rules/emails/{id}/retry", n.getId()).with(asProfile("admin", "ADMIN")).with(csrf())).andReturn().getResponse().getStatus();
+            };
+            var first = pool.submit(retry); var second = pool.submit(retry); start.countDown();
+            assertEquals(java.util.Set.of(202, 409), java.util.Set.of(first.get(10, java.util.concurrent.TimeUnit.SECONDS), second.get(10, java.util.concurrent.TimeUnit.SECONDS)));
+        } finally { pool.shutdownNow(); }
+    }
+
+    @Test
+    void twoInstancesPreparingTheSameDueEmailReserveItOnlyOnce() throws Exception {
+        assignAndWait();
+        Long id = assignmentNotification().getId();
+        var firstBuilding = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
         doAnswer(invocation -> {
-            Thread.sleep(3000);
-            return null;
-        }).when(mailSender).send(any(SimpleMailMessage.class));
+            if (calls.incrementAndGet() == 1) {
+                firstBuilding.countDown();
+                assertTrue(release.await(10, java.util.concurrent.TimeUnit.SECONDS));
+            }
+            return invocation.callRealMethod();
+        }).when(contentFactory).build(any(), any());
+        var pool = java.util.concurrent.Executors.newSingleThreadExecutor();
+        try {
+            // A primeira instância leu a linha devida e para antes de reservar; a segunda lê a mesma linha e reserva.
+            var first = pool.submit(() -> queue.prepare(id));
+            assertTrue(firstBuilding.await(10, java.util.concurrent.TimeUnit.SECONDS));
+            var second = queue.prepare(id);
+            release.countDown();
+            var stale = first.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            org.junit.jupiter.api.Assertions.assertNotNull(second);
+            org.junit.jupiter.api.Assertions.assertNull(stale);
+            Notification n = assignmentNotification();
+            assertEquals(1, n.getEmailAttempts());
+            assertEquals(NotificationEmailStatus.PENDING, n.getEmailStatus());
+            assertTrue(n.getEmailNextAttemptAt().isAfter(now));
+        } finally { release.countDown(); pool.shutdownNow(); }
+        // Reservada, a linha não volta a ser devida no mesmo instante: outra varredura não a envia.
+        worker.poll();
+        org.mockito.Mockito.verifyNoInteractions(mailSender);
+    }
 
-        long started = System.nanoTime();
-        assign().andExpect(status().isOk());
-        long elapsedMillis = (System.nanoTime() - started) / 1_000_000;
+    @Test
+    void dailyCapHoldsPendingWithoutConsumingAttemptsUntilTheNextSaoPauloDay() throws Exception {
+        useRealProviderWithLimits(1, 0);
+        assignAndWait();
+        worker.poll();
+        assertEquals(NotificationEmailStatus.SENT, assignmentNotifications().get(0).getEmailStatus());
+        mockMvc.perform(get("/api/notification-rules/email-status").with(asProfile("admin", "ADMIN")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.sentToday").value(1)).andExpect(jsonPath("$.dailyLimit").value(1))
+            .andExpect(jsonPath("$.sentThisMonth").value(1)).andExpect(jsonPath("$.monthlyLimit").value(0))
+            .andExpect(jsonPath("$.limitReached").value(true));
 
-        assertTrue(elapsedMillis < 1500, "RMA request waited for e-mail: " + elapsedMillis + " ms");
-        NotificationTestSupport.awaitIdle(notificationExecutor);
-        assertEquals(NotificationEmailStatus.SENT, assignmentNotification().getEmailStatus());
+        reassignAndWait();
+        worker.poll();
+        worker.poll();
+        Notification held = assignmentNotifications().get(1);
+        assertEquals(NotificationEmailStatus.PENDING, held.getEmailStatus());
+        assertEquals(0, held.getEmailAttempts());
+        verify(mailSender, org.mockito.Mockito.times(1)).send(any(), any());
+
+        // 12:00Z é 09:00 em São Paulo; 02:59Z do dia seguinte ainda é o mesmo dia lá, 03:00Z já é o próximo.
+        org.mockito.Mockito.when(clock.instant()).thenReturn(java.time.Instant.parse("2026-11-15T02:59:59Z"));
+        worker.poll();
+        assertEquals(NotificationEmailStatus.PENDING, assignmentNotifications().get(1).getEmailStatus());
+        org.mockito.Mockito.when(clock.instant()).thenReturn(java.time.Instant.parse("2026-11-15T03:00:00Z"));
+        worker.poll();
+        assertEquals(NotificationEmailStatus.SENT, assignmentNotifications().get(1).getEmailStatus());
+        assertEquals(1, assignmentNotifications().get(1).getEmailAttempts());
+        mockMvc.perform(get("/api/notification-rules/email-status").with(asProfile("admin", "ADMIN")))
+            .andExpect(jsonPath("$.sentToday").value(1)).andExpect(jsonPath("$.sentThisMonth").value(2));
+    }
+
+    @Test
+    void monthlyCapHoldsPendingUntilTheNextSaoPauloMonth() throws Exception {
+        useRealProviderWithLimits(0, 1);
+        assignAndWait();
+        worker.poll();
+        reassignAndWait();
+        org.mockito.Mockito.when(clock.instant()).thenReturn(java.time.Instant.parse("2026-12-01T02:59:59Z"));
+        worker.poll();
+        assertEquals(NotificationEmailStatus.PENDING, assignmentNotifications().get(1).getEmailStatus());
+        assertEquals(0, assignmentNotifications().get(1).getEmailAttempts());
+        org.mockito.Mockito.when(clock.instant()).thenReturn(java.time.Instant.parse("2026-12-01T03:00:00Z"));
+        worker.poll();
+        assertEquals(NotificationEmailStatus.SENT, assignmentNotifications().get(1).getEmailStatus());
+    }
+
+    @Test
+    void fakeDeliveriesDoNotCountTowardTheCap() throws Exception {
+        properties.getEmail().setDailyLimit(1);
+        assignAndWait();
+        worker.poll();
+        reassignAndWait();
+        worker.poll();
+        assertEquals(NotificationEmailStatus.SENT, assignmentNotifications().get(1).getEmailStatus());
+        mockMvc.perform(get("/api/notification-rules/email-status").with(asProfile("admin", "ADMIN")))
+            .andExpect(jsonPath("$.sentToday").value(0)).andExpect(jsonPath("$.limitReached").value(false));
+    }
+
+    private void useRealProviderWithLimits(int daily, int monthly) {
+        properties.getEmail().setProvider("resend");
+        properties.getEmail().setSendIntervalMs(0);
+        properties.getEmail().setDailyLimit(daily);
+        properties.getEmail().setMonthlyLimit(monthly);
+    }
+
+    private void reassignAndWait() throws Exception {
+        Map<String, Object> none = new java.util.HashMap<>();
+        none.put("assigneeId", null);
+        mockMvc.perform(patch("/api/rmas/{id}/assignee", rma.id()).with(asProfile("admin", "ADMIN")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(none))).andExpect(status().isOk());
+        assignAndWait().andExpect(status().isOk());
+    }
+
+    private List<Notification> assignmentNotifications() {
+        return notificationRepository.findAll().stream().filter(notification -> notification.getEventType() == NotificationEventType.RMA_ASSIGNED)
+            .sorted(java.util.Comparator.comparing(Notification::getId)).toList();
+    }
+
+    @Test
+    void manualRetryStartsANewIdempotencyKeyKeptAcrossItsAutomaticAttempts() throws Exception {
+        assignAndWait();
+        Long id = assignmentNotification().getId();
+        doThrow(new br.com.navitasassist.notification.email.EmailDeliveryException("HTTP_400", false)).when(mailSender).send(any(), any());
+        worker.poll();
+        verify(mailSender).send(any(), org.mockito.ArgumentMatchers.eq(id.toString()));
+        retry(id);
+        doThrow(new br.com.navitasassist.notification.email.EmailDeliveryException("HTTP_503", true)).when(mailSender).send(any(), any());
+        worker.poll();
+        org.mockito.Mockito.when(clock.instant()).thenReturn(now.plusSeconds(60));
+        worker.poll();
+        verify(mailSender, org.mockito.Mockito.times(2)).send(any(), org.mockito.ArgumentMatchers.eq(id + "-1"));
+        doThrow(new br.com.navitasassist.notification.email.EmailDeliveryException("HTTP_400", false)).when(mailSender).send(any(), any());
+        org.mockito.Mockito.when(clock.instant()).thenReturn(now.plusSeconds(360));
+        worker.poll();
+        assertEquals(NotificationEmailStatus.FAILED, assignmentNotification().getEmailStatus());
+        retry(id);
+        worker.poll();
+        verify(mailSender).send(any(), org.mockito.ArgumentMatchers.eq(id + "-2"));
+        verify(mailSender, org.mockito.Mockito.times(5)).send(any(), any());
+    }
+
+    private void retry(Long id) throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/notification-rules/emails/{id}/retry", id).with(asProfile("admin", "ADMIN")).with(csrf()))
+            .andExpect(status().isAccepted());
+    }
+
+    @Test
+    void persistentErrorOutsideContentBacksOffAndFailsAfterFiveAttempts() throws Exception {
+        assignAndWait();
+        doThrow(new IllegalStateException("database unavailable")).when(visibility).canReceive(any(), any());
+        java.time.Instant attemptTime = now;
+        int[] minutes = {1, 5, 30, 120};
+        for (int attempt = 1; attempt <= 5; attempt++) {
+            org.mockito.Mockito.when(clock.instant()).thenReturn(attemptTime);
+            worker.poll();
+            worker.poll();
+            Notification notification = assignmentNotification();
+            assertEquals(attempt, notification.getEmailAttempts());
+            assertEquals("PROCESSING_ERROR", notification.getEmailError());
+            if (attempt < 5) {
+                attemptTime = attemptTime.plusSeconds(minutes[attempt - 1] * 60L);
+                assertEquals(attemptTime, notification.getEmailNextAttemptAt());
+                assertEquals(NotificationEmailStatus.PENDING, notification.getEmailStatus());
+            } else {
+                assertEquals(NotificationEmailStatus.FAILED, notification.getEmailStatus());
+                org.junit.jupiter.api.Assertions.assertNull(notification.getEmailNextAttemptAt());
+            }
+        }
+        org.mockito.Mockito.verifyNoInteractions(mailSender);
+    }
+
+    @Test
+    void concurrentPersonalReadDoesNotRestorePendingAfterWorkerSent() throws Exception {
+        assignAndWait();
+        Long id = assignmentNotification().getId();
+        var loaded = new java.util.concurrent.CountDownLatch(1);
+        var sent = new java.util.concurrent.CountDownLatch(1);
+        var pool = java.util.concurrent.Executors.newSingleThreadExecutor();
+        try {
+            var read = pool.submit(() -> new org.springframework.transaction.support.TransactionTemplate(transactionManager).execute(ignored -> {
+                Notification n = notificationRepository.findById(id).orElseThrow();
+                n.setReadAt(now);
+                loaded.countDown();
+                try { assertTrue(sent.await(10, java.util.concurrent.TimeUnit.SECONDS)); }
+                catch (InterruptedException error) { Thread.currentThread().interrupt(); throw new RuntimeException(error); }
+                return null;
+            }));
+            assertTrue(loaded.await(10, java.util.concurrent.TimeUnit.SECONDS));
+            worker.poll();
+            sent.countDown();
+            read.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            assertEquals(NotificationEmailStatus.SENT, assignmentNotification().getEmailStatus());
+            assertEquals(now, assignmentNotification().getReadAt());
+        } finally { sent.countDown(); pool.shutdownNow(); }
     }
 
     private org.springframework.test.web.servlet.ResultActions assignAndWait() throws Exception {
         org.springframework.test.web.servlet.ResultActions result = assign();
         NotificationTestSupport.awaitIdle(notificationExecutor);
+        // The producer timestamps events with wall time; keep this worker fixture due at its fixed test clock.
+        List<Notification> assigned = assignmentNotifications();
+        Notification latest = assigned.get(assigned.size() - 1);
+        latest.setEmailNextAttemptAt(clock.instant());
+        notificationRepository.saveAndFlush(latest);
         return result;
     }
 
@@ -201,6 +532,7 @@ class NotificationEmailIntegrationTest {
     private void setAssignmentEmail(boolean enabled) {
         NotificationRule rule = notificationRuleRepository.findByEventType(NotificationEventType.RMA_ASSIGNED).orElseThrow();
         rule.setEmailEnabled(enabled);
+        rule.setAppEnabled(true);
         notificationRuleRepository.save(rule);
     }
 }

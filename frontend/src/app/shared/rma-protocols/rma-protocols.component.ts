@@ -13,10 +13,13 @@ import {
   PROTOCOL_OUTCOME_LABELS,
   normalizeDecimal,
   protocolOutcomeClass,
-  protocolProgressLabel,
   protocolProgressPercent
 } from '../../core/utils/protocol-ui';
 import { CustomSelectComponent, CustomSelectOption } from '../form-controls/custom-select/custom-select.component';
+
+interface ItemRow { item: ProtocolExecutionItemResponse; number: number; }
+interface StepGroup { key: string; step: string; rows: ItemRow[]; }
+interface ExecutionView { execution: ProtocolExecutionResponse; groups: StepGroup[]; }
 
 interface EditingItem {
   executionId: number;
@@ -27,90 +30,7 @@ interface EditingItem {
   selector: 'app-rma-protocols',
   imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent],
   templateUrl: './rma-protocols.component.html',
-  styles: [`
-    :host {
-      display: block;
-    }
-
-    .protocol-execution {
-      display: grid;
-      gap: var(--space-3);
-      margin-top: var(--space-3);
-      padding: var(--space-4);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      min-width: 0;
-      overflow-wrap: anywhere;
-    }
-
-    .protocol-progress {
-      height: 6px;
-      border-radius: var(--radius-pill);
-      background: var(--surface-alt);
-      overflow: hidden;
-    }
-
-    .protocol-progress span {
-      display: block;
-      height: 100%;
-      background: var(--brand-blue-deep);
-    }
-
-    .protocol-item {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-2);
-    }
-
-    .protocol-item p {
-      margin: var(--space-1) 0 0;
-      color: var(--muted);
-      font-size: var(--font-size-md);
-    }
-
-    .protocol-checklist-item { display: grid; gap: var(--space-3); min-width: 0; padding-top: var(--space-3); border-top: 1px solid var(--line); }
-    .protocol-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: var(--space-2); margin: 0; }
-    .protocol-facts dt { color: var(--muted); font-size: var(--font-size-md); }
-    .protocol-facts dd { margin: 0; white-space: pre-wrap; }
-    .protocol-attempts { display: grid; gap: var(--space-3); padding-left: var(--space-5); }
-
-    .protocol-launch {
-      display: grid;
-      gap: 0.4rem;
-      margin-top: 1rem;
-      padding: 0.85rem 0.9rem;
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      background: var(--surface-alt);
-    }
-
-    .protocol-launch__label {
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: var(--muted);
-    }
-
-    .protocol-launch__row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 0.6rem;
-      align-items: center;
-    }
-
-    .protocol-launch__row .button-primary {
-      min-height: var(--control-height);
-    }
-
-    .protocol-start {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      align-items: center;
-      margin-top: 0.75rem;
-    }
-  `]
+  styleUrl: './rma-protocols.component.css'
 })
 export class RmaProtocolsComponent {
   private readonly formBuilder = inject(FormBuilder);
@@ -138,6 +58,9 @@ export class RmaProtocolsComponent {
   protected readonly selectedTemplateId = signal<number | null>(null);
   protected readonly editing = signal<EditingItem | null>(null);
   protected readonly canExecute = computed(() => this.permissions.hasPermission('protocolos.executar'));
+
+  protected readonly expanded = signal<ReadonlySet<string>>(new Set());
+  protected readonly views = computed<ExecutionView[]>(() => this.executions().map((execution) => ({ execution, groups: groupByStep(execution) })));
 
   private readonly templatesSignal = signal<ProtocolTemplateResponse[]>([]);
 
@@ -256,8 +179,39 @@ export class RmaProtocolsComponent {
     return editing !== null && editing.executionId === execution.id && editing.item.item.id === item.item.id;
   }
 
-  protected progressLabel(execution: ProtocolExecutionResponse): string {
-    return protocolProgressLabel(execution);
+  protected summaryLabel(execution: ProtocolExecutionResponse): string {
+    const registered = `${execution.completedItems}/${execution.totalItems} registrados`;
+    return execution.requiredItems === 0 ? `Sem obrigatórios · ${registered}` : `${this.satisfiedRequiredItems(execution)}/${execution.requiredItems} obrigatórios · ${registered}`;
+  }
+
+  protected executionClass(execution: ProtocolExecutionResponse): string {
+    return `mini-chip ${execution.status === 'COMPLETED' ? 'warranty-ok' : execution.status === 'FAILED' ? 'priority-high' : ''}`.trim();
+  }
+
+  protected rangeLabel(item: ProtocolExecutionItemResponse): string {
+    const { type, minValue, maxValue, decimalPlaces, unit } = item.item;
+    if (type !== 'MEASUREMENT' || (minValue === null && maxValue === null)) return '';
+    const fmt = (value: number) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: decimalPlaces ?? 6 }).format(value);
+    const suffix = unit ? ` ${unit}` : '';
+    if (minValue !== null && maxValue !== null) return `${fmt(minValue)}–${fmt(maxValue)}${suffix}`;
+    return minValue !== null ? `≥ ${fmt(minValue)}${suffix}` : `≤ ${fmt(maxValue as number)}${suffix}`;
+  }
+
+  protected hasDetails(item: ProtocolExecutionItemResponse): boolean {
+    return !!item.item.expectedResult || !!item.item.instructions || item.attempts.length > 1;
+  }
+
+  protected detailsId(execution: ProtocolExecutionResponse, item: ProtocolExecutionItemResponse): string {
+    return `protocol-details-${execution.id}-${item.item.id}`;
+  }
+
+  protected isExpanded(execution: ProtocolExecutionResponse, item: ProtocolExecutionItemResponse): boolean {
+    return this.expanded().has(this.detailsId(execution, item));
+  }
+
+  protected toggleDetails(execution: ProtocolExecutionResponse, item: ProtocolExecutionItemResponse): void {
+    const id = this.detailsId(execution, item);
+    this.expanded.update((current) => { const next = new Set(current); if (!next.delete(id)) next.add(id); return next; });
   }
 
   protected progressPercent(execution: ProtocolExecutionResponse): number {
@@ -266,10 +220,6 @@ export class RmaProtocolsComponent {
 
   protected satisfiedRequiredItems(execution: ProtocolExecutionResponse): number {
     return Math.max(0, Math.min(execution.requiredItems, execution.requiredItems - execution.pendingRequiredItems));
-  }
-
-  protected formatProtocolLimit(value: number, decimalPlaces: number | null, unit: string | null): string {
-    return `${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: decimalPlaces ?? 6 }).format(value)} ${unit ?? ''}`.trim();
   }
 
   protected readonly outcomeLabels = PROTOCOL_OUTCOME_LABELS;
@@ -294,7 +244,7 @@ export class RmaProtocolsComponent {
   protected resultSummary(item: ProtocolExecutionItemResponse): string {
     const latest = item.latest;
     if (!latest) {
-      return 'Sem registro.';
+      return '';
     }
     const value = this.resultValue(latest);
     const attempts = item.attempts.length > 1 ? ` · tentativa ${latest.attempt}` : '';
@@ -333,7 +283,7 @@ export class RmaProtocolsComponent {
         if (this.rmaId() !== rmaId) return;
         this.executions.set([]);
         this.loadFailed.set(true);
-        this.loadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os protocolos do RMA.'));
+        this.loadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os protocolos da OS.'));
       }
     });
   }
@@ -356,4 +306,15 @@ export class RmaProtocolsComponent {
       }
     });
   }
+}
+
+function groupByStep(execution: ProtocolExecutionResponse): StepGroup[] {
+  const groups: StepGroup[] = [];
+  execution.items.forEach((item, index) => {
+    const last = groups[groups.length - 1];
+    const row = { item, number: index + 1 };
+    if (last && last.step === item.item.stepName) last.rows.push(row);
+    else groups.push({ key: `${index}-${item.item.stepName}`, step: item.item.stepName, rows: [row] });
+  });
+  return groups;
 }

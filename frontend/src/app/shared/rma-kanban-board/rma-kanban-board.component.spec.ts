@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { RmaResponse, RmaSlaResponse, WarrantyStatus } from '../../core/models';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { RmaBoardCardResponse, RmaResponse, WarrantyStatus } from '../../core/models';
+import { ClockService } from '../../core/services/clock.service';
 import { RmaKanbanBoardComponent } from './rma-kanban-board.component';
 
 describe('RmaKanbanBoardComponent card', () => {
@@ -12,7 +12,7 @@ describe('RmaKanbanBoardComponent card', () => {
     now = signal(Date.parse('2026-10-20T12:00:00Z'));
     await TestBed.configureTestingModule({
       imports: [RmaKanbanBoardComponent],
-      providers: [{ provide: SlaClockService, useValue: { now } }],
+      providers: [{ provide: ClockService, useValue: { now } }],
     }).compileComponents();
     fixture = TestBed.createComponent(RmaKanbanBoardComponent);
   });
@@ -51,60 +51,64 @@ describe('RmaKanbanBoardComponent card', () => {
     expect(card(host, 'NAV-0100').textContent).not.toContain('Não liga após queda de energia');
   });
 
-  it('hides SLA when the state is NORMAL and when it is CLOSED', () => {
+  function due(dueDate: string | null, overrides: Partial<RmaResponse> = {}): Partial<RmaResponse> {
+    const [y, m, d] = (dueDate ?? '2026-01-01').split('-').map(Number);
+    const dueSoonFrom = new Date(Date.UTC(y, m - 1, d - 7)).toISOString().slice(0, 10);
+    return { dueDate, deadline: { status: dueDate ? 'ON_TRACK' : 'NO_DUE_DATE', dueSoonFrom: dueDate ? dueSoonFrom : null }, ...overrides };
+  }
+
+  it('hides the deadline when on track, without due date and when closed', () => {
+    const host = render([
+      buildRma({ id: 1, code: 'NAV-0001', ...due('2026-12-30') }),
+      buildRma({ id: 2, code: 'NAV-0002', ...due(null) }),
+      buildRma({ id: 3, code: 'NAV-0003', status: 'COMPLETED', ...due('2026-10-01') }),
+    ]);
+    for (const code of ['NAV-0001', 'NAV-0002', 'NAV-0003']) {
+      expect(card(host, code).querySelector('.deadline-chip')).toBeNull();
+    }
+  });
+
+  it('shows Atrasado and Perto do limite on the card', () => {
+    const host = render([
+      buildRma({ id: 1, code: 'NAV-0001', ...due('2026-10-18') }),
+      buildRma({ id: 2, code: 'NAV-0002', ...due('2026-10-23') }),
+    ]);
+    const late = card(host, 'NAV-0001').querySelector('.deadline-chip');
+    expect(late?.textContent?.trim()).toBe('Atrasado há 2 dias');
+    expect(late?.getAttribute('data-deadline')).toBe('OVERDUE');
+    const soon = card(host, 'NAV-0002').querySelector('.deadline-chip');
+    expect(soon?.textContent?.trim()).toBe('Vence em 3 dias');
+    expect(soon?.getAttribute('data-deadline')).toBe('DUE_SOON');
+  });
+
+  it('turns the card overdue at São Paulo midnight as the shared clock advances', () => {
+    now.set(Date.parse('2026-10-21T02:59:00Z'));
+    const host = render([buildRma(due('2026-10-20'))]);
+    const chip = () => card(host, 'NAV-0100').querySelector('.deadline-chip');
+    expect(chip()?.textContent?.trim()).toBe('Vence hoje');
+
+    now.set(Date.parse('2026-10-21T03:01:00Z'));
+    fixture.detectChanges();
+    expect(chip()?.textContent?.trim()).toBe('Atrasado há 1 dia');
+    expect(chip()?.getAttribute('data-deadline')).toBe('OVERDUE');
+  });
+
+  it('shows the time in the current stage only for open ordens de serviço', () => {
     const host = render([
       buildRma({ id: 1, code: 'NAV-0001' }),
-      buildRma({ id: 2, code: 'NAV-0002', status: 'COMPLETED', sla: closedSla() }),
+      buildRma({ id: 2, code: 'NAV-0002', status: 'COMPLETED', stagePeriods: [{ status: 'COMPLETED', enteredAt: '2026-10-19T12:00:00Z', leftAt: null, durationSeconds: 0 }] }),
     ]);
-    expect(card(host, 'NAV-0001').querySelector('app-rma-sla-badge')).toBeNull();
-    expect(card(host, 'NAV-0002').querySelector('app-rma-sla-badge')).toBeNull();
-  });
-
-  it('shows SLA when the state is WARNING or OVERDUE', () => {
-    now.set(Date.parse('2026-10-20T12:45:00Z'));
-    let host = render([buildRma({})]);
-    expect(card(host, 'NAV-0100').querySelector('app-rma-sla-badge')).not.toBeNull();
-
-    now.set(Date.parse('2026-10-20T13:30:00Z'));
-    fixture.detectChanges();
-    host = fixture.nativeElement;
-    expect(card(host, 'NAV-0100').querySelector('app-rma-sla-badge')).not.toBeNull();
-  });
-
-  it('moves the card SLA from hidden (NORMAL) to WARNING and then OVERDUE as the shared clock advances', () => {
-    const host = render([buildRma({})]);
-    const badge = () => card(host, 'NAV-0100').querySelector('app-rma-sla-badge [data-sla]');
-    expect(card(host, 'NAV-0100').querySelector('app-rma-sla-badge')).toBeNull();
-
-    now.set(Date.parse('2026-10-20T12:45:00Z'));
-    fixture.detectChanges();
-    expect(badge()?.getAttribute('data-sla')).toBe('WARNING');
-
-    now.set(Date.parse('2026-10-20T13:30:00Z'));
-    fixture.detectChanges();
-    expect(badge()?.getAttribute('data-sla')).toBe('OVERDUE');
+    expect(card(host, 'NAV-0001').querySelector('.board-card__stage')?.textContent?.trim()).toBe('há 1 h nesta etapa');
+    expect(card(host, 'NAV-0002').querySelector('.board-card__stage')).toBeNull();
   });
 
   it('opens the card detail with Enter', () => {
     const rma = buildRma({});
     const host = render([rma]);
-    const opened: RmaResponse[] = [];
+    const opened: RmaBoardCardResponse[] = [];
     fixture.componentInstance.cardSelect.subscribe((item) => opened.push(item));
     card(host, 'NAV-0100').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     expect(opened).toEqual([rma]);
-  });
-
-  it('does not open the card detail when Enter or Space is pressed on the bulk checkbox', () => {
-    const rma = buildRma({});
-    const host = render([rma], { bulkSelectionEnabled: true });
-    const opened: RmaResponse[] = [];
-    fixture.componentInstance.cardSelect.subscribe((item) => opened.push(item));
-    const checkbox = host.querySelector<HTMLInputElement>('.board-card input[type="checkbox"]')!;
-    for (const key of ['Enter', ' ']) {
-      checkbox.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
-      checkbox.dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true }));
-    }
-    expect(opened).toEqual([]);
   });
 
   it('keeps code, client, product, priority label, avatar and active block', () => {
@@ -130,25 +134,13 @@ describe('RmaKanbanBoardComponent card', () => {
     const avatar = element.querySelector('.board-card__avatar');
     expect(avatar?.getAttribute('aria-label')).toBe('Responsável: Técnico Responsável');
     expect(avatar?.textContent?.trim()).toBe('TR');
-    expect(element.querySelector('.board-card__block')?.textContent).toContain('Bloqueado há 2h 0min');
+    expect(element.querySelector('.board-card__block')?.textContent).toContain('Impedida há 2 h');
   });
 
-  it('does not open the card when the bulk checkbox is clicked', () => {
-    const rma = buildRma({});
-    let host = render([rma]);
+  it('has no selection checkbox on the card', () => {
+    const host = render([buildRma({})]);
     expect(host.querySelector('.board-card input[type="checkbox"]')).toBeNull();
-
-    host = render([rma], { bulkSelectionEnabled: true });
-    const opened: RmaResponse[] = [];
-    const toggled: RmaResponse[] = [];
-    fixture.componentInstance.cardSelect.subscribe((item) => opened.push(item));
-    fixture.componentInstance.bulkSelectionChange.subscribe((item) => toggled.push(item));
-    host.querySelector<HTMLInputElement>('.board-card input[type="checkbox"]')!.click();
-    expect(toggled).toEqual([rma]);
-    expect(opened).toEqual([]);
-
-    card(host, 'NAV-0100').click();
-    expect(opened).toEqual([rma]);
+    expect(host.querySelector('.board-card__selection')).toBeNull();
   });
 
   it('renders a card without assignee, failure or with a very long client name without throwing', () => {
@@ -166,38 +158,14 @@ describe('RmaKanbanBoardComponent card', () => {
   });
 });
 
-function openSla(): RmaSlaResponse {
-  return {
-    status: 'NORMAL',
-    startedAt: '2026-10-20T11:00:00Z',
-    warningAt: '2026-10-20T12:30:00Z',
-    dueAt: '2026-10-20T13:00:00Z',
-    elapsedSeconds: 0,
-    limitSeconds: 7200,
-  };
-}
-
-function closedSla(): RmaSlaResponse {
-  return {
-    status: 'CLOSED',
-    startedAt: '2026-10-20T11:00:00Z',
-    warningAt: null,
-    dueAt: null,
-    elapsedSeconds: 3600,
-    limitSeconds: null,
-  };
-}
-
 function buildRma(values: Partial<RmaResponse>): RmaResponse {
   const base: RmaResponse = {
     id: 100,
     code: 'NAV-0100',
-    clientId: 1,
     clientName: 'Árvore Equipamentos',
     items: [
       {
         id: 1,
-        productId: 1,
         productName: 'Controlador Premium',
         productSku: 'CTRL-01',
         batchNumber: 'LOTE-ALFA',
@@ -205,15 +173,9 @@ function buildRma(values: Partial<RmaResponse>): RmaResponse {
         manufacturedAt: '2026-01-01',
         warrantyMonths: 12,
         warrantyExpiresAt: '2027-01-01',
-        warrantyStatus: WarrantyStatus.IN_WARRANTY,
+        calculatedWarrantyStatus: WarrantyStatus.IN_WARRANTY, warrantyOverride: null, warrantyStatus: WarrantyStatus.IN_WARRANTY,
       },
     ],
-    productId: 1,
-    productName: 'Controlador Premium',
-    productSku: 'CTRL-01',
-    batchNumber: 'LOTE-ALFA',
-    serialNumber: 'SERIE-ALFA',
-    manufacturedAt: '2026-01-01',
     purchaseDate: '2026-02-01',
     purchaseDateUnknown: false,
     entryDate: '2026-10-10',
@@ -229,7 +191,6 @@ function buildRma(values: Partial<RmaResponse>): RmaResponse {
     repairSummary: null,
     replacedPartsSummary: null,
     testSummary: null,
-    shippedAt: null,
     carrier: null,
     trackingCode: null,
     diagnosis: null,
@@ -237,7 +198,7 @@ function buildRma(values: Partial<RmaResponse>): RmaResponse {
     assignmentHistory: [],
     currentBlock: null,
     blockHistory: [],
-    sla: openSla(),
+    dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null }, stagePeriods: [{ status: 'TRIAGE', enteredAt: '2026-10-20T11:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [], warrantyHistory: [],
     createdAt: '2026-10-10T12:00:00Z',
     updatedAt: '2026-10-20T02:30:00Z',
   };

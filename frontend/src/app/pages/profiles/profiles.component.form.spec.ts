@@ -60,7 +60,7 @@ describe('ProfilesComponent form', () => {
   const alertDialog = () => element.querySelector<HTMLElement>('[role="alertdialog"]');
   const nameInput = () => dialog()!.querySelector<HTMLInputElement>('[formcontrolname="name"]')!;
   const moduleSets = () => Array.from(dialog()!.querySelectorAll<HTMLFieldSetElement>('fieldset.permission-module'));
-  const checkbox = (label: string) => Array.from(dialog()!.querySelectorAll<HTMLLabelElement>('label.checkbox-field'))
+  const checkbox = (label: string) => Array.from(dialog()!.querySelectorAll<HTMLLabelElement>('label.permission-row'))
     .find((item) => item.textContent?.trim() === label)!.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
   const submitButton = () => dialog()!.querySelector<HTMLButtonElement>('button[type="submit"]')!;
   const setName = (value: string) => { nameInput().value = value; nameInput().dispatchEvent(new Event('input')); fixture.detectChanges(); };
@@ -73,19 +73,21 @@ describe('ProfilesComponent form', () => {
     open(() => component.openEditModal(TECHNICIAN));
     const sets = moduleSets();
     expect(sets.map((set) => set.querySelector('legend')?.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
-      'RMAs 3 de 8', 'Clientes e produtos 0 de 2', 'Peças 1 de 3', 'Protocolos técnicos 0 de 3', 'Relatórios 0 de 1', 'Administração 0 de 3'
+      'Ordens de serviço 3 de 8', 'Clientes e produtos 0 de 3', 'Peças 1 de 3', 'Protocolos técnicos 0 de 3', 'Relatórios 0 de 1', 'Administração 0 de 4'
     ]);
-    checkbox('Abrir RMAs').click();
+    checkbox('Abrir ordens de serviço').click();
     fixture.detectChanges();
     expect(sets[0].querySelector('legend')?.textContent).toContain('4 de 8');
   });
 
-  it('uses checkbox-field for each permission', async () => {
+  it('uses a labelled switch for each permission, inside the Permissões section', async () => {
     await mount();
     open(() => component.openCreateModal());
+    const sections = Array.from(dialog()!.querySelectorAll('fieldset.form-section')).map((section) => section.querySelector('legend')?.textContent?.trim());
+    expect(sections).toEqual(['Identificação', 'Permissões']);
     const boxes = Array.from(dialog()!.querySelectorAll<HTMLInputElement>('fieldset.permission-module input[type="checkbox"]'));
-    expect(boxes.length).toBe(20);
-    expect(boxes.every((box) => box.closest('label')?.classList.contains('checkbox-field'))).toBe(true);
+    expect(boxes.length).toBe(22);
+    expect(boxes.every((box) => box.getAttribute('role') === 'switch' && box.closest('label')?.classList.contains('permission-row'))).toBe(true);
     expect(boxes.every((box) => !box.checked)).toBe(true);
     expect(dialog()!.querySelector('h3')?.textContent?.trim()).toBe('Novo perfil');
     expectCancelBeforePrimary(dialog()!);
@@ -113,7 +115,7 @@ describe('ProfilesComponent form', () => {
     open(() => component.openCreateModal());
     setName('  Supervisor  ');
     checkbox('Ver relatórios').click();
-    checkbox('Ver RMAs, Kanban e dashboard').click();
+    checkbox('Ver ordens de serviço, Kanban e dashboard').click();
     fixture.detectChanges();
     expect(submitButton().textContent?.trim()).toBe('Cadastrar perfil');
     service.list.mockClear();
@@ -131,7 +133,7 @@ describe('ProfilesComponent form', () => {
     expect(dialog()!.querySelector('h3')?.textContent?.trim()).toBe('Editar perfil');
     expect(nameInput().value).toBe('Técnico');
     expect(checkbox('Alterar status').checked).toBe(true);
-    expect(checkbox('Abrir RMAs').checked).toBe(false);
+    expect(checkbox('Abrir ordens de serviço').checked).toBe(false);
     checkbox('Alterar status').click();
     fixture.detectChanges();
     expect(submitButton().textContent?.trim()).toBe('Salvar alterações');

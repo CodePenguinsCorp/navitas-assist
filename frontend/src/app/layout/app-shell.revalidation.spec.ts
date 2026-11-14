@@ -17,8 +17,7 @@ import { AppShellComponent } from './app-shell.component';
 class StubPageComponent {}
 
 const user = (permissions: readonly Permission[]): AuthUserResponse => ({
-  id: 1, username: 'admin', fullName: 'Administrador', profile: { id: 1, name: 'Administrador' }, extraPermissions: [],
-  permissions: [...permissions], active: true, createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+  username: 'admin', fullName: 'Administrador', profileName: 'Administrador', permissions: [...permissions]
 });
 
 describe('AppShellComponent revalidates the current screen when permissions change', () => {
@@ -102,7 +101,7 @@ describe('AppShellComponent revalidates the current screen when permissions chan
     http.expectOne('/api/permissions').flush(PERMISSION_CATALOG);
     await settle();
     const dialog = page.querySelector<HTMLElement>('[role="dialog"]')!;
-    const perfisBox = [...dialog.querySelectorAll<HTMLLabelElement>('label.checkbox-field')]
+    const perfisBox = [...dialog.querySelectorAll<HTMLLabelElement>('label.permission-row')]
       .find((label) => label.textContent?.trim() === 'Gerenciar perfis e permissões')!
       .querySelector<HTMLInputElement>('input')!;
     perfisBox.click();

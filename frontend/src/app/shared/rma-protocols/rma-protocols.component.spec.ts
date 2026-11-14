@@ -16,7 +16,7 @@ const MEASUREMENT: ProtocolExecutionItemResponse = {
 };
 
 const EXECUTION: ProtocolExecutionResponse = {
-  id: 9, rmaId: 4, rmaCode: 'RMA-2026-000004', templateId: 2, templateName: 'Bancada PWM', versionNumber: 3, status: 'IN_PROGRESS',
+  id: 9, rmaId: 4, rmaCode: 'OS-2026-000004', templateId: 2, templateName: 'Bancada PWM', versionNumber: 3, status: 'IN_PROGRESS',
   blockedStatuses: ['IN_TESTS'], startedBy: 'tech', startedAt: '2026-10-20T12:00:00Z', completedBy: null, completedAt: null,
   totalItems: 2, completedItems: 1, requiredItems: 2, pendingRequiredItems: 1, failedItems: 0, items: [MEASUREMENT]
 };
@@ -56,8 +56,8 @@ describe('RmaProtocolsComponent', () => {
 
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('Bancada PWM · v3');
-    expect(text).toContain('1/2 itens registrados');
-    expect(text).toContain('1/2 obrigatórios atendidos');
+    expect(text).toContain('1/2 registrados');
+    expect(text).toContain('1/2 obrigatórios');
     expect(text).not.toContain('Registrar');
   });
 

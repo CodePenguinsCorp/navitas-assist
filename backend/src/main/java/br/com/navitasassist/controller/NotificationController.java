@@ -33,8 +33,8 @@ public class NotificationController {
     private final NotificationService notificationService;
 
     @GetMapping
-    public List<NotificationResponse> list(@RequestParam(defaultValue = "false") boolean unreadOnly, @RequestParam(defaultValue = "false") boolean includeSnoozed) {
-        return notificationService.list(unreadOnly, includeSnoozed);
+    public List<NotificationResponse> list(@RequestParam(defaultValue = "false") boolean unreadOnly, @RequestParam(defaultValue = "false") boolean includeSnoozed, @RequestParam(required = false) NotificationEventType eventType, @RequestParam(required = false) br.com.navitasassist.notification.NotificationSeverity severity) {
+        return notificationService.list(unreadOnly, includeSnoozed, eventType, severity);
     }
 
     @GetMapping("/summary")

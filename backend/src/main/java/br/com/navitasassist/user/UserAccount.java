@@ -39,6 +39,9 @@ public class UserAccount extends AuditableEntity {
     @Column(nullable = false, length = 120)
     private String fullName;
 
+    @Column(length = 254)
+    private String email;
+
     @Column(nullable = false, length = 255)
     private String passwordHash;
 

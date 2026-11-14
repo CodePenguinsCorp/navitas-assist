@@ -46,6 +46,15 @@ describe('route guards', () => {
     await expect(runGuard(authGuard, route(), state('/dashboard'))).resolves.toBe(true);
   });
 
+  it('aceita importar como alternativa na origem mas nao libera a rota de importacao sem importar', async () => {
+    granted.set(['cadastros.importar']);
+    const origin = route(['cadastros.ver', 'cadastros.editar']);
+    origin.data['alternativePermissions'] = ['cadastros.importar'];
+    await expect(runGuard(permissionGuard, origin, state('/clientes'))).resolves.toBe(true);
+    granted.set(['cadastros.ver', 'cadastros.editar']);
+    expect(await runGuard(permissionGuard, route(['cadastros.importar']), state('/clientes/importar'))).toBeInstanceOf(UrlTree);
+  });
+
   it('allows configured profiles and redirects forbidden profiles to the dashboard', async () => {
     granted.set(profilePermissions('SERVICE_DESK'));
     await expect(

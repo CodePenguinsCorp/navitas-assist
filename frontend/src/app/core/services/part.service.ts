@@ -3,12 +3,14 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   PartMovementRequest,
+  PartConsumptionRequest,
   PartMovementResponse,
   PartReplenishmentResponse,
   PartRequest,
   PartReservationRequest,
   PartReservationResponse,
   PartResponse,
+  PartOptionResponse,
   RmaPartsResponse
 } from '../models';
 
@@ -25,6 +27,10 @@ export class PartService {
     }
 
     return this.http.get<PartResponse[]>('/api/parts', { params });
+  }
+
+  listOptions(): Observable<PartOptionResponse[]> {
+    return this.http.get<PartOptionResponse[]>('/api/parts/options');
   }
 
   create(payload: PartRequest): Observable<PartResponse> {
@@ -63,7 +69,7 @@ export class PartService {
     return this.http.post<PartReservationResponse>(`/api/rmas/${rmaId}/parts`, payload);
   }
 
-  updateReservation(rmaId: number, reservationId: number, action: PartReservationAction): Observable<PartReservationResponse> {
-    return this.http.post<PartReservationResponse>(`/api/rmas/${rmaId}/parts/${reservationId}/${action}`, {});
+  updateReservation(rmaId: number, reservationId: number, action: PartReservationAction, consumption?: PartConsumptionRequest): Observable<PartReservationResponse> {
+    return this.http.post<PartReservationResponse>(`/api/rmas/${rmaId}/parts/${reservationId}/${action}`, consumption ?? {});
   }
 }

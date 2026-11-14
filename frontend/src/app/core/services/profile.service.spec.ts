@@ -58,7 +58,7 @@ describe('ProfileService', () => {
     service.permissionCatalog().subscribe(second);
     const request = http.expectOne('/api/permissions');
     expect(request.request.method).toBe('GET');
-    request.flush([{ module: 'RMA', label: 'RMAs', permissions: [{ code: 'rma.ver', label: 'Ver RMAs, Kanban e dashboard' }] }]);
+    request.flush([{ module: 'RMA', label: 'Ordens de serviço', permissions: [{ code: 'rma.ver', label: 'Ver ordens de serviço, Kanban e dashboard' }] }]);
     service.permissionCatalog().subscribe();
     http.expectNone('/api/permissions');
     expect(first).toHaveBeenCalledOnce();

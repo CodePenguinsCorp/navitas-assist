@@ -22,8 +22,6 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
     @Query("select r from RmaRecord r where r.id = :id")
     Optional<RmaRecord> findByIdForUpdate(@Param("id") Long id);
 
-    List<RmaRecord> findByStatusNotIn(Collection<RmaStatus> statuses);
-
     boolean existsByProduct_Id(Long productId);
 
     boolean existsByItems_Product_Id(Long productId);
@@ -31,8 +29,6 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
     boolean existsByClient_Id(Long clientId);
 
     boolean existsByAssignee_Id(Long assigneeId);
-
-    Optional<RmaRecord> findByCodeIgnoreCase(String code);
 
     Optional<RmaRecord> findTopByCodeStartingWithOrderByCodeDesc(String prefix);
 
@@ -52,17 +48,65 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
     List<RmaRecord> searchReport(@Param("entryFrom") LocalDate entryFrom, @Param("entryTo") LocalDate entryTo,
         @Param("status") RmaStatus status, @Param("clientId") Long clientId);
 
+    @Query(value = """
+        select r from RmaRecord r
+        join fetch r.client
+        join fetch r.product
+        left join fetch r.diagnosis
+        where r.entryDate >= :entryFrom
+          and r.entryDate <= :entryTo
+          and (:status is null or r.status = :status)
+          and (:clientId is null or r.client.id = :clientId)
+        order by r.entryDate desc, r.id desc
+        """, countQuery = """
+        select count(r) from RmaRecord r
+        where r.entryDate >= :entryFrom
+          and r.entryDate <= :entryTo
+          and (:status is null or r.status = :status)
+          and (:clientId is null or r.client.id = :clientId)
+        """)
+    Page<RmaRecord> searchReportPage(@Param("entryFrom") LocalDate entryFrom, @Param("entryTo") LocalDate entryTo,
+        @Param("status") RmaStatus status, @Param("clientId") Long clientId, Pageable pageable);
+
+    @Query("""
+        select count(r) from RmaRecord r
+        where r.entryDate >= :entryFrom
+          and r.entryDate <= :entryTo
+          and (:status is null or r.status = :status)
+          and (:clientId is null or r.client.id = :clientId)
+        """)
+    long countReport(@Param("entryFrom") LocalDate entryFrom, @Param("entryTo") LocalDate entryTo,
+        @Param("status") RmaStatus status, @Param("clientId") Long clientId);
+
+    /**
+     * Product id, normalized serial number (trim + upper, the same key RmaReportService builds in Java) and RMA count of
+     * every serial with two or more RMAs entered up to {@code entryTo}, restricted to the serials that appear in the
+     * period (instead of grouping the whole rma_items). Normalizing here keeps the database grouping equal to the
+     * Java one, without depending on the collation.
+     */
+    @Query("""
+        select i.product.id, upper(trim(i.itemIdentification.serialNumber)), count(distinct i.rma.id)
+        from RmaItem i
+        where i.itemIdentification.serialNumber is not null
+          and i.itemIdentification.serialNumber <> ''
+          and i.rma.entryDate <= :entryTo
+          and upper(trim(i.itemIdentification.serialNumber)) in (
+            select upper(trim(p.itemIdentification.serialNumber))
+            from RmaItem p
+            where p.itemIdentification.serialNumber is not null
+              and p.rma.entryDate >= :entryFrom
+              and p.rma.entryDate <= :entryTo
+          )
+        group by i.product.id, upper(trim(i.itemIdentification.serialNumber))
+        having count(distinct i.rma.id) > 1
+        """)
+    List<Object[]> findRecurrentSerials(@Param("entryFrom") LocalDate entryFrom, @Param("entryTo") LocalDate entryTo);
+
     @Query("select distinct r from RmaRecord r left join fetch r.items i left join fetch i.product where r in :rmas")
     List<RmaRecord> fetchItemsWithProducts(@Param("rmas") List<RmaRecord> rmas);
 
     @Query("select distinct r from RmaRecord r left join fetch r.statusHistory where r in :rmas")
     List<RmaRecord> fetchStatusHistory(@Param("rmas") List<RmaRecord> rmas);
-
-    @Query("select distinct r from RmaRecord r left join fetch r.assignmentHistory where r in :rmas")
-    List<RmaRecord> fetchAssignmentHistory(@Param("rmas") List<RmaRecord> rmas);
-
-    @Query("select distinct r from RmaRecord r left join fetch r.blockHistory where r in :rmas")
-    List<RmaRecord> fetchBlockHistory(@Param("rmas") List<RmaRecord> rmas);
 
     @Query("""
         select distinct r
@@ -74,17 +118,17 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
         where (:status is null or r.status = :status)
           and (
             :query is null
-            or lower(r.code) like lower(concat('%', :query, '%'))
-            or lower(coalesce(r.itemIdentification.batchNumber, '')) like lower(concat('%', :query, '%'))
-            or lower(coalesce(r.itemIdentification.serialNumber, '')) like lower(concat('%', :query, '%'))
-            or lower(c.legalName) like lower(concat('%', :query, '%'))
-            or lower(coalesce(c.tradeName, '')) like lower(concat('%', :query, '%'))
-            or lower(p.name) like lower(concat('%', :query, '%'))
-            or lower(p.sku) like lower(concat('%', :query, '%'))
-            or lower(coalesce(i.itemIdentification.batchNumber, '')) like lower(concat('%', :query, '%'))
-            or lower(coalesce(i.itemIdentification.serialNumber, '')) like lower(concat('%', :query, '%'))
-            or lower(coalesce(ip.name, '')) like lower(concat('%', :query, '%'))
-            or lower(coalesce(ip.sku, '')) like lower(concat('%', :query, '%'))
+            or lower(unaccent(r.code)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(r.itemIdentification.batchNumber, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(r.itemIdentification.serialNumber, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(c.legalName)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(c.tradeName, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(p.name)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(p.sku)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(i.itemIdentification.batchNumber, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(i.itemIdentification.serialNumber, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(ip.name, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(ip.sku, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
           )
         order by r.entryDate desc, r.id desc
         """)
@@ -98,22 +142,22 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
         where (:status is null or r.status = :status)
           and (
             :query is null
-            or lower(r.code) like lower(concat('%', :query, '%'))
-            or lower(coalesce(r.itemIdentification.batchNumber, '')) like lower(concat('%', :query, '%'))
-            or lower(coalesce(r.itemIdentification.serialNumber, '')) like lower(concat('%', :query, '%'))
-            or lower(r.client.legalName) like lower(concat('%', :query, '%'))
-            or lower(coalesce(r.client.tradeName, '')) like lower(concat('%', :query, '%'))
-            or lower(r.product.name) like lower(concat('%', :query, '%'))
-            or lower(r.product.sku) like lower(concat('%', :query, '%'))
+            or lower(unaccent(r.code)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(r.itemIdentification.batchNumber, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(r.itemIdentification.serialNumber, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(r.client.legalName)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(r.client.tradeName, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(r.product.name)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(r.product.sku)) like lower(unaccent(concat('%', cast(:query as String), '%')))
             or exists (
               select 1
               from RmaItem i
               where i.rma = r
                 and (
-                  lower(coalesce(i.itemIdentification.batchNumber, '')) like lower(concat('%', :query, '%'))
-                  or lower(coalesce(i.itemIdentification.serialNumber, '')) like lower(concat('%', :query, '%'))
-                  or lower(i.product.name) like lower(concat('%', :query, '%'))
-                  or lower(i.product.sku) like lower(concat('%', :query, '%'))
+                  lower(unaccent(coalesce(i.itemIdentification.batchNumber, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+                  or lower(unaccent(coalesce(i.itemIdentification.serialNumber, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+                  or lower(unaccent(i.product.name)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+                  or lower(unaccent(i.product.sku)) like lower(unaccent(concat('%', cast(:query as String), '%')))
                 )
             )
           )
@@ -132,22 +176,22 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
         where (:status is null or r.status = :status)
           and (
             :query is null
-            or lower(r.code) like lower(concat('%', :query, '%'))
-            or lower(coalesce(r.itemIdentification.batchNumber, '')) like lower(concat('%', :query, '%'))
-            or lower(coalesce(r.itemIdentification.serialNumber, '')) like lower(concat('%', :query, '%'))
-            or lower(r.client.legalName) like lower(concat('%', :query, '%'))
-            or lower(coalesce(r.client.tradeName, '')) like lower(concat('%', :query, '%'))
-            or lower(r.product.name) like lower(concat('%', :query, '%'))
-            or lower(r.product.sku) like lower(concat('%', :query, '%'))
+            or lower(unaccent(r.code)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(r.itemIdentification.batchNumber, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(r.itemIdentification.serialNumber, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(r.client.legalName)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(r.client.tradeName, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(r.product.name)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(r.product.sku)) like lower(unaccent(concat('%', cast(:query as String), '%')))
             or exists (
               select 1
               from RmaItem i
               where i.rma = r
                 and (
-                  lower(coalesce(i.itemIdentification.batchNumber, '')) like lower(concat('%', :query, '%'))
-                  or lower(coalesce(i.itemIdentification.serialNumber, '')) like lower(concat('%', :query, '%'))
-                  or lower(i.product.name) like lower(concat('%', :query, '%'))
-                  or lower(i.product.sku) like lower(concat('%', :query, '%'))
+                  lower(unaccent(coalesce(i.itemIdentification.batchNumber, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+                  or lower(unaccent(coalesce(i.itemIdentification.serialNumber, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+                  or lower(unaccent(i.product.name)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+                  or lower(unaccent(i.product.sku)) like lower(unaccent(concat('%', cast(:query as String), '%')))
                 )
             )
           )
@@ -166,40 +210,25 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
         where (:status is null or r.status = :status)
           and (
             :query is null
-            or lower(r.code) like lower(concat('%', :query, '%'))
-            or lower(coalesce(r.itemIdentification.batchNumber, '')) like lower(concat('%', :query, '%'))
-            or lower(coalesce(r.itemIdentification.serialNumber, '')) like lower(concat('%', :query, '%'))
-            or lower(r.client.legalName) like lower(concat('%', :query, '%'))
-            or lower(coalesce(r.client.tradeName, '')) like lower(concat('%', :query, '%'))
-            or lower(r.product.name) like lower(concat('%', :query, '%'))
-            or lower(r.product.sku) like lower(concat('%', :query, '%'))
+            or lower(unaccent(r.code)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(r.itemIdentification.batchNumber, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(r.itemIdentification.serialNumber, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(r.client.legalName)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(r.client.tradeName, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(r.product.name)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(r.product.sku)) like lower(unaccent(concat('%', cast(:query as String), '%')))
             or exists (
               select 1
               from RmaItem i
               where i.rma = r
                 and (
-                  lower(coalesce(i.itemIdentification.batchNumber, '')) like lower(concat('%', :query, '%'))
-                  or lower(coalesce(i.itemIdentification.serialNumber, '')) like lower(concat('%', :query, '%'))
-                  or lower(i.product.name) like lower(concat('%', :query, '%'))
-                  or lower(i.product.sku) like lower(concat('%', :query, '%'))
+                  lower(unaccent(coalesce(i.itemIdentification.batchNumber, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+                  or lower(unaccent(coalesce(i.itemIdentification.serialNumber, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+                  or lower(unaccent(i.product.name)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+                  or lower(unaccent(i.product.sku)) like lower(unaccent(concat('%', cast(:query as String), '%')))
                 )
             )
           )
         """)
     RmaSummaryResponse summarize(@Param("query") String query, @Param("status") RmaStatus status, @Param("terminalStatuses") Collection<RmaStatus> terminalStatuses);
-
-    @Query("""
-        select distinct r
-        from RmaRecord r
-        left join r.items i
-        where (:batchNumber is not null and lower(i.itemIdentification.batchNumber) = lower(:batchNumber))
-           or (:serialNumber is not null and lower(i.itemIdentification.serialNumber) = lower(:serialNumber))
-           or (:batchNumber is not null and lower(r.itemIdentification.batchNumber) = lower(:batchNumber))
-           or (:serialNumber is not null and lower(r.itemIdentification.serialNumber) = lower(:serialNumber))
-        order by r.entryDate desc, r.id desc
-        """)
-    List<RmaRecord> findHistory(
-        @Param("batchNumber") String batchNumber,
-        @Param("serialNumber") String serialNumber
-    );
 }

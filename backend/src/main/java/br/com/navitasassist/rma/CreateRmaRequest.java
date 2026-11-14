@@ -11,7 +11,7 @@ import jakarta.validation.constraints.Size;
 
 public record CreateRmaRequest(
     @NotNull Long clientId,
-    @NotEmpty List<@NotNull @Valid RmaItemRequest> items,
+    @NotEmpty @Size(max = 20, message = "A OS deve ter no máximo 20 itens.") List<@NotNull @Valid RmaItemRequest> items,
     LocalDate purchaseDate,
     boolean purchaseDateUnknown,
     @NotNull LocalDate entryDate,
@@ -22,6 +22,7 @@ public record CreateRmaRequest(
     RmaPriority priority,
     @Size(max = 600) String repairSummary,
     @Size(max = 600) String replacedPartsSummary,
-    @Size(max = 800) String testSummary
+    @Size(max = 800) String testSummary,
+    LocalDate dueDate
 ) {
 }

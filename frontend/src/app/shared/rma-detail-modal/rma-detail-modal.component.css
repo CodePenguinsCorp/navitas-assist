@@ -2,8 +2,11 @@
 /* Canvas, cards, card titles, tiles (grid) and the label/value grid come from the shared .detail-* rules. */
 .rma-detail { width: min(100%, 1080px); padding: 1.25rem 0.9rem 1.5rem 1.5rem; }
 .rma-detail:focus { outline: none; }
-.rma-detail__bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+.rma-detail__bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: 0.75rem; }
 .rma-detail__key { color: var(--brand-blue-deep); font-weight: 700; }
+/* Quiet text link beside the code (Jira style), not a button. */
+.rma-detail__bar-key { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-3); min-width: 0; }
+.rma-detail__open-link { display: inline-flex; align-items: center; gap: var(--space-1); padding-inline: var(--space-1); text-decoration: none; }
 .rma-detail__layout { display: grid; grid-template-columns: minmax(0, 1fr) 348px; gap: 1.5rem; padding-right: 0.6rem; align-items: start; }
 .rma-detail__main, .rma-detail__side { display: grid; gap: 1.25rem; min-width: 0; }
 .rma-detail__head { display: grid; gap: 0.3rem; }
@@ -11,8 +14,6 @@
 .rma-detail__subtitle, .rma-detail__muted, .rma-detail__error { margin: 0; }
 .rma-detail__subtitle { color: var(--muted); font-weight: 500; }
 .rma-detail__muted { color: var(--muted); }
-.rma-detail__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
-.rma-detail__block { display: grid; gap: 0.2rem; margin: 0; padding: 0.75rem 1rem; border: 1px solid var(--danger-line); border-radius: var(--radius-sm); background: var(--danger-bg); color: var(--danger-strong); font-size: 0.88rem; }
 
 .rma-detail__section { padding: 1.1rem 1.25rem 1.25rem; }
 .rma-detail__callout { margin: 0; padding-left: var(--space-3); border-left: 3px solid var(--status-waiting-part); line-height: 1.6; white-space: pre-wrap; }
@@ -51,3 +52,14 @@
 .avatar { inline-size: 26px; block-size: 26px; background: var(--brand-blue); color: #fff; }
 @media (max-width: 860px) { .rma-detail__layout { grid-template-columns: minmax(0, 1fr); } .rma-detail__side { order: -1; } .rma-detail__tiles { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 520px) { .rma-detail { padding: 1rem 0.4rem 1rem 0.9rem; } .rma-detail__section { padding: 1rem; } }
+
+/* Due date fact: the inline field (app-rma-due-date-field) takes the whole row and wraps its pieces at 320 px. */
+.rma-detail__deadline dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Quiet text control at the end of the action row (Jira style). */
+.rma-detail__fold-all { margin-left: auto; font-size: 0.8rem; }

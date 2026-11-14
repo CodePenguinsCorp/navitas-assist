@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Size;
 
 public record UpdateRmaRequest(
     Long clientId,
-    @Size(min = 1) List<@NotNull @Valid RmaItemRequest> items,
+    @Size(min = 1, max = 20, message = "A OS deve ter de 1 a 20 itens.") List<@NotNull @Valid RmaItemRequest> items,
     LocalDate purchaseDate,
     Boolean purchaseDateUnknown,
     LocalDate entryDate,
@@ -23,6 +23,8 @@ public record UpdateRmaRequest(
     @Size(max = 800) String testSummary,
     LocalDate shippedAt,
     @Size(max = 120) String carrier,
-    @Size(max = 120) String trackingCode
+    @Size(max = 120) String trackingCode,
+    LocalDate dueDate,
+    Boolean clearDueDate
 ) {
 }

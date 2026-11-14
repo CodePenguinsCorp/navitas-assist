@@ -1,7 +1,5 @@
 package br.com.navitasassist.config;
 
-import java.time.Duration;
-
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -14,26 +12,43 @@ import org.springframework.stereotype.Component;
 public class NotificationProperties {
 
     private final Email email = new Email();
-    private final SlaScan slaScan = new SlaScan();
     private final Async async = new Async();
 
-    /**
-     * Optional corporate e-mail channel. Disabled by default; addresses are built only as {@code username@domain}, so
-     * messages never leave the corporate domain and never reach clients.
-     */
     @Getter
     @Setter
     public static class Email {
         private boolean enabled;
-        private String domain;
-        private String from = "navitas-assist@localhost";
-    }
+        private String provider = "fake";
+        private String apiKey;
+        private String from;
+        private String appBaseUrl;
+        private long pollMs = 5000;
+        private int batchSize = 50;
+        /** Teto de envios aceitos pelo provedor real por dia civil de America/Sao_Paulo; 0 = sem limite. */
+        private int dailyLimit = 100;
+        /** Teto de envios aceitos pelo provedor real por mês civil de America/Sao_Paulo; 0 = sem limite. */
+        private int monthlyLimit = 3000;
+        /** Intervalo mínimo entre envios ao provedor real (500 ms = até 2 por segundo); 0 desliga o espaçamento. */
+        private long sendIntervalMs = 500;
 
-    @Getter
-    @Setter
-    public static class SlaScan {
-        private boolean enabled = true;
-        private Duration interval = Duration.ofMinutes(5);
+        /** @param fakeAllowed true só nos perfis local e test, onde o provedor falso pode ficar ligado. */
+        public void validate(boolean fakeAllowed) {
+            if (!java.util.Set.of("fake", "resend").contains(provider)) throw new IllegalStateException("Invalid notifications email provider");
+            if (pollMs <= 0 || batchSize < 1 || batchSize > 100) throw new IllegalStateException("Invalid notifications email polling limits");
+            if (dailyLimit < 0 || monthlyLimit < 0 || sendIntervalMs < 0) throw new IllegalStateException("Invalid notifications email sending limits");
+            if (!enabled) return;
+            if ("fake".equals(provider) && !fakeAllowed) {
+                throw new IllegalStateException("O provedor de e-mail falso só é permitido nos perfis local e test; ajuste NOTIFICATIONS_EMAIL_PROVIDER.");
+            }
+            if (!br.com.navitasassist.notification.email.EmailMessage.validAddress(from)) throw new IllegalStateException("MAIL_FROM is required and must be a single email address");
+            try {
+                java.net.URI uri = java.net.URI.create(appBaseUrl == null ? "" : appBaseUrl);
+                boolean secure = "https".equals(uri.getScheme());
+                boolean local = "fake".equals(provider) && "http".equals(uri.getScheme()) && java.util.Set.of("localhost", "127.0.0.1", "[::1]").contains(uri.getHost());
+                if ((!secure && !local) || uri.getHost() == null || uri.getUserInfo() != null || uri.getQuery() != null || uri.getFragment() != null) throw new IllegalArgumentException();
+            } catch (IllegalArgumentException e) { throw new IllegalStateException("Invalid APP_BASE_URL"); }
+            if ("resend".equals(provider) && (apiKey == null || apiKey.isBlank() || apiKey.contains("\r") || apiKey.contains("\n"))) throw new IllegalStateException("RESEND_API_KEY is required");
+        }
     }
 
     @Getter

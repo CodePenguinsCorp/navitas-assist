@@ -1,0 +1,45 @@
+:host { position: relative; display: inline-block; }
+.shell-notifications.is-open { border-color: var(--focus-border); background: var(--brand-tint); }
+
+/* Popover anchored to the bell: one surface, internal scroll, fits a 320px screen. */
+.bell-panel {
+  position: absolute; top: calc(100% + var(--space-2)); right: 0; z-index: 900;
+  display: flex; flex-direction: column;
+  width: min(380px, calc(100vw - 2rem)); max-height: 70vh;
+  border: 1px solid var(--line); border-radius: var(--radius-md);
+  background: var(--surface); box-shadow: var(--shadow);
+}
+.bell-panel:focus-visible { outline: none; box-shadow: var(--shadow), var(--focus-ring); }
+.bell-panel__head, .bell-panel__tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--space-3); padding: 0 var(--space-4); }
+.bell-panel__head { padding-top: var(--space-2); }
+.bell-panel__title { margin: 0; color: var(--brand-dark); font-size: 1rem; }
+.bell-panel__switch { min-height: var(--control-height); align-items: center; gap: var(--space-2); font-size: var(--font-size-sm); cursor: pointer; }
+.bell-panel__tools { border-bottom: 1px solid var(--line); }
+.bell-panel__tools a.link-button { display: inline-flex; align-items: center; }
+.bell-panel__error { margin: var(--space-2) var(--space-4) 0; }
+.bell-panel__body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 var(--space-2) var(--space-2); }
+.bell-panel__body .empty-state { padding: var(--space-6, 2rem) var(--space-3); }
+
+.bell-day { margin: var(--space-3) 0 var(--space-1); padding: 0 var(--space-2); color: var(--muted); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.bell-list { margin: 0; padding: 0; list-style: none; }
+.bell-item { display: grid; grid-template-columns: 8px minmax(0, 1fr) var(--control-height) 2.75rem; align-items: center; gap: var(--space-2); padding-inline: var(--space-2); border-radius: var(--radius-sm); }
+.bell-item:hover { background: color-mix(in srgb, var(--brand-tint) 60%, var(--surface)); }
+.bell-item__dot { align-self: start; width: 8px; height: 8px; margin-top: 0.85rem; border-radius: 50%; }
+.bell-item.is-unread .bell-item__dot { background: var(--brand-blue); }
+.bell-item__main {
+  display: grid; gap: 2px; min-width: 0; min-height: var(--control-height); padding: var(--space-2) 0;
+  border: 0; border-radius: var(--radius-xs); background: transparent; color: var(--text); text-align: left; cursor: pointer;
+}
+.bell-item__main:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.bell-item__title { font-size: var(--font-size-sm); font-weight: 500; overflow-wrap: anywhere; }
+.is-unread .bell-item__title { font-weight: 700; }
+.bell-item__action { display: inline-flex; justify-content: center; width: var(--control-height); }
+.bell-item__time { color: var(--muted); font-size: var(--font-size-xs); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.bell-item__meta { display: flex; align-items: center; gap: var(--space-2); }
+.bell-item__summary { flex: 1 1 0; min-width: 0; overflow: hidden; color: var(--muted); font-size: var(--font-size-xs); text-overflow: ellipsis; white-space: nowrap; }
+.bell-item__meta .mini-chip { flex: none; min-height: 20px; padding-inline: var(--space-2); font-size: 0.7rem; }
+
+/* Narrow shell: the bell sits at the left of the header, so the panel opens from there across the usable width. */
+@media (max-width: 720px) {
+  .bell-panel { right: auto; left: 0; }
+}

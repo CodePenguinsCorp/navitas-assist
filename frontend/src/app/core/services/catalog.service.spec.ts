@@ -111,4 +111,25 @@ describe('CatalogService', () => {
     service.getUserSummary().subscribe();
     httpTesting.expectOne('/api/users/summary').flush({});
   });
+
+  it('reenvia o mesmo arquivo multipart na prévia e confirmação de ambos os cadastros', () => {
+    const file = new File(['sku,name\nA,Produto'], 'dados.csv', { type: 'text/csv' });
+    for (const kind of ['clients', 'products'] as const) {
+      service.previewImport(kind, file).subscribe();
+      const preview = httpTesting.expectOne(`/api/${kind}/imports/preview`);
+      expect(preview.request.method).toBe('POST');
+      expect(preview.request.body.get('file')).toBe(file);
+      expect([...preview.request.body.keys()]).toEqual(['file']);
+      preview.flush({});
+      service.confirmImport(kind, file).subscribe();
+      const confirm = httpTesting.expectOne(`/api/${kind}/imports/confirm`);
+      expect(confirm.request.body.get('file')).toBe(file);
+      expect([...confirm.request.body.keys()]).toEqual(['file']);
+      confirm.flush({});
+      service.downloadImportTemplate(kind).subscribe();
+      const template = httpTesting.expectOne(`/api/${kind}/imports/template`);
+      expect(template.request.responseType).toBe('blob');
+      template.flush(new Blob(['modelo']));
+    }
+  });
 });

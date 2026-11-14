@@ -16,8 +16,6 @@ public interface AccessProfileRepository extends JpaRepository<AccessProfile, Lo
 
     Optional<AccessProfile> findByLegacyCode(String legacyCode);
 
-    boolean existsByNameIgnoreCase(String name);
-
     Optional<AccessProfile> findByNameIgnoreCase(String name);
 
     List<AccessProfile> findAllByOrderByNameAscIdAsc();
@@ -34,13 +32,13 @@ public interface AccessProfileRepository extends JpaRepository<AccessProfile, Lo
         value = """
             select profile
             from AccessProfile profile
-            where :query is null or lower(profile.name) like lower(concat('%', :query, '%'))
-            order by lower(profile.name), profile.id
+            where :query is null or lower(unaccent(profile.name)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            order by lower(unaccent(profile.name)), profile.id
             """,
         countQuery = """
             select count(profile)
             from AccessProfile profile
-            where :query is null or lower(profile.name) like lower(concat('%', :query, '%'))
+            where :query is null or lower(unaccent(profile.name)) like lower(unaccent(concat('%', cast(:query as String), '%')))
             """)
     Page<AccessProfile> search(@Param("query") String query, Pageable pageable);
 }

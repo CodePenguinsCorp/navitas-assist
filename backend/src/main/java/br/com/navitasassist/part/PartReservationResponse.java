@@ -20,8 +20,18 @@ public record PartReservationResponse(
     String note,
     String createdBy,
     Instant createdAt,
-    Instant updatedAt
+    Instant updatedAt,
+    String replacementReason,
+    String componentBatch,
+    Instant appliedAt,
+    String appliedBy
 ) {
+    /** Mesma reserva sem custos, para quem não tem `pecas.ver`. */
+    public PartReservationResponse withoutCosts() {
+        return new PartReservationResponse(id, rmaId, rmaCode, partId, partCode, partName, unit, location, quantity, status, partAvailable,
+            null, null, note, createdBy, createdAt, updatedAt, replacementReason, componentBatch, appliedAt, appliedBy);
+    }
+
     public static PartReservationResponse from(PartReservation reservation, BigDecimal unitCost, BigDecimal totalCost) {
         Part part = reservation.getPart();
         return new PartReservationResponse(
@@ -41,7 +51,11 @@ public record PartReservationResponse(
             reservation.getNote(),
             reservation.getCreatedBy(),
             reservation.getCreatedAt(),
-            reservation.getUpdatedAt()
+            reservation.getUpdatedAt(),
+            reservation.getReplacementReason(),
+            reservation.getComponentBatch(),
+            reservation.getAppliedAt(),
+            reservation.getAppliedBy()
         );
     }
 }

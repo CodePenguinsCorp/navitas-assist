@@ -1,7 +1,6 @@
 package br.com.navitasassist.part;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 
 public record PartResponse(
     Long id,
@@ -15,9 +14,7 @@ public record PartResponse(
     BigDecimal reserved,
     BigDecimal available,
     boolean belowMinimum,
-    boolean active,
-    Instant createdAt,
-    Instant updatedAt
+    boolean active
 ) {
     public static PartResponse from(Part part) {
         return new PartResponse(
@@ -32,9 +29,7 @@ public record PartResponse(
             part.getReserved(),
             part.getAvailable(),
             part.isBelowMinimum(),
-            part.isActive(),
-            part.getCreatedAt(),
-            part.getUpdatedAt()
+            part.isActive()
         );
     }
 }

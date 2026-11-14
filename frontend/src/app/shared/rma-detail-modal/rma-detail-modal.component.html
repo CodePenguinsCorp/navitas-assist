@@ -1,4 +1,5 @@
 <section class="modal-overlay" (click)="requestClose()">
+  @if (repairError()) { <p class="field-error" role="alert">{{ repairError() }}</p> }
   <article
     class="panel modal-panel rma-detail detail-surface"
     role="dialog"
@@ -6,14 +7,22 @@
     tabindex="-1"
     [attr.aria-label]="'Detalhes do ' + rma().code"
     appModalFocus
-    [modalCloseBlocked]="disabled()"
+    [modalCloseBlocked]="writePending()"
     [modalFallbackFocus]="fallbackFocus()"
     (modalCloseRequested)="requestClose()"
     (click)="$event.stopPropagation()"
   >
     <header class="rma-detail__bar">
-      <span class="rma-detail__key code-text">{{ rma().code }}</span>
-      <button type="button" class="modal-close" aria-label="Fechar" [disabled]="disabled()" (click)="requestClose()">
+      <div class="rma-detail__bar-key">
+        <span class="rma-detail__key code-text">{{ rma().code }}</span>
+        @if (writePending()) {
+          <button type="button" class="link-button rma-detail__open-link" disabled>Abrir na lista <app-icon name="external" [size]="14" /></button>
+        } @else {
+          <a class="link-button rma-detail__open-link" routerLink="/rmas" [queryParams]="{ rma: rma().id }">Abrir na lista <app-icon name="external" [size]="14" /></a>
+        }
+        <app-rma-report-link [rmaId]="rma().id" [code]="rma().code" [disabled]="writePending()" />
+      </div>
+      <button type="button" class="modal-close" aria-label="Fechar" [disabled]="writePending()" (click)="requestClose()">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
       </button>
     </header>
@@ -25,55 +34,44 @@
           <p class="rma-detail__subtitle">{{ rma().clientName }}</p>
         </div>
 
-        <div class="rma-detail__actions">
+        <div class="detail-actions">
           @if (canUpdateStatus()) {
-            <app-custom-select
-              class="rma-detail__status"
-              appearance="status"
-              [actionMenu]="true"
-              [ariaLabel]="'Alterar status, atual: ' + statusLabel(rma().status)"
-              [options]="statusOptions()"
-              [value]="rma().status"
-              [disabled]="disabled()"
-              (valueChange)="chooseStatus($event)"
-            />
+            <app-rma-status-field [rma]="rma()" [disabled]="disabled() || diagnosisBusy() || warrantyBusy()"
+              (saved)="rmaUpdated.emit($event)" (busyChange)="statusBusy.set($event); busyChange.emit($event)" />
           } @else {
             <span class="status-chip rma-detail__status" [attr.data-status]="rma().status">{{ statusLabel(rma().status) }}</span>
           }
-          <button type="button" class="button-secondary" [disabled]="disabled()" (click)="blockInspect.emit(rma())">Ver impedimentos</button>
-          @if (disabled()) {
-            <button type="button" class="button-secondary" disabled>Abrir RMA na lista</button>
-          } @else {
-            <a class="button-secondary" routerLink="/rmas" [queryParams]="{ rma: rma().id }">Abrir RMA na lista</a>
+          @if (rma().currentBlock; as block) {
+            <button type="button" class="detail-block-flag" aria-controls="rma-detail-blocks" (click)="showBlocks(blocksSection)">
+              <app-icon name="lock" [size]="16" />{{ blockedLabel(block, clock.now()) }}<span class="sr-only"> · ver impedimento</span>
+            </button>
           }
+          <button type="button" class="link-button rma-detail__fold-all" (click)="toggleAll()">{{ allOpen() ? 'Recolher tudo' : 'Expandir tudo' }}</button>
         </div>
 
         @if (actionError()) {
           <p class="alert-banner alert-banner--error rma-detail__error" role="alert"><strong>{{ actionError() }}</strong></p>
         }
 
-        @if (rma().currentBlock; as block) {
-          <p class="rma-detail__block"><strong>{{ blockedLabel(block, clock.now()) }}</strong>{{ block.reason }}</p>
-        }
-
         <section class="rma-detail__section rma-detail__section--failure detail-card">
-          <h3 class="rma-detail__heading detail-card__title">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.5 20h19L12 3ZM12 10v4.5M12 17.2v.1" /></svg>
-            {{ sectionLabel('failure') }}
-          </h3>
-          <p class="rma-detail__callout">{{ rma().reportedFailure }}</p>
+          <app-collapsible-section [title]="sectionLabel('failure')" icon="alert" storageKey="rma.failure">
+            <p class="rma-detail__callout">{{ rma().reportedFailure }}</p>
+          </app-collapsible-section>
+        </section>
+
+        <section #blocksSection id="rma-detail-blocks" class="rma-detail__section detail-card">
+          <app-collapsible-section #blocksFold title="Impedimentos" icon="lock" [open]="!!rma().currentBlock" storageKey="rma.blocks">
+            <app-rma-blocks-section [rma]="rma()" [disabled]="writePending()" (updated)="rmaUpdated.emit($event)" />
+          </app-collapsible-section>
         </section>
 
         <section class="rma-detail__section detail-card">
-          <h3 class="rma-detail__heading detail-card__title">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8.5 4.5v9L12 21l-8.5-4.5v-9L12 3ZM3.5 7.5 12 12l8.5-4.5M12 12v9" /></svg>
-            {{ sectionLabel('products') }} <span class="mini-chip">{{ itemCountLabel(rma().items.length) }}</span>
-          </h3>
+          <app-collapsible-section [title]="sectionLabel('products')" icon="box" [count]="rma().items.length" [open]="rma().items.length <= 1" storageKey="rma.products">
           <ul class="rma-detail__items">
             @for (item of rma().items; track item.id ?? $index) {
               <li class="detail-tile">
                 <strong>{{ item.productName }}</strong>
-                <span class="mini-chip" [class]="warrantyClass(item.warrantyStatus)">{{ warrantyLabel(item.warrantyStatus) }}</span>
+                <app-rma-warranty-field [rma]="rma()" [item]="item" [canEdit]="canEditDueDate()" [disabled]="writePending()" (saved)="rmaUpdated.emit($event)" (busyChange)="warrantyBusy.set($event); busyChange.emit($event)" />
                 <dl>
                   @for (fact of rmaItemFacts(item); track fact.label) {
                     <div><dt>{{ fact.label }}</dt><dd>{{ fact.value }}</dd></div>
@@ -82,88 +80,71 @@
               </li>
             }
           </ul>
+          </app-collapsible-section>
         </section>
 
         @let receipt = receiptFacts(rma());
         @if (receipt.length > 0) {
           <section class="rma-detail__section detail-card">
-            <h3 class="rma-detail__heading detail-card__title">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h18v12H3V8ZM8 8V5h8v3M3 13h18" /></svg>
-              {{ sectionLabel('receipt') }}
-            </h3>
-            <div class="rma-detail__tiles">
-              @for (fact of receipt; track fact.label) {
-                <div class="rma-detail__tile detail-tile"><span>{{ fact.label }}</span><strong>{{ fact.value }}</strong></div>
-              }
-            </div>
+            <app-collapsible-section [title]="sectionLabel('receipt')" icon="inbox" [open]="false" storageKey="rma.receipt">
+              <div class="rma-detail__tiles">
+                @for (fact of receipt; track fact.label) {
+                  <div class="rma-detail__tile detail-tile"><span>{{ fact.label }}</span><strong>{{ fact.value }}</strong></div>
+                }
+              </div>
+            </app-collapsible-section>
           </section>
         }
 
         <section class="rma-detail__section detail-card">
-          <h3 class="rma-detail__heading detail-card__title">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15ZM16 16l5 5" /></svg>
-            {{ sectionLabel('diagnosis') }}
-          </h3>
-          @if (rma().diagnosis; as diagnosis) {
-            <div class="rma-detail__tiles">
-              @for (fact of diagnosisFacts(diagnosis); track fact.label) {
-                <div class="rma-detail__tile detail-tile" [class.rma-detail__tile--wide]="fact.label === 'Falha encontrada' || fact.label === 'Notas'">
-                  <span>{{ fact.label }}</span>
-                  @if (fact.label === 'Tipo' || fact.label === 'Causa provável') {
-                    <em class="mini-chip">{{ fact.value }}</em>
-                  } @else {
-                    <strong>{{ fact.value }}</strong>
-                  }
-                </div>
-              }
-            </div>
-          } @else {
-            <p class="rma-detail__muted">{{ noDiagnosisLabel }}</p>
-          }
+          <app-rma-diagnosis [collapsible]="true" [rma]="rma()" [disabled]="disabled() || statusBusy() || warrantyBusy()" (saved)="rmaUpdated.emit($event)"
+            (busyChange)="diagnosisBusy.set($event); busyChange.emit($event)" />
         </section>
 
+        @defer { <app-rma-repair-panel (changed)="refreshRepair()" [rmaId]="rma().id" [rmaStatus]="rma().status" />
+        <app-rma-parts-panel (changed)="refreshRepair()" [rmaId]="rma().id" [rmaStatus]="rma().status" /> } @placeholder { <div aria-busy="true"></div> }
         @let repair = repairFacts(rma());
         @if (repair.length > 0) {
           <section class="rma-detail__section detail-card">
-            <h3 class="rma-detail__heading detail-card__title">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5a4 4 0 0 0-5.2 5.2L3 18l3 3 6.3-6.3a4 4 0 0 0 5.2-5.2L14.8 12l-2.8-2.8 2.5-2.7Z" /></svg>
-              {{ sectionLabel('repair') }}
-            </h3>
-            <div class="rma-detail__tiles">
-              @for (fact of repair; track fact.label) {
-                <div class="rma-detail__tile detail-tile" [class.rma-detail__tile--wide]="fact.label === 'Reparo'"><span>{{ fact.label }}</span><strong>{{ fact.value }}</strong></div>
-              }
-            </div>
+            <app-collapsible-section [title]="sectionLabel('repair')" icon="wrench" [open]="false" storageKey="rma.repair">
+              <div class="rma-detail__tiles">
+                @for (fact of repair; track fact.label) {
+                  <div class="rma-detail__tile detail-tile" [class.rma-detail__tile--wide]="fact.label === 'Reparo'"><span>{{ fact.label }}</span><strong>{{ fact.value }}</strong></div>
+                }
+              </div>
+            </app-collapsible-section>
           </section>
         }
 
         <section class="rma-detail__section detail-card">
-          <h3 class="rma-detail__heading detail-card__title">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7v5l3 2" /></svg>
-            {{ sectionLabel('history') }} <span class="mini-chip">{{ activity().length }}</span>
-          </h3>
-          @if (activity().length === 0) {
-            <p class="rma-detail__muted">Nenhuma atividade registrada.</p>
-          }
-          <ol class="rma-detail__timeline">
-            @for (entry of activity(); track $index) {
-              <li class="rma-detail__event" [class.is-assignee]="entry.kind === 'assignee'">
-                <span class="avatar" aria-hidden="true">{{ initials(entry.by) }}</span>
-                <div class="rma-detail__event-body">
-                  <div class="rma-detail__event-head">
-                    <strong>{{ entry.by }}</strong>
-                    <time>{{ dateTimeLabel(entry.at) }}</time>
-                  </div>
-                  @if (entry.kind === 'status') {
-                    <p>{{ entry.label }}</p>
-                    @if (entry.note) { <blockquote>{{ entry.note }}</blockquote> }
-                  } @else {
-                    <p>Responsável <span class="rma-detail__from">{{ entry.from }}</span> <span aria-hidden="true">→</span> <span class="mini-chip">{{ entry.to }}</span></p>
-                  }
-                </div>
-              </li>
+          <app-collapsible-section [title]="sectionLabel('history')" icon="history" [count]="activity().length" [open]="false" storageKey="rma.history">
+            @if (activity().length === 0) {
+              <p class="rma-detail__muted">Nenhuma atividade registrada.</p>
             }
-          </ol>
+            <ol class="rma-detail__timeline">
+              @for (entry of activity(); track $index) {
+                <li class="rma-detail__event" [class.is-assignee]="entry.kind === 'assignee'">
+                  <span class="avatar" aria-hidden="true">{{ initials(entry.by) }}</span>
+                  <div class="rma-detail__event-body">
+                    <div class="rma-detail__event-head">
+                      <strong>{{ entry.by }}</strong>
+                      <time>{{ dateTimeLabel(entry.at) }}</time>
+                    </div>
+                    @if (entry.kind === 'status') {
+                      <p>{{ entry.label }}</p>
+                      <app-rma-status-field [rma]="rma()" [event]="entry.event" [showSelector]="false" [disabled]="writePending()" (saved)="rmaUpdated.emit($event)" (busyChange)="statusBusy.set($event)" />
+                    } @else if (entry.kind === 'assignee') {
+                      <p>Responsável <span class="rma-detail__from">{{ entry.from }}</span> <span aria-hidden="true">→</span> <span class="mini-chip">{{ entry.to }}</span></p>
+                    } @else {
+                      <p class="rma-detail__due-date-event" [class.repair-voided]="entry.kind === 'repair' && entry.voided">{{ historyEntryTitle(entry) }}</p>
+                      @if (entry.kind === 'repair' && entry.voidReason) { <small class="muted-inline">{{ entry.voidReason }}</small> }
+                      @if (entry.kind === 'warranty' && entry.reason) { <blockquote>{{ entry.reason }}</blockquote> }
+                    }
+                  </div>
+                </li>
+              }
+            </ol>
+          </app-collapsible-section>
         </section>
       </div>
 
@@ -183,7 +164,7 @@
                     [placeholder]="ownerLabel(rma())"
                     [options]="assigneeOptions()"
                     [value]="rma().assigneeId"
-                    [disabled]="disabled()"
+                    [disabled]="writePending()"
                     (valueChange)="chooseAssignee($event)"
                   />
                 </dd>
@@ -194,16 +175,25 @@
                 </dd>
               }
             </div>
-            <div><dt>Prioridade</dt><dd><span class="priority-tag" [attr.data-priority]="rma().priority"><span class="priority-bars" [attr.data-priority]="rma().priority" aria-hidden="true"><i></i><i></i><i></i></span>{{ priorityLabel(rma().priority) }}</span></dd></div>
-            <div class="detail-facts__block"><dt>SLA</dt><dd><app-rma-sla-badge [sla]="rma().sla" /></dd></div>
+            <div><dt>Prioridade</dt><dd><app-rma-priority-field [rma]="rma()" [canEdit]="canEditDueDate()" [disabled]="writePending()" (saved)="rmaUpdated.emit($event)" (busyChange)="busyChange.emit($event)" /></dd></div>
+            <div class="detail-facts__block rma-detail__deadline">
+              <dt>Data limite</dt>
+              <dd [class.is-empty]="!rma().dueDate">
+                <app-rma-due-date-field [rma]="rma()" [canEdit]="canEditDueDate()" [disabled]="writePending()" (saved)="rmaUpdated.emit($event)" />
+              </dd>
+            </div>
+            <div><dt>{{ stage().label }}</dt><dd>{{ stage().value }}</dd></div>
           </dl>
+        </section>
+        <section class="rma-detail__info rma-detail__info--stages detail-card">
+          <app-rma-stage-times [rma]="rma()" />
         </section>
         <section class="rma-detail__info detail-card">
           <h3 class="rma-detail__info-title detail-card__header">Atendimento</h3>
           <dl class="detail-facts">
             <div><dt>Cliente</dt><dd>{{ rma().clientName }}</dd></div>
             <div><dt>Entrada</dt><dd>{{ dateLabel(rma().entryDate) }}</dd></div>
-            <div><dt>Recebido por</dt><dd>{{ rma().receivedBy }}</dd></div>
+            <div><dt>Recebida por</dt><dd>{{ rma().receivedBy }}</dd></div>
             @let invoice = invoiceFact(rma());
             <div><dt>{{ invoice.label }}</dt><dd>{{ invoice.value }}</dd></div>
             @let purchase = purchaseFact(rma());

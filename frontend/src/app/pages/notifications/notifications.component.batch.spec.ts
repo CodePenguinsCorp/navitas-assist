@@ -6,9 +6,10 @@ import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { NotificationResponse } from '../../core/models';
 import { ProfileService } from '../../core/services/profile.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { loadingInterceptor } from '../../core/interceptors/loading.interceptor';
 import { LoadingService } from '../../core/services/loading.service';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { NotificationsComponent } from './notifications.component';
 
@@ -48,7 +49,7 @@ describe('Notifications inbox ordering and batch undo', () => {
       providers: [provideRouter([]), provideHttpClient(withInterceptors([loadingInterceptor])), provideHttpClientTesting(),
         providePermissions(profilePermissions('ADMIN')),
         { provide: ProfileService, useValue: { options: () => of([]), invalidateOptions: () => undefined } },
-        { provide: SlaClockService, useValue: { now: signal(NOW) } }]
+        { provide: ClockService, useValue: { now: signal(NOW) } }]
     }).compileComponents();
     vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
     vi.setSystemTime(NOW);
@@ -82,7 +83,7 @@ describe('Notifications inbox ordering and batch undo', () => {
 
   it('preserves the selected order and filters across marking and undo reloads', () => {
     click('Ordem: mais recentes primeiro. Inverter ordem');
-    root().querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+    button('Somente não lidas').click();
     const filtered = http.expectOne(r => r.url === '/api/notifications');
     expect(filtered.request.params.get('unreadOnly')).toBe('true'); filtered.flush(rows([3, 2]));
     http.expectOne('/api/notifications/summary').flush({ unread: 2 }); render();
@@ -211,5 +212,96 @@ describe('Notifications inbox ordering and batch undo', () => {
     mark(1); fixture.destroy();
     const dismiss = http.expectOne('/api/notifications/read-all/dismiss'); expect(dismiss.request.body).toEqual({ token: TOKEN }); dismiss.flush(null);
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('dismisses a late mark-all after navigation without opening a popup or refreshing the destroyed page', () => {
+    click('Marcar todas como lidas');
+    const pending = http.expectOne('/api/notifications/read-all');
+    fixture.destroy();
+    expect(pending.cancelled).toBe(false);
+    pending.flush({ markedCount: 1, undoToken: TOKEN, expiresAt: new Date(NOW + 4000).toISOString() });
+    http.expectOne('/api/notifications/read-all/dismiss').flush(null);
+    expect(vi.getTimerCount()).toBe(0);
+    http.expectNone('/api/notifications');
+    http.expectNone('/api/notifications/read-all/dismiss');
+  });
+
+  it('cancels a pending undo on navigation and invalidates the current batch once', () => {
+    mark(1); click('Desmarcar mensagens');
+    const pending = http.expectOne('/api/notifications/read-all/undo');
+    fixture.destroy();
+    expect(pending.cancelled).toBe(true);
+    const dismiss = http.expectOne('/api/notifications/read-all/dismiss');
+    expect(dismiss.request.body).toEqual({ token: TOKEN }); dismiss.flush(null);
+    expect(vi.getTimerCount()).toBe(0);
+    http.expectNone('/api/notifications');
+  });
+
+  it('lets an in-flight dismissal finish after navigation without issuing a duplicate', () => {
+    mark(1); click('Fechar aviso de leitura');
+    const pending = http.expectOne('/api/notifications/read-all/dismiss');
+    fixture.destroy();
+    expect(pending.cancelled).toBe(false);
+    http.expectNone('/api/notifications/read-all/dismiss');
+    pending.flush(null);
+    expect(vi.getTimerCount()).toBe(0);
+    http.expectNone('/api/notifications');
+  });
+
+  it('keeps an expired popup closed while an already-submitted undo finishes', () => {
+    mark(1); click('Desmarcar mensagens');
+    const pending = http.expectOne('/api/notifications/read-all/undo');
+    vi.advanceTimersByTime(4000); render();
+    expect(root().querySelector('.read-batch-toast')).toBeNull();
+    pending.flush({ restoredCount: 1 }); flushInbox();
+    expect(root().querySelector('.read-batch-toast')).toBeNull();
+    expect(root().textContent).toContain('Leitura desfeita.');
+  });
+
+  it('does not offer undo when the mark-all response arrives after its deadline', () => {
+    click('Marcar todas como lidas');
+    const pending = http.expectOne('/api/notifications/read-all');
+    vi.advanceTimersByTime(5000);
+    pending.flush({ markedCount: 1, undoToken: TOKEN, expiresAt: new Date(NOW + 4000).toISOString() });
+    flushInbox([{ ...ROW, read: true }], 0);
+    expect(root().querySelector('.read-batch-toast')).toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('invalidates the page undo and refreshes rows after a newer batch from the bell', () => {
+    mark(1);
+    TestBed.inject(NotificationService).markAllRead().subscribe();
+    http.expectOne('/api/notifications/read-all').flush({ markedCount: 1, undoToken: NEXT_TOKEN, expiresAt: new Date(NOW + 4000).toISOString() });
+    render(); flushInbox([{ ...ROW, read: true }], 0);
+    expect(root().querySelector('.read-batch-toast')).toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
+    http.expectNone('/api/notifications/read-all/undo');
+  });
+
+  it('refreshes the page when the bell batch and its dismissal finish before the next render', () => {
+    mark(1);
+    const service = TestBed.inject(NotificationService);
+    service.markAllRead().subscribe();
+    http.expectOne('/api/notifications/read-all').flush({ markedCount: 1, undoToken: NEXT_TOKEN, expiresAt: new Date(NOW + 4000).toISOString() });
+    service.dismissReadAll(NEXT_TOKEN).subscribe();
+    http.expectOne('/api/notifications/read-all/dismiss').flush(null);
+    render(); flushInbox([{ ...ROW, read: true }], 0);
+    expect(root().querySelector('.read-batch-toast')).toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('reverses day groups together with their compact rows and keeps the filter toggles', () => {
+    const initial = [
+      { ...ROW, id: 3, title: 'Hoje 3', createdAt: '2026-11-12T10:00:00Z' },
+      { ...ROW, id: 2, title: 'Ontem 2', createdAt: '2026-11-11T11:00:00Z' },
+      { ...ROW, id: 1, title: 'Ontem 1', createdAt: '2026-11-11T10:00:00Z' }
+    ];
+    button('Caixa de entrada (1 não lida)').click(); flushInbox(initial, 3);
+    expect(Array.from(root().querySelectorAll('.notification-day')).map(e => e.textContent)).toEqual(['Hoje', 'Ontem']);
+    click('Ordem: mais recentes primeiro. Inverter ordem');
+    expect(Array.from(root().querySelectorAll('.notification-day')).map(e => e.textContent)).toEqual(['Ontem', 'Hoje']);
+    expect(titles()).toEqual(['Ontem 1', 'Ontem 2', 'Hoje 3']);
+    expect(root().querySelectorAll('.inbox-toggle[aria-pressed]')).toHaveLength(2);
+    expect(root().querySelectorAll('.notification-rows li')).toHaveLength(3);
   });
 });

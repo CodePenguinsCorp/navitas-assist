@@ -1,0 +1,30 @@
+<section class="stage-times" aria-label="Tempo por etapa">
+  <header class="stage-times__head">
+    <h4>Tempo por etapa</h4>
+    <span class="stage-times__total" title="Tempo total nas etapas">{{ totalLabel() }}</span>
+    <button type="button" class="stage-times__toggle" [class.is-open]="expanded()" [attr.aria-expanded]="expanded()" aria-controls="stage-times-list" [attr.aria-label]="expanded() ? 'Recolher tempo por etapa' : 'Detalhar tempo por etapa'" (click)="toggle()">
+      <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5.5 7.5 10 12l4.5-4.5" /></svg>
+    </button>
+  </header>
+  <div class="stage-times__bar" aria-hidden="true">
+    @for (row of segments(); track row.key) {
+      <span class="stage-times__segment" [attr.data-status]="row.status" [style.flex-grow]="row.weight"></span>
+    }
+  </div>
+  @if (expanded()) {
+    <ul class="stage-times__list" id="stage-times-list" aria-hidden="true">
+      @for (row of rows(); track row.key) {
+        <li [attr.data-status]="row.status">
+          <i class="stage-times__dot"></i>
+          <span class="stage-times__name">{{ row.label }}</span>
+          <span class="stage-times__value">{{ row.value }}</span>
+        </li>
+      }
+    </ul>
+  }
+  <ol class="sr-only">
+    @for (row of rows(); track row.key) {
+      <li [attr.data-stage]="row.status">{{ row.text }}</li>
+    }
+  </ol>
+</section>

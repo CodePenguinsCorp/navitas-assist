@@ -1,0 +1,66 @@
+@if (mode() === 'extras') {
+  <div class="permission-picker__head">
+    <div class="permission-picker__granted">
+      <span class="permission-picker__summary" [class.is-empty]="grantedExtras().length === 0">{{ summary() }}</span>
+      @if (grantedExtras().length) {
+        <ul class="permission-chips" aria-label="Permissões extras concedidas">
+          @for (item of grantedExtras(); track item.code) {
+            <li class="permission-chip removable-chip">
+              <span class="permission-chip__label">{{ item.label }}</span>
+              <button type="button" [attr.aria-label]="'Remover ' + item.label" [disabled]="disabled()" (click)="toggle(item.code, false)">
+                <app-icon name="close" [size]="14" />
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+    <button
+      type="button"
+      class="button-secondary"
+      [attr.aria-expanded]="expanded()"
+      [attr.aria-controls]="panelId"
+      (click)="toggleExpanded()"
+    >
+      <app-icon name="pencil" [size]="16" />{{ expanded() ? 'Ocultar permissões' : 'Editar permissões extras' }}
+    </button>
+  </div>
+}
+
+<div #panel class="permission-picker__panel" [id]="panelId" [hidden]="mode() === 'extras' && !expanded()">
+  <span class="permission-picker__total" aria-live="polite">{{ total() }}</span>
+
+  <div class="permission-picker__grid">
+    @for (module of catalog(); track module.module) {
+      <fieldset class="permission-module">
+        <legend>
+          <span class="permission-module__tile" aria-hidden="true"><app-icon [name]="iconFor(module.module)" [size]="16" /></span>
+          <span class="permission-module__heading">
+            <span class="permission-module__name">{{ module.label }}</span>{{ ' ' }}<span class="permission-module__count">{{ onCount(module) }} de {{ module.permissions.length }}</span>
+          </span>
+        </legend>
+        @for (item of module.permissions; track item.code) {
+          <label
+            class="permission-row"
+            [class.is-on]="isOn(item.code)"
+            [class.is-locked]="isLocked(item.code)"
+            [class.is-extra]="mode() === 'extras' && isSelected(item.code) && !isLocked(item.code)"
+          >
+            <input
+              type="checkbox"
+              role="switch"
+              class="switch"
+              [checked]="isOn(item.code)"
+              [disabled]="disabled() || isLocked(item.code)"
+              (change)="toggle(item.code, $any($event.target).checked)"
+            />
+            <span class="permission-row__label">{{ item.label }}</span>
+            @if (isLocked(item.code)) {
+              <span class="lock-badge permission-badge"><app-icon name="lock" [size]="12" />Do perfil</span>
+            }
+          </label>
+        }
+      </fieldset>
+    }
+  </div>
+</div>

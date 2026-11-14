@@ -1,10 +1,6 @@
 import type { IconName } from '../shared/icon/icon.component';
 import type { Permission } from './permissions';
 
-export type MetricTone = 'brand' | 'sky' | 'slate' | 'light';
-
-export type HealthState = 'checking' | 'online' | 'offline';
-
 export type RmaPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export enum WarrantyStatus {
@@ -48,6 +44,7 @@ export interface UserSession {
   name: string;
   profileName: string;
   permissions: Permission[];
+  email?: string | null;
 }
 
 export interface LoginPayload {
@@ -63,8 +60,8 @@ export interface UserAccountResponse {
   /** Extras do usuário, na ordem do catálogo; podem repetir permissões do perfil. */
   extraPermissions: string[];
   active: boolean;
-  createdAt: string;
   updatedAt: string;
+  email?: string | null;
 }
 
 export interface AssignableUserResponse {
@@ -78,13 +75,12 @@ export interface ProfileRef {
   name: string;
 }
 
-/** `GET /api/profiles` e `/api/profiles/{id}`: permissões na ordem do catálogo. */
+/** `GET /api/profiles`: permissões na ordem do catálogo. */
 export interface ProfileResponse {
   id: number;
   name: string;
   permissions: string[];
   userCount: number;
-  createdAt: string;
   updatedAt: string;
 }
 
@@ -111,12 +107,16 @@ export interface PermissionModuleResponse {
   permissions: PermissionItem[];
 }
 
-/** Usuário da sessão (`POST /api/auth/login` e `GET /api/auth/me`), com as permissões efetivas na ordem do catálogo. */
-export interface CurrentUserResponse extends UserAccountResponse {
+/** Sessão (`POST /api/auth/login` e `GET /api/auth/me`), com as permissões efetivas na ordem do catálogo. */
+export interface SessionResponse {
+  username: string;
+  fullName: string;
+  email?: string | null;
+  profileName: string | null;
   permissions: string[];
 }
 
-export type AuthUserResponse = CurrentUserResponse;
+export type AuthUserResponse = SessionResponse;
 
 export interface UserAccountRequest {
   username: string;
@@ -125,6 +125,7 @@ export interface UserAccountRequest {
   profileId: number;
   extraPermissions: Permission[];
   active: boolean;
+  email?: string | null;
 }
 
 export interface UserAccountUpdateRequest {
@@ -134,6 +135,7 @@ export interface UserAccountUpdateRequest {
   profileId: number;
   extraPermissions: Permission[];
   active: boolean;
+  email?: string | null;
 }
 
 export interface ClientResponse {
@@ -145,7 +147,17 @@ export interface ClientResponse {
   phone: string | null;
   address: string | null;
   notes: string | null;
-  createdAt: string;
+  updatedAt: string;
+}
+
+/** Linha da lista de clientes; endereço e observações ficam no detalhe (`GET /api/clients/{id}`). */
+export interface ClientListItemResponse {
+  id: number;
+  legalName: string;
+  tradeName: string | null;
+  documentNumber: string | null;
+  email: string | null;
+  phone: string | null;
   updatedAt: string;
 }
 
@@ -168,7 +180,6 @@ export interface ProductResponse {
   firmwareVersion: string | null;
   defaultWarrantyMonths: number;
   technicalNotes: string | null;
-  createdAt: string;
   updatedAt: string;
 }
 
@@ -183,15 +194,12 @@ export interface ProductRequest {
 }
 
 export interface DiagnosisResponse {
-  id: number;
   foundFailure: string | null;
   failureType: FailureType | null;
   probableCause: FailureCause | null;
   notes: string | null;
   diagnosedAt: string | null;
   technicianName: string | null;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface RmaItemRequest {
@@ -215,15 +223,13 @@ export interface CreateRmaRequest {
   repairSummary: string | null;
   replacedPartsSummary: string | null;
   testSummary: string | null;
+  /** Optional due date of the whole service (YYYY-MM-DD). */
+  dueDate?: string | null;
 }
 
 export interface RmaStatusUpdateRequest {
   status: RmaStatus;
   note: string | null;
-}
-
-export interface RmaBulkStatusUpdateRequest extends RmaStatusUpdateRequest {
-  expectedStatus: RmaStatus;
 }
 
 export interface RmaAssigneeUpdateRequest {
@@ -242,6 +248,8 @@ export interface KanbanViewFilters {
   entryTo: string | null;
   updatedFrom: string | null;
   updatedTo: string | null;
+  /** Saved "Prazo" filter; null (or absent in older views) means "Todos". */
+  deadline?: 'OVERDUE' | 'DUE_SOON' | 'ON_TRACK' | 'NO_DUE_DATE' | null;
 }
 
 export interface KanbanViewRequest {
@@ -252,8 +260,6 @@ export interface KanbanViewRequest {
 
 export interface KanbanViewResponse extends KanbanViewRequest {
   id: number;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface DiagnosisRequest {
@@ -266,6 +272,9 @@ export interface DiagnosisRequest {
 }
 
 export interface RmaStatusHistoryResponse {
+  id?: number;
+  noteEditedBy?: string | null;
+  noteEditedAt?: string | null;
   status: RmaStatus;
   changedBy: string;
   changedAt: string;
@@ -273,9 +282,7 @@ export interface RmaStatusHistoryResponse {
 }
 
 export interface RmaAssignmentHistoryResponse {
-  previousAssigneeId: number | null;
   previousAssigneeName: string | null;
-  newAssigneeId: number | null;
   newAssigneeName: string | null;
   changedBy: string;
   changedAt: string;
@@ -301,9 +308,31 @@ export interface RmaBlockResponse {
   resolutionNote: string | null;
 }
 
+export type WarrantyOverrideStatus = WarrantyStatus.IN_WARRANTY | WarrantyStatus.OUT_OF_WARRANTY;
+
+export interface RmaItemWarrantyRequest {
+  override: WarrantyOverrideStatus | null;
+  reason: string | null;
+}
+
+export interface WarrantyOverrideResponse {
+  status: WarrantyOverrideStatus;
+  reason: string;
+  changedBy: string;
+  changedAt: string;
+}
+
+export interface RmaItemWarrantyHistoryResponse {
+  itemId: number;
+  previousOverride: WarrantyOverrideStatus | null;
+  newOverride: WarrantyOverrideStatus | null;
+  reason: string | null;
+  changedBy: string;
+  changedAt: string;
+}
+
 export interface RmaItemResponse {
   id: number | null;
-  productId: number;
   productName: string;
   productSku: string;
   batchNumber: string | null;
@@ -312,34 +341,88 @@ export interface RmaItemResponse {
   warrantyMonths: number;
   warrantyExpiresAt: string | null;
   warrantyStatus: WarrantyStatus;
+  calculatedWarrantyStatus: WarrantyStatus;
+  warrantyOverride: WarrantyOverrideResponse | null;
 }
 
-export type RmaSlaStatus = 'NORMAL' | 'WARNING' | 'OVERDUE' | 'CLOSED';
+export type RmaDeadlineStatus = 'OVERDUE' | 'DUE_SOON' | 'ON_TRACK' | 'NO_DUE_DATE' | 'CLOSED';
 
-export interface RmaSlaResponse {
-  status: RmaSlaStatus;
-  startedAt: string;
-  warningAt: string | null;
-  dueAt: string | null;
-  elapsedSeconds: number;
-  limitSeconds: number | null;
+export interface RmaDeadlineResponse {
+  status: RmaDeadlineStatus;
+  dueSoonFrom: string | null;
+}
+
+/** One continuous stay in a stage; `leftAt` is null for the current stage. */
+export interface RmaStagePeriodResponse {
+  status: RmaStatus;
+  enteredAt: string;
+  leftAt: string | null;
+  durationSeconds: number;
+}
+
+export interface RmaDueDateHistoryResponse {
+  previousDueDate: string | null;
+  newDueDate: string | null;
+  changedBy: string;
+  changedAt: string;
+}
+
+export type UpdateRmaDueDateRequest = { dueDate: string } | { clearDueDate: true };
+
+/** `GET /api/rmas/dashboard`: indicadores calculados no servidor, sem históricos. */
+export interface RmaDashboardResponse {
+  statusCounts: Partial<Record<RmaStatus, number>>;
+  initialQueueHighPriority: number;
+  /** OS abertas com prazo vencido e perto do limite. */
+  overdue: number;
+  dueSoon: number;
+  /** Itens de todas as OS registradas. */
+  items: number;
+  itemsInWarranty: number;
+  itemsPendingWarranty: number;
+  /** Até cinco OS abertas, por prioridade e entrada mais antiga. */
+  queue: RmaDashboardQueueItem[];
+  /** As quatro OS atualizadas por último, encerradas incluídas. */
+  recent: RmaDashboardRecentItem[];
+  /** Os quatro eventos de status mais recentes. */
+  statusEvents: RmaDashboardStatusEvent[];
+}
+
+export interface RmaDashboardQueueItem {
+  id: number;
+  code: string;
+  clientName: string;
+  entryDate: string;
+  status: RmaStatus;
+  priority: RmaPriority;
+}
+
+export interface RmaDashboardRecentItem {
+  id: number;
+  code: string;
+  clientName: string;
+  assigneeName: string | null;
+  updatedAt: string;
+}
+
+export interface RmaDashboardStatusEvent {
+  rmaId: number;
+  code: string;
+  status: RmaStatus;
+  changedBy: string;
+  note: string | null;
+  changedAt: string;
 }
 
 export interface RmaResponse {
   id: number;
   code: string;
-  clientId: number;
   clientName: string;
   items: RmaItemResponse[];
-  productId: number;
-  productName: string;
-  productSku: string;
-  batchNumber: string | null;
-  serialNumber: string | null;
-  manufacturedAt: string | null;
   purchaseDate: string | null;
   purchaseDateUnknown: boolean;
   entryDate: string;
+  dueDate: string | null;
   invoiceNumber: string | null;
   receivedBy: string;
   reportedFailure: string;
@@ -347,35 +430,81 @@ export interface RmaResponse {
   physicalCondition: string | null;
   priority: RmaPriority;
   status: RmaStatus;
-  sla: RmaSlaResponse;
+  deadline: RmaDeadlineResponse;
   assigneeId: number | null;
   assigneeName: string | null;
   repairSummary: string | null;
   replacedPartsSummary: string | null;
   testSummary: string | null;
-  shippedAt: string | null;
   carrier: string | null;
   trackingCode: string | null;
   diagnosis: DiagnosisResponse | null;
+  repairHistory?: RmaRepairHistoryResponse[];
   statusHistory: RmaStatusHistoryResponse[];
+  stagePeriods: RmaStagePeriodResponse[];
   assignmentHistory: RmaAssignmentHistoryResponse[];
+  dueDateHistory: RmaDueDateHistoryResponse[];
+  warrantyHistory: RmaItemWarrantyHistoryResponse[];
   currentBlock: RmaBlockResponse | null;
   blockHistory: RmaBlockResponse[];
   createdAt: string;
   updatedAt: string;
 }
 
+/** Detalhe completo da OS: `GET /api/rmas/{id}` e as respostas de todas as escritas. */
+export type RmaDetailResponse = RmaResponse;
+
+/** Item resumido da OS nas coleções: rótulos, garantia por produto e busca. */
+export interface RmaItemSummaryResponse {
+  id: number | null;
+  productName: string;
+  productSku: string;
+  batchNumber: string | null;
+  serialNumber: string | null;
+  warrantyStatus: WarrantyStatus;
+}
+
+/** Impedimento ativo resumido no card do Kanban. */
+export interface RmaBlockSummaryResponse {
+  reason: string;
+  blockedAt: string;
+}
+
+/** Linha da lista paginada de OS (`GET /api/rmas`). */
+export interface RmaListItemResponse {
+  id: number;
+  code: string;
+  clientName: string;
+  items: RmaItemSummaryResponse[];
+  status: RmaStatus;
+  priority: RmaPriority;
+  entryDate: string;
+}
+
+/** Card do Kanban (`GET /api/rmas/board`): o que o card, os filtros e a busca usam, sem históricos nem textos livres. */
+export interface RmaBoardCardResponse {
+  id: number;
+  code: string;
+  clientName: string;
+  items: RmaItemSummaryResponse[];
+  status: RmaStatus;
+  priority: RmaPriority;
+  entryDate: string;
+  dueDate: string | null;
+  deadline: RmaDeadlineResponse;
+  updatedAt: string;
+  assigneeId: number | null;
+  assigneeName: string | null;
+  currentBlock: RmaBlockSummaryResponse | null;
+  stagePeriods: RmaStagePeriodResponse[];
+}
+
 export type NotificationEventType =
   | 'RMA_CREATED'
   | 'RMA_ASSIGNED'
-  | 'SLA_WARNING'
-  | 'SLA_OVERDUE'
   | 'RMA_BLOCKED'
-  | 'WIP_LIMIT_EXCEEDED'
   | 'PART_PENDING'
-  | 'INTERNAL_APPROVAL_REQUIRED'
-  | 'TEST_FAILED'
-  | 'RECURRENCE_DETECTED';
+  | 'TEST_FAILED';
 
 export type NotificationSeverity = 'INFO' | 'WARNING' | 'CRITICAL';
 
@@ -387,6 +516,7 @@ export interface NotificationResponse {
   message: string;
   rmaId: number | null;
   rmaCode: string | null;
+  rmaPriority?: RmaPriority | null;
   actionPath: string | null;
   createdAt: string;
   readAt: string | null;
@@ -417,6 +547,7 @@ export interface NotificationPreferenceResponse {
 }
 
 export interface NotificationRuleRequest {
+  appEnabled?: boolean;
   enabled: boolean;
   severity: NotificationSeverity;
   recipientProfileIds: number[];
@@ -426,6 +557,7 @@ export interface NotificationRuleRequest {
 }
 
 export interface NotificationRuleResponse extends Omit<NotificationRuleRequest, 'recipientProfileIds'> {
+  supported?: boolean;
   /** Ordenados por nome. */
   recipientProfiles: ProfileRef[];
   eventType: NotificationEventType;
@@ -441,6 +573,12 @@ export interface NotificationFailureResponse {
   recipient: string | null;
   error: string | null;
   occurredAt: string;
+  notificationId?: number | null;
+  attempts?: number;
+  provider?: string | null;
+  status?: NotificationEmailStatus | null;
+  nextAttemptAt?: string | null;
+  retryAllowed?: boolean;
 }
 
 export type PartMovementType =
@@ -479,18 +617,12 @@ export interface PartResponse {
   available: number;
   belowMinimum: boolean;
   active: boolean;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface PartMovementRequest {
   type: ManualPartMovementType;
   quantity: number;
   reason: string | null;
-}
-
-export interface PartReversalRequest {
-  reason: string;
 }
 
 export interface PartMovementResponse {
@@ -504,11 +636,7 @@ export interface PartMovementResponse {
   reservedChange: number;
   onHandAfter: number;
   reservedAfter: number;
-  unitCost: number;
-  totalCost: number;
-  rmaId: number | null;
   rmaCode: string | null;
-  reservationId: number | null;
   reversedMovementId: number | null;
   reversed: boolean;
   reason: string | null;
@@ -534,9 +662,14 @@ export interface PartReservationResponse {
   quantity: number;
   status: PartReservationStatus;
   partAvailable: number;
-  unitCost: number;
-  totalCost: number;
+  /** Nulos para quem não tem `pecas.ver`. */
+  unitCost: number | null;
+  totalCost: number | null;
   note: string | null;
+  replacementReason?: string | null;
+  componentBatch?: string | null;
+  appliedAt?: string | null;
+  appliedBy?: string | null;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -546,10 +679,67 @@ export interface RmaPartsResponse {
   rmaId: number;
   rmaCode: string;
   reservations: PartReservationResponse[];
+  replacedComponents?: PartReservationResponse[];
   movements: PartMovementResponse[];
-  reservedCost: number;
-  consumedCost: number;
+  /** Nulos para quem não tem `pecas.ver`. */
+  reservedCost: number | null;
+  consumedCost: number | null;
   pendingCount: number;
+}
+
+export interface PartConsumptionRequest {
+  replacementReason: string;
+  componentBatch: string | null;
+}
+
+export interface ExternalComponentRequest extends PartConsumptionRequest {
+  code: string | null;
+  description: string;
+  quantity: number;
+  unit: string;
+}
+
+export interface RepairAudit {
+  editedBy?: string | null;
+  editedAt?: string | null;
+  voidedBy?: string | null;
+  voidedAt?: string | null;
+  voidReason?: string | null;
+}
+
+export interface RmaRepairHistoryResponse {
+  id: number;
+  entityType: 'EXTERNAL_COMPONENT' | 'INTERVENTION' | 'STOCK_COMPONENT';
+  entityId: number;
+  action: 'CREATE' | 'UPDATE' | 'VOID' | 'APPLY';
+  changedBy: string;
+  changedAt: string;
+  summary: string;
+}
+
+export interface ExternalComponentResponse extends ExternalComponentRequest, RepairAudit {
+  id: number;
+  appliedAt: string;
+  appliedBy: string;
+}
+
+export type InterventionType = 'RESOLDERING' | 'CLEANING' | 'REPROGRAMMING' | 'FIRMWARE_UPDATE' | 'HARNESS_REPLACEMENT' | 'OTHER';
+
+export interface InterventionRequest {
+  type: InterventionType;
+  description: string;
+  performedOn: string;
+  hours: number;
+}
+
+export interface InterventionResponse extends InterventionRequest, RepairAudit {
+  id: number;
+  technicianName: string;
+}
+
+export interface RmaRepairResponse {
+  interventions: InterventionResponse[];
+  totalServiceHours: number;
 }
 
 export interface PartReplenishmentResponse {
@@ -574,11 +764,62 @@ export interface RmaReportFilters {
   clientId?: number;
 }
 
-export interface RmaReportResponse {
+export interface RmaReportRow {
+  id: number;
+  code: string;
+  entryDate: string;
+  status: RmaStatus;
+  clientName: string;
+  productName: string;
+  productSku: string;
+  serialNumber: string | null;
+  batchNumber: string | null;
+  itemCount: number;
+  warrantyStatuses: WarrantyStatus[];
+  failureType: FailureType | null;
+}
+
+export interface RmaReportPageResponse {
   generatedAt: string;
   entryFrom: string;
   entryTo: string;
-  rmas: RmaResponse[];
+  rmas: PageResponse<RmaReportRow>;
+}
+
+export interface RmaReportCountRow {
+  key: string;
+  label: string;
+  count: number;
+}
+
+export interface RmaReportRateRow {
+  key: string;
+  label: string;
+  items: number;
+  returnedItems: number;
+}
+
+export interface RmaReportSummaryResponse {
+  generatedAt: string;
+  entryFrom: string;
+  entryTo: string;
+  totalRmas: number;
+  totalItems: number;
+  byStatus: RmaReportCountRow[];
+  byWarranty: RmaReportCountRow[];
+  byMonth: RmaReportCountRow[];
+  topProducts: RmaReportCountRow[];
+  topBatches: RmaReportCountRow[];
+  topClients: RmaReportCountRow[];
+  topFailureTypes: RmaReportCountRow[];
+  recurrence: {
+    itemsWithSerial: number;
+    returnedItems: number;
+    byProduct: RmaReportRateRow[];
+    byBatch: RmaReportRateRow[];
+    serials: { serialNumber: string; productName: string; productSku: string; rmaCount: number }[];
+  };
+  stages: { status: RmaStatus; label: string; count: number; averageSeconds: number; maximumSeconds: number }[];
 }
 
 
@@ -588,18 +829,12 @@ export interface NavItem {
   icon: IconName;
   /** Todas exigidas; vazio = só login. */
   permissions: Permission[];
+  alternativePermissions?: Permission[];
 }
 
 export interface NavGroup {
   label: string;
   items: NavItem[];
-}
-
-export interface MetricCard {
-  label: string;
-  value: string;
-  variation: string;
-  tone: MetricTone;
 }
 
 export interface PageQuery {
@@ -623,23 +858,15 @@ export interface RmaSummaryResponse {
 
 export interface ClientSummaryResponse {
   total: number;
-  withContact: number;
-  withDocument: number;
-  withEmail: number;
 }
 
 export interface ProductSummaryResponse {
   total: number;
-  withFirmware: number;
-  averageWarrantyMonths: number;
   categories: string[];
 }
 
 export interface UserSummaryResponse {
   total: number;
-  active: number;
-  admins: number;
-  roles: number;
 }
 
 export interface PageResponse<T> {
@@ -756,4 +983,73 @@ export interface ProtocolExecutionResponse {
   pendingRequiredItems: number;
   failedItems: number;
   items: ProtocolExecutionItemResponse[];
+}
+
+export type NotificationEmailStatus = 'NOT_REQUESTED' | 'PENDING' | 'SENT' | 'FAILED';
+export interface NotificationEmailStatusResponse {
+  enabled: boolean; provider: string;
+  sentToday?: number; dailyLimit?: number; sentThisMonth?: number; monthlyLimit?: number; limitReached?: boolean;
+}
+export interface NotificationEmailActionResponse { notificationId: number; status: NotificationEmailStatus; provider: string; }
+export interface NotificationEmailTestResponse { status: string; provider: string; }
+
+export type CatalogImportKind = 'clients' | 'products';
+export type CatalogImportStatus = 'VALID' | 'INVALID' | 'DUPLICATE';
+export interface CatalogImportIssue { field: string; code: string; message: string; }
+export interface CatalogImportRow {
+  lineNumber: number;
+  status: CatalogImportStatus;
+  values: Record<string, string | number | null>;
+  reasons: CatalogImportIssue[];
+  warnings: CatalogImportIssue[];
+}
+export interface CatalogImportPreview {
+  fileName: string;
+  delimiter: string;
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  duplicateRows: number;
+  blankRows: number;
+  rows: CatalogImportRow[];
+}
+export interface CatalogImportResult { importedRows: number; ignoredInvalidRows: number; ignoredDuplicateRows: number; }
+
+export interface AuditEventResponse {
+  id: number;
+  occurredAt: string;
+  actorUsername: string;
+  action: string;
+  entityType: string;
+  entityId: number | null;
+  entityLabel: string | null;
+  summary: string;
+}
+
+export interface AuditQuery extends PageQuery {
+  from?: string;
+  to?: string;
+  actor?: string;
+  action?: string;
+  entityType?: string;
+}
+
+export interface ClientOptionResponse {
+  id: number;
+  legalName: string;
+}
+
+export interface ProductOptionResponse {
+  id: number;
+  sku: string;
+  name: string;
+}
+
+export interface PartOptionResponse {
+  id: number;
+  code: string;
+  name: string;
+  unit: string;
+  available: number;
+  active: boolean;
 }

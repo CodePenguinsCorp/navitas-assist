@@ -60,4 +60,36 @@ class ItemWarrantyTest {
         assertEquals(LocalDate.of(2026, 7, 1), response.warrantyExpiresAt());
         assertEquals(WarrantyStatus.IN_WARRANTY, response.warrantyStatus());
     }
+
+    @ParameterizedTest
+    @CsvSource({
+        "2024-01-01, false, OUT_OF_WARRANTY, IN_WARRANTY",
+        "2026-01-01, false, IN_WARRANTY, OUT_OF_WARRANTY",
+        ", true, PENDING, IN_WARRANTY",
+        ", true, PENDING, OUT_OF_WARRANTY"
+    })
+    void overrideWinsWithoutChangingTheCalculatedWarranty(LocalDate purchase, boolean unknown, WarrantyStatus calculated, WarrantyStatus override) {
+        Product product = new Product();
+        product.setDefaultWarrantyMonths(12);
+        RmaRecord rma = new RmaRecord();
+        rma.setPurchaseDate(purchase);
+        rma.setPurchaseDateUnknown(unknown);
+        rma.setEntryDate(LocalDate.of(2026, 1, 1));
+        RmaItem item = new RmaItem();
+        item.setRma(rma);
+        item.setProduct(product);
+        item.setWarrantyOverride(override);
+        item.setWarrantyOverrideReason("Cortesia");
+        item.setWarrantyOverrideBy("desk");
+        item.setWarrantyOverrideAt(java.time.Instant.parse("2026-01-01T12:00:00Z"));
+
+        RmaItemResponse response = RmaItemResponse.from(item);
+        assertEquals(override, response.warrantyStatus());
+        assertEquals(calculated, response.calculatedWarrantyStatus());
+        assertEquals("Cortesia", response.warrantyOverride().reason());
+        item.setWarrantyOverride(null);
+        response = RmaItemResponse.from(item);
+        assertEquals(calculated, response.warrantyStatus());
+        assertNull(response.warrantyOverride());
+    }
 }

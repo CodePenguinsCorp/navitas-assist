@@ -93,7 +93,7 @@ class EffectivePermissionIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{}"))
             .andReturn().getResponse().getStatus();
 
-        assertTrue(status != 401 && status != 403, "Consulta + extra rma.abrir deveria abrir RMA, mas recebeu " + status);
+        assertTrue(status != 401 && status != 403, "Consulta + extra rma.abrir deveria abrir OS, mas recebeu " + status);
         mvc.perform(putJson("/api/rmas/999999").with(as(VIEWER_EXTRA)))
             .andExpect(status().isForbidden());
     }
@@ -102,10 +102,11 @@ class EffectivePermissionIntegrationTest {
     void customProfileOnlyReports() throws Exception {
         mvc.perform(get("/api/reports/rmas").with(as(REPORTS_ONLY))).andExpect(status().isOk());
         mvc.perform(get("/api/rmas").with(as(REPORTS_ONLY))).andExpect(status().isForbidden());
-        // D2: as leituras auxiliares continuam abertas a qualquer usuário autenticado.
-        mvc.perform(get("/api/clients").with(as(REPORTS_ONLY))).andExpect(status().isOk());
-        mvc.perform(get("/api/parts").with(as(REPORTS_ONLY))).andExpect(status().isOk());
-        mvc.perform(get("/api/protocols/templates").with(as(REPORTS_ONLY))).andExpect(status().isOk());
+        // Minimização (etapa 3): só o seletor de clientes do relatório; listas de cadastros, peças e protocolos exigem a permissão da área.
+        mvc.perform(get("/api/clients/options").with(as(REPORTS_ONLY))).andExpect(status().isOk());
+        mvc.perform(get("/api/clients").with(as(REPORTS_ONLY))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/parts").with(as(REPORTS_ONLY))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/protocols/templates").with(as(REPORTS_ONLY))).andExpect(status().isForbidden());
     }
 
     @Test
@@ -163,7 +164,7 @@ class EffectivePermissionIntegrationTest {
         notification.setRecipient(users.findByUsernameIgnoreCase(username).orElseThrow());
         notification.setEventType(NotificationEventType.RMA_CREATED);
         notification.setSeverity(NotificationSeverity.INFO);
-        notification.setTitle("RMA aberto");
+        notification.setTitle("OS aberta");
         notification.setMessage("Notificação de teste");
         notification.setCreatedAt(Instant.now());
         return notifications.saveAndFlush(notification);

@@ -4,12 +4,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { KanbanViewRequest, KanbanViewResponse, RmaResponse, WarrantyStatus } from '../../core/models';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { RmaService } from '../../core/services/rma.service';
-import { BulkRmaResult } from '../../shared/kanban-bulk-actions/kanban-bulk-actions.component';
+import { SKIP_GLOBAL_LOADING } from '../../core/interceptors/loading.interceptor';
 import { KanbanComponent } from './kanban.component';
 import { mountUnderRoot, simulateNativeModality } from '../../testing/native-dialog';
 import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
@@ -33,7 +33,7 @@ describe('KanbanComponent filters', () => {
       imports: [KanbanComponent],
       providers: [
         provideRouter([]),
-        { provide: SlaClockService, useValue: { now } },
+        { provide: ClockService, useValue: { now } },
         providePermissions(profilePermissions('ADMIN')),
         {
           provide: CatalogService,
@@ -74,10 +74,15 @@ describe('KanbanComponent filters', () => {
           useValue: {
             listBoard: () => of(TEST_RMAS),
             getById: (id: number) => of(TEST_RMAS.find((rma) => rma.id === id)),
+            updateStatus: (id: number, payload: { status: RmaResponse['status'] }) => of({ ...TEST_RMAS.find(rma => rma.id === id)!, status: payload.status }),
             updateAssignee: (id: number, payload: { assigneeId: number | null }) => {
               assigneeUpdates.push([id, payload]);
               if (failAssignee) return throwError(() => ({ error: { message: 'Técnico inativo' } }));
               return of({ ...TEST_RMAS.find((rma) => rma.id === id)!, assigneeId: payload.assigneeId });
+            },
+            block: (id: number, payload: { reason: string; category: string | null }) => {
+              const block = { id: 77, reason: payload.reason, category: payload.category, blockedBy: 'admin', blockedAt: '2026-10-20T11:00:00Z', resolvedBy: null, resolvedAt: null, resolutionNote: null };
+              return of({ ...TEST_RMAS.find((rma) => rma.id === id)!, currentBlock: block, blockHistory: [block] });
             },
           },
         },
@@ -86,6 +91,22 @@ describe('KanbanComponent filters', () => {
 
     fixture = TestBed.createComponent(KanbanComponent);
     component = fixture.componentInstance as unknown as KanbanHarness;
+  });
+
+  it('filtra pela garantia efetiva mesmo quando a calculada diverge', () => {
+    const original = TEST_RMAS[0].items[0];
+    TEST_RMAS[0].items[0] = { ...original, warrantyStatus: WarrantyStatus.IN_WARRANTY,
+      calculatedWarrantyStatus: WarrantyStatus.OUT_OF_WARRANTY, warrantyExpiresAt: '2020-01-01',
+      warrantyOverride: { status: WarrantyStatus.IN_WARRANTY, reason: 'Cortesia', changedBy: 'ana', changedAt: '2026-11-13T12:00:00Z' } };
+    try {
+      fixture.detectChanges();
+      component.filtersForm.patchValue({ warranty: WarrantyStatus.IN_WARRANTY });
+      fixture.detectChanges();
+      expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
+      component.filtersForm.patchValue({ warranty: WarrantyStatus.OUT_OF_WARRANTY });
+      fixture.detectChanges();
+      expect(component.filteredRmas().map((rma) => rma.id)).toEqual([2]);
+    } finally { TEST_RMAS[0].items[0] = original; }
   });
 
   it('does not show the permanent drag instruction in the header', () => {
@@ -104,11 +125,14 @@ describe('KanbanComponent filters', () => {
     }
   });
 
-  it('shows search, SLA and assignee as quick filters and hides the other eight controls until Filtros is opened', () => {
+  it('shows search, Prazo and assignee as quick filters and hides the other eight controls until Filtros is opened', () => {
     fixture.detectChanges();
     const host: HTMLElement = fixture.nativeElement;
     const panel = host.querySelector<HTMLElement>('#kanbanAdvancedFilters');
-    const quick = ['query', 'sla', 'assignee'];
+    const quick = ['query', 'deadline', 'assignee'];
+    const prazo = host.querySelector('[formcontrolname="deadline"]')?.closest('.field-group');
+    expect(prazo?.querySelector('label')?.textContent?.trim()).toBe('Prazo');
+    expect(host.textContent).not.toContain('SLA');
     const advanced = ['priority', 'status', 'blocked', 'warranty', 'entryFrom', 'entryTo', 'updatedFrom', 'updatedTo'];
     for (const name of quick) {
       const control = host.querySelector(`[formcontrolname="${name}"]`);
@@ -212,12 +236,12 @@ describe('KanbanComponent filters', () => {
     expect(createdViewRequest?.filters).toEqual(expect.objectContaining({ warranty: WarrantyStatus.IN_WARRANTY }));
   });
 
-  it('deselects the saved view on a manual edit, including SLA, and keeps it when the values come back equal', () => {
+  it('deselects the saved view on a manual edit, including Prazo, and keeps it when the values come back equal', () => {
     component.filtersForm.patchValue({ priority: 'HIGH', query: 'árvore' });
     saveCurrentAsView('Críticos');
     component.filtersForm.patchValue({ query: '  árvore  ' });
     expect(component.activeViewId(), 'surrounding spaces are not a different search').toBe(5);
-    component.filtersForm.patchValue({ sla: 'OVERDUE' });
+    component.filtersForm.patchValue({ deadline: 'OVERDUE' });
     expect(component.activeViewId()).toBeNull();
     component.applyView(5);
     expect(component.activeViewId()).toBe(5);
@@ -300,36 +324,60 @@ describe('KanbanComponent filters', () => {
     component.openDetail(TEST_RMAS[0]);
     fixture.detectChanges();
     chooseDetailStatus('IN_REPAIR');
-    expect(fixture.nativeElement.querySelectorAll('.modal-overlay').length).toBe(2);
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-    fixture.detectChanges();
-    // Only the status confirmation on top reacts; the detail below stays open.
-    expect(fixture.nativeElement.querySelector('app-rma-detail-modal')).not.toBeNull();
     expect(fixture.nativeElement.querySelectorAll('.modal-overlay').length).toBe(1);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('app-rma-detail-modal')).toBeNull();
   });
 
-  it('opens the status dialog with the stage picked in the detail selector', () => {
-    fixture.detectChanges();
-    component.openDetail(TEST_RMAS[0]);
-    fixture.detectChanges();
+  it('saves the selected stage immediately inside the detail', () => {
+    fixture.detectChanges(); component.openDetail(TEST_RMAS[0]); fixture.detectChanges();
     chooseDetailStatus('IN_REPAIR');
-    expect(fixture.nativeElement.textContent).toContain('Novo status');
-    expect(component.statusForm.getRawValue()).toEqual({ status: 'IN_REPAIR', note: '' });
-    expect(fixture.nativeElement.querySelector('#kanbanStatusNote')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Movido para Reparo');
+    expect(fixture.nativeElement.querySelectorAll('.modal-overlay')).toHaveLength(1);
+    expect(fixture.nativeElement.querySelector('#kanbanStatusNote')).toBeNull();
   });
 
-  it('opens the status and assignment modals from the detail modal', () => {
+  it('moves a dropped card immediately and shows feedback without a status dialog', () => {
     fixture.detectChanges();
-    component.openDetail(TEST_RMAS[0]);
+    const actions = fixture.componentInstance as unknown as {
+      startCardDrag(event: DragEvent, rma: RmaResponse): void;
+      dropOnColumn(event: DragEvent, status: RmaResponse['status']): void;
+    };
+    actions.startCardDrag(new Event('dragstart') as DragEvent, TEST_RMAS[0]);
+    actions.dropOnColumn(new Event('drop') as DragEvent, 'IN_REPAIR');
     fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Movido para Reparo');
+    expect(component.filteredRmas().find(rma => rma.id === TEST_RMAS[0].id)?.status).toBe('IN_REPAIR');
+    expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it('does not undo an old drop after the same OS changes again in the detail', () => {
+    fixture.detectChanges();
+    const actions = fixture.componentInstance as unknown as {
+      startCardDrag(event: DragEvent, rma: RmaResponse): void;
+      dropOnColumn(event: DragEvent, status: RmaResponse['status']): void;
+    };
+    actions.startCardDrag(new Event('dragstart') as DragEvent, TEST_RMAS[0]);
+    actions.dropOnColumn(new Event('drop') as DragEvent, 'IN_REPAIR');
+    fixture.detectChanges();
+    component.openDetail(component.filteredRmas().find(rma => rma.id === TEST_RMAS[0].id)!);
+    fixture.detectChanges();
+    chooseDetailStatus('IN_TESTS');
+    fixture.nativeElement.querySelector('app-rma-detail-modal .modal-close').click();
+    fixture.detectChanges();
+    const feedback = fixture.nativeElement.querySelector('.kanban-stage > app-rma-status-field') as HTMLElement;
+    [...feedback.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent?.trim() === 'Desfazer')!.click();
+    fixture.detectChanges();
+    expect(component.filteredRmas().find(rma => rma.id === TEST_RMAS[0].id)?.status).toBe('IN_TESTS');
+    expect(feedback.querySelector('[role="alert"]')?.textContent).toContain('O status mudou.');
+  });
+
+  it('keeps the detail open after changing status', () => {
+    fixture.detectChanges(); component.openDetail(TEST_RMAS[0]); fixture.detectChanges();
     chooseDetailStatus('IN_REPAIR');
-    expect(fixture.nativeElement.textContent).toContain('Novo status');
-    fixture.nativeElement.querySelectorAll('.modal-overlay')[1].querySelector('.modal-close').click();
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelectorAll('.modal-overlay').length).toBe(1);
+    expect(fixture.nativeElement.querySelector('app-rma-detail-modal')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.modal-overlay')).toHaveLength(1);
   });
 
   it('saves the assignee picked in the detail selector through the existing service, without a dialog', () => {
@@ -340,6 +388,36 @@ describe('KanbanComponent filters', () => {
     expect(assigneeUpdates).toEqual([[TEST_RMAS[0].id, { assigneeId: null }]]);
     expect(fixture.nativeElement.querySelectorAll('.modal-overlay').length).toBe(1);
     expect(fixture.nativeElement.textContent).not.toContain('Novo responsável');
+  });
+
+  it('reads the full detail on open, outside the global loading, and retries a failed read inside the modal', () => {
+    fixture.detectChanges();
+    const service = TestBed.inject(RmaService);
+    const reads = vi.spyOn(service, 'getById').mockReturnValueOnce(throwError(() => ({ error: { message: 'Falha de rede' } })));
+    component.openDetail(TEST_RMAS[0]);
+    fixture.detectChanges();
+    const [id, context] = reads.mock.calls[0];
+    expect(id).toBe(TEST_RMAS[0].id);
+    expect(context?.get(SKIP_GLOBAL_LOADING)).toBe(true);
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('app-rma-detail-modal')).toBeNull();
+    expect(host.querySelector('[role="dialog"] [role="alert"]')?.textContent).toContain('Falha de rede');
+    [...host.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find((button) => button.textContent?.trim() === 'Tentar novamente')!.click();
+    fixture.detectChanges();
+    expect(reads).toHaveBeenCalledTimes(2);
+    expect(host.querySelector('app-rma-detail-modal')).not.toBeNull();
+  });
+
+  it('replaces only the assigned card with the response instead of reloading the board', () => {
+    fixture.detectChanges();
+    const boardReads = vi.spyOn(TestBed.inject(RmaService), 'listBoard');
+    component.openDetail(TEST_RMAS[0]);
+    fixture.detectChanges();
+    chooseDetailAssignee('Sem responsável');
+    fixture.detectChanges();
+    expect(boardReads).not.toHaveBeenCalled();
+    expect(component.filteredRmas().find((rma) => rma.id === TEST_RMAS[0].id)?.assigneeId).toBeNull();
+    expect(component.filteredRmas().map((rma) => rma.id)).toEqual(TEST_RMAS.map((rma) => rma.id));
   });
 
   it('shows a failed inline assignment inside the detail modal', () => {
@@ -369,19 +447,28 @@ describe('KanbanComponent filters', () => {
   }
 
 
-  it('preserves selection and filters when inspecting impediments from the detail modal', () => {
-    component.filtersForm.patchValue({ priority: 'HIGH' });
+  it('blocks inline from the detail and refreshes the card, keeping selection and filters', () => {
+    component.filtersForm.patchValue({ priority: TEST_RMAS[1].priority });
     fixture.detectChanges();
     component.openDetail(TEST_RMAS[1]);
     fixture.detectChanges();
-    const inspect = [...fixture.nativeElement.querySelectorAll('app-rma-detail-modal button')].find((button: HTMLButtonElement) => button.textContent?.includes('Ver impedimentos')) as HTMLButtonElement;
-    inspect.click();
+    const modal: HTMLElement = fixture.nativeElement.querySelector('app-rma-detail-modal');
+    expect([...modal.querySelectorAll('button')].some((button) => button.textContent?.includes('Ver impedimentos'))).toBe(false);
+    expect(fixture.nativeElement.querySelector('app-rma-block-panel, dialog')).toBeNull();
+    const flag = [...modal.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.trim() === 'Sinalizar impedimento')!;
+    flag.click();
     fixture.detectChanges();
-    const dialog: HTMLDialogElement = fixture.nativeElement.querySelector('app-rma-block-panel dialog');
-    expect(dialog.open).toBe(true);
-    dialog.querySelector<HTMLButtonElement>('button')!.click();
+    const reason = modal.querySelector<HTMLTextAreaElement>('#rma-block-reason')!;
+    reason.value = 'Aguardando cliente';
+    reason.dispatchEvent(new Event('input'));
+    reason.closest('form')!.dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+
+    const card = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.board-card')].find((item) => item.textContent?.includes(TEST_RMAS[1].code))!;
+    expect(card.querySelector('.board-card__block')?.textContent).toContain('Impedida há');
+    expect(modal.querySelector('.blocks-section__current')?.textContent).toContain('Aguardando cliente');
     expect(component.selectedRmaId()).toBe(2);
-    expect(component.filtersForm.getRawValue().priority).toBe('HIGH');
+    expect(component.filtersForm.getRawValue().priority).toBe(TEST_RMAS[1].priority);
   });
 
   it.each([
@@ -434,22 +521,41 @@ describe('KanbanComponent filters', () => {
     expect(component.activeCount()).toBe(1);
   });
 
-  it('combines SLA with advanced filters and clears the entire form', () => {
-    component.filtersForm.patchValue({ sla: 'NORMAL', priority: 'HIGH', assignee: 7, query: 'arvore' });
+  it('combines Prazo with advanced filters and clears the entire form', () => {
+    component.filtersForm.patchValue({ deadline: 'DUE_SOON', priority: 'HIGH', assignee: 7, query: 'arvore' });
     expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
     expect(component.activeFilterCount()).toBe(4);
-    component.filtersForm.patchValue({ sla: 'CLOSED' });
+    component.filtersForm.patchValue({ deadline: 'NO_DUE_DATE' });
     expect(component.filteredRmas()).toEqual([]);
     component.clearFilters();
     expect(component.filteredRmas()).toHaveLength(2);
-    expect(component.filtersForm.getRawValue().sla).toBe('all');
+    expect(component.filtersForm.getRawValue().deadline).toBe('all');
     expect(component.activeFilterCount()).toBe(0);
   });
 
-  it('updates the combined SLA filter as its deadline passes', () => {
-    component.filtersForm.patchValue({ sla: 'OVERDUE', priority: 'HIGH', assignee: 7 });
+  it('filters by each deadline option and keeps closed ordens de serviço only under Todos', () => {
+    const extra = (id: number, dueDate: string | null, status: RmaResponse['status'] = 'TRIAGE'): RmaResponse => ({
+      ...TEST_RMAS[0], id, code: `NAV-00${id}`, status, dueDate,
+      deadline: { status: 'ON_TRACK', dueSoonFrom: dueDate ? shiftDate(dueDate, -7) : null },
+    });
+    (component as unknown as { rmasSignal: { set(value: RmaResponse[]): void } }).rmasSignal.set([
+      extra(11, '2026-10-19'), extra(12, '2026-10-22'), extra(13, '2026-12-01'), extra(14, null), extra(15, '2026-10-01', 'COMPLETED'),
+    ]);
+    const ids = (deadline: 'all' | 'OVERDUE' | 'DUE_SOON' | 'ON_TRACK' | 'NO_DUE_DATE') => {
+      component.filtersForm.patchValue({ deadline });
+      return component.filteredRmas().map((rma) => rma.id);
+    };
+    expect(ids('OVERDUE')).toEqual([11]);
+    expect(ids('DUE_SOON')).toEqual([12]);
+    expect(ids('ON_TRACK')).toEqual([13]);
+    expect(ids('NO_DUE_DATE')).toEqual([14]);
+    expect(ids('all')).toEqual([11, 12, 13, 14, 15]);
+  });
+
+  it('updates the Prazo filter when the day turns', () => {
+    component.filtersForm.patchValue({ deadline: 'OVERDUE', priority: 'HIGH', assignee: 7 });
     expect(component.filteredRmas()).toEqual([]);
-    now.set(Date.parse('2026-10-20T13:00:00Z'));
+    now.set(Date.parse('2026-10-21T03:00:00Z'));
     expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
   });
 
@@ -483,9 +589,9 @@ describe('KanbanComponent filters', () => {
     );
     expect(component.activeViewId()).toBe(5);
 
-    component.filtersForm.patchValue({ priority: 'all', query: '', sla: 'CLOSED' });
+    component.filtersForm.patchValue({ priority: 'all', query: '', deadline: 'NO_DUE_DATE' });
     component.applyView(5);
-    expect(component.filtersForm.getRawValue().sla).toBe('all');
+    expect(component.filtersForm.getRawValue().deadline).toBe('all');
     expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
     expect(component.filtersForm.getRawValue()).toEqual(
       expect.objectContaining({ priority: 'HIGH', query: 'árvore' }),
@@ -496,37 +602,38 @@ describe('KanbanComponent filters', () => {
     expect(component.activeFilterCount()).toBe(0);
   });
 
-  it('does not mark the saved view as active when SLA, which views do not persist, is filtering the board', () => {
-    component.filtersForm.patchValue({ priority: 'HIGH', sla: 'OVERDUE' });
-    component.openCreateViewModal();
-    component.viewForm.patchValue({ name: 'Atrasados', defaultView: false });
+  it('saves and restores the deadline filter in a view', () => {
+    component.filtersForm.patchValue({ priority: 'HIGH', deadline: 'DUE_SOON' });
+    saveCurrentAsView('Perto do limite');
 
-    component.saveView();
-
-    expect(createdViewRequest).toEqual(expect.objectContaining({ name: 'Atrasados' }));
-    expect(component.filtersForm.getRawValue().sla).toBe('OVERDUE');
+    expect(createdViewRequest?.filters).toEqual(expect.objectContaining({ priority: 'HIGH', deadline: 'DUE_SOON' }));
+    expect(component.activeViewId()).toBe(5);
+    component.filtersForm.patchValue({ deadline: 'all' });
     expect(component.activeViewId()).toBeNull();
+    component.applyView(5);
+    expect(component.filtersForm.getRawValue().deadline).toBe('DUE_SOON');
+    expect(component.activeViewId()).toBe(5);
   });
 
-  it('selects across columns and filters, clears selection and patches affected cards', () => {
-    component.toggleBulkSelection(TEST_RMAS[0]);
-    component.toggleBulkSelection(TEST_RMAS[1]);
-    expect(component.bulkSelectedRmas()).toHaveLength(2);
+  it('saves Todos as a null deadline', () => {
     component.filtersForm.patchValue({ priority: 'HIGH' });
-    expect(component.hiddenSelectedCount()).toBe(1);
-    component.selectVisibleRmas();
-    expect(component.bulkSelectedRmas()).toHaveLength(2);
-    const updated = { ...TEST_RMAS[0], priority: 'LOW' as const };
-    component.applyBulkResults([
-      { id: 1, code: updated.code, success: true, message: 'OK', rma: updated },
-      { id: 2, code: TEST_RMAS[1].code, success: false, message: 'Etapa alterada', rma: { ...TEST_RMAS[1], status: 'IN_DIAGNOSIS' } },
-    ]);
-    expect(component.bulkSelectedRmas().map((rma) => rma.id)).toEqual([2]);
-    component.clearFilters();
-    expect(component.filteredRmas()[0]).toBe(updated);
-    expect(component.filteredRmas()[1].status).toBe('IN_DIAGNOSIS');
-    component.clearBulkSelection();
-    expect(component.bulkSelectedRmas()).toEqual([]);
+    saveCurrentAsView('Todos os prazos');
+    expect(createdViewRequest?.filters.deadline).toBeNull();
+  });
+
+  it('opens a view saved without deadline as Todos', () => {
+    const views = (component as unknown as { viewsSignal: { set(value: KanbanViewResponse[]): void } }).viewsSignal;
+    const legacyFilters = {
+      query: null, priority: 'HIGH', status: null, warranty: null, assigneeId: null, unassignedOnly: false,
+      entryFrom: null, entryTo: null, updatedFrom: null, updatedTo: null,
+    } as KanbanViewResponse['filters'];
+    views.set([{ id: 9, name: 'Antiga', defaultView: false, filters: legacyFilters}]);
+    component.filtersForm.patchValue({ deadline: 'OVERDUE' });
+
+    component.applyView(9);
+
+    expect(component.filtersForm.getRawValue()).toEqual(expect.objectContaining({ deadline: 'all', priority: 'HIGH' }));
+    expect(component.activeViewId()).toBe(9);
   });
 
   it('keeps the current filters when persistence fails', () => {
@@ -548,15 +655,8 @@ interface KanbanHarness {
   selectedRmaId: Signal<number | null>;
   selectRma(rma: RmaResponse): void;
   openDetail(rma: RmaResponse): void;
-  bulkSelectedRmas: Signal<RmaResponse[]>;
-  hiddenSelectedCount: Signal<number>;
-  toggleBulkSelection(rma: RmaResponse): void;
-  selectVisibleRmas(): void;
-  clearBulkSelection(): void;
-  applyBulkResults(results: BulkRmaResult[]): void;
   filtersForm: FormGroup;
   viewForm: FormGroup;
-  statusForm: FormGroup;
   filteredRmas: Signal<RmaResponse[]>;
   activeViewId: Signal<number | null>;
   viewError: Signal<string>;
@@ -585,6 +685,7 @@ const TEST_RMAS: RmaResponse[] = [
     serialNumber: 'SERIE-ALFA',
     entryDate: '2026-10-10',
     updatedAt: '2026-10-20T02:30:00Z',
+    dueDate: '2026-10-20',
     priority: 'HIGH',
     status: 'TRIAGE',
     assigneeId: 7,
@@ -601,6 +702,7 @@ const TEST_RMAS: RmaResponse[] = [
     serialNumber: 'SERIE-BETA',
     entryDate: '2026-10-15',
     updatedAt: '2026-10-20T15:00:00Z',
+    dueDate: '2026-10-12',
     priority: 'LOW',
     status: 'COMPLETED',
     assigneeId: null,
@@ -619,6 +721,7 @@ function buildRma(values: {
   serialNumber: string;
   entryDate: string;
   updatedAt: string;
+  dueDate?: string;
   priority: RmaResponse['priority'];
   status: RmaResponse['status'];
   assigneeId: number | null;
@@ -628,12 +731,10 @@ function buildRma(values: {
   return {
     id: values.id,
     code: values.code,
-    clientId: values.id,
     clientName: values.clientName,
     items: [
       {
         id: values.id,
-        productId: values.id,
         productName: values.productName,
         productSku: values.productSku,
         batchNumber: values.batchNumber,
@@ -642,14 +743,10 @@ function buildRma(values: {
         warrantyMonths: 12,
         warrantyExpiresAt: '2027-01-01',
         warrantyStatus: values.warrantyStatus,
+        calculatedWarrantyStatus: values.warrantyStatus,
+        warrantyOverride: null,
       },
     ],
-    productId: values.id,
-    productName: values.productName,
-    productSku: values.productSku,
-    batchNumber: values.batchNumber,
-    serialNumber: values.serialNumber,
-    manufacturedAt: '2026-01-01',
     purchaseDate: '2026-02-01',
     purchaseDateUnknown: false,
     entryDate: values.entryDate,
@@ -665,7 +762,6 @@ function buildRma(values: {
     repairSummary: null,
     replacedPartsSummary: null,
     testSummary: null,
-    shippedAt: null,
     carrier: null,
     trackingCode: null,
     diagnosis: null,
@@ -673,17 +769,19 @@ function buildRma(values: {
     assignmentHistory: [],
     currentBlock: null,
     blockHistory: [],
-    sla: {
-      status: values.status === 'COMPLETED' ? 'CLOSED' : 'NORMAL',
-      startedAt: '2026-10-20T11:00:00Z',
-      warningAt: values.status === 'COMPLETED' ? null : '2026-10-20T12:30:00Z',
-      dueAt: values.status === 'COMPLETED' ? null : '2026-10-20T13:00:00Z',
-      elapsedSeconds: 0,
-      limitSeconds: values.status === 'COMPLETED' ? null : 7200,
-    },
+    dueDate: values.dueDate ?? null,
+    deadline: values.dueDate
+      ? { status: values.status === 'COMPLETED' ? 'CLOSED' : 'DUE_SOON', dueSoonFrom: shiftDate(values.dueDate, -7) }
+      : { status: 'NO_DUE_DATE', dueSoonFrom: null },
+    stagePeriods: [{ status: values.status, enteredAt: '2026-10-20T11:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [], warrantyHistory: [],
     createdAt: '2026-10-10T12:00:00Z',
     updatedAt: values.updatedAt,
   };
+}
+
+function shiftDate(date: string, days: number): string {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
 describe('KanbanComponent dialog focus', () => {
@@ -700,7 +798,7 @@ describe('KanbanComponent dialog focus', () => {
       imports: [KanbanComponent],
       providers: [
         provideRouter([]),
-        { provide: SlaClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
+        { provide: ClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
         providePermissions(profilePermissions('ADMIN')),
         { provide: CatalogService, useValue: { listAssignableUsers: () => of([]) } },
         {
@@ -781,9 +879,8 @@ describe('KanbanComponent dialog focus', () => {
     render();
     openDetailFromCard();
     confirmStatusFromDetail('IN_REPAIR');
-    expect(statusDialog()?.getAttribute('role')).toBe('dialog');
-    expect(statusDialog()?.getAttribute('aria-modal')).toBe('true');
-    expect(find('#kanban-status-title').textContent?.trim()).toBe('Status');
+    expect(statusDialog()).toBeNull();
+    expect(detail()).not.toBeNull();
   });
 
   it('focuses the detail panel from its card and returns to the card on Escape', () => {
@@ -794,19 +891,11 @@ describe('KanbanComponent dialog focus', () => {
     expect(document.activeElement).toBe(card);
   });
 
-  it('closes only the status selector, then only the confirmation, returning to the detail selector', () => {
-    openDetailFromCard();
-    activate(statusTrigger());
+  it('closes only the open status selector on Escape and retains focus', () => {
+    openDetailFromCard(); activate(statusTrigger());
     expect(page.querySelector('app-rma-detail-modal .custom-select__menu')).not.toBeNull();
     press('Escape');
     expect(page.querySelector('app-rma-detail-modal .custom-select__menu')).toBeNull();
-    expect(detail()).not.toBeNull();
-    expect(document.activeElement).toBe(statusTrigger());
-
-    confirmStatusFromDetail('IN_REPAIR');
-    expect(document.activeElement).toBe(find('[aria-labelledby="kanban-status-title"] app-custom-select .custom-select__trigger'));
-    expect(press('Escape').defaultPrevented).toBe(true);
-    expect(statusDialog()).toBeNull();
     expect(detail()).not.toBeNull();
     expect(document.activeElement).toBe(statusTrigger());
   });
@@ -858,24 +947,15 @@ describe('KanbanComponent dialog focus', () => {
     expect(document.activeElement).toBe(trigger);
   });
 
-  it('opens impediments over the detail with focus on its title and returns to Ver impedimentos', () => {
+  it('moves focus into the inline impediment form and back to its trigger on Escape, keeping the detail open', () => {
     openDetailFromCard();
-    const inspect = activate(button(find('app-rma-detail-modal'), 'Ver impedimentos'));
-    const dialog = find<HTMLDialogElement>('app-rma-block-panel dialog');
-    expect(dialog.open).toBe(true);
-    expect(document.activeElement).toBe(find('#block-panel-title'));
-    expect(loading.visible()).toBe(false);
-    for (let node: HTMLElement | null = dialog; node; node = node.parentElement) {
-      expect(node.inert, 'the native dialog and its ancestors stay interactive').toBe(false);
-    }
-    expect(press('Escape').defaultPrevented, 'the detail below ignores Escape').toBe(false);
+    const flag = activate(button(find('app-rma-detail-modal'), 'Sinalizar impedimento'));
+    expect(document.activeElement).toBe(find('#rma-block-reason'));
+    expect(page.querySelector('app-rma-block-panel, dialog')).toBeNull();
+    expect(press('Escape').defaultPrevented, 'the inline form consumes Escape').toBe(true);
+    expect(page.querySelector('#rma-block-reason')).toBeNull();
     expect(detail()).not.toBeNull();
-    button(dialog, 'Fechar').click();
-    render();
-    expect(dialog.open).toBe(false);
-    expect(detail()).not.toBeNull();
-    expect(document.activeElement).toBe(inspect);
-    expect(find('.kanban-page').closest('[inert]'), 'the page stays behind the detail').not.toBeNull();
+    expect(document.activeElement).toBe(flag);
     press('Escape');
     expect(detail()).toBeNull();
   });
@@ -895,7 +975,7 @@ describe('KanbanComponent dialog focus under the root blocker', () => {
       imports: [KanbanComponent],
       providers: [
         provideRouter([{ path: '', component: KanbanComponent }]),
-        { provide: SlaClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
+        { provide: ClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
         providePermissions(profilePermissions('ADMIN')),
         { provide: CatalogService, useValue: { listAssignableUsers: () => of([]) } },
         { provide: KanbanViewService, useValue: { list: () => of([]) } },
@@ -955,16 +1035,14 @@ describe('KanbanComponent dialog focus under the root blocker', () => {
     activate(statusTrigger());
     find<HTMLButtonElement>('app-rma-detail-modal .custom-select__option[data-status="IN_REPAIR"]').click();
     render();
-    find('[aria-labelledby="kanban-status-title"] form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    render();
     expect(press('Escape').defaultPrevented).toBe(false);
-    expect(statusDialog()).not.toBeNull();
+    expect(page.querySelector('app-rma-detail-modal')).not.toBeNull();
 
     loading.start();
     vi.advanceTimersByTime(200);
     render();
     expect(blocker().open, 'the root blocker is shown').toBe(true);
-    expect(statusDialog()!.contains(document.activeElement), 'the blocker took focus away from the dialog').toBe(false);
+    expect(page.querySelector('app-rma-detail-modal')!.contains(document.activeElement), 'the blocker took focus away from the detail').toBe(false);
 
     const trigger = statusTrigger();
     const focus = vi.spyOn(trigger, 'focus');

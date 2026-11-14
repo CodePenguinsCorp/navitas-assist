@@ -24,14 +24,12 @@ public class NotificationProcessor {
 
     private final NotificationEventStore eventStore;
     private final NotificationDispatcher dispatcher;
-    private final NotificationEmailService emailService;
     private final TaskExecutor notificationExecutor;
 
-    public NotificationProcessor(NotificationEventStore eventStore, NotificationDispatcher dispatcher, NotificationEmailService emailService,
+    public NotificationProcessor(NotificationEventStore eventStore, NotificationDispatcher dispatcher,
                                  @Qualifier(NotificationAsyncConfig.NOTIFICATION_EXECUTOR) TaskExecutor notificationExecutor) {
         this.eventStore = eventStore;
         this.dispatcher = dispatcher;
-        this.emailService = emailService;
         this.notificationExecutor = notificationExecutor;
     }
 
@@ -48,7 +46,7 @@ public class NotificationProcessor {
             try {
                 eventStore.recordRejected(event, "Notification queue is full.");
             } catch (RuntimeException exception) {
-                log.error("Could not record rejected notification event {}", event.eventKey(), exception);
+                log.error("Could not record rejected notification event type={}", event.type());
             }
         }
     }
@@ -65,24 +63,16 @@ public class NotificationProcessor {
                 return;
             }
 
-            List<Long> emailNotificationIds;
             try {
-                emailNotificationIds = dispatcher.dispatch(eventId, event);
+                dispatcher.dispatch(eventId, event);
             } catch (RuntimeException exception) {
-                log.warn("Notification event {} failed: {}", event.eventKey(), exception.getMessage());
-                eventStore.markFailed(eventId, exception.getClass().getSimpleName() + ": " + exception.getMessage());
+                log.warn("Notification event {} failed: DISPATCH_ERROR", eventId);
+                eventStore.markFailed(eventId, "DISPATCH_ERROR");
                 return;
             }
 
-            for (Long notificationId : emailNotificationIds) {
-                try {
-                    emailService.send(notificationId);
-                } catch (RuntimeException exception) {
-                    log.warn("Notification e-mail {} could not be recorded: {}", notificationId, exception.getMessage());
-                }
-            }
         } catch (RuntimeException exception) {
-            log.error("Unexpected error while processing notification event {}", event.eventKey(), exception);
+            log.error("Unexpected error while processing notification event type={}", event.type());
         }
     }
 }

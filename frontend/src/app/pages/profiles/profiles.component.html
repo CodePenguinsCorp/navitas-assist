@@ -40,7 +40,6 @@
         <span class="icon-tile tone-slate"><app-icon name="shield" [size]="20" /></span>
         <h3>Nenhum perfil cadastrado</h3>
         <p>Crie um perfil para agrupar permissões e atribuí-lo aos usuários.</p>
-        <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Cadastrar perfil</button>
       </section>
     } @else if (profiles().length === 0) {
       <section class="empty-state">
@@ -153,25 +152,20 @@
           </label>
         </fieldset>
 
-        @if (catalogState() === 'loading') {
-          <div class="catalog-pending" aria-busy="true"></div>
-        } @else if (catalogState() === 'ready') {
-          @for (module of catalog(); track module.module) {
-            <fieldset class="form-section permission-module">
-              <legend>{{ module.label }} <span class="permission-module__count">{{ checkedCount(module) }} de {{ module.permissions.length }}</span></legend>
-              @for (item of module.permissions; track item.code) {
-                <label class="checkbox-field">
-                  <input
-                    type="checkbox"
-                    [checked]="isChecked(item.code)"
-                    [disabled]="submitting()"
-                    (change)="toggle(item.code, $any($event.target).checked)"
-                  />
-                  <span>{{ item.label }}</span>
-                </label>
-              }
-            </fieldset>
-          }
+        @if (catalogState() !== 'failed') {
+          <fieldset class="form-section profile-permissions">
+            <legend>Permissões</legend>
+            @if (catalogState() === 'loading') {
+              <div class="catalog-pending" aria-busy="true"></div>
+            } @else {
+              <app-permission-picker
+                mode="profile"
+                [catalog]="catalog()"
+                [disabled]="submitting()"
+                [(selected)]="selected"
+              />
+            }
+          </fieldset>
         }
 
         <div class="form-actions form-actions--full">

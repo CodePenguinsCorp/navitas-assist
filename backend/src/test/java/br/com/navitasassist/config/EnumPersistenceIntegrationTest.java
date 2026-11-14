@@ -14,6 +14,7 @@ import br.com.navitasassist.diagnosis.FailureCause;
 import br.com.navitasassist.diagnosis.FailureType;
 import br.com.navitasassist.kanban.KanbanView;
 import br.com.navitasassist.product.Product;
+import br.com.navitasassist.rma.RmaDeadlineStatus;
 import br.com.navitasassist.rma.RmaPriority;
 import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaStatus;
@@ -144,6 +145,17 @@ class EnumPersistenceIntegrationTest {
     }
 
     @Test
+    void shouldStoreEveryDeadlineFilterAsItsName() {
+        for (RmaDeadlineStatus deadline : RmaDeadlineStatus.values()) {
+            if (deadline == RmaDeadlineStatus.CLOSED) continue;
+            entityManager.find(KanbanView.class, viewId).setDeadline(deadline);
+            flushAndClear();
+            assertThat(entityManager.find(KanbanView.class, viewId).getDeadline()).isEqualTo(deadline);
+            assertThat(column("kanban_views", "deadline_status", viewId)).isEqualTo(deadline.name());
+        }
+    }
+
+    @Test
     void shouldStoreEveryFailureTypeAndCauseAsTheirNames() {
         for (FailureType type : FailureType.values()) {
             entityManager.find(Diagnosis.class, diagnosisId).setFailureType(type);
@@ -165,6 +177,7 @@ class EnumPersistenceIntegrationTest {
         view.setPriority(RmaPriority.HIGH);
         view.setStatus(RmaStatus.RECEIVED);
         view.setWarranty(WarrantyStatus.PENDING);
+        view.setDeadline(RmaDeadlineStatus.OVERDUE);
         Diagnosis diagnosis = entityManager.find(Diagnosis.class, diagnosisId);
         diagnosis.setFailureType(FailureType.OTHER);
         diagnosis.setProbableCause(FailureCause.OTHER);
@@ -174,6 +187,7 @@ class EnumPersistenceIntegrationTest {
         view.setPriority(null);
         view.setStatus(null);
         view.setWarranty(null);
+        view.setDeadline(null);
         diagnosis = entityManager.find(Diagnosis.class, diagnosisId);
         diagnosis.setFailureType(null);
         diagnosis.setProbableCause(null);
@@ -189,6 +203,8 @@ class EnumPersistenceIntegrationTest {
         assertThat(column("kanban_views", "priority", viewId)).isNull();
         assertThat(column("kanban_views", "status", viewId)).isNull();
         assertThat(column("kanban_views", "warranty_status", viewId)).isNull();
+        assertThat(view.getDeadline()).isNull();
+        assertThat(column("kanban_views", "deadline_status", viewId)).isNull();
         assertThat(column("diagnoses", "failure_type", diagnosisId)).isNull();
         assertThat(column("diagnoses", "probable_cause", diagnosisId)).isNull();
     }

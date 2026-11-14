@@ -16,123 +16,114 @@
   } @else if (executions().length === 0) {
     <div class="empty-state">
       <span class="icon-tile tone-slate"><app-icon name="checklist" [size]="20" /></span>
-      <p>Nenhum protocolo executado neste RMA.</p>
+      <p>Nenhum protocolo executado nesta OS.</p>
     </div>
   }
 
-  @for (execution of executions(); track execution.id) {
-    <section class="protocol-execution">
-      <div class="protocol-item">
-        <div>
-          <strong>{{ execution.templateName }} · v{{ execution.versionNumber }}</strong>
-          <p>{{ statusLabel(execution) }}</p>
-          <p>{{ execution.completedItems }}/{{ execution.totalItems }} itens registrados</p>
-          <p>{{ progressLabel(execution) }}</p>
-          <p>Iniciado por {{ execution.startedBy }}</p>
-        </div>
+  @for (view of views(); track view.execution.id) {
+    @let execution = view.execution;
+    <section class="protocol-execution" [attr.aria-label]="execution.templateName + ' v' + execution.versionNumber">
+      <header class="protocol-head">
+        <strong class="protocol-head__name">{{ execution.templateName }} · v{{ execution.versionNumber }}</strong>
+        <span [class]="executionClass(execution)">{{ statusLabel(execution) }}</span>
         @if (canExecute() && execution.status === 'IN_PROGRESS') {
-          <button type="button" class="button-secondary button-secondary--small" (click)="completeExecution(execution)" [disabled]="submitting()">Concluir protocolo</button>
+          <button type="button" class="button-secondary protocol-head__action" (click)="completeExecution(execution)" [disabled]="submitting()">Concluir protocolo</button>
         }
+      </header>
+      <div class="protocol-progress-row">
+        @if (execution.requiredItems > 0) {
+          <div class="protocol-progress" role="progressbar" [attr.aria-label]="execution.templateName + ' v' + execution.versionNumber + ': obrigatórios atendidos'" aria-valuemin="0" [attr.aria-valuenow]="satisfiedRequiredItems(execution)" [attr.aria-valuemax]="execution.requiredItems"><span [style.width.%]="progressPercent(execution)"></span></div>
+        }
+        <span class="protocol-progress-row__text">{{ summaryLabel(execution) }}</span>
+        <span class="protocol-progress-row__meta">Iniciado por {{ execution.startedBy }}</span>
       </div>
-      @if (execution.requiredItems > 0) {
-        <div class="protocol-progress" role="progressbar" [attr.aria-label]="execution.templateName + ' v' + execution.versionNumber + ': obrigatórios atendidos'" aria-valuemin="0" [attr.aria-valuenow]="satisfiedRequiredItems(execution)" [attr.aria-valuemax]="execution.requiredItems"><span [style.width.%]="progressPercent(execution)"></span></div>
-      }
 
-      @for (item of execution.items; track item.item.id) {
-        <section class="protocol-checklist-item">
-        <div class="protocol-item">
-          <div>
-            <p>Etapa: {{ item.item.stepName }}</p>
-            <strong>{{ item.item.title }}</strong>
-            <p>{{ item.item.required ? 'Obrigatório' : 'Opcional' }}</p>
-          </div>
-          <div class="protocol-start">
-            <span [class]="outcomeClass(item)">{{ outcomeLabel(item) }}</span>
-            @if (canExecute() && execution.status === 'IN_PROGRESS' && !isEditing(execution, item)) {
-              <button type="button" class="button-secondary button-secondary--small" (click)="openResult(execution, item)" [disabled]="submitting()">{{ item.latest ? 'Repetir registro' : 'Registrar resultado' }}</button>
-            }
-          </div>
-        </div>
-
-        <dl class="protocol-facts">
-          @if (item.item.expectedResult) {
-            <div><dt>Resultado esperado</dt><dd>{{ item.item.expectedResult }}</dd></div>
-          }
-          @if (item.item.instructions) {
-            <div><dt>Instruções</dt><dd>{{ item.item.instructions }}</dd></div>
-          }
-          @if (item.item.type === 'MEASUREMENT') {
-            @if (item.item.minValue !== null) {
-              <div><dt class="sr-only">Mínimo</dt><dd>Mínimo: {{ formatProtocolLimit(item.item.minValue, item.item.decimalPlaces, item.item.unit) }}</dd></div>
-            }
-            @if (item.item.maxValue !== null) {
-              <div><dt class="sr-only">Máximo</dt><dd>Máximo: {{ formatProtocolLimit(item.item.maxValue, item.item.decimalPlaces, item.item.unit) }}</dd></div>
-            }
-          }
-          <div><dt>Último registro</dt><dd>{{ resultSummary(item) }}</dd></div>
-        </dl>
-
-        @if (item.attempts.length > 0) {
-          <details>
-            <summary>Histórico de resultados</summary>
-            <ol class="protocol-attempts">
-              @for (attempt of item.attempts; track attempt.id) {
-                <li>
-                  <strong>Tentativa {{ attempt.attempt }}</strong>
-                  <dl class="protocol-facts">
-                    <div><dt>Resultado</dt><dd>{{ outcomeLabels[attempt.outcome] }}{{ resultValue(attempt) ? ' · ' + resultValue(attempt) : '' }}</dd></div>
-                    @if (attempt.evidence) { <div><dt>Evidência</dt><dd>{{ attempt.evidence }}</dd></div> }
-                    @if (attempt.justification) { <div><dt>Justificativa</dt><dd>{{ attempt.justification }}</dd></div> }
-                    <div><dt>Autor</dt><dd>{{ attempt.executedBy }}</dd></div>
-                    <div><dt>Instante</dt><dd><time [attr.datetime]="attempt.completedAt">{{ dateTime(attempt.completedAt) }}</time></dd></div>
-                  </dl>
-                </li>
+      @for (group of view.groups; track group.key) {
+        @if (view.groups.length > 1) {
+          <h5 class="protocol-group">{{ group.step }}</h5>
+        }
+        <ul class="protocol-list">
+          @for (row of group.rows; track row.item.item.id) {
+            @let item = row.item;
+            <li class="protocol-row">
+              <span class="protocol-row__number" aria-hidden="true">{{ row.number }}</span>
+              <div class="protocol-row__main">
+                <div class="protocol-row__title">
+                  <strong>{{ item.item.title }}</strong>
+                  @if (item.item.required) { <span class="protocol-tag protocol-tag--required">Obrigatório</span> } @else { <span class="protocol-row__optional">Opcional</span> }
+                  @if (rangeLabel(item); as range) { <span class="protocol-tag"><span class="sr-only">Faixa esperada: </span>{{ range }}</span> }
+                </div>
+                @if (item.latest) { <p class="protocol-row__last">{{ resultSummary(item) }}</p> }
+              </div>
+              <span [class]="outcomeClass(item)">{{ outcomeLabel(item) }}</span>
+              @if (canExecute() && execution.status === 'IN_PROGRESS' && !isEditing(execution, item)) {
+                <button type="button" class="protocol-row__action" (click)="openResult(execution, item)" [disabled]="submitting()"><app-icon name="pencil" [size]="14" />{{ item.latest ? 'Repetir registro' : 'Registrar resultado' }}</button>
               }
-            </ol>
-          </details>
-        }
+              @if (hasDetails(item)) {
+                <button type="button" class="protocol-row__toggle" [class.is-open]="isExpanded(execution, item)" [attr.aria-expanded]="isExpanded(execution, item)" [attr.aria-controls]="detailsId(execution, item)" [attr.aria-label]="(isExpanded(execution, item) ? 'Recolher detalhes de ' : 'Ver detalhes de ') + item.item.title" (click)="toggleDetails(execution, item)"><app-icon name="chevron" [size]="16" /></button>
+              }
 
-        @if (isEditing(execution, item)) {
-          <form class="form-grid" [formGroup]="resultForm" (ngSubmit)="saveResult()">
-            <fieldset class="form-section">
-            <legend>Resultado de {{ item.item.title }}</legend>
-            @if (resultErrorMessage()) {
-              <p class="field-error field-group--full" role="alert">{{ resultErrorMessage() }}</p>
-            }
-            <label class="field-group">
-              <span>Resultado</span>
-              <app-custom-select ariaLabel="Resultado do item" [options]="outcomeOptions" formControlName="outcome" />
-            </label>
-            @if (item.item.type === 'MEASUREMENT') {
-              <label class="field-group">
-                <span>Medição ({{ item.item.unit }}, {{ item.item.decimalPlaces }} casa(s))</span>
-                <input type="text" inputmode="decimal" formControlName="measuredValue" />
-              </label>
-            }
-            @if (item.item.type === 'TEXT') {
-              <label class="field-group">
-                <span>Registro</span>
-                <input type="text" formControlName="textValue" maxlength="1000" />
-              </label>
-            }
-            <label class="field-group">
-              <span>{{ requiresEvidence() ? 'Evidência obrigatória' : 'Evidência (opcional)' }}</span>
-              <input type="text" formControlName="evidence" maxlength="500" [attr.aria-required]="requiresEvidence()" aria-describedby="protocol-evidence-hint" />
-              <small id="protocol-evidence-hint">Texto ou referência. Obrigatória ao aprovar um item que exige evidência.</small>
-            </label>
-            <label class="field-group">
-              <span>{{ requiresJustification() ? 'Justificativa obrigatória' : 'Justificativa (opcional)' }}</span>
-              <input type="text" formControlName="justification" maxlength="500" [attr.aria-required]="requiresJustification()" aria-describedby="protocol-justification-hint" />
-              <small id="protocol-justification-hint">Obrigatória ao repetir um registro, reprovar ou indicar que não se aplica.</small>
-            </label>
-            </fieldset>
-            <div class="form-actions form-actions--full">
-              <button type="button" class="button-secondary" (click)="cancelResult()" [disabled]="submitting()">Cancelar</button>
-              <button type="submit" class="button-primary" [disabled]="submitting()">Salvar resultado</button>
-            </div>
-          </form>
-        }
-        </section>
+              @if (isExpanded(execution, item)) {
+                <div class="protocol-details" [id]="detailsId(execution, item)">
+                  @if (item.item.expectedResult) { <p><span>Resultado esperado</span> {{ item.item.expectedResult }}</p> }
+                  @if (item.item.instructions) { <p><span>Instruções</span> {{ item.item.instructions }}</p> }
+                  @if (item.attempts.length > 1) {
+                    <ol class="protocol-attempts" aria-label="Histórico de resultados">
+                      @for (attempt of item.attempts; track attempt.id) {
+                        <li>
+                          <span>Tentativa {{ attempt.attempt }} · {{ outcomeLabels[attempt.outcome] }}{{ resultValue(attempt) ? ' · ' + resultValue(attempt) : '' }} · {{ attempt.executedBy }} · <time [attr.datetime]="attempt.completedAt">{{ dateTime(attempt.completedAt) }}</time></span>
+                          @if (attempt.evidence) { <span class="protocol-attempts__note">Evidência: {{ attempt.evidence }}</span> }
+                          @if (attempt.justification) { <span class="protocol-attempts__note">Justificativa: {{ attempt.justification }}</span> }
+                        </li>
+                      }
+                    </ol>
+                  }
+                </div>
+              }
+
+              @if (isEditing(execution, item)) {
+                <form class="protocol-form" [formGroup]="resultForm" (ngSubmit)="saveResult()">
+                  <fieldset>
+                    <legend class="sr-only">Resultado de {{ item.item.title }}</legend>
+                    @if (resultErrorMessage()) {
+                      <p class="field-error field-group--full" role="alert">{{ resultErrorMessage() }}</p>
+                    }
+                    <label class="field-group">
+                      <span>Resultado</span>
+                      <app-custom-select ariaLabel="Resultado do item" [options]="outcomeOptions" formControlName="outcome" />
+                    </label>
+                    @if (item.item.type === 'MEASUREMENT') {
+                      <label class="field-group">
+                        <span>Medição ({{ item.item.unit }}, {{ item.item.decimalPlaces }} casa(s))</span>
+                        <input type="text" inputmode="decimal" formControlName="measuredValue" />
+                      </label>
+                    }
+                    @if (item.item.type === 'TEXT') {
+                      <label class="field-group">
+                        <span>Anotação</span>
+                        <input type="text" formControlName="textValue" maxlength="1000" />
+                      </label>
+                    }
+                    <label class="field-group">
+                      <span>{{ requiresEvidence() ? 'Evidência obrigatória' : 'Evidência (opcional)' }}</span>
+                      <input type="text" formControlName="evidence" maxlength="500" [attr.aria-required]="requiresEvidence()" aria-describedby="protocol-evidence-hint" />
+                      <small id="protocol-evidence-hint">Obrigatória ao aprovar item que exige evidência.</small>
+                    </label>
+                    <label class="field-group">
+                      <span>{{ requiresJustification() ? 'Justificativa obrigatória' : 'Justificativa (opcional)' }}</span>
+                      <input type="text" formControlName="justification" maxlength="500" [attr.aria-required]="requiresJustification()" aria-describedby="protocol-justification-hint" />
+                      <small id="protocol-justification-hint">Obrigatória ao repetir, reprovar ou marcar como não se aplica.</small>
+                    </label>
+                  </fieldset>
+                  <div class="form-actions form-actions--full">
+                    <button type="button" class="button-secondary" (click)="cancelResult()" [disabled]="submitting()">Cancelar</button>
+                    <button type="submit" class="button-primary" [disabled]="submitting()">Salvar resultado</button>
+                  </div>
+                </form>
+              }
+            </li>
+          }
+        </ul>
       }
     </section>
   }

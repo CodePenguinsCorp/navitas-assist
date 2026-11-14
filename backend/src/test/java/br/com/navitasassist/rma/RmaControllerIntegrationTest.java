@@ -82,8 +82,8 @@ class RmaControllerIntegrationTest {
         Client client = new Client();
         client.setLegalName("Client with multiple products");
         Client savedClient = clientRepository.save(client);
-        Product firstProduct = saveProduct("SKU-RMA-1", "First product", 12);
-        Product secondProduct = saveProduct("SKU-RMA-2", "Second product", 24);
+        Product firstProduct = saveProduct("SKU-OS-1", "First product", 12);
+        Product secondProduct = saveProduct("SKU-OS-2", "Second product", 24);
 
         Map<String, Object> payload = Map.of(
             "clientId", savedClient.getId(),
@@ -94,7 +94,8 @@ class RmaControllerIntegrationTest {
             "purchaseDateUnknown", true,
             "entryDate", LocalDate.now().toString(),
             "invoiceNumber", "NF-123",
-            "reportedFailure", "Products do not start"
+            "reportedFailure", "Products do not start",
+            "receivedBy", "admin"
         );
 
         mockMvc.perform(post("/api/rmas")
@@ -107,9 +108,9 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.invoiceNumber").value("NF-123"))
             .andExpect(jsonPath("$.invoiceFileName").doesNotExist())
             .andExpect(jsonPath("$.items", hasSize(2)))
-            .andExpect(jsonPath("$.items[0].productId").value(firstProduct.getId()))
+            .andExpect(jsonPath("$.items[0].productSku").value(firstProduct.getSku()))
             .andExpect(jsonPath("$.items[0].batchNumber").value("LOT-A"))
-            .andExpect(jsonPath("$.items[1].productId").value(secondProduct.getId()))
+            .andExpect(jsonPath("$.items[1].productSku").value(secondProduct.getSku()))
             .andExpect(jsonPath("$.items[1].batchNumber").value("LOT-B"))
             .andExpect(jsonPath("$.items[1].serialNumber").value("SERIAL-B"))
             .andExpect(jsonPath("$.items[0].warrantyMonths").value(12))
@@ -120,15 +121,15 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.warrantyStatus").doesNotExist())
             .andExpect(jsonPath("$.warrantyOverridden").doesNotExist());
 
-        mockMvc.perform(get("/api/rmas/history")
-                .param("batchNumber", "LOT-B")
+        mockMvc.perform(get("/api/rmas")
+                .param("query", "LOT-B")
                 .with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(1)))
-            .andExpect(jsonPath("$[0].items", hasSize(2)));
+            .andExpect(jsonPath("$.content", hasSize(1)))
+            .andExpect(jsonPath("$.content[0].items", hasSize(2)));
 
         mockMvc.perform(get("/api/rmas")
-                .param("query", "SKU-RMA-2")
+                .param("query", "SKU-OS-2")
                 .with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.content", hasSize(1)))
@@ -140,7 +141,7 @@ class RmaControllerIntegrationTest {
         Client client = new Client();
         client.setLegalName("Validation client");
         Client savedClient = clientRepository.save(client);
-        Product product = saveProduct("SKU-RMA-VALIDATION", "Validation product", 12);
+        Product product = saveProduct("SKU-OS-VALIDATION", "Validation product", 12);
 
         Map<String, Object> payload = Map.of(
             "clientId", savedClient.getId(),
@@ -191,7 +192,7 @@ class RmaControllerIntegrationTest {
         Client client = new Client();
         client.setLegalName("Date validation client");
         Client savedClient = clientRepository.save(client);
-        Product product = saveProduct("SKU-RMA-DATES", "Date validation product", 12);
+        Product product = saveProduct("SKU-OS-DATES", "Date validation product", 12);
         LocalDate today = LocalDate.now(BUSINESS_ZONE);
 
         Map<String, Object> futureManufacturing = Map.of(
@@ -248,7 +249,7 @@ class RmaControllerIntegrationTest {
         Client client = new Client();
         client.setLegalName("Text limit client");
         Client savedClient = clientRepository.save(client);
-        Product product = saveProduct("SKU-RMA-LIMIT", "Text limit product", 12);
+        Product product = saveProduct("SKU-OS-LIMIT", "Text limit product", 12);
 
         Map<String, Object> payload = Map.of(
             "clientId", savedClient.getId(),
@@ -271,14 +272,14 @@ class RmaControllerIntegrationTest {
     @Test
     void shouldReplaceItemsAndRecalculateWarranty() throws Exception {
         Client client = new Client();
-        client.setLegalName("RMA update client");
+        client.setLegalName("OS update client");
         Client savedClient = clientRepository.save(client);
-        Product originalProduct = saveProduct("SKU-RMA-OLD", "Original product", 24);
-        Product longWarrantyProduct = saveProduct("SKU-RMA-LONG", "Long warranty product", 24);
-        Product shortWarrantyProduct = saveProduct("SKU-RMA-SHORT", "Short warranty product", 12);
+        Product originalProduct = saveProduct("SKU-OS-OLD", "Original product", 24);
+        Product longWarrantyProduct = saveProduct("SKU-OS-LONG", "Long warranty product", 24);
+        Product shortWarrantyProduct = saveProduct("SKU-OS-SHORT", "Short warranty product", 12);
 
         RmaRecord rma = new RmaRecord();
-        rma.setCode("RMA-UPDATE-0001");
+        rma.setCode("OS-UPDATE-0001");
         rma.setClient(savedClient);
         rma.setProduct(originalProduct);
         rma.getItemIdentification().setBatchNumber("OLD-LOT");
@@ -307,38 +308,40 @@ class RmaControllerIntegrationTest {
                 .content(objectMapper.writeValueAsString(payload)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items", hasSize(2)))
-            .andExpect(jsonPath("$.items[0].productId").value(longWarrantyProduct.getId()))
-            .andExpect(jsonPath("$.items[1].productId").value(shortWarrantyProduct.getId()))
-            .andExpect(jsonPath("$.productId").value(longWarrantyProduct.getId()))
-            .andExpect(jsonPath("$.batchNumber").value("NEW-LOT-A"))
+            .andExpect(jsonPath("$.items[0].productSku").value(longWarrantyProduct.getSku()))
+            .andExpect(jsonPath("$.items[1].productSku").value(shortWarrantyProduct.getSku()))
+            .andExpect(jsonPath("$.productId").doesNotExist())
+            .andExpect(jsonPath("$.clientId").doesNotExist())
+            .andExpect(jsonPath("$.shippedAt").doesNotExist())
+            .andExpect(jsonPath("$.items[0].batchNumber").value("NEW-LOT-A"))
             .andExpect(jsonPath("$.items[0].warrantyStatus").value("IN_WARRANTY"))
             .andExpect(jsonPath("$.items[0].warrantyExpiresAt").value("2027-01-01"))
             .andExpect(jsonPath("$.items[1].warrantyStatus").value("OUT_OF_WARRANTY"))
             .andExpect(jsonPath("$.items[1].warrantyExpiresAt").value("2026-01-01"))
             .andExpect(jsonPath("$.warrantyStatus").doesNotExist());
 
-        mockMvc.perform(get("/api/rmas/history")
-                .param("batchNumber", "OLD-LOT")
+        mockMvc.perform(get("/api/rmas")
+                .param("query", "OLD-LOT")
                 .with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(0)));
+            .andExpect(jsonPath("$.content", hasSize(0)));
 
-        mockMvc.perform(get("/api/rmas/history")
-                .param("serialNumber", "NEW-SERIAL-B")
+        mockMvc.perform(get("/api/rmas")
+                .param("query", "NEW-SERIAL-B")
                 .with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(1)));
+            .andExpect(jsonPath("$.content", hasSize(1)));
     }
 
     @Test
     void shouldExposeLegacyRmaAsSingleItem() throws Exception {
         Client client = new Client();
-        client.setLegalName("Legacy RMA client");
+        client.setLegalName("Legacy OS client");
         Client savedClient = clientRepository.save(client);
-        Product product = saveProduct("SKU-RMA-LEGACY", "Legacy product", 12);
+        Product product = saveProduct("SKU-OS-LEGACY", "Legacy product", 12);
 
         RmaRecord rma = new RmaRecord();
-        rma.setCode("RMA-LEGACY-0001");
+        rma.setCode("OS-LEGACY-0001");
         rma.setClient(savedClient);
         rma.setProduct(product);
         rma.getItemIdentification().setSerialNumber("LEGACY-SERIAL");
@@ -353,7 +356,7 @@ class RmaControllerIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items", hasSize(1)))
             .andExpect(jsonPath("$.items[0].id").doesNotExist())
-            .andExpect(jsonPath("$.items[0].productId").value(product.getId()))
+            .andExpect(jsonPath("$.items[0].productSku").value(product.getSku()))
             .andExpect(jsonPath("$.items[0].serialNumber").value("LEGACY-SERIAL"))
             .andExpect(jsonPath("$.items[0].warrantyStatus").value("PENDING"))
             .andExpect(jsonPath("$.warrantyOverridden").doesNotExist());
@@ -449,7 +452,7 @@ class RmaControllerIntegrationTest {
         Product product = saveProduct("ASSIGNMENT-PRODUCT", "Assignment product", 12);
 
         RmaRecord rma = new RmaRecord();
-        rma.setCode("RMA-ASSIGN-0001");
+        rma.setCode("OS-ASSIGN-0001");
         rma.setClient(savedClient);
         rma.setProduct(product);
         rma.getItemIdentification().setSerialNumber("ASSIGN-SERIAL");
@@ -485,8 +488,8 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.assigneeId").value(firstTechnician.getId()))
             .andExpect(jsonPath("$.assigneeName").value("First Technician"))
             .andExpect(jsonPath("$.assignmentHistory", hasSize(1)))
-            .andExpect(jsonPath("$.assignmentHistory[0].previousAssigneeId").doesNotExist())
-            .andExpect(jsonPath("$.assignmentHistory[0].newAssigneeId").value(firstTechnician.getId()))
+            .andExpect(jsonPath("$.assignmentHistory[0].previousAssigneeName").doesNotExist())
+            .andExpect(jsonPath("$.assignmentHistory[0].newAssigneeId").doesNotExist())
             .andExpect(jsonPath("$.assignmentHistory[0].newAssigneeName").value("First Technician"))
             .andExpect(jsonPath("$.assignmentHistory[0].changedBy").value("service.desk"));
 
@@ -496,7 +499,7 @@ class RmaControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"assigneeId\":" + inactiveTechnician.getId() + "}"))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Inactive users cannot be assigned to an RMA."));
+            .andExpect(jsonPath("$.message").value("Usuários inativos não podem ser responsáveis por uma OS."));
 
         mockMvc.perform(patch("/api/rmas/{id}/assignee", savedRma.getId())
                 .with(asProfile("admin", "ADMIN"))
@@ -504,7 +507,7 @@ class RmaControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"assigneeId\":" + serviceUser.getId() + "}"))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Only technicians can be assigned to an RMA."));
+            .andExpect(jsonPath("$.message").value("Somente técnicos podem ser responsáveis por uma OS."));
 
         mockMvc.perform(patch("/api/rmas/{id}/assignee", savedRma.getId())
                 .with(asProfile("admin", "ADMIN"))
@@ -532,18 +535,18 @@ class RmaControllerIntegrationTest {
     }
 
     @Test
-    void shouldExposeSlaAndRestartItAfterPersistedStageChange() throws Exception {
+    void shouldExposeStagePeriodsAndRestartAfterStageChange() throws Exception {
         Client client = new Client();
-        client.setLegalName("SLA client");
+        client.setLegalName("Stage client");
         RmaRecord rma = new RmaRecord();
-        rma.setCode("RMA-SLA-0001");
+        rma.setCode("OS-STAGE-0001");
         rma.setClient(clientRepository.save(client));
-        rma.setProduct(saveProduct("SLA-PRODUCT", "SLA product", 12));
-        rma.getItemIdentification().setSerialNumber("SLA-SERIAL");
+        rma.setProduct(saveProduct("STAGE-PRODUCT", "Stage product", 12));
+        rma.getItemIdentification().setSerialNumber("STAGE-SERIAL");
         rma.setPurchaseDateUnknown(true);
         rma.setEntryDate(LocalDate.now(BUSINESS_ZONE));
         rma.setReceivedBy("Service desk");
-        rma.setReportedFailure("SLA test");
+        rma.setReportedFailure("Stage test");
         RmaStatusHistory history = new RmaStatusHistory();
         history.setStatus(RmaStatus.RECEIVED);
         history.setChangedBy("admin");
@@ -553,69 +556,68 @@ class RmaControllerIntegrationTest {
 
         mockMvc.perform(get("/api/rmas/{id}", id).with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.sla.status").value("OVERDUE"))
-            .andExpect(jsonPath("$.sla.startedAt").value("2020-01-01T10:00:00Z"))
-            .andExpect(jsonPath("$.sla.limitSeconds").value(86400));
+            .andExpect(jsonPath("$.sla").doesNotExist())
+            .andExpect(jsonPath("$.stagePeriods", hasSize(1)))
+            .andExpect(jsonPath("$.stagePeriods[0].status").value("RECEIVED"))
+            .andExpect(jsonPath("$.stagePeriods[0].enteredAt").value("2020-01-01T10:00:00Z"))
+            .andExpect(jsonPath("$.stagePeriods[0].leftAt").doesNotExist())
+            .andExpect(jsonPath("$.deadline.status").value("NO_DUE_DATE"));
         mockMvc.perform(patch("/api/rmas/{id}/status", id).with(asProfile("tech", "TECHNICIAN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"IN_DIAGNOSIS\"}"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.sla.status").value("NORMAL"))
-            .andExpect(jsonPath("$.sla.limitSeconds").value(172800));
-        mockMvc.perform(get("/api/rmas").with(asProfile("viewer", "VIEWER")))
+            .andExpect(jsonPath("$.sla").doesNotExist())
+            .andExpect(jsonPath("$.stagePeriods", hasSize(2)))
+            .andExpect(jsonPath("$.stagePeriods[0].leftAt").exists())
+            .andExpect(jsonPath("$.stagePeriods[1].status").value("IN_DIAGNOSIS"))
+            .andExpect(jsonPath("$.stagePeriods[1].leftAt").doesNotExist());
+        mockMvc.perform(get("/api/rmas/board").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.content[0].sla.status").value("NORMAL"));
+            .andExpect(jsonPath("$[0].stagePeriods[1].status").value("IN_DIAGNOSIS"));
         mockMvc.perform(patch("/api/rmas/{id}/status", id).with(asProfile("tech", "TECHNICIAN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"COMPLETED\"}"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.sla.status").value("CLOSED"))
-            .andExpect(jsonPath("$.sla.elapsedSeconds").value(0))
-            .andExpect(jsonPath("$.sla.dueAt").doesNotExist());
+            .andExpect(jsonPath("$.deadline.status").value("CLOSED"))
+            .andExpect(jsonPath("$.deadline.daysUntilDue").doesNotExist())
+            .andExpect(jsonPath("$.stagePeriods[2].status").value("COMPLETED"))
+            .andExpect(jsonPath("$.sla").doesNotExist());
     }
 
     @Test
-    void shouldAllowAnyBulkStageIncludingBackwardMovesAndKeepHistoryPerRma() throws Exception {
-        Long firstId = saveBulkTestRma("RMA-BULK-0001");
-        Long secondId = saveBulkTestRma("RMA-BULK-0002");
-        String nextStage = "{\"status\":\"TRIAGE\",\"expectedStatus\":\"RECEIVED\",\"note\":\"Triagem em lote\"}";
-
-        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", firstId).with(asProfile("tech", "TECHNICIAN"))
-                .with(csrf()).contentType(MediaType.APPLICATION_JSON).content(nextStage))
+    void diagnosisResponseCarriesOnlyTheFieldsShown() throws Exception {
+        LocalDate today = LocalDate.now(BUSINESS_ZONE);
+        long id = createdId(postDueDateRma("DIAG-MIN", today, null));
+        mockMvc.perform(put("/api/rmas/{id}/diagnosis", id).with(asProfile("tech", "TECHNICIAN")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("foundFailure", "Capacitor", "diagnosedAt", today.toString(), "technicianName", "Tec"))))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.status").value("TRIAGE"))
-            .andExpect(jsonPath("$.statusHistory[0].note").value("Triagem em lote"));
+            .andExpect(jsonPath("$.diagnosis.foundFailure").value("Capacitor"))
+            .andExpect(jsonPath("$.diagnosis.technicianName").value("Tec"))
+            .andExpect(jsonPath("$.diagnosis.id").doesNotExist())
+            .andExpect(jsonPath("$.diagnosis.createdAt").doesNotExist())
+            .andExpect(jsonPath("$.diagnosis.updatedAt").doesNotExist());
+    }
 
-        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", secondId).with(asProfile("service.desk", "SERVICE_DESK"))
-                .with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"status\":\"RETURNED\",\"expectedStatus\":\"RECEIVED\"}"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.status").value("RETURNED"));
+    @Test
+    void shouldExposeDeadlineStatus() throws Exception {
+        LocalDate today = LocalDate.now(BUSINESS_ZONE);
+        long overdue = createdId(postDueDateRma("DEADLINE-LATE", today.minusDays(5), today.minusDays(1)));
+        long soon = createdId(postDueDateRma("DEADLINE-SOON", today, today.plusDays(3)));
+        long none = createdId(postDueDateRma("DEADLINE-NONE", today, null));
 
-        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", firstId).with(asProfile("tech", "TECHNICIAN"))
-                .with(csrf()).contentType(MediaType.APPLICATION_JSON).content(nextStage))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("RMA status changed. Refresh the item before trying again."));
-
-        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", secondId).with(asProfile("tech", "TECHNICIAN"))
-                .with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"status\":\"RECEIVED\",\"expectedStatus\":\"RETURNED\",\"note\":\"Corrigido após movimento por engano\"}"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.status").value("RECEIVED"))
-            .andExpect(jsonPath("$.statusHistory[0].note").value("Corrigido após movimento por engano"));
-
-        mockMvc.perform(get("/api/rmas/{id}", firstId).with(asProfile("viewer", "VIEWER")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.statusHistory", hasSize(1)));
-        mockMvc.perform(get("/api/rmas/{id}", secondId).with(asProfile("viewer", "VIEWER")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("RECEIVED"))
-            .andExpect(jsonPath("$.statusHistory", hasSize(2)));
-
-        mockMvc.perform(patch("/api/rmas/{id}/bulk-status", firstId).with(asProfile("viewer", "VIEWER"))
-                .with(csrf()).contentType(MediaType.APPLICATION_JSON).content(nextStage))
-            .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/rmas/{id}", overdue).with(asProfile("viewer", "VIEWER")))
+            .andExpect(jsonPath("$.deadline.status").value("OVERDUE"))
+            .andExpect(jsonPath("$.deadline.daysUntilDue").doesNotExist())
+            .andExpect(jsonPath("$.deadline.dueSoonFrom").value(today.minusDays(8).toString()));
+        mockMvc.perform(get("/api/rmas/{id}", soon).with(asProfile("viewer", "VIEWER")))
+            .andExpect(jsonPath("$.deadline.status").value("DUE_SOON"));
+        mockMvc.perform(get("/api/rmas/{id}", none).with(asProfile("viewer", "VIEWER")))
+            .andExpect(jsonPath("$.deadline.status").value("NO_DUE_DATE"))
+            .andExpect(jsonPath("$.deadline.dueSoonFrom").doesNotExist());
     }
 
     @Test
     void shouldRecordPriorityHistoryAndRestrictWhoCanChangeIt() throws Exception {
-        Long id = saveBulkTestRma("RMA-BULK-PRIORITY");
+        Long id = saveTestRma("OS-BULK-PRIORITY");
         mockMvc.perform(put("/api/rmas/{id}", id).with(asProfile("tech", "TECHNICIAN"))
                 .with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"priority\":\"HIGH\"}"))
             .andExpect(status().isForbidden());
@@ -626,7 +628,129 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.statusHistory[0].note").value("Priority changed from MEDIUM to HIGH"));
     }
 
-    private Long saveBulkTestRma(String code) {
+    @Test
+    void shouldCreateWithOptionalDueDateAndRecordIt() throws Exception {
+        LocalDate entry = LocalDate.now(BUSINESS_ZONE);
+        String created = postDueDateRma("DUE-CREATE", entry, entry.plusDays(10))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.dueDate").value(entry.plusDays(10).toString()))
+            .andExpect(jsonPath("$.dueDateHistory", hasSize(1)))
+            .andExpect(jsonPath("$.dueDateHistory[0].previousDueDate").doesNotExist())
+            .andExpect(jsonPath("$.dueDateHistory[0].newDueDate").value(entry.plusDays(10).toString()))
+            .andExpect(jsonPath("$.dueDateHistory[0].changedBy").value("admin"))
+            .andExpect(jsonPath("$.dueDateHistory[0].changedAt").exists())
+            .andReturn().getResponse().getContentAsString();
+        mockMvc.perform(get("/api/rmas/{id}", objectMapper.readTree(created).get("id").asLong()).with(asProfile("viewer", "VIEWER")))
+            .andExpect(jsonPath("$.dueDate").value(entry.plusDays(10).toString()));
+
+        postDueDateRma("DUE-NONE", entry, null)
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.dueDate").doesNotExist())
+            .andExpect(jsonPath("$.dueDateHistory", hasSize(0)));
+    }
+
+    @Test
+    void shouldChangeAndClearDueDateWithHistory() throws Exception {
+        LocalDate entry = LocalDate.now(BUSINESS_ZONE);
+        LocalDate first = entry.plusDays(5);
+        LocalDate second = entry.plusDays(9);
+        long id = createdId(postDueDateRma("DUE-EDIT", entry, first));
+
+        putJson(id, "{\"dueDate\":\"" + second + "\"}").andExpect(status().isOk())
+            .andExpect(jsonPath("$.dueDate").value(second.toString()))
+            .andExpect(jsonPath("$.dueDateHistory", hasSize(2)));
+        putJson(id, "{\"dueDate\":\"" + second + "\"}").andExpect(status().isOk())
+            .andExpect(jsonPath("$.dueDateHistory", hasSize(2)));
+        putJson(id, "{\"invoiceNumber\":\"NF-9\"}").andExpect(status().isOk())
+            .andExpect(jsonPath("$.dueDate").value(second.toString()))
+            .andExpect(jsonPath("$.dueDateHistory", hasSize(2)));
+        putJson(id, "{\"clearDueDate\":true}").andExpect(status().isOk())
+            .andExpect(jsonPath("$.dueDate").doesNotExist())
+            .andExpect(jsonPath("$.dueDateHistory", hasSize(3)))
+            .andExpect(jsonPath("$.dueDateHistory[0].previousDueDate").value(second.toString()))
+            .andExpect(jsonPath("$.dueDateHistory[0].newDueDate").doesNotExist())
+            .andExpect(jsonPath("$.dueDateHistory[0].changedBy").value("admin"))
+            .andExpect(jsonPath("$.dueDateHistory[1].previousDueDate").value(first.toString()))
+            .andExpect(jsonPath("$.dueDateHistory[1].newDueDate").value(second.toString()));
+        putJson(id, "{\"clearDueDate\":true}").andExpect(status().isOk())
+            .andExpect(jsonPath("$.dueDateHistory", hasSize(3)));
+    }
+
+    @Test
+    void shouldRejectDueDateAndClearTogether() throws Exception {
+        LocalDate entry = LocalDate.now(BUSINESS_ZONE);
+        long id = createdId(postDueDateRma("DUE-BOTH", entry, null));
+
+        putJson(id, "{\"dueDate\":\"" + entry.plusDays(2) + "\",\"clearDueDate\":true}")
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Provide a due date or clear it, not both."));
+    }
+
+    @Test
+    void shouldRejectDueDateBeforeEntryDate() throws Exception {
+        LocalDate entry = LocalDate.now(BUSINESS_ZONE);
+        postDueDateRma("DUE-BEFORE", entry, entry.minusDays(1))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Due date cannot be before entry date."));
+
+        long id = createdId(postDueDateRma("DUE-BEFORE-2", entry, null));
+        putJson(id, "{\"dueDate\":\"" + entry.minusDays(1) + "\"}")
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Due date cannot be before entry date."));
+        // A past due date is accepted when it is not before the entry date.
+        putJson(id, "{\"entryDate\":\"" + entry.minusDays(20) + "\",\"dueDate\":\"" + entry.minusDays(3) + "\"}")
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.dueDate").value(entry.minusDays(3).toString()));
+    }
+
+    @Test
+    void shouldRejectEntryDateAfterExistingDueDate() throws Exception {
+        LocalDate entry = LocalDate.now(BUSINESS_ZONE).minusDays(10);
+        long id = createdId(postDueDateRma("DUE-ENTRY", entry, entry.plusDays(2)));
+
+        putJson(id, "{\"entryDate\":\"" + entry.plusDays(3) + "\"}")
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Due date cannot be before entry date."));
+    }
+
+    @Test
+    void shouldRequireEditPermissionToChangeDueDate() throws Exception {
+        LocalDate entry = LocalDate.now(BUSINESS_ZONE);
+        long id = createdId(postDueDateRma("DUE-PERM", entry, null));
+
+        mockMvc.perform(put("/api/rmas/{id}", id).with(asProfile("viewer", "VIEWER")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"dueDate\":\"" + entry.plusDays(1) + "\"}"))
+            .andExpect(status().isForbidden());
+        assertEquals(null, rmaRecordRepository.findById(id).orElseThrow().getDueDate());
+    }
+
+    private org.springframework.test.web.servlet.ResultActions postDueDateRma(String sku, LocalDate entry, LocalDate dueDate) throws Exception {
+        Client client = new Client();
+        client.setLegalName("Due date client " + sku);
+        Client savedClient = clientRepository.save(client);
+        Product product = saveProduct(sku, "Due date product", 12);
+        Map<String, Object> payload = new java.util.HashMap<>(Map.of(
+            "clientId", savedClient.getId(),
+            "items", List.of(Map.of("productId", product.getId(), "serialNumber", sku)),
+            "purchaseDateUnknown", true,
+            "entryDate", entry.toString(),
+            "reportedFailure", "Não liga"
+        ));
+        if (dueDate != null) payload.put("dueDate", dueDate.toString());
+        return mockMvc.perform(post("/api/rmas").with(asProfile("admin", "ADMIN")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(payload)));
+    }
+
+    private org.springframework.test.web.servlet.ResultActions putJson(long id, String body) throws Exception {
+        return mockMvc.perform(put("/api/rmas/{id}", id).with(asProfile("admin", "ADMIN")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    private long createdId(org.springframework.test.web.servlet.ResultActions result) throws Exception {
+        return objectMapper.readTree(result.andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asLong();
+    }
+
+    private Long saveTestRma(String code) {
         Client client = new Client();
         client.setLegalName("Bulk test client " + code);
         RmaRecord rma = new RmaRecord();

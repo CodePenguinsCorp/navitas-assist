@@ -46,7 +46,7 @@ function Resolve-ServiceSelection {
     }
 
     if ($DatabaseOnly) {
-        $selectedServices += "mysql"
+        $selectedServices += "postgres"
     }
 
     if ($selectedServices.Count -gt 1) {
@@ -54,7 +54,7 @@ function Resolve-ServiceSelection {
     }
 
     if ($selectedServices.Count -eq 0) {
-        return @("mysql", "backend", "frontend")
+        return @("postgres", "backend", "frontend")
     }
 
     return @($selectedServices)
@@ -186,9 +186,9 @@ $restartWholeStack = -not ($BackendOnly -or $FrontendOnly -or $DatabaseOnly)
 
 $frontendPort = Get-ConfiguredValue -Settings $settings -Key "FRONTEND_PORT" -DefaultValue "4200"
 $backendPort = Get-ConfiguredValue -Settings $settings -Key "BACKEND_PORT" -DefaultValue "8080"
-$mysqlPort = Get-ConfiguredValue -Settings $settings -Key "MYSQL_PORT" -DefaultValue "3306"
-$mysqlDatabase = Get-ConfiguredValue -Settings $settings -Key "MYSQL_DATABASE" -DefaultValue "navitas_assist"
-$mysqlUser = Get-ConfiguredValue -Settings $settings -Key "MYSQL_USER" -DefaultValue "navitas_app"
+$postgresPort = Get-ConfiguredValue -Settings $settings -Key "POSTGRES_PORT" -DefaultValue "5432"
+$postgresDatabase = Get-ConfiguredValue -Settings $settings -Key "POSTGRES_DB" -DefaultValue "navitas_assist"
+$postgresUser = Get-ConfiguredValue -Settings $settings -Key "POSTGRES_USER" -DefaultValue "navitas_app"
 $healthUrl = "http://localhost:$backendPort/health"
 
 Restart-ExistingServices -Services $services -RestartWholeStack $restartWholeStack
@@ -211,9 +211,9 @@ Write-Host ""
 if ($DatabaseOnly) {
     Write-Host "Banco Docker em execucao:" -ForegroundColor Cyan
     Write-Host "Host:     127.0.0.1"
-    Write-Host "Porta:    $mysqlPort"
-    Write-Host "Banco:    $mysqlDatabase"
-    Write-Host "Usuario:  $mysqlUser"
+    Write-Host "Porta:    $postgresPort"
+    Write-Host "Banco:    $postgresDatabase"
+    Write-Host "Usuario:  $postgresUser"
     Write-Host ""
     Write-Host "Proximo passo: rode o backend manualmente ou use .\run-local.ps1 para subir a stack completa." -ForegroundColor DarkGray
     Write-Host "Parar banco: .\stop-local.ps1 -DatabaseOnly" -ForegroundColor DarkGray
@@ -225,7 +225,7 @@ if ($BackendOnly) {
     Write-Host "Backend:  http://localhost:$backendPort"
     Write-Host "API:      http://localhost:$backendPort/api"
     Write-Host "Health:   $healthUrl"
-    Write-Host "Banco:    127.0.0.1:$mysqlPort ($mysqlDatabase)"
+    Write-Host "Banco:    127.0.0.1:$postgresPort ($postgresDatabase)"
     Write-Host ""
     Write-Host "Parar backend: .\stop-local.ps1 -BackendOnly" -ForegroundColor DarkGray
     return
@@ -239,9 +239,9 @@ Write-Host "Health:   $healthUrl"
 Write-Host ""
 Write-Host "Banco Docker:" -ForegroundColor Cyan
 Write-Host "Host:     127.0.0.1"
-Write-Host "Porta:    $mysqlPort"
-Write-Host "Banco:    $mysqlDatabase"
-Write-Host "Usuario:  $mysqlUser"
+Write-Host "Porta:    $postgresPort"
+Write-Host "Banco:    $postgresDatabase"
+Write-Host "Usuario:  $postgresUser"
 Write-Host ""
 Write-Host "Se voce alterou codigo do backend/frontend, rode com rebuild: .\run-local.ps1 -Build" -ForegroundColor DarkGray
 if ($FrontendOnly) {

@@ -1,22 +1,23 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { RmaResponse } from '../../core/models';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { blockDateTime, blockDuration } from '../../core/utils/rma-block';
 
 @Component({
   selector: 'app-rma-block-history',
   template: `
-    <section class="summary-block block-history" aria-label="Impedimentos do RMA">
-      <h3>Impedimentos</h3>
-      @if (rma().currentBlock; as block) {
-        <div class="block-history__current">
-          <strong>Bloqueado há {{ duration(block, clock.now()) }}</strong>
-          <p>{{ block.reason }}</p>
-        </div>
-      } @else {
-        <p class="block-history__state">Sem bloqueio atual.</p>
+    <section class="summary-block block-history" [class.block-history--previous]="previousOnly()" [attr.aria-label]="previousOnly() ? 'Impedimentos anteriores' : 'Impedimentos da OS'">
+      @if (!previousOnly()) {
+        <h3>Impedimentos</h3>
+        @if (rma().currentBlock; as block) {
+          <div class="block-history__current">
+            <strong>Impedida há {{ duration(block, clock.now()) }}</strong>
+            <p>{{ block.reason }}</p>
+          </div>
+        } @else {
+          <p class="block-history__state">Sem bloqueio atual.</p>
+        }
       }
-      <p class="block-history__hint">O período bloqueado continua contando no SLA.</p>
       @if (history().length === 0) {
         <p class="block-history__state">Nenhum impedimento registrado.</p>
       } @else {
@@ -52,14 +53,15 @@ import { blockDateTime, blockDuration } from '../../core/utils/rma-block';
     .block-history p { margin: 0; }
     .block-history__current { display: grid; gap: 0.2rem; padding: 0.7rem 0.85rem; border-radius: var(--radius-sm); background: var(--danger-bg); color: var(--danger-text); }
     .block-history__state { color: var(--text); }
-    .block-history__hint { color: var(--muted); font-size: 0.88rem; }
     .block-history__wide { grid-column: 1 / -1; }
   `]
 })
 export class RmaBlockHistoryComponent {
   readonly rma = input.required<RmaResponse>();
-  protected readonly clock = inject(SlaClockService);
+  /** Only the resolved episodes, without title, current block or hint (the detail shows those). */
+  readonly previousOnly = input(false);
+  protected readonly clock = inject(ClockService);
   protected readonly duration = blockDuration;
   protected readonly dateTime = blockDateTime;
-  protected readonly history = computed(() => [...this.rma().blockHistory].sort((a, b) => Date.parse(b.blockedAt) - Date.parse(a.blockedAt) || b.id - a.id));
+  protected readonly history = computed(() => this.rma().blockHistory.filter((block) => !this.previousOnly() || block.resolvedAt !== null).sort((a, b) => Date.parse(b.blockedAt) - Date.parse(a.blockedAt) || b.id - a.id));
 }

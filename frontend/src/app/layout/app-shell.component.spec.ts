@@ -9,9 +9,7 @@ import { LegacyProfileCode, profilePermissions } from '../testing/permission-fix
 import { AppShellComponent } from './app-shell.component';
 
 const AUTH_USER: AuthUserResponse = {
-  id: 1, username: 'admin', fullName: 'Administrador', profile: { id: 1, name: 'Administrador' }, extraPermissions: [],
-  permissions: ['rma.ver'], active: true,
-  createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+  username: 'admin', fullName: 'Administrador', profileName: 'Administrador', permissions: ['rma.ver']
 };
 
 describe('AppShellComponent logout', () => {
@@ -194,10 +192,10 @@ describe('AppShellComponent menu by permission', () => {
     ]));
   }
 
-  const operation = ['Dashboard', 'RMAs', 'Kanban', 'Notificações', 'Peças'];
+  const operation = ['Dashboard', 'Ordens de serviço', 'Kanban', 'Notificações', 'Peças'];
 
   it.each([
-    ['ADMIN', { 'Operação': operation, Cadastros: ['Clientes', 'Produtos', 'Protocolos', 'Usuários', 'Perfis'], 'Relatórios': ['Relatórios'] }],
+    ['ADMIN', { 'Operação': operation, Cadastros: ['Clientes', 'Produtos', 'Protocolos', 'Usuários', 'Perfis', 'Auditoria'], 'Relatórios': ['Relatórios'] }],
     ['SERVICE_DESK', { 'Operação': operation, Cadastros: ['Clientes', 'Produtos'] }],
     ['TECHNICIAN', { 'Operação': operation, 'Relatórios': ['Relatórios'] }],
     ['VIEWER', { 'Operação': operation, 'Relatórios': ['Relatórios'] }],
@@ -214,8 +212,24 @@ describe('AppShellComponent menu by permission', () => {
   });
 
   it('shows the profile name in the sidebar footer', async () => {
-    const page = await render({ profile: { id: 9, name: 'Suporte N1' } });
+    const page = await render({ profileName: 'Suporte N1' });
 
     expect(page.querySelector('.sidebar-user__meta span')?.textContent?.trim()).toBe('Suporte N1');
+  });
+
+  it('keeps the sidebar fixed and only lets the menu list scroll, with its scrollbar hidden', async () => {
+    const fsModule = 'node:fs';
+    const { readFileSync } = await import(/* @vite-ignore */ fsModule);
+    const css: string = readFileSync('src/styles.css', 'utf8');
+    const rule = (selector: string): string => {
+      const start = css.indexOf(`${String.fromCharCode(10)}${selector} {`);
+      return start < 0 ? '' : css.slice(start, css.indexOf('}', start));
+    };
+
+    expect(rule('.shell-sidebar')).toMatch(/overflow:\s*hidden/);
+    expect(rule('.shell-sidebar')).not.toMatch(/overflow-y:\s*auto/);
+    expect(rule('.nav-groups')).toMatch(/overflow-y:\s*auto/);
+    expect(rule('.nav-groups')).toMatch(/scrollbar-width:\s*none/);
+    expect(css).toMatch(/\.nav-groups::-webkit-scrollbar\s*\{\s*display:\s*none/);
   });
 });

@@ -22,7 +22,7 @@ import { UsersComponent } from './users.component';
 function user(id: number, fullName: string): UserAccountResponse {
   return {
     id, username: `user${id}`, fullName, profile: { id: 3, name: 'Técnico' }, extraPermissions: [], active: true,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+    updatedAt: '2026-10-20T12:00:00Z'
   };
 }
 
@@ -46,7 +46,7 @@ describe('UsersComponent pagination', () => {
         { provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }), refreshSession: () => of(null) } },
         { provide: CatalogService, useValue: {
           listUsers,
-          getUserSummary: () => of({ total: 45, active: 40, admins: 3, roles: 4 }),
+          getUserSummary: () => of({ total: 45 }),
           deleteUser: () => of(undefined)
         } }
       ]
@@ -117,7 +117,7 @@ describe('UsersComponent collection layout and states', () => {
         { provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }), refreshSession: () => of(null) } },
         { provide: CatalogService, useValue: {
           listUsers,
-          getUserSummary: options.summary ?? (() => of({ total: 45, active: 40, admins: 3, roles: 4 })),
+          getUserSummary: options.summary ?? (() => of({ total: 45 })),
           deleteUser,
           createUser: () => of(user(9, 'Novo')),
           updateUser: () => of(ana)
@@ -245,7 +245,7 @@ describe('UsersComponent collection layout and states', () => {
     const sections = Array.from(dialog.querySelectorAll('fieldset.form-section'));
     expect(sections.map((section) => section.querySelector('legend')?.textContent?.trim())).toEqual(['Identidade', 'Acesso', 'Permissões extras', 'Senha']);
     const controlsIn = (section: Element) => Array.from(section.querySelectorAll('[formControlName]')).map((node) => node.getAttribute('formControlName'));
-    expect(controlsIn(sections[0])).toEqual(['fullName', 'username']);
+    expect(controlsIn(sections[0])).toEqual(['fullName', 'username', 'email']);
     expect(controlsIn(sections[1])).toEqual(['profileId', 'active']);
     expect(controlsIn(sections[2])).toEqual([]);
     expect(controlsIn(sections[3])).toEqual(['password']);

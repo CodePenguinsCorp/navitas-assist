@@ -1,6 +1,9 @@
-<div class="summary-block">
-  <strong>Peças</strong>
-
+<div class="parts-panel">
+<section class="detail-card">
+  <app-collapsible-section title="Peças" icon="chip" storageKey="rma.parts">
+    @if (canCreateReservation()) {
+      <button sectionActions type="button" id="reserve-trigger" class="link-button" [attr.aria-expanded]="reserveOpen()" aria-controls="reserve-form" (click)="toggleReserve()"><app-icon name="plus" [size]="14" /> Reservar peça</button>
+    }
   @if (loadFailed()) {
     <div class="alert-banner alert-banner--error parts-load-error" role="alert">
       <strong>{{ loadErrorMessage() }}</strong>
@@ -10,17 +13,11 @@
   } @else if (loading() || !hasLoaded()) {
     <div class="rma-detail-copy" aria-busy="true"></div>
   } @else {
-    @if (parts(); as rmaParts) {
-      <p class="parts-summary">
-        <span>Reservas ativas: {{ activeCount() }}</span>
-        <span aria-hidden="true">·</span>
-        <span>Consumidas: {{ consumedCount() }}</span>
-        <span aria-hidden="true">·</span>
-        <span>Pendentes: {{ rmaParts.pendingCount }}</span>
-      </p>
-      <dl class="meta-list parts-costs">
-        <div><dt>Custo consumido no RMA</dt><dd>{{ currency(rmaParts.consumedCost) }}</dd></div>
-        <div><dt>Custo reservado no RMA</dt><dd>{{ currency(rmaParts.reservedCost) }}</dd></div>
+    @if (stats().length > 0) {
+      <dl class="parts-stats" aria-label="Resumo das peças da OS">
+        @for (stat of stats(); track stat.label) {
+          <div><dt>{{ stat.label }}</dt><dd>{{ stat.value }}</dd></div>
+        }
       </dl>
     }
 
@@ -31,8 +28,50 @@
       <p class="muted-inline" role="status">{{ successMessage() }}</p>
     }
 
+    @if (canCreateReservation() && reserveOpen()) {
+      <form id="reserve-form" class="repair-form" [formGroup]="reserveForm" (ngSubmit)="reserve()" (keydown.escape)="$event.stopPropagation(); closeReserve(true)" novalidate>
+        @if (catalogLoadFailed()) {
+          <div class="alert-banner alert-banner--error parts-load-error field-group--full" role="alert">
+            <strong>{{ catalogLoadErrorMessage() }}</strong>
+            <button type="button" class="button-secondary button-secondary--small" [disabled]="catalogLoading()" (click)="retryCatalog()">Tentar novamente</button>
+            @if (catalogLoading()) { <div aria-busy="true"></div> }
+          </div>
+        } @else if (catalogHasLoaded() && partOptions().length === 0) {
+          <p class="repair-empty field-group--full">Nenhuma peça ativa disponível</p>
+        }
+        <label class="field-group">
+          <span>Peça</span>
+          <app-custom-select ariaLabel="Peça para reservar" [placeholder]="catalogHasLoaded() ? 'Selecione a peça' : 'Carregando opções...'" [options]="partOptions()" formControlName="partId"
+            [ariaInvalid]="hasError(reserveForm.controls.partId)" [ariaDescribedBy]="hasError(reserveForm.controls.partId) ? 'reserve-part-error' : null" />
+          @if (hasError(reserveForm.controls.partId)) {
+            <small id="reserve-part-error" class="field-error" role="alert">Selecione a peça.</small>
+          }
+        </label>
+        <label class="field-group">
+          <span>Quantidade @if (selectedPart(); as part) { ({{ part.unit }}) }</span>
+          <input type="number" min="0.001" step="any" formControlName="quantity"
+            [attr.aria-invalid]="hasError(reserveForm.controls.quantity) ? 'true' : null" [attr.aria-describedby]="hasError(reserveForm.controls.quantity) ? 'reserve-quantity-error' : null" />
+          @if (hasError(reserveForm.controls.quantity)) {
+            <small id="reserve-quantity-error" class="field-error" role="alert">Informe uma quantidade de pelo menos 0,001.</small>
+          }
+        </label>
+        <label class="field-group">
+          <span>Observação</span>
+          <input type="text" maxlength="255" formControlName="note"
+            [attr.aria-invalid]="hasError(reserveForm.controls.note) ? 'true' : null" [attr.aria-describedby]="hasError(reserveForm.controls.note) ? 'reserve-note-error' : null" />
+          @if (hasError(reserveForm.controls.note)) {
+            <small id="reserve-note-error" class="field-error" role="alert">Use até 255 caracteres.</small>
+          }
+        </label>
+        <div class="form-actions form-actions--full repair-actions">
+          <button type="button" class="button-secondary" [disabled]="submitting()" (click)="closeReserve(true)">Cancelar</button>
+          <button type="submit" class="button-primary" [disabled]="submitting() || !catalogHasLoaded() || catalogLoadFailed()">{{ submitting() ? 'Reservando...' : 'Reservar' }}</button>
+        </div>
+      </form>
+    }
+
     @if (reservations().length === 0) {
-      <p class="rma-detail-copy">Nenhuma peça reservada para este RMA.</p>
+      <p class="repair-empty">Nenhuma peça reservada</p>
     } @else {
       <div class="parts-list">
         @for (reservation of reservations(); track reservation.id) {
@@ -45,7 +84,9 @@
               <dl class="meta-list">
                 <div><dt>Quantidade</dt><dd>{{ quantity(reservation.quantity, reservation.unit) }}</dd></div>
                 <div><dt>Disponível</dt><dd>{{ quantity(reservation.partAvailable, reservation.unit) }}</dd></div>
-                <div><dt>Custo da reserva</dt><dd>{{ currency(reservation.totalCost) }}</dd></div>
+                @if (canSeeCosts()) {
+                  <div><dt>Custo da reserva</dt><dd>{{ currency(reservation.totalCost ?? 0) }}</dd></div>
+                }
                 @if (reservation.location) {
                   <div><dt>Local</dt><dd>{{ reservation.location }}</dd></div>
                 }
@@ -58,7 +99,7 @@
             @if (canReserve()) {
               <div class="parts-item__actions">
                 @if (reservation.status === 'ACTIVE' && !isClosed()) {
-                  <button type="button" class="button-secondary button-secondary--small" (click)="runAction(reservation, 'consume')" [disabled]="busyReservationId() !== null">Consumir</button>
+                  <button type="button" class="button-secondary button-secondary--small" (click)="startConsumption(reservation)" [disabled]="busyReservationId() !== null">Aplicar</button>
                 }
                 @if (reservation.status === 'PENDING' && !isClosed()) {
                   <button type="button" class="button-secondary button-secondary--small" (click)="runAction(reservation, 'allocate')" [disabled]="busyReservationId() !== null">Efetivar reserva</button>
@@ -73,64 +114,96 @@
       </div>
     }
 
-    @if (canCreateReservation()) {
-      <form class="form-grid parts-reserve-form"[formGroup]="reserveForm" (ngSubmit)="reserve()">
-        <fieldset class="form-section">
-          <legend>Reservar peças</legend>
-          @if (catalogLoadFailed()) {
-            <div class="alert-banner alert-banner--error parts-load-error field-group--full" role="alert">
-              <strong>{{ catalogLoadErrorMessage() }}</strong>
-              <button type="button" class="button-secondary button-secondary--small" [disabled]="catalogLoading()" (click)="retryCatalog()">Tentar novamente</button>
-              @if (catalogLoading()) { <div aria-busy="true"></div> }
-            </div>
-          } @else if (catalogHasLoaded() && partOptions().length === 0) {
-            <p class="rma-detail-copy field-group--full">Nenhuma peça ativa disponível para reserva.</p>
-          }
-          <label class="field-group">
-            <span>Peça</span>
-            <app-custom-select ariaLabel="Peça para reservar" [placeholder]="catalogHasLoaded() ? 'Selecione a peça' : 'Carregando opções...'" [options]="partOptions()" formControlName="partId"
-              [ariaInvalid]="hasError(reserveForm.controls.partId)" [ariaDescribedBy]="hasError(reserveForm.controls.partId) ? 'reserve-part-error' : null" />
-            @if (hasError(reserveForm.controls.partId)) {
-              <small id="reserve-part-error" class="field-error" role="alert">Selecione a peça.</small>
-            }
+    @if (consuming(); as reservation) {
+      @if (canCreateReservation()) {
+        <form class="repair-form" [formGroup]="consumptionForm" (ngSubmit)="confirmConsumption()" (keydown.escape)="$event.stopPropagation(); consuming.set(null)" novalidate>
+          <strong class="field-group--full">Aplicar {{ reservation.partCode }} · {{ reservation.partName }}</strong>
+          <label class="field-group field-group--full"><span>Motivo da troca</span><textarea rows="2" maxlength="1000" formControlName="replacementReason" [attr.aria-invalid]="hasError(consumptionForm.controls.replacementReason) ? 'true' : null"></textarea>
+            @if (hasError(consumptionForm.controls.replacementReason)) { <small class="field-error" role="alert">Informe o motivo da troca</small> }
           </label>
-          <label class="field-group">
-            <span>Quantidade @if (selectedPart(); as part) { ({{ part.unit }}) }</span>
-            <input type="number" min="0.001" step="any" formControlName="quantity"
-              [attr.aria-invalid]="hasError(reserveForm.controls.quantity) ? 'true' : null" [attr.aria-describedby]="hasError(reserveForm.controls.quantity) ? 'reserve-quantity-error' : null" />
-            @if (hasError(reserveForm.controls.quantity)) {
-              <small id="reserve-quantity-error" class="field-error" role="alert">Informe uma quantidade de pelo menos 0,001.</small>
-            }
-          </label>
-          <label class="field-group field-group--full">
-            <span>Observação</span>
-            <input type="text" maxlength="255" formControlName="note"
-              [attr.aria-invalid]="hasError(reserveForm.controls.note) ? 'true' : null" [attr.aria-describedby]="hasError(reserveForm.controls.note) ? 'reserve-note-error' : null" />
-            @if (hasError(reserveForm.controls.note)) {
-              <small id="reserve-note-error" class="field-error" role="alert">Use até 255 caracteres.</small>
-            }
-          </label>
-        </fieldset>
-        <div class="form-actions form-actions--full">
-          <button type="submit" class="button-primary" [disabled]="submitting() || !catalogHasLoaded() || catalogLoadFailed()">{{ submitting() ? 'Reservando...' : 'Reservar' }}</button>
-        </div>
-      </form>
+          <label class="field-group"><span>Lote do componente (opcional)</span><input maxlength="120" formControlName="componentBatch" /></label>
+          <div class="form-actions form-actions--full repair-actions"><button type="button" class="button-secondary" [disabled]="busyReservationId() !== null" (click)="consuming.set(null)">Cancelar</button><button type="submit" class="button-primary" [disabled]="busyReservationId() !== null">Confirmar</button></div>
+        </form>
+      }
     }
 
-    @if (parts()?.movements?.length) {
-      <details class="parts-history">
-        <summary>Histórico de movimentos de peças</summary>
-        <ul>
-          @for (movement of parts()!.movements; track movement.id) {
-            <li>
-              {{ dateTime(movement.createdAt) }} · {{ movementLabels[movement.type] }} · {{ movement.partCode }} ·
-              {{ quantity(movement.quantity) }} · {{ movement.createdBy }}
-              @if (movement.reversed) { · estornado }
-              @if (movement.reason) { · {{ movement.reason }} }
-            </li>
-          }
-        </ul>
-      </details>
     }
+  </app-collapsible-section>
+</section>
+
+@if (hasLoaded() && !loading() && !loadFailed()) {
+<section class="repair-panel detail-card">
+  <app-collapsible-section title="Componentes trocados" icon="wrench" storageKey="rma.components">
+      @if (canCreateReservation()) {
+        <button sectionActions type="button" id="external-trigger" class="link-button" [attr.aria-expanded]="externalOpen() && !editingExternal()" aria-controls="external-form" (click)="toggleExternal()"><app-icon name="plus" [size]="14" /> Adicionar fora do estoque</button>
+      }
+      @if (externalError()) { <p class="field-error" role="alert">{{ externalError() }}</p><button type="button" class="button-secondary button-secondary--small" (click)="loadExternal()">Tentar novamente</button> }
+      @if (canCreateReservation() && externalOpen() && !editingExternal()) { <ng-container [ngTemplateOutlet]="externalEditor" /> }
+      @for (component of replacedComponents(); track component.key) {
+        <div class="repair-entry">
+          <div class="repair-line">
+            <strong class="repair-line__title" [class.repair-voided]="!!component.voidedAt">@if (component.code) { {{ component.code }} · }{{ component.description }}</strong>
+            <small class="repair-line__meta">{{ quantity(component.quantity, component.unit) }} · {{ component.source }}</small>
+            <button type="button" class="repair-line__desc" [class.is-expanded]="expandedKeys().has(component.key)" [attr.aria-expanded]="expandedKeys().has(component.key)" [title]="component.replacementReason || 'Motivo não registrado'" (click)="toggleExpanded(component.key)">{{ component.replacementReason || 'Motivo não registrado' }}</button>
+            @if (component.external && canCreateReservation() && !component.voidedAt) {
+              <span class="repair-row-actions">
+                <button appRowAction icon="pencil" label="Editar" [target]="component.description" [disabled]="externalSaving()" (click)="editExternal(component)"></button>
+                <button appRowAction icon="close" label="Anular" tone="danger" [target]="component.description" [disabled]="externalSaving()" (click)="startVoidExternal(component)"></button>
+              </span>
+            }
+          </div>
+          @if (component.componentBatch || component.appliedAt) {
+            <small class="repair-note">@if (component.componentBatch) { Lote: {{ component.componentBatch }} }@if (component.componentBatch && component.appliedAt) { · }@if (component.appliedAt) { {{ dateTime(component.appliedAt) }} · {{ component.appliedBy }} }</small>
+          }
+          @if (component.voidedAt) { <small class="repair-note">Anulado: {{ component.voidReason }} · {{ component.voidedBy }}</small> }
+          @if (component.external && voidingExternal()?.id === component.id && canCreateReservation()) {
+            <div class="repair-inline">
+              <label class="field-group"><span>Motivo da anulação</span><textarea [formControl]="voidReason" rows="2" maxlength="1000"></textarea></label>
+              @if (voidReason.invalid && voidReason.touched) { <p class="field-error" role="alert">Informe um motivo de até 1000 caracteres.</p> }
+              <div class="form-actions repair-actions"><button type="button" class="button-secondary" [disabled]="externalSaving()" (click)="voidingExternal.set(null)">Cancelar</button><button type="button" class="button-primary" [disabled]="externalSaving()" (click)="confirmVoidExternal()">Anular</button></div>
+            </div>
+          }
+          @if (component.external && editingExternal()?.id === component.id && canCreateReservation()) { <ng-container [ngTemplateOutlet]="externalEditor" /> }
+        </div>
+      } @empty { @if (!externalOpen()) { <p class="repair-empty">Nenhum componente trocado</p> } }
+  </app-collapsible-section>
+</section>
+
+@if (parts()?.movements?.length) {
+<section class="detail-card">
+  <app-collapsible-section title="Movimentos de peças" icon="history" [count]="parts()!.movements.length" [open]="false" storageKey="rma.part-movements">
+    <ul class="movements__list" id="parts-movements">
+      @for (movement of parts()!.movements; track movement.id) {
+        <li [class.is-reversed]="movement.reversed">
+          <time class="movements__date">{{ dateTime(movement.createdAt) }}</time>
+          <span class="mini-chip movements__type">{{ movementChip(movement.type) }}</span>
+          <span class="code-text movements__part">{{ movement.partCode }}</span>
+          <span class="movements__qty">{{ quantity(movement.quantity) }}</span>
+          <span class="movements__user">{{ movement.createdBy }}</span>
+          <span class="movements__note" [title]="movementNote(movement)">{{ movementNote(movement) }}</span>
+        </li>
+      }
+    </ul>
+  </app-collapsible-section>
+</section>
+}
   }
 </div>
+
+<ng-template #externalEditor>
+  <form id="external-form" class="repair-form" [formGroup]="externalForm" (ngSubmit)="saveExternal()" (keydown.escape)="$event.stopPropagation(); closeExternal(true)" novalidate>
+    <label class="field-group"><span>Código (opcional)</span><input maxlength="60" formControlName="code" /></label>
+    <label class="field-group"><span>Descrição</span><input maxlength="120" formControlName="description" [attr.aria-invalid]="hasError(externalForm.controls.description) ? 'true' : null" />
+      @if (hasError(externalForm.controls.description)) { <small class="field-error" role="alert">Informe a descrição</small> }
+    </label>
+    <label class="field-group"><span>Quantidade</span><input type="number" min="0.001" max="999999999.999" step="0.001" placeholder="1" formControlName="quantity" [attr.aria-invalid]="hasError(externalForm.controls.quantity) ? 'true' : null" />
+      @if (hasError(externalForm.controls.quantity)) { <small class="field-error" role="alert">Informe a quantidade (maior que 0, até 3 casas)</small> }
+    </label>
+    <label class="field-group"><span>Unidade</span><input maxlength="20" formControlName="unit" /></label>
+    <label class="field-group"><span>Lote (opcional)</span><input maxlength="120" formControlName="componentBatch" /></label>
+    <label class="field-group field-group--full"><span>Motivo da troca</span><textarea rows="2" maxlength="1000" formControlName="replacementReason" [attr.aria-invalid]="hasError(externalForm.controls.replacementReason) ? 'true' : null"></textarea>
+      @if (hasError(externalForm.controls.replacementReason)) { <small class="field-error" role="alert">Informe o motivo da troca</small> }
+    </label>
+    <div class="form-actions form-actions--full repair-actions"><button type="button" class="button-secondary" [disabled]="externalSaving()" (click)="closeExternal(true)">Cancelar</button><button type="submit" class="button-primary" [disabled]="externalSaving()">{{ editingExternal() ? 'Salvar' : 'Registrar' }}</button></div>
+  </form>
+</ng-template>

@@ -1,9 +1,20 @@
+import { RmaWarrantyFieldComponent } from '../rma-warranty-field/rma-warranty-field.component';
+import { By } from '@angular/platform-browser';
 import { Component, signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, DeferBlockState, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { DiagnosisResponse, RmaResponse, WarrantyStatus } from '../../core/models';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
+import { AuthService } from '../../core/services/auth.service';
+import { RmaRepairPanelComponent } from '../rma-repair-panel/rma-repair-panel.component';
+import { RmaPartsPanelComponent } from '../rma-parts-panel/rma-parts-panel.component';
+import { RmaRepairService } from '../../core/services/rma-repair.service';
+import { PartService } from '../../core/services/part.service';
+import { ReportService } from '../../core/services/report.service';
+import { RmaService } from '../../core/services/rma.service';
+import { of } from 'rxjs';
 import { buildRma, buildRmaItem } from '../../testing/rma-fixtures';
+import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { RmaDetailModalComponent } from './rma-detail-modal.component';
 
 @Component({ template: '' })
@@ -12,17 +23,16 @@ class StubComponent {}
 const NOW = Date.parse('2026-10-20T12:00:00Z');
 
 const diagnosis: DiagnosisResponse = {
-  id: 9, foundFailure: 'Capacitor estufado', failureType: 'POWER_SUPPLY', probableCause: 'COMPONENT',
+  foundFailure: 'Capacitor estufado', failureType: 'POWER_SUPPLY', probableCause: 'COMPONENT',
   notes: 'Trocar lote', diagnosedAt: '2026-10-21', technicianName: 'Bia',
-  createdAt: '2026-10-21T12:00:00Z', updatedAt: '2026-10-21T12:00:00Z'
 };
 
 const fullRma = buildRma({
   id: 5,
-  code: 'RMA-2026-000005',
+  code: 'OS-2026-000005',
   clientName: 'Cliente X',
   items: [
-    buildRmaItem({ id: 1, productName: 'Produto A', productSku: 'SKU-A', serialNumber: 'S1', batchNumber: 'L1', warrantyMonths: 12, warrantyExpiresAt: '2027-02-01', warrantyStatus: WarrantyStatus.IN_WARRANTY }),
+    buildRmaItem({ id: 1, productName: 'Produto A', productSku: 'SKU-A', serialNumber: 'S1', batchNumber: 'L1', warrantyMonths: 12, warrantyExpiresAt: '2027-02-01', calculatedWarrantyStatus: WarrantyStatus.IN_WARRANTY, warrantyOverride: null, warrantyStatus: WarrantyStatus.IN_WARRANTY }),
     buildRmaItem({ id: 2, productName: 'Produto B', productSku: 'SKU-B', serialNumber: null, batchNumber: 'L2', warrantyMonths: 1, warrantyExpiresAt: null })
   ],
   status: 'TRIAGE',
@@ -45,7 +55,7 @@ const fullRma = buildRma({
     { status: 'TRIAGE', changedBy: 'ana', changedAt: '2026-10-20T11:00:00Z', note: 'Prioridade alterada para Alta' }
   ],
   assignmentHistory: [
-    { previousAssigneeId: null, previousAssigneeName: null, newAssigneeId: 7, newAssigneeName: 'Ana', changedBy: 'bia', changedAt: '2026-10-20T10:30:00Z' }
+    { previousAssigneeName: null, newAssigneeName: 'Ana', changedBy: 'bia', changedAt: '2026-10-20T10:30:00Z' }
   ]
 });
 
@@ -55,18 +65,33 @@ const USERS = [
   { id: 9, username: 'bia', fullName: 'Beatriz Souza' }
 ];
 
-async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; canUpdateAssignee?: boolean; disabled?: boolean } = {}) {
+async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; canUpdateAssignee?: boolean; canEditDueDate?: boolean; disabled?: boolean } = {}) {
   await TestBed.configureTestingModule({
     imports: [RmaDetailModalComponent],
     providers: [
       provideRouter([{ path: 'rmas', component: StubComponent }]),
-      { provide: SlaClockService, useValue: { now: signal(NOW) } }
+      { provide: AuthService, useValue: { currentUser: () => ({ name: 'Ana' }) } },
+      { provide: ClockService, useValue: { now: signal(NOW) } },
+      providePermissions(profilePermissions('ADMIN')),
+      { provide: RmaRepairService, useValue: { getRepair: () => of({ interventions: [], totalServiceHours: 0 }), listExternalComponents: () => of([]) } },
+      { provide: PartService, useValue: { getRmaParts: () => of({ reservations: [], movements: [], reservedCost: 0, consumedCost: 0, pendingCount: 0 }), listOptions: () => of([]) } },
+      { provide: ReportService, useValue: { downloadTechnicalReport: () => of() } },
+      { provide: RmaService, useValue: {
+        updateStatus: (id: number, payload: { status: RmaResponse['status'] }) => of({ ...(inputs.rma ?? fullRma), id, status: payload.status }),
+        updateDueDate: (id: number, dueDate: string | null) => of({ ...(inputs.rma ?? fullRma), id, dueDate }),
+        updatePriority: (id: number, priority: RmaResponse['priority']) => of({ ...(inputs.rma ?? fullRma), id, priority }),
+        resolveBlock: (id: number, blockId: number, body: { resolutionNote: string }) => of({
+          ...(inputs.rma ?? fullRma), id, currentBlock: null,
+          blockHistory: [{ ...(inputs.rma ?? fullRma).currentBlock!, id: blockId, resolvedBy: 'ana', resolvedAt: '2026-10-20T11:50:00Z', resolutionNote: body.resolutionNote }]
+        })
+      } }
     ]
   }).compileComponents();
   const fixture: ComponentFixture<RmaDetailModalComponent> = TestBed.createComponent(RmaDetailModalComponent);
   fixture.componentRef.setInput('rma', inputs.rma ?? fullRma);
   fixture.componentRef.setInput('canUpdateStatus', inputs.canUpdateStatus ?? true);
   fixture.componentRef.setInput('canUpdateAssignee', inputs.canUpdateAssignee ?? true);
+  fixture.componentRef.setInput('canEditDueDate', inputs.canEditDueDate ?? false);
   fixture.componentRef.setInput('disabled', inputs.disabled ?? false);
   fixture.componentRef.setInput('assignableUsers', USERS);
   fixture.detectChanges();
@@ -75,13 +100,13 @@ async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; can
   /** Heading text without the count chip. */
   const headingText = (heading: Element) => {
     const clone = heading.cloneNode(true) as Element;
-    clone.querySelectorAll('.mini-chip').forEach((chip) => chip.remove());
+    clone.querySelectorAll('.mini-chip, .collapsible__count').forEach((chip) => chip.remove());
     return clone.textContent?.trim();
   };
   const section = (title: string) =>
-    [...host.querySelectorAll<HTMLElement>('.rma-detail__section')].find((item) => headingText(item.querySelector('.rma-detail__heading')!) === title) ?? null;
+    [...host.querySelectorAll<HTMLElement>('.rma-detail__section')].find((item) => headingText(item.querySelector('.rma-detail__heading, .collapsible__heading, app-rma-diagnosis h3')!) === title) ?? null;
   const tiles = (root: Element) =>
-    [...root.querySelectorAll('.rma-detail__tile')].map((tile) => [tile.querySelector('span')?.textContent?.trim(), tile.querySelector('strong, em')?.textContent?.trim()]);
+    [...root.querySelectorAll('.rma-detail__tile, app-rma-diagnosis dl > div')].map((tile) => [tile.querySelector('span, dt')?.textContent?.trim(), tile.querySelector('strong, em, dd')?.textContent?.trim()]);
   const sidePairs = () =>
     Object.fromEntries([...host.querySelectorAll('.rma-detail__side dl > div')].map((row) => [row.querySelector('dt')?.textContent?.trim(), row.querySelector('dd')?.textContent?.trim()]));
   const buttonByText = (text: string) =>
@@ -90,13 +115,97 @@ async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; can
   return { fixture, host, component, headingText, section, tiles, sidePairs, buttonByText };
 }
 
+describe('RmaDetailModalComponent collapsible sections', () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  const toggles = (host: HTMLElement) => [...host.querySelectorAll<HTMLButtonElement>('.rma-detail__main .collapsible__toggle')];
+  const states = (host: HTMLElement) => Object.fromEntries(toggles(host).map((button) => [button.querySelector('.collapsible__title')!.textContent!.trim(), button.getAttribute('aria-expanded')]));
+
+  it('opens failure, blocks (active) and diagnosis; folds products (several), receipt, repair and history', async () => {
+    const { host } = await setup();
+    expect(states(host)).toEqual({
+      'Falha relatada': 'true', Impedimentos: 'true', Produtos: 'false', Recebimento: 'false', Diagnóstico: 'true', 'Reparo e testes': 'false', Histórico: 'false'
+    });
+  });
+
+  it('folds Impedimentos without an active block and opens Produtos with a single item', async () => {
+    const { host } = await setup({ rma: { ...fullRma, currentBlock: null, items: [fullRma.items[0]] } });
+    expect(states(host)['Impedimentos']).toBe('false');
+    expect(states(host)['Produtos']).toBe('true');
+  });
+
+  it('shows the event count on Histórico and the product count on Produtos', async () => {
+    const { host, section, component } = await setup();
+    const count = (title: string) => section(title)!.querySelector('.collapsible__count')?.textContent?.trim();
+    expect(count('Histórico')).toBe(String((component as unknown as { activity: () => unknown[] }).activity().length));
+    expect(count('Produtos')).toBe('2');
+    expect(host.querySelector('.rma-detail__main .collapsible__count')).not.toBeNull();
+  });
+
+  it('Recolher tudo folds every section and Expandir tudo opens them, remembering the choice', async () => {
+    const { fixture, host, buttonByText } = await setup();
+    expect(buttonByText('Expandir tudo')).toBeDefined();
+    buttonByText('Expandir tudo')!.click();
+    fixture.detectChanges();
+    expect(Object.values(states(host)).every((value) => value === 'true')).toBe(true);
+    expect(buttonByText('Recolher tudo')).toBeDefined();
+    buttonByText('Recolher tudo')!.click();
+    fixture.detectChanges();
+    expect(Object.values(states(host)).every((value) => value === 'false')).toBe(true);
+    expect(localStorage.getItem('navitas.section.rma.diagnosis')).toBe('0');
+    expect(localStorage.getItem('navitas.section.rma.history')).toBe('0');
+  });
+
+  it('the block flag opens a folded Impedimentos before focusing it', async () => {
+    const { fixture, host, section } = await setup();
+    toggles(host).find((button) => button.textContent?.includes('Impedimentos'))!.click();
+    fixture.detectChanges();
+    expect(states(host)['Impedimentos']).toBe('false');
+    host.querySelector<HTMLButtonElement>('.detail-actions button.detail-block-flag')!.click();
+    fixture.detectChanges(); TestBed.tick();
+    expect(states(host)['Impedimentos']).toBe('true');
+    expect(document.activeElement).toBe(section('Impedimentos')!.querySelector('.blocks-section'));
+  });
+
+  it('Editar no diagnóstico recolhido abre a seção', async () => {
+    const { fixture, host, section } = await setup();
+    toggles(host).find((button) => button.textContent?.includes('Diagnóstico'))!.click();
+    fixture.detectChanges();
+    expect(states(host)['Diagnóstico']).toBe('false');
+    section('Diagnóstico')!.querySelector<HTMLButtonElement>('.diagnosis-trigger')!.click();
+    fixture.detectChanges(); TestBed.tick();
+    expect(states(host)['Diagnóstico']).toBe('true');
+  });
+});
+
 describe('RmaDetailModalComponent with the shared information contract', () => {
+  it('renders shared repair and parts panels even without legacy summaries', async () => {
+    const { fixture, host } = await setup({ rma: { ...fullRma, repairSummary: null, replacedPartsSummary: null, testSummary: null } });
+    const [block] = await fixture.getDeferBlocks(); await block.render(DeferBlockState.Complete); fixture.detectChanges();
+    expect(fixture.debugElement.query(By.directive(RmaRepairPanelComponent)).componentInstance.rmaId()).toBe(5);
+    expect(fixture.debugElement.query(By.directive(RmaPartsPanelComponent)).componentInstance.rmaStatus()).toBe(fullRma.status);
+    expect(host.textContent).toContain('Intervenções'); expect(host.textContent).toContain('Componentes trocados');
+  });
+
+  it('edita o diagnóstico no mesmo cartão e cancela sem fechar o detalhe', async () => {
+    const { fixture, host, section } = await setup();
+    const card = section('Diagnóstico')!;
+    card.querySelector<HTMLButtonElement>('.diagnosis-trigger')!.click();
+    fixture.detectChanges(); TestBed.tick();
+    expect(card.querySelector('[formControlName="foundFailure"]')).not.toBeNull();
+    expect(host.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+    card.querySelector<HTMLButtonElement>('.form-actions .button-secondary')!.click();
+    fixture.detectChanges(); TestBed.tick();
+    expect(card.querySelector('form')).toBeNull();
+    expect(host.querySelector('.rma-detail')).not.toBeNull();
+  });
   it('shows the blocks in contract order with the shared names', async () => {
     // Hoje os títulos são "Itens", "Reparo" e "Atividade".
     const { host, headingText } = await setup();
 
-    expect([...host.querySelectorAll('.rma-detail__heading')].map(headingText)).toEqual([
-      'Falha relatada', 'Produtos', 'Recebimento', 'Diagnóstico', 'Reparo e testes', 'Histórico'
+    expect([...host.querySelectorAll('.rma-detail__heading, .collapsible__heading, app-rma-diagnosis h3')].map(headingText)).toEqual([
+      'Falha relatada', 'Impedimentos', 'Produtos', 'Recebimento', 'Diagnóstico', 'Reparo e testes', 'Histórico'
     ]);
   });
 
@@ -152,8 +261,8 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     const empty = await setup({ rma: { ...fullRma, diagnosis: null } });
     const block = empty.section('Diagnóstico');
     expect(block).not.toBeNull();
-    expect(block!.querySelector('.rma-detail__muted')?.textContent?.trim()).toBe('Sem diagnóstico registrado.');
-    expect(block!.querySelector('button, a')).toBeNull();
+    expect(block!.querySelector('.repair-empty')?.textContent?.trim()).toBe('Sem diagnóstico registrado.');
+    expect(block!.querySelector('button.link-button')?.textContent?.trim()).toBe('Registrar diagnóstico');
   });
 
   it('uses the creation labels for retroactive repair records', async () => {
@@ -198,7 +307,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     const { host, sidePairs } = await setup({ canUpdateStatus: false });
     const side = host.querySelector('.rma-detail__side')!;
 
-    expect(host.querySelector('.rma-detail__actions .status-chip[data-status="TRIAGE"]')?.textContent?.trim()).toBe('Triagem');
+    expect(host.querySelector('.detail-actions .status-chip[data-status="TRIAGE"]')?.textContent?.trim()).toBe('Triagem');
     expect(side.querySelector('.status-chip')).toBeNull();
     expect(side.querySelector('.priority-tag[data-priority="HIGH"] .priority-bars')).not.toBeNull();
     expect(side.querySelector('.priority-tag')?.textContent?.trim()).toBe('Alta');
@@ -206,30 +315,43 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(pairs['Nota fiscal']).toBe('Não informada');
     expect(pairs['Compra']).toBe('Desconhecida');
     expect(pairs).not.toHaveProperty('Data da compra');
-    expect(pairs['Recebido por']).toBe('tester');
+    expect(pairs['Recebida por']).toBe('tester');
     expect(pairs).toHaveProperty('Criado em');
     expect(pairs).toHaveProperty('Atualizado em');
   });
 
-  it('navigates to the RMA in the list', async () => {
-    // Hoje o link "Abrir RMA na lista" não existe.
-    const { fixture, buttonByText } = await setup();
-    const link = buttonByText('Abrir RMA na lista');
+  it('navigates to the OS in the list from a quiet text link beside the code', async () => {
+    const { fixture, host, buttonByText } = await setup();
+    const link = buttonByText('Abrir na lista');
 
     expect(link?.tagName).toBe('A');
+    expect(link!.closest('.rma-detail__bar')).not.toBeNull();
+    expect(link!.classList).toContain('rma-detail__open-link');
+    expect(link!.className).not.toContain('button-');
+    expect(link!.querySelector('app-icon')).not.toBeNull();
+    expect(host.querySelector('.detail-actions a')).toBeNull();
     link!.click();
     await fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe('/rmas?rma=5');
   });
 
+  it('offers the PDF report as a quiet text link beside Abrir na lista', async () => {
+    const { host } = await setup();
+    const link = host.querySelector<HTMLButtonElement>('.rma-detail__bar-key app-rma-report-link button')!;
+
+    expect(link.textContent).toContain('Laudo (PDF)');
+    expect(link.className).not.toContain('button-');
+    expect(link.querySelector('app-icon')).not.toBeNull();
+  });
+
   it('keeps the list link inactive while disabled', async () => {
-    // Hoje o link não existe; durante disabled() ele deve ser um botão inativo, sem href.
     const { fixture, host, buttonByText } = await setup({ disabled: true });
-    const control = buttonByText('Abrir RMA na lista');
+    const control = buttonByText('Abrir na lista');
 
     expect(control?.tagName).toBe('BUTTON');
     expect((control as HTMLButtonElement).disabled).toBe(true);
-    expect(host.querySelector('.rma-detail__actions a[href]')).toBeNull();
+    expect(control!.className).not.toContain('button-');
+    expect(host.querySelector('.rma-detail__bar a[href]')).toBeNull();
     control!.click();
     await fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe('/');
@@ -246,7 +368,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     [true, true],
     [true, false],
     [false, false]
-  ])('shows status and assignee actions only when allowed and always Ver impedimentos (status %s, assignee %s)', async (canUpdateStatus, canUpdateAssignee) => {
+  ])('shows status and assignee actions only when allowed and always the Impedimentos card (status %s, assignee %s)', async (canUpdateStatus, canUpdateAssignee) => {
     const { buttonByText, host } = await setup({ canUpdateStatus, canUpdateAssignee, rma: { ...fullRma, assigneeId: null } });
 
     expect(host.querySelector('app-custom-select.rma-detail__status') !== null).toBe(canUpdateStatus);
@@ -254,14 +376,15 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(host.querySelector('.rma-detail__assignee-picker') !== null).toBe(canUpdateAssignee);
     expect(buttonByText('Atribuir')).toBeUndefined();
     expect(buttonByText('Trocar responsável')).toBeUndefined();
-    expect(buttonByText('Ver impedimentos')).toBeDefined();
+    expect(buttonByText('Ver impedimentos')).toBeUndefined();
+    expect(host.querySelector('app-rma-blocks-section')).not.toBeNull();
     expect(host.querySelector('.modal-close')).not.toBeNull();
   });
 
   it('disables business actions while disabled', async () => {
     const { buttonByText, host } = await setup({ disabled: true, rma: { ...fullRma, assigneeId: 7, assigneeName: 'Ana' } });
 
-    expect((buttonByText('Ver impedimentos') as HTMLButtonElement).disabled).toBe(true);
+    expect((buttonByText('Resolver') as HTMLButtonElement).disabled).toBe(true);
     expect(host.querySelector<HTMLButtonElement>('.rma-detail__assignee-picker .custom-select__trigger')!.disabled).toBe(true);
     expect(host.querySelector<HTMLButtonElement>('.rma-detail__status .custom-select__trigger')!.disabled).toBe(true);
     expect(host.querySelector<HTMLButtonElement>('.modal-close')!.disabled).toBe(true);
@@ -278,47 +401,154 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(closed).not.toHaveBeenCalled();
   });
 
-  it('emits closed and blockInspect from the buttons', async () => {
+  it('emits closed from the close button and the backdrop, with no separate impediments button', async () => {
     const rma = { ...fullRma, assigneeId: 7, assigneeName: 'Ana' };
     const { component, buttonByText, host } = await setup({ rma });
     const closed = vi.fn();
     const statusChange = vi.fn();
     const assigneeChange = vi.fn();
-    const blockInspect = vi.fn();
     component.closed.subscribe(closed);
-    component.statusChange.subscribe(statusChange);
+    component.rmaUpdated.subscribe(statusChange);
     component.assigneeChange.subscribe(assigneeChange);
-    component.blockInspect.subscribe(blockInspect);
 
-    buttonByText('Ver impedimentos')!.click();
+    expect(buttonByText('Ver impedimentos')).toBeUndefined();
+    expect('blockInspect' in component).toBe(false);
     host.querySelector<HTMLButtonElement>('.modal-close')!.click();
     host.querySelector<HTMLElement>('.modal-overlay')!.click();
 
     expect(statusChange).not.toHaveBeenCalled();
     expect(assigneeChange).not.toHaveBeenCalled();
-    expect(blockInspect).toHaveBeenCalledWith(rma);
     expect(closed).toHaveBeenCalledTimes(2);
   });
 
-  it('shows the active block and the SLA badge', async () => {
-    const { host } = await setup();
-    const block = host.querySelector('.rma-detail__block')!;
+  it('shows the active block inside the Impedimentos card with an inline Resolver', async () => {
+    const { host, section, buttonByText } = await setup();
+    const card = section('Impedimentos')!;
+    const current = card.querySelector('app-rma-blocks-section .blocks-section__current')!;
 
-    expect(block.querySelector('strong')?.textContent?.trim()).toBe('Bloqueado há 2h 0min');
-    expect(block.textContent).toContain('Aguardando cliente');
-    expect(host.querySelector('.rma-detail__side app-rma-sla-badge')).not.toBeNull();
+    expect(current.querySelector('strong')?.textContent?.trim()).toBe('Impedida há 2 h');
+    expect(current.textContent).toContain('Aguardando cliente');
+    expect(buttonByText('Resolver')?.classList).toContain('link-button');
+    expect(host.querySelector('.rma-detail__block')).toBeNull();
+    expect(host.querySelector('dialog, app-rma-block-panel')).toBeNull();
   });
 
-  it('gives the SLA its own full-width row and never breaks the state or the times inside', async () => {
-    // Hoje o selo dividia "Atrasad / o" e "74h 14min / 24h 0min" numa coluna estreita.
-    const { host } = await setup();
-    const row = [...host.querySelectorAll('.rma-detail__side dl > div')].find((item) => item.querySelector('dt')?.textContent?.trim() === 'SLA')!;
+  it('flags the current block beside the status, like the ordens de serviço detail, and leads to Impedimentos', async () => {
+    const { host, section } = await setup();
+    const flag = host.querySelector<HTMLButtonElement>('.detail-actions button.detail-block-flag')!;
+    expect(flag.textContent).toContain('Impedida há');
+    expect(flag.querySelector('app-icon')).not.toBeNull();
+    expect(flag.getAttribute('aria-controls')).toBe('rma-detail-blocks');
+    expect(section('Impedimentos')!.id).toBe('rma-detail-blocks');
+    flag.click();
+    expect(document.activeElement).toBe(section('Impedimentos')!.querySelector('.blocks-section'));
+  });
 
-    expect(row.classList).toContain('detail-facts__block');
-    for (const selector of ['.sla__state', '.sla__elapsed', '.sla__limit', '.sla__due']) {
-      expect(getComputedStyle(row.querySelector(selector)!).whiteSpace, selector).toBe('nowrap');
-    }
-    expect(getComputedStyle(row.querySelector('.sla__row')!).flexWrap).toBe('wrap');
+  it('shows Sem impedimento and Sinalizar impedimento when the OS is not blocked', async () => {
+    const { host, section } = await setup({ rma: { ...fullRma, currentBlock: null } });
+    expect(host.querySelector('.detail-block-flag')).toBeNull();
+    const card = section('Impedimentos')!;
+    expect(card.querySelector('.blocks-section__empty')?.textContent?.trim()).toBe('Sem impedimento');
+    expect([...card.querySelectorAll('button')].some((button) => button.textContent?.trim() === 'Sinalizar impedimento')).toBe(true);
+  });
+
+  it('emits rmaUpdated with the OS saved by the inline resolve', async () => {
+    const { fixture, component, buttonByText, section } = await setup();
+    const updated: RmaResponse[] = [];
+    component.rmaUpdated.subscribe((rma) => updated.push(rma));
+    buttonByText('Resolver')!.click();
+    fixture.detectChanges();
+    const note = section('Impedimentos')!.querySelector<HTMLTextAreaElement>('textarea')!;
+    note.value = 'Cliente respondeu';
+    note.dispatchEvent(new Event('input'));
+    note.closest('form')!.dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+
+    expect(updated).toHaveLength(1);
+    expect(updated[0].currentBlock).toBeNull();
+    expect(section('Impedimentos')!.querySelector('.blocks-section__empty')?.textContent?.trim()).toBe('Sem impedimento');
+  });
+
+  it('disables the inline impediment actions while the detail is busy', async () => {
+    const { buttonByText } = await setup({ disabled: true });
+    expect((buttonByText('Resolver') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('shows Sem data limite when there is none', async () => {
+    const { host, sidePairs } = await setup({ rma: { ...fullRma, dueDate: null } });
+    expect(sidePairs()['Data limite']).toBe('Sem data limite');
+    const row = [...host.querySelectorAll('.rma-detail__side dl > div')].find((item) => item.querySelector('dt')?.textContent?.trim() === 'Data limite')!;
+    expect(row.querySelector('dd')?.classList).toContain('is-empty');
+  });
+
+  it('shows the date and Atrasado há 2 dias', async () => {
+    const { host, sidePairs } = await setup({
+      rma: { ...fullRma, dueDate: '2026-10-18', deadline: { status: 'OVERDUE', dueSoonFrom: '2026-10-11' } }
+    });
+    expect(sidePairs()['Data limite']).toContain('18/10/2026');
+    const chip = host.querySelector('.rma-detail__side .deadline-chip');
+    expect(chip?.textContent?.trim()).toBe('Atrasado há 2 dias');
+    expect(chip?.getAttribute('data-deadline')).toBe('OVERDUE');
+  });
+
+  it('makes the due date value clickable only with rma.editar and emits the OS saved inline', async () => {
+    let view = await setup();
+    expect(view.buttonByText('Alterar')).toBeUndefined();
+    expect(view.host.querySelector('.rma-detail__deadline .due-date-field__trigger')).toBeNull();
+    TestBed.resetTestingModule();
+
+    view = await setup({ canEditDueDate: true, rma: { ...fullRma, dueDate: null } });
+    const updated: RmaResponse[] = [];
+    view.component.rmaUpdated.subscribe((rma) => updated.push(rma));
+    expect(view.buttonByText('Alterar')).toBeUndefined();
+    const trigger = view.host.querySelector<HTMLButtonElement>('.rma-detail__deadline .due-date-field__trigger')!;
+    expect(trigger.querySelector('.due-date-field__text')?.textContent?.trim()).toBe('Sem data limite');
+    trigger.click();
+    view.fixture.detectChanges();
+    expect(view.host.querySelector('app-rma-due-date-dialog, [role="dialog"] [role="dialog"]')).toBeNull();
+    const input = view.host.querySelector<HTMLInputElement>('.rma-detail__deadline input[type="date"]')!;
+    input.value = '2026-10-30';
+    input.dispatchEvent(new Event('input'));
+    input.closest('form')!.dispatchEvent(new Event('submit'));
+    view.fixture.detectChanges();
+    expect(updated.map((rma) => rma.dueDate)).toEqual(['2026-10-30']);
+  });
+
+  it('keeps the due date trigger inactive while disabled', async () => {
+    const { host } = await setup({ canEditDueDate: true, disabled: true });
+    expect(host.querySelector<HTMLButtonElement>('.rma-detail__deadline .due-date-field__trigger')!.disabled).toBe(true);
+  });
+
+  it('shows há 2 d 4 h in Nesta etapa and Encerrada em for closed ordens de serviço', async () => {
+    let view = await setup({ rma: { ...fullRma, stagePeriods: [{ status: 'TRIAGE', enteredAt: '2026-10-18T08:00:00Z', leftAt: null, durationSeconds: 0 }] } });
+    expect(view.sidePairs()['Nesta etapa']).toBe('há 2 d 4 h');
+    TestBed.resetTestingModule();
+
+    view = await setup({ rma: { ...fullRma, status: 'COMPLETED', stagePeriods: [{ status: 'COMPLETED', enteredAt: '2026-10-19T13:00:00Z', leftAt: null, durationSeconds: 0 }] } });
+    expect(view.sidePairs()['Nesta etapa']).toBe('Encerrada em 19/10/2026 10:00');
+  });
+
+  it('shows the time of each stage in the side column', async () => {
+    const { host } = await setup({
+      rma: {
+        ...fullRma,
+        stagePeriods: [
+          { status: 'RECEIVED', enteredAt: '2026-10-20T08:00:00Z', leftAt: '2026-10-20T10:00:00Z', durationSeconds: 7200 },
+          { status: 'TRIAGE', enteredAt: '2026-10-20T10:00:00Z', leftAt: null, durationSeconds: 0 }
+        ]
+      }
+    });
+    const items = [...host.querySelectorAll('.rma-detail__side app-rma-stage-times li')].map((item) => item.textContent?.trim());
+    expect(items).toEqual(['Recebida · 2 h', 'Triagem · 2 h (atual)']);
+  });
+
+  it('shows due date changes with previous value and author', async () => {
+    const { section } = await setup({
+      rma: { ...fullRma, dueDateHistory: [{ previousDueDate: '2026-11-20', newDueDate: '2026-11-25', changedBy: 'carla', changedAt: '2026-10-20T11:30:00Z' }] }
+    });
+    const event = [...section('Histórico')!.querySelectorAll('.rma-detail__event')].find((item) => item.textContent?.includes('Data limite'))!;
+    expect(event.querySelector('.rma-detail__due-date-event')?.textContent?.trim()).toBe('Data limite 20/11/2026 → 25/11/2026');
+    expect(event.querySelector('strong')?.textContent?.trim()).toBe('carla');
   });
 
   it('puts every section and side card on a white card over the tinted canvas', async () => {
@@ -379,13 +609,13 @@ describe('RmaDetailModalComponent status selector', () => {
   it('emits the picked status for the existing flow and returns focus to the pill', async () => {
     const { fixture, host, component } = await setup();
     const statusChange = vi.fn();
-    component.statusChange.subscribe(statusChange);
+    component.rmaUpdated.subscribe(statusChange);
     await openMenu(fixture, host);
 
     options(host).find((option) => option.getAttribute('data-status') === 'IN_REPAIR')!.click();
     fixture.detectChanges();
 
-    expect(statusChange).toHaveBeenCalledExactlyOnceWith({ rma: fullRma, status: 'IN_REPAIR' });
+    expect(statusChange).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: fullRma.id, status: 'IN_REPAIR' }));
     expect(host.querySelector('.rma-detail__status [role="listbox"]')).toBeNull();
     expect(document.activeElement).toBe(trigger(host));
     expect(trigger(host).textContent?.trim()).toBe('Triagem');
@@ -394,7 +624,7 @@ describe('RmaDetailModalComponent status selector', () => {
   it('does not emit when the current status is picked again', async () => {
     const { fixture, host, component } = await setup();
     const statusChange = vi.fn();
-    component.statusChange.subscribe(statusChange);
+    component.rmaUpdated.subscribe(statusChange);
     await openMenu(fixture, host);
 
     options(host).find((option) => option.getAttribute('data-status') === 'TRIAGE')!.click();
@@ -406,7 +636,7 @@ describe('RmaDetailModalComponent status selector', () => {
   it('works from the keyboard: arrows open and move, Enter picks, Escape closes back to the pill', async () => {
     const { fixture, host, component } = await setup();
     const statusChange = vi.fn();
-    component.statusChange.subscribe(statusChange);
+    component.rmaUpdated.subscribe(statusChange);
 
     trigger(host).focus();
     key(trigger(host), 'ArrowDown');
@@ -426,7 +656,7 @@ describe('RmaDetailModalComponent status selector', () => {
     // A focused button turns Enter into a click.
     (document.activeElement as HTMLButtonElement).click();
     fixture.detectChanges();
-    expect(statusChange).toHaveBeenCalledExactlyOnceWith({ rma: fullRma, status: 'IN_REPAIR' });
+    expect(statusChange).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: fullRma.id, status: 'IN_REPAIR' }));
 
     await openMenu(fixture, host);
     key(document.activeElement!, 'Escape');
@@ -543,5 +773,66 @@ describe('RmaDetailModalComponent assignee selector', () => {
     fixture.detectChanges();
 
     expect(host.querySelector('[role="alert"]')?.textContent?.trim()).toBe('Técnico inativo');
+  });
+});
+
+
+describe('garantia no detalhe compartilhado', () => {
+  it('usa o campo em cada item com permissão e propaga a OS salvo', async () => {
+    const { fixture, host, component } = await setup({ canEditDueDate: true });
+    const fields = host.querySelectorAll('app-rma-warranty-field');
+    expect(fields.length).toBe(fullRma.items.length);
+    expect(fields[0].querySelector('.warranty-field__trigger')).not.toBeNull();
+    const updated = vi.fn(); component.rmaUpdated.subscribe(updated);
+    const field = fixture.debugElement.queryAll(By.directive(RmaWarrantyFieldComponent))[0].componentInstance as RmaWarrantyFieldComponent;
+    field.saved.emit(fullRma);
+    expect(updated).toHaveBeenCalledWith(fullRma);
+  });
+  it('mantém garantia somente leitura sem rma.editar ou com disabled', async () => {
+    const { fixture, host } = await setup();
+    expect(host.querySelector('.warranty-field__trigger')).toBeNull();
+    fixture.componentRef.setInput('canEditDueDate', true); fixture.componentRef.setInput('disabled', true); fixture.detectChanges();
+    expect(host.querySelector<HTMLButtonElement>('.warranty-field__trigger')!.disabled).toBe(true);
+  });
+  it('exibe ajuste na linha do tempo com motivo e autor', async () => {
+    const { host } = await setup({ rma: { ...fullRma, warrantyHistory: [{ itemId: 1, previousOverride: null,
+      newOverride: WarrantyStatus.IN_WARRANTY, reason: 'Cortesia', changedBy: 'carla', changedAt: '2026-11-13T12:00:00Z' }] } });
+    const events = [...host.querySelectorAll('.rma-detail__event')];
+    expect(events[0].textContent).toContain('Garantia de Produto A (SKU-A): Automático → Em garantia');
+    expect(events[0].textContent).toContain('Cortesia'); expect(events[0].textContent).toContain('carla');
+  });
+});
+
+describe('RmaDetailModalComponent priority selector', () => {
+  const priorityRow = (host: HTMLElement) =>
+    [...host.querySelectorAll<HTMLElement>('.rma-detail__side dl > div')].find((row) => row.querySelector('dt')?.textContent?.trim() === 'Prioridade')!;
+
+  it('changes the priority from the Informações side and emits the saved OS', async () => {
+    const { fixture, host, component } = await setup({ canEditDueDate: true });
+    const updated: RmaResponse[] = [];
+    component.rmaUpdated.subscribe((rma) => updated.push(rma));
+    const trigger = priorityRow(host).querySelector<HTMLButtonElement>('app-rma-priority-field .custom-select__trigger')!;
+    expect(trigger.getAttribute('aria-label')).toBe('Alterar prioridade, atual: Alta');
+    expect(trigger.querySelector('.priority-bars[data-priority="HIGH"]')).not.toBeNull();
+    trigger.click();
+    fixture.detectChanges();
+    [...host.querySelectorAll<HTMLButtonElement>('.custom-select__option')].find((option) => option.textContent?.includes('Baixa'))!.click();
+    fixture.detectChanges();
+    expect(updated.map((rma) => rma.priority)).toEqual(['LOW']);
+    expect(priorityRow(host).querySelector('[role="status"]')?.textContent?.trim()).toBe('Prioridade alterada para Baixa');
+  });
+
+  it('keeps the priority read only without rma.editar or for a closed OS', async () => {
+    let view = await setup({ canEditDueDate: false });
+    expect(priorityRow(view.host).querySelector('.custom-select__trigger')).toBeNull();
+    expect(priorityRow(view.host).querySelector('.priority-tag')?.textContent?.trim()).toBe('Alta');
+    TestBed.resetTestingModule();
+    view = await setup({ canEditDueDate: true, rma: { ...fullRma, status: 'COMPLETED' } });
+    expect(priorityRow(view.host).querySelector('.custom-select__trigger')).toBeNull();
+  });
+
+  it('keeps the priority selector inactive while disabled', async () => {
+    const { host } = await setup({ canEditDueDate: true, disabled: true });
+    expect(priorityRow(host).querySelector<HTMLButtonElement>('.custom-select__trigger')!.disabled).toBe(true);
   });
 });

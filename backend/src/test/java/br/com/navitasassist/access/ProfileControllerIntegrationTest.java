@@ -126,12 +126,8 @@ class ProfileControllerIntegrationTest {
             .andExpect(jsonPath("$.content[0].name").value(PREFIX + "B usado"))
             .andExpect(jsonPath("$.content[0].userCount").value(1))
             .andExpect(jsonPath("$.content[0].permissions", contains("rma.ver", "relatorios.ver")))
-            .andExpect(jsonPath("$.content[0].createdAt").isNotEmpty())
+            .andExpect(jsonPath("$.content[0].createdAt").doesNotExist())
             .andExpect(jsonPath("$.content[0].updatedAt").isNotEmpty());
-        mvc.perform(get("/api/profiles/{id}", used.getId()).with(asProfile("admin", "ADMIN")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.userCount").value(1));
-        mvc.perform(get("/api/profiles/{id}", 999999).with(asProfile("admin", "ADMIN")))
-            .andExpect(status().isNotFound());
     }
 
     @Test
@@ -162,11 +158,11 @@ class ProfileControllerIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(6))
             .andExpect(jsonPath("$[*].module", contains("RMA", "CADASTROS", "PECAS", "PROTOCOLOS", "RELATORIOS", "ADMINISTRACAO")))
-            .andExpect(jsonPath("$[0].label").value("RMAs"))
+            .andExpect(jsonPath("$[0].label").value("Ordens de serviço"))
             .andExpect(jsonPath("$[0].permissions.length()").value(8))
             .andExpect(jsonPath("$[0].permissions[5].code").value("rma.atribuivel"))
-            .andExpect(jsonPath("$[0].permissions[5].label").value("Pode ser responsável por RMAs"))
-            .andExpect(jsonPath("$[5].permissions[*].code", contains("usuarios.gerir", "perfis.gerir", "notificacoes.regras")));
+            .andExpect(jsonPath("$[0].permissions[5].label").value("Pode ser responsável por ordens de serviço"))
+            .andExpect(jsonPath("$[5].permissions[*].code", contains("usuarios.gerir", "perfis.gerir", "notificacoes.regras", "auditoria.ver")));
         mvc.perform(get("/api/permissions").with(user("rules").authorities(authorities("notificacoes.regras")))).andExpect(status().isForbidden());
     }
 
@@ -331,7 +327,7 @@ class ProfileControllerIntegrationTest {
         assertTrue(profiles.existsById(used.getId()));
     }
 
-    /** Enquanto a coluna role existir, os perfis migrados (legacy_code) sustentam o rollback (spec §6). */
+    /** Perfis com legacy_code (os 4 prontos da migração-base) não podem ser excluídos. */
     @Test
     void deleteBlockedForMigratedProfile() throws Exception {
         AccessProfile migrated = AccessTestSupport.saveProfile(profiles, PREFIX + "Migrado", "rma.ver");

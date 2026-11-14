@@ -91,27 +91,49 @@ public class SecurityConfig {
                 .requestMatchers("/api/kanban-views/**").authenticated()
                 .requestMatchers("/api/notifications/**").authenticated()
                 .requestMatchers("/api/notification-rules/**").hasAuthority(Codes.NOTIFICACOES_REGRAS)
+                .requestMatchers(HttpMethod.GET, "/api/audit-events").hasAuthority(Codes.AUDITORIA_VER)
                 .requestMatchers("/api/users/**").hasAuthority(Codes.USUARIOS_GERIR)
-                .requestMatchers(HttpMethod.GET, "/api/reports/rmas").hasAuthority(Codes.RELATORIOS_VER)
-                // D2: leituras auxiliares (dashboard, relatórios, RMAs e painéis) seguem abertas a quem tem login.
-                .requestMatchers(HttpMethod.GET, "/api/auth/me", "/api/clients/**", "/api/products/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/reports/rmas", "/api/reports/rmas/summary", "/api/reports/rmas/export.csv",
+                    "/api/reports/rmas/summary/export.csv").hasAuthority(Codes.RELATORIOS_VER)
+                .requestMatchers(HttpMethod.GET, "/api/clients/imports/template", "/api/products/imports/template").hasAuthority(Codes.CADASTROS_IMPORTAR)
+                .requestMatchers(HttpMethod.POST, "/api/clients/imports/preview", "/api/clients/imports/confirm",
+                    "/api/products/imports/preview", "/api/products/imports/confirm").hasAuthority(Codes.CADASTROS_IMPORTAR)
+                .requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
+                // Minimização: seletores para quem abre, consulta ou relata OS e protocolos; totais para o dashboard; lista e detalhe só com cadastros.ver.
+                .requestMatchers(HttpMethod.GET, "/api/clients/options", "/api/products/options").hasAnyAuthority(Codes.CADASTROS_VER, Codes.RMA_VER,
+                    Codes.RMA_ABRIR, Codes.RELATORIOS_VER, Codes.PROTOCOLOS_VER, Codes.PROTOCOLOS_CATALOGO)
+                .requestMatchers(HttpMethod.GET, "/api/clients/summary", "/api/products/summary").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/clients", "/api/clients/*", "/api/products", "/api/products/*").hasAuthority(Codes.CADASTROS_VER)
+                .requestMatchers(HttpMethod.GET, "/api/rmas/dashboard").hasAuthority(Codes.RMA_VER)
+                .requestMatchers(HttpMethod.GET, "/api/rmas/*/report.pdf").hasAuthority(Codes.RMA_VER)
+                .requestMatchers(HttpMethod.GET, "/api/rmas/*/repair", "/api/rmas/*/repair/external-components").hasAuthority(Codes.RMA_VER)
                 .requestMatchers(HttpMethod.GET, "/api/rmas/**").hasAuthority(Codes.RMA_VER)
                 .requestMatchers(HttpMethod.POST, "/api/auth/logout").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/clients", "/api/products").hasAuthority(Codes.CADASTROS_EDITAR)
                 .requestMatchers(HttpMethod.POST, "/api/rmas").hasAuthority(Codes.RMA_ABRIR)
                 .requestMatchers(HttpMethod.PUT, "/api/rmas/*/diagnosis").hasAuthority(Codes.RMA_DIAGNOSTICAR)
-                .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/status", "/api/rmas/*/bulk-status").hasAuthority(Codes.RMA_STATUS)
+                .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/status-history/*/note").hasAuthority(Codes.RMA_STATUS)
+                .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/status").hasAuthority(Codes.RMA_STATUS)
                 .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/assignee").hasAuthority(Codes.RMA_RESPONSAVEL)
-                .requestMatchers(HttpMethod.GET, "/api/parts/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/parts/options").hasAnyAuthority(Codes.PECAS_VER, Codes.PECAS_RESERVAR)
+                .requestMatchers(HttpMethod.GET, "/api/parts/**").hasAuthority(Codes.PECAS_VER)
+                .requestMatchers(HttpMethod.POST, "/api/rmas/*/repair/external-components", "/api/rmas/*/parts/*/consume").hasAuthority(Codes.PECAS_RESERVAR)
+                .requestMatchers(HttpMethod.POST, "/api/rmas/*/repair/interventions").hasAuthority(Codes.RMA_DIAGNOSTICAR)
+                .requestMatchers(HttpMethod.PUT, "/api/rmas/*/repair/interventions/*").hasAuthority(Codes.RMA_DIAGNOSTICAR)
+                .requestMatchers(HttpMethod.POST, "/api/rmas/*/repair/interventions/*/void").hasAuthority(Codes.RMA_DIAGNOSTICAR)
+                .requestMatchers(HttpMethod.PUT, "/api/rmas/*/repair/external-components/*").hasAuthority(Codes.PECAS_RESERVAR)
+                .requestMatchers(HttpMethod.POST, "/api/rmas/*/repair/external-components/*/void").hasAuthority(Codes.PECAS_RESERVAR)
                 .requestMatchers(HttpMethod.POST, "/api/rmas/*/parts", "/api/rmas/*/parts/*/*").hasAuthority(Codes.PECAS_RESERVAR)
                 .requestMatchers(HttpMethod.POST, "/api/parts", "/api/parts/*/movements", "/api/parts/movements/*/reversal").hasAuthority(Codes.PECAS_MOVIMENTAR)
                 .requestMatchers(HttpMethod.PUT, "/api/parts/*").hasAuthority(Codes.PECAS_MOVIMENTAR)
                 .requestMatchers(HttpMethod.POST, "/api/rmas/*/blocks").hasAuthority(Codes.RMA_IMPEDIMENTOS)
                 .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/blocks/*").hasAuthority(Codes.RMA_IMPEDIMENTOS)
                 .requestMatchers(HttpMethod.PUT, "/api/clients/*", "/api/products/*").hasAuthority(Codes.CADASTROS_EDITAR)
+                .requestMatchers(HttpMethod.PUT, "/api/rmas/*/items/*/warranty").hasAuthority(Codes.RMA_EDITAR)
                 .requestMatchers(HttpMethod.PUT, "/api/rmas/*").hasAuthority(Codes.RMA_EDITAR)
                 .requestMatchers(HttpMethod.DELETE, "/api/clients/*", "/api/products/*").hasAuthority(Codes.CADASTROS_EDITAR)
-                .requestMatchers(HttpMethod.GET, "/api/protocols/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/protocols/rmas/*/executions").hasAuthority(Codes.RMA_VER)
+                .requestMatchers(HttpMethod.GET, "/api/protocols/templates").hasAnyAuthority(Codes.PROTOCOLOS_VER, Codes.PROTOCOLOS_EXECUTAR, Codes.RMA_VER)
                 .requestMatchers(HttpMethod.POST, "/api/protocols/templates").hasAuthority(Codes.PROTOCOLOS_CATALOGO)
                 .requestMatchers(HttpMethod.PUT, "/api/protocols/templates/*").hasAuthority(Codes.PROTOCOLOS_CATALOGO)
                 .requestMatchers(HttpMethod.POST, "/api/protocols/rmas/*/executions", "/api/protocols/executions/*/items/*/results", "/api/protocols/executions/*/complete").hasAuthority(Codes.PROTOCOLOS_EXECUTAR)
@@ -144,6 +166,24 @@ public class SecurityConfig {
     @Bean
     public HttpSessionEventPublisher httpSessionEventPublisher() {
         return new HttpSessionEventPublisher();
+    }
+
+    @Bean
+    public org.springframework.security.authentication.dao.DaoAuthenticationProvider authenticationProvider(
+            NavitasUserDetailsService users, PasswordEncoder passwords) {
+        var provider = new org.springframework.security.authentication.dao.DaoAuthenticationProvider();
+        provider.setUserDetailsService(users);
+        provider.setPasswordEncoder(passwords);
+        // A conta inativa percorre a mesma verificacao de senha que a ativa.
+        provider.setPreAuthenticationChecks(user -> {
+            if (!user.isAccountNonLocked()) throw new org.springframework.security.authentication.LockedException("Invalid credentials");
+            if (!user.isAccountNonExpired()) throw new org.springframework.security.authentication.AccountExpiredException("Invalid credentials");
+        });
+        provider.setPostAuthenticationChecks(user -> {
+            if (!user.isEnabled()) throw new org.springframework.security.authentication.DisabledException("Invalid credentials");
+            if (!user.isCredentialsNonExpired()) throw new org.springframework.security.authentication.CredentialsExpiredException("Invalid credentials");
+        });
+        return provider;
     }
 
     @Bean

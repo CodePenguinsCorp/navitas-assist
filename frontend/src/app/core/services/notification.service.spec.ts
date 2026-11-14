@@ -20,12 +20,101 @@ describe('NotificationService', () => {
 
   afterEach(() => httpTesting.verify());
 
+  it('envia evento e severidade para filtro antes do limite no servidor', () => {
+    service.list({ eventType: 'RMA_CREATED', severity: 'CRITICAL' }).subscribe();
+    const request = httpTesting.expectOne(r => r.url === '/api/notifications');
+    expect(request.request.params.get('eventType')).toBe('RMA_CREATED');
+    expect(request.request.params.get('severity')).toBe('CRITICAL');
+    request.flush([]);
+  });
+
+  it('consulta status e testa sem destinatério ou payload', () => {
+    const status = { enabled: true, provider: 'smtp', sentToday: 3, dailyLimit: 100, sentThisMonth: 9, monthlyLimit: 3000, limitReached: false };
+    service.emailStatus().subscribe(value => expect(value).toEqual(status));
+    httpTesting.expectOne('/api/notification-rules/email-status').flush(status);
+    service.testEmail().subscribe(value => expect(value.status).toBe('simulado'));
+    const request = httpTesting.expectOne('/api/notification-rules/emails/test');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({});
+    request.flush({ status: 'simulado', provider: 'fake' });
+  });
+
+  it('reenvia somente a notificação selecionada', () => {
+    service.retryEmail(42).subscribe();
+    const request = httpTesting.expectOne('/api/notification-rules/emails/42/retry');
+    expect(request.request.method).toBe('POST');
+    request.flush({ notificationId: 42, status: 'PENDING', provider: 'fake' });
+  });
+
   it('sends list filters only when enabled', () => {
     service.list({ unreadOnly: true }).subscribe();
     const request = httpTesting.expectOne((candidate) => candidate.url === '/api/notifications');
     expect(request.request.params.get('unreadOnly')).toBe('true');
     expect(request.request.params.has('includeSnoozed')).toBe(false);
     request.flush([]);
+  });
+
+  it('preserves every list filter during a background inbox refresh', () => {
+    service.list({ unreadOnly: true, includeSnoozed: true, eventType: 'RMA_CREATED', severity: 'WARNING', silent: true }).subscribe();
+    const request = httpTesting.expectOne((candidate) => candidate.url === '/api/notifications');
+    expect(request.request.params.toString()).toBe('unreadOnly=true&includeSnoozed=true&eventType=RMA_CREATED&severity=WARNING');
+    expect(request.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+    request.flush([]);
+  });
+
+  describe('reversible read-all batch', () => {
+    it('serializes mark-all requests shared by the inbox and bell and releases the lock after an error', () => {
+      service.markAllRead().subscribe({ error: () => undefined });
+      expect(service.markingAll()).toBe(true);
+      service.markAllRead().subscribe();
+      httpTesting.expectOne('/api/notifications/read-all').flush({}, { status: 500, statusText: 'Error' });
+      expect(service.markingAll()).toBe(false);
+      service.markAllRead().subscribe();
+      httpTesting.expectOne('/api/notifications/read-all').flush({ markedCount: 0, undoToken: null, expiresAt: null });
+      expect(service.markingAll()).toBe(false);
+    });
+    const first = { markedCount: 2, undoToken: 'first-token', expiresAt: '2026-11-13T18:00:04Z' };
+    const second = { markedCount: 1, undoToken: 'second-token', expiresAt: '2026-11-13T18:00:05Z' };
+    const mark = (response = first) => {
+      service.markAllRead().subscribe((batch) => expect(batch).toEqual(response));
+      const request = httpTesting.expectOne({ method: 'POST', url: '/api/notifications/read-all' });
+      expect(request.request.body).toEqual({});
+      expect(request.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+      request.flush(response);
+    };
+
+    it('shares the latest batch and restores only its token through the background endpoint', () => {
+      expect(service.latestReadAll()).toBeNull();
+      mark();
+      expect(service.latestReadAll()).toEqual(first);
+      service.undoReadAll(first.undoToken).subscribe((response) => expect(response.restoredCount).toBe(2));
+      const undo = httpTesting.expectOne({ method: 'POST', url: '/api/notifications/read-all/undo' });
+      expect(undo.request.body).toEqual({ token: first.undoToken });
+      expect(undo.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+      undo.flush({ restoredCount: 2 });
+      expect(service.latestReadAll()).toBeNull();
+    });
+
+    it('does not clear a newer batch when an older dismiss response arrives', () => {
+      mark();
+      service.dismissReadAll(first.undoToken).subscribe();
+      const dismiss = httpTesting.expectOne({ method: 'POST', url: '/api/notifications/read-all/dismiss' });
+      expect(dismiss.request.body).toEqual({ token: first.undoToken });
+      expect(dismiss.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+      mark(second);
+      dismiss.flush(null);
+      expect(service.latestReadAll()).toEqual(second);
+      service.dismissReadAll(second.undoToken).subscribe();
+      httpTesting.expectOne('/api/notifications/read-all/dismiss').flush(null);
+      expect(service.latestReadAll()).toBeNull();
+    });
+
+    it('retains the active batch when a later mark-all request fails', () => {
+      mark();
+      service.markAllRead().subscribe({ error: () => {} });
+      httpTesting.expectOne('/api/notifications/read-all').flush({}, { status: 500, statusText: 'Server Error' });
+      expect(service.latestReadAll()).toEqual(first);
+    });
   });
 
   it('keeps the shared unread count in sync with the summary endpoint', () => {
@@ -98,6 +187,37 @@ describe('NotificationService', () => {
     });
   });
 
+  describe('silent requests (bell popover)', () => {
+    it('keeps the global loading overlay only for non-silent calls', () => {
+      service.list({ unreadOnly: true, silent: true }).subscribe();
+      const silent = httpTesting.expectOne(r => r.url === '/api/notifications');
+      expect(silent.request.params.get('unreadOnly')).toBe('true');
+      expect(silent.request.params.has('silent')).toBe(false);
+      expect(silent.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+      silent.flush([]);
+
+      service.list().subscribe();
+      const regular = httpTesting.expectOne(r => r.url === '/api/notifications');
+      expect(regular.request.context.get(SKIP_GLOBAL_LOADING)).toBe(false);
+      regular.flush([]);
+    });
+
+    it('marks one and all as read without the overlay when silent', () => {
+      service.markRead(3, { silent: true }).subscribe();
+      const one = httpTesting.expectOne('/api/notifications/3/read');
+      expect(one.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+      one.flush({});
+      service.markAllRead().subscribe();
+      const all = httpTesting.expectOne('/api/notifications/read-all');
+      expect(all.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+      all.flush({ markedCount: 0, undoToken: null, expiresAt: null });
+      service.markRead(4).subscribe();
+      const regular = httpTesting.expectOne('/api/notifications/4/read');
+      expect(regular.request.context.get(SKIP_GLOBAL_LOADING)).toBe(false);
+      regular.flush({});
+    });
+  });
+
   describe('summary preservation', () => {
     it('requests the summary outside the global loading overlay', () => {
       service.refreshSummary().subscribe();
@@ -135,8 +255,8 @@ describe('NotificationService', () => {
     preference.flush({});
 
     const rule: NotificationRuleRequest = { enabled: false, severity: 'CRITICAL', recipientProfileIds: [1], notifyAssignee: true, emailEnabled: false, userMutable: false };
-    service.updateRule('SLA_OVERDUE', rule).subscribe();
-    const update = httpTesting.expectOne('/api/notification-rules/SLA_OVERDUE');
+    service.updateRule('RMA_ASSIGNED', rule).subscribe();
+    const update = httpTesting.expectOne('/api/notification-rules/RMA_ASSIGNED');
     expect(update.request.method).toBe('PUT');
     expect(update.request.body).toEqual(rule);
     update.flush({});

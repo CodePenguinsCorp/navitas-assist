@@ -11,10 +11,10 @@ public record UserAccountResponse(
     Long id,
     String username,
     String fullName,
+    String email,
     ProfileSummary profile,
     List<String> extraPermissions,
     boolean active,
-    Instant createdAt,
     Instant updatedAt
 ) {
     public static UserAccountResponse from(UserAccount userAccount) {
@@ -22,10 +22,10 @@ public record UserAccountResponse(
             userAccount.getId(),
             userAccount.getUsername(),
             userAccount.getFullName(),
+            userAccount.getEmail(),
             ProfileSummary.from(userAccount.getProfile()),
             List.copyOf(Permission.codes(Permission.fromCodes(userAccount.getExtraPermissions()))),
             userAccount.isActive(),
-            userAccount.getCreatedAt(),
             userAccount.getUpdatedAt()
         );
     }

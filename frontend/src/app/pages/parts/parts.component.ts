@@ -21,7 +21,9 @@ import {
   canReverseMovement,
   formatCurrency,
   formatQuantity,
-  formatSignedQuantity
+  formatSignedQuantity,
+  movementChanges,
+  movementTypeTone
 } from '../../core/utils/part-ui';
 import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
@@ -60,13 +62,6 @@ const MOVEMENT_TYPE_OPTIONS: ReadonlyArray<CustomSelectOption<ManualPartMovement
       max-width: 120px;
     }
 
-    .stock-summary {
-      margin: 0;
-      color: var(--muted);
-      font-size: var(--font-size-md);
-      line-height: var(--line-height-body);
-    }
-
     .movement-context {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
@@ -79,13 +74,41 @@ const MOVEMENT_TYPE_OPTIONS: ReadonlyArray<CustomSelectOption<ManualPartMovement
     .movement-preview { grid-column: 1 / -1; }
     .movement-preview p { margin: var(--space-2) 0; }
 
+    .history-panel { width: min(100%, 720px); }
+    .movement-list { display: grid; margin: 0; padding: 0; list-style: none; }
+
+    .movement-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      column-gap: var(--space-3);
+      row-gap: var(--space-1);
+      padding: var(--space-3) 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .movement-item:last-child { border-bottom: 0; }
+    .movement-item > * { grid-column: 1; }
+    .movement-item p { margin: 0; }
+    .movement-item .movement-item__action { grid-column: 2; grid-row: 1 / span 2; align-self: start; }
+    .movement-item__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
+    .movement-item__muted { color: var(--muted); font-size: var(--font-size-sm); white-space: nowrap; }
+    .movement-item__change { font-size: var(--font-size-md); }
+    .movement-item__change strong { font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); }
+    .movement-item__balance, .movement-item__meta { color: var(--muted); font-size: var(--font-size-sm); overflow-wrap: anywhere; }
+    .movement-item__balance span { white-space: nowrap; }
+    .movement-item__reason { padding: 0 var(--space-3); border-left: 3px solid var(--line); font-size: var(--font-size-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
+    .movement-item .movement-reversal { grid-column: 1 / -1; }
+
     .movement-reversal {
       display: grid;
       gap: var(--space-3);
+      margin-top: var(--space-2);
       padding: var(--space-3);
+      border-radius: var(--radius-sm);
+      background: var(--surface-alt);
     }
 
-    .movement-reversal p { margin: 0; }
+    .movement-reversal p, .movement-reversal h4 { margin: 0; }
     .movement-reversal .form-actions { flex-wrap: wrap; }
   `]
 })
@@ -123,6 +146,8 @@ export class PartsComponent {
   protected readonly currency = formatCurrency;
   protected readonly dateTime = formatBusinessDateTime;
   protected readonly canReverse = canReverseMovement;
+  protected readonly movementTone = movementTypeTone;
+  protected readonly changes = movementChanges;
 
   protected readonly parts = signal<PartResponse[]>([]);
   protected readonly replenishment = signal<PartReplenishmentResponse[]>([]);

@@ -1,0 +1,78 @@
+<div class="blocks-section" tabindex="-1">
+  @if (current().currentBlock; as block) {
+    <div class="blocks-section__current">
+      <div class="blocks-section__current-head">
+        <strong>{{ blockedLabel(block, clock.now()) }}</strong>
+        @if (block.category) { <span class="mini-chip">{{ block.category }}</span> }
+      </div>
+      <p class="blocks-section__reason">{{ block.reason }}</p>
+      <p class="blocks-section__meta">Sinalizado por {{ block.blockedBy }}</p>
+      @if (canEdit()) {
+        <button type="button" class="link-button blocks-section__action" data-blocks-trigger aria-controls="rma-blocks-form" [attr.aria-expanded]="mode() === 'resolve'" [disabled]="disabled() || busy() || mode() === 'resolve'" (click)="start('resolve')">Resolver</button>
+      }
+    </div>
+  } @else {
+    <div class="blocks-section__state">
+      <p class="blocks-section__empty">Sem impedimento</p>
+      @if (canEdit()) {
+        <button type="button" class="link-button blocks-section__action" data-blocks-trigger aria-controls="rma-blocks-form" [attr.aria-expanded]="mode() === 'block'" [disabled]="disabled() || busy() || mode() === 'block'" (click)="start('block')">Sinalizar impedimento</button>
+      }
+    </div>
+  }
+
+  @if (mode() === 'resolve' && current().currentBlock) {
+    <form id="rma-blocks-form" class="blocks-section__form" [formGroup]="resolveForm" (ngSubmit)="save()" (keydown.escape)="cancelOnEscape($event)">
+      <div class="field-group">
+        <label for="rma-block-resolution">Nota de resolução obrigatória</label>
+        <textarea id="rma-block-resolution" formControlName="resolutionNote" rows="3" maxlength="1000"
+          [attr.aria-invalid]="hasError(resolveForm.controls.resolutionNote) ? 'true' : null"
+          [attr.aria-describedby]="hasError(resolveForm.controls.resolutionNote) ? 'rma-block-resolution-error' : null"></textarea>
+        @if (hasError(resolveForm.controls.resolutionNote)) {
+          <small id="rma-block-resolution-error" class="field-error" role="alert">{{ textError(resolveForm.controls.resolutionNote, 'Informe a nota de resolução.') }}</small>
+        }
+      </div>
+      <div class="form-actions blocks-section__actions">
+        <button type="button" class="button-secondary" [disabled]="busy()" (click)="cancel()">Cancelar</button>
+        <button type="submit" class="button-primary" [disabled]="disabled() || busy()">{{ busy() ? 'Salvando...' : 'Desbloquear' }}</button>
+      </div>
+    </form>
+  } @else if (mode() === 'block' && !current().currentBlock) {
+    <form id="rma-blocks-form" class="blocks-section__form" [formGroup]="blockForm" (ngSubmit)="save()" (keydown.escape)="cancelOnEscape($event)">
+      <div class="field-group">
+        <label for="rma-block-reason">Motivo obrigatório</label>
+        <textarea id="rma-block-reason" formControlName="reason" rows="3" maxlength="1000"
+          [attr.aria-invalid]="hasError(blockForm.controls.reason) ? 'true' : null"
+          [attr.aria-describedby]="hasError(blockForm.controls.reason) ? 'rma-block-reason-error' : null"></textarea>
+        @if (hasError(blockForm.controls.reason)) {
+          <small id="rma-block-reason-error" class="field-error" role="alert">{{ textError(blockForm.controls.reason, 'Informe o motivo do impedimento.') }}</small>
+        }
+      </div>
+      <div class="field-group">
+        <label for="rma-block-category">Categoria opcional</label>
+        <input id="rma-block-category" formControlName="category" maxlength="80"
+          [attr.aria-invalid]="hasError(blockForm.controls.category) ? 'true' : null"
+          [attr.aria-describedby]="hasError(blockForm.controls.category) ? 'rma-block-category-error' : null" />
+        @if (hasError(blockForm.controls.category)) {
+          <small id="rma-block-category-error" class="field-error" role="alert">{{ textError(blockForm.controls.category, '') }}</small>
+        }
+      </div>
+      <div class="form-actions blocks-section__actions">
+        <button type="button" class="button-secondary" [disabled]="busy()" (click)="cancel()">Cancelar</button>
+        <button type="submit" class="button-primary" [disabled]="disabled() || busy()">{{ busy() ? 'Salvando...' : 'Bloquear' }}</button>
+      </div>
+    </form>
+  }
+
+  @if (error()) {
+    <p class="alert-banner alert-banner--error blocks-section__error" role="alert">{{ error() }}</p>
+  }
+
+  @if (previousCount() > 0) {
+    <button type="button" class="link-button blocks-section__history-toggle" aria-controls="rma-blocks-history" [attr.aria-expanded]="historyOpen()" (click)="historyOpen.set(!historyOpen())">
+      Histórico ({{ previousCount() }})
+    </button>
+    @if (historyOpen()) {
+      <app-rma-block-history id="rma-blocks-history" [rma]="current()" [previousOnly]="true" />
+    }
+  }
+</div>

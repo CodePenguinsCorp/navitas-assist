@@ -202,7 +202,7 @@ class ClientControllerIntegrationTest {
         Product savedProduct = productRepository.save(product);
 
         RmaRecord rma = new RmaRecord();
-        rma.setCode("RMA-CLIENT-0001");
+        rma.setCode("OS-CLIENT-0001");
         rma.setProduct(savedProduct);
         rma.setClient(savedClient);
         rma.setEntryDate(LocalDate.now());
@@ -215,7 +215,7 @@ class ClientControllerIntegrationTest {
                 .with(csrf()))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value(
-                "Client cannot be deleted because it is used by an RMA."
+                "Cliente não pode ser excluído porque está vinculado a uma OS."
             ));
 
         assertTrue(clientRepository.existsById(savedClient.getId()));

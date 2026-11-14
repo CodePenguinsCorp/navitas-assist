@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.EnumSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -27,13 +28,18 @@ import br.com.navitasassist.rma.RmaAssigneeUpdateRequest;
 import br.com.navitasassist.rma.RmaBlock;
 import br.com.navitasassist.rma.RmaBlockRequest;
 import br.com.navitasassist.rma.RmaBlockResolveRequest;
-import br.com.navitasassist.rma.RmaBulkStatusUpdateRequest;
 import br.com.navitasassist.rma.RmaAssignmentHistory;
+import br.com.navitasassist.rma.RmaDueDateHistory;
 import br.com.navitasassist.rma.RmaItem;
+import br.com.navitasassist.rma.RmaItemWarrantyRequest;
+import br.com.navitasassist.rma.RmaItemWarrantyHistory;
+import br.com.navitasassist.rma.WarrantyStatus;
 import br.com.navitasassist.rma.RmaItemRequest;
 import br.com.navitasassist.rma.RmaPriority;
 import br.com.navitasassist.rma.RmaRecord;
-import br.com.navitasassist.rma.RmaResponse;
+import br.com.navitasassist.rma.RmaBoardCardResponse;
+import br.com.navitasassist.rma.RmaDetailResponse;
+import br.com.navitasassist.rma.RmaListItemResponse;
 import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusHistory;
 import br.com.navitasassist.rma.RmaStatusUpdateRequest;
@@ -52,6 +58,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class RmaService {
+    private final AuditService audit;
 
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
     private static final Set<RmaStatus> CLOSED_STATUSES = EnumSet.of(RmaStatus.COMPLETED, RmaStatus.RETURNED, RmaStatus.IRREPARABLE);
@@ -60,7 +67,8 @@ public class RmaService {
 
     private final RmaRecordRepository rmaRecordRepository;
     private final RmaCodeGenerationLockRepository rmaCodeGenerationLockRepository;
-    private final RmaSlaService rmaSlaService;
+    private final RmaStageTimeService rmaStageTimeService;
+    private final RmaDeadlineService rmaDeadlineService;
     private final ClientService clientService;
     private final ProductService productService;
     private final UserAccountService userAccountService;
@@ -68,17 +76,23 @@ public class RmaService {
     private final ApplicationEventPublisher eventPublisher;
     private final PartReservationRepository partReservationRepository;
 
+    /** Cards do Kanban: o histórico de status só é lido no servidor para calcular o tempo por etapa. */
     @Transactional(readOnly = true)
-    public List<RmaResponse> search(String query, RmaStatus status) {
-        return rmaRecordRepository.search(trimToNull(query), status).stream().map(this::toResponse).toList();
+    public List<RmaBoardCardResponse> search(String query, RmaStatus status) {
+        List<RmaRecord> records = rmaRecordRepository.search(trimToNull(query), status);
+        if (!records.isEmpty()) rmaRecordRepository.fetchItemsWithProducts(records);
+        Instant now = Instant.now();
+        LocalDate today = RmaDeadlineService.businessDate(now);
+        return records.stream()
+            .map(rma -> RmaBoardCardResponse.from(rma, rmaStageTimeService.periods(rma, now), rmaDeadlineService.evaluate(rma, today)))
+            .toList();
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<RmaResponse> searchPage(String query, RmaStatus status, Integer page, Integer size) {
-        return PageResponse.from(
-            rmaRecordRepository.searchPage(trimToNull(query), status, PageParams.of(page, size)),
-            this::toResponse
-        );
+    public PageResponse<RmaListItemResponse> searchPage(String query, RmaStatus status, Integer page, Integer size) {
+        var records = rmaRecordRepository.searchPage(trimToNull(query), status, PageParams.of(page, size));
+        if (!records.getContent().isEmpty()) rmaRecordRepository.fetchItemsWithProducts(records.getContent());
+        return PageResponse.from(records, RmaListItemResponse::from);
     }
 
     @Transactional(readOnly = true)
@@ -87,33 +101,12 @@ public class RmaService {
     }
 
     @Transactional(readOnly = true)
-    public RmaResponse getById(Long id) {
+    public RmaDetailResponse getById(Long id) {
         return toResponse(getEntityById(id));
     }
 
-    @Transactional(readOnly = true)
-    public RmaResponse getByCode(String code) {
-        return toResponse(rmaRecordRepository.findByCodeIgnoreCase(code)
-            .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + code)));
-    }
-
-    @Transactional(readOnly = true)
-    public List<RmaResponse> findHistory(String batchNumber, String serialNumber) {
-        String normalizedBatch = trimToNull(batchNumber);
-        String normalizedSerial = trimToNull(serialNumber);
-
-        if (normalizedBatch == null && normalizedSerial == null) {
-            throw new BusinessException("Provide a batch number or a serial number to load history.");
-        }
-
-        return rmaRecordRepository.findHistory(normalizedBatch, normalizedSerial)
-            .stream()
-            .map(this::toResponse)
-            .toList();
-    }
-
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public RmaResponse create(CreateRmaRequest request) {
+    public RmaDetailResponse create(CreateRmaRequest request) {
         Client client = clientService.getEntityById(request.clientId());
         List<RmaItem> items = buildItems(request.items());
 
@@ -141,24 +134,31 @@ public class RmaService {
             null,
             null
         );
+        rma.setDueDate(request.dueDate());
         validateMandatoryFields(rma);
         validateDates(rma);
+        if (rma.getDueDate() != null) {
+            addDueDateHistory(rma, null, rma.getDueDate());
+        }
         rma.setCode(generateNextCode());
-        addStatusHistory(rma, RmaStatus.RECEIVED, "RMA created");
+        addStatusHistory(rma, RmaStatus.RECEIVED, "OS criada");
 
         RmaRecord saved = rmaRecordRepository.save(rma);
         eventPublisher.publishEvent(new RmaNotificationEvent(NotificationEventType.RMA_CREATED, "RMA_CREATED:" + saved.getId(), saved.getId(), Instant.now(), currentUsername()));
         return toResponse(saved);
     }
 
-    public RmaResponse update(Long id, UpdateRmaRequest request) {
+    public RmaDetailResponse update(Long id, UpdateRmaRequest request) {
+        if (Boolean.TRUE.equals(request.clearDueDate()) && request.dueDate() != null) {
+            throw new BusinessException("Provide a due date or clear it, not both.");
+        }
         RmaRecord rma = getEntityForUpdate(id);
 
         if (request.clientId() != null) {
             rma.setClient(clientService.getEntityById(request.clientId()));
         }
         if (request.items() != null) {
-            rma.replaceItems(buildItems(request.items()));
+            replaceItemsPreservingWarranty(rma, request.items());
             syncLegacyItem(rma);
         }
         if (request.priority() != null && request.priority() != rma.getPriority()) {
@@ -183,33 +183,84 @@ public class RmaService {
             request.trackingCode()
         );
 
+        LocalDate previousDueDate = rma.getDueDate();
+        LocalDate nextDueDate = Boolean.TRUE.equals(request.clearDueDate()) ? null
+            : request.dueDate() != null ? request.dueDate() : previousDueDate;
+        rma.setDueDate(nextDueDate);
+
         validateMandatoryFields(rma);
         validateDates(rma);
+        if (!Objects.equals(previousDueDate, nextDueDate)) {
+            addDueDateHistory(rma, previousDueDate, nextDueDate);
+        }
 
         return toResponse(rmaRecordRepository.save(rma));
     }
 
-    public RmaResponse updateStatus(Long id, RmaStatusUpdateRequest request) {
+    public RmaDetailResponse updateStatusNote(Long id, Long eventId, br.com.navitasassist.rma.RmaStatusNoteRequest request) {
+        RmaRecord rma = getEntityForUpdate(id);
+        RmaStatusHistory event = rma.getStatusHistory().stream().filter(item -> item.getId().equals(eventId)).findFirst()
+            .orElseThrow(() -> new ResourceNotFoundException("Evento de status não encontrado nesta OS."));
+        if (CLOSED_STATUSES.contains(rma.getStatus())) throw new BusinessException("Não é permitido editar observações de uma OS encerrada.");
+        String note = trimToNull(request.note());
+        if (note != null && note.length() > 255) throw new BusinessException("Use até 255 caracteres na observação.");
+        String previousNote = event.getNote();
+        event.setNote(note);
+        event.setNoteEditedBy(currentUsername());
+        event.setNoteEditedAt(Instant.now());
+        audit.record("STATUS_NOTE_UPDATE", "RMA_STATUS_NOTE", eventId, rma.getCode(), "Observação anterior: " + AuditService.safeNote(previousNote) + "; nova: " + AuditService.safeNote(note, 255));
+        return toResponse(rmaRecordRepository.saveAndFlush(rma));
+    }
+
+    public RmaDetailResponse updateStatus(Long id, RmaStatusUpdateRequest request) {
         return applyStatusChange(getEntityForUpdate(id), request);
     }
 
-    public RmaResponse updateStatusInBulk(Long id, RmaBulkStatusUpdateRequest request) {
-        RmaRecord rma = rmaRecordRepository.findByIdForUpdate(id)
-            .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
-        if (rma.getStatus() != request.expectedStatus()) {
-            throw new BusinessException("RMA status changed. Refresh the item before trying again.");
+    public RmaDetailResponse updateWarranty(Long id, Long itemId, RmaItemWarrantyRequest request) {
+        RmaRecord rma = getEntityForUpdate(id);
+        RmaItem item = rma.getItems().stream().filter(candidate -> candidate.getId().equals(itemId)).findFirst()
+            .orElseThrow(() -> new ResourceNotFoundException("Item não encontrado nesta OS: " + itemId));
+        if (CLOSED_STATUSES.contains(rma.getStatus())) {
+            throw new BusinessException("Não é possível ajustar a garantia de uma OS encerrada.");
         }
-        return applyStatusChange(rma, new RmaStatusUpdateRequest(request.status(), request.note()));
+        WarrantyStatus next = null;
+        if (request.override() != null) {
+            if (!request.override().equals("IN_WARRANTY") && !request.override().equals("OUT_OF_WARRANTY")) {
+                throw new BusinessException("Garantia manual deve ser IN_WARRANTY ou OUT_OF_WARRANTY.");
+            }
+            next = WarrantyStatus.valueOf(request.override());
+        }
+        String reason = trimToNull(request.reason());
+        if ((next != null && reason == null) || (reason != null && reason.length() > 255)) {
+            throw new BusinessException("Informe um motivo de até 255 caracteres para ajustar a garantia.");
+        }
+        if (next == null && item.getWarrantyOverride() == null) return toResponse(rma);
+
+        Instant now = Instant.now();
+        RmaItemWarrantyHistory history = new RmaItemWarrantyHistory();
+        history.setPreviousOverride(item.getWarrantyOverride());
+        history.setNewOverride(next);
+        history.setReason(reason);
+        history.setChangedBy(currentUsername());
+        history.setChangedAt(now);
+        item.addWarrantyHistory(history);
+        item.setWarrantyOverride(next);
+        item.setWarrantyOverrideReason(next == null ? null : reason);
+        item.setWarrantyOverrideBy(next == null ? null : history.getChangedBy());
+        item.setWarrantyOverrideAt(next == null ? null : now);
+        rma.setUpdatedAt(now);
+        audit.record("WARRANTY_UPDATE", "RMA_ITEM", itemId, rma.getCode(), "Garantia ajustada. Consulte o histórico de garantia do item #" + itemId + " na OS #" + id + ".");
+        return toResponse(rmaRecordRepository.save(rma));
     }
 
-    private RmaResponse applyStatusChange(RmaRecord rma, RmaStatusUpdateRequest request) {
+    private RmaDetailResponse applyStatusChange(RmaRecord rma, RmaStatusUpdateRequest request) {
         boolean changed = !Objects.equals(rma.getStatus(), request.status());
 
         // Closing requires every part reservation to be consumed or cancelled first, so no stock stays locked or pending
         // on a closed RMA. The RMA row is locked here and by PartStockService, which serializes both sides.
         if (changed && CLOSED_STATUSES.contains(request.status())
             && partReservationRepository.existsByRma_IdAndStatusIn(rma.getId(), OPEN_RESERVATION_STATUSES)) {
-            throw new BusinessException("RMA has open part reservations. Consume or cancel them before closing.");
+            throw new BusinessException("A OS possui reservas de peças abertas. Aplique ou cancele as reservas antes de encerrar.");
         }
 
         if (changed) {
@@ -223,7 +274,7 @@ public class RmaService {
         return toResponse(rmaRecordRepository.save(rma));
     }
 
-    public RmaResponse updateAssignee(Long id, RmaAssigneeUpdateRequest request) {
+    public RmaDetailResponse updateAssignee(Long id, RmaAssigneeUpdateRequest request) {
         RmaRecord rma = getEntityForUpdate(id);
         UserAccount previousAssignee = rma.getAssignee();
         UserAccount newAssignee = request.assigneeId() == null
@@ -246,7 +297,7 @@ public class RmaService {
         return toResponse(rmaRecordRepository.save(rma));
     }
 
-    public RmaResponse upsertDiagnosis(Long id, DiagnosisRequest request) {
+    public RmaDetailResponse upsertDiagnosis(Long id, DiagnosisRequest request) {
         RmaRecord rma = getEntityForUpdate(id);
         Diagnosis diagnosis = rma.getDiagnosis();
 
@@ -268,18 +319,18 @@ public class RmaService {
     @Transactional(readOnly = true)
     public RmaRecord getEntityById(Long id) {
         return rmaRecordRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("OS não encontrada: " + id));
     }
 
     private RmaRecord getEntityForUpdate(Long id) {
-        return rmaRecordRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
+        return rmaRecordRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("OS não encontrada: " + id));
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public RmaResponse block(Long id, RmaBlockRequest request) {
+    public RmaDetailResponse block(Long id, RmaBlockRequest request) {
         RmaRecord rma = getEntityForUpdate(id);
         if (rma.getBlockHistory().stream().anyMatch(block -> block.getResolvedAt() == null)) {
-            throw new BusinessException("RMA is already blocked.");
+            throw new BusinessException("A OS já está impedida.");
         }
         RmaBlock block = new RmaBlock();
         block.setReason(trim(request.reason()));
@@ -288,15 +339,18 @@ public class RmaService {
         block.setBlockedAt(Instant.now());
         rma.addBlock(block);
         rma.setUpdatedAt(block.getBlockedAt());
-        return toResponse(rmaRecordRepository.save(rma));
+        rmaRecordRepository.flush();
+        eventPublisher.publishEvent(new RmaNotificationEvent(NotificationEventType.RMA_BLOCKED,
+            "RMA_BLOCKED:" + block.getId(), rma.getId(), block.getBlockedAt(), currentUsername(), block.getReason()));
+        return toResponse(rma);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public RmaResponse resolveBlock(Long id, Long blockId, RmaBlockResolveRequest request) {
+    public RmaDetailResponse resolveBlock(Long id, Long blockId, RmaBlockResolveRequest request) {
         RmaRecord rma = getEntityForUpdate(id);
         RmaBlock block = rma.getBlockHistory().stream().filter(item -> item.getId().equals(blockId)).findFirst()
-            .orElseThrow(() -> new ResourceNotFoundException("RMA block not found: " + blockId));
-        if (block.getResolvedAt() != null) throw new BusinessException("RMA block is no longer active.");
+            .orElseThrow(() -> new ResourceNotFoundException("Impedimento da OS não encontrado: " + blockId));
+        if (block.getResolvedAt() != null) throw new BusinessException("O impedimento da OS não está mais ativo.");
         block.setResolutionNote(trim(request.resolutionNote()));
         block.setResolvedBy(currentUsername());
         block.setResolvedAt(Instant.now());
@@ -309,7 +363,7 @@ public class RmaService {
             throw new BusinessException("At least one product must be provided.");
         }
         if (requests.stream().anyMatch(Objects::isNull)) {
-            throw new BusinessException("Each RMA item must be provided.");
+            throw new BusinessException("Cada item da OS deve ser informado.");
         }
 
         return requests.stream().map(request -> {
@@ -322,6 +376,26 @@ public class RmaService {
             }
             return item;
         }).toList();
+    }
+
+    private void replaceItemsPreservingWarranty(RmaRecord rma, List<RmaItemRequest> requests) {
+        List<RmaItem> available = new ArrayList<>(rma.getItems());
+        List<RmaItem> replacements = buildItems(requests).stream().map(candidate -> {
+            RmaItem existing = available.stream().filter(item ->
+                Objects.equals(item.getProduct().getId(), candidate.getProduct().getId())
+                    && Objects.equals(item.getItemIdentification().getBatchNumber(), candidate.getItemIdentification().getBatchNumber())
+                    && Objects.equals(item.getItemIdentification().getSerialNumber(), candidate.getItemIdentification().getSerialNumber()))
+                .findFirst().orElse(null);
+            if (existing == null) return candidate;
+            available.remove(existing);
+            existing.getItemIdentification().setManufacturedAt(candidate.getItemIdentification().getManufacturedAt());
+            return existing;
+        }).toList();
+        // A ordem do request é mantida (replaceItems grava a posição): o primeiro continua sendo o item principal.
+        if (available.stream().anyMatch(item -> !item.getWarrantyHistory().isEmpty())) {
+            throw new BusinessException("Não é possível remover um item com histórico de ajuste de garantia.");
+        }
+        rma.replaceItems(replacements);
     }
 
     private void syncLegacyItem(RmaRecord rma) {
@@ -448,6 +522,9 @@ public class RmaService {
         if (manufacturedDates.stream().anyMatch(date -> rma.getEntryDate().isBefore(date))) {
             throw new BusinessException("Entry date cannot be before manufacturing date.");
         }
+        if (rma.getDueDate() != null && rma.getDueDate().isBefore(rma.getEntryDate())) {
+            throw new BusinessException("Due date cannot be before entry date.");
+        }
     }
 
     private void addStatusHistory(RmaRecord rma, RmaStatus status, String note) {
@@ -471,12 +548,21 @@ public class RmaService {
         return history;
     }
 
+    private void addDueDateHistory(RmaRecord rma, LocalDate previous, LocalDate next) {
+        RmaDueDateHistory history = new RmaDueDateHistory();
+        history.setPreviousDueDate(previous);
+        history.setNewDueDate(next);
+        history.setChangedBy(currentUsername());
+        history.setChangedAt(Instant.now());
+        rma.addDueDateHistory(history);
+    }
+
     private String generateNextCode() {
         // Held until create commits or rolls back, including the RMA insert.
         rmaCodeGenerationLockRepository.lockForCodeGeneration()
-            .orElseThrow(() -> new IllegalStateException("RMA code generation lock is missing"));
+            .orElseThrow(() -> new IllegalStateException("OS code generation lock is missing"));
         int year = LocalDate.now(BUSINESS_ZONE).getYear();
-        String prefix = "RMA-" + year + "-";
+        String prefix = "OS-" + year + "-";
 
         int nextValue = rmaRecordRepository.findTopByCodeStartingWithOrderByCodeDesc(prefix)
             .map(RmaRecord::getCode)
@@ -485,7 +571,7 @@ public class RmaService {
             .orElse(1);
 
         if (nextValue > MAX_YEARLY_SEQUENCE) {
-            throw new BusinessException("Annual RMA code capacity reached.");
+            throw new BusinessException("Capacidade anual de códigos de OS atingida.");
         }
 
         return prefix + String.format("%06d", nextValue);
@@ -507,8 +593,9 @@ public class RmaService {
         return authentication.getName();
     }
 
-    private RmaResponse toResponse(RmaRecord rma) {
-        return RmaResponse.from(rma, rmaSlaService.calculate(rma, Instant.now()));
+    private RmaDetailResponse toResponse(RmaRecord rma) {
+        Instant now = Instant.now();
+        return RmaDetailResponse.from(rma, rmaStageTimeService.periods(rma, now), rmaDeadlineService.evaluate(rma, RmaDeadlineService.businessDate(now)));
     }
 
     private String trimToNull(String value) {

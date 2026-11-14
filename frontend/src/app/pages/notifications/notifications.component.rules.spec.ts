@@ -1,3 +1,4 @@
+import { AuthService } from '../../core/services/auth.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Signal, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -8,7 +9,7 @@ import { Permission } from '../../core/permissions';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { LoadingService } from '../../core/services/loading.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { ProfileOption } from '../../core/models';
+import { NotificationEmailStatusResponse, ProfileOption } from '../../core/models';
 import { ProfileService } from '../../core/services/profile.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { NotificationsComponent } from './notifications.component';
@@ -23,7 +24,7 @@ const PROFILES: ProfileOption[] = [
 const profilesOf = (ids: number[]) => PROFILES.filter((profile) => ids.includes(profile.id)).map(({ id, name }) => ({ id, name }));
 
 const RULE: NotificationRuleResponse = {
-  eventType: 'SLA_OVERDUE', enabled: true, severity: 'CRITICAL', recipientProfiles: profilesOf([1]), notifyAssignee: true, emailEnabled: false,
+  eventType: 'RMA_BLOCKED', enabled: true, severity: 'CRITICAL', recipientProfiles: profilesOf([1]), notifyAssignee: true, emailEnabled: false,
   userMutable: false, updatedAt: '2026-10-24T12:00:00Z', updatedBy: 'admin'
 };
 const SILENT_RULE: NotificationRuleResponse = {
@@ -57,7 +58,7 @@ describe('NotificationsComponent rules', () => {
   };
   const openRules = () => { component.selectTab('rules'); render(); };
 
-  async function setup(sources: { role?: LegacyProfileCode; permissions?: readonly Permission[] | Signal<readonly Permission[]>; rules?: Observable<NotificationRuleResponse[]>[]; failures?: Observable<NotificationFailureResponse[]>[]; update?: Observable<NotificationRuleResponse>[]; profiles?: Observable<ProfileOption[]>[] } = {}) {
+  async function setup(sources: { role?: LegacyProfileCode; permissions?: readonly Permission[] | Signal<readonly Permission[]>; rules?: Observable<NotificationRuleResponse[]>[]; failures?: Observable<NotificationFailureResponse[]>[]; update?: Observable<NotificationRuleResponse>[]; profiles?: Observable<ProfileOption[]>[]; emailStatus?: NotificationEmailStatusResponse } = {}) {
     const listRules = vi.fn(() => of([RULE]));
     for (const source of sources.rules ?? []) listRules.mockImplementationOnce(() => source);
     const listFailures = vi.fn(() => of([] as NotificationFailureResponse[]));
@@ -71,6 +72,8 @@ describe('NotificationsComponent rules', () => {
     service = {
       unreadCount: signal(0),
       summaryLoaded: signal(true),
+      latestReadAll: signal(null),
+      markingAll: signal(false),
       summaryLoadFailed: signal(false),
       list: vi.fn(() => of([])),
       refreshSummary: vi.fn(() => of(0)),
@@ -81,12 +84,16 @@ describe('NotificationsComponent rules', () => {
       updatePreference: vi.fn(),
       listRules,
       updateRule,
+      emailStatus: vi.fn(() => of(sources.emailStatus ?? { enabled: true, provider: 'fake' })),
+      testEmail: vi.fn(() => of({ status: 'simulado', provider: 'fake' })),
+      retryEmail: vi.fn(() => of({ notificationId: 42, status: 'PENDING', provider: 'fake' })),
       listFailures
     } as never;
     await TestBed.configureTestingModule({
       imports: [NotificationsComponent],
       providers: [
         provideRouter([]),
+        { provide: AuthService, useValue: { currentUser: () => ({ email: 'user@example.com' }) } },
         { provide: NotificationService, useValue: service },
         { provide: ProfileService, useValue: { options: profileOptions, invalidateOptions } },
         providePermissions(sources.permissions ?? profilePermissions(sources.role ?? 'ADMIN'))
@@ -97,25 +104,115 @@ describe('NotificationsComponent rules', () => {
     render();
   }
 
+  it.each(['RMA_BLOCKED', 'PART_PENDING', 'TEST_FAILED'] as const)('permite editar o evento suportado %s', async (eventType) => {
+    const labels = { RMA_BLOCKED: 'Bloqueio', PART_PENDING: 'Peça pendente', TEST_FAILED: 'Falha de teste' };
+    await setup({ rules: [of([{ ...RULE, eventType, supported: true, severity: 'WARNING', emailEnabled: false }])] }); openRules();
+    expect(text()).not.toContain('Indisponível');
+    const edit = root().querySelector<HTMLButtonElement>(`button[aria-label="Editar regra ${labels[eventType]}"]`);
+    expect(edit?.disabled).toBe(false);
+    edit!.click(); render();
+    expect(root().querySelector('[role="dialog"]')).not.toBeNull();
+  });
+
+  it('envia teste para si e informa simulação sem alegar entrega', async () => {
+    await setup(); openRules();
+    button('Enviar e-mail de teste')!.click(); render();
+    expect(service['testEmail']).toHaveBeenCalledTimes(1);
+    expect(text()).toContain('Simulação registrada');
+    expect(text()).not.toContain('Entregue');
+  });
+
+  it.each([400, 409])('mostra erro inline de reenvio %s e permite nova tentativa', async (status) => {
+    const email: NotificationFailureResponse = { source: 'EMAIL', eventKey: 'e', eventType: 'RMA_CREATED', rmaCode: 'OS-1', recipient: 'admin', error: 'Falha', occurredAt: RULE.updatedAt, notificationId: 42, status: 'FAILED', retryAllowed: true, attempts: 5 };
+    await setup({ failures: [of([email]), of([email])] }); openRules();
+    service['retryEmail'].mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status, error: { message: 'Reenvio recusado' } })));
+    button('Reenviar')!.click(); render();
+    expect(text()).toContain('Reenvio recusado');
+    expect(button('Reenviar')!.disabled).toBe(false);
+    expect(service['listFailures']).toHaveBeenCalledTimes(status === 409 ? 2 : 1);
+  });
+
+  it('bloqueia teste duplicado e ignora resposta depois da perda de permissão', async () => {
+    const permissions = signal<readonly Permission[]>(profilePermissions('ADMIN'));
+    const pending = new Subject<{ status: string; provider: string }>();
+    await setup({ permissions }); openRules();
+    service['testEmail'].mockReturnValue(pending);
+    button('Enviar e-mail de teste')!.click(); render();
+    expect(button('Enviando...')!.disabled).toBe(true);
+    permissions.set(profilePermissions('TECHNICIAN')); render();
+    pending.next({ status: 'simulado', provider: 'fake' }); pending.complete(); render();
+    expect(root().querySelector('.email-failures-section')).toBeNull();
+    expect(text()).not.toContain('Simulação registrada');
+  });
+
+  const REAL = { enabled: true, provider: 'smtp', sentToday: 12, dailyLimit: 100, sentThisMonth: 340, monthlyLimit: 3000, limitReached: false };
+
+  it('mostra o consumo diário com o mensal no tooltip quando o provedor é real', async () => {
+    await setup({ emailStatus: REAL }); openRules();
+    const usage = root().querySelector<HTMLElement>('.email-usage')!;
+    expect(normalize(usage.textContent)).toBe('Enviados hoje 12/100');
+    expect(usage.title).toBe('No mês 340/3000');
+    expect(text()).not.toContain('Limite atingido');
+  });
+
+  it('omite o limite quando é zero e a contagem com provedor falso', async () => {
+    await setup({ emailStatus: { ...REAL, dailyLimit: 0, monthlyLimit: 0 } }); openRules();
+    const usage = root().querySelector<HTMLElement>('.email-usage')!;
+    expect(normalize(usage.textContent)).toBe('Enviados hoje 12');
+    expect(usage.title).toBe('No mês 340');
+  });
+
+  it('não mostra contagem com provedor falso', async () => {
+    await setup({ emailStatus: { ...REAL, provider: 'fake' } }); openRules();
+    expect(root().querySelector('.email-usage')).toBeNull();
+  });
+
+  it('destaca o limite atingido com aviso curto', async () => {
+    await setup({ emailStatus: { ...REAL, sentToday: 100, limitReached: true } }); openRules();
+    expect(root().querySelector('.email-usage--limit')).not.toBeNull();
+    expect(text()).toContain('Limite atingido: os envios retomam no próximo período');
+  });
+
+  it.each([400, 429, 502])('mostra erro inline do teste %s sem feedback de sucesso', async status => {
+    await setup(); openRules();
+    service['testEmail'].mockReturnValue(throwError(() => new HttpErrorResponse({ status, error: { message: 'Teste recusado' } })));
+    button('Enviar e-mail de teste')!.click(); render();
+    expect(text()).toContain('Teste recusado');
+    expect(text()).not.toContain('Teste enviado');
+    expect(button('Enviar e-mail de teste')!.disabled).toBe(false);
+  });
+
+  it('permite salvar os dois canais independentemente', async () => {
+    await setup(); openRules();
+    const editor = component as unknown as { openRuleEditor(rule: NotificationRuleResponse): void; ruleForm: { patchValue(value: object): void }; saveRule(): void };
+    editor.openRuleEditor(RULE); editor.ruleForm.patchValue({ appEnabled: false, emailEnabled: true }); editor.saveRule();
+    expect(service['updateRule']).toHaveBeenCalledWith(RULE.eventType, expect.objectContaining({ appEnabled: false, emailEnabled: true }));
+  });
+
+  it('não oferece reenvio para email pendente ou falha de evento', async () => {
+    await setup({ failures: [of([{ source: 'EMAIL', eventKey: 'e', eventType: 'RMA_CREATED', rmaCode: null, recipient: null, error: 'Erro', occurredAt: RULE.updatedAt, notificationId: 42, status: 'PENDING', retryAllowed: true }])] });
+    openRules(); expect(button('Reenviar')).toBeUndefined();
+  });
+
   // Vermelho: a tabela tem checkboxes e selects por linha e nenhum botão "Editar regra".
   it('summarizes each rule without inline controls', async () => {
     await setup({ rules: [of([RULE, SILENT_RULE])] });
     openRules();
     const table = rulesTable()!;
-    expect(cells(table, 'SLA vencido')).toMatchObject({
-      'Alerta': 'SLA vencido',
-      'Situação': 'Ativa',
+    expect(cells(table, 'Bloqueio')).toMatchObject({
+      'Alerta': 'Bloqueio',
+      'Ativa': 'Ativa',
       'Severidade': 'Crítico',
-      'Destinatários': 'Administrador + responsável pelo RMA',
+      'Destinatários': 'Administrador + responsável pela OS',
       'E-mail': 'Não',
       'Silenciável': 'Não',
       'Atualização': '24/10/2026, 09:00 por admin'
     });
     expect(table.querySelector('input')).toBeNull();
     expect(table.querySelector('app-custom-select')).toBeNull();
-    expect(table.querySelector('button[aria-label="Editar regra SLA vencido"]')).not.toBeNull();
-    expect(cells(table, 'Novo RMA')['Destinatários']).toMatch(/^Nenhum destinatário\b/);
-    expect(cells(table, 'Novo RMA')['Situação']).toBe('Inativa');
+    expect(table.querySelector('button[aria-label="Editar regra Bloqueio"]')).not.toBeNull();
+    expect(cells(table, 'Nova OS')['Destinatários']).toMatch(/^Nenhum destinatário\b/);
+    expect(cells(table, 'Nova OS')['Ativa']).toBe('Inativa');
   });
 
   // Vermelho: a tabela aparece vazia durante a carga e antiga depois da falha.
@@ -134,16 +231,16 @@ describe('NotificationsComponent rules', () => {
     TestBed.resetTestingModule();
     await setup({ rules: [of([RULE]), failure()] });
     openRules();
-    expect(text()).toContain('SLA vencido');
+    expect(text()).toContain('Bloqueio');
     component.selectTab('preferences');
     render();
     openRules();
-    expect(text()).not.toContain('SLA vencido');
+    expect(text()).not.toContain('Bloqueio');
     expect(text()).toContain('Não foi possível carregar as regras.');
     button('Tentar novamente')!.click();
     render();
     expect(service['listRules']).toHaveBeenCalledTimes(3);
-    expect(text()).toContain('SLA vencido');
+    expect(text()).toContain('Bloqueio');
   });
 
   // Vermelho: com lista vazia aparece a tabela sem linhas.
@@ -176,7 +273,7 @@ describe('NotificationsComponent rules', () => {
     openRules(); component.selectTab('preferences'); render(); openRules();
     expectPending(root());
     expect(rulesTable()).toBeNull();
-    expect(text()).not.toContain('SLA vencido');
+    expect(text()).not.toContain('Bloqueio');
   });
 
   it('keeps the rule failure visible during a pending retry', async () => {
@@ -239,62 +336,65 @@ describe('NotificationsComponent rules', () => {
     it('edits a rule in a focused form and saves the same contract', async () => {
       await setup();
       openRules();
-      openEditor('SLA vencido');
-      expect(Array.from(dialog()!.querySelectorAll('fieldset legend')).map((legend) => normalize(legend.textContent))).toEqual(['Entrega', 'Destinatários', 'E-mail e silenciamento']);
+      openEditor('Bloqueio');
+      expect(Array.from(dialog()!.querySelectorAll('fieldset legend')).map((legend) => normalize(legend.textContent))).toEqual(['Entrega', 'Destinatários', 'Silenciamento']);
       expect(normalize(field('Atendimento').closest('fieldset')!.querySelector('legend')!.textContent)).toBe('Destinatários');
+      // Os dois canais ficam juntos na seção de entrega.
+      expect(normalize(field('App').closest('fieldset')!.querySelector('legend')!.textContent)).toBe('Entrega');
+      expect(normalize(field('E-mail').closest('fieldset')!.querySelector('legend')!.textContent)).toBe('Entrega');
       expect(dialog()!.textContent).toContain('Vale para os próximos eventos.');
       expectCancelBeforePrimary(dialog()!);
       toggleField('Atendimento');
       submit();
       expect(service['updateRule']).toHaveBeenCalledTimes(1);
-      expect(service['updateRule']).toHaveBeenCalledWith('SLA_OVERDUE', {
-        enabled: true, severity: 'CRITICAL', recipientProfileIds: [1, 2], notifyAssignee: true, emailEnabled: false, userMutable: false
+      expect(service['updateRule']).toHaveBeenCalledWith('RMA_BLOCKED', {
+        enabled: true, appEnabled: true, severity: 'CRITICAL', recipientProfileIds: [1, 2], notifyAssignee: true, emailEnabled: false, userMutable: false
       });
       expect(dialog()).toBeNull();
-      expect(cells(rulesTable()!, 'SLA vencido')).toMatchObject({
-        'Destinatários': 'Administrador, Atendimento + responsável pelo RMA',
+      expect(cells(rulesTable()!, 'Bloqueio')).toMatchObject({
+        'Destinatários': 'Administrador, Atendimento + responsável pela OS',
         'Atualização': '24/10/2026, 13:00 por root'
       });
-      expect(text()).toContain('Regra "SLA vencido" atualizada.');
+      expect(text()).toContain('Regra "Bloqueio" atualizada.');
     });
 
     // Vermelho: o resumo e o editor não explicam que a regra sem destinatários não entrega a ninguém.
     it('lists profiles as recipient checkboxes and prefills those of the rule', async () => {
       await setup({ profiles: [of([...PROFILES, { id: 9, name: 'Supervisor', permissions: [] }])] });
       openRules();
-      openEditor('SLA vencido');
+      openEditor('Bloqueio');
       const recipients = field('Administrador').closest('fieldset')!;
       expect(Array.from(recipients.querySelectorAll('label.checkbox-field')).map((label) => normalize(label.textContent)))
-        .toEqual(['Administrador', 'Atendimento', 'Consulta', 'Técnico', 'Supervisor', 'Notificar o responsável pelo RMA']);
+        .toEqual(['Administrador', 'Atendimento', 'Consulta', 'Técnico', 'Supervisor', 'Notificar o responsável pela OS']);
       expect(field('Administrador').checked).toBe(true);
       expect(field('Supervisor').checked).toBe(false);
       toggleField('Supervisor');
       submit();
-      expect(service['updateRule']).toHaveBeenCalledWith('SLA_OVERDUE', expect.objectContaining({ recipientProfileIds: [1, 9] }));
+      expect(service['updateRule']).toHaveBeenCalledWith('RMA_BLOCKED', expect.objectContaining({ recipientProfileIds: [1, 9] }));
     });
 
     it('loads profile options once, when the rules tab opens', async () => {
       await setup();
       expect(profileOptions).not.toHaveBeenCalled();
       openRules();
-      openEditor('SLA vencido');
+      openEditor('Bloqueio');
       dialogButton('Cancelar').click();
       render();
-      openEditor('SLA vencido');
+      openEditor('Bloqueio');
       expect(profileOptions).toHaveBeenCalledTimes(1);
     });
 
     it('shows error when profiles fail to load and retries on the next editor', async () => {
       await setup({ profiles: [throwError(() => new HttpErrorResponse({ status: 503 }))] });
       openRules();
-      openEditor('SLA vencido');
+      openEditor('Bloqueio');
       expect(dialog()!.querySelector('[role="alert"] strong')?.textContent?.trim()).toBe('Não foi possível carregar os perfis.');
       expect(dialog()!.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(true);
       submit();
       expect(service['updateRule']).not.toHaveBeenCalled();
       dialogButton('Cancelar').click();
       render();
-      openEditor('SLA vencido');
+      openEditor('Bloqueio');
       expect(dialog()!.querySelector('[role="alert"]')).toBeNull();
       expect(field('Administrador').checked).toBe(true);
       expect(profileOptions).toHaveBeenCalledTimes(2);
@@ -303,7 +403,7 @@ describe('NotificationsComponent rules', () => {
     it('retries the profile options from the editor alert', async () => {
       await setup({ profiles: [throwError(() => new HttpErrorResponse({ status: 503 }))] });
       openRules();
-      openEditor('SLA vencido');
+      openEditor('Bloqueio');
       dialogButton('Tentar novamente').click();
       render();
       expect(profileOptions).toHaveBeenCalledTimes(2);
@@ -329,24 +429,24 @@ describe('NotificationsComponent rules', () => {
       await setup({ rules: [of([RULE, SILENT_RULE, assigneeOnly])] });
       openRules();
       const table = rulesTable()!;
-      expect(cells(table, 'Novo RMA')['Destinatários']).toContain('Nenhum destinatário');
-      expect(cells(table, 'Novo RMA')['Destinatários']).toContain(warning);
-      expect(cells(table, 'Novo RMA')['Situação']).toBe('Inativa');
-      expect(cells(table, 'SLA vencido')['Destinatários']).not.toContain(warning);
-      expect(cells(table, 'Nova atribuição')['Destinatários']).toBe('Responsável pelo RMA');
+      expect(cells(table, 'Nova OS')['Destinatários']).toContain('Nenhum destinatário');
+      expect(cells(table, 'Nova OS')['Destinatários']).toContain(warning);
+      expect(cells(table, 'Nova OS')['Ativa']).toBe('Inativa');
+      expect(cells(table, 'Bloqueio')['Destinatários']).not.toContain(warning);
+      expect(cells(table, 'Nova atribuição')['Destinatários']).toBe('Responsável pela OS');
 
-      openEditor('SLA vencido');
+      openEditor('Bloqueio');
       expect(dialog()!.textContent).not.toContain(warning);
       toggleField('Administrador');
       expect(dialog()!.textContent).not.toContain(warning);
       toggleField('Notificar o responsável');
       expect(dialog()!.textContent).toContain(warning);
       submit();
-      expect(service['updateRule']).toHaveBeenLastCalledWith('SLA_OVERDUE', {
-        enabled: true, severity: 'CRITICAL', recipientProfileIds: [], notifyAssignee: false, emailEnabled: false, userMutable: false
+      expect(service['updateRule']).toHaveBeenLastCalledWith('RMA_BLOCKED', {
+        enabled: true, appEnabled: true, severity: 'CRITICAL', recipientProfileIds: [], notifyAssignee: false, emailEnabled: false, userMutable: false
       });
 
-      openEditor('Novo RMA');
+      openEditor('Nova OS');
       expect(dialog()!.textContent).toContain(warning);
       toggleField('Técnico');
       expect(dialog()!.textContent).not.toContain(warning);
@@ -356,15 +456,15 @@ describe('NotificationsComponent rules', () => {
     it('saves an unchanged rule and all-false booleans', async () => {
       await setup({ rules: [of([RULE, SILENT_RULE])] });
       openRules();
-      openEditor('SLA vencido');
+      openEditor('Bloqueio');
       submit();
-      expect(service['updateRule']).toHaveBeenLastCalledWith('SLA_OVERDUE', {
-        enabled: true, severity: 'CRITICAL', recipientProfileIds: [1], notifyAssignee: true, emailEnabled: false, userMutable: false
+      expect(service['updateRule']).toHaveBeenLastCalledWith('RMA_BLOCKED', {
+        enabled: true, appEnabled: true, severity: 'CRITICAL', recipientProfileIds: [1], notifyAssignee: true, emailEnabled: false, userMutable: false
       });
-      openEditor('Novo RMA');
+      openEditor('Nova OS');
       submit();
       expect(service['updateRule']).toHaveBeenLastCalledWith('RMA_CREATED', {
-        enabled: false, severity: 'INFO', recipientProfileIds: [], notifyAssignee: false, emailEnabled: false, userMutable: false
+        enabled: false, appEnabled: true, severity: 'INFO', recipientProfileIds: [], notifyAssignee: false, emailEnabled: false, userMutable: false
       });
     });
 
@@ -372,17 +472,17 @@ describe('NotificationsComponent rules', () => {
     it('does not carry values between consecutive rules', async () => {
       await setup({ rules: [of([RULE, SILENT_RULE])] });
       openRules();
-      openEditor('SLA vencido');
+      openEditor('Bloqueio');
       toggleField('Técnico');
       expect(field('Técnico').checked).toBe(true);
       dialogButton('Cancelar').click();
       render();
-      openEditor('Novo RMA');
+      openEditor('Nova OS');
       expect(field('Técnico').checked).toBe(false);
       expect(field('Administrador').checked).toBe(false);
       expect(field('Ativa').checked).toBe(false);
-      expect(field('Notificar o responsável pelo RMA').checked).toBe(false);
-      expect(field('Enviar também por e-mail').checked).toBe(false);
+      expect(field('Notificar o responsável pela OS').checked).toBe(false);
+      expect(field('E-mail').checked).toBe(false);
       expect(field('Permitir que cada usuário silencie').checked).toBe(false);
     });
 
@@ -390,13 +490,13 @@ describe('NotificationsComponent rules', () => {
       const pending = new Subject<NotificationRuleResponse>();
       await setup({ rules: [of([RULE, SILENT_RULE])], update: [pending] });
       openRules();
-      openEditor('SLA vencido');
+      openEditor('Bloqueio');
       toggleField('Técnico');
       submit();
 
       (component as unknown as { openRuleEditor(rule: NotificationRuleResponse): void }).openRuleEditor(SILENT_RULE);
       render();
-      expect(dialog()!.querySelector('h3')!.textContent).toContain('SLA vencido');
+      expect(dialog()!.querySelector('h3')!.textContent).toContain('Bloqueio');
       expect(field('Técnico').checked).toBe(true);
       expect(field('Ativa').checked).toBe(true);
 
@@ -404,22 +504,22 @@ describe('NotificationsComponent rules', () => {
       pending.complete();
       render();
       expect(dialog()).toBeNull();
-      expect(cells(rulesTable()!, 'SLA vencido')['Destinatários']).toBe('Administrador, Técnico + responsável pelo RMA');
-      expect(cells(rulesTable()!, 'Novo RMA')['Situação']).toBe('Inativa');
+      expect(cells(rulesTable()!, 'Bloqueio')['Destinatários']).toBe('Administrador, Técnico + responsável pela OS');
+      expect(cells(rulesTable()!, 'Nova OS')['Ativa']).toBe('Inativa');
     });
 
     it('disables every rule edit button while a save is pending', async () => {
       const pending = new Subject<NotificationRuleResponse>();
       await setup({ rules: [of([RULE, SILENT_RULE])], update: [pending] });
       openRules();
-      openEditor('SLA vencido');
+      openEditor('Bloqueio');
       submit();
       const editButtons = Array.from(rulesTable()!.querySelectorAll<HTMLButtonElement>('button'));
       expect(editButtons).toHaveLength(2);
       expect(editButtons.every((button) => button.disabled)).toBe(true);
       editButtons[1].click();
       render();
-      expect(dialog()!.querySelector('h3')!.textContent).toContain('SLA vencido');
+      expect(dialog()!.querySelector('h3')!.textContent).toContain('Bloqueio');
     });
 
     // Vermelho: sem formulário não há Cancelar nem gravação pendente.
@@ -427,14 +527,14 @@ describe('NotificationsComponent rules', () => {
       const pending = new Subject<NotificationRuleResponse>();
       await setup({ update: [pending] });
       openRules();
-      openEditor('SLA vencido');
+      openEditor('Bloqueio');
       toggleField('Atendimento');
       dialogButton('Cancelar').click();
       render();
       expect(service['updateRule']).not.toHaveBeenCalled();
-      expect(cells(rulesTable()!, 'SLA vencido')['Destinatários']).toBe('Administrador + responsável pelo RMA');
+      expect(cells(rulesTable()!, 'Bloqueio')['Destinatários']).toBe('Administrador + responsável pela OS');
 
-      openEditor('SLA vencido');
+      openEditor('Bloqueio');
       toggleField('Atendimento');
       formHarness().saveRule();
       formHarness().saveRule();
@@ -459,18 +559,20 @@ describe('NotificationsComponent rules', () => {
       it('sends the chosen severity and a disabled rule', async () => {
         await setup();
         openRules();
-        openEditor('SLA vencido');
+        openEditor('Bloqueio');
         formHarness().ruleForm.controls.severity.setValue('WARNING');
         toggleField('Ativa');
         submit();
-        expect(service['updateRule']).toHaveBeenCalledWith('SLA_OVERDUE', expect.objectContaining({ severity: 'WARNING', enabled: false }));
+        expect(service['updateRule']).toHaveBeenCalledWith('RMA_BLOCKED', expect.objectContaining({ severity: 'WARNING', enabled: false }));
       });
 
-      it('explains the e-mail restriction next to its checkbox', async () => {
+      it('usa canais app e email sem pressupor domínio corporativo', async () => {
         await setup();
         openRules();
-        openEditor('SLA vencido');
-        expect(field('Enviar também por e-mail').closest('.field-group, fieldset')!.textContent).toContain('Somente endereços do domínio corporativo configurado.');
+        openEditor('Bloqueio');
+        expect(field('App')).not.toBeNull();
+        expect(field('E-mail')).not.toBeNull();
+        expect(dialog()!.textContent).not.toContain('domínio corporativo');
       });
     });
   });
@@ -481,7 +583,7 @@ describe('NotificationsComponent rules', () => {
 
     const dialog = () => root().querySelector<HTMLElement>('[role="dialog"]');
     const tick = () => { render(); TestBed.tick(); };
-    const editButton = () => root().querySelector<HTMLButtonElement>('button[aria-label="Editar regra SLA vencido"]')!;
+    const editButton = () => root().querySelector<HTMLButtonElement>('button[aria-label="Editar regra Bloqueio"]')!;
     const openFromButton = () => { const trigger = editButton(); trigger.focus(); trigger.click(); tick(); return trigger; };
     const escape = () => {
       const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
@@ -543,8 +645,8 @@ describe('NotificationsComponent rules', () => {
 
   describe('processing failures', () => {
     const FAILURES: NotificationFailureResponse[] = [
-      { source: 'EVENT', eventKey: 'evt-1', eventType: 'SLA_OVERDUE', rmaCode: null, recipient: null, error: 'Linha 1\nLinha 2 com detalhe', occurredAt: '2026-10-24T16:00:00Z' },
-      { source: 'EMAIL', eventKey: 'evt-2', eventType: 'RMA_CREATED', rmaCode: 'RMA-2026-000007', recipient: 'tec@empresa.com', error: 'SMTP indisponível', occurredAt: '2026-10-24T15:00:00Z' }
+      { source: 'EVENT', eventKey: 'evt-1', eventType: 'RMA_BLOCKED', rmaCode: null, recipient: null, error: 'Linha 1\nLinha 2 com detalhe', occurredAt: '2026-10-24T16:00:00Z' },
+      { source: 'EMAIL', eventKey: 'evt-2', eventType: 'RMA_CREATED', rmaCode: 'OS-2026-000007', recipient: 'tec@empresa.com', error: 'SMTP indisponível', occurredAt: '2026-10-24T15:00:00Z' }
     ];
     const section = () => root().querySelector<HTMLElement>('section[aria-labelledby="notification-failures-title"]');
     const failuresColumn = (header: string) => {
@@ -560,7 +662,7 @@ describe('NotificationsComponent rules', () => {
       expect(text()).toContain('Não foi possível carregar as falhas de processamento.');
       expect(button('Tentar novamente')).toBeDefined();
       expect(text()).not.toContain('Nenhuma falha registrada.');
-      expect(cells(rulesTable()!, 'SLA vencido')['Situação']).toBe('Ativa');
+      expect(cells(rulesTable()!, 'Bloqueio')['Ativa']).toBe('Ativa');
     });
 
     // Vermelho: durante a carga aparece "Nenhuma falha registrada.".
@@ -607,25 +709,25 @@ describe('NotificationsComponent rules', () => {
       render();
       expect(service['listFailures']).toHaveBeenCalledTimes(2);
       expect(service['listRules']).toHaveBeenCalledTimes(1);
-      expect(failuresColumn('Origem')).toEqual(['Processamento do evento', 'Envio de e-mail']);
+      expect(failuresColumn('Origem')).toEqual(['Processamento do evento']);
     });
 
     // Vermelho: a origem é "Evento"/"E-mail" e não há texto do limite.
     it('identifies the origin and the limit', async () => {
       await setup({ failures: [of(FAILURES)] });
       openRules();
-      expect(failuresColumn('Origem').map((value) => normalize(value))).toEqual(['Processamento do evento', 'Envio de e-mail']);
-      expect(normalize(section()!.textContent)).toContain('Até 50 falhas de eventos e até 50 falhas de envio de e-mail, da mais recente para a mais antiga.');
+      expect(failuresColumn('Origem').map((value) => normalize(value))).toEqual(['Processamento do evento']);
+      expect(root().querySelector('.email-failures-section')?.textContent).toContain('SMTP indisponível');
     });
 
     describe('preservation', () => {
       it('keeps the full error, the server order, placeholders and event labels', async () => {
         await setup({ failures: [of(FAILURES)] });
         openRules();
-        expect(failuresColumn('Erro')).toEqual(['Linha 1\nLinha 2 com detalhe', 'SMTP indisponível']);
-        expect(failuresColumn('RMA').map((value) => normalize(value))).toEqual(['—', 'RMA-2026-000007']);
-        expect(failuresColumn('Destinatário').map((value) => normalize(value))).toEqual(['—', 'tec@empresa.com']);
-        expect(failuresColumn('Alerta').map((value) => normalize(value))).toEqual(['SLA vencido', 'Novo RMA']);
+        expect(failuresColumn('Erro')).toEqual(['Linha 1\nLinha 2 com detalhe']);
+        expect(failuresColumn('OS').map((value) => normalize(value))).toEqual(['—']);
+        expect(failuresColumn('Destinatário').map((value) => normalize(value))).toEqual(['—']);
+        expect(failuresColumn('Alerta').map((value) => normalize(value))).toEqual(['Bloqueio']);
       });
 
       it('requests failures only for admins', async () => {

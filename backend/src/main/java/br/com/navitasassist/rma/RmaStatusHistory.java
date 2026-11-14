@@ -47,4 +47,9 @@ public class RmaStatusHistory {
 
     @Column(length = 255)
     private String note;
+
+    @Column(length = 120)
+    private String noteEditedBy;
+
+    private Instant noteEditedAt;
 }

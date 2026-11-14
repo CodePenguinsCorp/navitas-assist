@@ -18,7 +18,7 @@ const OPTIONS: ProfileOption[] = [
 function account(overrides: Partial<UserAccountResponse> = {}): UserAccountResponse {
   return {
     id: 7, username: 'ana', fullName: 'Ana Souza', profile: { id: 4, name: 'Consulta' }, extraPermissions: [], active: true,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z', ...overrides
+    updatedAt: '2026-10-20T12:00:00Z', ...overrides
   };
 }
 
@@ -56,7 +56,7 @@ describe('UsersComponent profile and extra permissions', () => {
       imports: [UsersComponent],
       providers: [
         { provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }), refreshSession } },
-        { provide: CatalogService, useValue: { listUsers, getUserSummary: () => of({ total: 1, active: 1, admins: 1, roles: 2 }), createUser, updateUser } },
+        { provide: CatalogService, useValue: { listUsers, getUserSummary: () => of({ total: 1 }), createUser, updateUser } },
         { provide: ProfileService, useValue: { options, permissionCatalog: sources.catalog ?? (() => of(PERMISSION_CATALOG)), invalidateOptions: vi.fn() } }
       ]
     }).compileComponents();
@@ -67,8 +67,8 @@ describe('UsersComponent profile and extra permissions', () => {
   }
 
   const dialog = () => element.querySelector<HTMLElement>('[role="dialog"]')!;
-  const extraBox = (label: string) => Array.from(dialog().querySelectorAll<HTMLLabelElement>('.extra-permissions label.checkbox-field'))
-    .find((item) => item.querySelector('span')?.textContent?.trim() === label)!;
+  const extraBox = (label: string) => Array.from(dialog().querySelectorAll<HTMLLabelElement>('.extra-permissions label.permission-row'))
+    .find((item) => item.querySelector('.permission-row__label')?.textContent?.trim() === label)!;
   const fill = () => component.form.patchValue({ username: 'novo', fullName: 'Novo usuário', password: 'segredo1' });
   const selectProfile = (id: number) => { component.form.controls['profileId'].setValue(id); fixture.detectChanges(); };
 
@@ -94,14 +94,72 @@ describe('UsersComponent profile and extra permissions', () => {
     expect(sets.length).toBe(6);
     expect(dialog().querySelector('.extra-permissions')?.textContent).toContain('Permissões extras');
     selectProfile(2);
-    const included = extraBox('Abrir RMAs');
+    const included = extraBox('Abrir ordens de serviço');
     expect(included.querySelector('input')!.checked).toBe(true);
     expect(included.querySelector('input')!.disabled).toBe(true);
-    expect(included.textContent).toContain('Incluída no perfil');
+    expect(included.querySelector('.permission-badge')?.textContent?.trim()).toBe('Do perfil');
     const free = extraBox('Alterar status');
     expect(free.querySelector('input')!.checked).toBe(false);
     expect(free.querySelector('input')!.disabled).toBe(false);
-    expect(free.textContent).not.toContain('Incluída no perfil');
+    expect(free.querySelector('.permission-badge')).toBeNull();
+  });
+
+  describe('collapsible extra permissions', () => {
+    const toggle = () => dialog().querySelector<HTMLButtonElement>('.extra-permissions button[aria-controls]')!;
+    const details = () => ({ open: toggle().getAttribute('aria-expanded') === 'true' && !dialog().querySelector<HTMLElement>(`#${toggle().getAttribute('aria-controls')}`)!.hidden });
+    const summary = () => dialog().querySelector('.extra-permissions .permission-picker__summary')!.textContent!.replace(/\s+/g, ' ').trim();
+
+    it('starts minimized for a new user and keeps the checkboxes in the DOM', async () => {
+      await mount();
+      component.openCreateModal();
+      fixture.detectChanges();
+      expect(details().open).toBe(false);
+      expect(summary()).toContain('Nenhuma permissão extra');
+      expect(dialog().querySelectorAll('.extra-permissions fieldset.permission-module').length).toBe(6);
+    });
+
+    it('opens by itself when the user being edited already has extras, and counts them', async () => {
+      await mount();
+      component.openEditModal(account({ extraPermissions: ['rma.status', 'pecas.reservar'] }));
+      fixture.detectChanges();
+      expect(details().open).toBe(true);
+      expect(summary()).toContain('2 permissões extras');
+    });
+
+    it('counts a single extra in the singular and ignores permissions the profile already has', async () => {
+      await mount();
+      component.openEditModal(account({ extraPermissions: ['rma.ver'] }));
+      fixture.detectChanges();
+      expect(summary()).toContain('Nenhuma permissão extra');
+      extraBox('Alterar status').querySelector('input')!.click();
+      fixture.detectChanges();
+      expect(summary()).toContain('1 permissão extra');
+    });
+
+    it('is minimized again the next time a new user is created', async () => {
+      await mount();
+      component.openEditModal(account({ extraPermissions: ['rma.status'] }));
+      fixture.detectChanges();
+      expect(details().open).toBe(true);
+      component.closeModal();
+      fixture.detectChanges();
+      component.openCreateModal();
+      fixture.detectChanges();
+      expect(details().open).toBe(false);
+    });
+  });
+
+  it('removes an extra from its chip without opening the panel', async () => {
+    await mount();
+    component.openEditModal(account({ extraPermissions: ['rma.status', 'pecas.reservar'] }));
+    fixture.detectChanges();
+    const chips = () => Array.from(dialog().querySelectorAll('.extra-permissions .permission-chip')).map((chip) => chip.querySelector('.permission-chip__label')?.textContent?.trim());
+    expect(chips()).toEqual(['Alterar status', 'Reservar e aplicar peças nas ordens de serviço']);
+    dialog().querySelector<HTMLButtonElement>('.permission-chip button[aria-label="Remover Alterar status"]')!.click();
+    fixture.detectChanges();
+    expect(chips()).toEqual(['Reservar e aplicar peças nas ordens de serviço']);
+    component.saveUser();
+    expect(updateUser).toHaveBeenCalledWith(7, expect.objectContaining({ extraPermissions: ['pecas.reservar'] }));
   });
 
   it('sends only extras not in the selected profile', async () => {
@@ -121,14 +179,14 @@ describe('UsersComponent profile and extra permissions', () => {
     component.openCreateModal();
     fixture.detectChanges();
     selectProfile(4);
-    extraBox('Abrir RMAs').querySelector('input')!.click();
+    extraBox('Abrir ordens de serviço').querySelector('input')!.click();
     extraBox('Alterar status').querySelector('input')!.click();
     fixture.detectChanges();
     selectProfile(2);
-    expect(extraBox('Abrir RMAs').querySelector('input')!.checked).toBe(true);
+    expect(extraBox('Abrir ordens de serviço').querySelector('input')!.checked).toBe(true);
     selectProfile(4);
-    expect(extraBox('Abrir RMAs').querySelector('input')!.checked).toBe(true);
-    expect(extraBox('Abrir RMAs').querySelector('input')!.disabled).toBe(false);
+    expect(extraBox('Abrir ordens de serviço').querySelector('input')!.checked).toBe(true);
+    expect(extraBox('Abrir ordens de serviço').querySelector('input')!.disabled).toBe(false);
     expect(extraBox('Alterar status').querySelector('input')!.checked).toBe(true);
     selectProfile(2);
     fill();
@@ -149,7 +207,7 @@ describe('UsersComponent profile and extra permissions', () => {
   it('shows profile name and extras count', async () => {
     await mount({ rows: [account(), account({ id: 8, fullName: 'Bia', username: 'bia', extraPermissions: ['rma.status'] }),
       account({ id: 9, fullName: 'Caio', username: 'caio', extraPermissions: ['rma.status', 'pecas.reservar'] })] });
-    const profileCell = (row: number) => element.querySelectorAll('tbody tr')[row].querySelectorAll('td')[2].textContent?.replace(/\s+/g, ' ').trim();
+    const profileCell = (row: number) => element.querySelectorAll('tbody tr')[row].querySelectorAll('td')[3].textContent?.replace(/\s+/g, ' ').trim();
     expect(profileCell(0)).toBe('Consulta');
     expect(profileCell(1)).toBe('Consulta +1 extra');
     expect(profileCell(2)).toBe('Consulta +2 extras');
@@ -226,7 +284,7 @@ describe('UsersComponent profile requests', () => {
     const component = fixture.componentInstance as unknown as UsersHarness;
     fixture.detectChanges();
     http.expectOne((request) => request.url === '/api/users').flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 });
-    http.match('/api/users/summary').forEach((request) => request.flush({ total: 0, active: 0, admins: 0, roles: 0 }));
+    http.match('/api/users/summary').forEach((request) => request.flush({ total: 0 }));
     http.expectOne('/api/profiles/options').flush(OPTIONS);
     component.openCreateModal(); fixture.detectChanges();
     http.match('/api/permissions').forEach((request) => request.flush(PERMISSION_CATALOG));

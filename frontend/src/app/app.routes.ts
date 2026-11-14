@@ -32,7 +32,7 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/rmas/rmas.component').then((module) => module.RmasComponent),
         canActivate: [permissionGuard],
         data: { permissions: ['rma.ver'] },
-        title: 'RMAs | Navitas Assist'
+        title: 'Ordens de serviço | Navitas Assist'
       },
       {
         path: 'kanban',
@@ -59,17 +59,31 @@ export const routes: Routes = [
         redirectTo: 'clientes'
       },
       {
+        path: 'clientes/importar',
+        loadComponent: () => import('./pages/catalog-import/catalog-import.component').then(module => module.CatalogImportComponent),
+        canActivate: [permissionGuard],
+        data: { permissions: ['cadastros.importar'], catalogKind: 'clients' },
+        title: 'Importar CSV | Navitas Assist'
+      },
+      {
         path: 'clientes',
         loadComponent: () => import('./pages/clients/clients.component').then((module) => module.ClientsComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['cadastros.ver', 'cadastros.editar'] },
+        data: { permissions: ['cadastros.ver', 'cadastros.editar'], alternativePermissions: ['cadastros.importar'] },
         title: 'Clientes | Navitas Assist'
+      },
+      {
+        path: 'produtos/importar',
+        loadComponent: () => import('./pages/catalog-import/catalog-import.component').then(module => module.CatalogImportComponent),
+        canActivate: [permissionGuard],
+        data: { permissions: ['cadastros.importar'], catalogKind: 'products' },
+        title: 'Importar CSV | Navitas Assist'
       },
       {
         path: 'produtos',
         loadComponent: () => import('./pages/products/products.component').then((module) => module.ProductsComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['cadastros.ver', 'cadastros.editar'] },
+        data: { permissions: ['cadastros.ver', 'cadastros.editar'], alternativePermissions: ['cadastros.importar'] },
         title: 'Produtos | Navitas Assist'
       },
       {
@@ -92,6 +106,13 @@ export const routes: Routes = [
         canActivate: [permissionGuard],
         data: { permissions: ['perfis.gerir'] },
         title: 'Perfis | Navitas Assist'
+      },
+      {
+        path: 'auditoria',
+        loadComponent: () => import('./pages/audit/audit.component').then(module => module.AuditComponent),
+        canActivate: [permissionGuard],
+        data: { permissions: ['auditoria.ver'] },
+        title: 'Auditoria | Navitas Assist'
       },
       {
         path: 'relatorios',

@@ -22,14 +22,14 @@ export const RMA_STATUS_FLOW: RmaStatus[] = [
 export const CLOSED_RMA_STATUSES: RmaStatus[] = ['COMPLETED', 'RETURNED', 'IRREPARABLE'];
 
 export const RMA_STATUS_LABELS: Record<RmaStatus, string> = {
-  RECEIVED: 'Recebido',
+  RECEIVED: 'Recebida',
   TRIAGE: 'Triagem',
   IN_DIAGNOSIS: 'Diagnóstico',
   WAITING_PART: 'Aguardando peça',
   IN_REPAIR: 'Reparo',
   IN_TESTS: 'Testes',
-  COMPLETED: 'Concluído',
-  RETURNED: 'Devolvido',
+  COMPLETED: 'Concluída',
+  RETURNED: 'Devolvida',
   IRREPARABLE: 'Sem conserto'
 };
 
@@ -92,20 +92,21 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Operação',
     items: [
       { label: 'Dashboard', route: '/dashboard', icon: 'dashboard', permissions: ['rma.ver'] },
-      { label: 'RMAs', route: '/rmas', icon: 'clipboard', permissions: ['rma.ver'] },
+      { label: 'Ordens de serviço', route: '/rmas', icon: 'clipboard', permissions: ['rma.ver'] },
       { label: 'Kanban', route: '/kanban', icon: 'columns', permissions: ['rma.ver'] },
       { label: 'Notificações', route: '/notificacoes', icon: 'bell', permissions: [] },
-      { label: 'Peças', route: '/pecas', icon: 'wrench', permissions: ['pecas.ver'] }
+      { label: 'Peças', route: '/pecas', icon: 'chip', permissions: ['pecas.ver'] }
     ]
   },
   {
     label: 'Cadastros',
     items: [
-      { label: 'Clientes', route: '/clientes', icon: 'building', permissions: ['cadastros.ver', 'cadastros.editar'] },
-      { label: 'Produtos', route: '/produtos', icon: 'box', permissions: ['cadastros.ver', 'cadastros.editar'] },
+      { label: 'Clientes', route: '/clientes', icon: 'building', permissions: ['cadastros.ver', 'cadastros.editar'], alternativePermissions: ['cadastros.importar'] },
+      { label: 'Produtos', route: '/produtos', icon: 'box', permissions: ['cadastros.ver', 'cadastros.editar'], alternativePermissions: ['cadastros.importar'] },
       { label: 'Protocolos', route: '/protocolos', icon: 'checklist', permissions: ['protocolos.ver', 'protocolos.catalogo'] },
       { label: 'Usuários', route: '/usuarios', icon: 'users', permissions: ['usuarios.gerir'] },
-      { label: 'Perfis', route: '/perfis', icon: 'shield', permissions: ['perfis.gerir'] }
+      { label: 'Perfis', route: '/perfis', icon: 'shield', permissions: ['perfis.gerir'] },
+      { label: 'Auditoria', route: '/auditoria', icon: 'checklist', permissions: ['auditoria.ver'] }
     ]
   },
   {

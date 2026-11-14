@@ -1,3 +1,4 @@
+import { AuthService } from '../../core/services/auth.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -12,8 +13,8 @@ import { NotificationsComponent } from './notifications.component';
 const PREFERENCES: NotificationPreferenceResponse[] = [
   { eventType: 'RMA_CREATED', severity: 'INFO', enabled: true, userMutable: true, muted: false },
   { eventType: 'RMA_ASSIGNED', severity: 'INFO', enabled: true, userMutable: true, muted: true },
-  { eventType: 'SLA_WARNING', severity: 'WARNING', enabled: false, userMutable: true, muted: false },
-  { eventType: 'SLA_OVERDUE', severity: 'CRITICAL', enabled: true, userMutable: false, muted: true },
+  { eventType: 'PART_PENDING', severity: 'WARNING', enabled: false, userMutable: true, muted: false },
+  { eventType: 'TEST_FAILED', severity: 'CRITICAL', enabled: true, userMutable: false, muted: true },
   { eventType: 'RMA_BLOCKED', severity: 'WARNING', enabled: true, userMutable: false, muted: false }
 ];
 
@@ -46,6 +47,8 @@ describe('NotificationsComponent preferences', () => {
     service = {
       unreadCount: signal(0),
       summaryLoaded: signal(true),
+      latestReadAll: signal(null),
+      markingAll: signal(false),
       summaryLoadFailed: signal(false),
       list: vi.fn(() => of([])),
       refreshSummary: vi.fn(() => of(0)),
@@ -56,12 +59,14 @@ describe('NotificationsComponent preferences', () => {
       updatePreference: vi.fn(() => sources.update ?? of({ ...PREFERENCES[0], muted: true })),
       listRules: vi.fn(() => of([])),
       updateRule: vi.fn(),
+      emailStatus: vi.fn(() => of({ enabled: true, provider: 'fake' })),
       listFailures: vi.fn(() => of([]))
     } as never;
     await TestBed.configureTestingModule({
       imports: [NotificationsComponent],
       providers: [
         provideRouter([]),
+        { provide: AuthService, useValue: { currentUser: () => ({ email: 'user@example.com' }) } },
         { provide: NotificationService, useValue: service },
         { provide: ProfileService, useValue: { options: () => of([]), invalidateOptions: () => undefined } },
         providePermissions(profilePermissions(sources.role ?? 'TECHNICIAN'))
@@ -72,23 +77,52 @@ describe('NotificationsComponent preferences', () => {
     render();
   }
 
+  it('informa falta de email sem remover o silenciamento salvo', async () => {
+    await setup();
+    vi.spyOn(TestBed.inject(AuthService), 'currentUser').mockReturnValue({ email: null } as never);
+    openPreferences();
+    expect(text()).toContain('Sem e-mail cadastrado');
+    expect(column('Situação')[1]).toBe('Silenciado');
+    expect(service['updatePreference']).not.toHaveBeenCalled();
+  });
+
   // Vermelho: a quarta linha mostra "Silenciado", a quinta "Recebendo" e a terceira "Regra desativada".
   it('labels each preference with one of four states', async () => {
     await setup();
     openPreferences();
-    expect(column('Situação')).toEqual(['Recebendo', 'Silenciado', 'Desativado pela administração', 'Obrigatório', 'Obrigatório']);
+    expect(column('Situação')).toEqual(['Recebendo', 'Silenciado', 'Desligado', 'Obrigatório', 'Obrigatório']);
   });
 
-  // Vermelho: o nome acessível do botão é só "Silenciar".
-  it('names the preference action with its alert', async () => {
+  // Cada alerta silenciável tem um interruptor nomeado pelo alerta; ligado = recebendo.
+  it('names the preference switch with its alert', async () => {
     await setup();
     openPreferences();
     const rows = Array.from(root().querySelectorAll('tbody tr'));
-    expect(rows[0].querySelector('button')!.getAttribute('aria-label')).toBe('Silenciar Novo RMA');
-    expect(rows[1].querySelector('button')!.getAttribute('aria-label')).toBe('Reativar Nova atribuição');
-    // Preservação: linhas obrigatórias não têm botão.
+    const toggle = (index: number) => rows[index].querySelector<HTMLInputElement>('input.switch[role="switch"]');
+    expect(toggle(0)!.getAttribute('aria-label')).toBe('Receber Nova OS');
+    expect(toggle(0)!.checked).toBe(true);
+    expect(toggle(1)!.getAttribute('aria-label')).toBe('Receber Nova atribuição');
+    expect(toggle(1)!.checked).toBe(false);
+    // Preservação: linhas obrigatórias não têm interruptor nem botão.
+    expect(toggle(3)).toBeNull();
+    expect(toggle(4)).toBeNull();
     expect(rows[3].querySelector('button')).toBeNull();
-    expect(rows[4].querySelector('button')).toBeNull();
+  });
+
+  it('keeps the switch on the saved value until the server answers', async () => {
+    const pending = new Subject<NotificationPreferenceResponse>();
+    await setup({ update: pending });
+    openPreferences();
+    const toggle = root().querySelector<HTMLInputElement>('tbody tr input.switch')!;
+    toggle.click();
+    render();
+    expect(service['updatePreference']).toHaveBeenCalledWith('RMA_CREATED', true);
+    expect(toggle.checked).toBe(true);
+    expect(toggle.disabled).toBe(true);
+    pending.next({ ...PREFERENCES[0], muted: true }); pending.complete();
+    render();
+    expect(root().querySelector<HTMLInputElement>('tbody tr input.switch')!.checked).toBe(false);
+    expect(column('Situação')[0]).toBe('Silenciado');
   });
 
   // Vermelho: não há mensagem de status depois de silenciar.
@@ -97,7 +131,7 @@ describe('NotificationsComponent preferences', () => {
     openPreferences();
     component.toggleMute(PREFERENCES[0]);
     render();
-    expect(root().querySelector('[role="status"].alert-banner')?.textContent).toContain('Novo RMA silenciado.');
+    expect(root().querySelector('[role="status"].alert-banner')?.textContent).toContain('Nova OS silenciado.');
   });
 
   // Vermelho: a tabela aparece durante a carga e mantém as linhas antigas depois da falha.
@@ -117,16 +151,16 @@ describe('NotificationsComponent preferences', () => {
     TestBed.resetTestingModule();
     await setup({ preferences: [of(PREFERENCES), failure()] });
     openPreferences();
-    expect(text()).toContain('Novo RMA');
+    expect(text()).toContain('Nova OS');
     component.selectTab('inbox');
     render();
     openPreferences();
-    expect(text()).not.toContain('Novo RMA');
+    expect(text()).not.toContain('Nova OS');
     expect(text()).toContain('Não foi possível carregar as preferências.');
     button('Tentar novamente')!.click();
     render();
     expect(service['listPreferences']).toHaveBeenCalledTimes(3);
-    expect(text()).toContain('Novo RMA');
+    expect(text()).toContain('Nova OS');
   });
 
   // Vermelho: com lista vazia aparece a tabela com cabeçalho e corpo vazio.
@@ -159,7 +193,7 @@ describe('NotificationsComponent preferences', () => {
     openPreferences(); component.selectTab('inbox'); render(); openPreferences();
     expectPending(root());
     expect(root().querySelector('table')).toBeNull();
-    expect(text()).not.toContain('Novo RMA');
+    expect(text()).not.toContain('Nova OS');
   });
 
   it('keeps the preference failure visible during a pending retry', async () => {
@@ -177,8 +211,8 @@ describe('NotificationsComponent preferences', () => {
     it('keeps the mute action for a disabled preference that users may mute', async () => {
       await setup();
       openPreferences();
-      expect(Array.from(root().querySelectorAll('tbody tr'))[2].querySelector('button')!.textContent!.trim()).toBe('Silenciar');
-      expect(text()).toContain('Silencie os alertas que a regra permite. Alertas obrigatórios continuam chegando.');
+      expect(Array.from(root().querySelectorAll('tbody tr'))[2].querySelector('input.switch')).not.toBeNull();
+      expect(text()).toContain('Desligar vale para App e E-mail.');
     });
 
     it('keeps the row and shows the alert when the update fails', async () => {
@@ -193,7 +227,7 @@ describe('NotificationsComponent preferences', () => {
     it('lets viewers mute their own preferences', async () => {
       await setup({ role: 'VIEWER' });
       openPreferences();
-      Array.from(root().querySelectorAll('tbody tr'))[0].querySelector('button')!.click();
+      Array.from(root().querySelectorAll('tbody tr'))[0].querySelector<HTMLInputElement>('input.switch')!.click();
       expect(service['updatePreference']).toHaveBeenCalledWith('RMA_CREATED', true);
     });
   });

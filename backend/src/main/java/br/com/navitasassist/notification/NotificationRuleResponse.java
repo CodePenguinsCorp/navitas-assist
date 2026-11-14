@@ -15,7 +15,9 @@ public record NotificationRuleResponse(
     boolean emailEnabled,
     boolean userMutable,
     Instant updatedAt,
-    String updatedBy
+    String updatedBy,
+    boolean appEnabled,
+    boolean supported
 ) {
     public static NotificationRuleResponse from(NotificationRule rule) {
         return new NotificationRuleResponse(
@@ -30,7 +32,9 @@ public record NotificationRuleResponse(
             rule.isEmailEnabled(),
             rule.isUserMutable(),
             rule.getUpdatedAt(),
-            rule.getUpdatedBy()
+            rule.getUpdatedBy(),
+            rule.isAppEnabled(),
+            rule.getEventType().isSupported()
         );
     }
 }

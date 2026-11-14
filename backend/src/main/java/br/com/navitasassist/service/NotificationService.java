@@ -49,10 +49,10 @@ public class NotificationService {
     private final Clock clock;
 
     @Transactional(readOnly = true)
-    public List<NotificationResponse> list(boolean unreadOnly, boolean includeSnoozed) {
+    public List<NotificationResponse> list(boolean unreadOnly, boolean includeSnoozed, NotificationEventType eventType, br.com.navitasassist.notification.NotificationSeverity severity) {
         UserAccount user = currentUser();
-        return notificationRepository.findForRecipient(user.getId(), unreadOnly, includeSnoozed, Instant.now(), PageRequest.of(0, PAGE_SIZE)).stream()
-            .filter(notification -> visibilityPolicy.canView(user, notification.getEventType()))
+        return notificationRepository.findForRecipient(user.getId(), unreadOnly, includeSnoozed, Instant.now(), visibleTypes(user), eventType, severity, PageRequest.of(0, PAGE_SIZE)).stream()
+            .filter(notification -> notification.isAppVisible() && visibilityPolicy.canView(user, notification.getEventType()))
             .map(NotificationResponse::from)
             .toList();
     }
@@ -79,18 +79,18 @@ public class NotificationService {
     }
 
     public NotificationReadAllResponse markAllRead() {
-        Long recipientId = currentUserForUpdate().getId();
-        notificationRepository.dismissReadBatch(recipientId, null);
+        UserAccount user = currentUserForUpdate();
+        notificationRepository.dismissReadBatch(user.getId(), null);
         Instant now = clock.instant();
         Instant expiresAt = now.plusSeconds(4);
         UUID token = UUID.randomUUID();
-        int marked = notificationRepository.markAllRead(recipientId, now, token.toString(), expiresAt);
+        int marked = notificationRepository.markAllRead(user.getId(), now, token.toString(), expiresAt, visibleTypes(user));
         return new NotificationReadAllResponse(marked, marked == 0 ? null : token, marked == 0 ? null : expiresAt);
     }
 
     public NotificationReadUndoResponse undoReadAll(UUID token) {
-        Long recipientId = currentUserForUpdate().getId();
-        int restored = notificationRepository.undoReadBatch(recipientId, token.toString(), clock.instant());
+        UserAccount user = currentUserForUpdate();
+        int restored = notificationRepository.undoReadBatch(user.getId(), token.toString(), clock.instant(), visibleTypes(user));
         if (restored == 0) {
             throw new BusinessException("O prazo para desfazer esta leitura terminou ou o lote não está mais disponível.");
         }
@@ -144,8 +144,12 @@ public class NotificationService {
 
     private Notification getOwned(Long id, UserAccount user) {
         return notificationRepository.findByIdAndRecipient_Id(id, user.getId())
-            .filter(notification -> visibilityPolicy.canView(user, notification.getEventType()))
+            .filter(notification -> notification.isAppVisible() && visibilityPolicy.canView(user, notification.getEventType()))
             .orElseThrow(() -> new ResourceNotFoundException("Notification not found: " + id));
+    }
+
+    private List<NotificationEventType> visibleTypes(UserAccount user) {
+        return java.util.Arrays.stream(NotificationEventType.values()).filter(type -> visibilityPolicy.canView(user, type)).toList();
     }
 
     private UserAccount currentUser() {

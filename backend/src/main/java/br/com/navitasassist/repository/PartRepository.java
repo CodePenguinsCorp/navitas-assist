@@ -22,9 +22,9 @@ public interface PartRepository extends JpaRepository<Part, Long> {
         select p
         from Part p
         where :query is null
-           or lower(p.code) like lower(concat('%', :query, '%'))
-           or lower(p.name) like lower(concat('%', :query, '%'))
-           or lower(coalesce(p.location, '')) like lower(concat('%', :query, '%'))
+           or lower(unaccent(p.code)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+           or lower(unaccent(p.name)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+           or lower(unaccent(coalesce(p.location, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
         order by p.name asc, p.id asc
         """)
     List<Part> search(@Param("query") String query);

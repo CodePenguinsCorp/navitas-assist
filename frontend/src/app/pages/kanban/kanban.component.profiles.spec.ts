@@ -8,7 +8,7 @@ import { Permission } from '../../core/permissions';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { RmaService } from '../../core/services/rma.service';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { RmaDetailModalComponent } from '../../shared/rma-detail-modal/rma-detail-modal.component';
 import { buildRma } from '../../testing/rma-fixtures';
 import { KanbanComponent } from './kanban.component';
@@ -29,14 +29,14 @@ async function setupWith(permissions: readonly Permission[] | Signal<readonly Pe
     imports: [KanbanComponent],
     providers: [
       provideRouter([]),
-      { provide: SlaClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
+      { provide: ClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
       providePermissions(permissions),
       { provide: CatalogService, useValue: { listAssignableUsers: () => of([{ id: 7, username: 'tecnico', fullName: 'Técnico Responsável' }]) } },
       {
         provide: KanbanViewService,
         useValue: { list: () => of([]), create: vi.fn(), update: vi.fn(), setDefault: () => of({}), delete: () => of(undefined) }
       },
-      { provide: RmaService, useValue: { listBoard: () => of([RMA]), getById: () => of(RMA) } }
+      { provide: RmaService, useValue: { listBoard: () => of([RMA]), getById: () => of(RMA), updatePriority: (id: number, priority: RmaResponse['priority']) => of({ ...RMA, id, priority }) } }
     ]
   }).compileComponents();
   const fixture: ComponentFixture<KanbanComponent> = TestBed.createComponent(KanbanComponent);
@@ -61,85 +61,29 @@ describe('KanbanComponent detail permissions by profile', () => {
     expect(instance.canUpdateStatus()).toBe(status);
     expect(instance.canUpdateAssignee()).toBe(assignee);
 
-    const buttons = [...(modal.nativeElement as HTMLElement).querySelectorAll('.rma-detail__actions button')].map((button) => button.textContent?.trim());
-    expect((modal.nativeElement as HTMLElement).querySelector('.rma-detail__actions .rma-detail__status .custom-select__trigger') !== null).toBe(status);
+    const buttons = [...(modal.nativeElement as HTMLElement).querySelectorAll('.detail-actions button')].map((button) => button.textContent?.trim());
+    expect((modal.nativeElement as HTMLElement).querySelector('.detail-actions .rma-detail__status .custom-select__trigger') !== null).toBe(status);
     expect((modal.nativeElement as HTMLElement).querySelector('.rma-detail__assignee-picker .custom-select__trigger') !== null).toBe(assignee);
-    expect(buttons).toContain('Ver impedimentos');
+    expect(buttons).not.toContain('Ver impedimentos');
+    expect((modal.nativeElement as HTMLElement).querySelector('app-rma-blocks-section')).not.toBeNull();
   });
 });
 
-describe('KanbanComponent bulk actions by permission', () => {
-  function bulk(fixture: ComponentFixture<KanbanComponent>) {
+describe('KanbanComponent priority from the detail', () => {
+  it('updates the card when the priority changes in the detail modal', async () => {
+    const fixture = await setup('ADMIN');
     const page = fixture.nativeElement as HTMLElement;
-    const toolbar = page.querySelector('.bulk-toolbar');
-    return {
-      page,
-      toolbar,
-      actions: [...(toolbar?.querySelectorAll('.bulk-buttons button') ?? [])].map((button) => button.textContent?.trim())
-        .filter((label) => label?.startsWith('Alterar')),
-      checkbox: page.querySelector<HTMLInputElement>('.board-card__selection input'),
-    };
-  }
-
-  it.each([
-    ['ADMIN', ['Alterar status', 'Alterar prioridade', 'Alterar responsável']],
-    ['SERVICE_DESK', ['Alterar status', 'Alterar prioridade', 'Alterar responsável']],
-    ['TECHNICIAN', ['Alterar status']],
-  ] as const)('keeps the bulk actions of %s', async (role, actions) => {
-    const view = bulk(await setup(role));
-
-    expect(view.toolbar).not.toBeNull();
-    expect(view.actions).toEqual(actions);
-    expect(view.checkbox).not.toBeNull();
-  });
-
-  it('keeps bulk selection hidden for VIEWER', async () => {
-    const view = bulk(await setup('VIEWER'));
-
-    expect(view.toolbar).toBeNull();
-    expect(view.checkbox).toBeNull();
-  });
-
-  it('offers bulk assignee changes with only rma.responsavel', async () => {
-    const fixture = await setupWith(['rma.ver', 'rma.responsavel']);
-    const view = bulk(fixture);
-
-    expect(view.toolbar).not.toBeNull();
-    expect(view.actions).toEqual(['Alterar responsável']);
-    expect(view.checkbox).not.toBeNull();
-
-    view.checkbox!.dispatchEvent(new Event('change'));
-    fixture.detectChanges();
-    expect(view.toolbar!.textContent).toContain('1 RMA selecionado');
-
-    [...view.toolbar!.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.includes('Limpar seleção'))!.click();
-    fixture.detectChanges();
-    [...view.toolbar!.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.includes('Selecionar visíveis'))!.click();
-    fixture.detectChanges();
-    expect(view.toolbar!.textContent).toContain('1 RMA selecionado');
-  });
-
-  it('drops the bulk selection when the bulk permissions are lost', async () => {
-    const permissions = signal<readonly Permission[]>(['rma.ver', 'rma.status']);
-    const fixture = await setupWith(permissions);
-    bulk(fixture).checkbox!.dispatchEvent(new Event('change'));
-    fixture.detectChanges();
-    expect(bulk(fixture).toolbar!.textContent).toContain('1 RMA selecionado');
-
-    permissions.set(['rma.ver']);
-    fixture.detectChanges();
-    expect(bulk(fixture).toolbar).toBeNull();
-    permissions.set(['rma.ver', 'rma.status']);
+    const cardPriority = () => page.querySelector('.board-card .priority-tag')!;
+    expect(cardPriority().getAttribute('data-priority')).toBe(RMA.priority);
+    const next = RMA.priority === 'HIGH' ? 'Baixa' : 'Alta';
+    (fixture.componentInstance as unknown as KanbanProfileHarness).openDetail(RMA);
     fixture.detectChanges();
 
-    expect(bulk(fixture).toolbar!.textContent).not.toContain('1 RMA selecionado');
-    expect(bulk(fixture).checkbox!.checked).toBe(false);
-  });
+    page.querySelector<HTMLButtonElement>('app-rma-detail-modal app-rma-priority-field .custom-select__trigger')!.click();
+    fixture.detectChanges();
+    [...page.querySelectorAll<HTMLButtonElement>('app-rma-priority-field .custom-select__option')].find((option) => option.textContent?.includes(next))!.click();
+    fixture.detectChanges();
 
-  it('offers bulk priority changes with only rma.editar', async () => {
-    const view = bulk(await setupWith(['rma.ver', 'rma.editar']));
-
-    expect(view.actions).toEqual(['Alterar prioridade']);
-    expect(view.checkbox).not.toBeNull();
+    expect(cardPriority().textContent?.trim()).toBe(next);
   });
 });

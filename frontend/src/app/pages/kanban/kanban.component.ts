@@ -6,13 +6,12 @@ import {
   Injector,
   afterNextRender,
   computed,
-  effect,
   inject,
   signal,
-  untracked,
   viewChild,
   viewChildren,
 } from '@angular/core';
+import { HttpContext } from '@angular/common/http';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription, finalize, forkJoin, map } from 'rxjs';
@@ -30,31 +29,31 @@ import {
   KanbanViewResponse,
   RmaPriority,
   RmaAssigneeUpdateRequest,
+  RmaBoardCardResponse,
   RmaResponse,
   RmaStatus,
-  RmaStatusUpdateRequest,
   WarrantyStatus,
 } from '../../core/models';
-import { SlaClockService } from '../../core/services/sla-clock.service';
-import { SlaFilterValue, SLA_LABELS, slaStatus } from '../../core/utils/rma-sla';
+import { ClockService } from '../../core/services/clock.service';
+import { DEADLINE_FILTER_OPTIONS, DeadlineFilterValue, businessToday, deadlineStatus } from '../../core/utils/rma-deadline';
 import { PermissionService } from '../../core/services/permission.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { businessDateInputValue } from '../../core/utils/date';
-import { formatDate, normalizeText } from '../../core/utils/rma-ui';
+import { formatDate, normalizeText, toBoardCard } from '../../core/utils/rma-ui';
+import { SKIP_GLOBAL_LOADING } from '../../core/interceptors/loading.interceptor';
 import {
   CustomSelectComponent,
   CustomSelectOption,
 } from '../../shared/form-controls/custom-select/custom-select.component';
 import { BoundedFilterPanelsDirective } from '../../shared/form-controls/bounded-filter-panels.directive';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
-import { BulkRmaResult, KanbanBulkActionsComponent } from '../../shared/kanban-bulk-actions/kanban-bulk-actions.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { RmaKanbanBoardComponent } from '../../shared/rma-kanban-board/rma-kanban-board.component';
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
-import { RmaBlockPanelComponent } from '../../shared/rma-block-panel/rma-block-panel.component';
+import { RmaStatusFieldComponent } from '../../shared/rma-status-field/rma-status-field.component';
 import { RmaDetailModalComponent } from '../../shared/rma-detail-modal/rma-detail-modal.component';
 
 interface KanbanHeroStat {
@@ -72,7 +71,7 @@ type WarrantyFilterValue = 'all' | WarrantyStatus;
 
 interface KanbanFilterValues {
   blocked: 'all' | 'blocked' | 'unblocked';
-  sla: SlaFilterValue;
+  deadline: DeadlineFilterValue;
   query: string;
   priority: PriorityFilterValue;
   status: StatusFilterValue;
@@ -86,7 +85,7 @@ interface KanbanFilterValues {
 
 type ViewModalMode = 'create' | 'rename' | null;
 
-/** Filters kept behind the "Filtros" toggle; search, SLA and assignee stay in the quick row. */
+/** Filters kept behind the "Filtros" toggle; search, Prazo and assignee stay in the quick row. */
 const ADVANCED_FILTER_KEYS = [
   'priority',
   'status',
@@ -124,9 +123,8 @@ const FILTER_LABELS: Record<AdvancedFilterKey, string> = {
     CustomSelectComponent,
     DatePickerComponent,
     RmaKanbanBoardComponent,
-    RmaBlockPanelComponent,
     RmaDetailModalComponent,
-    KanbanBulkActionsComponent,
+    RmaStatusFieldComponent,
     ModalFocusDirective,
     PageHeaderComponent,
   ],
@@ -134,11 +132,8 @@ const FILTER_LABELS: Record<AdvancedFilterKey, string> = {
   styleUrl: './kanban.component.css',
 })
 export class KanbanComponent {
-  private readonly slaClock = inject(SlaClockService);
-  protected readonly slaFilterOptions: ReadonlyArray<CustomSelectOption<SlaFilterValue>> = [
-    { value: 'all', label: 'Todas as situações' },
-    ...(['NORMAL', 'WARNING', 'OVERDUE', 'CLOSED'] as const).map((value) => ({ value, label: SLA_LABELS[value] }))
-  ];
+  private readonly clock = inject(ClockService);
+  protected readonly deadlineFilterOptions = DEADLINE_FILTER_OPTIONS;
   private readonly formBuilder = inject(FormBuilder);
   private readonly permissions = inject(PermissionService);
   private readonly catalogService = inject(CatalogService);
@@ -147,6 +142,7 @@ export class KanbanComponent {
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private loadRequest?: Subscription;
+  private detailRequest?: Subscription;
   private readonly filtersToggle = viewChild.required<ElementRef<HTMLButtonElement>>('filtersToggle');
   private readonly chipRemoveButtons = viewChildren<ElementRef<HTMLButtonElement>>('chipRemove');
 
@@ -156,7 +152,6 @@ export class KanbanComponent {
   protected readonly loadFailed = signal(false);
   protected readonly loadErrorMessage = signal('');
   protected readonly pageError = signal('');
-  protected readonly statusModalError = signal('');
   /** Failure of an assignment made from the detail selector, shown inside the detail modal. */
   protected readonly assignmentError = signal('');
   protected readonly viewError = signal('');
@@ -166,22 +161,26 @@ export class KanbanComponent {
   protected readonly boardUpdatingId = signal<number | null>(null);
   protected readonly draggedRmaId = signal<number | null>(null);
   protected readonly dragTargetStatus = signal<RmaStatus | null>(null);
-  protected readonly bulkSelectedIds = signal<readonly number[]>([]);
-  protected readonly bulkBusy = signal(false);
-  protected readonly bulkSelectedRmas = computed(() => this.rmasSignal().filter((rma) => this.bulkSelectedIds().includes(rma.id)));
-  protected readonly hiddenSelectedCount = computed(() => this.bulkSelectedRmas().filter((rma) => !this.filteredRmas().some((visible) => visible.id === rma.id)).length);
   protected readonly selectedRmaId = signal<number | null>(null);
   protected readonly detailRmaId = signal<number | null>(null);
 
-  private readonly rmasSignal = signal<RmaResponse[]>([]);
-  protected readonly detailRma = computed(() => this.rmasSignal().find((rma) => rma.id === this.detailRmaId()) ?? null);
+  private readonly rmasSignal = signal<RmaBoardCardResponse[]>([]);
+  /** Full detail of the open card, read from `GET /api/rmas/{id}` when the modal opens. */
+  private readonly detailSignal = signal<RmaResponse | null>(null);
+  protected readonly detailRma = computed(() => {
+    const detail = this.detailSignal();
+    return detail && detail.id === this.detailRmaId() ? detail : null;
+  });
+  protected readonly detailError = signal('');
+  private readonly statusFeedbackRmaId = signal<number | null>(null);
+  protected readonly statusFeedbackRma = computed(() => this.rmasSignal().find(rma => rma.id === this.statusFeedbackRmaId()) ?? null);
   private readonly assignableUsersSignal = signal<AssignableUserResponse[]>([]);
   private readonly viewsSignal = signal<KanbanViewResponse[]>([]);
-  private readonly pendingStatusRmaSignal = signal<RmaResponse | null>(null);
+  private readonly boardStatus = viewChild.required<RmaStatusFieldComponent>('boardStatus');
 
   protected readonly filtersForm = this.formBuilder.nonNullable.group({
     blocked: ['all' as KanbanFilterValues['blocked']],
-    sla: ['all' as SlaFilterValue],
+    deadline: ['all' as DeadlineFilterValue],
     query: [''],
     priority: ['all' as PriorityFilterValue],
     status: ['all' as StatusFilterValue],
@@ -199,7 +198,7 @@ export class KanbanComponent {
     },
   );
   protected readonly filteredRmas = computed(() =>
-    filterKanbanRmas(this.rmasSignal(), this.filters(), this.slaClock.now()),
+    filterKanbanRmas(this.rmasSignal(), this.filters(), this.clock.now()),
   );
   protected readonly activeFilterCount = computed(() => countActiveFilters(this.filters()));
   protected readonly advancedFiltersOpen = signal(false);
@@ -223,7 +222,6 @@ export class KanbanComponent {
       })),
     ],
   );
-  protected readonly pendingStatusRma = this.pendingStatusRmaSignal.asReadonly();
   protected readonly assignableUsers = this.assignableUsersSignal.asReadonly();
   protected readonly statusSelectOptions = STATUS_SELECT_OPTIONS;
   protected readonly statusFilterOptions = STATUS_FILTER_OPTIONS;
@@ -241,22 +239,10 @@ export class KanbanComponent {
     { value: 'unassigned', label: 'Sem responsável' },
     ...mergeAssigneeOptions(this.assignableUsersSignal(), this.rmasSignal()),
   ]);
-  protected readonly assigneeSelectOptions = computed<
-    ReadonlyArray<CustomSelectOption<number | null>>
-  >(() => [
-    { value: null, label: 'Sem responsável' },
-    ...this.assignableUsersSignal().map((user) => ({
-      value: user.id,
-      label: `${user.fullName} (@${user.username})`,
-    })),
-  ]);
   protected readonly canUpdateStatus = computed(() => this.permissions.hasPermission('rma.status'));
   protected readonly canUpdateAssignee = computed(() => this.permissions.hasPermission('rma.responsavel'));
-  protected readonly canUpdatePriority = computed(() => this.permissions.hasPermission('rma.editar'));
-  /** Seleção e ações em lote: basta uma das ações disponíveis no lote. */
-  protected readonly canBulkEdit = computed(() =>
-    this.permissions.hasAny(['rma.status', 'rma.editar', 'rma.responsavel']),
-  );
+  /** `rma.editar`: due date, priority and warranty become editable in the detail. */
+  protected readonly canEditRma = computed(() => this.permissions.hasPermission('rma.editar'));
   protected readonly activeCount = computed(
     () => this.filteredRmas().filter((rma) => !CLOSED_RMA_STATUSES.includes(rma.status)).length,
   );
@@ -272,13 +258,13 @@ export class KanbanComponent {
   /** Indicators belong to a current successful read: hidden before it and after a failure. */
   protected readonly boardReady = computed(() => this.hasLoaded() && !this.loadFailed());
   /**
-   * First indicator: "Y RMAs" without filter, "X de Y RMAs" with one, with the singular of the last number.
+   * First indicator: "Y ordens de serviço" without filter, "X de Y ordens de serviço" with one, with the singular of the last number.
    */
   protected readonly totalSummary = computed(() => {
     if (!this.boardReady()) return null;
     const count = this.filteredRmas().length;
     const overall = this.activeFilterCount() > 0 ? this.totalRmas() : null;
-    return { count, overall, label: (overall ?? count) === 1 ? 'RMA' : 'RMAs' };
+    return { count, overall, label: (overall ?? count) === 1 ? 'OS' : 'OS' };
   });
   protected readonly heroStats = computed<ReadonlyArray<KanbanHeroStat>>(() => [
     {
@@ -311,11 +297,6 @@ export class KanbanComponent {
     },
   ]);
 
-  protected readonly statusForm = this.formBuilder.nonNullable.group({
-    status: ['RECEIVED' as RmaStatus, [Validators.required]],
-    note: [''],
-  });
-
   protected readonly viewForm = this.formBuilder.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(80)]],
     defaultView: [false],
@@ -325,10 +306,6 @@ export class KanbanComponent {
     this.filtersForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.releaseDivergentView());
     this.loadKanban();
     this.loadViews();
-    // Sem permissão de lote (após um 403 ou ao mudar o próprio perfil), a seleção some com a barra.
-    effect(() => {
-      if (!this.canBulkEdit()) untracked(() => this.bulkSelectedIds.set([]));
-    });
   }
 
   protected retryLoad(): void {
@@ -347,51 +324,48 @@ export class KanbanComponent {
     if (!matches) this.activeViewId.set(null);
   }
 
-  protected toggleBulkSelection(rma: RmaResponse): void {
-    if (this.bulkBusy() || this.boardUpdatingId() !== null || !this.canBulkEdit()) return;
-    this.bulkSelectedIds.update((ids) => ids.includes(rma.id) ? ids.filter((id) => id !== rma.id) : [...ids, rma.id]);
-  }
-
-  protected selectVisibleRmas(): void {
-    if (this.bulkBusy() || this.boardUpdatingId() !== null || !this.canBulkEdit()) return;
-    this.bulkSelectedIds.update((ids) => [...new Set([...ids, ...this.filteredRmas().map((rma) => rma.id)])]);
-  }
-
-  protected clearBulkSelection(): void {
-    if (!this.bulkBusy()) this.bulkSelectedIds.set([]);
-  }
-
-  protected applyBulkResults(results: BulkRmaResult[]): void {
-    const updated = new Map(results.filter((result) => result.rma).map((result) => [result.id, result.rma!]));
-    this.rmasSignal.update((rmas) => rmas.map((rma) => updated.get(rma.id) ?? rma));
-    const succeeded = new Set(results.filter((result) => result.success).map((result) => result.id));
-    this.bulkSelectedIds.update((ids) => ids.filter((id) => !succeeded.has(id)));
-  }
-
-  protected openDetail(rma: RmaResponse): void {
+  protected openDetail(rma: RmaBoardCardResponse): void {
     this.selectRma(rma);
     this.detailRmaId.set(rma.id);
+    this.loadDetail(rma.id);
+  }
+
+  protected retryDetail(): void {
+    const id = this.detailRmaId();
+    if (id !== null) this.loadDetail(id);
   }
 
   protected closeDetail(): void {
+    this.detailRequest?.unsubscribe();
     this.detailRmaId.set(null);
+    this.detailSignal.set(null);
+    this.detailError.set('');
     this.assignmentError.set('');
   }
 
-  protected openStatusModal(rma: RmaResponse, status: RmaStatus): void {
-    if (!this.canUpdateStatus() || this.bulkBusy() || this.boardUpdatingId() !== null) return;
-    this.pendingStatusRmaSignal.set(rma);
-    this.statusModalError.set('');
-    this.statusForm.reset({ status, note: '' });
+  /** Only the latest detail read counts; it skips the global loading because the modal shows its own state. */
+  private loadDetail(id: number): void {
+    this.detailRequest?.unsubscribe();
+    this.detailSignal.set(null);
+    this.detailError.set('');
+    this.detailRequest = this.rmaService.getById(id, new HttpContext().set(SKIP_GLOBAL_LOADING, true))
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (detail) => { if (this.detailRmaId() === id) this.detailSignal.set(detail); },
+        error: (error) => { if (this.detailRmaId() === id) this.detailError.set(extractHttpErrorMessage(error, 'Não foi possível carregar a OS.')); },
+      });
   }
 
-  protected selectRma(rma: RmaResponse): void {
+  protected selectRma(rma: RmaBoardCardResponse): void {
     this.selectedRmaId.set(rma.id);
     this.pageError.set('');
   }
 
-  protected applyBlockUpdate(updated: RmaResponse): void {
-    this.rmasSignal.update((rmas) => rmas.map((rma) => rma.id === updated.id ? updated : rma));
+  /** Each write (assignee, status, priority, impediment, due date) replaces only its card with the response. */
+  protected applyRmaUpdate(updated: RmaResponse): void {
+    const card = toBoardCard(updated);
+    this.rmasSignal.update((rmas) => rmas.map((rma) => rma.id === updated.id ? card : rma));
+    if (this.detailRmaId() === updated.id) this.detailSignal.set(updated);
   }
 
   protected clearFilters(): void {
@@ -565,15 +539,15 @@ export class KanbanComponent {
 
   /** The detail selector is the whole choice (no extra field), so a pick saves right away. */
   protected assignFromDetail(rma: RmaResponse, assigneeId: number | null): void {
-    if (!this.canUpdateAssignee() || this.bulkBusy() || this.boardUpdatingId() !== null || assigneeId === rma.assigneeId) {
+    if (!this.canUpdateAssignee() || this.boardUpdatingId() !== null || assigneeId === rma.assigneeId) {
       return;
     }
 
     this.submitAssigneeUpdate(rma, { assigneeId });
   }
 
-  protected startCardDrag(event: DragEvent, rma: RmaResponse): void {
-    if (!this.canUpdateStatus() || this.bulkBusy() || this.boardUpdatingId() !== null) {
+  protected startCardDrag(event: DragEvent, rma: RmaBoardCardResponse): void {
+    if (!this.canUpdateStatus() || this.boardUpdatingId() !== null) {
       event.preventDefault();
       return;
     }
@@ -596,7 +570,7 @@ export class KanbanComponent {
 
   protected allowColumnDrop(event: DragEvent, status: RmaStatus): void {
     if (
-      !this.canUpdateStatus() || this.bulkBusy() ||
+      !this.canUpdateStatus() ||
       this.boardUpdatingId() !== null ||
       this.draggedRmaId() === null
     ) {
@@ -620,7 +594,7 @@ export class KanbanComponent {
   protected dropOnColumn(event: DragEvent, status: RmaStatus): void {
     event.preventDefault();
 
-    if (!this.canUpdateStatus() || this.bulkBusy() || this.boardUpdatingId() !== null) {
+    if (!this.canUpdateStatus() || this.boardUpdatingId() !== null) {
       this.clearBoardDragState();
       return;
     }
@@ -638,42 +612,9 @@ export class KanbanComponent {
       return;
     }
 
-    this.openStatusModal(dragged, status);
+    this.statusFeedbackRmaId.set(dragged.id);
+    this.boardStatus().move(status, dragged);
     this.clearBoardDragState();
-  }
-
-  protected closeStatusModal(): void {
-    if (this.boardUpdatingId() !== null) {
-      return;
-    }
-
-    this.pendingStatusRmaSignal.set(null);
-    this.statusModalError.set('');
-    this.clearBoardDragState();
-  }
-
-  protected saveStatusChange(): void {
-    const target = this.pendingStatusRmaSignal();
-    if (!target) {
-      return;
-    }
-
-    if (this.statusForm.invalid) {
-      this.statusForm.markAllAsTouched();
-      this.statusModalError.set('Informe um status válido.');
-      return;
-    }
-
-    const raw = this.statusForm.getRawValue();
-    if (raw.status === target.status) {
-      this.statusModalError.set('Escolha uma fase diferente da atual.');
-      return;
-    }
-
-    this.submitStatusUpdate(target, {
-      status: raw.status,
-      note: normalizeText(raw.note),
-    });
   }
 
   /** Only the latest read counts: a newer one (retry or reload) cancels the previous, as does destroy. */
@@ -730,7 +671,7 @@ export class KanbanComponent {
     );
   }
 
-  private syncSelection(rmas: RmaResponse[]): void {
+  private syncSelection(rmas: RmaBoardCardResponse[]): void {
     const selectedId = this.selectedRmaId();
     if (selectedId === null) {
       return;
@@ -742,29 +683,7 @@ export class KanbanComponent {
     }
   }
 
-  private submitStatusUpdate(target: RmaResponse, payload: RmaStatusUpdateRequest): void {
-    this.boardUpdatingId.set(target.id);
-    this.pageError.set('');
-    this.statusModalError.set('');
-
-    this.rmaService
-      .updateStatus(target.id, payload)
-      .pipe(finalize(() => this.boardUpdatingId.set(null)))
-      .subscribe({
-        next: (updated) => {
-          this.selectedRmaId.set(updated.id);
-          this.pendingStatusRmaSignal.set(null);
-          this.loadKanban();
-        },
-        error: (error) => {
-          this.statusModalError.set(
-            extractHttpErrorMessage(error, 'Não foi possível atualizar o status do RMA.'),
-          );
-        },
-      });
-  }
-
-  private submitAssigneeUpdate(target: RmaResponse, payload: RmaAssigneeUpdateRequest): void {
+  private submitAssigneeUpdate(target: Pick<RmaResponse, 'id'>, payload: RmaAssigneeUpdateRequest): void {
     this.boardUpdatingId.set(target.id);
     this.pageError.set('');
     this.assignmentError.set('');
@@ -775,11 +694,11 @@ export class KanbanComponent {
       .subscribe({
         next: (updated) => {
           this.selectedRmaId.set(updated.id);
-          this.loadKanban();
+          this.applyRmaUpdate(updated);
         },
         error: (error) => {
           this.assignmentError.set(
-            extractHttpErrorMessage(error, 'Não foi possível atualizar o responsável do RMA.'),
+            extractHttpErrorMessage(error, 'Não foi possível atualizar o responsável da OS.'),
           );
         },
       });
@@ -800,7 +719,7 @@ const STATUS_SELECT_OPTIONS: ReadonlyArray<CustomSelectOption<RmaStatus>> = RMA_
 
 const DEFAULT_KANBAN_FILTERS: KanbanFilterValues = {
   blocked: 'all',
-  sla: 'all',
+  deadline: 'all',
   query: '',
   priority: 'all',
   status: 'all',
@@ -833,8 +752,9 @@ const WARRANTY_FILTER_OPTIONS: ReadonlyArray<CustomSelectOption<WarrantyFilterVa
   })),
 ];
 
-function filterKanbanRmas(rmas: RmaResponse[], filters: KanbanFilterValues, now: number): RmaResponse[] {
+function filterKanbanRmas(rmas: RmaBoardCardResponse[], filters: KanbanFilterValues, now: number): RmaBoardCardResponse[] {
   const query = normalizeSearch(filters.query);
+  const today = businessToday(now);
 
   return rmas.filter((rma) => {
     const matchesQuery = !query || rmaSearchText(rma).includes(query);
@@ -854,7 +774,7 @@ function filterKanbanRmas(rmas: RmaResponse[], filters: KanbanFilterValues, now:
 
     return (
       (filters.blocked === 'all' || Boolean(rma.currentBlock) === (filters.blocked === 'blocked')) &&
-      (filters.sla === 'all' || slaStatus(rma.sla, now) === filters.sla) &&
+      (filters.deadline === 'all' || deadlineStatus(rma, today) === filters.deadline) &&
       matchesQuery &&
       matchesPriority &&
       matchesStatus &&
@@ -866,7 +786,7 @@ function filterKanbanRmas(rmas: RmaResponse[], filters: KanbanFilterValues, now:
   });
 }
 
-function rmaSearchText(rma: RmaResponse): string {
+function rmaSearchText(rma: RmaBoardCardResponse): string {
   const itemValues = rma.items.flatMap((item) => [
     item.productName,
     item.productSku,
@@ -878,10 +798,6 @@ function rmaSearchText(rma: RmaResponse): string {
     [
       rma.code,
       rma.clientName,
-      rma.productName,
-      rma.productSku,
-      rma.batchNumber,
-      rma.serialNumber,
       ...itemValues,
     ].join(' '),
   );
@@ -910,7 +826,7 @@ function countActiveFilters(filters: KanbanFilterValues): number {
 
 function mergeAssigneeOptions(
   assignableUsers: AssignableUserResponse[],
-  rmas: RmaResponse[],
+  rmas: RmaBoardCardResponse[],
 ): ReadonlyArray<CustomSelectOption<number>> {
   const options = new Map<number, string>(
     assignableUsers.map((user) => [user.id, `${user.fullName} (@${user.username})`]),
@@ -940,13 +856,14 @@ function toPersistedFilters(filters: KanbanFilterValues): KanbanViewFilters {
     entryTo: filters.entryTo || null,
     updatedFrom: filters.updatedFrom || null,
     updatedTo: filters.updatedTo || null,
+    deadline: filters.deadline === 'all' ? null : filters.deadline,
   };
 }
 
 function fromPersistedFilters(filters: KanbanViewFilters): KanbanFilterValues {
   return {
     blocked: filters.blocked == null ? 'all' : filters.blocked ? 'blocked' : 'unblocked',
-    sla: 'all',
+    deadline: filters.deadline ?? 'all',
     query: filters.query ?? '',
     priority: filters.priority ?? 'all',
     status: filters.status ?? 'all',

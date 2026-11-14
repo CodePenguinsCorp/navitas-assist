@@ -40,7 +40,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.support.TransactionTemplate;
 
-@SpringBootTest
+@SpringBootTest(properties = "navitas.test.database=notification_read_batch")
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class NotificationReadBatchIntegrationTest {
@@ -112,6 +112,56 @@ class NotificationReadBatchIntegrationTest {
             .andExpect(jsonPath("$.unread").value(0));
         assertEquals(1, markAll(owner).path("markedCount").asInt());
         assertNotNull(notifications.findById(hidden.getId()).orElseThrow().getReadAt());
+    }
+
+    @Test
+    void batchDoesNotChangeEmailOnlyNotifications() throws Exception {
+        Notification visible = notification(owner, false, false);
+        Notification emailOnly = notification(owner, false, false);
+        emailOnly.setAppVisible(false);
+        emailOnly.setEmailStatus(NotificationEmailStatus.PENDING);
+        emailOnly.setEmailGeneration(3);
+        notifications.saveAndFlush(emailOnly);
+
+        JsonNode batch = markAll(owner);
+        assertEquals(1, batch.path("markedCount").asInt());
+        batchAction("undo", owner, batch.path("undoToken").asText())
+            .andExpect(status().isOk()).andExpect(jsonPath("$.restoredCount").value(1));
+        Notification preserved = notifications.findById(emailOnly.getId()).orElseThrow();
+        assertNull(preserved.getReadAt());
+        assertNull(preserved.getReadBatchToken());
+        assertEquals(NotificationEmailStatus.PENDING, preserved.getEmailStatus());
+        assertEquals(3, preserved.getEmailGeneration());
+        assertNull(notifications.findById(visible.getId()).orElseThrow().getReadAt());
+    }
+
+    @Test
+    void lostRmaPermissionPreventsBulkReadAndUndoEvenWithAnExistingToken() throws Exception {
+        Notification row = notification(owner, false, false);
+        JsonNode batch = markAll(owner);
+        owner.setProfile(AccessTestSupport.saveProfile(profiles, "No RMA " + owner.getUsername()));
+        users.saveAndFlush(owner);
+
+        batchAction("undo", owner, batch.path("undoToken").asText()).andExpect(status().isBadRequest());
+        assertNotNull(notifications.findById(row.getId()).orElseThrow().getReadAt());
+        Notification newer = notification(owner, false, false);
+        assertEquals(0, markAll(owner).path("markedCount").asInt());
+        assertNull(notifications.findById(newer.getId()).orElseThrow().getReadAt());
+    }
+
+    @Test
+    void undoRechecksAppVisibilityAfterTheBatchWasCreated() throws Exception {
+        Notification hidden = notification(owner, false, false);
+        Notification visible = notification(owner, false, false);
+        JsonNode batch = markAll(owner);
+        hidden = notifications.findById(hidden.getId()).orElseThrow();
+        hidden.setAppVisible(false);
+        notifications.saveAndFlush(hidden);
+
+        batchAction("undo", owner, batch.path("undoToken").asText())
+            .andExpect(status().isOk()).andExpect(jsonPath("$.restoredCount").value(1));
+        assertNotNull(notifications.findById(hidden.getId()).orElseThrow().getReadAt());
+        assertNull(notifications.findById(visible.getId()).orElseThrow().getReadAt());
     }
 
     @Test

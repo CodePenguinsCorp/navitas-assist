@@ -1,0 +1,14 @@
+<div class="collapsible__head detail-card__title" [class.is-collapsed]="!expanded()">
+  <h3 class="collapsible__heading">
+  <button type="button" class="collapsible__toggle" [id]="buttonId" [attr.aria-expanded]="expanded()" [attr.aria-controls]="bodyId" (click)="toggle()">
+    @if (icon(); as name) { <app-icon [name]="name" [size]="18" /> }
+    <span class="collapsible__title">{{ title() }}</span>
+    @if (hasCount()) { <span class="collapsible__count">{{ count() }}</span> }
+  </button>
+  </h3>
+  <span class="collapsible__actions"><ng-content select="[sectionActions]" /></span>
+  <span class="collapsible__chevron" [class.is-open]="expanded()" aria-hidden="true" (click)="toggle()"><app-icon name="chevron" [size]="16" /></span>
+</div>
+<div class="collapsible__body" role="region" [id]="bodyId" [attr.aria-labelledby]="buttonId" [hidden]="!expanded()">
+  <ng-content />
+</div>

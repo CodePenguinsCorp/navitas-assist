@@ -1,3 +1,4 @@
+import { AuthService } from '../../core/services/auth.service';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
@@ -9,17 +10,17 @@ import { ProfileService } from '../../core/services/profile.service';
 import { NotificationsComponent } from './notifications.component';
 
 const NOTIFICATION: NotificationResponse = {
-  id: 5, eventType: 'RMA_ASSIGNED', severity: 'INFO', title: 'RMA RMA-2026-000007 atribuído a Técnico', message: 'Cliente · Produto',
-  rmaId: 7, rmaCode: 'RMA-2026-000007', actionPath: '/rmas?rma=7', createdAt: '2026-10-24T12:00:00Z', readAt: null, snoozedUntil: null, read: false
+  id: 5, eventType: 'RMA_ASSIGNED', severity: 'INFO', title: 'OS OS-2026-000007 atribuída a Técnico', message: 'Cliente · Produto',
+  rmaId: 7, rmaCode: 'OS-2026-000007', actionPath: '/rmas?rma=7', createdAt: '2026-10-24T12:00:00Z', readAt: null, snoozedUntil: null, read: false
 };
 
 const PREFERENCES: NotificationPreferenceResponse[] = [
   { eventType: 'RMA_CREATED', severity: 'INFO', enabled: true, userMutable: true, muted: false },
-  { eventType: 'SLA_OVERDUE', severity: 'CRITICAL', enabled: true, userMutable: false, muted: false }
+  { eventType: 'TEST_FAILED', severity: 'CRITICAL', enabled: true, userMutable: false, muted: false }
 ];
 
 const RULE: NotificationRuleResponse = {
-  eventType: 'SLA_OVERDUE', enabled: true, severity: 'CRITICAL', recipientProfiles: [{ id: 1, name: 'Administrador' }], notifyAssignee: true, emailEnabled: false,
+  eventType: 'RMA_ASSIGNED', enabled: true, severity: 'CRITICAL', recipientProfiles: [{ id: 1, name: 'Administrador' }], notifyAssignee: true, emailEnabled: false,
   userMutable: false, updatedAt: '2026-10-24T12:00:00Z', updatedBy: 'admin'
 };
 
@@ -40,22 +41,26 @@ describe('NotificationsComponent', () => {
     service = {
       unreadCount: signal(1),
       summaryLoaded: signal(true),
+      latestReadAll: signal(null),
+      markingAll: signal(false),
       summaryLoadFailed: signal(false),
       list: vi.fn(() => of([NOTIFICATION])),
       refreshSummary: vi.fn(() => of(1)),
       markRead: vi.fn(() => of({ ...NOTIFICATION, read: true })),
-      markAllRead: vi.fn(() => of(undefined)),
+      markAllRead: vi.fn(() => of({ markedCount: 0, undoToken: null, expiresAt: null })),
       snooze: vi.fn(() => of(NOTIFICATION)),
       listPreferences: vi.fn(() => of(PREFERENCES)),
       updatePreference: vi.fn(() => of({ ...PREFERENCES[0], muted: true })),
       listRules: vi.fn(() => of([RULE])),
       updateRule: vi.fn(() => of(RULE)),
+      emailStatus: vi.fn(() => of({ enabled: true, provider: 'fake' })),
       listFailures: vi.fn(() => of([]))
     } as never;
     await TestBed.configureTestingModule({
       imports: [NotificationsComponent],
       providers: [
         provideRouter([]),
+        { provide: AuthService, useValue: { currentUser: () => ({ email: 'user@example.com' }) } },
         { provide: NotificationService, useValue: service },
         { provide: ProfileService, useValue: { options: () => of([{ id: 1, name: 'Administrador', permissions: [] }, { id: 2, name: 'Atendimento', permissions: [] }]), invalidateOptions: () => undefined } },
         providePermissions(profilePermissions(role))
@@ -66,18 +71,20 @@ describe('NotificationsComponent', () => {
     fixture.detectChanges();
   }
 
-  it('lists the inbox with context and opens the related RMA through an internal route', async () => {
+  it('lists the inbox with context and opens the detail dialog before any navigation', async () => {
     await setUp('TECHNICIAN');
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const text: string = fixture.nativeElement.textContent;
 
-    expect(text).toContain('RMA RMA-2026-000007 atribuído a Técnico');
-    expect(text).toContain('Nova atribuição');
+    expect(text).toContain('OS OS-2026-000007 atribuída a Técnico');
+    expect(fixture.nativeElement.querySelector('.notification-meta')!.textContent).not.toContain('Nova atribuição');
     expect(text).not.toContain('Regras');
 
     component.open(NOTIFICATION);
-    expect(service['markRead']).toHaveBeenCalledWith(5);
-    expect(navigate).toHaveBeenCalledWith(['/rmas'], { queryParams: { rma: '7' } });
+    fixture.detectChanges();
+    expect(service['markRead']).toHaveBeenCalledWith(5, { silent: true });
+    expect(fixture.nativeElement.querySelector('app-notification-detail-modal [role="dialog"]')).not.toBeNull();
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('snoozes for the chosen period', async () => {
@@ -92,7 +99,7 @@ describe('NotificationsComponent', () => {
     fixture.detectChanges();
     const text: string = fixture.nativeElement.textContent;
 
-    expect(text).toContain('Silenciar');
+    expect(fixture.nativeElement.querySelector('input.switch[aria-label="Receber Nova OS"]')).not.toBeNull();
     expect(text).toContain('Obrigatório');
     component.toggleMute(PREFERENCES[0]);
     expect(service['updatePreference']).toHaveBeenCalledWith('RMA_CREATED', true);
@@ -104,7 +111,7 @@ describe('NotificationsComponent', () => {
     expect(component.canManageRules()).toBe(true);
     component.selectTab('rules');
     fixture.detectChanges();
-    fixture.nativeElement.querySelector('button[aria-label="Editar regra SLA vencido"]').click();
+    fixture.nativeElement.querySelector('button[aria-label="Editar regra Nova atribuição"]').click();
     fixture.detectChanges();
     const dialog: HTMLElement = fixture.nativeElement.querySelector('[role="dialog"]');
     const serviceDesk = Array.from(dialog.querySelectorAll('label')).find((label) => label.textContent?.trim() === 'Atendimento')!.querySelector('input')!;
@@ -112,8 +119,8 @@ describe('NotificationsComponent', () => {
     dialog.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     fixture.detectChanges();
 
-    expect(service['updateRule']).toHaveBeenCalledWith('SLA_OVERDUE', {
-      enabled: true, severity: 'CRITICAL', recipientProfileIds: [1, 2], notifyAssignee: true, emailEnabled: false, userMutable: false
+    expect(service['updateRule']).toHaveBeenCalledWith('RMA_ASSIGNED', {
+      enabled: true, appEnabled: true, severity: 'CRITICAL', recipientProfileIds: [1, 2], notifyAssignee: true, emailEnabled: false, userMutable: false
     });
   });
 });

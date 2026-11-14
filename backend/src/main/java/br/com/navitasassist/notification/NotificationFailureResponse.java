@@ -13,6 +13,16 @@ public record NotificationFailureResponse(
     String rmaCode,
     String recipient,
     String error,
-    Instant occurredAt
+    Instant occurredAt,
+    Long notificationId,
+    int attempts,
+    String provider,
+    NotificationEmailStatus status,
+    Instant nextAttemptAt,
+    boolean retryAllowed
 ) {
+    public NotificationFailureResponse(String source, String eventKey, NotificationEventType eventType, String rmaCode, String recipient, String error, Instant occurredAt) {
+        this(source, eventKey, eventType, rmaCode, recipient, error, occurredAt, null, 0, null, null, null, false);
+    }
+
 }

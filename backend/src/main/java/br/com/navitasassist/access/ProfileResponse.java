@@ -8,12 +8,11 @@ public record ProfileResponse(
     String name,
     List<String> permissions,
     long userCount,
-    Instant createdAt,
     Instant updatedAt
 ) {
     public static ProfileResponse from(AccessProfile profile, long userCount) {
         return new ProfileResponse(profile.getId(), profile.getName(), orderedCodes(profile), userCount,
-            profile.getCreatedAt(), profile.getUpdatedAt());
+            profile.getUpdatedAt());
     }
 
     /** Códigos do perfil na ordem do catálogo. */

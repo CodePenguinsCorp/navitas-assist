@@ -1,18 +1,21 @@
+import { AuthService } from '../../core/services/auth.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { Router, provideRouter } from '@angular/router';
+import { NotificationDetailModalComponent } from '../../shared/notification-detail-modal/notification-detail-modal.component';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { NotificationResponse } from '../../core/models';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { NotificationService } from '../../core/services/notification.service';
 import { ProfileService } from '../../core/services/profile.service';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { NotificationsComponent } from './notifications.component';
 
 const NOTIFICATION: NotificationResponse = {
-  id: 5, eventType: 'RMA_ASSIGNED', severity: 'INFO', title: 'RMA RMA-2026-000007 atribuído a Técnico', message: 'Cliente · Produto',
-  rmaId: 7, rmaCode: 'RMA-2026-000007', actionPath: '/rmas?rma=7', createdAt: '2026-10-24T12:00:00Z', readAt: null, snoozedUntil: null, read: false
+  id: 5, eventType: 'RMA_ASSIGNED', severity: 'INFO', title: 'OS OS-2026-000007 atribuída a Técnico', message: 'Cliente · Produto',
+  rmaId: 7, rmaCode: 'OS-2026-000007', actionPath: '/rmas?rma=7', createdAt: '2026-10-24T12:00:00Z', readAt: null, snoozedUntil: null, read: false
 };
 const OLD: NotificationResponse = { ...NOTIFICATION, id: 8, title: 'Notificação antiga' };
 const NEW: NotificationResponse = { ...NOTIFICATION, id: 9, title: 'Notificação nova' };
@@ -20,6 +23,9 @@ const NEW: NotificationResponse = { ...NOTIFICATION, id: 9, title: 'Notificaçã
 const failure = () => throwError(() => new HttpErrorResponse({ status: 500 }));
 
 interface Harness {
+  updateEventFilter(value: 'RMA_CREATED' | ''): void;
+  updateSeverityFilter(value: 'CRITICAL' | ''): void;
+  clearInboxFilters(): void;
   markAllRead(): void;
   markRead(notification: NotificationResponse): void;
   snooze(notification: NotificationResponse, minutes: string): void;
@@ -38,10 +44,12 @@ describe('NotificationsComponent inbox loading', () => {
   const text = () => root().textContent!.replace(/[\s ]+/g, ' ').trim();
   const render = () => { fixture.componentRef.injector.get(ChangeDetectorRef).markForCheck(); fixture.detectChanges(); };
   const button = (label: string) => Array.from(root().querySelectorAll('button')).find((item) => item.textContent?.trim() === label);
-  const checkbox = (label: string) => Array.from(root().querySelectorAll('label')).find((item) => item.textContent?.trim() === label)!.querySelector('input')!;
-  const toggle = (label: string) => { checkbox(label).dispatchEvent(new Event('change')); render(); };
+  const filterBar = () => root().querySelector<HTMLElement>('.inbox-filters')!;
+  const filterToggle = (label: string) => Array.from(filterBar().querySelectorAll<HTMLButtonElement>('button[aria-pressed]')).find((item) => item.textContent?.trim() === label)!;
+  const clearFiltersButton = () => filterBar().querySelector<HTMLButtonElement>('.inbox-clear')!;
+  const toggle = (label: string) => { filterToggle(label).click(); render(); };
 
-  async function setup(sources: { role?: LegacyProfileCode; unread?: number; list?: Source<NotificationResponse[]>[]; markAllRead?: Observable<unknown>; snooze?: Observable<NotificationResponse>; markRead?: Observable<NotificationResponse> } = {}) {
+  async function setup(sources: { role?: LegacyProfileCode; unread?: number; list?: Source<NotificationResponse[]>[]; markAllRead?: Observable<void>; snooze?: Observable<NotificationResponse>; markRead?: Observable<NotificationResponse> } = {}) {
     clock = signal(Date.parse('2026-10-24T13:00:00Z'));
     const list = vi.fn(() => of([NOTIFICATION]));
     for (const source of sources.list ?? []) {
@@ -50,6 +58,8 @@ describe('NotificationsComponent inbox loading', () => {
     service = {
       unreadCount: signal(sources.unread ?? 1),
       summaryLoaded: signal(true),
+      latestReadAll: signal(null),
+      markingAll: signal(false),
       summaryLoadFailed: signal(false),
       list,
       refreshSummary: vi.fn(() => of(1)),
@@ -60,22 +70,51 @@ describe('NotificationsComponent inbox loading', () => {
       updatePreference: vi.fn(),
       listRules: vi.fn(() => of([])),
       updateRule: vi.fn(),
+      emailStatus: vi.fn(() => of({ enabled: true, provider: 'fake' })),
       listFailures: vi.fn(() => of([]))
     } as never;
     await TestBed.configureTestingModule({
       imports: [NotificationsComponent],
       providers: [
         provideRouter([]),
+        { provide: AuthService, useValue: { currentUser: () => ({ email: 'user@example.com' }) } },
         { provide: NotificationService, useValue: service },
         { provide: ProfileService, useValue: { options: () => of([]), invalidateOptions: () => undefined } },
         providePermissions(profilePermissions(sources.role ?? 'TECHNICIAN')),
-        { provide: SlaClockService, useValue: { now: clock.asReadonly() } }
+        { provide: ClockService, useValue: { now: clock.asReadonly() } }
       ]
     }).compileComponents();
     fixture = TestBed.createComponent(NotificationsComponent);
     component = fixture.componentInstance as unknown as Harness;
     render();
   }
+
+  it('agrupa por dia e recalcula os rótulos na virada pelo ClockService', async () => {
+    await setup({ list: [of([
+      { ...NOTIFICATION, createdAt: new Date(2026, 9, 24, 10).toISOString() },
+      { ...OLD, createdAt: new Date(2026, 9, 23, 10).toISOString() }
+    ])] });
+    clock.set(new Date(2026, 9, 24, 23, 59).getTime()); render();
+    expect(text()).toContain('Hoje'); expect(text()).toContain('Ontem');
+    clock.set(new Date(2026, 9, 25, 0, 1).getTime()); render();
+    expect(root().querySelectorAll('.notification-day')[0].textContent).toBe('Ontem');
+    expect(root().querySelectorAll('.notification-day')[1].textContent).toBe('23/10/2026');
+  });
+
+  it('envia filtros ao servidor e limpa evento, severidade e adiadas juntos', async () => {
+    await setup();
+    component.updateEventFilter('RMA_CREATED');
+    component.updateSeverityFilter('CRITICAL');
+    toggle('Mostrar adiadas');
+    expect(service['list']).toHaveBeenLastCalledWith({ unreadOnly: false, includeSnoozed: true, eventType: 'RMA_CREATED', severity: 'CRITICAL' });
+    component.clearInboxFilters();
+    expect(service['list']).toHaveBeenLastCalledWith({ unreadOnly: false, includeSnoozed: false });
+  });
+
+  it('mantém leitura em massa habilitada quando o filtro não contém não lidas', async () => {
+    await setup({ unread: 8, list: [of([])] });
+    expect(button('Marcar todas como lidas')?.disabled).toBe(false);
+  });
 
   it('shows an empty inbox only after the initial response', async () => {
     const pending = new Subject<NotificationResponse[]>();
@@ -97,9 +136,9 @@ describe('NotificationsComponent inbox loading', () => {
   // Vermelho: a lista antiga continua visível depois que a recarga do filtro falha.
   it('hides the previous list when a filter reload fails', async () => {
     await setup({ list: [of([NOTIFICATION]), failure()] });
-    expect(text()).toContain('RMA RMA-2026-000007 atribuído a Técnico');
+    expect(text()).toContain('OS OS-2026-000007 atribuída a Técnico');
     toggle('Somente não lidas');
-    expect(text()).not.toContain('RMA RMA-2026-000007 atribuído a Técnico');
+    expect(text()).not.toContain('OS OS-2026-000007 atribuída a Técnico');
     expect(text()).toContain('Não foi possível carregar as notificações.');
     button('Tentar novamente')!.click();
     render();
@@ -117,7 +156,7 @@ describe('NotificationsComponent inbox loading', () => {
     await setup({ list: [of([NOTIFICATION]), new Subject<NotificationResponse[]>()] });
     toggle('Mostrar adiadas');
     expectPending(root());
-    expect(text()).not.toContain('RMA RMA-2026-000007 atribuído a Técnico');
+    expect(text()).not.toContain('OS OS-2026-000007 atribuída a Técnico');
   });
 
   // Vermelho: não existe "Tentar novamente" nem estado "Carregando..." na nova tentativa.
@@ -154,7 +193,7 @@ describe('NotificationsComponent inbox loading', () => {
     button('Mostrar todas')!.click();
     render();
     expect(service['list']).toHaveBeenLastCalledWith({ unreadOnly: false, includeSnoozed: false });
-    expect(checkbox('Somente não lidas').checked).toBe(false);
+    expect(filterToggle('Somente não lidas').getAttribute('aria-pressed')).toBe('false');
     expect(text()).toContain('Nenhuma notificação.');
     expect(text()).not.toContain('Nenhuma notificação não lida.');
   });
@@ -162,7 +201,57 @@ describe('NotificationsComponent inbox loading', () => {
   // Vermelho: a lista não informa o limite de 100 notificações.
   it('states the inbox limit', async () => {
     await setup();
+    expect(text()).toContain('1 notificação');
     expect(text()).toContain('Mostra as 100 notificações mais recentes, dentro dos filtros selecionados.');
+  });
+
+  it('distinguishes an inbox emptied by event or severity filters and clears them', async () => {
+    await setup({ list: [of([NOTIFICATION]), of([]), of([])] });
+    expect(clearFiltersButton().disabled).toBe(true);
+    expect(clearFiltersButton().textContent?.trim()).toBe('Limpar filtros');
+    component.updateSeverityFilter('CRITICAL');
+    render();
+    expect(text()).toContain('Nenhuma notificação encontrada.');
+    expect(clearFiltersButton().disabled).toBe(false);
+    expect(clearFiltersButton().textContent?.trim()).toBe('Limpar filtros (1)');
+    button('Limpar filtros')!.click();
+    render();
+    expect(service['list']).toHaveBeenLastCalledWith({ unreadOnly: false, includeSnoozed: false });
+    expect(text()).toContain('Nenhuma notificação.');
+  });
+
+  it('lays out the filter bar like the Kanban: labelled selects, pressed toggles and a counted Limpar filtros', async () => {
+    await setup();
+    const labels = Array.from(filterBar().querySelectorAll('.field-group > label')).map((label) => label.textContent?.trim());
+    expect(labels).toEqual(['Evento', 'Severidade']);
+    expect(filterBar().querySelector('input.switch')).toBeNull();
+    const actions = Array.from(filterBar().querySelectorAll<HTMLButtonElement>('.inbox-filters__actions > button'));
+    expect(actions.map((item) => item.textContent?.trim())).toEqual(['Somente não lidas', 'Mostrar adiadas', '', 'Limpar filtros']);
+    expect(actions.every((item) => item.classList.contains('button-secondary'))).toBe(true);
+    expect(filterToggle('Somente não lidas').getAttribute('aria-pressed')).toBe('false');
+
+    toggle('Somente não lidas');
+    toggle('Mostrar adiadas');
+    expect(filterToggle('Somente não lidas').getAttribute('aria-pressed')).toBe('true');
+    expect(filterToggle('Mostrar adiadas').getAttribute('aria-pressed')).toBe('true');
+    expect(filterToggle('Somente não lidas').querySelector('app-icon')).not.toBeNull();
+    expect(clearFiltersButton().textContent?.trim()).toBe('Limpar filtros (2)');
+    expect(service['list']).toHaveBeenLastCalledWith({ unreadOnly: true, includeSnoozed: true });
+
+    clearFiltersButton().click();
+    render();
+    expect(filterToggle('Mostrar adiadas').getAttribute('aria-pressed')).toBe('false');
+    expect(clearFiltersButton().disabled).toBe(true);
+  });
+
+  it('marks unread rows, shows the severity chip and the time of day', async () => {
+    await setup({ list: [of([NOTIFICATION, { ...OLD, read: true, severity: 'CRITICAL' }])] });
+    const rows = Array.from(root().querySelectorAll<HTMLElement>('.notification-item'));
+    expect(rows.map((row) => row.classList.contains('is-unread'))).toEqual([true, false]);
+    expect(rows[0].textContent).toContain('Não lida:');
+    expect(rows[1].querySelector('.mini-chip')!.textContent!.trim()).toBe('Crítico');
+    expect(rows[0].querySelector('time')!.textContent!.trim()).toBe('09:00');
+    expect(rows[0].querySelector('time')!.getAttribute('title')).toBe('24/10/2026, 09:00');
   });
 
   it.each([
@@ -176,9 +265,9 @@ describe('NotificationsComponent inbox loading', () => {
     expect(root().querySelector('.notification-message')?.textContent).toBe(`Cliente · Produto · Prioridade ${label}. Aberto por admin.`);
   });
 
-  it('leaves assignment and SLA notifications unchanged even if their text mentions a priority', async () => {
+  it('leaves assignment and other notifications unchanged even if their text mentions a priority', async () => {
     const message = 'Cliente · Produto · prioridade alta.';
-    const items: NotificationResponse[] = ['RMA_ASSIGNED', 'SLA_WARNING', 'SLA_OVERDUE'].map((eventType, index) =>
+    const items: NotificationResponse[] = ['RMA_ASSIGNED', 'RMA_BLOCKED', 'TEST_FAILED'].map((eventType, index) =>
       ({ ...NOTIFICATION, id: index + 1, eventType: eventType as NotificationResponse['eventType'], message }));
     await setup({ list: [of(items)] });
     expect(root().querySelector('.notification-priority')).toBeNull();
@@ -199,6 +288,28 @@ describe('NotificationsComponent inbox loading', () => {
     await setup({ list: [of([{ ...NOTIFICATION, eventType: 'RMA_CREATED', message }])] });
     expect(root().querySelector('.notification-priority, .notification-message img')).toBeNull();
     expect(root().querySelector('.notification-message')?.textContent).toBe(message);
+  });
+
+  it('colors the structured new RMA priority even when its message wording changes', async () => {
+    const message = '<img src=x onerror=alert(1)>: equipamento recebido.';
+    await setup({ list: [of([{ ...NOTIFICATION, eventType: 'RMA_CREATED', rmaPriority: 'HIGH', message }])] });
+    const highlight = root().querySelector('.notification-priority');
+    expect(highlight?.textContent).toBe('Prioridade Alta');
+    expect(highlight?.getAttribute('data-priority')).toBe('HIGH');
+    expect(root().querySelector('.notification-message')?.textContent).toContain(message);
+    expect(root().querySelector('.notification-message img')).toBeNull();
+  });
+
+  // Vermelho: o erro da ação substitui a única mensagem e a troca de aba apaga a falha de carga.
+  it('keeps the same columns in read and unread rows, with the time last', async () => {
+    await setup({ list: [of([NOTIFICATION, { ...OLD, read: true }])] });
+    const rows = Array.from(root().querySelectorAll<HTMLElement>('.notification-item'));
+    const slots = rows.map((row) => row.querySelector('.notification-actions .notification-action-slot'));
+    expect(slots.every(Boolean)).toBe(true);
+    expect(slots[0]!.querySelector('button')).not.toBeNull();
+    expect(slots[1]!.querySelector('button')).toBeNull();
+    expect(slots[1]!.getAttribute('aria-hidden')).toBe('true');
+    expect(rows.every((row) => row.lastElementChild!.matches('time.notification-time'))).toBe(true);
   });
 
   // Vermelho: o erro da ação substitui a única mensagem e a troca de aba apaga a falha de carga.
@@ -228,7 +339,7 @@ describe('NotificationsComponent inbox loading', () => {
       await setup({ list: [of([NOTIFICATION]), new Subject<NotificationResponse[]>()] });
       component.snooze(NOTIFICATION, '60');
       render();
-      expect(text()).not.toContain('RMA RMA-2026-000007 atribuído a Técnico');
+      expect(text()).not.toContain('OS OS-2026-000007 atribuída a Técnico');
       expectPending(root());
       expect(root().querySelector('.notification-list')).toBeNull();
       expect(service['list']).toHaveBeenCalledTimes(2);
@@ -248,7 +359,7 @@ describe('NotificationsComponent inbox loading', () => {
       await setup({ markRead: failure() as never });
       component.markRead(NOTIFICATION);
       render();
-      expect(text()).toContain('RMA RMA-2026-000007 atribuído a Técnico');
+      expect(text()).toContain('OS OS-2026-000007 atribuída a Técnico');
       expect(text()).toContain('Não foi possível concluir a ação agora.');
     });
   });
@@ -259,22 +370,130 @@ describe('NotificationsComponent inbox loading', () => {
     const tabLabelled = (label: string) => tabs().find((tab) => tab.textContent!.trim().startsWith(label))!;
     const key = (target: HTMLElement, value: string) => { target.dispatchEvent(new KeyboardEvent('keydown', { key: value, bubbles: true })); render(); };
 
-    // Vermelho: cada item tem "Abrir RMA" em .button-primary, inclusive para URL externa.
-    it('opens the RMA from the notification title', async () => {
+    it('shows only the useful summary on the second line, without repeating the event type', async () => {
       await setup();
-      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-      const title = item().querySelector<HTMLButtonElement>('button.link-button')!;
-      expect(title.textContent!.trim()).toBe('RMA RMA-2026-000007 atribuído a Técnico');
-      expect(item().querySelector('.button-primary')).toBeNull();
-      title.click();
-      expect(service['markRead']).toHaveBeenCalledWith(5);
-      expect(navigate).toHaveBeenCalledWith(['/rmas'], { queryParams: { rma: '7' } });
+      const meta = item().querySelector<HTMLElement>('.notification-meta')!;
+      expect(meta.textContent!.trim()).toBe('Cliente · Produto');
+      expect(meta.querySelector('.notification-event')).toBeNull();
+      expect(meta.querySelector<HTMLElement>('.notification-message')!.title).toBe('Cliente · Produto');
+    });
 
-      TestBed.resetTestingModule();
-      await setup({ list: [of([{ ...NOTIFICATION, actionPath: 'https://externo' }])] });
-      expect(item().querySelector('button.link-button')).toBeNull();
-      expect(Array.from(item().querySelectorAll('button')).some((entry) => /abrir/i.test(entry.textContent!))).toBe(false);
-      expect(item().textContent).toContain('RMA RMA-2026-000007 atribuído a Técnico');
+    describe('detail dialog', () => {
+      const dialog = () => root().querySelector<HTMLElement>('app-notification-detail-modal [role="dialog"]');
+      const titleButton = () => item().querySelector<HTMLButtonElement>('button.notification-title')!;
+      const dialogButton = (label: string) => Array.from(dialog()!.querySelectorAll('button')).find((entry) => entry.textContent?.trim() === label);
+      const dialogText = () => dialog()!.textContent!.replace(/[\s\u00a0]+/g, ' ').trim();
+      const unreadFull = { ...NOTIFICATION, message: 'Primeira linha\nSegunda linha <b>não é HTML</b>' };
+
+      afterEach(() => { document.body.style.overflow = ''; });
+
+      it('opens from the row title with the full content, marks it read and does not navigate', async () => {
+        await setup({ list: [of([unreadFull])] });
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        titleButton().click();
+        render();
+
+        expect(dialog()).not.toBeNull();
+        expect(dialog()!.getAttribute('aria-modal')).toBe('true');
+        expect(dialog()!.querySelector('h3')!.textContent!.trim()).toBe('OS atribuída a Técnico · OS-2026-000007');
+        expect(dialogText()).toContain('Informativo');
+        expect(dialogText()).toContain('Nova atribuição');
+        expect(dialog()!.querySelector('.notification-detail__meta')!.textContent).toContain('24/10/2026, 09:00');
+        expect(dialogText()).toContain('há 1 h');
+        expect(dialog()!.querySelector('.notification-detail__message')!.textContent).toBe('Primeira linha\nSegunda linha <b>não é HTML</b>');
+        expect(dialog()!.querySelector('.notification-detail__message b')).toBeNull();
+        expect(service['markRead']).toHaveBeenCalledWith(5, { silent: true });
+        expect(dialogText()).toContain('Lida');
+        expect(dialogButton('Marcar como lida')).toBeUndefined();
+        expect(navigate).not.toHaveBeenCalled();
+      });
+
+      it('follows the internal path only through Abrir OS and closes', async () => {
+        await setup();
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        titleButton().click();
+        render();
+        dialogButton('Abrir OS')!.click();
+        render();
+        expect(navigate).toHaveBeenCalledExactlyOnceWith(['/rmas'], { queryParams: { rma: '7' } });
+        expect(dialog()).toBeNull();
+      });
+
+      it('offers no Abrir OS for an external path', async () => {
+        await setup({ list: [of([{ ...NOTIFICATION, actionPath: 'https://externo' }])] });
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        titleButton().click();
+        render();
+        expect(dialog()).not.toBeNull();
+        expect(dialogButton('Abrir OS')).toBeUndefined();
+        expect(dialogText()).toContain('OS-2026-000007');
+        expect(navigate).not.toHaveBeenCalled();
+      });
+
+      it('closes with Fechar, X and Escape, returning focus to the row title', async () => {
+        await setup();
+        document.body.appendChild(fixture.nativeElement);
+        const close = async (action: () => void) => {
+          titleButton().focus();
+          titleButton().click();
+          render();
+          await fixture.whenStable();
+          expect(document.activeElement).toBe(dialog()!.querySelector('h3'));
+          action();
+          render();
+          await fixture.whenStable();
+          expect(dialog()).toBeNull();
+          expect(document.activeElement).toBe(titleButton());
+        };
+        await close(() => dialogButton('Fechar')!.click());
+        await close(() => dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Fechar"]')!.click());
+        await close(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+        fixture.nativeElement.remove();
+      });
+
+      it('keeps the row icon marking as read without opening the dialog', async () => {
+        await setup();
+        item().querySelector<HTMLButtonElement>('button[aria-label^="Marcar como lida"]')!.click();
+        render();
+        expect(service['markRead']).toHaveBeenCalledWith(5);
+        expect(dialog()).toBeNull();
+      });
+
+      it('offers Marcar como lida and shows the error when marking on open fails', async () => {
+        await setup({ markRead: failure() as never });
+        titleButton().click();
+        render();
+        expect(dialogText()).toContain('Não lida');
+        expect(dialogText()).toContain('Não foi possível concluir a ação agora.');
+        expect(dialogButton('Marcar como lida')).toBeDefined();
+      });
+
+      it('snoozes from the dialog, closes it and reloads the list', async () => {
+        await setup({ snooze: of({ ...NOTIFICATION, snoozedUntil: '2026-10-24T16:00:00Z' }) });
+        titleButton().click();
+        render();
+        fixture.debugElement.query(By.directive(NotificationDetailModalComponent)).componentInstance.snoozed.emit(60);
+        render();
+        expect(service['snooze']).toHaveBeenCalledWith(5, 60);
+        expect(dialog()).toBeNull();
+        expect(service['list']).toHaveBeenCalledTimes(2);
+      });
+
+      it('walks through the visible list with Anterior and Próxima', async () => {
+        await setup({ list: [of([NOTIFICATION, { ...OLD, read: true }])] });
+        titleButton().click();
+        render();
+        const previous = () => dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Notificação anterior"]')!;
+        const next = () => dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Próxima notificação"]')!;
+        expect(previous().disabled).toBe(true);
+        next().click();
+        render();
+        expect(dialog()!.querySelector('h3')!.textContent!.trim()).toBe('Notificação antiga · OS-2026-000007');
+        expect(next().disabled).toBe(true);
+        previous().click();
+        render();
+        expect(dialog()!.querySelector('h3')!.textContent!.trim()).toBe('OS atribuída a Técnico · OS-2026-000007');
+      });
     });
 
     // Vermelho: "adiada até" aparece também depois do vencimento do adiamento.
@@ -299,11 +518,11 @@ describe('NotificationsComponent inbox loading', () => {
       expect(service['list']).toHaveBeenCalledTimes(2);
     });
 
-    it('reloads after marking all without claiming a count for an empty batch', async () => {
+    // Vermelho: a mensagem não diz que as adiadas também foram marcadas.
+    it('states that marking all includes snoozed', async () => {
       await setup();
       component.markAllRead();
       render();
-      expect(service['list']).toHaveBeenCalledTimes(2);
       expect(text()).not.toContain('mensagens marcada(s) como lida');
     });
 
@@ -403,20 +622,23 @@ describe('NotificationsComponent inbox loading', () => {
     });
 
     describe('preservation', () => {
-      it('keeps mark as read and snooze as secondary actions', async () => {
+      it('keeps mark as read and snooze as discreet row actions', async () => {
         await setup();
-        expect(button('Marcar como lida')!.classList).toContain('button-secondary');
+        expect(button('Marcar como lida')!.classList).toContain('row-action');
+        expect(button('Marcar como lida')!.getAttribute('aria-label')).toBe('Marcar como lida OS OS-2026-000007 atribuída a Técnico');
         expect(item().querySelector('app-custom-select')).not.toBeNull();
+        expect(item().querySelector('.button-secondary')).toBeNull();
         component.snooze(NOTIFICATION, '1440');
         expect(service['snooze']).toHaveBeenCalledWith(5, 1440);
       });
 
-      it('disables actions while busy but keeps the global action available without visible unread', async () => {
+      it('disables actions while busy and mark all without unread', async () => {
         await setup({ markRead: new Subject<NotificationResponse>() });
         component.markRead(NOTIFICATION);
         render();
         expect(button('Marcar como lida')!.disabled).toBe(true);
         TestBed.resetTestingModule();
+        // A contagem exclui adiadas: a leitura global continua disponível.
         await setup({ unread: 0, list: [of([{ ...NOTIFICATION, read: true }])] });
         expect(button('Marcar todas como lidas')!.disabled).toBe(false);
       });

@@ -1,0 +1,88 @@
+@if (collapsible()) {
+  <app-collapsible-section title="Diagnóstico" icon="clipboard" [open]="true" storageKey="rma.diagnosis">
+    @if (canEdit() && !editing()) {
+      <button sectionActions type="button" class="link-button diagnosis-trigger" [disabled]="disabled()" (click)="edit()">
+        @if (rma().diagnosis) { Editar } @else { <app-icon name="plus" [size]="14" /> Registrar diagnóstico }
+      </button>
+    }
+    <ng-container *ngTemplateOutlet="content" />
+  </app-collapsible-section>
+} @else {
+  <header class="diagnosis-header">
+    <h3 class="detail-card__title"><app-icon name="clipboard" [size]="16" /> Diagnóstico</h3>
+    @if (canEdit() && !editing()) {
+      <button type="button" class="link-button diagnosis-trigger" [disabled]="disabled()" (click)="edit()">
+        @if (rma().diagnosis) { Editar } @else { <app-icon name="plus" [size]="14" /> Registrar diagnóstico }
+      </button>
+    }
+  </header>
+  <ng-container *ngTemplateOutlet="content" />
+}
+<ng-template #content>
+@if (editing() && canEdit()) {
+  @if (diagnosisErrorMessage()) { <p class="field-error" role="alert">{{ diagnosisErrorMessage() }}</p> }
+      <form [formGroup]="diagnosisForm" (ngSubmit)="saveDiagnosis()" class="form-grid" (keydown.escape)="cancelOnEscape($event)">
+        <fieldset class="diagnosis-fields">
+          <legend>Falha encontrada</legend>
+
+          <div class="field-group field-group--full">
+            <label [for]="fieldId('foundFailure')" class="sr-only">Falha encontrada</label>
+            <textarea [id]="fieldId('foundFailure')" formControlName="foundFailure" rows="4"
+              [attr.aria-invalid]="showDiagnosisError(diagnosisForm.controls.foundFailure) || null"
+              [attr.aria-describedby]="showDiagnosisError(diagnosisForm.controls.foundFailure) ? fieldId('foundFailure-error') : null"></textarea>
+            @if (showDiagnosisError(diagnosisForm.controls.foundFailure)) {
+              <small class="field-error" [id]="fieldId('foundFailure-error')">{{ diagnosisForm.controls.foundFailure.hasError('maxlength') ? 'Use até 2000 caracteres.' : 'Descreva a falha encontrada.' }}</small>
+            }
+          </div>
+
+          <div class="field-group">
+            <label>Tipo de falha</label>
+            <app-custom-select
+              formControlName="failureType"
+              ariaLabel="Tipo de falha"
+              [options]="failureTypeSelectOptions"
+            />
+          </div>
+
+          <div class="field-group">
+            <label>Causa provável</label>
+            <app-custom-select
+              formControlName="probableCause"
+              ariaLabel="Causa provável"
+              [options]="failureCauseSelectOptions"
+            />
+          </div>
+        </fieldset>
+
+        <fieldset class="diagnosis-fields">
+          <legend>Notas</legend>
+
+          <div class="field-group field-group--full">
+            <label [for]="fieldId('notes')" class="sr-only">Notas</label>
+            <textarea [id]="fieldId('notes')" formControlName="notes" rows="4" maxlength="2000"
+              [attr.aria-invalid]="showDiagnosisError(diagnosisForm.controls.notes) || null"
+              [attr.aria-describedby]="showDiagnosisError(diagnosisForm.controls.notes) ? fieldId('notes-error') : null"></textarea>
+            @if (showDiagnosisError(diagnosisForm.controls.notes)) {
+              <small class="field-error" [id]="fieldId('notes-error')">Use até 2000 caracteres.</small>
+            }
+          </div>
+        </fieldset>
+
+        <div class="form-actions form-actions--full">
+          <button type="button" class="button-secondary" (click)="cancel()" [disabled]="diagnosisSubmitting()">Cancelar</button>
+          <button type="submit" class="button-primary" [disabled]="diagnosisSubmitting()">
+            {{ diagnosisSubmitting() ? 'Salvando...' : 'Salvar diagnóstico' }}
+          </button>
+        </div>
+      </form>
+} @else if (rma().diagnosis; as diagnosis) {
+  <dl class="meta-list rma-details__pairs diagnosis-facts">
+    @for (fact of diagnosisFacts(diagnosis); track fact.label) {
+      <div><dt>{{ fact.label }}</dt><dd [class.is-empty]="fact.empty">{{ fact.value }}</dd></div>
+    }
+  </dl>
+} @else {
+  <p class="repair-empty">{{ noDiagnosisLabel }}</p>
+}
+@if (message()) { <p role="status" class="muted-inline">{{ message() }}</p> }
+</ng-template>

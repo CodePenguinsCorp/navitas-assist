@@ -11,6 +11,9 @@ function routeFor(permissions: readonly Permission[]): string {
 }
 
 describe('firstAllowedRoute', () => {
+  it('permite acessar cadastros somente com importacao sem edicao', () => {
+    expect(routeFor(['cadastros.importar' as Permission])).toBe('/clientes');
+  });
   it.each(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as LegacyProfileCode[])(
     'sends the %s profile to the dashboard',
     (code) => {
@@ -49,7 +52,7 @@ describe('NAV_GROUPS', () => {
         ['/rmas', 'clipboard', ['rma.ver']],
         ['/kanban', 'columns', ['rma.ver']],
         ['/notificacoes', 'bell', []],
-        ['/pecas', 'wrench', ['pecas.ver']],
+        ['/pecas', 'chip', ['pecas.ver']],
       ]],
       ['Cadastros', [
         ['/clientes', 'building', ['cadastros.ver', 'cadastros.editar']],
@@ -57,11 +60,12 @@ describe('NAV_GROUPS', () => {
         ['/protocolos', 'checklist', ['protocolos.ver', 'protocolos.catalogo']],
         ['/usuarios', 'users', ['usuarios.gerir']],
         ['/perfis', 'shield', ['perfis.gerir']],
+        ['/auditoria', 'checklist', ['auditoria.ver']],
       ]],
       ['Relatórios', [
         ['/relatorios', 'chart', ['relatorios.ver']],
       ]],
     ]);
-    expect(NAV_GROUPS[1].items.at(-1)?.label).toBe('Perfis');
+    expect(NAV_GROUPS[1].items.at(-1)?.label).toBe('Auditoria');
   });
 });

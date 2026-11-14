@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { CreateRmaRequest } from '../models';
+import { CreateRmaRequest, WarrantyStatus } from '../models';
 import { RmaService } from './rma.service';
 
 describe('RmaService', () => {
@@ -18,12 +18,32 @@ describe('RmaService', () => {
 
   afterEach(() => httpTesting.verify());
 
+  it('envia o ajuste de garantia por item e preserva a resposta do backend', () => {
+    const payload = { override: WarrantyStatus.IN_WARRANTY, reason: 'Cortesia' } as const;
+    let result: unknown;
+    service.updateWarranty(4, 9, payload).subscribe((rma) => result = rma);
+    const request = httpTesting.expectOne('/api/rmas/4/items/9/warranty');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual(payload);
+    const response = { id: 4, items: [], warrantyHistory: [] };
+    request.flush(response);
+    expect(result).toEqual(response);
+  });
+
+  it('remove o ajuste enviando override e motivo nulos', () => {
+    service.updateWarranty(4, 9, { override: null, reason: null }).subscribe();
+    const request = httpTesting.expectOne('/api/rmas/4/items/9/warranty');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ override: null, reason: null });
+    request.flush({});
+  });
+
   it('trims search text and preserves the selected status', () => {
-    service.list({ query: '  RMA-1  ', status: 'TRIAGE' }).subscribe();
+    service.list({ query: '  OS-1  ', status: 'TRIAGE' }).subscribe();
 
     const request = httpTesting.expectOne((candidate) => candidate.url === '/api/rmas');
     expect(request.request.method).toBe('GET');
-    expect(request.request.params.get('query')).toBe('RMA-1');
+    expect(request.request.params.get('query')).toBe('OS-1');
     expect(request.request.params.get('status')).toBe('TRIAGE');
     request.flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 });
   });
@@ -39,22 +59,31 @@ describe('RmaService', () => {
   });
 
   it('loads the complete board list without pagination parameters', () => {
-    service.listBoard({ query: ' RMA ', status: 'TRIAGE' }).subscribe();
+    service.listBoard({ query: ' OS ', status: 'TRIAGE' }).subscribe();
 
     const request = httpTesting.expectOne((candidate) => candidate.url === '/api/rmas/board');
     expect(request.request.params.has('page')).toBe(false);
     expect(request.request.params.has('size')).toBe(false);
-    expect(request.request.params.get('query')).toBe('RMA');
+    expect(request.request.params.get('query')).toBe('OS');
     expect(request.request.params.get('status')).toBe('TRIAGE');
     request.flush([]);
   });
 
+  it('loads the server-side dashboard aggregates', () => {
+    service.getDashboard().subscribe();
+
+    const request = httpTesting.expectOne('/api/rmas/dashboard');
+    expect(request.request.method).toBe('GET');
+    expect(request.request.params.keys()).toEqual([]);
+    request.flush({ statusCounts: {}, initialQueueHighPriority: 0, overdue: 0, dueSoon: 0, items: 0, itemsInWarranty: 0, itemsPendingWarranty: 0, queue: [], recent: [], statusEvents: [] });
+  });
+
   it('loads summary totals with the same filters as the list', () => {
-    service.getSummary({ query: ' RMA ', status: 'TRIAGE' }).subscribe();
+    service.getSummary({ query: ' OS ', status: 'TRIAGE' }).subscribe();
 
     const request = httpTesting.expectOne((candidate) => candidate.url === '/api/rmas/summary');
     expect(request.request.params.has('page')).toBe(false);
-    expect(request.request.params.get('query')).toBe('RMA');
+    expect(request.request.params.get('query')).toBe('OS');
     expect(request.request.params.get('status')).toBe('TRIAGE');
     request.flush({ total: 3, ongoing: 2, highPriority: 1 });
   });
@@ -72,7 +101,7 @@ describe('RmaService', () => {
     resolve.flush({});
   });
 
-  it('posts the complete RMA payload unchanged', () => {
+  it('posts the complete OS payload unchanged', () => {
     const payload: CreateRmaRequest = {
       clientId: 3,
       items: [
@@ -98,12 +127,25 @@ describe('RmaService', () => {
     request.flush({});
   });
 
-  it('updates only priority through the existing RMA endpoint', () => {
+  it('updates only priority through the existing OS endpoint', () => {
     service.updatePriority(11, 'HIGH').subscribe();
     const request = httpTesting.expectOne('/api/rmas/11');
     expect(request.request.method).toBe('PUT');
     expect(request.request.body).toEqual({ priority: 'HIGH' });
     request.flush({});
+  });
+
+  it('sets the due date and clears it with clearDueDate, never with a null dueDate', () => {
+    service.updateDueDate(11, '2026-11-30').subscribe();
+    const set = httpTesting.expectOne('/api/rmas/11');
+    expect(set.request.method).toBe('PUT');
+    expect(set.request.body).toEqual({ dueDate: '2026-11-30' });
+    set.flush({});
+
+    service.updateDueDate(11, null).subscribe();
+    const clear = httpTesting.expectOne('/api/rmas/11');
+    expect(clear.request.body).toEqual({ clearDueDate: true });
+    clear.flush({});
   });
 
   it('patches status and assignee through their dedicated endpoints', () => {

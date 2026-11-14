@@ -3,7 +3,9 @@ package br.com.navitasassist.controller;
 import java.util.List;
 
 import br.com.navitasassist.client.ClientRequest;
+import br.com.navitasassist.client.ClientListItemResponse;
 import br.com.navitasassist.client.ClientResponse;
+import br.com.navitasassist.client.ClientOptionResponse;
 import br.com.navitasassist.client.ClientSummaryResponse;
 import br.com.navitasassist.pagination.PageResponse;
 import br.com.navitasassist.service.ClientService;
@@ -29,8 +31,8 @@ public class ClientController {
     private final ClientService clientService;
 
     @GetMapping
-    public PageResponse<ClientResponse> search(
-        @RequestParam(required = false) String query,
+    public PageResponse<ClientListItemResponse> search(
+        @RequestParam(required = false) @jakarta.validation.constraints.Size(max = 100, message = "A busca deve ter no máximo 100 caracteres.") String query,
         @RequestParam(required = false) Boolean hasDocument,
         @RequestParam(required = false) Boolean hasEmail,
         @RequestParam(required = false) Integer page,
@@ -40,7 +42,7 @@ public class ClientController {
     }
 
     @GetMapping("/options")
-    public List<ClientResponse> listOptions() {
+    public List<ClientOptionResponse> listOptions() {
         return clientService.listOptions();
     }
 

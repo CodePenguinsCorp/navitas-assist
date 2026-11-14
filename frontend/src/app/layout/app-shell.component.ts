@@ -1,42 +1,32 @@
+import { DOCUMENT } from '@angular/common';
 import { IconComponent } from '../shared/icon/icon.component';
+import { NotificationBellComponent } from '../shared/notification-bell/notification-bell.component';
 import { initialsOf } from '../core/utils/rma-ui';
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRouteSnapshot, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { finalize, switchMap, timer } from 'rxjs';
+import { EMPTY, distinctUntilChanged, finalize, fromEvent, map, startWith, switchMap, timer } from 'rxjs';
 import { NAV_GROUPS } from '../core/mock-data';
-import { firstAllowedRoute } from '../core/navigation';
+import { allowsPermissions, firstAllowedRoute } from '../core/navigation';
 import { Permission } from '../core/permissions';
 import { AuthService } from '../core/services/auth.service';
 import { NotificationService } from '../core/services/notification.service';
 import { PermissionService } from '../core/services/permission.service';
 
-const UNREAD_UNAVAILABLE = 'Contagem de não lidas indisponível';
-
 @Component({
   selector: 'app-shell',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet, IconComponent],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, IconComponent, NotificationBellComponent],
   templateUrl: './app-shell.component.html',
   styles: [':host { display: block; }']
 })
 export class AppShellComponent {
+  private readonly document = inject(DOCUMENT);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly notificationService = inject(NotificationService);
   private readonly permissions = inject(PermissionService);
 
   protected readonly currentUser = this.authService.currentUser;
-  protected readonly unreadNotifications = this.notificationService.unreadCount;
-  /** The count is shown only when the latest summary succeeded; otherwise it is unknown, not zero. */
-  protected readonly unreadKnown = computed(() =>
-    this.notificationService.summaryLoaded() && !this.notificationService.summaryLoadFailed());
-  protected readonly unreadUnavailable = this.notificationService.summaryLoadFailed;
-  protected readonly notificationsLabel = computed(() => {
-    if (this.unreadUnavailable()) return `Notificações: ${UNREAD_UNAVAILABLE}`;
-    if (!this.unreadKnown()) return 'Notificações';
-    return `Notificações: ${this.unreadNotifications()} não lida(s)`;
-  });
-  protected readonly unreadUnavailableMessage = UNREAD_UNAVAILABLE;
   protected readonly loggingOut = signal(false);
   protected readonly logoutError = signal('');
   protected readonly initials = initialsOf;
@@ -44,7 +34,7 @@ export class AppShellComponent {
     NAV_GROUPS
       .map((group) => ({
         ...group,
-        items: group.items.filter((item) => this.permissions.hasAll(item.permissions))
+        items: group.items.filter((item) => allowsPermissions(this.permissions, item.permissions, item.alternativePermissions))
       }))
       .filter((group) => group.items.length > 0)
   );
@@ -52,8 +42,13 @@ export class AppShellComponent {
   protected readonly currentProfileName = computed(() => this.currentUser()?.profileName ?? '');
 
   constructor() {
-    timer(0, 60_000).pipe(
-      switchMap(() => this.notificationService.refreshSummary()),
+    fromEvent(this.document, 'visibilitychange').pipe(
+      startWith(null),
+      map(() => this.document.visibilityState === 'visible'),
+      distinctUntilChanged(),
+      switchMap((visible) => visible
+        ? timer(0, 60_000).pipe(switchMap(() => this.notificationService.refreshSummary()))
+        : EMPTY),
       takeUntilDestroyed()
     ).subscribe();
     // As permissões mudam após um 403 ou ao salvar o próprio perfil: a tela aberta é conferida de novo.
@@ -65,13 +60,14 @@ export class AppShellComponent {
 
   private leaveScreenIfForbidden(): void {
     let route: ActivatedRouteSnapshot | null = this.router.routerState.snapshot.root;
-    const required: Permission[] = [];
     while (route) {
-      required.push(...((route.data['permissions'] as Permission[] | undefined) ?? []));
+      const required = (route.data['permissions'] as Permission[] | undefined) ?? [];
+      const alternatives = (route.data['alternativePermissions'] as Permission[] | undefined) ?? [];
+      if (!allowsPermissions(this.permissions, required, alternatives)) {
+        void this.router.navigateByUrl(firstAllowedRoute(this.permissions));
+        return;
+      }
       route = route.firstChild;
-    }
-    if (!this.permissions.hasAll(required)) {
-      void this.router.navigateByUrl(firstAllowedRoute(this.permissions));
     }
   }
 

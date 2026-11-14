@@ -1,3 +1,4 @@
+import { providePermissions } from '../../testing/permission-fixtures';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { Signal } from '@angular/core';
@@ -13,13 +14,13 @@ import { ProductsComponent } from './products.component';
 const INITIAL_PRODUCTS: ProductResponse[] = [
   { id: 1, sku: 'A', name: 'Controlador Alfa', category: 'Controle', hardwareVersion: null,
     firmwareVersion: '1.0', defaultWarrantyMonths: 12, technicalNotes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' },
+    updatedAt: '2026-10-20T12:00:00Z' },
   { id: 2, sku: 'B', name: 'Controlador Beta', category: 'controle', hardwareVersion: null,
     firmwareVersion: null, defaultWarrantyMonths: 12, technicalNotes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' },
+    updatedAt: '2026-10-20T12:00:00Z' },
   { id: 3, sku: 'C', name: 'Sensor Gama', category: 'Sensor', hardwareVersion: null,
     firmwareVersion: ' ', defaultWarrantyMonths: 12, technicalNotes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' }
+    updatedAt: '2026-10-20T12:00:00Z' }
 ];
 
 
@@ -46,12 +47,12 @@ describe('ProductsComponent HTTP error feedback', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ProductsComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()]
+      providers: [providePermissions(['cadastros.ver', 'cadastros.editar']), provideHttpClient(), provideHttpClientTesting()]
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(ProductsComponent);
     http.expectOne(r => r.method === 'GET' && r.url.split('?')[0] === '/api/products').flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 1 });
-    http.expectOne('/api/products/summary').flush({ total: 1, withFirmware: 0, averageWarrantyMonths: 12, categories: [] });
+    http.expectOne('/api/products/summary').flush({ total: 1, categories: [] });
     fixture.detectChanges();
     page = fixture.nativeElement as HTMLElement;
     page.querySelector<HTMLButtonElement>('.page-heading button')!.click();
@@ -97,7 +98,7 @@ describe('ProductsComponent HTTP error feedback', () => {
     const saved: ProductResponse = { ...INITIAL_PRODUCTS[0], sku: 'SKU-NAV-81', name: 'Produto salvo' };
     retry.flush(saved);
     http.expectOne(r => r.method === 'GET' && r.url.split('?')[0] === '/api/products').flush({ content: [saved], page: 0, size: 20, totalElements: 1, totalPages: 1 });
-    http.expectOne('/api/products/summary').flush({ total: 1, withFirmware: 0, averageWarrantyMonths: 12, categories: [] });
+    http.expectOne('/api/products/summary').flush({ total: 1, categories: [] });
     fixture.detectChanges();
     expect(page.querySelector('.modal-overlay')).toBeNull();
     expect(page.querySelector('tbody')?.textContent).toContain('Produto salvo');

@@ -1,4 +1,4 @@
-import { IconComponent, IconName } from '../../shared/icon/icon.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import { Component, DestroyRef, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
@@ -6,6 +6,8 @@ import { Router } from '@angular/router';
 import { Observable, Subscription, finalize } from 'rxjs';
 import {
   NotificationFailureResponse,
+  NotificationEventType,
+  NotificationEmailStatusResponse,
   NotificationPreferenceResponse,
   NotificationReadAllResponse,
   NotificationResponse,
@@ -14,11 +16,14 @@ import {
   NotificationSeverity,
   ProfileOption
 } from '../../core/models';
+import { AuthService } from '../../core/services/auth.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { ProfileService } from '../../core/services/profile.service';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
+import { NotificationDetailModalComponent } from '../../shared/notification-detail-modal/notification-detail-modal.component';
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { ResultCountComponent } from '../../shared/result-count/result-count.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
 import { CustomSelectComponent } from '../../shared/form-controls/custom-select/custom-select.component';
 import { NotificationService } from '../../core/services/notification.service';
@@ -30,7 +35,9 @@ import {
   NOTIFICATION_SEVERITY_LABELS,
   SNOOZE_OPTIONS,
   formatNotificationDateTime,
-  internalRoute,
+  formatNotificationTime,
+  groupNotificationsByDay,
+  followNotification,
   newRmaMessagePriority,
   severityClass
 } from '../../core/utils/notification-ui';
@@ -39,7 +46,7 @@ type NotificationsTab = 'inbox' | 'preferences' | 'rules';
 type PreferenceState = 'disabled' | 'mandatory' | 'muted' | 'receiving';
 
 const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
-  disabled: 'Desativado pela administração',
+  disabled: 'Desligado',
   mandatory: 'Obrigatório',
   muted: 'Silenciado',
   receiving: 'Recebendo'
@@ -47,244 +54,30 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
 
 @Component({
   selector: 'app-notifications',
-  imports: [IconComponent, CustomSelectComponent, ModalFocusDirective, PageHeaderComponent, RowActionComponent, ReactiveFormsModule],
+  imports: [IconComponent, CustomSelectComponent, ModalFocusDirective, NotificationDetailModalComponent, PageHeaderComponent, ResultCountComponent, RowActionComponent, ReactiveFormsModule],
   templateUrl: './notifications.component.html',
-  styles: [`
-    :host {
-      display: block;
-    }
-
-    .notification-toolbar,
-    .notification-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--space-2);
-      align-items: center;
-    }
-
-
-    .notification-toolbar {
-      gap: var(--space-1) var(--space-5);
-    }
-
-    .notification-toolbar .mark-all-button {
-      margin-left: auto;
-    }
-
-    .read-batch-toast {
-      position: fixed;
-      top: var(--space-4);
-      right: var(--space-4);
-      z-index: 1000;
-      width: min(360px, calc(100vw - 2 * var(--space-4)));
-      box-sizing: border-box;
-      padding: var(--space-4);
-      padding-right: calc(var(--space-4) + var(--control-height));
-      border-width: 1px;
-      border-style: solid;
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .read-batch-toast p { margin: 0 0 var(--space-3); }
-    .read-batch-toast button {
-      --_bg: var(--btn-success-bg);
-      --_bg-hover: var(--btn-success-bg-hover);
-      --_border: var(--btn-success-border);
-      --_border-hover: var(--btn-success-border-hover);
-      --_text: var(--btn-success-text);
-      --_text-hover: var(--btn-success-text-hover);
-    }
-
-    .read-batch-progress {
-      position: absolute;
-      inset: auto 0 0;
-      height: 4px;
-      background: var(--tone-success);
-      transform-origin: left;
-      animation: read-batch-countdown linear forwards;
-    }
-
-    @keyframes read-batch-countdown {
-      to { transform: scaleX(0); }
-    }
-
-    .read-batch-close {
-      position: absolute;
-      top: var(--space-2);
-      right: var(--space-2);
-    }
-
-    .inbox-limit,
-    .inbox-state {
-      margin: var(--space-3) 0 0;
-    }
-
-    .inbox-state.alert-banner {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-3);
-    }
-
-    .preferences-state,
-    .rules-state,
-    .failures-state {
-      margin: var(--space-3) 0 0;
-    }
-
-    .preferences-state.alert-banner,
-    .rules-state.alert-banner,
-    .failures-state.alert-banner {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-3);
-    }
-
-    .failures-section .field-hint {
-      margin: var(--space-1) 0 0;
-    }
-
-    .rule-no-recipients {
-      display: block;
-      margin-top: var(--space-1);
-    }
-
-    .failure-error {
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-    }
-
-    .notification-list {
-      display: grid;
-      gap: var(--space-2);
-      margin-top: var(--space-4);
-    }
-
-    .notification-item {
-      position: relative;
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr) auto;
-      align-items: center;
-      gap: var(--space-3) var(--space-4);
-      padding: var(--space-3) var(--space-4);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      background: var(--surface);
-    }
-
-    .notification-item.is-unread {
-      background: var(--brand-tint);
-    }
-
-    .notification-item.is-unread::before {
-      content: '';
-      position: absolute;
-      left: -1px;
-      top: 12px;
-      bottom: 12px;
-      width: 3px;
-      border-radius: 0 3px 3px 0;
-      background: var(--brand-blue);
-    }
-
-    .notification-body {
-      display: grid;
-      gap: var(--space-1);
-      min-width: 0;
-    }
-
-    .notification-meta {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: var(--space-2);
-    }
-
-    .notification-meta .mini-chip {
-      min-height: 22px;
-      padding-inline: var(--space-2);
-      font-size: 0.72rem;
-    }
-
-    .notification-event {
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--brand-blue-deep);
-    }
-
-    .notification-time {
-      font-size: 0.78rem;
-      color: var(--muted);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .notification-title {
-      font-size: 0.95rem;
-      color: var(--text);
-    }
-
-    .notification-title.link-button {
-      justify-self: start;
-      min-height: var(--control-height);
-      color: var(--brand-blue);
-      font-size: 0.95rem;
-      text-align: left;
-    }
-
-    .inbox-feedback {
-      margin-top: var(--space-3);
-    }
-
-    .notification-message {
-      margin: 0;
-      font-size: 0.88rem;
-      line-height: 1.45;
-      color: var(--muted);
-    }
-
-    .notification-priority { font-weight: 600; }
-    .notification-priority[data-priority='LOW'] { color: var(--success-text); }
-    .notification-priority[data-priority='MEDIUM'] { color: var(--warning-text); }
-    .notification-priority[data-priority='HIGH'] { color: var(--danger-text); }
-
-    .notification-actions {
-      justify-content: flex-end;
-      flex-wrap: nowrap;
-    }
-
-    @media (max-width: 720px) {
-      .notification-item {
-        grid-template-columns: 1fr;
-      }
-
-      .notification-actions {
-        justify-content: flex-start;
-        flex-wrap: wrap;
-      }
-    }
-  `]
+  styleUrl: './notifications.component.css'
 })
 export class NotificationsComponent {
   private readonly notificationService = inject(NotificationService);
   private readonly permissions = inject(PermissionService);
+  protected readonly auth = inject(AuthService);
   private readonly profileService = inject(ProfileService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
   /** Page target for the rule editor's focus return when its row button is gone. */
   protected readonly rulesPanel = viewChild<ElementRef<HTMLElement>>('rulesPanel');
-  private readonly clock = inject(SlaClockService);
+  private readonly clock = inject(ClockService);
   private readonly fb = inject(FormBuilder);
   private inboxRequest?: Subscription;
   private preferencesRequest?: Subscription;
   private rulesRequest?: Subscription;
   private failuresRequest?: Subscription;
   private readBatchTimer?: ReturnType<typeof setTimeout>;
+  private dismissingToken: string | null = null;
+  private observedReadAll = this.notificationService.latestReadAll();
+  protected readonly markingAll = this.notificationService.markingAll;
 
   protected readonly activeTab = signal<NotificationsTab>('inbox');
   protected readonly inboxLoading = signal(false);
@@ -308,6 +101,22 @@ export class NotificationsComponent {
   protected readonly successMessage = signal('');
   protected readonly unreadOnly = signal(false);
   protected readonly includeSnoozed = signal(false);
+  protected readonly eventFilter = signal<NotificationEventType | ''>('');
+  protected readonly severityFilter = signal<NotificationSeverity | ''>('');
+  protected readonly eventFilterOptions = [{ value: '', label: 'Todos os eventos' }, ...Object.entries(NOTIFICATION_EVENT_LABELS).map(([value, label]) => ({ value, label }))];
+  protected readonly severityFilterOptions = [{ value: '', label: 'Todas as severidades' }, ...NOTIFICATION_SEVERITIES.map(value => ({ value, label: NOTIFICATION_SEVERITY_LABELS[value] }))];
+  protected readonly inboxFilterCount = computed(() => [this.unreadOnly(), this.includeSnoozed(), !!this.eventFilter(), !!this.severityFilter()].filter(Boolean).length);
+  protected readonly hasInboxFilters = computed(() => this.inboxFilterCount() > 0);
+  protected readonly notificationGroups = computed(() => groupNotificationsByDay(this.orderedNotifications(), this.clock.now()));
+  /** Notification shown in the detail dialog; a snapshot kept in sync by the actions that change it. */
+  protected readonly selected = signal<NotificationResponse | null>(null);
+  private readonly visibleNotifications = computed(() => this.notificationGroups().flatMap((group) => group.items));
+  private readonly selectedIndex = computed(() => {
+    const current = this.selected();
+    return current ? this.visibleNotifications().findIndex((item) => item.id === current.id) : -1;
+  });
+  protected readonly hasPreviousSelected = computed(() => this.selectedIndex() > 0);
+  protected readonly hasNextSelected = computed(() => this.selectedIndex() >= 0 && this.selectedIndex() < this.visibleNotifications().length - 1);
   protected readonly notifications = signal<NotificationResponse[]>([]);
   protected readonly newestFirst = signal(true);
   // The server already orders by createdAt DESC, id DESC (including sub-millisecond precision).
@@ -319,6 +128,17 @@ export class NotificationsComponent {
   protected readonly preferences = signal<NotificationPreferenceResponse[]>([]);
   protected readonly rules = signal<NotificationRuleResponse[]>([]);
   protected readonly failures = signal<NotificationFailureResponse[]>([]);
+  protected readonly emailStatus = signal<NotificationEmailStatusResponse | null>(null);
+  protected readonly emailStatusLoading = signal(false);
+  protected readonly emailStatusError = signal('');
+  protected readonly emailTestBusy = signal(false);
+  protected readonly emailFeedback = signal('');
+  protected readonly emailError = signal('');
+  protected readonly retryingEmails = signal<ReadonlySet<number>>(new Set());
+  protected readonly retryErrors = signal<Record<number, string>>({});
+  protected readonly emailFailures = computed(() => this.failures().filter(item => item.source === 'EMAIL'));
+  protected readonly eventFailures = computed(() => this.failures().filter(item => item.source === 'EVENT'));
+  private adminEpoch = 0;
   protected readonly editingRule = signal<NotificationRuleResponse | null>(null);
   protected readonly ruleSubmitting = signal(false);
   protected readonly ruleErrorMessage = signal('');
@@ -326,6 +146,7 @@ export class NotificationsComponent {
     enabled: false,
     severity: 'INFO' as NotificationSeverity,
     notifyAssignee: false,
+    appEnabled: true,
     emailEnabled: false,
     userMutable: false,
     profiles: this.fb.nonNullable.control<number[]>([])
@@ -339,16 +160,10 @@ export class NotificationsComponent {
   protected readonly severityLabels = NOTIFICATION_SEVERITY_LABELS;
   protected readonly severities = NOTIFICATION_SEVERITIES;
   protected readonly severityOptions = NOTIFICATION_SEVERITIES.map((severity) => ({ value: severity, label: NOTIFICATION_SEVERITY_LABELS[severity] }));
-  protected severityIcon(severity: NotificationSeverity): IconName {
-    return severity === 'CRITICAL' ? 'alert' : severity === 'WARNING' ? 'clock' : 'info';
-  }
-
-  protected severityTone(severity: NotificationSeverity): string {
-    return severity === 'CRITICAL' ? 'tone-danger' : severity === 'WARNING' ? 'tone-warning' : 'tone-sky';
-  }
   protected readonly snoozeOptions = SNOOZE_OPTIONS;
   protected readonly severityClass = severityClass;
   protected readonly dateTime = formatNotificationDateTime;
+  protected readonly timeOf = formatNotificationTime;
 
   protected readonly canManageRules = computed(() => this.permissions.hasPermission('notificacoes.regras'));
   protected readonly unreadCount = this.notificationService.unreadCount;
@@ -366,16 +181,34 @@ export class NotificationsComponent {
       const token = this.readBatch()?.undoToken;
       this.clearReadBatch();
       // Best effort on navigation; the server deadline remains authoritative even if the request fails.
-      if (token) this.notificationService.dismissReadAll(token).subscribe({ error: () => undefined });
+      if (token && token !== this.dismissingToken) this.notificationService.dismissReadAll(token).subscribe({ error: () => undefined });
     });
     this.loadInbox();
+    effect(() => {
+      const latest = this.notificationService.latestReadAll();
+      if (latest === this.observedReadAll) return;
+      this.observedReadAll = latest;
+      untracked(() => {
+        const hadBatch = this.readBatch() !== null;
+        this.clearReadBatch();
+        if (latest || hadBatch) this.loadInbox(true);
+      });
+    });
     // Sem a permissão (após um 403 ou ao mudar o próprio perfil), a aba Regras some: volta para a caixa de entrada.
     effect(() => {
-      if (!this.canManageRules() && this.activeTab() === 'rules') untracked(() => this.selectTab('inbox'));
+      if (!this.canManageRules()) untracked(() => {
+        this.adminEpoch++;
+        this.rulesRequest?.unsubscribe(); this.failuresRequest?.unsubscribe();
+        this.rules.set([]); this.failures.set([]); this.emailStatus.set(null);
+        this.editingRule.set(null); this.emailError.set(''); this.emailFeedback.set('');
+        this.retryErrors.set({});
+        if (this.activeTab() === 'rules') this.selectTab('inbox');
+      });
     });
   }
 
   protected selectTab(tab: NotificationsTab): void {
+    if (tab === 'rules' && !this.canManageRules()) return;
     this.activeTab.set(tab);
     this.clearMessages();
     if (tab === 'inbox') {
@@ -388,6 +221,7 @@ export class NotificationsComponent {
         this.profileService.invalidateOptions();
       }
       this.loadRules();
+      this.loadEmailStatus();
       this.loadProfileOptions();
     }
   }
@@ -415,9 +249,6 @@ export class NotificationsComponent {
     this.host.nativeElement.querySelector<HTMLElement>(`#notifications-tab-${tabs[next]}`)?.focus();
   }
 
-  protected canOpen(notification: NotificationResponse): boolean {
-    return internalRoute(notification.actionPath) !== null;
-  }
 
   /** An expired snooze is returned by the server as visible again, so it is not shown as active. */
   protected isSnoozed(notification: NotificationResponse): boolean {
@@ -436,32 +267,71 @@ export class NotificationsComponent {
 
   protected clearInboxFilters(): void {
     this.unreadOnly.set(false);
+    this.includeSnoozed.set(false);
+    this.eventFilter.set('');
+    this.severityFilter.set('');
     this.reloadInboxForNewFilters();
+  }
+
+  protected updateEventFilter(value: NotificationEventType | ''): void {
+    this.eventFilter.set(value); this.reloadInboxForNewFilters();
+  }
+
+  protected updateSeverityFilter(value: NotificationSeverity | ''): void {
+    this.severityFilter.set(value); this.reloadInboxForNewFilters();
   }
 
   protected retryInbox(): void {
     if (!this.inboxLoading()) this.loadInbox();
   }
 
+  /** Opens the detail dialog; seeing a notification counts as reading it. */
   protected open(notification: NotificationResponse): void {
-    const route = internalRoute(notification.actionPath);
-    if (!notification.read) {
-      this.notificationService.markRead(notification.id).subscribe({ next: () => this.refreshSummary() });
-    }
-    if (route) {
-      void this.router.navigate([route.path], { queryParams: route.queryParams });
-    }
+    this.selected.set(notification);
+    if (!notification.read) this.markRead(notification, true);
   }
 
-  protected markRead(notification: NotificationResponse): void {
-    this.run(this.notificationService.markRead(notification.id), () => {
+  protected closeDetail(): void {
+    this.selected.set(null);
+  }
+
+  protected openDetailAction(): void {
+    const current = this.selected();
+    if (current && followNotification(current, this.router)) this.closeDetail();
+  }
+
+  protected step(delta: number): void {
+    const target = this.visibleNotifications()[this.selectedIndex() + delta];
+    if (target) this.open(target);
+  }
+
+  protected snoozeSelected(minutes: number): void {
+    const current = this.selected();
+    if (current) this.snooze(current, minutes);
+  }
+
+  protected markSelectedRead(): void {
+    const current = this.selected();
+    if (current) this.markRead(current);
+  }
+
+  /** Opening the dialog reads silently: the global loading blocker would flash over it. */
+  protected markRead(notification: NotificationResponse, silent = false): void {
+    this.run(silent ? this.notificationService.markRead(notification.id, { silent: true }) : this.notificationService.markRead(notification.id), () => {
       this.replace(notification.id, (current) => ({ ...current, read: true }));
+      this.selected.update((current) => current?.id === notification.id ? { ...current, read: true } : current);
       this.refreshSummary();
     });
   }
 
   protected markAllRead(): void {
-    this.run(this.notificationService.markAllRead().pipe(takeUntilDestroyed(this.destroyRef)), (batch) => {
+    if (this.markingAll()) return;
+    this.run(this.notificationService.markAllRead(), (batch) => {
+      if (this.destroyRef.destroyed) {
+        if (batch.undoToken) this.notificationService.dismissReadAll(batch.undoToken).subscribe({ error: () => undefined });
+        return;
+      }
+      this.observedReadAll = batch;
       this.clearReadBatch();
       const remaining = batch.expiresAt ? Math.min(4000, Date.parse(batch.expiresAt) - Date.now()) : 0;
       if (batch.markedCount > 0 && batch.undoToken && remaining > 0) {
@@ -489,8 +359,9 @@ export class NotificationsComponent {
 
   protected dismissReadAll(): void {
     const token = this.readBatch()?.undoToken;
-    if (!token) return;
-    this.run(this.notificationService.dismissReadAll(token).pipe(takeUntilDestroyed(this.destroyRef)), () => this.clearReadBatch());
+    if (!token || this.busy()) return;
+    this.dismissingToken = token;
+    this.run(this.notificationService.dismissReadAll(token).pipe(finalize(() => this.dismissingToken = null)), () => this.clearReadBatch());
   }
 
   private clearReadBatch(): void {
@@ -506,6 +377,7 @@ export class NotificationsComponent {
     }
 
     this.run(this.notificationService.snooze(notification.id, value), (updated) => {
+      this.closeDetail();
       this.successMessage.set(updated.snoozedUntil ? `Notificação adiada até ${formatNotificationDateTime(updated.snoozedUntil)}.` : 'Notificação adiada.');
       this.loadInbox();
     });
@@ -530,6 +402,7 @@ export class NotificationsComponent {
   }
 
   protected toggleMute(preference: NotificationPreferenceResponse): void {
+    if (!preference.userMutable || this.busy()) return;
     this.run(this.notificationService.updatePreference(preference.eventType, !preference.muted), (updated) => {
       this.preferences.update((items) => items.map((item) => item.eventType === updated.eventType ? updated : item));
       this.successMessage.set(`${NOTIFICATION_EVENT_LABELS[updated.eventType]} ${updated.muted ? 'silenciado' : 'reativado'}.`);
@@ -544,16 +417,72 @@ export class NotificationsComponent {
     if (!this.failuresLoading()) this.loadFailures();
   }
 
+  protected loadEmailStatus(): void {
+    if (!this.canManageRules()) return;
+    const epoch = this.adminEpoch;
+    this.emailStatusLoading.set(true); this.emailStatusError.set(''); this.emailStatus.set(null);
+    this.notificationService.emailStatus().pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.emailStatusLoading.set(false))).subscribe({
+      next: status => { if (this.canManageRules() && epoch === this.adminEpoch) this.emailStatus.set(status); },
+      error: error => { if (this.canManageRules() && epoch === this.adminEpoch) this.emailStatusError.set(extractHttpErrorMessage(error, 'Não foi possível consultar o canal.')); }
+    });
+  }
+
+  protected monthlyUsage(status: NotificationEmailStatusResponse): string {
+    return `No mês ${status.sentThisMonth ?? 0}${status.monthlyLimit ? '/' + status.monthlyLimit : ''}`;
+  }
+
+  protected sendTestEmail(): void {
+    if (!this.canManageRules() || this.emailTestBusy() || !this.emailStatus()?.enabled) return;
+    const epoch = this.adminEpoch;
+    this.emailTestBusy.set(true); this.emailError.set(''); this.emailFeedback.set('');
+    this.notificationService.testEmail().pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.emailTestBusy.set(false))).subscribe({
+      next: result => {
+        if (this.canManageRules() && epoch === this.adminEpoch) this.emailFeedback.set(result.status === 'simulado' ? 'Simulação registrada' : 'Teste enviado');
+      },
+      error: error => { if (this.canManageRules() && epoch === this.adminEpoch) this.emailError.set(extractHttpErrorMessage(error, 'Não foi possível enviar o teste.')); }
+    });
+  }
+
+  protected canRetryEmail(failure: NotificationFailureResponse): boolean {
+    return this.canManageRules() && failure.source === 'EMAIL' && failure.status === 'FAILED' && failure.retryAllowed === true && failure.notificationId != null;
+  }
+
+  protected retryEmail(failure: NotificationFailureResponse): void {
+    const id = failure.notificationId;
+    if (id == null || !this.canRetryEmail(failure) || this.retryingEmails().has(id)) return;
+    const epoch = this.adminEpoch;
+    this.retryingEmails.update(ids => new Set([...ids, id]));
+    this.emailError.set(''); this.emailFeedback.set('');
+    this.retryErrors.update(errors => ({ ...errors, [id]: '' }));
+    this.notificationService.retryEmail(id).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => {
+      this.retryingEmails.update(ids => { const next = new Set(ids); next.delete(id); return next; });
+    })).subscribe({
+      next: () => {
+        if (!this.canManageRules() || epoch !== this.adminEpoch) return;
+        this.emailFeedback.set('Reenvio agendado'); this.loadFailures();
+      },
+      error: error => {
+        if (!this.canManageRules() || epoch !== this.adminEpoch) return;
+        const message = extractHttpErrorMessage(error, 'Não foi possível reenviar.');
+        this.retryErrors.update(errors => ({ ...errors, [id]: message }));
+        if (error.status === 409) {
+          this.emailError.set(message);
+          this.loadFailures();
+        }
+      }
+    });
+  }
+
   protected failureSource(failure: NotificationFailureResponse): string {
     return failure.source === 'EMAIL' ? 'Envio de e-mail' : 'Processamento do evento';
   }
 
-  /** Recipients as a fact: configured profiles plus the RMA assignee, without judging the result. */
+  /** Recipients as a fact: configured profiles plus the OS assignee, without judging the result. */
   protected recipientsSummary(rule: NotificationRuleResponse): string {
     const roles = rule.recipientProfiles.map((profile) => profile.name).join(', ');
-    if (roles && rule.notifyAssignee) return `${roles} + responsável pelo RMA`;
+    if (roles && rule.notifyAssignee) return `${roles} + responsável pela OS`;
     if (roles) return roles;
-    return rule.notifyAssignee ? 'Responsável pelo RMA' : 'Nenhum destinatário';
+    return rule.notifyAssignee ? 'Responsável pela OS' : 'Nenhum destinatário';
   }
 
   protected hasNoRecipients(rule: { recipientCount: number; notifyAssignee: boolean }): boolean {
@@ -585,11 +514,12 @@ export class NotificationsComponent {
 
   /** Every control is reset from the rule, so nothing is carried over from the previously edited one. */
   protected openRuleEditor(rule: NotificationRuleResponse): void {
-    if (this.ruleSubmitting()) return;
+    if (this.ruleSubmitting() || !this.canManageRules()) return;
     this.ruleForm.reset({
       enabled: rule.enabled,
       severity: rule.severity,
       notifyAssignee: rule.notifyAssignee,
+      appEnabled: rule.appEnabled ?? true,
       emailEnabled: rule.emailEnabled,
       userMutable: rule.userMutable,
       profiles: rule.recipientProfiles.map((profile) => profile.id)
@@ -603,20 +533,22 @@ export class NotificationsComponent {
     this.resetRuleEditor();
   }
 
-  /** Single confirmed save with the same six fields of the rule contract. */
+  /** Salva os canais e destinatários no contrato da regra. */
   protected saveRule(): void {
     const rule = this.editingRule();
-    if (!rule || this.ruleSubmitting() || this.profileOptionsState() !== 'ready') return;
+    if (!rule || rule.supported === false || !this.canManageRules() || this.ruleSubmitting() || this.profileOptionsState() !== 'ready') return;
 
-    const { enabled, severity, profiles, notifyAssignee, emailEnabled, userMutable } = this.ruleForm.getRawValue();
+    const { enabled, appEnabled, severity, profiles, notifyAssignee, emailEnabled, userMutable } = this.ruleForm.getRawValue();
     const payload: NotificationRuleRequest = {
       enabled,
+      appEnabled,
       severity,
       recipientProfileIds: profiles,
       notifyAssignee,
       emailEnabled,
       userMutable
     };
+    const epoch = this.adminEpoch;
 
     this.ruleSubmitting.set(true);
     this.ruleErrorMessage.set('');
@@ -626,11 +558,14 @@ export class NotificationsComponent {
       finalize(() => this.ruleSubmitting.set(false))
     ).subscribe({
       next: (updated) => {
+        if (!this.canManageRules() || epoch !== this.adminEpoch) return;
         this.rules.update((items) => items.map((item) => item.eventType === updated.eventType ? updated : item));
         this.successMessage.set(`Regra "${NOTIFICATION_EVENT_LABELS[updated.eventType]}" atualizada.`);
         this.resetRuleEditor();
       },
-      error: (error) => this.ruleErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível salvar a regra.'))
+      error: (error) => {
+        if (this.canManageRules() && epoch === this.adminEpoch) this.ruleErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível salvar a regra.'));
+      }
     });
   }
 
@@ -658,7 +593,10 @@ export class NotificationsComponent {
     this.inboxRequest?.unsubscribe();
     this.inboxLoading.set(true);
     this.inboxRequest = this.notificationService.list({
-      unreadOnly: this.unreadOnly(), includeSnoozed: this.includeSnoozed(), ...(background ? { background: true } : {})
+      unreadOnly: this.unreadOnly(), includeSnoozed: this.includeSnoozed(),
+      ...(this.eventFilter() ? { eventType: this.eventFilter() as NotificationEventType } : {}),
+      ...(this.severityFilter() ? { severity: this.severityFilter() as NotificationSeverity } : {}),
+      ...(background ? { silent: true } : {})
     }).pipe(
       takeUntilDestroyed(this.destroyRef),
       finalize(() => this.inboxLoading.set(false))
@@ -722,6 +660,7 @@ export class NotificationsComponent {
       finalize(() => this.rulesLoading.set(false))
     ).subscribe({
       next: (rules) => {
+        if (!this.canManageRules()) return;
         this.rules.set(rules);
         this.rulesHasLoaded.set(true);
         this.rulesLoadFailed.set(false);
@@ -745,6 +684,7 @@ export class NotificationsComponent {
       finalize(() => this.failuresLoading.set(false))
     ).subscribe({
       next: (failures) => {
+        if (!this.canManageRules()) return;
         this.failures.set(failures);
         this.failuresHasLoaded.set(true);
         this.failuresLoadFailed.set(false);

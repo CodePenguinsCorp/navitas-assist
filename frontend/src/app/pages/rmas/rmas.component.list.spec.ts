@@ -12,6 +12,7 @@ import { RmaFilters, RmaService } from '../../core/services/rma.service';
 import { buildRma, buildRmaItem, buildRmaPage } from '../../testing/rma-fixtures';
 import { RmasComponent } from './rmas.component';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { settleRmaLazyChunks } from '../../testing/lazy-chunks';
 
 type ListFn = (filters: RmaFilters) => Observable<PageResponse<RmaResponse>>;
 type SummaryFn = (filters: Pick<RmaFilters, 'query' | 'status'>) => Observable<RmaSummaryResponse>;
@@ -25,14 +26,11 @@ interface SetupOptions {
 
 interface ListHarness {
   filtersForm: FormGroup;
-  diagnosisForm: FormGroup;
   submitFilters(): void;
   clearFilters(): void;
   goToPage(page: number): void;
   changePageSize(size: number): void;
   openDetailsModal(rma: RmaResponse): void;
-  openDiagnosisModal(): void;
-  saveDiagnosis(): void;
   page(): number;
 }
 
@@ -42,6 +40,7 @@ const defaultSummary: SummaryFn = () => of({ total: 45, ongoing: 30, highPriorit
 
 async function setup(options: SetupOptions = {}) {
   const role = options.role ?? 'ADMIN';
+  const catalogService = { listClientOptions: vi.fn(() => of([])), listProductOptions: vi.fn(() => of([])), listAssignableUsers: vi.fn(() => of([])) };
   const rmaService = {
     list: vi.fn(options.list ?? defaultList),
     getSummary: vi.fn(options.summary ?? defaultSummary),
@@ -57,7 +56,7 @@ async function setup(options: SetupOptions = {}) {
       provide: AuthService,
       useValue: { currentUser: currentUser.asReadonly() }
     },
-    { provide: CatalogService, useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]) } },
+    { provide: CatalogService, useValue: catalogService },
     { provide: RmaService, useValue: rmaService },
     { provide: ProtocolService, useValue: { listExecutions: () => of([]), listTemplates: () => of([]) } }
   ];
@@ -73,7 +72,7 @@ async function setup(options: SetupOptions = {}) {
   const component = fixture.componentInstance as unknown as ListHarness;
   const page = fixture.nativeElement as HTMLElement;
   const render = () => fixture.detectChanges();
-  return { fixture, component, page, rmaService, render };
+  return { fixture, component, page, rmaService, catalogService, render };
 }
 
 function confirmFilters(component: ListHarness, query: string, status = ''): void {
@@ -88,7 +87,7 @@ function countLabel(page: HTMLElement): string | null {
   return normalized(page.querySelector('.table-card .pagination__summary'));
 }
 
-/** First indicator of the row below the header: "Y RMAs", or "X de Y RMAs" with a filter. */
+/** First indicator of the row below the header: "Y ordens de serviço", or "X de Y ordens de serviço" with a filter. */
 function totalIndicator(page: HTMLElement): string | null {
   return normalized(page.querySelector('.page-summary .page-summary__item--total'));
 }
@@ -102,21 +101,24 @@ function summaryText(page: HTMLElement): string | null {
 
 const httpError = new HttpErrorResponse({ status: 500, error: { message: 'Falha no servidor' } });
 
+// Waits for the lazy chunks the detail view starts, so none is pending at environment teardown.
+afterEach(settleRmaLazyChunks);
+
 describe('RmasComponent list state', () => {
   describe('header and indicators', () => {
     it('shows a single total at the foot of the list, in the pagination, and no statistics cards', async () => {
-      // Hoje o rodapé repete o total em app-result-count ("45 RMAs") além da paginação ("registro(s)").
+      // Hoje o rodapé repete o total em app-result-count ("45 OS") além da paginação ("registro(s)").
       const { page } = await setup();
       expect(page.querySelector('app-result-count')).toBeNull();
       expect(page.querySelectorAll('.table-card .pagination__summary').length).toBe(1);
-      expect(countLabel(page)).toBe('1–1 de 45 RMAs');
+      expect(countLabel(page)).toBe('1–1 de 45 ordens de serviço');
       expect(page.querySelectorAll('.stat-card').length).toBe(0);
     });
 
-    it('uses the singular for one RMA', async () => {
+    it('uses the singular for one OS', async () => {
       const { page } = await setup({ list: (f) => of(buildRmaPage([defaultRma], f.page ?? 0, f.size ?? 20, 1)) });
-      expect(countLabel(page)).toBe('1–1 de 1 RMA');
-      expect(totalIndicator(page)).toBe('1 RMA');
+      expect(countLabel(page)).toBe('1–1 de 1 OS');
+      expect(totalIndicator(page)).toBe('1 OS');
     });
 
     it('shows the indicators in their own row below the header, outside the filters', async () => {
@@ -127,24 +129,24 @@ describe('RmasComponent list state', () => {
       expect(row!.closest('.catalog-toolbar')).toBeNull();
       expect(page.querySelector('.rma-summary')).toBeNull();
       expect(row!.previousElementSibling?.tagName.toLowerCase()).toBe('app-page-header');
-      expect(totalIndicator(page)).toBe('45 RMAs');
+      expect(totalIndicator(page)).toBe('45 OS');
       expect(summaryText(page)).toBe('Em atendimento 30 | Prioridade alta 7');
       expect(page.textContent).not.toContain('No resultado');
       expect(page.textContent).not.toContain('nesta página');
     });
 
-    it('shows "X de Y RMAs" as the first indicator while a filter is active', async () => {
+    it('shows "X de Y ordens de serviço" as the first indicator while a filter is active', async () => {
       const { component, page, render } = await setup({
         list: (f) => of(buildRmaPage([defaultRma], f.page ?? 0, f.size ?? 20, f.query ? 2 : 45))
       });
       confirmFilters(component, 'B');
       render();
-      expect(totalIndicator(page)).toBe('2 de 45 RMAs');
-      expect(countLabel(page)).toBe('1–1 de 2 RMAs');
+      expect(totalIndicator(page)).toBe('2 de 45 OS');
+      expect(countLabel(page)).toBe('1–1 de 2 ordens de serviço');
 
       component.clearFilters();
       render();
-      expect(totalIndicator(page)).toBe('45 RMAs');
+      expect(totalIndicator(page)).toBe('45 OS');
     });
 
     it('uses the singular of the total in the filtered indicator', async () => {
@@ -153,14 +155,14 @@ describe('RmasComponent list state', () => {
       });
       confirmFilters(component, 'zzz');
       render();
-      expect(totalIndicator(page)).toBe('0 de 1 RMA');
+      expect(totalIndicator(page)).toBe('0 de 1 OS');
       expect(page.querySelector('app-pagination, app-result-count')).toBeNull();
     });
 
     it('hides the whole indicator row after a list failure, without zeros', async () => {
       const { page } = await setup({ list: () => throwError(() => httpError) });
       expect(page.querySelector('.page-summary')).toBeNull();
-      expect(page.textContent).not.toContain('0 RMAs');
+      expect(page.textContent).not.toContain('0 ordens de serviço');
     });
 
     it('shows no count and no indicator values before the first responses', async () => {
@@ -171,14 +173,14 @@ describe('RmasComponent list state', () => {
 
       expect(countLabel(page)).toBeNull();
       expect(page.querySelector('.page-summary')).toBeNull();
-      expect(page.textContent).not.toContain('0 RMAs');
+      expect(page.textContent).not.toContain('0 ordens de serviço');
       expect(page.textContent).not.toMatch(/Prioridade alta[^0-9]*0/);
       expect(summaryText(page)).toBeNull();
 
       list$.next(buildRmaPage([defaultRma], 0, 20, 45));
       summary$.next({ total: 45, ongoing: 30, highPriority: 7 });
       render();
-      expect(totalIndicator(page)).toBe('45 RMAs');
+      expect(totalIndicator(page)).toBe('45 OS');
       expect(summaryText(page)).toContain('30');
       expect(summaryText(page)).toContain('7');
     });
@@ -198,8 +200,8 @@ describe('RmasComponent list state', () => {
       expect(summaryText(page)).toBeNull();
       const alerts = [...page.querySelectorAll('[role="alert"]')].map((el) => el.textContent ?? '');
       expect(alerts.some((text) => text.includes('resumo') || text.includes('Falha no servidor'))).toBe(false);
-      expect(countLabel(page)).toBe('1–1 de 45 RMAs');
-      expect(totalIndicator(page)).toBe('45 de 45 RMAs');
+      expect(countLabel(page)).toBe('1–1 de 45 ordens de serviço');
+      expect(totalIndicator(page)).toBe('45 de 45 OS');
     });
 
     it('never shows the summary of filter A next to the list of filter B', async () => {
@@ -220,7 +222,7 @@ describe('RmasComponent list state', () => {
       expect(page.textContent).not.toContain('30');
       expect(page.textContent).not.toContain('7');
       expect(summaryText(page)).toBeNull();
-      expect(totalIndicator(page)).toBe('2 de 45 RMAs');
+      expect(totalIndicator(page)).toBe('2 de 45 OS');
 
       summaryB$.next({ total: 2, ongoing: 4, highPriority: 1 });
       render();
@@ -248,7 +250,7 @@ describe('RmasComponent list state', () => {
     });
 
     it('ignores a late error of filter A after B succeeded', async () => {
-      // Hoje o erro tardio de A grava "Não foi possível carregar o resumo dos RMAs." na página.
+      // Hoje o erro tardio de A grava "Não foi possível carregar o resumo das ordens de serviço." na página.
       const summaryA$ = new Subject<RmaSummaryResponse>();
       const summaryB$ = new Subject<RmaSummaryResponse>();
       const subjects = [summaryA$, summaryB$];
@@ -283,12 +285,12 @@ describe('RmasComponent list state', () => {
 
       listB$.next(buildRmaPage([defaultRma], 0, 20, 2));
       render();
-      expect(totalIndicator(page)).toBe('2 de 45 RMAs');
+      expect(totalIndicator(page)).toBe('2 de 45 OS');
       expect(summaryText(page)).toContain('Em atendimento 4');
     });
 
     it('does not reuse the previous result when the same filter is searched again', async () => {
-      // Hoje a contagem antiga "45 RMAs" fica visível e, depois, o novo resumo aparece ao lado da lista antiga.
+      // Hoje a contagem antiga "45 ordens de serviço" fica visível e, depois, o novo resumo aparece ao lado da lista antiga.
       const list$ = new Subject<PageResponse<RmaResponse>>();
       const summary$ = new Subject<RmaSummaryResponse>();
       let listCalls = 0;
@@ -297,7 +299,7 @@ describe('RmasComponent list state', () => {
         list: (f) => (listCalls++ === 0 ? defaultList(f) : list$),
         summary: (f) => (summaryCalls++ === 0 ? defaultSummary(f) : summary$)
       });
-      expect(countLabel(page)).toBe('1–1 de 45 RMAs');
+      expect(countLabel(page)).toBe('1–1 de 45 ordens de serviço');
 
       confirmFilters(component, '');
       render();
@@ -311,12 +313,12 @@ describe('RmasComponent list state', () => {
 
       list$.next(buildRmaPage([defaultRma], 0, 20, 2));
       render();
-      expect(totalIndicator(page)).toBe('2 RMAs');
+      expect(totalIndicator(page)).toBe('2 OS');
       expect(summaryText(page)).toContain('Em atendimento 4');
     });
 
     it('does not mix generations on A, B, A with B still pending', async () => {
-      // Hoje, ao voltar para A, a contagem antiga "45 RMAs" volta a ser exibida com B pendente.
+      // Hoje, ao voltar para A, a contagem antiga "45 ordens de serviço" volta a ser exibida com B pendente.
       const pendingLists = [new Subject<PageResponse<RmaResponse>>(), new Subject<PageResponse<RmaResponse>>()];
       const pendingSummaries = [new Subject<RmaSummaryResponse>(), new Subject<RmaSummaryResponse>()];
       let listCalls = 0;
@@ -327,7 +329,7 @@ describe('RmasComponent list state', () => {
       });
       confirmFilters(component, 'A');
       render();
-      expect(countLabel(page)).toBe('1–1 de 45 RMAs');
+      expect(countLabel(page)).toBe('1–1 de 45 ordens de serviço');
       expect(summaryText(page)).toContain('Em atendimento 30');
 
       confirmFilters(component, 'B');
@@ -347,7 +349,7 @@ describe('RmasComponent list state', () => {
 
       listA$.next(buildRmaPage([defaultRma], 0, 20, 1));
       render();
-      expect(totalIndicator(page)).toBe('1 de 45 RMAs');
+      expect(totalIndicator(page)).toBe('1 de 45 OS');
       expect(summaryText(page)).toContain('Em atendimento 1');
       expect(summaryText(page)).toContain('Prioridade alta 0');
     });
@@ -366,7 +368,7 @@ describe('RmasComponent list state', () => {
       confirmFilters(component, 'B');
       render();
       expect(page.querySelector('.table-card [role="alert"]')).toBeNull();
-      expect(countLabel(page)).toBe('1–1 de 45 RMAs');
+      expect(countLabel(page)).toBe('1–1 de 45 ordens de serviço');
       expect(summaryText(page)).toContain('Em atendimento 4');
       expect(summaryText(page)).toContain('Prioridade alta 1');
     });
@@ -376,7 +378,7 @@ describe('RmasComponent list state', () => {
       const listB$ = new Subject<PageResponse<RmaResponse>>();
       let listCalls = 0;
       const { component, page, render } = await setup({ list: (f) => (listCalls++ === 0 ? defaultList(f) : listB$) });
-      expect(countLabel(page)).toBe('1–1 de 45 RMAs');
+      expect(countLabel(page)).toBe('1–1 de 45 ordens de serviço');
 
       confirmFilters(component, 'B');
       render();
@@ -387,8 +389,8 @@ describe('RmasComponent list state', () => {
       listB$.next(buildRmaPage([defaultRma], 0, 20, 2));
       listB$.complete();
       render();
-      expect(countLabel(page)).toBe('1–1 de 2 RMAs');
-      expect(totalIndicator(page)).toBe('2 de 45 RMAs');
+      expect(countLabel(page)).toBe('1–1 de 2 ordens de serviço');
+      expect(totalIndicator(page)).toBe('2 de 45 OS');
     });
   });
 
@@ -415,16 +417,23 @@ describe('RmasComponent list state', () => {
 
     it('refreshes with the confirmed filter after saving a diagnosis', async () => {
       // Hoje a recarga após salvar usa a busca não enviada ("y").
-      const { component, rmaService } = await setup();
+      const { component, rmaService, page, render } = await setup();
       confirmFilters(component, 'x');
       component.filtersForm.setValue({ query: 'y', status: '' });
 
       component.openDetailsModal(defaultRma);
-      component.openDiagnosisModal();
-      component.diagnosisForm.patchValue({ foundFailure: 'Falha encontrada', technicianName: 'Tecnico' });
+      render();
+      [...page.querySelectorAll<HTMLButtonElement>('.tab')].find(tab => tab.textContent?.trim() === 'Diagnóstico')!.click();
+      render();
+      page.querySelector<HTMLButtonElement>('app-rma-diagnosis .diagnosis-trigger')!.click();
+      render();
+      const failure = page.querySelector<HTMLTextAreaElement>('[formControlName="foundFailure"]')!;
+      failure.value = 'Falha encontrada';
+      failure.dispatchEvent(new Event('input'));
       rmaService.list.mockClear();
       rmaService.getSummary.mockClear();
-      component.saveDiagnosis();
+      page.querySelector('app-rma-diagnosis form')!.dispatchEvent(new Event('submit', { cancelable: true }));
+      render();
 
       expect(rmaService.upsertDiagnosis).toHaveBeenCalledOnce();
       expect(rmaService.list).toHaveBeenLastCalledWith(expect.objectContaining({ query: 'x' }));
@@ -478,10 +487,16 @@ describe('RmasComponent list state', () => {
       expect(component.page()).toBe(1);
     });
 
-    it('opens the RMA requested by a notification link on the Produtos tab', async () => {
+    it.each([['ADMIN', 1], ['SERVICE_DESK', 1], ['TECHNICIAN', 0], ['VIEWER', 0]] as const)('loads the opening selectors only with rma.abrir (%s)', async (role, calls) => {
+      const { catalogService } = await setup({ role });
+      expect(catalogService.listClientOptions).toHaveBeenCalledTimes(calls);
+      expect(catalogService.listProductOptions).toHaveBeenCalledTimes(calls);
+    });
+
+    it('opens the OS requested by a notification link on the Produtos tab', async () => {
       const { page, rmaService } = await setup({ requestedRma: 1 });
 
-      expect(rmaService.getById).toHaveBeenCalledWith(1);
+      expect(rmaService.getById).toHaveBeenCalledWith(1, expect.anything());
       expect(page.querySelector('.rma-details')).not.toBeNull();
       const selected = page.querySelector('[role="tab"][aria-selected="true"]');
       expect(selected?.textContent?.trim()).toBe('Produtos');
@@ -512,15 +527,15 @@ describe('RmasComponent list composition', () => {
   });
 
   it('shows the failure state on an initial load error', async () => {
-    // Hoje, com a lista em erro, o corpo mostra "Nenhum RMA encontrado." e não há alerta.
+    // Hoje, com a lista em erro, o corpo mostra "Nenhuma OS encontrada." e não há alerta.
     const { page } = await setup({ list: () => throwError(() => httpError) });
-    expect(page.textContent).not.toContain('Nenhum RMA encontrado');
+    expect(page.textContent).not.toContain('Nenhuma OS encontrada');
     const alert = page.querySelector('.table-card [role="alert"]');
-    expect(alert?.textContent).toContain('Não foi possível carregar os RMAs.');
+    expect(alert?.textContent).toContain('Não foi possível carregar as ordens de serviço.');
     expect(alert?.textContent).toContain('Falha no servidor');
     expect(buttonByText(alert!, 'Tentar novamente')).toBeDefined();
     expect(page.querySelector('app-pagination')).toBeNull();
-    expect(page.textContent).not.toContain('Nenhum RMA registrado');
+    expect(page.textContent).not.toContain('Nenhuma OS registrada');
   });
 
   it('replaces the table when a reload fails after a success with records', async () => {
@@ -533,20 +548,20 @@ describe('RmasComponent list composition', () => {
     component.goToPage(1);
     render();
     expect(page.querySelector('tbody')).toBeNull();
-    expect(page.querySelector('.table-card [role="alert"]')?.textContent).toContain('Não foi possível carregar os RMAs.');
+    expect(page.querySelector('.table-card [role="alert"]')?.textContent).toContain('Não foi possível carregar as ordens de serviço.');
     expect(page.querySelector('app-pagination')).toBeNull();
   });
 
   it('replaces the table when a reload fails after an empty success', async () => {
-    // Hoje o estado vazio anterior ("Nenhum RMA encontrado.") continua depois da falha.
+    // Hoje o estado vazio anterior ("Nenhuma OS encontrada.") continua depois da falha.
     let failing = false;
     const { component, page, render } = await setup({ list: (f) => (failing ? throwError(() => httpError) : emptyPage(f)) });
 
     failing = true;
     component.goToPage(1);
     render();
-    expect(page.textContent).not.toContain('Nenhum RMA');
-    expect(page.querySelector('.table-card [role="alert"]')?.textContent).toContain('Não foi possível carregar os RMAs.');
+    expect(page.textContent).not.toContain('Nenhuma OS');
+    expect(page.querySelector('.table-card [role="alert"]')?.textContent).toContain('Não foi possível carregar as ordens de serviço.');
   });
 
   it('recovers with Tentar novamente using the confirmed filter and page', async () => {
@@ -574,17 +589,17 @@ describe('RmasComponent list composition', () => {
   });
 
   it('distinguishes an empty registry from a search without results', async () => {
-    // Hoje os dois casos mostram "Nenhum RMA encontrado." sem "Limpar busca e filtros".
+    // Hoje os dois casos mostram "Nenhuma OS encontrada." sem "Limpar busca e filtros".
     const { component, page, render, rmaService } = await setup({ list: emptyPage });
-    expect(page.textContent).toContain('Nenhum RMA registrado');
-    expect(page.textContent).toContain('Abra o primeiro RMA para iniciar o atendimento.');
-    expect(page.textContent).not.toContain('Nenhum RMA encontrado');
+    expect(page.textContent).toContain('Nenhuma OS registrada');
+    expect(page.textContent).toContain('Abra a primeira OS para iniciar o atendimento.');
+    expect(page.textContent).not.toContain('Nenhuma OS encontrada');
 
     confirmFilters(component, 'zzz');
     render();
-    expect(page.textContent).toContain('Nenhum RMA encontrado');
+    expect(page.textContent).toContain('Nenhuma OS encontrada');
     expect(page.textContent).toContain('Ajuste a busca ou o status.');
-    expect(page.textContent).not.toContain('Nenhum RMA registrado');
+    expect(page.textContent).not.toContain('Nenhuma OS registrada');
     rmaService.list.mockClear();
     rmaService.getSummary.mockClear();
 
@@ -593,7 +608,7 @@ describe('RmasComponent list composition', () => {
     expect(rmaService.list).toHaveBeenCalledOnce();
     expect(rmaService.list).toHaveBeenCalledWith({ page: 0, size: 20, query: undefined, status: undefined });
     expect(rmaService.getSummary).toHaveBeenCalledOnce();
-    expect(page.textContent).toContain('Nenhum RMA registrado');
+    expect(page.textContent).toContain('Nenhuma OS registrada');
   });
 
   it.each(['parts', 'protocols'])('uses an empty busy placeholder before the %s detail component loads', async (tab) => {
@@ -608,7 +623,7 @@ describe('RmasComponent list composition', () => {
     expect(page.querySelector('.rma-details')?.textContent).not.toContain('Carregando');
   });
 
-  it.each(['initial', 'data', 'empty'])('renders an empty busy RMA list during %s loading without flashing an empty state', async (previous) => {
+  it.each(['initial', 'data', 'empty'])('renders an empty busy OS list during %s loading without flashing an empty state', async (previous) => {
     const pending = new Subject<PageResponse<RmaResponse>>();
     const { component, page, render, rmaService } = await setup({
       list: previous === 'initial' ? () => pending : previous === 'empty' ? emptyPage : defaultList
@@ -621,9 +636,9 @@ describe('RmasComponent list composition', () => {
     expect(busy?.textContent?.trim()).toBe('');
     expect(busy?.children.length).toBe(0);
     expect(page.querySelector('tbody, .table-card .empty-state')).toBeNull();
-    expect(page.textContent).not.toMatch(/Carregando|Nenhum RMA/);
+    expect(page.textContent).not.toMatch(/Carregando|Nenhuma OS/);
     pending.next(buildRmaPage([], 0, 20, 0)); pending.complete(); render();
-    expect(page.textContent).toContain(previous === 'initial' ? 'Nenhum RMA registrado' : 'Nenhum RMA encontrado');
+    expect(page.textContent).toContain(previous === 'initial' ? 'Nenhuma OS registrada' : 'Nenhuma OS encontrada');
   });
 
   it('keeps a disabled fixed-label retry and its failure until an empty success', async () => {
@@ -638,14 +653,14 @@ describe('RmasComponent list composition', () => {
     expect(page.querySelector('tbody')).toBeNull();
     pending.next(buildRmaPage([], 0, 20, 0)); pending.complete(); render();
     expect(page.querySelector('[role="alert"]')).toBeNull();
-    expect(page.textContent).toContain('Nenhum RMA registrado');
+    expect(page.textContent).toContain('Nenhuma OS registrada');
   });
 
-  it('keeps RMA codes on one line and counts products with singular and plural', async () => {
+  it('keeps OS codes on one line and counts products with singular and plural', async () => {
     // Hoje o subtítulo do produto diz "1 item(ns)" e "2 item(ns)".
-    const single = buildRma({ id: 1, code: 'RMA-2026-000001' });
+    const single = buildRma({ id: 1, code: 'OS-2026-000001' });
     const double = buildRma({
-      id: 2, code: 'RMA-2026-000002',
+      id: 2, code: 'OS-2026-000002',
       items: [buildRmaItem({ id: 3 }), buildRmaItem({ id: 4, productSku: 'SKU-4', productName: 'Outro' })]
     });
     const { page } = await setup({ list: (f) => of(buildRmaPage([single, double], f.page ?? 0, f.size ?? 20, 2)) });
@@ -693,7 +708,7 @@ describe('RmasComponent list composition', () => {
   });
 
   it('keeps warranty per product with an accessible status', async () => {
-    const rma = buildRma({ items: [buildRmaItem({ productSku: 'SKU-9', warrantyStatus: WarrantyStatus.IN_WARRANTY })] });
+    const rma = buildRma({ items: [buildRmaItem({ productSku: 'SKU-9', calculatedWarrantyStatus: WarrantyStatus.IN_WARRANTY, warrantyOverride: null, warrantyStatus: WarrantyStatus.IN_WARRANTY })] });
     const { page } = await setup({ list: (f) => of(buildRmaPage([rma], f.page ?? 0, f.size ?? 20, 1)) });
     const tag = page.querySelector('tbody .warranty-tag')!;
 
@@ -706,10 +721,24 @@ describe('RmasComponent list composition', () => {
     ['SERVICE_DESK', true],
     ['TECHNICIAN', false],
     ['VIEWER', false]
-  ] as const)('shows Novo RMA only for ADMIN and SERVICE_DESK (%s)', async (role, allowed) => {
+  ] as const)('shows Nova OS only for ADMIN and SERVICE_DESK (%s)', async (role, allowed) => {
     const { page } = await setup({ role, list: emptyPage });
 
-    expect(buttonByText(page.querySelector('.page-heading')!, 'Novo RMA') !== undefined).toBe(allowed);
-    expect(buttonByText(page.querySelector('.table-card')!, 'Novo RMA') !== undefined).toBe(allowed);
+    expect(buttonByText(page.querySelector('.page-heading')!, 'Nova OS') !== undefined).toBe(allowed);
+    // The empty state no longer repeats the header action.
+    expect(buttonByText(page.querySelector('.table-card')!, 'Nova OS')).toBeUndefined();
+  });
+});
+
+
+describe('garantia efetiva na lista', () => {
+  it('mantém o chip efetivo apesar de cálculo e vencimento divergentes', async () => {
+    const rma = buildRma({ items: [buildRmaItem({ warrantyStatus: WarrantyStatus.IN_WARRANTY,
+      calculatedWarrantyStatus: WarrantyStatus.OUT_OF_WARRANTY, warrantyExpiresAt: '2020-01-01',
+      warrantyOverride: { status: WarrantyStatus.IN_WARRANTY, reason: 'Cortesia', changedBy: 'ana', changedAt: '2026-11-13T12:00:00Z' } })] });
+    const { page } = await setup({ list: () => of(buildRmaPage([rma])) });
+    const chip = page.querySelector('.warranty-tag')!;
+    expect(chip.classList.contains('warranty-ok')).toBe(true);
+    expect(chip.getAttribute('title')).toContain('Em garantia');
   });
 });

@@ -5,6 +5,7 @@ import java.util.List;
 import br.com.navitasassist.pagination.PageResponse;
 import br.com.navitasassist.product.ProductRequest;
 import br.com.navitasassist.product.ProductResponse;
+import br.com.navitasassist.product.ProductOptionResponse;
 import br.com.navitasassist.product.ProductSummaryResponse;
 import br.com.navitasassist.service.ProductService;
 import jakarta.validation.Valid;
@@ -30,7 +31,7 @@ public class ProductController {
 
     @GetMapping
     public PageResponse<ProductResponse> search(
-        @RequestParam(required = false) String query,
+        @RequestParam(required = false) @jakarta.validation.constraints.Size(max = 100, message = "A busca deve ter no máximo 100 caracteres.") String query,
         @RequestParam(required = false) String category,
         @RequestParam(required = false) Boolean hasFirmware,
         @RequestParam(required = false) Integer page,
@@ -40,18 +41,13 @@ public class ProductController {
     }
 
     @GetMapping("/options")
-    public List<ProductResponse> listOptions() {
+    public List<ProductOptionResponse> listOptions() {
         return productService.listOptions();
     }
 
     @GetMapping("/summary")
     public ProductSummaryResponse summarize() {
         return productService.summarize();
-    }
-
-    @GetMapping("/{id}")
-    public ProductResponse getById(@PathVariable Long id) {
-        return productService.getById(id);
     }
 
     @PostMapping

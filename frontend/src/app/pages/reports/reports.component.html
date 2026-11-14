@@ -1,184 +1,203 @@
 <section class="page-surface">
-  <app-page-header heading="Relatórios" />
-  <form class="panel report-filters" [formGroup]="form" (ngSubmit)="loadReports()">
-    <label class="filter-field"><span>Entrada a partir de</span>
-      <app-date-picker ariaLabel="Data inicial de entrada" formControlName="entryFrom" [ariaDescribedBy]="periodDescribedBy()" [ariaInvalid]="!!periodError()" />
+  <app-page-header heading="Relatórios">
+    <button type="button" class="button-secondary" data-export [disabled]="exporting() || loading() || !summary()" (click)="exportCsv()">
+      <app-icon name="download" [size]="16" />{{ exporting() ? 'Exportando...' : 'Exportar CSV' }}
+    </button>
+  </app-page-header>
+
+  @if (summary(); as data) {
+    <ul class="page-summary" aria-label="Indicadores do período">
+      <li class="page-summary__item">
+        <app-icon name="calendar" [size]="16" />
+        <span>{{ periodLabel(data) }}</span>
+      </li>
+      <li class="page-summary__item">
+        <app-icon name="inbox" [size]="16" />
+        <span><strong>{{ data.totalRmas }}</strong> {{ data.totalRmas === 1 ? 'OS' : 'ordens de serviço' }}</span>
+      </li>
+      <li class="page-summary__item">
+        <app-icon name="box" [size]="16" />
+        <span><strong>{{ data.totalItems }}</strong> {{ data.totalItems === 1 ? 'item' : 'itens' }}</span>
+      </li>
+      @if (tab() === 'recurrence') {
+        <li class="page-summary__item" [class.tone-warning]="data.recurrence.returnedItems > 0" title="Itens com número de série que voltaram em outra OS">
+          <app-icon name="history" [size]="16" />
+          <span>Retornaram</span>
+          <strong>{{ data.recurrence.returnedItems }} de {{ data.recurrence.itemsWithSerial }}</strong>
+          <span>itens com série ({{ percent(data.recurrence.returnedItems, data.recurrence.itemsWithSerial) }})</span>
+        </li>
+      }
+    </ul>
+  }
+  @if (exportError()) {
+    <article class="panel alert-banner alert-banner--error" role="alert">
+      <strong>{{ exportError() }}</strong>
+    </article>
+  }
+
+  <form class="panel catalog-toolbar catalog-toolbar--filters report-filters" [formGroup]="form" (ngSubmit)="consult()">
+    <label class="filter-field"><span>Entrada de</span>
+      <app-date-picker ariaLabel="Data inicial de entrada" formControlName="entryFrom" [ariaDescribedBy]="periodError() ? 'report-period-error' : ''" [ariaInvalid]="!!periodError()" />
     </label>
-    <label class="filter-field"><span>Entrada até</span>
-      <app-date-picker ariaLabel="Data final de entrada" formControlName="entryTo" [ariaDescribedBy]="periodDescribedBy()" [ariaInvalid]="!!periodError()" />
+    <label class="filter-field"><span>Até</span>
+      <app-date-picker ariaLabel="Data final de entrada" formControlName="entryTo" [ariaDescribedBy]="periodError() ? 'report-period-error' : ''" [ariaInvalid]="!!periodError()" />
     </label>
-    <label class="filter-field"><span>Status atual</span>
+    <label class="filter-field"><span>Status</span>
       <app-custom-select ariaLabel="Filtrar por status" formControlName="status" [options]="statusOptions" />
     </label>
     <label class="filter-field"><span>Cliente</span>
       <app-custom-select ariaLabel="Filtrar por cliente" formControlName="clientId" [options]="clientOptions()" />
     </label>
-    <button class="button-primary" type="submit" [disabled]="loading()">Consultar</button>
-    <div class="report-period-messages">
-      <p class="report-hint" id="report-period-help">Período pela data de entrada do RMA, até 366 dias.</p>
-      @if (periodError()) {
-        <p class="field-error" id="report-period-error" role="alert">{{ periodError() }}</p>
-      }
+    <div class="report-filters__actions">
+      <button type="button" class="link-button" (click)="clearFilters()">Limpar filtros</button>
+      <button class="button-primary" type="submit" [disabled]="loading()">Consultar</button>
     </div>
+    @if (periodError()) {
+      <p class="field-error report-period-error" id="report-period-error" role="alert">{{ periodError() }}</p>
+    }
+    @if (clientsError()) {
+      <p class="field-error report-period-error" role="alert">{{ clientsError() }} <button type="button" class="link-button" (click)="loadClients()">Recarregar clientes</button></p>
+    }
   </form>
-  @if (clientsError()) {
-    <article class="panel alert-banner alert-banner--error" role="alert">
-      <span>{{ clientsError() }}</span>
-      <button type="button" class="button-secondary" (click)="loadClients()">Recarregar clientes</button>
-    </article>
-  }
-  <section aria-live="polite" [attr.aria-busy]="loading()">
-    @if (loading()) {
-      <article class="panel table-card"><p class="report-muted">Carregando relatórios...</p></article>
-    } @else if (errorMessage()) {
-      <article class="panel alert-banner alert-banner--error" role="alert">
-        <span>{{ errorMessage() }}</span>
-        <button type="button" class="button-secondary" (click)="loadReports()">Tentar novamente</button>
+
+  <div class="tab-list" role="tablist" aria-label="Relatórios">
+    @for (option of tabs; track option.value) {
+      <button type="button" role="tab" class="tab" [id]="'report-tab-' + option.value" [class.is-active]="tab() === option.value"
+        [attr.aria-selected]="tab() === option.value" [attr.aria-controls]="'report-panel'"
+        [attr.tabindex]="tab() === option.value ? 0 : -1" (click)="selectTab(option.value)" (keydown)="onTabKeydown($event)">{{ option.label }}</button>
+    }
+  </div>
+
+  <section id="report-panel" class="report-panel" role="tabpanel" tabindex="0" [attr.aria-labelledby]="'report-tab-' + tab()" aria-live="polite" [attr.aria-busy]="loading()">
+    @if (errorMessage()) {
+      <article class="panel empty-state" role="alert">
+        <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
+        <h3>{{ errorMessage() }}</h3>
+        <button type="button" class="button-secondary" [disabled]="loading()" (click)="consult()">Tentar novamente</button>
       </article>
-    } @else if (report(); as data) {
-      <div class="report-summary">
-        <dl class="meta-list" aria-label="Consulta aplicada">
-          <div><dt>Período de entrada</dt><dd>{{ formatDate(data.entryFrom) }} a {{ formatDate(data.entryTo) }}</dd></div>
-          <div><dt>Status atual</dt><dd>{{ appliedFilters()?.status }}</dd></div>
-          <div><dt>Cliente</dt><dd>{{ appliedFilters()?.client }}</dd></div>
-          <div><dt>Gerado em</dt><dd>{{ formatInstant(data.generatedAt) }} (São Paulo)</dd></div>
-        </dl>
-        <app-result-count singular="RMA" plural="RMAs" [count]="rmas().length" />
-        <p class="report-hint">Consulte novamente para atualizar.</p>
-      </div>
-      <div class="tab-list" role="tablist" aria-label="Relatórios">
-        @for (option of reportOptions; track option.value) {
-          <button type="button" role="tab" class="tab" [id]="'report-tab-' + option.value" [class.is-active]="reportType() === option.value"
-            [attr.aria-selected]="reportType() === option.value" [attr.aria-controls]="'report-panel-' + option.value"
-            [attr.tabindex]="reportType() === option.value ? 0 : -1" (click)="selectReport(option.value)" (keydown)="onTabKeydown($event)">{{ option.label }}</button>
+    } @else if (summary(); as data) {
+      @switch (tab()) {
+        @case ('summary') {
+          <div class="report-grid">
+            <article class="panel table-card">
+              <h2>Status atual</h2>
+              <app-bar-chart [rows]="toBars(data.byStatus)" ariaLabel="ordens de serviço por status atual" />
+            </article>
+            <article class="panel table-card">
+              <h2>Garantia</h2>
+              <app-donut-chart [slices]="warrantySlices(data.byWarranty)" centerLabel="itens" [centerValue]="data.totalItems" ariaLabel="Itens por situação de garantia" />
+            </article>
+            <article class="panel table-card">
+              <h2>Entradas por mês</h2>
+              <app-bar-chart [rows]="toBars(data.byMonth)" ariaLabel="ordens de serviço por mês de entrada" />
+            </article>
+            <article class="panel table-card">
+              <h2>Tempo na etapa atual</h2>
+              @if (data.stages.length) {
+                <div class="table-wrap"><table>
+                  <thead><tr><th scope="col">Etapa</th><th scope="col" class="num">Ordens de serviço</th><th scope="col" class="num">Médio</th><th scope="col" class="num">Maior</th></tr></thead>
+                  <tbody>@for (stage of data.stages; track stage.status) {
+                    <tr><td>{{ stage.label }}</td><td class="num">{{ stage.count }}</td><td class="num">{{ duration(stage.averageSeconds) }}</td><td class="num">{{ duration(stage.maximumSeconds) }}</td></tr>
+                  }</tbody>
+                </table></div>
+              } @else { <p class="report-muted">Nenhuma OS em andamento.</p> }
+            </article>
+          </div>
         }
-      </div>
-      @for (option of reportOptions; track option.value) {
-      <div class="report-panel" role="tabpanel" tabindex="0" [id]="'report-panel-' + option.value" [attr.aria-labelledby]="'report-tab-' + option.value" [hidden]="reportType() !== option.value">
-      @if (reportType() === option.value && rmas().length === 0) {
-        <article class="panel empty-state"><h3>Nenhum RMA encontrado.</h3><p>Ajuste os filtros e consulte novamente.</p></article>
-      } @else if (reportType() === option.value) {
-        @switch (reportType()) {
-          @case ('technical') {
-            <section class="report-documents" aria-labelledby="report-technical-title">
-              <h2 id="report-technical-title">Laudo técnico</h2>
-              @for (rma of rmas(); track rma.id) {
-                <article class="panel report-document" [attr.aria-labelledby]="'report-document-' + rma.id">
-                  <h3 [id]="'report-document-' + rma.id"><span class="code-text">{{ rma.code }}</span> · {{ rma.clientName }}</h3>
-                  <dl class="meta-list">
-                    <div><dt>Status</dt><dd><span class="status-chip" [attr.data-status]="rma.status">{{ statusLabels[rma.status] }}</span></dd></div>
-                    <div><dt>Entrada</dt><dd>{{ formatDate(rma.entryDate) }}</dd></div>
-                  </dl>
-                  <section class="report-document__section">
-                    <h4>Produtos</h4>
-                    <div class="table-wrap"><table>
-                      <thead><tr><th scope="col">Produto</th><th scope="col">SKU</th><th scope="col">Série</th><th scope="col">Lote</th></tr></thead>
-                      <tbody>@for (item of rma.items; track $index) {
-                        <tr><td>{{ item.productName }}</td><td class="code-text">{{ item.productSku }}</td>
-                          <td>{{ item.serialNumber || 'Não informada' }}</td><td>{{ item.batchNumber || 'Não informado' }}</td></tr>
-                      }</tbody>
-                    </table></div>
-                  </section>
-                  <section class="report-document__section">
-                    <h4>Falha relatada</h4>
-                    <p class="report-text">{{ rma.reportedFailure }}</p>
-                  </section>
-                  <section class="report-document__section">
-                    <h4>Diagnóstico</h4>
-                    @if (rma.diagnosis; as diagnosis) {
-                      <p class="report-text">{{ diagnosis.foundFailure }}</p>
-                      <dl class="report-fields">
-                        <div><dt>Tipo</dt><dd>{{ diagnosis.failureType ? failureLabels[diagnosis.failureType] : 'Não informado' }}</dd></div>
-                        <div><dt>Causa provável</dt><dd>{{ diagnosis.probableCause ? causeLabels[diagnosis.probableCause] : 'Não informada' }}</dd></div>
-                        <div><dt>Técnico</dt><dd>{{ diagnosis.technicianName }}</dd></div>
-                        <div><dt>Data do diagnóstico</dt><dd>{{ formatDate(diagnosis.diagnosedAt) }}</dd></div>
-                        <div><dt>Notas</dt><dd class="report-text">{{ diagnosis.notes || 'Sem observações' }}</dd></div>
-                      </dl>
-                    } @else { <p class="report-muted">Diagnóstico pendente</p> }
-                  </section>
-                  <section class="report-document__section">
-                    <h4>Reparo e testes</h4>
-                    <dl class="report-fields">
-                      <div><dt>Reparo</dt><dd class="report-text">{{ rma.repairSummary || 'Não informado' }}</dd></div>
-                      <div><dt>Peças trocadas</dt><dd class="report-text">{{ rma.replacedPartsSummary || 'Não informadas' }}</dd></div>
-                      <div><dt>Testes</dt><dd class="report-text">{{ rma.testSummary || 'Não informados' }}</dd></div>
-                    </dl>
-                  </section>
-                </article>
-              }
-            </section>
-          }
-          @case ('aging') {
-            @let activeCount = activeRmas().length;
-            @let closedCount = rmas().length - activeRmas().length;
-            <article class="panel table-card">
-              <h2>Tempo por etapa atual</h2>
-              <p>Tempo corrido na etapa, calculado no instante da consulta. RMAs encerrados não entram nas métricas.</p>
-              <p class="report-scope">{{ activeCount }} {{ activeCount === 1 ? 'RMA em andamento considerado' : 'RMAs em andamento considerados' }}@if (closedCount > 0) { · {{ closedCount }} {{ closedCount === 1 ? 'encerrado' : 'encerrados' }} fora do cálculo}</p>
-              @if (activeCount === 0) { <p class="empty-state">Nenhum RMA em andamento nos filtros selecionados.</p> }
-              @else {
+        @case ('failures') {
+          <div class="report-grid">
+            <article class="panel table-card"><h2>Por produto</h2>
+              <ng-container [ngTemplateOutlet]="counts" [ngTemplateOutletContext]="{ rows: data.topProducts, head: 'Produto', unit: 'Itens' }" /></article>
+            <article class="panel table-card"><h2>Por lote</h2>
+              <ng-container [ngTemplateOutlet]="counts" [ngTemplateOutletContext]="{ rows: data.topBatches, head: 'Lote', unit: 'Itens' }" /></article>
+            <article class="panel table-card"><h2>Por cliente</h2>
+              <ng-container [ngTemplateOutlet]="counts" [ngTemplateOutletContext]="{ rows: data.topClients, head: 'Cliente', unit: 'Itens' }" /></article>
+            <article class="panel table-card"><h2>Por tipo de falha</h2>
+              <ng-container [ngTemplateOutlet]="counts" [ngTemplateOutletContext]="{ rows: data.topFailureTypes, head: 'Tipo', unit: 'Ordens de serviço' }" /></article>
+          </div>
+        }
+        @case ('recurrence') {
+          @let recurrence = data.recurrence;
+          <div class="report-grid">
+            <article class="panel table-card"><h2>Por modelo</h2>
+              <ng-container [ngTemplateOutlet]="rates" [ngTemplateOutletContext]="{ rows: recurrence.byProduct, head: 'Modelo', empty: 'Nenhum modelo com retorno.' }" /></article>
+            <article class="panel table-card"><h2>Por lote</h2>
+              <ng-container [ngTemplateOutlet]="rates" [ngTemplateOutletContext]="{ rows: recurrence.byBatch, head: 'Lote', empty: 'Nenhum lote com retorno.' }" /></article>
+            <article class="panel table-card"><h2>Séries que retornaram</h2>
+              @if (recurrence.serials.length) {
                 <div class="table-wrap"><table>
-                  <caption>Resumo das etapas em andamento</caption>
-                  <thead><tr><th scope="col">Etapa</th><th scope="col">RMAs</th><th scope="col">Tempo médio na etapa</th><th scope="col">Maior tempo na etapa</th></tr></thead>
-                  <tbody>@for (stage of aging(); track stage.status) {
-                    <tr [attr.data-stage]="stage.status"><td>{{ statusLabels[stage.status] }}</td><td>{{ stage.count }}</td><td>{{ duration(stage.average) }}</td><td>{{ duration(stage.maximum) }}</td></tr>
+                  <thead><tr><th scope="col">Série</th><th scope="col">Produto</th><th scope="col" class="num">Ordens de serviço</th></tr></thead>
+                  <tbody>@for (serial of recurrence.serials; track serial.serialNumber + serial.productSku) {
+                    <tr><td class="code-text">{{ serial.serialNumber }}</td><td>{{ serial.productName }}</td><td class="num">{{ serial.rmaCount }}</td></tr>
                   }</tbody>
                 </table></div>
+              } @else { <p class="report-muted">Nenhuma série com retorno.</p> }
+            </article>
+          </div>
+        }
+        @case ('rmas') {
+          @if (list(); as page) {
+            <article class="panel table-card table-card--list">
+              @if (page.rmas.content.length) {
                 <div class="table-wrap"><table>
-                  <caption>Tempo por RMA na etapa atual</caption>
-                  <thead><tr><th scope="col">RMA</th><th scope="col">Cliente</th><th scope="col">Etapa</th><th scope="col">Início na etapa (São Paulo)</th><th scope="col">Tempo decorrido</th></tr></thead>
-                  <tbody>@for (rma of activeRmas(); track rma.id) {
-                    <tr><td><strong class="code-text">{{ rma.code }}</strong></td><td>{{ rma.clientName }}</td><td><span class="status-chip" [attr.data-status]="rma.status">{{ statusLabels[rma.status] }}</span></td>
-                      <td>{{ formatInstant(rma.sla.startedAt) }}</td><td>{{ duration(rma.sla.elapsedSeconds) }}</td></tr>
+                  <thead><tr><th scope="col">OS</th><th scope="col">Cliente</th><th scope="col">Produto</th>
+                    <th scope="col">Status</th><th scope="col">Garantia</th><th scope="col">Falha</th>
+                    @if (canViewRma()) { <th scope="col" class="table-actions-col">Laudo</th> }</tr></thead>
+                  <tbody>@for (row of page.rmas.content; track row.id) {
+                    <tr>
+                      <td><strong class="table-title code-text">{{ row.code }}</strong><span class="table-subtitle">{{ formatDate(row.entryDate) }}</span></td>
+                      <td>{{ row.clientName }}</td>
+                      <td>
+                        <span class="table-title">{{ productLabel(row) }}</span>
+                        <span class="table-subtitle">Série {{ row.serialNumber || '—' }} · Lote {{ row.batchNumber || '—' }}</span>
+                      </td>
+                      <td><span class="status-chip" [attr.data-status]="row.status">{{ statusLabels[row.status] }}</span></td>
+                      <td>{{ warrantyLabel(row) }}</td><td>{{ row.failureType ? failureLabels[row.failureType] : '—' }}</td>
+                      @if (canViewRma()) { <td class="table-actions-col"><app-rma-report-link [rmaId]="row.id" [code]="row.code" label="PDF" /></td> }
+                    </tr>
                   }</tbody>
                 </table></div>
+              } @else {
+                <section class="empty-state">
+                  <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
+                  <h3>Nenhuma OS encontrada.</h3>
+                  <p>Ajuste o período ou os filtros.</p>
+                </section>
               }
+              <app-pagination singular="OS" plural="ordens de serviço" [page]="page.rmas.page" [size]="pageSize()" [totalElements]="page.rmas.totalElements"
+                [totalPages]="page.rmas.totalPages" [shown]="page.rmas.content.length" [loading]="listLoading()"
+                (pageChange)="loadPage($event)" (sizeChange)="changePageSize($event)" />
             </article>
-          }
-          @case ('warranty') {
-            <article class="panel table-card">
-              <h2>Garantia por produto</h2>
-              <p>Cálculo automático na data de entrada, sem override manual. Compra desconhecida mantém a garantia pendente.</p>
-              <div class="table-wrap"><table>
-                <caption>Prazos e situação de cada produto do RMA</caption>
-                <thead><tr><th scope="col">RMA</th><th scope="col">Cliente</th><th scope="col">Produto</th><th scope="col">Série</th><th scope="col">Lote</th>
-                  <th scope="col">Compra</th><th scope="col">Entrada</th><th scope="col">Prazo</th><th scope="col">Vencimento</th><th scope="col">Situação</th></tr></thead>
-                <tbody>@for (rma of rmas(); track rma.id) {
-                  @for (item of rma.items; track $index) {
-                    <tr><td><strong class="code-text">{{ rma.code }}</strong></td><td>{{ rma.clientName }}</td>
-                      <td><strong>{{ item.productName }}</strong><p class="report-muted code-text">{{ item.productSku }}</p></td>
-                      <td>{{ item.serialNumber || 'Não informada' }}</td><td>{{ item.batchNumber || 'Não informado' }}</td>
-                      <td>{{ purchaseFact(rma).value }}</td><td>{{ formatDate(rma.entryDate) }}</td><td>{{ warrantyTermLabel(item.warrantyMonths) }}</td>
-                      <td>{{ warrantyExpiryLabel(item).value }}</td><td>{{ warrantyLabels[item.warrantyStatus] }}</td></tr>
-                  }
-                }</tbody>
-              </table></div>
-            </article>
-          }
-          @case ('returns') {
-            @let returnCount = returns().length;
-            <article class="panel table-card">
-              <h2>Devoluções</h2>
-              <p class="report-scope">{{ returnCount }} {{ returnCount === 1 ? 'RMA devolvido' : 'RMAs devolvidos' }}</p>
-              <p>Somente RMAs com status atual Devolvido. O período filtra a data de entrada do RMA, não a data de expedição.</p>
-              @if (returnCount === 0) { <p class="empty-state">Nenhuma devolução nos filtros selecionados.</p> }
-              @else {
-                <div class="table-wrap"><table>
-                  <caption>Expedição dos RMAs devolvidos</caption>
-                  <thead><tr><th scope="col">RMA</th><th scope="col">Cliente</th><th scope="col">Entrada</th><th scope="col">Expedição</th><th scope="col">Transportadora</th><th scope="col">Rastreio</th></tr></thead>
-                  <tbody>@for (rma of returns(); track rma.id) {
-                    <tr><td><strong class="code-text">{{ rma.code }}</strong></td><td>{{ rma.clientName }}</td><td>{{ formatDate(rma.entryDate) }}</td>
-                      <td>{{ formatDate(rma.shippedAt) }}</td><td>{{ rma.carrier || 'Não informada' }}</td><td>{{ rma.trackingCode || 'Não informado' }}</td></tr>
-                  }</tbody>
-                </table></div>
-              }
-            </article>
+          } @else {
+            <div class="panel" aria-busy="true"></div>
           }
         }
       }
-      </div>
-      }
+    } @else {
+      <div class="panel report-loading" aria-busy="true"></div>
     }
   </section>
-  <p class="report-hint">Consulta em tela.</p>
 </section>
+
+<ng-template #counts let-rows="rows" let-head="head" let-unit="unit">
+  @if (rows.length) {
+    <div class="table-wrap"><table>
+      <thead><tr><th scope="col">{{ head }}</th><th scope="col">{{ unit }}</th></tr></thead>
+      <tbody>@for (row of rows; track row.key) {
+        <tr><td>{{ row.label }}</td>
+          <td class="report-count"><span>{{ row.count }}</span><span class="report-count__bar" aria-hidden="true" [style.width.%]="barWidth(row.count, rows)"></span></td></tr>
+      }</tbody>
+    </table></div>
+  } @else { <p class="report-muted">Sem dados no período.</p> }
+</ng-template>
+
+<ng-template #rates let-rows="rows" let-head="head" let-empty="empty">
+  @if (rows.length) {
+    <div class="table-wrap"><table>
+      <thead><tr><th scope="col">{{ head }}</th><th scope="col" class="num">Itens</th><th scope="col" class="num">Retornos</th><th scope="col" class="num">Taxa</th></tr></thead>
+      <tbody>@for (row of rows; track row.key) {
+        <tr><td>{{ row.label }}</td><td class="num">{{ row.items }}</td><td class="num">{{ row.returnedItems }}</td><td class="num">{{ percent(row.returnedItems, row.items) }}</td></tr>
+      }</tbody>
+    </table></div>
+  } @else { <p class="report-muted">{{ empty }}</p> }
+</ng-template>

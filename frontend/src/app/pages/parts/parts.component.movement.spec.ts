@@ -12,12 +12,11 @@ import { PartsComponent } from './parts.component';
 const PART: PartResponse = {
   id: 4, code: 'PCA-1', name: 'Capacitor', unit: 'm', location: 'A1', minimumStock: 8, unitCost: 10,
   onHand: 10, reserved: 4, available: 6, belowMinimum: true, active: true,
-  createdAt: '2026-10-24T12:00:00Z', updatedAt: '2026-10-24T12:00:00Z'
 };
 const MOVEMENT: PartMovementResponse = {
   id: 9, partId: 4, partCode: 'PCA-1', partName: 'Capacitor', type: 'EXIT', quantity: 1.5,
-  onHandChange: -1.5, reservedChange: 0, onHandAfter: 8.5, reservedAfter: 4, unitCost: 10, totalCost: 15,
-  rmaId: null, rmaCode: null, reservationId: null, reversedMovementId: null, reversed: false,
+  onHandChange: -1.5, reservedChange: 0, onHandAfter: 8.5, reservedAfter: 4, 
+  rmaCode: null, reversedMovementId: null, reversed: false,
   reason: null, createdBy: 'desk', createdAt: '2026-10-24T12:00:00Z'
 };
 interface Harness {

@@ -2,7 +2,8 @@
   <app-page-header
     heading="Clientes"
   >
-    <button #createButton type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo cliente</button>
+    @if (canEdit()) { <button #createButton type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo cliente</button> }
+    @if (canImport()) { <a class="button-secondary" routerLink="/clientes/importar">Importar CSV</a> }
   </app-page-header>
 
   <section class="panel catalog-toolbar catalog-toolbar--filters">
@@ -43,7 +44,11 @@
   }
 
   <article class="table-card table-card--list panel">
-    @if (loadFailed()) {
+    @if (!canView()) {
+      <section class="empty-state">
+        <p>Seu perfil pode importar clientes, mas não consultar a lista.</p>
+      </section>
+    } @else if (loadFailed()) {
       <section class="empty-state" role="alert">
         <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
         <h3>Não foi possível carregar os clientes.</h3>
@@ -61,8 +66,7 @@
       <section class="empty-state">
         <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
         <h3>Nenhum cliente cadastrado</h3>
-        <p>Cadastre o primeiro cliente para vincular novos RMAs.</p>
-        <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Cadastrar cliente</button>
+        <p>Cadastre o primeiro cliente para vincular novas ordens de serviço.</p>
       </section>
     } @else if (clients().length === 0) {
       <section class="empty-state">
@@ -113,6 +117,7 @@
                 </td>
                 <td>{{ updatedAtLabel(client) }}</td>
                 <td class="table-actions-col">
+                  @if (canEdit()) {
                   <div class="row-actions">
                     <button
                       appRowAction
@@ -132,6 +137,7 @@
                       [disabled]="deletingClientId() !== null"
                     ></button>
                   </div>
+                  }
                 </td>
               </tr>
             }
@@ -164,7 +170,7 @@
       appModalFocus
       modalInitialFocus="[formcontrolname='legalName']"
       [modalCloseBlocked]="submitting()"
-      [modalFallbackFocus]="createButton"
+      [modalFallbackFocus]="createButtonElement()?.nativeElement ?? null"
       (modalCloseRequested)="closeModal()"
       (click)="$event.stopPropagation()"
     >
@@ -180,10 +186,13 @@
       @if (modalErrorMessage()) {
         <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
           <strong>{{ modalErrorMessage() }}</strong>
+          @if (editLoadFailed()) {
+            <button type="button" class="button-secondary" (click)="retryEditLoad()">Tentar novamente</button>
+          }
         </article>
       }
 
-      <form class="form-grid" [formGroup]="form" (ngSubmit)="saveClient()">
+      <form class="form-grid" [formGroup]="form" (ngSubmit)="saveClient()" [attr.aria-busy]="editLoading() || null">
         <fieldset class="form-section">
           <legend>Identificação</legend>
 
@@ -247,7 +256,7 @@
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="submitting()">
             Cancelar
           </button>
-          <button type="submit" class="button-primary" [disabled]="submitting()">
+          <button type="submit" class="button-primary" [disabled]="submitting() || editLoading()">
             {{ submitting() ? 'Salvando...' : editingClient() ? 'Salvar alterações' : 'Cadastrar cliente' }}
           </button>
         </div>
@@ -267,7 +276,7 @@
       appModalFocus
       modalInitialFocus=".form-actions .button-secondary"
       [modalCloseBlocked]="deletingClientId() !== null"
-      [modalFallbackFocus]="createButton"
+      [modalFallbackFocus]="createButtonElement()?.nativeElement ?? null"
       (modalCloseRequested)="closeDeleteModal()"
       (click)="$event.stopPropagation()"
     >

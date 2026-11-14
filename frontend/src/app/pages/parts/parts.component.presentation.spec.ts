@@ -10,14 +10,13 @@ import { PartsComponent } from './parts.component';
 const PART: PartResponse = {
   id: 4, code: 'PCA-1', name: 'Capacitor', unit: 'm', location: 'A1', minimumStock: 8, unitCost: 10,
   onHand: 10, reserved: 4, available: 6, belowMinimum: true, active: true,
-  createdAt: '2026-10-24T12:00:00Z', updatedAt: '2026-10-24T12:00:00Z'
 };
 const INACTIVE: PartResponse = { ...PART, id: 5, code: 'CAB-2', name: 'Cabo', location: 'B2', active: false, onHand: 2, unitCost: 5 };
 const REPLENISHMENT: PartReplenishmentResponse = { ...PART, partId: 4, pendingQuantity: 3.5, suggestedQuantity: 12.5 };
 const PENDING: PartReservationResponse = {
-  id: 2, rmaId: 7, rmaCode: 'RMA-7', partId: 4, partCode: 'PCA-1', partName: 'Capacitor', unit: 'm', location: 'A1',
+  id: 2, rmaId: 7, rmaCode: 'OS-7', partId: 4, partCode: 'PCA-1', partName: 'Capacitor', unit: 'm', location: 'A1',
   quantity: 3.5, status: 'PENDING', partAvailable: 6, unitCost: 10, totalCost: 35, note: null, createdBy: 'tech',
-  createdAt: PART.createdAt, updatedAt: PART.updatedAt
+  createdAt: '2026-10-24T12:00:00Z', updatedAt: '2026-10-24T12:00:00Z'
 };
 
 describe('PartsComponent presentation', () => {
@@ -63,13 +62,12 @@ describe('PartsComponent presentation', () => {
   // Vermelho: cartões não identificam o escopo global dos três indicadores.
   it('shows scoped alerts and stock value without statistic cards', async () => {
     const source = await setup('ADMIN', true);
-    expect(normalized(root())).not.toContain('No estoque completo:');
+    expect(root().querySelector('.page-summary')).toBeNull();
     source.next([PART, INACTIVE]); source.complete(); render();
-    expect(normalized(root())).toContain('No estoque completo:');
-    const line = Array.from(root().querySelectorAll('p')).find((item) => normalized(item).startsWith('No estoque completo:'))!;
-    expect(normalized(line)).toContain('1 peça abaixo do mínimo');
-    expect(normalized(line)).toContain('1 reserva pendente');
-    expect(normalized(line)).toContain('Valor em estoque (saldo × custo unitário atual): R$ 110,00');
+    const line = root().querySelector('.page-summary')!;
+    expect(normalized(line)).toMatch(/Abaixo do mínimo\s*1/);
+    expect(normalized(line)).toMatch(/Reservas pendentes\s*1/);
+    expect(normalized(line)).toMatch(/Valor em estoque\s*R\$\s*110,00/);
     expect(root().querySelector('.stat-card')).toBeNull();
     const before = normalized(line);
     search('Capacitor'); expect(normalized(line)).toBe(before);
@@ -78,7 +76,7 @@ describe('PartsComponent presentation', () => {
     const component = fixture.componentInstance as unknown as { openEditModal(part: PartResponse): void; savePart(): void };
     component.openEditModal(PART); component.savePart(); render();
     expect(normalized(root())).toContain('Não foi possível carregar as peças.');
-    expect(normalized(root())).not.toContain('No estoque completo:');
+    expect(root().querySelector('.page-summary')).toBeNull();
     expect(normalized(root())).not.toContain('R$ 110,00');
     expect(root().querySelector('.result-count')).toBeNull();
   });
@@ -124,14 +122,14 @@ describe('PartsComponent presentation', () => {
     expect(normalized(rows[1].querySelector('td'))).not.toContain('Repor');
   });
 
-  it('preserves API suggestion and pending quantity, RMA and business date', async () => {
+  it('preserves API suggestion and pending quantity, OS and business date', async () => {
     await setup(); tab('Reposição');
     const tables = root().querySelectorAll<HTMLTableElement>('table');
     const replenishment = facts(tables[0]);
-    expect(replenishment.get('Pendente em RMAs')).toBe('3,5 m');
+    expect(replenishment.get('Pendente em ordens de serviço')).toBe('3,5 m');
     expect(replenishment.get('Sugestão de compra')).toBe('12,5 m');
     const pending = facts(tables[1]);
-    expect(pending.get('RMA')).toBe('RMA-7');
+    expect(pending.get('OS')).toBe('OS-7');
     expect(pending.get('Quantidade')).toBe('3,5 m');
     expect(pending.get('Disponível')).toBe('6 m');
     expect(pending.get('Solicitada em')).toBe('24/10/2026, 09:00');

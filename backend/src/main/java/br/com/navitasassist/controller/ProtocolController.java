@@ -34,11 +34,6 @@ public class ProtocolController {
         return protocolTemplateService.listAll();
     }
 
-    @GetMapping("/templates/{id}")
-    public ProtocolTemplateResponse getTemplate(@PathVariable Long id) {
-        return protocolTemplateService.getById(id);
-    }
-
     @PostMapping("/templates")
     @ResponseStatus(HttpStatus.CREATED)
     public ProtocolTemplateResponse createTemplate(@Valid @RequestBody ProtocolTemplateRequest request) {

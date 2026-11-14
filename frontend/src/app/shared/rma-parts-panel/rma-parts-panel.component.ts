@@ -1,40 +1,59 @@
-import { Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Injector, Output, DestroyRef, afterNextRender, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription, finalize } from 'rxjs';
 import { CLOSED_RMA_STATUSES } from '../../core/mock-data';
-import { PartReservationResponse, PartResponse, RmaPartsResponse, RmaStatus } from '../../core/models';
+import { ExternalComponentResponse, PartConsumptionRequest, PartMovementResponse, PartMovementType, PartReservationResponse, PartOptionResponse, RmaPartsResponse, RmaStatus } from '../../core/models';
+import { RmaRepairService } from '../../core/services/rma-repair.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { PartReservationAction, PartService } from '../../core/services/part.service';
 import { extractHttpErrorMessage, normalizeOptionalText } from '../../core/utils/catalog-ui';
 import { formatBusinessDateTime } from '../../core/utils/date';
 import { PART_MOVEMENT_LABELS, PART_RESERVATION_STATUS_LABELS, formatCurrency, formatQuantity, reservationStatusClass } from '../../core/utils/part-ui';
+import { NgTemplateOutlet } from '@angular/common';
+import { IconComponent } from '../icon/icon.component';
+import { CollapsibleSectionComponent } from '../collapsible-section/collapsible-section.component';
+import { RowActionComponent } from '../row-action/row-action.component';
 import { CustomSelectComponent, CustomSelectOption } from '../form-controls/custom-select/custom-select.component';
 
 const ACTION_MESSAGES: Record<PartReservationAction, string> = {
   allocate: 'Reserva efetivada.',
-  consume: 'Consumo registrado.',
+  consume: 'Aplicação registrada.',
   cancel: 'Reserva cancelada e disponibilidade devolvida.'
 };
 
 @Component({
   selector: 'app-rma-parts-panel',
-  imports: [ReactiveFormsModule, CustomSelectComponent],
+  imports: [NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, IconComponent, CollapsibleSectionComponent],
   templateUrl: './rma-parts-panel.component.html',
   styles: [`
     :host {
       display: block;
     }
 
-    .parts-summary {
+    /* One compact line of figures (label and value side by side); only non-zero ones render. */
+    .parts-stats {
       display: flex;
       flex-wrap: wrap;
-      gap: var(--space-2);
-      margin: var(--space-2) 0 var(--space-3);
+      gap: var(--space-1) var(--space-4);
+      margin: 0 0 var(--space-2);
+      font-size: var(--font-size-sm);
     }
 
-    .parts-costs {
-      margin-bottom: 0.75rem;
+    .parts-stats div {
+      display: flex;
+      gap: var(--space-1);
+      white-space: nowrap;
+    }
+
+    .parts-stats dt {
+      color: var(--muted);
+    }
+
+    .parts-stats dd {
+      margin: 0;
+      font-weight: var(--font-weight-semibold);
+      font-variant-numeric: tabular-nums;
     }
 
     .parts-load-error {
@@ -60,7 +79,10 @@ const ACTION_MESSAGES: Record<PartReservationAction, string> = {
     }
 
     .parts-item .meta-list {
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0 var(--space-3);
+      font-size: var(--font-size-sm);
     }
 
     .parts-list {
@@ -71,11 +93,22 @@ const ACTION_MESSAGES: Record<PartReservationAction, string> = {
     .parts-item {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
-      gap: 0.35rem 0.75rem;
-      padding: 0.85rem 0.9rem;
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      background: var(--surface-alt);
+      gap: var(--space-1) var(--space-3);
+      padding: var(--space-2) 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .parts-item .meta-list div {
+      display: flex;
+      gap: var(--space-1);
+    }
+
+    .parts-item .meta-list dt {
+      color: var(--muted);
+    }
+
+    .parts-item .meta-list dd {
+      margin: 0;
     }
 
     .parts-item small {
@@ -118,13 +151,23 @@ export class RmaPartsPanelComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly partService = inject(PartService);
   private readonly permissions = inject(PermissionService);
+  private readonly repairService = inject(RmaRepairService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
+  protected readonly expandedKeys = signal<ReadonlySet<string>>(new Set());
+  protected readonly reserveOpen = signal(false);
 
+  @Output() readonly changed = new EventEmitter<void>();
+  protected readonly editingExternal = signal<ExternalComponentResponse | null>(null);
+  protected readonly voidingExternal = signal<ExternalComponentResponse | null>(null);
+  protected readonly voidReason = new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.pattern(/\S/), Validators.maxLength(1000)] });
   readonly rmaId = input.required<number>();
   readonly rmaStatus = input.required<RmaStatus>();
 
   private readonly destroyRef = inject(DestroyRef);
   private loadRequest?: Subscription;
   private catalogRequest?: Subscription;
+  private externalRequest?: Subscription;
 
   protected readonly loading = signal(false);
   protected readonly loadFailed = signal(false);
@@ -139,7 +182,7 @@ export class RmaPartsPanelComponent {
   protected readonly errorMessage = signal('');
   protected readonly successMessage = signal('');
   protected readonly parts = signal<RmaPartsResponse | null>(null);
-  protected readonly catalog = signal<PartResponse[]>([]);
+  protected readonly catalog = signal<PartOptionResponse[]>([]);
 
   protected readonly statusLabels = PART_RESERVATION_STATUS_LABELS;
   protected readonly movementLabels = PART_MOVEMENT_LABELS;
@@ -156,11 +199,47 @@ export class RmaPartsPanelComponent {
   protected readonly activeCount = computed(() => this.reservations().filter((reservation) => reservation.status === 'ACTIVE').length);
   protected readonly consumedCount = computed(() => this.reservations().filter((reservation) => reservation.status === 'CONSUMED').length);
 
+  protected readonly canSeeCosts = computed(() => this.permissions.hasPermission('pecas.ver'));
+  protected readonly stats = computed(() => {
+    const parts = this.parts();
+    if (!parts || this.reservations().length === 0) return [];
+    const rows = [
+      { label: 'Ativas', value: String(this.activeCount()), show: this.activeCount() > 0 },
+      { label: 'Aplicadas', value: String(this.consumedCount()), show: this.consumedCount() > 0 },
+      { label: 'Pendentes', value: String(parts.pendingCount), show: parts.pendingCount > 0 },
+      { label: 'Custo aplicado', value: formatCurrency(parts.consumedCost ?? 0), show: this.canSeeCosts() && (parts.consumedCost ?? 0) > 0 },
+      { label: 'Custo reservado', value: formatCurrency(parts.reservedCost ?? 0), show: this.canSeeCosts() && (parts.reservedCost ?? 0) > 0 }
+    ];
+    return rows.filter(row => row.show);
+  });
+
   protected readonly partOptions = computed<ReadonlyArray<CustomSelectOption<number>>>(() =>
     this.catalog()
       .filter((part) => part.active)
       .map((part) => ({ value: part.id, label: `${part.code} · ${part.name} (disponível: ${formatQuantity(part.available, part.unit)})` }))
   );
+
+  protected readonly consuming = signal<PartReservationResponse | null>(null);
+  protected readonly externalOpen = signal(false);
+  protected readonly externalSaving = signal(false);
+  protected readonly externalComponents = signal<ExternalComponentResponse[]>([]);
+  protected readonly externalError = signal('');
+  protected readonly replacedComponents = computed(() => [
+    ...(this.parts()?.replacedComponents ?? this.reservations().filter(r => r.status === 'CONSUMED')).map(r => ({ ...r, key: `stock-${r.id}`, description: r.partName, code: r.partCode, source: 'Estoque', external: false as const, voidedAt: null, voidReason: null, voidedBy: null })),
+    ...this.externalComponents().map(c => ({ ...c, key: `external-${c.id}`, source: 'Fora do estoque', external: true as const }))
+  ]);
+  protected readonly consumptionForm = this.formBuilder.nonNullable.group({
+    replacementReason: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(1000)]],
+    componentBatch: ['', Validators.maxLength(120)]
+  });
+  protected readonly externalForm = this.formBuilder.nonNullable.group({
+    code: ['', Validators.maxLength(60)],
+    description: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(120)]],
+    quantity: [1, [Validators.required, Validators.min(0.001), Validators.max(999999999.999), Validators.pattern(/^\d+(\.\d{1,3})?$/)]],
+    unit: ['un', Validators.maxLength(20)],
+    componentBatch: ['', Validators.maxLength(120)],
+    replacementReason: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(1000)]]
+  });
 
   protected readonly reserveForm = this.formBuilder.group({
     partId: this.formBuilder.control<number | null>(null, Validators.required),
@@ -182,9 +261,20 @@ export class RmaPartsPanelComponent {
     return control.invalid && (control.dirty || control.touched);
   }
 
-  protected selectedPart(): PartResponse | null {
+  protected selectedPart(): PartOptionResponse | null {
     const partId = this.reserveForm.controls.partId.value;
     return partId === null ? null : this.catalog().find((part) => part.id === partId) ?? null;
+  }
+
+  protected toggleReserve(): void {
+    if (this.reserveOpen()) { this.closeReserve(true); return; }
+    this.reserveOpen.set(true);
+    afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>('#reserve-form .custom-select__trigger, #reserve-form input')?.focus(), { injector: this.injector });
+  }
+
+  protected closeReserve(restoreFocus: boolean): void {
+    this.reserveOpen.set(false); this.reserveForm.reset({ partId: null, quantity: 1, note: '' });
+    if (restoreFocus) afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>('#reserve-trigger')?.focus(), { injector: this.injector });
   }
 
   protected retryLoad(): void {
@@ -216,8 +306,8 @@ export class RmaPartsPanelComponent {
         if (this.rmaId() !== rmaId) return;
         this.successMessage.set(reservation.status === 'PENDING'
           ? `Saldo insuficiente: ${reservation.partName} ficou pendente de reposição.`
-          : `${reservation.partName} reservada para o RMA.`);
-        this.reserveForm.reset({ partId: null, quantity: 1, note: '' });
+          : `${reservation.partName} reservada para a OS.`);
+        this.closeReserve(true);
         this.load(rmaId);
       },
       error: (error) => {
@@ -227,7 +317,93 @@ export class RmaPartsPanelComponent {
     });
   }
 
-  protected runAction(reservation: PartReservationResponse, action: PartReservationAction): void {
+  protected startConsumption(reservation: PartReservationResponse): void {
+    if (!this.canCreateReservation()) return;
+    this.consuming.set(reservation); this.consumptionForm.reset();
+  }
+
+  protected confirmConsumption(): void {
+    if (!this.canCreateReservation() || !this.consuming()) return;
+    if (this.consumptionForm.invalid) { this.consumptionForm.markAllAsTouched(); return; }
+    const value = this.consumptionForm.getRawValue();
+    this.runAction(this.consuming()!, 'consume', { replacementReason: value.replacementReason.trim(), componentBatch: normalizeOptionalText(value.componentBatch) });
+  }
+
+  protected saveExternal(): void {
+    if (!this.canCreateReservation() || this.externalSaving()) return;
+    if (this.externalForm.invalid) { this.externalForm.markAllAsTouched(); return; }
+    const id = this.rmaId(); const value = this.externalForm.getRawValue();
+    this.externalSaving.set(true); this.clearMessages();
+    const payload = { ...value, code: normalizeOptionalText(value.code), description: value.description.trim(), unit: value.unit.trim() || 'un', componentBatch: normalizeOptionalText(value.componentBatch), replacementReason: value.replacementReason.trim() };
+    const editing = this.editingExternal();
+    (editing ? this.repairService.updateExternalComponent(id, editing.id, payload) : this.repairService.addExternalComponent(id, payload))
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.externalSaving.set(false))).subscribe({
+        next: () => { if (id !== this.rmaId()) return; this.closeExternal(false); this.successMessage.set('Componente salvo.'); this.loadExternal(id); this.changed.emit(); },
+        error: error => { if (id === this.rmaId()) this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível registrar o componente.')); }
+      });
+  }
+
+  protected editExternal(item: ExternalComponentResponse): void {
+    if (!this.canCreateReservation() || this.externalSaving() || item.voidedAt) return;
+    this.voidingExternal.set(null); this.editingExternal.set(item); this.externalOpen.set(true);
+    this.externalForm.reset({ code: item.code ?? '', description: item.description, quantity: item.quantity, unit: item.unit, componentBatch: item.componentBatch ?? '', replacementReason: item.replacementReason });
+    this.focusFirstExternalField();
+  }
+
+  protected toggleExternal(): void {
+    if (this.editingExternal() || this.externalOpen()) { this.closeExternal(true); return; }
+    this.externalOpen.set(true); this.focusFirstExternalField();
+  }
+
+  protected closeExternal(restoreFocus: boolean): void {
+    this.cancelExternal();
+    if (restoreFocus) afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>('#external-trigger')?.focus(), { injector: this.injector });
+  }
+
+  protected toggleExpanded(key: string): void {
+    const next = new Set(this.expandedKeys()); if (!next.delete(key)) next.add(key); this.expandedKeys.set(next);
+  }
+
+  protected movementChip(type: PartMovementType): string {
+    return type === 'RESERVATION_CANCEL' ? 'Cancelamento' : this.movementLabels[type];
+  }
+
+  protected movementNote(movement: PartMovementResponse): string {
+    return [movement.reversed ? 'estornado' : '', movement.reason ?? ''].filter(Boolean).join(' · ');
+  }
+
+  private focusFirstExternalField(): void {
+    afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>('#external-form input, #external-form textarea')?.focus(), { injector: this.injector });
+  }
+
+  protected cancelExternal(): void { this.editingExternal.set(null); this.externalOpen.set(false); this.externalForm.reset(); }
+
+  protected startVoidExternal(item: ExternalComponentResponse): void {
+    if (!this.canCreateReservation() || this.externalSaving() || item.voidedAt) return;
+    this.cancelExternal(); this.voidingExternal.set(item); this.voidReason.reset();
+  }
+
+  protected confirmVoidExternal(): void {
+    const item = this.voidingExternal();
+    if (!item || !this.canCreateReservation() || this.externalSaving()) return;
+    if (this.voidReason.invalid) { this.voidReason.markAsTouched(); return; }
+    const id = this.rmaId(); this.externalSaving.set(true); this.clearMessages();
+    this.repairService.voidExternalComponent(id, item.id, this.voidReason.value.trim()).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.externalSaving.set(false))).subscribe({
+      next: () => { if (id !== this.rmaId()) return; this.voidingExternal.set(null); this.loadExternal(id); this.changed.emit(); },
+      error: error => { if (id === this.rmaId()) this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível anular o componente.')); }
+    });
+  }
+
+  protected loadExternal(id = this.rmaId()): void {
+    this.externalRequest?.unsubscribe();
+    this.externalError.set('');
+    this.externalRequest = this.repairService.listExternalComponents(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: components => { if (id === this.rmaId()) this.externalComponents.set(components); },
+      error: error => { if (id === this.rmaId()) this.externalError.set(extractHttpErrorMessage(error, 'Não foi possível carregar componentes fora do estoque.')); }
+    });
+  }
+
+  protected runAction(reservation: PartReservationResponse, action: PartReservationAction, consumption?: PartConsumptionRequest): void {
     if (this.busyReservationId() !== null) {
       return;
     }
@@ -236,12 +412,14 @@ export class RmaPartsPanelComponent {
     this.busyReservationId.set(reservation.id);
     this.clearMessages();
 
-    this.partService.updateReservation(rmaId, reservation.id, action).pipe(
+    (consumption ? this.partService.updateReservation(rmaId, reservation.id, action, consumption) : this.partService.updateReservation(rmaId, reservation.id, action)).pipe(
       takeUntilDestroyed(this.destroyRef),
       finalize(() => this.busyReservationId.set(null))
     ).subscribe({
       next: () => {
         if (this.rmaId() !== rmaId) return;
+        this.consuming.set(null);
+        if (action === 'consume') this.changed.emit();
         this.successMessage.set(ACTION_MESSAGES[action]);
         this.load(rmaId);
       },
@@ -255,6 +433,9 @@ export class RmaPartsPanelComponent {
   private resetContext(): void {
     this.loadRequest?.unsubscribe();
     this.catalogRequest?.unsubscribe();
+    this.externalRequest?.unsubscribe();
+    this.editingExternal.set(null); this.voidingExternal.set(null); this.voidReason.reset();
+    this.consuming.set(null); this.reserveOpen.set(false); this.externalOpen.set(false); this.externalComponents.set([]); this.externalError.set(''); this.externalForm.reset();
     this.parts.set(null);
     this.hasLoaded.set(false);
     this.loadFailed.set(false);
@@ -286,11 +467,12 @@ export class RmaPartsPanelComponent {
         if (this.rmaId() !== rmaId) return;
         this.parts.set(null);
         this.loadFailed.set(true);
-        this.loadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as peças do RMA.'));
+        this.loadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as peças da OS.'));
       }
     });
 
     this.loadCatalog();
+    this.loadExternal(rmaId);
   }
 
   private loadCatalog(): void {
@@ -298,7 +480,7 @@ export class RmaPartsPanelComponent {
     this.catalogRequest?.unsubscribe();
     this.catalogLoading.set(true);
 
-    this.catalogRequest = this.partService.list().pipe(
+    this.catalogRequest = this.partService.listOptions().pipe(
       takeUntilDestroyed(this.destroyRef),
       finalize(() => this.catalogLoading.set(false))
     ).subscribe({

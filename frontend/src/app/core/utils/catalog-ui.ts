@@ -13,15 +13,6 @@ export const PRESENCE_FILTER_OPTIONS: ReadonlyArray<{ value: PresenceFilter; lab
   { value: 'without', label: 'Sem' }
 ];
 
-export function matchesPresence(value: string | null | undefined, filter: PresenceFilter): boolean {
-  if (filter === 'all') {
-    return true;
-  }
-
-  const hasValue = Boolean(normalizeOptionalText(value));
-  return filter === 'with' ? hasValue : !hasValue;
-}
-
 export function extractHttpErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === 'object' && error !== null) {
     const maybeHttpError = error as {
@@ -63,12 +54,4 @@ export function includesQuery(
       .toLocaleLowerCase('pt-BR')
       .includes(normalizedQuery)
   );
-}
-
-export function countDistinct(values: Array<string | null | undefined>): number {
-  return new Set(
-    values
-      .map((value) => normalizeOptionalText(value)?.toLocaleLowerCase('pt-BR'))
-      .filter((value): value is string => Boolean(value))
-  ).size;
 }

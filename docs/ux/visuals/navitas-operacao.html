@@ -1,0 +1,335 @@
+<style>
+  #navitas-study {
+    --n-bg: light-dark(#ffffff, #1d2128); --n-soft: light-dark(#f7f8fa, #242930);
+    --n-text: light-dark(#172b4d, #e3e9f2); --n-muted: light-dark(#566171, #aeb9ca);
+    --n-line: light-dark(#dfe3e8, #414a57); --n-brand: light-dark(#236da7, #84c1f5);
+    --n-brand-on: light-dark(#ffffff, #102b46); --n-selected: light-dark(#eaf2fa, #233b53);
+    --n-good: light-dark(#216e4e, #90d8b6); --n-good-bg: light-dark(#e5f4ec, #1c3c31);
+    --n-warn: light-dark(#7f5f01, #f3d176); --n-warn-bg: light-dark(#fff4d3, #42381d);
+    --n-danger: light-dark(#ae2a19, #ffab9f); --n-danger-bg: light-dark(#ffebe6, #492c2a);
+    --n-radius: 8px; --n-card-pad: 13px;
+    color: var(--n-text); font: 14px/1.45 "Segoe UI", system-ui, sans-serif;
+    background: var(--n-bg); border: 1px solid var(--n-line); border-radius: 12px;
+    overflow: clip; position: relative;
+  }
+  #navitas-study *, #navitas-study *::before, #navitas-study *::after { box-sizing: border-box; }
+  #navitas-study [hidden] { display: none !important; }
+  #navitas-study button, #navitas-study input { font: inherit; }
+  #navitas-study button { cursor: pointer; }
+  #navitas-study button:focus-visible, #navitas-study input:focus-visible { outline: 3px solid var(--n-brand); outline-offset: 3px; }
+  #navitas-study button:disabled { opacity: .5; cursor: default; }
+  #navitas-study h2, #navitas-study h3, #navitas-study p { margin: 0; }
+  #navitas-study svg { flex: 0 0 auto; width: 16px; height: 16px; }
+  #navitas-study .n-app { display: grid; grid-template-columns: 166px minmax(0, 1fr); min-height: 680px; }
+  #navitas-study .n-sidebar { background: var(--n-soft); border-right: 1px solid var(--n-line); display: flex; flex-direction: column; padding: 22px 12px 12px; gap: 28px; }
+  #navitas-study .n-brand { display: flex; align-items: center; gap: 7px; padding-inline: 3px; font-weight: 600; font-size: 14px; white-space: nowrap; }
+  #navitas-study .n-brand-mark { display: grid; place-items: center; width: 28px; height: 28px; background: var(--n-brand); color: var(--n-brand-on); border-radius: 6px; font-weight: 700; }
+  #navitas-study .n-sidebar nav { display: grid; gap: 5px; }
+  #navitas-study .n-nav { display: flex; gap: 10px; align-items: center; border: 0; background: transparent; color: var(--n-muted); border-radius: 6px; padding: 9px 10px; text-align: left; min-height: 38px; }
+  #navitas-study .n-nav[aria-current=page] { background: var(--n-selected); color: var(--n-brand); font-weight: 600; }
+  #navitas-study .n-profile { margin-top: auto; border-top: 1px solid var(--n-line); padding: 16px 5px 2px; display: flex; align-items: center; gap: 8px; }
+  #navitas-study .n-profile small { display: block; font-size: 12px; color: var(--n-muted); }
+  #navitas-study .n-avatar { border-radius: 50%; display: inline-grid; place-items: center; width: 26px; height: 26px; flex-shrink: 0; font-size: 11px; font-weight: 600; background: var(--n-selected); color: var(--n-brand); }
+  #navitas-study .n-avatar[data-person=BR] { background: var(--n-good-bg); color: var(--n-good); }
+  #navitas-study .n-avatar[data-person=CL] { background: var(--n-warn-bg); color: var(--n-warn); }
+  #navitas-study .n-main { min-width: 0; }
+  #navitas-study .n-topbar { height: 57px; display: flex; align-items: center; justify-content: space-between; padding: 0 96px 0 24px; border-bottom: 1px solid var(--n-line); color: var(--n-muted); font-size: 12px; }
+  #navitas-study .n-crumb { display: flex; align-items: center; gap: 9px; }
+  #navitas-study .n-crumb strong { font-weight: 500; color: var(--n-text); }
+  #navitas-study .n-icon { display: inline-grid; place-items: center; width: 32px; height: 32px; border: 0; background: transparent; border-radius: 6px; color: var(--n-muted); position: relative; }
+  #navitas-study .n-icon:hover { background: var(--n-selected); color: var(--n-brand); }
+  #navitas-study .n-bell-count { position: absolute; top: -2px; right: -6px; min-width: 17px; height: 17px; background: var(--n-danger); color: var(--n-bg); border-radius: 9px; font-size: 11px; display: grid; place-items: center; }
+  #navitas-study .n-page { padding: 24px; }
+  #navitas-study .n-page-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  #navitas-study .n-page-head h2 { font-size: 23px; line-height: 1.3; font-weight: 600; letter-spacing: -.4px; }
+  #navitas-study .n-heading-line { display: flex; align-items: center; gap: 10px; }
+  #navitas-study .n-count { font-size: 12px; color: var(--n-muted); background: var(--n-soft); border-radius: 5px; padding: 2px 7px; font-variant-numeric: tabular-nums; }
+  #navitas-study .n-button { display: inline-flex; gap: 7px; align-items: center; justify-content: center; border: 1px solid var(--n-line); color: var(--n-text); background: var(--n-bg); min-height: 36px; border-radius: 6px; padding: 6px 11px; white-space: nowrap; }
+  #navitas-study .n-button:hover { background: var(--n-soft); }
+  #navitas-study .n-button.n-primary { background: var(--n-brand); border-color: var(--n-brand); color: var(--n-brand-on); font-weight: 500; }
+  #navitas-study .n-button[aria-pressed=true] { color: var(--n-brand); background: var(--n-selected); border-color: var(--n-brand); }
+  #navitas-study .n-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 18px; position: relative; }
+  #navitas-study .n-search { display: flex; align-items: center; gap: 7px; min-height: 36px; width: 205px; max-width: 100%; padding: 6px 9px; border: 1px solid var(--n-line); border-radius: 6px; color: var(--n-muted); background: var(--n-bg); }
+  #navitas-study .n-search input { border: 0; color: var(--n-text); background: transparent; min-width: 0; width: 100%; padding: 0; }
+  #navitas-study .n-search input::placeholder { color: var(--n-muted); opacity: 1; }
+  #navitas-study .n-filter-panel { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--n-line); background: var(--n-bg); box-shadow: 0 8px 24px light-dark(#172b4d1a, #00000040); border-radius: 8px; margin-bottom: 18px; }
+  #navitas-study .n-check { display: inline-flex; align-items: center; gap: 9px; min-height: 28px; cursor: pointer; }
+  #navitas-study .n-check input { width: 17px; height: 17px; accent-color: var(--n-brand); margin: 0; flex-shrink: 0; }
+  #navitas-study .n-board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; }
+  #navitas-study .n-column { min-width: 0; border-radius: 8px; background: var(--n-soft); padding: 10px 8px; min-height: 400px; }
+  #navitas-study .n-column-head { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 2px 3px 12px; }
+  #navitas-study .n-column-head h3 { font-size: 12px; font-weight: 600; }
+  #navitas-study .n-column-head .n-count { background: var(--n-bg); padding: 0 5px; }
+  #navitas-study .n-stack { display: grid; gap: 8px; }
+  #navitas-study .n-ticket { display: flex; flex-direction: column; gap: 11px; text-align: left; padding: var(--n-card-pad); border: 1px solid var(--n-line); border-radius: var(--n-radius); background: var(--n-bg); color: var(--n-text); width: 100%; min-width: 0; }
+  #navitas-study .n-ticket:hover { border-color: var(--n-brand); }
+  #navitas-study .n-ticket-title { font-weight: 500; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+  #navitas-study .n-tag { background: var(--n-soft); color: var(--n-muted); border-radius: 4px; padding: 2px 6px; font-size: 11px; align-self: start; }
+  #navitas-study .n-risk { display: flex; gap: 5px; align-items: center; color: var(--n-warn); font-size: 11px; font-weight: 500; }
+  #navitas-study .n-risk.n-late { color: var(--n-danger); }
+  #navitas-study .n-risk.n-healthy { color: var(--n-good); }
+  #navitas-study .n-risk svg { width: 13px; height: 13px; }
+  #navitas-study .n-ticket-foot { display: flex; align-items: center; gap: 5px; margin-top: auto; }
+  #navitas-study .n-key { font-size: 11px; white-space: nowrap; color: var(--n-muted); font-variant-numeric: tabular-nums; }
+  #navitas-study .n-priority { display: inline-flex; margin-left: auto; color: var(--n-muted); }
+  #navitas-study .n-priority[data-priority=Alta] { color: var(--n-danger); }
+  #navitas-study .n-ticket-foot .n-avatar { width: 22px; height: 22px; font-size: 10px; }
+  #navitas-study .n-empty { color: var(--n-muted); text-align: center; padding: 32px 8px; font-size: 12px; }
+  #navitas-study .n-bottom { color: var(--n-muted); font-size: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+  #navitas-study .n-table { width: 100%; border-collapse: collapse; }
+  #navitas-study .n-table th { text-align: left; font-size: 12px; font-weight: 500; color: var(--n-muted); padding: 12px 8px; border-bottom: 1px solid var(--n-line); }
+  #navitas-study .n-table td { border-bottom: 1px solid var(--n-line); padding: 15px 8px; vertical-align: middle; }
+  #navitas-study .n-table strong { display: block; font-weight: 500; }
+  #navitas-study .n-table small { display: block; color: var(--n-muted); font-size: 12px; }
+  #navitas-study .n-cell-actions { display: flex; justify-content: end; }
+  #navitas-study .n-danger { color: var(--n-danger); }
+  #navitas-study .n-state { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--n-good); }
+  #navitas-study .n-state::before { content: ''; height: 7px; width: 7px; border-radius: 50%; background: currentColor; }
+  #navitas-study .n-notice { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 18px 0; border-bottom: 1px solid var(--n-line); }
+  #navitas-study .n-event-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 6px; background: var(--n-selected); color: var(--n-brand); }
+  #navitas-study .n-notice strong { font-weight: 500; display: block; }
+  #navitas-study .n-notice p { font-size: 12px; color: var(--n-muted); margin-top: 5px; }
+  #navitas-study .n-notice .n-event-icon.n-danger { background: var(--n-danger-bg); color: var(--n-danger); }
+  #navitas-study .n-notice-link { background: none; border: 0; color: var(--n-text); padding: 0; text-align: left; }
+  #navitas-study .n-notice-link:hover { color: var(--n-brand); text-decoration: underline; }
+  #navitas-study .n-modal { position: absolute; inset: 12px; margin: auto; width: calc(100% - 24px); max-width: 930px; max-height: calc(100% - 24px); min-width: 0; padding: 0; color: var(--n-text); background: var(--n-bg); border: 1px solid var(--n-line); border-radius: 12px; box-shadow: 0 20px 70px #00000030; }
+  #navitas-study .n-modal::backdrop { background: #101c2d66; }
+  #navitas-study .n-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 22px; border-bottom: 1px solid var(--n-line); }
+  #navitas-study .n-modal-head .n-key { font-size: 13px; }
+  #navitas-study .n-modal-layout { display: grid; grid-template-columns: minmax(0, 1fr) 250px; min-height: 530px; }
+  #navitas-study .n-detail-main { padding: 24px; min-width: 0; }
+  #navitas-study .n-detail-main h2 { font-size: 22px; line-height: 1.35; font-weight: 600; letter-spacing: -.3px; }
+  #navitas-study .n-subtitle { color: var(--n-muted); margin-top: 6px; display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  #navitas-study .n-tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--n-line); margin: 24px 0; flex-wrap: wrap; }
+  #navitas-study .n-tab { color: var(--n-muted); padding: 0 0 11px; min-height: 32px; border: 0; border-bottom: 2px solid transparent; background: none; font-size: 13px; }
+  #navitas-study .n-tab[aria-selected=true] { color: var(--n-brand); border-bottom-color: var(--n-brand); font-weight: 600; }
+  #navitas-study .n-section { margin-top: 24px; }
+  #navitas-study .n-section:first-child { margin-top: 0; }
+  #navitas-study .n-section h3 { font-size: 15px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  #navitas-study .n-section h3 svg { color: var(--n-muted); }
+  #navitas-study .n-section p { font-size: 14px; line-height: 1.65; }
+  #navitas-study .n-next { display: flex; align-items: center; gap: 10px; margin-top: 24px; border-top: 1px solid var(--n-line); padding-top: 20px; }
+  #navitas-study .n-next .n-event-icon { flex-shrink: 0; }
+  #navitas-study .n-next p { font-size: 12px; color: var(--n-muted); }
+  #navitas-study .n-side { background: var(--n-soft); border-left: 1px solid var(--n-line); padding: 24px 20px; }
+  #navitas-study .n-side h3 { font-weight: 600; font-size: 14px; margin: 24px 0 14px; }
+  #navitas-study .n-status { background: var(--n-selected); color: var(--n-brand); display: inline-flex; gap: 7px; align-items: center; border-radius: 5px; padding: 6px 9px; font-size: 12px; font-weight: 600; }
+  #navitas-study .n-meta { margin: 0; display: grid; gap: 17px; }
+  #navitas-study .n-meta > div { display: grid; gap: 5px; }
+  #navitas-study .n-meta dt { font-size: 12px; color: var(--n-muted); }
+  #navitas-study .n-meta dd { margin: 0; display: flex; align-items: center; gap: 7px; overflow-wrap: anywhere; font-size: 13px; }
+  #navitas-study .n-meta .n-risk { font-size: 12px; }
+  #navitas-study .n-hairline { border: 0; border-top: 1px solid var(--n-line); margin: 22px 0; }
+  #navitas-study .n-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 16px; }
+  #navitas-study .n-timeline { list-style: none; padding: 0; margin: 0; display: grid; gap: 23px; }
+  #navitas-study .n-timeline li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; }
+  #navitas-study .n-event-head { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 5px; font-size: 13px; }
+  #navitas-study .n-event-head strong { font-weight: 600; }
+  #navitas-study .n-event-head time { font-size: 12px; color: var(--n-muted); }
+  #navitas-study .n-transition { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; margin-top: 7px; font-size: 12px; }
+  #navitas-study .n-transition span { background: var(--n-soft); border-radius: 4px; padding: 3px 6px; }
+  #navitas-study .n-transition span:last-child { background: var(--n-selected); color: var(--n-brand); }
+  #navitas-study .n-timeline p { font-size: 13px; margin-top: 8px; color: var(--n-muted); }
+  #navitas-study .n-progress { height: 5px; background: var(--n-line); border-radius: 3px; overflow: hidden; margin: 12px 0 20px; }
+  #navitas-study .n-progress > span { height: 100%; display: block; background: var(--n-brand); }
+  #navitas-study .n-checklist { display: grid; gap: 12px; margin: 20px 0; }
+  #navitas-study .n-form { padding: 24px; display: grid; gap: 15px; }
+  #navitas-study .n-field { display: grid; gap: 6px; font-size: 13px; }
+  #navitas-study .n-field input { min-height: 36px; border: 1px solid var(--n-line); border-radius: 6px; padding: 7px 9px; background: var(--n-bg); color: var(--n-text); width: 100%; }
+  #navitas-study .n-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+  #navitas-study .n-message { font-size: 12px; color: var(--n-good); margin-top: 14px; min-height: 18px; }
+  @media(max-width: 820px) {
+    #navitas-study .n-app { grid-template-columns: 52px minmax(0,1fr); }
+    #navitas-study .n-sidebar { padding-inline: 7px; }
+    #navitas-study .n-brand { padding: 0; justify-content: center; }
+    #navitas-study .n-brand-label, #navitas-study .n-nav-label, #navitas-study .n-profile-meta { display: none; }
+    #navitas-study .n-nav { justify-content: center; padding: 10px 0; }
+    #navitas-study .n-profile { padding-inline: 0; justify-content: center; }
+    #navitas-study .n-page { padding: 20px 16px; }
+    #navitas-study .n-topbar { padding-left: 16px; }
+    #navitas-study .n-board { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    #navitas-study .n-column { min-height: 260px; }
+    #navitas-study .n-modal-layout { grid-template-columns: minmax(0,1fr) 210px; }
+  }
+  @media(max-width: 550px) {
+    #navitas-study .n-modal-layout { grid-template-columns: minmax(0,1fr); }
+    #navitas-study .n-side { border-left: 0; border-top: 1px solid var(--n-line); }
+    #navitas-study .n-detail-main { padding: 20px 16px; }
+    #navitas-study .n-tabs { gap: 12px; }
+    #navitas-study .n-board { grid-template-columns: minmax(0,1fr); }
+    #navitas-study .n-column { min-height: 0; }
+    #navitas-study .n-table .n-extra { display: none; }
+    #navitas-study .n-table td, #navitas-study .n-table th { padding-inline: 4px; }
+    #navitas-study .n-table { font-size: 12px; }
+    #navitas-study .n-tools .n-search { width: 100%; }
+    #navitas-study .n-facts { grid-template-columns: minmax(0,1fr); }
+    #navitas-study .n-topbar { padding-right: 90px; }
+    #navitas-study .n-topbar .n-crumb > span { display: none; }
+  }
+  @media(pointer: coarse) { #navitas-study .n-icon, #navitas-study .n-button, #navitas-study .n-tab, #navitas-study .n-check { min-height: 44px; } #navitas-study .n-icon { min-width: 44px; } }
+</style>
+<div id="navitas-study" lang="pt-BR" aria-label="Proposta visual do Navitas Assist">
+  <div class="n-app">
+    <aside class="n-sidebar" aria-label="Navegação principal">
+      <div class="n-brand"><span class="n-brand-mark" aria-hidden="true">N</span><span class="n-brand-label">Navitas Assist</span></div>
+      <nav>
+        <button class="n-nav" type="button" data-screen="kanban" aria-current="page" aria-label="Kanban"><i data-lucide="columns-3" aria-hidden="true"></i><span class="n-nav-label">Kanban</span></button>
+        <button class="n-nav" type="button" data-screen="products" aria-label="Produtos"><i data-lucide="package" aria-hidden="true"></i><span class="n-nav-label">Produtos</span></button>
+        <button class="n-nav" type="button" data-screen="notifications" aria-label="Notificações"><i data-lucide="bell" aria-hidden="true"></i><span class="n-nav-label">Notificações</span></button>
+      </nav>
+      <div class="n-profile"><span class="n-avatar">AM</span><div class="n-profile-meta">Ana Martins<small>Técnica</small></div></div>
+    </aside>
+    <main class="n-main">
+      <header class="n-topbar"><div class="n-crumb"><span>Operação</span><i data-lucide="chevron-right" aria-hidden="true"></i><strong id="n-breadcrumb">Kanban</strong></div><button type="button" class="n-icon" data-screen="notifications" aria-label="Notificações: 3 não lidas" data-tooltip="Notificações"><i data-lucide="bell" aria-hidden="true"></i><span class="n-bell-count" id="n-bell-count" aria-hidden="true">3</span></button></header>
+      <div class="n-page" id="n-page"></div>
+    </main>
+  </div>
+  <dialog class="n-modal" id="n-detail" aria-labelledby="n-detail-title">
+    <header class="n-modal-head"><span class="n-key" id="n-detail-key">OS-1048</span><button type="button" class="n-icon" data-close aria-label="Fechar detalhes" data-tooltip="Fechar"><i data-lucide="x" aria-hidden="true"></i></button></header>
+    <div class="n-modal-layout">
+      <div class="n-detail-main">
+        <h2 id="n-detail-title">Controlador NVT-500 não liga</h2>
+        <div class="n-subtitle"><i data-lucide="building-2" aria-hidden="true"></i><span id="n-client">Solar Sul</span></div>
+        <div class="n-tabs" role="tablist" aria-label="Detalhes da OS">
+          <button class="n-tab" role="tab" type="button" id="n-tab-overview" aria-controls="n-panel-overview" aria-selected="true" data-tab="overview">Visão geral</button>
+          <button class="n-tab" role="tab" type="button" id="n-tab-items" aria-controls="n-panel-items" aria-selected="false" data-tab="items">Itens</button>
+          <button class="n-tab" role="tab" type="button" id="n-tab-activity" aria-controls="n-panel-activity" aria-selected="false" data-tab="activity">Atividade</button>
+          <button class="n-tab" role="tab" type="button" id="n-tab-protocol" aria-controls="n-panel-protocol" aria-selected="false" data-tab="protocol">Protocolos</button>
+        </div>
+        <div id="n-panel-overview" role="tabpanel" aria-labelledby="n-tab-overview">
+          <section class="n-section"><h3><i data-lucide="message-square" aria-hidden="true"></i>Falha relatada</h3><p id="n-failure">O equipamento não liga após a conexão à rede. O indicador de alimentação permanece apagado.</p></section>
+          <section class="n-section"><h3><i data-lucide="scan-search" aria-hidden="true"></i>Diagnóstico</h3><p id="n-diagnosis">Alimentação de entrada conferida. Verificar a fonte interna e registrar as medições de bancada.</p></section>
+          <div class="n-next"><span class="n-event-icon"><i data-lucide="clipboard-check" aria-hidden="true"></i></span><div><strong>Inspeção de entrada</strong><p>Checklist de recebimento</p></div></div>
+          <div class="n-dialog-actions"><button type="button" class="n-button n-primary" id="n-start-protocol"><i data-lucide="play" aria-hidden="true"></i>Iniciar protocolo</button></div>
+        </div>
+        <div id="n-panel-items" role="tabpanel" aria-labelledby="n-tab-items" hidden>
+          <section class="n-section"><h3><i data-lucide="package" aria-hidden="true"></i><span id="n-product-title">Controlador NVT-500</span><span class="n-count">1</span></h3><dl class="n-meta n-facts"><div><dt>SKU</dt><dd id="n-sku">NVT-500</dd></div><div><dt>Garantia</dt><dd class="n-state">Em garantia</dd></div><div><dt>Série</dt><dd>NV26004821</dd></div><div><dt>Lote</dt><dd>LT-2026-08</dd></div><div><dt>Acessórios</dt><dd>Cabo de alimentação</dd></div><div><dt>Condição física</dt><dd>Sem avarias aparentes</dd></div></dl></section>
+        </div>
+        <div id="n-panel-activity" role="tabpanel" aria-labelledby="n-tab-activity" hidden>
+          <ol class="n-timeline" aria-label="Histórico do atendimento">
+            <li><span class="n-avatar">AM</span><div><div class="n-event-head"><strong>Ana Martins</strong><time>6 nov, 10:42</time></div><div class="n-transition" aria-label="Status alterado de Triagem para Em diagnóstico"><span>Triagem</span><i data-lucide="arrow-right" aria-hidden="true"></i><span>Em diagnóstico</span></div><p>Iniciada a verificação da fonte interna.</p></div></li>
+            <li><span class="n-avatar" data-person="BR">BR</span><div><div class="n-event-head"><strong>Bruno Rocha</strong><time>6 nov, 09:15</time></div><div class="n-transition" aria-label="Responsável alterado de Bruno Rocha para Ana Martins"><span>Bruno Rocha</span><i data-lucide="arrow-right" aria-hidden="true"></i><span>Ana Martins</span></div></div></li>
+            <li><span class="n-avatar" data-person="CL">CL</span><div><div class="n-event-head"><strong>Carla Lima</strong><time>5 nov, 16:30</time></div><div class="n-transition" aria-label="Status alterado de Recebido para Triagem"><span>Recebido</span><i data-lucide="arrow-right" aria-hidden="true"></i><span>Triagem</span></div></div></li>
+          </ol>
+        </div>
+        <div id="n-panel-protocol" role="tabpanel" aria-labelledby="n-tab-protocol" hidden>
+          <section class="n-section"><h3><i data-lucide="clipboard-check" aria-hidden="true"></i>Inspeção de entrada</h3><span id="n-progress-label">0 de 3 etapas</span><div class="n-progress" role="progressbar" aria-label="Inspeção de entrada" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0" id="n-progress"><span style="width:0%"></span></div><div class="n-checklist"><label class="n-check"><input type="checkbox" data-step="visual">Inspeção visual</label><label class="n-check"><input type="checkbox" data-step="accessories">Conferir acessórios</label><label class="n-check"><input type="checkbox" data-step="power">Verificar alimentação</label></div></section>
+        </div>
+      </div>
+      <aside class="n-side" aria-label="Informações da OS">
+        <span class="n-status"><i data-lucide="circle-dot" aria-hidden="true"></i><span id="n-detail-status">Em diagnóstico</span></span>
+        <h3>Informações</h3>
+        <dl class="n-meta"><div><dt>Responsável</dt><dd><span class="n-avatar" id="n-owner-avatar">AM</span><span id="n-owner">Ana Martins</span></dd></div><div><dt>Prioridade</dt><dd id="n-detail-priority"><i data-lucide="chevrons-up" aria-hidden="true"></i>Alta</dd></div><div><dt>SLA</dt><dd class="n-risk" id="n-detail-sla"><i data-lucide="clock-3" aria-hidden="true"></i>Vence em 2 h</dd></div><div><dt>Prazo</dt><dd>6 nov, 17:00</dd></div><div id="n-detail-block" hidden><dt>Impedimento ativo</dt><dd class="n-danger"><i data-lucide="ban" aria-hidden="true"></i>Aguardando fonte de reposição</dd></div></dl>
+        <hr class="n-hairline"><h3>Atendimento</h3><dl class="n-meta"><div><dt>Entrada</dt><dd>5 nov 2026</dd></div><div><dt>Nota fiscal</dt><dd>00008452</dd></div></dl>
+      </aside>
+    </div>
+  </dialog>
+  <dialog class="n-modal" id="n-product-dialog" aria-labelledby="n-product-dialog-title" style="max-width:460px">
+    <header class="n-modal-head"><h3 id="n-product-dialog-title">Novo produto</h3><button type="button" class="n-icon" data-close-product aria-label="Fechar produto"><i data-lucide="x" aria-hidden="true"></i></button></header>
+    <form class="n-form" id="n-product-form"><label class="n-field">Produto<input id="n-product-name" required maxlength="80" autocomplete="off"></label><label class="n-field">SKU<input id="n-product-code" required maxlength="32" autocomplete="off"></label><div class="n-dialog-actions"><button type="button" class="n-button" data-close-product>Cancelar</button><button type="submit" class="n-button n-primary">Salvar produto</button></div></form>
+  </dialog>
+  <dialog class="n-modal" id="n-delete-dialog" aria-labelledby="n-delete-title" style="max-width:430px">
+    <div class="n-form"><h3 id="n-delete-title">Excluir produto?</h3><p id="n-delete-name"></p><div class="n-dialog-actions"><button type="button" class="n-button" id="n-cancel-delete">Cancelar</button><button type="button" class="n-button n-danger" id="n-confirm-delete"><i data-lucide="trash-2" aria-hidden="true"></i>Excluir produto</button></div></div>
+  </dialog>
+  <div aria-live="polite" id="n-live" style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)"></div>
+</div>
+<script>
+(() => {
+  const root = document.getElementById('navitas-study');
+  const $ = s => root.querySelector(s);
+  const all = s => [...root.querySelectorAll(s)];
+  const icons = () => { if (globalThis.lucide) lucide.createIcons({attrs:{width:16,height:16}}); };
+  const escape = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const tickets = [
+    {id:'OS-1052', title:'Display NVT-200 sem imagem', product:'Display NVT-200', sku:'NVT-200', client:'Horizonte Energia', col:0, tag:'Display', priority:'Média', person:'BR', owner:'Bruno Rocha'},
+    {id:'OS-1050', title:'Sensor com leitura instável', product:'Sensor NVT-S1', sku:'NVT-S1', client:'Alfa Automação', col:0, tag:'Sensor', priority:'Baixa', person:'CL', owner:'Carla Lima'},
+    {id:'OS-1049', title:'Controlador reinicia em operação', product:'Controlador NVT-300', sku:'NVT-300', client:'Delta Solar', col:1, tag:'Controlador', priority:'Alta', person:'AM', owner:'Ana Martins', risk:'Vence em 4 h'},
+    {id:'OS-1046', title:'Falha na comunicação do inversor', product:'Inversor NVT-I2', sku:'NVT-I2', client:'Solar Sul', col:1, tag:'Inversor', priority:'Média', person:'BR', owner:'Bruno Rocha'},
+    {id:'OS-1048', title:'Controlador NVT-500 não liga', product:'Controlador NVT-500', sku:'NVT-500', client:'Solar Sul', col:2, tag:'Controlador', priority:'Alta', person:'AM', owner:'Ana Martins', risk:'Vence em 2 h'},
+    {id:'OS-1044', title:'Oscilação no sinal de saída', product:'Módulo NVT-M2', sku:'NVT-M2', client:'Alfa Automação', col:2, tag:'Módulo', priority:'Média', person:'CL', owner:'Carla Lima'},
+    {id:'OS-1039', title:'Substituir fonte do controlador', product:'Controlador NVT-500', sku:'NVT-500', client:'Delta Solar', col:3, tag:'Controlador', priority:'Alta', person:'BR', owner:'Bruno Rocha', risk:'Vencido há 1 d', blocked:true}
+  ];
+  const columns = ['Recebido','Triagem','Em diagnóstico','Aguardando peça'];
+  let screen='kanban', query='', mine=false, risk=false, high=false, blocked=false, filtersOpen=false;
+  let selected=tickets[4], activeTab='overview', productEdit=-1, deleteIndex=-1;
+  let checks = {};
+  let products = [
+    {name:'Controlador NVT-500',sku:'NVT-500',category:'Controlador',warranty:'12 meses'},
+    {name:'Display NVT-200',sku:'NVT-200',category:'Display',warranty:'12 meses'},
+    {name:'Sensor NVT-S1',sku:'NVT-S1',category:'Sensor',warranty:'6 meses'}
+  ];
+  let notices = [
+    {title:'Prazo de atendimento vencido',id:'OS-1039',time:'Há 12 min',icon:'clock-3',danger:true,read:false},
+    {title:'Ana atribuiu uma OS a você',id:'OS-1048',time:'Há 35 min',icon:'user-round',read:false},
+    {title:'Diagnóstico disponível',id:'OS-1044',time:'Há 1 h',icon:'scan-search',read:false}
+  ];
+  const saved = window.openai?.widgetState;
+  if(saved?.modelContent && ['kanban','products','notifications'].includes(saved.modelContent.screen)) screen=saved.modelContent.screen;
+  function persist(){ window.openai?.setWidgetState?.({modelContent:{screen,selectedRma:selected.id},privateContent:{mine,risk}})?.catch(()=>{}); }
+  function announce(text){ $('#n-live').textContent=text; }
+  function setScreen(next){ screen=next; query=''; draw(); persist(); }
+  function card(t){
+    const priorityIcon = t.priority==='Alta'?'chevrons-up':t.priority==='Baixa'?'arrow-down':'minus';
+    return `<button type="button" class="n-ticket" data-ticket="${t.id}" aria-label="${escape(t.id+' '+t.title)}"><span class="n-ticket-title">${escape(t.title)}</span><span class="n-tag">${t.tag}</span>${t.risk?`<span class="n-risk ${t.blocked?'n-late':''}"><i data-lucide="${t.blocked?'circle-alert':'clock-3'}" aria-hidden="true"></i>${t.risk}</span>`:''}${t.blocked?'<span class="n-risk n-late"><i data-lucide="ban" aria-hidden="true"></i>Bloqueado</span>':''}<span class="n-ticket-foot"><span class="n-key">${t.id}</span><span class="n-priority" data-priority="${t.priority}" data-tooltip="Prioridade ${t.priority.toLowerCase()}" aria-label="Prioridade ${t.priority.toLowerCase()}"><i data-lucide="${priorityIcon}" aria-hidden="true"></i></span><span class="n-avatar" data-person="${t.person}" data-tooltip="${t.owner}" aria-label="Responsável: ${t.owner}">${t.person}</span></span></button>`;
+  }
+  function filtered(){const q=query.toLocaleLowerCase('pt-BR');return tickets.filter(t=>(!mine||t.person==='AM')&&(!risk||t.risk)&&(!high||t.priority==='Alta')&&(!blocked||t.blocked)&&(!q||[t.id,t.title,t.client,t.sku].some(x=>x.toLocaleLowerCase('pt-BR').includes(q))));}
+  function drawBoard(){ const list=filtered(); $('#n-board').innerHTML=columns.map((c,i)=>`<section class="n-column" aria-label="${c}"><header class="n-column-head"><h3>${c}</h3><span class="n-count">${list.filter(t=>t.col===i).length}</span></header><div class="n-stack">${list.filter(t=>t.col===i).map(card).join('')||'<div class="n-empty">Nenhuma OS</div>'}</div></section>`).join(''); $('#n-results').textContent=`${list.length} de ${tickets.length} ordens de serviço`; icons(); }
+  function draw(){
+    all('.n-nav').forEach(b=>{if(b.dataset.screen===screen)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+    const title={kanban:'Kanban',products:'Produtos',notifications:'Notificações'}[screen]; $('#n-breadcrumb').textContent=title;
+    if(screen==='kanban'){
+      $('#n-page').innerHTML=`<div class="n-page-head"><div class="n-heading-line"><h2>Kanban</h2><span class="n-count">${tickets.length}</span></div></div><div class="n-tools"><label class="n-search"><i data-lucide="search" aria-hidden="true"></i><input type="search" id="n-search" aria-label="Buscar ordens de serviço" placeholder="Buscar ordens de serviço"></label><button class="n-button" type="button" id="n-mine" aria-pressed="${mine}"><i data-lucide="user-round" aria-hidden="true"></i>Só meus</button><button class="n-button" type="button" id="n-risk" aria-pressed="${risk}"><i data-lucide="clock-3" aria-hidden="true"></i>SLA em risco</button><button class="n-button" type="button" id="n-filters" aria-expanded="${filtersOpen}" aria-controls="n-filter-panel"><i data-lucide="sliders-horizontal" aria-hidden="true"></i>Filtros${high||blocked?' ('+(Number(high)+Number(blocked))+')':''}</button></div><div class="n-filter-panel" id="n-filter-panel" ${filtersOpen?'':'hidden'}><label class="n-check"><input id="n-high" type="checkbox" ${high?'checked':''}>Alta prioridade</label><label class="n-check"><input id="n-blocked" type="checkbox" ${blocked?'checked':''}>Bloqueados</label><button type="button" class="n-button" id="n-clear">Limpar filtros</button></div><div class="n-board" id="n-board" aria-label="Quadro de ordens de serviço"></div><div class="n-bottom"><span id="n-results" aria-live="polite"></span><span>Recorte de 4 etapas</span></div>`;
+      $('#n-search').value=query;
+      $('#n-search').addEventListener('input',e=>{query=e.target.value;drawBoard();});
+      $('#n-mine').onclick=()=>{mine=!mine;draw();persist();}; $('#n-risk').onclick=()=>{risk=!risk;draw();persist();};
+      $('#n-filters').onclick=()=>{filtersOpen=!filtersOpen;$('#n-filter-panel').hidden=!filtersOpen;$('#n-filters').setAttribute('aria-expanded',String(filtersOpen));};
+      $('#n-high').onchange=e=>{high=e.target.checked;draw();}; $('#n-blocked').onchange=e=>{blocked=e.target.checked;draw();};
+      $('#n-clear').onclick=()=>{query='';mine=risk=high=blocked=false;draw();}; drawBoard();
+    }else if(screen==='products'){
+      $('#n-page').innerHTML=`<div class="n-page-head"><div class="n-heading-line"><h2>Produtos</h2><span class="n-count">${products.length}</span></div><button class="n-button n-primary" type="button" id="n-new-product"><i data-lucide="plus" aria-hidden="true"></i>Novo produto</button></div><table class="n-table"><thead><tr><th>Produto</th><th class="n-extra">Garantia</th><th>Estado</th><th><span style="position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden">Ações</span></th></tr></thead><tbody>${products.map((p,i)=>`<tr><td><strong>${escape(p.name)}</strong><small>${escape(p.sku)}</small></td><td class="n-extra">${p.warranty}</td><td><span class="n-state">Ativo</span></td><td><div class="n-cell-actions"><button type="button" class="n-icon" data-edit="${i}" aria-label="Editar ${escape(p.name)}" data-tooltip="Editar"><i data-lucide="pencil" aria-hidden="true"></i></button><button type="button" class="n-icon n-danger" data-delete="${i}" aria-label="Excluir ${escape(p.name)}" data-tooltip="Excluir"><i data-lucide="trash-2" aria-hidden="true"></i></button></div></td></tr>`).join('')}</tbody></table>${!products.length?'<div class="n-empty">Nenhum produto cadastrado</div>':''}<div class="n-message" id="n-product-message" role="status"></div>`;
+      $('#n-new-product').onclick=()=>editProduct(-1);
+    }else{
+      $('#n-page').innerHTML=`<div class="n-page-head"><div class="n-heading-line"><h2>Notificações</h2><span class="n-count">${notices.filter(n=>!n.read).length}</span></div><button class="n-button" type="button" id="n-read-all"><i data-lucide="check-check" aria-hidden="true"></i>Marcar como lidas</button></div>${notices.map((n,i)=>`<article class="n-notice"><span class="n-event-icon ${n.danger?'n-danger':''}"><i data-lucide="${n.icon}" aria-hidden="true"></i></span><div><button type="button" class="n-notice-link" data-ticket="${n.id}"><strong>${n.title}</strong></button><p>${n.id}</p><p>${n.time}${n.read?' · Lida':''}</p></div><button class="n-icon" type="button" data-read="${i}" aria-label="${n.read?'Marcar como não lida':'Marcar como lida'}" data-tooltip="${n.read?'Marcar como não lida':'Marcar como lida'}"><i data-lucide="${n.read?'mail-open':'mail'}" aria-hidden="true"></i></button></article>`).join('')}`;
+      $('#n-read-all').onclick=()=>{notices.forEach(n=>n.read=true);updateCount();draw();};
+    }
+    icons();
+  }
+  function updateCount(){const count=notices.filter(n=>!n.read).length;$('#n-bell-count').textContent=count;$('#n-bell-count').hidden=count===0;$('.n-topbar [data-screen]').setAttribute('aria-label',`Notificações: ${count} não lidas`);announce(`${count} notificações não lidas`);}
+  function tab(name){activeTab=name;all('[data-tab]').forEach(b=>{const active=b.dataset.tab===name;b.setAttribute('aria-selected',String(active));$('#n-panel-'+b.dataset.tab).hidden=!active;});}
+  function openTicket(id){
+    selected=tickets.find(t=>t.id===id)||tickets[4];
+    $('#n-detail-key').textContent=selected.id;$('#n-detail-title').textContent=selected.title;$('#n-client').textContent=selected.client;$('#n-owner').textContent=selected.owner;$('#n-owner-avatar').textContent=selected.person;$('#n-owner-avatar').dataset.person=selected.person;$('#n-detail-status').textContent=columns[selected.col];$('#n-detail-priority').innerHTML=`<i data-lucide="${selected.priority==='Alta'?'chevrons-up':'minus'}" aria-hidden="true"></i>${selected.priority}`;$('#n-detail-sla').innerHTML=`<i data-lucide="clock-3" aria-hidden="true"></i>${selected.risk||'Em dia'}`;
+    $('#n-product-title').textContent=selected.product;$('#n-sku').textContent=selected.sku;
+    $('#n-detail-sla').className='n-risk'+(selected.blocked?' n-late':!selected.risk?' n-healthy':'');$('#n-detail-block').hidden=!selected.blocked;
+    if(selected.id!=='OS-1048'){
+      const from=columns[Math.max(0,selected.col-1)],to=columns[selected.col];
+      $('#n-panel-activity').innerHTML=`<ol class="n-timeline" aria-label="Histórico do atendimento"><li><span class="n-avatar" data-person="${selected.person}">${selected.person}</span><div><div class="n-event-head"><strong>${selected.owner}</strong><time>6 nov, 10:42</time></div><div class="n-transition" aria-label="Etapa atual: ${to}"><span>${from}</span><i data-lucide="arrow-right" aria-hidden="true"></i><span>${to}</span></div><p>${selected.blocked?'Solicitada fonte de reposição.':'Conferência do equipamento registrada.'}</p></div></li></ol>`;
+    }else $('#n-panel-activity').innerHTML=activityExample;
+    $('#n-failure').textContent=selected.id==='OS-1048'?'O equipamento não liga após a conexão à rede. O indicador de alimentação permanece apagado.':selected.title+'. Relato recebido junto ao equipamento.';
+    $('#n-diagnosis').textContent=selected.id==='OS-1048'?'Alimentação de entrada conferida. Verificar a fonte interna e registrar as medições de bancada.':'Verificar o equipamento em bancada e registrar as evidências do atendimento.';
+    tab('overview');all('[data-step]').forEach(c=>c.checked=!!checks[selected.id]?.[c.dataset.step]);updateProgress();icons();$('#n-detail').showModal();persist();
+  }
+  const activityExample=$('#n-panel-activity').innerHTML;
+  function updateProgress(){const done=all('[data-step]').filter(c=>c.checked).length;$('#n-progress-label').textContent=`${done} de 3 etapas`;$('#n-progress').setAttribute('aria-valuenow',done);$('#n-progress > span').style.width=`${done/3*100}%`;}
+  function editProduct(i){productEdit=i;$('#n-product-dialog-title').textContent=i<0?'Novo produto':'Editar produto';$('#n-product-name').value=i<0?'':products[i].name;$('#n-product-code').value=i<0?'':products[i].sku;$('#n-product-dialog').showModal();}
+  root.addEventListener('click',e=>{
+    const b=e.target.closest('button');if(!b)return;
+    if(b.dataset.screen)setScreen(b.dataset.screen);
+    if(b.dataset.ticket)openTicket(b.dataset.ticket);
+    if(b.hasAttribute('data-close'))$('#n-detail').close();
+    if(b.dataset.tab)tab(b.dataset.tab);
+    if(b.hasAttribute('data-close-product'))$('#n-product-dialog').close();
+    if(b.dataset.edit!==undefined)editProduct(Number(b.dataset.edit));
+    if(b.dataset.delete!==undefined){deleteIndex=Number(b.dataset.delete);$('#n-delete-name').textContent=products[deleteIndex].name;$('#n-delete-dialog').showModal();}
+    if(b.dataset.read!==undefined){notices[Number(b.dataset.read)].read=!notices[Number(b.dataset.read)].read;updateCount();draw();}
+  });
+  $('.n-tabs').addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;const buttons=all('[data-tab]');let i=buttons.indexOf(document.activeElement);if(i<0)return;e.preventDefault();i=e.key==='Home'?0:e.key==='End'?buttons.length-1:(i+(e.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length;tab(buttons[i].dataset.tab);buttons[i].focus();});
+  $('#n-start-protocol').onclick=()=>{tab('protocol');$('#n-tab-protocol').focus();};
+  all('[data-step]').forEach(c=>c.onchange=()=>{checks[selected.id]??={};checks[selected.id][c.dataset.step]=c.checked;updateProgress();announce($('#n-progress-label').textContent);});
+  $('#n-product-form').onsubmit=e=>{e.preventDefault();const value={name:$('#n-product-name').value.trim(),sku:$('#n-product-code').value.trim(),category:'Produto',warranty:'12 meses'};if(!value.name||!value.sku)return;if(productEdit<0)products.push(value);else products[productEdit]={...products[productEdit],...value};$('#n-product-dialog').close();draw();$('#n-product-message').textContent='Produto salvo nesta demonstração.';};
+  $('#n-cancel-delete').onclick=()=>$('#n-delete-dialog').close();$('#n-confirm-delete').onclick=()=>{products.splice(deleteIndex,1);$('#n-delete-dialog').close();draw();announce('Produto excluído nesta demonstração.');};
+  window.addEventListener('openai:set_globals',e=>{const next=e.detail?.globals?.widgetState?.modelContent?.screen;if(['kanban','products','notifications'].includes(next)){screen=next;draw();}});
+  draw();
+  if(globalThis.Tweak){const options={density:'Padrão',radius:8};const tweak=new Tweak({container:root,onChange:()=>{root.style.setProperty('--n-card-pad',options.density==='Compacta'?'10px':'13px');root.style.setProperty('--n-radius',options.radius+'px');}});tweak.addSelect(options,'density',{label:'Densidade dos cards',options:['Padrão','Compacta']});tweak.addSlider(options,'radius',{label:'Raio dos cards',min:4,max:12,step:2,unit:'px'});}
+})();
+</script>

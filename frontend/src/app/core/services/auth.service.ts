@@ -98,7 +98,8 @@ export class AuthService {
     return {
       username: user.username,
       name: user.fullName || user.username,
-      profileName: user.profile?.name ?? '',
+      email: user.email,
+      profileName: user.profileName ?? '',
       permissions: (user.permissions ?? []).filter(isPermission)
     };
   }

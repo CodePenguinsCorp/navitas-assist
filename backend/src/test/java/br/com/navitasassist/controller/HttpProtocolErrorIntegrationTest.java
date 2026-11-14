@@ -89,7 +89,7 @@ class HttpProtocolErrorIntegrationTest {
         mvc.perform(get("/api/products").with(asProfile("viewer", "VIEWER"))).andExpect(status().isOk());
         mvc.perform(post("/api/products").with(asProfile("admin", "ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{}"))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Validation failed"));
-        mvc.perform(get("/api/products/9223372036854775807").with(asProfile("viewer", "VIEWER")))
+        mvc.perform(get("/api/clients/9223372036854775807").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isNotFound());
     }
 
@@ -101,7 +101,7 @@ class HttpProtocolErrorIntegrationTest {
         boundary.perform(get("/api/products"))
             .andExpect(status().isInternalServerError())
             .andExpect(jsonPath("$.status").value(500))
-            .andExpect(jsonPath("$.message").value("Unexpected error"))
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.matchesPattern("Erro inesperado\\. Informe o código [A-F0-9]{8} ao suporte\\.")))
             .andExpect(content().string(not(containsString("private-service-details"))));
     }
 }

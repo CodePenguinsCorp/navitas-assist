@@ -1,0 +1,29 @@
+:host { display: block; min-width: 0; }
+/* The row is the card's .detail-card__title; a folded section drops the rule and the gap under it. */
+.collapsible__head { gap: var(--space-3); }
+.collapsible__head.is-collapsed { margin-bottom: 0; padding-bottom: 0; border-bottom-color: transparent; }
+.collapsible__heading { display: flex; flex: 1 1 auto; min-width: 0; margin: 0; font: inherit; letter-spacing: inherit; text-transform: inherit; }
+.collapsible__toggle {
+  display: flex; flex: 1 1 auto; align-items: center; gap: var(--space-2); min-width: 0; min-height: var(--control-height-xs);
+  margin: 0; padding: 0; border: 0; border-radius: var(--radius-sm); background: none;
+  color: inherit; font: inherit; letter-spacing: inherit; text-align: left; text-transform: inherit; cursor: pointer;
+}
+.collapsible__toggle:hover .collapsible__title { text-decoration: underline; text-underline-offset: 3px; }
+.collapsible__toggle:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.collapsible__title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.collapsible__count {
+  display: inline-flex; align-items: center; min-height: var(--control-height-xs); padding: 0 var(--space-2);
+  border-radius: var(--radius-pill); background: var(--brand-tint); color: var(--brand-blue-deep);
+  font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); letter-spacing: 0; text-transform: none;
+}
+.collapsible__actions { display: inline-flex; flex-shrink: 0; align-items: center; gap: var(--space-2); letter-spacing: 0; text-transform: none; }
+.collapsible__actions:empty { display: none; }
+.collapsible__chevron { display: inline-flex; color: var(--muted); cursor: pointer; transition: transform 160ms ease; }
+.collapsible__chevron.is-open { transform: rotate(90deg); }
+.collapsible__body:not([hidden]) { animation: collapsible-in 160ms ease; }
+.collapsible__body[hidden] { display: none; }
+@keyframes collapsible-in { from { opacity: 0; transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) {
+  .collapsible__chevron { transition: none; }
+  .collapsible__body:not([hidden]) { animation: none; }
+}

@@ -1,7 +1,9 @@
+import { providePermissions } from '../../testing/permission-fixtures';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { Signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { FormGroup } from '@angular/forms';
 import { of } from 'rxjs';
 import { ClientRequest, ClientResponse } from '../../core/models';
@@ -11,7 +13,7 @@ import { ClientsComponent } from './clients.component';
 
 function flushClientLists(http: HttpTestingController, content: unknown[]): void {
   http.expectOne(r => r.method === 'GET' && r.url.split('?')[0] === '/api/clients').flush({ content, page: 0, size: 20, totalElements: content.length, totalPages: 1 });
-  http.expectOne('/api/clients/summary').flush({ total: content.length, withContact: 0, withDocument: 0, withEmail: 0 });
+  http.expectOne('/api/clients/summary').flush({ total: content.length });
 }
 
 describe('ClientsComponent pending save lifecycle', () => {
@@ -22,7 +24,7 @@ describe('ClientsComponent pending save lifecycle', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ClientsComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [providePermissions(['cadastros.ver', 'cadastros.editar']), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(ClientsComponent);
@@ -36,6 +38,11 @@ describe('ClientsComponent pending save lifecycle', () => {
   function openEditor(mode: 'create' | 'edit'): void {
     page.querySelector<HTMLButtonElement>(mode === 'create' ? '.page-heading button' : '.row-actions button')!.click();
     fixture.detectChanges();
+    if (mode === 'edit') {
+      // A edição lê o cliente completo (endereço e observações) antes de liberar o salvar.
+      http.expectOne('/api/clients/1').flush(CLIENTS[0]);
+      fixture.detectChanges();
+    }
   }
 
   function enterName(): void {
@@ -132,6 +139,18 @@ describe('ClientsComponent pending save lifecycle', () => {
     expect(page.querySelector('[role="alert"]')?.textContent).toContain('Revise os campos destacados');
     expect(page.querySelector<HTMLButtonElement>('.modal-close')!.disabled).toBe(false);
   });
+
+  it('fills address and notes from the client detail and only then allows saving', () => {
+    page.querySelector<HTMLButtonElement>('.row-actions button')!.click();
+    fixture.detectChanges();
+    const submit = page.querySelector<HTMLButtonElement>('form button[type="submit"]')!;
+    expect(submit.disabled).toBe(true);
+    http.expectOne('/api/clients/1').flush({ ...CLIENTS[0], address: 'Rua do detalhe, 5', notes: 'Observação do detalhe' });
+    fixture.detectChanges();
+    expect(page.querySelector<HTMLInputElement>('[formControlName="address"]')!.value).toBe('Rua do detalhe, 5');
+    expect(page.querySelector<HTMLTextAreaElement>('[formControlName="notes"]')!.value).toBe('Observação do detalhe');
+    expect(submit.disabled).toBe(false);
+  });
 });
 
 const CLIENTS: ClientResponse[] = [
@@ -139,16 +158,31 @@ const CLIENTS: ClientResponse[] = [
     ...{ contactName: 'Contato legado reservado' },
     id: 1, legalName: 'Alfa', tradeName: null, documentNumber: '123',
     email: 'alfa@example.com', phone: null, address: null, notes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+    updatedAt: '2026-10-20T12:00:00Z'
   },
   {
     id: 2, legalName: 'Beta', tradeName: null, documentNumber: null,
     email: 'beta@example.com', phone: '123', address: null, notes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+    updatedAt: '2026-10-20T12:00:00Z'
   },
   {
     id: 3, legalName: 'Gama', tradeName: null, documentNumber: '456',
     email: '   ', phone: null, address: null, notes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+    updatedAt: '2026-10-20T12:00:00Z'
   }
 ];
+
+describe('ClientsComponent for a profile that only imports', () => {
+  it('requests neither the list nor the totals without cadastros.ver', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ClientsComponent],
+      providers: [providePermissions(['cadastros.importar']), provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    }).compileComponents();
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(ClientsComponent);
+    fixture.detectChanges();
+    http.expectNone((request) => request.url.startsWith('/api/clients'));
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Seu perfil pode importar clientes, mas não consultar a lista.');
+    http.verify();
+  });
+});

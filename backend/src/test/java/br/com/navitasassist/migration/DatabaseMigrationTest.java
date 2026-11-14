@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -14,22 +13,20 @@ import java.sql.Statement;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.flywaydb.core.Flyway;
+import br.com.navitasassist.support.PostgresTestDatabase;
 import org.junit.jupiter.api.Test;
 
 class DatabaseMigrationTest {
 
-    private static final String USER = "sa";
-    private static final String PASSWORD = "";
-
     @Test
     void createsSchemaAndSupportsMultipleItemsPerRma() throws SQLException {
-        String url = "jdbc:h2:mem:migration_empty;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
+        PostgresTestDatabase.Coordinates database = PostgresTestDatabase.create("migration_empty");
 
-        int executedMigrations = Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate().migrationsExecuted;
+        int executedMigrations = PostgresTestDatabase.flyway(database).migrate().migrationsExecuted;
 
-        assertEquals(7, executedMigrations);
-        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
+        // A V1 consolida o histórico MySQL; a V2 adiciona leitura em lote e prioridade das notificações.
+        assertEquals(2, executedMigrations);
+        try (Connection connection = database.connect()) {
             assertTrue(tableExists(connection, "rmas"));
             assertTrue(tableExists(connection, "rma_code_generation_lock"));
             try (Statement statement = connection.createStatement();
@@ -49,6 +46,9 @@ class DatabaseMigrationTest {
             assertEquals(1000, columnSize(connection, "rma_blocks", "reason"));
             assertEquals(80, columnSize(connection, "rma_blocks", "category"));
             assertTrue(columnExists(connection, "kanban_views", "blocked"));
+            assertTrue(columnExists(connection, "kanban_views", "deadline_status"));
+            assertTrue(columnExists(connection, "rmas", "due_date"));
+            assertTrue(tableExists(connection, "rma_due_date_history"));
             assertTrue(tableExists(connection, "kanban_views"));
             assertTrue(tableExists(connection, "protocol_templates"));
             assertTrue(tableExists(connection, "protocol_template_versions"));
@@ -89,7 +89,7 @@ class DatabaseMigrationTest {
                 applicationIndexes(connection, "rma_assignment_history")
             );
             assertEquals(
-                Set.of("idx_kanban_views_owner_id"),
+                Set.of(),
                 applicationIndexes(connection, "kanban_views")
             );
 
@@ -106,11 +106,9 @@ class DatabaseMigrationTest {
 
     @Test
     void createsPartInventoryTablesThatRejectNegativeAvailability() throws SQLException {
-        String url = "jdbc:h2:mem:migration_parts;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
+        PostgresTestDatabase.Coordinates database = PostgresTestDatabase.migrated("migration_parts");
 
-        Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate();
-
-        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
+        try (Connection connection = database.connect()) {
             assertTrue(tableExists(connection, "parts"));
             assertTrue(tableExists(connection, "part_reservations"));
             assertTrue(tableExists(connection, "part_movements"));
@@ -192,7 +190,7 @@ class DatabaseMigrationTest {
                 code, client_id, product_id, purchase_date_unknown, entry_date, received_by,
                 reported_failure, priority, status, created_at, updated_at
             ) VALUES (
-                'RMA-25', ?, ?, TRUE, DATE '2026-10-19', 'Técnico', 'Falha',
+                'OS-25', ?, ?, TRUE, DATE '2026-10-19', 'Técnico', 'Falha',
                 'HIGH', 'RECEIVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             )
             """, Statement.RETURN_GENERATED_KEYS)) {
@@ -224,17 +222,15 @@ class DatabaseMigrationTest {
 
     @Test
     void createsNotificationTablesWithSeededRulesAndIdempotencyKey() throws SQLException {
-        String url = "jdbc:h2:mem:migration_notifications;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
+        PostgresTestDatabase.Coordinates database = PostgresTestDatabase.migrated("migration_notifications");
 
-        Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate();
-
-        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
+        try (Connection connection = database.connect()) {
             assertTrue(tableExists(connection, "notification_rules"));
             assertTrue(tableExists(connection, "notification_events"));
             assertTrue(tableExists(connection, "notifications"));
             assertTrue(tableExists(connection, "notification_mutes"));
-            assertEquals(Set.of("idx_notifications_recipient_id", "idx_notifications_rma_id"), applicationIndexes(connection, "notifications"));
-            assertEquals(4, count(connection, "notification_rules"));
+            assertEquals(Set.of("idx_notifications_recipient_id", "idx_notifications_rma_id", "idx_notifications_email_due", "idx_notifications_email_sent", "idx_notifications_recipient_created"), applicationIndexes(connection, "notifications"));
+            assertEquals(5, count(connection, "notification_rules"));
 
             try (Statement statement = connection.createStatement()) {
                 String insert = "INSERT INTO notification_events (event_key, event_type, status, recipient_count, occurred_at) VALUES ('KEY-1', 'RMA_CREATED', 'RECEIVED', 0, CURRENT_TIMESTAMP)";

@@ -1,5 +1,7 @@
 # Permissões por perfil personalizado (etapa 8A): plano de implementação
 
+> **Nota (13 nov 2026): migrações zeradas.** Não havia dados em produção, só dados de teste, e as migrações V1–V10 foram substituídas por uma única `V1__baseline.sql` com o schema final. As colunas legadas `user_accounts.role` e `notification_rules.recipient_roles` não existem mais, então não há V11 de remoção nem rollback manual: o que este documento diz sobre V8–V11, expand/contract, backup antes da V8 e rollback fica só como histórico. Perfis prontos, permissões, extras e destinatários por perfil continuam iguais, semeados pela baseline.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Trocar o enum `UserRole` por perfis personalizados (nome + permissões de um catálogo fixo) com permissões extras por usuário, sem mudar o que os 4 perfis atuais podem fazer.
@@ -98,7 +100,7 @@ Projeto Docker **isolado**. Nunca use o volume `mysql_data` nem a stack do desen
 - Test: `backend/src/test/java/br/com/navitasassist/access/PermissionTest.java`.
 
 **Interfaces:**
-- Produces: `enum PermissionModule { RMA("RMAs"), CADASTROS("Clientes e produtos"), PECAS("Peças"), PROTOCOLOS("Protocolos técnicos"), RELATORIOS("Relatórios"), ADMINISTRACAO("Administração"); String label(); }`.
+- Produces: `enum PermissionModule { RMA("ordens de serviço"), CADASTROS("Clientes e produtos"), PECAS("Peças"), PROTOCOLOS("Protocolos técnicos"), RELATORIOS("Relatórios"), ADMINISTRACAO("Administração"); String label(); }`.
 - Produces: `enum Permission` com os métodos:
   - `String code()`, `PermissionModule module()` e `String label()`;
   - `static Optional<Permission> fromCode(String)`;
@@ -110,8 +112,8 @@ Projeto Docker **isolado**. Nunca use o volume `mysql_data` nem a stack do desen
 - [ ] **Step 1: Write the failing test** `PermissionTest`:
   - `codesMatchSpecCatalogInOrder`: a lista de códigos é igual à lista literal da spec §3, na ordem.
   - `modulesAndLabelsMatchSpec`, com 3 amostras:
-    - `rma.atribuivel` → RMA / "Pode ser responsável por RMAs";
-    - `pecas.reservar` → PECAS / "Reservar e aplicar peças nos RMAs";
+    - `rma.atribuivel` → OS / "Pode ser responsável por ordens de serviço";
+    - `pecas.reservar` → PECAS / "Reservar e aplicar peças nas ordens de serviço";
     - `notificacoes.regras` → ADMINISTRACAO / "Configurar regras de notificação";
     - e a ordem de `PermissionModule.values()`.
   - `fromCodesIgnoresUnknown`.
@@ -638,7 +640,7 @@ git commit -m "feat(permissoes): rotas, guard e menus por permissão (etapa 8A)"
 
 ---
 
-### Task 14: Ações de RMA, Kanban e dashboard por permissão
+### Task 14: Ações de OS, Kanban e dashboard por permissão
 
 **Files:**
 - Modify:
@@ -663,7 +665,7 @@ git commit -m "feat(permissoes): rotas, guard e menus por permissão (etapa 8A)"
 - [ ] **Step 6: Commit**
 ```bash
 git add frontend/src/app/pages/rmas frontend/src/app/pages/kanban frontend/src/app/pages/dashboard frontend/src/app/shared/kanban-bulk-actions
-git commit -m "feat(permissoes): ações de RMA, Kanban e dashboard por permissão (etapa 8A)"
+git commit -m "feat(permissoes): ações de OS, Kanban e dashboard por permissão (etapa 8A)"
 ```
 
 **Aceite:** essas telas não chamam `hasAnyRole`, e as asserções antigas passam sem mudança.
@@ -728,7 +730,7 @@ git commit -m "feat(permissoes): peças, impedimentos, protocolos e notificaçõ
     - `blocks delete when profile has users`;
     - nenhum texto de carregamento no DOM.
   - **`profiles.component.form.spec.ts`:**
-    - `groups permissions by module with counters` (6 `fieldset`; "3 de 8" em RMAs);
+    - `groups permissions by module with counters` (6 `fieldset`; "3 de 8" em ordens de serviço);
     - `uses checkbox-field for each permission`;
     - `requires name`;
     - `creates profile with checked permissions`;

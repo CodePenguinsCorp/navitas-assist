@@ -8,7 +8,7 @@ on:
       # Lidos pelos testes do frontend (core/permissions.spec.ts) para conferir catálogo e fixtures.
       - "backend/src/main/java/br/com/navitasassist/access/Permission.java"
       - "backend/src/main/java/br/com/navitasassist/access/PermissionModule.java"
-      - "backend/src/main/resources/db/migration/V8__create_access_profiles.sql"
+      - "backend/src/main/resources/db/migration/V1__baseline.sql"
   pull_request:
     paths:
       - "frontend/**"
@@ -16,7 +16,10 @@ on:
       # Lidos pelos testes do frontend (core/permissions.spec.ts) para conferir catálogo e fixtures.
       - "backend/src/main/java/br/com/navitasassist/access/Permission.java"
       - "backend/src/main/java/br/com/navitasassist/access/PermissionModule.java"
-      - "backend/src/main/resources/db/migration/V8__create_access_profiles.sql"
+      - "backend/src/main/resources/db/migration/V1__baseline.sql"
+
+permissions:
+  contents: read
 
 jobs:
   test-and-build:
@@ -37,7 +40,5 @@ jobs:
         run: npm ci
       - name: Run unit tests
         run: npm test -- --watch=false
-      - name: Run SLA tests
-        run: npm run test:sla
       - name: Build production bundle
         run: npm run build

@@ -1,12 +1,9 @@
 package br.com.navitasassist.access;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -15,26 +12,20 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
-import org.flywaydb.core.Flyway;
+import br.com.navitasassist.support.PostgresTestDatabase;
 import org.junit.jupiter.api.Test;
 
 /**
- * Migração dos roles fixos para perfis (V8), num H2 próprio por teste.
+ * Perfis, permissões e regras de notificação semeados pelas migrações (V1 e a limpeza do SLA na V2), num PostgreSQL próprio por teste.
  */
 class AccessProfileMigrationTest {
 
-    private static final String USER = "sa";
-    private static final String PASSWORD = "";
-    private static final List<String> LEGACY_CODES = List.of("ADMIN", "SERVICE_DESK", "TECHNICIAN", "VIEWER");
-
     @Test
     void seedsLegacyProfilesWithExactPermissions() throws SQLException {
-        String url = newDatabase();
-        migrateTo(url, "8");
+        PostgresTestDatabase.Coordinates database = migratedDatabase();
 
-        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
+        try (Connection connection = database.connect()) {
             assertEquals(
                 Map.of("ADMIN", "Administrador", "SERVICE_DESK", "Atendimento", "TECHNICIAN", "Técnico", "VIEWER", "Consulta"),
                 profileNamesByLegacyCode(connection));
@@ -43,7 +34,10 @@ class AccessProfileMigrationTest {
             assertEquals(LegacyProfiles.PERMISSIONS, permissions);
 
             // Totais conferidos de forma independente da tabela usada pelos mocks.
-            assertEquals(19, permissions.get("ADMIN").size());
+            assertEquals(21, permissions.get("ADMIN").size());
+            assertEquals(Set.of("ADMIN"), permissions.entrySet().stream()
+                .filter(entry -> entry.getValue().contains("cadastros.importar"))
+                .map(Map.Entry::getKey).collect(java.util.stream.Collectors.toSet()));
             assertEquals(11, permissions.get("SERVICE_DESK").size());
             assertEquals(11, permissions.get("TECHNICIAN").size());
             assertEquals(5, permissions.get("VIEWER").size());
@@ -51,136 +45,93 @@ class AccessProfileMigrationTest {
     }
 
     @Test
-    void mapsEveryLegacyRoleToItsProfile() throws SQLException {
-        String url = newDatabase();
-        migrateTo(url, "7");
-        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
-            for (String role : LEGACY_CODES) {
-                try (PreparedStatement statement = connection.prepareStatement("""
-                    INSERT INTO user_accounts (username, full_name, password_hash, role, active, created_at, updated_at)
-                    VALUES (?, ?, 'hash', ?, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                    """)) {
-                    statement.setString(1, "mig." + role.toLowerCase());
-                    statement.setString(2, "Migração " + role);
-                    statement.setString(3, role);
-                    statement.executeUpdate();
-                }
-            }
-        }
+    void seedsNotificationRulesWithProfileRecipients() throws SQLException {
+        PostgresTestDatabase.Coordinates database = migratedDatabase();
 
-        migrateTo(url, "8");
-
-        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
-            Map<String, String> profileByLegacyRole = new HashMap<>();
+        try (Connection connection = database.connect()) {
+            Map<String, String> rules = new HashMap<>();
             try (Statement statement = connection.createStatement();
                  ResultSet rows = statement.executeQuery("""
-                     SELECT u.role, p.legacy_code
-                     FROM user_accounts u
-                     JOIN access_profiles p ON p.id = u.profile_id
+                     SELECT event_type, enabled, severity, notify_assignee, email_enabled, user_mutable FROM notification_rules WHERE event_type IN ('RMA_CREATED', 'RMA_ASSIGNED')
                      """)) {
                 while (rows.next()) {
-                    profileByLegacyRole.put(rows.getString(1), rows.getString(2));
-                }
-            }
-            assertEquals(Map.of("ADMIN", "ADMIN", "SERVICE_DESK", "SERVICE_DESK", "TECHNICIAN", "TECHNICIAN", "VIEWER", "VIEWER"),
-                profileByLegacyRole);
-
-            assertThrows(SQLException.class, () -> {
-                try (Statement statement = connection.createStatement()) {
-                    statement.executeUpdate("""
-                        INSERT INTO user_accounts (username, full_name, password_hash, role, active, created_at, updated_at)
-                        VALUES ('mig.sem.perfil', 'Sem perfil', 'hash', 'VIEWER', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                        """);
-                }
-            });
-        }
-    }
-
-    @Test
-    void mapsRuleRolesToProfiles() throws SQLException {
-        String url = newDatabase();
-        migrateTo(url, "8");
-        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD);
-             Statement statement = connection.createStatement()) {
-            // Regra editada com espaço depois da vírgula, como a conversão antiga aceitava.
-            statement.executeUpdate("UPDATE notification_rules SET recipient_roles = 'ADMIN, VIEWER' WHERE event_type = 'SLA_WARNING'");
-        }
-
-        migrateTo(url, "9");
-
-        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
-            Map<String, Set<String>> recipients = new HashMap<>();
-            try (Statement statement = connection.createStatement();
-                 ResultSet rows = statement.executeQuery("""
-                     SELECT r.event_type, p.name
-                     FROM notification_rules r
-                     LEFT JOIN notification_rule_recipient_profiles rp ON rp.rule_id = r.id
-                     LEFT JOIN access_profiles p ON p.id = rp.profile_id
-                     """)) {
-                while (rows.next()) {
-                    Set<String> names = recipients.computeIfAbsent(rows.getString(1), key -> new HashSet<>());
-                    if (rows.getString(2) != null) names.add(rows.getString(2));
+                    rules.put(rows.getString(1), String.join(",", List.of(
+                        String.valueOf(rows.getBoolean(2)), rows.getString(3), String.valueOf(rows.getBoolean(4)),
+                        String.valueOf(rows.getBoolean(5)), String.valueOf(rows.getBoolean(6)))));
                 }
             }
             assertEquals(Map.of(
-                "RMA_CREATED", Set.of("Administrador", "Atendimento"),
-                "RMA_ASSIGNED", Set.of(),
-                "SLA_WARNING", Set.of("Administrador", "Consulta"),
-                "SLA_OVERDUE", Set.of("Administrador", "Atendimento")), recipients);
+                "RMA_CREATED", "true,INFO,false,false,true",
+                "RMA_ASSIGNED", "true,INFO,true,false,false"), rules);
 
-            // Expand: a coluna legada continua existindo até a V10/V11.
+            Map<String, Set<String>> recipients = new HashMap<>();
             try (Statement statement = connection.createStatement();
-                 ResultSet rows = statement.executeQuery("SELECT recipient_roles FROM notification_rules WHERE event_type = 'SLA_WARNING'")) {
-                rows.next();
-                assertEquals("ADMIN, VIEWER", rows.getString(1));
+                 ResultSet rows = statement.executeQuery("""
+                     SELECT r.event_type, p.legacy_code
+                     FROM notification_rules r
+                     LEFT JOIN notification_rule_recipient_profiles rp ON rp.rule_id = r.id
+                     LEFT JOIN access_profiles p ON p.id = rp.profile_id
+                     WHERE r.event_type IN ('RMA_CREATED', 'RMA_ASSIGNED')
+                     """)) {
+                while (rows.next()) {
+                    Set<String> codes = recipients.computeIfAbsent(rows.getString(1), key -> new HashSet<>());
+                    if (rows.getString(2) != null) codes.add(rows.getString(2));
+                }
             }
+            assertEquals(Map.of(
+                "RMA_CREATED", Set.of("ADMIN", "SERVICE_DESK"),
+                "RMA_ASSIGNED", Set.of()), recipients);
         }
     }
 
-    /** V10 (fim do uso pelo código): as colunas legadas aceitam NULL e o CHECK de role sai. */
+    /** As colunas legadas dos roles fixos não fazem parte da migração-base. */
     @Test
-    void relaxesLegacyColumnsAtV10() throws SQLException {
-        String url = newDatabase();
-        migrateTo(url, "10");
+    void hasNoLegacyRoleColumns() throws SQLException {
+        PostgresTestDatabase.Coordinates database = migratedDatabase();
 
-        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD);
+        try (Connection connection = database.connect()) {
+            assertEquals(0, count(connection, """
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE (UPPER(TABLE_NAME) = 'USER_ACCOUNTS' AND UPPER(COLUMN_NAME) = 'ROLE')
+                   OR (UPPER(TABLE_NAME) = 'NOTIFICATION_RULES' AND UPPER(COLUMN_NAME) = 'RECIPIENT_ROLES')
+                """));
+            assertEquals(0, count(connection, """
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE UPPER(CONSTRAINT_NAME) = 'CK_USER_ACCOUNTS_ROLE'
+                """));
+        }
+    }
+
+    @Test
+    void requiresProfileForEveryUser() throws SQLException {
+        PostgresTestDatabase.Coordinates database = migratedDatabase();
+
+        try (Connection connection = database.connect();
              Statement statement = connection.createStatement()) {
             statement.executeUpdate("""
-                INSERT INTO user_accounts (username, full_name, password_hash, profile_id, active, created_at, updated_at)
-                VALUES ('mig.sem.role', 'Sem role', 'hash', (SELECT id FROM access_profiles WHERE legacy_code = 'VIEWER'),
-                        TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                INSERT INTO user_accounts (username, full_name, password_hash, active, created_at, updated_at, profile_id)
+                VALUES ('base.admin', 'Administrador', 'hash', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
+                        (SELECT id FROM access_profiles WHERE legacy_code = 'ADMIN'))
                 """);
-            try (ResultSet rows = statement.executeQuery("SELECT role FROM user_accounts WHERE username = 'mig.sem.role'")) {
-                rows.next();
-                assertNull(rows.getString(1));
-            }
-
-            assertEquals(4, statement.executeUpdate("UPDATE notification_rules SET recipient_roles = NULL"));
-
-            try (ResultSet rows = statement.executeQuery("""
-                SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
-                WHERE UPPER(CONSTRAINT_NAME) = 'CK_USER_ACCOUNTS_ROLE'
-                """)) {
-                rows.next();
-                assertEquals(0, rows.getInt(1));
-            }
-
-            // Um role fora da lista antiga não é mais recusado pelo banco: a coluna é legada e sem uso.
-            statement.executeUpdate("UPDATE user_accounts SET role = 'QUALQUER' WHERE username = 'mig.sem.role'");
+            assertThrows(SQLException.class, () -> statement.executeUpdate("""
+                INSERT INTO user_accounts (username, full_name, password_hash, active, created_at, updated_at)
+                VALUES ('base.sem.perfil', 'Sem perfil', 'hash', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """));
+            assertThrows(SQLException.class, () -> statement.executeUpdate("""
+                INSERT INTO user_accounts (username, full_name, password_hash, active, created_at, updated_at, profile_id)
+                VALUES ('base.perfil.inexistente', 'Perfil inexistente', 'hash', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 999999)
+                """));
         }
     }
 
-    private static String newDatabase() {
-        return "jdbc:h2:mem:mig_" + UUID.randomUUID().toString().replace("-", "") + ";MODE=MySQL;DB_CLOSE_DELAY=-1";
+    private static PostgresTestDatabase.Coordinates migratedDatabase() {
+        return PostgresTestDatabase.migrated("mig_profiles");
     }
 
-    private static void migrateTo(String url, String target) {
-        Flyway.configure()
-            .dataSource(url, USER, PASSWORD)
-            .locations("classpath:db/migration")
-            .target(target)
-            .load()
-            .migrate();
+    private static int count(Connection connection, String sql) throws SQLException {
+        try (Statement statement = connection.createStatement(); ResultSet rows = statement.executeQuery(sql)) {
+            rows.next();
+            return rows.getInt(1);
+        }
     }
 
     private static Map<String, String> profileNamesByLegacyCode(Connection connection) throws SQLException {

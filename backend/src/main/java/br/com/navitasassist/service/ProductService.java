@@ -10,6 +10,7 @@ import br.com.navitasassist.pagination.PageResponse;
 import br.com.navitasassist.product.Product;
 import br.com.navitasassist.product.ProductRequest;
 import br.com.navitasassist.product.ProductResponse;
+import br.com.navitasassist.product.ProductOptionResponse;
 import br.com.navitasassist.product.ProductSummaryResponse;
 import br.com.navitasassist.repository.ProductRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class ProductService {
+    private final AuditService audit;
 
     private final ProductRepository productRepository;
     private final RmaRecordRepository rmaRecordRepository;
@@ -40,8 +42,8 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProductResponse> listOptions() {
-        return productRepository.findAllByOrderByNameAscIdAsc().stream().map(ProductResponse::from).toList();
+    public List<ProductOptionResponse> listOptions() {
+        return productRepository.findAllByOrderByNameAscIdAsc().stream().map(ProductOptionResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
@@ -56,8 +58,6 @@ public class ProductService {
 
         return new ProductSummaryResponse(
             productRepository.count(),
-            productRepository.countWithFirmware(),
-            productRepository.averageWarrantyMonths(),
             categories
         );
     }
@@ -66,35 +66,36 @@ public class ProductService {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
-    @Transactional(readOnly = true)
-    public ProductResponse getById(Long id) {
-        return ProductResponse.from(getEntityById(id));
-    }
-
     public ProductResponse create(ProductRequest request) {
         validateSku(null, request.sku());
 
         Product product = new Product();
         apply(product, request);
-        return ProductResponse.from(productRepository.save(product));
+        productRepository.save(product);
+        audit.record("CREATE", "PRODUCT", product.getId(), product.getSku() + " · " + product.getName(), "Registro criado.");
+        return ProductResponse.from(product);
     }
 
     public ProductResponse update(Long id, ProductRequest request) {
         Product product = getEntityById(id);
         validateSku(product, request.sku());
 
+        var before = ProductResponse.from(product);
         apply(product, request);
-        return ProductResponse.from(productRepository.save(product));
+        productRepository.save(product);
+        audit.record("UPDATE", "PRODUCT", product.getId(), product.getSku() + " · " + product.getName(), AuditService.changedFields(before, ProductResponse.from(product)));
+        return ProductResponse.from(product);
     }
 
     public void delete(Long id) {
         Product product = getEntityById(id);
 
         if (rmaRecordRepository.existsByProduct_Id(id) || rmaRecordRepository.existsByItems_Product_Id(id)) {
-            throw new BusinessException("Product cannot be deleted because it is used by an RMA.");
+            throw new BusinessException("Produto não pode ser excluído porque está vinculado a uma OS.");
         }
 
         productRepository.delete(product);
+        audit.record("DELETE", "PRODUCT", id, product.getSku() + " · " + product.getName(), "Registro excluído.");
     }
 
     @Transactional(readOnly = true)

@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.part.Part;
+import br.com.navitasassist.part.PartConsumptionRequest;
 import br.com.navitasassist.part.PartMovement;
 import br.com.navitasassist.part.PartMovementRequest;
 import br.com.navitasassist.part.PartMovementResponse;
@@ -30,6 +31,9 @@ import br.com.navitasassist.repository.PartReservationRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaStatus;
+import br.com.navitasassist.notification.NotificationEventType;
+import br.com.navitasassist.notification.RmaNotificationEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.Authentication;
@@ -48,12 +52,13 @@ public class PartStockService {
 
     private static final Set<PartMovementType> MANUAL_TYPES = EnumSet.of(PartMovementType.ENTRY, PartMovementType.EXIT, PartMovementType.ADJUSTMENT);
     private static final Set<RmaStatus> CLOSED_RMA_STATUSES = EnumSet.of(RmaStatus.COMPLETED, RmaStatus.RETURNED, RmaStatus.IRREPARABLE);
-    private static final String CLOSED_RMA_RESERVATION_MESSAGE = "Parts cannot be allocated or consumed for a closed RMA.";
+    private static final String CLOSED_RMA_RESERVATION_MESSAGE = "Não é permitido reservar ou aplicar peças em uma OS encerrada.";
 
     private final PartRepository partRepository;
     private final PartMovementRepository partMovementRepository;
     private final PartReservationRepository partReservationRepository;
     private final RmaRecordRepository rmaRecordRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final RmaService rmaService;
 
     @Transactional(readOnly = true)
@@ -135,6 +140,7 @@ public class PartStockService {
             movements,
             sumCost(reservationResponses, PartReservationStatus.ACTIVE),
             sumCost(reservationResponses, PartReservationStatus.CONSUMED),
+            reservationResponses.stream().filter(reservation -> reservation.status() == PartReservationStatus.CONSUMED).toList(),
             reservationResponses.stream().filter(reservation -> reservation.status() == PartReservationStatus.PENDING).count()
         );
     }
@@ -144,7 +150,7 @@ public class PartStockService {
      * is kept as PENDING, which feeds the pending-parts list and the replenishment alert.
      */
     public PartReservationResponse reserve(Long rmaId, PartReservationRequest request) {
-        RmaRecord rma = lockOpenRma(rmaId, "Parts cannot be reserved for a closed RMA.");
+        RmaRecord rma = lockOpenRma(rmaId, "Não é permitido reservar peças em uma OS encerrada.");
 
         Part part = lockPart(request.partId());
         if (!part.isActive()) {
@@ -162,6 +168,10 @@ public class PartStockService {
 
         if (available) {
             record(part, PartMovementType.RESERVATION, BigDecimal.ZERO, request.quantity(), part.getUnitCost(), rma, reservation, null, reservation.getNote());
+        } else {
+            eventPublisher.publishEvent(new RmaNotificationEvent(NotificationEventType.PART_PENDING,
+                "PART_PENDING:" + reservation.getId(), rma.getId(), Instant.now(), currentUsername(),
+                "Peça " + part.getCode() + " · " + reservation.getQuantity().toPlainString() + " " + part.getUnit() + " sem saldo disponível."));
         }
         return toReservationResponse(reservation);
     }
@@ -181,15 +191,22 @@ public class PartStockService {
         return toReservationResponse(partReservationRepository.save(reservation));
     }
 
-    public PartReservationResponse consume(Long rmaId, Long reservationId) {
+    public PartReservationResponse consume(Long rmaId, Long reservationId, PartConsumptionRequest request) {
         Long partId = findReservationPartId(rmaId, reservationId);
         lockOpenRma(rmaId, CLOSED_RMA_RESERVATION_MESSAGE);
         Part part = lockPart(partId);
         PartReservation reservation = lockReservation(reservationId);
-        requireStatus(reservation, "Only active reservations can be consumed.", PartReservationStatus.ACTIVE);
+        requireStatus(reservation, "Somente reservas ativas podem ser aplicadas.", PartReservationStatus.ACTIVE);
 
         record(part, PartMovementType.CONSUMPTION, reservation.getQuantity().negate(), reservation.getQuantity().negate(), part.getUnitCost(), reservation.getRma(), reservation, null, null);
         reservation.setStatus(PartReservationStatus.CONSUMED);
+        reservation.setReplacementReason(request.replacementReason().trim());
+        reservation.setComponentBatch(trimToNull(request.componentBatch()));
+        reservation.setAppliedAt(Instant.now());
+        reservation.setAppliedBy(currentUsername());
+        br.com.navitasassist.rma.RmaRepairHistory.record(reservation.getRma(), "STOCK_COMPONENT", reservation.getId(), "APPLY",
+            "Peça aplicada: " + part.getCode() + " · " + part.getName() + " · " + reservation.getQuantity() + " " + part.getUnit() + " · " + reservation.getReplacementReason()
+                + (reservation.getComponentBatch() == null ? "" : " · Lote: " + reservation.getComponentBatch()), currentUsername());
         return toReservationResponse(partReservationRepository.save(reservation));
     }
 
@@ -271,7 +288,7 @@ public class PartStockService {
      * Locks the RMA row, serializing reservation changes with status changes that close the RMA (see RmaService).
      */
     private RmaRecord lockOpenRma(Long rmaId, String closedMessage) {
-        RmaRecord rma = rmaRecordRepository.findByIdForUpdate(rmaId).orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + rmaId));
+        RmaRecord rma = rmaRecordRepository.findByIdForUpdate(rmaId).orElseThrow(() -> new ResourceNotFoundException("OS não encontrada: " + rmaId));
         if (CLOSED_RMA_STATUSES.contains(rma.getStatus())) {
             throw new BusinessException(closedMessage);
         }

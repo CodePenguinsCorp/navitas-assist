@@ -6,6 +6,7 @@ import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 
 import br.com.navitasassist.rma.RmaRecord;
+import br.com.navitasassist.rma.RmaPriority;
 import br.com.navitasassist.user.UserAccount;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -48,6 +49,11 @@ public class Notification {
 
     @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
+    @Column(length = 20, updatable = false)
+    private RmaPriority rmaPriority;
+
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40, updatable = false)
     private NotificationEventType eventType;
 
@@ -81,6 +87,22 @@ public class Notification {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private NotificationEmailStatus emailStatus = NotificationEmailStatus.NOT_REQUESTED;
+
+    @Column(nullable = false)
+    private boolean appVisible = true;
+
+    @Column(nullable = false)
+    private int emailAttempts;
+
+    /** Incrementada a cada reenvio manual; compõe a chave de idempotência junto com o id. */
+    @Column(nullable = false)
+    private int emailGeneration;
+
+    private Instant emailNextAttemptAt;
+    private Instant emailSentAt;
+
+    @Column(length = 20)
+    private String emailProvider;
 
     @Column(length = 500)
     private String emailError;

@@ -1,8 +1,10 @@
+import { PermissionService } from '../../core/services/permission.service';
+import { RouterLink } from '@angular/router';
 import { IconComponent } from '../../shared/icon/icon.component';
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable, Subject, debounceTime, filter, finalize } from 'rxjs';
+import { Observable, Subject, debounceTime, filter, finalize, of } from 'rxjs';
 import { ProductRequest, ProductResponse, ProductSummaryResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import {
@@ -15,6 +17,7 @@ import {
 import { PagedList } from '../../core/utils/paged-list';
 import { SEARCH_DEBOUNCE_MS, presenceToFlag } from '../../core/utils/pagination';
 import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
+import { SuggestInputComponent } from '../../shared/form-controls/suggest-input/suggest-input.component';
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
@@ -41,7 +44,7 @@ const PRODUCT_LIMITS = {
 
 @Component({
   selector: 'app-products',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PaginationComponent, PageHeaderComponent, RowActionComponent],
+  imports: [RouterLink, IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PaginationComponent, PageHeaderComponent, RowActionComponent, SuggestInputComponent],
   templateUrl: './products.component.html',
   styles: [`
     :host {
@@ -71,6 +74,13 @@ const PRODUCT_LIMITS = {
   `]
 })
 export class ProductsComponent {
+  private readonly permissions = inject(PermissionService);
+  protected readonly createButtonElement = viewChild<ElementRef<HTMLButtonElement>>('createButton');
+  protected readonly canImport = computed(() => this.permissions.hasPermission('cadastros.importar'));
+  protected readonly canEdit = computed(() => this.permissions.hasPermission('cadastros.editar'));
+  /** `cadastros.ver`: the list and its totals; a profile that only imports reaches the page for the import action. */
+  protected readonly canView = computed(() => this.permissions.hasPermission('cadastros.ver'));
+
   private readonly formBuilder = inject(FormBuilder);
   private readonly catalogService = inject(CatalogService);
 
@@ -81,7 +91,7 @@ export class ProductsComponent {
   protected readonly errorMessage = signal('');
   protected readonly modalErrorMessage = signal('');
   protected readonly deleteModalErrorMessage = signal('');
-  protected readonly successMessage = signal('');
+  protected readonly successMessage = signal<string>(history.state?.importSummary ?? '');
   protected readonly searchTerm = signal('');
   protected readonly categoryFilter = signal('');
   protected readonly firmwareFilter = signal<PresenceFilter>('all');
@@ -93,7 +103,7 @@ export class ProductsComponent {
 
   private readonly searchChanges = new Subject<'search' | 'cancel'>();
   private readonly productList = new PagedList<ProductResponse>(
-    (pageQuery) => this.catalogService.listProducts({
+    (pageQuery) => !this.canView() ? of({ content: [], page: 0, size: pageQuery.size ?? 20, totalElements: 0, totalPages: 0 }) : this.catalogService.listProducts({
       ...pageQuery,
       query: this.searchTerm(),
       category: this.categoryFilter(),
@@ -105,7 +115,7 @@ export class ProductsComponent {
     },
     () => this.loadFailed.set(false)
   );
-  private readonly summarySignal = signal<ProductSummaryResponse>({ total: 0, withFirmware: 0, averageWarrantyMonths: 0, categories: [] });
+  private readonly summarySignal = signal<ProductSummaryResponse>({ total: 0, categories: [] });
   private readonly editingProductSignal = signal<ProductResponse | null>(null);
   private readonly deletingProductSignal = signal<ProductResponse | null>(null);
 
@@ -185,6 +195,7 @@ export class ProductsComponent {
   }
 
   protected openCreateModal(): void {
+    if (!this.canEdit()) return;
     this.editingProductSignal.set(null);
     this.form.reset(emptyProductForm());
     this.activeModal.set('create');
@@ -192,6 +203,7 @@ export class ProductsComponent {
   }
 
   protected openEditModal(product: ProductResponse): void {
+    if (!this.canEdit()) return;
     this.editingProductSignal.set(product);
     this.form.reset({
       sku: product.sku,
@@ -215,6 +227,7 @@ export class ProductsComponent {
   }
 
   protected saveProduct(): void {
+    if (!this.canEdit()) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.modalErrorMessage.set('Revise os campos destacados antes de salvar o produto.');
@@ -252,6 +265,7 @@ export class ProductsComponent {
   }
 
   protected openDeleteModal(product: ProductResponse): void {
+    if (!this.canEdit()) return;
     this.deletingProductSignal.set(product);
     this.clearMessages();
   }
@@ -265,6 +279,7 @@ export class ProductsComponent {
   }
 
   protected confirmDeleteProduct(): void {
+    if (!this.canEdit()) return;
     const product = this.deletingProductSignal();
 
     if (!product || this.deletingProductId() !== null) {
@@ -310,6 +325,7 @@ export class ProductsComponent {
   }
 
   private loadSummary(): void {
+    if (!this.canView()) return;
     this.catalogService.getProductSummary().subscribe({
       next: (summary) => {
         this.summarySignal.set(summary);

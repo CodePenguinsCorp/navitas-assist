@@ -1,5 +1,5 @@
 <section class="page-surface kanban-page">
-  <app-page-header heading="Kanban de RMAs" />
+  <app-page-header heading="Kanban de ordens de serviço" />
 
   @if (totalSummary(); as total) {
     <ul class="page-summary" aria-label="Indicadores do quadro">
@@ -41,11 +41,11 @@
         </div>
 
         <div class="field-group">
-          <label>SLA</label>
+          <label>Prazo</label>
           <app-custom-select
-            formControlName="sla"
-            ariaLabel="Filtrar Kanban por SLA"
-            [options]="slaFilterOptions"
+            formControlName="deadline"
+            ariaLabel="Filtrar Kanban por prazo"
+            [options]="deadlineFilterOptions"
           />
         </div>
 
@@ -239,41 +239,22 @@
       <div aria-busy="true"></div>
     } @else if (!loading() && totalRmas() === 0) {
       <article class="kanban-empty">
-        <strong>Nenhum RMA cadastrado</strong>
-        <p>Os RMAs abertos aparecem aqui por etapa do atendimento.</p>
+        <strong>Nenhuma OS cadastrada</strong>
+        <p>As ordens de serviço abertas aparecem aqui por etapa do atendimento.</p>
       </article>
     } @else if (!loading() && filteredRmas().length === 0) {
       <article class="kanban-empty">
-        <strong>Nenhum RMA encontrado</strong>
+        <strong>Nenhuma OS encontrada</strong>
         <p>Ajuste ou limpe os filtros para voltar a visualizar os atendimentos.</p>
         <button type="button" class="button-secondary" (click)="clearFilters()">Limpar filtros</button>
       </article>
     }
 
-    @if (boardReady() && canBulkEdit()) {
-      <app-kanban-bulk-actions
-        [selection]="bulkSelectedRmas()"
-        [hiddenCount]="hiddenSelectedCount()"
-        [visibleCount]="filteredRmas().length"
-        [canUpdateStatus]="canUpdateStatus()"
-        [canUpdatePriority]="canUpdatePriority()"
-        [canUpdateAssignee]="canUpdateAssignee()"
-        [assigneeOptions]="assigneeSelectOptions()"
-        [disabled]="loading() || boardUpdatingId() !== null"
-        (selectVisible)="selectVisibleRmas()"
-        (clearSelection)="clearBulkSelection()"
-        (busyChange)="bulkBusy.set($event)"
-        (applied)="applyBulkResults($event)"
-      />
-    }
+    <app-rma-status-field #boardStatus [rma]="statusFeedbackRma()" [showSelector]="false" (saved)="applyRmaUpdate($event)" (busyChange)="boardUpdatingId.set($event ? selectedRmaId() : null)" />
 
     @if (boardReady() && (loading() || filteredRmas().length > 0)) {
       <app-rma-kanban-board
         [rmas]="filteredRmas()"
-        [bulkSelectionEnabled]="canBulkEdit()"
-        [bulkSelectedIds]="bulkSelectedIds()"
-        [interactionDisabled]="bulkBusy()"
-        (bulkSelectionChange)="toggleBulkSelection($event)"
         [loading]="loading()"
         [canUpdateStatus]="canUpdateStatus()"
         [canUpdateAssignee]="canUpdateAssignee()"
@@ -293,22 +274,44 @@
   </section>
 </section>
 
-<app-rma-block-panel #blockPanel (updated)="applyBlockUpdate($event)" />
-
 @if (detailRma(); as rma) {
   <app-rma-detail-modal
     [rma]="rma"
     [canUpdateStatus]="canUpdateStatus()"
     [canUpdateAssignee]="canUpdateAssignee()"
+    [canEditDueDate]="canEditRma()"
     [assignableUsers]="assignableUsers()"
     [actionError]="assignmentError()"
-    [disabled]="bulkBusy() || boardUpdatingId() !== null"
+    [disabled]="boardUpdatingId() !== null"
     [fallbackFocus]="filtersToggle"
     (closed)="closeDetail()"
-    (statusChange)="openStatusModal($event.rma, $event.status)"
+    (busyChange)="boardUpdatingId.set($event ? rma.id : null)"
     (assigneeChange)="assignFromDetail($event.rma, $event.assigneeId)"
-    (blockInspect)="blockPanel.open($event.id)"
+    (rmaUpdated)="applyRmaUpdate($event)"
   />
+} @else if (detailRmaId() !== null) {
+  <section class="modal-overlay" (click)="closeDetail()">
+    <article
+      class="panel modal-panel modal-panel--narrow"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Detalhes da OS"
+      appModalFocus
+      [modalFallbackFocus]="filtersToggle"
+      (modalCloseRequested)="closeDetail()"
+      (click)="$event.stopPropagation()"
+    >
+      @if (detailError()) {
+        <div class="alert-banner alert-banner--error" role="alert">
+          <strong>{{ detailError() }}</strong>
+          <button type="button" class="button-secondary" (click)="retryDetail()">Tentar novamente</button>
+          <button type="button" class="button-secondary" (click)="closeDetail()">Fechar</button>
+        </div>
+      } @else {
+        <div aria-busy="true"></div>
+      }
+    </article>
+  </section>
 }
 
 @if (viewModalMode(); as mode) {
@@ -380,77 +383,6 @@
           </button>
           <button type="submit" class="button-primary" [disabled]="viewBusy()">
             {{ viewBusy() ? 'Salvando...' : 'Salvar' }}
-          </button>
-        </div>
-      </form>
-    </article>
-  </section>
-}
-
-@if (pendingStatusRma(); as rma) {
-  <section class="modal-overlay" (click)="closeStatusModal()">
-    <article
-      class="panel modal-panel modal-panel--narrow"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="kanban-status-title"
-      appModalFocus
-      modalInitialFocus="app-custom-select[formcontrolname='status'] .custom-select__trigger"
-      [modalCloseBlocked]="boardUpdatingId() !== null"
-      [modalFallbackFocus]="filtersToggle"
-      (modalCloseRequested)="closeStatusModal()"
-      (click)="$event.stopPropagation()"
-    >
-      <div class="modal-header">
-        <div>
-          <h3 id="kanban-status-title">Status</h3>
-          <p>{{ rma.code }}</p>
-        </div>
-        <button
-          type="button"
-          class="modal-close"
-          (click)="closeStatusModal()"
-          [disabled]="boardUpdatingId() !== null"
-          aria-label="Fechar"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M6 6l12 12M18 6 6 18" />
-          </svg>
-        </button>
-      </div>
-
-      @if (statusModalError()) {
-        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
-          <strong>{{ statusModalError() }}</strong>
-        </article>
-      }
-
-      <form [formGroup]="statusForm" (ngSubmit)="saveStatusChange()" class="form-grid">
-        <div class="field-group">
-          <label>Novo status</label>
-          <app-custom-select
-            formControlName="status"
-            ariaLabel="Novo status do RMA"
-            [options]="statusSelectOptions"
-          />
-        </div>
-
-        <div class="field-group field-group--full">
-          <label for="kanbanStatusNote">Observação</label>
-          <textarea id="kanbanStatusNote" formControlName="note" rows="4"></textarea>
-        </div>
-
-        <div class="form-actions form-actions--full">
-          <button
-            type="button"
-            class="button-secondary"
-            (click)="closeStatusModal()"
-            [disabled]="boardUpdatingId() !== null"
-          >
-            Cancelar
-          </button>
-          <button type="submit" class="button-primary" [disabled]="boardUpdatingId() !== null">
-            {{ boardUpdatingId() !== null ? 'Salvando...' : 'Salvar status' }}
           </button>
         </div>
       </form>

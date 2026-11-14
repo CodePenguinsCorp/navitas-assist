@@ -68,7 +68,6 @@
         <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
         <h3>Nenhum usuário cadastrado</h3>
         <p>Cadastre perfis internos para controlar o acesso ao sistema.</p>
-        <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Cadastrar usuário</button>
       </section>
     } @else if (users().length === 0) {
       <section class="empty-state">
@@ -84,6 +83,7 @@
             <tr>
               <th>Nome</th>
               <th>Usuário</th>
+              <th>E-mail</th>
               <th>Perfil</th>
               <th>Status</th>
               <th>Atualizado</th>
@@ -97,6 +97,7 @@
                   <span class="person"><span class="avatar" aria-hidden="true">{{ initials(user.fullName) }}</span><strong class="table-title">{{ user.fullName }}</strong></span>
                 </td>
                 <td><span class="code-text">{{ user.username }}</span></td>
+                <td class="user-email">{{ user.email || '—' }}</td>
                 <td>
                   {{ user.profile.name }}
                   @if (extrasLabel(user)) { <span class="mini-chip">{{ extrasLabel(user) }}</span> }
@@ -185,7 +186,6 @@
       <form class="form-grid user-form" [formGroup]="form" (ngSubmit)="saveUser()">
         <fieldset class="form-section">
           <legend>Identidade</legend>
-
           <label class="field-group">
             <span>Nome completo</span>
             <input type="text" formControlName="fullName" autocomplete="name" />
@@ -200,6 +200,12 @@
             @if (hasError('username')) {
               <small class="field-error">Informe o usuário.</small>
             }
+          </label>
+
+          <label class="field-group">
+            <span>E-mail (opcional)</span>
+            <input type="email" formControlName="email" autocomplete="email" maxlength="254" [attr.aria-invalid]="hasError('email')" [attr.aria-describedby]="hasError('email') ? 'user-email-error' : null" />
+            @if (hasError('email')) { <small id="user-email-error" class="field-error">Informe um e-mail válido com até 254 caracteres.</small> }
           </label>
         </fieldset>
 
@@ -230,29 +236,19 @@
           </label>
         </fieldset>
 
-        <fieldset class="form-section extra-permissions" aria-describedby="user-extras-hint">
+        <fieldset class="form-section extra-permissions">
           <legend>Permissões extras</legend>
-          <p id="user-extras-hint" class="form-section__hint field-group--full">Somam-se às permissões do perfil escolhido.</p>
           @if (catalogState() === 'loading') {
             <div class="extras-pending" aria-busy="true"></div>
           } @else if (catalogState() === 'ready') {
-            @for (module of catalog(); track module.module) {
-              <fieldset class="permission-module">
-                <legend>{{ module.label }}</legend>
-                @for (item of module.permissions; track item.code) {
-                  <label class="checkbox-field">
-                    <input
-                      type="checkbox"
-                      [checked]="isExtraChecked(item.code)"
-                      [disabled]="submitting() || includedInProfile(item.code)"
-                      (change)="toggleExtra(item.code, $any($event.target).checked)"
-                    />
-                    <span>{{ item.label }}</span>
-                    @if (includedInProfile(item.code)) { <small class="field-hint">Incluída no perfil</small> }
-                  </label>
-                }
-              </fieldset>
-            }
+            <app-permission-picker
+              mode="extras"
+              [catalog]="catalog()"
+              [locked]="profilePermissions()"
+              [disabled]="submitting()"
+              [(selected)]="extras"
+              [(expanded)]="extrasOpen"
+            />
           }
         </fieldset>
 

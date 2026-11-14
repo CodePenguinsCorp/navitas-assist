@@ -1,20 +1,18 @@
 services:
-  mysql:
-    image: mysql:8.0
+  postgres:
+    image: postgres:16
     restart: unless-stopped
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "${POSTGRES_PORT:-5432}:5432"
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-navitas_assist}
-      MYSQL_USER: ${MYSQL_USER:-navitas_app}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-navitas123}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}
-      MYSQL_ROOT_HOST: "%"
+      POSTGRES_DB: ${POSTGRES_DB:-navitas_assist}
+      POSTGRES_USER: ${POSTGRES_USER:-navitas_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-navitas123}
       TZ: America/Sao_Paulo
     volumes:
-      - mysql_data:/var/lib/mysql
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -26,14 +24,25 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: local
-      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-navitas_assist}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      DB_USER: ${MYSQL_USER:-navitas_app}
-      DB_PASSWORD: ${MYSQL_PASSWORD:-navitas123}
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-navitas_assist}
+      DB_USER: ${POSTGRES_USER:-navitas_app}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-navitas123}
       SESSION_TIMEOUT: ${SESSION_TIMEOUT:-30m}
+      DEADLINE_WARNING_DAYS: ${DEADLINE_WARNING_DAYS:-7}
+      NOTIFICATIONS_EMAIL_ENABLED: ${NOTIFICATIONS_EMAIL_ENABLED:-false}
+      NOTIFICATIONS_EMAIL_PROVIDER: ${NOTIFICATIONS_EMAIL_PROVIDER:-fake}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      APP_BASE_URL: ${APP_BASE_URL:-}
+      NOTIFICATIONS_EMAIL_POLL_MS: ${NOTIFICATIONS_EMAIL_POLL_MS:-5000}
+      NOTIFICATIONS_EMAIL_BATCH_SIZE: ${NOTIFICATIONS_EMAIL_BATCH_SIZE:-50}
+      NOTIFICATIONS_EMAIL_DAILY_LIMIT: ${NOTIFICATIONS_EMAIL_DAILY_LIMIT:-100}
+      NOTIFICATIONS_EMAIL_MONTHLY_LIMIT: ${NOTIFICATIONS_EMAIL_MONTHLY_LIMIT:-3000}
+      NOTIFICATIONS_EMAIL_SEND_INTERVAL_MS: ${NOTIFICATIONS_EMAIL_SEND_INTERVAL_MS:-500}
       SESSION_COOKIE_SECURE: "false"
     ports:
       - "${BACKEND_PORT:-8080}:8080"
@@ -49,4 +58,4 @@ services:
       - "${FRONTEND_PORT:-4200}:80"
 
 volumes:
-  mysql_data:
+  postgres_data:

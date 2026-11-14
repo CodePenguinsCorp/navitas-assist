@@ -1,10 +1,10 @@
 import { Component, EventEmitter, Output, computed, inject, input } from '@angular/core';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { blockDuration } from '../../core/utils/rma-block';
-import { slaStatus } from '../../core/utils/rma-sla';
-import { RmaSlaBadgeComponent } from '../rma-sla-badge/rma-sla-badge.component';
+import { stageTimeLabel } from '../../core/utils/rma-stage';
+import { RmaDeadlineChipComponent } from '../rma-deadline-chip/rma-deadline-chip.component';
 import { RMA_STATUS_FLOW } from '../../core/mock-data';
-import { RmaResponse, RmaStatus } from '../../core/models';
+import { RmaBoardCardResponse, RmaStatus } from '../../core/models';
 import {
   compareRmasForBoard,
   formatDate,
@@ -19,21 +19,17 @@ import {
 interface RmaBoardColumn {
   status: RmaStatus;
   label: string;
-  items: RmaResponse[];
+  items: RmaBoardCardResponse[];
 }
 
 @Component({
   selector: 'app-rma-kanban-board',
-  imports: [RmaSlaBadgeComponent],
+  imports: [RmaDeadlineChipComponent],
   templateUrl: './rma-kanban-board.component.html',
   styleUrl: './rma-kanban-board.component.css'
 })
 export class RmaKanbanBoardComponent {
-  readonly rmas = input<readonly RmaResponse[]>([]);
-  readonly bulkSelectionEnabled = input(false);
-  readonly bulkSelectedIds = input<readonly number[]>([]);
-  readonly interactionDisabled = input(false);
-  @Output() readonly bulkSelectionChange = new EventEmitter<RmaResponse>();
+  readonly rmas = input<readonly RmaBoardCardResponse[]>([]);
   readonly loading = input(false);
   readonly canUpdateStatus = input(false);
   readonly canUpdateAssignee = input(false);
@@ -43,12 +39,12 @@ export class RmaKanbanBoardComponent {
   readonly dragTargetStatus = input<RmaStatus | null>(null);
   readonly showToolbar = input(true);
   readonly toolbarTitle = input('Quadro Kanban');
-  readonly toolbarDescription = input('Arraste os cards entre as colunas para atualizar o status do RMA.');
+  readonly toolbarDescription = input('Arraste os cards entre as colunas para atualizar o status da OS.');
 
-  @Output() readonly cardSelect = new EventEmitter<RmaResponse>();
-  protected readonly clock = inject(SlaClockService);
+  @Output() readonly cardSelect = new EventEmitter<RmaBoardCardResponse>();
+  protected readonly clock = inject(ClockService);
   protected readonly blockedDuration = blockDuration;
-  @Output() readonly cardDragStart = new EventEmitter<{ event: DragEvent; rma: RmaResponse }>();
+  @Output() readonly cardDragStart = new EventEmitter<{ event: DragEvent; rma: RmaBoardCardResponse }>();
   @Output() readonly cardDragEnd = new EventEmitter<void>();
   @Output() readonly columnDragOver = new EventEmitter<{ event: DragEvent; status: RmaStatus }>();
   @Output() readonly columnDragLeave = new EventEmitter<RmaStatus>();
@@ -72,17 +68,16 @@ export class RmaKanbanBoardComponent {
   protected readonly ownerLabel = ownerLabel;
   protected readonly dateLabel = formatDate;
 
-  /** Healthy and closed SLAs stay in the detail; the card only flags attention or delay. */
-  protected showSla(rma: RmaResponse): boolean {
-    const state = slaStatus(rma.sla, this.clock.now());
-    return state === 'WARNING' || state === 'OVERDUE';
+  /** "há 2 d 4 h nesta etapa" for open RMAs; null for closed ones. */
+  protected stageTime(rma: RmaBoardCardResponse): string | null {
+    return stageTimeLabel(rma, this.clock.now());
   }
 
-  protected isSelected(rma: RmaResponse): boolean {
-    return this.selectedRmaId() === rma.id || this.bulkSelectedIds().includes(rma.id);
+  protected isSelected(rma: RmaBoardCardResponse): boolean {
+    return this.selectedRmaId() === rma.id;
   }
 
-  protected isDragging(rma: RmaResponse): boolean {
+  protected isDragging(rma: RmaBoardCardResponse): boolean {
     return this.draggedRmaId() === rma.id;
   }
 
@@ -90,12 +85,7 @@ export class RmaKanbanBoardComponent {
     return this.dragTargetStatus() === status;
   }
 
-  protected isStatusUpdating(rma: RmaResponse): boolean {
+  protected isStatusUpdating(rma: RmaBoardCardResponse): boolean {
     return this.boardUpdatingId() === rma.id;
-  }
-
-  protected preventCardDrag(event: DragEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
   }
 }

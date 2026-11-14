@@ -10,6 +10,7 @@ export const PERMISSIONS = [
   'rma.impedimentos',
   'cadastros.ver',
   'cadastros.editar',
+  'cadastros.importar',
   'pecas.ver',
   'pecas.movimentar',
   'pecas.reservar',
@@ -19,7 +20,8 @@ export const PERMISSIONS = [
   'relatorios.ver',
   'usuarios.gerir',
   'perfis.gerir',
-  'notificacoes.regras'
+  'notificacoes.regras',
+  'auditoria.ver'
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

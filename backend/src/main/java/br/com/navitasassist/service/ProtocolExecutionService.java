@@ -30,6 +30,9 @@ import br.com.navitasassist.repository.RmaProtocolItemResultRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaStatus;
+import br.com.navitasassist.notification.NotificationEventType;
+import br.com.navitasassist.notification.RmaNotificationEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -48,27 +51,28 @@ public class ProtocolExecutionService {
     private final RmaProtocolExecutionRepository rmaProtocolExecutionRepository;
     private final RmaProtocolItemResultRepository rmaProtocolItemResultRepository;
     private final RmaRecordRepository rmaRecordRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final ProtocolTemplateService protocolTemplateService;
 
     @Transactional(readOnly = true)
     public List<ProtocolExecutionResponse> listForRma(Long rmaId) {
         if (!rmaRecordRepository.existsById(rmaId)) {
-            throw new ResourceNotFoundException("RMA not found: " + rmaId);
+            throw new ResourceNotFoundException("OS não encontrada: " + rmaId);
         }
         return rmaProtocolExecutionRepository.findAllByRma_IdOrderByIdAsc(rmaId).stream().map(this::toResponse).toList();
     }
 
     public ProtocolExecutionResponse start(Long rmaId, Long templateId) {
-        RmaRecord rma = rmaRecordRepository.findByIdForUpdate(rmaId).orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + rmaId));
+        RmaRecord rma = rmaRecordRepository.findByIdForUpdate(rmaId).orElseThrow(() -> new ResourceNotFoundException("OS não encontrada: " + rmaId));
         ProtocolTemplate template = protocolTemplateService.getEntityById(templateId);
         if (!template.isActive()) {
             throw new BusinessException("Inactive protocols cannot be started.");
         }
         if (!protocolTemplateService.appliesTo(template, rma)) {
-            throw new BusinessException("This protocol does not apply to the products of the RMA.");
+            throw new BusinessException("Este protocolo não se aplica aos produtos da OS.");
         }
         if (rmaProtocolExecutionRepository.existsByRma_IdAndTemplateVersion_Template_IdAndStatus(rmaId, templateId, ProtocolExecutionStatus.IN_PROGRESS)) {
-            throw new BusinessException("This protocol is already in progress for the RMA.");
+            throw new BusinessException("Este protocolo já está em andamento para a OS.");
         }
 
         ProtocolTemplateVersion version = template.latestVersion();
@@ -119,6 +123,11 @@ public class ProtocolExecutionService {
         result.setExecutedBy(currentUsername());
 
         execution.getResults().add(rmaProtocolItemResultRepository.save(result));
+        if (result.getOutcome() == ProtocolItemOutcome.FAILED) {
+            eventPublisher.publishEvent(new RmaNotificationEvent(NotificationEventType.TEST_FAILED,
+                "TEST_FAILED:" + result.getId(), execution.getRma().getId(), now, currentUsername(),
+                "Item " + item.getTitle() + " reprovado · tentativa " + result.getAttempt() + "."));
+        }
         return toResponse(execution);
     }
 
@@ -162,8 +171,8 @@ public class ProtocolExecutionService {
             .filter(execution -> pendingRequired(execution) > 0)
             .findFirst()
             .ifPresent(execution -> {
-                throw new BusinessException("Required items of protocol " + execution.getTemplateName() + " v" + execution.getVersionNumber()
-                    + " are pending. The RMA cannot move to " + targetStatus + ".");
+                throw new BusinessException("Itens obrigatórios do protocolo " + execution.getTemplateName() + " v" + execution.getVersionNumber()
+                    + " estão pendentes. A OS não pode avançar para " + targetStatus + ".");
             });
 
         protocolTemplateService.findActiveApplicable(rma).stream()
@@ -172,8 +181,8 @@ public class ProtocolExecutionService {
             .filter(template -> template.latestVersion().getItems().stream().anyMatch(ProtocolTemplateItem::isRequired))
             .findFirst()
             .ifPresent(template -> {
-                throw new BusinessException("Protocol " + template.getName() + " v" + template.getCurrentVersion()
-                    + " has required items and was not started. The RMA cannot move to " + targetStatus + ".");
+                throw new BusinessException("Protocolo " + template.getName() + " v" + template.getCurrentVersion()
+                    + " possui itens obrigatórios e não foi iniciado. A OS não pode avançar para " + targetStatus + ".");
             });
     }
 

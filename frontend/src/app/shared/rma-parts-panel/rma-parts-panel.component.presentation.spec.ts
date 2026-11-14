@@ -4,31 +4,31 @@ import { Observable, Subject, of } from 'rxjs';
 import { PartMovementResponse, PartReservationResponse, PartResponse, RmaPartsResponse, RmaStatus } from '../../core/models';
 import { Permission } from '../../core/permissions';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { RmaRepairService } from '../../core/services/rma-repair.service';
 import { PartService } from '../../core/services/part.service';
 import { RmaPartsPanelComponent } from './rma-parts-panel.component';
 
 type ReservationStatus = PartReservationResponse['status'];
 
 const reservation = (id: number, status: ReservationStatus): PartReservationResponse => ({
-  id, rmaId: 7, rmaCode: 'RMA-7', partId: 4, partCode: `PCA-${id}`, partName: 'Capacitor', unit: 'un',
+  id, rmaId: 7, rmaCode: 'OS-7', partId: 4, partCode: `PCA-${id}`, partName: 'Capacitor', unit: 'un',
   location: 'A1', quantity: 2, status, partAvailable: 3, unitCost: 10, totalCost: 20, note: null, createdBy: 'tech',
   createdAt: '2026-10-24T12:00:00Z', updatedAt: '2026-10-24T12:00:00Z'
 });
 
 const MOVEMENT: PartMovementResponse = {
   id: 30, partId: 4, partCode: 'PCA-1', partName: 'Capacitor', type: 'CONSUMPTION', quantity: 2,
-  onHandChange: -2, reservedChange: -2, onHandAfter: 3, reservedAfter: 0, unitCost: 10, totalCost: 20, rmaId: 7, rmaCode: 'RMA-7', reservationId: 2,
+  onHandChange: -2, reservedChange: -2, onHandAfter: 3, reservedAfter: 0, rmaCode: 'OS-7', 
   reason: 'Troca da placa', reversed: true, reversedMovementId: null, createdBy: 'tech', createdAt: '2026-10-24T13:00:00Z'
 };
 
 const rmaParts = (reservations: PartReservationResponse[]): RmaPartsResponse => ({
-  rmaId: 7, rmaCode: 'RMA-7', reservations, movements: [MOVEMENT], reservedCost: 20, consumedCost: 20, pendingCount: 1
+  rmaId: 7, rmaCode: 'OS-7', reservations, movements: [MOVEMENT], reservedCost: 20, consumedCost: 20, pendingCount: 1
 });
 
 const part = (id: number, unit: string, available = 3): PartResponse => ({
   id, code: `P-${id}`, name: `Peça ${id}`, unit, location: null, minimumStock: 1, unitCost: 10,
   onHand: available, reserved: 0, available, belowMinimum: false, active: true,
-  createdAt: '2026-10-24T12:00:00Z', updatedAt: '2026-10-24T12:00:00Z'
 });
 
 type Harness = {
@@ -40,8 +40,9 @@ type Harness = {
 };
 
 describe('RmaPartsPanelComponent presentation', () => {
+  afterEach(() => localStorage.clear());
   let fixture: ComponentFixture<RmaPartsPanelComponent>;
-  let service: { getRmaParts: ReturnType<typeof vi.fn>; list: ReturnType<typeof vi.fn>; reserve: ReturnType<typeof vi.fn>; updateReservation: ReturnType<typeof vi.fn> };
+  let service: { getRmaParts: ReturnType<typeof vi.fn>; listOptions: ReturnType<typeof vi.fn>; reserve: ReturnType<typeof vi.fn>; updateReservation: ReturnType<typeof vi.fn> };
   const root = (): HTMLElement => fixture.nativeElement;
   const component = () => fixture.componentInstance as unknown as Harness;
   const render = () => { fixture.componentRef.injector.get(ChangeDetectorRef).markForCheck(); fixture.detectChanges(); };
@@ -56,7 +57,7 @@ describe('RmaPartsPanelComponent presentation', () => {
   async function setup(sources: { role?: LegacyProfileCode; permissions?: readonly Permission[]; status?: RmaStatus; reservations?: PartReservationResponse[]; catalog?: PartResponse[]; update?: Observable<PartReservationResponse> } = {}) {
     service = {
       getRmaParts: vi.fn(() => of(rmaParts(sources.reservations ?? [reservation(1, 'ACTIVE'), reservation(2, 'CONSUMED'), reservation(3, 'PENDING')]))),
-      list: vi.fn(() => of(sources.catalog ?? [part(4, 'm'), part(5, 'un')])),
+      listOptions: vi.fn(() => of(sources.catalog ?? [part(4, 'm'), part(5, 'un')])),
       reserve: vi.fn(() => of(reservation(9, 'ACTIVE'))),
       updateReservation: vi.fn(() => sources.update ?? of(reservation(1, 'CANCELLED')))
     };
@@ -64,12 +65,15 @@ describe('RmaPartsPanelComponent presentation', () => {
       imports: [RmaPartsPanelComponent],
       providers: [
         { provide: PartService, useValue: service },
+        { provide: RmaRepairService, useValue: { listExternalComponents: () => of([]) } },
         providePermissions(sources.permissions ?? profilePermissions(sources.role ?? 'TECHNICIAN'))
       ]
     }).compileComponents();
     fixture = TestBed.createComponent(RmaPartsPanelComponent);
     fixture.componentRef.setInput('rmaId', 7);
     fixture.componentRef.setInput('rmaStatus', sources.status ?? 'IN_REPAIR');
+    render();
+    fixture.nativeElement.querySelector('#reserve-trigger')?.click();
     render();
   }
 
@@ -87,9 +91,9 @@ describe('RmaPartsPanelComponent presentation', () => {
   // Vermelho: o cancelamento é rotulado apenas "Cancelar".
   it('names cancellation as a reservation operation', async () => {
     await setup();
-    expect(buttons()).toContain('Consumir');
+    expect(buttons()).toContain('Aplicar');
     expect(buttons()).toContain('Efetivar reserva');
-    expect(buttons()).not.toContain('Cancelar');
+    expect(buttons(items()[0])).not.toContain('Cancelar');
     const cancel = buttons(items()[0]).find((label) => label.startsWith('Cancelar'));
     expect(cancel).toBe('Cancelar reserva');
     (items()[0].querySelectorAll('button')[1] as HTMLButtonElement).click();
@@ -97,24 +101,32 @@ describe('RmaPartsPanelComponent presentation', () => {
   });
 
   // Vermelho: contagens usam plurais artificiais e custos não declaram escopo.
-  it('states reservation count and RMA cost scope', async () => {
+  it('states reservation count and OS cost scope', async () => {
     await setup();
-    expect(text()).toContain('Reservas ativas: 1');
-    expect(text()).toContain('Consumidas: 1');
-    expect(text()).toContain('Pendentes: 1');
-    const costs = facts(root().querySelector<HTMLElement>('.parts-costs')!);
-    expect(costs.get('Custo consumido no RMA')).toBe('R$ 20,00');
-    expect(costs.get('Custo reservado no RMA')).toBe('R$ 20,00');
+    const stats = facts(root().querySelector<HTMLElement>('.parts-stats')!);
+    expect(stats.get('Ativas')).toBe('1');
+    expect(stats.get('Aplicadas')).toBe('1');
+    expect(stats.get('Pendentes')).toBe('1');
+    expect(stats.get('Custo aplicado')).toBe('R$ 20,00');
+    expect(stats.get('Custo reservado')).toBe('R$ 20,00');
     expect(facts(items()[0]).get('Custo da reserva')).toBe('R$ 20,00');
     expect(text()).not.toContain('reservada(s)');
-    expect(text()).not.toContain('consumida(s)');
+    expect(text()).not.toContain('aplicada(s)');
     expect(text()).not.toContain('pendente(s)');
+  });
+
+  it('hides every cost block without pecas.ver', async () => {
+    await setup({ permissions: ['rma.ver', 'pecas.reservar'] });
+    expect(text()).not.toContain('Custo aplicado');
+    expect(text()).not.toContain('Custo reservado');
+    expect(facts(items()[0]).has('Custo da reserva')).toBe(false);
+    expect(facts(items()[0]).get('Quantidade')).toBeTruthy();
   });
 
   // Vermelho: o formulário não tem seção nomeada nem mensagens junto dos campos; só há alerta geral.
   it('groups the inline reservation form and shows existing errors by field', async () => {
     await setup();
-    expect(normalize(root().querySelector('form fieldset.form-section > legend')?.textContent)).toBe('Reservar peças');
+    expect(root().querySelector('fieldset')).toBeNull();
     component().reserveForm.setValue({ partId: null, quantity: 0, note: '' });
     submit();
     expect(normalize(field('partId').textContent)).toContain('Selecione a peça.');
@@ -143,7 +155,7 @@ describe('RmaPartsPanelComponent presentation', () => {
   const STATUSES: ReservationStatus[] = ['ACTIVE', 'PENDING', 'CONSUMED', 'CANCELLED', 'REVERSED'];
   const expectedActions = (canAct: boolean, closed: boolean, status: ReservationStatus): string[] => {
     if (!canAct) return [];
-    if (status === 'ACTIVE') return closed ? ['Cancelar reserva'] : ['Consumir', 'Cancelar reserva'];
+    if (status === 'ACTIVE') return closed ? ['Cancelar reserva'] : ['Aplicar', 'Cancelar reserva'];
     if (status === 'PENDING') return closed ? ['Cancelar reserva'] : ['Efetivar reserva', 'Cancelar reserva'];
     return [];
   };
@@ -159,7 +171,7 @@ describe('RmaPartsPanelComponent presentation', () => {
       });
       expect(root().querySelector('form') !== null).toBe(canAct && !closed);
       expect(button('Reservar') !== undefined).toBe(canAct && !closed);
-      expect(text()).toContain('Custo consumido no RMA');
+      expect(text()).toContain('Custo aplicado');
     });
 
   it.each([
@@ -188,17 +200,29 @@ describe('RmaPartsPanelComponent presentation', () => {
   it('blocks other reservation actions while one is pending', async () => {
     const pending = new Subject<PartReservationResponse>();
     await setup({ update: pending });
-    button('Consumir')!.click(); render();
-    for (const label of ['Consumir', 'Efetivar reserva', 'Cancelar reserva']) expect(button(label)!.disabled).toBe(true);
+    button('Aplicar')!.click(); render();
+    (fixture.componentInstance as any).consumptionForm.setValue({ replacementReason: 'Falha', componentBatch: '' });
+    button('Confirmar')!.click(); render();
+    for (const label of ['Aplicar', 'Efetivar reserva', 'Cancelar reserva']) expect(button(label)!.disabled).toBe(true);
     (items()[0].querySelectorAll('button')[1] as HTMLButtonElement).click();
     expect(service.updateReservation).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the collapsible movement history with reversal and reason', async () => {
+  it('keeps the movement history collapsed by default and lists aligned columns with reversal and reason', async () => {
     await setup();
-    const history = root().querySelector('details.parts-history')!;
-    expect(normalize(history.querySelector('summary')!.textContent)).toBe('Histórico de movimentos de peças');
-    expect(normalize(history.textContent)).toContain('estornado');
-    expect(normalize(history.textContent)).toContain('Troca da placa');
+    const section = Array.from(root().querySelectorAll('app-collapsible-section')).find((item) => normalize(item.querySelector('h3')!.textContent).startsWith('Movimentos de peças'))!;
+    const toggle = section.querySelector<HTMLButtonElement>('.collapsible__toggle')!;
+    expect(normalize(toggle.textContent)).toBe('Movimentos de peças1');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(section.querySelector<HTMLElement>('.collapsible__body')!.hidden).toBe(true);
+    toggle.click(); render();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(section.querySelector<HTMLElement>('.collapsible__body')!.hidden).toBe(false);
+    const row = section.querySelector('.movements__list li')!;
+    expect(normalize(row.querySelector('.movements__type')!.textContent)).toBe('Aplicação');
+    expect(normalize(row.querySelector('.movements__part')!.textContent)).toBe('PCA-1');
+    expect(normalize(row.querySelector('.movements__user')!.textContent)).toBe('tech');
+    expect(normalize(row.querySelector('.movements__note')!.textContent)).toBe('estornado · Troca da placa');
+    expect(root().querySelector('details')).toBeNull();
   });
 });

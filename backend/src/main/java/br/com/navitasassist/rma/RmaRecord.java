@@ -58,7 +58,7 @@ public class RmaRecord extends AuditableEntity {
     private ItemIdentification itemIdentification = new ItemIdentification();
 
     @OneToMany(mappedBy = "rma", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("id ASC")
+    @OrderBy("position ASC, id ASC")
     private List<RmaItem> items = new ArrayList<>();
 
     @Column
@@ -69,6 +69,10 @@ public class RmaRecord extends AuditableEntity {
 
     @Column(nullable = false)
     private LocalDate entryDate;
+
+    /** Optional due date of the whole service (date only). */
+    @Column(name = "due_date")
+    private LocalDate dueDate;
 
     @Column(length = 80)
     private String invoiceNumber;
@@ -128,6 +132,14 @@ public class RmaRecord extends AuditableEntity {
     @OrderBy("changedAt DESC")
     private List<RmaAssignmentHistory> assignmentHistory = new ArrayList<>();
 
+    @OneToMany(mappedBy = "rma", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("changedAt DESC, id DESC")
+    private List<RmaDueDateHistory> dueDateHistory = new ArrayList<>();
+
+    @OneToMany(mappedBy = "rma", cascade = CascadeType.ALL)
+    @OrderBy("changedAt DESC, id DESC")
+    private List<RmaRepairHistory> repairHistory = new ArrayList<>();
+
     public ItemIdentification getItemIdentification() {
         // JPA may reconstruct an all-null embedded value as null.
         if (itemIdentification == null) {
@@ -165,6 +177,11 @@ public class RmaRecord extends AuditableEntity {
         this.assignmentHistory.add(history);
     }
 
+    public void addDueDateHistory(RmaDueDateHistory history) {
+        history.setRma(this);
+        this.dueDateHistory.add(0, history);
+    }
+
     public void replaceItems(List<RmaItem> items) {
         this.items.clear();
         items.forEach(this::addItem);
@@ -172,6 +189,7 @@ public class RmaRecord extends AuditableEntity {
 
     public void addItem(RmaItem item) {
         item.setRma(this);
+        item.setPosition(this.items.size());
         this.items.add(item);
     }
 }

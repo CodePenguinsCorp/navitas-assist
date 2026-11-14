@@ -9,12 +9,16 @@ import {
   RmaAssigneeUpdateRequest,
   RmaBlockRequest,
   RmaBlockResolveRequest,
-  RmaBulkStatusUpdateRequest,
+  RmaBoardCardResponse,
+  RmaDashboardResponse,
   RmaResponse,
+  RmaItemWarrantyRequest,
+  RmaListItemResponse,
   RmaSummaryResponse,
   RmaPriority,
   RmaStatus,
-  RmaStatusUpdateRequest
+  RmaStatusUpdateRequest,
+  UpdateRmaDueDateRequest
 } from '../models';
 import { buildPageParams } from '../utils/pagination';
 
@@ -27,9 +31,9 @@ export interface RmaFilters extends PageQuery {
 export class RmaService {
   private readonly http = inject(HttpClient);
 
-  list(filters: RmaFilters = {}): Observable<PageResponse<RmaResponse>> {
+  list(filters: RmaFilters = {}): Observable<PageResponse<RmaListItemResponse>> {
     const params = buildPageParams(filters, { query: filters.query, status: filters.status });
-    return this.http.get<PageResponse<RmaResponse>>('/api/rmas', { params });
+    return this.http.get<PageResponse<RmaListItemResponse>>('/api/rmas', { params });
   }
 
   getSummary(filters: Pick<RmaFilters, 'query' | 'status'> = {}): Observable<RmaSummaryResponse> {
@@ -37,9 +41,13 @@ export class RmaService {
     return this.http.get<RmaSummaryResponse>('/api/rmas/summary', { params });
   }
 
-  listBoard(filters: Pick<RmaFilters, 'query' | 'status'> = {}): Observable<RmaResponse[]> {
+  listBoard(filters: Pick<RmaFilters, 'query' | 'status'> = {}): Observable<RmaBoardCardResponse[]> {
     const params = buildPageParams({}, { query: filters.query, status: filters.status });
-    return this.http.get<RmaResponse[]>('/api/rmas/board', { params });
+    return this.http.get<RmaBoardCardResponse[]>('/api/rmas/board', { params });
+  }
+
+  getDashboard(): Observable<RmaDashboardResponse> {
+    return this.http.get<RmaDashboardResponse>('/api/rmas/dashboard');
   }
 
   getById(id: number, context?: HttpContext): Observable<RmaResponse> {
@@ -54,12 +62,22 @@ export class RmaService {
     return this.http.patch<RmaResponse>(`/api/rmas/${id}/status`, payload);
   }
 
-  updateStatusInBulk(id: number, payload: RmaBulkStatusUpdateRequest): Observable<RmaResponse> {
-    return this.http.patch<RmaResponse>(`/api/rmas/${id}/bulk-status`, payload);
+  updateStatusNote(id: number, eventId: number, note: string): Observable<RmaResponse> {
+    return this.http.patch<RmaResponse>(`/api/rmas/${id}/status-history/${eventId}/note`, { note });
   }
 
   updatePriority(id: number, priority: RmaPriority): Observable<RmaResponse> {
     return this.http.put<RmaResponse>(`/api/rmas/${id}`, { priority });
+  }
+
+  /** A null date removes the due date with `clearDueDate`; a null `dueDate` would mean "unchanged". */
+  updateDueDate(id: number, dueDate: string | null): Observable<RmaResponse> {
+    const payload: UpdateRmaDueDateRequest = dueDate ? { dueDate } : { clearDueDate: true };
+    return this.http.put<RmaResponse>(`/api/rmas/${id}`, payload);
+  }
+
+  updateWarranty(rmaId: number, itemId: number, payload: RmaItemWarrantyRequest): Observable<RmaResponse> {
+    return this.http.put<RmaResponse>(`/api/rmas/${rmaId}/items/${itemId}/warranty`, payload);
   }
 
   updateAssignee(id: number, payload: RmaAssigneeUpdateRequest): Observable<RmaResponse> {

@@ -157,19 +157,26 @@ describe('ProtocolsComponent', () => {
     it('names the Nova versão action with the protocol', async () => {
       await setup();
 
-      const action = rows()[0].querySelector<HTMLButtonElement>('.table-actions-col button');
-      expect(action?.textContent?.trim()).toBe('Nova versão');
-      expect(action?.getAttribute('aria-label')).toBe('Nova versão de Diagnóstico Alfa');
+      const actions = rows()[0].querySelectorAll<HTMLButtonElement>('.table-actions-col button');
+      expect(actions.length).toBe(1);
+      const action = actions[0];
+      // Ação só com ícone, no mesmo padrão de Clientes e Produtos: o nome vai no aria-label e na dica.
+      expect(action.classList).toContain('row-action');
+      expect(action.classList).not.toContain('button-secondary');
+      expect(action.querySelector('app-icon')).not.toBeNull();
+      expect(action.querySelector('[role="tooltip"]')?.textContent?.trim()).toBe('Nova versão');
+      expect(action.getAttribute('aria-label')).toBe('Nova versão de Diagnóstico Alfa');
     });
 
-    it('shows the empty catalog with a create action', async () => {
+    it('shows the empty catalog with the create action only in the header', async () => {
       await setup(() => of([]));
 
       expect(text()).toContain('Nenhum protocolo cadastrado');
       expect(text()).not.toContain('Nenhum protocolo encontrado');
       expect(count()).toBe('0 protocolos');
 
-      buttonByText('Cadastrar protocolo')!.click();
+      expect(element().querySelector('.empty-state button')).toBeNull();
+      buttonByText('Novo protocolo')!.click();
       fixture.detectChanges();
 
       expect(element().querySelector('.modal-panel h3')?.textContent?.trim()).toBe('Novo protocolo');
@@ -349,7 +356,7 @@ describe('ProtocolsComponent', () => {
       for (const name of ['name', 'productId', 'category', 'active']) {
         expect(general.querySelector('[formcontrolname="' + name + '"]')).not.toBeNull();
       }
-      expect(blocked.textContent).toContain('Bloquear mudança do RMA para estas etapas enquanto houver obrigatórios pendentes');
+      expect(blocked.textContent).toContain('Bloquear mudança da OS para estas etapas enquanto houver obrigatórios pendentes');
       expect(blocked.querySelectorAll('input[type="checkbox"]').length).toBeGreaterThan(0);
       expect(general.querySelector('[formcontrolname="stepName"]')).toBeNull();
       expect(items.querySelector('[formcontrolname="stepName"]')).not.toBeNull();

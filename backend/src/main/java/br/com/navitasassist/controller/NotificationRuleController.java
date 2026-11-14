@@ -22,6 +22,24 @@ import org.springframework.web.bind.annotation.RestController;
 public class NotificationRuleController {
 
     private final NotificationRuleService notificationRuleService;
+    private final br.com.navitasassist.service.NotificationEmailAdminService emailAdmin;
+
+    @GetMapping("/email-status")
+    public br.com.navitasassist.notification.NotificationEmailStatusResponse emailStatus() {
+        return emailAdmin.status();
+    }
+
+    @org.springframework.web.bind.annotation.PostMapping("/emails/{notificationId}/retry")
+    @org.springframework.web.bind.annotation.ResponseStatus(org.springframework.http.HttpStatus.ACCEPTED)
+    public br.com.navitasassist.notification.NotificationEmailActionResponse retryEmail(@PathVariable Long notificationId, java.security.Principal principal) {
+        return emailAdmin.retry(notificationId, principal.getName());
+    }
+
+    @org.springframework.web.bind.annotation.PostMapping("/emails/test")
+    public br.com.navitasassist.notification.NotificationEmailTestResponse testEmail(@RequestBody(required = false) java.util.Map<String, Object> body, java.security.Principal principal) {
+        if (body != null && !body.isEmpty()) throw new br.com.navitasassist.controller.BusinessException("Email test accepts no recipient or payload.");
+        return emailAdmin.test(principal.getName());
+    }
 
     @GetMapping
     public List<NotificationRuleResponse> list() {

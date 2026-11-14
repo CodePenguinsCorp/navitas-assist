@@ -12,17 +12,22 @@ import { ProtocolService } from '../../core/services/protocol.service';
 import { RmaService } from '../../core/services/rma.service';
 import { RmasComponent } from './rmas.component';
 import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { settleRmaLazyChunks } from '../../testing/lazy-chunks';
+
+// Waits for the lazy chunks the detail view starts, so none is pending at environment teardown.
+afterEach(settleRmaLazyChunks);
 
 describe('RmasComponent form', () => {
   let component: RmaFormHarness;
   let fixture: ComponentFixture<RmasComponent>;
-  let rmaService: { list: ReturnType<typeof vi.fn>; getSummary: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
+  let rmaService: { list: ReturnType<typeof vi.fn>; getSummary: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn>; getById: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     rmaService = {
       list: vi.fn(() => of({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 })),
       getSummary: vi.fn(() => of({ total: 45, ongoing: 30, highPriority: 7 })),
       create: vi.fn(() => of(createdRma)),
+      getById: vi.fn(() => of(createdRma)),
     };
     const currentUser = signal<UserSession | null>({
       username: 'tester',
@@ -41,7 +46,7 @@ describe('RmasComponent form', () => {
         },
         {
           provide: CatalogService,
-          useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]) },
+          useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]), listAssignableUsers: () => of([]) },
         },
         { provide: RmaService, useValue: rmaService },
         { provide: ProtocolService, useValue: { listExecutions: () => of([]), listTemplates: () => of([]) } },
@@ -119,10 +124,10 @@ describe('RmasComponent form', () => {
     expect(page.querySelector('[formControlName="invoiceFileName"]')).toBeNull();
     expect(page.querySelector('[formControlName="receivedBy"]')).toBeNull();
     expect(page.textContent).not.toContain('Arquivo da NF');
-    expect(page.textContent).not.toContain('Recebido por');
+    expect(page.textContent).not.toContain('Recebida por');
   });
 
-  it('creates an RMA with its invoice number without sending a file or receiver', () => {
+  it('creates an OS with its invoice number without sending a file or receiver', () => {
     component.createForm.patchValue({
       clientId: 1, purchaseDateUnknown: true, invoiceNumber: '  NF-123  ', reportedFailure: 'Falha',
     });
@@ -146,7 +151,7 @@ describe('RmasComponent form', () => {
     expect(page.textContent).toContain('Nota fiscal');
     expect(page.textContent).toContain('NF-123');
     expect(page.textContent).not.toContain('Arquivo da NF');
-    expect(page.textContent).not.toContain('Recebido por');
+    expect(page.textContent).not.toContain('Recebida por');
   });
 });
 
@@ -161,17 +166,15 @@ interface RmaFormHarness {
 }
 
 const createdRma: RmaResponse = {
-  id: 1, code: 'RMA-2026-000001', clientId: 1, clientName: 'Cliente',
-  items: [{ id: 1, productId: 2, productName: 'Produto', productSku: 'SKU-2', batchNumber: null,
-    serialNumber: 'SER-2', manufacturedAt: null, warrantyMonths: 12, warrantyExpiresAt: null, warrantyStatus: WarrantyStatus.PENDING }],
-  productId: 2, productName: 'Produto', productSku: 'SKU-2', batchNumber: null, serialNumber: 'SER-2',
-  manufacturedAt: null, purchaseDate: null, purchaseDateUnknown: true, entryDate: '2026-10-20',
+  id: 1, code: 'OS-2026-000001', clientName: 'Cliente',
+  items: [{ id: 1, productName: 'Produto', productSku: 'SKU-2', batchNumber: null,
+    serialNumber: 'SER-2', manufacturedAt: null, warrantyMonths: 12, warrantyExpiresAt: null, calculatedWarrantyStatus: WarrantyStatus.PENDING, warrantyOverride: null, warrantyStatus: WarrantyStatus.PENDING }],
+  purchaseDate: null, purchaseDateUnknown: true, entryDate: '2026-10-20',
   invoiceNumber: 'NF-123', receivedBy: 'tester', reportedFailure: 'Falha', receivedAccessories: null,
   physicalCondition: null, priority: 'MEDIUM', status: 'RECEIVED', assigneeId: null, assigneeName: null,
-  repairSummary: null, replacedPartsSummary: null, testSummary: null, shippedAt: null, carrier: null,
+  repairSummary: null, replacedPartsSummary: null, testSummary: null, carrier: null,
   trackingCode: null, diagnosis: null, statusHistory: [], assignmentHistory: [], currentBlock: null, blockHistory: [],
-  sla: { status: 'NORMAL', startedAt: '2026-10-20T12:00:00Z', warningAt: '2026-10-21T07:12:00Z',
-    dueAt: '2026-10-21T12:00:00Z', elapsedSeconds: 0, limitSeconds: 86400 },
+  dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [], warrantyHistory: [],
   createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z',
 };
 
@@ -182,11 +185,11 @@ describe('RmasComponent pending editor lifecycle', () => {
   const client: ClientResponse = {
     id: 1, legalName: 'Cliente', tradeName: null, documentNumber: null,
     email: null, phone: null, address: null, notes: null,
-    createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt
+    updatedAt: createdRma.updatedAt
   };
   const product: ProductResponse = {
     id: 2, sku: 'SKU-2', name: 'Produto', category: null, hardwareVersion: null, firmwareVersion: null,
-    defaultWarrantyMonths: 12, technicalNotes: null, createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt
+    defaultWarrantyMonths: 12, technicalNotes: null, updatedAt: createdRma.updatedAt
   };
 
   beforeEach(async () => {
@@ -197,9 +200,7 @@ describe('RmasComponent pending editor lifecycle', () => {
     http = TestBed.inject(HttpTestingController);
     TestBed.inject(AuthService).restoreSession().subscribe();
     http.expectOne('/api/auth/me').flush({
-      id: 1, username: 'tester', fullName: 'Tester', profile: { id: 1, name: 'Administrador' }, extraPermissions: [],
-      permissions: profilePermissions('ADMIN'), active: true,
-      createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt
+      username: 'tester', fullName: 'Tester', profileName: 'Administrador', permissions: profilePermissions('ADMIN')
     });
     fixture = TestBed.createComponent(RmasComponent);
     http.expectOne('/api/clients/options').flush([client]);
@@ -212,12 +213,25 @@ describe('RmasComponent pending editor lifecycle', () => {
 
   afterEach(() => http.verify());
 
+  /** Detail served by `GET /api/rmas/1` when the row opens; follows the last saved response. */
+  let detailBody: RmaResponse = createdRma;
+  beforeEach(() => { detailBody = createdRma; });
+
+  function openRow(): void {
+    page.querySelector<HTMLElement>('.rma-table-row')!.click();
+    fixture.detectChanges();
+    http.expectOne('/api/rmas/1').flush(detailBody);
+    fixture.detectChanges();
+    http.match('/api/users/assignable').forEach((request) => request.flush([]));
+  }
+
   function openEditor(mode: 'create' | 'diagnosis'): void {
     if (mode === 'create') page.querySelector<HTMLButtonElement>('.page-heading .button-primary')!.click();
     else {
-      page.querySelector<HTMLElement>('.rma-table-row')!.click();
+      openRow();
+      [...page.querySelectorAll<HTMLButtonElement>('.tab')].find(b => b.textContent?.trim() === 'Diagnóstico')!.click();
       fixture.detectChanges();
-      page.querySelector<HTMLButtonElement>('.rma-details__header-actions .button-primary')!.click();
+      page.querySelector<HTMLButtonElement>('app-rma-diagnosis .diagnosis-trigger')!.click();
     }
     fixture.detectChanges();
   }
@@ -243,7 +257,7 @@ describe('RmasComponent pending editor lifecycle', () => {
       enterField('reportedFailure', 'Falha mantida');
     } else {
       enterField('foundFailure', 'Falha mantida');
-      enterField('technicianName', 'Tecnico');
+      // Data e técnico do diagnóstico são preenchidos automaticamente; não há campo para digitar.
     }
     fixture.detectChanges();
   }
@@ -271,16 +285,17 @@ describe('RmasComponent pending editor lifecycle', () => {
   }
 
   function fail(request: TestRequest): void {
-    request.flush({ message: 'RMA not saved', details: [] }, { status: 400, statusText: 'Bad Request' });
+    request.flush({ message: 'OS not saved', details: [] }, { status: 400, statusText: 'Bad Request' });
     fixture.detectChanges();
   }
 
   function succeed(request: TestRequest, mode: 'create' | 'diagnosis'): void {
     const saved: RmaResponse = mode === 'create'
-      ? { ...createdRma, id: 2, code: 'RMA-2026-000002', reportedFailure: 'Falha mantida' }
+      ? { ...createdRma, id: 2, code: 'OS-2026-000002', reportedFailure: 'Falha mantida' }
       : { ...createdRma, diagnosis: { id: 1, ...request.request.body,
         createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt } };
     request.flush(saved);
+    if (mode === 'diagnosis') { detailBody = saved; http.expectOne('/api/rmas/1').flush(saved); }
     const reloaded = mode === 'create' ? [createdRma, saved] : [saved];
     http.expectOne(r => r.method === 'GET' && r.url.split('?')[0] === '/api/rmas').flush({ content: reloaded, page: 0, size: 20, totalElements: reloaded.length, totalPages: 1 });
     http.expectOne('/api/rmas/summary').flush({ total: reloaded.length, ongoing: reloaded.length, highPriority: 0 });
@@ -288,12 +303,14 @@ describe('RmasComponent pending editor lifecycle', () => {
   }
 
   function expectSuccess(mode: 'create' | 'diagnosis'): void {
-    expect(page.querySelector('.modal-overlay')).toBeNull();
-    expect(page.querySelector('tbody')?.textContent).toContain(mode === 'create' ? 'RMA-2026-000002' : createdRma.code);
+    expect(page.querySelector('.modal-overlay') === null).toBe(mode === 'create');
+    if (mode === 'diagnosis') { exitControl('close').click(); fixture.detectChanges(); }
+    expect(page.querySelector('tbody')?.textContent).toContain(mode === 'create' ? 'OS-2026-000002' : createdRma.code);
     openEditor(mode);
     expect(fieldValue(mode)).toBe(mode === 'create' ? '' : 'Falha mantida');
     exitControl('cancel').click();
     fixture.detectChanges();
+    if (mode === 'diagnosis') { exitControl('close').click(); fixture.detectChanges(); }
     expect(page.querySelector('.modal-overlay')).toBeNull();
   }
 
@@ -321,7 +338,7 @@ describe('RmasComponent pending editor lifecycle', () => {
       openEditor(mode);
       fillEditor(mode);
       fail(submit(mode));
-      expect(editorFeedback(mode)).toContain('RMA not saved');
+      expect(editorFeedback(mode)).toContain('OS not saved');
       expect(fieldValue(mode)).toBe('Falha mantida');
       expect((exitControl('close') as HTMLButtonElement).disabled).toBe(false);
       expect((exitControl('cancel') as HTMLButtonElement).disabled).toBe(false);
@@ -336,7 +353,7 @@ describe('RmasComponent pending editor lifecycle', () => {
       fail(submit(mode));
       const retry = submit(mode);
       expect(retry.request.body[mode === 'create' ? 'reportedFailure' : 'foundFailure']).toBe('Falha mantida');
-      expect(page.textContent).not.toContain('RMA not saved');
+      expect(page.textContent).not.toContain('OS not saved');
       succeed(retry, mode);
       expectSuccess(mode);
     });
@@ -345,7 +362,7 @@ describe('RmasComponent pending editor lifecycle', () => {
       openEditor(mode);
       exitControl(control).click();
       fixture.detectChanges();
-      expect(page.querySelector('.modal-overlay')).toBeNull();
+      expect(page.querySelector('.modal-overlay') === null).toBe(mode === 'create' || control !== 'cancel');
     });
 
     it('does not send an invalid editor form', () => {
@@ -360,8 +377,7 @@ describe('RmasComponent pending editor lifecycle', () => {
   });
 
   it('preserves read-only detail closure', () => {
-    page.querySelector<HTMLElement>('.rma-table-row')!.click();
-    fixture.detectChanges();
+    openRow();
     exitControl('close').click();
     fixture.detectChanges();
     expect(page.querySelector('.modal-overlay')).toBeNull();

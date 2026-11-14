@@ -1,3 +1,4 @@
+import { providePermissions } from '../../testing/permission-fixtures';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -12,11 +13,13 @@ import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { mountUnderRoot, simulateNativeModality } from '../../testing/native-dialog';
 import { ClientsComponent } from './clients.component';
 
+beforeEach(() => TestBed.configureTestingModule({ providers: [provideRouter([]), providePermissions(['cadastros.ver', 'cadastros.editar'])] }));
+
 function client(id: number, legalName: string): ClientResponse {
   return {
     id, legalName, tradeName: null, documentNumber: null, email: null,
     phone: null, address: null, notes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+    updatedAt: '2026-10-20T12:00:00Z'
   };
 }
 
@@ -34,7 +37,7 @@ describe('ClientsComponent pagination', () => {
   beforeEach(async () => {
     vi.useFakeTimers();
     listClients = vi.fn((filters: ClientFilters) => of(page([client(1, 'Alfa'), client(2, 'Beta')], filters.page, filters.size, 45)));
-    getClientSummary = vi.fn(() => of({ total: 45, withContact: 10, withDocument: 20, withEmail: 30 }));
+    getClientSummary = vi.fn(() => of({ total: 45 }));
     deleteClient = vi.fn(() => of(undefined));
 
     await TestBed.configureTestingModule({
@@ -158,7 +161,7 @@ describe('ClientsComponent collection layout and states', () => {
     vi.useFakeTimers();
     listClients = vi.fn(options.list ?? ((filters: ClientFilters) =>
       of(page([client(1, 'Alfa'), client(2, 'Beta')], filters.page, filters.size, 45))));
-    getClientSummary = vi.fn(options.summary ?? (() => of({ total: 45, withContact: 10, withDocument: 20, withEmail: 30 })));
+    getClientSummary = vi.fn(options.summary ?? (() => of({ total: 45 })));
     deleteClient = vi.fn(() => of(undefined));
 
     await TestBed.configureTestingModule({
@@ -431,7 +434,7 @@ describe('ClientsComponent collection layout and states', () => {
   it('keeps the delete dialog open with the link error', async () => {
     await mount();
     deleteClient.mockImplementation(() => throwError(() =>
-      new HttpErrorResponse({ status: 409, error: { message: 'Cliente possui RMAs vinculados.' } })));
+      new HttpErrorResponse({ status: 409, error: { message: 'Cliente possui ordens de serviço vinculadas.' } })));
     listClients.mockClear();
 
     component.openDeleteModal(client(1, 'Alfa'));
@@ -439,7 +442,7 @@ describe('ClientsComponent collection layout and states', () => {
     fixture.detectChanges();
 
     expect(element.querySelector('[role="alertdialog"]')).not.toBeNull();
-    expect(element.querySelector('[role="alertdialog"] [role="alert"]')?.textContent).toContain('Cliente possui RMAs vinculados.');
+    expect(element.querySelector('[role="alertdialog"] [role="alert"]')?.textContent).toContain('Cliente possui ordens de serviço vinculadas.');
     expect(listClients).not.toHaveBeenCalled();
   });
 });
@@ -461,7 +464,7 @@ describe('ClientsComponent dialog focus', () => {
       imports: [ClientsComponent],
       providers: [provideRouter([{ path: '', component: ClientsComponent }]), { provide: CatalogService, useValue: {
         listClients: (filters: ClientFilters) => of(page(rows, filters.page, filters.size)),
-        getClientSummary: () => of({ total: rows.length, withContact: 0, withDocument: 0, withEmail: 0 }),
+        getClientSummary: () => of({ total: rows.length }),
         createClient: () => (save = new Subject<ClientResponse>()),
         updateClient: () => (save = new Subject<ClientResponse>()),
         deleteClient: () => (remove = new Subject<void>())

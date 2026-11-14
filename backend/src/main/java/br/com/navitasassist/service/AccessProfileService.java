@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class AccessProfileService {
+    private final AuditService audit;
 
     private final AccessProfileRepository accessProfileRepository;
     private final UserAccountRepository userAccountRepository;
@@ -44,11 +45,6 @@ public class AccessProfileService {
         return accessProfileRepository.findAllByOrderByNameAscIdAsc().stream().map(ProfileOptionResponse::from).toList();
     }
 
-    @Transactional(readOnly = true)
-    public ProfileResponse get(Long id) {
-        return toResponse(accessProfileRepository.findById(id).orElseThrow(() -> notFound(id)));
-    }
-
     public ProfileResponse create(ProfileRequest request, String actor) {
         String name = request.name().trim();
         Set<Permission> permissions = validateCodes(request.permissions());
@@ -58,7 +54,9 @@ public class AccessProfileService {
         AccessProfile profile = new AccessProfile();
         profile.setName(name);
         profile.setPermissions(new HashSet<>(Permission.codes(permissions)));
-        return toResponse(save(profile));
+        save(profile);
+        audit.record("CREATE", "ACCESS_PROFILE", profile.getId(), profile.getName(), "Perfil criado.");
+        return toResponse(profile);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -80,17 +78,22 @@ public class AccessProfileService {
         if (!codes.equals(profile.getPermissions())) {
             administratorGuard.ensureRemainsAfterProfileChange(profile, codes);
         }
+        Set<String> beforePermissions = new HashSet<>(profile.getPermissions());
+        boolean nameChanged = !Objects.equals(profile.getName(), name);
         profile.setName(name);
         profile.getPermissions().clear();
         profile.getPermissions().addAll(codes);
         // D8: sem revogação de sessões; as permissões são recalculadas na próxima requisição de cada usuário.
-        return toResponse(save(profile));
+        save(profile);
+        audit.record("UPDATE", "ACCESS_PROFILE", profile.getId(), profile.getName(), nameChanged ? "Campos alterados: name." : "Perfil alterado.");
+        audit.recordPermissionChanges("ACCESS_PROFILE", id, profile.getName(), beforePermissions, codes);
+        return toResponse(profile);
     }
 
     public void delete(Long id, String actor) {
         AccessProfile profile = accessProfileRepository.findByIdForUpdate(id).orElseThrow(() -> notFound(id));
         permissionGrantPolicy.ensureCanGrant(actor, Permission.fromCodes(profile.getPermissions()));
-        // Enquanto a coluna legada role existir, os perfis migrados (legacy_code) sustentam o rollback (spec §6).
+        // Os 4 perfis prontos da migração-base (legacy_code) não podem ser excluídos.
         if (profile.getLegacyCode() != null) {
             throw new BusinessException("Perfil migrado não pode ser excluído.");
         }
@@ -98,6 +101,7 @@ public class AccessProfileService {
             throw new BusinessException("Perfil possui usuários vinculados e não pode ser excluído.");
         }
         accessProfileRepository.delete(profile);
+        audit.record("DELETE", "ACCESS_PROFILE", id, profile.getName(), "Perfil excluído.");
     }
 
     /** Perfil referenciado por outro cadastro (usuário, regra): id inexistente é erro de validação (400). */
@@ -126,7 +130,7 @@ public class AccessProfileService {
         }
     }
 
-    /** O índice único pega a corrida (e, no MySQL, nomes que diferem só por acento). */
+    /** O índice único em lower(name) pega a corrida entre gravações do mesmo nome, mesmo com caixa diferente. */
     private AccessProfile save(AccessProfile profile) {
         try {
             return accessProfileRepository.saveAndFlush(profile);

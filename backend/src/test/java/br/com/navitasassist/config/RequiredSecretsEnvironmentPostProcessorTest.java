@@ -25,7 +25,7 @@ class RequiredSecretsEnvironmentPostProcessorTest {
     @Test
     void shouldAcceptDatabaseSecretsWithoutAdministratorSettings() {
         MockEnvironment environment = new MockEnvironment()
-            .withProperty("DB_URL", "jdbc:mysql://db/navitas")
+            .withProperty("DB_URL", "jdbc:postgresql://db/navitas")
             .withProperty("DB_USER", "navitas")
             .withProperty("DB_PASSWORD", "database-secret");
         environment.setActiveProfiles("prod");
@@ -144,7 +144,7 @@ class RequiredSecretsEnvironmentPostProcessorTest {
     private MockEnvironment environmentWithSecrets() {
         MockEnvironment environment = new MockEnvironment();
         Map.of(
-            "DB_URL", "jdbc:mysql://db/navitas",
+            "DB_URL", "jdbc:postgresql://db/navitas",
             "DB_USER", "navitas",
             "DB_PASSWORD", "database-secret"
         ).forEach(environment::setProperty);

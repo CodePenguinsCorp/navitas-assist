@@ -5,6 +5,7 @@ import {
   RMA_DETAIL_SECTIONS,
   blockedLabel,
   diagnosisFacts,
+  historyEntryTitle,
   invoiceFact,
   purchaseFact,
   receiptFacts,
@@ -12,6 +13,7 @@ import {
   rmaHistory,
   rmaItemFacts,
   sectionLabel,
+  stageFact,
   warrantyExpiryLabel,
   warrantyTermLabel
 } from './rma-detail';
@@ -19,9 +21,8 @@ import {
 // Hoje o módulo ./rma-detail não existe: o vermelho é de resolução do import (compilação).
 
 const diagnosis: DiagnosisResponse = {
-  id: 1, foundFailure: 'Capacitor estufado', failureType: 'POWER_SUPPLY', probableCause: 'COMPONENT',
+  foundFailure: 'Capacitor estufado', failureType: 'POWER_SUPPLY', probableCause: 'COMPONENT',
   notes: 'Trocar lote', diagnosedAt: '2026-10-21', technicianName: 'Bia',
-  createdAt: '2026-10-21T12:00:00Z', updatedAt: '2026-10-21T12:00:00Z'
 };
 
 function statusRecord(overrides: Partial<RmaStatusHistoryResponse> = {}): RmaStatusHistoryResponse {
@@ -30,14 +31,14 @@ function statusRecord(overrides: Partial<RmaStatusHistoryResponse> = {}): RmaSta
 
 function assigneeRecord(overrides: Partial<RmaAssignmentHistoryResponse> = {}): RmaAssignmentHistoryResponse {
   return {
-    previousAssigneeId: null, previousAssigneeName: null, newAssigneeId: 7, newAssigneeName: 'Ana',
+    previousAssigneeName: null, newAssigneeName: 'Ana',
     changedBy: 'bia', changedAt: '2026-10-20T12:00:00Z', ...overrides
   };
 }
 
 const labels = (facts: { label: string }[]) => facts.map((fact) => fact.label);
 
-describe('RMA detail contract', () => {
+describe('OS detail contract', () => {
   it('lists the nine sections in contract order', () => {
     expect(RMA_DETAIL_SECTIONS.map((section) => section.label)).toEqual([
       'Falha relatada', 'Produtos', 'Recebimento', 'Diagnóstico', 'Reparo e testes',
@@ -78,7 +79,7 @@ describe('RMA detail contract', () => {
   it('includes manufacture only when present', () => {
     const item = buildRmaItem({
       productSku: 'SKU-9', serialNumber: 'S1', batchNumber: 'L1', warrantyMonths: 1,
-      warrantyExpiresAt: '2026-11-20', warrantyStatus: WarrantyStatus.IN_WARRANTY
+      warrantyExpiresAt: '2026-11-20', calculatedWarrantyStatus: WarrantyStatus.IN_WARRANTY, warrantyOverride: null, warrantyStatus: WarrantyStatus.IN_WARRANTY
     });
     expect(rmaItemFacts(item)).toEqual([
       { label: 'SKU', value: 'SKU-9', empty: false },
@@ -150,7 +151,7 @@ describe('RMA detail contract', () => {
   it('keeps a note recorded without a status change', () => {
     const [entry] = rmaHistory({ statusHistory: [statusRecord({ status: 'IN_REPAIR', note: 'Cliente avisado' })], assignmentHistory: [] });
     expect(entry).toEqual({
-      kind: 'status', at: '2026-10-20T12:00:00Z', by: 'ana', label: 'Status registrado: Reparo', status: 'IN_REPAIR', note: 'Cliente avisado'
+      kind: 'status', at: '2026-10-20T12:00:00Z', by: 'ana', label: 'Status registrado: Reparo', status: 'IN_REPAIR', note: 'Cliente avisado', event: statusRecord({ status: 'IN_REPAIR', note: 'Cliente avisado' })
     });
   });
 
@@ -201,7 +202,70 @@ describe('RMA detail contract', () => {
       id: 1, reason: 'Peça pendente', category: null, blockedBy: 'ana', blockedAt: '2026-10-20T10:00:00Z',
       resolvedBy: null, resolvedAt: null, resolutionNote: null
     };
-    expect(blockedLabel(block, Date.parse('2026-10-20T12:05:00Z'))).toBe('Bloqueado há 2h 5min');
-    expect(blockedLabel(block, Date.parse('2026-10-20T10:30:00Z'))).toBe('Bloqueado há 30 min');
+    expect(blockedLabel(block, Date.parse('2026-10-20T12:05:00Z'))).toBe('Impedida há 2 h 5 min');
+    expect(blockedLabel(block, Date.parse('2026-10-20T10:30:00Z'))).toBe('Impedida há 30 min');
+  });
+
+  it('merges due date changes into the history with previous value and author', () => {
+    const history = rmaHistory({
+      statusHistory: [statusRecord({ changedAt: '2026-10-20T10:00:00Z' })],
+      assignmentHistory: [],
+      dueDateHistory: [
+        { previousDueDate: '2026-11-20', newDueDate: null, changedBy: 'ana', changedAt: '2026-10-22T12:00:00Z' },
+        { previousDueDate: '2026-11-20', newDueDate: '2026-11-25', changedBy: 'bia', changedAt: '2026-10-21T12:00:00Z' },
+        { previousDueDate: null, newDueDate: '2026-11-20', changedBy: 'bia', changedAt: '2026-10-20T11:00:00Z' }
+      ]
+    });
+    expect(history.map((entry) => entry.kind)).toEqual(['dueDate', 'dueDate', 'dueDate', 'status']);
+    expect(history.map(historyEntryTitle)).toEqual([
+      'Data limite removida (era 20/11/2026)',
+      'Data limite 20/11/2026 → 25/11/2026',
+      'Data limite definida: 20/11/2026',
+      'Status registrado: Triagem'
+    ]);
+    expect(history[1].by).toBe('bia');
+  });
+
+  it('shows the time in the current stage, or the closing for closed ordens de serviço', () => {
+    const now = Date.parse('2026-10-22T16:00:00Z');
+    expect(stageFact(buildRma({ status: 'IN_REPAIR', stagePeriods: [{ status: 'IN_REPAIR', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 0 }] }), now))
+      .toEqual({ label: 'Nesta etapa', value: 'há 2 d 4 h', empty: false });
+    expect(stageFact(buildRma({ status: 'COMPLETED', stagePeriods: [{ status: 'COMPLETED', enteredAt: '2026-10-21T13:30:00Z', leftAt: null, durationSeconds: 0 }] }), now).value)
+      .toBe('Encerrada em 21/10/2026 10:30');
+  });
+});
+
+
+describe('histórico de garantia', () => {
+  it('intercala ajustes com os demais eventos e identifica o item, autor, motivo e remoção', () => {
+    const rma = buildRma({ items: [buildRmaItem({ id: 9, productName: 'Fonte', productSku: 'F-9' })],
+      dueDateHistory: [{ previousDueDate: null, newDueDate: '2026-11-20', changedBy: 'bia', changedAt: '2026-11-13T11:00:00Z' }],
+      warrantyHistory: [
+        { itemId: 9, previousOverride: null, newOverride: WarrantyStatus.IN_WARRANTY, reason: 'Cortesia', changedBy: 'ana', changedAt: '2026-11-13T10:00:00Z' },
+        { itemId: 9, previousOverride: WarrantyStatus.IN_WARRANTY, newOverride: null, reason: null, changedBy: 'carla', changedAt: '2026-11-13T12:00:00Z' }
+      ] });
+    const history = rmaHistory(rma);
+    expect(history.map((e) => e.kind)).toEqual(['warranty', 'dueDate', 'warranty']);
+    expect(historyEntryTitle(history[0])).toBe('Garantia de Fonte (F-9): Em garantia → Automático');
+    expect(historyEntryTitle(history[2])).toBe('Garantia de Fonte (F-9): Automático → Em garantia');
+    expect(history[2]).toMatchObject({ by: 'ana', reason: 'Cortesia', itemId: 9 });
+    expect(rma.warrantyHistory[0].changedBy).toBe('ana');
+  });
+  it('identifica item ausente sem perder o evento', () => {
+    const history = rmaHistory(buildRma({ warrantyHistory: [{ itemId: 99, previousOverride: WarrantyStatus.IN_WARRANTY,
+      newOverride: WarrantyStatus.OUT_OF_WARRANTY, reason: 'Mau uso', changedBy: 'ana', changedAt: '2026-11-13T12:00:00Z' }] }));
+    expect(historyEntryTitle(history[0])).toBe('Garantia de Item #99: Em garantia → Fora de garantia');
+  });
+});
+
+describe('repair timeline', () => {
+  it('merges repair events and marks the voided entity while preserving audit', () => {
+    const history = rmaHistory({ statusHistory: [], assignmentHistory: [], repairHistory: [
+      { id: 1, entityType: 'INTERVENTION', entityId: 8, action: 'CREATE', changedBy: 'ana', changedAt: '2026-11-12T10:00:00Z', summary: 'Limpeza' },
+      { id: 2, entityType: 'INTERVENTION', entityId: 8, action: 'VOID', changedBy: 'bia', changedAt: '2026-11-13T10:00:00Z', summary: 'Duplicado' }
+    ] } as any);
+    expect(history).toHaveLength(2);
+    expect(historyEntryTitle(history[0])).toBe('Duplicado');
+    expect(history[1]).toMatchObject({ kind: 'repair', by: 'ana', voided: true });
   });
 });

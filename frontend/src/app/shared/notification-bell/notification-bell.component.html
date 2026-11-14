@@ -1,0 +1,98 @@
+<button
+  #trigger
+  type="button"
+  class="shell-notifications"
+  [class.has-unread]="unreadKnown() && unreadCount() > 0"
+  [class.is-open]="open()"
+  aria-haspopup="dialog"
+  [attr.aria-expanded]="open()"
+  [attr.aria-controls]="open() ? panelId : null"
+  [attr.aria-label]="label()"
+  [attr.title]="unreadUnavailable() ? unreadUnavailableMessage : 'Notificações'"
+  (click)="toggle()"
+>
+  <app-icon name="bell" [size]="22" />
+  @if (unreadKnown() && unreadCount() > 0) {
+    <span class="count-badge" aria-hidden="true">{{ unreadCount() > 99 ? '99+' : unreadCount() }}</span>
+  }
+</button>
+
+@if (open()) {
+  <section #panel class="bell-panel" role="dialog" [id]="panelId" [attr.aria-labelledby]="panelId + '-title'" tabindex="-1" (keydown)="onPanelKeydown($event)">
+    <header class="bell-panel__head">
+      <h2 class="bell-panel__title" [id]="panelId + '-title'">Notificações</h2>
+      <label class="checkbox-field bell-panel__switch">
+        <input type="checkbox" class="switch" role="switch" [checked]="unreadOnly()" (change)="toggleUnreadOnly()" />
+        <span>Somente não lidas</span>
+      </label>
+    </header>
+    <div class="bell-panel__tools">
+      <button type="button" class="link-button" [disabled]="!canMarkAll()" (click)="markAllRead()">Marcar todas como lidas</button>
+      <a class="link-button" routerLink="/notificacoes">Ver todas</a>
+    </div>
+    @if (actionError()) {
+      <p class="field-error bell-panel__error" role="alert">{{ actionError() }}</p>
+    }
+
+    <div class="bell-panel__body">
+      @if (loadError()) {
+        <section class="empty-state" role="alert">
+          <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
+          <h3>{{ loadError() }}</h3>
+          <button type="button" class="button-secondary" [disabled]="loading()" (click)="retry()">Tentar novamente</button>
+        </section>
+      } @else if (loading() || !loaded()) {
+        <p class="empty-state" role="status" aria-busy="true">Carregando notificações...</p>
+      } @else if (groups().length === 0) {
+        <section class="empty-state">
+          <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
+          <h3>{{ unreadOnly() ? 'Nenhuma notificação não lida.' : 'Nenhuma notificação.' }}</h3>
+        </section>
+      } @else {
+        @for (group of groups(); track group.label) {
+          <section class="bell-group" [attr.aria-label]="group.label">
+            <h3 class="bell-day">{{ group.label }}</h3>
+            <ul class="bell-list">
+              @for (notification of group.items; track notification.id) {
+                <li class="bell-item" [class.is-unread]="!notification.read">
+                  <span class="bell-item__dot" aria-hidden="true"></span>
+                  <button type="button" class="bell-item__main" (click)="select(notification)">
+                    @if (!notification.read) { <span class="sr-only">Não lida: </span> }
+                    <span class="bell-item__title">{{ notification.title }}</span>
+                    <span class="bell-item__meta">
+                      <span class="mini-chip" [class]="severityClass(notification.severity)">{{ severityLabels[notification.severity] }}</span>
+                      <span class="bell-item__summary">{{ notification.message }}</span>
+                    </span>
+                  </button>
+                  <span class="bell-item__action" [attr.aria-hidden]="notification.read ? 'true' : null">
+                    @if (!notification.read) {
+                      <button appRowAction icon="check" label="Marcar como lida" [target]="notification.title" [disabled]="busy()" (click)="markRead(notification)"></button>
+                    }
+                  </span>
+                  <time class="bell-item__time" [attr.datetime]="notification.createdAt" [title]="dateTime(notification.createdAt)">{{ timeOf(notification.createdAt) }}</time>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      }
+    </div>
+  </section>
+}
+
+@if (selected(); as detail) {
+  <app-notification-detail-modal
+    [notification]="detail"
+    [busy]="busy()"
+    [error]="actionError()"
+    [hasPrevious]="hasPreviousSelected()"
+    [hasNext]="hasNextSelected()"
+    [fallbackFocus]="bellElement()"
+    (closed)="closeDetail()"
+    (openAction)="openDetailAction()"
+    (markRead)="markSelectedRead()"
+    (snoozed)="snoozeSelected($event)"
+    (previous)="step(-1)"
+    (next)="step(1)"
+  />
+}

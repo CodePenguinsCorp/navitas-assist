@@ -9,7 +9,7 @@ import { UsersComponent } from './users.component';
 
 const SAMPLE_USER: UserAccountResponse = {
   id: 1, username: 'technician', fullName: 'Operador', profile: { id: 3, name: 'Técnico' }, extraPermissions: [], active: true,
-  createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+  updatedAt: '2026-10-20T12:00:00Z'
 };
 
 function flushUserLists(http: HttpTestingController, content: unknown[]): void {
@@ -98,7 +98,7 @@ describe('UsersComponent pending save lifecycle', () => {
       const request = submitSave(mode);
       const close = page.querySelector<HTMLButtonElement>('.modal-close')!;
       const closeDisabled = close.disabled;
-      const cancelDisabled = page.querySelector<HTMLButtonElement>('form .button-secondary')!.disabled;
+      const cancelDisabled = page.querySelector<HTMLButtonElement>('form .form-actions .button-secondary')!.disabled;
       page.querySelector<HTMLElement>(control === 'overlay' ? '.modal-overlay' : '.modal-close')!.click();
       fixture.detectChanges();
       const stillOpen = page.querySelector('.modal-overlay') !== null;
@@ -121,7 +121,7 @@ describe('UsersComponent pending save lifecycle', () => {
       expect(page.querySelector('[role="alert"]')?.textContent).toContain('User not saved');
       expect(page.querySelector<HTMLInputElement>('[formControlName="fullName"]')!.value).toBe('Operador salvo');
       expect(page.querySelector<HTMLButtonElement>('.modal-close')!.disabled).toBe(false);
-      expect(page.querySelector<HTMLButtonElement>('form .button-secondary')!.disabled).toBe(false);
+      expect(page.querySelector<HTMLButtonElement>('form .form-actions .button-secondary')!.disabled).toBe(false);
       page.querySelector<HTMLButtonElement>('.modal-close')!.click();
       fixture.detectChanges();
       expect(page.querySelector('.modal-overlay')).toBeNull();

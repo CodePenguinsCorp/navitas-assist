@@ -33,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class UserAccountService {
+    private final AuditService audit;
 
     private final UserAccountRepository userAccountRepository;
     private final AccessProfileService accessProfileService;
@@ -54,16 +55,7 @@ public class UserAccountService {
 
     @Transactional(readOnly = true)
     public UserSummaryResponse summarize() {
-        // D13: admins = usuários, ativos ou não, com usuarios.gerir e perfis.gerir efetivas; roles = perfis em uso.
-        long administrators = userAccountRepository.findAll().stream()
-            .filter(effectivePermissionService::isAdministrator)
-            .count();
-        return new UserSummaryResponse(
-            userAccountRepository.count(),
-            userAccountRepository.countByActiveTrue(),
-            administrators,
-            userAccountRepository.countDistinctProfiles()
-        );
+        return new UserSummaryResponse(userAccountRepository.count());
     }
 
     @Transactional(readOnly = true)
@@ -84,17 +76,22 @@ public class UserAccountService {
         UserAccount userAccount = new UserAccount();
         userAccount.setUsername(trim(request.username()));
         userAccount.setFullName(trim(request.fullName()));
+        userAccount.setEmail(validateEmail(userAccount.getId(), request.email()));
         userAccount.setPasswordHash(passwordEncoder.encode(request.password()));
         userAccount.setProfile(profile);
         userAccount.setExtraPermissions(extras);
         userAccount.setActive(request.active());
 
-        return UserAccountResponse.from(userAccountRepository.save(userAccount));
+        saveWithEmailConstraint(userAccount);
+        audit.record("CREATE", "USER", userAccount.getId(), userAccount.getUsername(), "Usuário criado.");
+        return UserAccountResponse.from(userAccount);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public UserAccountResponse update(Long id, UserAccountUpdateRequest request, String actor) {
         UserAccount userAccount = getEntityForAdministration(id);
+        var before = UserAccountResponse.from(userAccount);
+        Set<String> beforePermissions = new HashSet<>(Permission.codes(effectivePermissionService.effectivePermissions(userAccount)));
         AccessProfile newProfile = accessProfileService.getEntity(request.profileId());
         Set<String> newExtras = validateExtras(request.extraPermissions());
         administratorGuard.ensureRemainsAfterUserChange(userAccount, newProfile, newExtras, request.active());
@@ -114,6 +111,10 @@ public class UserAccountService {
 
         userAccount.setUsername(trim(request.username()));
         userAccount.setFullName(trim(request.fullName()));
+        // Campo ausente preserva o e-mail; null explícito ou branco limpa (o frontend sempre envia o campo).
+        if (request.email() != null) {
+            userAccount.setEmail(validateEmail(userAccount.getId(), request.email().orElse(null)));
+        }
         if (passwordChanged) {
             userAccount.setPasswordHash(passwordEncoder.encode(request.password()));
         }
@@ -122,7 +123,16 @@ public class UserAccountService {
         userAccount.getExtraPermissions().addAll(newExtras);
         userAccount.setActive(request.active());
 
-        UserAccountResponse response = UserAccountResponse.from(userAccountRepository.save(userAccount));
+        UserAccountResponse response = UserAccountResponse.from(saveWithEmailConstraint(userAccount));
+        String summary = AuditService.changedFields(before, response);
+        if (!Objects.equals(before.email(), response.email())) summary += " E-mail alterado.";
+        if (passwordChanged) summary += " Senha alterada.";
+        if (before.active() != response.active()) summary += response.active() ? " Usuário ativado." : " Usuário desativado.";
+        audit.record("UPDATE", "USER", id, userAccount.getUsername(), summary);
+        if (!Objects.equals(before.profile().id(), newProfile.getId())) {
+            audit.recordPermissionChanges("USER", id, userAccount.getUsername(), beforePermissions, Permission.codes(effectivePermissionService.effectivePermissions(userAccount)));
+        }
+        audit.recordPermissionChanges("USER", id, userAccount.getUsername(), new HashSet<>(before.extraPermissions()), newExtras, "extra ");
         if (sessionsRevoked) {
             events.publishEvent(new AccountSessionRevoker.AccessChanged(id));
         }
@@ -139,10 +149,11 @@ public class UserAccountService {
         administratorGuard.ensureRemainsAfterUserDeletion(userAccount);
         permissionGrantPolicy.ensureCanGrant(authenticatedUsername, effectivePermissionService.effectivePermissions(userAccount));
         if (rmaRecordRepository.existsByAssignee_Id(id)) {
-            throw new BusinessException("User is assigned to one or more RMAs and cannot be deleted.");
+            throw new BusinessException("Usuário é responsável por uma ou mais ordens de serviço e não pode ser excluído.");
         }
 
         userAccountRepository.delete(userAccount);
+        audit.record("DELETE", "USER", id, userAccount.getUsername(), "Usuário excluído.");
         events.publishEvent(new AccountSessionRevoker.AccessChanged(id));
     }
 
@@ -150,10 +161,10 @@ public class UserAccountService {
     public UserAccount getAssignableTechnicianById(Long id) {
         UserAccount userAccount = getEntityById(id);
         if (!userAccount.isActive()) {
-            throw new BusinessException("Inactive users cannot be assigned to an RMA.");
+            throw new BusinessException("Usuários inativos não podem ser responsáveis por uma OS.");
         }
         if (!isAssignable(userAccount)) {
-            throw new BusinessException("Only technicians can be assigned to an RMA.");
+            throw new BusinessException("Somente técnicos podem ser responsáveis por uma OS.");
         }
         return userAccount;
     }
@@ -174,6 +185,31 @@ public class UserAccountService {
     public CurrentUserResponse getCurrentUser(String username) {
         UserAccount userAccount = getEntityByUsername(username);
         return CurrentUserResponse.from(userAccount, effectivePermissionService.effectivePermissions(userAccount));
+    }
+
+    private String validateEmail(Long id, String email) {
+        if (email == null) return null;
+        if (email.indexOf('\r') >= 0 || email.indexOf('\n') >= 0 || email.length() > 254) throw new BusinessException("Invalid email address.");
+        if (email.isBlank()) return null;
+        String normalized = email.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!br.com.navitasassist.notification.email.EmailMessage.validAddress(normalized)) throw new BusinessException("Invalid email address.");
+        if (userAccountRepository.findByEmailIgnoreCase(normalized).filter(user -> !Objects.equals(user.getId(), id)).isPresent()) throw new BusinessException("Email already registered.");
+        return normalized;
+    }
+
+    private UserAccount saveWithEmailConstraint(UserAccount user) {
+        try { return userAccountRepository.saveAndFlush(user); }
+        catch (org.springframework.dao.DataIntegrityViolationException error) {
+            Throwable cause = error;
+            while (cause != null) {
+                if (cause instanceof org.hibernate.exception.ConstraintViolationException violation
+                    && violation.getConstraintName() != null && violation.getConstraintName().toLowerCase(java.util.Locale.ROOT).contains("uk_user_accounts_email")) {
+                    throw new BusinessException("Email already registered.");
+                }
+                cause = cause.getCause();
+            }
+            throw error;
+        }
     }
 
     private void validateUsername(UserAccount existing, String username) {

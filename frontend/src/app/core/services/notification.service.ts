@@ -1,9 +1,13 @@
 import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, catchError, defer, map, of, tap } from 'rxjs';
+import { EMPTY, Observable, catchError, defer, finalize, map, of, tap } from 'rxjs';
 import { SKIP_GLOBAL_LOADING } from '../interceptors/loading.interceptor';
 import {
   NotificationEventType,
+  NotificationSeverity,
+  NotificationEmailStatusResponse,
+  NotificationEmailTestResponse,
+  NotificationEmailActionResponse,
   NotificationFailureResponse,
   NotificationPreferenceResponse,
   NotificationReadAllResponse,
@@ -14,10 +18,21 @@ import {
   NotificationSummaryResponse
 } from '../models';
 
+/** `silent` keeps the global loading overlay out of the call: the bell popover shows its own inline state. */
+export interface NotificationRequestOptions { silent?: boolean }
+
+function requestContext(options: NotificationRequestOptions): HttpContext {
+  return new HttpContext().set(SKIP_GLOBAL_LOADING, options.silent === true);
+}
+
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
   private readonly http = inject(HttpClient);
   private readonly unreadSignal = signal(0);
+  private readonly latestReadAllSignal = signal<NotificationReadAllResponse | null>(null);
+  private readonly markingAllSignal = signal(false);
+  readonly latestReadAll = this.latestReadAllSignal.asReadonly();
+  readonly markingAll = this.markingAllSignal.asReadonly();
 
   /** Unread count shared by the shell badge and the notification center. */
   readonly unreadCount = this.unreadSignal.asReadonly();
@@ -30,7 +45,7 @@ export class NotificationService {
   /** True while the most recent summary request failed; consumers hide the stale count. */
   readonly summaryLoadFailed = this.summaryLoadFailedSignal.asReadonly();
 
-  list(options: { unreadOnly?: boolean; includeSnoozed?: boolean; background?: boolean } = {}): Observable<NotificationResponse[]> {
+  list(options: { unreadOnly?: boolean; includeSnoozed?: boolean; eventType?: NotificationEventType; severity?: NotificationSeverity } & NotificationRequestOptions = {}): Observable<NotificationResponse[]> {
     let params = new HttpParams();
     if (options.unreadOnly) {
       params = params.set('unreadOnly', 'true');
@@ -39,9 +54,9 @@ export class NotificationService {
       params = params.set('includeSnoozed', 'true');
     }
 
-    return this.http.get<NotificationResponse[]>('/api/notifications', {
-      params, context: new HttpContext().set(SKIP_GLOBAL_LOADING, options.background ?? false)
-    });
+    if (options.eventType) params = params.set('eventType', options.eventType);
+    if (options.severity) params = params.set('severity', options.severity);
+    return this.http.get<NotificationResponse[]>('/api/notifications', { params, context: requestContext(options) });
   }
 
   /** Only the most recently started request updates the shared count and its state. */
@@ -67,30 +82,38 @@ export class NotificationService {
     });
   }
 
-  markRead(id: number): Observable<NotificationResponse> {
-    return this.http.post<NotificationResponse>(`/api/notifications/${id}/read`, {});
+  markRead(id: number, options: NotificationRequestOptions = {}): Observable<NotificationResponse> {
+    return this.http.post<NotificationResponse>(`/api/notifications/${id}/read`, {}, { context: requestContext(options) });
   }
 
   markAllRead(): Observable<NotificationReadAllResponse> {
-    return this.http.post<NotificationReadAllResponse>('/api/notifications/read-all', {}, {
-      context: new HttpContext().set(SKIP_GLOBAL_LOADING, true)
+    return defer(() => {
+      // The inbox and bell share this mutation: a second request could replace the first undo token.
+      if (this.markingAllSignal()) return EMPTY;
+      this.markingAllSignal.set(true);
+      return this.http.post<NotificationReadAllResponse>('/api/notifications/read-all', {}, { context: requestContext({ silent: true }) }).pipe(
+        tap(batch => this.latestReadAllSignal.set(batch)),
+        finalize(() => this.markingAllSignal.set(false))
+      );
     });
   }
 
   undoReadAll(token: string): Observable<NotificationReadUndoResponse> {
-    return this.http.post<NotificationReadUndoResponse>('/api/notifications/read-all/undo', { token }, {
-      context: new HttpContext().set(SKIP_GLOBAL_LOADING, true)
-    });
+    return this.http.post<NotificationReadUndoResponse>('/api/notifications/read-all/undo', { token }, { context: requestContext({ silent: true }) })
+      .pipe(tap(() => this.clearReadAll(token)));
   }
 
   dismissReadAll(token: string): Observable<void> {
-    return this.http.post<void>('/api/notifications/read-all/dismiss', { token }, {
-      context: new HttpContext().set(SKIP_GLOBAL_LOADING, true)
-    });
+    return this.http.post<void>('/api/notifications/read-all/dismiss', { token }, { context: requestContext({ silent: true }) })
+      .pipe(tap(() => this.clearReadAll(token)));
   }
 
-  snooze(id: number, minutes: number): Observable<NotificationResponse> {
-    return this.http.post<NotificationResponse>(`/api/notifications/${id}/snooze`, { minutes });
+  private clearReadAll(token: string): void {
+    if (this.latestReadAllSignal()?.undoToken === token) this.latestReadAllSignal.set(null);
+  }
+
+  snooze(id: number, minutes: number, options: NotificationRequestOptions = {}): Observable<NotificationResponse> {
+    return this.http.post<NotificationResponse>(`/api/notifications/${id}/snooze`, { minutes }, { context: requestContext(options) });
   }
 
   listPreferences(): Observable<NotificationPreferenceResponse[]> {
@@ -112,4 +135,16 @@ export class NotificationService {
   listFailures(): Observable<NotificationFailureResponse[]> {
     return this.http.get<NotificationFailureResponse[]>('/api/notification-rules/failures');
   }
+  emailStatus(): Observable<NotificationEmailStatusResponse> {
+    return this.http.get<NotificationEmailStatusResponse>('/api/notification-rules/email-status');
+  }
+
+  testEmail(): Observable<NotificationEmailTestResponse> {
+    return this.http.post<NotificationEmailTestResponse>('/api/notification-rules/emails/test', {});
+  }
+
+  retryEmail(id: number): Observable<NotificationEmailActionResponse> {
+    return this.http.post<NotificationEmailActionResponse>(`/api/notification-rules/emails/${id}/retry`, {});
+  }
+
 }

@@ -4,13 +4,13 @@ import { PERMISSION_SOURCE } from '../core/services/permission.service';
 
 export type LegacyProfileCode = 'ADMIN' | 'SERVICE_DESK' | 'TECHNICIAN' | 'VIEWER';
 
-/** Permissões dos 4 perfis migrados, copiadas da tabela da spec §3 (A = 19, S = 11, T = 11, V = 5). */
+/** Permissões dos 4 perfis migrados (A = 20, S = 11, T = 11, V = 5). */
 export const LEGACY_PROFILE_PERMISSIONS: Readonly<Record<LegacyProfileCode, readonly Permission[]>> = {
   ADMIN: [
     'rma.ver', 'rma.abrir', 'rma.editar', 'rma.status', 'rma.responsavel', 'rma.diagnosticar', 'rma.impedimentos',
-    'cadastros.ver', 'cadastros.editar', 'pecas.ver', 'pecas.movimentar', 'pecas.reservar', 'protocolos.ver',
+    'cadastros.ver', 'cadastros.editar', 'cadastros.importar', 'pecas.ver', 'pecas.movimentar', 'pecas.reservar', 'protocolos.ver',
     'protocolos.executar', 'protocolos.catalogo', 'relatorios.ver', 'usuarios.gerir', 'perfis.gerir',
-    'notificacoes.regras'
+    'notificacoes.regras', 'auditoria.ver'
   ],
   SERVICE_DESK: [
     'rma.ver', 'rma.abrir', 'rma.editar', 'rma.status', 'rma.responsavel', 'rma.impedimentos', 'cadastros.ver',

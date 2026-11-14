@@ -1,26 +1,37 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { NgTemplateOutlet } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Subscription, finalize } from 'rxjs';
-import { FAILURE_CAUSE_LABELS, FAILURE_TYPE_LABELS, RMA_STATUS_FLOW, RMA_STATUS_LABELS, WARRANTY_STATUS_LABELS } from '../../core/mock-data';
-import { RmaReportResponse, RmaStatus } from '../../core/models';
+import { FAILURE_TYPE_LABELS, RMA_STATUS_FLOW, RMA_STATUS_LABELS, WARRANTY_STATUS_LABELS } from '../../core/mock-data';
+import { RmaReportFilters, RmaReportPageResponse, RmaReportRow, RmaReportSummaryResponse, RmaStatus } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
+import { PermissionService } from '../../core/services/permission.service';
 import { ReportService } from '../../core/services/report.service';
 import { formatDateOnly, todayInputValue } from '../../core/utils/date';
-import { purchaseFact, warrantyExpiryLabel, warrantyTermLabel } from '../../core/utils/rma-detail';
+import { saveDownload } from '../../core/utils/download';
+import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
+import { formatDuration } from '../../core/utils/duration';
+import { DEFAULT_PAGE_SIZE } from '../../core/utils/pagination';
+import { BarChartComponent } from '../../shared/bar-chart/bar-chart.component';
+import { DonutChartComponent } from '../../shared/donut-chart/donut-chart.component';
 import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
-import { ResultCountComponent } from '../../shared/result-count/result-count.component';
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
+import { RmaReportLinkComponent } from '../../shared/rma-report-link/rma-report-link.component';
 
-type ReportType = 'technical' | 'aging' | 'warranty' | 'returns';
+type ReportTab = 'summary' | 'failures' | 'recurrence' | 'rmas';
+
+const WARRANTY_TONES: Record<string, string> = { IN_WARRANTY: 'success', OUT_OF_WARRANTY: 'danger', PENDING: 'slate' };
 
 const DEFAULT_PERIOD_DAYS = 90;
 const MAX_PERIOD_DAYS = 366;
 
 @Component({
   selector: 'app-reports',
-  imports: [ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, PageHeaderComponent, ResultCountComponent],
+  imports: [NgTemplateOutlet, ReactiveFormsModule, BarChartComponent, CustomSelectComponent, DatePickerComponent, DonutChartComponent, IconComponent, PageHeaderComponent, PaginationComponent, RmaReportLinkComponent],
   templateUrl: './reports.component.html',
   styleUrl: './reports.component.css'
 })
@@ -29,51 +40,44 @@ export class ReportsComponent {
   private readonly reportService = inject(ReportService);
   private readonly catalogService = inject(CatalogService);
   private readonly destroyRef = inject(DestroyRef);
-  private request?: Subscription;
+  private readonly permissions = inject(PermissionService);
+  private summaryRequest?: Subscription;
+  private listRequest?: Subscription;
+  /** Filters of the last consultation; paging and exports reuse them, not the form being edited. */
+  private applied: RmaReportFilters = {};
 
   protected readonly form = this.formBuilder.nonNullable.group({
-    report: 'technical' as ReportType, entryFrom: shiftDate(todayInputValue(), -(DEFAULT_PERIOD_DAYS - 1)), entryTo: todayInputValue(), status: '' as RmaStatus | '',
+    entryFrom: shiftDate(todayInputValue(), -(DEFAULT_PERIOD_DAYS - 1)), entryTo: todayInputValue(), status: '' as RmaStatus | '',
     clientId: this.formBuilder.control<number | null>(null)
   });
-  protected readonly reportType = toSignal(this.form.controls.report.valueChanges, { initialValue: this.form.controls.report.value });
+  protected readonly tab = signal<ReportTab>('summary');
   protected readonly loading = signal(false);
-  /** Server failure only; local period validation lives in periodError. */
+  protected readonly listLoading = signal(false);
+  protected readonly exporting = signal(false);
   protected readonly errorMessage = signal('');
+  protected readonly exportError = signal('');
   protected readonly periodError = signal('');
-  /** Labels of the values submitted with the request that produced the current report. */
-  protected readonly appliedFilters = signal<{ status: string; client: string } | null>(null);
   protected readonly clientsError = signal('');
-  protected readonly report = signal<RmaReportResponse | null>(null);
+  protected readonly summary = signal<RmaReportSummaryResponse | null>(null);
+  protected readonly list = signal<RmaReportPageResponse | null>(null);
+  protected readonly pageSize = signal(DEFAULT_PAGE_SIZE);
+  protected readonly canViewRma = computed(() => this.permissions.hasPermission('rma.ver'));
   protected readonly clientOptions = signal<CustomSelectOption[]>([{ value: null, label: 'Todos os clientes' }]);
-  protected readonly reportOptions: CustomSelectOption<ReportType>[] = [
-    { value: 'technical', label: 'Laudo técnico' }, { value: 'aging', label: 'Tempo por etapa' },
-    { value: 'warranty', label: 'Garantia por produto' }, { value: 'returns', label: 'Devoluções' }
+  protected readonly tabs: { value: ReportTab; label: string }[] = [
+    { value: 'summary', label: 'Resumo' }, { value: 'failures', label: 'Falhas' },
+    { value: 'recurrence', label: 'Recorrência' }, { value: 'rmas', label: 'Ordens de serviço' }
   ];
   protected readonly statusOptions: CustomSelectOption[] = [
     { value: '', label: 'Todos os status' }, ...RMA_STATUS_FLOW.map((value) => ({ value, label: RMA_STATUS_LABELS[value] }))
   ];
   protected readonly statusLabels = RMA_STATUS_LABELS;
-  protected readonly warrantyLabels = WARRANTY_STATUS_LABELS;
   protected readonly failureLabels = FAILURE_TYPE_LABELS;
-  protected readonly causeLabels = FAILURE_CAUSE_LABELS;
   protected readonly formatDate = formatDateOnly;
-  protected readonly warrantyTermLabel = warrantyTermLabel;
-  protected readonly warrantyExpiryLabel = warrantyExpiryLabel;
-  protected readonly purchaseFact = purchaseFact;
-  protected readonly rmas = computed(() => this.report()?.rmas ?? []);
-  protected readonly activeRmas = computed(() => this.rmas().filter((rma) => rma.sla.status !== 'CLOSED'));
-  protected readonly returns = computed(() => this.rmas().filter((rma) => rma.status === 'RETURNED'));
-  protected readonly aging = computed(() => RMA_STATUS_FLOW.flatMap((status) => {
-    const records = this.activeRmas().filter((rma) => rma.status === status);
-    if (!records.length) return [];
-    const seconds = records.map((rma) => rma.sla.elapsedSeconds);
-    return [{ status, count: records.length, average: Math.floor(seconds.reduce((sum, value) => sum + value, 0) / seconds.length),
-      maximum: seconds.reduce((maximum, value) => Math.max(maximum, value), 0) }];
-  }));
+  protected readonly duration = formatDuration;
 
   constructor() {
     this.loadClients();
-    this.loadReports();
+    this.consult();
   }
 
   protected loadClients(): void {
@@ -85,10 +89,7 @@ export class ReportsComponent {
     });
   }
 
-  protected loadReports(): void {
-    this.request?.unsubscribe();
-    this.report.set(null);
-    this.errorMessage.set('');
+  protected consult(): void {
     this.periodError.set('');
     const { entryFrom, entryTo, status, clientId } = this.form.getRawValue();
     if (entryFrom && entryTo && entryFrom > entryTo) {
@@ -96,53 +97,120 @@ export class ReportsComponent {
       return;
     }
     if (entryFrom && entryTo && daysBetween(entryFrom, entryTo) + 1 > MAX_PERIOD_DAYS) {
-      this.periodError.set(`O período do relatório deve ter no máximo ${MAX_PERIOD_DAYS} dias.`);
+      this.periodError.set(`O período deve ter no máximo ${MAX_PERIOD_DAYS} dias.`);
       return;
     }
-    this.appliedFilters.set({
-      status: this.statusOptions.find((option) => option.value === status)?.label ?? 'Todos os status',
-      client: this.clientOptions().find((option) => option.value === clientId)?.label ?? 'Todos os clientes'
-    });
+    this.applied = { entryFrom: entryFrom || undefined, entryTo: entryTo || undefined, status: status || undefined, clientId: clientId ?? undefined };
+    this.summaryRequest?.unsubscribe();
+    this.errorMessage.set('');
+    this.exportError.set('');
+    this.summary.set(null);
+    // A página anterior pertence a outros filtros: some até a nova chegar (ou falhar).
+    this.list.set(null);
     this.loading.set(true);
-    this.request = this.reportService.list({ entryFrom: entryFrom || undefined, entryTo: entryTo || undefined,
-      status: status || undefined, clientId: clientId ?? undefined })
+    this.summaryRequest = this.reportService.summary(this.applied)
       .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false))).subscribe({
-        next: (report) => this.report.set(report),
-        error: () => this.errorMessage.set('Não foi possível carregar os relatórios. Tente novamente.')
+        next: (summary) => this.summary.set(summary),
+        error: () => this.errorMessage.set('Não foi possível carregar os relatórios.')
+      });
+    this.loadPage(0);
+  }
+
+  /** Volta aos filtros iniciais (últimos 90 dias, todos os status e clientes) e consulta. */
+  protected clearFilters(): void {
+    this.form.reset({ entryFrom: shiftDate(todayInputValue(), -(DEFAULT_PERIOD_DAYS - 1)), entryTo: todayInputValue(), status: '', clientId: null });
+    this.consult();
+  }
+
+  protected loadPage(page: number): void {
+    this.listRequest?.unsubscribe();
+    this.listLoading.set(true);
+    this.listRequest = this.reportService.list(this.applied, page, this.pageSize())
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.listLoading.set(false))).subscribe({
+        next: (list) => this.list.set(list),
+        error: () => this.errorMessage.set('Não foi possível carregar os relatórios.')
       });
   }
 
-  protected selectReport(type: ReportType): void {
-    this.form.controls.report.setValue(type);
+  protected changePageSize(size: number): void {
+    this.pageSize.set(size);
+    this.loadPage(0);
+  }
+
+  protected selectTab(tab: ReportTab): void {
+    this.tab.set(tab);
   }
 
   /** Tab keyboard contract: arrows move with wrap-around, Home and End go to the ends. */
   protected onTabKeydown(event: KeyboardEvent): void {
-    const values = this.reportOptions.map((option) => option.value);
-    const current = values.indexOf(this.form.controls.report.value);
+    const values = this.tabs.map((tab) => tab.value);
+    const current = values.indexOf(this.tab());
     const next = event.key === 'ArrowRight' ? (current + 1) % values.length
       : event.key === 'ArrowLeft' ? (current - 1 + values.length) % values.length
         : event.key === 'Home' ? 0 : event.key === 'End' ? values.length - 1 : -1;
     if (next < 0) return;
     event.preventDefault();
-    this.selectReport(values[next]);
+    this.selectTab(values[next]);
     const tabs = (event.currentTarget as HTMLElement).closest('[role="tablist"]')?.querySelectorAll<HTMLElement>('[role="tab"]');
     tabs?.[next]?.focus();
   }
 
-  protected periodDescribedBy(): string {
-    return this.periodError() ? 'report-period-help report-period-error' : 'report-period-help';
+  protected exportCsv(): void {
+    const rmas = this.tab() === 'rmas';
+    this.exporting.set(true);
+    this.exportError.set('');
+    (rmas ? this.reportService.exportRmas(this.applied) : this.reportService.exportSummary(this.applied))
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.exporting.set(false))).subscribe({
+        next: (response) => saveDownload(response, rmas ? 'rmas.csv' : 'resumo-rmas.csv'),
+        error: (error: unknown) => {
+          void exportErrorMessage(error).then((message) => this.exportError.set(message));
+        }
+      });
   }
 
-  protected formatInstant(value: string): string {
-    return new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
+  protected percent(part: number, base: number): string {
+    return base ? `${(Math.round((part / base) * 1000) / 10).toFixed(1).replace('.', ',')}%` : '—';
   }
 
-  protected duration(seconds: number): string {
-    const minutes = Math.floor(seconds / 60);
-    const days = Math.floor(minutes / 1440);
-    return `${days ? `${days}d ` : ''}${Math.floor(minutes % 1440 / 60)}h ${minutes % 60}min`;
+  protected barWidth(count: number, rows: { count: number }[]): number {
+    const max = rows.reduce((value, row) => Math.max(value, row.count), 0);
+    return max ? Math.round((count / max) * 100) : 0;
   }
+
+  protected toBars(rows: { label: string; count: number }[]): { label: string; value: number }[] {
+    return rows.map((row) => ({ label: row.label, value: row.count }));
+  }
+
+  protected warrantySlices(rows: { key: string; label: string; count: number }[]): { label: string; value: number; tone: string }[] {
+    return rows.map((row) => ({ label: row.label, value: row.count, tone: WARRANTY_TONES[row.key] ?? 'slate' }));
+  }
+
+  protected productLabel(row: RmaReportRow): string {
+    return row.itemCount > 1 ? `${row.productName} +${row.itemCount - 1}` : row.productName;
+  }
+
+  protected warrantyLabel(row: RmaReportRow): string {
+    return row.warrantyStatuses.map((status) => WARRANTY_STATUS_LABELS[status]).join(', ');
+  }
+
+  protected periodLabel(data: { entryFrom: string; entryTo: string }): string {
+    return `${formatDateOnly(data.entryFrom)} a ${formatDateOnly(data.entryTo)}`;
+  }
+}
+
+const EXPORT_FALLBACK = 'Não foi possível exportar o CSV. Reduza o período ou os filtros e tente novamente.';
+
+/** The CSV request expects a blob, so the backend's JSON error arrives as a blob too: read it for the real message. */
+async function exportErrorMessage(error: unknown): Promise<string> {
+  const body = (error as { error?: unknown } | null)?.error;
+  if (body instanceof Blob) {
+    try {
+      return extractHttpErrorMessage({ error: JSON.parse(await body.text()) }, EXPORT_FALLBACK);
+    } catch {
+      return EXPORT_FALLBACK;
+    }
+  }
+  return extractHttpErrorMessage(error, EXPORT_FALLBACK);
 }
 
 function shiftDate(value: string, days: number): string {

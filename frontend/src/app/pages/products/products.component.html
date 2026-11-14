@@ -2,7 +2,8 @@
   <app-page-header
     heading="Produtos"
   >
-    <button #createButton type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo produto</button>
+    @if (canEdit()) { <button #createButton type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo produto</button> }
+    @if (canImport()) { <a class="button-secondary" routerLink="/produtos/importar">Importar CSV</a> }
   </app-page-header>
 
   <section class="panel catalog-toolbar catalog-toolbar--filters">
@@ -43,7 +44,11 @@
   }
 
   <article class="table-card table-card--list panel">
-    @if (loadFailed()) {
+    @if (!canView()) {
+      <section class="empty-state">
+        <p>Seu perfil pode importar produtos, mas não consultar a lista.</p>
+      </section>
+    } @else if (loadFailed()) {
       <section class="empty-state" role="alert">
         <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
         <h3>Não foi possível carregar os produtos.</h3>
@@ -61,8 +66,7 @@
       <section class="empty-state">
         <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
         <h3>Nenhum produto cadastrado</h3>
-        <p>Cadastre produtos para utilizar no fluxo de abertura de RMAs.</p>
-        <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Cadastrar produto</button>
+        <p>Cadastre produtos para utilizar no fluxo de abertura de ordens de serviço.</p>
       </section>
     } @else if (products().length === 0) {
       <section class="empty-state">
@@ -121,6 +125,7 @@
                 <td>{{ warrantyLabel(product.defaultWarrantyMonths) }}</td>
                 <td>{{ updatedAtLabel(product) }}</td>
                 <td class="table-actions-col">
+                  @if (canEdit()) {
                   <div class="row-actions">
                     <button
                       appRowAction
@@ -140,6 +145,7 @@
                       [disabled]="deletingProductId() !== null"
                     ></button>
                   </div>
+                  }
                 </td>
               </tr>
             }
@@ -172,7 +178,7 @@
       appModalFocus
       modalInitialFocus="[formcontrolname='sku']"
       [modalCloseBlocked]="submitting()"
-      [modalFallbackFocus]="createButton"
+      [modalFallbackFocus]="createButtonElement()?.nativeElement ?? null"
       (modalCloseRequested)="closeModal()"
       (click)="$event.stopPropagation()"
     >
@@ -215,18 +221,21 @@
             }
           </label>
 
-          <label class="field-group field-group--full">
-            <span>Categoria (máx. {{ limits.category }} caracteres)</span>
-            <input type="text" formControlName="category" list="product-categories" placeholder="Selecione ou digite uma categoria" [attr.maxlength]="limits.category" />
-            <datalist id="product-categories">
-              @for (category of summary().categories; track category) {
-                <option [value]="category"></option>
-              }
-            </datalist>
+          <div class="field-group field-group--full">
+            <span id="product-category-label">Categoria</span>
+            <app-suggest-input
+              formControlName="category"
+              labelledBy="product-category-label"
+              listLabel="Categorias existentes"
+              placeholder="Digite ou escolha uma categoria"
+              [suggestions]="summary().categories"
+              [maxlength]="limits.category"
+              [invalid]="hasError('category')"
+            />
             @if (hasError('category')) {
               <small class="field-error">A categoria excede o limite permitido.</small>
             }
-          </label>
+          </div>
         </fieldset>
 
         <fieldset class="form-section">
@@ -249,8 +258,8 @@
           </label>
         </fieldset>
 
-        <fieldset class="form-section form-section--untitled">
-          <legend class="sr-only">Garantia e observações</legend>
+        <fieldset class="form-section">
+          <legend>Garantia e observações</legend>
 
           <label class="field-group">
             <span>Garantia padrão (meses)</span>
@@ -293,7 +302,7 @@
       appModalFocus
       modalInitialFocus=".form-actions .button-secondary"
       [modalCloseBlocked]="deletingProductId() !== null"
-      [modalFallbackFocus]="createButton"
+      [modalFallbackFocus]="createButtonElement()?.nativeElement ?? null"
       (modalCloseRequested)="closeDeleteModal()"
       (click)="$event.stopPropagation()"
     >

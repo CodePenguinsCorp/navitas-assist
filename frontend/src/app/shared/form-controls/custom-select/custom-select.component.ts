@@ -27,6 +27,8 @@ export interface CustomSelectOption<T = unknown> {
   status?: string;
   /** Person initials; '' draws the empty avatar. */
   avatar?: string;
+  /** RMA priority key: the option draws the priority bars and the trigger takes that priority colour. */
+  priority?: string;
 }
 
 let nextMenuId = 0;
@@ -62,8 +64,8 @@ export class CustomSelectComponent implements ControlValueAccessor {
    * (the placeholder, or the option matching `value` until the parent updates it).
    */
   readonly actionMenu = input(false);
-  /** 'status' draws the trigger as a status pill; 'person' as avatar + name. */
-  readonly appearance = input<'field' | 'status' | 'person'>('field');
+  /** 'status' draws the trigger as a status pill; 'person' as avatar + name; 'priority' as bars + level. */
+  readonly appearance = input<'field' | 'status' | 'person' | 'priority'>('field');
 
   @Output() readonly valueChange = new EventEmitter<unknown>();
 

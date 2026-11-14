@@ -36,7 +36,7 @@
                 [class.is-selected]="isSelected(item)"
                 [class.is-dragging]="isDragging(item)"
                 [class.is-updating]="isStatusUpdating(item)"
-                [draggable]="canUpdateStatus() && !interactionDisabled() && boardUpdatingId() === null"
+                [draggable]="canUpdateStatus() && boardUpdatingId() === null"
                 tabindex="0"
                 (click)="cardSelect.emit(item)"
                 (keydown.enter)="cardSelect.emit(item)"
@@ -44,11 +44,6 @@
                 (dragend)="cardDragEnd.emit()"
               >
                 <header class="board-card__header">
-                  @if (bulkSelectionEnabled()) {
-                    <label class="board-card__selection" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" (dragstart)="preventCardDrag($event)">
-                      <input type="checkbox" [checked]="bulkSelectedIds().includes(item.id)" [disabled]="interactionDisabled() || boardUpdatingId() !== null" [attr.aria-label]="'Selecionar ' + item.code" (change)="bulkSelectionChange.emit(item)" />
-                    </label>
-                  }
                   <div class="board-card__identity">
                     <h4 class="code-text">{{ item.code }}</h4>
                     <p class="board-card__client" [title]="item.clientName">{{ item.clientName }}</p>
@@ -58,12 +53,14 @@
 
                 <strong class="board-card__title">{{ productSummary(item) }}</strong>
 
-                @if (showSla(item)) {
-                  <app-rma-sla-badge [sla]="item.sla" />
+                <app-rma-deadline-chip [rma]="item" mode="card" />
+
+                @if (stageTime(item); as stage) {
+                  <p class="board-card__stage">{{ stage }}</p>
                 }
 
                 @if (item.currentBlock; as block) {
-                  <p class="board-card__block" [title]="block.reason"><strong>Bloqueado há {{ blockedDuration(block, clock.now()) }}</strong></p>
+                  <p class="board-card__block" [title]="block.reason"><strong>Impedida há {{ blockedDuration(block, clock.now()) }}</strong></p>
                 }
 
                 <footer class="board-card__footer">

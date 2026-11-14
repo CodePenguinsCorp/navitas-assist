@@ -1,9 +1,11 @@
+import { PermissionService } from '../../core/services/permission.service';
+import { RouterLink } from '@angular/router';
 import { IconComponent } from '../../shared/icon/icon.component';
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable, Subject, debounceTime, filter, finalize } from 'rxjs';
-import { ClientRequest, ClientResponse, ClientSummaryResponse } from '../../core/models';
+import { Observable, Subject, Subscription, debounceTime, filter, finalize, of } from 'rxjs';
+import { ClientListItemResponse, ClientRequest, ClientResponse, ClientSummaryResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import {
   extractHttpErrorMessage,
@@ -32,13 +34,20 @@ type ClientFormControlName =
 
 @Component({
   selector: 'app-clients',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PaginationComponent, PageHeaderComponent, RowActionComponent],
+  imports: [RouterLink, IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PaginationComponent, PageHeaderComponent, RowActionComponent],
   templateUrl: './clients.component.html',
   styles: [`
     :host { display: block; }
   `]
 })
 export class ClientsComponent {
+  private readonly permissions = inject(PermissionService);
+  protected readonly createButtonElement = viewChild<ElementRef<HTMLButtonElement>>('createButton');
+  protected readonly canImport = computed(() => this.permissions.hasPermission('cadastros.importar'));
+  protected readonly canEdit = computed(() => this.permissions.hasPermission('cadastros.editar'));
+  /** `cadastros.ver`: the list and its totals; a profile that only imports reaches the page for the import action. */
+  protected readonly canView = computed(() => this.permissions.hasPermission('cadastros.ver'));
+
   private readonly formBuilder = inject(FormBuilder);
   private readonly catalogService = inject(CatalogService);
 
@@ -49,7 +58,7 @@ export class ClientsComponent {
   protected readonly errorMessage = signal('');
   protected readonly modalErrorMessage = signal('');
   protected readonly deleteModalErrorMessage = signal('');
-  protected readonly successMessage = signal('');
+  protected readonly successMessage = signal<string>(history.state?.importSummary ?? '');
   protected readonly searchTerm = signal('');
   protected readonly documentFilter = signal<PresenceFilter>('all');
   protected readonly emailFilter = signal<PresenceFilter>('all');
@@ -59,8 +68,8 @@ export class ClientsComponent {
   protected readonly loadFailed = signal(false);
 
   private readonly searchChanges = new Subject<'search' | 'cancel'>();
-  private readonly clientList = new PagedList<ClientResponse>(
-    (pageQuery) => this.catalogService.listClients({
+  private readonly clientList = new PagedList<ClientListItemResponse>(
+    (pageQuery) => !this.canView() ? of({ content: [], page: 0, size: pageQuery.size ?? 20, totalElements: 0, totalPages: 0 }) : this.catalogService.listClients({
       ...pageQuery,
       query: this.searchTerm(),
       hasDocument: presenceToFlag(this.documentFilter()),
@@ -72,9 +81,13 @@ export class ClientsComponent {
     },
     () => this.loadFailed.set(false)
   );
-  private readonly summarySignal = signal<ClientSummaryResponse>({ total: 0, withContact: 0, withDocument: 0, withEmail: 0 });
-  private readonly editingClientSignal = signal<ClientResponse | null>(null);
-  private readonly deletingClientSignal = signal<ClientResponse | null>(null);
+  private readonly summarySignal = signal<ClientSummaryResponse>({ total: 0 });
+  private readonly editingClientSignal = signal<ClientListItemResponse | null>(null);
+  private readonly deletingClientSignal = signal<ClientListItemResponse | null>(null);
+  /** The edit form waits for `GET /api/clients/{id}` (address and notes) before it can be saved. */
+  protected readonly editLoading = signal(false);
+  protected readonly editLoadFailed = signal(false);
+  private editRequest?: Subscription;
 
   protected readonly clients = this.clientList.items;
   protected readonly loading = this.clientList.loading;
@@ -165,13 +178,15 @@ export class ClientsComponent {
   }
 
   protected openCreateModal(): void {
+    if (!this.canEdit()) return;
     this.editingClientSignal.set(null);
     this.form.reset(emptyClientForm());
     this.activeModal.set('create');
     this.clearMessages();
   }
 
-  protected openEditModal(client: ClientResponse): void {
+  protected openEditModal(client: ClientListItemResponse): void {
+    if (!this.canEdit()) return;
     this.editingClientSignal.set(client);
     this.form.reset({
       legalName: client.legalName,
@@ -179,11 +194,44 @@ export class ClientsComponent {
       documentNumber: client.documentNumber ?? '',
       email: client.email ?? '',
       phone: client.phone ?? '',
-      address: client.address ?? '',
-      notes: client.notes ?? ''
+      address: '',
+      notes: ''
     });
     this.activeModal.set('edit');
     this.clearMessages();
+    this.loadEditedClient(client.id);
+  }
+
+  protected retryEditLoad(): void {
+    const client = this.editingClientSignal();
+    if (client) this.loadEditedClient(client.id);
+  }
+
+  private loadEditedClient(id: number): void {
+    this.editRequest?.unsubscribe();
+    this.editLoading.set(true);
+    this.editLoadFailed.set(false);
+    this.modalErrorMessage.set('');
+    this.editRequest = this.catalogService.getClient(id).subscribe({
+      next: (full) => {
+        if (this.editingClientSignal()?.id !== id) return;
+        this.form.reset({
+          legalName: full.legalName,
+          tradeName: full.tradeName ?? '',
+          documentNumber: full.documentNumber ?? '',
+          email: full.email ?? '',
+          phone: full.phone ?? '',
+          address: full.address ?? '',
+          notes: full.notes ?? ''
+        });
+        this.editLoading.set(false);
+      },
+      error: (error) => {
+        if (this.editingClientSignal()?.id !== id) return;
+        this.editLoadFailed.set(true);
+        this.modalErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar o cliente.'));
+      }
+    });
   }
 
   protected closeModal(): void {
@@ -195,6 +243,7 @@ export class ClientsComponent {
   }
 
   protected saveClient(): void {
+    if (!this.canEdit() || this.editLoading()) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.modalErrorMessage.set('Revise os campos destacados antes de salvar o cliente.');
@@ -231,7 +280,8 @@ export class ClientsComponent {
     });
   }
 
-  protected openDeleteModal(client: ClientResponse): void {
+  protected openDeleteModal(client: ClientListItemResponse): void {
+    if (!this.canEdit()) return;
     this.deletingClientSignal.set(client);
     this.clearMessages();
   }
@@ -245,6 +295,7 @@ export class ClientsComponent {
   }
 
   protected confirmDeleteClient(): void {
+    if (!this.canEdit()) return;
     const client = this.deletingClientSignal();
 
     if (!client || this.deletingClientId() !== null) {
@@ -276,7 +327,7 @@ export class ClientsComponent {
     return control.invalid && (control.dirty || control.touched);
   }
 
-  protected updatedAtLabel(client: ClientResponse): string {
+  protected updatedAtLabel(client: ClientListItemResponse): string {
     return formatDateTime(client.updatedAt);
   }
 
@@ -286,6 +337,7 @@ export class ClientsComponent {
   }
 
   private loadSummary(): void {
+    if (!this.canView()) return;
     this.catalogService.getClientSummary().subscribe({
       next: (summary) => this.summarySignal.set(summary),
       error: () => undefined
@@ -302,6 +354,9 @@ export class ClientsComponent {
   private resetModal(): void {
     this.activeModal.set(null);
     this.modalErrorMessage.set('');
+    this.editRequest?.unsubscribe();
+    this.editLoading.set(false);
+    this.editLoadFailed.set(false);
   }
 
   private resetDeleteModal(): void {

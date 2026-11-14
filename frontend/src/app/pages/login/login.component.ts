@@ -62,7 +62,10 @@ export class LoginComponent {
       },
       error: (error: unknown) => {
         const invalidCredentials = error instanceof HttpErrorResponse && error.status === 401 && error.url?.endsWith('/api/auth/login');
-        this.authError.set(invalidCredentials ? 'Credenciais inválidas.' : 'Não foi possível entrar. Tente novamente em instantes.');
+        const message = error instanceof HttpErrorResponse && error.status === 500 && typeof error.error?.message === 'string'
+          && /^Erro inesperado\. Informe o código [A-F0-9]{8} ao suporte\.$/.test(error.error.message)
+          ? error.error.message : 'Não foi possível entrar. Tente novamente em instantes.';
+        this.authError.set(invalidCredentials ? 'Credenciais inválidas.' : message);
       }
     });
   }

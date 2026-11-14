@@ -1,3 +1,4 @@
+import { providePermissions } from '../../testing/permission-fixtures';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { Signal } from '@angular/core';
@@ -19,21 +20,23 @@ import { ProductsComponent } from './products.component';
 const INITIAL_PRODUCTS: ProductResponse[] = [
   { id: 1, sku: 'A', name: 'Controlador Alfa', category: 'Controle', hardwareVersion: null,
     firmwareVersion: '1.0', defaultWarrantyMonths: 12, technicalNotes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' },
+    updatedAt: '2026-10-20T12:00:00Z' },
   { id: 2, sku: 'B', name: 'Controlador Beta', category: 'controle', hardwareVersion: null,
     firmwareVersion: null, defaultWarrantyMonths: 12, technicalNotes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' },
+    updatedAt: '2026-10-20T12:00:00Z' },
   { id: 3, sku: 'C', name: 'Sensor Gama', category: 'Sensor', hardwareVersion: null,
     firmwareVersion: ' ', defaultWarrantyMonths: 12, technicalNotes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' }
+    updatedAt: '2026-10-20T12:00:00Z' }
 ];
 
+
+beforeEach(() => TestBed.configureTestingModule({ providers: [provideRouter([]), providePermissions(['cadastros.ver', 'cadastros.editar'])] }));
 
 function product(id: number, name: string): ProductResponse {
   return {
     id, sku: `SKU-${id}`, name, category: 'Controle', hardwareVersion: null, firmwareVersion: null,
     defaultWarrantyMonths: 12, technicalNotes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+    updatedAt: '2026-10-20T12:00:00Z'
   };
 }
 
@@ -52,7 +55,7 @@ describe('ProductsComponent pagination', () => {
 
   beforeEach(async () => {
     vi.useFakeTimers();
-    summary = { total: 45, withFirmware: 20, averageWarrantyMonths: 18, categories: ['Controle', 'Sensor'] };
+    summary = { total: 45, categories: ['Controle', 'Sensor'] };
     listProducts = vi.fn((filters: ProductFilters) => of(page([product(1, 'Alfa'), product(2, 'Beta')], filters.page, filters.size, 45)));
     getProductSummary = vi.fn(() => of(summary));
 
@@ -147,7 +150,7 @@ describe('ProductsComponent collection layout and states', () => {
   let getProductSummary: ReturnType<typeof vi.fn>;
   let deleteProduct: ReturnType<typeof vi.fn>;
 
-  const summary: ProductSummaryResponse = { total: 45, withFirmware: 20, averageWarrantyMonths: 18, categories: ['Controle', 'Sensor'] };
+  const summary: ProductSummaryResponse = { total: 45, categories: ['Controle', 'Sensor'] };
   const loadError = () => throwError(() => new HttpErrorResponse({ status: 503, error: { message: 'Serviço indisponível.' } }));
 
   async function mount(options: {
@@ -296,7 +299,7 @@ describe('ProductsComponent collection layout and states', () => {
     expect(remove.hasAttribute('title')).toBe(false);
   });
 
-  it('groups the form into Identificação, Versões and an untitled warranty and notes section', async () => {
+  it('groups the form into Identificação, Versões and Garantia e observações', async () => {
     await mount();
     component.openCreateModal();
     fixture.detectChanges();
@@ -307,20 +310,31 @@ describe('ProductsComponent collection layout and states', () => {
     const sections = Array.from(dialog.querySelectorAll('fieldset.form-section'));
     expect(sections.map((section) => section.querySelector('legend')?.textContent?.trim()))
       .toEqual(['Identificação', 'Versões', 'Garantia e observações']);
-    // The last group's fields already name themselves: its legend stays for screen readers only.
-    expect(sections[2].querySelector('legend')?.classList.contains('sr-only')).toBe(true);
+    // Every group shows its title, like the others.
+    expect(sections[2].querySelector('legend')?.classList.contains('sr-only')).toBe(false);
     expect(sections[0].querySelector('legend')?.classList.contains('sr-only')).toBe(false);
     const controlsIn = (section: Element) => Array.from(section.querySelectorAll('[formControlName]')).map((node) => node.getAttribute('formControlName'));
     expect(controlsIn(sections[0])).toEqual(['sku', 'name', 'category']);
     expect(controlsIn(sections[1])).toEqual(['hardwareVersion', 'firmwareVersion']);
     expect(controlsIn(sections[2])).toEqual(['defaultWarrantyMonths', 'technicalNotes']);
 
-    const category = sections[0].querySelector<HTMLInputElement>('[formControlName="category"]')!;
-    expect(category.type).toBe('text');
-    expect(category.getAttribute('list')).toBe('product-categories');
-    expect(sections[0].querySelector('datalist#product-categories')).not.toBeNull();
+    // Categoria: campo de texto com sugestões no estilo do app, sem o datalist nativo.
+    const category = sections[0].querySelector<HTMLElement>('[formControlName="category"]')!;
+    expect(category.tagName.toLowerCase()).toBe('app-suggest-input');
+    const categoryInput = category.querySelector<HTMLInputElement>('input')!;
+    expect(categoryInput.type).toBe('text');
+    expect(categoryInput.getAttribute('list')).toBeNull();
+    expect(categoryInput.getAttribute('maxlength')).toBe('80');
+    expect(element.querySelector(`#${categoryInput.getAttribute('aria-labelledby')}`)?.textContent?.trim()).toBe('Categoria');
+    expect(dialog.querySelector('datalist')).toBeNull();
+    categoryInput.dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
+    expect(Array.from(category.querySelectorAll('[role="option"]')).map((option) => option.textContent?.trim())).toEqual(['Controle', 'Sensor']);
+    (category.querySelector('[role="option"]') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(categoryInput.value).toBe('Controle');
     expect(dialog.textContent).toContain('SKU (máx. 20 caracteres)');
-    expect(dialog.textContent).toContain('Categoria (máx. 80 caracteres)');
+    expect(dialog.textContent).not.toContain('Categoria (máx.');
     expect(dialog.textContent).toContain('Observações técnicas (máx. 1000 caracteres)');
     expect(dialog.textContent).not.toContain('Preencha os dados mínimos');
   });
@@ -458,7 +472,7 @@ describe('ProductsComponent collection layout and states', () => {
   it('identifies name and SKU in the delete confirmation and shows the error in the dialog', async () => {
     await mount();
     deleteProduct.mockImplementation(() => throwError(() =>
-      new HttpErrorResponse({ status: 409, error: { message: 'Produto possui RMAs vinculados.' } })));
+      new HttpErrorResponse({ status: 409, error: { message: 'Produto possui ordens de serviço vinculadas.' } })));
 
     component.openDeleteModal(product(1, 'Alfa'));
     fixture.detectChanges();
@@ -468,7 +482,7 @@ describe('ProductsComponent collection layout and states', () => {
 
     component.confirmDeleteProduct();
     fixture.detectChanges();
-    expect(element.querySelector('[role="alertdialog"] [role="alert"]')?.textContent).toContain('Produto possui RMAs vinculados.');
+    expect(element.querySelector('[role="alertdialog"] [role="alert"]')?.textContent).toContain('Produto possui ordens de serviço vinculadas.');
   });
 });
 
@@ -489,7 +503,7 @@ interface ProductsHarness {
 
 function flushProductLists(http: HttpTestingController, content: unknown[], categories: string[] = []): void {
   http.expectOne(r => r.method === 'GET' && r.url.split('?')[0] === '/api/products').flush({ content, page: 0, size: 20, totalElements: content.length, totalPages: 1 });
-  http.expectOne('/api/products/summary').flush({ total: content.length, withFirmware: 0, averageWarrantyMonths: 12, categories });
+  http.expectOne('/api/products/summary').flush({ total: content.length, categories });
 }
 
 describe('ProductsComponent pending save lifecycle', () => {
@@ -562,10 +576,13 @@ describe('ProductsComponent pending save lifecycle', () => {
   describe.each(['create', 'edit'] as const)('%s', (mode) => {
     it.each(['Sensor', 'Robótica'])('suggests existing categories and saves the typed category %s', (category) => {
       openEditor(mode);
-      const input = page.querySelector<HTMLInputElement>('[formControlName="category"]')!;
-      const suggestions = page.querySelector<HTMLDataListElement>(`datalist[id="${input.getAttribute('list')}"]`);
-      expect(suggestions).not.toBeNull();
-      expect(Array.from(suggestions!.options, (option) => option.value)).toEqual(['Controle', 'Sensor']);
+      const input = page.querySelector<HTMLInputElement>('[formControlName="category"] input')!;
+      const suggestions = () => {
+        page.querySelector<HTMLInputElement>('[formControlName="category"] input')!.dispatchEvent(new Event('focus'));
+        fixture.detectChanges();
+        return Array.from(page.querySelectorAll('[formControlName="category"] [role="option"]'), (option) => option.textContent?.trim());
+      };
+      expect(suggestions()).toEqual(['Controle', 'Sensor']);
       if (mode === 'edit') expect(input.value).toBe('Controle');
 
       enterFields(mode);
@@ -583,9 +600,8 @@ describe('ProductsComponent pending save lifecycle', () => {
       expect(page.querySelector('.modal-overlay')).toBeNull();
 
       openEditor(mode);
-      const refreshed = page.querySelector<HTMLDataListElement>('datalist')!;
-      expect(Array.from(refreshed.options, (option) => option.value)).toEqual(categories);
-      if (mode === 'edit') expect(page.querySelector<HTMLInputElement>('[formControlName="category"]')!.value).toBe(category);
+      expect(suggestions()).toEqual(categories);
+      if (mode === 'edit') expect(page.querySelector<HTMLInputElement>('[formControlName="category"] input')!.value).toBe(category);
     });
 
     it.each(['overlay', 'close'] as const)('keeps a pending save open through %s and closes on success', (control) => {
@@ -678,7 +694,7 @@ describe('ProductsComponent dialog focus', () => {
       imports: [ProductsComponent],
       providers: [provideRouter([{ path: '', component: ProductsComponent }]), { provide: CatalogService, useValue: {
         listProducts: (filters: { page: number; size: number }) => of(page(rows, filters.page, filters.size)),
-        getProductSummary: () => of({ total: rows.length, withFirmware: 0, averageWarrantyMonths: 12, categories: ['Controle'] }),
+        getProductSummary: () => of({ total: rows.length, categories: ['Controle'] }),
         createProduct: () => (save = new Subject<ProductResponse>()),
         updateProduct: () => (save = new Subject<ProductResponse>()),
         deleteProduct: () => (remove = new Subject<void>())

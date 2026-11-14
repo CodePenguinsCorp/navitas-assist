@@ -1,54 +1,51 @@
+import { RmaWarrantyFieldComponent } from '../../shared/rma-warranty-field/rma-warranty-field.component';
+import { RmaDiagnosisComponent } from '../../shared/rma-diagnosis/rma-diagnosis.component';
+import { RmaStatusFieldComponent } from '../../shared/rma-status-field/rma-status-field.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { NgComponentOutlet } from '@angular/common';
 import { Component, ElementRef, Injector, Type, afterNextRender, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { Subject, catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
+import { HttpContext } from '@angular/common/http';
+import { Subject, Subscription, catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
+import { SKIP_GLOBAL_LOADING } from '../../core/interceptors/loading.interceptor';
 import {
-  FAILURE_CAUSE_LABELS,
-  FAILURE_CAUSE_OPTIONS,
-  FAILURE_TYPE_LABELS,
-  FAILURE_TYPE_OPTIONS,
   RMA_PRIORITY_LABELS,
   RMA_STATUS_FLOW,
   RMA_STATUS_LABELS
 } from '../../core/mock-data';
 import {
-  ClientResponse,
+  ClientOptionResponse,
   CreateRmaRequest,
-  DiagnosisRequest,
-  FailureCause,
-  FailureType,
-  ProductResponse,
+  ProductOptionResponse,
   RmaPriority,
+  RmaListItemResponse,
   RmaResponse,
   RmaSummaryResponse,
   RmaStatus
 } from '../../core/models';
-import { AuthService } from '../../core/services/auth.service';
+import { RmaReportLinkComponent } from '../../shared/rma-report-link/rma-report-link.component';
 import { PermissionService } from '../../core/services/permission.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { PagedList } from '../../core/utils/paged-list';
 import { todayInputValue } from '../../core/utils/date';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import {
-  NO_DIAGNOSIS_LABEL,
   blockedLabel,
-  diagnosisFacts,
+  historyEntryTitle,
   invoiceFact,
   purchaseFact,
   receiptFacts,
   repairFacts,
   rmaHistory,
   rmaItemFacts,
-  sectionLabel
+  sectionLabel,
+  stageFact
 } from '../../core/utils/rma-detail';
 import {
-  failureCauseLabel,
-  failureTypeLabel,
   formatDate,
   formatDateTime,
   normalizeText,
@@ -72,21 +69,24 @@ import { DatePickerComponent } from '../../shared/form-controls/date-picker/date
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
-import { RmaBlockHistoryComponent } from '../../shared/rma-block-history/rma-block-history.component';
+import { RmaBlocksSectionComponent } from '../../shared/rma-blocks-section/rma-blocks-section.component';
+import { RmaRepairPanelComponent } from '../../shared/rma-repair-panel/rma-repair-panel.component';
 import { RmaPartsPanelComponent } from '../../shared/rma-parts-panel/rma-parts-panel.component';
-import { RmaSlaBadgeComponent } from '../../shared/rma-sla-badge/rma-sla-badge.component';
+import { RmaDueDateFieldComponent } from '../../shared/rma-due-date-field/rma-due-date-field.component';
+import { RmaPriorityFieldComponent } from '../../shared/rma-priority-field/rma-priority-field.component';
+import { RmaStageTimesComponent } from '../../shared/rma-stage-times/rma-stage-times.component';
+import { RmaAssigneeFieldComponent } from '../../shared/rma-assignee-field/rma-assignee-field.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
 type SearchStatusValue = RmaStatus | '';
-type FailureTypeValue = FailureType | '';
-type FailureCauseValue = FailureCause | '';
-type ModalView = 'create' | 'details' | 'diagnosis';
+type ModalView = 'create' | 'details';
 type DetailTab = 'products' | 'diagnosis' | 'parts' | 'protocols' | 'blocks' | 'history';
 
 interface CreateDateErrors {
   manufacturedAt: string[];
   purchaseDate: string;
   entryDate: string;
+  dueDate: string;
 }
 
 /** Filters confirmed by "Buscar"/"Limpar"; the list and the summary only read these. */
@@ -97,7 +97,7 @@ export interface RmaListFilters {
 
 @Component({
   selector: 'app-rmas',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, PaginationComponent, RmaBlockHistoryComponent, PageHeaderComponent, RowActionComponent, RmaSlaBadgeComponent],
+  imports: [RmaWarrantyFieldComponent, RmaDiagnosisComponent, RmaStatusFieldComponent, IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, RmaRepairPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaAssigneeFieldComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {
@@ -148,43 +148,42 @@ export interface RmaListFilters {
       padding: var(--space-5) var(--space-4) var(--space-5) var(--space-5);
     }
 
+    /* Same hierarchy as the Kanban detail: code bar, title and client, then the status row. */
     .rma-details__header {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
-      gap: var(--space-4);
-    }
-
-    .rma-details__identity {
-      display: grid;
-      gap: var(--space-1);
-      min-width: 0;
+      gap: var(--space-2);
     }
 
     .rma-details__code {
-      font-size: var(--font-size-sm);
-      font-weight: 600;
-      color: var(--muted);
+      color: var(--brand-blue-deep);
+      font-weight: 700;
     }
 
-    .rma-details__identity h3 {
+    .rma-details__head {
+      display: grid;
+      gap: 0.3rem;
+      margin-top: calc(-1 * var(--space-2));
+    }
+
+    .rma-details__head h3 {
       margin: 0;
-      font-size: 1.4rem;
+      font-size: 1.5rem;
       line-height: 1.25;
       color: var(--brand-blue-deep);
       overflow-wrap: anywhere;
     }
 
+    .rma-details__client {
+      margin: 0;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
     .rma-details__note {
       margin: 0;
       color: var(--muted);
-    }
-
-    .rma-details__chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--space-2);
-      margin-top: var(--space-1);
     }
 
     .rma-details__header-actions {
@@ -194,8 +193,7 @@ export interface RmaListFilters {
       flex-shrink: 0;
     }
 
-    .rma-items-editor,
-    .rma-diagnosis__context {
+    .rma-items-editor {
       padding: var(--space-3) var(--space-4);
       border: 1px solid var(--line);
       border-radius: var(--radius-md);
@@ -204,10 +202,6 @@ export interface RmaListFilters {
 
     .rma-items-editor {
       gap: var(--space-3);
-    }
-
-    .rma-details__panel {
-      min-height: 360px;
     }
 
     .rma-details__section + .rma-details__section {
@@ -286,7 +280,6 @@ export interface RmaListFilters {
       gap: var(--space-2);
     }
 
-
     .rma-create-form > * {
       grid-column: 1 / -1;
     }
@@ -330,11 +323,6 @@ export interface RmaListFilters {
       grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr)) auto;
     }
 
-    /* Read-only context the technician compares with the found failure. */
-    .rma-diagnosis__context {
-      margin-bottom: var(--space-4);
-    }
-
     @media (max-width: 900px) {
       .rma-create-form__receipt {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -365,7 +353,7 @@ export interface RmaListFilters {
         grid-template-columns: 1fr;
       }
 
-      /* Identity and Fechar share the first row; the diagnosis action takes its own row below. */
+      /* Identity and Fechar share the first row. */
       .rma-details__header {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
@@ -380,18 +368,12 @@ export interface RmaListFilters {
         grid-row: 1;
       }
 
-      .rma-details__header-actions .button-primary {
-        grid-column: 1 / -1;
-        grid-row: 2;
-        justify-self: start;
-      }
     }
   `]
 })
 export class RmasComponent {
   protected readonly protocolsComponent = signal<Type<unknown> | null>(null);
   private readonly formBuilder = inject(FormBuilder);
-  private readonly authService = inject(AuthService);
   private readonly permissions = inject(PermissionService);
   private readonly catalogService = inject(CatalogService);
   private readonly rmaService = inject(RmaService);
@@ -408,11 +390,8 @@ export class RmasComponent {
    * its controls stay in the DOM and in createForm.
    */
   protected readonly retroactiveOpen = signal(false);
-  protected readonly dateErrors = signal<CreateDateErrors>({ manufacturedAt: [], purchaseDate: '', entryDate: '' });
-  protected readonly diagnosisSubmitting = signal(false);
-  /** Diagnosis feedback shown inside the dialog (validation and service errors). */
-  protected readonly diagnosisErrorMessage = signal('');
-  protected readonly diagnosisSubmitAttempted = signal(false);
+  protected readonly dateErrors = signal<CreateDateErrors>({ manufacturedAt: [], purchaseDate: '', entryDate: '', dueDate: '' });
+  protected readonly diagnosisBusy = signal(false);
 
   protected readonly pageError = signal('');
   protected readonly pageMessage = signal('');
@@ -446,7 +425,7 @@ export class RmasComponent {
   protected readonly loadFailed = signal(false);
   protected readonly listErrorMessage = signal('');
 
-  private readonly rmaList = new PagedList<RmaResponse>(
+  private readonly rmaList = new PagedList<RmaListItemResponse>(
     (pageQuery) => {
       const filters = this.appliedFilters();
       this.requestedGeneration = this.generation();
@@ -455,18 +434,21 @@ export class RmasComponent {
     },
     (error) => {
       this.loadFailed.set(true);
-      this.listErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os RMAs.'));
+      this.listErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as ordens de serviço.'));
     },
     (rmas) => {
       this.resultGeneration.set(this.requestedGeneration);
       this.loadFailed.set(false);
       if (this.requestedUnfiltered) this.overallTotal.set(this.rmaList.totalElements());
-      this.syncSelection(rmas);
     }
   );
-  private readonly clientsSignal = signal<ClientResponse[]>([]);
-  private readonly productsSignal = signal<ProductResponse[]>([]);
+  private readonly clientsSignal = signal<ClientOptionResponse[]>([]);
+  private readonly productsSignal = signal<ProductOptionResponse[]>([]);
+  /** Full detail of the open OS, read from `GET /api/rmas/{id}` when the modal opens. */
   private readonly selectedRmaSignal = signal<RmaResponse | null>(null);
+  private readonly detailRmaId = signal<number | null>(null);
+  protected readonly detailError = signal('');
+  private detailRequest?: Subscription;
 
   protected readonly rmas = this.rmaList.items;
   protected readonly loading = this.rmaList.loading;
@@ -495,14 +477,14 @@ export class RmasComponent {
       ? summary.value : null;
   });
   /**
-   * First indicator: "Y RMAs" without filter, "X de Y RMAs" with one (Y = whole registry), with the
+   * First indicator: "Y ordens de serviço" without filter, "X de Y ordens de serviço" with one (Y = whole registry), with the
    * singular of the last number. Hidden before the first success and after a failure.
    */
   protected readonly totalSummary = computed(() => {
     if (!this.hasCurrentResult()) return null;
     const count = this.totalElements();
     const overall = this.hasActiveFilters() ? this.overallTotal() : null;
-    return { count, overall, label: (overall ?? count) === 1 ? 'RMA' : 'RMAs' };
+    return { count, overall, label: (overall ?? count) === 1 ? 'OS' : 'OS' };
   });
 
   protected readonly statusLabel = statusLabel;
@@ -510,8 +492,6 @@ export class RmasComponent {
   protected readonly priorityClass = priorityChipClass;
   protected readonly warrantyLabel = warrantyLabel;
   protected readonly warrantyClass = warrantyClass;
-  protected readonly failureTypeLabel = failureTypeLabel;
-  protected readonly failureCauseLabel = failureCauseLabel;
   protected readonly dateLabel = formatDate;
   protected readonly dateTimeLabel = formatDateTime;
   protected readonly trackableLabel = trackableLabel;
@@ -520,17 +500,17 @@ export class RmasComponent {
   protected readonly itemCountLabel = itemCountLabel;
   protected readonly itemTrackableLabel = rmaItemTrackableLabel;
   protected readonly initials = initialsOf;
-  protected readonly clock = inject(SlaClockService);
+  protected readonly clock = inject(ClockService);
   protected readonly blockedLabel = blockedLabel;
   protected readonly sectionLabel = sectionLabel;
   protected readonly invoiceFact = invoiceFact;
   protected readonly purchaseFact = purchaseFact;
   protected readonly rmaItemFacts = rmaItemFacts;
   protected readonly receiptFacts = receiptFacts;
-  protected readonly diagnosisFacts = diagnosisFacts;
   protected readonly repairFacts = repairFacts;
   protected readonly rmaHistory = rmaHistory;
-  protected readonly noDiagnosisLabel = NO_DIAGNOSIS_LABEL;
+  protected readonly historyEntryTitle = historyEntryTitle;
+  protected readonly stageFact = stageFact;
 
   protected get todayDate(): string {
     return todayInputValue();
@@ -564,12 +544,17 @@ export class RmasComponent {
 
   protected readonly statusFilterOptions = STATUS_FILTER_OPTIONS;
   protected readonly prioritySelectOptions = PRIORITY_SELECT_OPTIONS;
-  protected readonly failureTypeSelectOptions = FAILURE_TYPE_SELECT_OPTIONS;
-  protected readonly failureCauseSelectOptions = FAILURE_CAUSE_SELECT_OPTIONS;
 
   protected readonly canOpenRma = computed(() => this.permissions.hasPermission('rma.abrir'));
 
-  protected readonly canRegisterDiagnosis = computed(() => this.permissions.hasPermission('rma.diagnosticar'));
+  protected readonly warrantyBusy = signal(false);
+  protected readonly statusBusy = signal(false);
+  protected readonly canUpdateStatus = computed(() => this.permissions.hasPermission('rma.status'));
+
+  /** `rma.editar`: general data, including the due date. */
+  protected readonly canEditRma = computed(() => this.permissions.hasPermission('rma.editar'));
+  /** `rma.responsavel`: the assignee in the detail becomes a selector (same rule as the Kanban). */
+  protected readonly canUpdateAssignee = computed(() => this.permissions.hasPermission('rma.responsavel'));
 
   protected readonly filtersForm = this.formBuilder.nonNullable.group({
     query: [''],
@@ -582,6 +567,7 @@ export class RmasComponent {
     purchaseDate: [''],
     purchaseDateUnknown: [false],
     entryDate: [todayInputValue(), [Validators.required]],
+    dueDate: [''],
     invoiceNumber: [''],
     reportedFailure: ['', [Validators.required, Validators.maxLength(1000)]],
     receivedAccessories: ['', [Validators.maxLength(500)]],
@@ -590,15 +576,6 @@ export class RmasComponent {
     repairSummary: ['', [Validators.maxLength(600)]],
     replacedPartsSummary: ['', [Validators.maxLength(600)]],
     testSummary: ['', [Validators.maxLength(800)]]
-  });
-
-  protected readonly diagnosisForm = this.formBuilder.nonNullable.group({
-    foundFailure: ['', [Validators.required, Validators.maxLength(2000)]],
-    failureType: ['' as FailureTypeValue],
-    probableCause: ['' as FailureCauseValue],
-    notes: [''],
-    diagnosedAt: [todayInputValue(), [Validators.required]],
-    technicianName: ['', [Validators.required, Validators.maxLength(120)]]
   });
 
   constructor() {
@@ -619,7 +596,6 @@ export class RmasComponent {
       }),
       takeUntilDestroyed()
     ).subscribe((summary) => this.summarySignal.set(summary));
-    this.seedOperatorDefaults();
     this.loadWorkspace();
     this.openRequestedRma();
   }
@@ -672,7 +648,7 @@ export class RmasComponent {
 
   protected openCreateModal(): void {
     if (!this.canOpenRma()) {
-      this.pageError.set('Seu perfil não pode abrir novos RMAs.');
+      this.pageError.set('Seu perfil não pode abrir novas ordens de serviço.');
       return;
     }
 
@@ -692,16 +668,39 @@ export class RmasComponent {
     return ids.filter(Boolean).join(' ') || null;
   }
 
-  protected openDetailsModal(rma: RmaResponse): void {
+  protected openDetailsModal(rma: Pick<RmaListItemResponse, 'id'>): void {
+    this.openDetailById(rma.id);
+  }
+
+  /** Opens the modal at once and reads the detail without the global loading; the modal shows its own state. */
+  private openDetailById(id: number): void {
     void import('../../shared/rma-protocols/rma-protocols.component').then((module) => this.protocolsComponent.set(module.RmaProtocolsComponent));
-    this.selectRma(rma);
+    this.pageError.set('');
     this.pageMessage.set('');
     this.detailTab.set('products');
     this.activeModal.set('details');
+    this.loadDetail(id);
+  }
+
+  protected retryDetail(): void {
+    const id = this.detailRmaId();
+    if (id !== null) this.loadDetail(id);
+  }
+
+  private loadDetail(id: number): void {
+    this.detailRequest?.unsubscribe();
+    this.detailRmaId.set(id);
+    this.selectedRmaSignal.set(null);
+    this.detailError.set('');
+    this.detailRequest = this.rmaService.getById(id, new HttpContext().set(SKIP_GLOBAL_LOADING, true)).subscribe({
+      next: (rma) => { if (this.detailRmaId() === id) this.selectedRmaSignal.set(rma); },
+      error: (error) => { if (this.detailRmaId() === id) this.detailError.set(extractHttpErrorMessage(error, 'Não foi possível carregar a OS.')); }
+    });
   }
 
   /** Same tab contract as notifications: arrows wrap, Home/End jump to the ends; selection follows focus. */
   protected onDetailTabKeydown(event: KeyboardEvent): void {
+    if (this.statusBusy() || this.diagnosisBusy() || this.warrantyBusy()) return;
     const ids = this.detailTabs.map((tab) => tab.id);
     const current = ids.indexOf(this.detailTab());
     let next: number;
@@ -717,47 +716,19 @@ export class RmasComponent {
     this.host.nativeElement.querySelector<HTMLElement>(`#rma-tab-${ids[next]}`)?.focus();
   }
 
-  protected openDetailsFromKeyboard(event: Event, rma: RmaResponse): void {
+  protected openDetailsFromKeyboard(event: Event, rma: RmaListItemResponse): void {
     event.preventDefault();
     this.openDetailsModal(rma);
   }
 
-  protected openDiagnosisModal(): void {
-    if (!this.selectedRmaSignal()) {
-      this.pageError.set('Selecione um RMA para registrar diagnóstico.');
-      return;
-    }
-
-    if (!this.canRegisterDiagnosis()) {
-      this.pageError.set('Seu perfil não pode registrar diagnóstico técnico.');
-      return;
-    }
-
-    this.pageError.set('');
-    this.pageMessage.set('');
-    this.diagnosisErrorMessage.set('');
-    this.diagnosisSubmitAttempted.set(false);
-    this.activeModal.set('diagnosis');
-  }
-
-  protected showDiagnosisError(control: AbstractControl): boolean {
-    return control.invalid && (control.touched || this.diagnosisSubmitAttempted());
-  }
-
   protected closeModal(): void {
-    if (this.createSubmitting() || this.diagnosisSubmitting()) return;
+    if (this.createSubmitting() || this.diagnosisBusy() || this.statusBusy() || this.warrantyBusy()) return;
     this.resetModal();
-  }
-
-  protected selectRma(rma: RmaResponse): void {
-    this.selectedRmaSignal.set(rma);
-    this.primeDetailForms(rma);
-    this.pageError.set('');
   }
 
   protected createRma(): void {
     if (!this.canOpenRma()) {
-      this.pageError.set('Seu perfil não pode abrir novos RMAs.');
+      this.pageError.set('Seu perfil não pode abrir novas ordens de serviço.');
       return;
     }
 
@@ -775,7 +746,7 @@ export class RmasComponent {
     const raw = this.createForm.getRawValue();
     const dateErrors = this.validateCreateDates();
     this.dateErrors.set(dateErrors);
-    if (dateErrors.manufacturedAt.some(Boolean) || dateErrors.purchaseDate || dateErrors.entryDate) {
+    if (dateErrors.manufacturedAt.some(Boolean) || dateErrors.purchaseDate || dateErrors.entryDate || dateErrors.dueDate) {
       this.createErrorMessage.set('Corrija as datas indicadas no formulário.');
       this.pageMessage.set('');
       return;
@@ -798,7 +769,8 @@ export class RmasComponent {
       priority: raw.priority,
       repairSummary: normalizeText(raw.repairSummary),
       replacedPartsSummary: normalizeText(raw.replacedPartsSummary),
-      testSummary: normalizeText(raw.testSummary)
+      testSummary: normalizeText(raw.testSummary),
+      dueDate: normalizeText(raw.dueDate)
     };
 
     this.createSubmitting.set(true);
@@ -809,72 +781,35 @@ export class RmasComponent {
       finalize(() => this.createSubmitting.set(false))
     ).subscribe({
       next: (rma) => {
+        this.detailRmaId.set(rma.id);
         this.selectedRmaSignal.set(rma);
-        this.primeDetailForms(rma);
         this.resetCreateForm();
         this.createSubmitAttempted.set(false);
         this.filtersForm.setValue({ query: '', status: '' });
         this.appliedFilters.set({});
         this.resetModal();
-        this.pageMessage.set(`RMA ${rma.code} criado com sucesso.`);
+        this.pageMessage.set(`OS ${rma.code} criada com sucesso.`);
         this.refreshRmas();
       },
       error: (error) => {
-        this.createErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível abrir o RMA agora.'));
+        this.createErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível abrir a OS agora.'));
       }
     });
   }
 
-  protected saveDiagnosis(): void {
-    const selected = this.selectedRmaSignal();
-    if (!selected) {
-      this.pageError.set('Selecione um RMA para registrar diagnóstico.');
-      return;
-    }
-
-    if (!this.canRegisterDiagnosis()) {
-      this.pageError.set('Seu perfil não pode registrar diagnóstico técnico.');
-      return;
-    }
-
-    this.diagnosisErrorMessage.set('');
-
-    if (this.diagnosisForm.invalid) {
-      this.diagnosisForm.markAllAsTouched();
-      this.diagnosisSubmitAttempted.set(true);
-      this.diagnosisErrorMessage.set('Preencha os campos obrigatórios do diagnóstico.');
-      return;
-    }
-
-    const raw = this.diagnosisForm.getRawValue();
-    const payload: DiagnosisRequest = {
-      foundFailure: raw.foundFailure.trim(),
-      failureType: raw.failureType || null,
-      probableCause: raw.probableCause || null,
-      notes: normalizeText(raw.notes),
-      diagnosedAt: raw.diagnosedAt,
-      technicianName: raw.technicianName.trim()
-    };
-
-    this.diagnosisSubmitting.set(true);
-    this.pageError.set('');
-    this.pageMessage.set('');
-
-    this.rmaService.upsertDiagnosis(selected.id, payload).pipe(
-      finalize(() => this.diagnosisSubmitting.set(false))
-    ).subscribe({
-      next: (updated) => {
-        this.selectedRmaSignal.set(updated);
-        this.primeDetailForms(updated);
-        this.diagnosisSubmitAttempted.set(false);
-        this.resetModal();
-        this.pageMessage.set(`Diagnóstico do ${updated.code} salvo com sucesso.`);
-        this.refreshRmas();
-      },
-      error: (error) => {
-        this.diagnosisErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível salvar o diagnóstico agora.'));
-      }
+  /** A save made inside the detail (impediment, due date) refreshes the detail and the list. */
+  protected refreshRepair(): void {
+    const id = this.selectedRma()?.id;
+    if (!id) return;
+    this.rmaService.getById(id).subscribe({
+      next: updated => { if (this.selectedRma()?.id === id) this.detailRmaSaved(updated); },
+      error: error => this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível atualizar o histórico.'))
     });
+  }
+
+  protected detailRmaSaved(updated: RmaResponse): void {
+    this.selectedRmaSignal.set(updated);
+    this.refreshRmas();
   }
 
   /** Opens the collapsed retroactive group and focuses its first invalid field, if any. */
@@ -888,27 +823,28 @@ export class RmasComponent {
     }, { injector: this.injector });
   }
 
-  /** Opens the RMA referenced by an internal notification link (/rmas?rma=<id>). */
+  /** Opens the OS referenced by an internal notification link (/rmas?rma=<id>). */
   private openRequestedRma(): void {
     const rmaId = Number(this.route.snapshot.queryParamMap.get('rma'));
     if (!Number.isInteger(rmaId) || rmaId <= 0) {
       return;
     }
 
-    this.rmaService.getById(rmaId).subscribe({
-      next: (rma) => this.openDetailsModal(rma),
-      error: (error) => this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível abrir o RMA da notificação.'))
-    });
+    this.openDetailById(rmaId);
   }
 
   private resetModal(): void {
     this.activeModal.set(null);
+    this.detailRequest?.unsubscribe();
+    this.detailError.set('');
   }
 
   private loadWorkspace(): void {
     this.pageError.set('');
     this.loadListAndSummary();
 
+    // Os seletores só servem para abrir OS: sem `rma.abrir`, nenhuma chamada.
+    if (!this.canOpenRma()) return;
     forkJoin({
       clients: this.catalogService.listClientOptions(),
       products: this.catalogService.listProductOptions()
@@ -937,47 +873,6 @@ export class RmasComponent {
     this.summaryRequests.next({ generation: this.generation(), filters: { query, status } });
   }
 
-  private syncSelection(rmas: RmaResponse[]): void {
-    const selected = this.selectedRmaSignal();
-
-    if (selected) {
-      const refreshed = rmas.find((item) => item.id === selected.id);
-      if (refreshed) {
-        this.selectedRmaSignal.set(refreshed);
-        this.primeDetailForms(refreshed);
-        return;
-      }
-
-      this.primeDetailForms(selected);
-      return;
-    }
-
-    const firstRma = rmas[0] ?? null;
-    this.selectedRmaSignal.set(firstRma);
-    if (firstRma) {
-      this.primeDetailForms(firstRma);
-    }
-  }
-
-  private primeDetailForms(rma: RmaResponse): void {
-    this.diagnosisForm.setValue({
-      foundFailure: rma.diagnosis?.foundFailure ?? '',
-      failureType: (rma.diagnosis?.failureType ?? '') as FailureTypeValue,
-      probableCause: (rma.diagnosis?.probableCause ?? '') as FailureCauseValue,
-      notes: rma.diagnosis?.notes ?? '',
-      diagnosedAt: rma.diagnosis?.diagnosedAt ?? todayInputValue(),
-      technicianName: rma.diagnosis?.technicianName ?? this.currentOperatorName()
-    });
-  }
-
-  private seedOperatorDefaults(): void {
-    const operatorName = this.currentOperatorName();
-
-    this.diagnosisForm.patchValue({
-      technicianName: operatorName
-    });
-  }
-
   private resetCreateForm(): void {
     this.createItems.clear();
     this.createItems.push(this.createRmaItemForm());
@@ -987,6 +882,7 @@ export class RmasComponent {
       purchaseDate: '',
       purchaseDateUnknown: false,
       entryDate: todayInputValue(),
+      dueDate: '',
       invoiceNumber: '',
       reportedFailure: '',
       receivedAccessories: '',
@@ -996,12 +892,12 @@ export class RmasComponent {
       replacedPartsSummary: '',
       testSummary: ''
     });
-    this.dateErrors.set({ manufacturedAt: [], purchaseDate: '', entryDate: '' });
+    this.dateErrors.set({ manufacturedAt: [], purchaseDate: '', entryDate: '', dueDate: '' });
     this.retroactiveOpen.set(false);
   }
 
   private validateCreateDates(): CreateDateErrors {
-    const { items, purchaseDate, purchaseDateUnknown, entryDate } = this.createForm.getRawValue();
+    const { items, purchaseDate, purchaseDateUnknown, entryDate, dueDate } = this.createForm.getRawValue();
     const manufacturedDates = items.map((item) => item.manufacturedAt).filter(Boolean);
     const latestManufacturedDate = manufacturedDates.sort().at(-1) ?? '';
     const knownPurchaseDate = purchaseDateUnknown ? '' : purchaseDate;
@@ -1016,7 +912,8 @@ export class RmasComponent {
       entryDate: knownPurchaseDate && entryDate && entryDate < knownPurchaseDate
         ? 'A entrada não pode ser anterior à compra.'
         : latestManufacturedDate && entryDate && entryDate < latestManufacturedDate
-          ? 'A entrada não pode ser anterior à fabricação.' : ''
+          ? 'A entrada não pode ser anterior à fabricação.' : '',
+      dueDate: dueDate && entryDate && dueDate < entryDate ? 'A data limite não pode ser anterior à entrada.' : ''
     };
   }
 
@@ -1047,10 +944,6 @@ export class RmasComponent {
     }, { validators: atLeastOneItemIdentification });
   }
 
-  private currentOperatorName(): string {
-    const user = this.authService.currentUser();
-    return user?.name ?? user?.username ?? '';
-  }
 }
 
 function atLeastOneItemIdentification(control: AbstractControl): ValidationErrors | null {
@@ -1074,20 +967,4 @@ const PRIORITY_SELECT_OPTIONS: ReadonlyArray<CustomSelectOption<RmaPriority>> = 
   { value: 'HIGH', label: RMA_PRIORITY_LABELS.HIGH },
   { value: 'MEDIUM', label: RMA_PRIORITY_LABELS.MEDIUM },
   { value: 'LOW', label: RMA_PRIORITY_LABELS.LOW }
-];
-
-const FAILURE_TYPE_SELECT_OPTIONS: ReadonlyArray<CustomSelectOption<FailureTypeValue>> = [
-  { value: '', label: 'Não classificado' },
-  ...FAILURE_TYPE_OPTIONS.map((option) => ({
-    value: option,
-    label: FAILURE_TYPE_LABELS[option]
-  }))
-];
-
-const FAILURE_CAUSE_SELECT_OPTIONS: ReadonlyArray<CustomSelectOption<FailureCauseValue>> = [
-  { value: '', label: 'Não classificada' },
-  ...FAILURE_CAUSE_OPTIONS.map((option) => ({
-    value: option,
-    label: FAILURE_CAUSE_LABELS[option]
-  }))
 ];

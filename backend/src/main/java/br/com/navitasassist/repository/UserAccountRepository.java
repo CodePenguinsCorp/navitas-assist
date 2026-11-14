@@ -41,6 +41,8 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
         """)
     Optional<UserAccount> findWithAccessById(@Param("id") Long id);
 
+    Optional<UserAccount> findByEmailIgnoreCase(String email);
+
     boolean existsByUsernameIgnoreCase(String username);
 
     List<UserAccount> findAllByActiveTrueAndProfileInOrderByFullNameAsc(Collection<AccessProfile> profiles);
@@ -52,12 +54,12 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
         from UserAccount account
         where (
             :query is null
-            or lower(account.fullName) like lower(concat('%', :query, '%'))
-            or lower(account.username) like lower(concat('%', :query, '%'))
+            or lower(unaccent(account.fullName)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(account.username)) like lower(unaccent(concat('%', cast(:query as String), '%')))
           )
           and (:profileId is null or account.profile.id = :profileId)
           and (:active is null or account.active = :active)
-        order by lower(account.fullName), account.id
+        order by lower(unaccent(account.fullName)), account.id
         """)
     Page<UserAccount> search(
         @Param("query") String query,
@@ -66,10 +68,5 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
         Pageable pageable
     );
 
-    long countByActiveTrue();
-
     long countByProfile_Id(Long profileId);
-
-    @Query("select count(distinct account.profile.id) from UserAccount account")
-    long countDistinctProfiles();
 }

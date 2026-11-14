@@ -223,6 +223,41 @@ class KanbanViewControllerIntegrationTest {
             .andExpect(jsonPath("$[1].filters.blocked").value(true));
     }
 
+    @Test
+    void shouldPersistDeadlineFilter() throws Exception {
+        Map<String, Object> values = filters(null);
+        values.put("deadline", "DUE_SOON");
+        String created = mockMvc.perform(post("/api/kanban-views").with(asProfile("view.alice", "VIEWER")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(viewJson("Perto do limite", false, values)))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.filters.deadline").value("DUE_SOON"))
+            .andReturn().getResponse().getContentAsString();
+        long id = objectMapper.readTree(created).get("id").asLong();
+        mockMvc.perform(get("/api/kanban-views").with(asProfile("view.alice", "VIEWER")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$[0].filters.deadline").value("DUE_SOON"));
+
+        values.put("deadline", null);
+        mockMvc.perform(put("/api/kanban-views/{id}", id).with(asProfile("view.alice", "VIEWER")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(viewJson("Perto do limite", false, values)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.filters.deadline").doesNotExist());
+    }
+
+    @Test
+    void shouldRejectClosedDeadlineFilter() throws Exception {
+        Map<String, Object> values = filters(null);
+        values.put("deadline", "CLOSED");
+        mockMvc.perform(post("/api/kanban-views").with(asProfile("view.alice", "VIEWER")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(viewJson("Encerrados", false, values)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Deadline filter must be OVERDUE, DUE_SOON, ON_TRACK or NO_DUE_DATE."));
+    }
+
+    @Test
+    void shouldReadViewsSavedWithoutDeadline() throws Exception {
+        mockMvc.perform(post("/api/kanban-views").with(asProfile("view.alice", "VIEWER")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(viewJson("Sem prazo", false, filters(null))))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.filters.deadline").doesNotExist());
+    }
+
     private String viewJson(String name, boolean defaultView, Map<String, Object> filters) throws Exception {
         return objectMapper.writeValueAsString(Map.of(
             "name", name,

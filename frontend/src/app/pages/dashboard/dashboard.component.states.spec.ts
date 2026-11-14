@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Signal, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { Observable, Subject, of, throwError } from 'rxjs';
+import { Observable, Subject, map, of, throwError } from 'rxjs';
 import {
   ClientSummaryResponse,
   ProductSummaryResponse,
@@ -12,41 +12,42 @@ import {
 } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
+import { businessToday } from '../../core/utils/rma-deadline';
 import { DashboardComponent } from './dashboard.component';
+import { dashboardFromBoard } from '../../testing/dashboard-fixtures';
 import { Permission } from '../../core/permissions';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
 function rmaFactory(overrides: Partial<RmaResponse> = {}): RmaResponse {
   return {
-    id: 1, code: 'RMA-OPEN', clientId: 1, clientName: 'Cliente',
-    items: [{ id: 1, productId: 2, productName: 'Produto', productSku: 'SKU-2', batchNumber: null,
-      serialNumber: 'SER-2', manufacturedAt: null, warrantyMonths: 12, warrantyExpiresAt: null, warrantyStatus: WarrantyStatus.PENDING }],
-    productId: 2, productName: 'Produto', productSku: 'SKU-2', batchNumber: null, serialNumber: 'SER-2',
-    manufacturedAt: null, purchaseDate: null, purchaseDateUnknown: true, entryDate: '2026-10-20',
+    id: 1, code: 'OS-OPEN', clientName: 'Cliente',
+    items: [{ id: 1, productName: 'Produto', productSku: 'SKU-2', batchNumber: null,
+      serialNumber: 'SER-2', manufacturedAt: null, warrantyMonths: 12, warrantyExpiresAt: null, calculatedWarrantyStatus: WarrantyStatus.PENDING, warrantyOverride: null, warrantyStatus: WarrantyStatus.PENDING }],
+    purchaseDate: null, purchaseDateUnknown: true, entryDate: '2026-10-20',
     invoiceNumber: null, receivedBy: 'tester', reportedFailure: 'Falha', receivedAccessories: null,
     physicalCondition: null, priority: 'MEDIUM', status: 'RECEIVED', assigneeId: null, assigneeName: null,
-    repairSummary: null, replacedPartsSummary: null, testSummary: null, shippedAt: null, carrier: null,
+    repairSummary: null, replacedPartsSummary: null, testSummary: null, carrier: null,
     trackingCode: null, diagnosis: null, assignmentHistory: [],
     statusHistory: [{ status: 'RECEIVED', changedBy: 'tester', changedAt: '2026-10-20T16:00:00Z', note: null }],
     currentBlock: null, blockHistory: [],
-    sla: { status: 'NORMAL', startedAt: '2026-10-20T16:00:00Z', warningAt: '2026-10-21T11:12:00Z',
-      dueAt: '2026-10-21T16:00:00Z', elapsedSeconds: 0, limitSeconds: 86400 },
+    dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T16:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [], warrantyHistory: [],
     createdAt: '2026-10-20T16:00:00Z', updatedAt: '2026-10-20T16:00:00Z',
     ...overrides
   };
 }
 
 const RMA_OPEN = rmaFactory();
-const CLIENTS: ClientSummaryResponse = { total: 0, withContact: 0, withDocument: 0, withEmail: 0 };
-const PRODUCTS: ProductSummaryResponse = { total: 0, withFirmware: 0, averageWarrantyMonths: 0, categories: [] };
-const USERS: UserSummaryResponse = { total: 0, active: 0, admins: 0, roles: 0 };
+const CLIENTS: ClientSummaryResponse = { total: 0 };
+const PRODUCTS: ProductSummaryResponse = { total: 0, categories: [] };
+const USERS: UserSummaryResponse = { total: 0 };
 
-type Source = 'listBoard' | 'getClientSummary' | 'getProductSummary' | 'getUserSummary';
+type Source = 'getDashboard' | 'getClientSummary' | 'getProductSummary' | 'getUserSummary';
 
 describe('DashboardComponent load states', () => {
   let fixture: ComponentFixture<DashboardComponent>;
-  let rmaService: { listBoard: ReturnType<typeof vi.fn> };
-  let catalogService: { [K in Exclude<Source, 'listBoard'>]: ReturnType<typeof vi.fn> };
+  let rmaService: { getDashboard: ReturnType<typeof vi.fn> };
+  let catalogService: { [K in Exclude<Source, 'getDashboard'>]: ReturnType<typeof vi.fn> };
+  const asDashboard = (board: Observable<RmaResponse[]>) => board.pipe(map((rmas) => dashboardFromBoard(rmas)));
   const root = (): HTMLElement => fixture.nativeElement.querySelector('.page-surface');
   const text = () => root().textContent!.replace(/\s+/g, ' ').trim();
   const button = (label: string) => Array.from(root().querySelectorAll('button')).find((item) => item.textContent?.trim() === label);
@@ -59,9 +60,9 @@ describe('DashboardComponent load states', () => {
     clients?: Observable<ClientSummaryResponse>;
     products?: Observable<ProductSummaryResponse>;
     users?: Observable<UserSummaryResponse>;
-    listBoard?: ReturnType<typeof vi.fn>;
+    getDashboard?: ReturnType<typeof vi.fn>;
   } = {}) {
-    rmaService = { listBoard: sources.listBoard ?? vi.fn(() => sources.board ?? of([RMA_OPEN])) };
+    rmaService = { getDashboard: sources.getDashboard ?? vi.fn(() => asDashboard(sources.board ?? of([RMA_OPEN]))) };
     catalogService = {
       getClientSummary: vi.fn(() => sources.clients ?? of(CLIENTS)),
       getProductSummary: vi.fn(() => sources.products ?? of(PRODUCTS)),
@@ -87,14 +88,14 @@ describe('DashboardComponent load states', () => {
     expect(root().querySelector('.empty-state')).toBeNull();
     expect(root().querySelector('table')).toBeNull();
     expect(text()).not.toContain('0%');
-    expect(text()).not.toContain('Nenhum RMA em andamento.');
+    expect(text()).not.toContain('Nenhuma OS em andamento.');
   });
 
   // Vermelho: não há botão de nova tentativa, e os vazios aparecem depois da falha.
-  it.each(['listBoard', 'getClientSummary', 'getProductSummary', 'getUserSummary'] as Source[])('replaces the dashboard with a retryable failure when %s fails', async (source) => {
+  it.each(['getDashboard', 'getClientSummary', 'getProductSummary', 'getUserSummary'] as Source[])('replaces the dashboard with a retryable failure when %s fails', async (source) => {
     await setup({
       role: 'ADMIN',
-      board: source === 'listBoard' ? failure() : undefined,
+      board: source === 'getDashboard' ? failure() : undefined,
       clients: source === 'getClientSummary' ? failure() : undefined,
       products: source === 'getProductSummary' ? failure() : undefined,
       users: source === 'getUserSummary' ? failure() : undefined
@@ -105,7 +106,7 @@ describe('DashboardComponent load states', () => {
     expect(root().querySelector('.dashboard-summary')).toBeNull();
     expect(root().querySelector('.empty-state')).toBeNull();
     expect(root().querySelector('table')).toBeNull();
-    expect(text()).not.toContain('Nenhum RMA em andamento.');
+    expect(text()).not.toContain('Nenhuma OS em andamento.');
     expect(text()).not.toContain('Sem alterações recentes.');
     expect(text()).not.toContain('0%');
   });
@@ -113,7 +114,7 @@ describe('DashboardComponent load states', () => {
   // Vermelho: não há nova tentativa.
   it('retries the complete snapshot', async () => {
     const board = new Subject<RmaResponse[]>();
-    await setup({ listBoard: vi.fn().mockReturnValueOnce(failure()).mockReturnValueOnce(board) });
+    await setup({ getDashboard: vi.fn().mockReturnValueOnce(failure()).mockReturnValueOnce(asDashboard(board)) });
 
     const retry = button('Tentar novamente')!;
     retry.click();
@@ -127,21 +128,21 @@ describe('DashboardComponent load states', () => {
     board.complete();
     fixture.detectChanges();
     expect(root().querySelector('.alert-banner--error')).toBeNull();
-    expect(text()).toContain('RMA-OPEN');
-    expect(rmaService.listBoard).toHaveBeenCalledTimes(2);
+    expect(text()).toContain('OS-OPEN');
+    expect(rmaService.getDashboard).toHaveBeenCalledTimes(2);
     expect(catalogService.getClientSummary).toHaveBeenCalledTimes(2);
   });
 
-  it.each(['TECHNICIAN', 'SERVICE_DESK', 'VIEWER'] as LegacyProfileCode[])('preserves a single unfiltered board request without user summary for %s', async (role) => {
+  it.each(['TECHNICIAN', 'SERVICE_DESK', 'VIEWER'] as LegacyProfileCode[])('requests the server-side dashboard once, without user summary, for %s', async (role) => {
     await setup({ role });
-    expect(rmaService.listBoard).toHaveBeenCalledTimes(1);
-    expect(rmaService.listBoard).toHaveBeenCalledWith();
+    expect(rmaService.getDashboard).toHaveBeenCalledTimes(1);
+    expect(rmaService.getDashboard).toHaveBeenCalledWith();
     expect(catalogService.getUserSummary).not.toHaveBeenCalled();
   });
 
   describe('composition', () => {
-    const IN_WARRANTY_ITEM = { ...RMA_OPEN.items[0], id: 7, warrantyStatus: WarrantyStatus.IN_WARRANTY };
-    const RMA_CLOSED = rmaFactory({ id: 9, code: 'RMA-CLOSED', status: 'COMPLETED', priority: 'HIGH', entryDate: '2026-01-01', items: [IN_WARRANTY_ITEM] });
+    const IN_WARRANTY_ITEM = { ...RMA_OPEN.items[0], id: 7, calculatedWarrantyStatus: WarrantyStatus.IN_WARRANTY, warrantyOverride: null, warrantyStatus: WarrantyStatus.IN_WARRANTY };
+    const RMA_CLOSED = rmaFactory({ id: 9, code: 'OS-CLOSED', status: 'COMPLETED', priority: 'HIGH', entryDate: '2026-01-01', items: [IN_WARRANTY_ITEM] });
     const OPEN_2 = rmaFactory({ id: 2 });
     const tables = () => root().querySelectorAll('table');
     const panelOf = (element: Element) => element.closest('.panel') as HTMLElement;
@@ -152,38 +153,38 @@ describe('DashboardComponent load states', () => {
     const history = (status: RmaResponse['status'], changedAt: string, note: string | null = null, changedBy = 'tester') => ({ status, changedBy, changedAt, note });
 
     // Vermelho: `queue` ordena todos os registros, inclusive encerrados, e não há link.
-    it('keeps closed RMAs out of the priority queue and links each code', async () => {
+    it('keeps closed ordens de serviço out of the priority queue and links each code', async () => {
       await setup({ board: of([RMA_CLOSED, OPEN_2]) });
       const queue = tables()[0];
-      expect(normalized(queue)).not.toContain('RMA-CLOSED');
+      expect(normalized(queue)).not.toContain('OS-CLOSED');
       expect(queue.querySelector('a')?.getAttribute('href')).toBe('/rmas?rma=2');
       expect(normalized(panelOf(queue).querySelector('h3'))).toContain('Fila prioritária');
       expect(text()).not.toContain('primeiros de');
     });
 
     // Vermelho: não há legenda de escopo quando a fila é limitada a cinco.
-    it('states how many active RMAs the queue shows', async () => {
-      const active = Array.from({ length: 7 }, (_, index) => rmaFactory({ id: index + 1, code: `RMA-${index + 1}` }));
+    it('states how many active ordens de serviço the queue shows', async () => {
+      const active = Array.from({ length: 7 }, (_, index) => rmaFactory({ id: index + 1, code: `OS-${index + 1}` }));
       await setup({ board: of([RMA_CLOSED, ...active]) });
-      expect(text()).toContain('5 primeiros de 7 RMAs em andamento');
+      expect(text()).toContain('5 primeiras de 7 ordens de serviço em andamento');
       expect(tables()[0].querySelectorAll('tbody tr').length).toBe(5);
     });
 
     // Vermelho: com apenas encerrados, a fila mostra o encerrado em vez do vazio de RMAs em andamento.
-    it('shows an empty active queue when every RMA is closed', async () => {
+    it('shows an empty active queue when every OS is closed', async () => {
       await setup({ board: of([RMA_CLOSED]) });
-      expect(text()).toContain('Nenhum RMA em andamento.');
+      expect(text()).toContain('Nenhuma OS em andamento.');
     });
 
     it('preserves the queue order by priority and oldest entry', async () => {
       await setup({ board: of([
-        rmaFactory({ id: 1, code: 'RMA-MED-NEW', priority: 'MEDIUM', entryDate: '2026-10-22' }),
-        rmaFactory({ id: 2, code: 'RMA-LOW', priority: 'LOW', entryDate: '2026-10-01' }),
-        rmaFactory({ id: 3, code: 'RMA-HIGH', priority: 'HIGH', entryDate: '2026-10-25' }),
-        rmaFactory({ id: 4, code: 'RMA-MED-OLD', priority: 'MEDIUM', entryDate: '2026-10-10' })
+        rmaFactory({ id: 1, code: 'OS-MED-NEW', priority: 'MEDIUM', entryDate: '2026-10-22' }),
+        rmaFactory({ id: 2, code: 'OS-LOW', priority: 'LOW', entryDate: '2026-10-01' }),
+        rmaFactory({ id: 3, code: 'OS-HIGH', priority: 'HIGH', entryDate: '2026-10-25' }),
+        rmaFactory({ id: 4, code: 'OS-MED-OLD', priority: 'MEDIUM', entryDate: '2026-10-10' })
       ]) });
       const codes = Array.from(tables()[0].querySelectorAll('tbody tr td:first-child .code-text')).map((item) => item.textContent?.trim());
-      expect(codes).toEqual(['RMA-HIGH', 'RMA-MED-OLD', 'RMA-MED-NEW', 'RMA-LOW']);
+      expect(codes).toEqual(['OS-HIGH', 'OS-MED-OLD', 'OS-MED-NEW', 'OS-LOW']);
     });
 
     // Vermelho: rótulos, escopo e detalhe não existem, Cadastros mostra a soma e há barras.
@@ -195,12 +196,12 @@ describe('DashboardComponent load states', () => {
         products: of({ ...PRODUCTS, total: 4 }),
         users: of({ ...USERS, total: 2 })
       });
-      expect(normalized(indicator('RMAs em andamento'))).toContain('1 de 2 registrados');
+      expect(normalized(indicator('Ordens de serviço em andamento'))).toContain('1 de 2 registradas');
       const warranty = normalized(indicator('Itens em garantia'));
       // Preservação: o percentual de 50% já existe hoje.
       expect(warranty).toContain('50%');
       expect(warranty).toContain('1 de 2 itens · 1 pendente');
-      expect(warranty).toContain('em todos os RMAs registrados');
+      expect(warranty).toContain('em todas as ordens de serviço registradas');
       expect(normalized(indicator('Cadastros'))).toContain('3 clientes · 4 produtos · 2 usuários');
       expect(normalized(indicator('Cadastros'))).not.toContain('9');
       expect(root().querySelector('.meter')).toBeNull();
@@ -208,6 +209,32 @@ describe('DashboardComponent load states', () => {
 
     // Vermelho: a lista de indicadores e o formato `X · Y com prioridade alta` não existem.
     // Preservação: o cálculo da fila inicial e a ausência de usuários para quem não é ADMIN.
+    it('counts Atrasadas and Perto do limite among open ordens de serviço only', async () => {
+      const today = businessToday(Date.now());
+      const shift = (days: number) => {
+        const [y, m, d] = today.split('-').map(Number);
+        return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+      };
+      const due = (id: number, days: number, status: RmaResponse['status'] = 'IN_REPAIR') => rmaFactory({
+        id, status, entryDate: '2000-01-01', dueDate: shift(days),
+        deadline: { status: 'ON_TRACK', dueSoonFrom: shift(days - 7) }
+      });
+      await setup({ board: of([due(1, -3), due(2, -1), due(3, 2), due(4, 30), due(5, -9, 'COMPLETED'), rmaFactory({ id: 6 })]) });
+      const card = indicator('Atrasadas')!;
+      expect(normalized(card.querySelector('.dashboard-summary__value'))).toBe('2 · 1 perto do limite');
+      expect(card.getAttribute('data-tone')).toBe('danger');
+      const labels = Array.from(root().querySelectorAll('ul[aria-label="Indicadores do dashboard"] > li .dashboard-summary__label')).map((item) => item.textContent?.trim());
+      expect(labels[1]).toBe('Atrasadas');
+    });
+
+    it('keeps the catalog card style regardless of position', async () => {
+      await setup();
+      const items = Array.from(root().querySelectorAll<HTMLElement>('ul[aria-label="Indicadores do dashboard"] > li'));
+      expect(items.map((item) => item.getAttribute('data-tone'))).toEqual(['brand', 'danger', 'sky', 'success', 'violet']);
+      expect(items.filter((item) => item.classList.contains('dashboard-summary__item--catalog')).map((item) => normalized(item.querySelector('.dashboard-summary__label'))))
+        .toEqual(['Cadastros']);
+    });
+
     it('keeps the initial queue indicator and omits users for non-admin profiles', async () => {
       await setup({ role: 'TECHNICIAN', board: of([rmaFactory({ id: 1, priority: 'HIGH' }), rmaFactory({ id: 2, status: 'TRIAGE' })]) });
       expect(normalized(indicator('Fila inicial'))).toContain('2 · 1 com prioridade alta');
@@ -226,7 +253,7 @@ describe('DashboardComponent load states', () => {
     });
 
     // Vermelho: com nota, o autor desaparece, e não há link.
-    it('describes audit events like the RMA history', async () => {
+    it('describes audit events like the OS history', async () => {
       await setup({ board: of([rmaFactory({ statusHistory: [history('TRIAGE', '2026-10-21T16:00:00Z', 'Aguardando peça', 'ana')] })]) });
       const [entry] = audit();
       expect(normalized(entry)).toContain('Status registrado: Triagem');
@@ -238,7 +265,7 @@ describe('DashboardComponent load states', () => {
     });
 
     // Vermelho: não há link nas entradas de auditoria.
-    it('keeps distinct audit entries for the same RMA', async () => {
+    it('keeps distinct audit entries for the same OS', async () => {
       await setup({ board: of([rmaFactory({ statusHistory: [history('RECEIVED', '2026-10-20T16:00:00Z'), history('TRIAGE', '2026-10-21T16:00:00Z')] })]) });
       // Preservação: as duas entradas já aparecem hoje.
       expect(audit().length).toBe(2);
@@ -253,18 +280,18 @@ describe('DashboardComponent load states', () => {
     });
 
     // Vermelho: os códigos de “Últimos RMAs” não têm link.
-    it('links recent RMAs', async () => {
+    it('links recent ordens de serviço', async () => {
       await setup();
       const link = tables()[1].querySelector('a[href="/rmas?rma=1"]');
-      expect(normalized(link)).toBe('RMA-OPEN');
+      expect(normalized(link)).toBe('OS-OPEN');
     });
 
-    it('preserves the four most recently updated RMAs, closed included, and the empty owner', async () => {
-      const board = [1, 2, 3, 4, 5].map((day) => rmaFactory({ id: day, code: `RMA-U${day}`, updatedAt: `2026-10-2${day}T16:00:00Z` }));
+    it('preserves the four most recently updated ordens de serviço, closed included, and the empty owner', async () => {
+      const board = [1, 2, 3, 4, 5].map((day) => rmaFactory({ id: day, code: `OS-U${day}`, updatedAt: `2026-10-2${day}T16:00:00Z` }));
       board[4] = { ...board[4], status: 'COMPLETED' };
       await setup({ board: of(board) });
       const rows = Array.from(tables()[1].querySelectorAll('tbody tr'));
-      expect(rows.map((row) => normalized(row.querySelector('td:first-child')))).toEqual(['RMA-U5', 'RMA-U4', 'RMA-U3', 'RMA-U2']);
+      expect(rows.map((row) => normalized(row.querySelector('td:first-child')))).toEqual(['OS-U5', 'OS-U4', 'OS-U3', 'OS-U2']);
       expect(normalized(rows[0].querySelector('.person'))).toBe('–Sem responsável');
       expect(normalized(rows[0].querySelector('.avatar'))).toBe('–');
     });

@@ -8,7 +8,7 @@ import { AssignableUserResponse, RmaResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { RmaService } from '../../core/services/rma.service';
-import { SlaClockService } from '../../core/services/sla-clock.service';
+import { ClockService } from '../../core/services/clock.service';
 import { buildRma } from '../../testing/rma-fixtures';
 import { KanbanComponent } from './kanban.component';
 import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
@@ -17,8 +17,8 @@ interface StatesHarness {
   filtersForm: FormGroup;
 }
 
-const FIRST = buildRma({ id: 1, code: 'RMA-2026-000001', priority: 'HIGH' });
-const SECOND = buildRma({ id: 2, code: 'RMA-2026-000002', priority: 'LOW' });
+const FIRST = buildRma({ id: 1, code: 'OS-2026-000001', priority: 'HIGH' });
+const SECOND = buildRma({ id: 2, code: 'OS-2026-000002', priority: 'LOW' });
 
 describe('KanbanComponent reading states and count', () => {
   let fixture: ComponentFixture<KanbanComponent>;
@@ -33,7 +33,7 @@ describe('KanbanComponent reading states and count', () => {
       imports: [KanbanComponent],
       providers: [
         provideRouter([]),
-        { provide: SlaClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
+        { provide: ClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
         providePermissions(profilePermissions('ADMIN')),
         { provide: CatalogService, useValue: { listAssignableUsers: () => { const source = new Subject<AssignableUserResponse[]>(); users.push(source); return source; } } },
         { provide: KanbanViewService, useValue: { list: () => of([]) } },
@@ -71,7 +71,7 @@ describe('KanbanComponent reading states and count', () => {
   const filters = () => (fixture.componentInstance as unknown as StatesHarness).filtersForm;
 
   it('uses the shared page header without the old count or a result counter', () => {
-    expect(page.querySelector('app-page-header h1')?.textContent?.trim()).toBe('Kanban de RMAs');
+    expect(page.querySelector('app-page-header h1')?.textContent?.trim()).toBe('Kanban de ordens de serviço');
     expect(page.querySelector('.kanban-heading__count')).toBeNull();
     respond(0, [FIRST, SECOND]);
     expect(page.querySelector('.kanban-heading__count')).toBeNull();
@@ -83,7 +83,7 @@ describe('KanbanComponent reading states and count', () => {
     expect(page.querySelector('[aria-busy="true"]')).not.toBeNull();
     expect(summary()).toBeNull();
     expect(page.querySelector('.board-card')).toBeNull();
-    expect(text()).not.toContain('Nenhum RMA');
+    expect(text()).not.toContain('Nenhuma OS');
     expect(text()).not.toContain('Carregando');
   });
 
@@ -95,7 +95,7 @@ describe('KanbanComponent reading states and count', () => {
     expect(retryButton()).toBeDefined();
     expect(summary()).toBeNull();
     expect(page.querySelector('.board-card, .board-column')).toBeNull();
-    expect(text()).not.toContain('Nenhum RMA');
+    expect(text()).not.toContain('Nenhuma OS');
     expect(page.querySelector('.status-card')).toBeNull();
   });
 
@@ -125,18 +125,18 @@ describe('KanbanComponent reading states and count', () => {
 
   it('distinguishes an empty registry from a filter without results', () => {
     respond(0, []);
-    expect(text()).toContain('Nenhum RMA cadastrado');
-    expect(text()).not.toContain('Nenhum RMA encontrado');
-    expect(firstIndicator()).toBe('0 RMAs');
+    expect(text()).toContain('Nenhuma OS cadastrada');
+    expect(text()).not.toContain('Nenhuma OS encontrada');
+    expect(firstIndicator()).toBe('0 OS');
   });
 
-  it('offers Limpar filtros when a filter hides every RMA', () => {
+  it('offers Limpar filtros when a filter hides every OS', () => {
     respond(0, [FIRST, SECOND]);
     filters().patchValue({ query: 'inexistente' });
     render();
-    const empty = [...page.querySelectorAll<HTMLElement>('.kanban-empty')].find((item) => item.textContent?.includes('Nenhum RMA encontrado'));
+    const empty = [...page.querySelectorAll<HTMLElement>('.kanban-empty')].find((item) => item.textContent?.includes('Nenhuma OS encontrada'));
     expect(empty).toBeDefined();
-    expect(text()).not.toContain('Nenhum RMA cadastrado');
+    expect(text()).not.toContain('Nenhuma OS cadastrada');
     const clear = [...empty!.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.trim() === 'Limpar filtros');
     expect(clear).toBeDefined();
     clear!.click();
@@ -159,21 +159,21 @@ describe('KanbanComponent reading states and count', () => {
     expect(boards[0].observed).toBe(false);
   });
 
-  it('puts the total first: "1 RMA" without filter and "X de Y" with filter, with the real singular', () => {
+  it('puts the total first: "1 OS" without filter and "X de Y" with filter, with the real singular', () => {
     respond(0, [FIRST]);
-    expect(firstIndicator()).toBe('1 RMA');
+    expect(firstIndicator()).toBe('1 OS');
     filters().patchValue({ priority: 'HIGH' });
     render();
-    expect(firstIndicator()).toBe('1 de 1 RMA');
+    expect(firstIndicator()).toBe('1 de 1 OS');
     filters().patchValue({ priority: 'all' });
     render();
     (fixture.componentInstance as unknown as { retryLoad(): void }).retryLoad();
     render();
     respond(1, [FIRST, SECOND]);
-    expect(firstIndicator()).toBe('2 RMAs');
+    expect(firstIndicator()).toBe('2 OS');
     filters().patchValue({ priority: 'HIGH' });
     render();
-    expect(firstIndicator()).toBe('1 de 2 RMAs');
+    expect(firstIndicator()).toBe('1 de 2 OS');
     expect(summary()!.textContent).toContain('Alta prioridade');
   });
 });

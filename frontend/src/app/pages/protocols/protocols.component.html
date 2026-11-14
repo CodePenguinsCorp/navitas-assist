@@ -38,7 +38,6 @@
         <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
         <h3>Nenhum protocolo cadastrado</h3>
         <p>Cadastre checklists por produto ou categoria para padronizar diagnóstico, reparo e testes.</p>
-        <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Cadastrar protocolo</button>
       </section>
     } @else if (filteredTemplates().length === 0) {
       <section class="empty-state">
@@ -73,12 +72,15 @@
                 <td><span class="state-dot" [class.is-on]="template.active">{{ template.active ? 'Ativo' : 'Inativo' }}</span></td>
                 <td>{{ updatedAtLabel(template) }}</td>
                 <td class="table-actions-col">
-                  <button
-                    type="button"
-                    class="button-secondary button-secondary--small"
-                    [attr.aria-label]="'Nova versão de ' + template.name"
-                    (click)="openEditModal(template)"
-                  ><app-icon name="layers" />Nova versão</button>
+                  <div class="row-actions">
+                    <button
+                      appRowAction
+                      icon="layers"
+                      label="Nova versão"
+                      [target]="'de ' + template.name"
+                      (click)="openEditModal(template)"
+                    ></button>
+                  </div>
                 </td>
               </tr>
             }
@@ -143,13 +145,20 @@
           </label>
 
           @if (form.controls.productId.value === null) {
-            <label class="field-group">
-              <span>Categoria</span>
-              <input type="text" formControlName="category" maxlength="80" [attr.aria-invalid]="categoryMissing() ? 'true' : null" />
+            <div class="field-group">
+              <span id="protocol-category-label">Categoria</span>
+              <app-suggest-input
+                formControlName="category"
+                labelledBy="protocol-category-label"
+                listLabel="Categorias existentes"
+                [suggestions]="categorySuggestions()"
+                [maxlength]="80"
+                [invalid]="categoryMissing()"
+              />
               @if (categoryMissing()) {
                 <small class="field-error">Informe a categoria ou selecione um produto.</small>
               }
-            </label>
+            </div>
           }
 
           <label class="field-group">
@@ -163,7 +172,7 @@
 
         <fieldset class="form-section" aria-describedby="protocol-blocked-hint">
           <legend>Etapas bloqueadas</legend>
-          <p id="protocol-blocked-hint" class="form-section__hint">Bloquear mudança do RMA para estas etapas enquanto houver obrigatórios pendentes</p>
+          <p id="protocol-blocked-hint" class="form-section__hint">Bloquear mudança da OS para estas etapas enquanto houver obrigatórios pendentes</p>
           <div class="status-options field-group--full">
             @for (status of statusOptions; track status) {
               <label class="checkbox-field">
@@ -177,10 +186,15 @@
         <fieldset class="form-section">
           <legend>Itens</legend>
           <div class="field-group--full protocol-items" formArrayName="items">
+            @if (items.length > 1) {
+              <div class="protocol-items__head">
+                <button type="button" class="link-button" (click)="toggleAllItems()" [disabled]="submitting()">{{ expandedItems().size > 0 ? 'Recolher todos' : 'Expandir todos' }}</button>
+              </div>
+            }
             @for (item of items.controls; track item; let index = $index) {
-              <div class="item-row" [class.is-selected]="selectedItem() === item">
+              <div class="item-row" [class.is-selected]="isExpanded(item)">
               <div class="item-row__head protocol-item-summary-row">
-                <button type="button" class="item-row__summary protocol-item-summary" [id]="'protocol-item-summary-' + index" [attr.aria-expanded]="selectedItem() === item" [attr.aria-controls]="'protocol-item-editor-' + index" (click)="selectItem(item)" [disabled]="submitting()">
+                <button type="button" class="item-row__summary protocol-item-summary" [id]="'protocol-item-summary-' + index" [attr.aria-expanded]="isExpanded(item)" [attr.aria-controls]="'protocol-item-editor-' + index" (click)="toggleItem(item)" [disabled]="submitting()">
                   <span class="item-row__badge"><span class="sr-only">Item </span>{{ index + 1 }}</span>
                   <span class="item-row__body">
                     <strong class="item-row__title">{{ item.controls['title'].value.trim() || 'Sem título' }}</strong>
@@ -195,7 +209,7 @@
                 </button>
                 <button appRowAction icon="close" tone="danger" label="Remover item" [target]="'' + (index + 1)" [blockedReason]="items.length === 1 ? 'O protocolo precisa de pelo menos um item.' : null" [disabled]="submitting()" (click)="removeItem(index)"></button>
               </div>
-              @if (selectedItem() === item) {
+              @if (isExpanded(item)) {
               <div class="item-row__editor protocol-item-card" [id]="'protocol-item-editor-' + index" [formGroupName]="index">
                 <h4 class="sr-only">Item {{ index + 1 }}</h4>
                 <label class="field-group">

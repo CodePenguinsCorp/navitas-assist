@@ -1,0 +1,36 @@
+<section class="page-surface">
+  <app-page-header heading="Auditoria" />
+  <form class="audit-filters" [formGroup]="filters" (ngSubmit)="applyFilters()">
+    <label class="filter-field"><span>De</span><app-date-picker ariaLabel="Data inicial" formControlName="from" [maxDate]="filters.controls.to.value" /></label>
+    <label class="filter-field"><span>Até</span><app-date-picker ariaLabel="Data final" formControlName="to" [minDate]="filters.controls.from.value" /></label>
+    <label class="search-field"><span>Usuário</span><input type="search" formControlName="actor" maxlength="60" placeholder="Nome de usuário" /></label>
+    <label class="filter-field"><span>Ação</span><app-custom-select ariaLabel="Filtrar por ação" formControlName="action" [options]="actionOptions" /></label>
+    <label class="filter-field"><span>Tipo</span><app-custom-select ariaLabel="Filtrar por tipo" formControlName="entityType" [options]="entityOptions" /></label>
+    <div class="audit-filter-actions"><button type="submit" class="button-primary">Filtrar</button><button type="button" class="button-secondary" (click)="clearFilters()">Limpar filtros</button></div>
+  </form>
+  <article class="table-card table-card--list panel">
+    @if (list.loading()) {
+      <div aria-busy="true" aria-label="Carregando auditoria"></div>
+    } @else if (error()) {
+      <section class="empty-state" role="alert">
+        <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
+        <h3>Não foi possível carregar a auditoria.</h3><p>{{ error() }}</p>
+        <button type="button" class="button-secondary" (click)="list.reload()">Tentar novamente</button>
+      </section>
+    } @else if (list.items().length === 0) {
+      <section class="empty-state"><span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span><h3>Nenhum evento encontrado</h3></section>
+    } @else {
+      <div class="table-wrap"><table>
+        <caption class="sr-only">Trilha de auditoria</caption>
+        <thead><tr><th scope="col">Data e hora</th><th scope="col">Usuário</th><th scope="col">Ação</th><th scope="col">Registro</th><th scope="col">Resumo</th></tr></thead>
+        <tbody>@for (event of list.items(); track event.id) {
+          <tr><td data-label="Data e hora">{{ dateTime(event.occurredAt) }}</td><td data-label="Usuário">{{ event.actorUsername }}</td><td data-label="Ação">{{ actionLabels[event.action] ?? event.action }}</td><td data-label="Registro">{{ recordLabel(event) }}</td><td data-label="Resumo">{{ event.summary }}</td></tr>
+        }</tbody>
+      </table></div>
+    }
+    @if (!list.loading() && !error()) {
+      <app-result-count singular="evento" plural="eventos" [count]="list.totalElements()" />
+      <app-pagination [page]="list.page()" [size]="list.size()" [totalElements]="list.totalElements()" [totalPages]="list.totalPages()" [shown]="list.items().length" [loading]="list.loading()" singular="evento" plural="eventos" (pageChange)="list.goToPage($event)" (sizeChange)="list.changeSize($event)" />
+    }
+  </article>
+</section>
