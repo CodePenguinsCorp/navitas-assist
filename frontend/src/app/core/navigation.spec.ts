@@ -52,7 +52,7 @@ describe('NAV_GROUPS', () => {
         ['/rmas', 'clipboard', ['rma.ver']],
         ['/kanban', 'columns', ['rma.ver']],
         ['/notificacoes', 'bell', []],
-        ['/pecas', 'wrench', ['pecas.ver']],
+        ['/pecas', 'chip', ['pecas.ver']],
       ]],
       ['Cadastros', [
         ['/clientes', 'building', ['cadastros.ver', 'cadastros.editar']],

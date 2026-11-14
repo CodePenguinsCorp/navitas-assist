@@ -95,7 +95,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'RMAs', route: '/rmas', icon: 'clipboard', permissions: ['rma.ver'] },
       { label: 'Kanban', route: '/kanban', icon: 'columns', permissions: ['rma.ver'] },
       { label: 'Notificações', route: '/notificacoes', icon: 'bell', permissions: [] },
-      { label: 'Peças', route: '/pecas', icon: 'wrench', permissions: ['pecas.ver'] }
+      { label: 'Peças', route: '/pecas', icon: 'chip', permissions: ['pecas.ver'] }
     ]
   },
   {
