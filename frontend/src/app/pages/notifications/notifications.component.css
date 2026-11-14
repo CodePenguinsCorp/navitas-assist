@@ -65,5 +65,4 @@ th { white-space: nowrap; }
   .rule-updated { white-space: normal; }
 }
 
-.email-usage--limit { background: var(--warning-bg); color: var(--warning-text); }
-.email-usage-note { color: var(--warning-text); }
+

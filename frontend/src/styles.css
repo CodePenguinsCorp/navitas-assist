@@ -3399,3 +3399,7 @@ app-custom-select:has(> .custom-select--priority) {
 .repair-inline { display: grid; gap: var(--space-2); min-width: 0; }
 .repair-inline textarea, .repair-form input, .repair-form textarea { box-sizing: border-box; max-width: 100%; min-width: 0; }
 @media (max-width: 420px) { .repair-form { grid-template-columns: minmax(0, 1fr); } }
+
+/* Notification email limit indicators. */
+.mini-chip.email-usage--limit { background: var(--warning-bg); color: var(--warning-text); }
+.field-hint.email-usage-note { color: var(--warning-text); }
