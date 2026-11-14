@@ -200,10 +200,6 @@ export interface RmaListFilters {
       gap: var(--space-3);
     }
 
-    .rma-details__panel {
-      min-height: 360px;
-    }
-
     .rma-details__section + .rma-details__section {
       margin-top: var(--space-5);
     }
