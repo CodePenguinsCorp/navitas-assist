@@ -430,7 +430,7 @@ export class RmasComponent {
     },
     (error) => {
       this.loadFailed.set(true);
-      this.listErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os RMAs.'));
+      this.listErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as ordens de serviço.'));
     },
     (rmas) => {
       this.resultGeneration.set(this.requestedGeneration);
@@ -470,14 +470,14 @@ export class RmasComponent {
       ? summary.value : null;
   });
   /**
-   * First indicator: "Y RMAs" without filter, "X de Y RMAs" with one (Y = whole registry), with the
+   * First indicator: "Y ordens de serviço" without filter, "X de Y ordens de serviço" with one (Y = whole registry), with the
    * singular of the last number. Hidden before the first success and after a failure.
    */
   protected readonly totalSummary = computed(() => {
     if (!this.hasCurrentResult()) return null;
     const count = this.totalElements();
     const overall = this.hasActiveFilters() ? this.overallTotal() : null;
-    return { count, overall, label: (overall ?? count) === 1 ? 'RMA' : 'RMAs' };
+    return { count, overall, label: (overall ?? count) === 1 ? 'OS' : 'ordens de serviço' };
   });
 
   protected readonly statusLabel = statusLabel;
@@ -639,7 +639,7 @@ export class RmasComponent {
 
   protected openCreateModal(): void {
     if (!this.canOpenRma()) {
-      this.pageError.set('Seu perfil não pode abrir novos RMAs.');
+      this.pageError.set('Seu perfil não pode abrir novas ordens de serviço.');
       return;
     }
 
@@ -702,7 +702,7 @@ export class RmasComponent {
 
   protected createRma(): void {
     if (!this.canOpenRma()) {
-      this.pageError.set('Seu perfil não pode abrir novos RMAs.');
+      this.pageError.set('Seu perfil não pode abrir novas ordens de serviço.');
       return;
     }
 
@@ -761,11 +761,11 @@ export class RmasComponent {
         this.filtersForm.setValue({ query: '', status: '' });
         this.appliedFilters.set({});
         this.resetModal();
-        this.pageMessage.set(`RMA ${rma.code} criado com sucesso.`);
+        this.pageMessage.set(`OS ${rma.code} criada com sucesso.`);
         this.refreshRmas();
       },
       error: (error) => {
-        this.createErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível abrir o RMA agora.'));
+        this.createErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível abrir a OS agora.'));
       }
     });
   }
@@ -796,7 +796,7 @@ export class RmasComponent {
     }, { injector: this.injector });
   }
 
-  /** Opens the RMA referenced by an internal notification link (/rmas?rma=<id>). */
+  /** Opens the OS referenced by an internal notification link (/rmas?rma=<id>). */
   private openRequestedRma(): void {
     const rmaId = Number(this.route.snapshot.queryParamMap.get('rma'));
     if (!Number.isInteger(rmaId) || rmaId <= 0) {
@@ -805,7 +805,7 @@ export class RmasComponent {
 
     this.rmaService.getById(rmaId).subscribe({
       next: (rma) => this.openDetailsModal(rma),
-      error: (error) => this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível abrir o RMA da notificação.'))
+      error: (error) => this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível abrir a OS da notificação.'))
     });
   }
 

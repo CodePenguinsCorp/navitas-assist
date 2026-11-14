@@ -7,7 +7,7 @@ import { ProtocolService } from '../../core/services/protocol.service';
 import { RmaProtocolsComponent } from './rma-protocols.component';
 
 const EXECUTION: ProtocolExecutionResponse = {
-  id: 9, rmaId: 4, rmaCode: 'RMA-4', templateId: 2, templateName: 'Bancada PWM', versionNumber: 3, status: 'IN_PROGRESS',
+  id: 9, rmaId: 4, rmaCode: 'OS-4', templateId: 2, templateName: 'Bancada PWM', versionNumber: 3, status: 'IN_PROGRESS',
   blockedStatuses: [], startedBy: 'tech', startedAt: '2026-10-20T12:00:00Z', completedBy: null, completedAt: null,
   totalItems: 1, completedItems: 0, requiredItems: 1, pendingRequiredItems: 1, failedItems: 0,
   items: [{ item: { id: 21, sortOrder: 1, stepName: 'Inspeção', title: 'Conector', instructions: null, type: 'CHECK', required: true,
@@ -55,7 +55,7 @@ describe('RmaProtocolsComponent loading', () => {
   });
 
   const expectFailure = () => {
-    expect(text()).toContain('Não foi possível carregar os protocolos do RMA.');
+    expect(text()).toContain('Não foi possível carregar os protocolos da OS.');
     expect(text()).toContain('Tentar novamente');
     expect(text()).not.toContain('Nenhum protocolo executado');
     expect(fixture.nativeElement.querySelector('.protocol-execution')).toBeNull();
@@ -76,7 +76,7 @@ describe('RmaProtocolsComponent loading', () => {
   });
 
   // Vermelho: não existe retry que preserve a falha durante a nova leitura do RMA atual.
-  it('retries executions for the current RMA', async () => {
+  it('retries executions for the current OS', async () => {
     await setup();
     service.listExecutions.mockReturnValue(throwError(() => new Error()));
     fixture.componentRef.setInput('rmaId', 5); render();
@@ -84,10 +84,10 @@ describe('RmaProtocolsComponent loading', () => {
     const retry = new Subject<ProtocolExecutionResponse[]>(); service.listExecutions.mockReturnValue(retry);
     button('Tentar novamente')!.click(); render();
     expect(button('Tentar novamente')?.disabled).toBe(true);
-    expect(text()).toContain('Não foi possível carregar os protocolos do RMA.');
+    expect(text()).toContain('Não foi possível carregar os protocolos da OS.');
     expect(text()).not.toContain('Bancada PWM · v3');
     retry.next([{ ...EXECUTION, rmaId: 5, templateName: 'Protocolo de B' }]); retry.complete(); render();
-    expect(text()).toContain('Protocolo de B'); expect(text()).not.toContain('Não foi possível carregar os protocolos do RMA.');
+    expect(text()).toContain('Protocolo de B'); expect(text()).not.toContain('Não foi possível carregar os protocolos da OS.');
     expect(service.listExecutions).toHaveBeenLastCalledWith(5);
   });
 
@@ -127,7 +127,7 @@ describe('RmaProtocolsComponent loading', () => {
   });
 
   // Vermelho: a resposta de A sobrescreve B e o editor de A permanece montado.
-  it('does not overwrite another RMA with an old response', async () => {
+  it('does not overwrite another OS with an old response', async () => {
     const first = new Subject<ProtocolExecutionResponse[]>(); await setup({ executions: first });
     first.next([EXECUTION]); render(); component().openResult(EXECUTION, EXECUTION.items[0]); component().selectTemplate(2); render();
     const second = new Subject<ProtocolExecutionResponse[]>(); service.listExecutions.mockReturnValue(second);
@@ -141,7 +141,7 @@ describe('RmaProtocolsComponent loading', () => {
   });
 
   // Vermelho: callbacks de escrita de A ainda atualizam a lista ou exibem erro em B.
-  it.each(['start', 'record', 'complete'] as const)('ignores a late %s result and error after switching RMA', async (operation) => {
+  it.each(['start', 'record', 'complete'] as const)('ignores a late %s result and error after switching OS', async (operation) => {
     await setup(); const write = new Subject<ProtocolExecutionResponse>();
     if (operation === 'start') { service.startExecution.mockReturnValue(write); component().selectTemplate(2); component().startExecution(); }
     if (operation === 'record') { service.recordResult.mockReturnValue(write); component().openResult(EXECUTION, EXECUTION.items[0]); component().saveResult(); }
@@ -154,7 +154,7 @@ describe('RmaProtocolsComponent loading', () => {
   });
 
   // Vermelho: a escrita de A mantém as ações de B desabilitadas; seu finalize também pode liberar a escrita de B.
-  it.each(['start', 'record', 'complete'] as const)('does not carry a pending %s write into another RMA', async (operation) => {
+  it.each(['start', 'record', 'complete'] as const)('does not carry a pending %s write into another OS', async (operation) => {
     await setup(); const first = new Subject<ProtocolExecutionResponse>();
     if (operation === 'start') { service.startExecution.mockReturnValue(first); component().selectTemplate(2); component().startExecution(); }
     if (operation === 'record') { service.recordResult.mockReturnValue(first); component().openResult(EXECUTION, EXECUTION.items[0]); component().saveResult(); }
@@ -186,7 +186,7 @@ describe('RmaProtocolsComponent loading', () => {
   });
 
   it('shows legitimate empty executions only after a successful reading', async () => {
-    await setup({ role: 'VIEWER', executions: of([]) }); expect(text()).toContain('Nenhum protocolo executado neste RMA.');
+    await setup({ role: 'VIEWER', executions: of([]) }); expect(text()).toContain('Nenhum protocolo executado nesta OS.');
   });
 
   // Vermelho: leituras continuam inscritas depois de destruir o painel.

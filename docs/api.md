@@ -20,32 +20,32 @@ Convenções:
 | `POST /api/auth/logout` | autenticado | Encerra a sessão (`204`). |
 | `GET /api/auth/me` | autenticado | Usuário atual e permissões efetivas. |
 
-## RMAs
+## ordens de serviço
 
 | Rota | Permissão | Descrição |
 | --- | --- | --- |
 | `GET /api/rmas` | `rma.ver` | Lista paginada (`query`, `status`, `page`, `size`). |
 | `GET /api/rmas/summary` | `rma.ver` | Totais para os indicadores (`query`, `status`). |
-| `GET /api/rmas/board` | `rma.ver` | Todos os RMAs do Kanban e do dashboard, sem paginação. |
+| `GET /api/rmas/board` | `rma.ver` | Todos as ordens de serviço do Kanban e do dashboard, sem paginação. |
 | `GET /api/rmas/history` | `rma.ver` | Histórico por `batchNumber` ou `serialNumber`. |
 | `GET /api/rmas/{id}` | `rma.ver` | Detalhe. |
-| `GET /api/rmas/code/{code}` | `rma.ver` | Detalhe pelo código `RMA-AAAA-NNNNNN`. |
+| `GET /api/rmas/code/{code}` | `rma.ver` | Detalhe pelo código `OS-AAAA-NNNNNN`. |
 | `GET /api/rmas/{id}/report.pdf` | `rma.ver` | Laudo final em PDF. |
-| `POST /api/rmas` | `rma.abrir` | Abre um RMA. |
+| `POST /api/rmas` | `rma.abrir` | Abre uma OS. |
 | `PUT /api/rmas/{id}` | `rma.editar` | Altera dados gerais, prioridade e data limite (`dueDate` / `clearDueDate`). |
 | `PUT /api/rmas/{id}/items/{itemId}/warranty` | `rma.editar` | Ajuste manual de garantia do item. |
 | `PATCH /api/rmas/{id}/status` | `rma.status` | Muda o status. |
-| `PATCH /api/rmas/{id}/status-history/{eventId}/note` | `rma.status` | Edita a observação (`note`, até 255 caracteres) de um evento do histórico de status; recusado em RMA encerrado. |
+| `PATCH /api/rmas/{id}/status-history/{eventId}/note` | `rma.status` | Edita a observação (`note`, até 255 caracteres) de um evento do histórico de status; recusado em OS encerrada. |
 | `PATCH /api/rmas/{id}/assignee` | `rma.responsavel` | Atribui, troca ou remove o responsável. |
 | `PUT /api/rmas/{id}/diagnosis` | `rma.diagnosticar` | Registra ou altera o diagnóstico. |
 | `POST /api/rmas/{id}/blocks` | `rma.impedimentos` | Inicia um impedimento. |
 | `PATCH /api/rmas/{id}/blocks/{blockId}` | `rma.impedimentos` | Resolve aquele impedimento. |
 
-## Peças, reparo e protocolos nos RMAs
+## Peças, reparo e protocolos nas ordens de serviço
 
 | Rota | Permissão | Descrição |
 | --- | --- | --- |
-| `GET /api/rmas/{id}/parts` | `rma.ver` | Reservas e componentes trocados do RMA. |
+| `GET /api/rmas/{id}/parts` | `rma.ver` | Reservas e componentes trocados da OS. |
 | `POST /api/rmas/{id}/parts` | `pecas.reservar` | Reserva peça. |
 | `POST /api/rmas/{id}/parts/{reservationId}/allocate` | `pecas.reservar` | Aloca a reserva. |
 | `POST /api/rmas/{id}/parts/{reservationId}/consume` | `pecas.reservar` | Aplica a reserva (ação `consume`) (motivo e lote). |
@@ -54,11 +54,11 @@ Convenções:
 | `GET /api/rmas/{id}/repair/external-components` | `rma.ver` | Componentes externos. |
 | `POST /api/rmas/{id}/repair/external-components` | `pecas.reservar` | Adiciona componente externo. |
 | `POST /api/rmas/{id}/repair/interventions` | `rma.diagnosticar` | Registra intervenção. |
-| `PUT /api/rmas/{rmaId}/repair/interventions/{id}` | `rma.diagnosticar` | Edita intervenção ativa em RMA aberto. |
+| `PUT /api/rmas/{rmaId}/repair/interventions/{id}` | `rma.diagnosticar` | Edita intervenção ativa em OS aberta. |
 | `POST /api/rmas/{rmaId}/repair/interventions/{id}/void` | `rma.diagnosticar` | Anula intervenção com `{ reason }` obrigatório (até 1000). |
-| `PUT /api/rmas/{rmaId}/repair/external-components/{id}` | `pecas.reservar` | Edita componente externo ativo em RMA aberto. |
+| `PUT /api/rmas/{rmaId}/repair/external-components/{id}` | `pecas.reservar` | Edita componente externo ativo em OS aberta. |
 | `POST /api/rmas/{rmaId}/repair/external-components/{id}/void` | `pecas.reservar` | Anula componente externo com `{ reason }` obrigatório (até 1000). |
-| `GET /api/protocols/rmas/{rmaId}/executions` | autenticado | Execuções de protocolo do RMA. |
+| `GET /api/protocols/rmas/{rmaId}/executions` | autenticado | Execuções de protocolo da OS. |
 | `POST /api/protocols/rmas/{rmaId}/executions` | `protocolos.executar` | Inicia execução. |
 | `POST /api/protocols/executions/{executionId}/items/{itemId}/results` | `protocolos.executar` | Registra resultado de um item. |
 | `POST /api/protocols/executions/{executionId}/complete` | `protocolos.executar` | Conclui a execução. |

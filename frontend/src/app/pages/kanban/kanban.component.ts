@@ -248,13 +248,13 @@ export class KanbanComponent {
   /** Indicators belong to a current successful read: hidden before it and after a failure. */
   protected readonly boardReady = computed(() => this.hasLoaded() && !this.loadFailed());
   /**
-   * First indicator: "Y RMAs" without filter, "X de Y RMAs" with one, with the singular of the last number.
+   * First indicator: "Y ordens de serviço" without filter, "X de Y ordens de serviço" with one, with the singular of the last number.
    */
   protected readonly totalSummary = computed(() => {
     if (!this.boardReady()) return null;
     const count = this.filteredRmas().length;
     const overall = this.activeFilterCount() > 0 ? this.totalRmas() : null;
-    return { count, overall, label: (overall ?? count) === 1 ? 'RMA' : 'RMAs' };
+    return { count, overall, label: (overall ?? count) === 1 ? 'OS' : 'ordens de serviço' };
   });
   protected readonly heroStats = computed<ReadonlyArray<KanbanHeroStat>>(() => [
     {
@@ -664,7 +664,7 @@ export class KanbanComponent {
         },
         error: (error) => {
           this.assignmentError.set(
-            extractHttpErrorMessage(error, 'Não foi possível atualizar o responsável do RMA.'),
+            extractHttpErrorMessage(error, 'Não foi possível atualizar o responsável da OS.'),
           );
         },
       });

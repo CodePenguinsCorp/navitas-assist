@@ -79,7 +79,7 @@ export class RmaDetailModalComponent {
   protected readonly writePending = computed(() => this.disabled() || this.statusBusy() || this.diagnosisBusy() || this.warrantyBusy());
   /** A person (or null, unassigned) picked in the inline selector; the host saves it. */
   @Output() readonly assigneeChange = new EventEmitter<{ rma: RmaResponse; assigneeId: number | null }>();
-  /** The RMA returned by a save made inside the detail (impediments, due date). */
+  /** The OS returned by a save made inside the detail (impediments, due date). */
   @Output() readonly rmaUpdated = new EventEmitter<RmaResponse>();
   protected readonly clock = inject(ClockService);
   protected readonly statusLabel = statusLabel;

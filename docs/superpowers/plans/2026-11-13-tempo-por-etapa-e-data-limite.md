@@ -29,7 +29,7 @@
 
 ## Review Focus
 
-1. **Virada do dia.** Um RMA com data limite de hoje, visto às 23:59 e às 00:00 de São Paulo (02:59Z e 03:00Z), tem de passar de "Vence hoje" para "Atrasado há 1 dia" sem recarregar. Testes: `RmaDeadlineServiceTest.businessDateUsesSaoPauloMidnight` (Task 2) e `rma-deadline.spec.ts` "turns overdue at São Paulo midnight" (Task 8).
+1. **Virada do dia.** Um OS com data limite de hoje, visto às 23:59 e às 00:00 de São Paulo (02:59Z e 03:00Z), tem de passar de "Vence hoje" para "Atrasado há 1 dia" sem recarregar. Testes: `RmaDeadlineServiceTest.businessDateUsesSaoPauloMidnight` (Task 2) e `rma-deadline.spec.ts` "turns overdue at São Paulo midnight" (Task 8).
 2. **Mudar a entrada para depois da data limite.** Editar só `entryDate` deixando a data limite anterior a ela tem de ser recusado com 400. Teste: `shouldRejectEntryDateAfterExistingDueDate` (Task 5).
 3. **Visualização salva antiga** (sem `deadline` no JSON) tem de abrir com "Prazo: Todos", sem erro. Testes: `shouldReadViewsSavedWithoutDeadline` (Task 7) e "opens a view saved without deadline as Todos" (Task 10).
 4. **Caixa de entrada com alerta SLA antigo** tem de continuar abrindo (sem 500), com rótulo "Prazo de etapa (descontinuado)". Testes: `legacySlaNotificationsStayReadable` (Task 3) e o caso de rótulo em `notification-ui.spec.ts` (Task 14).
@@ -158,7 +158,7 @@ git add backend/src/main/resources/db/migration/V11__rma_due_date_and_remove_sta
 git commit -m "feat(prazo): migração V11 com data limite, histórico e fim das regras de SLA"
 ```
 
-### Task 5: Data limite no RMA (persistência, API e histórico)
+### Task 5: Data limite na OS (persistência, API e histórico)
 
 **Files:**
 - Create: `rma/RmaDueDateHistory.java` (entidade, no molde de `RmaAssignmentHistory`) e `rma/RmaDueDateHistoryResponse.java`
@@ -167,7 +167,7 @@ git commit -m "feat(prazo): migração V11 com data limite, histórico e fim das
 
 **Interfaces:**
 - Consumes: o schema da Task 4.
-- Produces: o JSON do RMA com `dueDate` (`"2026-11-30"` ou `null`) e `dueDateHistory[] {previousDueDate, newDueDate, changedBy, changedAt}`. O PUT aceita `{"dueDate": "..."}` ou `{"clearDueDate": true}`. Também `record RmaDueDateHistoryResponse(LocalDate previousDueDate, LocalDate newDueDate, String changedBy, Instant changedAt)` com `static from(RmaDueDateHistory)`.
+- Produces: o JSON da OS com `dueDate` (`"2026-11-30"` ou `null`) e `dueDateHistory[] {previousDueDate, newDueDate, changedBy, changedAt}`. O PUT aceita `{"dueDate": "..."}` ou `{"clearDueDate": true}`. Também `record RmaDueDateHistoryResponse(LocalDate previousDueDate, LocalDate newDueDate, String changedBy, Instant changedAt)` com `static from(RmaDueDateHistory)`.
 
 - [ ] **Step 1: Write the failing tests** em `RmaControllerIntegrationTest`, usando os helpers de criação que já existem:
   - `shouldCreateWithOptionalDueDateAndRecordIt`: POST com `dueDate` igual à entrada + 10 dá 201, `$.dueDate` com a data, `$.dueDateHistory[0].previousDueDate` nulo, `newDueDate` com a data e `changedBy` com o usuário. POST sem `dueDate` dá `$.dueDate` nulo e `dueDateHistory` vazio.
@@ -183,7 +183,7 @@ git commit -m "feat(prazo): migração V11 com data limite, histórico e fim das
 
 ```bash
 git add backend/src/main/java/br/com/navitasassist/rma/RmaDueDateHistory.java backend/src/main/java/br/com/navitasassist/rma/RmaDueDateHistoryResponse.java backend/src/main/java/br/com/navitasassist/rma/RmaRecord.java backend/src/main/java/br/com/navitasassist/rma/CreateRmaRequest.java backend/src/main/java/br/com/navitasassist/rma/UpdateRmaRequest.java backend/src/main/java/br/com/navitasassist/rma/RmaResponse.java backend/src/main/java/br/com/navitasassist/service/RmaService.java backend/src/main/java/br/com/navitasassist/repository/RmaRecordRepository.java backend/src/main/java/br/com/navitasassist/service/RmaReportService.java backend/src/test/java/br/com/navitasassist/rma/RmaControllerIntegrationTest.java
-git commit -m "feat(prazo): data limite opcional no RMA com histórico de alterações"
+git commit -m "feat(prazo): data limite opcional na OS com histórico de alterações"
 ```
 
 ### Task 6: Resposta com tempo por etapa e prazo, sem SLA
@@ -195,11 +195,11 @@ git commit -m "feat(prazo): data limite opcional no RMA com histórico de altera
 
 **Interfaces:**
 - Consumes: `RmaStageTimeService.periods` (Task 1), `RmaDeadlineService.evaluate/businessDate` (Task 2) e `dueDate` (Task 5).
-- Produces: o JSON do RMA sem `sla`, com `deadline {status, dueSoonFrom, daysUntilDue}` e `stagePeriods[] {status, enteredAt, leftAt, durationSeconds}`.
+- Produces: o JSON da OS sem `sla`, com `deadline {status, dueSoonFrom, daysUntilDue}` e `stagePeriods[] {status, enteredAt, leftAt, durationSeconds}`.
 
 - [ ] **Step 1: Rewrite the tests.**
   - `shouldExposeStagePeriodsAndRestartAfterStageChange`: mesmo cenário do teste antigo (histórico em 2020-01-01T10:00Z). `$.stagePeriods[-1:].status` é `RECEIVED`, `$.stagePeriods[0].enteredAt` é `2020-01-01T10:00:00Z`, e `leftAt` do último não existe. Depois de `PATCH status IN_DIAGNOSIS`, o último período é `IN_DIAGNOSIS` e o anterior tem `leftAt`. Depois de `COMPLETED`, `$.deadline.status` é `CLOSED`. `$.sla` não existe em nenhuma resposta.
-  - `shouldExposeDeadlineStatus`: um RMA com `dueDate` = hoje (SP) − 1 dá `$.deadline.status == "OVERDUE"` e `daysUntilDue == -1`. Com hoje + 3 dá `DUE_SOON`, e sem data dá `NO_DUE_DATE`.
+  - `shouldExposeDeadlineStatus`: uma OS com `dueDate` = hoje (SP) − 1 dá `$.deadline.status == "OVERDUE"` e `daysUntilDue == -1`. Com hoje + 3 dá `DUE_SOON`, e sem data dá `NO_DUE_DATE`.
   - `RmaReportIntegrationTest`: troque `/rmas/0/sla/elapsedSeconds` por `/rmas/0/stagePeriods/<último>/durationSeconds` e `sla/startedAt` por `enteredAt`, com os mesmos valores esperados. Troque `sla.status CLOSED` por `deadline.status CLOSED`.
   - `RmaBlockIntegrationTest`: o tamanho e o `enteredAt` do último período não mudam ao bloquear.
 - [ ] **Step 2: Run** `mvn -B -ntp -f backend/pom.xml -Dtest=RmaControllerIntegrationTest,RmaReportIntegrationTest,RmaBlockIntegrationTest test`. Expected: FAIL.
@@ -208,7 +208,7 @@ git commit -m "feat(prazo): data limite opcional no RMA com histórico de altera
 - [ ] **Step 5: Commit** (`git add` dos arquivos alterados e `git add -A` dos caminhos apagados)
 
 ```bash
-git commit -m "refactor(prazo): resposta do RMA com tempo por etapa e prazo no lugar do SLA"
+git commit -m "refactor(prazo): resposta da OS com tempo por etapa e prazo no lugar do SLA"
 ```
 
 ### Task 7: Filtro de prazo nas visualizações salvas (backend)
@@ -302,8 +302,8 @@ git commit -m "feat(prazo): chip de prazo e lista de tempo por etapa"
 - Consumes: as Tasks 8 e 9.
 
 - [ ] **Step 1: Rewrite the SLA specs** com os nomes novos:
-  - `rma-kanban-board.component.spec.ts`: "hides the deadline when on track, without due date and when closed", "shows Atrasado and Perto do limite on the card", "turns the card overdue at São Paulo midnight as the shared clock advances" e "shows the time in the current stage only for open RMAs".
-  - `kanban.component.spec.ts`: "shows search, Prazo and assignee as quick filters…" (no lugar da linha 107), "filters by each deadline option and keeps closed RMAs only under Todos", "combines Prazo with advanced filters and clears the entire form" (linha 437), "updates the Prazo filter when the day turns" (linha 449), "saves and restores the deadline filter in a view" (no lugar da linha 499, que dizia que as visualizações não guardavam SLA), "opens a view saved without deadline as Todos" e "deselects the saved view on a manual edit, including Prazo" (linha 215).
+  - `rma-kanban-board.component.spec.ts`: "hides the deadline when on track, without due date and when closed", "shows Atrasado and Perto do limite on the card", "turns the card overdue at São Paulo midnight as the shared clock advances" e "shows the time in the current stage only for open ordens de serviço".
+  - `kanban.component.spec.ts`: "shows search, Prazo and assignee as quick filters…" (no lugar da linha 107), "filters by each deadline option and keeps closed ordens de serviço only under Todos", "combines Prazo with advanced filters and clears the entire form" (linha 437), "updates the Prazo filter when the day turns" (linha 449), "saves and restores the deadline filter in a view" (no lugar da linha 499, que dizia que as visualizações não guardavam SLA), "opens a view saved without deadline as Todos" e "deselects the saved view on a manual edit, including Prazo" (linha 215).
   - Troque `sla` por `deadline`/`stagePeriods` nos specs `states` e `profiles`. Nenhum spec do Kanban pode conter "SLA".
 - [ ] **Step 2: Run** `... --include src/app/pages/kanban --include src/app/shared/rma-kanban-board`. Expected: FAIL.
 - [ ] **Step 3: Implement** o que está em Files.
@@ -315,13 +315,13 @@ git add frontend/src/app/pages/kanban frontend/src/app/shared/rma-kanban-board
 git commit -m "feat(prazo): filtro Prazo e indicador de data limite no Kanban"
 ```
 
-### Task 11: Diálogo da data limite e detalhes do RMA
+### Task 11: Diálogo da data limite e detalhes da OS
 
 **Files:**
 - Create: `frontend/src/app/shared/rma-due-date-dialog/rma-due-date-dialog.component.{ts,html,css,spec.ts}`
 - Modify: `frontend/src/app/core/services/rma.service.ts`, com `updateDueDate(id: number, dueDate: string | null): Observable<RmaResponse>`. O PUT vai para `/api/rmas/${id}` com `{ dueDate }` ou `{ clearDueDate: true }`. Spec em `rma.service.spec.ts`, se o arquivo existir; senão, no spec do diálogo, com `HttpTestingController`.
 - Modify: `frontend/src/app/core/utils/rma-detail.ts`. `RmaHistoryEntry` ganha `{ kind: 'dueDate'; at; by; from: string | null; to: string | null }`, e `rmaHistory` aceita `Pick<..., 'statusHistory' | 'assignmentHistory' | 'dueDateHistory'>`. Também ganha `dueDateHistoryLabel(entry)`, que dá "Data limite definida: 25/11/2026", "Data limite 20/11/2026 → 25/11/2026" ou "Data limite removida (era 20/11/2026)". Spec em `rma-detail.spec.ts`.
-- Modify: `frontend/src/app/pages/rmas/rmas.component.{ts,html}`. A linha 212 vira dois fatos: "Data limite" (data com `formatDateOnly` e chip `mode="detail"`, ou "Sem data limite" com `is-empty`, e o botão "Alterar" quando `hasPermission('rma.editar')`) e "Nesta etapa". A aba Histórico ganha `<app-rma-stage-times>` antes da lista e mostra as entradas `dueDate`. Salvar atualiza o RMA na lista e no detalhe.
+- Modify: `frontend/src/app/pages/rmas/rmas.component.{ts,html}`. A linha 212 vira dois fatos: "Data limite" (data com `formatDateOnly` e chip `mode="detail"`, ou "Sem data limite" com `is-empty`, e o botão "Alterar" quando `hasPermission('rma.editar')`) e "Nesta etapa". A aba Histórico ganha `<app-rma-stage-times>` antes da lista e mostra as entradas `dueDate`. Salvar atualiza a OS na lista e no detalhe.
 - Modify: `frontend/src/app/shared/rma-detail-modal/rma-detail-modal.component.{ts,html,css}`. A linha 198 recebe os mesmos dois fatos. A seção Histórico ganha `<app-rma-stage-times>` e o item `dueDate` na timeline. Há uma nova `@Output() rmaUpdated = new EventEmitter<RmaResponse>()`. `kanban.component.html:299-308` liga `(rmaUpdated)`, que substitui o item em `rmasSignal`.
 - Test: `rma-due-date-dialog.component.spec.ts`, `rmas.component.detail.spec.ts`, `rma-detail-modal.component.spec.ts` e `rma-detail.spec.ts`.
 
@@ -331,7 +331,7 @@ git commit -m "feat(prazo): filtro Prazo e indicador de data limite no Kanban"
 
 - [ ] **Step 1: Write the failing specs.**
   - Diálogo: "opens with the current due date and entry date as minimum", "sends dueDate when a date is chosen", "sends clearDueDate when the field is cleared", "shows the server error inside the modal and keeps it open", "Cancelar is the first button and closes without a request" e "traps focus with appModalFocus".
-  - Detalhes, nos dois: "shows Sem data limite when there is none", "shows the date and Atrasado há 2 dias", "shows Alterar only with rma.editar", "shows há 2 d 4 h in Nesta etapa and Encerrado em for closed RMAs", "lists the time of each previous stage in Histórico" e "shows due date changes with previous value and author". Nenhum texto contém "SLA".
+  - Detalhes, nos dois: "shows Sem data limite when there is none", "shows the date and Atrasado há 2 dias", "shows Alterar only with rma.editar", "shows há 2 d 4 h in Nesta etapa and Encerrado em for closed ordens de serviço", "lists the time of each previous stage in Histórico" e "shows due date changes with previous value and author". Nenhum texto contém "SLA".
 - [ ] **Step 2: Run** `... --include src/app/shared/rma-due-date-dialog --include src/app/pages/rmas --include src/app/shared/rma-detail-modal --include src/app/core/utils/rma-detail.spec.ts`. Expected: FAIL.
 - [ ] **Step 3: Implement.** O diálogo tem título "Data limite", `app-date-picker` com `[allowClear]="true"` e `[minDate]="rma.entryDate"`, Cancelar à esquerda e Salvar (`button-primary`). Mostra "Salvando..." enquanto `busy`. O fallback de erro é `extractHttpErrorMessage(error, 'Não foi possível salvar a data limite.')`.
 - [ ] **Step 4: Run** a suíte completa e o build. Expected: PASS.
@@ -339,10 +339,10 @@ git commit -m "feat(prazo): filtro Prazo e indicador de data limite no Kanban"
 
 ```bash
 git add frontend/src/app/shared/rma-due-date-dialog frontend/src/app/core/services/rma.service.ts frontend/src/app/core/utils/rma-detail.ts frontend/src/app/core/utils/rma-detail.spec.ts frontend/src/app/pages/rmas frontend/src/app/shared/rma-detail-modal frontend/src/app/pages/kanban/kanban.component.html frontend/src/app/pages/kanban/kanban.component.ts
-git commit -m "feat(prazo): data limite e tempo por etapa nos detalhes do RMA"
+git commit -m "feat(prazo): data limite e tempo por etapa nos detalhes da OS"
 ```
 
-### Task 12: Data limite na abertura do RMA
+### Task 12: Data limite na abertura da OS
 
 **Files:**
 - Modify: `frontend/src/app/pages/rmas/rmas.component.ts`. Em `createForm` (linha 579), `dueDate: ['']`. O payload (perto da linha 794) leva `dueDate: normalizeText(raw.dueDate)`. O reset (perto da linha 990) volta a `dueDate: ''`. `dateErrors()` ganha `dueDate: 'A data limite não pode ser anterior à entrada.'` quando `dueDate && dueDate < entryDate`.
@@ -357,7 +357,7 @@ git commit -m "feat(prazo): data limite e tempo por etapa nos detalhes do RMA"
 
 ```bash
 git add frontend/src/app/pages/rmas/rmas.component.ts frontend/src/app/pages/rmas/rmas.component.html frontend/src/app/pages/rmas/rmas.component.create.spec.ts
-git commit -m "feat(prazo): campo opcional de data limite na abertura do RMA"
+git commit -m "feat(prazo): campo opcional de data limite na abertura da OS"
 ```
 
 ### Task 13: Relatório "Tempo por etapa" e dashboard
@@ -365,10 +365,10 @@ git commit -m "feat(prazo): campo opcional de data limite na abertura do RMA"
 **Files:**
 - Modify: `frontend/src/app/pages/reports/reports.component.ts`. `activeRmas` filtra por `!CLOSED_RMA_STATUSES.includes(rma.status)`. `aging` usa `currentStagePeriod(rma).durationSeconds`. `duration()` passa a delegar para `formatDuration`.
 - Modify: `frontend/src/app/pages/reports/reports.component.html:131-132`, que usa `currentStagePeriod(rma).enteredAt` e `durationSeconds`.
-- Modify: `frontend/src/app/pages/dashboard/dashboard.component.{ts,html}`. `DashboardIndicator` ganha `tone: 'brand' | 'sky' | 'danger' | 'success' | 'violet'`, e o card de cadastros ganha a classe `dashboard-summary__item--catalog`. As regras `nth-child` saem e entram `[data-tone]`. O indicador novo, em segundo lugar, é `{ label: 'Atrasados', value: N, detail: '· M perto do limite', icon: 'clock' (ou o ícone de relógio que exista em IconName), tone: 'danger' }`, calculado com `deadlineStatus(rma, businessToday(Date.now()))` sobre os RMAs não encerrados.
+- Modify: `frontend/src/app/pages/dashboard/dashboard.component.{ts,html}`. `DashboardIndicator` ganha `tone: 'brand' | 'sky' | 'danger' | 'success' | 'violet'`, e o card de cadastros ganha a classe `dashboard-summary__item--catalog`. As regras `nth-child` saem e entram `[data-tone]`. O indicador novo, em segundo lugar, é `{ label: 'Atrasados', value: N, detail: '· M perto do limite', icon: 'clock' (ou o ícone de relógio que exista em IconName), tone: 'danger' }`, calculado com `deadlineStatus(rma, businessToday(Date.now()))` sobre as ordens de serviço não encerrados.
 - Test: `reports.component.spec.ts`, `reports.component.compositions.spec.ts`, `reports.component.frame.spec.ts`, `dashboard.component.spec.ts` e `dashboard.component.states.spec.ts`.
 
-- [ ] **Step 1: Write and adjust the specs:** "computes average and maximum per stage from the current stage period", "excludes closed RMAs from the active metrics", "formats durations as 2 d 4 h", "counts Atrasados and Perto do limite among open RMAs only" e "keeps the catalog card style regardless of position". Troque as fixtures `sla:` desses specs por `stagePeriods`/`deadline`.
+- [ ] **Step 1: Write and adjust the specs:** "computes average and maximum per stage from the current stage period", "excludes closed ordens de serviço from the active metrics", "formats durations as 2 d 4 h", "counts Atrasados and Perto do limite among open ordens de serviço only" e "keeps the catalog card style regardless of position". Troque as fixtures `sla:` desses specs por `stagePeriods`/`deadline`.
 - [ ] **Step 2: Run** `... --include src/app/pages/reports --include src/app/pages/dashboard`. Expected: FAIL.
 - [ ] **Step 3: Implement** o que está em Files. Confira em `shared/icon/icon.component.ts` qual `IconName` de relógio existe.
 - [ ] **Step 4: Run** a suíte completa e o build. Expected: PASS.
@@ -383,7 +383,7 @@ git commit -m "feat(prazo): relatório de tempo por etapa e indicador de atrasad
 
 **Files:**
 - Modify: `frontend/src/app/core/utils/notification-ui.ts:8-9`, onde os dois rótulos viram `'Prazo de etapa (descontinuado)'`. Também `notification-ui.spec.ts`.
-- Modify: `frontend/src/app/pages/notifications/notifications.component.html:70`, com "Alertas sobre RMAs atribuídos e novos itens aparecem aqui."
+- Modify: `frontend/src/app/pages/notifications/notifications.component.html:70`, com "Alertas sobre ordens de serviço atribuídas e novos itens aparecem aqui."
 - Modify: `notifications.component.rules.spec.ts`, `notifications.component.preferences.spec.ts`, `notifications.component.inbox.spec.ts`, `notifications.component.spec.ts` e `core/services/notification.service.spec.ts`. As fixtures de regra e preferência trocam `SLA_*` por `RMA_CREATED`/`RMA_ASSIGNED`. A caixa de entrada mantém um item `SLA_OVERDUE` legado.
 - Rename: `core/services/sla-clock.service.ts` vira `core/services/clock.service.ts` (classe `ClockService`), e todos os `inject(SlaClockService)` mudam (kanban, rmas, notifications, rma-kanban-board, rma-detail-modal, rma-block-history e os componentes das Tasks 9 e 11).
 - Modify: `frontend/src/app/shared/rma-block-history/rma-block-history.component.ts:19`, com "O período bloqueado continua contando no tempo da etapa." Também o spec dele.
@@ -422,7 +422,7 @@ git commit -m "refactor(prazo): remove o SLA da interface e renomeia o relógio 
 ```bash
 docker run -d --name navitas-mig -p 3317:3306 -e MYSQL_ROOT_PASSWORD=mig -e MYSQL_DATABASE=navitas_mig mysql:8
 # 1) checkout da main atual (antes da V11) e migração até V10 com dados: suba o backend com DB_URL=jdbc:mysql://127.0.0.1:3317/navitas_mig ...,
-#    crie um RMA, silencie SLA_WARNING para um usuário e insira uma notificação SLA_OVERDUE.
+#    crie uma OS, silencie SLA_WARNING para um usuário e insira uma notificação SLA_OVERDUE.
 # 2) volte para o branch e suba o backend contra a mesma base: o Flyway aplica a V11.
 docker exec navitas-mig mysql -uroot -pmig navitas_mig -e "SELECT version, success FROM flyway_schema_history; SHOW COLUMNS FROM rmas LIKE 'due_date'; SHOW CREATE TABLE kanban_views; SELECT event_type FROM notification_rules; SELECT event_type FROM notification_mutes; SELECT event_type FROM notifications;"
 # esperado: V11 success=1; due_date DATE YES; CHECK ck_kanban_views_deadline; regras só RMA_CREATED e RMA_ASSIGNED; silenciamento SLA_* apagado; notificação SLA_OVERDUE presente.
@@ -440,7 +440,7 @@ git commit -m "docs(prazo): README e configuração da data limite no lugar do S
 ## Critério de aceite
 
 - Nenhum "SLA" na interface, e nenhum "Vencido(s)" em texto novo.
-- Cards e detalhes mostram "há X nesta etapa" para RMAs abertos. O Histórico lista o tempo de cada etapa anterior e as mudanças da data limite, com autor e valor anterior.
+- Cards e detalhes mostram "há X nesta etapa" para ordens de serviço abertas. O Histórico lista o tempo de cada etapa anterior e as mudanças da data limite, com autor e valor anterior.
 - A data limite é opcional na abertura (`rma.abrir`) e editável no detalhe (`rma.editar`). Sem a permissão, o botão "Alterar" não aparece e a API responde 403.
 - O Kanban tem o filtro "Prazo" com as cinco opções, salvo nas visualizações. O card mostra "Atrasado há N dias" ou "Vence em N dias" só nesses casos.
 - O dashboard conta "Atrasados" e "perto do limite". O relatório "Tempo por etapa" mostra média e máximo como antes.

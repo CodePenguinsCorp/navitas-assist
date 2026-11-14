@@ -19,17 +19,17 @@
 - Filtro aplicado nunca fica escondido: o painel avançado recolhido mostra os filtros ativos como chips removíveis.
 - Remover a instrução permanente sobre arrastar do cabeçalho.
 - Usar os tokens da etapa 1; sem cores novas, sem gradientes decorativos nos módulos de operação.
-- Fora do escopo: detalhe do RMA, modais de status/responsável, abas, lista alternativa em tela estreita, paleta, outras páginas.
+- Fora do escopo: detalhe da OS, modais de status/responsável, abas, lista alternativa em tela estreita, paleta, outras páginas.
 - Comandos: `npm --prefix frontend test -- --watch=false`; se a suíte travar com "Timeout starting forks runner", usar `--runner-config` com `maxWorkers: 2` em arquivo fora do repositório.
 
 ## Review Focus
 
-- Filtro avançado ativo com o painel recolhido: o chip aparece e o RMA continua filtrado (Tarefa 2).
+- Filtro avançado ativo com o painel recolhido: o chip aparece e a OS continua filtrado (Tarefa 2).
 - Remover um chip limpa só aquele filtro e mantém os demais e a visualização ativa coerente (Tarefa 2).
-- Card de RMA com SLA `NORMAL` não mostra SLA; `WARNING` e `OVERDUE` mostram; RMA encerrado (`CLOSED`) não mostra (Tarefa 3).
-- RMA sem falha, sem responsável ou com cliente longo não quebra o card (Tarefa 3).
+- Card de OS com SLA `NORMAL` não mostra SLA; `WARNING` e `OVERDUE` mostram; OS encerrada (`CLOSED`) não mostra (Tarefa 3).
+- OS sem falha, sem responsável ou com cliente longo não quebra o card (Tarefa 3).
 - Seleção em lote: o checkbox continua só em modo de seleção e clicar nele não abre o detalhe (Tarefa 3).
-- Colunas vazias, carregando e "Nenhum RMA encontrado" continuam aparecendo (Tarefa 2).
+- Colunas vazias, carregando e "Nenhuma OS encontrada" continuam aparecendo (Tarefa 2).
 
 ---
 
@@ -46,7 +46,7 @@
 
 - [ ] **Step 1: Escrever os testes que falham.** Em `kanban.component.spec.ts`: `does not show the permanent drag instruction in the header` (o texto da página não contém "Arraste os cards entre as colunas") e `shows the four indicators in a single compact summary` (existe `.kanban-summary`, não existe `.stats-grid` nem `.stat-card`, e o texto traz "Em andamento", "Alta prioridade", "Aguardando peça", "Encerrados").
 - [ ] **Step 2: Rodar e ver falhar.** `npm --prefix frontend test -- --watch=false`. Esperado: os dois testes novos FAIL; os demais passam.
-- [ ] **Step 3: Implementar.** Título "Kanban de RMAs" com a contagem `filteredRmas().length de totalRmas()` junto ao título; remover o `<p>` da instrução; trocar `.stats-grid` por `.kanban-summary`, uma linha de itens "rótulo + valor" (ícone `app-icon` opcional, sem `.panel`), usando `heroStats()`. Remover do cabeçalho de `.kanban-stage` o título "Fluxo operacional" duplicado e deixar só a contagem e "Limpar filtros".
+- [ ] **Step 3: Implementar.** Título "Kanban de ordens de serviço" com a contagem `filteredRmas().length de totalRmas()` junto ao título; remover o `<p>` da instrução; trocar `.stats-grid` por `.kanban-summary`, uma linha de itens "rótulo + valor" (ícone `app-icon` opcional, sem `.panel`), usando `heroStats()`. Remover do cabeçalho de `.kanban-stage` o título "Fluxo operacional" duplicado e deixar só a contagem e "Limpar filtros".
 - [ ] **Step 4: Rodar e ver passar.** Mesmo comando. Esperado: PASS em toda a suíte.
 - [ ] **Step 5: Commit.** `git add` dos arquivos listados em **Files**; mensagem: `feat(kanban): cabeçalho curto e faixa de indicadores (NAV-98)`.
 
@@ -83,7 +83,7 @@
 - Consumes: `slaStatus(sla: RmaSlaResponse, now: number): RmaSlaStatus` (`core/utils/rma-sla.ts:10`; estados `NORMAL | WARNING | OVERDUE | CLOSED`), o `clock` já injetado no componente e `<app-rma-sla-badge [sla]>`.
 - Produces: `showSla(item: RmaResponse): boolean` no componente do quadro, verdadeiro só para `WARNING` e `OVERDUE`.
 
-- [ ] **Step 1: Escrever os testes que falham** (novo spec, com `TestBed` e RMAs de fábrica). Nomes: `does not render the reported failure in the card`; `hides SLA when the state is NORMAL and when it is CLOSED`; `shows SLA when the state is WARNING or OVERDUE`; `keeps code, client, product, priority label, avatar and active block`; `does not open the card when the bulk checkbox is clicked`; `renders a card without assignee, failure or with a very long client name without throwing`.
+- [ ] **Step 1: Escrever os testes que falham** (novo spec, com `TestBed` e ordens de serviço de fábrica). Nomes: `does not render the reported failure in the card`; `hides SLA when the state is NORMAL and when it is CLOSED`; `shows SLA when the state is WARNING or OVERDUE`; `keeps code, client, product, priority label, avatar and active block`; `does not open the card when the bulk checkbox is clicked`; `renders a card without assignee, failure or with a very long client name without throwing`.
 - [ ] **Step 2: Rodar e ver falhar.** Esperado: os testes de falha, de SLA saudável e de SLA em atenção/atraso FAIL; os demais podem passar.
 - [ ] **Step 3: Implementar.** Remover o `<p class="board-card__failure">`; envolver `<app-rma-sla-badge>` em `@if (showSla(item))`; manter o resto do card (identidade, `priority-tag`, título, bloqueio, rodapé). Dar `aria-label` ao avatar com o responsável e limitar o cliente a uma linha com reticências. Ajustar o CSS: remover `.board-card__failure` e reduzir o espaço vertical que sobra.
 - [ ] **Step 4: Rodar e ver passar.** Esperado: PASS em toda a suíte, incluindo os testes de clique e de Escape do `kanban.component.spec.ts`.
@@ -122,4 +122,4 @@
 
 ## Fora deste plano
 
-Detalhe do RMA e suas abas (etapa 4), lista alternativa em tela estreita, colunas recolhíveis e a revisão de densidade (36 px) depois de validar com operadores.
+Detalhe da OS e suas abas (etapa 4), lista alternativa em tela estreita, colunas recolhíveis e a revisão de densidade (36 px) depois de validar com operadores.

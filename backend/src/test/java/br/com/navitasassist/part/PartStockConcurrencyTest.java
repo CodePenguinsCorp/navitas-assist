@@ -145,7 +145,7 @@ class PartStockConcurrencyTest {
         Client client = new Client();
         client.setLegalName("Cliente concorrente");
         RmaRecord record = new RmaRecord();
-        record.setCode("RMA-CONC-0001");
+        record.setCode("OS-CONC-0001");
         record.setProduct(productRepository.save(product));
         record.setClient(clientRepository.save(client));
         record.setEntryDate(LocalDate.now());

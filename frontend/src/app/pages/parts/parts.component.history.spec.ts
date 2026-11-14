@@ -17,7 +17,7 @@ const OTHER_PART: PartResponse = { ...PART, id: 5, code: 'PCB-2', name: 'Peça B
 const CONSUMPTION: PartMovementResponse = {
   id: 9, partId: 4, partCode: 'PCA-1', partName: 'Capacitor', type: 'CONSUMPTION', quantity: 1.5,
   onHandChange: -1.5, reservedChange: -1.5, onHandAfter: 10, reservedAfter: 4, unitCost: 10, totalCost: 15,
-  rmaId: 7, rmaCode: 'RMA-7', reservationId: 2, reversedMovementId: null, reversed: false,
+  rmaId: 7, rmaCode: 'OS-7', reservationId: 2, reversedMovementId: null, reversed: false,
   reason: 'Peça instalada', createdBy: 'tech', createdAt: '2026-10-24T12:00:00Z'
 };
 const REVERSAL: PartMovementResponse = {
@@ -175,9 +175,9 @@ describe('PartsComponent movement history', () => {
   it('separates author, reason and resulting balances', async () => {
     await setup();
     const headers = Array.from(panel()!.querySelectorAll('thead th')).map((item) => text(item));
-    expect(headers).toEqual(['Instante', 'Tipo', 'Variação em estoque', 'Variação reservada', 'Em estoque após', 'Reservado após', 'RMA', 'Autor', 'Motivo', 'Ações']);
+    expect(headers).toEqual(['Instante', 'Tipo', 'Variação em estoque', 'Variação reservada', 'Em estoque após', 'Reservado após', 'OS', 'Autor', 'Motivo', 'Ações']);
     const cells = Array.from(panel()!.querySelectorAll('tbody tr:first-child td')).map((item) => text(item));
-    expect(cells[0]).toContain('24/10/2026'); expect(cells.slice(2, 9)).toEqual(['-1,5 m', '-1,5 m', '10 m', '4 m', 'RMA-7', 'tech', 'Peça instalada']);
+    expect(cells[0]).toContain('24/10/2026'); expect(cells.slice(2, 9)).toEqual(['-1,5 m', '-1,5 m', '10 m', '4 m', 'OS-7', 'tech', 'Peça instalada']);
   });
 
   // Vermelho: fechar não cancela a leitura pendente do histórico.

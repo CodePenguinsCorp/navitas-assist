@@ -10,7 +10,7 @@
 | 1 | Fundação visual comum (este documento) | Em revisão |
 | 2 | Piloto do Kanban: cabeçalho, indicadores, filtros, card | Depois da etapa 1 |
 | 3 | Cadastros: clientes, produtos, usuários, catálogo de protocolos | |
-| 4 | Ciclo do RMA: lista, histórico, abertura, diagnóstico e os dois detalhes | |
+| 4 | Ciclo da OS: lista, histórico, abertura, diagnóstico e os dois detalhes | |
 | 5 | Operações: estoque, reposição, movimentos, reservas, impedimentos, protocolos | |
 | 6 | Comunicação e análise: dashboard, notificações, relatórios | |
 | 7 | Conferência global: telas, perfis, teclado e largura estreita | |
@@ -38,7 +38,7 @@ A decisão 1 do resumo do estudo já foi tomada em 7 de novembro: **card enxuto*
 4. **Mensagens.** `.field-error` e feedbacks com a mesma cor, ícone e posição; sem banner global para atualização pequena.
 5. **Limpeza.** Remover CSS morto confirmado (`.top-user`, `.shell-logout`, `.eyebrow`) e hexadecimais que duplicam um token existente.
 
-**Fora do recorte:** layout de qualquer tela, cabeçalhos de página, cards, tabelas, Kanban, modais de RMA, cores novas, tema escuro, ícones novos e reordenação de campos.
+**Fora do recorte:** layout de qualquer tela, cabeçalhos de página, cards, tabelas, Kanban, modais de OS, cores novas, tema escuro, ícones novos e reordenação de campos.
 
 ## Decisões que preciso de você
 

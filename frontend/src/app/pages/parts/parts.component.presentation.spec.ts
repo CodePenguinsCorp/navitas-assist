@@ -15,7 +15,7 @@ const PART: PartResponse = {
 const INACTIVE: PartResponse = { ...PART, id: 5, code: 'CAB-2', name: 'Cabo', location: 'B2', active: false, onHand: 2, unitCost: 5 };
 const REPLENISHMENT: PartReplenishmentResponse = { ...PART, partId: 4, pendingQuantity: 3.5, suggestedQuantity: 12.5 };
 const PENDING: PartReservationResponse = {
-  id: 2, rmaId: 7, rmaCode: 'RMA-7', partId: 4, partCode: 'PCA-1', partName: 'Capacitor', unit: 'm', location: 'A1',
+  id: 2, rmaId: 7, rmaCode: 'OS-7', partId: 4, partCode: 'PCA-1', partName: 'Capacitor', unit: 'm', location: 'A1',
   quantity: 3.5, status: 'PENDING', partAvailable: 6, unitCost: 10, totalCost: 35, note: null, createdBy: 'tech',
   createdAt: PART.createdAt, updatedAt: PART.updatedAt
 };
@@ -123,14 +123,14 @@ describe('PartsComponent presentation', () => {
     expect(normalized(rows[1].querySelector('td'))).not.toContain('Repor');
   });
 
-  it('preserves API suggestion and pending quantity, RMA and business date', async () => {
+  it('preserves API suggestion and pending quantity, OS and business date', async () => {
     await setup(); tab('Reposição');
     const tables = root().querySelectorAll<HTMLTableElement>('table');
     const replenishment = facts(tables[0]);
-    expect(replenishment.get('Pendente em RMAs')).toBe('3,5 m');
+    expect(replenishment.get('Pendente em ordens de serviço')).toBe('3,5 m');
     expect(replenishment.get('Sugestão de compra')).toBe('12,5 m');
     const pending = facts(tables[1]);
-    expect(pending.get('RMA')).toBe('RMA-7');
+    expect(pending.get('OS')).toBe('OS-7');
     expect(pending.get('Quantidade')).toBe('3,5 m');
     expect(pending.get('Disponível')).toBe('6 m');
     expect(pending.get('Solicitada em')).toBe('24/10/2026, 09:00');

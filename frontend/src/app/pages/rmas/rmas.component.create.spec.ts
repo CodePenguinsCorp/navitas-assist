@@ -42,7 +42,7 @@ async function setup(options: { role?: LegacyProfileCode; create?: CreateFn } = 
     list: vi.fn(() => of(buildRmaPage([buildRma()], 0, 20, 1))),
     getSummary: vi.fn(() => of({ total: 1, ongoing: 1, highPriority: 0 })),
     getById: vi.fn(),
-    create: vi.fn(options.create ?? ((payload: CreateRmaRequest) => of(buildRma({ id: 2, code: 'RMA-2026-000002', reportedFailure: payload.reportedFailure })))),
+    create: vi.fn(options.create ?? ((payload: CreateRmaRequest) => of(buildRma({ id: 2, code: 'OS-2026-000002', reportedFailure: payload.reportedFailure })))),
     upsertDiagnosis: vi.fn()
   };
   const currentUser = signal<UserSession | null>({ username: 'tester', name: 'Tester', profileName: 'Perfil', permissions: [] });
@@ -106,7 +106,7 @@ describe('RmasComponent creation messages', () => {
     expect(panel).not.toBeNull();
     expect(panel!.getAttribute('aria-modal')).toBe('true');
     const titleId = panel!.getAttribute('aria-labelledby')!;
-    expect(page.querySelector(`#${titleId}`)?.textContent?.trim()).toBe('Novo RMA');
+    expect(page.querySelector(`#${titleId}`)?.textContent?.trim()).toBe('Nova OS');
     expect(page.textContent).not.toContain('Preencha os dados do atendimento');
   });
 
@@ -228,13 +228,13 @@ describe('RmasComponent creation messages', () => {
 
   it('shows the save error inside the dialog and keeps the values', async () => {
     // Hoje a falha do serviço vai para .status-card fora do diálogo.
-    const error = new HttpErrorResponse({ status: 400, error: { message: 'RMA não salvo' } });
+    const error = new HttpErrorResponse({ status: 400, error: { message: 'OS não salvo' } });
     const { component, page, open, submit, alertText, fillValid } = await setup({ create: () => throwError(() => error) });
     open();
     fillValid();
     submit();
 
-    expect(alertText()).toBe('RMA não salvo');
+    expect(alertText()).toBe('OS não salvo');
     expect(page.querySelector('.status-card')).toBeNull();
     expect(component.createForm.controls['reportedFailure'].value).toBe('Falha mantida');
   });
@@ -242,7 +242,7 @@ describe('RmasComponent creation messages', () => {
   it('clears the dialog message on reopen, on a corrected resubmit and on a new pending attempt', async () => {
     // Hoje a mensagem fica em pageError e continua na página durante o novo envio.
     let pending = new Subject<RmaResponse>();
-    const error = new HttpErrorResponse({ status: 400, error: { message: 'RMA não salvo' } });
+    const error = new HttpErrorResponse({ status: 400, error: { message: 'OS não salvo' } });
     const { component, open, render, submit, alertText, fillValid } = await setup({ create: () => pending });
 
     open();
@@ -262,7 +262,7 @@ describe('RmasComponent creation messages', () => {
     // Falha do serviço e nova tentativa pendente.
     pending.error(error);
     render();
-    expect(alertText()).toBe('RMA não salvo');
+    expect(alertText()).toBe('OS não salvo');
     pending = new Subject<RmaResponse>();
     submit();
     expect(alertText()).toBeNull();
@@ -274,7 +274,7 @@ describe('RmasComponent creation messages', () => {
     component.createRma();
 
     expect(rmaService.create).not.toHaveBeenCalled();
-    expect(component.pageError()).toBe('Seu perfil não pode abrir novos RMAs.');
+    expect(component.pageError()).toBe('Seu perfil não pode abrir novas ordens de serviço.');
   });
 
   it.each(['ADMIN', 'SERVICE_DESK'] as const)('lets %s call createRma', async (role) => {
@@ -574,7 +574,7 @@ describe('RmasComponent creation dialog focus', () => {
     return { ...context, render, newButton, openFromButton, escape, showOverlay, hideOverlay };
   }
 
-  it('focuses the Cliente selector from Novo RMA and returns to it on Escape', async () => {
+  it('focuses the Cliente selector from Nova OS and returns to it on Escape', async () => {
     const { page, dialog, openFromButton, escape } = await focusSetup();
     const trigger = openFromButton();
     const clientSelect = page.querySelector('app-custom-select[formControlName="clientId"] .custom-select__trigger');
@@ -584,7 +584,7 @@ describe('RmasComponent creation dialog focus', () => {
     expect(document.activeElement).toBe(trigger);
   });
 
-  it('ignores Escape while the RMA is being opened', async () => {
+  it('ignores Escape while the OS is being opened', async () => {
     const pending = new Subject<RmaResponse>();
     const { dialog, openFromButton, escape, fillValid, submit } = await focusSetup(() => pending);
     openFromButton();
@@ -595,7 +595,7 @@ describe('RmasComponent creation dialog focus', () => {
     pending.error(new HttpErrorResponse({ status: 400, error: { message: 'Recusado.' } }));
   });
 
-  it('returns to Novo RMA only after the global overlay hides when the creation succeeds under it', async () => {
+  it('returns to Nova OS only after the global overlay hides when the creation succeeds under it', async () => {
     const pending = new Subject<RmaResponse>();
     const { dialog, render, openFromButton, fillValid, submit, showOverlay, hideOverlay } = await focusSetup(() => pending);
     const trigger = openFromButton();
@@ -603,7 +603,7 @@ describe('RmasComponent creation dialog focus', () => {
     submit();
     showOverlay();
     const focus = vi.spyOn(trigger, 'focus');
-    pending.next(buildRma({ id: 2, code: 'RMA-2026-000002' }));
+    pending.next(buildRma({ id: 2, code: 'OS-2026-000002' }));
     pending.complete();
     render();
     expect(dialog()).toBeNull();

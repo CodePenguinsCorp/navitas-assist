@@ -8,7 +8,7 @@ import { ReportsComponent } from './reports.component';
 
 const SUMMARY: RmaReportSummaryResponse = {
   generatedAt: '2026-10-21T01:00:00Z', entryFrom: '2026-07-24', entryTo: '2026-10-21', totalRmas: 4, totalItems: 5,
-  byStatus: [{ key: 'RECEIVED', label: 'Recebido', count: 3 }, { key: 'RETURNED', label: 'Devolvido', count: 1 }],
+  byStatus: [{ key: 'RECEIVED', label: 'Recebida', count: 3 }, { key: 'RETURNED', label: 'Devolvida', count: 1 }],
   byWarranty: [{ key: 'IN_WARRANTY', label: 'Em garantia', count: 4 }, { key: 'OUT_OF_WARRANTY', label: 'Fora de garantia', count: 1 },
     { key: 'PENDING', label: 'Pendente', count: 0 }],
   byMonth: [{ key: '2026-09', label: '09/2026', count: 1 }, { key: '2026-10', label: '10/2026', count: 3 }],
@@ -16,12 +16,12 @@ const SUMMARY: RmaReportSummaryResponse = {
   topClients: [{ key: '2', label: 'Cliente Alfa', count: 4 }], topFailureTypes: [{ key: 'SENSOR', label: 'Sensor', count: 2 }],
   recurrence: { itemsWithSerial: 4, returnedItems: 1, byProduct: [{ key: '3', label: 'Controlador (SKU-1)', items: 4, returnedItems: 1 }],
     byBatch: [], serials: [{ serialNumber: 'SER-A', productName: 'Controlador', productSku: 'SKU-1', rmaCount: 2 }] },
-  stages: [{ status: 'RECEIVED', label: 'Recebido', count: 3, averageSeconds: 7200, maximumSeconds: 90000 }]
+  stages: [{ status: 'RECEIVED', label: 'Recebida', count: 3, averageSeconds: 7200, maximumSeconds: 90000 }]
 };
 
 const PAGE: RmaReportPageResponse = {
   generatedAt: '2026-10-21T01:00:00Z', entryFrom: '2026-07-24', entryTo: '2026-10-21',
-  rmas: { content: [{ id: 1, code: 'RMA-REAL', entryDate: '2026-10-20', status: 'RECEIVED', clientName: 'Cliente Alfa', productName: 'Controlador',
+  rmas: { content: [{ id: 1, code: 'OS-REAL', entryDate: '2026-10-20', status: 'RECEIVED', clientName: 'Cliente Alfa', productName: 'Controlador',
     productSku: 'SKU-1', serialNumber: 'SER-A', batchNumber: null, itemCount: 2, warrantyStatuses: [WarrantyStatus.IN_WARRANTY, WarrantyStatus.OUT_OF_WARRANTY],
     failureType: 'SENSOR' }], page: 0, size: 20, totalElements: 21, totalPages: 2 }
 };
@@ -94,9 +94,9 @@ describe('ReportsComponent', () => {
 
   it('shows the summary with shares, months and stage times', () => {
     respond();
-    expect(text()).toContain('4 RMAs');
+    expect(text()).toContain('4 ordens de serviço');
     expect(text()).toContain('5 itens');
-    expect(text()).toContain('Recebido');
+    expect(text()).toContain('Recebida');
     expect(text()).toContain('Em garantia');
     expect(text()).toContain('80,0%');
     expect(text()).toContain('10/2026');
@@ -118,21 +118,21 @@ describe('ReportsComponent', () => {
     expect(text()).toContain('Nenhum lote com retorno');
   });
 
-  it('pages the RMA list on the server and links the PDF report', () => {
+  it('pages the OS list on the server and links the PDF report', () => {
     respond();
     show('rmas');
-    expect(text()).toContain('RMA-REAL');
+    expect(text()).toContain('OS-REAL');
     expect(text()).toContain('Controlador +1');
     expect(text()).toContain('Em garantia, Fora de garantia');
     expect(text()).toContain('1–1 de 21');
-    expect((fixture.nativeElement as HTMLElement).querySelector('[aria-label="Baixar laudo de RMA-REAL"]')).not.toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('[aria-label="Baixar laudo de OS-REAL"]')).not.toBeNull();
     const next = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((button) => button.textContent?.includes('Próxima'));
     next?.click();
     const request: TestRequest = listRequest();
     expect(request.request.params.get('page')).toBe('1');
     request.flush({ ...PAGE, rmas: { ...PAGE.rmas, content: [], page: 1 } });
     fixture.detectChanges();
-    expect(text()).toContain('Nenhum RMA encontrado.');
+    expect(text()).toContain('Nenhuma OS encontrada.');
   });
 
   it('exports the CSV of the current tab with the applied filters', () => {
@@ -154,7 +154,7 @@ describe('ReportsComponent', () => {
     respond();
     const indicators = (fixture.nativeElement as HTMLElement).querySelector('.page-summary')!.textContent!.replace(/\s+/g, ' ');
     expect(indicators).toContain('24/07/2026 a 21/10/2026');
-    expect(indicators).toContain('4 RMAs');
+    expect(indicators).toContain('4 ordens de serviço');
     expect(indicators).toContain('5 itens');
     expect(indicators).not.toContain('Retornaram');
   });
@@ -162,16 +162,16 @@ describe('ReportsComponent', () => {
   it('hides the previous page while a new consultation loads or fails', () => {
     respond();
     show('rmas');
-    expect(text()).toContain('RMA-REAL');
+    expect(text()).toContain('OS-REAL');
     component.form.patchValue({ status: 'RETURNED' });
     component.consult();
     fixture.detectChanges();
-    expect(text()).not.toContain('RMA-REAL');
+    expect(text()).not.toContain('OS-REAL');
     expect((fixture.nativeElement as HTMLElement).querySelector('#report-panel [aria-busy="true"]')).not.toBeNull();
     summaryRequest().flush({ message: 'erro' }, { status: 500, statusText: 'Erro' });
     listRequest().flush({ message: 'erro' }, { status: 500, statusText: 'Erro' });
     fixture.detectChanges();
-    expect(text()).not.toContain('RMA-REAL');
+    expect(text()).not.toContain('OS-REAL');
     expect(text()).toContain('Não foi possível carregar os relatórios.');
   });
 

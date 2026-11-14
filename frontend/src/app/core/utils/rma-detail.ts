@@ -109,14 +109,14 @@ export function repairFacts(rma: RmaResponse): RmaFact[] {
 }
 
 export function blockedLabel(block: RmaBlockResponse, now: number): string {
-  return `Bloqueado há ${blockDuration(block, now)}`;
+  return `Impedida há ${blockDuration(block, now)}`;
 }
 
-/** "Nesta etapa": "há 2 d 4 h" while open, "Encerrado em dd/mm/aaaa hh:mm" once closed. */
+/** "Nesta etapa": "há 2 d 4 h" while open, "Encerrada em dd/mm/aaaa hh:mm" once closed. */
 export function stageFact(rma: Pick<RmaResponse, 'status' | 'stagePeriods'>, now: number): RmaFact {
   const current = currentStagePeriod(rma);
   if (CLOSED_RMA_STATUSES.includes(rma.status)) {
-    return fact('Nesta etapa', `Encerrado em ${formatBusinessDateTime(current.enteredAt).replace(', ', ' ')}`);
+    return fact('Nesta etapa', `Encerrada em ${formatBusinessDateTime(current.enteredAt).replace(', ', ' ')}`);
   }
   return fact('Nesta etapa', `há ${formatDuration(stageElapsedSeconds(current, now))}`);
 }

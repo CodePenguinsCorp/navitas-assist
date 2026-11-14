@@ -3,7 +3,7 @@ import { NotificationEventType, NotificationResponse, NotificationSeverity } fro
 const APP_TIME_ZONE = 'America/Sao_Paulo';
 
 export const NOTIFICATION_EVENT_LABELS: Record<NotificationEventType, string> = {
-  RMA_CREATED: 'Novo RMA',
+  RMA_CREATED: 'Nova OS',
   RMA_ASSIGNED: 'Nova atribuição',
   RMA_BLOCKED: 'Bloqueio',
   PART_PENDING: 'Peça pendente',

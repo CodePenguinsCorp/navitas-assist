@@ -17,7 +17,7 @@ import br.com.navitasassist.rma.RmaReportRequest;
 import org.junit.jupiter.api.Test;
 
 class RmaReportCsvServiceTest {
-    private static final String LIMIT_MESSAGE = "Reduza o período: o relatório passa de 5.000 RMAs.";
+    private static final String LIMIT_MESSAGE = "Reduza o período: o relatório passa de 5.000 ordens de serviço.";
     private final RmaRecordRepository repository = mock(RmaRecordRepository.class);
     private final RmaReportService reports = new RmaReportService(repository, mock(RmaStageTimeService.class));
     private final RmaReportCsvService service = new RmaReportCsvService(reports, repository);

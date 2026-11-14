@@ -16,7 +16,7 @@ const ITEM: ProtocolExecutionItemResponse = {
     unit: 'V', decimalPlaces: 2, minValue: 11.5, maxValue: 12.5, expectedResult: '12 V', evidenceRequired: true }, latest: null, attempts: []
 };
 const EXECUTION: ProtocolExecutionResponse = {
-  id: 9, rmaId: 4, rmaCode: 'RMA-4', templateId: 2, templateName: 'Bancada PWM', versionNumber: 3, status: 'IN_PROGRESS',
+  id: 9, rmaId: 4, rmaCode: 'OS-4', templateId: 2, templateName: 'Bancada PWM', versionNumber: 3, status: 'IN_PROGRESS',
   blockedStatuses: [], startedBy: 'tech', startedAt: '2026-10-20T12:00:00Z', completedBy: null, completedAt: null,
   totalItems: 2, completedItems: 0, requiredItems: 1, pendingRequiredItems: 1, failedItems: 0,
   items: [ITEM, { ...ITEM, item: { ...ITEM.item, id: 22, title: 'Conector', type: 'CHECK', required: false }, latest: RESULT, attempts: [RESULT] }]

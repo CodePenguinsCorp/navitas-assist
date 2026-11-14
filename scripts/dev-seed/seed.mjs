@@ -151,7 +151,7 @@ async function main() {
     const serialNumber = `DEMO-SN-${String(i + 1).padStart(4, '0')}`;
     let rma = rmas.find(r => r.items.some(item => item.serialNumber === serialNumber));
     const created = !rma;
-    count('RMAs', created);
+    count('ordens de serviço', created);
     if (!rma) {
       rma = await api('/api/rmas', 'POST', {
         clientId: demoClients[i % 3].id,

@@ -20,22 +20,22 @@ A = Administrador (`ADMIN`), S = Atendimento (`SERVICE_DESK`), T = Técnico (`TE
 
 | Código | Módulo | Rótulo | A | S | T | V |
 |:---|:---|:---|:-:|:-:|:-:|:-:|
-| `rma.ver` | RMAs | Ver RMAs, Kanban e dashboard | ✓ | ✓ | ✓ | ✓ |
-| `rma.abrir` | RMAs | Abrir RMAs | ✓ | ✓ | | |
-| `rma.editar` | RMAs | Alterar dados gerais e prioridade | ✓ | ✓ | | |
-| `rma.status` | RMAs | Alterar status | ✓ | ✓ | ✓ | |
-| `rma.responsavel` | RMAs | Atribuir responsável | ✓ | ✓ | | |
-| `rma.atribuivel` | RMAs | Pode ser responsável por RMAs | | | ✓ | |
-| `rma.diagnosticar` | RMAs | Registrar diagnóstico | ✓ | | ✓ | |
-| `rma.impedimentos` | RMAs | Registrar e resolver impedimentos | ✓ | ✓ | ✓ | |
+| `rma.ver` | Ordens de serviço | Ver ordens de serviço, Kanban e dashboard | ✓ | ✓ | ✓ | ✓ |
+| `rma.abrir` | Ordens de serviço | Abrir Ordens de serviço | ✓ | ✓ | | |
+| `rma.editar` | Ordens de serviço | Alterar dados gerais e prioridade | ✓ | ✓ | | |
+| `rma.status` | Ordens de serviço | Alterar status | ✓ | ✓ | ✓ | |
+| `rma.responsavel` | Ordens de serviço | Atribuir responsável | ✓ | ✓ | | |
+| `rma.atribuivel` | Ordens de serviço | Pode ser responsável por Ordens de serviço | | | ✓ | |
+| `rma.diagnosticar` | Ordens de serviço | Registrar diagnóstico | ✓ | | ✓ | |
+| `rma.impedimentos` | Ordens de serviço | Registrar e resolver impedimentos | ✓ | ✓ | ✓ | |
 | `cadastros.ver` | Clientes e produtos | Consultar clientes e produtos | ✓ | ✓ | ✓ | ✓ |
 | `cadastros.editar` | Clientes e produtos | Criar, alterar e excluir clientes e produtos | ✓ | ✓ | | |
 | `cadastros.importar` | Clientes e produtos | Importar clientes e produtos | ✓ | | | |
 | `pecas.ver` | Peças | Consultar peças e estoque | ✓ | ✓ | ✓ | ✓ |
 | `pecas.movimentar` | Peças | Cadastrar peças e movimentar estoque | ✓ | ✓ | | |
-| `pecas.reservar` | Peças | Reservar e aplicar peças nos RMAs | ✓ | | ✓ | |
+| `pecas.reservar` | Peças | Reservar e aplicar peças nas Ordens de serviço | ✓ | | ✓ | |
 | `protocolos.ver` | Protocolos técnicos | Consultar protocolos e execuções | ✓ | ✓ | ✓ | ✓ |
-| `protocolos.executar` | Protocolos técnicos | Executar protocolos nos RMAs | ✓ | | ✓ | |
+| `protocolos.executar` | Protocolos técnicos | Executar protocolos nas Ordens de serviço | ✓ | | ✓ | |
 | `protocolos.catalogo` | Protocolos técnicos | Gerenciar modelos de protocolo | ✓ | | | |
 | `relatorios.ver` | Relatórios | Ver relatórios | ✓ | | ✓ | ✓ |
 | `usuarios.gerir` | Administração | Gerenciar usuários | ✓ | | | |
@@ -54,10 +54,10 @@ Rota a rota em [api.md](api.md).
 | Recurso/operação | Permissão |
 |:---|:---|
 | Consultar clientes, produtos, peças e protocolos (`GET`, exceto importação) | qualquer usuário autenticado |
-| Consultar RMAs, Kanban e dashboard (`GET /api/rmas/**`) e laudo PDF | `rma.ver` |
+| Consultar ordens de serviço, Kanban e dashboard (`GET /api/rmas/**`) e laudo PDF | `rma.ver` |
 | Criar, alterar ou excluir clientes e produtos | `cadastros.editar` |
 | Baixar modelo, prévia e confirmação de importação CSV | `cadastros.importar` |
-| Abrir RMA | `rma.abrir` |
+| Abrir OS | `rma.abrir` |
 | Alterar dados gerais e prioridade; ajustar garantia dos itens | `rma.editar` |
 | Alterar o status | `rma.status` |
 | Atribuir ou remover responsável | `rma.responsavel` |

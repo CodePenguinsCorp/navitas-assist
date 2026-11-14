@@ -57,7 +57,7 @@ class RmaReportSummaryIntegrationTest {
 
     @Test
     void countsStatusEffectiveWarrantyAndMonthsOfThePeriod() throws Exception {
-        RmaRecord first = rma("RMA-1", "2026-09-10", RmaStatus.RECEIVED, alfa, item(controller, "S1", "L1"), item(controller, "S2", "L1"));
+        RmaRecord first = rma("OS-1", "2026-09-10", RmaStatus.RECEIVED, alfa, item(controller, "S1", "L1"), item(controller, "S2", "L1"));
         first.setPurchaseDateUnknown(false);
         first.setPurchaseDate(LocalDate.parse("2026-01-10"));
         first.getItems().get(1).setWarrantyOverride(WarrantyStatus.OUT_OF_WARRANTY);
@@ -65,8 +65,8 @@ class RmaReportSummaryIntegrationTest {
         first.getItems().get(1).setWarrantyOverrideBy("admin");
         first.getItems().get(1).setWarrantyOverrideAt(Instant.parse("2026-09-11T10:00:00Z"));
         rmas.saveAndFlush(first);
-        rma("RMA-2", "2026-10-05", RmaStatus.RETURNED, beta, item(sensor, "S9", null));
-        rma("RMA-OUT", "2026-08-31", RmaStatus.RECEIVED, alfa, item(sensor, "S8", null));
+        rma("OS-2", "2026-10-05", RmaStatus.RETURNED, beta, item(sensor, "S9", null));
+        rma("OS-OUT", "2026-08-31", RmaStatus.RECEIVED, alfa, item(sensor, "S8", null));
 
         mockMvc.perform(get("/api/reports/rmas/summary").param("entryFrom", "2026-09-01").param("entryTo", "2026-10-31")
                 .with(asProfile("viewer", "VIEWER")))
@@ -77,7 +77,7 @@ class RmaReportSummaryIntegrationTest {
             .andExpect(jsonPath("$.totalItems").value(3))
             .andExpect(jsonPath("$.byStatus", hasSize(2)))
             .andExpect(jsonPath("$.byStatus[0].key").value("RECEIVED"))
-            .andExpect(jsonPath("$.byStatus[0].label").value("Recebido"))
+            .andExpect(jsonPath("$.byStatus[0].label").value("Recebida"))
             .andExpect(jsonPath("$.byStatus[1].key").value("RETURNED"))
             .andExpect(jsonPath("$.byWarranty", hasSize(3)))
             .andExpect(jsonPath("$.byWarranty[0].key").value("IN_WARRANTY"))
@@ -95,11 +95,11 @@ class RmaReportSummaryIntegrationTest {
 
     @Test
     void ranksFailuresByProductBatchClientAndFailureType() throws Exception {
-        RmaRecord first = rma("RMA-1", "2026-10-01", RmaStatus.IN_DIAGNOSIS, alfa, item(controller, "S1", "L1"), item(controller, "S2", "L1"));
+        RmaRecord first = rma("OS-1", "2026-10-01", RmaStatus.IN_DIAGNOSIS, alfa, item(controller, "S1", "L1"), item(controller, "S2", "L1"));
         diagnose(first, FailureType.SENSOR);
-        RmaRecord second = rma("RMA-2", "2026-10-02", RmaStatus.IN_DIAGNOSIS, alfa, item(controller, "S3", "L2"));
+        RmaRecord second = rma("OS-2", "2026-10-02", RmaStatus.IN_DIAGNOSIS, alfa, item(controller, "S3", "L2"));
         diagnose(second, FailureType.SENSOR);
-        rma("RMA-3", "2026-10-03", RmaStatus.IN_DIAGNOSIS, beta, item(sensor, "S4", "L1"));
+        rma("OS-3", "2026-10-03", RmaStatus.IN_DIAGNOSIS, beta, item(sensor, "S4", "L1"));
 
         mockMvc.perform(get("/api/reports/rmas/summary").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31")
                 .with(asProfile("admin", "ADMIN")))
@@ -120,10 +120,10 @@ class RmaReportSummaryIntegrationTest {
 
     @Test
     void countsReturnsAgainstEarlierRmasOfTheSameProductAndSerial() throws Exception {
-        rma("RMA-OLD", "2026-05-01", RmaStatus.RETURNED, beta, item(controller, "S1", "L1"));
-        rma("RMA-NEW", "2026-10-01", RmaStatus.RECEIVED, alfa, item(controller, "S1", "L1"), item(controller, "S2", "L1"), item(controller, "", "L1"));
-        rma("RMA-OTHER-PRODUCT", "2026-10-02", RmaStatus.RECEIVED, alfa, item(sensor, "S2", null));
-        rma("RMA-LATER", "2026-11-20", RmaStatus.RECEIVED, alfa, item(controller, "S2", "L1"));
+        rma("OS-OLD", "2026-05-01", RmaStatus.RETURNED, beta, item(controller, "S1", "L1"));
+        rma("OS-NEW", "2026-10-01", RmaStatus.RECEIVED, alfa, item(controller, "S1", "L1"), item(controller, "S2", "L1"), item(controller, "", "L1"));
+        rma("OS-OTHER-PRODUCT", "2026-10-02", RmaStatus.RECEIVED, alfa, item(sensor, "S2", null));
+        rma("OS-LATER", "2026-11-20", RmaStatus.RECEIVED, alfa, item(controller, "S2", "L1"));
 
         mockMvc.perform(get("/api/reports/rmas/summary").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31")
                 .with(asProfile("admin", "ADMIN")))
@@ -143,10 +143,10 @@ class RmaReportSummaryIntegrationTest {
 
     @Test
     void recurrenceLooksUpOnlySerialsPresentInThePeriod() {
-        rma("RMA-S1-OLD", "2026-05-01", RmaStatus.RETURNED, beta, item(controller, "S1", null));
-        rma("RMA-S1-NEW", "2026-10-01", RmaStatus.RECEIVED, alfa, item(controller, "S1", null));
-        rma("RMA-S9-A", "2026-05-01", RmaStatus.RETURNED, beta, item(controller, "S9", null));
-        rma("RMA-S9-B", "2026-06-01", RmaStatus.RETURNED, beta, item(controller, "S9", null));
+        rma("OS-S1-OLD", "2026-05-01", RmaStatus.RETURNED, beta, item(controller, "S1", null));
+        rma("OS-S1-NEW", "2026-10-01", RmaStatus.RECEIVED, alfa, item(controller, "S1", null));
+        rma("OS-S9-A", "2026-05-01", RmaStatus.RETURNED, beta, item(controller, "S9", null));
+        rma("OS-S9-B", "2026-06-01", RmaStatus.RETURNED, beta, item(controller, "S9", null));
 
         List<Object[]> rows = rmas.findRecurrentSerials(LocalDate.parse("2026-10-01"), LocalDate.parse("2026-10-31"));
 
@@ -157,8 +157,8 @@ class RmaReportSummaryIntegrationTest {
 
     @Test
     void countsRecurrenceRegardlessOfSerialCase() throws Exception {
-        rma("RMA-OLD", "2026-05-01", RmaStatus.RETURNED, beta, item(controller, "abc1", "L1"));
-        rma("RMA-NEW", "2026-10-01", RmaStatus.RECEIVED, alfa, item(controller, "ABC1", "L1"));
+        rma("OS-OLD", "2026-05-01", RmaStatus.RETURNED, beta, item(controller, "abc1", "L1"));
+        rma("OS-NEW", "2026-10-01", RmaStatus.RECEIVED, alfa, item(controller, "ABC1", "L1"));
 
         mockMvc.perform(get("/api/reports/rmas/summary").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31")
                 .with(asProfile("admin", "ADMIN")))
@@ -173,12 +173,12 @@ class RmaReportSummaryIntegrationTest {
     @Test
     void measuresTheCurrentStageOfOpenRmasAtTheReportInstant() throws Exception {
         Instant entered = Instant.parse("2026-10-20T23:30:00Z");
-        RmaRecord open = rma("RMA-OPEN", "2026-10-20", RmaStatus.IN_DIAGNOSIS, alfa, item(controller, "S1", null));
+        RmaRecord open = rma("OS-OPEN", "2026-10-20", RmaStatus.IN_DIAGNOSIS, alfa, item(controller, "S1", null));
         history(open, RmaStatus.RECEIVED, entered.minusSeconds(3600));
         history(open, RmaStatus.IN_DIAGNOSIS, entered);
         history(open, RmaStatus.IN_DIAGNOSIS, entered.plusSeconds(1800));
         rmas.saveAndFlush(open);
-        RmaRecord closed = rma("RMA-CLOSED", "2026-10-20", RmaStatus.COMPLETED, alfa, item(controller, "S2", null));
+        RmaRecord closed = rma("OS-CLOSED", "2026-10-20", RmaStatus.COMPLETED, alfa, item(controller, "S2", null));
         history(closed, RmaStatus.COMPLETED, entered);
         rmas.saveAndFlush(closed);
 
@@ -198,8 +198,8 @@ class RmaReportSummaryIntegrationTest {
 
     @Test
     void appliesTheSameFiltersAndPermissionsAsTheList() throws Exception {
-        rma("RMA-1", "2026-10-01", RmaStatus.RECEIVED, alfa, item(controller, "S1", null));
-        rma("RMA-2", "2026-10-01", RmaStatus.RECEIVED, beta, item(controller, "S2", null));
+        rma("OS-1", "2026-10-01", RmaStatus.RECEIVED, alfa, item(controller, "S1", null));
+        rma("OS-2", "2026-10-01", RmaStatus.RECEIVED, beta, item(controller, "S2", null));
         mockMvc.perform(get("/api/reports/rmas/summary").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31")
                 .param("clientId", beta.getId().toString()).with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.totalRmas").value(1));

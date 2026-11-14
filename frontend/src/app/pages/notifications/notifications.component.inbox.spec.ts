@@ -14,8 +14,8 @@ import { ClockService } from '../../core/services/clock.service';
 import { NotificationsComponent } from './notifications.component';
 
 const NOTIFICATION: NotificationResponse = {
-  id: 5, eventType: 'RMA_ASSIGNED', severity: 'INFO', title: 'RMA RMA-2026-000007 atribuído a Técnico', message: 'Cliente · Produto',
-  rmaId: 7, rmaCode: 'RMA-2026-000007', actionPath: '/rmas?rma=7', createdAt: '2026-10-24T12:00:00Z', readAt: null, snoozedUntil: null, read: false
+  id: 5, eventType: 'RMA_ASSIGNED', severity: 'INFO', title: 'OS OS-2026-000007 atribuída a Técnico', message: 'Cliente · Produto',
+  rmaId: 7, rmaCode: 'OS-2026-000007', actionPath: '/rmas?rma=7', createdAt: '2026-10-24T12:00:00Z', readAt: null, snoozedUntil: null, read: false
 };
 const OLD: NotificationResponse = { ...NOTIFICATION, id: 8, title: 'Notificação antiga' };
 const NEW: NotificationResponse = { ...NOTIFICATION, id: 9, title: 'Notificação nova' };
@@ -134,9 +134,9 @@ describe('NotificationsComponent inbox loading', () => {
   // Vermelho: a lista antiga continua visível depois que a recarga do filtro falha.
   it('hides the previous list when a filter reload fails', async () => {
     await setup({ list: [of([NOTIFICATION]), failure()] });
-    expect(text()).toContain('RMA RMA-2026-000007 atribuído a Técnico');
+    expect(text()).toContain('OS OS-2026-000007 atribuída a Técnico');
     toggle('Somente não lidas');
-    expect(text()).not.toContain('RMA RMA-2026-000007 atribuído a Técnico');
+    expect(text()).not.toContain('OS OS-2026-000007 atribuída a Técnico');
     expect(text()).toContain('Não foi possível carregar as notificações.');
     button('Tentar novamente')!.click();
     render();
@@ -154,7 +154,7 @@ describe('NotificationsComponent inbox loading', () => {
     await setup({ list: [of([NOTIFICATION]), new Subject<NotificationResponse[]>()] });
     toggle('Mostrar adiadas');
     expectPending(root());
-    expect(text()).not.toContain('RMA RMA-2026-000007 atribuído a Técnico');
+    expect(text()).not.toContain('OS OS-2026-000007 atribuída a Técnico');
   });
 
   // Vermelho: não existe "Tentar novamente" nem estado "Carregando..." na nova tentativa.
@@ -290,7 +290,7 @@ describe('NotificationsComponent inbox loading', () => {
       await setup({ list: [of([NOTIFICATION]), new Subject<NotificationResponse[]>()] });
       component.snooze(NOTIFICATION, '60');
       render();
-      expect(text()).not.toContain('RMA RMA-2026-000007 atribuído a Técnico');
+      expect(text()).not.toContain('OS OS-2026-000007 atribuída a Técnico');
       expectPending(root());
       expect(root().querySelector('.notification-list')).toBeNull();
       expect(service['list']).toHaveBeenCalledTimes(2);
@@ -310,7 +310,7 @@ describe('NotificationsComponent inbox loading', () => {
       await setup({ markRead: failure() as never });
       component.markRead(NOTIFICATION);
       render();
-      expect(text()).toContain('RMA RMA-2026-000007 atribuído a Técnico');
+      expect(text()).toContain('OS OS-2026-000007 atribuída a Técnico');
       expect(text()).toContain('Não foi possível concluir a ação agora.');
     });
   });
@@ -346,12 +346,12 @@ describe('NotificationsComponent inbox loading', () => {
 
         expect(dialog()).not.toBeNull();
         expect(dialog()!.getAttribute('aria-modal')).toBe('true');
-        expect(dialog()!.querySelector('h3')!.textContent).toBe('RMA RMA-2026-000007 atribuído a Técnico');
+        expect(dialog()!.querySelector('h3')!.textContent).toBe('OS OS-2026-000007 atribuída a Técnico');
         expect(dialogText()).toContain('Informativo');
         expect(dialogText()).toContain('Nova atribuição');
         expect(dialogText()).toContain('24 de outubro de 2026 às 09:00');
         expect(dialogText()).toContain('(há 1 h)');
-        expect(dialogText()).toContain('RMA-2026-000007');
+        expect(dialogText()).toContain('OS-2026-000007');
         expect(dialog()!.querySelector('.notification-detail__message')!.textContent).toBe('Primeira linha\nSegunda linha <b>não é HTML</b>');
         expect(dialog()!.querySelector('.notification-detail__message b')).toBeNull();
         expect(service['markRead']).toHaveBeenCalledWith(5, { silent: true });
@@ -378,7 +378,7 @@ describe('NotificationsComponent inbox loading', () => {
         render();
         expect(dialog()).not.toBeNull();
         expect(dialogButton('Abrir OS')).toBeUndefined();
-        expect(dialogText()).toContain('RMA-2026-000007');
+        expect(dialogText()).toContain('OS-2026-000007');
         expect(navigate).not.toHaveBeenCalled();
       });
 
@@ -444,7 +444,7 @@ describe('NotificationsComponent inbox loading', () => {
         expect(next().disabled).toBe(true);
         previous().click();
         render();
-        expect(dialog()!.querySelector('h3')!.textContent).toBe('RMA RMA-2026-000007 atribuído a Técnico');
+        expect(dialog()!.querySelector('h3')!.textContent).toBe('OS OS-2026-000007 atribuída a Técnico');
       });
     });
 
@@ -577,7 +577,7 @@ describe('NotificationsComponent inbox loading', () => {
       it('keeps mark as read and snooze as discreet row actions', async () => {
         await setup();
         expect(button('Marcar como lida')!.classList).toContain('row-action');
-        expect(button('Marcar como lida')!.getAttribute('aria-label')).toBe('Marcar como lida RMA RMA-2026-000007 atribuído a Técnico');
+        expect(button('Marcar como lida')!.getAttribute('aria-label')).toBe('Marcar como lida OS OS-2026-000007 atribuída a Técnico');
         expect(item().querySelector('app-custom-select')).not.toBeNull();
         expect(item().querySelector('.button-secondary')).toBeNull();
         component.snooze(NOTIFICATION, '1440');

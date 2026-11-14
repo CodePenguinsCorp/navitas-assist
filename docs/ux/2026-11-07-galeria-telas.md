@@ -11,7 +11,7 @@ São mockups exploratórios: nem todos os controles, salvamentos e filtros repro
 | Operação | Cadastros e configuração | Acesso e análise |
 | --- | --- | --- |
 | [Dashboard](#dashboard) | [Clientes](#clientes) | [Login](#login) |
-| [RMAs](#rmas) | [Produtos](#produtos) | [Relatórios](#relatórios) |
+| [ordens de serviço](#rmas) | [Produtos](#produtos) | [Relatórios](#relatórios) |
 | [Kanban](#kanban) | [Protocolos](#protocolos) | |
 | [Peças](#peças) | [Usuários](#usuários) | |
 | [Notificações](#notificações) | | |
@@ -22,11 +22,11 @@ Visão operacional com indicadores contextualizados, fila acionável e atividade
 
 ![Proposta do dashboard](../../output/playwright/global-dashboard.png)
 
-### RMAs
+### ordens de serviço
 
 Coleção com busca, acesso ao histórico por lote/série e abertura do atendimento. Os dados detalhados de garantia, prioridade, entrada e identificação continuam no contrato de informação; a definição de colunas padrão deve ser validada.
 
-![Proposta da lista de RMAs](../../output/playwright/global-rmas.png)
+![Proposta da lista de ordens de serviço](../../output/playwright/global-rmas.png)
 
 ### Kanban
 
@@ -66,7 +66,7 @@ Identidade, usuário, perfil e estado separados. Estado é indicador; o formulá
 
 ### Notificações
 
-Um resumo, ícone de evento, referência do RMA, instante e ações discretas. Preferências e regras são seções distintas da caixa de entrada.
+Um resumo, ícone de evento, referência da OS, instante e ações discretas. Preferências e regras são seções distintas da caixa de entrada.
 
 ![Proposta da caixa de notificações](../../output/playwright/global-notificacoes.png)
 
@@ -84,17 +84,17 @@ Mesma identidade visual e geometria dos controles. Rótulos persistentes e mostr
 
 ## Fluxos internos
 
-### Abertura de RMA
+### Abertura de OS
 
 Grupos de Atendimento, Produtos, Recebimento e Atendimento já realizado. A organização é uma proposta para discussão; campos de negócio não foram removidos. A implementação precisa preservar dados e validações ao trocar de grupo.
 
-![Proposta de abertura de RMA](../../output/playwright/global-novo-rma.png)
+![Proposta de abertura de OS](../../output/playwright/global-novo-rma.png)
 
-### Detalhe do RMA pela lista
+### Detalhe da OS pela lista
 
 Preservação das seis seções que já existem na lista. O detalhe do Kanban ainda pode aproveitar seus blocos e timeline; harmonizar o acesso à informação antes de substituir sua estrutura.
 
-![Proposta do detalhe de RMA](../../output/playwright/global-detalhe-rma.png)
+![Proposta do detalhe de OS](../../output/playwright/global-detalhe-rma.png)
 
 ### Execução de protocolo
 
@@ -146,7 +146,7 @@ Compra, entrada, prazo e estado separados. Compra desconhecida mantém pendênci
 
 ### Devoluções
 
-Atendimento, cliente, expedição, transportadora e rastreio. O período continua baseado na entrada do RMA, conforme o sistema atual.
+Atendimento, cliente, expedição, transportadora e rastreio. O período continua baseado na entrada da OS, conforme o sistema atual.
 
 ![Proposta do relatório de devoluções](../../output/playwright/global-devolucoes.png)
 

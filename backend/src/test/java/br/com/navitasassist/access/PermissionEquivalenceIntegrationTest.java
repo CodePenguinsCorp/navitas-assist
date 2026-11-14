@@ -76,7 +76,7 @@ class PermissionEquivalenceIntegrationTest {
     private static String sample(String pattern) {
         return pattern
             .replace("{eventType}", "INVALID")
-            .replace("{code}", "RMA-INEXISTENTE")
+            .replace("{code}", "OS-INEXISTENTE")
             .replaceAll("\\{[A-Za-z]+}", ID);
     }
 

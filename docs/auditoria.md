@@ -17,7 +17,7 @@ A auditoria tem três níveis: logs do servidor, trilha transacional no banco e 
 | Usuários | Criação, exclusão e campos alterados; ativação, senha e e-mail alterados sem seus valores. Perfil e permissões com permissões adicionadas/removidas. |
 | Perfis | Criação, edição, exclusão e diferença de permissões. |
 | Clientes e produtos | Criação, exclusão e nomes dos campos alterados; nome/código no rótulo do registro. |
-| Observação de status do RMA | Texto anterior limitado a 200 caracteres e texto novo até 255, com máscaras para dados pessoais e segredos reconhecidos. |
+| Observação de status da OS | Texto anterior limitado a 200 caracteres e texto novo até 255, com máscaras para dados pessoais e segredos reconhecidos. |
 | Notificações | Alteração de regras, solicitação de reenvio e solicitação de e-mail de teste, sem endereço de destino. |
 | Importação CSV | Confirmação com contagens, sem conteúdo das linhas. |
 | Garantia e anulação de reparo | Referência ao histórico específico existente, sem repetir seus dados. |
@@ -30,7 +30,7 @@ As observações preservam o texto anterior e o novo com máscaras para e-mail, 
 
 O envio externo de e-mail não pode ser revertido pelo banco. O evento de teste descreve a **solicitação**, não comprova entrega; o resultado da entrega continua no mecanismo de e-mail.
 
-Não são registrados acessos de leitura, navegação, falhas de login na tabela, prévias de CSV ou o conteúdo importado. A trilha não substitui os históricos próprios de RMA, garantia e reparo.
+Não são registrados acessos de leitura, navegação, falhas de login na tabela, prévias de CSV ou o conteúdo importado. A trilha não substitui os históricos próprios de OS, garantia e reparo.
 
 ## Consulta
 

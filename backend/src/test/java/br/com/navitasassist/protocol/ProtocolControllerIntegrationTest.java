@@ -121,7 +121,7 @@ class ProtocolControllerIntegrationTest {
 
     @Test
     void shouldFreezeStartedExecutionsWhenTemplateChanges() throws Exception {
-        Long rmaId = saveRma("RMA-PROT-1", product);
+        Long rmaId = saveRma("OS-PROT-1", product);
         long templateId = templateId(createTemplate(templateJson("Inspeção visual", null, "controladores", List.of(checkItem("Carcaça", true)))));
         JsonNode execution = startExecution(rmaId, templateId, "tech", "TECHNICIAN");
         long executionId = execution.get("id").asLong();
@@ -150,17 +150,17 @@ class ProtocolControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"templateId\":" + templateId + "}"))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("This protocol is already in progress for the RMA."));
+            .andExpect(jsonPath("$.message").value("Este protocolo já está em andamento para a OS."));
 
         Product other = saveProduct("PROT-2", "Sensor", "Sensores");
-        Long otherRmaId = saveRma("RMA-PROT-2", other);
+        Long otherRmaId = saveRma("OS-PROT-2", other);
         mockMvc.perform(post("/api/protocols/rmas/{rmaId}/executions", otherRmaId)
                 .with(asProfile("tech", "TECHNICIAN"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"templateId\":" + templateId + "}"))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("This protocol does not apply to the products of the RMA."));
+            .andExpect(jsonPath("$.message").value("Este protocolo não se aplica aos produtos da OS."));
 
         mockMvc.perform(post("/api/protocols/rmas/{rmaId}/executions", rmaId)
                 .with(asProfile("viewer", "VIEWER"))
@@ -172,7 +172,7 @@ class ProtocolControllerIntegrationTest {
 
     @Test
     void shouldValidateRequiredFieldsAndPreserveMeasurementUnitAndPrecision() throws Exception {
-        Long rmaId = saveRma("RMA-PROT-3", product);
+        Long rmaId = saveRma("OS-PROT-3", product);
         Map<String, Object> evidenceItem = checkItem("Foto da placa", true);
         evidenceItem.put("evidenceRequired", true);
         Map<String, Object> textItem = checkItem("Observação", true);
@@ -222,7 +222,7 @@ class ProtocolControllerIntegrationTest {
 
     @Test
     void shouldKeepRepetitionHistoryWithJustification() throws Exception {
-        Long rmaId = saveRma("RMA-PROT-4", product);
+        Long rmaId = saveRma("OS-PROT-4", product);
         long templateId = templateId(createTemplate(templateJson("Teste funcional", product.getId(), null, List.of(checkItem("Liga", true)))));
         JsonNode execution = startExecution(rmaId, templateId, "tech", "TECHNICIAN");
         long executionId = execution.get("id").asLong();
@@ -246,7 +246,7 @@ class ProtocolControllerIntegrationTest {
 
     @Test
     void shouldBlockConfiguredRmaTransitionsWhileRequiredItemsArePending() throws Exception {
-        Long rmaId = saveRma("RMA-PROT-5", product);
+        Long rmaId = saveRma("OS-PROT-5", product);
         Map<String, Object> template = templatePayload("Reparo", product.getId(), null, List.of(checkItem("Solda revisada", true)));
         template.put("blockedStatuses", List.of("IN_TESTS", "COMPLETED"));
         long templateId = templateId(createTemplate(objectMapper.writeValueAsString(template)));
@@ -255,7 +255,7 @@ class ProtocolControllerIntegrationTest {
         changeStatus(rmaId, "IN_REPAIR").andExpect(status().isOk());
         changeStatus(rmaId, "IN_TESTS")
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Required items of protocol Reparo v1 are pending. The RMA cannot move to IN_TESTS."));
+            .andExpect(jsonPath("$.message").value("Itens obrigatórios do protocolo Reparo v1 estão pendentes. A OS não pode avançar para IN_TESTS."));
 
         result(execution.get("id").asLong(), itemId(execution, 0), "FAILED", null, null, null, "Solda fria").andExpect(status().isCreated());
         changeStatus(rmaId, "IN_TESTS").andExpect(status().isBadRequest());
@@ -266,23 +266,23 @@ class ProtocolControllerIntegrationTest {
 
     @Test
     void shouldBlockConfiguredTransitionsWhenAnApplicableProtocolWasNotStarted() throws Exception {
-        Long rmaId = saveRma("RMA-PROT-6", product);
+        Long rmaId = saveRma("OS-PROT-6", product);
         Product other = saveProduct("PROT-3", "Fonte", "Fontes");
-        Long otherRmaId = saveRma("RMA-PROT-7", other);
+        Long otherRmaId = saveRma("OS-PROT-7", other);
         Map<String, Object> template = templatePayload("Inspeção final", null, "Controladores", List.of(checkItem("Aperto dos bornes", true)));
         template.put("blockedStatuses", List.of("IN_TESTS"));
         long templateId = templateId(createTemplate(objectMapper.writeValueAsString(template)));
 
         changeStatus(rmaId, "IN_TESTS")
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Protocol Inspeção final v1 has required items and was not started. The RMA cannot move to IN_TESTS."));
+            .andExpect(jsonPath("$.message").value("Protocolo Inspeção final v1 possui itens obrigatórios e não foi iniciado. A OS não pode avançar para IN_TESTS."));
         changeStatus(rmaId, "IN_REPAIR").andExpect(status().isOk());
         changeStatus(otherRmaId, "IN_TESTS").andExpect(status().isOk());
 
         JsonNode execution = startExecution(rmaId, templateId, "tech", "TECHNICIAN");
         changeStatus(rmaId, "IN_TESTS")
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Required items of protocol Inspeção final v1 are pending. The RMA cannot move to IN_TESTS."));
+            .andExpect(jsonPath("$.message").value("Itens obrigatórios do protocolo Inspeção final v1 estão pendentes. A OS não pode avançar para IN_TESTS."));
 
         result(execution.get("id").asLong(), itemId(execution, 0), "PASSED", null, null, null, null).andExpect(status().isCreated());
         changeStatus(rmaId, "IN_TESTS").andExpect(status().isOk());
@@ -290,7 +290,7 @@ class ProtocolControllerIntegrationTest {
 
     @Test
     void shouldNotBlockTransitionsForInactiveOrOptionalOnlyProtocols() throws Exception {
-        Long rmaId = saveRma("RMA-PROT-8", product);
+        Long rmaId = saveRma("OS-PROT-8", product);
         Map<String, Object> inactive = templatePayload("Inativo", product.getId(), null, List.of(checkItem("Obrigatório", true)));
         inactive.put("blockedStatuses", List.of("IN_TESTS"));
         inactive.put("active", false);
@@ -304,7 +304,7 @@ class ProtocolControllerIntegrationTest {
 
     @Test
     void shouldRejectMeasurementsBeyondStoragePrecisionAsValidationError() throws Exception {
-        Long rmaId = saveRma("RMA-PROT-9", product);
+        Long rmaId = saveRma("OS-PROT-9", product);
         long templateId = templateId(createTemplate(templateJson("Grande", product.getId(), null, List.of(measurementItem("Resistência", true, "Ω", 2, null, null)))));
         JsonNode execution = startExecution(rmaId, templateId, "tech", "TECHNICIAN");
 

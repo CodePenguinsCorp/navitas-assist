@@ -123,10 +123,10 @@ describe('RmasComponent form', () => {
     expect(page.querySelector('[formControlName="invoiceFileName"]')).toBeNull();
     expect(page.querySelector('[formControlName="receivedBy"]')).toBeNull();
     expect(page.textContent).not.toContain('Arquivo da NF');
-    expect(page.textContent).not.toContain('Recebido por');
+    expect(page.textContent).not.toContain('Recebida por');
   });
 
-  it('creates an RMA with its invoice number without sending a file or receiver', () => {
+  it('creates an OS with its invoice number without sending a file or receiver', () => {
     component.createForm.patchValue({
       clientId: 1, purchaseDateUnknown: true, invoiceNumber: '  NF-123  ', reportedFailure: 'Falha',
     });
@@ -150,7 +150,7 @@ describe('RmasComponent form', () => {
     expect(page.textContent).toContain('Nota fiscal');
     expect(page.textContent).toContain('NF-123');
     expect(page.textContent).not.toContain('Arquivo da NF');
-    expect(page.textContent).not.toContain('Recebido por');
+    expect(page.textContent).not.toContain('Recebida por');
   });
 });
 
@@ -165,7 +165,7 @@ interface RmaFormHarness {
 }
 
 const createdRma: RmaResponse = {
-  id: 1, code: 'RMA-2026-000001', clientId: 1, clientName: 'Cliente',
+  id: 1, code: 'OS-2026-000001', clientId: 1, clientName: 'Cliente',
   items: [{ id: 1, productId: 2, productName: 'Produto', productSku: 'SKU-2', batchNumber: null,
     serialNumber: 'SER-2', manufacturedAt: null, warrantyMonths: 12, warrantyExpiresAt: null, calculatedWarrantyStatus: WarrantyStatus.PENDING, warrantyOverride: null, warrantyStatus: WarrantyStatus.PENDING }],
   productId: 2, productName: 'Produto', productSku: 'SKU-2', batchNumber: null, serialNumber: 'SER-2',
@@ -276,13 +276,13 @@ describe('RmasComponent pending editor lifecycle', () => {
   }
 
   function fail(request: TestRequest): void {
-    request.flush({ message: 'RMA not saved', details: [] }, { status: 400, statusText: 'Bad Request' });
+    request.flush({ message: 'OS not saved', details: [] }, { status: 400, statusText: 'Bad Request' });
     fixture.detectChanges();
   }
 
   function succeed(request: TestRequest, mode: 'create' | 'diagnosis'): void {
     const saved: RmaResponse = mode === 'create'
-      ? { ...createdRma, id: 2, code: 'RMA-2026-000002', reportedFailure: 'Falha mantida' }
+      ? { ...createdRma, id: 2, code: 'OS-2026-000002', reportedFailure: 'Falha mantida' }
       : { ...createdRma, diagnosis: { id: 1, ...request.request.body,
         createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt } };
     request.flush(saved);
@@ -296,7 +296,7 @@ describe('RmasComponent pending editor lifecycle', () => {
   function expectSuccess(mode: 'create' | 'diagnosis'): void {
     expect(page.querySelector('.modal-overlay') === null).toBe(mode === 'create');
     if (mode === 'diagnosis') { exitControl('close').click(); fixture.detectChanges(); }
-    expect(page.querySelector('tbody')?.textContent).toContain(mode === 'create' ? 'RMA-2026-000002' : createdRma.code);
+    expect(page.querySelector('tbody')?.textContent).toContain(mode === 'create' ? 'OS-2026-000002' : createdRma.code);
     openEditor(mode);
     expect(fieldValue(mode)).toBe(mode === 'create' ? '' : 'Falha mantida');
     exitControl('cancel').click();
@@ -329,7 +329,7 @@ describe('RmasComponent pending editor lifecycle', () => {
       openEditor(mode);
       fillEditor(mode);
       fail(submit(mode));
-      expect(editorFeedback(mode)).toContain('RMA not saved');
+      expect(editorFeedback(mode)).toContain('OS not saved');
       expect(fieldValue(mode)).toBe('Falha mantida');
       expect((exitControl('close') as HTMLButtonElement).disabled).toBe(false);
       expect((exitControl('cancel') as HTMLButtonElement).disabled).toBe(false);
@@ -344,7 +344,7 @@ describe('RmasComponent pending editor lifecycle', () => {
       fail(submit(mode));
       const retry = submit(mode);
       expect(retry.request.body[mode === 'create' ? 'reportedFailure' : 'foundFailure']).toBe('Falha mantida');
-      expect(page.textContent).not.toContain('RMA not saved');
+      expect(page.textContent).not.toContain('OS not saved');
       succeed(retry, mode);
       expectSuccess(mode);
     });

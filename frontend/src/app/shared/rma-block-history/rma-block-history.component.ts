@@ -6,12 +6,12 @@ import { blockDateTime, blockDuration } from '../../core/utils/rma-block';
 @Component({
   selector: 'app-rma-block-history',
   template: `
-    <section class="summary-block block-history" [class.block-history--previous]="previousOnly()" [attr.aria-label]="previousOnly() ? 'Impedimentos anteriores' : 'Impedimentos do RMA'">
+    <section class="summary-block block-history" [class.block-history--previous]="previousOnly()" [attr.aria-label]="previousOnly() ? 'Impedimentos anteriores' : 'Impedimentos da OS'">
       @if (!previousOnly()) {
         <h3>Impedimentos</h3>
         @if (rma().currentBlock; as block) {
           <div class="block-history__current">
-            <strong>Bloqueado há {{ duration(block, clock.now()) }}</strong>
+            <strong>Impedida há {{ duration(block, clock.now()) }}</strong>
             <p>{{ block.reason }}</p>
           </div>
         } @else {

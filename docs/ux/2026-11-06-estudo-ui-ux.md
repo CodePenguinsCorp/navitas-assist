@@ -9,7 +9,7 @@ Escopo: o produto inteiro (11 telas de entrada e seus fluxos internos), entregue
 | # | Decisão | Base conservadora proposta | Alternativa | Escolha |
 | --- | --- | --- | --- | --- |
 | 1 | Card do Kanban | Produto e falha resumida, cliente, SLA (inclusive saudável), prioridade, avatar e chave | Card enxuto: ocultar SLA saudável e falha, após teste com operadores | **Enxuto** (decidido em 7 nov): SLA saudável e falha saem do card; cliente, exceções de SLA/bloqueio, prioridade, avatar e chave ficam. Validar com operadores após a entrega |
-| 2 | Detalhe do RMA | Preservar as seis abas da lista e os blocos/timeline do Kanban; harmonizar o contrato de informação antes de trocar a estrutura | Estrutura única com abas nos dois lugares | **Harmonizar primeiro** (decidido em 7 nov) |
+| 2 | Detalhe da OS | Preservar as seis abas da lista e os blocos/timeline do Kanban; harmonizar o contrato de informação antes de trocar a estrutura | Estrutura única com abas nos dois lugares | **Harmonizar primeiro** (decidido em 7 nov) |
 | 3 | Indicadores nos cadastros | Avaliar por tarefa: total no título; indicadores de gestão no dashboard; estoque mantém o que orienta ação | Remover de todos os cadastros | **Avaliar por tela** (decidido em 7 nov) |
 | 4 | Prioridade | Ícone com nome acessível e rótulo curto na densidade padrão | Só ícone, após teste de compreensão | **Ícone + rótulo curto** (decidido em 7 nov) |
 | 5 | Fundação visual | Azul `#236DA7`, Segoe UI, escala 4/8/12/16/24/32, controles de 36 px; valores são candidatos | Ajustar paleta e medidas | **Aceita como ponto de partida** (decidido em 7 nov) |
@@ -22,21 +22,21 @@ Escopo: o produto inteiro (11 telas de entrada e seus fluxos internos), entregue
 - Tabela para comparar registros, pares rótulo/valor para propriedades, timeline para eventos e checklist para execução. Não transformar tudo em chips ou cards.
 - Nenhuma simplificação visual elimina permissões, filtros, paginação, rastreabilidade ou ações existentes.
 - Texto de implementação não aparece para o usuário (ex.: exportação indisponível em relatórios).
-- Ações de negócio mantêm texto (Iniciar protocolo, Consumir, Efetivar reserva); ações recorrentes de linha usam ícone com tooltip e nome acessível.
+- Ações de negócio mantêm texto (Iniciar protocolo, Aplicar, Efetivar reserva); ações recorrentes de linha usam ícone com tooltip e nome acessível.
 - Estado vazio, busca sem resultado, falha de carga e falta de permissão são casos distintos.
 
 ### Primeira entrega (fase 1, implementada em 7 nov; plano em `2026-11-07-plano-fase-1-fundacao.md`)
 
 1. Shell: usuário e Sair no rodapé da lateral; sino com contador. Já entregue no commit `71d51ba`.
 2. Rótulos visíveis no login, com fundo mais escuro para manter contraste mínimo de 4,5:1 (cálculo sobre o CSS, não medição de pixels).
-3. Ordem Cancelar / ação principal nos diálogos de clientes, produtos, usuários, peças, protocolos e execução de protocolo. Rodapé do `rma-block-panel`, Cancelar no estorno de peças e filtros de RMAs ficam para a fase seguinte.
+3. Ordem Cancelar / ação principal nos diálogos de clientes, produtos, usuários, peças, protocolos e execução de protocolo. Rodapé do `rma-block-panel`, Cancelar no estorno de peças e filtros de ordens de serviço ficam para a fase seguinte.
 4. Texto de relatórios sem justificativa técnica da exportação.
 
 Em seguida: piloto operacional no Kanban. O restante entra por fases, conforme a tabela de ordem de aplicação.
 
 ## Direção recomendada
 
-Uma ferramenta de operação com uma linguagem comum em todo o produto: leitura rápida, poucas superfícies, ações previsíveis e detalhes disponíveis no contexto. O Kanban é a principal referência operacional, mas o escopo inclui login, navegação, dashboard, lista e abertura de RMAs, atendimento, peças, clientes, produtos, protocolos, usuários, notificações e relatórios, com suas telas internas e estados.
+Uma ferramenta de operação com uma linguagem comum em todo o produto: leitura rápida, poucas superfícies, ações previsíveis e detalhes disponíveis no contexto. O Kanban é a principal referência operacional, mas o escopo inclui login, navegação, dashboard, lista e abertura de ordens de serviço, atendimento, peças, clientes, produtos, protocolos, usuários, notificações e relatórios, com suas telas internas e estados.
 
 Usar o Jira para o quadro e a organização do atendimento; Linear para densidade; Geist para estruturas discretas; Carbon para tabelas, ações em lote e formulários. Preservar o azul do Navitas. Um padrão comum deve oferecer composições adequadas a tarefas diferentes: uma tabela de estoque, um formulário de diagnóstico e um relatório não precisam ter o mesmo layout para pertencerem ao mesmo produto.
 
@@ -52,7 +52,7 @@ O pedido já define a preferência por cards enxutos, detalhe com conteúdo à e
 
 ### Material visual global
 
-A [galeria do projeto inteiro](2026-11-07-galeria-telas.md) apresenta as 11 telas de entrada e exemplos de abertura de RMA, atendimento, estoque, versões de protocolos, configurações e relatórios. A visualização de referência está em `visuals/navitas-projeto-completo.html` e usa a navegação do produto para explorar os módulos.
+A [galeria do projeto inteiro](2026-11-07-galeria-telas.md) apresenta as 11 telas de entrada e exemplos de abertura de OS, atendimento, estoque, versões de protocolos, configurações e relatórios. A visualização de referência está em `visuals/navitas-projeto-completo.html` e usa a navegação do produto para explorar os módulos.
 
 ![Visão global do dashboard e navegação](../../output/playwright/global-dashboard.png)
 
@@ -60,16 +60,16 @@ A [galeria do projeto inteiro](2026-11-07-galeria-telas.md) apresenta as 11 tela
 
 ## Cobertura do projeto inteiro
 
-O inventário parte das rotas e de seus estados internos. `/cadastros`, a raiz e a rota desconhecida são redirecionamentos, não novos módulos. Garantia é um domínio presente em produtos, RMAs e relatórios; não existe uma tela independente de garantias nesta versão.
+O inventário parte das rotas e de seus estados internos. `/cadastros`, a raiz e a rota desconhecida são redirecionamentos, não novos módulos. Garantia é um domínio presente em produtos, ordens de serviço e relatórios; não existe uma tela independente de garantias nesta versão.
 
 | Tela de entrada | Telas internas e fluxos incluídos | Evidência principal |
 | --- | --- | --- |
 | Login | Credenciais, mostrar senha, validação, falha de autenticação, envio | `pages/login/login.component.html` |
-| Dashboard | Indicadores, fila, auditoria, últimos RMAs, carregamento e vazio | `pages/dashboard/dashboard.component.html` |
-| RMAs | Lista, filtros, histórico por lote/série, paginação, abertura, detalhe e diagnóstico | `pages/rmas/rmas.component.html` |
+| Dashboard | Indicadores, fila, auditoria, últimas ordens de serviço, carregamento e vazio | `pages/dashboard/dashboard.component.html` |
+| Ordens de serviço | Lista, filtros, histórico por lote/série, paginação, abertura, detalhe e diagnóstico | `pages/rmas/rmas.component.html` |
 | Kanban | Nove etapas, busca e 11 filtros, visualizações salvas, seleção em lote, status, responsável e detalhe | `pages/kanban/kanban.component.html`; `shared/kanban-bulk-actions` |
 | Notificações | Caixa de entrada, não lidas/adiadas, adiar, preferências, regras administrativas e falhas de processamento | `pages/notifications/notifications.component.html` |
-| Peças | Estoque, reposição, pendências por RMA, cadastro, movimento, histórico e estorno | `pages/parts/parts.component.html` |
+| Peças | Estoque, reposição, pendências por OS, cadastro, movimento, histórico e estorno | `pages/parts/parts.component.html` |
 | Clientes | Lista, busca e filtros, paginação, criar/editar, confirmação de exclusão e erros | `pages/clients/clients.component.html` |
 | Produtos | Lista, categoria/firmware, paginação, criar/editar, garantia padrão, versões e exclusão | `pages/products/products.component.html` |
 | Protocolos | Catálogo, aplicação por produto/categoria, criar, publicar versão, itens, medições e etapas bloqueadas | `pages/protocols/protocols.component.html` |
@@ -80,10 +80,10 @@ O inventário parte das rotas e de seus estados internos. `/cadastros`, a raiz e
 
 ### Achados globais mais relevantes
 
-1. **A mesma entidade tem dois detalhes.** A lista de RMAs já usa seis abas: Produtos, Diagnóstico, Peças, Protocolos, Impedimentos e Histórico (`RmasComponent.detailTabs`). O Kanban abre `RmaDetailModalComponent`, com blocos e linha do tempo, sem abas. A revisão externa estava correta sobre o modal do Kanban, mas a conclusão não deve ser generalizada para o projeto todo. Primeiro unificar o contrato de informação e o acesso às ações; reaproveitar os dois avanços existentes antes de decidir uma estrutura única.
-2. **Estatísticas ocupam espaço em vários cadastros.** Clientes, produtos, usuários, peças, RMAs e Kanban apresentam indicadores antes da lista/quadro. Avaliar a utilidade por tarefa: total pode ser contagem no título; indicadores de estoque podem orientar uma ação; métricas de gestão cabem no dashboard. Não retirar indicadores de todos os módulos automaticamente.
+1. **A mesma entidade tem dois detalhes.** A lista de ordens de serviço já usa seis abas: Produtos, Diagnóstico, Peças, Protocolos, Impedimentos e Histórico (`RmasComponent.detailTabs`). O Kanban abre `RmaDetailModalComponent`, com blocos e linha do tempo, sem abas. A revisão externa estava correta sobre o modal do Kanban, mas a conclusão não deve ser generalizada para o projeto todo. Primeiro unificar o contrato de informação e o acesso às ações; reaproveitar os dois avanços existentes antes de decidir uma estrutura única.
+2. **Estatísticas ocupam espaço em vários cadastros.** Clientes, produtos, usuários, peças, ordens de serviço e Kanban apresentam indicadores antes da lista/quadro. Avaliar a utilidade por tarefa: total pode ser contagem no título; indicadores de estoque podem orientar uma ação; métricas de gestão cabem no dashboard. Não retirar indicadores de todos os módulos automaticamente.
 3. **Formulários repetem instruções e variam nas ações.** Frases como “preencha os dados principais” não acrescentam contexto. Havia rodapés com Salvar antes de Cancelar e outros com ordem inversa; a fase 1 padronizou a maioria (restam rma-block-panel, estorno de peças e filtros). Definir Cancelar à esquerda e ação principal à direita, mantendo esse arranjo em todos os diálogos.
-4. **A abertura de RMA mistura momentos do ciclo.** O formulário inclui recebimento, compra, falha, reparo, peças trocadas e testes. Propor agrupamento por momento operacional, preservando a possibilidade de registrar atendimento retroativo; não remover campos nem alterar sua obrigatoriedade sem validar o processo.
+4. **A abertura de OS mistura momentos do ciclo.** O formulário inclui recebimento, compra, falha, reparo, peças trocadas e testes. Propor agrupamento por momento operacional, preservando a possibilidade de registrar atendimento retroativo; não remover campos nem alterar sua obrigatoriedade sem validar o processo.
 5. **Regras também precisam de hierarquia.** O editor de protocolos expõe configuração, etapas bloqueadas e muitos campos de cada item; regras de notificações acumulam seletores e checkboxes. Priorizar visão resumida e edição da regra/item selecionado.
 6. **Relatórios têm conteúdo de produto a rever.** A tela expõe a justificativa técnica da exportação indisponível. O usuário precisa ver as opções disponíveis; detalhes de implementação pertencem à documentação. Manter período, instante de geração e critério da consulta, pois afetam a interpretação dos dados.
 7. **Peças têm semântica própria.** Disponível, reservado e em estoque são valores distintos. Estorno é uma operação rastreável, não exclusão. O sistema visual deve tornar essas diferenças claras.
@@ -94,8 +94,8 @@ O inventário parte das rotas e de seus estados internos. `/cadastros`, a raiz e
 | --- | --- | --- |
 | Acesso | Login | Marca contida, rótulos persistentes, dois campos, ação principal e feedback local |
 | Visão operacional | Dashboard | Indicadores úteis, fila acionável e atividade; números com contexto e escopo |
-| Coleção | RMAs, clientes, produtos, usuários, estoque e catálogo de protocolos | Cabeçalho, busca/filtros, tabela, ações de linha, paginação quando existente |
-| Trabalho e configuração | Detalhe do RMA, diagnóstico, protocolos, reservas, movimentos, regras | Seções por tarefa, campos alinhados, contexto preservado e ação explícita |
+| Coleção | ordens de serviço, clientes, produtos, usuários, estoque e catálogo de protocolos | Cabeçalho, busca/filtros, tabela, ações de linha, paginação quando existente |
+| Trabalho e configuração | Detalhe da OS, diagnóstico, protocolos, reservas, movimentos, regras | Seções por tarefa, campos alinhados, contexto preservado e ação explícita |
 | Fluxo e análise | Kanban e relatórios | Quadro para etapas; tabelas/gráficos para comparação; mesmos controles, estados e linguagem |
 
 A referência Carbon reúne busca, filtros e ações na barra da tabela e apresenta ações em lote após seleção. Adotar o princípio de hierarquia contextual, preservando as funções que o Navitas já oferece. [Tabelas e ações em lote](https://www.carbondesignsystem.com/building-blocks/core/components/data-table/guidelines).
@@ -124,13 +124,13 @@ Manter os grupos reais da navegação e a visibilidade por perfil. Usuário, fun
 
 ### Dashboard
 
-Manter sua função de visão geral. Destacar fila prioritária e os indicadores já calculados, explicando período ou escopo quando necessário. A fila deve permitir chegar ao RMA correspondente. Auditoria usa a mesma linguagem de eventos do detalhe. Evitar reproduzir uma segunda lista extensa de RMAs se ela não orientar uma ação diferente. Não inventar tendências, percentuais, metas ou comparações sem dados.
+Manter sua função de visão geral. Destacar fila prioritária e os indicadores já calculados, explicando período ou escopo quando necessário. A fila deve permitir chegar à OS correspondente. Auditoria usa a mesma linguagem de eventos do detalhe. Evitar reproduzir uma segunda lista extensa de ordens de serviço se ela não orientar uma ação diferente. Não inventar tendências, percentuais, metas ou comparações sem dados.
 
-### Lista de RMAs e histórico
+### Lista de ordens de serviço e histórico
 
 Usar busca e filtro de status na barra comum; colocar consulta por lote/série em uma aba ou painel identificado como Histórico, preservando a busca especializada. Manter cliente, identificação, status e garantia por produto acessíveis. Códigos sem quebra; paginação real preservada. Indicadores calculados apenas sobre a página atual não podem parecer totais de toda a operação.
 
-### Abertura de RMA
+### Abertura de OS
 
 Organizar em grupos de Atendimento, Produtos/identificação e Recebimento. Cliente, prioridade, nota fiscal, datas, lote/série, fabricação, falha, acessórios e condição física mantêm seu lugar no fluxo. Associar “Compra desconhecida” ao campo de compra. Itens repetidos usam linhas com campos alinhados e remoção por ícone com nome acessível. Reparo, peças trocadas e testes podem ficar em grupo avançado “Atendimento já realizado”, caso essa entrada seja necessária para registros retroativos.
 
@@ -138,17 +138,17 @@ Para formulários extensos, explorar área ampla ou página de edição em vez d
 
 ### Atendimento e diagnóstico
 
-Estabelecer um contrato comum de conteúdo entre os dois detalhes existentes. Preservar os blocos e a timeline do commit `4361b81`, confirmado no histórico. Preservar as seis seções já acessíveis na lista de RMAs. O primeiro passo é facilitar o acesso consistente a produto, garantia, diagnóstico, peças, protocolos, impedimentos e histórico; a adoção de novas abas no Kanban permanece hipótese posterior.
+Estabelecer um contrato comum de conteúdo entre os dois detalhes existentes. Preservar os blocos e a timeline do commit `4361b81`, confirmado no histórico. Preservar as seis seções já acessíveis na lista de ordens de serviço. O primeiro passo é facilitar o acesso consistente a produto, garantia, diagnóstico, peças, protocolos, impedimentos e histórico; a adoção de novas abas no Kanban permanece hipótese posterior.
 
 Diagnóstico: falha encontrada primeiro; tipo, causa, data e técnico em campos organizados; notas separadas; ação “Salvar diagnóstico”. Respeitar permissões de ADMIN/TECHNICIAN. Não usar alertas ou chips para substituir texto técnico que precisa ser lido.
 
 ### Peças: estoque, reposição, movimento e reservas
 
-No estoque, destacar disponível, unidade e mínimo; manter reservado e saldo total comparáveis. Cor de atenção acompanha texto “Repor” e números reais. Reposição conserva sugestão de compra e pendência por RMA em grupos relacionados, sem concatenar nome, código e localização.
+No estoque, destacar disponível, unidade e mínimo; manter reservado e saldo total comparáveis. Cor de atenção acompanha texto “Repor” e números reais. Reposição conserva sugestão de compra e pendência por OS em grupos relacionados, sem concatenar nome, código e localização.
 
-Cadastro de peça não altera saldo. Movimento apresenta tipo, quantidade/unidade, motivo e impacto antes/depois quando calculável. Histórico usa colunas para instante, tipo, variação, saldo, RMA e autor. Estorno tem confirmação específica com motivo; conservar o movimento original.
+Cadastro de peça não altera saldo. Movimento apresenta tipo, quantidade/unidade, motivo e impacto antes/depois quando calculável. Histórico usa colunas para instante, tipo, variação, saldo, OS e autor. Estorno tem confirmação específica com motivo; conservar o movimento original.
 
-No RMA, peças reservadas, pendentes e consumidas têm estados e ações distintos. “Consumir”, “Efetivar reserva” e “Cancelar reserva” são operações de negócio e continuam nomeadas; não trocá-las por ícones ambíguos. Mostrar custos com moeda e escopo, respeitando as permissões atuais.
+Na OS, peças reservadas, pendentes e aplicadas têm estados e ações distintos. “Aplicar”, “Efetivar reserva” e “Cancelar reserva” são operações de negócio e continuam nomeadas; não trocá-las por ícones ambíguos. Mostrar custos com moeda e escopo, respeitando as permissões atuais.
 
 ### Clientes
 
@@ -164,9 +164,9 @@ Catálogo com aplicação, versão atual, número de itens, estado e próxima a�
 
 Editor: configuração geral e etapas bloqueadas separadas da lista de itens; resumo de cada item e edição focada do item selecionado. Tipo determina campos adicionais de medição, unidade, casas decimais e limites. Obrigatório e Exige evidência usam o mesmo checkbox do produto. Instruções e resultado esperado têm espaço adequado. Publicar versão deve identificar a consequência; não esconder essa ação atrás de um lápis.
 
-### Protocolos: execução no RMA
+### Protocolos: execução na OS
 
-Exibir nome e versão, progresso real dos itens obrigatórios e estado. Separar etapa, item e resultado. Medição mostra valor, unidade e faixa esperada; evidência e justificativa aparecem quando necessárias. Repetir registro conserva histórico e pede a justificativa prevista. Iniciar, Registrar resultado e Concluir são ações com texto. Não confundir progresso da inspeção com progresso percentual do RMA.
+Exibir nome e versão, progresso real dos itens obrigatórios e estado. Separar etapa, item e resultado. Medição mostra valor, unidade e faixa esperada; evidência e justificativa aparecem quando necessárias. Repetir registro conserva histórico e pede a justificativa prevista. Iniciar, Registrar resultado e Concluir são ações com texto. Não confundir progresso da inspeção com progresso percentual da OS.
 
 ### Usuários
 
@@ -174,16 +174,16 @@ Tabela com avatar/nome, usuário, perfil e estado. Ativo/inativo é indicador; s
 
 ### Notificações: entrada, preferências e regras
 
-Entrada: um resumo acionável, ícone do evento, RMA e instante. Manter marcar como lida e adiar sem dar o mesmo destaque à ação principal. Adiamento precisa ser identificável, sem multiplicar frases.
+Entrada: um resumo acionável, ícone do evento, OS e instante. Manter marcar como lida e adiar sem dar o mesmo destaque à ação principal. Adiamento precisa ser identificável, sem multiplicar frases.
 
 Preferências: separar recebendo, silenciado, desativado e obrigatório. Regra administrativa: resumo legível por evento; edição focada para severidade, destinatários, responsável, e-mail e possibilidade de silenciar. Falhas de processamento em uma seção administrativa própria, com erro completo disponível. Detalhes sobre implantação e configuração de servidor não precisam ocupar a rotina de quem lê alertas.
 
 ### Relatórios: quatro composições
 
-- **Laudo técnico:** leitura por atendimento com identificação, produtos, falha, diagnóstico, reparo e testes. Evitar transformar textos longos em quatro colunas estreitas; usar resumo tabular com detalhe expandido por RMA ou documento estruturado.
+- **Laudo técnico:** leitura por atendimento com identificação, produtos, falha, diagnóstico, reparo e testes. Evitar transformar textos longos em quatro colunas estreitas; usar resumo tabular com detalhe expandido por OS ou documento estruturado.
 - **Tempo por etapa:** resumo comparável por etapa e tabela detalhada; se houver gráfico, valores e unidade devem ser os mesmos da consulta. Diferenciar média de máximo e excluir encerrados conforme a regra atual.
 - **Garantia por produto:** compra, entrada, prazo, vencimento e estado em campos distintos. Compra desconhecida preserva pendência; nenhuma nova regra de cálculo é proposta.
-- **Devoluções:** expedição, transportadora e rastreio; conservar o recorte atual por status Devolvido e explicitar que o período filtra a entrada do RMA.
+- **Devoluções:** expedição, transportadora e rastreio; conservar o recorte atual por status Devolvido e explicitar que o período filtra a entrada da OS.
 
 Todos mantêm período, filtros aplicados, instante de geração e atualização explícita. Exportação continua fora da proposta executável enquanto indisponível no produto; não desenhar botão funcional sem capacidade existente.
 
@@ -191,16 +191,16 @@ Todos mantêm período, filtros aplicados, instante de geração e atualização
 
 Impedimento: motivo, início, duração e resolução separados; bloquear/desbloquear com rótulo claro e nota obrigatória conforme a regra existente.
 
-Lote: seleção visível, quantidade selecionada inclusive fora dos filtros atuais, confirmação com ação/escopo e resultado por RMA. Sucesso parcial precisa continuar identificando falhas e mantendo a seleção dos itens que falharam. Não simplificar essa operação para um único toast de sucesso.
+Lote: seleção visível, quantidade selecionada inclusive fora dos filtros atuais, confirmação com ação/escopo e resultado por OS. Sucesso parcial precisa continuar identificando falhas e mantendo a seleção dos itens que falharam. Não simplificar essa operação para um único toast de sucesso.
 
 ## Perfis e estados transversais
 
 | Perfil atual | Acesso que a proposta deve preservar |
 | --- | --- |
 | Administrador | Navegação completa e ações administrativas, respeitando validações por operação |
-| Atendimento | Dashboard, RMAs, Kanban, notificações, peças, clientes e produtos; abertura de RMA e gestão de estoque conforme componentes |
-| Técnico | Dashboard, RMAs, Kanban, notificações, peças e relatórios; diagnóstico, protocolos e reservas conforme regras |
-| Consulta | Dashboard, RMAs, Kanban, notificações, peças e relatórios; sem receber ações de alteração de RMA reservadas a outros perfis |
+| Atendimento | Dashboard, ordens de serviço, Kanban, notificações, peças, clientes e produtos; abertura de OS e gestão de estoque conforme componentes |
+| Técnico | Dashboard, ordens de serviço, Kanban, notificações, peças e relatórios; diagnóstico, protocolos e reservas conforme regras |
+| Consulta | Dashboard, ordens de serviço, Kanban, notificações, peças e relatórios; sem receber ações de alteração de OS reservadas a outros perfis |
 
 Fonte: `app.routes.ts`, `NAV_GROUPS`, `canOpenRma`, `canRegisterDiagnosis`, `canManage`, `canReserve` e `canExecute`. A tabela resume o frontend; a autorização do backend permanece obrigatória e precisa de verificação na implementação. As preferências pessoais de notificações seguem suas próprias regras, inclusive para quem tem perfil de consulta.
 
@@ -235,7 +235,7 @@ Referência visual oficial, para observar a relação entre superfícies, cards 
 
 ### Linear
 
-O Linear não apresenta descrições nos cards e direciona a consulta de todas as propriedades para a abertura do item. Aproveitar a hierarquia curta e a clareza de estados. O SLA e os impedimentos do RMA exigem adaptação ao domínio do Navitas. [Board layout](https://linear.app/docs/board-layout).
+O Linear não apresenta descrições nos cards e direciona a consulta de todas as propriedades para a abertura do item. Aproveitar a hierarquia curta e a clareza de estados. O SLA e os impedimentos da OS exigem adaptação ao domínio do Navitas. [Board layout](https://linear.app/docs/board-layout).
 
 ### Vercel / Geist
 
@@ -327,7 +327,7 @@ A Atlassian recomenda usar botão primário para a ação de maior importância 
 | `Abrir` ao final de todas as linhas | Título como link ou ação por ícone com nome acessível |
 | Botões de linha `Editar` e `Excluir` repetidos | Lápis e lixeira com tooltip e nome acessível |
 | `admin moveu para Triagem` repetido em texto corrido | Autor + instante; origem → destino; comentário em bloco separado |
-| `Nenhum registro foi encontrado no sistema` | `Nenhum RMA encontrado` e ação para limpar filtros, se houver filtros |
+| `Nenhum registro foi encontrado no sistema` | `Nenhuma OS encontrada` e ação para limpar filtros, se houver filtros |
 | `Ocorreu um erro` | `Não foi possível salvar o status. Tente novamente.`; preservar os dados digitados |
 
 Manter palavras em ações específicas do negócio: **Iniciar protocolo**, **Salvar diagnóstico**, **Concluir reparo**. Um ícone pouco conhecido pode aumentar esforço; o reconhecimento depende da experiência anterior. Ações recorrentes por ícone atendem ao pedido, mas precisam de verificação de compreensão. [Usabilidade de ícones](https://www.nngroup.com/articles/icon-usability/).
@@ -341,7 +341,7 @@ Pares rótulo/valor continuam adequados em metadados organizados. O problema é 
 | Fundação global | Contratos de tipografia, controles, ações, estados, cabeçalhos e overlay; shell e login | Baixo a médio | Layout responsivo, acesso por perfil, foco e encerramento da sessão |
 | Coleções | Clientes, produtos, usuários, catálogo de protocolos e tabela de estoque com a mesma composição | Médio | Paginação, busca, categorias livres, validação e exclusões |
 | Piloto operacional | Cabeçalho/filtros do Kanban, card conservador, visualizações e lote preservados | Médio a alto | Arraste, seleção fora do filtro, permissões, SLA e resultados parciais |
-| Ciclo do atendimento | Lista/histórico e abertura de RMAs, diagnóstico e contrato comum dos dois detalhes | Alto | Itens, garantia, registros retroativos, dados por etapa e trabalho recente do modal |
+| Ciclo do atendimento | Lista/histórico e abertura de ordens de serviço, diagnóstico e contrato comum dos dois detalhes | Alto | Itens, garantia, registros retroativos, dados por etapa e trabalho recente do modal |
 | Operações especializadas | Protocolos/versões/execuções, reservas, movimentos, estornos e impedimentos | Alto | Rastreabilidade, medições, restrições de status e estoque |
 | Comunicação e análise | Notificações, preferências/regras/falhas, dashboard e quatro relatórios | Médio a alto | Escopo das métricas, dados temporais, configurações administrativas e textos técnicos |
 
@@ -353,8 +353,8 @@ Não é necessário substituir Angular nem adotar bibliotecas React das referên
 
 Antes de expandir a mudança, comparar a interface atual e a proposta com operadores em tarefas reais:
 
-- Encontrar o RMA mais urgente e identificar responsável e impedimento.
-- Localizar um RMA pelo cliente, série ou código; aplicar e remover um filtro.
+- Encontrar a OS mais urgente e identificar responsável e impedimento.
+- Localizar uma OS pelo cliente, série ou código; aplicar e remover um filtro.
 - Abrir o detalhe, consultar a garantia e entender a última movimentação.
 - Mudar status sem arrastar e iniciar um protocolo.
 - Percorrer o fluxo por teclado e com zoom de 200%; avaliar a lista alternativa em tela estreita.
@@ -369,7 +369,7 @@ Decisões a validar: redução posterior do card, filtros mais frequentes, estru
 
 As propostas foram abertas no navegador e inspecionadas por captura de tela em desktop e largura estreita. Foram exercitados busca, filtros de responsável e SLA, abertura e fechamento do detalhe, abas, progresso do checklist, exibição de impedimento, navegação para produtos e leitura de notificações. O select da amostra foi operado por teclado. Ambos os exemplos foram conferidos com área de conteúdo de 320 px sem transbordamento horizontal. A sintaxe dos scripts foi verificada; o console do exemplo principal não apresentou erros nessa verificação. Isso valida a apresentação exploratória, sem substituir testes da aplicação Angular, avaliação de acessibilidade ou pesquisa com operadores.
 
-Na ampliação global, as 11 telas de entrada foram percorridas e registradas em imagens. Também foram exploradas seções internas de atendimento, abertura de RMA, editor e execução de protocolos, reposição/movimento de estoque, preferências/regras de notificações e os quatro relatórios. O protótipo representa composições e permite navegação, sem reproduzir toda a validação, persistência, autenticação ou resposta a falhas da aplicação. Alguns filtros, relatórios e operações usam estados demonstrativos; não constituem uma implementação funcional equivalente em Angular.
+Na ampliação global, as 11 telas de entrada foram percorridas e registradas em imagens. Também foram exploradas seções internas de atendimento, abertura de OS, editor e execução de protocolos, reposição/movimento de estoque, preferências/regras de notificações e os quatro relatórios. O protótipo representa composições e permite navegação, sem reproduzir toda a validação, persistência, autenticação ou resposta a falhas da aplicação. Alguns filtros, relatórios e operações usam estados demonstrativos; não constituem uma implementação funcional equivalente em Angular.
 
 Na conferência do exemplo global, foram verificadas nove colunas no Kanban, a representação dos 11 filtros (busca mais dez campos avançados), seleção em lote com itens fora dos filtros, seis seções no detalhe da lista e proteção visual da exclusão da própria conta. As dez telas internas ao shell foram percorridas em área de conteúdo de 320 px sem transbordamento horizontal da página; tabelas e quadro conservam rolagem própria quando necessária. Isso não equivale a uma validação completa de todos os formulários em celular.
 
@@ -387,7 +387,7 @@ Quadro inicial com filtros curtos, títulos principais e exceções operacionais
 
 Detalhe com conteúdo à esquerda e propriedades à direita:
 
-![Proposta do detalhe de um RMA com dados fictícios](../../output/playwright/navitas-detalhe.png)
+![Proposta do detalhe de uma OS com dados fictícios](../../output/playwright/navitas-detalhe.png)
 
 Atividade organizada por autor, horário e transição:
 
@@ -410,7 +410,7 @@ Algumas reclamações anteriores já foram parcialmente tratadas no código. É 
 | `shared/rma-kanban-board/rma-kanban-board.component.html:46`: código e cliente; linha 59: produto, falha, SLA, bloqueio e data | O card ainda apresenta vários níveis de texto | Um título, etiqueta curta se útil, chave, prioridade e responsável; exceções de SLA/bloqueio explícitas |
 | `shared/rma-detail-modal/rma-detail-modal.component.html:10`: duas colunas; linha 98: atividade com avatar e transição | A estrutura desejada e parte da linguagem visual já existem | Manter a arquitetura; reduzir empilhamento e melhorar hierarquia, sem recomeçar o detalhe |
 | `shared/rma-detail-modal/rma-detail-modal.component.css`: cada seção tem borda, fundo e título em caixa alta | As seções têm tratamento semelhante apesar de importâncias diferentes | Títulos em sentence case, espaços consistentes, divisórias leves; destaque apenas para exceções reais |
-| `pages/notifications/notifications.component.html:46`: evento, título, mensagem e várias ações em cada alerta | Repetição e competição entre ações | Ícone do evento, um resumo, chave e tempo; acesso ao RMA e ações auxiliares discretas |
+| `pages/notifications/notifications.component.html:46`: evento, título, mensagem e várias ações em cada alerta | Repetição e competição entre ações | Ícone do evento, um resumo, chave e tempo; acesso à OS e ações auxiliares discretas |
 | `layout/app-shell.component.html:44`: usuário no topo; saída na sequência; notificação com texto (estado anterior ao commit `71d51ba`) | Resolvido: usuário na lateral e sino com contador | Usuário no rodapé da lateral; sino com contador e nome acessível no cabeçalho |
 
 Esses achados indicam oportunidades; não provam perda de produtividade nem falhas de acessibilidade em toda a aplicação.

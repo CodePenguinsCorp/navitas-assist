@@ -306,7 +306,7 @@ export class RmaPartsPanelComponent {
         if (this.rmaId() !== rmaId) return;
         this.successMessage.set(reservation.status === 'PENDING'
           ? `Saldo insuficiente: ${reservation.partName} ficou pendente de reposição.`
-          : `${reservation.partName} reservada para o RMA.`);
+          : `${reservation.partName} reservada para a OS.`);
         this.closeReserve(true);
         this.load(rmaId);
       },
@@ -467,7 +467,7 @@ export class RmaPartsPanelComponent {
         if (this.rmaId() !== rmaId) return;
         this.parts.set(null);
         this.loadFailed.set(true);
-        this.loadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as peças do RMA.'));
+        this.loadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar as peças da OS.'));
       }
     });
 

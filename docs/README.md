@@ -6,7 +6,7 @@
 
 | Documento | Conteúdo |
 | --- | --- |
-| [visao-geral.md](visao-geral.md) | O que é o sistema, módulos, fluxo do RMA, datas e fuso, numeração, paginação. |
+| [visao-geral.md](visao-geral.md) | O que é o sistema, módulos, fluxo da OS, datas e fuso, numeração, paginação. |
 | [desenvolvimento.md](desenvolvimento.md) | Pré-requisitos, subir com e sem Docker, portas, testes, build, convenções, dados de demonstração. |
 | [configuracao.md](configuracao.md) | Variáveis de ambiente e propriedades, com padrão e obrigatoriedade. |
 | [projeto.md](projeto.md) | Equipe, problema, objetivo, público, MVP, backlog e cronograma originais. |
@@ -18,6 +18,7 @@
 | [acesso-e-permissoes.md](acesso-e-permissoes.md) | Perfis, permissões extras, catálogo, perfis prontos, sessão, regras anti-escalada. |
 | [api.md](api.md) | Rotas por módulo, com a permissão exigida. |
 | [banco-de-dados.md](banco-de-dados.md) | Migrações, política da baseline, recriar o banco, primeiro administrador. |
+| [nomenclatura-auditoria.txt](nomenclatura-auditoria.txt) | Ocorrências internas preservadas após a adoção de Ordem de Serviço/OS. |
 
 ## Funcionalidades
 
@@ -38,7 +39,7 @@
 
 | Documento | Conteúdo |
 | --- | --- |
-| [produto/pontos-para-conversar-com-o-dono.md](produto/pontos-para-conversar-com-o-dono.md) | Etiqueta com QR Code e custo por RMA: opções, esforço e decisões pendentes. |
+| [produto/pontos-para-conversar-com-o-dono.md](produto/pontos-para-conversar-com-o-dono.md) | Etiqueta com QR Code e custo por OS: opções, esforço e decisões pendentes. |
 
 ## Histórico e conferência
 

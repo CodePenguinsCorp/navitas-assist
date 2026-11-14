@@ -119,6 +119,6 @@ $env:SEED_PASSWORD = '<senha do administrador>'
 
 Sem variáveis, usa `http://localhost:4201` e `admin` / `admin123`; para a stack padrão (porta 4200), defina `SEED_BASE_URL`. O script só aceita origens de loopback.
 
-Cria 3 clientes, 3 produtos, 3 peças (20 unidades cada), 7 RMAs em etapas e prioridades variadas, 2 impedimentos, 2 reservas e um modelo de protocolo com 3 execuções, além de 3 usuários: `demo.atendimento`, `demo.tecnico` e `demo.consulta`. Os nomes de clientes e produtos levam `[DEMO]`; SKUs, códigos, lotes e séries levam `DEMO-`. A senha inicial dos usuários criados é impressa ao final.
+Cria 3 clientes, 3 produtos, 3 peças (20 unidades cada), 7 ordens de serviço em etapas e prioridades variadas, 2 impedimentos, 2 reservas e um modelo de protocolo com 3 execuções, além de 3 usuários: `demo.atendimento`, `demo.tecnico` e `demo.consulta`. Os nomes de clientes e produtos levam `[DEMO]`; SKUs, códigos, lotes e séries levam `DEMO-`. A senha inicial dos usuários criados é impressa ao final.
 
 Pode ser repetido após falha (reutiliza o que já existe), mas rode uma instância por vez; não há limpeza automática. Mais detalhes em `scripts/dev-seed/README.md`.

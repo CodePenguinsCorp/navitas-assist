@@ -185,12 +185,12 @@
     </main>
   </div>
   <dialog class="n-modal" id="n-detail" aria-labelledby="n-detail-title">
-    <header class="n-modal-head"><span class="n-key" id="n-detail-key">RMA-1048</span><button type="button" class="n-icon" data-close aria-label="Fechar detalhes" data-tooltip="Fechar"><i data-lucide="x" aria-hidden="true"></i></button></header>
+    <header class="n-modal-head"><span class="n-key" id="n-detail-key">OS-1048</span><button type="button" class="n-icon" data-close aria-label="Fechar detalhes" data-tooltip="Fechar"><i data-lucide="x" aria-hidden="true"></i></button></header>
     <div class="n-modal-layout">
       <div class="n-detail-main">
         <h2 id="n-detail-title">Controlador NVT-500 não liga</h2>
         <div class="n-subtitle"><i data-lucide="building-2" aria-hidden="true"></i><span id="n-client">Solar Sul</span></div>
-        <div class="n-tabs" role="tablist" aria-label="Detalhes do RMA">
+        <div class="n-tabs" role="tablist" aria-label="Detalhes da OS">
           <button class="n-tab" role="tab" type="button" id="n-tab-overview" aria-controls="n-panel-overview" aria-selected="true" data-tab="overview">Visão geral</button>
           <button class="n-tab" role="tab" type="button" id="n-tab-items" aria-controls="n-panel-items" aria-selected="false" data-tab="items">Itens</button>
           <button class="n-tab" role="tab" type="button" id="n-tab-activity" aria-controls="n-panel-activity" aria-selected="false" data-tab="activity">Atividade</button>
@@ -216,7 +216,7 @@
           <section class="n-section"><h3><i data-lucide="clipboard-check" aria-hidden="true"></i>Inspeção de entrada</h3><span id="n-progress-label">0 de 3 etapas</span><div class="n-progress" role="progressbar" aria-label="Inspeção de entrada" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0" id="n-progress"><span style="width:0%"></span></div><div class="n-checklist"><label class="n-check"><input type="checkbox" data-step="visual">Inspeção visual</label><label class="n-check"><input type="checkbox" data-step="accessories">Conferir acessórios</label><label class="n-check"><input type="checkbox" data-step="power">Verificar alimentação</label></div></section>
         </div>
       </div>
-      <aside class="n-side" aria-label="Informações do RMA">
+      <aside class="n-side" aria-label="Informações da OS">
         <span class="n-status"><i data-lucide="circle-dot" aria-hidden="true"></i><span id="n-detail-status">Em diagnóstico</span></span>
         <h3>Informações</h3>
         <dl class="n-meta"><div><dt>Responsável</dt><dd><span class="n-avatar" id="n-owner-avatar">AM</span><span id="n-owner">Ana Martins</span></dd></div><div><dt>Prioridade</dt><dd id="n-detail-priority"><i data-lucide="chevrons-up" aria-hidden="true"></i>Alta</dd></div><div><dt>SLA</dt><dd class="n-risk" id="n-detail-sla"><i data-lucide="clock-3" aria-hidden="true"></i>Vence em 2 h</dd></div><div><dt>Prazo</dt><dd>6 nov, 17:00</dd></div><div id="n-detail-block" hidden><dt>Impedimento ativo</dt><dd class="n-danger"><i data-lucide="ban" aria-hidden="true"></i>Aguardando fonte de reposição</dd></div></dl>
@@ -241,13 +241,13 @@
   const icons = () => { if (globalThis.lucide) lucide.createIcons({attrs:{width:16,height:16}}); };
   const escape = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const tickets = [
-    {id:'RMA-1052', title:'Display NVT-200 sem imagem', product:'Display NVT-200', sku:'NVT-200', client:'Horizonte Energia', col:0, tag:'Display', priority:'Média', person:'BR', owner:'Bruno Rocha'},
-    {id:'RMA-1050', title:'Sensor com leitura instável', product:'Sensor NVT-S1', sku:'NVT-S1', client:'Alfa Automação', col:0, tag:'Sensor', priority:'Baixa', person:'CL', owner:'Carla Lima'},
-    {id:'RMA-1049', title:'Controlador reinicia em operação', product:'Controlador NVT-300', sku:'NVT-300', client:'Delta Solar', col:1, tag:'Controlador', priority:'Alta', person:'AM', owner:'Ana Martins', risk:'Vence em 4 h'},
-    {id:'RMA-1046', title:'Falha na comunicação do inversor', product:'Inversor NVT-I2', sku:'NVT-I2', client:'Solar Sul', col:1, tag:'Inversor', priority:'Média', person:'BR', owner:'Bruno Rocha'},
-    {id:'RMA-1048', title:'Controlador NVT-500 não liga', product:'Controlador NVT-500', sku:'NVT-500', client:'Solar Sul', col:2, tag:'Controlador', priority:'Alta', person:'AM', owner:'Ana Martins', risk:'Vence em 2 h'},
-    {id:'RMA-1044', title:'Oscilação no sinal de saída', product:'Módulo NVT-M2', sku:'NVT-M2', client:'Alfa Automação', col:2, tag:'Módulo', priority:'Média', person:'CL', owner:'Carla Lima'},
-    {id:'RMA-1039', title:'Substituir fonte do controlador', product:'Controlador NVT-500', sku:'NVT-500', client:'Delta Solar', col:3, tag:'Controlador', priority:'Alta', person:'BR', owner:'Bruno Rocha', risk:'Vencido há 1 d', blocked:true}
+    {id:'OS-1052', title:'Display NVT-200 sem imagem', product:'Display NVT-200', sku:'NVT-200', client:'Horizonte Energia', col:0, tag:'Display', priority:'Média', person:'BR', owner:'Bruno Rocha'},
+    {id:'OS-1050', title:'Sensor com leitura instável', product:'Sensor NVT-S1', sku:'NVT-S1', client:'Alfa Automação', col:0, tag:'Sensor', priority:'Baixa', person:'CL', owner:'Carla Lima'},
+    {id:'OS-1049', title:'Controlador reinicia em operação', product:'Controlador NVT-300', sku:'NVT-300', client:'Delta Solar', col:1, tag:'Controlador', priority:'Alta', person:'AM', owner:'Ana Martins', risk:'Vence em 4 h'},
+    {id:'OS-1046', title:'Falha na comunicação do inversor', product:'Inversor NVT-I2', sku:'NVT-I2', client:'Solar Sul', col:1, tag:'Inversor', priority:'Média', person:'BR', owner:'Bruno Rocha'},
+    {id:'OS-1048', title:'Controlador NVT-500 não liga', product:'Controlador NVT-500', sku:'NVT-500', client:'Solar Sul', col:2, tag:'Controlador', priority:'Alta', person:'AM', owner:'Ana Martins', risk:'Vence em 2 h'},
+    {id:'OS-1044', title:'Oscilação no sinal de saída', product:'Módulo NVT-M2', sku:'NVT-M2', client:'Alfa Automação', col:2, tag:'Módulo', priority:'Média', person:'CL', owner:'Carla Lima'},
+    {id:'OS-1039', title:'Substituir fonte do controlador', product:'Controlador NVT-500', sku:'NVT-500', client:'Delta Solar', col:3, tag:'Controlador', priority:'Alta', person:'BR', owner:'Bruno Rocha', risk:'Vencido há 1 d', blocked:true}
   ];
   const columns = ['Recebido','Triagem','Em diagnóstico','Aguardando peça'];
   let screen='kanban', query='', mine=false, risk=false, high=false, blocked=false, filtersOpen=false;
@@ -259,9 +259,9 @@
     {name:'Sensor NVT-S1',sku:'NVT-S1',category:'Sensor',warranty:'6 meses'}
   ];
   let notices = [
-    {title:'Prazo de atendimento vencido',id:'RMA-1039',time:'Há 12 min',icon:'clock-3',danger:true,read:false},
-    {title:'Ana atribuiu um RMA a você',id:'RMA-1048',time:'Há 35 min',icon:'user-round',read:false},
-    {title:'Diagnóstico disponível',id:'RMA-1044',time:'Há 1 h',icon:'scan-search',read:false}
+    {title:'Prazo de atendimento vencido',id:'OS-1039',time:'Há 12 min',icon:'clock-3',danger:true,read:false},
+    {title:'Ana atribuiu uma OS a você',id:'OS-1048',time:'Há 35 min',icon:'user-round',read:false},
+    {title:'Diagnóstico disponível',id:'OS-1044',time:'Há 1 h',icon:'scan-search',read:false}
   ];
   const saved = window.openai?.widgetState;
   if(saved?.modelContent && ['kanban','products','notifications'].includes(saved.modelContent.screen)) screen=saved.modelContent.screen;
@@ -273,12 +273,12 @@
     return `<button type="button" class="n-ticket" data-ticket="${t.id}" aria-label="${escape(t.id+' '+t.title)}"><span class="n-ticket-title">${escape(t.title)}</span><span class="n-tag">${t.tag}</span>${t.risk?`<span class="n-risk ${t.blocked?'n-late':''}"><i data-lucide="${t.blocked?'circle-alert':'clock-3'}" aria-hidden="true"></i>${t.risk}</span>`:''}${t.blocked?'<span class="n-risk n-late"><i data-lucide="ban" aria-hidden="true"></i>Bloqueado</span>':''}<span class="n-ticket-foot"><span class="n-key">${t.id}</span><span class="n-priority" data-priority="${t.priority}" data-tooltip="Prioridade ${t.priority.toLowerCase()}" aria-label="Prioridade ${t.priority.toLowerCase()}"><i data-lucide="${priorityIcon}" aria-hidden="true"></i></span><span class="n-avatar" data-person="${t.person}" data-tooltip="${t.owner}" aria-label="Responsável: ${t.owner}">${t.person}</span></span></button>`;
   }
   function filtered(){const q=query.toLocaleLowerCase('pt-BR');return tickets.filter(t=>(!mine||t.person==='AM')&&(!risk||t.risk)&&(!high||t.priority==='Alta')&&(!blocked||t.blocked)&&(!q||[t.id,t.title,t.client,t.sku].some(x=>x.toLocaleLowerCase('pt-BR').includes(q))));}
-  function drawBoard(){ const list=filtered(); $('#n-board').innerHTML=columns.map((c,i)=>`<section class="n-column" aria-label="${c}"><header class="n-column-head"><h3>${c}</h3><span class="n-count">${list.filter(t=>t.col===i).length}</span></header><div class="n-stack">${list.filter(t=>t.col===i).map(card).join('')||'<div class="n-empty">Nenhum RMA</div>'}</div></section>`).join(''); $('#n-results').textContent=`${list.length} de ${tickets.length} RMAs`; icons(); }
+  function drawBoard(){ const list=filtered(); $('#n-board').innerHTML=columns.map((c,i)=>`<section class="n-column" aria-label="${c}"><header class="n-column-head"><h3>${c}</h3><span class="n-count">${list.filter(t=>t.col===i).length}</span></header><div class="n-stack">${list.filter(t=>t.col===i).map(card).join('')||'<div class="n-empty">Nenhuma OS</div>'}</div></section>`).join(''); $('#n-results').textContent=`${list.length} de ${tickets.length} ordens de serviço`; icons(); }
   function draw(){
     all('.n-nav').forEach(b=>{if(b.dataset.screen===screen)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     const title={kanban:'Kanban',products:'Produtos',notifications:'Notificações'}[screen]; $('#n-breadcrumb').textContent=title;
     if(screen==='kanban'){
-      $('#n-page').innerHTML=`<div class="n-page-head"><div class="n-heading-line"><h2>Kanban</h2><span class="n-count">${tickets.length}</span></div></div><div class="n-tools"><label class="n-search"><i data-lucide="search" aria-hidden="true"></i><input type="search" id="n-search" aria-label="Buscar RMAs" placeholder="Buscar RMAs"></label><button class="n-button" type="button" id="n-mine" aria-pressed="${mine}"><i data-lucide="user-round" aria-hidden="true"></i>Só meus</button><button class="n-button" type="button" id="n-risk" aria-pressed="${risk}"><i data-lucide="clock-3" aria-hidden="true"></i>SLA em risco</button><button class="n-button" type="button" id="n-filters" aria-expanded="${filtersOpen}" aria-controls="n-filter-panel"><i data-lucide="sliders-horizontal" aria-hidden="true"></i>Filtros${high||blocked?' ('+(Number(high)+Number(blocked))+')':''}</button></div><div class="n-filter-panel" id="n-filter-panel" ${filtersOpen?'':'hidden'}><label class="n-check"><input id="n-high" type="checkbox" ${high?'checked':''}>Alta prioridade</label><label class="n-check"><input id="n-blocked" type="checkbox" ${blocked?'checked':''}>Bloqueados</label><button type="button" class="n-button" id="n-clear">Limpar filtros</button></div><div class="n-board" id="n-board" aria-label="Quadro de RMAs"></div><div class="n-bottom"><span id="n-results" aria-live="polite"></span><span>Recorte de 4 etapas</span></div>`;
+      $('#n-page').innerHTML=`<div class="n-page-head"><div class="n-heading-line"><h2>Kanban</h2><span class="n-count">${tickets.length}</span></div></div><div class="n-tools"><label class="n-search"><i data-lucide="search" aria-hidden="true"></i><input type="search" id="n-search" aria-label="Buscar ordens de serviço" placeholder="Buscar ordens de serviço"></label><button class="n-button" type="button" id="n-mine" aria-pressed="${mine}"><i data-lucide="user-round" aria-hidden="true"></i>Só meus</button><button class="n-button" type="button" id="n-risk" aria-pressed="${risk}"><i data-lucide="clock-3" aria-hidden="true"></i>SLA em risco</button><button class="n-button" type="button" id="n-filters" aria-expanded="${filtersOpen}" aria-controls="n-filter-panel"><i data-lucide="sliders-horizontal" aria-hidden="true"></i>Filtros${high||blocked?' ('+(Number(high)+Number(blocked))+')':''}</button></div><div class="n-filter-panel" id="n-filter-panel" ${filtersOpen?'':'hidden'}><label class="n-check"><input id="n-high" type="checkbox" ${high?'checked':''}>Alta prioridade</label><label class="n-check"><input id="n-blocked" type="checkbox" ${blocked?'checked':''}>Bloqueados</label><button type="button" class="n-button" id="n-clear">Limpar filtros</button></div><div class="n-board" id="n-board" aria-label="Quadro de ordens de serviço"></div><div class="n-bottom"><span id="n-results" aria-live="polite"></span><span>Recorte de 4 etapas</span></div>`;
       $('#n-search').value=query;
       $('#n-search').addEventListener('input',e=>{query=e.target.value;drawBoard();});
       $('#n-mine').onclick=()=>{mine=!mine;draw();persist();}; $('#n-risk').onclick=()=>{risk=!risk;draw();persist();};
@@ -301,12 +301,12 @@
     $('#n-detail-key').textContent=selected.id;$('#n-detail-title').textContent=selected.title;$('#n-client').textContent=selected.client;$('#n-owner').textContent=selected.owner;$('#n-owner-avatar').textContent=selected.person;$('#n-owner-avatar').dataset.person=selected.person;$('#n-detail-status').textContent=columns[selected.col];$('#n-detail-priority').innerHTML=`<i data-lucide="${selected.priority==='Alta'?'chevrons-up':'minus'}" aria-hidden="true"></i>${selected.priority}`;$('#n-detail-sla').innerHTML=`<i data-lucide="clock-3" aria-hidden="true"></i>${selected.risk||'Em dia'}`;
     $('#n-product-title').textContent=selected.product;$('#n-sku').textContent=selected.sku;
     $('#n-detail-sla').className='n-risk'+(selected.blocked?' n-late':!selected.risk?' n-healthy':'');$('#n-detail-block').hidden=!selected.blocked;
-    if(selected.id!=='RMA-1048'){
+    if(selected.id!=='OS-1048'){
       const from=columns[Math.max(0,selected.col-1)],to=columns[selected.col];
       $('#n-panel-activity').innerHTML=`<ol class="n-timeline" aria-label="Histórico do atendimento"><li><span class="n-avatar" data-person="${selected.person}">${selected.person}</span><div><div class="n-event-head"><strong>${selected.owner}</strong><time>6 nov, 10:42</time></div><div class="n-transition" aria-label="Etapa atual: ${to}"><span>${from}</span><i data-lucide="arrow-right" aria-hidden="true"></i><span>${to}</span></div><p>${selected.blocked?'Solicitada fonte de reposição.':'Conferência do equipamento registrada.'}</p></div></li></ol>`;
     }else $('#n-panel-activity').innerHTML=activityExample;
-    $('#n-failure').textContent=selected.id==='RMA-1048'?'O equipamento não liga após a conexão à rede. O indicador de alimentação permanece apagado.':selected.title+'. Relato recebido junto ao equipamento.';
-    $('#n-diagnosis').textContent=selected.id==='RMA-1048'?'Alimentação de entrada conferida. Verificar a fonte interna e registrar as medições de bancada.':'Verificar o equipamento em bancada e registrar as evidências do atendimento.';
+    $('#n-failure').textContent=selected.id==='OS-1048'?'O equipamento não liga após a conexão à rede. O indicador de alimentação permanece apagado.':selected.title+'. Relato recebido junto ao equipamento.';
+    $('#n-diagnosis').textContent=selected.id==='OS-1048'?'Alimentação de entrada conferida. Verificar a fonte interna e registrar as medições de bancada.':'Verificar o equipamento em bancada e registrar as evidências do atendimento.';
     tab('overview');all('[data-step]').forEach(c=>c.checked=!!checks[selected.id]?.[c.dataset.step]);updateProgress();icons();$('#n-detail').showModal();persist();
   }
   const activityExample=$('#n-panel-activity').innerHTML;

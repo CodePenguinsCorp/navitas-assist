@@ -6,7 +6,7 @@ MySQL 8, com schema gerido pelo Flyway (`backend/src/main/resources/db/migration
 
 | Versão | Arquivo | O que faz |
 | --- | --- | --- |
-| V1 | `V1__baseline.sql` | Baseline única: todas as tabelas, índices e constraints e os seeds (linha de bloqueio da numeração dos RMAs, 4 perfis prontos com permissões, regras de notificação com destinatários por perfil). |
+| V1 | `V1__baseline.sql` | Baseline única: todas as tabelas, índices e constraints e os seeds (linha de bloqueio da numeração das ordens de serviço, 4 perfis prontos com permissões, regras de notificação com destinatários por perfil). |
 | V2 | `V2__rma_due_date_and_remove_stage_sla.sql` | Data limite (`rmas.due_date`, `rma_due_date_history`, `kanban_views.deadline_status`) e remoção dos alertas `SLA_WARNING`/`SLA_OVERDUE` (regras, silenciamentos, eventos e notificações desses tipos). |
 | V3 | `V3__rma_item_warranty_override.sql` | Ajuste manual de garantia por item e tabela de auditoria `rma_item_warranty_history`. |
 | V4 | `V4__notification_email_delivery.sql` | E-mail opcional e único do usuário; canal App/E-mail por regra; colunas e índice da fila de e-mail; regras dos tipos reservados. |
@@ -19,6 +19,7 @@ MySQL 8, com schema gerido pelo Flyway (`backend/src/main/resources/db/migration
 | V11 | `V11__repair_history_and_void.sql` | Auditoria de edição e anulação lógica de componentes externos e intervenções; `rma_repair_history`, com inclusão dos registros anteriores. |
 | V12 | `V12__notification_event_producers.sql` | Ativa impedimentos, reservas pendentes e testes reprovados (e-mail desligado); remove regras, destinatários, silenciamentos, eventos e notificações dos tipos sem produtor. |
 | V13 | `V13__audit_events.sql` | Trilha imutável `audit_events` com instante DATETIME(6) em UTC; índices por instante, registro e ator/instante; concede `auditoria.ver` somente ao Administrador. |
+| V14 | `V14__service_order_codes.sql` | Converte o prefixo dos códigos existentes para `OS-`, preservando ano, sequência e unicidade. |
 
 Tabelas principais: `audit_events`, `clients`, `products`, `rmas`, `rma_items`, `diagnoses`, `rma_status_history`, `rma_assignment_history`, `rma_repair_history`, `rma_blocks`, `parts`, `part_reservations`, `part_movements`, `access_profiles`, `access_profile_permissions`, `user_accounts`, `user_account_extra_permissions`, `kanban_views`, `notification_*`, `notifications`, `protocol_*` e `rma_protocol_*`.
 

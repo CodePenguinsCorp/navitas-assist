@@ -32,7 +32,7 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/rmas/rmas.component').then((module) => module.RmasComponent),
         canActivate: [permissionGuard],
         data: { permissions: ['rma.ver'] },
-        title: 'RMAs | Navitas Assist'
+        title: 'Ordens de serviço | Navitas Assist'
       },
       {
         path: 'kanban',

@@ -15,16 +15,16 @@ O processo de assistência técnica enfrenta dificuldades como:
 - Falta de rastreabilidade dos produtos
 - Controle manual de informações
 - Dificuldade em localizar histórico de atendimentos
-- Falta de padronização no processo de RMA
+- Falta de padronização no processo de OS
 - Retrabalho e perda de informações
 
 ## Objetivo do Sistema
 
-Desenvolver um sistema digital que permita o controle e rastreamento de produtos da Navitas que retornam para assistência técnica ou reparo, consolidando o processo de RMA no sistema Navitas Assist e facilitando o registro, acompanhamento e geração de relatórios relacionados aos atendimentos.
+Desenvolver um sistema digital que permita o controle e rastreamento de produtos da Navitas que retornam para assistência técnica ou reparo, consolidando o processo de OS no sistema Navitas Assist e facilitando o registro, acompanhamento e geração de relatórios relacionados aos atendimentos.
 
 ## Público Beneficiado
 
-O projeto beneficia diretamente dois principais públicos. O primeiro e mais diretamente beneficiado é a empresa Navitas Tecnologia, uma vez que o produto pretende otimizar os processos de RMA da empresa proporcionando maior competitividade e eficiência interna, um diferencial necessário nos setores de tecnologia.
+O projeto beneficia diretamente dois principais públicos. O primeiro e mais diretamente beneficiado é a empresa Navitas Tecnologia, uma vez que o produto pretende otimizar os processos de OS da empresa proporcionando maior competitividade e eficiência interna, um diferencial necessário nos setores de tecnologia.
 O segundo público beneficiado será composto pelos clientes e parceiros da Navitas Tecnologia, que poderão usufruir de uma experiência mais eficiente, organizada e transparente no atendimento de reparos e assistência dos produtos Navitas, resultando em benefícios diretos, como maior agilidade e confiabilidade no serviço, e indiretos, como aumento da satisfação, fortalecimento do relacionamento e maior credibilidade da marca.
 
 ## Projeto Mínimo Viável (MVP)
@@ -70,7 +70,7 @@ Disponibilizar um fluxo funcional de gerenciamento de assistência técnica, per
 
 ## Próximos Passos
 
-- [ ] **Interface Kanban para RMAs:** Fazer com que a gestão de status do chamado seja feita de forma visual, melhorando a experiência do usuário.
-- [ ] **Ampliação da Cobertura de Testes:** Criar novos testes de integração para as regras de negócio de RMAs e Garantias.
+- [ ] **Interface Kanban para ordens de serviço:** Fazer com que a gestão de status do chamado seja feita de forma visual, melhorando a experiência do usuário.
+- [ ] **Ampliação da Cobertura de Testes:** Criar novos testes de integração para as regras de negócio de ordens de serviço e Garantias.
 - [ ] **Homologação e Deploy:** Validar os scripts de ambiente de produção, preparando o sistema para o primeiro ciclo de uso e feedback do cliente.
 

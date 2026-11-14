@@ -10,7 +10,7 @@ import { profilePermissions, providePermissions } from '../../testing/permission
 describe('Dashboard timestamp display', () => {
   it('renders audit and recent instants in Sao Paulo while preserving the civil entry date', async () => {
     const rma: RmaResponse = {
-      id: 1, code: 'RMA-2026-000001', clientId: 1, clientName: 'Cliente',
+      id: 1, code: 'OS-2026-000001', clientId: 1, clientName: 'Cliente',
       items: [{ id: 1, productId: 2, productName: 'Produto', productSku: 'SKU-2', batchNumber: null,
         serialNumber: 'SER-2', manufacturedAt: null, warrantyMonths: 12, warrantyExpiresAt: null, calculatedWarrantyStatus: WarrantyStatus.PENDING, warrantyOverride: null, warrantyStatus: WarrantyStatus.PENDING }],
       productId: 2, productName: 'Produto', productSku: 'SKU-2', batchNumber: null, serialNumber: 'SER-2',

@@ -21,13 +21,13 @@ class NotificationEmailContentFactoryTest {
         n.setMessage("Secret client name");
         RmaRecord rma = new RmaRecord();
         rma.setId(42L);
-        rma.setCode("RMA<&\"42");
+        rma.setCode("OS<&\"42");
         n.setRma(rma);
         var factory = new NotificationEmailContentFactory(properties);
         var message = factory.build(n, "to@example.invalid");
         String label = switch (type) {
-            case RMA_CREATED -> "RMA criado";
-            case RMA_ASSIGNED -> "RMA atribuído";
+            case RMA_CREATED -> "OS criada";
+            case RMA_ASSIGNED -> "OS atribuída";
             case RMA_BLOCKED -> "Impedimento aberto";
             case PART_PENDING -> "Peça pendente";
             case TEST_FAILED -> "Teste reprovado";
@@ -35,7 +35,7 @@ class NotificationEmailContentFactoryTest {
         assertTrue(message.subject().startsWith("[Navitas Assist] " + label));
         assertTrue(message.text().contains(label));
         assertFalse(message.text().contains("Secret client"));
-        assertTrue(message.html().contains("RMA&lt;&amp;&quot;42"));
+        assertTrue(message.html().contains("OS&lt;&amp;&quot;42"));
         assertTrue(message.text().contains("http://localhost:4200/rmas?rma=42"));
         assertFalse(message.html().contains("Secret client"));
         assertEquals(message, factory.build(n, "to@example.invalid"));

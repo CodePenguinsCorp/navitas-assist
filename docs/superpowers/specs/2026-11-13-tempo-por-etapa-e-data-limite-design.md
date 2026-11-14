@@ -6,19 +6,19 @@ Data: 13 nov 2026. Substitui o SLA por etapa da NAV-10.
 
 ## 1. Objetivo e decisões
 
-O documento do cliente cita o tema uma vez, em "Tempo médio por etapa (SLA interno)", e o dashboard pede "RMAs em aberto, atrasados, por etapa". Os prazos por etapa (24/48/72/120 h, `SLA_*_MINUTES`, situações `NORMAL/WARNING/OVERDUE/CLOSED`, filtro e selo de SLA no Kanban, alertas `SLA_WARNING`/`SLA_OVERDUE`) foram uma interpretação nossa. O dono do produto decidiu (13 nov 2026) retirar os prazos por etapa e mostrar duas coisas:
+O documento do cliente cita o tema uma vez, em "Tempo médio por etapa (SLA interno)", e o dashboard pede "ordens de serviço em aberto, atrasados, por etapa". Os prazos por etapa (24/48/72/120 h, `SLA_*_MINUTES`, situações `NORMAL/WARNING/OVERDUE/CLOSED`, filtro e selo de SLA no Kanban, alertas `SLA_WARNING`/`SLA_OVERDUE`) foram uma interpretação nossa. O dono do produto decidiu (13 nov 2026) retirar os prazos por etapa e mostrar duas coisas:
 
-1. **Quanto tempo o RMA está em cada etapa.** Cards e detalhe mostram "há 2 d 4 h nesta etapa". O histórico mostra o tempo de cada etapa anterior. O relatório "Tempo por etapa" continua.
-2. **Uma data limite do atendimento inteiro.** É opcional, só data (sem hora). Quem abre o RMA pode preencher. Depois, quem tem `rma.editar` pode alterar ou remover. Cada mudança fica no histórico com autor, instante, valor anterior e valor novo. Um RMA sem data limite não tem prazo.
+1. **Quanto tempo a OS está em cada etapa.** Cards e detalhe mostram "há 2 d 4 h nesta etapa". O histórico mostra o tempo de cada etapa anterior. O relatório "Tempo por etapa" continua.
+2. **Uma data limite do atendimento inteiro.** É opcional, só data (sem hora). Quem abre a OS pode preencher. Depois, quem tem `rma.editar` pode alterar ou remover. Cada mudança fica no histórico com autor, instante, valor anterior e valor novo. Um OS sem data limite não tem prazo.
 
 Efeito da data limite: **só destaca e filtra, sem notificar.**
 
 | Situação | Código | Regra (hoje = data civil em `America/Sao_Paulo`) |
 | --- | --- | --- |
-| Atrasado | `OVERDUE` | RMA não encerrado e `hoje > dataLimite` |
-| Perto do limite | `DUE_SOON` | RMA não encerrado e `dataLimite - N <= hoje <= dataLimite` (N = `navitas.deadline.warning-days`, padrão 7) |
-| No prazo | `ON_TRACK` | RMA não encerrado e `hoje < dataLimite - N` |
-| Sem data limite | `NO_DUE_DATE` | RMA não encerrado e sem data limite |
+| Atrasado | `OVERDUE` | OS não encerrada e `hoje > dataLimite` |
+| Perto do limite | `DUE_SOON` | OS não encerrada e `dataLimite - N <= hoje <= dataLimite` (N = `navitas.deadline.warning-days`, padrão 7) |
+| No prazo | `ON_TRACK` | OS não encerrada e `hoje < dataLimite - N` |
+| Sem data limite | `NO_DUE_DATE` | OS não encerrada e sem data limite |
 | Encerrado | `CLOSED` | Status `COMPLETED`, `RETURNED` ou `IRREPARABLE`, com ou sem data limite. Nunca é atrasado. |
 
 Termos de interface: "Atrasado(s)", "Perto do limite", "No prazo", "Sem data limite", "Data limite", "Prazo" (rótulo do filtro). **"Vencido(s)" é proibido** em qualquer texto novo. "SLA" some da interface.
@@ -48,13 +48,13 @@ Entidades: `RmaRecord.dueDate` (`@Column(name = "due_date")`) e `RmaRecord.dueDa
 - Cada período tem `status`, `enteredAt` (primeiro registro do bloco), `leftAt` (início do bloco seguinte, ou `null` no atual) e `durationSeconds = max(0, (leftAt ?? now) - enteredAt)`.
 - Sem histórico, há um período único com o status atual, iniciado em `createdAt`. Se `createdAt` faltar, usa `entryDate` à meia-noite de `America/Sao_Paulo`, e se também faltar, `now`. É o mesmo fallback do SLA de hoje.
 - Se o último bloco não for do status atual (legado inconsistente), acrescenta um período atual iniciado no `changedAt` do último registro.
-- O período atual de um RMA encerrado continua contando: é o tempo desde o encerramento. As telas não o exibem como "nesta etapa" (seção 5).
+- O período atual de uma OS encerrada continua contando: é o tempo desde o encerramento. As telas não o exibem como "nesta etapa" (seção 5).
 
 ### 3.2 Situação da data limite (`RmaDeadlineService`)
 
 - `static LocalDate businessDate(Instant now)` é `LocalDate.ofInstant(now, America/Sao_Paulo)`.
 - `RmaDeadlineResponse evaluate(RmaRecord rma, LocalDate today)` devolve `status` (tabela da seção 1), `dueSoonFrom = dueDate - warningDays` (nulo sem data) e `daysUntilDue = dueDate - today` em dias civis (negativo quando atrasado, nulo sem data ou encerrado).
-- O frontend recalcula a situação a cada tique do relógio de 30 s. Usa `dueDate`, `dueSoonFrom`, o status do RMA e o "hoje" de São Paulo, sem saber `warningDays`. Assim a virada da meia-noite não exige recarga.
+- O frontend recalcula a situação a cada tique do relógio de 30 s. Usa `dueDate`, `dueSoonFrom`, o status da OS e o "hoje" de São Paulo, sem saber `warningDays`. Assim a virada da meia-noite não exige recarga.
 
 ### 3.3 Configuração
 
@@ -62,11 +62,11 @@ Entidades: `RmaRecord.dueDate` (`@Column(name = "due_date")`) e `RmaRecord.dueDa
 
 ## 4. Backend
 
-### 4.1 API de RMA
+### 4.1 API de OS
 
 - `CreateRmaRequest` ganha `LocalDate dueDate` (opcional).
 - `UpdateRmaRequest` ganha `LocalDate dueDate` e `Boolean clearDueDate`. Segue a semântica parcial atual (nulo = não muda). `clearDueDate = true` remove a data. Mandar os dois juntos dá 400: "Provide a due date or clear it, not both."
-- Validação em `RmaService.validateDates`: se houver data limite, ela não pode ser anterior à data de entrada ("Due date cannot be before entry date."). A regra vale também quando a edição muda só a entrada. Datas no passado são aceitas desde que não sejam anteriores à entrada, porque um RMA antigo pode já estar atrasado.
+- Validação em `RmaService.validateDates`: se houver data limite, ela não pode ser anterior à data de entrada ("Due date cannot be before entry date."). A regra vale também quando a edição muda só a entrada. Datas no passado são aceitas desde que não sejam anteriores à entrada, porque uma OS antigo pode já estar atrasado.
 - Histórico: criar com data grava `(null → data)`. Alterar grava `(anterior → nova)` só quando o valor muda. Remover grava `(anterior → null)`. O autor é `currentUsername()` e o instante é `Instant.now()`.
 - `RmaResponse` **perde `sla`** e ganha:
   - `LocalDate dueDate`;
@@ -98,7 +98,7 @@ Entidades: `RmaRecord.dueDate` (`@Column(name = "due_date")`) e `RmaRecord.dueDa
 ### 5.1 Utilitários (sem Angular)
 
 - `core/utils/duration.ts`: `formatDuration(seconds)`. Abaixo de 60 s, "menos de 1 min". Abaixo de 1 h, "N min". Abaixo de 1 d, "N h" ou "N h M min". A partir de 1 d, "N d" ou "N d H h". Substitui `slaDuration` (também nos impedimentos: "Bloqueado há 1 h 1 min") e o `duration()` local de `reports.component.ts`.
-- `core/utils/rma-stage.ts`: `currentStagePeriod(rma)`, `stageElapsedSeconds(period, now)` e `stageTimeLabel(rma, now)`. O rótulo é "há 2 d 4 h nesta etapa", ou `null` quando o RMA está encerrado.
+- `core/utils/rma-stage.ts`: `currentStagePeriod(rma)`, `stageElapsedSeconds(period, now)` e `stageTimeLabel(rma, now)`. O rótulo é "há 2 d 4 h nesta etapa", ou `null` quando a OS está encerrado.
 - `core/utils/rma-deadline.ts`: `DeadlineStatus`, `DeadlineFilterValue = 'all' | 'OVERDUE' | 'DUE_SOON' | 'ON_TRACK' | 'NO_DUE_DATE'`, `DEADLINE_LABELS`, `DEADLINE_FILTER_OPTIONS`, `deadlineStatus(rma, today)`, `deadlineDetailLabel(rma, today)` e `deadlineCardLabel(rma, today)`. Os textos são "Atrasado há 1 dia", "Atrasado há N dias", "Vence hoje", "Vence em 1 dia", "Vence em N dias". No card, só para `OVERDUE` e `DUE_SOON`. `today` vem de `businessDateInputValue(new Date(clock.now()))`.
 - `SlaClockService` passa a se chamar `ClockService` (`core/services/clock.service.ts`), com o mesmo comportamento de 30 s.
 
@@ -111,12 +111,12 @@ Entidades: `RmaRecord.dueDate` (`@Column(name = "due_date")`) e `RmaRecord.dueDa
 ### 5.3 Telas
 
 - **Kanban** (`pages/kanban`): o filtro "SLA" dá lugar a "Prazo" (`formControlName="deadline"`, `ariaLabel="Filtrar Kanban por prazo"`) na linha rápida, com as opções "Todos", "Atrasados", "Perto do limite", "No prazo" e "Sem data limite". Encerrados só aparecem em "Todos". O valor é salvo nas visualizações (`toPersistedFilters`/`fromPersistedFilters`) e conta em `countActiveFilters`.
-- **Card** (`rma-kanban-board`): sai o selo de SLA. Entra o chip de prazo só quando a situação é `OVERDUE` ou `DUE_SOON`, e uma linha discreta "há 2 d 4 h nesta etapa" para RMAs não encerrados. O card continua enxuto, sem falha nem situação saudável.
-- **Detalhes** (lista de RMAs, `rmas.component.html:212`, e modal do Kanban, `rma-detail-modal.component.html:198`): o fato "SLA" vira dois fatos. "Data limite" mostra a data e o chip de situação, ou "Sem data limite" com `is-empty`. Para quem tem `rma.editar`, há o botão "Alterar" (`button-secondary`), que abre o diálogo. "Nesta etapa" mostra "há 2 d 4 h", ou "Encerrado em …". O Histórico passa a incluir entradas `kind: 'dueDate'` ("Data limite 20/11/2026 → 25/11/2026", "Data limite definida: …", "Data limite removida") e a lista de tempo por etapa.
-- **Abertura de RMA** (`rmas.component`): campo opcional "Data limite" (`app-date-picker`, `allowClear`, `minDate` = entrada) ao lado de "Entrada". O erro local "A data limite não pode ser anterior à entrada." aparece em `dateErrors().dueDate`. O valor vai em `CreateRmaRequest.dueDate`.
-- **Relatório "Tempo por etapa"**: o comportamento não muda (etapa atual dos RMAs não encerrados, média e máximo por etapa). A fonte troca `rma.sla.startedAt/elapsedSeconds` pelo período atual (`enteredAt`, `durationSeconds`, que é uma fotografia em `generatedAt`), e o filtro de ativos passa a usar `CLOSED_RMA_STATUSES`. A legenda continua: "Tempo corrido na etapa…".
-- **Dashboard**: o indicador novo "Atrasados" fica em segundo lugar, com valor N e detalhe "· M perto do limite", contando RMAs não encerrados de `listBoard()`. As cores e o estilo do card de cadastros deixam de depender de `nth-child` e passam a usar `data-tone` e um modificador `dashboard-summary__item--catalog`, para que o card novo não desloque os tons.
-- **Notificações**: o texto vazio vira "Alertas sobre RMAs atribuídos e novos itens aparecem aqui.". O rótulo de `SLA_WARNING`/`SLA_OVERDUE` em `notification-ui.ts` vira "Prazo de etapa (descontinuado)", só para itens antigos da caixa. Regras e preferências deixam de listá-los porque as linhas somem do banco.
+- **Card** (`rma-kanban-board`): sai o selo de SLA. Entra o chip de prazo só quando a situação é `OVERDUE` ou `DUE_SOON`, e uma linha discreta "há 2 d 4 h nesta etapa" para ordens de serviço não encerrados. O card continua enxuto, sem falha nem situação saudável.
+- **Detalhes** (lista de ordens de serviço, `rmas.component.html:212`, e modal do Kanban, `rma-detail-modal.component.html:198`): o fato "SLA" vira dois fatos. "Data limite" mostra a data e o chip de situação, ou "Sem data limite" com `is-empty`. Para quem tem `rma.editar`, há o botão "Alterar" (`button-secondary`), que abre o diálogo. "Nesta etapa" mostra "há 2 d 4 h", ou "Encerrado em …". O Histórico passa a incluir entradas `kind: 'dueDate'` ("Data limite 20/11/2026 → 25/11/2026", "Data limite definida: …", "Data limite removida") e a lista de tempo por etapa.
+- **Abertura de OS** (`rmas.component`): campo opcional "Data limite" (`app-date-picker`, `allowClear`, `minDate` = entrada) ao lado de "Entrada". O erro local "A data limite não pode ser anterior à entrada." aparece em `dateErrors().dueDate`. O valor vai em `CreateRmaRequest.dueDate`.
+- **Relatório "Tempo por etapa"**: o comportamento não muda (etapa atual das ordens de serviço não encerrados, média e máximo por etapa). A fonte troca `rma.sla.startedAt/elapsedSeconds` pelo período atual (`enteredAt`, `durationSeconds`, que é uma fotografia em `generatedAt`), e o filtro de ativos passa a usar `CLOSED_RMA_STATUSES`. A legenda continua: "Tempo corrido na etapa…".
+- **Dashboard**: o indicador novo "Atrasados" fica em segundo lugar, com valor N e detalhe "· M perto do limite", contando ordens de serviço não encerradas de `listBoard()`. As cores e o estilo do card de cadastros deixam de depender de `nth-child` e passam a usar `data-tone` e um modificador `dashboard-summary__item--catalog`, para que o card novo não desloque os tons.
+- **Notificações**: o texto vazio vira "Alertas sobre ordens de serviço atribuídas e novos itens aparecem aqui.". O rótulo de `SLA_WARNING`/`SLA_OVERDUE` em `notification-ui.ts` vira "Prazo de etapa (descontinuado)", só para itens antigos da caixa. Regras e preferências deixam de listá-los porque as linhas somem do banco.
 - Removidos: `rma-sla-badge/*`, `core/utils/rma-sla.ts`, `rma-sla.spec.mjs`, o script `test:sla` e o passo "Run SLA tests" de `.github/workflows/frontend-ci.yml`. Os testes dos utilitários novos rodam no Vitest com a suíte normal.
 - A dica do impedimento "O período bloqueado continua contando no SLA." vira "O período bloqueado continua contando no tempo da etapa.".
 - Tudo funciona a 320 px: os fatos novos quebram linha, e o chip usa `overflow-wrap`.
@@ -174,7 +174,7 @@ Verificação: H2 nos testes (`DeadlineMigrationTest`, `DatabaseMigrationTest`) 
 - Calcular a data limite automaticamente (por prioridade ou cliente).
 - Média histórica das etapas já concluídas no relatório. Os dados existem em `stagePeriods`, mas o relatório continua mostrando a etapa atual. Ver risco R5.
 - Pausar o tempo da etapa durante impedimentos.
-- Filtro de prazo no servidor (`GET /api/rmas?deadline=`). A lista paginada de RMAs não ganha filtro novo.
+- Filtro de prazo no servidor (`GET /api/rmas?deadline=`). A lista paginada de ordens de serviço não ganha filtro novo.
 - Apagar as notificações legadas `SLA_*` (pode virar uma migração futura com prazo de retenção).
 
 ## 9. Riscos

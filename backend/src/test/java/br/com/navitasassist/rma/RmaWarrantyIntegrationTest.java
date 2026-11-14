@@ -118,7 +118,7 @@ class RmaWarrantyIntegrationTest {
         em.flush();
         mvc.perform(put(path(rma, rma.getItems().get(0).getId())).with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"override\":\"IN_WARRANTY\",\"reason\":\"Cortesia\"}"))
-            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Não é possível ajustar a garantia de um RMA encerrado."));
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Não é possível ajustar a garantia de uma OS encerrada."));
     }
 
     private String path(RmaRecord rma, Long itemId) {

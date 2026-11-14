@@ -13,7 +13,7 @@ const PART: PartResponse = {
 };
 const REPLENISHMENT: PartReplenishmentResponse = { ...PART, partId: PART.id, pendingQuantity: 3, suggestedQuantity: 5 };
 const PENDING: PartReservationResponse = {
-  id: 2, rmaId: 7, rmaCode: 'RMA-7', partId: 4, partCode: 'PCA-1', partName: 'Capacitor', unit: 'm', location: 'A1',
+  id: 2, rmaId: 7, rmaCode: 'OS-7', partId: 4, partCode: 'PCA-1', partName: 'Capacitor', unit: 'm', location: 'A1',
   quantity: 3, status: 'PENDING', partAvailable: 6, unitCost: 10, totalCost: 30, note: null, createdBy: 'tech',
   createdAt: PART.createdAt, updatedAt: PART.updatedAt
 };
@@ -173,7 +173,7 @@ describe('PartsComponent snapshot loading', () => {
   it('preserves immediate code, name and location search and tab changes without HTTP', async () => {
     await setup();
     for (const query of ['PCA-1', 'capacitor', 'a1']) { search(query); expect(text()).toContain('Capacitor'); }
-    tab('Reposição'); expect(text()).toContain('RMA-7'); tab('Estoque');
+    tab('Reposição'); expect(text()).toContain('OS-7'); tab('Estoque');
     for (const method of ['list', 'listReplenishment', 'listPending'] as const) expect(service[method]).toHaveBeenCalledTimes(1);
   });
 

@@ -8,7 +8,7 @@ import { providePermissions } from '../../testing/permission-fixtures';
 import { RmaPartsPanelComponent } from './rma-parts-panel.component';
 
 const reservation = (id: number, status: PartReservationResponse['status']): PartReservationResponse => ({
-  id, rmaId: 7, rmaCode: 'RMA-7', partId: 4, partCode: 'PCA-1', partName: 'Capacitor', unit: 'un', location: 'A1', quantity: 2, status,
+  id, rmaId: 7, rmaCode: 'OS-7', partId: 4, partCode: 'PCA-1', partName: 'Capacitor', unit: 'un', location: 'A1', quantity: 2, status,
   partAvailable: 3, unitCost: 10, totalCost: 20, note: null, createdBy: 'tech', createdAt: '2026-10-24T12:00:00Z', updatedAt: '2026-10-24T12:00:00Z'
 });
 
@@ -21,7 +21,7 @@ describe('RmaPartsPanelComponent compact sections', () => {
   const errors = () => Array.from(root().querySelectorAll('.field-error')).map((e) => e.textContent?.trim());
 
   async function setup(parts: Partial<RmaPartsResponse> = {}, permissions: Permission[] = ['rma.ver', 'pecas.ver', 'pecas.reservar']) {
-    const response: RmaPartsResponse = { rmaId: 7, rmaCode: 'RMA-7', reservations: [], movements: [], reservedCost: 0, consumedCost: 0, pendingCount: 0, ...parts };
+    const response: RmaPartsResponse = { rmaId: 7, rmaCode: 'OS-7', reservations: [], movements: [], reservedCost: 0, consumedCost: 0, pendingCount: 0, ...parts };
     await TestBed.configureTestingModule({
       imports: [RmaPartsPanelComponent],
       providers: [

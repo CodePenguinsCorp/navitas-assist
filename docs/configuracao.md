@@ -55,7 +55,7 @@ Detalhes de comportamento em [notificacoes-e-emails.md](notificacoes-e-emails.md
 
 | Variável | Padrão | Obrigatória quando | Validação |
 | --- | --- | --- | --- |
-| `NOTIFICATIONS_EMAIL_ENABLED` | `false` | | Desligado pausa a fila sem consumir tentativas. |
+| `NOTIFICATIONS_EMAIL_ENABLED` | `false` | | Desligado pausa a fila sem aplicar tentativas. |
 | `NOTIFICATIONS_EMAIL_PROVIDER` | `fake` | | `fake` ou `resend`. Com o canal ligado, `fake` só é aceito nos perfis `local` e `test`. |
 | `MAIL_FROM` | vazio | Canal ligado | Um único endereço de e-mail válido. |
 | `APP_BASE_URL` | vazio | Canal ligado | URL absoluta sem credenciais, query ou fragmento; HTTPS com Resend; HTTP só no fake e em `localhost`, `127.0.0.1` ou `[::1]`. |

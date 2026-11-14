@@ -97,7 +97,7 @@ public class ProductService {
         Product product = getEntityById(id);
 
         if (rmaRecordRepository.existsByProduct_Id(id) || rmaRecordRepository.existsByItems_Product_Id(id)) {
-            throw new BusinessException("Product cannot be deleted because it is used by an RMA.");
+            throw new BusinessException("Produto não pode ser excluído porque está vinculado a uma OS.");
         }
 
         productRepository.delete(product);

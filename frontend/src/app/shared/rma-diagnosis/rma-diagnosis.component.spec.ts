@@ -86,7 +86,7 @@ describe('Diagnóstico inline', () => {
     expect(calls).toHaveLength(0);
   });
 
-  it('salva o mesmo contrato, recarrega o RMA e mantém o detalhe aberto', () => {
+  it('salva o mesmo contrato, recarrega a OS e mantém o detalhe aberto', () => {
     edit(); fill('foundFailure', '  Falha na fonte  '); fill('notes', '   '); submit();
     expect(calls).toEqual([expect.objectContaining({ foundFailure: 'Falha na fonte', technicianName: 'Ana', notes: null, failureType: null, probableCause: null })]);
     expect(reads).toBe(1);
@@ -117,7 +117,7 @@ describe('Diagnóstico inline', () => {
     expect(button('Cancelar').disabled).toBe(true);
   });
 
-  it.each(['COMPLETED', 'RETURNED', 'IRREPARABLE'] as const)('não permite editar RMA encerrado em %s', status => {
+  it.each(['COMPLETED', 'RETURNED', 'IRREPARABLE'] as const)('não permite editar OS encerrada em %s', status => {
     fixture.componentRef.setInput('rma', buildRma({ status })); render();
     expect(button('Registrar diagnóstico')).toBeUndefined();
   });

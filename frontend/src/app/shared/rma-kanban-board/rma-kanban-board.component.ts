@@ -39,7 +39,7 @@ export class RmaKanbanBoardComponent {
   readonly dragTargetStatus = input<RmaStatus | null>(null);
   readonly showToolbar = input(true);
   readonly toolbarTitle = input('Quadro Kanban');
-  readonly toolbarDescription = input('Arraste os cards entre as colunas para atualizar o status do RMA.');
+  readonly toolbarDescription = input('Arraste os cards entre as colunas para atualizar o status da OS.');
 
   @Output() readonly cardSelect = new EventEmitter<RmaResponse>();
   protected readonly clock = inject(ClockService);

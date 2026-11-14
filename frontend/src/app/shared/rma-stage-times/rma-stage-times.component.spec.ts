@@ -32,10 +32,10 @@ describe('RmaStageTimesComponent', () => {
         { status: 'TRIAGE', enteredAt: '2026-11-10T12:00:00Z', leftAt: '2026-11-11T12:30:00Z', durationSeconds: 88200 },
         { status: 'IN_DIAGNOSIS', enteredAt: '2026-11-11T12:30:00Z', leftAt: null, durationSeconds: 0 }
       ]
-    })).toEqual(['Recebido · 2 h', 'Triagem · 1 d', 'Diagnóstico · 1 d 23 h (atual)']);
+    })).toEqual(['Recebida · 2 h', 'Triagem · 1 d', 'Diagnóstico · 1 d 23 h (atual)']);
   });
 
-  it('shows Encerrado em on the last line of a closed RMA', () => {
+  it('shows Encerrada em on the last line of a closed OS', () => {
     const rendered = lines({
       status: 'COMPLETED',
       stagePeriods: [
@@ -44,7 +44,7 @@ describe('RmaStageTimesComponent', () => {
       ]
     });
     expect(rendered[0]).toBe('Testes · 3 h');
-    expect(rendered[1]).toBe('Concluído · Encerrado em 10/11/2026 10:00');
+    expect(rendered[1]).toBe('Concluída · Encerrada em 10/11/2026 10:00');
     expect(rendered.join(' ')).not.toContain('(atual)');
   });
 
@@ -87,7 +87,7 @@ describe('RmaStageTimesComponent', () => {
       item.querySelector('.stage-times__value')?.textContent?.trim()
     ]);
     expect(rows).toEqual([
-      ['RECEIVED', 'Recebido', '2 d'],
+      ['RECEIVED', 'Recebida', '2 d'],
       ['TRIAGE', 'Triagem', '10 min'],
       ['IN_REPAIR', 'Reparo', '1 d 11 h (atual)']
     ]);

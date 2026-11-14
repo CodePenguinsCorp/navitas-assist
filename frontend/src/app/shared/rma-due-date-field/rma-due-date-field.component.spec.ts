@@ -13,7 +13,7 @@ describe('RmaDueDateFieldComponent', () => {
   let response: () => ReturnType<RmaService['updateDueDate']>;
   let saved: RmaResponse[];
 
-  const RMA = buildRma({ id: 4, code: 'RMA-2026-000004', entryDate: '2026-11-02', dueDate: '2026-11-20', deadline: { status: 'ON_TRACK', dueSoonFrom: '2026-11-13', daysUntilDue: 10 } });
+  const RMA = buildRma({ id: 4, code: 'OS-2026-000004', entryDate: '2026-11-02', dueDate: '2026-11-20', deadline: { status: 'ON_TRACK', dueSoonFrom: '2026-11-13', daysUntilDue: 10 } });
 
   beforeEach(async () => {
     calls = [];
@@ -93,7 +93,7 @@ describe('RmaDueDateFieldComponent', () => {
     expect([...host().querySelectorAll('.due-date-field__actions button')].map(text)).toEqual(['Cancelar', 'Salvar']);
   });
 
-  it('saves the chosen date, emits the RMA and returns focus to the trigger', () => {
+  it('saves the chosen date, emits the OS and returns focus to the trigger', () => {
     mount();
     edit();
     type('2026-11-25');

@@ -1,6 +1,6 @@
 # Navitas Assist
 
-Sistema web para diagnóstico técnico e acompanhamento de RMAs (produtos da Navitas que voltam para assistência técnica ou reparo): abertura, Kanban, diagnóstico, peças, protocolos, garantia, prazo, notificações e relatórios, com rastreabilidade por produto, lote e série.
+Sistema web para diagnóstico técnico e acompanhamento de ordens de serviço (produtos da Navitas que voltam para assistência técnica ou reparo): abertura, Kanban, diagnóstico, peças, protocolos, garantia, prazo, notificações e relatórios, com rastreabilidade por produto, lote e série.
 
 ## Stack
 
@@ -25,7 +25,7 @@ Acesse `http://localhost:4200` (frontend), `http://localhost:8080` (API) e `http
 
 A aplicação não cria contas na inicialização. Em banco novo, o primeiro administrador é inserido no banco com um hash BCrypt ([docs/banco-de-dados.md](docs/banco-de-dados.md#primeiro-administrador)); depois, usuários e perfis são mantidos pelas telas Usuários e Perfis.
 
-Para dados de demonstração locais (clientes, produtos, peças, RMAs e protocolos), com a stack no ar e uma conta administradora:
+Para dados de demonstração locais (clientes, produtos, peças, ordens de serviço e protocolos), com a stack no ar e uma conta administradora:
 
 ```powershell
 node scripts/dev-seed/seed.mjs
@@ -39,7 +39,7 @@ Todo o detalhamento está em [docs/](docs/README.md):
 
 | Documento | Conteúdo |
 | --- | --- |
-| [visao-geral](docs/visao-geral.md) | Sistema, módulos, fluxo do RMA, fuso, numeração, paginação |
+| [visao-geral](docs/visao-geral.md) | Sistema, módulos, fluxo da OS, fuso, numeração, paginação |
 | [desenvolvimento](docs/desenvolvimento.md) | Ambiente, Docker, testes, build, convenções, dados de demonstração |
 | [configuracao](docs/configuracao.md) | Variáveis de ambiente e propriedades |
 | [acesso-e-permissoes](docs/acesso-e-permissoes.md) | Perfis, permissões, sessão, regras anti-escalada |

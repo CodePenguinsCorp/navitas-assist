@@ -94,7 +94,7 @@
             <section class="empty-state">
               <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
               <h3>Nenhuma notificação.</h3>
-              <p>Alertas sobre RMAs atribuídos e novos itens aparecem aqui.</p>
+              <p>Alertas sobre ordens de serviço atribuídas e novos itens aparecem aqui.</p>
             </section>
           }
         } @else {
@@ -293,7 +293,7 @@
               <thead>
                 <tr>
                   <th>Data</th>
-                  <th>RMA</th>
+                  <th>OS</th>
                   <th>Destinatário</th>
                   <th>Tentativas</th>
                   <th>Erro</th>
@@ -304,7 +304,7 @@
                 @for (failure of emailFailures(); track failure.notificationId ?? failure.eventKey + failure.recipient) {
                   <tr>
                     <td data-label="Data"><time>{{ dateTime(failure.occurredAt) }}</time></td>
-                    <td data-label="RMA">{{ failure.rmaCode || '—' }}</td>
+                    <td data-label="OS">{{ failure.rmaCode || '—' }}</td>
                     <td data-label="Destinatário">{{ failure.recipient || '—' }}</td>
                     <td data-label="Tentativas">{{ failure.attempts ?? 0 }}</td>
                     <td class="failure-error" data-label="Erro">
@@ -348,7 +348,7 @@
                   <th>Data</th>
                   <th>Origem</th>
                   <th>Alerta</th>
-                  <th>RMA</th>
+                  <th>OS</th>
                   <th>Destinatário</th>
                   <th>Erro</th>
                 </tr>
@@ -359,7 +359,7 @@
                     <td data-label="Data">{{ dateTime(failure.occurredAt) }}</td>
                     <td data-label="Origem">{{ failureSource(failure) }}</td>
                     <td data-label="Alerta">{{ eventLabels[failure.eventType] }}</td>
-                    <td data-label="RMA">{{ failure.rmaCode || '—' }}</td>
+                    <td data-label="OS">{{ failure.rmaCode || '—' }}</td>
                     <td data-label="Destinatário">{{ failure.recipient || '—' }}</td>
                     <td class="failure-error" data-label="Erro">{{ failure.error || '—' }}</td>
                   </tr>
@@ -442,7 +442,7 @@
 
             <label class="checkbox-field">
               <input type="checkbox" [formControl]="ruleForm.controls.notifyAssignee" />
-              <span>Notificar o responsável pelo RMA</span>
+              <span>Notificar o responsável pela OS</span>
             </label>
 
             @if (editorHasNoRecipients()) {

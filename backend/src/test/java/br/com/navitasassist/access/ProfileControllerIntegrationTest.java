@@ -162,10 +162,10 @@ class ProfileControllerIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(6))
             .andExpect(jsonPath("$[*].module", contains("RMA", "CADASTROS", "PECAS", "PROTOCOLOS", "RELATORIOS", "ADMINISTRACAO")))
-            .andExpect(jsonPath("$[0].label").value("RMAs"))
+            .andExpect(jsonPath("$[0].label").value("Ordens de serviço"))
             .andExpect(jsonPath("$[0].permissions.length()").value(8))
             .andExpect(jsonPath("$[0].permissions[5].code").value("rma.atribuivel"))
-            .andExpect(jsonPath("$[0].permissions[5].label").value("Pode ser responsável por RMAs"))
+            .andExpect(jsonPath("$[0].permissions[5].label").value("Pode ser responsável por ordens de serviço"))
             .andExpect(jsonPath("$[5].permissions[*].code", contains("usuarios.gerir", "perfis.gerir", "notificacoes.regras", "auditoria.ver")));
         mvc.perform(get("/api/permissions").with(user("rules").authorities(authorities("notificacoes.regras")))).andExpect(status().isForbidden());
     }

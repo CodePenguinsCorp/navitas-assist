@@ -58,7 +58,7 @@ public class NotificationDispatcher {
             return List.of();
         }
 
-        RmaRecord rma = rmaRecordRepository.findById(event.rmaId()).orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + event.rmaId()));
+        RmaRecord rma = rmaRecordRepository.findById(event.rmaId()).orElseThrow(() -> new ResourceNotFoundException("OS não encontrada: " + event.rmaId()));
         record.setRma(rma);
         NotificationContentFactory.Content content = contentFactory.build(event, rma);
         boolean sendEmail = rule.get().isEmailEnabled() && properties.getEmail().isEnabled();

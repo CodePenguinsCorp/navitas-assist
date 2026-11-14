@@ -10,8 +10,8 @@ import { ProfileService } from '../../core/services/profile.service';
 import { NotificationsComponent } from './notifications.component';
 
 const NOTIFICATION: NotificationResponse = {
-  id: 5, eventType: 'RMA_ASSIGNED', severity: 'INFO', title: 'RMA RMA-2026-000007 atribuído a Técnico', message: 'Cliente · Produto',
-  rmaId: 7, rmaCode: 'RMA-2026-000007', actionPath: '/rmas?rma=7', createdAt: '2026-10-24T12:00:00Z', readAt: null, snoozedUntil: null, read: false
+  id: 5, eventType: 'RMA_ASSIGNED', severity: 'INFO', title: 'OS OS-2026-000007 atribuída a Técnico', message: 'Cliente · Produto',
+  rmaId: 7, rmaCode: 'OS-2026-000007', actionPath: '/rmas?rma=7', createdAt: '2026-10-24T12:00:00Z', readAt: null, snoozedUntil: null, read: false
 };
 
 const PREFERENCES: NotificationPreferenceResponse[] = [
@@ -74,7 +74,7 @@ describe('NotificationsComponent', () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const text: string = fixture.nativeElement.textContent;
 
-    expect(text).toContain('RMA RMA-2026-000007 atribuído a Técnico');
+    expect(text).toContain('OS OS-2026-000007 atribuída a Técnico');
     expect(fixture.nativeElement.querySelector('.notification-meta')!.textContent).not.toContain('Nova atribuição');
     expect(text).not.toContain('Regras');
 
@@ -97,7 +97,7 @@ describe('NotificationsComponent', () => {
     fixture.detectChanges();
     const text: string = fixture.nativeElement.textContent;
 
-    expect(fixture.nativeElement.querySelector('input.switch[aria-label="Receber Novo RMA"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('input.switch[aria-label="Receber Nova OS"]')).not.toBeNull();
     expect(text).toContain('Obrigatório');
     component.toggleMute(PREFERENCES[0]);
     expect(service['updatePreference']).toHaveBeenCalledWith('RMA_CREATED', true);

@@ -13,12 +13,12 @@ export const DEADLINE_LABELS: Record<DeadlineStatus, string> = {
   DUE_SOON: 'Perto do limite',
   ON_TRACK: 'No prazo',
   NO_DUE_DATE: 'Sem data limite',
-  CLOSED: 'Encerrado'
+  CLOSED: 'Encerrada'
 };
 
 export const DEADLINE_FILTER_OPTIONS: ReadonlyArray<CustomSelectOption<DeadlineFilterValue>> = [
   { value: 'all', label: 'Todos' },
-  { value: 'OVERDUE', label: 'Atrasados' },
+  { value: 'OVERDUE', label: 'Atrasadas' },
   { value: 'DUE_SOON', label: 'Perto do limite' },
   { value: 'ON_TRACK', label: 'No prazo' },
   { value: 'NO_DUE_DATE', label: 'Sem data limite' }

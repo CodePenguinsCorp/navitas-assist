@@ -41,7 +41,7 @@ describe('ReportService', () => {
   });
 
   it('reads plain and encoded file names from Content-Disposition', () => {
-    expect(filenameFromDisposition('attachment; filename="laudo-RMA-1.pdf"', 'x.pdf')).toBe('laudo-RMA-1.pdf');
+    expect(filenameFromDisposition('attachment; filename="laudo-OS-1.pdf"', 'x.pdf')).toBe('laudo-OS-1.pdf');
     expect(filenameFromDisposition("attachment; filename*=UTF-8''rmas%20out.csv", 'x.csv')).toBe('rmas out.csv');
     expect(filenameFromDisposition(null, 'x.csv')).toBe('x.csv');
   });

@@ -351,7 +351,7 @@ describe('KanbanComponent filters', () => {
     expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeNull();
   });
 
-  it('does not undo an old drop after the same RMA changes again in the detail', () => {
+  it('does not undo an old drop after the same OS changes again in the detail', () => {
     fixture.detectChanges();
     const actions = fixture.componentInstance as unknown as {
       startCardDrag(event: DragEvent, rma: RmaResponse): void;
@@ -434,7 +434,7 @@ describe('KanbanComponent filters', () => {
     fixture.detectChanges();
 
     const card = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.board-card')].find((item) => item.textContent?.includes(TEST_RMAS[1].code))!;
-    expect(card.querySelector('.board-card__block')?.textContent).toContain('Bloqueado há');
+    expect(card.querySelector('.board-card__block')?.textContent).toContain('Impedida há');
     expect(modal.querySelector('.blocks-section__current')?.textContent).toContain('Aguardando cliente');
     expect(component.selectedRmaId()).toBe(2);
     expect(component.filtersForm.getRawValue().priority).toBe(TEST_RMAS[1].priority);
@@ -502,7 +502,7 @@ describe('KanbanComponent filters', () => {
     expect(component.activeFilterCount()).toBe(0);
   });
 
-  it('filters by each deadline option and keeps closed RMAs only under Todos', () => {
+  it('filters by each deadline option and keeps closed ordens de serviço only under Todos', () => {
     const extra = (id: number, dueDate: string | null, status: RmaResponse['status'] = 'TRIAGE'): RmaResponse => ({
       ...TEST_RMAS[0], id, code: `NAV-00${id}`, status, dueDate,
       deadline: { status: 'ON_TRACK', dueSoonFrom: dueDate ? shiftDate(dueDate, -7) : null, daysUntilDue: null },

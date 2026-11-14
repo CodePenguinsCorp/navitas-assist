@@ -60,7 +60,7 @@ public class RmaRepairService {
     public ExternalComponentResponse updateExternalComponent(Long rmaId, Long id, ExternalComponentRequest request) {
         RmaRecord rma = lockOpenRma(rmaId);
         RmaExternalComponent component = externalComponents.findById(id).filter(item -> item.getRma().getId().equals(rmaId))
-            .orElseThrow(() -> new ResourceNotFoundException("Componente não encontrado neste RMA."));
+            .orElseThrow(() -> new ResourceNotFoundException("Componente não encontrado nesta OS."));
         requireActive(component.getVoidedAt());
         fillExternal(component, request);
         component.setEditedBy(currentUsername()); component.setEditedAt(Instant.now());
@@ -71,7 +71,7 @@ public class RmaRepairService {
     public InterventionResponse updateIntervention(Long rmaId, Long id, InterventionRequest request) {
         RmaRecord rma = lockOpenRma(rmaId);
         RmaIntervention item = interventions.findById(id).filter(record -> record.getRma().getId().equals(rmaId))
-            .orElseThrow(() -> new ResourceNotFoundException("Intervenção não encontrada neste RMA."));
+            .orElseThrow(() -> new ResourceNotFoundException("Intervenção não encontrada nesta OS."));
         requireActive(item.getVoidedAt());
         fillIntervention(item, request);
         item.setEditedBy(currentUsername()); item.setEditedAt(Instant.now());
@@ -82,23 +82,23 @@ public class RmaRepairService {
     public ExternalComponentResponse voidExternalComponent(Long rmaId, Long id, RepairVoidRequest request) {
         RmaRecord rma = lockOpenRma(rmaId);
         RmaExternalComponent item = externalComponents.findById(id).filter(record -> record.getRma().getId().equals(rmaId))
-            .orElseThrow(() -> new ResourceNotFoundException("Componente não encontrado neste RMA."));
+            .orElseThrow(() -> new ResourceNotFoundException("Componente não encontrado nesta OS."));
         requireActive(item.getVoidedAt());
         item.setVoidedBy(currentUsername()); item.setVoidedAt(Instant.now()); item.setVoidReason(request.reason().trim());
         RmaRepairHistory.record(rma, "EXTERNAL_COMPONENT", id, "VOID", "Componente anulado: " + item.getDescription() + " · Motivo: " + item.getVoidReason(), currentUsername());
-        audit.record("REPAIR_VOID", "EXTERNAL_COMPONENT", id, rma.getCode(), "Reparo anulado. Consulte o histórico de reparo do RMA #" + rmaId + ", registro #EXTERNAL_COMPONENT:" + id + ".");
+        audit.record("REPAIR_VOID", "EXTERNAL_COMPONENT", id, rma.getCode(), "Reparo anulado. Consulte o histórico de reparo da OS #" + rmaId + ", registro #EXTERNAL_COMPONENT:" + id + ".");
         return ExternalComponentResponse.from(item);
     }
 
     public InterventionResponse voidIntervention(Long rmaId, Long id, RepairVoidRequest request) {
         RmaRecord rma = lockOpenRma(rmaId);
         RmaIntervention item = interventions.findById(id).filter(record -> record.getRma().getId().equals(rmaId))
-            .orElseThrow(() -> new ResourceNotFoundException("Intervenção não encontrada neste RMA."));
+            .orElseThrow(() -> new ResourceNotFoundException("Intervenção não encontrada nesta OS."));
         requireActive(item.getVoidedAt());
         item.setVoidedBy(currentUsername()); item.setVoidedAt(Instant.now()); item.setVoidReason(request.reason().trim());
         String description = item.getDescription().length() > 120 ? item.getDescription().substring(0, 120) + "…" : item.getDescription();
         RmaRepairHistory.record(rma, "INTERVENTION", id, "VOID", "Intervenção anulada: " + description + " · Motivo: " + item.getVoidReason(), currentUsername());
-        audit.record("REPAIR_VOID", "INTERVENTION", id, rma.getCode(), "Reparo anulado. Consulte o histórico de reparo do RMA #" + rmaId + ", registro #INTERVENTION:" + id + ".");
+        audit.record("REPAIR_VOID", "INTERVENTION", id, rma.getCode(), "Reparo anulado. Consulte o histórico de reparo da OS #" + rmaId + ", registro #INTERVENTION:" + id + ".");
         return InterventionResponse.from(item);
     }
 
@@ -120,13 +120,13 @@ public class RmaRepairService {
     private String batch(String value) { return value == null ? "" : " · Lote: " + value; }
 
     private void requireRma(Long rmaId) {
-        if (!rmas.existsById(rmaId)) throw new ResourceNotFoundException("RMA não encontrado: " + rmaId);
+        if (!rmas.existsById(rmaId)) throw new ResourceNotFoundException("OS não encontrada: " + rmaId);
     }
 
     private RmaRecord lockOpenRma(Long rmaId) {
-        RmaRecord rma = rmas.findByIdForUpdate(rmaId).orElseThrow(() -> new ResourceNotFoundException("RMA não encontrado: " + rmaId));
+        RmaRecord rma = rmas.findByIdForUpdate(rmaId).orElseThrow(() -> new ResourceNotFoundException("OS não encontrada: " + rmaId));
         if (List.of(RmaStatus.COMPLETED, RmaStatus.RETURNED, RmaStatus.IRREPARABLE).contains(rma.getStatus())) {
-            throw new BusinessException("Não é permitido registrar reparos em um RMA encerrado.");
+            throw new BusinessException("Não é permitido registrar reparos em uma OS encerrada.");
         }
         return rma;
     }

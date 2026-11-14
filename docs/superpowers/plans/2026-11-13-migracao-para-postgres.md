@@ -115,7 +115,7 @@ Decisão:
 
 - [ ] Passo 1 (vermelho): escrever primeiro o teste `SchemaEquivalenceTest` e o `PostgresTestDatabase` da Tarefa 4/5 (falham porque a baseline ainda é MySQL).
 - [ ] Passo 2: `V1__baseline.sql` em PostgreSQL com o schema final de V1..V10: identity (D2), `timestamptz` (D2), `CREATE EXTENSION IF NOT EXISTS unaccent`, índices únicos funcionais (D3), colunas e checks da V2 (`rmas.due_date`, `rma_due_date_history`, `kanban_views.deadline_status` com `ck_kanban_views_deadline`), V3 (`warranty_override*`, `rma_item_warranty_history`), V4 sem `email_normalized` (`email` + `uk_user_accounts_email` em `lower(email)`, `app_enabled`, `app_visible`, colunas e índice `idx_notifications_email_due`, check `ck_notifications_email_status` já final), V5 (tabelas de reparo), V6 (`email_generation`), V7 (`idx_notifications_email_sent`), V8 (`item_position`), V9 (permissão `cadastros.importar` ao `ADMIN`), V10 (`note_edited_by`, `note_edited_at`).
-- [ ] Passo 3: seeds: manter perfis, permissões e regras de notificação **no estado final**: sem `SLA_WARNING`/`SLA_OVERDUE` (a V2 os apagava), com os tipos reservados da V4 e `cadastros.importar`; linha de trava da numeração dos RMAs.
+- [ ] Passo 3: seeds: manter perfis, permissões e regras de notificação **no estado final**: sem `SLA_WARNING`/`SLA_OVERDUE` (a V2 os apagava), com os tipos reservados da V4 e `cadastros.importar`; linha de trava da numeração das ordens de serviço.
 - [ ] Passo 4: na V1, manter as convenções do cabeçalho atual (todo índice e constraint com nome; índice de FK com o nome da FK antes dela) e reescrever o cabeçalho: dialeto PostgreSQL, histórico consolidado, sem referência a MySQL/H2.
 - [ ] Verificação: subir um Postgres vazio (Tarefa 8) e `mvn -q test -Dtest=SchemaEquivalenceTest` passa; `flyway info` lista só a V1.
 
@@ -152,8 +152,8 @@ Decisão:
 **Arquivos:** novos em `backend/src/test/java/br/com/navitasassist/migration/` (`SchemaEquivalenceTest`, `UniquenessCaseTest`) e `.../search/AccentInsensitiveSearchTest`, `.../concurrency/AbortedTransactionTest` (nomes indicativos).
 
 - [ ] `SchemaEquivalenceTest`: criar um segundo banco vazio, deixar o Hibernate gerar o schema (`SchemaExport` em `CREATE` a partir dos metadados das entidades) e comparar com o banco migrado pelo Flyway via `information_schema.columns` (tabela, coluna, tipo, nulabilidade, tamanho/precisão) e `table_constraints` (existência de PK, FK, UNIQUE, CHECK por nome). Ignora diferenças de índices extras e nomes gerados. Complementa o `validate` da Tarefa 4.
-- [ ] `UniquenessCaseTest`: para cada coluna da D3 (SKU de produto, nome e código legado de perfil, usuário, e-mail, código de peça, código de RMA, nome de visualização por dono), inserir `X` e depois `x` e esperar a violação, com o **nome da constraint** correto; verificar que `UserAccountService` ainda devolve "Email already registered." para o e-mail duplicado com caixa diferente, e que dois donos diferentes aceitam o mesmo nome de visualização. Variação de acento: o teste documenta a decisão da Q4 (por padrão, "Técnico" e "Tecnico" coexistem).
-- [ ] `AccentInsensitiveSearchTest`: clientes, produtos, peças, perfis e RMAs encontrados por termo sem acento e em outra caixa ("tecnico" encontra "Técnico"); `query` nula e vazia; ordenação de uma lista com "Ábaco", "Zebra", "abelha" resulta em ordem alfabética sem depender da collation.
+- [ ] `UniquenessCaseTest`: para cada coluna da D3 (SKU de produto, nome e código legado de perfil, usuário, e-mail, código de peça, código de OS, nome de visualização por dono), inserir `X` e depois `x` e esperar a violação, com o **nome da constraint** correto; verificar que `UserAccountService` ainda devolve "Email already registered." para o e-mail duplicado com caixa diferente, e que dois donos diferentes aceitam o mesmo nome de visualização. Variação de acento: o teste documenta a decisão da Q4 (por padrão, "Técnico" e "Tecnico" coexistem).
+- [ ] `AccentInsensitiveSearchTest`: clientes, produtos, peças, perfis e ordens de serviço encontradas por termo sem acento e em outra caixa ("tecnico" encontra "Técnico"); `query` nula e vazia; ordenação de uma lista com "Ábaco", "Zebra", "abelha" resulta em ordem alfabética sem depender da collation.
 - [ ] `AbortedTransactionTest`: nome de perfil duplicado concorrente, reversão de movimento concorrente (`PartStockConcurrencyTest` já existe, agora com locking real), regra de notificação com perfil apagado, e-mail duplicado concorrente: todos retornam 400/409 e a transação seguinte da mesma conexão funciona.
 - [ ] Um teste por repositório com lock confirma que a consulta tem `for update` e não tem `join fetch` (leitura do SQL gerado ou execução com dois threads).
 - [ ] Verificação: classes novas verdes; `PartStockConcurrencyTest`, `RmaCodeConcurrencyIntegrationTest`, `NotificationRuleProfileRaceIntegrationTest` verdes em Postgres real (se falharem, é bug real de concorrência que o H2 escondia).
@@ -193,7 +193,7 @@ Decisão:
 ## Tarefa 10. Verificação integrada e fechamento
 
 - [ ] `mvn -B -ntp verify` verde (Testcontainers, e o equivalente do CI com `TEST_DB_*`).
-- [ ] `docker compose up -d --build` sobe `postgres`, `backend` e `frontend`; login, criação de um RMA, reserva de peça e busca por termo sem acento funcionam pelo front.
+- [ ] `docker compose up -d --build` sobe `postgres`, `backend` e `frontend`; login, criação de uma OS, reserva de peça e busca por termo sem acento funcionam pelo front.
 - [ ] Ensaio no provedor do ambiente de testes (Neon ou Supabase) com banco vazio: o backend no Render aplica a V1 sobre o endpoint direto, o app roda pelo pooler (se houver) e `ddl-auto=validate` passa.
 - [ ] Varredura final: `grep -ri "mysql\|h2\|MODE=MySQL\|AUTO_INCREMENT\|DATETIME\|xampp"` em `backend/`, `compose*`, `scripts/`, `.github/`, `README.md`, `docs/` (exceto planos históricos em `docs/superpowers/`) sem ocorrências vivas.
 - [ ] Commits locais por tarefa lógica, staging por caminho, sem push até o dono validar.
@@ -204,7 +204,7 @@ Decisão:
 
 1. Existe uma única migração, `V1__baseline.sql`, em PostgreSQL; nenhum arquivo MySQL ou H2 sobra nos diretórios de código, testes, compose, scripts e CI.
 2. Hibernate `validate` passa sobre o schema do Flyway, e `SchemaEquivalenceTest` passa.
-3. SKU, nome e código de perfil, usuário, e-mail, código de peça e de RMA e nome de visualização rejeitam duplicatas que diferem só pela caixa, com a mensagem de negócio correta (inclusive "Email already registered.").
+3. SKU, nome e código de perfil, usuário, e-mail, código de peça e de OS e nome de visualização rejeitam duplicatas que diferem só pela caixa, com a mensagem de negócio correta (inclusive "Email already registered.").
 4. Buscas por termo sem acento e em outra caixa encontram o registro; a ordenação é alfabética sem depender da collation do banco.
 5. Nenhum fluxo conhecido usa a transação depois de um erro de constraint; testes de concorrência passam em Postgres real.
 6. Toda a suíte roda em Postgres 16 real (Testcontainers localmente, serviço no CI), sem fixtures H2, em tempo comparável ao atual.

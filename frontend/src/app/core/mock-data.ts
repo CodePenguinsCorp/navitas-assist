@@ -22,14 +22,14 @@ export const RMA_STATUS_FLOW: RmaStatus[] = [
 export const CLOSED_RMA_STATUSES: RmaStatus[] = ['COMPLETED', 'RETURNED', 'IRREPARABLE'];
 
 export const RMA_STATUS_LABELS: Record<RmaStatus, string> = {
-  RECEIVED: 'Recebido',
+  RECEIVED: 'Recebida',
   TRIAGE: 'Triagem',
   IN_DIAGNOSIS: 'Diagnóstico',
   WAITING_PART: 'Aguardando peça',
   IN_REPAIR: 'Reparo',
   IN_TESTS: 'Testes',
-  COMPLETED: 'Concluído',
-  RETURNED: 'Devolvido',
+  COMPLETED: 'Concluída',
+  RETURNED: 'Devolvida',
   IRREPARABLE: 'Sem conserto'
 };
 
@@ -92,7 +92,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Operação',
     items: [
       { label: 'Dashboard', route: '/dashboard', icon: 'dashboard', permissions: ['rma.ver'] },
-      { label: 'RMAs', route: '/rmas', icon: 'clipboard', permissions: ['rma.ver'] },
+      { label: 'Ordens de serviço', route: '/rmas', icon: 'clipboard', permissions: ['rma.ver'] },
       { label: 'Kanban', route: '/kanban', icon: 'columns', permissions: ['rma.ver'] },
       { label: 'Notificações', route: '/notificacoes', icon: 'bell', permissions: [] },
       { label: 'Peças', route: '/pecas', icon: 'chip', permissions: ['pecas.ver'] }

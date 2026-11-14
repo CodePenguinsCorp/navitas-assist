@@ -13,7 +13,7 @@ import {
   warrantyLabel,
 } from './rma-ui';
 
-describe('RMA UI utilities', () => {
+describe('OS UI utilities', () => {
   it('normalizes optional text and renders responsibility and warranty labels', () => {
     expect(normalizeText('  observacao  ')).toBe('observacao');
     expect(normalizeText('   ')).toBeNull();
@@ -57,7 +57,7 @@ describe('RMA UI utilities', () => {
 });
 
 describe.each([
-  ['RMA', formatRmaDateTime],
+  ['OS', formatRmaDateTime],
   ['cadastros', formatCatalogDateTime],
 ] as const)('%s date/time display', (_area, format) => {
   it.each([

@@ -53,7 +53,7 @@ public class RmaReportCsvService {
     public CsvFile summary(RmaReportRequest filters) {
         RmaReportSummaryResponse summary = rmaReportService.summary(filters);
         CsvWriter csv = new CsvWriter().row("Seção", "Item", "Quantidade", "Base", "Percentual", "Tempo médio (h)", "Maior tempo (h)");
-        csv.row("Total", "RMAs", CsvWriter.number(summary.totalRmas()), null, null, null, null);
+        csv.row("Total", "Ordens de serviço", CsvWriter.number(summary.totalRmas()), null, null, null, null);
         csv.row("Total", "Itens", CsvWriter.number(summary.totalItems()), null, null, null, null);
         shares(csv, "Status", summary.byStatus(), summary.totalRmas());
         shares(csv, "Garantia", summary.byWarranty(), summary.totalItems());

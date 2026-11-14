@@ -33,7 +33,7 @@ const diagnosis: DiagnosisResponse = {
 
 const fullRma = buildRma({
   id: 5,
-  code: 'RMA-2026-000005',
+  code: 'OS-2026-000005',
   clientName: 'Cliente X',
   items: [buildRmaItem({
     productName: 'Produto A', productSku: 'SKU-A', serialNumber: 'S1', batchNumber: null,
@@ -137,17 +137,17 @@ describe('RmasComponent detail with the shared information contract', () => {
     const head = detail().querySelector('.rma-details__head')!;
     const actions = detail().querySelector<HTMLElement>('.detail-actions')!;
 
-    expect(detail().querySelector('.rma-details__header > .rma-details__code')?.textContent?.trim()).toBe('RMA-2026-000005');
+    expect(detail().querySelector('.rma-details__header > .rma-details__code')?.textContent?.trim()).toBe('OS-2026-000005');
     expect(head.querySelector('h3')?.textContent?.trim()).toBe('Produto A');
     expect(head.querySelector('.rma-details__client')?.textContent?.trim()).toBe('Cliente X');
-    expect(actions.querySelector('[data-status="RECEIVED"]')?.textContent?.trim()).toBe('Recebido');
+    expect(actions.querySelector('[data-status="RECEIVED"]')?.textContent?.trim()).toBe('Recebida');
     expect(actions.querySelector('app-rma-priority-field')).toBeNull();
     const summary = detail().querySelector('.rma-details__summary')!;
     expect(summary.querySelector('app-rma-priority-field [data-priority="MEDIUM"] .priority-bars[data-priority="MEDIUM"]')).not.toBeNull();
     expect(Object.fromEntries(pairs(summary)).Prioridade).toContain('Média');
 
     const flag = actions.querySelector<HTMLButtonElement>('button.detail-block-flag')!;
-    expect(flag.textContent?.replace(/\s+/g, ' ').trim()).toBe('Bloqueado há 2 h · ver impedimento');
+    expect(flag.textContent?.replace(/\s+/g, ' ').trim()).toBe('Impedida há 2 h · ver impedimento');
     expect(flag.querySelector('app-icon')).not.toBeNull();
     expect(flag.getAttribute('aria-controls')).toBe('rma-detail-panel');
     expect(detail().querySelector('.mini-chip.priority-high')).toBeNull();
@@ -156,7 +156,7 @@ describe('RmasComponent detail with the shared information contract', () => {
     expect(tabPanel().querySelector('.blocks-section__current')?.textContent).toContain('Aguardando cliente');
   });
 
-  it('hides the block flag when the RMA has no current block', async () => {
+  it('hides the block flag when the OS has no current block', async () => {
     const { open, detail } = await setup();
     open({ ...fullRma, currentBlock: null });
     expect(detail().querySelector('.detail-actions .detail-block-flag')).toBeNull();
@@ -224,7 +224,7 @@ describe('RmasComponent detail with the shared information contract', () => {
 
     const products = section('Produtos')!;
     expect(products).not.toBeNull();
-    expect(products.textContent).toContain('Garantia avaliada na entrada do RMA.');
+    expect(products.textContent).toContain('Garantia avaliada na entrada da OS.');
     const item = products.querySelector('.rma-item-detail')!;
     expect(item.querySelector('.rma-item-detail__sku')?.textContent?.trim()).toBe('SKU-A');
     expect(pairs(item.querySelector('dl')!)).toEqual([
@@ -372,12 +372,12 @@ describe('RmasComponent detail with the shared information contract', () => {
     expect(view.detail().querySelector('.rma-details__summary')?.textContent).toContain('30/10/2026');
   });
 
-  it('shows há 2 d 4 h in Nesta etapa and Encerrado em for closed RMAs', async () => {
+  it('shows há 2 d 4 h in Nesta etapa and Encerrada em for closed ordens de serviço', async () => {
     const { open, detail, pairs } = await setup();
     open({ ...fullRma, stagePeriods: [{ status: 'TRIAGE', enteredAt: '2026-10-18T08:00:00Z', leftAt: null, durationSeconds: 0 }] });
     expect(Object.fromEntries(pairs(detail().querySelector('.rma-details__summary')!))['Nesta etapa']).toBe('há 2 d 4 h');
     open({ ...fullRma, status: 'COMPLETED', stagePeriods: [{ status: 'COMPLETED', enteredAt: '2026-10-19T13:00:00Z', leftAt: null, durationSeconds: 0 }] });
-    expect(Object.fromEntries(pairs(detail().querySelector('.rma-details__summary')!))['Nesta etapa']).toBe('Encerrado em 19/10/2026 10:00');
+    expect(Object.fromEntries(pairs(detail().querySelector('.rma-details__summary')!))['Nesta etapa']).toBe('Encerrada em 19/10/2026 10:00');
   });
 
   it('lists the time of each previous stage in Histórico', async () => {
@@ -391,7 +391,7 @@ describe('RmasComponent detail with the shared information contract', () => {
     });
     selectTab('Histórico');
     const lines = [...tabPanel().querySelectorAll('app-rma-stage-times li')].map((item) => item.textContent?.trim());
-    expect(lines).toEqual(['Recebido · 2 h', 'Triagem · 2 h (atual)']);
+    expect(lines).toEqual(['Recebida · 2 h', 'Triagem · 2 h (atual)']);
   });
 
   it('shows due date changes with previous value and author', async () => {
@@ -659,7 +659,7 @@ describe('RmasComponent detail priority selector', () => {
     expect(field.textContent).toContain('Média');
   });
 
-  it('keeps the priority read only for a closed RMA', async () => {
+  it('keeps the priority read only for a closed OS', async () => {
     const { open, detail } = await setup();
     open({ ...fullRma, status: 'RETURNED' });
     expect(detail().querySelector('app-rma-priority-field .custom-select__trigger')).toBeNull();

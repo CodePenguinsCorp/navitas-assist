@@ -1,11 +1,11 @@
 <section class="page-surface">
-  <app-page-header heading="RMAs">
+  <app-page-header heading="Ordens de serviço">
     @if (canOpenRma()) {
-      <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo RMA</button>
+      <button type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Nova OS</button>
     }
   </app-page-header>
   @if (totalSummary(); as total) {
-    <ul class="page-summary" aria-label="Indicadores dos RMAs">
+    <ul class="page-summary" aria-label="Indicadores das ordens de serviço">
       <li class="page-summary__item page-summary__item--total">
         <app-icon name="inbox" [size]="16" />
         <span>
@@ -33,7 +33,7 @@
     <form [formGroup]="filtersForm" (ngSubmit)="submitFilters()" class="rma-filters">
       <label class="search-field">
         <span>Busca</span>
-        <input type="search" formControlName="query" placeholder="Cliente, RMA, lote ou série" />
+        <input type="search" formControlName="query" placeholder="Cliente, OS, lote ou série" />
       </label>
       <label class="filter-field">
         <span>Status</span>
@@ -66,8 +66,8 @@
     @if (loadFailed()) {
       <section class="empty-state" role="alert">
         <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
-        <h3>Não foi possível carregar os RMAs.</h3>
-        @if (listErrorMessage() && listErrorMessage() !== 'Não foi possível carregar os RMAs.') {
+        <h3>Não foi possível carregar as ordens de serviço.</h3>
+        @if (listErrorMessage() && listErrorMessage() !== 'Não foi possível carregar as ordens de serviço.') {
           <p>{{ listErrorMessage() }}</p>
         }
         <button type="button" class="button-secondary" (click)="retryLoad()" [disabled]="loading()">
@@ -80,13 +80,13 @@
     } @else if (rmas().length === 0 && !hasActiveFilters()) {
       <section class="empty-state">
         <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
-        <h3>Nenhum RMA registrado</h3>
-        <p>Abra o primeiro RMA para iniciar o atendimento.</p>
+        <h3>Nenhuma OS registrada</h3>
+        <p>Abra a primeira OS para iniciar o atendimento.</p>
       </section>
     } @else if (rmas().length === 0) {
       <section class="empty-state">
         <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
-        <h3>Nenhum RMA encontrado</h3>
+        <h3>Nenhuma OS encontrada</h3>
         <p>Ajuste a busca ou o status.</p>
         <button type="button" class="button-secondary" (click)="clearFilters()">Limpar busca e filtros</button>
       </section>
@@ -95,7 +95,7 @@
         <table>
           <thead>
             <tr>
-              <th>RMA</th>
+              <th>OS</th>
               <th>Cliente</th>
               <th>Produto</th>
               <th>Status</th>
@@ -111,7 +111,7 @@
                 class="rma-table-row"
                 role="button"
                 tabindex="0"
-                [attr.aria-label]="'Abrir detalhes do RMA ' + rma.code"
+                [attr.aria-label]="'Abrir detalhes da OS ' + rma.code"
                 (click)="openDetailsModal(rma)"
                 (keydown.enter)="openDetailsModal(rma)"
                 (keydown.space)="openDetailsFromKeyboard($event, rma)"
@@ -146,8 +146,8 @@
         </table>
       </div>
       <app-pagination
-        singular="RMA"
-        plural="RMAs"
+        singular="OS"
+        plural="ordens de serviço"
         [page]="page()"
         [size]="pageSize()"
         [totalElements]="totalElements()"
@@ -224,7 +224,7 @@
           <div><dt>Atualizado em</dt><dd>{{ dateTimeLabel(rma.updatedAt) }}</dd></div>
         </dl>
 
-        <div class="tab-list tab-list--raised" role="tablist" aria-label="Seções do RMA" (keydown)="onDetailTabKeydown($event)">
+        <div class="tab-list tab-list--raised" role="tablist" aria-label="Seções da OS" (keydown)="onDetailTabKeydown($event)">
           @for (tab of detailTabs; track tab.id) {
             <button type="button" role="tab" class="tab" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy()" [id]="'rma-tab-' + tab.id" [class.is-active]="detailTab() === tab.id" [attr.aria-selected]="detailTab() === tab.id" aria-controls="rma-detail-panel" [attr.tabindex]="detailTab() === tab.id ? 0 : -1" (click)="detailTab.set(tab.id)">{{ tab.label }}</button>
           }
@@ -239,7 +239,7 @@
               </section>
               <section class="rma-details__section">
                 <h4>{{ sectionLabel('products') }}</h4>
-                <p class="rma-detail-copy">Garantia avaliada na entrada do RMA.</p>
+                <p class="rma-detail-copy">Garantia avaliada na entrada da OS.</p>
                 <div class="rma-items-detail">
                   @for (item of rma.items; track item.id ?? $index) {
                     <article class="rma-item-detail detail-tile">
@@ -353,7 +353,7 @@
     >
       <div class="modal-header">
         <div>
-          <h3 id="rma-create-title">Novo RMA</h3>
+          <h3 id="rma-create-title">Nova OS</h3>
         </div>
         <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar" [disabled]="createSubmitting()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
@@ -581,7 +581,7 @@
         <div class="form-actions form-actions--full">
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="createSubmitting()">Cancelar</button>
           <button type="submit" class="button-primary" [disabled]="createSubmitting()">
-            {{ createSubmitting() ? 'Abrindo...' : 'Abrir RMA' }}
+            {{ createSubmitting() ? 'Abrindo...' : 'Abrir OS' }}
           </button>
         </div>
       </form>

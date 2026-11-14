@@ -707,7 +707,7 @@ class UserControllerIntegrationTest {
             .andExpect(jsonPath("$[*].username", not(hasItem("admin"))));
         assertThatThrownBy(() -> userAccountService.getAssignableTechnicianById(admin.getId()))
             .isInstanceOf(BusinessException.class)
-            .hasMessage("Only technicians can be assigned to an RMA.");
+            .hasMessage("Somente técnicos podem ser responsáveis por uma OS.");
     }
 
     private void saveManager(String... permissions) {

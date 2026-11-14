@@ -2,7 +2,7 @@
 
 Fonte de requisitos: solicitação enxuta do usuário, com precedência sobre o desenho anterior.
 
-1. Backend com TDD: V5 aditiva, motivo/lote na reserva consumida, componentes externos sem estoque e intervenções em horas; preservar travas RMA → peça → reserva.
+1. Backend com TDD: V5 aditiva, motivo/lote na reserva aplicada, componentes externos sem estoque e intervenções em horas; preservar travas OS → peça → reserva.
 2. Frontend com TDD: contratos espelhados, formulários inline, lista unificada e painel compartilhado de intervenções nas duas superfícies.
 3. Segurança: permissões existentes, matchers explícitos antes dos genéricos e matriz com autoridades isoladas.
 4. Laudo: componentes estruturados, motivo/lote, intervenções e horas, validados pela extração do PDF.

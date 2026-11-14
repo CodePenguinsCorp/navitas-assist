@@ -12,7 +12,7 @@ describe('RmaPriorityFieldComponent', () => {
   let saved: RmaResponse[];
   let busy: boolean[];
 
-  const RMA = buildRma({ id: 4, code: 'RMA-2026-000004', status: 'TRIAGE', priority: 'MEDIUM' });
+  const RMA = buildRma({ id: 4, code: 'OS-2026-000004', status: 'TRIAGE', priority: 'MEDIUM' });
 
   beforeEach(async () => {
     calls = [];
@@ -121,10 +121,10 @@ describe('RmaPriorityFieldComponent', () => {
     response = () => throwError(() => ({}));
     mount();
     choose('Alta');
-    expect(text(host().querySelector('[role="alert"]'))).toBe('Não foi possível alterar a prioridade do RMA.');
+    expect(text(host().querySelector('[role="alert"]'))).toBe('Não foi possível alterar a prioridade da OS.');
   });
 
-  it('clears the notice and the error when another RMA is shown', () => {
+  it('clears the notice and the error when another OS is shown', () => {
     mount();
     choose('Alta');
     fixture.componentRef.setInput('rma', buildRma({ id: 5, priority: 'LOW' }));
@@ -135,8 +135,8 @@ describe('RmaPriorityFieldComponent', () => {
 
   it.each([
     ['without rma.editar', { canEdit: false }],
-    ['for a closed RMA', { rma: { ...RMA, status: 'COMPLETED' as const } }],
-    ['for a returned RMA', { rma: { ...RMA, status: 'RETURNED' as const } }]
+    ['for a closed OS', { rma: { ...RMA, status: 'COMPLETED' as const } }],
+    ['for a returned OS', { rma: { ...RMA, status: 'RETURNED' as const } }]
   ])('shows only the priority tag %s', (_label, options) => {
     mount(options);
     expect(trigger()).toBeNull();

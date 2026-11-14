@@ -52,7 +52,7 @@ public class PartStockService {
 
     private static final Set<PartMovementType> MANUAL_TYPES = EnumSet.of(PartMovementType.ENTRY, PartMovementType.EXIT, PartMovementType.ADJUSTMENT);
     private static final Set<RmaStatus> CLOSED_RMA_STATUSES = EnumSet.of(RmaStatus.COMPLETED, RmaStatus.RETURNED, RmaStatus.IRREPARABLE);
-    private static final String CLOSED_RMA_RESERVATION_MESSAGE = "Não é permitido reservar ou consumir peças em um RMA encerrado.";
+    private static final String CLOSED_RMA_RESERVATION_MESSAGE = "Não é permitido reservar ou aplicar peças em uma OS encerrada.";
 
     private final PartRepository partRepository;
     private final PartMovementRepository partMovementRepository;
@@ -150,7 +150,7 @@ public class PartStockService {
      * is kept as PENDING, which feeds the pending-parts list and the replenishment alert.
      */
     public PartReservationResponse reserve(Long rmaId, PartReservationRequest request) {
-        RmaRecord rma = lockOpenRma(rmaId, "Parts cannot be reserved for a closed RMA.");
+        RmaRecord rma = lockOpenRma(rmaId, "Não é permitido reservar peças em uma OS encerrada.");
 
         Part part = lockPart(request.partId());
         if (!part.isActive()) {
@@ -196,7 +196,7 @@ public class PartStockService {
         lockOpenRma(rmaId, CLOSED_RMA_RESERVATION_MESSAGE);
         Part part = lockPart(partId);
         PartReservation reservation = lockReservation(reservationId);
-        requireStatus(reservation, "Only active reservations can be consumed.", PartReservationStatus.ACTIVE);
+        requireStatus(reservation, "Somente reservas ativas podem ser aplicadas.", PartReservationStatus.ACTIVE);
 
         record(part, PartMovementType.CONSUMPTION, reservation.getQuantity().negate(), reservation.getQuantity().negate(), part.getUnitCost(), reservation.getRma(), reservation, null, null);
         reservation.setStatus(PartReservationStatus.CONSUMED);
@@ -288,7 +288,7 @@ public class PartStockService {
      * Locks the RMA row, serializing reservation changes with status changes that close the RMA (see RmaService).
      */
     private RmaRecord lockOpenRma(Long rmaId, String closedMessage) {
-        RmaRecord rma = rmaRecordRepository.findByIdForUpdate(rmaId).orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + rmaId));
+        RmaRecord rma = rmaRecordRepository.findByIdForUpdate(rmaId).orElseThrow(() -> new ResourceNotFoundException("OS não encontrada: " + rmaId));
         if (CLOSED_RMA_STATUSES.contains(rma.getStatus())) {
             throw new BusinessException(closedMessage);
         }

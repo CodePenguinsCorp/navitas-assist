@@ -121,7 +121,7 @@ describe('NotificationsComponent rules', () => {
   });
 
   it.each([400, 409])('mostra erro inline de reenvio %s e permite nova tentativa', async (status) => {
-    const email: NotificationFailureResponse = { source: 'EMAIL', eventKey: 'e', eventType: 'RMA_CREATED', rmaCode: 'RMA-1', recipient: 'admin', error: 'Falha', occurredAt: RULE.updatedAt, notificationId: 42, status: 'FAILED', retryAllowed: true, attempts: 5 };
+    const email: NotificationFailureResponse = { source: 'EMAIL', eventKey: 'e', eventType: 'RMA_CREATED', rmaCode: 'OS-1', recipient: 'admin', error: 'Falha', occurredAt: RULE.updatedAt, notificationId: 42, status: 'FAILED', retryAllowed: true, attempts: 5 };
     await setup({ failures: [of([email]), of([email])] }); openRules();
     service['retryEmail'].mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status, error: { message: 'Reenvio recusado' } })));
     button('Reenviar')!.click(); render();
@@ -201,7 +201,7 @@ describe('NotificationsComponent rules', () => {
       'Alerta': 'Bloqueio',
       'Ativa': 'Ativa',
       'Severidade': 'Crítico',
-      'Destinatários': 'Administrador + responsável pelo RMA',
+      'Destinatários': 'Administrador + responsável pela OS',
       'E-mail': 'Não',
       'Silenciável': 'Não',
       'Atualização': '24/10/2026, 09:00 por admin'
@@ -209,8 +209,8 @@ describe('NotificationsComponent rules', () => {
     expect(table.querySelector('input')).toBeNull();
     expect(table.querySelector('app-custom-select')).toBeNull();
     expect(table.querySelector('button[aria-label="Editar regra Bloqueio"]')).not.toBeNull();
-    expect(cells(table, 'Novo RMA')['Destinatários']).toMatch(/^Nenhum destinatário\b/);
-    expect(cells(table, 'Novo RMA')['Ativa']).toBe('Inativa');
+    expect(cells(table, 'Nova OS')['Destinatários']).toMatch(/^Nenhum destinatário\b/);
+    expect(cells(table, 'Nova OS')['Ativa']).toBe('Inativa');
   });
 
   // Vermelho: a tabela aparece vazia durante a carga e antiga depois da falha.
@@ -350,7 +350,7 @@ describe('NotificationsComponent rules', () => {
       });
       expect(dialog()).toBeNull();
       expect(cells(rulesTable()!, 'Bloqueio')).toMatchObject({
-        'Destinatários': 'Administrador, Atendimento + responsável pelo RMA',
+        'Destinatários': 'Administrador, Atendimento + responsável pela OS',
         'Atualização': '24/10/2026, 13:00 por root'
       });
       expect(text()).toContain('Regra "Bloqueio" atualizada.');
@@ -363,7 +363,7 @@ describe('NotificationsComponent rules', () => {
       openEditor('Bloqueio');
       const recipients = field('Administrador').closest('fieldset')!;
       expect(Array.from(recipients.querySelectorAll('label.checkbox-field')).map((label) => normalize(label.textContent)))
-        .toEqual(['Administrador', 'Atendimento', 'Consulta', 'Técnico', 'Supervisor', 'Notificar o responsável pelo RMA']);
+        .toEqual(['Administrador', 'Atendimento', 'Consulta', 'Técnico', 'Supervisor', 'Notificar o responsável pela OS']);
       expect(field('Administrador').checked).toBe(true);
       expect(field('Supervisor').checked).toBe(false);
       toggleField('Supervisor');
@@ -427,11 +427,11 @@ describe('NotificationsComponent rules', () => {
       await setup({ rules: [of([RULE, SILENT_RULE, assigneeOnly])] });
       openRules();
       const table = rulesTable()!;
-      expect(cells(table, 'Novo RMA')['Destinatários']).toContain('Nenhum destinatário');
-      expect(cells(table, 'Novo RMA')['Destinatários']).toContain(warning);
-      expect(cells(table, 'Novo RMA')['Ativa']).toBe('Inativa');
+      expect(cells(table, 'Nova OS')['Destinatários']).toContain('Nenhum destinatário');
+      expect(cells(table, 'Nova OS')['Destinatários']).toContain(warning);
+      expect(cells(table, 'Nova OS')['Ativa']).toBe('Inativa');
       expect(cells(table, 'Bloqueio')['Destinatários']).not.toContain(warning);
-      expect(cells(table, 'Nova atribuição')['Destinatários']).toBe('Responsável pelo RMA');
+      expect(cells(table, 'Nova atribuição')['Destinatários']).toBe('Responsável pela OS');
 
       openEditor('Bloqueio');
       expect(dialog()!.textContent).not.toContain(warning);
@@ -444,7 +444,7 @@ describe('NotificationsComponent rules', () => {
         enabled: true, appEnabled: true, severity: 'CRITICAL', recipientProfileIds: [], notifyAssignee: false, emailEnabled: false, userMutable: false
       });
 
-      openEditor('Novo RMA');
+      openEditor('Nova OS');
       expect(dialog()!.textContent).toContain(warning);
       toggleField('Técnico');
       expect(dialog()!.textContent).not.toContain(warning);
@@ -459,7 +459,7 @@ describe('NotificationsComponent rules', () => {
       expect(service['updateRule']).toHaveBeenLastCalledWith('RMA_BLOCKED', {
         enabled: true, appEnabled: true, severity: 'CRITICAL', recipientProfileIds: [1], notifyAssignee: true, emailEnabled: false, userMutable: false
       });
-      openEditor('Novo RMA');
+      openEditor('Nova OS');
       submit();
       expect(service['updateRule']).toHaveBeenLastCalledWith('RMA_CREATED', {
         enabled: false, appEnabled: true, severity: 'INFO', recipientProfileIds: [], notifyAssignee: false, emailEnabled: false, userMutable: false
@@ -475,11 +475,11 @@ describe('NotificationsComponent rules', () => {
       expect(field('Técnico').checked).toBe(true);
       dialogButton('Cancelar').click();
       render();
-      openEditor('Novo RMA');
+      openEditor('Nova OS');
       expect(field('Técnico').checked).toBe(false);
       expect(field('Administrador').checked).toBe(false);
       expect(field('Ativa').checked).toBe(false);
-      expect(field('Notificar o responsável pelo RMA').checked).toBe(false);
+      expect(field('Notificar o responsável pela OS').checked).toBe(false);
       expect(field('E-mail').checked).toBe(false);
       expect(field('Permitir que cada usuário silencie').checked).toBe(false);
     });
@@ -502,8 +502,8 @@ describe('NotificationsComponent rules', () => {
       pending.complete();
       render();
       expect(dialog()).toBeNull();
-      expect(cells(rulesTable()!, 'Bloqueio')['Destinatários']).toBe('Administrador, Técnico + responsável pelo RMA');
-      expect(cells(rulesTable()!, 'Novo RMA')['Ativa']).toBe('Inativa');
+      expect(cells(rulesTable()!, 'Bloqueio')['Destinatários']).toBe('Administrador, Técnico + responsável pela OS');
+      expect(cells(rulesTable()!, 'Nova OS')['Ativa']).toBe('Inativa');
     });
 
     it('disables every rule edit button while a save is pending', async () => {
@@ -530,7 +530,7 @@ describe('NotificationsComponent rules', () => {
       dialogButton('Cancelar').click();
       render();
       expect(service['updateRule']).not.toHaveBeenCalled();
-      expect(cells(rulesTable()!, 'Bloqueio')['Destinatários']).toBe('Administrador + responsável pelo RMA');
+      expect(cells(rulesTable()!, 'Bloqueio')['Destinatários']).toBe('Administrador + responsável pela OS');
 
       openEditor('Bloqueio');
       toggleField('Atendimento');
@@ -644,7 +644,7 @@ describe('NotificationsComponent rules', () => {
   describe('processing failures', () => {
     const FAILURES: NotificationFailureResponse[] = [
       { source: 'EVENT', eventKey: 'evt-1', eventType: 'RMA_BLOCKED', rmaCode: null, recipient: null, error: 'Linha 1\nLinha 2 com detalhe', occurredAt: '2026-10-24T16:00:00Z' },
-      { source: 'EMAIL', eventKey: 'evt-2', eventType: 'RMA_CREATED', rmaCode: 'RMA-2026-000007', recipient: 'tec@empresa.com', error: 'SMTP indisponível', occurredAt: '2026-10-24T15:00:00Z' }
+      { source: 'EMAIL', eventKey: 'evt-2', eventType: 'RMA_CREATED', rmaCode: 'OS-2026-000007', recipient: 'tec@empresa.com', error: 'SMTP indisponível', occurredAt: '2026-10-24T15:00:00Z' }
     ];
     const section = () => root().querySelector<HTMLElement>('section[aria-labelledby="notification-failures-title"]');
     const failuresColumn = (header: string) => {
@@ -723,7 +723,7 @@ describe('NotificationsComponent rules', () => {
         await setup({ failures: [of(FAILURES)] });
         openRules();
         expect(failuresColumn('Erro')).toEqual(['Linha 1\nLinha 2 com detalhe']);
-        expect(failuresColumn('RMA').map((value) => normalize(value))).toEqual(['—']);
+        expect(failuresColumn('OS').map((value) => normalize(value))).toEqual(['—']);
         expect(failuresColumn('Destinatário').map((value) => normalize(value))).toEqual(['—']);
         expect(failuresColumn('Alerta').map((value) => normalize(value))).toEqual(['Bloqueio']);
       });

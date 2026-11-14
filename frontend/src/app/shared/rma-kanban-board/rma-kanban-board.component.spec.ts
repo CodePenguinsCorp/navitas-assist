@@ -93,7 +93,7 @@ describe('RmaKanbanBoardComponent card', () => {
     expect(chip()?.getAttribute('data-deadline')).toBe('OVERDUE');
   });
 
-  it('shows the time in the current stage only for open RMAs', () => {
+  it('shows the time in the current stage only for open ordens de serviço', () => {
     const host = render([
       buildRma({ id: 1, code: 'NAV-0001' }),
       buildRma({ id: 2, code: 'NAV-0002', status: 'COMPLETED', stagePeriods: [{ status: 'COMPLETED', enteredAt: '2026-10-19T12:00:00Z', leftAt: null, durationSeconds: 0 }] }),
@@ -134,7 +134,7 @@ describe('RmaKanbanBoardComponent card', () => {
     const avatar = element.querySelector('.board-card__avatar');
     expect(avatar?.getAttribute('aria-label')).toBe('Responsável: Técnico Responsável');
     expect(avatar?.textContent?.trim()).toBe('TR');
-    expect(element.querySelector('.board-card__block')?.textContent).toContain('Bloqueado há 2 h');
+    expect(element.querySelector('.board-card__block')?.textContent).toContain('Impedida há 2 h');
   });
 
   it('has no selection checkbox on the card', () => {

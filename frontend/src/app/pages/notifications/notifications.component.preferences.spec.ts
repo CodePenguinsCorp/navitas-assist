@@ -97,7 +97,7 @@ describe('NotificationsComponent preferences', () => {
     openPreferences();
     const rows = Array.from(root().querySelectorAll('tbody tr'));
     const toggle = (index: number) => rows[index].querySelector<HTMLInputElement>('input.switch[role="switch"]');
-    expect(toggle(0)!.getAttribute('aria-label')).toBe('Receber Novo RMA');
+    expect(toggle(0)!.getAttribute('aria-label')).toBe('Receber Nova OS');
     expect(toggle(0)!.checked).toBe(true);
     expect(toggle(1)!.getAttribute('aria-label')).toBe('Receber Nova atribuição');
     expect(toggle(1)!.checked).toBe(false);
@@ -129,7 +129,7 @@ describe('NotificationsComponent preferences', () => {
     openPreferences();
     component.toggleMute(PREFERENCES[0]);
     render();
-    expect(root().querySelector('[role="status"].alert-banner')?.textContent).toContain('Novo RMA silenciado.');
+    expect(root().querySelector('[role="status"].alert-banner')?.textContent).toContain('Nova OS silenciado.');
   });
 
   // Vermelho: a tabela aparece durante a carga e mantém as linhas antigas depois da falha.
@@ -149,16 +149,16 @@ describe('NotificationsComponent preferences', () => {
     TestBed.resetTestingModule();
     await setup({ preferences: [of(PREFERENCES), failure()] });
     openPreferences();
-    expect(text()).toContain('Novo RMA');
+    expect(text()).toContain('Nova OS');
     component.selectTab('inbox');
     render();
     openPreferences();
-    expect(text()).not.toContain('Novo RMA');
+    expect(text()).not.toContain('Nova OS');
     expect(text()).toContain('Não foi possível carregar as preferências.');
     button('Tentar novamente')!.click();
     render();
     expect(service['listPreferences']).toHaveBeenCalledTimes(3);
-    expect(text()).toContain('Novo RMA');
+    expect(text()).toContain('Nova OS');
   });
 
   // Vermelho: com lista vazia aparece a tabela com cabeçalho e corpo vazio.
@@ -191,7 +191,7 @@ describe('NotificationsComponent preferences', () => {
     openPreferences(); component.selectTab('inbox'); render(); openPreferences();
     expectPending(root());
     expect(root().querySelector('table')).toBeNull();
-    expect(text()).not.toContain('Novo RMA');
+    expect(text()).not.toContain('Nova OS');
   });
 
   it('keeps the preference failure visible during a pending retry', async () => {

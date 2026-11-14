@@ -5,8 +5,8 @@ import { NotificationDetailModalComponent } from './notification-detail-modal.co
 
 const NOW = Date.parse('2026-10-24T15:00:00Z');
 const NOTIFICATION: NotificationResponse = {
-  id: 5, eventType: 'RMA_BLOCKED', severity: 'WARNING', title: 'Bloqueio na RMA-2026-000007', message: 'Cliente · Produto',
-  rmaId: 7, rmaCode: 'RMA-2026-000007', actionPath: '/rmas?rma=7', createdAt: '2026-10-24T14:30:00Z', readAt: null, snoozedUntil: null, read: false
+  id: 5, eventType: 'RMA_BLOCKED', severity: 'WARNING', title: 'Bloqueio na OS-2026-000007', message: 'Cliente · Produto',
+  rmaId: 7, rmaCode: 'OS-2026-000007', actionPath: '/rmas?rma=7', createdAt: '2026-10-24T14:30:00Z', readAt: null, snoozedUntil: null, read: false
 };
 
 describe('NotificationDetailModalComponent', () => {
@@ -61,7 +61,7 @@ describe('NotificationDetailModalComponent', () => {
 
   it('shows the code without a link when the path is not internal', async () => {
     await setup({ ...NOTIFICATION, actionPath: '//externo' });
-    expect(text()).toContain('RMA-2026-000007');
+    expect(text()).toContain('OS-2026-000007');
     expect(root().querySelector('.link-button.code-text')).toBeNull();
     expect(button('Abrir OS')).toBeUndefined();
   });

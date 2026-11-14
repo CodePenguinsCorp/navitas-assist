@@ -24,7 +24,7 @@ const CHECK: ProtocolExecutionItemResponse = {
 };
 const OPTIONAL: ProtocolExecutionItemResponse = { item: { ...CHECK.item, id: 23, sortOrder: 3, required: false, title: 'Foto final' }, latest: null, attempts: [] };
 const EXECUTION: ProtocolExecutionResponse = {
-  id: 9, rmaId: 4, rmaCode: 'RMA-4', templateId: 2, templateName: 'Bancada PWM', versionNumber: 3, status: 'IN_PROGRESS',
+  id: 9, rmaId: 4, rmaCode: 'OS-4', templateId: 2, templateName: 'Bancada PWM', versionNumber: 3, status: 'IN_PROGRESS',
   blockedStatuses: ['IN_TESTS'], startedBy: 'tech', startedAt: '2026-10-20T12:00:00Z', completedBy: null, completedAt: null,
   totalItems: 3, completedItems: 2, requiredItems: 2, pendingRequiredItems: 1, failedItems: 1, items: [MEASUREMENT, CHECK, OPTIONAL]
 };

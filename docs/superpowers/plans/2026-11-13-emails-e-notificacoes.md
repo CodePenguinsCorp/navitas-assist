@@ -18,7 +18,7 @@
 - Migração incremental na próxima migração livre; conferir versões na branch de integração, inclusive eventual V3 de outro projeto. Nunca editar V1/V2 nem apagar volumes.
 - Um e-mail por evento e usuário interno; email opcional, único insensível a caixa, até 254 caracteres. Sem inferência username@domain ou uso de clients.email.
 - Máximo 5 tentativas por geração, recuos 1 min/5 min/30 min/2 h, lease 60 s, lote 50, poll 5 s. Corpo até 64 KiB, resposta HTTP até 16 KiB, conexão 3 s/requisição 10 s.
-- Reutilizar notificacoes.regras e usuarios.gerir. Não adicionar permissões. Nunca falhar operação de RMA por envio; não expor PII/segredos em logs/erros.
+- Reutilizar notificacoes.regras e usuarios.gerir. Não adicionar permissões. Nunca falhar operação de OS por envio; não expor PII/segredos em logs/erros.
 - Preservar estilos, componentes compartilhados, foco, permissões efetivas e proteções de administrador. Não reintroduzir SLA nem criar produtores de eventos reservados.
 - Em cada tarefa de comportamento: RED comprovado, alteração mínima, GREEN comprovado; registrar comandos e resultados reais. Commits por tarefa podem ser feitos na execução autorizada, com Conventional Commits, sem incluir alterações alheias.
 
@@ -90,10 +90,10 @@ Caminhos Java abaixo usam `backend/src/main/java/br/com/navitasassist/`; testes 
 
 - [ ] Escrever testes de criação/atribuição para app-only, email-only, ambos, nenhum e regra geral desligada; duplicação de eventKey e perfil+responsável resulta em no máximo uma linha/e-mail por usuário. Sem email não agenda; ausência do app e email não cria registro vazio.
 - [ ] Cobrir muted legado, emailMuted isolado, userMutable=false ignorando preferências antigas, inativo/sem rma.ver, tipos unsupported rejeitados e regras existentes preservadas. Adiar/ler não muda a entrega.
-- [ ] Testar templates em português, rota `/rmas?rma={id}`, teste sem RMA, assunto até 160 sem dados do cliente, HTML escapado, CRLF recusado e corpo acima de 64 KiB recusado antes do provider. Falhas de template devem produzir somente email FAILED e preservar app e RMA; renderização pertence ao worker após commit da distribuição, usando dados persistidos estáveis entre retries.
+- [ ] Testar templates em português, rota `/rmas?rma={id}`, teste sem OS, assunto até 160 sem dados do cliente, HTML escapado, CRLF recusado e corpo acima de 64 KiB recusado antes do provider. Falhas de template devem produzir somente email FAILED e preservar app e OS; renderização pertence ao worker após commit da distribuição, usando dados persistidos estáveis entre retries.
 - [ ] Rodar `mvn -B -ntp -Dtest=NotificationIntegrationTest,NotificationEmailIntegrationTest,NotificationEmailContentFactoryTest test`; verificar RED.
 - [ ] Implementar escolhas de canal e template mínimo da spec; preservar seleção por perfil, deduplicação, política de visibilidade e AFTER_COMMIT. Adaptar captura de erros sanitizados; jamais propagar falha para o negócio.
-- [ ] Repetir até GREEN e provar que falha de agendamento/email deixa RMA confirmado e notificação app disponível. Registrar commit `feat(notificacoes): distribuir por canal e renderizar emails`.
+- [ ] Repetir até GREEN e provar que falha de agendamento/email deixa OS confirmado e notificação app disponível. Registrar commit `feat(notificacoes): distribuir por canal e renderizar emails`.
 
 ## Tarefa 5 — Worker persistente, recuo e recuperação
 
@@ -106,7 +106,7 @@ Caminhos Java abaixo usam `backend/src/main/java/br/com/navitasassist/`; testes 
 - [ ] Cobrir revalidação de email/atividade/permissão/regra/preferência; payloadHash diferente depois de tentativa e provider alterado geram FAILED controlado, sem chamada nova. Preferência/regra revogada gera NOT_REQUESTED/motivo. Fake SENT antigo nunca é despachado ao ativar Resend.
 - [ ] Executar `mvn -B -ntp -Dtest=NotificationEmailWorkerTest,NotificationEmailConcurrencyIntegrationTest,NotificationEmailIntegrationTest test`; observar RED.
 - [ ] Implementar claims somente com vaga de execução imediata, lease 60 s e token, poll 5 s/lote máximo 50 e recuos da spec, executor limitado; rede fora da transação. Persistir estado e hash antes do envio, manter chave estável notificationId/generation; conclusão condicionada. Aplicar logs/códigos seguros e contadores sem PII na infraestrutura disponível.
-- [ ] Repetir até GREEN e provar concorrência em MySQL para a atualização condicional; confirmar que falha ao persistir resultado pode ser recuperada e não altera RMA. Registrar commit `feat(notificacoes): processar fila com tentativas e lease`.
+- [ ] Repetir até GREEN e provar concorrência em MySQL para a atualização condicional; confirmar que falha ao persistir resultado pode ser recuperada e não altera OS. Registrar commit `feat(notificacoes): processar fila com tentativas e lease`.
 
 ## Tarefa 6 — Consulta e ações pessoais consistentes
 
@@ -171,14 +171,14 @@ Caminhos Java abaixo usam `backend/src/main/java/br/com/navitasassist/`; testes 
 
 ## Tarefa 11 — Configuração operacional, regressão e revisão final
 
-**Arquivos:** arquivos de operação do mapa; atualizar `notification/NotificationEmailIntegrationTest.java`, substituir `notification/NotificationSmtpTimeoutIntegrationTest.java` por cobertura HTTP já criada e remover somente suporte SMTP sem consumidor; README com configuração, padrões, preferências, status, limitações e procedimentos de reenvio/teste.
+**Arquivos:** arquivos de operação do mapa; atualizar `notification/NotificationEmailIntegrationTest.java`, substituir `notification/NotificationSmtpTimeoutIntegrationTest.java` por cobertura HTTP já criada e remover somente suporte SMTP sem aplicador; README com configuração, padrões, preferências, status, limitações e procedimentos de reenvio/teste.
 
-- [ ] Antes de remover SMTP, localizar todos os consumidores de JavaMailSender/starter-mail/variáveis SMTP; se houver consumidor real alheio ao projeto, preservar a dependência necessária e retirar apenas o caminho antigo das notificações. Não manter fallback username@domain.
+- [ ] Antes de remover SMTP, localizar todos os aplicadores de JavaMailSender/starter-mail/variáveis SMTP; se houver aplicador real alheio ao projeto, preservar a dependência necessária e retirar apenas o caminho antigo das notificações. Não manter fallback username@domain.
 - [ ] Incluir novas variáveis nos exemplos e environments dos dois Compose sem valores reais; remover configuração obsoleta conforme inventário. README deve explicar fake em dev, chave obrigatória só quando Resend ligado, MAIL_FROM/APP_BASE_URL, sem email não envia, estados e SENT como aceitação/simulação; documentar janela pós-commit e risco de duplicação.
 - [ ] Verificar que testes de configuração e de HTTP já cobrem o substituto antes de excluir testes SMTP. Atualizar testes de infraestrutura que ainda esperem configurações antigas; seguir RED/GREEN se houver alteração de comportamento nessa etapa.
 - [ ] Em `backend`, executar `mvn -B -ntp verify`; exigir saída 0, suites sem falhas e compilação aprovada. Repetir a prova de upgrade/collation/claims em MySQL se as tarefas anteriores alterarem SQL depois da primeira prova. Registrar separadamente limites de H2.
 - [ ] Em `frontend`, executar sequencialmente `npm.cmd test -- --watch=false` e `npm.cmd run build`; exigir saída 0. Não usar `test:sla`, que não existe no package.json atual e não se aplica ao projeto.
-- [ ] Na raiz, executar `docker compose --env-file .env.example config --quiet` e `docker compose --env-file .env.prod.example -f compose.prod.yaml config --quiet`; não subir stack nem remover volumes. Fazer smoke autorizado somente com fake: cadastrar email, habilitar regra/canal, gerar RMA, observar captura/status e simular falha/retry/teste sem rede externa.
+- [ ] Na raiz, executar `docker compose --env-file .env.example config --quiet` e `docker compose --env-file .env.prod.example -f compose.prod.yaml config --quiet`; não subir stack nem remover volumes. Fazer smoke autorizado somente com fake: cadastrar email, habilitar regra/canal, gerar OS, observar captura/status e simular falha/retry/teste sem rede externa.
 - [ ] Revisar segurança/contratos, logs/erros sem PII, HTML/CRLF/tamanhos e matchers de autorização. Executar `git diff --check` e revisar lista de arquivos; documentar resultados reais, pendências e riscos. Não alegar envio real nem entrega postal.
 - [ ] Registrar commit de configuração/documentação quando a execução estiver autorizada. Publicação de PR, Jira, push, merge e deploy não são requisitos nem autorização deste pedido documental.
 

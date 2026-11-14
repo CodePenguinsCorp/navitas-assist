@@ -16,14 +16,14 @@ import org.springframework.stereotype.Component;
 public class NotificationContentFactory {
 
     private static final Map<RmaStatus, String> STATUS_LABELS = Map.of(
-        RmaStatus.RECEIVED, "Recebido",
+        RmaStatus.RECEIVED, "Recebida",
         RmaStatus.TRIAGE, "Triagem",
         RmaStatus.IN_DIAGNOSIS, "Diagnóstico",
         RmaStatus.WAITING_PART, "Aguardando peça",
         RmaStatus.IN_REPAIR, "Reparo",
         RmaStatus.IN_TESTS, "Testes",
-        RmaStatus.COMPLETED, "Concluído",
-        RmaStatus.RETURNED, "Devolvido",
+        RmaStatus.COMPLETED, "Concluída",
+        RmaStatus.RETURNED, "Devolvida",
         RmaStatus.IRREPARABLE, "Sem conserto"
     );
     private static final Map<RmaPriority, String> PRIORITY_LABELS = Map.of(RmaPriority.HIGH, "alta", RmaPriority.MEDIUM, "média", RmaPriority.LOW, "baixa");
@@ -34,11 +34,11 @@ public class NotificationContentFactory {
         String stage = STATUS_LABELS.get(rma.getStatus());
 
         return switch (event.type()) {
-            case RMA_CREATED -> new Content("Novo RMA " + rma.getCode(), context + " · prioridade " + PRIORITY_LABELS.get(rma.getPriority()) + ". Aberto por " + event.actor() + ".", actionPath(rma));
-            case RMA_ASSIGNED -> new Content("RMA " + rma.getCode() + " atribuído a " + assignee, context + " · etapa " + stage + ". Atribuído por " + event.actor() + ".", actionPath(rma));
-            case RMA_BLOCKED -> new Content("Impedimento no RMA " + rma.getCode(), detail(event, "Impedimento aberto."), actionPath(rma));
-            case PART_PENDING -> new Content("Peça pendente no RMA " + rma.getCode(), detail(event, "Reserva pendente por falta de saldo."), actionPath(rma));
-            case TEST_FAILED -> new Content("Teste reprovado no RMA " + rma.getCode(), detail(event, "Item de protocolo reprovado."), actionPath(rma));
+            case RMA_CREATED -> new Content("Nova OS " + rma.getCode(), context + " · prioridade " + PRIORITY_LABELS.get(rma.getPriority()) + ". Aberta por " + event.actor() + ".", actionPath(rma));
+            case RMA_ASSIGNED -> new Content("OS " + rma.getCode() + " atribuída a " + assignee, context + " · etapa " + stage + ". Atribuída por " + event.actor() + ".", actionPath(rma));
+            case RMA_BLOCKED -> new Content("Impedimento na OS " + rma.getCode(), detail(event, "Impedimento aberto."), actionPath(rma));
+            case PART_PENDING -> new Content("Peça pendente na OS " + rma.getCode(), detail(event, "Reserva pendente por falta de saldo."), actionPath(rma));
+            case TEST_FAILED -> new Content("Teste reprovado na OS " + rma.getCode(), detail(event, "Item de protocolo reprovado."), actionPath(rma));
         };
     }
 

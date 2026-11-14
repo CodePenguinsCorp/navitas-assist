@@ -14,8 +14,8 @@ public class NotificationEmailContentFactory {
 
     public EmailMessage build(Notification notification, String recipientEmail) {
         String event = switch (notification.getEventType()) {
-            case RMA_CREATED -> "RMA criado";
-            case RMA_ASSIGNED -> "RMA atribuído";
+            case RMA_CREATED -> "OS criada";
+            case RMA_ASSIGNED -> "OS atribuída";
             case RMA_BLOCKED -> "Impedimento aberto";
             case PART_PENDING -> "Peça pendente";
             case TEST_FAILED -> "Teste reprovado";
@@ -28,8 +28,8 @@ public class NotificationEmailContentFactory {
         String link = baseUrl() + "/rmas?rma=" + notification.getRma().getId();
         String date = notification.getCreatedAt().toString();
         return new EmailMessage(properties.getEmail().getFrom(), recipientEmail, subject,
-            event + " — " + code + "\n" + date + "\nAbrir RMA: " + link,
-            "<p>" + escape(event) + " — " + escape(code) + "</p><p>" + escape(date) + "</p><p><a href=\"" + escape(link) + "\">Abrir RMA</a></p>");
+            event + " — " + code + "\n" + date + "\nAbrir OS: " + link,
+            "<p>" + escape(event) + " — " + escape(code) + "</p><p>" + escape(date) + "</p><p><a href=\"" + escape(link) + "\">Abrir OS</a></p>");
     }
 
     public EmailMessage test(String recipientEmail) {

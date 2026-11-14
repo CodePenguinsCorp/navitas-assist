@@ -142,7 +142,7 @@ describe('RmaBlocksSectionComponent', () => {
   it('shows the current block in a warning card with reason, category, author and duration', () => {
     mount(blocked());
     const card = host().querySelector('.blocks-section__current')!;
-    expect(text(card.querySelector('strong'))).toBe('Bloqueado há 2 h');
+    expect(text(card.querySelector('strong'))).toBe('Impedida há 2 h');
     expect(text(card)).toContain('Peça pendente');
     expect(text(card)).toContain('Peças');
     expect(text(card)).toContain('tech');
@@ -200,8 +200,8 @@ describe('RmaBlocksSectionComponent', () => {
   });
 
   it.each([
-    { isBlocked: false, message: 'RMA is already blocked.', expected: 'O RMA já foi bloqueado. Feche e abra o detalhe para atualizar.' },
-    { isBlocked: true, message: 'RMA block is no longer active.', expected: 'Este impedimento já foi resolvido. Feche e abra o detalhe para atualizar.' },
+    { isBlocked: false, message: 'A OS já está impedida.', expected: 'A OS já foi bloqueada. Feche e abra o detalhe para atualizar.' },
+    { isBlocked: true, message: 'O impedimento da OS não está mais ativo.', expected: 'Este impedimento já foi resolvido. Feche e abra o detalhe para atualizar.' },
     { isBlocked: false, message: 'Gravação recusada', expected: 'Gravação recusada' }
   ])('keeps values and shows the server message (blocked=$isBlocked, $message)', ({ isBlocked, message, expected }) => {
     mount(isBlocked ? blocked() : RMA);
@@ -268,7 +268,7 @@ describe('RmaBlocksSectionComponent', () => {
 
 const BLOCK: RmaBlockResponse = { id: 9, reason: 'Peça pendente', category: 'Peças', blockedBy: 'tech', blockedAt: '2026-10-20T10:00:00Z', resolvedBy: null, resolvedAt: null, resolutionNote: null };
 const RMA: RmaResponse = {
-  id: 1, code: 'RMA-2026-000001', clientId: 1, clientName: 'Cliente', items: [], productId: 1, productName: 'Produto', productSku: 'P1', batchNumber: 'L1', serialNumber: null, manufacturedAt: null,
+  id: 1, code: 'OS-2026-000001', clientId: 1, clientName: 'Cliente', items: [], productId: 1, productName: 'Produto', productSku: 'P1', batchNumber: 'L1', serialNumber: null, manufacturedAt: null,
   purchaseDate: null, purchaseDateUnknown: true, entryDate: '2026-10-20', invoiceNumber: null, receivedBy: 'desk', reportedFailure: 'Falha', receivedAccessories: null, physicalCondition: null,
   priority: 'MEDIUM', status: 'TRIAGE', dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T10:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [], warrantyHistory: [],
   assigneeId: null, assigneeName: null, repairSummary: null, replacedPartsSummary: null, testSummary: null, shippedAt: null, carrier: null, trackingCode: null, diagnosis: null, statusHistory: [], assignmentHistory: [],

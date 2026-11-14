@@ -28,7 +28,7 @@ class DatabaseMigrationTest {
 
         int executedMigrations = Flyway.configure().dataSource(url, USER, PASSWORD).load().migrate().migrationsExecuted;
 
-        assertEquals(13, executedMigrations);
+        assertEquals(14, executedMigrations);
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
             assertTrue(tableExists(connection, "rmas"));
             assertTrue(tableExists(connection, "rma_code_generation_lock"));
@@ -195,7 +195,7 @@ class DatabaseMigrationTest {
                 code, client_id, product_id, purchase_date_unknown, entry_date, received_by,
                 reported_failure, priority, status, created_at, updated_at
             ) VALUES (
-                'RMA-25', ?, ?, TRUE, DATE '2026-10-19', 'Técnico', 'Falha',
+                'OS-25', ?, ?, TRUE, DATE '2026-10-19', 'Técnico', 'Falha',
                 'HIGH', 'RECEIVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             )
             """, Statement.RETURN_GENERATED_KEYS)) {

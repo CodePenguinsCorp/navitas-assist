@@ -14,7 +14,7 @@ describe('rma stage time', () => {
       .toBe('há 2 d 4 h nesta etapa');
   });
 
-  it('has no stage label for closed RMAs', () => {
+  it('has no stage label for closed ordens de serviço', () => {
     expect(stageTimeLabel({ status: 'COMPLETED', stagePeriods: [period({ status: 'COMPLETED' })] }, NOW)).toBeNull();
   });
 

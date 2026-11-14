@@ -158,7 +158,7 @@ public class UserAccountService {
         administratorGuard.ensureRemainsAfterUserDeletion(userAccount);
         permissionGrantPolicy.ensureCanGrant(authenticatedUsername, effectivePermissionService.effectivePermissions(userAccount));
         if (rmaRecordRepository.existsByAssignee_Id(id)) {
-            throw new BusinessException("User is assigned to one or more RMAs and cannot be deleted.");
+            throw new BusinessException("Usuário é responsável por uma ou mais ordens de serviço e não pode ser excluído.");
         }
 
         userAccountRepository.delete(userAccount);
@@ -170,10 +170,10 @@ public class UserAccountService {
     public UserAccount getAssignableTechnicianById(Long id) {
         UserAccount userAccount = getEntityById(id);
         if (!userAccount.isActive()) {
-            throw new BusinessException("Inactive users cannot be assigned to an RMA.");
+            throw new BusinessException("Usuários inativos não podem ser responsáveis por uma OS.");
         }
         if (!isAssignable(userAccount)) {
-            throw new BusinessException("Only technicians can be assigned to an RMA.");
+            throw new BusinessException("Somente técnicos podem ser responsáveis por uma OS.");
         }
         return userAccount;
     }

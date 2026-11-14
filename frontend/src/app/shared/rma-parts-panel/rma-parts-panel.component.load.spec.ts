@@ -8,13 +8,13 @@ import { PartService } from '../../core/services/part.service';
 import { RmaPartsPanelComponent } from './rma-parts-panel.component';
 
 const reservation = (id: number, status: PartReservationResponse['status'], partName = 'Capacitor', rmaId = 7): PartReservationResponse => ({
-  id, rmaId, rmaCode: `RMA-${rmaId}`, partId: 4, partCode: 'PCA-1', partName, unit: 'un',
+  id, rmaId, rmaCode: `OS-${rmaId}`, partId: 4, partCode: 'PCA-1', partName, unit: 'un',
   location: 'A1', quantity: 2, status, partAvailable: 3, unitCost: 10, totalCost: 20, note: null, createdBy: 'tech',
   createdAt: '2026-10-24T12:00:00Z', updatedAt: '2026-10-24T12:00:00Z'
 });
 
 const rmaParts = (reservations: PartReservationResponse[], rmaId = 7): RmaPartsResponse => ({
-  rmaId, rmaCode: `RMA-${rmaId}`, reservations, movements: [],
+  rmaId, rmaCode: `OS-${rmaId}`, reservations, movements: [],
   reservedCost: reservations.length ? 20 : 0, consumedCost: 0, pendingCount: 0
 });
 
@@ -70,7 +70,7 @@ describe('RmaPartsPanelComponent loading', () => {
   });
 
   const expectFailureOnly = () => {
-    expect(text()).toContain('Não foi possível carregar as peças do RMA.');
+    expect(text()).toContain('Não foi possível carregar as peças da OS.');
     expect(text()).toContain('Tentar novamente');
     expect(text()).not.toContain('Nenhuma peça reservada');
     expect(text()).not.toContain('Capacitor');
@@ -79,7 +79,7 @@ describe('RmaPartsPanelComponent loading', () => {
   };
 
   // Vermelho: a falha inicial aparece junto de "Nenhuma peça reservada" e sem nova tentativa.
-  it('shows failed RMA parts without an empty reservation message', async () => {
+  it('shows failed OS parts without an empty reservation message', async () => {
     await setup({ parts: throwError(() => new Error()) });
     expectFailureOnly();
   });
@@ -114,12 +114,12 @@ describe('RmaPartsPanelComponent loading', () => {
     expect(button('Tentar novamente')).toBeDefined();
     button('Tentar novamente')!.click(); render();
     expect(button('Tentar novamente')?.disabled).toBe(true);
-    expect(text()).toContain('Não foi possível carregar as peças do RMA.');
+    expect(text()).toContain('Não foi possível carregar as peças da OS.');
     expect(text()).not.toContain('R$ 20,00');
     retry$.next(rmaParts([reservation(1, 'ACTIVE')])); retry$.complete(); render();
     expect(text()).toContain('R$ 20,00');
     expect(text()).toContain('Capacitor');
-    expect(text()).not.toContain('Não foi possível carregar as peças do RMA.');
+    expect(text()).not.toContain('Não foi possível carregar as peças da OS.');
     expect(service.getRmaParts).toHaveBeenLastCalledWith(7);
   });
 
@@ -155,7 +155,7 @@ describe('RmaPartsPanelComponent loading', () => {
   });
 
   // Vermelho: a falha do RMA 8 não oferece nova tentativa com o RMA atual.
-  it('retries the current RMA after a failing context change', async () => {
+  it('retries the current OS after a failing context change', async () => {
     await setup();
     service.getRmaParts.mockReturnValue(throwError(() => new Error()));
     fixture.componentRef.setInput('rmaId', 8); render();
@@ -172,7 +172,7 @@ describe('RmaPartsPanelComponent loading', () => {
     expect(text()).toContain('Não foi possível carregar as opções de peças.');
     expect(text()).toContain('Tentar novamente');
     expect(text()).toContain('Capacitor');
-    expect(text()).not.toContain('Não foi possível carregar as peças do RMA.');
+    expect(text()).not.toContain('Não foi possível carregar as peças da OS.');
     expect(text()).not.toContain('Nenhuma peça ativa disponível');
     expect(button('Reservar')!.disabled).toBe(true);
 
@@ -191,7 +191,7 @@ describe('RmaPartsPanelComponent loading', () => {
   });
 
   // Vermelho: a resposta do RMA anterior ainda substitui o painel do RMA atual.
-  it('keeps only the latest RMA after a context change', async () => {
+  it('keeps only the latest OS after a context change', async () => {
     const first = new Subject<RmaPartsResponse>();
     const second = new Subject<RmaPartsResponse>();
     await setup({ parts: first });
@@ -205,7 +205,7 @@ describe('RmaPartsPanelComponent loading', () => {
   });
 
   // Vermelho: a reserva concluída depois da troca recarrega e anuncia sucesso no RMA atual.
-  it('ignores a write result after switching RMA', async () => {
+  it('ignores a write result after switching OS', async () => {
     await setup();
     const write$ = new Subject<PartReservationResponse>();
     service.reserve.mockReturnValue(write$);
@@ -215,7 +215,7 @@ describe('RmaPartsPanelComponent loading', () => {
     fixture.componentRef.setInput('rmaId', 8); render();
     write$.next(reservation(9, 'ACTIVE')); write$.complete(); render();
     expect(service.getRmaParts.mock.calls.map(([id]) => id)).toEqual([7, 8]);
-    expect(text()).not.toContain('reservada para o RMA');
+    expect(text()).not.toContain('reservada para a OS');
     expect(text()).toContain('Peça de B');
   });
 
@@ -242,7 +242,7 @@ describe('RmaPartsPanelComponent loading', () => {
     button('Confirmar')!.click(); render();
     expect(text()).toContain('Saldo insuficiente.');
     expect(text()).toContain('Capacitor');
-    expect(text()).not.toContain('Não foi possível carregar as peças do RMA.');
+    expect(text()).not.toContain('Não foi possível carregar as peças da OS.');
   });
 
   it('reloads parts and catalog after reserving and after each action', async () => {

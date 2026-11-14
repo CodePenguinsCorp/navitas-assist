@@ -64,7 +64,7 @@
           <section class="empty-state">
             <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
             <h3>Nenhuma peça cadastrada</h3>
-            <p>Cadastre peças de reposição para reservá-las nos RMAs.</p>
+            <p>Cadastre peças de reposição para reservá-las nas ordens de serviço.</p>
           </section>
         } @else if (filteredParts().length === 0) {
           <section class="empty-state">
@@ -140,7 +140,7 @@
                   <th>Localização</th>
                   <th>Disponível</th>
                   <th>Mínimo</th>
-                  <th>Pendente em RMAs</th>
+                  <th>Pendente em ordens de serviço</th>
                   <th>Sugestão de compra</th>
                 </tr>
               </thead>
@@ -162,7 +162,7 @@
       </article>
 
       <article class="table-card table-card--list panel">
-        <h3>Peças pendentes por RMA</h3>
+        <h3>Peças pendentes por OS</h3>
         @if (pending().length === 0) {
           <p>Nenhuma reserva aguardando saldo.</p>
         } @else {
@@ -170,7 +170,7 @@
             <table>
               <thead>
                 <tr>
-                  <th>RMA</th>
+                  <th>OS</th>
                   <th>Nome / Código</th>
                   <th>Localização</th>
                   <th>Quantidade</th>
@@ -418,7 +418,7 @@
                 <th>Variação reservada</th>
                 <th>Em estoque após</th>
                 <th>Reservado após</th>
-                <th>RMA</th>
+                <th>OS</th>
                 <th>Autor</th>
                 <th>Motivo</th>
                 @if (canManage()) {

@@ -109,8 +109,8 @@ export class RmaBlocksSectionComponent {
       error: (error) => {
         const message = extractHttpErrorMessage(error, 'Não foi possível atualizar o impedimento.');
         this.error.set(
-          message === 'RMA is already blocked.' ? 'O RMA já foi bloqueado. Feche e abra o detalhe para atualizar.'
-            : message === 'RMA block is no longer active.' ? 'Este impedimento já foi resolvido. Feche e abra o detalhe para atualizar.'
+          message === 'A OS já está impedida.' ? 'A OS já foi bloqueada. Feche e abra o detalhe para atualizar.'
+            : message === 'O impedimento da OS não está mais ativo.' ? 'Este impedimento já foi resolvido. Feche e abra o detalhe para atualizar.'
               : message
         );
       }

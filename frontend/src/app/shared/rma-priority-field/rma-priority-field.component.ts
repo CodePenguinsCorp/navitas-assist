@@ -85,7 +85,7 @@ export class RmaPriorityFieldComponent {
           this.message.set(`Prioridade alterada para ${priorityLabel(updated.priority)}`);
           this.saved.emit(updated);
         },
-        error: (error) => this.error.set(extractHttpErrorMessage(error, 'Não foi possível alterar a prioridade do RMA.'))
+        error: (error) => this.error.set(extractHttpErrorMessage(error, 'Não foi possível alterar a prioridade da OS.'))
       });
   }
 }

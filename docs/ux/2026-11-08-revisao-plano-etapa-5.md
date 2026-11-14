@@ -1,7 +1,7 @@
 # Revisão do plano da etapa 5 — Operações especializadas
 
 **Plano revisado:** `docs/ux/2026-11-07-plano-etapa-5-operacoes.md` (525 linhas, tarefas 1–11 com 6a/6b e 7a/7b).
-**Base conferida:** `main` em `f889f70`, leitura de `frontend/src/app` (peças, painéis do RMA, protocolos, cabeçalho, ação de linha, `styles.css`, `core/*`), backend citado pelo plano, estudo de UI/UX e planos das etapas 3 e 4.
+**Base conferida:** `main` em `f889f70`, leitura de `frontend/src/app` (peças, painéis da OS, protocolos, cabeçalho, ação de linha, `styles.css`, `core/*`), backend citado pelo plano, estudo de UI/UX e planos das etapas 3 e 4.
 
 **Precedência:** onde este documento diverge do plano, vale este documento. Os trechos "Substituir por" são o texto que o implementador deve seguir no lugar do trecho citado.
 
@@ -17,8 +17,8 @@
 - Linha 3, substituir a última frase por: "A implementação e os commits por tarefa estão autorizados conforme Global Constraints."
 - Linha 19, substituir o item inteiro por: "**Escrita na execução:** somente os **Files** de cada tarefa. Não alterar outros documentos, o estado das etapas nem este plano. Testes e build devem ser executados de fato e relatados com a saída real."
 
-**A2. Catálogo de reservas desatualizado (6a).** Hoje `load()` também relê o catálogo depois de cada reserva e de cada ação (`rma-parts-panel.component.ts:181,200,216-218`). Isso mantém atualizado o texto "disponível: X" das opções (`:143-147`). O plano (`:236`) cria `loadCatalog()` sem dizer quando ela é chamada, e quem implementar tende a chamá-la só na troca de RMA.
-- Acrescentar em 6a **Interfaces**: "`load(rmaId)` continua chamando `loadCatalog()` a cada execução, como hoje (abertura, troca de RMA, depois de reservar e depois de cada ação), sempre que `canCreateReservation()`. Cada chamada cancela a leitura anterior do catálogo. `retryCatalog()` chama somente `loadCatalog()`."
+**A2. Catálogo de reservas desatualizado (6a).** Hoje `load()` também relê o catálogo depois de cada reserva e de cada ação (`rma-parts-panel.component.ts:181,200,216-218`). Isso mantém atualizado o texto "disponível: X" das opções (`:143-147`). O plano (`:236`) cria `loadCatalog()` sem dizer quando ela é chamada, e quem implementar tende a chamá-la só na troca de OS.
+- Acrescentar em 6a **Interfaces**: "`load(rmaId)` continua chamando `loadCatalog()` a cada execução, como hoje (abertura, troca de OS, depois de reservar e depois de cada ação), sempre que `canCreateReservation()`. Cada chamada cancela a leitura anterior do catálogo. `retryCatalog()` chama somente `loadCatalog()`."
 - Acrescentar em 6a **Preservação**: "Depois de `reserve` ou `runAction` com sucesso, `list` é chamado de novo (contagem de chamadas +1)."
 
 **A3. Remoção de "Valor em estoque" sem decisão do usuário (Task 2).** Plano `:81,154,159,458,499`. O próprio plano registra essa remoção como proposta do autor (`:496-499`). A decisão "indicadores avaliados por tela" não autoriza retirar informação existente (`parts.component.html:24-28`, `parts.component.ts:120`).
@@ -44,7 +44,7 @@
 - T1: sucesso inicial com `Capacitor`, depois `savePart` (ou `saveMovement`) com sucesso e a recarga de `list` com erro.
 - T5: histórico da peça A com sucesso, fechar, reabrir A com `listMovements` em erro. Para "registro antigo", usar `confirmReversal` com sucesso e a recarga do histórico com erro.
 - T6a: sucesso com reserva, depois `runAction` com sucesso e a recarga de `getRmaParts` com erro. Para troca de contexto, `setInput('rmaId', 8)` com erro.
-- T8: sucesso no RMA 4, depois `setInput('rmaId', 5)` com `listExecutions` em erro. O retry repete o RMA 5.
+- T8: sucesso na OS 4, depois `setInput('rmaId', 5)` com `listExecutions` em erro. O retry repete a OS 5.
 
 **M2. Bloqueio de escrita durante a atualização (T1) não tem teste e é inflado.** Plano `:89` ("com ações de mutação desabilitadas durante a carga") e `:136` ("Desabilitar ações de escrita sobre snapshot em atualização"). Substituir por: "A atualização depois de um sucesso mantém os dados e mostra `Atualizando estoque...` com `role="status"`. As ações continuam habilitadas, porque o servidor decide concorrência e saldo." Cortar o item correspondente do roteiro (`:491`, "impedir operação sobre snapshot…").
 
@@ -57,13 +57,13 @@
 
 **M5. Matriz de perfis nos impedimentos exige mudar o mock existente (7a).** `rma-block-panel.component.spec.ts:11-17` usa `hasAnyRole: () => writable`. Acrescentar em 7a Step 1: "Substituir `writable` por `let role: UserRole = 'TECHNICIAN'` e `hasAnyRole: (roles: UserRole[]) => roles.includes(role)`. O teste VIEWER existente (`:63-70`) passa a usar `role = 'VIEWER'`. Parametrizar `ADMIN`/`SERVICE_DESK`/`TECHNICIAN` com formulário e `VIEWER` sem formulário."
 
-**M6. Specs consumidores fora dos comandos.** `rmas.component.detail.spec.ts:280-302` monta os painéis de peças, protocolos e o histórico de impedimentos, e `rmas.component.html:318` também usa `app-rma-block-history`. Isso contradiz o plano em `:320`, que trata o painel como único consumidor. Nos Steps 2/4 das tarefas 6a, 6b, 7b, 8, 9 e 10, acrescentar `--include 'src/app/pages/rmas/rmas.component.detail.spec.ts'`. Em 7b Step 4, substituir "inclusive painel consumidor" por "inclusive `rma-block-panel` e o detalhe de RMAs".
+**M6. Specs aplicadores fora dos comandos.** `rmas.component.detail.spec.ts:280-302` monta os painéis de peças, protocolos e o histórico de impedimentos, e `rmas.component.html:318` também usa `app-rma-block-history`. Isso contradiz o plano em `:320`, que trata o painel como único aplicador. Nos Steps 2/4 das tarefas 6a, 6b, 7b, 8, 9 e 10, acrescentar `--include 'src/app/pages/rmas/rmas.component.detail.spec.ts'`. Em 7b Step 4, substituir "inclusive painel aplicador" por "inclusive `rma-block-panel` e o detalhe de ordens de serviço".
 
 **M7. Confirmação de estorno sem lugar definido (Task 5).** A coluna de ações (`parts.component.html:370-380`) não comporta rótulo, consequência e dois botões de 40 px. Acrescentar em Step 3: "A confirmação é uma linha própria `<tr>` logo abaixo do movimento, com uma `<td>` de `colspan` igual ao número de colunas. A validação e o erro do estorno continuam em `modalErrorMessage` (o spec `:93` não muda), mostrados dentro dessa linha com `role="alert"`. O erro de leitura do histórico vai para `historyLoadErrorMessage`. A unidade das variações é concatenada no template (`signedQuantity(v) + ' ' + part.unit`), sem alterar `formatSignedQuantity` (`part-ui.ts:47`, coberto por `part-ui.spec.ts`)."
 
 **M8. Decisões em aberto na 6a.**
 - Substituir o trecho "Após falha principal ocultar operações…" (`:249`) por: "Com `loadFailed()`, ocultar resumo, lista, ações por reserva **e** o formulário de nova reserva, até uma recarga com sucesso."
-- A regra "Callbacks de escrita conferem o id capturado" (`:236`) precisa de teste. Acrescentar: `ignores a write result after switching RMA` — com `reserve` pendente no RMA 7, trocar para o 8 e só então emitir o sucesso; `getRmaParts` não é chamado de novo com 7 e o painel do 8 não mostra a mensagem de sucesso.
+- A regra "Callbacks de escrita conferem o id capturado" (`:236`) precisa de teste. Acrescentar: `ignores a write result after switching OS` — com `reserve` pendente na OS 7, trocar para o 8 e só então emitir o sucesso; `getRmaParts` não é chamado de novo com 7 e o painel do 8 não mostra a mensagem de sucesso.
 
 **M9. Efeito dos protocolos (Task 8).** O `effect` atual não usa `untracked` (`rma-protocols.component.ts:137`). Em `:332`, substituir "usando `untracked` se…" por: "Obrigatório: `effect(() => { const id = this.rmaId(); untracked(() => this.loadExecutions(id)); })`, como em `rma-parts-panel.component.ts:156-159`."
 
@@ -82,7 +82,7 @@
 
 **B3. Rótulo "Concluir" entre as tarefas 9 e 10.** Os testes da Task 9 devem localizar o botão com `textContent.trim().startsWith('Concluir')`, porque a Task 10 o renomeia para "Concluir protocolo".
 
-**B4. Consumidores de `protocolProgress*`.** Já conferido: só `rma-protocols.component.ts:15-16,211-217`. Substituir "Antes de mudar, buscar todos os consumidores…" (`:362`) por "Consumidor único: `rma-protocols`."
+**B4. Aplicadores de `protocolProgress*`.** Já conferido: só `rma-protocols.component.ts:15-16,211-217`. Substituir "Antes de mudar, buscar todos os aplicadores…" (`:362`) por "Aplicador único: `rma-protocols`."
 
 **B5. Estrutura do formulário inline de reserva (6b, `:273`).** Usar `form.form-grid` > `fieldset.form-section` (legenda "Reservar peças") com Peça e Quantidade, Observação em `field-group--full` e `.form-actions.form-actions--full` contendo apenas "Reservar". Remover `.parts-reserve`. A coluna única abaixo de 720 px já vem de `styles.css:1769,1807-1809`; não duplicar no CSS local.
 

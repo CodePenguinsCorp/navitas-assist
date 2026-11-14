@@ -276,24 +276,24 @@ class PaginationIntegrationTest {
 
     @Test
     void shouldPageRmasWithFiltersAndKeepFullBoardList() throws Exception {
-        Client client = saveClient("RMA Client", null, null);
+        Client client = saveClient("OS Client", null, null);
         Product product = saveProduct("SKU-PAGE", "Paged product", null, null);
 
         for (int index = 1; index <= 5; index++) {
-            saveRma(client, product, "RMA-2026-000" + index, index == 5 ? RmaStatus.IN_REPAIR : RmaStatus.RECEIVED, index);
+            saveRma(client, product, "OS-2026-000" + index, index == 5 ? RmaStatus.IN_REPAIR : RmaStatus.RECEIVED, index);
         }
 
         mockMvc.perform(get("/api/rmas").param("size", "2").with(admin()))
-            .andExpect(jsonPath("$.content[*].code", contains("RMA-2026-0001", "RMA-2026-0002")))
+            .andExpect(jsonPath("$.content[*].code", contains("OS-2026-0001", "OS-2026-0002")))
             .andExpect(jsonPath("$.totalElements").value(5))
             .andExpect(jsonPath("$.totalPages").value(3));
         mockMvc.perform(get("/api/rmas").param("size", "2").param("page", "1").with(admin()))
-            .andExpect(jsonPath("$.content[*].code", contains("RMA-2026-0003", "RMA-2026-0004")));
+            .andExpect(jsonPath("$.content[*].code", contains("OS-2026-0003", "OS-2026-0004")));
         mockMvc.perform(get("/api/rmas").param("status", "RECEIVED").param("size", "3").with(admin()))
             .andExpect(jsonPath("$.totalElements").value(4))
             .andExpect(jsonPath("$.totalPages").value(2));
         mockMvc.perform(get("/api/rmas").param("query", "paged").param("status", "IN_REPAIR").with(admin()))
-            .andExpect(jsonPath("$.content[*].code", contains("RMA-2026-0005")));
+            .andExpect(jsonPath("$.content[*].code", contains("OS-2026-0005")));
         mockMvc.perform(get("/api/rmas/board").with(admin()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$", hasSize(5)));
@@ -306,22 +306,22 @@ class PaginationIntegrationTest {
         Client client = saveClient("Queue Client", null, null);
         Product product = saveProduct("SKU-QUEUE", "Queue product", null, null);
 
-        saveRma(client, product, "RMA-Q-LOW-OLD", RmaStatus.RECEIVED, 1, RmaPriority.LOW);
-        saveRma(client, product, "RMA-Q-HIGH-NEW", RmaStatus.RECEIVED, 9, RmaPriority.HIGH);
-        saveRma(client, product, "RMA-Q-MED-OLD", RmaStatus.TRIAGE, 2, RmaPriority.MEDIUM);
-        saveRma(client, product, "RMA-Q-HIGH-OLD", RmaStatus.IN_REPAIR, 3, RmaPriority.HIGH);
-        saveRma(client, product, "RMA-Q-MED-NEW", RmaStatus.RECEIVED, 8, RmaPriority.MEDIUM);
-        saveRma(client, product, "RMA-Q-HIGH-SAME-1", RmaStatus.RECEIVED, 5, RmaPriority.HIGH);
-        saveRma(client, product, "RMA-Q-HIGH-SAME-2", RmaStatus.RECEIVED, 5, RmaPriority.HIGH);
+        saveRma(client, product, "OS-Q-LOW-OLD", RmaStatus.RECEIVED, 1, RmaPriority.LOW);
+        saveRma(client, product, "OS-Q-HIGH-NEW", RmaStatus.RECEIVED, 9, RmaPriority.HIGH);
+        saveRma(client, product, "OS-Q-MED-OLD", RmaStatus.TRIAGE, 2, RmaPriority.MEDIUM);
+        saveRma(client, product, "OS-Q-HIGH-OLD", RmaStatus.IN_REPAIR, 3, RmaPriority.HIGH);
+        saveRma(client, product, "OS-Q-MED-NEW", RmaStatus.RECEIVED, 8, RmaPriority.MEDIUM);
+        saveRma(client, product, "OS-Q-HIGH-SAME-1", RmaStatus.RECEIVED, 5, RmaPriority.HIGH);
+        saveRma(client, product, "OS-Q-HIGH-SAME-2", RmaStatus.RECEIVED, 5, RmaPriority.HIGH);
 
         mockMvc.perform(get("/api/rmas").param("size", "4").with(admin()))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.content[*].code", contains("RMA-Q-HIGH-OLD", "RMA-Q-HIGH-SAME-1", "RMA-Q-HIGH-SAME-2", "RMA-Q-HIGH-NEW")))
+            .andExpect(jsonPath("$.content[*].code", contains("OS-Q-HIGH-OLD", "OS-Q-HIGH-SAME-1", "OS-Q-HIGH-SAME-2", "OS-Q-HIGH-NEW")))
             .andExpect(jsonPath("$.totalElements").value(7))
             .andExpect(jsonPath("$.totalPages").value(2));
         mockMvc.perform(get("/api/rmas").param("size", "4").param("page", "1").with(admin()))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.content[*].code", contains("RMA-Q-MED-OLD", "RMA-Q-MED-NEW", "RMA-Q-LOW-OLD")));
+            .andExpect(jsonPath("$.content[*].code", contains("OS-Q-MED-OLD", "OS-Q-MED-NEW", "OS-Q-LOW-OLD")));
     }
 
     @Test
@@ -329,11 +329,11 @@ class PaginationIntegrationTest {
         Client client = saveClient("Summary Client", null, null);
         Product product = saveProduct("SKU-SUMMARY", "Summary product", null, null);
 
-        saveRma(client, product, "RMA-S-1", RmaStatus.RECEIVED, 1, RmaPriority.HIGH);
-        saveRma(client, product, "RMA-S-2", RmaStatus.IN_REPAIR, 2, RmaPriority.HIGH);
-        saveRma(client, product, "RMA-S-3", RmaStatus.COMPLETED, 3, RmaPriority.HIGH);
-        saveRma(client, product, "RMA-S-4", RmaStatus.RETURNED, 4, RmaPriority.LOW);
-        saveRma(client, product, "RMA-S-5", RmaStatus.RECEIVED, 5, RmaPriority.MEDIUM);
+        saveRma(client, product, "OS-S-1", RmaStatus.RECEIVED, 1, RmaPriority.HIGH);
+        saveRma(client, product, "OS-S-2", RmaStatus.IN_REPAIR, 2, RmaPriority.HIGH);
+        saveRma(client, product, "OS-S-3", RmaStatus.COMPLETED, 3, RmaPriority.HIGH);
+        saveRma(client, product, "OS-S-4", RmaStatus.RETURNED, 4, RmaPriority.LOW);
+        saveRma(client, product, "OS-S-5", RmaStatus.RECEIVED, 5, RmaPriority.MEDIUM);
 
         mockMvc.perform(get("/api/rmas/summary").with(admin()))
             .andExpect(status().isOk())
@@ -345,7 +345,7 @@ class PaginationIntegrationTest {
             .andExpect(jsonPath("$.total").value(2))
             .andExpect(jsonPath("$.ongoing").value(2))
             .andExpect(jsonPath("$.highPriority").value(1));
-        mockMvc.perform(get("/api/rmas/summary").param("query", "RMA-S-3").with(admin()))
+        mockMvc.perform(get("/api/rmas/summary").param("query", "OS-S-3").with(admin()))
             .andExpect(jsonPath("$.total").value(1))
             .andExpect(jsonPath("$.ongoing").value(0));
         mockMvc.perform(get("/api/rmas").param("size", "2").with(admin()))

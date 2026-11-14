@@ -56,7 +56,7 @@ class RmaReportCsvIntegrationTest {
     @Test
     void exportsOneLinePerItemWithBomSemicolonsAndNeutralizedText() throws Exception {
         RmaRecord rma = new RmaRecord();
-        rma.setCode("RMA-1");
+        rma.setCode("OS-1");
         rma.setClient(client);
         rma.setProduct(product);
         rma.setEntryDate(LocalDate.parse("2026-10-05"));
@@ -91,7 +91,7 @@ class RmaReportCsvIntegrationTest {
         String[] lines = new String(body, 3, body.length - 3, StandardCharsets.UTF_8).split("\r\n");
         assertEquals("Código;Entrada;Status;Cliente;Produto;SKU;Lote;Série;Garantia;Ajuste manual de garantia;Falha relatada;"
             + "Falha encontrada;Tipo de falha;Causa provável;Responsável;Expedição", lines[0]);
-        assertEquals("RMA-1;05/10/2026;Diagnóstico;\"'=Cliente; \"\"Alfa\"\"\";Controlador;CTRL-1;L1;S1;Pendente;Não;\"Não liga\nàs vezes\";"
+        assertEquals("OS-1;05/10/2026;Diagnóstico;\"'=Cliente; \"\"Alfa\"\"\";Controlador;CTRL-1;L1;S1;Pendente;Não;\"Não liga\nàs vezes\";"
             + "Conector danificado;Comunicação;;;", lines[1]);
         assertTrue(lines[2].contains(";'-S2;"), lines[2]);
         assertEquals(3, lines.length);
@@ -100,7 +100,7 @@ class RmaReportCsvIntegrationTest {
     @Test
     void exportsTheSummaryAsALongTable() throws Exception {
         RmaRecord rma = new RmaRecord();
-        rma.setCode("RMA-1");
+        rma.setCode("OS-1");
         rma.setClient(client);
         rma.setProduct(product);
         rma.setEntryDate(LocalDate.parse("2026-10-05"));
@@ -118,8 +118,8 @@ class RmaReportCsvIntegrationTest {
         String text = new String(body, 3, body.length - 3, StandardCharsets.UTF_8);
 
         assertTrue(text.startsWith("Seção;Item;Quantidade;Base;Percentual;Tempo médio (h);Maior tempo (h)\r\n"), text);
-        assertTrue(text.contains("Total;RMAs;1;;;;\r\n"), text);
-        assertTrue(text.contains("Status;Recebido;1;1;100,0;;\r\n"), text);
+        assertTrue(text.contains("Total;Ordens de serviço;1;;;;\r\n"), text);
+        assertTrue(text.contains("Status;Recebida;1;1;100,0;;\r\n"), text);
         assertTrue(text.contains("Garantia;Pendente;1;1;100,0;;\r\n"), text);
         assertTrue(text.contains("Mês de entrada;10/2026;1;;;;\r\n"), text);
         assertTrue(text.contains("Top falhas por produto;Controlador (CTRL-1);1;;;;\r\n"), text);

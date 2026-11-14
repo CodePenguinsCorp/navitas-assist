@@ -11,19 +11,19 @@ import { RmaPartsPanelComponent } from './rma-parts-panel.component';
 type ReservationStatus = PartReservationResponse['status'];
 
 const reservation = (id: number, status: ReservationStatus): PartReservationResponse => ({
-  id, rmaId: 7, rmaCode: 'RMA-7', partId: 4, partCode: `PCA-${id}`, partName: 'Capacitor', unit: 'un',
+  id, rmaId: 7, rmaCode: 'OS-7', partId: 4, partCode: `PCA-${id}`, partName: 'Capacitor', unit: 'un',
   location: 'A1', quantity: 2, status, partAvailable: 3, unitCost: 10, totalCost: 20, note: null, createdBy: 'tech',
   createdAt: '2026-10-24T12:00:00Z', updatedAt: '2026-10-24T12:00:00Z'
 });
 
 const MOVEMENT: PartMovementResponse = {
   id: 30, partId: 4, partCode: 'PCA-1', partName: 'Capacitor', type: 'CONSUMPTION', quantity: 2,
-  onHandChange: -2, reservedChange: -2, onHandAfter: 3, reservedAfter: 0, unitCost: 10, totalCost: 20, rmaId: 7, rmaCode: 'RMA-7', reservationId: 2,
+  onHandChange: -2, reservedChange: -2, onHandAfter: 3, reservedAfter: 0, unitCost: 10, totalCost: 20, rmaId: 7, rmaCode: 'OS-7', reservationId: 2,
   reason: 'Troca da placa', reversed: true, reversedMovementId: null, createdBy: 'tech', createdAt: '2026-10-24T13:00:00Z'
 };
 
 const rmaParts = (reservations: PartReservationResponse[]): RmaPartsResponse => ({
-  rmaId: 7, rmaCode: 'RMA-7', reservations, movements: [MOVEMENT], reservedCost: 20, consumedCost: 20, pendingCount: 1
+  rmaId: 7, rmaCode: 'OS-7', reservations, movements: [MOVEMENT], reservedCost: 20, consumedCost: 20, pendingCount: 1
 });
 
 const part = (id: number, unit: string, available = 3): PartResponse => ({
@@ -102,7 +102,7 @@ describe('RmaPartsPanelComponent presentation', () => {
   });
 
   // Vermelho: contagens usam plurais artificiais e custos não declaram escopo.
-  it('states reservation count and RMA cost scope', async () => {
+  it('states reservation count and OS cost scope', async () => {
     await setup();
     const stats = facts(root().querySelector<HTMLElement>('.parts-stats')!);
     expect(stats.get('Ativas')).toBe('1');
@@ -112,7 +112,7 @@ describe('RmaPartsPanelComponent presentation', () => {
     expect(stats.get('Custo reservado')).toBe('R$ 20,00');
     expect(facts(items()[0]).get('Custo da reserva')).toBe('R$ 20,00');
     expect(text()).not.toContain('reservada(s)');
-    expect(text()).not.toContain('consumida(s)');
+    expect(text()).not.toContain('aplicada(s)');
     expect(text()).not.toContain('pendente(s)');
   });
 

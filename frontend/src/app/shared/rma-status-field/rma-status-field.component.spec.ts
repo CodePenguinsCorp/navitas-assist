@@ -6,7 +6,7 @@ import { providePermissions } from '../../testing/permission-fixtures';
 import { buildRma } from '../../testing/rma-fixtures';
 import { RmaStatusFieldComponent } from './rma-status-field.component';
 
-describe('Status inline do RMA', () => {
+describe('Status inline da OS', () => {
   let fixture: ComponentFixture<RmaStatusFieldComponent>;
   let request: ReturnType<RmaService['updateStatus']>;
   let calls: RmaStatusUpdateRequest[];
@@ -53,7 +53,7 @@ describe('Status inline do RMA', () => {
     expect(fixture.componentInstance.rma()?.status).toBe('RECEIVED');
   });
 
-  it('preserva a recusa do primeiro drop quando o quadro vincula o RMA no mesmo ciclo', () => {
+  it('preserva a recusa do primeiro drop quando o quadro vincula a OS no mesmo ciclo', () => {
     fixture.componentRef.setInput('rma', null); render();
     request = throwError(() => ({ error: { message: 'Protocolo obrigatório pendente.' } }));
     fixture.componentRef.setInput('rma', original);
@@ -89,10 +89,10 @@ describe('Status inline do RMA', () => {
     expect(calls).toHaveLength(1);
   });
 
-  it('descarta a observação reservada ao desfazer antes de mover outro RMA', () => {
+  it('descarta a observação reservada ao desfazer antes de mover outra OS', () => {
     pick(); button('Adicionar observação').click(); render();
     const textarea = host().querySelector('textarea')!;
-    textarea.value = 'Nota do primeiro RMA'; textarea.dispatchEvent(new Event('input'));
+    textarea.value = 'Nota do primeira OS'; textarea.dispatchEvent(new Event('input'));
     button('Salvar').click(); render();
     request = of(original); button('Desfazer').click(); render();
     const other = buildRma({ id: 2 });

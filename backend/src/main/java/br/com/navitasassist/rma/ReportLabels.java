@@ -9,9 +9,9 @@ import br.com.navitasassist.diagnosis.FailureType;
 /** Portuguese labels for the report summary, the CSV exports and the PDF, matching the frontend labels. */
 public final class ReportLabels {
     private static final Map<RmaStatus, String> STATUS = new EnumMap<>(Map.of(
-        RmaStatus.RECEIVED, "Recebido", RmaStatus.TRIAGE, "Triagem", RmaStatus.IN_DIAGNOSIS, "Diagnóstico",
+        RmaStatus.RECEIVED, "Recebida", RmaStatus.TRIAGE, "Triagem", RmaStatus.IN_DIAGNOSIS, "Diagnóstico",
         RmaStatus.WAITING_PART, "Aguardando peça", RmaStatus.IN_REPAIR, "Reparo", RmaStatus.IN_TESTS, "Testes",
-        RmaStatus.COMPLETED, "Concluído", RmaStatus.RETURNED, "Devolvido", RmaStatus.IRREPARABLE, "Sem conserto"));
+        RmaStatus.COMPLETED, "Concluída", RmaStatus.RETURNED, "Devolvida", RmaStatus.IRREPARABLE, "Sem conserto"));
     private static final Map<WarrantyStatus, String> WARRANTY = new EnumMap<>(Map.of(
         WarrantyStatus.PENDING, "Pendente", WarrantyStatus.IN_WARRANTY, "Em garantia", WarrantyStatus.OUT_OF_WARRANTY, "Fora de garantia"));
     private static final Map<FailureType, String> FAILURE_TYPE = new EnumMap<>(Map.of(

@@ -93,7 +93,7 @@ class EffectivePermissionIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{}"))
             .andReturn().getResponse().getStatus();
 
-        assertTrue(status != 401 && status != 403, "Consulta + extra rma.abrir deveria abrir RMA, mas recebeu " + status);
+        assertTrue(status != 401 && status != 403, "Consulta + extra rma.abrir deveria abrir OS, mas recebeu " + status);
         mvc.perform(putJson("/api/rmas/999999").with(as(VIEWER_EXTRA)))
             .andExpect(status().isForbidden());
     }
@@ -163,7 +163,7 @@ class EffectivePermissionIntegrationTest {
         notification.setRecipient(users.findByUsernameIgnoreCase(username).orElseThrow());
         notification.setEventType(NotificationEventType.RMA_CREATED);
         notification.setSeverity(NotificationSeverity.INFO);
-        notification.setTitle("RMA aberto");
+        notification.setTitle("OS aberta");
         notification.setMessage("Notificação de teste");
         notification.setCreatedAt(Instant.now());
         return notifications.saveAndFlush(notification);

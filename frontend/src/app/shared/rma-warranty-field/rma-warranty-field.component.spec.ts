@@ -65,7 +65,7 @@ describe('RmaWarrantyFieldComponent', () => {
   it('sem permissão mostra o valor sem permitir edição', () => {
     mount({ canEdit: false }); expect(trigger()).toBeNull(); expect(host().querySelector('form')).toBeNull();
   });
-  it.each(['COMPLETED', 'RETURNED', 'IRREPARABLE'] as const)('bloqueia RMA encerrado %s', (status) => {
+  it.each(['COMPLETED', 'RETURNED', 'IRREPARABLE'] as const)('bloqueia OS encerrada %s', (status) => {
     mount({ status }); expect(trigger()?.disabled ?? true).toBe(true);
   });
   it('bloqueia readonly e item legado sem id', () => {
@@ -118,9 +118,9 @@ describe('RmaWarrantyFieldComponent', () => {
     expect(event.defaultPrevented).toBe(true); expect(host().querySelector('form')).toBeNull(); expect(calls).toEqual([]);
   });
   it('mostra erro do backend inline e mantém os valores para tentar novamente', () => {
-    response = () => throwError(() => ({ error: { message: 'RMA encerrado.' } }));
+    response = () => throwError(() => ({ error: { message: 'OS encerrada.' } }));
     mount(); edit(); reason('Outro'); submit();
-    expect(host().querySelector('[role="alert"]')!.textContent).toContain('RMA encerrado.');
+    expect(host().querySelector('[role="alert"]')!.textContent).toContain('OS encerrada.');
     expect(host().querySelector('textarea')!.value).toBe('Outro'); expect(saved).toEqual([]);
   });
   it('usa mensagem de erro padrão quando o backend não informa o motivo', () => {

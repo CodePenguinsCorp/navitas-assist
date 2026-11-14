@@ -434,7 +434,7 @@ describe('ClientsComponent collection layout and states', () => {
   it('keeps the delete dialog open with the link error', async () => {
     await mount();
     deleteClient.mockImplementation(() => throwError(() =>
-      new HttpErrorResponse({ status: 409, error: { message: 'Cliente possui RMAs vinculados.' } })));
+      new HttpErrorResponse({ status: 409, error: { message: 'Cliente possui ordens de serviço vinculadas.' } })));
     listClients.mockClear();
 
     component.openDeleteModal(client(1, 'Alfa'));
@@ -442,7 +442,7 @@ describe('ClientsComponent collection layout and states', () => {
     fixture.detectChanges();
 
     expect(element.querySelector('[role="alertdialog"]')).not.toBeNull();
-    expect(element.querySelector('[role="alertdialog"] [role="alert"]')?.textContent).toContain('Cliente possui RMAs vinculados.');
+    expect(element.querySelector('[role="alertdialog"] [role="alert"]')?.textContent).toContain('Cliente possui ordens de serviço vinculadas.');
     expect(listClients).not.toHaveBeenCalled();
   });
 });

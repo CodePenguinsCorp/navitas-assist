@@ -24,7 +24,7 @@ export function buildRma(overrides: Partial<RmaResponse> = {}): RmaResponse {
   const first = items[0];
   return {
     id: 1,
-    code: 'RMA-2026-000001',
+    code: 'OS-2026-000001',
     clientId: 1,
     clientName: 'Cliente',
     items,

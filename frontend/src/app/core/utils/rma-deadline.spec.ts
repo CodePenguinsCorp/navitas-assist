@@ -36,7 +36,7 @@ describe('rma deadline', () => {
     expect(deadlineCardLabel(rma('2026-11-10'), TODAY)).toBe('Atrasado há 3 dias');
   });
 
-  it('never flags closed RMAs or RMAs without a due date', () => {
+  it('never flags closed ordens de serviço or ordens de serviço without a due date', () => {
     const closed = rma('2026-11-01', 'COMPLETED', 'CLOSED');
     expect(deadlineStatus(closed, TODAY)).toBe('CLOSED');
     expect(deadlineCardLabel(closed, TODAY)).toBeNull();
@@ -48,7 +48,7 @@ describe('rma deadline', () => {
     expect(deadlineDetailLabel(rma('2026-11-11'), TODAY)).toBe('Atrasado há 2 dias');
     expect(deadlineDetailLabel(rma('2026-11-30'), TODAY)).toBe('No prazo');
     expect(deadlineDetailLabel(rma(null), TODAY)).toBe('Sem data limite');
-    expect(deadlineDetailLabel(rma('2026-11-01', 'RETURNED', 'CLOSED'), TODAY)).toBe('Encerrado');
+    expect(deadlineDetailLabel(rma('2026-11-01', 'RETURNED', 'CLOSED'), TODAY)).toBe('Encerrada');
   });
 
   it('turns overdue at São Paulo midnight', () => {
@@ -60,7 +60,7 @@ describe('rma deadline', () => {
   });
 
   it('offers the five Prazo options and never says vencido', () => {
-    expect(DEADLINE_FILTER_OPTIONS.map((option) => option.label)).toEqual(['Todos', 'Atrasados', 'Perto do limite', 'No prazo', 'Sem data limite']);
+    expect(DEADLINE_FILTER_OPTIONS.map((option) => option.label)).toEqual(['Todos', 'Atrasadas', 'Perto do limite', 'No prazo', 'Sem data limite']);
     expect(DEADLINE_FILTER_OPTIONS.map((option) => option.value)).toEqual(['all', 'OVERDUE', 'DUE_SOON', 'ON_TRACK', 'NO_DUE_DATE']);
     const texts = [
       ...Object.values(DEADLINE_LABELS),

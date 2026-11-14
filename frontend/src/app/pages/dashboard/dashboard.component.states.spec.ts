@@ -19,7 +19,7 @@ import { LegacyProfileCode, profilePermissions, providePermissions } from '../..
 
 function rmaFactory(overrides: Partial<RmaResponse> = {}): RmaResponse {
   return {
-    id: 1, code: 'RMA-OPEN', clientId: 1, clientName: 'Cliente',
+    id: 1, code: 'OS-OPEN', clientId: 1, clientName: 'Cliente',
     items: [{ id: 1, productId: 2, productName: 'Produto', productSku: 'SKU-2', batchNumber: null,
       serialNumber: 'SER-2', manufacturedAt: null, warrantyMonths: 12, warrantyExpiresAt: null, calculatedWarrantyStatus: WarrantyStatus.PENDING, warrantyOverride: null, warrantyStatus: WarrantyStatus.PENDING }],
     productId: 2, productName: 'Produto', productSku: 'SKU-2', batchNumber: null, serialNumber: 'SER-2',
@@ -87,7 +87,7 @@ describe('DashboardComponent load states', () => {
     expect(root().querySelector('.empty-state')).toBeNull();
     expect(root().querySelector('table')).toBeNull();
     expect(text()).not.toContain('0%');
-    expect(text()).not.toContain('Nenhum RMA em andamento.');
+    expect(text()).not.toContain('Nenhuma OS em andamento.');
   });
 
   // Vermelho: não há botão de nova tentativa, e os vazios aparecem depois da falha.
@@ -105,7 +105,7 @@ describe('DashboardComponent load states', () => {
     expect(root().querySelector('.dashboard-summary')).toBeNull();
     expect(root().querySelector('.empty-state')).toBeNull();
     expect(root().querySelector('table')).toBeNull();
-    expect(text()).not.toContain('Nenhum RMA em andamento.');
+    expect(text()).not.toContain('Nenhuma OS em andamento.');
     expect(text()).not.toContain('Sem alterações recentes.');
     expect(text()).not.toContain('0%');
   });
@@ -127,7 +127,7 @@ describe('DashboardComponent load states', () => {
     board.complete();
     fixture.detectChanges();
     expect(root().querySelector('.alert-banner--error')).toBeNull();
-    expect(text()).toContain('RMA-OPEN');
+    expect(text()).toContain('OS-OPEN');
     expect(rmaService.listBoard).toHaveBeenCalledTimes(2);
     expect(catalogService.getClientSummary).toHaveBeenCalledTimes(2);
   });
@@ -141,7 +141,7 @@ describe('DashboardComponent load states', () => {
 
   describe('composition', () => {
     const IN_WARRANTY_ITEM = { ...RMA_OPEN.items[0], id: 7, calculatedWarrantyStatus: WarrantyStatus.IN_WARRANTY, warrantyOverride: null, warrantyStatus: WarrantyStatus.IN_WARRANTY };
-    const RMA_CLOSED = rmaFactory({ id: 9, code: 'RMA-CLOSED', status: 'COMPLETED', priority: 'HIGH', entryDate: '2026-01-01', items: [IN_WARRANTY_ITEM] });
+    const RMA_CLOSED = rmaFactory({ id: 9, code: 'OS-CLOSED', status: 'COMPLETED', priority: 'HIGH', entryDate: '2026-01-01', items: [IN_WARRANTY_ITEM] });
     const OPEN_2 = rmaFactory({ id: 2 });
     const tables = () => root().querySelectorAll('table');
     const panelOf = (element: Element) => element.closest('.panel') as HTMLElement;
@@ -152,38 +152,38 @@ describe('DashboardComponent load states', () => {
     const history = (status: RmaResponse['status'], changedAt: string, note: string | null = null, changedBy = 'tester') => ({ status, changedBy, changedAt, note });
 
     // Vermelho: `queue` ordena todos os registros, inclusive encerrados, e não há link.
-    it('keeps closed RMAs out of the priority queue and links each code', async () => {
+    it('keeps closed ordens de serviço out of the priority queue and links each code', async () => {
       await setup({ board: of([RMA_CLOSED, OPEN_2]) });
       const queue = tables()[0];
-      expect(normalized(queue)).not.toContain('RMA-CLOSED');
+      expect(normalized(queue)).not.toContain('OS-CLOSED');
       expect(queue.querySelector('a')?.getAttribute('href')).toBe('/rmas?rma=2');
       expect(normalized(panelOf(queue).querySelector('h3'))).toContain('Fila prioritária');
       expect(text()).not.toContain('primeiros de');
     });
 
     // Vermelho: não há legenda de escopo quando a fila é limitada a cinco.
-    it('states how many active RMAs the queue shows', async () => {
-      const active = Array.from({ length: 7 }, (_, index) => rmaFactory({ id: index + 1, code: `RMA-${index + 1}` }));
+    it('states how many active ordens de serviço the queue shows', async () => {
+      const active = Array.from({ length: 7 }, (_, index) => rmaFactory({ id: index + 1, code: `OS-${index + 1}` }));
       await setup({ board: of([RMA_CLOSED, ...active]) });
-      expect(text()).toContain('5 primeiros de 7 RMAs em andamento');
+      expect(text()).toContain('5 primeiras de 7 ordens de serviço em andamento');
       expect(tables()[0].querySelectorAll('tbody tr').length).toBe(5);
     });
 
     // Vermelho: com apenas encerrados, a fila mostra o encerrado em vez do vazio de RMAs em andamento.
-    it('shows an empty active queue when every RMA is closed', async () => {
+    it('shows an empty active queue when every OS is closed', async () => {
       await setup({ board: of([RMA_CLOSED]) });
-      expect(text()).toContain('Nenhum RMA em andamento.');
+      expect(text()).toContain('Nenhuma OS em andamento.');
     });
 
     it('preserves the queue order by priority and oldest entry', async () => {
       await setup({ board: of([
-        rmaFactory({ id: 1, code: 'RMA-MED-NEW', priority: 'MEDIUM', entryDate: '2026-10-22' }),
-        rmaFactory({ id: 2, code: 'RMA-LOW', priority: 'LOW', entryDate: '2026-10-01' }),
-        rmaFactory({ id: 3, code: 'RMA-HIGH', priority: 'HIGH', entryDate: '2026-10-25' }),
-        rmaFactory({ id: 4, code: 'RMA-MED-OLD', priority: 'MEDIUM', entryDate: '2026-10-10' })
+        rmaFactory({ id: 1, code: 'OS-MED-NEW', priority: 'MEDIUM', entryDate: '2026-10-22' }),
+        rmaFactory({ id: 2, code: 'OS-LOW', priority: 'LOW', entryDate: '2026-10-01' }),
+        rmaFactory({ id: 3, code: 'OS-HIGH', priority: 'HIGH', entryDate: '2026-10-25' }),
+        rmaFactory({ id: 4, code: 'OS-MED-OLD', priority: 'MEDIUM', entryDate: '2026-10-10' })
       ]) });
       const codes = Array.from(tables()[0].querySelectorAll('tbody tr td:first-child .code-text')).map((item) => item.textContent?.trim());
-      expect(codes).toEqual(['RMA-HIGH', 'RMA-MED-OLD', 'RMA-MED-NEW', 'RMA-LOW']);
+      expect(codes).toEqual(['OS-HIGH', 'OS-MED-OLD', 'OS-MED-NEW', 'OS-LOW']);
     });
 
     // Vermelho: rótulos, escopo e detalhe não existem, Cadastros mostra a soma e há barras.
@@ -195,12 +195,12 @@ describe('DashboardComponent load states', () => {
         products: of({ ...PRODUCTS, total: 4 }),
         users: of({ ...USERS, total: 2 })
       });
-      expect(normalized(indicator('RMAs em andamento'))).toContain('1 de 2 registrados');
+      expect(normalized(indicator('Ordens de serviço em andamento'))).toContain('1 de 2 registradas');
       const warranty = normalized(indicator('Itens em garantia'));
       // Preservação: o percentual de 50% já existe hoje.
       expect(warranty).toContain('50%');
       expect(warranty).toContain('1 de 2 itens · 1 pendente');
-      expect(warranty).toContain('em todos os RMAs registrados');
+      expect(warranty).toContain('em todas as ordens de serviço registradas');
       expect(normalized(indicator('Cadastros'))).toContain('3 clientes · 4 produtos · 2 usuários');
       expect(normalized(indicator('Cadastros'))).not.toContain('9');
       expect(root().querySelector('.meter')).toBeNull();
@@ -208,7 +208,7 @@ describe('DashboardComponent load states', () => {
 
     // Vermelho: a lista de indicadores e o formato `X · Y com prioridade alta` não existem.
     // Preservação: o cálculo da fila inicial e a ausência de usuários para quem não é ADMIN.
-    it('counts Atrasados and Perto do limite among open RMAs only', async () => {
+    it('counts Atrasadas and Perto do limite among open ordens de serviço only', async () => {
       const today = businessToday(Date.now());
       const shift = (days: number) => {
         const [y, m, d] = today.split('-').map(Number);
@@ -219,11 +219,11 @@ describe('DashboardComponent load states', () => {
         deadline: { status: 'ON_TRACK', dueSoonFrom: shift(days - 7), daysUntilDue: null }
       });
       await setup({ board: of([due(1, -3), due(2, -1), due(3, 2), due(4, 30), due(5, -9, 'COMPLETED'), rmaFactory({ id: 6 })]) });
-      const card = indicator('Atrasados')!;
+      const card = indicator('Atrasadas')!;
       expect(normalized(card.querySelector('.dashboard-summary__value'))).toBe('2 · 1 perto do limite');
       expect(card.getAttribute('data-tone')).toBe('danger');
       const labels = Array.from(root().querySelectorAll('ul[aria-label="Indicadores do dashboard"] > li .dashboard-summary__label')).map((item) => item.textContent?.trim());
-      expect(labels[1]).toBe('Atrasados');
+      expect(labels[1]).toBe('Atrasadas');
     });
 
     it('keeps the catalog card style regardless of position', async () => {
@@ -252,7 +252,7 @@ describe('DashboardComponent load states', () => {
     });
 
     // Vermelho: com nota, o autor desaparece, e não há link.
-    it('describes audit events like the RMA history', async () => {
+    it('describes audit events like the OS history', async () => {
       await setup({ board: of([rmaFactory({ statusHistory: [history('TRIAGE', '2026-10-21T16:00:00Z', 'Aguardando peça', 'ana')] })]) });
       const [entry] = audit();
       expect(normalized(entry)).toContain('Status registrado: Triagem');
@@ -264,7 +264,7 @@ describe('DashboardComponent load states', () => {
     });
 
     // Vermelho: não há link nas entradas de auditoria.
-    it('keeps distinct audit entries for the same RMA', async () => {
+    it('keeps distinct audit entries for the same OS', async () => {
       await setup({ board: of([rmaFactory({ statusHistory: [history('RECEIVED', '2026-10-20T16:00:00Z'), history('TRIAGE', '2026-10-21T16:00:00Z')] })]) });
       // Preservação: as duas entradas já aparecem hoje.
       expect(audit().length).toBe(2);
@@ -279,18 +279,18 @@ describe('DashboardComponent load states', () => {
     });
 
     // Vermelho: os códigos de “Últimos RMAs” não têm link.
-    it('links recent RMAs', async () => {
+    it('links recent ordens de serviço', async () => {
       await setup();
       const link = tables()[1].querySelector('a[href="/rmas?rma=1"]');
-      expect(normalized(link)).toBe('RMA-OPEN');
+      expect(normalized(link)).toBe('OS-OPEN');
     });
 
-    it('preserves the four most recently updated RMAs, closed included, and the empty owner', async () => {
-      const board = [1, 2, 3, 4, 5].map((day) => rmaFactory({ id: day, code: `RMA-U${day}`, updatedAt: `2026-10-2${day}T16:00:00Z` }));
+    it('preserves the four most recently updated ordens de serviço, closed included, and the empty owner', async () => {
+      const board = [1, 2, 3, 4, 5].map((day) => rmaFactory({ id: day, code: `OS-U${day}`, updatedAt: `2026-10-2${day}T16:00:00Z` }));
       board[4] = { ...board[4], status: 'COMPLETED' };
       await setup({ board: of(board) });
       const rows = Array.from(tables()[1].querySelectorAll('tbody tr'));
-      expect(rows.map((row) => normalized(row.querySelector('td:first-child')))).toEqual(['RMA-U5', 'RMA-U4', 'RMA-U3', 'RMA-U2']);
+      expect(rows.map((row) => normalized(row.querySelector('td:first-child')))).toEqual(['OS-U5', 'OS-U4', 'OS-U3', 'OS-U2']);
       expect(normalized(rows[0].querySelector('.person'))).toBe('–Sem responsável');
       expect(normalized(rows[0].querySelector('.avatar'))).toBe('–');
     });

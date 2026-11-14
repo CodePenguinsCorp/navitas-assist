@@ -101,7 +101,7 @@ public class RmaService {
     @Transactional(readOnly = true)
     public RmaResponse getByCode(String code) {
         return toResponse(rmaRecordRepository.findByCodeIgnoreCase(code)
-            .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + code)));
+            .orElseThrow(() -> new ResourceNotFoundException("OS não encontrada: " + code)));
     }
 
     @Transactional(readOnly = true)
@@ -161,7 +161,7 @@ public class RmaService {
             addDueDateHistory(rma, null, rma.getDueDate());
         }
         rma.setCode(generateNextCode());
-        addStatusHistory(rma, RmaStatus.RECEIVED, "RMA created");
+        addStatusHistory(rma, RmaStatus.RECEIVED, "OS criada");
 
         RmaRecord saved = rmaRecordRepository.save(rma);
         eventPublisher.publishEvent(new RmaNotificationEvent(NotificationEventType.RMA_CREATED, "RMA_CREATED:" + saved.getId(), saved.getId(), Instant.now(), currentUsername()));
@@ -220,8 +220,8 @@ public class RmaService {
     public RmaResponse updateStatusNote(Long id, Long eventId, br.com.navitasassist.rma.RmaStatusNoteRequest request) {
         RmaRecord rma = getEntityForUpdate(id);
         RmaStatusHistory event = rma.getStatusHistory().stream().filter(item -> item.getId().equals(eventId)).findFirst()
-            .orElseThrow(() -> new ResourceNotFoundException("Evento de status não encontrado neste RMA."));
-        if (CLOSED_STATUSES.contains(rma.getStatus())) throw new BusinessException("Não é permitido editar observações de um RMA encerrado.");
+            .orElseThrow(() -> new ResourceNotFoundException("Evento de status não encontrado nesta OS."));
+        if (CLOSED_STATUSES.contains(rma.getStatus())) throw new BusinessException("Não é permitido editar observações de uma OS encerrada.");
         String note = trimToNull(request.note());
         if (note != null && note.length() > 255) throw new BusinessException("Use até 255 caracteres na observação.");
         String previousNote = event.getNote();
@@ -239,9 +239,9 @@ public class RmaService {
     public RmaResponse updateWarranty(Long id, Long itemId, RmaItemWarrantyRequest request) {
         RmaRecord rma = getEntityForUpdate(id);
         RmaItem item = rma.getItems().stream().filter(candidate -> candidate.getId().equals(itemId)).findFirst()
-            .orElseThrow(() -> new ResourceNotFoundException("Item não encontrado neste RMA: " + itemId));
+            .orElseThrow(() -> new ResourceNotFoundException("Item não encontrado nesta OS: " + itemId));
         if (CLOSED_STATUSES.contains(rma.getStatus())) {
-            throw new BusinessException("Não é possível ajustar a garantia de um RMA encerrado.");
+            throw new BusinessException("Não é possível ajustar a garantia de uma OS encerrada.");
         }
         WarrantyStatus next = null;
         if (request.override() != null) {
@@ -269,7 +269,7 @@ public class RmaService {
         item.setWarrantyOverrideBy(next == null ? null : history.getChangedBy());
         item.setWarrantyOverrideAt(next == null ? null : now);
         rma.setUpdatedAt(now);
-        audit.record("WARRANTY_UPDATE", "RMA_ITEM", itemId, rma.getCode(), "Garantia ajustada. Consulte o histórico de garantia do item #" + itemId + " no RMA #" + id + ".");
+        audit.record("WARRANTY_UPDATE", "RMA_ITEM", itemId, rma.getCode(), "Garantia ajustada. Consulte o histórico de garantia do item #" + itemId + " na OS #" + id + ".");
         return toResponse(rmaRecordRepository.save(rma));
     }
 
@@ -280,7 +280,7 @@ public class RmaService {
         // on a closed RMA. The RMA row is locked here and by PartStockService, which serializes both sides.
         if (changed && CLOSED_STATUSES.contains(request.status())
             && partReservationRepository.existsByRma_IdAndStatusIn(rma.getId(), OPEN_RESERVATION_STATUSES)) {
-            throw new BusinessException("RMA has open part reservations. Consume or cancel them before closing.");
+            throw new BusinessException("A OS possui reservas de peças abertas. Aplique ou cancele as reservas antes de encerrar.");
         }
 
         if (changed) {
@@ -339,18 +339,18 @@ public class RmaService {
     @Transactional(readOnly = true)
     public RmaRecord getEntityById(Long id) {
         return rmaRecordRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("OS não encontrada: " + id));
     }
 
     private RmaRecord getEntityForUpdate(Long id) {
-        return rmaRecordRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("RMA not found: " + id));
+        return rmaRecordRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("OS não encontrada: " + id));
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public RmaResponse block(Long id, RmaBlockRequest request) {
         RmaRecord rma = getEntityForUpdate(id);
         if (rma.getBlockHistory().stream().anyMatch(block -> block.getResolvedAt() == null)) {
-            throw new BusinessException("RMA is already blocked.");
+            throw new BusinessException("A OS já está impedida.");
         }
         RmaBlock block = new RmaBlock();
         block.setReason(trim(request.reason()));
@@ -369,8 +369,8 @@ public class RmaService {
     public RmaResponse resolveBlock(Long id, Long blockId, RmaBlockResolveRequest request) {
         RmaRecord rma = getEntityForUpdate(id);
         RmaBlock block = rma.getBlockHistory().stream().filter(item -> item.getId().equals(blockId)).findFirst()
-            .orElseThrow(() -> new ResourceNotFoundException("RMA block not found: " + blockId));
-        if (block.getResolvedAt() != null) throw new BusinessException("RMA block is no longer active.");
+            .orElseThrow(() -> new ResourceNotFoundException("Impedimento da OS não encontrado: " + blockId));
+        if (block.getResolvedAt() != null) throw new BusinessException("O impedimento da OS não está mais ativo.");
         block.setResolutionNote(trim(request.resolutionNote()));
         block.setResolvedBy(currentUsername());
         block.setResolvedAt(Instant.now());
@@ -383,7 +383,7 @@ public class RmaService {
             throw new BusinessException("At least one product must be provided.");
         }
         if (requests.stream().anyMatch(Objects::isNull)) {
-            throw new BusinessException("Each RMA item must be provided.");
+            throw new BusinessException("Cada item da OS deve ser informado.");
         }
 
         return requests.stream().map(request -> {
@@ -580,9 +580,9 @@ public class RmaService {
     private String generateNextCode() {
         // Held until create commits or rolls back, including the RMA insert.
         rmaCodeGenerationLockRepository.lockForCodeGeneration()
-            .orElseThrow(() -> new IllegalStateException("RMA code generation lock is missing"));
+            .orElseThrow(() -> new IllegalStateException("OS code generation lock is missing"));
         int year = LocalDate.now(BUSINESS_ZONE).getYear();
-        String prefix = "RMA-" + year + "-";
+        String prefix = "OS-" + year + "-";
 
         int nextValue = rmaRecordRepository.findTopByCodeStartingWithOrderByCodeDesc(prefix)
             .map(RmaRecord::getCode)
@@ -591,7 +591,7 @@ public class RmaService {
             .orElse(1);
 
         if (nextValue > MAX_YEARLY_SEQUENCE) {
-            throw new BusinessException("Annual RMA code capacity reached.");
+            throw new BusinessException("Capacidade anual de códigos de OS atingida.");
         }
 
         return prefix + String.format("%06d", nextValue);

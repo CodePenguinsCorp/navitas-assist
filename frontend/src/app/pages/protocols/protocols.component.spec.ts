@@ -356,7 +356,7 @@ describe('ProtocolsComponent', () => {
       for (const name of ['name', 'productId', 'category', 'active']) {
         expect(general.querySelector('[formcontrolname="' + name + '"]')).not.toBeNull();
       }
-      expect(blocked.textContent).toContain('Bloquear mudança do RMA para estas etapas enquanto houver obrigatórios pendentes');
+      expect(blocked.textContent).toContain('Bloquear mudança da OS para estas etapas enquanto houver obrigatórios pendentes');
       expect(blocked.querySelectorAll('input[type="checkbox"]').length).toBeGreaterThan(0);
       expect(general.querySelector('[formcontrolname="stepName"]')).toBeNull();
       expect(items.querySelector('[formcontrolname="stepName"]')).not.toBeNull();

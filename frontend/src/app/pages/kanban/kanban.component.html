@@ -1,5 +1,5 @@
 <section class="page-surface kanban-page">
-  <app-page-header heading="Kanban de RMAs" />
+  <app-page-header heading="Kanban de ordens de serviço" />
 
   @if (totalSummary(); as total) {
     <ul class="page-summary" aria-label="Indicadores do quadro">
@@ -239,12 +239,12 @@
       <div aria-busy="true"></div>
     } @else if (!loading() && totalRmas() === 0) {
       <article class="kanban-empty">
-        <strong>Nenhum RMA cadastrado</strong>
-        <p>Os RMAs abertos aparecem aqui por etapa do atendimento.</p>
+        <strong>Nenhuma OS cadastrada</strong>
+        <p>As ordens de serviço abertas aparecem aqui por etapa do atendimento.</p>
       </article>
     } @else if (!loading() && filteredRmas().length === 0) {
       <article class="kanban-empty">
-        <strong>Nenhum RMA encontrado</strong>
+        <strong>Nenhuma OS encontrada</strong>
         <p>Ajuste ou limpe os filtros para voltar a visualizar os atendimentos.</p>
         <button type="button" class="button-secondary" (click)="clearFilters()">Limpar filtros</button>
       </article>

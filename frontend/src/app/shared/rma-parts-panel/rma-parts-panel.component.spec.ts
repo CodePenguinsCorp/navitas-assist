@@ -7,14 +7,14 @@ import { RmaRepairService } from '../../core/services/rma-repair.service';
 import { RmaPartsPanelComponent } from './rma-parts-panel.component';
 
 const reservation = (id: number, status: PartReservationResponse['status']): PartReservationResponse => ({
-  id, rmaId: 7, rmaCode: 'RMA-2026-000007', partId: 4, partCode: 'PCA-1', partName: 'Capacitor', unit: 'un',
+  id, rmaId: 7, rmaCode: 'OS-2026-000007', partId: 4, partCode: 'PCA-1', partName: 'Capacitor', unit: 'un',
   location: 'A1', quantity: 2, status, partAvailable: 3, unitCost: 10, totalCost: 20, note: null, createdBy: 'tech',
   createdAt: '2026-10-24T12:00:00Z', updatedAt: '2026-10-24T12:00:00Z'
 });
 
 const RMA_PARTS: RmaPartsResponse = {
   rmaId: 7,
-  rmaCode: 'RMA-2026-000007',
+  rmaCode: 'OS-2026-000007',
   reservations: [reservation(1, 'ACTIVE'), reservation(2, 'CONSUMED'), reservation(3, 'PENDING')],
   movements: [],
   reservedCost: 20,
@@ -85,7 +85,7 @@ describe('RmaPartsPanelComponent', () => {
     expect(component.successMessage()).toContain('pendente de reposição');
   });
 
-  it('only allows cancelling reservations of closed RMAs', async () => {
+  it('only allows cancelling reservations of closed ordens de serviço', async () => {
     await setUp('ADMIN', 'COMPLETED');
     const text: string = fixture.nativeElement.textContent;
 

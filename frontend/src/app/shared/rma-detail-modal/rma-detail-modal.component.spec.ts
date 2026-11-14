@@ -30,7 +30,7 @@ const diagnosis: DiagnosisResponse = {
 
 const fullRma = buildRma({
   id: 5,
-  code: 'RMA-2026-000005',
+  code: 'OS-2026-000005',
   clientName: 'Cliente X',
   items: [
     buildRmaItem({ id: 1, productName: 'Produto A', productSku: 'SKU-A', serialNumber: 'S1', batchNumber: 'L1', warrantyMonths: 12, warrantyExpiresAt: '2027-02-01', calculatedWarrantyStatus: WarrantyStatus.IN_WARRANTY, warrantyOverride: null, warrantyStatus: WarrantyStatus.IN_WARRANTY }),
@@ -316,12 +316,12 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(pairs['Nota fiscal']).toBe('Não informada');
     expect(pairs['Compra']).toBe('Desconhecida');
     expect(pairs).not.toHaveProperty('Data da compra');
-    expect(pairs['Recebido por']).toBe('tester');
+    expect(pairs['Recebida por']).toBe('tester');
     expect(pairs).toHaveProperty('Criado em');
     expect(pairs).toHaveProperty('Atualizado em');
   });
 
-  it('navigates to the RMA in the list from a quiet text link beside the code', async () => {
+  it('navigates to the OS in the list from a quiet text link beside the code', async () => {
     const { fixture, host, buttonByText } = await setup();
     const link = buttonByText('Abrir na lista');
 
@@ -427,17 +427,17 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     const card = section('Impedimentos')!;
     const current = card.querySelector('app-rma-blocks-section .blocks-section__current')!;
 
-    expect(current.querySelector('strong')?.textContent?.trim()).toBe('Bloqueado há 2 h');
+    expect(current.querySelector('strong')?.textContent?.trim()).toBe('Impedida há 2 h');
     expect(current.textContent).toContain('Aguardando cliente');
     expect(buttonByText('Resolver')?.classList).toContain('link-button');
     expect(host.querySelector('.rma-detail__block')).toBeNull();
     expect(host.querySelector('dialog, app-rma-block-panel')).toBeNull();
   });
 
-  it('flags the current block beside the status, like the RMAs detail, and leads to Impedimentos', async () => {
+  it('flags the current block beside the status, like the ordens de serviço detail, and leads to Impedimentos', async () => {
     const { host, section } = await setup();
     const flag = host.querySelector<HTMLButtonElement>('.detail-actions button.detail-block-flag')!;
-    expect(flag.textContent).toContain('Bloqueado há');
+    expect(flag.textContent).toContain('Impedida há');
     expect(flag.querySelector('app-icon')).not.toBeNull();
     expect(flag.getAttribute('aria-controls')).toBe('rma-detail-blocks');
     expect(section('Impedimentos')!.id).toBe('rma-detail-blocks');
@@ -445,7 +445,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(document.activeElement).toBe(section('Impedimentos')!.querySelector('.blocks-section'));
   });
 
-  it('shows Sem impedimento and Sinalizar impedimento when the RMA is not blocked', async () => {
+  it('shows Sem impedimento and Sinalizar impedimento when the OS is not blocked', async () => {
     const { host, section } = await setup({ rma: { ...fullRma, currentBlock: null } });
     expect(host.querySelector('.detail-block-flag')).toBeNull();
     const card = section('Impedimentos')!;
@@ -453,7 +453,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect([...card.querySelectorAll('button')].some((button) => button.textContent?.trim() === 'Sinalizar impedimento')).toBe(true);
   });
 
-  it('emits rmaUpdated with the RMA saved by the inline resolve', async () => {
+  it('emits rmaUpdated with the OS saved by the inline resolve', async () => {
     const { fixture, component, buttonByText, section } = await setup();
     const updated: RmaResponse[] = [];
     component.rmaUpdated.subscribe((rma) => updated.push(rma));
@@ -492,7 +492,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(chip?.getAttribute('data-deadline')).toBe('OVERDUE');
   });
 
-  it('makes the due date value clickable only with rma.editar and emits the RMA saved inline', async () => {
+  it('makes the due date value clickable only with rma.editar and emits the OS saved inline', async () => {
     let view = await setup();
     expect(view.buttonByText('Alterar')).toBeUndefined();
     expect(view.host.querySelector('.rma-detail__deadline .due-date-field__trigger')).toBeNull();
@@ -520,13 +520,13 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(host.querySelector<HTMLButtonElement>('.rma-detail__deadline .due-date-field__trigger')!.disabled).toBe(true);
   });
 
-  it('shows há 2 d 4 h in Nesta etapa and Encerrado em for closed RMAs', async () => {
+  it('shows há 2 d 4 h in Nesta etapa and Encerrada em for closed ordens de serviço', async () => {
     let view = await setup({ rma: { ...fullRma, stagePeriods: [{ status: 'TRIAGE', enteredAt: '2026-10-18T08:00:00Z', leftAt: null, durationSeconds: 0 }] } });
     expect(view.sidePairs()['Nesta etapa']).toBe('há 2 d 4 h');
     TestBed.resetTestingModule();
 
     view = await setup({ rma: { ...fullRma, status: 'COMPLETED', stagePeriods: [{ status: 'COMPLETED', enteredAt: '2026-10-19T13:00:00Z', leftAt: null, durationSeconds: 0 }] } });
-    expect(view.sidePairs()['Nesta etapa']).toBe('Encerrado em 19/10/2026 10:00');
+    expect(view.sidePairs()['Nesta etapa']).toBe('Encerrada em 19/10/2026 10:00');
   });
 
   it('shows the time of each stage in the side column', async () => {
@@ -540,7 +540,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
       }
     });
     const items = [...host.querySelectorAll('.rma-detail__side app-rma-stage-times li')].map((item) => item.textContent?.trim());
-    expect(items).toEqual(['Recebido · 2 h', 'Triagem · 2 h (atual)']);
+    expect(items).toEqual(['Recebida · 2 h', 'Triagem · 2 h (atual)']);
   });
 
   it('shows due date changes with previous value and author', async () => {
@@ -779,7 +779,7 @@ describe('RmaDetailModalComponent assignee selector', () => {
 
 
 describe('garantia no detalhe compartilhado', () => {
-  it('usa o campo em cada item com permissão e propaga o RMA salvo', async () => {
+  it('usa o campo em cada item com permissão e propaga a OS salvo', async () => {
     const { fixture, host, component } = await setup({ canEditDueDate: true });
     const fields = host.querySelectorAll('app-rma-warranty-field');
     expect(fields.length).toBe(fullRma.items.length);
@@ -808,7 +808,7 @@ describe('RmaDetailModalComponent priority selector', () => {
   const priorityRow = (host: HTMLElement) =>
     [...host.querySelectorAll<HTMLElement>('.rma-detail__side dl > div')].find((row) => row.querySelector('dt')?.textContent?.trim() === 'Prioridade')!;
 
-  it('changes the priority from the Informações side and emits the saved RMA', async () => {
+  it('changes the priority from the Informações side and emits the saved OS', async () => {
     const { fixture, host, component } = await setup({ canEditDueDate: true });
     const updated: RmaResponse[] = [];
     component.rmaUpdated.subscribe((rma) => updated.push(rma));
@@ -823,7 +823,7 @@ describe('RmaDetailModalComponent priority selector', () => {
     expect(priorityRow(host).querySelector('[role="status"]')?.textContent?.trim()).toBe('Prioridade alterada para Baixa');
   });
 
-  it('keeps the priority read only without rma.editar or for a closed RMA', async () => {
+  it('keeps the priority read only without rma.editar or for a closed OS', async () => {
     let view = await setup({ canEditDueDate: false });
     expect(priorityRow(view.host).querySelector('.custom-select__trigger')).toBeNull();
     expect(priorityRow(view.host).querySelector('.priority-tag')?.textContent?.trim()).toBe('Alta');

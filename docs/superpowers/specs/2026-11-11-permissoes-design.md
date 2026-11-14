@@ -20,8 +20,8 @@ Decisões aprovadas:
 - Cada usuário tem 1 perfil e uma lista de **permissões extras**, que só acrescentam. Permissão efetiva = permissões do perfil ∪ extras.
 - Administrador protegido: sempre existe ao menos um usuário ativo com `usuarios.gerir` **e** `perfis.gerir` efetivas. Perfil com usuários não pode ser apagado.
 - Sem escopo de dados: nenhuma permissão restringe *quais* registros se vê.
-- **D1** A permissão `rma.atribuivel` ("pode ser responsável por RMAs") é nova. Hoje só usuários `TECHNICIAN` aparecem em `/api/users/assignable` e podem ser atribuídos (`UserAccountService.java:58-63`, `:122-132`). Daqui em diante, isso depende dessa permissão, e só o perfil Técnico a recebe.
-- **D2** As leituras `GET /api/clients/**`, `/api/products/**`, `/api/parts/**` e `/api/protocols/**` continuam `authenticated()`, como hoje. Dashboard, relatórios, RMAs e painéis dependem delas (`dashboard.component.ts:299-303`, `reports.component.ts:81`).
+- **D1** A permissão `rma.atribuivel` ("pode ser responsável por ordens de serviço") é nova. Hoje só usuários `TECHNICIAN` aparecem em `/api/users/assignable` e podem ser atribuídos (`UserAccountService.java:58-63`, `:122-132`). Daqui em diante, isso depende dessa permissão, e só o perfil Técnico a recebe.
+- **D2** As leituras `GET /api/clients/**`, `/api/products/**`, `/api/parts/**` e `/api/protocols/**` continuam `authenticated()`, como hoje. Dashboard, relatórios, ordens de serviço e painéis dependem delas (`dashboard.component.ts:299-303`, `reports.component.ts:81`).
   - `cadastros.ver`, `pecas.ver` e `protocolos.ver` controlam só menu e rota.
   - As telas Clientes/Produtos e Protocolos continuam exigindo leitura **e** edição: `cadastros.ver` + `cadastros.editar` e `protocolos.ver` + `protocolos.catalogo`.
   - `rma.ver` e `relatorios.ver` controlam a API.
@@ -29,7 +29,7 @@ Decisões aprovadas:
   - As rotas de API não classificadas (`/api/**`, hoje `hasRole("ADMIN")`) exigem as duas. Assim o ADMIN continua recebendo 404/405 nelas, e os demais, 403.
   - Vale a regra anti-escalada (seção 4.4).
 - **D4** Regras de notificação passam a ter **perfis** destinatários, em vez de roles. Apagar um perfil o remove das regras. Isso não muda quem recebe, porque só se apaga perfil sem usuários.
-- **D5** A visibilidade de notificações (`NotificationVisibilityPolicy`) passa a exigir `rma.ver`, porque as notificações expõem dados de RMA. Os 4 perfis têm `rma.ver`.
+- **D5** A visibilidade de notificações (`NotificationVisibilityPolicy`) passa a exigir `rma.ver`, porque as notificações expõem dados de OS. Os 4 perfis têm `rma.ver`.
 - **D6** Migração em **expand/contract**:
   - V8–V10 criam o modelo novo.
   - `user_accounts.role` e `notification_rules.recipient_roles` **não são apagadas**. A V10 remove o CHECK e o NOT NULL delas, e elas viram colunas legadas, nulas e sem uso pelo código.
@@ -82,21 +82,21 @@ O catálogo é o enum `br.com.navitasassist.access.Permission(code, module, labe
 
 | # | Código | Módulo (`PermissionModule`) | Rótulo | A | S | T | V |
 |:-:|:---|:---|:---|:-:|:-:|:-:|:-:|
-| 1 | `rma.ver` | RMA "RMAs" | Ver RMAs, Kanban e dashboard | ✓ | ✓ | ✓ | ✓ |
-| 2 | `rma.abrir` | RMA | Abrir RMAs | ✓ | ✓ | | |
-| 3 | `rma.editar` | RMA | Alterar dados gerais e prioridade | ✓ | ✓ | | |
-| 4 | `rma.status` | RMA | Alterar status | ✓ | ✓ | ✓ | |
-| 5 | `rma.responsavel` | RMA | Atribuir responsável | ✓ | ✓ | | |
-| 6 | `rma.atribuivel` | RMA | Pode ser responsável por RMAs | | | ✓ | |
-| 7 | `rma.diagnosticar` | RMA | Registrar diagnóstico | ✓ | | ✓ | |
-| 8 | `rma.impedimentos` | RMA | Registrar e resolver impedimentos | ✓ | ✓ | ✓ | |
+| 1 | `rma.ver` | OS "Ordens de serviço" | Ver ordens de serviço, Kanban e dashboard | ✓ | ✓ | ✓ | ✓ |
+| 2 | `rma.abrir` | OS | Abrir Ordens de serviço | ✓ | ✓ | | |
+| 3 | `rma.editar` | OS | Alterar dados gerais e prioridade | ✓ | ✓ | | |
+| 4 | `rma.status` | OS | Alterar status | ✓ | ✓ | ✓ | |
+| 5 | `rma.responsavel` | OS | Atribuir responsável | ✓ | ✓ | | |
+| 6 | `rma.atribuivel` | OS | Pode ser responsável por Ordens de serviço | | | ✓ | |
+| 7 | `rma.diagnosticar` | OS | Registrar diagnóstico | ✓ | | ✓ | |
+| 8 | `rma.impedimentos` | OS | Registrar e resolver impedimentos | ✓ | ✓ | ✓ | |
 | 9 | `cadastros.ver` | CADASTROS "Clientes e produtos" | Consultar clientes e produtos | ✓ | ✓ | ✓ | ✓ |
 | 10 | `cadastros.editar` | CADASTROS | Criar, alterar e excluir clientes e produtos | ✓ | ✓ | | |
 | 11 | `pecas.ver` | PECAS "Peças" | Consultar peças e estoque | ✓ | ✓ | ✓ | ✓ |
 | 12 | `pecas.movimentar` | PECAS | Cadastrar peças e movimentar estoque | ✓ | ✓ | | |
-| 13 | `pecas.reservar` | PECAS | Reservar e aplicar peças nos RMAs | ✓ | | ✓ | |
+| 13 | `pecas.reservar` | PECAS | Reservar e aplicar peças nas Ordens de serviço | ✓ | | ✓ | |
 | 14 | `protocolos.ver` | PROTOCOLOS "Protocolos técnicos" | Consultar protocolos e execuções | ✓ | ✓ | ✓ | ✓ |
-| 15 | `protocolos.executar` | PROTOCOLOS | Executar protocolos nos RMAs | ✓ | | ✓ | |
+| 15 | `protocolos.executar` | PROTOCOLOS | Executar protocolos nas Ordens de serviço | ✓ | | ✓ | |
 | 16 | `protocolos.catalogo` | PROTOCOLOS | Gerenciar modelos de protocolo | ✓ | | | |
 | 17 | `relatorios.ver` | RELATORIOS "Relatórios" | Ver relatórios | ✓ | | ✓ | ✓ |
 | 18 | `usuarios.gerir` | ADMINISTRACAO "Administração" | Gerenciar usuários | ✓ | | | |
@@ -127,7 +127,7 @@ As regras seguem a ordem atual. A coluna "Hoje" mostra quem acessa com os roles 
 | `POST /api/rmas/*/blocks`, `PATCH /api/rmas/*/blocks/*` | ADMIN, SERVICE_DESK, TECHNICIAN | `rma.impedimentos` |
 | `GET /api/parts/**` | autenticado | autenticado (D2) |
 | `POST /api/parts`, `PUT /api/parts/*`, `POST /api/parts/*/movements`, `POST /api/parts/movements/*/reversal` | ADMIN, SERVICE_DESK | `pecas.movimentar` |
-| `POST /api/rmas/*/parts`, `POST /api/rmas/*/parts/*/*` (reservar, alocar, consumir, cancelar) | ADMIN, TECHNICIAN | `pecas.reservar` |
+| `POST /api/rmas/*/parts`, `POST /api/rmas/*/parts/*/*` (reservar, alocar, aplicar, cancelar) | ADMIN, TECHNICIAN | `pecas.reservar` |
 | `GET /api/protocols/**` | autenticado | autenticado (D2) |
 | `POST /api/protocols/templates`, `PUT /api/protocols/templates/*` | ADMIN | `protocolos.catalogo` |
 | `POST /api/protocols/rmas/*/executions`, `.../executions/*/items/*/results`, `.../executions/*/complete` | ADMIN, TECHNICIAN | `protocolos.executar` |
@@ -201,7 +201,7 @@ Contratos JSON. Datas vêm em ISO, e as listas de permissões, na ordem do catá
 
 **Catálogo e perfis:**
 
-- `GET /api/permissions` → `[{ "module": "RMA", "label": "RMAs", "permissions": [{ "code": "rma.ver", "label": "Ver RMAs, Kanban e dashboard" }, …] }, …]`, com os 6 módulos na ordem do enum.
+- `GET /api/permissions` → `[{ "module": "OS", "label": "ordens de serviço", "permissions": [{ "code": "rma.ver", "label": "Ver ordens de serviço, Kanban e dashboard" }, …] }, …]`, com os 6 módulos na ordem do enum.
 - `GET /api/profiles?query&page&size` → `PageResponse<ProfileResponse>`, ordenado por `lower(name)` e depois `id`. O `query` filtra pelo nome.
   - `ProfileResponse = { id, name, permissions: string[], userCount, createdAt, updatedAt }`.
 - `GET /api/profiles/options` → `[{ id, name, permissions: string[] }]`, ordenado por nome.

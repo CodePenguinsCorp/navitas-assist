@@ -104,7 +104,7 @@ class PartInventoryIntegrationTest {
     @BeforeEach
     void setUp() {
         cleanUp();
-        rma = createRma("RMA-PART-0001", RmaStatus.IN_DIAGNOSIS);
+        rma = createRma("OS-PART-0001", RmaStatus.IN_DIAGNOSIS);
     }
 
     @AfterEach
@@ -203,7 +203,7 @@ class PartInventoryIntegrationTest {
         mockMvc.perform(get("/api/parts/pending").with(VIEWER))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$", hasSize(1)))
-            .andExpect(jsonPath("$[0].rmaCode").value("RMA-PART-0001"));
+            .andExpect(jsonPath("$[0].rmaCode").value("OS-PART-0001"));
 
         mockMvc.perform(get("/api/parts/replenishment").with(VIEWER))
             .andExpect(status().isOk())
@@ -264,7 +264,7 @@ class PartInventoryIntegrationTest {
 
         mockMvc.perform(get("/api/rmas/{id}/parts", rma.getId()).with(VIEWER))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.rmaCode").value("RMA-PART-0001"))
+            .andExpect(jsonPath("$.rmaCode").value("OS-PART-0001"))
             .andExpect(jsonPath("$.reservations", hasSize(3)))
             .andExpect(jsonPath("$.reservations[0].status").value("CONSUMED"))
             .andExpect(jsonPath("$.reservations[1].status").value("ACTIVE"))
@@ -273,7 +273,7 @@ class PartInventoryIntegrationTest {
             .andExpect(jsonPath("$.reservedCost").value(7.10))
             .andExpect(jsonPath("$.pendingCount").value(1))
             .andExpect(jsonPath("$.movements[0].type").value("CONSUMPTION"))
-            .andExpect(jsonPath("$.movements[0].rmaCode").value("RMA-PART-0001"));
+            .andExpect(jsonPath("$.movements[0].rmaCode").value("OS-PART-0001"));
     }
 
     @Test
@@ -291,7 +291,7 @@ class PartInventoryIntegrationTest {
             .andExpect(jsonPath("$.type").value("REVERSAL"))
             .andExpect(jsonPath("$.reversedMovementId").value(consumptionId))
             .andExpect(jsonPath("$.onHandChange").value(2))
-            .andExpect(jsonPath("$.rmaCode").value("RMA-PART-0001"))
+            .andExpect(jsonPath("$.rmaCode").value("OS-PART-0001"))
             .andExpect(jsonPath("$.createdBy").value("desk"))
             .andExpect(jsonPath("$.reason").value("Peça não utilizada"));
 
@@ -336,13 +336,13 @@ class PartInventoryIntegrationTest {
 
     @Test
     void shouldRejectReservationForClosedRma() throws Exception {
-        RmaRecord closed = createRma("RMA-PART-0002", RmaStatus.COMPLETED);
+        RmaRecord closed = createRma("OS-PART-0002", RmaStatus.COMPLETED);
         long partId = createPart("PCA-CLOSED", "10.00", "0");
         movement(partId, "ENTRY", "3", null, ADMIN).andExpect(status().isCreated());
 
         reserve(closed.getId(), partId, "1", TECHNICIAN)
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Parts cannot be reserved for a closed RMA."));
+            .andExpect(jsonPath("$.message").value("Não é permitido reservar peças em uma OS encerrada."));
     }
 
     @Test
@@ -399,7 +399,7 @@ class PartInventoryIntegrationTest {
 
         changeStatus(rma.getId(), "IRREPARABLE")
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("RMA has open part reservations. Consume or cancel them before closing."));
+            .andExpect(jsonPath("$.message").value("A OS possui reservas de peças abertas. Aplique ou cancele as reservas antes de encerrar."));
 
         action(rma.getId(), active, "consume", TECHNICIAN).andExpect(status().isOk());
         changeStatus(rma.getId(), "COMPLETED").andExpect(status().isBadRequest());
@@ -421,7 +421,7 @@ class PartInventoryIntegrationTest {
 
         action(rma.getId(), active, "consume", TECHNICIAN)
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Não é permitido reservar ou consumir peças em um RMA encerrado."));
+            .andExpect(jsonPath("$.message").value("Não é permitido reservar ou aplicar peças em uma OS encerrada."));
         action(rma.getId(), pending, "allocate", TECHNICIAN).andExpect(status().isBadRequest());
 
         action(rma.getId(), active, "cancel", TECHNICIAN).andExpect(status().isOk()).andExpect(jsonPath("$.partAvailable").value(1));

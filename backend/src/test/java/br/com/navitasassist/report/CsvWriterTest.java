@@ -14,11 +14,11 @@ class CsvWriterTest {
     void startsWithUtf8BomAndUsesSemicolonAndCrLf() {
         CsvWriter csv = new CsvWriter();
         csv.row("Código", "Situação");
-        csv.row("RMA-1", "Em garantia");
+        csv.row("OS-1", "Em garantia");
         byte[] bytes = csv.toBytes();
 
         assertArrayEquals(new byte[] {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF}, Arrays.copyOf(bytes, 3));
-        assertEquals("Código;Situação\r\nRMA-1;Em garantia\r\n", new String(bytes, 3, bytes.length - 3, StandardCharsets.UTF_8));
+        assertEquals("Código;Situação\r\nOS-1;Em garantia\r\n", new String(bytes, 3, bytes.length - 3, StandardCharsets.UTF_8));
     }
 
     @Test

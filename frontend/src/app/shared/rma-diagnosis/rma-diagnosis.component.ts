@@ -116,7 +116,7 @@ export class RmaDiagnosisComponent {
       notes: normalizeText(raw.notes), diagnosedAt: raw.diagnosedAt, technicianName: raw.technicianName.trim()
     }).pipe(
       switchMap(updated => this.service.getById(id).pipe(catchError(() => {
-        this.message.set('Diagnóstico salvo. Não foi possível recarregar o RMA; atualize o detalhe.');
+        this.message.set('Diagnóstico salvo. Não foi possível recarregar a OS; atualize o detalhe.');
         return of(updated);
       }))),
       finalize(() => { this.diagnosisSubmitting.set(false); this.diagnosisForm.enable(); this.busyChange.emit(false); })

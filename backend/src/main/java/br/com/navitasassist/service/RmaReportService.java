@@ -131,7 +131,7 @@ public class RmaReportService {
     /** The summary and the CSV exports load the whole period in memory: refuse instead of truncating above the cap. */
     void ensureWithinLimit(RmaReportRequest filters, Period period) {
         if (rmaRecordRepository.countReport(period.from(), period.to(), filters.status(), filters.clientId()) > MAX_REPORT_RMAS) {
-            throw new BusinessException("Reduza o período: o relatório passa de 5.000 RMAs.");
+            throw new BusinessException("Reduza o período: o relatório passa de 5.000 ordens de serviço.");
         }
     }
 

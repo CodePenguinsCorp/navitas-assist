@@ -40,7 +40,7 @@ export class RmaStageTimesComponent {
       const closing = current && closed;
       const seconds = closing ? 0 : stageElapsedSeconds(period, now);
       const value = closing
-        ? `Encerrado em ${formatDateTime(period.enteredAt).replace(", ", " ")}`
+        ? `Encerrada em ${formatDateTime(period.enteredAt).replace(", ", " ")}`
         : `${formatDuration(seconds)}${current ? ' (atual)' : ''}`;
       return { key: `${period.status}-${period.enteredAt}-${index}`, status: period.status, text: `${label} · ${value}`, label, value, seconds, closing };
     });

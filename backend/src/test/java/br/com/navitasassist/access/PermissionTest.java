@@ -45,14 +45,14 @@ class PermissionTest {
     @Test
     void modulesAndLabelsMatchSpec() {
         assertEquals(PermissionModule.RMA, Permission.RMA_ATRIBUIVEL.module());
-        assertEquals("Pode ser responsável por RMAs", Permission.RMA_ATRIBUIVEL.label());
+        assertEquals("Pode ser responsável por ordens de serviço", Permission.RMA_ATRIBUIVEL.label());
         assertEquals(PermissionModule.PECAS, Permission.PECAS_RESERVAR.module());
-        assertEquals("Reservar e aplicar peças nos RMAs", Permission.PECAS_RESERVAR.label());
+        assertEquals("Reservar e aplicar peças nas ordens de serviço", Permission.PECAS_RESERVAR.label());
         assertEquals(PermissionModule.ADMINISTRACAO, Permission.NOTIFICACOES_REGRAS.module());
         assertEquals("Configurar regras de notificação", Permission.NOTIFICACOES_REGRAS.label());
 
         assertEquals(
-            List.of("RMAs", "Clientes e produtos", "Peças", "Protocolos técnicos", "Relatórios", "Administração"),
+            List.of("Ordens de serviço", "Clientes e produtos", "Peças", "Protocolos técnicos", "Relatórios", "Administração"),
             Arrays.stream(PermissionModule.values()).map(PermissionModule::label).toList());
         assertEquals(
             List.of("RMA", "CADASTROS", "PECAS", "PROTOCOLOS", "RELATORIOS", "ADMINISTRACAO"),
@@ -63,7 +63,7 @@ class PermissionTest {
     void fromCodesIgnoresUnknown() {
         assertEquals(
             Set.of(Permission.RMA_VER, Permission.PERFIS_GERIR),
-            Permission.fromCodes(List.of("rma.ver", "desconhecida", "perfis.gerir", "RMA.VER")));
+            Permission.fromCodes(List.of("rma.ver", "desconhecida", "perfis.gerir", "OS.VER")));
         assertTrue(Permission.fromCode("nao.existe").isEmpty());
         assertEquals(Permission.RELATORIOS_VER, Permission.fromCode("relatorios.ver").orElseThrow());
         assertEquals(Set.of("rma.ver", "usuarios.gerir"), Permission.codes(List.of(Permission.RMA_VER, Permission.USUARIOS_GERIR)));

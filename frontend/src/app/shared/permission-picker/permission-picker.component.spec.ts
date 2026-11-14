@@ -58,7 +58,7 @@ describe('PermissionPickerComponent', () => {
     it('renders one fieldset per module, with name, counter and a switch per permission', async () => {
       await mount((h) => h.selected.set(new Set<Permission>(['rma.ver', 'rma.status', 'pecas.ver'])));
       expect(modules().map((set) => text(set.querySelector('legend .permission-module__name')))).toEqual([
-        'RMAs', 'Clientes e produtos', 'Peças', 'Protocolos técnicos', 'Relatórios', 'Administração'
+        'Ordens de serviço', 'Clientes e produtos', 'Peças', 'Protocolos técnicos', 'Relatórios', 'Administração'
       ]);
       expect([0, 1, 2].map(counter)).toEqual(['2 de 8', '0 de 3', '1 de 3']);
       const switches = Array.from(element.querySelectorAll<HTMLInputElement>('fieldset.permission-module input[type="checkbox"]'));
@@ -73,12 +73,12 @@ describe('PermissionPickerComponent', () => {
 
     it('toggles a permission and updates the counters', async () => {
       await mount();
-      switchOf('Abrir RMAs').click();
+      switchOf('Abrir ordens de serviço').click();
       render();
       expect([...host.selected()]).toEqual(['rma.abrir']);
       expect(counter(0)).toBe('1 de 8');
-      expect(row('Abrir RMAs').classList).toContain('is-on');
-      switchOf('Abrir RMAs').click();
+      expect(row('Abrir ordens de serviço').classList).toContain('is-on');
+      switchOf('Abrir ordens de serviço').click();
       render();
       expect(host.selected().size).toBe(0);
       expect(counter(0)).toBe('0 de 8');
@@ -114,12 +114,12 @@ describe('PermissionPickerComponent', () => {
 
     it('shows profile permissions on, locked and badged; the others free', async () => {
       await mount((h) => extras(h, ['rma.status']));
-      const locked = switchOf('Abrir RMAs');
+      const locked = switchOf('Abrir ordens de serviço');
       expect(locked.checked).toBe(true);
       expect(locked.disabled).toBe(true);
-      expect(row('Abrir RMAs').classList).toContain('is-locked');
-      expect(text(row('Abrir RMAs').querySelector('.permission-badge'))).toBe('Do perfil');
-      expect(row('Abrir RMAs').querySelector('.permission-badge app-icon')).not.toBeNull();
+      expect(row('Abrir ordens de serviço').classList).toContain('is-locked');
+      expect(text(row('Abrir ordens de serviço').querySelector('.permission-badge'))).toBe('Do perfil');
+      expect(row('Abrir ordens de serviço').querySelector('.permission-badge app-icon')).not.toBeNull();
       const extra = row('Alterar status');
       expect(extra.classList).toContain('is-extra');
       expect(extra.querySelector('.permission-badge')).toBeNull();
@@ -156,7 +156,7 @@ describe('PermissionPickerComponent', () => {
 
     it('lists the granted extras as chips, without the profile ones, and removes them', async () => {
       await mount((h) => extras(h, ['pecas.reservar', 'rma.status', 'rma.ver']));
-      expect(chips()).toEqual(['Alterar status', 'Reservar e aplicar peças nos RMAs']);
+      expect(chips()).toEqual(['Alterar status', 'Reservar e aplicar peças nas ordens de serviço']);
       expect(text(element.querySelector('.permission-picker__summary'))).toBe('2 permissões extras');
       expect(text(element.querySelector('.permission-picker__total'))).toBe('2 do perfil e 2 extras');
       const remove = element.querySelector<HTMLButtonElement>('.permission-chip button')!;
@@ -164,16 +164,16 @@ describe('PermissionPickerComponent', () => {
       remove.click();
       render();
       expect([...host.selected()].sort()).toEqual(['pecas.reservar', 'rma.ver']);
-      expect(chips()).toEqual(['Reservar e aplicar peças nos RMAs']);
+      expect(chips()).toEqual(['Reservar e aplicar peças nas ordens de serviço']);
       expect(text(element.querySelector('.permission-picker__summary'))).toBe('1 permissão extra');
     });
 
     it('ignores toggles on locked permissions', async () => {
       // An extra the profile also grants stays stored (it comes back if the profile changes).
       await mount((h) => extras(h, ['rma.abrir']));
-      switchOf('Abrir RMAs').click();
+      switchOf('Abrir ordens de serviço').click();
       render();
-      const locked = switchOf('Abrir RMAs');
+      const locked = switchOf('Abrir ordens de serviço');
       locked.checked = false;
       locked.dispatchEvent(new Event('change'));
       render();

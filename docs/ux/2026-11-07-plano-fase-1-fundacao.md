@@ -49,7 +49,7 @@ Existem restos não commitados de uma tentativa interrompida: cinco specs modifi
 - Create: `frontend/src/app/pages/protocols/protocols.component.spec.ts` (não existe no HEAD; TestBed com `ProtocolService` e `CatalogService` como mocks, `protocols.component.ts:61-62`; chamar `openCreateModal()` e `fixture.detectChanges()`)
 - Test: specs existentes de clients, products, users (estender `users.component.pending.spec.ts`), parts (adicionar `openCreateModal` ao `PartsHarness`, papel `SERVICE_DESK`) e rma-protocols (papel `ADMIN` ou `TECHNICIAN`)
 
-Registrados para a fase seguinte, **fora** desta tarefa: rodapé do `rma-block-panel` (só tem "Fechar" no cabeçalho), Cancelar na confirmação de estorno em `parts.component.html:373-376` e a ordem "Buscar / Limpar" do filtro de RMAs (`rmas.component.html:64-67`, é filtro, não diálogo).
+Registrados para a fase seguinte, **fora** desta tarefa: rodapé do `rma-block-panel` (só tem "Fechar" no cabeçalho), Cancelar na confirmação de estorno em `parts.component.html:373-376` e a ordem "Buscar / Limpar" do filtro de ordens de serviço (`rmas.component.html:64-67`, é filtro, não diálogo).
 
 Já estão corretos e **não** devem ser alterados: `kanban.component.html` (3 diálogos), `rmas.component.html:478` e `:541`, `kanban-bulk-actions.component.html:53`. O botão "Cancelar" de `rma-parts-panel.component.html:58` é ação de linha, não rodapé de diálogo; ignorar.
 

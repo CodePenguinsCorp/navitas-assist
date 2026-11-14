@@ -212,21 +212,21 @@ export class DashboardComponent {
 
     return [
       {
-        label: 'RMAs em andamento',
+        label: 'Ordens de serviço em andamento',
         value: String(activeRmas.length),
-        detail: `de ${rmas.length} ${rmas.length === 1 ? 'registrado' : 'registrados'}`,
+        detail: `de ${rmas.length} ${rmas.length === 1 ? 'registrada' : 'registradas'}`,
         icon: 'clipboard',
         tone: 'brand'
       },
       {
-        label: 'Atrasados',
+        label: 'Atrasadas',
         value: String(overdueCount),
         detail: `· ${dueSoonCount} perto do limite`,
         icon: 'clock',
         tone: 'danger'
       },
       {
-        label: 'Fila inicial (Recebido e Triagem)',
+        label: 'Fila inicial (Recebida e Triagem)',
         value: String(initialQueue.length),
         detail: `· ${countHighPriority(initialQueue)} com prioridade alta`,
         icon: 'inbox',
@@ -235,7 +235,7 @@ export class DashboardComponent {
       {
         label: 'Itens em garantia',
         value: `${warrantyRate}%`,
-        detail: `· ${inWarrantyCount} de ${rmaItems.length} ${rmaItems.length === 1 ? 'item' : 'itens'} · ${pendingWarrantyCount} ${pendingWarrantyCount === 1 ? 'pendente' : 'pendentes'}, em todos os RMAs registrados`,
+        detail: `· ${inWarrantyCount} de ${rmaItems.length} ${rmaItems.length === 1 ? 'item' : 'itens'} · ${pendingWarrantyCount} ${pendingWarrantyCount === 1 ? 'pendente' : 'pendentes'}, em todas as ordens de serviço registradas`,
         icon: 'shield',
         tone: 'success'
       },

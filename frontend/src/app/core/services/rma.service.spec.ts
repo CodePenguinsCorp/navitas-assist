@@ -39,11 +39,11 @@ describe('RmaService', () => {
   });
 
   it('trims search text and preserves the selected status', () => {
-    service.list({ query: '  RMA-1  ', status: 'TRIAGE' }).subscribe();
+    service.list({ query: '  OS-1  ', status: 'TRIAGE' }).subscribe();
 
     const request = httpTesting.expectOne((candidate) => candidate.url === '/api/rmas');
     expect(request.request.method).toBe('GET');
-    expect(request.request.params.get('query')).toBe('RMA-1');
+    expect(request.request.params.get('query')).toBe('OS-1');
     expect(request.request.params.get('status')).toBe('TRIAGE');
     request.flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 });
   });
@@ -59,22 +59,22 @@ describe('RmaService', () => {
   });
 
   it('loads the complete board list without pagination parameters', () => {
-    service.listBoard({ query: ' RMA ', status: 'TRIAGE' }).subscribe();
+    service.listBoard({ query: ' OS ', status: 'TRIAGE' }).subscribe();
 
     const request = httpTesting.expectOne((candidate) => candidate.url === '/api/rmas/board');
     expect(request.request.params.has('page')).toBe(false);
     expect(request.request.params.has('size')).toBe(false);
-    expect(request.request.params.get('query')).toBe('RMA');
+    expect(request.request.params.get('query')).toBe('OS');
     expect(request.request.params.get('status')).toBe('TRIAGE');
     request.flush([]);
   });
 
   it('loads summary totals with the same filters as the list', () => {
-    service.getSummary({ query: ' RMA ', status: 'TRIAGE' }).subscribe();
+    service.getSummary({ query: ' OS ', status: 'TRIAGE' }).subscribe();
 
     const request = httpTesting.expectOne((candidate) => candidate.url === '/api/rmas/summary');
     expect(request.request.params.has('page')).toBe(false);
-    expect(request.request.params.get('query')).toBe('RMA');
+    expect(request.request.params.get('query')).toBe('OS');
     expect(request.request.params.get('status')).toBe('TRIAGE');
     request.flush({ total: 3, ongoing: 2, highPriority: 1 });
   });
@@ -92,7 +92,7 @@ describe('RmaService', () => {
     resolve.flush({});
   });
 
-  it('posts the complete RMA payload unchanged', () => {
+  it('posts the complete OS payload unchanged', () => {
     const payload: CreateRmaRequest = {
       clientId: 3,
       items: [
@@ -118,7 +118,7 @@ describe('RmaService', () => {
     request.flush({});
   });
 
-  it('updates only priority through the existing RMA endpoint', () => {
+  it('updates only priority through the existing OS endpoint', () => {
     service.updatePriority(11, 'HIGH').subscribe();
     const request = httpTesting.expectOne('/api/rmas/11');
     expect(request.request.method).toBe('PUT');

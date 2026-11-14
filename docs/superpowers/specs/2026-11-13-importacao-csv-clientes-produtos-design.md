@@ -3,7 +3,7 @@
 **Estado:** proposta para implementação posterior; somente este documento é entregue nesta tarefa.
 **Objetivo:** atender ao item §9 do PDF do cliente conforme o contexto fornecido: importar clientes e produtos exclusivamente por CSV, com prévia e confirmação. O PDF não foi disponibilizado para conferência direta.
 **Decisões do usuário:** CSV, duas etapas, permissão própria `cadastros.importar`, Administrador com essa permissão por padrão e acesso pela tela de Clientes e pela de Produtos. As demais escolhas abaixo são recomendações deste desenho.
-**Escopo:** novos cadastros em lote. Excel/XLSX, atualização em massa, importação de RMAs, peças e alterações do projeto de prazo ficam fora.
+**Escopo:** novos cadastros em lote. Excel/XLSX, atualização em massa, importação de ordens de serviço, peças e alterações do projeto de prazo ficam fora.
 
 ## Base real do repositório
 
@@ -22,7 +22,7 @@ Os caminhos Java abaixo são relativos a `backend/src/main/java/br/com/navitasas
 
 | Escolha | Alternativas | Recomendação e motivo |
 |---|---|---|
-| Duplicados | Atualizar existentes ou ignorar | **Ignorar**, sem sobrescrever dados usados nos RMAs; atualização exige outro desenho e critérios de correspondência confiáveis. |
+| Duplicados | Atualizar existentes ou ignorar | **Ignorar**, sem sobrescrever dados usados nas ordens de serviço; atualização exige outro desenho e critérios de correspondência confiáveis. |
 | Linhas inválidas | Bloquear todo o arquivo ou aproveitar válidas | **Confirmar somente válidas**, exibindo explicitamente quantas serão ignoradas. Corrigir uma linha não deve obrigar a descartar centenas de linhas corretas. |
 | Escrita | Commit por linha ou uma transação | **Uma transação para o conjunto válido aprovado**; falha inesperada reverte todas as inserções desse conjunto. Não confundir seleção parcial na prévia com commits parciais. |
 | Prévia | Reenviar arquivo/resultado pelo navegador ou lote no servidor | **Lote temporário no servidor**, imutável e vinculado ao usuário; não confiar em classificação ou dados devolvidos pelo navegador. |

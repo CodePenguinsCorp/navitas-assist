@@ -15,7 +15,7 @@ describe('RmaReportLinkComponent', () => {
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(RmaReportLinkComponent);
     fixture.componentRef.setInput('rmaId', 7);
-    fixture.componentRef.setInput('code', 'RMA-2026/7');
+    fixture.componentRef.setInput('code', 'OS-2026/7');
     fixture.detectChanges();
   });
 
@@ -27,17 +27,17 @@ describe('RmaReportLinkComponent', () => {
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
 
     expect(button().textContent).toContain('Laudo (PDF)');
-    expect(button().getAttribute('aria-label')).toBe('Baixar laudo de RMA-2026/7');
+    expect(button().getAttribute('aria-label')).toBe('Baixar laudo de OS-2026/7');
     button().click();
     fixture.detectChanges();
     expect(button().disabled).toBe(true);
     const request = http.expectOne('/api/rmas/7/report.pdf');
     expect(request.request.responseType).toBe('blob');
-    request.flush(new Blob(['%PDF']), { headers: { 'Content-Disposition': 'attachment; filename="laudo-RMA-2026-7.pdf"' } });
+    request.flush(new Blob(['%PDF']), { headers: { 'Content-Disposition': 'attachment; filename="laudo-OS-2026-7.pdf"' } });
     fixture.detectChanges();
 
     expect(createObjectURL).toHaveBeenCalled();
-    expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe('laudo-RMA-2026-7.pdf');
+    expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe('laudo-OS-2026-7.pdf');
     expect(button().disabled).toBe(false);
     click.mockRestore();
     createObjectURL.mockRestore();

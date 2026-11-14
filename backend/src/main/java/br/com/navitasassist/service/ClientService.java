@@ -75,7 +75,7 @@ public class ClientService {
         Client client = getEntityById(id);
 
         if (rmaRecordRepository.existsByClient_Id(id)) {
-            throw new BusinessException("Client cannot be deleted because it is used by an RMA.");
+            throw new BusinessException("Cliente não pode ser excluído porque está vinculado a uma OS.");
         }
 
         clientRepository.delete(client);

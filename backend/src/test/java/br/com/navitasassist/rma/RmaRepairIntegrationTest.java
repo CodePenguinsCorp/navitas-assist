@@ -51,7 +51,7 @@ class RmaRepairIntegrationTest {
     void setup() {
         Client client = new Client(); client.setLegalName("Cliente reparo"); clients.save(client);
         Product product = new Product(); product.setSku("REPAIR-TEST"); product.setName("Produto reparo"); products.save(product);
-        rma = new RmaRecord(); rma.setCode("RMA-REPAIR-TEST"); rma.setClient(client); rma.setProduct(product);
+        rma = new RmaRecord(); rma.setCode("OS-REPAIR-TEST"); rma.setClient(client); rma.setProduct(product);
         rma.setEntryDate(LocalDate.now()); rma.setReceivedBy("Teste"); rma.setReportedFailure("Falha"); rma.setStatus(RmaStatus.IN_REPAIR); rmas.saveAndFlush(rma);
     }
 
@@ -99,7 +99,7 @@ class RmaRepairIntegrationTest {
         for (RmaStatus closed : new RmaStatus[]{RmaStatus.COMPLETED, RmaStatus.RETURNED, RmaStatus.IRREPARABLE}) {
             rma.setStatus(closed); rmas.saveAndFlush(rma);
             write("interventions", intervention("1", LocalDate.now())).andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Não é permitido registrar reparos em um RMA encerrado."));
+                .andExpect(jsonPath("$.message").value("Não é permitido registrar reparos em uma OS encerrada."));
             write("external-components", Map.of("description", "X", "quantity", "1", "replacementReason", "Falha")).andExpect(status().isBadRequest());
             mvc.perform(get(base()).with(asProfile("viewer", "VIEWER"))).andExpect(status().isOk());
         }

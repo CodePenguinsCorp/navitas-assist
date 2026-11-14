@@ -117,7 +117,7 @@ export class RmaStatusFieldComponent {
     if (!change || !this.allowed() || this.disabled() || this.busy() || this.editing()) return;
     const current = this.rma() ?? change.after;
     if (current.id !== change.after.id || current.status !== change.after.status) {
-      this.error.set('O status mudou. Atualize o RMA antes de desfazer.');
+      this.error.set('O status mudou. Atualize a OS antes de desfazer.');
       return;
     }
     this.submit(current, change.before.status, '', true);
@@ -133,7 +133,7 @@ export class RmaStatusFieldComponent {
         this.message.set(undo ? 'Alteração desfeita' : `Movido para ${statusLabel(updated.status)}`);
         this.saved.emit(updated);
       },
-      error: error => this.error.set(extractHttpErrorMessage(error, 'Não foi possível atualizar o status do RMA.'))
+      error: error => this.error.set(extractHttpErrorMessage(error, 'Não foi possível atualizar o status da OS.'))
     });
   }
 

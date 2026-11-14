@@ -408,12 +408,12 @@ export class NotificationsComponent {
     return failure.source === 'EMAIL' ? 'Envio de e-mail' : 'Processamento do evento';
   }
 
-  /** Recipients as a fact: configured profiles plus the RMA assignee, without judging the result. */
+  /** Recipients as a fact: configured profiles plus the OS assignee, without judging the result. */
   protected recipientsSummary(rule: NotificationRuleResponse): string {
     const roles = rule.recipientProfiles.map((profile) => profile.name).join(', ');
-    if (roles && rule.notifyAssignee) return `${roles} + responsável pelo RMA`;
+    if (roles && rule.notifyAssignee) return `${roles} + responsável pela OS`;
     if (roles) return roles;
-    return rule.notifyAssignee ? 'Responsável pelo RMA' : 'Nenhum destinatário';
+    return rule.notifyAssignee ? 'Responsável pela OS' : 'Nenhum destinatário';
   }
 
   protected hasNoRecipients(rule: { recipientCount: number; notifyAssignee: boolean }): boolean {

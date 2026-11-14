@@ -283,7 +283,7 @@ export class RmaProtocolsComponent {
         if (this.rmaId() !== rmaId) return;
         this.executions.set([]);
         this.loadFailed.set(true);
-        this.loadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os protocolos do RMA.'));
+        this.loadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar os protocolos da OS.'));
       }
     });
   }

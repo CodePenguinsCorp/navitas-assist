@@ -45,7 +45,7 @@ describe('PartService', () => {
     reversal.flush({});
   });
 
-  it('reserves parts and runs reservation actions under the RMA resource', () => {
+  it('reserves parts and runs reservation actions under the OS resource', () => {
     const payload: PartReservationRequest = { partId: 4, quantity: 1, note: null };
     service.reserve(7, payload).subscribe();
     const reserve = httpTesting.expectOne('/api/rmas/7/parts');

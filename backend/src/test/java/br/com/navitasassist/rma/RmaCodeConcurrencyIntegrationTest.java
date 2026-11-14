@@ -176,6 +176,6 @@ class RmaCodeConcurrencyIntegrationTest {
     }
 
     private String prefix() {
-        return "RMA-" + LocalDate.now(ZoneId.of("America/Sao_Paulo")).getYear() + "-";
+        return "OS-" + LocalDate.now(ZoneId.of("America/Sao_Paulo")).getYear() + "-";
     }
 }

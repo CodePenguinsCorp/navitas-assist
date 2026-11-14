@@ -4,7 +4,7 @@ package br.com.navitasassist.access;
  * Módulos do catálogo de permissões, na ordem de exibição.
  */
 public enum PermissionModule {
-    RMA("RMAs"),
+    RMA("Ordens de serviço"),
     CADASTROS("Clientes e produtos"),
     PECAS("Peças"),
     PROTOCOLOS("Protocolos técnicos"),

@@ -65,23 +65,23 @@ class RmaReportIntegrationTest {
 
     @Test
     void combinesFiltersWithInclusiveCivilDatesAndStableOrdering() throws Exception {
-        saveRma("RMA-START", "2026-10-01", RmaStatus.RECEIVED, client);
-        saveRma("RMA-END", "2026-10-20", RmaStatus.RECEIVED, client);
-        saveRma("RMA-END-2", "2026-10-20", RmaStatus.RECEIVED, client);
-        saveRma("RMA-BEFORE", "2026-09-30", RmaStatus.RECEIVED, client);
-        saveRma("RMA-AFTER", "2026-10-21", RmaStatus.RECEIVED, client);
-        saveRma("RMA-STATUS", "2026-10-10", RmaStatus.RETURNED, client);
+        saveRma("OS-START", "2026-10-01", RmaStatus.RECEIVED, client);
+        saveRma("OS-END", "2026-10-20", RmaStatus.RECEIVED, client);
+        saveRma("OS-END-2", "2026-10-20", RmaStatus.RECEIVED, client);
+        saveRma("OS-BEFORE", "2026-09-30", RmaStatus.RECEIVED, client);
+        saveRma("OS-AFTER", "2026-10-21", RmaStatus.RECEIVED, client);
+        saveRma("OS-STATUS", "2026-10-10", RmaStatus.RETURNED, client);
         Client other = new Client();
         other.setLegalName("Outro cliente");
         clients.save(other);
-        saveRma("RMA-OTHER", "2026-10-10", RmaStatus.RECEIVED, other);
+        saveRma("OS-OTHER", "2026-10-10", RmaStatus.RECEIVED, other);
 
         mockMvc.perform(get("/api/reports/rmas").with(asProfile("viewer", "VIEWER"))
                 .param("entryFrom", "2026-10-01").param("entryTo", "2026-10-20")
                 .param("status", "RECEIVED").param("clientId", client.getId().toString()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.rmas.content", hasSize(3)))
-            .andExpect(jsonPath("$.rmas.content[0].code").value("RMA-END-2"))
+            .andExpect(jsonPath("$.rmas.content[0].code").value("OS-END-2"))
             .andExpect(jsonPath("$.rmas.content[1].entryDate").value("2026-10-20"))
             .andExpect(jsonPath("$.rmas.content[2].entryDate").value("2026-10-01"))
             .andExpect(jsonPath("$.generatedAt").isNotEmpty());
@@ -89,7 +89,7 @@ class RmaReportIntegrationTest {
 
     @Test
     void returnsALeanRowWithPrimaryItemEffectiveWarrantyAndFailureType() throws Exception {
-        RmaRecord rma = saveRma("RMA-DETAIL", "2026-10-20", RmaStatus.RETURNED, client);
+        RmaRecord rma = saveRma("OS-DETAIL", "2026-10-20", RmaStatus.RETURNED, client);
         rma.setPurchaseDateUnknown(false);
         rma.setPurchaseDate(LocalDate.parse("2025-10-20"));
         RmaItem covered = new RmaItem();
@@ -112,7 +112,7 @@ class RmaReportIntegrationTest {
 
         mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31").with(asProfile("tech", "TECHNICIAN")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.rmas.content[0].code").value("RMA-DETAIL"))
+            .andExpect(jsonPath("$.rmas.content[0].code").value("OS-DETAIL"))
             .andExpect(jsonPath("$.rmas.content[0].clientName").value("Cliente de relatórios"))
             .andExpect(jsonPath("$.rmas.content[0].productName").value("Controlador"))
             .andExpect(jsonPath("$.rmas.content[0].serialNumber").value("SERIAL-A"))
@@ -129,7 +129,7 @@ class RmaReportIntegrationTest {
     @Test
     void paginatesOnTheServerWithDefaultAndBoundedSize() throws Exception {
         for (int index = 0; index < 25; index++) {
-            saveRma("RMA-P" + String.format("%02d", index), "2026-10-01", RmaStatus.RECEIVED, client);
+            saveRma("OS-P" + String.format("%02d", index), "2026-10-01", RmaStatus.RECEIVED, client);
         }
         mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31").with(asProfile("a", "ADMIN")))
             .andExpect(status().isOk())
@@ -138,12 +138,12 @@ class RmaReportIntegrationTest {
             .andExpect(jsonPath("$.rmas.size").value(20))
             .andExpect(jsonPath("$.rmas.totalElements").value(25))
             .andExpect(jsonPath("$.rmas.totalPages").value(2))
-            .andExpect(jsonPath("$.rmas.content[0].code").value("RMA-P24"));
+            .andExpect(jsonPath("$.rmas.content[0].code").value("OS-P24"));
         mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31")
                 .param("page", "1").param("size", "20").with(asProfile("a", "ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.rmas.content", hasSize(5)))
-            .andExpect(jsonPath("$.rmas.content[4].code").value("RMA-P00"));
+            .andExpect(jsonPath("$.rmas.content[4].code").value("OS-P00"));
         mockMvc.perform(get("/api/reports/rmas").param("size", "101").with(asProfile("a", "ADMIN")))
             .andExpect(status().isBadRequest());
         mockMvc.perform(get("/api/reports/rmas").param("page", "-1").with(asProfile("a", "ADMIN")))
@@ -152,14 +152,14 @@ class RmaReportIntegrationTest {
 
     @Test
     void supportsEmptyAndOneSidedFilters() throws Exception {
-        saveRma("RMA-OLD", "2026-09-30", RmaStatus.RECEIVED, client);
-        saveRma("RMA-NEW", "2026-10-01", RmaStatus.RECEIVED, client);
+        saveRma("OS-OLD", "2026-09-30", RmaStatus.RECEIVED, client);
+        saveRma("OS-NEW", "2026-10-01", RmaStatus.RECEIVED, client);
         mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-10-01").with(asProfile("a", "ADMIN")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.rmas.content", hasSize(1)))
-            .andExpect(jsonPath("$.rmas.content[0].code").value("RMA-NEW"));
+            .andExpect(jsonPath("$.rmas.content[0].code").value("OS-NEW"));
         mockMvc.perform(get("/api/reports/rmas").param("entryTo", "2026-09-30").with(asProfile("a", "ADMIN")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.rmas.content", hasSize(1)))
-            .andExpect(jsonPath("$.rmas.content[0].code").value("RMA-OLD"));
+            .andExpect(jsonPath("$.rmas.content[0].code").value("OS-OLD"));
         mockMvc.perform(get("/api/reports/rmas").param("clientId", "999999").with(asProfile("a", "ADMIN")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.rmas.content", hasSize(0)));
     }
@@ -174,17 +174,17 @@ class RmaReportIntegrationTest {
     @Test
     void appliesTheDefaultPeriodAndRejectsPeriodsLongerThanOneYear() throws Exception {
         LocalDate today = LocalDate.now(ZoneId.of("America/Sao_Paulo"));
-        saveRma("RMA-RECENT", today.minusDays(10).toString(), RmaStatus.RECEIVED, client);
-        saveRma("RMA-EDGE", today.minusDays(89).toString(), RmaStatus.RECEIVED, client);
-        saveRma("RMA-OUTSIDE", today.minusDays(90).toString(), RmaStatus.RECEIVED, client);
+        saveRma("OS-RECENT", today.minusDays(10).toString(), RmaStatus.RECEIVED, client);
+        saveRma("OS-EDGE", today.minusDays(89).toString(), RmaStatus.RECEIVED, client);
+        saveRma("OS-OUTSIDE", today.minusDays(90).toString(), RmaStatus.RECEIVED, client);
 
         mockMvc.perform(get("/api/reports/rmas").with(asProfile("a", "ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.entryFrom").value(today.minusDays(89).toString()))
             .andExpect(jsonPath("$.entryTo").value(today.toString()))
             .andExpect(jsonPath("$.rmas.content", hasSize(2)))
-            .andExpect(jsonPath("$.rmas.content[0].code").value("RMA-RECENT"))
-            .andExpect(jsonPath("$.rmas.content[1].code").value("RMA-EDGE"));
+            .andExpect(jsonPath("$.rmas.content[0].code").value("OS-RECENT"))
+            .andExpect(jsonPath("$.rmas.content[1].code").value("OS-EDGE"));
 
         mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2025-01-01").param("entryTo", "2026-01-02").with(asProfile("a", "ADMIN")))
             .andExpect(status().isBadRequest())
@@ -198,13 +198,13 @@ class RmaReportIntegrationTest {
         long withOneRma = reportStatements(1);
         long withSixRmas = reportStatements(6);
 
-        assertEquals(withOneRma, withSixRmas, "Report queries must not grow with the number of RMAs.");
+        assertEquals(withOneRma, withSixRmas, "Report queries must not grow with the number of ordens de serviço.");
     }
 
     private long reportStatements(int count) throws Exception {
         rmas.deleteAll();
         for (int index = 0; index < count; index++) {
-            RmaRecord rma = saveRma("RMA-N1-" + count + "-" + index, "2026-10-1" + index % 10, RmaStatus.IN_DIAGNOSIS, client);
+            RmaRecord rma = saveRma("OS-N1-" + count + "-" + index, "2026-10-1" + index % 10, RmaStatus.IN_DIAGNOSIS, client);
             RmaItem first = new RmaItem();
             first.setProduct(product);
             first.getItemIdentification().setSerialNumber("S-" + count + "-" + index + "-A");

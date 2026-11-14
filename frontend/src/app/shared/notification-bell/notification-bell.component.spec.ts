@@ -20,8 +20,8 @@ const SP_OFFSET = 3;
 const NOW = Date.UTC(2026, 9, 24, 15 + SP_OFFSET, 0);
 const at = (day: number, hour: number) => new Date(Date.UTC(2026, 9, day, hour + SP_OFFSET)).toISOString();
 const NOTIFICATION: NotificationResponse = {
-  id: 5, eventType: 'RMA_ASSIGNED', severity: 'CRITICAL', title: 'RMA-2026-000007 atribuído', message: 'Cliente · Produto',
-  rmaId: 7, rmaCode: 'RMA-2026-000007', actionPath: '/rmas?rma=7', createdAt: at(24, 10), readAt: null, snoozedUntil: null, read: false
+  id: 5, eventType: 'RMA_ASSIGNED', severity: 'CRITICAL', title: 'OS-2026-000007 atribuída', message: 'Cliente · Produto',
+  rmaId: 7, rmaCode: 'OS-2026-000007', actionPath: '/rmas?rma=7', createdAt: at(24, 10), readAt: null, snoozedUntil: null, read: false
 };
 const READ: NotificationResponse = { ...NOTIFICATION, id: 6, severity: 'INFO', title: 'Peça pendente', createdAt: at(23, 9), read: true, readAt: at(23, 10) };
 const OLD: NotificationResponse = { ...READ, id: 4, title: 'Antiga', createdAt: at(20, 9) };
@@ -118,7 +118,7 @@ describe('NotificationBellComponent', () => {
     summary.flush({ unread: 1 });
     await render();
 
-    panel()!.querySelector<HTMLButtonElement>('button[aria-label="Marcar como lida RMA-2026-000007 atribuído"]')!.click();
+    panel()!.querySelector<HTMLButtonElement>('button[aria-label="Marcar como lida OS-2026-000007 atribuída"]')!.click();
     const read = http.expectOne({ method: 'POST', url: '/api/notifications/5/read' });
     expect(read.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
     read.flush({ ...NOTIFICATION, read: true });
@@ -272,7 +272,7 @@ describe('NotificationBellComponent', () => {
 
     it('the row icon marks as read without opening the dialog', async () => {
       await openWith([NOTIFICATION]);
-      panel()!.querySelector<HTMLButtonElement>('button[aria-label="Marcar como lida RMA-2026-000007 atribuído"]')!.click();
+      panel()!.querySelector<HTMLButtonElement>('button[aria-label="Marcar como lida OS-2026-000007 atribuída"]')!.click();
       await settleRead();
       expect(dialog()).toBeNull();
       expect(panel()).not.toBeNull();
@@ -288,7 +288,7 @@ describe('NotificationBellComponent', () => {
 
   it('marks a single item as read from its row action and keeps the panel open', async () => {
     await openWith([NOTIFICATION, READ]);
-    panel()!.querySelector<HTMLButtonElement>('button[aria-label="Marcar como lida RMA-2026-000007 atribuído"]')!.click();
+    panel()!.querySelector<HTMLButtonElement>('button[aria-label="Marcar como lida OS-2026-000007 atribuída"]')!.click();
     http.expectOne({ method: 'POST', url: '/api/notifications/5/read' }).flush({ ...NOTIFICATION, read: true });
     flushSummary(0);
     await render();

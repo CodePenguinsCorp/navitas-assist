@@ -2,13 +2,13 @@ import { PageResponse, PermissionModuleResponse, ProfileResponse } from '../core
 
 /** O catálogo de `GET /api/permissions`, com módulos e rótulos da spec §3. */
 export const PERMISSION_CATALOG: PermissionModuleResponse[] = [
-  { module: 'RMA', label: 'RMAs', permissions: [
-    { code: 'rma.ver', label: 'Ver RMAs, Kanban e dashboard' },
-    { code: 'rma.abrir', label: 'Abrir RMAs' },
+  { module: 'RMA', label: 'Ordens de serviço', permissions: [
+    { code: 'rma.ver', label: 'Ver ordens de serviço, Kanban e dashboard' },
+    { code: 'rma.abrir', label: 'Abrir ordens de serviço' },
     { code: 'rma.editar', label: 'Alterar dados gerais e prioridade' },
     { code: 'rma.status', label: 'Alterar status' },
     { code: 'rma.responsavel', label: 'Atribuir responsável' },
-    { code: 'rma.atribuivel', label: 'Pode ser responsável por RMAs' },
+    { code: 'rma.atribuivel', label: 'Pode ser responsável por ordens de serviço' },
     { code: 'rma.diagnosticar', label: 'Registrar diagnóstico' },
     { code: 'rma.impedimentos', label: 'Registrar e resolver impedimentos' }
   ] },
@@ -20,11 +20,11 @@ export const PERMISSION_CATALOG: PermissionModuleResponse[] = [
   { module: 'PECAS', label: 'Peças', permissions: [
     { code: 'pecas.ver', label: 'Consultar peças e estoque' },
     { code: 'pecas.movimentar', label: 'Cadastrar peças e movimentar estoque' },
-    { code: 'pecas.reservar', label: 'Reservar e aplicar peças nos RMAs' }
+    { code: 'pecas.reservar', label: 'Reservar e aplicar peças nas ordens de serviço' }
   ] },
   { module: 'PROTOCOLOS', label: 'Protocolos técnicos', permissions: [
     { code: 'protocolos.ver', label: 'Consultar protocolos e execuções' },
-    { code: 'protocolos.executar', label: 'Executar protocolos nos RMAs' },
+    { code: 'protocolos.executar', label: 'Executar protocolos nas ordens de serviço' },
     { code: 'protocolos.catalogo', label: 'Gerenciar modelos de protocolo' }
   ] },
   { module: 'RELATORIOS', label: 'Relatórios', permissions: [

@@ -64,7 +64,7 @@ class RmaTechnicalReportIntegrationTest {
         products.save(product);
 
         rma = new RmaRecord();
-        rma.setCode("RMA-2026/0001");
+        rma.setCode("OS-2026/0001");
         rma.setClient(client);
         rma.setProduct(product);
         rma.setEntryDate(LocalDate.parse("2026-10-05"));
@@ -100,14 +100,14 @@ class RmaTechnicalReportIntegrationTest {
         byte[] pdf = mockMvc.perform(get("/api/rmas/{id}/report.pdf", rma.getId()).with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk())
             .andExpect(header().string("Content-Type", "application/pdf"))
-            .andExpect(header().string("Content-Disposition", "attachment; filename=\"laudo-RMA-2026-0001.pdf\""))
+            .andExpect(header().string("Content-Disposition", "attachment; filename=\"laudo-OS-2026-0001.pdf\""))
             .andReturn().getResponse().getContentAsByteArray();
 
         String text = text(pdf);
-        for (String expected : List.of("Laudo técnico", "RMA-2026/0001", "Cliente Ação Ltda", "Controlador térmico", "CTRL-LAUDO", "LOTE-9",
+        for (String expected : List.of("Laudo técnico", "OS-2026/0001", "Cliente Ação Ltda", "Controlador térmico", "CTRL-LAUDO", "LOTE-9",
             "SN-123", "Pendente", "Não liga após queda de energia", "Regulador queimado", "Fonte", "Sobrecarga", "João Técnico",
             "Substituição do regulador", "Teste de bancada aprovado", "Regulador 5V", "REG-5V", "Regulador de tensão", "Carcaça riscada",
-            "Fonte original", "Concluído", "Motivo não registrado", "Intervenções", "Total de horas")) {
+            "Fonte original", "Concluída", "Motivo não registrado", "Intervenções", "Total de horas")) {
             assertTrue(text.contains(expected), "PDF sem \"" + expected + "\":\n" + text);
         }
         assertFalse(text.contains("Capacitor cancelado"), text);

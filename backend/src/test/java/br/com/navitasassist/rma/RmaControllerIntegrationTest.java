@@ -82,8 +82,8 @@ class RmaControllerIntegrationTest {
         Client client = new Client();
         client.setLegalName("Client with multiple products");
         Client savedClient = clientRepository.save(client);
-        Product firstProduct = saveProduct("SKU-RMA-1", "First product", 12);
-        Product secondProduct = saveProduct("SKU-RMA-2", "Second product", 24);
+        Product firstProduct = saveProduct("SKU-OS-1", "First product", 12);
+        Product secondProduct = saveProduct("SKU-OS-2", "Second product", 24);
 
         Map<String, Object> payload = Map.of(
             "clientId", savedClient.getId(),
@@ -129,7 +129,7 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$[0].items", hasSize(2)));
 
         mockMvc.perform(get("/api/rmas")
-                .param("query", "SKU-RMA-2")
+                .param("query", "SKU-OS-2")
                 .with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.content", hasSize(1)))
@@ -141,7 +141,7 @@ class RmaControllerIntegrationTest {
         Client client = new Client();
         client.setLegalName("Validation client");
         Client savedClient = clientRepository.save(client);
-        Product product = saveProduct("SKU-RMA-VALIDATION", "Validation product", 12);
+        Product product = saveProduct("SKU-OS-VALIDATION", "Validation product", 12);
 
         Map<String, Object> payload = Map.of(
             "clientId", savedClient.getId(),
@@ -192,7 +192,7 @@ class RmaControllerIntegrationTest {
         Client client = new Client();
         client.setLegalName("Date validation client");
         Client savedClient = clientRepository.save(client);
-        Product product = saveProduct("SKU-RMA-DATES", "Date validation product", 12);
+        Product product = saveProduct("SKU-OS-DATES", "Date validation product", 12);
         LocalDate today = LocalDate.now(BUSINESS_ZONE);
 
         Map<String, Object> futureManufacturing = Map.of(
@@ -249,7 +249,7 @@ class RmaControllerIntegrationTest {
         Client client = new Client();
         client.setLegalName("Text limit client");
         Client savedClient = clientRepository.save(client);
-        Product product = saveProduct("SKU-RMA-LIMIT", "Text limit product", 12);
+        Product product = saveProduct("SKU-OS-LIMIT", "Text limit product", 12);
 
         Map<String, Object> payload = Map.of(
             "clientId", savedClient.getId(),
@@ -272,14 +272,14 @@ class RmaControllerIntegrationTest {
     @Test
     void shouldReplaceItemsAndRecalculateWarranty() throws Exception {
         Client client = new Client();
-        client.setLegalName("RMA update client");
+        client.setLegalName("OS update client");
         Client savedClient = clientRepository.save(client);
-        Product originalProduct = saveProduct("SKU-RMA-OLD", "Original product", 24);
-        Product longWarrantyProduct = saveProduct("SKU-RMA-LONG", "Long warranty product", 24);
-        Product shortWarrantyProduct = saveProduct("SKU-RMA-SHORT", "Short warranty product", 12);
+        Product originalProduct = saveProduct("SKU-OS-OLD", "Original product", 24);
+        Product longWarrantyProduct = saveProduct("SKU-OS-LONG", "Long warranty product", 24);
+        Product shortWarrantyProduct = saveProduct("SKU-OS-SHORT", "Short warranty product", 12);
 
         RmaRecord rma = new RmaRecord();
-        rma.setCode("RMA-UPDATE-0001");
+        rma.setCode("OS-UPDATE-0001");
         rma.setClient(savedClient);
         rma.setProduct(originalProduct);
         rma.getItemIdentification().setBatchNumber("OLD-LOT");
@@ -334,12 +334,12 @@ class RmaControllerIntegrationTest {
     @Test
     void shouldExposeLegacyRmaAsSingleItem() throws Exception {
         Client client = new Client();
-        client.setLegalName("Legacy RMA client");
+        client.setLegalName("Legacy OS client");
         Client savedClient = clientRepository.save(client);
-        Product product = saveProduct("SKU-RMA-LEGACY", "Legacy product", 12);
+        Product product = saveProduct("SKU-OS-LEGACY", "Legacy product", 12);
 
         RmaRecord rma = new RmaRecord();
-        rma.setCode("RMA-LEGACY-0001");
+        rma.setCode("OS-LEGACY-0001");
         rma.setClient(savedClient);
         rma.setProduct(product);
         rma.getItemIdentification().setSerialNumber("LEGACY-SERIAL");
@@ -450,7 +450,7 @@ class RmaControllerIntegrationTest {
         Product product = saveProduct("ASSIGNMENT-PRODUCT", "Assignment product", 12);
 
         RmaRecord rma = new RmaRecord();
-        rma.setCode("RMA-ASSIGN-0001");
+        rma.setCode("OS-ASSIGN-0001");
         rma.setClient(savedClient);
         rma.setProduct(product);
         rma.getItemIdentification().setSerialNumber("ASSIGN-SERIAL");
@@ -497,7 +497,7 @@ class RmaControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"assigneeId\":" + inactiveTechnician.getId() + "}"))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Inactive users cannot be assigned to an RMA."));
+            .andExpect(jsonPath("$.message").value("Usuários inativos não podem ser responsáveis por uma OS."));
 
         mockMvc.perform(patch("/api/rmas/{id}/assignee", savedRma.getId())
                 .with(asProfile("admin", "ADMIN"))
@@ -505,7 +505,7 @@ class RmaControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"assigneeId\":" + serviceUser.getId() + "}"))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Only technicians can be assigned to an RMA."));
+            .andExpect(jsonPath("$.message").value("Somente técnicos podem ser responsáveis por uma OS."));
 
         mockMvc.perform(patch("/api/rmas/{id}/assignee", savedRma.getId())
                 .with(asProfile("admin", "ADMIN"))
@@ -537,7 +537,7 @@ class RmaControllerIntegrationTest {
         Client client = new Client();
         client.setLegalName("Stage client");
         RmaRecord rma = new RmaRecord();
-        rma.setCode("RMA-STAGE-0001");
+        rma.setCode("OS-STAGE-0001");
         rma.setClient(clientRepository.save(client));
         rma.setProduct(saveProduct("STAGE-PRODUCT", "Stage product", 12));
         rma.getItemIdentification().setSerialNumber("STAGE-SERIAL");
@@ -601,7 +601,7 @@ class RmaControllerIntegrationTest {
 
     @Test
     void shouldRecordPriorityHistoryAndRestrictWhoCanChangeIt() throws Exception {
-        Long id = saveTestRma("RMA-BULK-PRIORITY");
+        Long id = saveTestRma("OS-BULK-PRIORITY");
         mockMvc.perform(put("/api/rmas/{id}", id).with(asProfile("tech", "TECHNICIAN"))
                 .with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"priority\":\"HIGH\"}"))
             .andExpect(status().isForbidden());

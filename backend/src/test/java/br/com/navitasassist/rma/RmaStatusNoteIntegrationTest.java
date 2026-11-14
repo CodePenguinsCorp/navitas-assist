@@ -49,7 +49,7 @@ class RmaStatusNoteIntegrationTest {
     void setup() {
         Client client = new Client(); client.setLegalName("Cliente reparo"); clients.save(client);
         Product product = new Product(); product.setSku("REPAIR-TEST"); product.setName("Produto reparo"); products.save(product);
-        rma = new RmaRecord(); rma.setCode("RMA-REPAIR-TEST"); rma.setClient(client); rma.setProduct(product);
+        rma = new RmaRecord(); rma.setCode("OS-REPAIR-TEST"); rma.setClient(client); rma.setProduct(product);
         rma.setEntryDate(LocalDate.now()); rma.setReceivedBy("Teste"); rma.setReportedFailure("Falha"); rma.setStatus(RmaStatus.IN_REPAIR); rmas.saveAndFlush(rma);
     }
 
@@ -104,7 +104,7 @@ class RmaStatusNoteIntegrationTest {
 
     @Test
     void rejectsEventBelongingToAnotherRma() throws Exception {
-        RmaRecord other = new RmaRecord(); other.setCode("RMA-NOTE-OTHER"); other.setClient(rma.getClient()); other.setProduct(rma.getProduct());
+        RmaRecord other = new RmaRecord(); other.setCode("OS-NOTE-OTHER"); other.setClient(rma.getClient()); other.setProduct(rma.getProduct());
         other.setEntryDate(LocalDate.now()); other.setReceivedBy("original"); other.setReportedFailure("Falha"); other.setStatus(RmaStatus.IN_REPAIR);
         RmaStatusHistory event = new RmaStatusHistory(); event.setStatus(other.getStatus()); event.setChangedBy("original"); event.setChangedAt(java.time.Instant.now());
         event.setNote("Intacta"); other.addStatusHistory(event); other = rmas.saveAndFlush(other); Long eventId = other.getStatusHistory().get(0).getId();

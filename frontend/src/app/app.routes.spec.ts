@@ -47,7 +47,7 @@ describe('app routes', () => {
       const expected: Record<string, { title: string; permissions?: string[]; alternativePermissions?: string[] }> = {
         auditoria: { title: 'Auditoria | Navitas Assist', permissions: ['auditoria.ver'] },
         dashboard: { title: 'Dashboard | Navitas Assist', permissions: ['rma.ver'] },
-        rmas: { title: 'RMAs | Navitas Assist', permissions: ['rma.ver'] },
+        rmas: { title: 'Ordens de serviço | Navitas Assist', permissions: ['rma.ver'] },
         kanban: { title: 'Kanban | Navitas Assist', permissions: ['rma.ver'] },
         notificacoes: { title: 'Notificações | Navitas Assist' },
         pecas: { title: 'Peças | Navitas Assist', permissions: ['pecas.ver'] },

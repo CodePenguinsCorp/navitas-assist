@@ -91,7 +91,7 @@ class ProductControllerIntegrationTest {
         Client savedClient = clientRepository.save(client);
 
         RmaRecord rma = new RmaRecord();
-        rma.setCode("RMA-TEST-0001");
+        rma.setCode("OS-TEST-0001");
         rma.setProduct(savedProduct);
         rma.setClient(savedClient);
         rma.setEntryDate(LocalDate.now());
@@ -104,7 +104,7 @@ class ProductControllerIntegrationTest {
                 .with(csrf()))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value(
-                "Product cannot be deleted because it is used by an RMA."
+                "Produto não pode ser excluído porque está vinculado a uma OS."
             ));
 
         assertTrue(productRepository.existsById(savedProduct.getId()));
@@ -113,13 +113,13 @@ class ProductControllerIntegrationTest {
     @Test
     void shouldNotDeleteProductLinkedAsSecondaryRmaItem() throws Exception {
         Product primaryProduct = new Product();
-        primaryProduct.setSku("SKU-RMA-PRIMARY");
-        primaryProduct.setName("Primary RMA product");
+        primaryProduct.setSku("SKU-OS-PRIMARY");
+        primaryProduct.setName("Primary OS product");
         Product savedPrimaryProduct = productRepository.save(primaryProduct);
 
         Product secondaryProduct = new Product();
-        secondaryProduct.setSku("SKU-RMA-SECONDARY");
-        secondaryProduct.setName("Secondary RMA product");
+        secondaryProduct.setSku("SKU-OS-SECONDARY");
+        secondaryProduct.setName("Secondary OS product");
         Product savedSecondaryProduct = productRepository.save(secondaryProduct);
 
         Client client = new Client();
@@ -127,7 +127,7 @@ class ProductControllerIntegrationTest {
         Client savedClient = clientRepository.save(client);
 
         RmaRecord rma = new RmaRecord();
-        rma.setCode("RMA-TEST-SECONDARY");
+        rma.setCode("OS-TEST-SECONDARY");
         rma.setProduct(savedPrimaryProduct);
         rma.getItemIdentification().setBatchNumber("PRIMARY-LOT");
         rma.setClient(savedClient);
@@ -151,7 +151,7 @@ class ProductControllerIntegrationTest {
                 .with(csrf()))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value(
-                "Product cannot be deleted because it is used by an RMA."
+                "Produto não pode ser excluído porque está vinculado a uma OS."
             ));
 
         assertTrue(productRepository.existsById(savedSecondaryProduct.getId()));

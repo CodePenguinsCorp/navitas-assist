@@ -38,7 +38,7 @@ export class AuditComponent {
   };
   protected readonly entityLabels: Partial<Record<string, string>> = {
     USER: 'Usuário', ACCESS_PROFILE: 'Perfil de acesso', CLIENT: 'Cliente', PRODUCT: 'Produto',
-    RMA_STATUS_NOTE: 'Observação do RMA', RMA_ITEM: 'Item do RMA', EXTERNAL_COMPONENT: 'Componente externo',
+    RMA_STATUS_NOTE: 'Observação da OS', RMA_ITEM: 'Item da OS', EXTERNAL_COMPONENT: 'Componente externo',
     INTERVENTION: 'Intervenção', NOTIFICATION_RULE: 'Regra de notificação', NOTIFICATION: 'Notificação',
     EMAIL: 'E-mail', CATALOG_IMPORT: 'Importação'
   };

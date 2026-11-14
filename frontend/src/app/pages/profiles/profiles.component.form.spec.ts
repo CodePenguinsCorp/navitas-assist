@@ -73,9 +73,9 @@ describe('ProfilesComponent form', () => {
     open(() => component.openEditModal(TECHNICIAN));
     const sets = moduleSets();
     expect(sets.map((set) => set.querySelector('legend')?.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
-      'RMAs 3 de 8', 'Clientes e produtos 0 de 3', 'Peças 1 de 3', 'Protocolos técnicos 0 de 3', 'Relatórios 0 de 1', 'Administração 0 de 4'
+      'Ordens de serviço 3 de 8', 'Clientes e produtos 0 de 3', 'Peças 1 de 3', 'Protocolos técnicos 0 de 3', 'Relatórios 0 de 1', 'Administração 0 de 4'
     ]);
-    checkbox('Abrir RMAs').click();
+    checkbox('Abrir ordens de serviço').click();
     fixture.detectChanges();
     expect(sets[0].querySelector('legend')?.textContent).toContain('4 de 8');
   });
@@ -115,7 +115,7 @@ describe('ProfilesComponent form', () => {
     open(() => component.openCreateModal());
     setName('  Supervisor  ');
     checkbox('Ver relatórios').click();
-    checkbox('Ver RMAs, Kanban e dashboard').click();
+    checkbox('Ver ordens de serviço, Kanban e dashboard').click();
     fixture.detectChanges();
     expect(submitButton().textContent?.trim()).toBe('Cadastrar perfil');
     service.list.mockClear();
@@ -133,7 +133,7 @@ describe('ProfilesComponent form', () => {
     expect(dialog()!.querySelector('h3')?.textContent?.trim()).toBe('Editar perfil');
     expect(nameInput().value).toBe('Técnico');
     expect(checkbox('Alterar status').checked).toBe(true);
-    expect(checkbox('Abrir RMAs').checked).toBe(false);
+    expect(checkbox('Abrir ordens de serviço').checked).toBe(false);
     checkbox('Alterar status').click();
     fixture.detectChanges();
     expect(submitButton().textContent?.trim()).toBe('Salvar alterações');

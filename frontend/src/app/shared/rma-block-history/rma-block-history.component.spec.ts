@@ -83,7 +83,7 @@ describe('RmaBlockHistoryComponent', () => {
 
   it('preserves the current block summary', () => {
     const element = render({ ...RMA, currentBlock: ACTIVE, blockHistory: [ACTIVE] });
-    expect(text(element.querySelector('.block-history__current strong'))).toBe('Bloqueado há 2 h');
+    expect(text(element.querySelector('.block-history__current strong'))).toBe('Impedida há 2 h');
     expect(text(element.querySelector('.block-history__current'))).toContain('Aguardando peça');
     expect(text(element)).not.toContain('Sem bloqueio atual.');
   });
@@ -113,7 +113,7 @@ describe('RmaBlockHistoryComponent', () => {
 const ACTIVE: RmaBlockResponse = { id: 9, reason: 'Aguardando peça', category: 'Peças', blockedBy: 'tech', blockedAt: '2026-10-20T10:00:00Z', resolvedBy: null, resolvedAt: null, resolutionNote: null };
 const RESOLVED: RmaBlockResponse = { id: 5, reason: 'Falha no fornecedor', category: null, blockedBy: 'admin', blockedAt: '2026-10-19T08:00:00Z', resolvedBy: 'desk', resolvedAt: '2026-10-19T09:00:00Z', resolutionNote: 'Peça recebida' };
 const RMA: RmaResponse = {
-  id: 1, code: 'RMA-2026-000001', clientId: 1, clientName: 'Cliente', items: [], productId: 1, productName: 'Produto', productSku: 'P1', batchNumber: 'L1', serialNumber: null, manufacturedAt: null,
+  id: 1, code: 'OS-2026-000001', clientId: 1, clientName: 'Cliente', items: [], productId: 1, productName: 'Produto', productSku: 'P1', batchNumber: 'L1', serialNumber: null, manufacturedAt: null,
   purchaseDate: null, purchaseDateUnknown: true, entryDate: '2026-10-20', invoiceNumber: null, receivedBy: 'desk', reportedFailure: 'Falha', receivedAccessories: null, physicalCondition: null,
   priority: 'MEDIUM', status: 'TRIAGE', dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null, daysUntilDue: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T10:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [], warrantyHistory: [],
   assigneeId: null, assigneeName: null, repairSummary: null, replacedPartsSummary: null, testSummary: null, shippedAt: null, carrier: null, trackingCode: null, diagnosis: null, statusHistory: [], assignmentHistory: [],

@@ -65,7 +65,7 @@ export class ReportsComponent {
   protected readonly clientOptions = signal<CustomSelectOption[]>([{ value: null, label: 'Todos os clientes' }]);
   protected readonly tabs: { value: ReportTab; label: string }[] = [
     { value: 'summary', label: 'Resumo' }, { value: 'failures', label: 'Falhas' },
-    { value: 'recurrence', label: 'Recorrência' }, { value: 'rmas', label: 'RMAs' }
+    { value: 'recurrence', label: 'Recorrência' }, { value: 'rmas', label: 'Ordens de serviço' }
   ];
   protected readonly statusOptions: CustomSelectOption[] = [
     { value: '', label: 'Todos os status' }, ...RMA_STATUS_FLOW.map((value) => ({ value, label: RMA_STATUS_LABELS[value] }))

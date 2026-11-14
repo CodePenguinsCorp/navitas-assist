@@ -6,11 +6,11 @@ Tipos (`NotificationEventType`):
 
 | Evento | Produzido hoje | Regra inicial |
 | --- | --- | --- |
-| `RMA_CREATED` | Sim, ao abrir um RMA | Ligada, severidade `INFO`, destinatários: perfis Administrador e Atendimento. |
+| `RMA_CREATED` | Sim, ao abrir uma OS | Ligada, severidade `INFO`, destinatários: perfis Administrador e Atendimento. |
 | `RMA_ASSIGNED` | Sim, ao atribuir ou trocar o responsável | Ligada, `INFO`, avisa só o responsável (`notifyAssignee`); o usuário não pode silenciá-la. |
-| `RMA_BLOCKED` | Sim, ao abrir um impedimento | App ligado, `WARNING`, responsável pelo RMA e perfil Administrador; permite silenciamento. |
+| `RMA_BLOCKED` | Sim, ao abrir um impedimento | App ligado, `WARNING`, responsável pela OS e perfil Administrador; permite silenciamento. |
 | `PART_PENDING` | Sim, ao reservar uma peça sem saldo suficiente | App ligado, `WARNING`, perfil Administrador; permite silenciamento. |
-| `TEST_FAILED` | Sim, ao registrar cada tentativa reprovada de um item de protocolo | App ligado, `WARNING`, responsável pelo RMA e perfil Administrador; permite silenciamento. |
+| `TEST_FAILED` | Sim, ao registrar cada tentativa reprovada de um item de protocolo | App ligado, `WARNING`, responsável pela OS e perfil Administrador; permite silenciamento. |
 
 Os alertas `SLA_*` foram removidos; a data limite não gera notificação ([prazo-e-garantia.md](prazo-e-garantia.md)).
 
@@ -59,5 +59,5 @@ O plano do provedor (por exemplo, o Resend gratuito: cerca de 100 por dia e 3.00
 
 ### Limitações conhecidas
 
-- Falhas do canal não desfazem o RMA nem a notificação do app. Existe uma janela de perda entre o commit do RMA e a distribuição pelo listener; não há outbox de negócio.
+- Falhas do canal não desfazem a OS nem a notificação do app. Existe uma janela de perda entre o commit da OS e a distribuição pelo listener; não há outbox de negócio.
 - O provedor pode reconhecer a tentativa anterior pelo `Idempotency-Key`; mudanças de endereço ou conteúdo podem conflitar na janela de retenção dele, e um timeout após aceitação pode duplicar fora dela.

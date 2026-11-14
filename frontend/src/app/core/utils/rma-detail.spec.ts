@@ -39,7 +39,7 @@ function assigneeRecord(overrides: Partial<RmaAssignmentHistoryResponse> = {}): 
 
 const labels = (facts: { label: string }[]) => facts.map((fact) => fact.label);
 
-describe('RMA detail contract', () => {
+describe('OS detail contract', () => {
   it('lists the nine sections in contract order', () => {
     expect(RMA_DETAIL_SECTIONS.map((section) => section.label)).toEqual([
       'Falha relatada', 'Produtos', 'Recebimento', 'Diagnóstico', 'Reparo e testes',
@@ -203,8 +203,8 @@ describe('RMA detail contract', () => {
       id: 1, reason: 'Peça pendente', category: null, blockedBy: 'ana', blockedAt: '2026-10-20T10:00:00Z',
       resolvedBy: null, resolvedAt: null, resolutionNote: null
     };
-    expect(blockedLabel(block, Date.parse('2026-10-20T12:05:00Z'))).toBe('Bloqueado há 2 h 5 min');
-    expect(blockedLabel(block, Date.parse('2026-10-20T10:30:00Z'))).toBe('Bloqueado há 30 min');
+    expect(blockedLabel(block, Date.parse('2026-10-20T12:05:00Z'))).toBe('Impedida há 2 h 5 min');
+    expect(blockedLabel(block, Date.parse('2026-10-20T10:30:00Z'))).toBe('Impedida há 30 min');
   });
 
   it('merges due date changes into the history with previous value and author', () => {
@@ -227,12 +227,12 @@ describe('RMA detail contract', () => {
     expect(history[1].by).toBe('bia');
   });
 
-  it('shows the time in the current stage, or the closing for closed RMAs', () => {
+  it('shows the time in the current stage, or the closing for closed ordens de serviço', () => {
     const now = Date.parse('2026-10-22T16:00:00Z');
     expect(stageFact(buildRma({ status: 'IN_REPAIR', stagePeriods: [{ status: 'IN_REPAIR', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 0 }] }), now))
       .toEqual({ label: 'Nesta etapa', value: 'há 2 d 4 h', empty: false });
     expect(stageFact(buildRma({ status: 'COMPLETED', stagePeriods: [{ status: 'COMPLETED', enteredAt: '2026-10-21T13:30:00Z', leftAt: null, durationSeconds: 0 }] }), now).value)
-      .toBe('Encerrado em 21/10/2026 10:30');
+      .toBe('Encerrada em 21/10/2026 10:30');
   });
 });
 

@@ -73,13 +73,13 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
 | --- | --- | --- |
 | Dashboard com cabeçalho manual | `pages/dashboard/dashboard.component.html:2-6` | 1b |
 | Indicadores visíveis antes da resposta e depois da falha, com zeros e `0%` | HTML `:14-26` sem guarda de `loading`/erro. Os sinais começam vazios (TS `:72-75`), e `metrics` calcula `0`, `0%` e `meter: 0` (`:88,103,108`) | 1a |
-| Falha sem nova tentativa e vista como vazio | TS `:206-208` só grava a mensagem. HTML `:33,69,94` mostra “Nenhum RMA na fila.”, “Sem alterações recentes.” e “Nenhum RMA registrado.” depois do erro | 1a |
-| Barras decorativas | TS `:99` (barra = ativos ÷ todos) e `:108` (barra repetindo o percentual de garantia). O percentual de garantia (`:88,103`) tem dados e fórmula definidos, mas o escopo, “todos os RMAs registrados, inclusive encerrados”, não aparece | 1b (barras saem; percentual fica com escopo) |
+| Falha sem nova tentativa e vista como vazio | TS `:206-208` só grava a mensagem. HTML `:33,69,94` mostra “Nenhuma OS na fila.”, “Sem alterações recentes.” e “Nenhuma OS registrada.” depois do erro | 1a |
+| Barras decorativas | TS `:99` (barra = ativos ÷ todos) e `:108` (barra repetindo o percentual de garantia). O percentual de garantia (`:88,103`) tem dados e fórmula definidos, mas o escopo, “todas as ordens de serviço registradas, inclusive encerrados”, não aparece | 1b (barras saem; percentual fica com escopo) |
 | Total somado de entidades diferentes | TS `:89,121`: o valor exibido é clientes + produtos + usuários. Os três totais componentes já estão no detalhe (`:122`). É uma decisão de apresentação, não um defeito matemático | 1b |
-| Escopo implícito: `listBoard()` devolve todos os RMAs, de todo o período | `RmaController.java:57-63` → `RmaService.search(null, null)` sem filtro de status | 1b (texto do escopo) e backlog D2 |
-| “Fila” inclui RMAs encerrados | TS `:131-134` ordena `rmasSignal()` inteiro antes de limitar a cinco. Um RMA `COMPLETED` de prioridade alta e entrada antiga fica no topo. O indicador “Fila inicial” (`:84`) usa outro recorte com o mesmo nome | 1b |
-| Fila sem caminho até o RMA | HTML `:49-58` sem link. A rota `/rmas?rma=<id>` já existe (`pages/rmas/rmas.component.ts:951-960`; `shared/rma-detail-modal/rma-detail-modal.component.html:26`) | 1b |
-| Auditoria troca o autor pela nota | TS `:161` `detail: note || changedBy`. O detalhe do RMA usa “Status registrado: X”, “Alterado por” e a nota em bloco (`core/utils/rma-detail.ts:119-128`; `pages/rmas/rmas.component.html:321-333`) | 1b |
+| Escopo implícito: `listBoard()` devolve todas as ordens de serviço, de todo o período | `RmaController.java:57-63` → `RmaService.search(null, null)` sem filtro de status | 1b (texto do escopo) e backlog D2 |
+| “Fila” inclui ordens de serviço encerradas | TS `:131-134` ordena `rmasSignal()` inteiro antes de limitar a cinco. Um OS `COMPLETED` de prioridade alta e entrada antiga fica no topo. O indicador “Fila inicial” (`:84`) usa outro recorte com o mesmo nome | 1b |
+| Fila sem caminho até a OS | HTML `:49-58` sem link. A rota `/rmas?rma=<id>` já existe (`pages/rmas/rmas.component.ts:951-960`; `shared/rma-detail-modal/rma-detail-modal.component.html:26`) | 1b |
+| Auditoria troca o autor pela nota | TS `:161` `detail: note || changedBy`. O detalhe da OS usa “Status registrado: X”, “Alterado por” e a nota em bloco (`core/utils/rma-detail.ts:119-128`; `pages/rmas/rmas.component.html:321-333`) | 1b |
 | Tabelas do dashboard sem rolagem interna | HTML `:39,100`: `<table>` direto no painel | 1b |
 | Código duplicado e morto | TS `:217-224` duplica `compareRmasForQueue` (`core/utils/rma-ui.ts:131-138`). `latestStatusUpdate` (`:253-259`) não é usado | 1b |
 | Notificações com cabeçalho manual, abas sem painel associado e sem teclado | `pages/notifications/notifications.component.html:2-6,8-16`. A referência parcial com `aria-controls`/`tabpanel` está em `rmas.component.html:223-229` | 2b |
@@ -88,7 +88,7 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
 | Filtros da caixa sem cancelar a leitura anterior | TS `:210-218,288-297`: cada alternância assina outra vez, e uma resposta antiga pode sobrescrever a nova | 2a |
 | Vazio com filtro igual ao vazio real | HTML `:39-44`: com “Somente não lidas” marcado, mostra o mesmo “Nenhuma notificação.” | 2a |
 | Limite da caixa não informado | O servidor devolve até 100 notificações (`NotificationService.java:38,49-51`), enquanto o resumo conta todas as não lidas visíveis e não adiadas (`:58-61`; `NotificationRepository.java:35-43`) | 2a |
-| Uma ação primária por linha | HTML `:64`: “Abrir RMA” em `button-primary` em todas as notificações. O estudo pede título acionável (`:327`) e destaque menor para marcar como lida e adiar (`:177`) | 2b |
+| Uma ação primária por linha | HTML `:64`: “Abrir OS” em `button-primary` em todas as notificações. O estudo pede título acionável (`:327`) e destaque menor para marcar como lida e adiar (`:177`) | 2b |
 | Link mostrado para destino recusado | HTML `:63` testa só `actionPath`. Com URL externa, `open()` não navega (TS `:221-227`), mas o botão aparece | 2b |
 | Adiamento vencido aparece como ativo | HTML `:55-57` mostra “adiada até X” sempre que `snoozedUntil` existe. O servidor devolve como visível a notificação com `snoozedUntil <= now` (`NotificationRepository.java:24`) | 2b |
 | Sucesso de adiar sem o fim do adiamento | TS `:251` “Notificação adiada.”, embora a resposta traga `snoozedUntil` (`models.ts:345`) | 2b |
@@ -102,7 +102,7 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
 | Texto de implantação na rotina | HTML `:114` “sem nova implantação… domínio corporativo configurado no servidor” (estudo `:179`) | 4a |
 | Falha ao listar falhas vira “Nenhuma falha registrada.” | TS `:317` `error: () => this.failures.set([])`. HTML `:155-156` mostra o mesmo texto também durante a carga | 5 |
 | Origem e limite das falhas pouco explícitos | HTML `:174`: “E-mail” / “Evento”. O servidor traz até 50 falhas de eventos e até 50 de e-mail, combinadas e ordenadas (`NotificationRuleService.java:33,58-63`) | 5 |
-| Relatórios com cabeçalho manual e contagem com “(s)” | `pages/reports/reports.component.html:2,37` “RMA(s) consultado(s)” | 6 |
+| Relatórios com cabeçalho manual e contagem com “(s)” | `pages/reports/reports.component.html:2,37` “ordens de serviço consultadas” | 6 |
 | Período aplicado, status e cliente da consulta não aparecem | O servidor devolve `entryFrom`/`entryTo` normalizados (`RmaReportService.java:38-44`; `models.ts:517-522`), e o template não os usa. Depois de alterar o formulário sem consultar, nada diz a quais filtros os dados correspondem | 6 |
 | Tipo de relatório misturado aos filtros | HTML `:4-6`: o select está no formulário, mas `loadReports` não o usa (TS `:82`) e a troca é imediata. A dica `:20` (“Altere os filtros e clique em Consultar”) não vale para ele | 6 |
 | Erro de validação tratado como falha, com “Tentar novamente” | TS `:83-89` grava `errorMessage`. HTML `:31-35` mostra o mesmo alerta com nova tentativa, que repete a mesma validação | 6 |
@@ -113,7 +113,7 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
 
 ### Specs existentes e o que continua valendo
 
-- `pages/dashboard/dashboard.component.spec.ts:10-46` confere o fuso da auditoria (`.timeline-entry time`), a entrada civil (`tables[0] … td:nth-child(3)`) e o instante de “Últimos RMAs” (`tables[1] … td:last-child`). Ele continua passando se a Tarefa 1b mantiver três coisas: `li.timeline-entry` com `<time>`; a fila como primeira `<table>`, com Entrada na 3.ª coluna; e “Últimos RMAs” como segunda `<table>`, com Atualizado na última. O `.table-wrap` em volta não altera esses seletores. Mudança deliberada na 1b: incluir `provideRouter([])` nos providers, porque o template passa a usar `RouterLink`.
+- `pages/dashboard/dashboard.component.spec.ts:10-46` confere o fuso da auditoria (`.timeline-entry time`), a entrada civil (`tables[0] … td:nth-child(3)`) e o instante de “Últimas ordens de serviço” (`tables[1] … td:last-child`). Ele continua passando se a Tarefa 1b mantiver três coisas: `li.timeline-entry` com `<time>`; a fila como primeira `<table>`, com Entrada na 3.ª coluna; e “Últimas ordens de serviço” como segunda `<table>`, com Atualizado na última. O `.table-wrap` em volta não altera esses seletores. Mudança deliberada na 1b: incluir `provideRouter([])` nos providers, porque o template passa a usar `RouterLink`.
 - `pages/notifications/notifications.component.spec.ts`:
   - `:66-78` (lista, rótulo do evento, abertura) continua valendo. A asserção `not.toContain('Regras')` para TECHNICIAN obriga a caixa de entrada a não usar a palavra “Regras”.
   - `:80-84` (adiar 240) e `:86-96` (Silenciar/Obrigatório e payload) continuam valendo.
@@ -125,17 +125,17 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
 
 | Área | Decisão | Escopo declarado na tela |
 | --- | --- | --- |
-| Dashboard: RMAs em andamento | `RMAs em andamento: X de Y registrados`. A barra sai | `Y` = todos os RMAs devolvidos por `listBoard()`. Em andamento = status fora de `CLOSED_RMA_STATUSES` (cálculo atual `:83`) |
+| Dashboard: ordens de serviço em andamento | `ordens de serviço em andamento: X de Y registrados`. A barra sai | `Y` = todas as ordens de serviço devolvidas por `listBoard()`. Em andamento = status fora de `CLOSED_RMA_STATUSES` (cálculo atual `:83`) |
 | Dashboard: fila inicial | `Fila inicial (Recebido e Triagem): X · Y com prioridade alta` | Mesmo cálculo de `:84,113` |
-| Dashboard: garantia | Mantém o percentual atual (`P%`, mesma fórmula de `:88`) com o detalhe `X de Y itens · Z pendentes` e o escopo `em todos os RMAs registrados`. A barra sai | Itens de todos os RMAs registrados, inclusive encerrados, mesmo cálculo de `:85-88` |
+| Dashboard: garantia | Mantém o percentual atual (`P%`, mesma fórmula de `:88`) com o detalhe `X de Y itens · Z pendentes` e o escopo `em todas as ordens de serviço registradas`. A barra sai | Itens de todas as ordens de serviço registradas, inclusive encerrados, mesmo cálculo de `:85-88` |
 | Dashboard: cadastros | `Cadastros: X clientes · Y produtos` e, só para ADMIN, `· Z usuários`. Sem total somado | Totais dos endpoints de resumo atuais |
-| Dashboard: fila prioritária | Até 5 RMAs **em andamento**, ordenados por prioridade e entrada mais antiga (`compareRmasForQueue`), com link para `/rmas?rma=<id>` e a legenda `N primeiros de M RMAs em andamento` quando M > 5 | Corrige a inclusão de encerrados. Não muda a ordem nem o tamanho |
-| Dashboard: auditoria e últimos RMAs | Mantidos, com os mesmos 4 itens e a mesma ordenação. Códigos com link. A auditoria usa a linguagem do detalhe | Status registrados de todos os RMAs carregados |
+| Dashboard: fila prioritária | Até 5 ordens de serviço **em andamento**, ordenados por prioridade e entrada mais antiga (`compareRmasForQueue`), com link para `/rmas?rma=<id>` e a legenda `N primeiros de M ordens de serviço em andamento` quando M > 5 | Corrige a inclusão de encerrados. Não muda a ordem nem o tamanho |
+| Dashboard: auditoria e últimas Ordens de serviço | Mantidos, com os mesmos 4 itens e a mesma ordenação. Códigos com link. A auditoria usa a linguagem do detalhe | Status registrados de todas as ordens de serviço carregados |
 | Caixa de entrada | Aba `Caixa de entrada (N não lida[s])`, ou só `Caixa de entrada` com zero. Na lista: `Mostra até 100 notificações, das mais recentes, nos filtros selecionados.` | O contador é `unreadCount` do serviço, que exclui adiadas (`NotificationRepository.java:35-43`) e conserva o último valor conhecido (ver contrato de carga). O limite é `NotificationService.java:38` |
 | Falhas de processamento | `Até 50 falhas de eventos e até 50 falhas de envio de e-mail, da mais recente para a mais antiga.` | `NotificationRuleService.java:33,58-63` |
-| Relatórios | Cabeçalho com `N RMAs` consultados. O resumo da consulta traz período (do servidor), status, cliente e “Gerado em” | Resposta e valores submetidos, não o estado atual do formulário |
-| Tempo por etapa | Linha `X RMAs em andamento considerados · Y encerrados fora do cálculo` | `activeRmas().length` e `rmas().length - activeRmas().length`, sem fórmula nova |
-| Devoluções | `N RMAs devolvidos`, mais o texto do recorte e do período | `returns().length` |
+| Relatórios | Cabeçalho com `N ordens de serviço` consultados. O resumo da consulta traz período (do servidor), status, cliente e “Gerado em” | Resposta e valores submetidos, não o estado atual do formulário |
+| Tempo por etapa | Linha `X ordens de serviço em andamento considerados · Y encerrados fora do cálculo` | `activeRmas().length` e `rmas().length - activeRmas().length`, sem fórmula nova |
+| Devoluções | `N ordens de serviço devolvidas`, mais o texto do recorte e do período | `returns().length` |
 
 ## Quando recarregar dados
 
@@ -202,9 +202,9 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
   - Os indicadores continuam com o cálculo e os rótulos atuais nesta subtarefa. Só a visibilidade muda.
 
 - [ ] **Step 1: Escrever os testes novos**, com `setup({ role, board, clients, products, users })`:
-  - `shows no indicators or empty sections before the first response`: `board = new Subject()`. Esperar `text` com `'Carregando dashboard...'` e sem `'0%'`. **Reprova hoje:** `metrics` mostra `0%` (`:103`) durante a carga. Preservação dentro do teste: “Nenhum RMA na fila.” já não aparece durante a carga.
-  - `replaces the dashboard with a retryable failure`: parametrizar a falha em `listBoard`, `getClientSummary`, `getProductSummary` e, com `role: 'ADMIN'`, em `getUserSummary`, usando `throwError`. Esperar `'Não foi possível carregar o dashboard.'` e `'Tentar novamente'`, sem `'Nenhum RMA na fila.'`, `'Sem alterações recentes.'` ou `'0%'`. **Reprova hoje:** sem botão de nova tentativa, e os vazios aparecem (`html:33,69,94`). A mensagem de erro em si já existe (preservação).
-  - `retries the complete snapshot`: `listBoard` com `mockReturnValueOnce(throwError(...)).mockReturnValueOnce(subject)`. Clicar em “Tentar novamente”: `expect(retry.disabled).toBe(true)`, com o texto `Carregando...` e a falha ainda visível. Depois `subject.next([RMA_OPEN]); subject.complete()`: o alerta some, `RMA-OPEN` aparece, `listBoard` é chamado 2 vezes e `getClientSummary` também. **Reprova hoje:** não há nova tentativa.
+  - `shows no indicators or empty sections before the first response`: `board = new Subject()`. Esperar `text` com `'Carregando dashboard...'` e sem `'0%'`. **Reprova hoje:** `metrics` mostra `0%` (`:103`) durante a carga. Preservação dentro do teste: “Nenhuma OS na fila.” já não aparece durante a carga.
+  - `replaces the dashboard with a retryable failure`: parametrizar a falha em `listBoard`, `getClientSummary`, `getProductSummary` e, com `role: 'ADMIN'`, em `getUserSummary`, usando `throwError`. Esperar `'Não foi possível carregar o dashboard.'` e `'Tentar novamente'`, sem `'Nenhuma OS na fila.'`, `'Sem alterações recentes.'` ou `'0%'`. **Reprova hoje:** sem botão de nova tentativa, e os vazios aparecem (`html:33,69,94`). A mensagem de erro em si já existe (preservação).
+  - `retries the complete snapshot`: `listBoard` com `mockReturnValueOnce(throwError(...)).mockReturnValueOnce(subject)`. Clicar em “Tentar novamente”: `expect(retry.disabled).toBe(true)`, com o texto `Carregando...` e a falha ainda visível. Depois `subject.next([RMA_OPEN]); subject.complete()`: o alerta some, `OS-OPEN` aparece, `listBoard` é chamado 2 vezes e `getClientSummary` também. **Reprova hoje:** não há nova tentativa.
 
   **Preservação:** o spec existente de fuso e datas civis passa sem alteração. `listBoard()` é chamado uma vez, sem filtros. `getUserSummary` não é chamado para TECHNICIAN, SERVICE_DESK e VIEWER (já passa hoje).
 - [ ] **Step 2: Rodar e ver falhar** (comando do dashboard). Esperado: FAIL nas asserções marcadas.
@@ -228,28 +228,28 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
   - Remover o **import** de `MetricCard` (a definição em `core/models.ts:537` fica), a interface local `DashboardMetric`, a função local `compareRmasForQueue` e `latestStatusUpdate`, que não é usada.
 
 - [ ] **Step 1: Escrever os testes novos:**
-  - `keeps closed RMAs out of the priority queue and links each code`: `RMA_CLOSED` (`COMPLETED`, `HIGH`, entrada `2026-01-01`, id 9) e `RMA_OPEN` (`RECEIVED`, `MEDIUM`, id 2). Na primeira tabela: não contém `'RMA-CLOSED'`, o primeiro `a` tem `href="/rmas?rma=2"` e o título contém `'Fila prioritária'`. Com 7 RMAs ativos: `'5 primeiros de 7 RMAs em andamento'`. Só com encerrados: `'Nenhum RMA em andamento.'`. **Reprova hoje:** `queue` ordena todos os registros (`:131-134`), e não há link.
-  - `states indicator scope and keeps the warranty percentage`: ADMIN; um RMA ativo e um encerrado, com dois itens (`IN_WARRANTY`, `PENDING`); resumos `clients.total=3`, `products.total=4`, `users.total=2`. Ler cada `li` da lista `aria-label="Indicadores do dashboard"`:
-    - `RMAs em andamento` → `1 de 2 registrados`;
-    - `Itens em garantia` → `50%`, `1 de 2 itens · 1 pendente` e `em todos os RMAs registrados`;
+  - `keeps closed ordens de serviço out of the priority queue and links each code`: `RMA_CLOSED` (`COMPLETED`, `HIGH`, entrada `2026-01-01`, id 9) e `RMA_OPEN` (`RECEIVED`, `MEDIUM`, id 2). Na primeira tabela: não contém `'OS-CLOSED'`, o primeiro `a` tem `href="/rmas?rma=2"` e o título contém `'Fila prioritária'`. Com 7 ordens de serviço ativos: `'5 primeiras de 7 ordens de serviço em andamento'`. Só com encerrados: `'Nenhuma OS em andamento.'`. **Reprova hoje:** `queue` ordena todos os registros (`:131-134`), e não há link.
+  - `states indicator scope and keeps the warranty percentage`: ADMIN; uma OS ativo e um encerrado, com dois itens (`IN_WARRANTY`, `PENDING`); resumos `clients.total=3`, `products.total=4`, `users.total=2`. Ler cada `li` da lista `aria-label="Indicadores do dashboard"`:
+    - `ordens de serviço em andamento` → `1 de 2 registrados`;
+    - `Itens em garantia` → `50%`, `1 de 2 itens · 1 pendente` e `em todas as ordens de serviço registradas`;
     - `Cadastros` → `3 clientes · 4 produtos · 2 usuários`.
 
-    Também `root.querySelector('.meter')` é nulo. **Reprova hoje:** os rótulos “RMAs em andamento” e “Itens em garantia”, o escopo e o detalhe `1 de 2 itens · 1 pendente` não existem (`:93,102-104`), o valor de Cadastros é a soma `9` (`:121`) e há barras (`html:21`). O próprio `50%` já existe hoje (preservação).
-  - `describes audit events like the RMA history`: evento `{ status: 'TRIAGE', changedBy: 'ana', note: 'Aguardando peça' }`. A entrada tem `'Status registrado: Triagem'`, o par `Alterado por` → `ana`, a nota em `blockquote` e o código com `href="/rmas?rma=1"`. **Reprova hoje:** com nota, o autor desaparece (`:161`), e não há link.
-  - `keeps distinct audit entries for the same RMA`: dois eventos do RMA 1 (`RECEIVED` e `TRIAGE`, instantes diferentes). Esperar duas `li.timeline-entry`, ambas com `href="/rmas?rma=1"`. **Reprova hoje:** não há link. A presença das duas entradas já passa hoje (preservação, com chave por evento).
-  - `links recent RMAs`: em “Últimos RMAs”, `a[href="/rmas?rma=1"]` tem o código. **Reprova hoje:** sem link.
+    Também `root.querySelector('.meter')` é nulo. **Reprova hoje:** os rótulos “ordens de serviço em andamento” e “Itens em garantia”, o escopo e o detalhe `1 de 2 itens · 1 pendente` não existem (`:93,102-104`), o valor de Cadastros é a soma `9` (`:121`) e há barras (`html:21`). O próprio `50%` já existe hoje (preservação).
+  - `describes audit events like the OS history`: evento `{ status: 'TRIAGE', changedBy: 'ana', note: 'Aguardando peça' }`. A entrada tem `'Status registrado: Triagem'`, o par `Alterado por` → `ana`, a nota em `blockquote` e o código com `href="/rmas?rma=1"`. **Reprova hoje:** com nota, o autor desaparece (`:161`), e não há link.
+  - `keeps distinct audit entries for the same OS`: dois eventos da OS 1 (`RECEIVED` e `TRIAGE`, instantes diferentes). Esperar duas `li.timeline-entry`, ambas com `href="/rmas?rma=1"`. **Reprova hoje:** não há link. A presença das duas entradas já passa hoje (preservação, com chave por evento).
+  - `links recent ordens de serviço`: em “Últimas ordens de serviço”, `a[href="/rmas?rma=1"]` tem o código. **Reprova hoje:** sem link.
 
-  **Preservação:** ordem da fila por prioridade e entrada; auditoria com os 4 eventos mais recentes; últimos RMAs com os 4 de `updatedAt` mais recente, encerrados incluídos como hoje; responsável vazio como “Sem responsável” com avatar `–`; sem “usuários” na linha de cadastros para perfis que não são ADMIN; spec existente com `provideRouter([])`.
+  **Preservação:** ordem da fila por prioridade e entrada; auditoria com os 4 eventos mais recentes; últimas ordens de serviço com os 4 de `updatedAt` mais recente, encerrados incluídos como hoje; responsável vazio como “Sem responsável” com avatar `–`; sem “usuários” na linha de cadastros para perfis que não são ADMIN; spec existente com `provideRouter([])`.
 - [ ] **Step 2: Rodar e ver falhar.** Esperado: FAIL nas asserções marcadas.
 - [ ] **Step 3: Implementar.**
-  - Cabeçalho `<app-page-header heading="Dashboard" singular="RMA" plural="RMAs" />`, sem contagem, porque o dashboard não é uma coleção.
+  - Cabeçalho `<app-page-header heading="Dashboard" singular="OS" plural="ordens de serviço" />`, sem contagem, porque o dashboard não é uma coleção.
   - Indicadores em `<ul class="dashboard-summary" aria-label="Indicadores do dashboard">`: uma linha com ícone, rótulo, valor e detalhe. CSS local com tokens, sem `.stat-card` nem `.meter`.
-  - Fila prioritária: filtrar `!CLOSED_RMA_STATUSES.includes(status)` antes de `sort(compareRmasForQueue)` e manter `slice(0, 5)` e as colunas RMA, Cliente, Entrada, Status. A legenda de escopo fica abaixo do título.
+  - Fila prioritária: filtrar `!CLOSED_RMA_STATUSES.includes(status)` antes de `sort(compareRmasForQueue)` e manter `slice(0, 5)` e as colunas OS, Cliente, Entrada, Status. A legenda de escopo fica abaixo do título.
   - Auditoria: manter `li.timeline-entry` com `track event.id` e `<time>`. Título “Status registrado: X”, par `Alterado por` em `.meta-list` e nota em `blockquote` quando existir.
   - Links: `<a class="code-text" routerLink="/rmas" [queryParams]="{ rma: id }">` (ou `rmaId`).
   - Envolver as duas tabelas em `.table-wrap` e dar `min-width: 0` aos painéis da grade, preservando a rolagem interna.
 - [ ] **Step 4: Repetir o comando.** Esperado: todos PASS.
-- [ ] **Step 5: Commit.** `git add` dos quatro **Files**. `git commit -m "feat(dashboard): indicadores com escopo, fila em andamento e navegacao ao RMA (NAV-98)"`.
+- [ ] **Step 5: Commit.** `git add` dos quatro **Files**. `git commit -m "feat(dashboard): indicadores com escopo, fila em andamento e navegacao à OS (NAV-98)"`.
 
 ### Task 2a: Caixa de entrada — carga, falha, cancelamento e vazios
 
@@ -270,7 +270,7 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
 
 - [ ] **Step 1: Escrever os testes novos:**
   - `replaces the inbox with a retryable failure instead of an empty state`: `list` com `throwError`. Esperar `'Não foi possível carregar as notificações.'` e `'Tentar novamente'`, sem `'Nenhuma notificação.'`. **Reprova hoje:** o estado vazio aparece junto com o banner (`html:39-44`).
-  - `hides the previous list when a filter reload fails`: primeiro `of([NOTIFICATION])`, depois `throwError`. Marcar “Somente não lidas”: o título `'RMA RMA-2026-000007 atribuído a Técnico'` não aparece. Clicar em “Tentar novamente”: `list` foi chamado por último com `{ unreadOnly: true, includeSnoozed: false }`. **Reprova hoje:** a lista antiga continua (`:293-294`).
+  - `hides the previous list when a filter reload fails`: primeiro `of([NOTIFICATION])`, depois `throwError`. Marcar “Somente não lidas”: o título `'OS OS-2026-000007 atribuído a Técnico'` não aparece. Clicar em “Tentar novamente”: `list` foi chamado por último com `{ unreadOnly: true, includeSnoozed: false }`. **Reprova hoje:** a lista antiga continua (`:293-294`).
   - `starts a first load after a filter change, even after a failure`: o primeiro `list` falha. Configurar `Subject` pendente e marcar “Mostrar adiadas”. Esperar `'Carregando notificações...'`, sem `'Não foi possível carregar as notificações.'`. Repetir com um sucesso anterior: o título antigo não aparece. **Reprova hoje:** a condição `loading() && notifications().length === 0` (`html:37`) mantém a lista antiga, e o banner de erro continua.
   - `keeps the failure while retrying the same filters`: com falha inicial e `Subject` na nova tentativa, o botão fica desabilitado com `Carregando...` e a mensagem de falha continua. **Reprova hoje:** não há nova tentativa.
   - `keeps only the latest inbox response`: `list` devolve `first` (construção) e depois `second` (toggle). `expect(first.observed).toBe(false)`. Emitir `second` com `NEW` e depois tentar `first` com `OLD`: `NEW` aparece e `OLD` não. **Reprova hoje:** a assinatura anterior não é cancelada (`:288-297`).
@@ -300,7 +300,7 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
   - `protected onTabKeydown(event: KeyboardEvent): void`, conforme o contrato de abas nas restrições globais.
 
 - [ ] **Step 1: Escrever os testes novos:**
-  - `opens the RMA from the notification title`: com `actionPath: '/rmas?rma=7'`, o título é um `button.link-button` com o texto do título. O clique chama `markRead(5)` e `navigate(['/rmas'], { queryParams: { rma: '7' } })`. Nenhum `.button-primary` no item. Com `actionPath: 'https://externo'`, nenhum botão de abertura aparece e o título é texto. **Reprova hoje:** existe “Abrir RMA” primário em cada linha, inclusive para URL externa (`html:63-64`). Preservação: `open()` marca como lida e navega por rota interna (`:220-228`).
+  - `opens the OS from the notification title`: com `actionPath: '/rmas?rma=7'`, o título é um `button.link-button` com o texto do título. O clique chama `markRead(5)` e `navigate(['/rmas'], { queryParams: { rma: '7' } })`. Nenhum `.button-primary` no item. Com `actionPath: 'https://externo'`, nenhum botão de abertura aparece e o título é texto. **Reprova hoje:** existe “Abrir OS” primário em cada linha, inclusive para URL externa (`html:63-64`). Preservação: `open()` marca como lida e navega por rota interna (`:220-228`).
   - `marks only active snoozes`: com `clock` em `2026-10-24T13:00:00Z` e `snoozedUntil: '2026-10-24T16:00:00Z'`, aparece `'Adiada até 24/10/2026, 13:00'`. Com `clock.set(Date.parse('2026-10-24T16:00:00Z'))` (o instante exato do vencimento) e `detectChanges()`, o texto `/adiada até/i` desaparece. Com `snoozedUntil: '2026-10-24T12:30:00Z'`, ele não aparece. **Reprova hoje:** o adiamento vencido aparece (`html:55-57`).
   - `confirms when the snooze ends`: `snooze` devolve `{ ...NOTIFICATION, snoozedUntil: '2026-10-24T16:00:00Z' }`. Aparece `role="status"` com `'Notificação adiada até 24/10/2026, 13:00.'`. **Reprova hoje:** a mensagem é “Notificação adiada.” (`:251`). A recarga depois de adiar é preservação.
   - `states that marking all includes snoozed`: o sucesso mostra `'Todas as notificações, inclusive as adiadas, foram marcadas como lidas.'`. **Reprova hoje:** `:239`.
@@ -337,9 +337,9 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
 
 - [ ] **Step 1: Escrever os testes novos:**
   - `labels each preference with one of four states`: cinco preferências (recebendo; silenciado; `enabled: false`; `userMutable: false, muted: true`; `userMutable: false, muted: false`). A coluna `Situação` mostra `['Recebendo', 'Silenciado', 'Desativado pela administração', 'Obrigatório', 'Obrigatório']`. **Reprova hoje:** o quarto mostra “Silenciado” e o quinto “Recebendo” (`html:96`), e o rótulo de desativado é “Regra desativada”.
-  - `names the preference action with its alert`: o botão da primeira linha tem `aria-label="Silenciar Novo RMA"`, e o da segunda `'Reativar …'`. **Reprova hoje:** o nome acessível é só “Silenciar” (`html:99`). A ausência de botão nas linhas obrigatórias já passa hoje (preservação).
-  - `confirms the change in a status message`: depois de `toggleMute`, `role="status"` contém `'Novo RMA silenciado.'`. **Reprova hoje:** não há mensagem (`:257-259`).
-  - `does not show an empty table while loading or after failure`: com `Subject` pendente, aparece `'Carregando preferências...'` e nenhuma `table`. Com `throwError`, aparecem `'Não foi possível carregar as preferências.'` e `'Tentar novamente'`, sem `table`. Falha depois de sucesso: abrir Preferências com `of(PREFERENCES)`, voltar para a Caixa, configurar `throwError` e abrir de novo; `'Novo RMA'` não aparece. A nova tentativa chama `listPreferences` mais uma vez. **Reprova hoje:** a tabela aparece durante a carga e mantém as linhas antigas depois da falha (`html:78-110`).
+  - `names the preference action with its alert`: o botão da primeira linha tem `aria-label="Silenciar Nova OS"`, e o da segunda `'Reativar …'`. **Reprova hoje:** o nome acessível é só “Silenciar” (`html:99`). A ausência de botão nas linhas obrigatórias já passa hoje (preservação).
+  - `confirms the change in a status message`: depois de `toggleMute`, `role="status"` contém `'Nova OS silenciado.'`. **Reprova hoje:** não há mensagem (`:257-259`).
+  - `does not show an empty table while loading or after failure`: com `Subject` pendente, aparece `'Carregando preferências...'` e nenhuma `table`. Com `throwError`, aparecem `'Não foi possível carregar as preferências.'` e `'Tentar novamente'`, sem `table`. Falha depois de sucesso: abrir Preferências com `of(PREFERENCES)`, voltar para a Caixa, configurar `throwError` e abrir de novo; `'Nova OS'` não aparece. A nova tentativa chama `listPreferences` mais uma vez. **Reprova hoje:** a tabela aparece durante a carga e mantém as linhas antigas depois da falha (`html:78-110`).
   - `shows an empty preference list`: com `of([])`, aparece `'Nenhuma preferência disponível.'`, sem `table`. **Reprova hoje:** a tabela aparece com cabeçalho e corpo vazio.
 
   **Preservação:** spec existente `:86-96` (Silenciar, Obrigatório e `updatePreference('RMA_CREATED', true)`). Uma preferência desativada e silenciável continua com o botão, porque o servidor aceita (`NotificationService.java:93-111`). O texto explicativo `:80` continua. O erro de `updatePreference` mantém a linha e mostra o alerta. VIEWER vê e altera as próprias preferências.
@@ -360,7 +360,7 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
 - Produces:
   - Os signals `rulesLoading`, `rulesLoadFailed`, `rulesHasLoaded` e `rulesLoadErrorMessage`.
   - `protected retryRules(): void`.
-  - `protected recipientsSummary(rule): string`, que produz `'Administrador, Atendimento + responsável pelo RMA'` ou, sem perfis nem responsável, `'Nenhum destinatário'` (só o fato, sem aviso nem validação).
+  - `protected recipientsSummary(rule): string`, que produz `'Administrador, Atendimento + responsável pela OS'` ou, sem perfis nem responsável, `'Nenhum destinatário'` (só o fato, sem aviso nem validação).
   - A edição imediata (`updateRule(rule, change)`, `toggleRole`, `updateSeverity`) sai do template nesta subtarefa. Os métodos ficam no TS até a 4b, que os remove. Por isso, nesta subtarefa não há como editar regras pela tela. A 4a e a 4b devem ser entregues juntas na mesma série de commits, sem publicar entre elas.
 
 - [ ] **Step 1: Escrever os testes novos:**
@@ -371,7 +371,7 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
     | `Alerta` | `SLA vencido` |
     | `Situação` | `Ativa` |
     | `Severidade` | `Crítico` |
-    | `Destinatários` | `Administrador + responsável pelo RMA` |
+    | `Destinatários` | `Administrador + responsável pela OS` |
     | `E-mail` | `Não` |
     | `Silenciável` | `Não` |
     | `Atualização` | `24/10/2026, 09:00 por admin` |
@@ -416,7 +416,7 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
   **Preservação:** a severidade alterada no select vai no payload; desmarcar Ativa envia `enabled: false`; a regra não ganha validação nova; a explicação do e-mail fica junto do checkbox, `'Somente endereços do domínio corporativo configurado.'`; só ADMIN acessa.
 - [ ] **Step 2: Rodar e ver falhar.** Esperado: FAIL nas novas asserções.
 - [ ] **Step 3: Implementar** o diálogo com o padrão de `users.component.html:147-235`: `modal-overlay`, `section role="dialog" aria-modal="true" aria-labelledby`, Fechar e overlay desabilitados durante a gravação.
-  - Dentro, `form.form-grid` com três `fieldset.form-section`: **Entrega** (Ativa, Severidade), **Destinatários** (perfis e “Notificar o responsável pelo RMA”) e **E-mail e silenciamento** (“Enviar também por e-mail”, “Permitir que cada usuário silencie”).
+  - Dentro, `form.form-grid` com três `fieldset.form-section`: **Entrega** (Ativa, Severidade), **Destinatários** (perfis e “Notificar o responsável pela OS”) e **E-mail e silenciamento** (“Enviar também por e-mail”, “Permitir que cada usuário silencie”).
   - Introdução: `'Vale para os próximos eventos.'`.
   - Rodapé `.form-actions--full`: Cancelar (`type="button"`) à esquerda de “Salvar regra” (`type="submit"`).
   - O foco global continua no backlog F1.
@@ -480,19 +480,19 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
   - `shows period validation beside the dates without a retry`: `entryFrom > entryTo` e `loadReports()`. `#report-period-error` contém `'A data inicial deve ser anterior ou igual à data final.'`. Nos gatilhos `[aria-label="Data inicial de entrada"]` e `[aria-label="Data final de entrada"]`, a lista de ids em `aria-describedby` (separada por espaço) contém `report-period-help` e `report-period-error`, os dois existem no DOM, e `aria-invalid="true"`. Nenhum botão `Tentar novamente`. Repetir com 367 dias. **Reprova hoje:** a validação aparece como falha com nova tentativa (`html:31-35`), e os seletores não têm descrição. O texto da mensagem e o `expectNone` já passam hoje (preservação).
   - `switches report type in tabs without a new query`: existem as abas `['Laudo técnico', 'Tempo por etapa', 'Garantia por produto', 'Devoluções']`. Clicar em `Garantia por produto` dá `aria-selected="true"`, o painel `role="tabpanel"` mostra `Garantia por produto` e `http.expectNone(...)` vale. O formulário não contém `Tipo de relatório`. **Reprova hoje:** é um select dentro do formulário. A troca programática sem HTTP já existe (preservação).
   - `moves between report tabs with the keyboard`: ArrowRight no Laudo seleciona e foca Tempo por etapa, e `form.controls.report.value === 'aging'`. End vai para Devoluções e Home para Laudo. Só a aba ativa tem `tabindex="0"`. Nenhuma requisição nova. **Reprova hoje:** não há abas.
-  - `counts consulted RMAs in the heading`: com 1 RMA, `.page-heading__count` é `1 RMA`; com 2, `2 RMAs`. A contagem não aparece durante a carga nem na falha. `'RMA(s)'` não aparece. **Reprova hoje:** `html:37`.
+  - `counts consulted ordens de serviço in the heading`: com 1 OS, `.page-heading__count` é `1 OS`; com 2, `2 ordens de serviço`. A contagem não aparece durante a carga nem na falha. `'ordens de serviço'` não aparece. **Reprova hoje:** `html:37`.
 
   **Preservação:** todo o `reports.component.spec.ts` existente. A falha do servidor mantém “Tentar novamente”. A consulta inválida continua sem HTTP e oculta o resultado anterior, como `:134` exige.
 - [ ] **Step 2: Rodar e ver falhar** (comando de relatórios). Esperado: FAIL nas asserções marcadas.
 - [ ] **Step 3: Implementar.**
-  - `<app-page-header heading="Relatórios" singular="RMA" plural="RMAs" [count]="report() && !loading() ? rmas().length : null" />`.
-  - O formulário fica com quatro filtros e Consultar. A dica do formulário vira a ajuda `#report-period-help`: `'Período pela data de entrada do RMA, até 366 dias.'`.
+  - `<app-page-header heading="Relatórios" singular="OS" plural="ordens de serviço" [count]="report() && !loading() ? rmas().length : null" />`.
+  - O formulário fica com quatro filtros e Consultar. A dica do formulário vira a ajuda `#report-period-help`: `'Período pela data de entrada da OS, até 366 dias.'`.
   - O resumo `.meta-list` fica acima das abas, seguido de `'Consulte novamente para atualizar.'`.
   - Manter `aria-live` e `aria-busy` no bloco de resultados. Não criar botão de exportação.
 - [ ] **Step 4: Repetir o comando.** Esperado: todos PASS.
 - [ ] **Step 5: Commit.** `git add` dos quatro **Files**. `git commit -m "feat(relatorios): consulta aplicada, abas com teclado e validacao junto do periodo (NAV-98)"`.
 
-### Task 7: Laudo técnico como documento estruturado por RMA
+### Task 7: Laudo técnico como documento estruturado por OS
 
 **Files:**
 - Modify: `frontend/src/app/pages/reports/reports.component.html` (caso `technical`).
@@ -501,7 +501,7 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
 
 **Interfaces:**
 - Consumes: `rmas()`, `failureLabels`, `causeLabels`, `formatDate` e `statusLabels`. Nenhuma propriedade nova no TS.
-- Produces: um `<article aria-labelledby>` por RMA, com `h3` (código e cliente) e `.meta-list` com Status e Entrada. Seções `h4`:
+- Produces: um `<article aria-labelledby>` por OS, com `h3` (código e cliente) e `.meta-list` com Status e Entrada. Seções `h4`:
   - **Produtos:** tabela em `.table-wrap` com Produto, SKU, Série, Lote, e `Não informada`/`Não informado` nas ausências.
   - **Falha relatada.**
   - **Diagnóstico:** falha encontrada e os pares Tipo, Causa provável, Técnico, Data do diagnóstico e Notas, com os rótulos de `rma-detail.ts:82-95`; ou `Diagnóstico pendente`.
@@ -509,7 +509,7 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
   - As ausências mantêm os textos atuais do relatório (`Não informado`, `Não informada`, `Sem observações`, `Não informadas`, `Não informados`).
 
 - [ ] **Step 1: Escrever os testes novos:**
-  - `renders one structured document per RMA`: com 2 RMAs, há dois `article` com `h3` contendo `RMA-REAL` e o segundo código. Cada um tem os `h4` `['Produtos', 'Falha relatada', 'Diagnóstico', 'Reparo e testes']`. **Reprova hoje:** há uma tabela de quatro colunas (`html:45-77`).
+  - `renders one structured document per OS`: com 2 ordens de serviço, há dois `article` com `h3` contendo `OS-REAL` e o segundo código. Cada um tem os `h4` `['Produtos', 'Falha relatada', 'Diagnóstico', 'Reparo e testes']`. **Reprova hoje:** há uma tabela de quatro colunas (`html:45-77`).
   - `separates product identification in columns`: a tabela de produtos tem os cabeçalhos `['Produto', 'SKU', 'Série', 'Lote']`, e a linha 1 é `Controlador | SKU-1 | SER-A | LOTE-A`. Com `serialNumber: null`, a célula Série é `Não informada`. **Reprova hoje:** a identificação é concatenada (`html:54`).
   - `uses the detail labels and separates technician and date`: os pares `Técnico` → `Técnico Alfa`, `Data do diagnóstico` → `20/10/2026`, `Causa provável` → rótulo de `INCORRECT_USAGE`, `Notas` → `Inspeção visual` e `Peças trocadas` → `Conector USB`. **Reprova hoje:** `html:64` mostra `Técnico Alfa · 20/10/2026`, e os rótulos são “Causa”, “Observações” e “Peças”.
 
@@ -517,7 +517,7 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
 - [ ] **Step 2: Rodar e ver falhar.**
 - [ ] **Step 3: Implementar** só o caso `technical`, com os documentos empilhados e `--space-4` entre eles. Nenhum dado novo.
 - [ ] **Step 4: Repetir o comando.** Esperado: todos PASS.
-- [ ] **Step 5: Commit.** `git add` dos três **Files**. `git commit -m "feat(relatorios): laudo tecnico como documento por RMA (NAV-98)"`.
+- [ ] **Step 5: Commit.** `git add` dos três **Files**. `git commit -m "feat(relatorios): laudo tecnico como documento por OS (NAV-98)"`.
 
 ### Task 8: Garantia por produto com campos distintos
 
@@ -531,14 +531,14 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
   - Compra: `purchaseFact(rma).value`. Dá `Desconhecida` quando `purchaseDateUnknown`, `Não informada` quando nula, ou a data.
   - Vencimento: `warrantyExpiryLabel(item).value`. Dá `Sem data da compra` quando nulo, o que equivale a compra ausente ou desconhecida (`ItemWarranty.java:8-9`).
   - Prazo: `warrantyTermLabel(item.warrantyMonths)`, que devolve `1 mês` ou `N meses`.
-- Produces: colunas `RMA`, `Cliente`, `Produto` (nome e SKU), `Série`, `Lote`, `Compra`, `Entrada`, `Prazo`, `Vencimento`, `Situação`, em `.table-wrap`. A situação continua texto de `WARRANTY_STATUS_LABELS`.
+- Produces: colunas `OS`, `Cliente`, `Produto` (nome e SKU), `Série`, `Lote`, `Compra`, `Entrada`, `Prazo`, `Vencimento`, `Situação`, em `.table-wrap`. A situação continua texto de `WARRANTY_STATUS_LABELS`.
 
 - [ ] **Step 1: Escrever os testes novos:**
   - `separates purchase and entry`: os cabeçalhos incluem `Compra` e `Entrada` separados, e a linha tem `20/10/2025` e `20/10/2026`. **Reprova hoje:** `Compra / Entrada` (`html:115`).
   - `keeps unknown purchase pending with explicit labels`: `purchaseDateUnknown: true, purchaseDate: null`, item `PENDING` com `warrantyExpiresAt: null`. `Compra` → `Desconhecida`, `Vencimento` → `Sem data da compra`, `Situação` → `Pendente`. **Reprova hoje:** a compra e o vencimento aparecem como `Não informado`. `Pendente` já passa hoje (preservação).
   - `uses the singular month`: com `warrantyMonths: 1`, `Prazo` é `1 mês`. **Reprova hoje:** `1 meses`.
 
-  **Preservação:** uma linha por item, inclusive itens repetidos do mesmo RMA (spec `:82-93`); `Em garantia` e `Fora de garantia`; vencimento `20/04/2026`; o texto `Cálculo automático na data de entrada, sem override manual. Compra desconhecida mantém a garantia pendente.`. Nenhum cálculo de prazo no cliente. Os testes dos helpers (`rma-detail.spec.ts:51-65`) não são recriados.
+  **Preservação:** uma linha por item, inclusive itens repetidos do mesma OS (spec `:82-93`); `Em garantia` e `Fora de garantia`; vencimento `20/04/2026`; o texto `Cálculo automático na data de entrada, sem override manual. Compra desconhecida mantém a garantia pendente.`. Nenhum cálculo de prazo no cliente. Os testes dos helpers (`rma-detail.spec.ts:51-65`) não são recriados.
 - [ ] **Step 2: Rodar e ver falhar.**
 - [ ] **Step 3: Implementar** só o caso `warranty`.
 - [ ] **Step 4: Repetir o comando.** Esperado: todos PASS.
@@ -553,16 +553,16 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
 **Interfaces:**
 - Consumes: `activeRmas()`, `aging()`, `returns()`, `duration()` e `formatInstant()`, sem mudança de cálculo.
 - Produces:
-  - **Tempo por etapa:** título `Tempo por etapa atual`. Linha de escopo `X RMAs em andamento considerados · Y encerrados fora do cálculo`, com `Y` = `rmas().length - activeRmas().length` e o trecho de `Y` omitido quando zero. Cabeçalhos do resumo: `Etapa`, `RMAs`, `Tempo médio na etapa`, `Maior tempo na etapa`. Cabeçalhos do detalhe: `RMA`, `Cliente`, `Etapa`, `Início na etapa (São Paulo)`, `Tempo decorrido`. As tabelas ficam em `.table-wrap`.
-  - **Devoluções:** `N RMAs devolvidos` e o texto `'Somente RMAs com status atual Devolvido. O período filtra a data de entrada do RMA, não a data de expedição.'`. Colunas `RMA`, `Cliente`, `Entrada`, `Expedição`, `Transportadora`, `Rastreio`.
+  - **Tempo por etapa:** título `Tempo por etapa atual`. Linha de escopo `X ordens de serviço em andamento considerados · Y encerrados fora do cálculo`, com `Y` = `rmas().length - activeRmas().length` e o trecho de `Y` omitido quando zero. Cabeçalhos do resumo: `Etapa`, `ordens de serviço`, `Tempo médio na etapa`, `Maior tempo na etapa`. Cabeçalhos do detalhe: `OS`, `Cliente`, `Etapa`, `Início na etapa (São Paulo)`, `Tempo decorrido`. As tabelas ficam em `.table-wrap`.
+  - **Devoluções:** `N ordens de serviço devolvidas` e o texto `'Somente ordens de serviço com status atual Devolvido. O período filtra a data de entrada da OS, não a data de expedição.'`. Colunas `OS`, `Cliente`, `Entrada`, `Expedição`, `Transportadora`, `Rastreio`.
 
 - [ ] **Step 1: Escrever os testes novos:**
-  - `states how many closed RMAs were left out`: com 2 ativos e 1 encerrado, aparece `'2 RMAs em andamento considerados · 1 encerrado fora do cálculo'`, e o título do painel é `Tempo por etapa atual`. **Reprova hoje:** só o texto genérico, com título “Aging” (`html:82-83`).
-  - `labels average and maximum per stage`: os cabeçalhos do resumo são `['Etapa', 'RMAs', 'Tempo médio na etapa', 'Maior tempo na etapa']`. **Reprova hoje:** `Quantidade`, `Tempo médio`, `Maior tempo`.
-  - `explains the return scope and period inside the panel`: o `tabpanel` de Devoluções contém `'O período filtra a data de entrada do RMA, não a data de expedição.'` e `'1 RMA devolvido'`. **Reprova hoje:** o período só aparece no formulário.
-  - `separates RMA and client in both tables`: a coluna `Cliente` tem `Cliente Alfa` separado do código. **Reprova hoje:** `RMA / Cliente`.
+  - `states how many closed ordens de serviço were left out`: com 2 ativos e 1 encerrado, aparece `'2 ordens de serviço em andamento considerados · 1 encerrado fora do cálculo'`, e o título do painel é `Tempo por etapa atual`. **Reprova hoje:** só o texto genérico, com título “Aging” (`html:82-83`).
+  - `labels average and maximum per stage`: os cabeçalhos do resumo são `['Etapa', 'ordens de serviço', 'Tempo médio na etapa', 'Maior tempo na etapa']`. **Reprova hoje:** `Quantidade`, `Tempo médio`, `Maior tempo`.
+  - `explains the return scope and period inside the panel`: o `tabpanel` de Devoluções contém `'O período filtra a data de entrada da OS, não a data de expedição.'` e `'1 OS devolvida'`. **Reprova hoje:** o período só aparece no formulário.
+  - `separates OS and client in both tables`: a coluna `Cliente` tem `Cliente Alfa` separado do código. **Reprova hoje:** `OS / Cliente`.
 
-  **Preservação:** `[data-stage="IN_DIAGNOSIS"]` com `2`, `3h 0min` e `4h 0min` (spec `:95-105`); `RMA-CLOSED` ausente; o vazio de ativos mantém um caso próprio (`Nenhum RMA em andamento nos filtros selecionados.`); devoluções sem `RMA-REAL` (`:107-117`); `Não informada` e `Não informado` para transportadora e rastreio; `Nenhuma devolução nos filtros selecionados.`.
+  **Preservação:** `[data-stage="IN_DIAGNOSIS"]` com `2`, `3h 0min` e `4h 0min` (spec `:95-105`); `OS-CLOSED` ausente; o vazio de ativos mantém um caso próprio (`Nenhuma OS em andamento nos filtros selecionados.`); devoluções sem `OS-REAL` (`:107-117`); `Não informada` e `Não informado` para transportadora e rastreio; `Nenhuma devolução nos filtros selecionados.`.
 - [ ] **Step 2: Rodar e ver falhar.**
 - [ ] **Step 3: Implementar** só os dois casos, sem gráfico.
 - [ ] **Step 4: Repetir o comando.** Esperado: todos PASS.
@@ -587,7 +587,7 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
   ```powershell
   Get-ChildItem frontend/src/app/pages/dashboard,frontend/src/app/pages/notifications,frontend/src/app/pages/reports -File |
     Where-Object { $_.Name -match '\.component\.(html|ts)$' } |
-    Select-String -Pattern 'RMA\(s\)','consultado\(s\)','stat-card','class="meter','Aging','Exportar','Regra desativada','title\]="severityLabels','icon="edit"'
+    Select-String -Pattern 'OS\(s\)','consultado\(s\)','stat-card','class="meter','Aging','Exportar','Regra desativada','title\]="severityLabels','icon="edit"'
   ```
   Esperado: nenhuma ocorrência. `Consulta em tela.` continua no template.
 - [ ] **Step 4: Relatar limites.** A conferência autenticada não foi feita. Testes e build não substituem o roteiro abaixo. F1 continua aberto.
@@ -595,13 +595,13 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
 ## Critérios de aceite
 
 1. O dashboard não mostra zeros nem vazios antes do primeiro sucesso ou depois de uma falha, e tem “Tentar novamente”. Os indicadores dizem o que contam e sobre qual conjunto. O percentual de garantia continua, com numerador, denominador, pendentes e escopo. Não há barras decorativas nem total somado de entidades diferentes.
-2. A fila prioritária contém só RMAs em andamento, na ordem atual, e cada código leva a `/rmas?rma=<id>`. A auditoria mostra status, autor, instante e nota separados, com uma entrada por evento.
+2. A fila prioritária contém só ordens de serviço em andamento, na ordem atual, e cada código leva a `/rmas?rma=<id>`. A auditoria mostra status, autor, instante e nota separados, com uma entrada por evento.
 3. Caixa, preferências, regras e falhas têm carga, falha com nova tentativa e vazio próprios (“Nenhuma preferência disponível.”, “Nenhuma regra disponível.”). A resposta antiga da caixa não substitui a atual. A troca de filtro inicia uma primeira carga. O vazio com filtro oferece “Mostrar todas”. Os limites de 100 notificações e de 50 + 50 falhas aparecem na tela.
 4. Cada notificação tem um título acionável só quando o destino é interno. Marcar como lida e adiar são secundárias. O adiamento ativo é identificado e o vencido não aparece. O sucesso de adiar informa o fim. As abas funcionam por teclado.
 5. Cada preferência mostra exatamente uma situação: Recebendo, Silenciado, Desativado pela administração ou Obrigatório, com a precedência definida e sem prometer entrega.
 6. As regras são lidas num resumo (inclusive “Nenhum destinatário”) e editadas num formulário em seções, com Cancelar à esquerda, numa única gravação confirmada, com os mesmos seis campos e o mesmo conjunto de destinatários. Cancelar não grava. A gravação pendente não duplica nem fecha. Abrir outra regra não herda valores.
-7. Os relatórios mostram período (do servidor), status, cliente, instante de geração e contagem de RMAs. A validação de período fica junto das datas, com ajuda e erro associados, sem nova tentativa. O tipo de relatório fica em abas com teclado, sem nova consulta.
-8. O laudo é um documento por RMA, com os rótulos do detalhe. Garantia, tempo por etapa e devoluções separam os campos e explicam o escopo. Regras, cálculos e textos preservados continuam valendo.
+7. Os relatórios mostram período (do servidor), status, cliente, instante de geração e contagem de ordens de serviço. A validação de período fica junto das datas, com ajuda e erro associados, sem nova tentativa. O tipo de relatório fica em abas com teclado, sem nova consulta.
+8. O laudo é um documento por OS, com os rótulos do detalhe. Garantia, tempo por etapa e devoluções separam os campos e explicam o escopo. Regras, cálculos e textos preservados continuam valendo.
 9. Cada tarefa ou subtarefa tem um commit próprio, testes novos com o vermelho identificado, preservação separada, suíte e build passando com a saída relatada. Backend, contratos, rotas, `core`, `shared` e CSS global ficam sem alteração.
 
 ## Roteiro manual para o usuário
@@ -611,8 +611,8 @@ Backend em `localhost:8080`, frontend com `npm --prefix frontend start -- --port
 1. **Dashboard, ADMIN:**
    - A linha de indicadores tem escopo legível, e o percentual de garantia aparece com `X de Y itens · Z pendentes`.
    - Cadastros mostra os três totais separados.
-   - A fila prioritária não tem RMA concluído, devolvido ou irreparável.
-   - Abrir um código da fila, da auditoria e de Últimos RMAs: o RMA certo abre na lista.
+   - A fila prioritária não tem OS concluída, devolvido ou irreparável.
+   - Abrir um código da fila, da auditoria e de Últimas ordens de serviço: a OS certo abre na lista.
    - As tabelas rolam por dentro em 320 px.
    - Com o backend desligado na abertura: falha, “Tentar novamente”, religar e recuperar.
 2. **Dashboard, TECHNICIAN, SERVICE_DESK e VIEWER:** sem total de usuários e sem erro de permissão.
@@ -650,10 +650,10 @@ Backend em `localhost:8080`, frontend com `npm --prefix frontend start -- --port
 
 São propostas do autor do plano, já ajustadas pela revisão. Não são acordos atribuídos ao usuário. Cada uma pode ser revertida antes da tarefa correspondente.
 
-1. **Dashboard:** manter o percentual de garantia existente, com `X de Y itens · Z pendentes` e o escopo “em todos os RMAs registrados”. Retirar só as barras decorativas. Não restringir o recorte aos ativos: isso seria um cálculo novo.
+1. **Dashboard:** manter o percentual de garantia existente, com `X de Y itens · Z pendentes` e o escopo “em todas as ordens de serviço registradas”. Retirar só as barras decorativas. Não restringir o recorte aos ativos: isso seria um cálculo novo.
 2. **Dashboard:** mostrar clientes, produtos e usuários (este só para ADMIN) separados, sem o total somado. É decisão de apresentação: os três números permanecem.
-3. **Dashboard:** excluir RMAs encerrados da fila prioritária. É uma alteração de comportamento declarada. Manter “Últimos RMAs” (backlog D1). A atualização manual fica no backlog (D3).
-4. **Notificações:** o título acionável substitui o botão primário repetido “Abrir RMA” e só aparece para destino interno. A severidade continua por ícone mais texto para leitor de tela, sem `title` nativo.
+3. **Dashboard:** excluir ordens de serviço encerradas da fila prioritária. É uma alteração de comportamento declarada. Manter “Últimas ordens de serviço” (backlog D1). A atualização manual fica no backlog (D3).
+4. **Notificações:** o título acionável substitui o botão primário repetido “Abrir OS” e só aparece para destino interno. A severidade continua por ícone mais texto para leitor de tela, sem `title` nativo.
 5. **Notificações:** esconder “Adiada até” quando o adiamento venceu, usando `SlaClockService.now` como relógio e testando o instante exato do vencimento.
 6. **Notificações:** dizer na mensagem de sucesso que “Marcar todas” inclui as adiadas, como o servidor faz.
 7. **Preferências:** precedência `desativado → obrigatório → silenciado → recebendo`. “Obrigatório” significa “não silenciável”, e o silenciamento antigo é ignorado quando o usuário for destinatário de uma regra ativa. Não oferecer “Reativar” em alerta obrigatório. Adiar continua permitido.
@@ -661,14 +661,14 @@ São propostas do autor do plano, já ajustadas pela revisão. Não são acordos
 9. **Regras sem destinatário:** só o resumo factual “Nenhum destinatário”. O aviso explicativo foi para o backlog (N4).
 10. **Limites:** informar os limites do servidor: 50 falhas de eventos + 50 de e-mail, e até 100 notificações na caixa.
 11. **Relatórios:** tipo em abas com teclado sobre `form.controls.report`, resumo dos filtros submetidos e validação local junto das datas. A consulta inválida continua ocultando o resultado anterior.
-12. **Laudo:** documento estruturado por RMA, uma das formas indicadas pelo estudo (`:183`), sem emissão, persistência ou exportação.
+12. **Laudo:** documento estruturado por OS, uma das formas indicadas pelo estudo (`:183`), sem emissão, persistência ou exportação.
 13. **Tempo por etapa:** sem gráfico, porque a tabela já compara os valores disponíveis.
 14. **Escrita:** “Tempo por etapa” no lugar de “Aging”, plurais reais no lugar de “(s)”, sem mudança de cálculo.
 
 ## Fora de escopo e backlog justificado
 
-- **D1 — Últimos RMAs no dashboard.** O estudo (`:127`) desaconselha uma segunda lista de RMAs se ela não orienta ação diferente. Remover é retirar informação existente e precisa de decisão do usuário.
-- **D2 — Indicadores do dashboard no servidor.** Hoje `listBoard()` traz todos os RMAs de todo o período só para contar e ordenar. Um endpoint de resumo, com período e escopo definidos, tiraria o cálculo do cliente. Exige backend.
+- **D1 — Últimas ordens de serviço no dashboard.** O estudo (`:127`) desaconselha uma segunda lista de ordens de serviço se ela não orienta ação diferente. Remover é retirar informação existente e precisa de decisão do usuário.
+- **D2 — Indicadores do dashboard no servidor.** Hoje `listBoard()` traz todas as ordens de serviço de todo o período só para contar e ordenar. Um endpoint de resumo, com período e escopo definidos, tiraria o cálculo do cliente. Exige backend.
 - **D3 — Instante e atualização manual do dashboard.** Mostrar “Atualizado às …” e um botão Atualizar é comportamento novo.
 - **D4 — Candidatos herdados das etapas anteriores.** Garantia média dos produtos e número de administradores (`plano-etapa-3:78-79`), e a eventual migração do valor em estoque (`revisao-plano-etapa-5:105`). Eram candidatos ao dashboard da etapa 6, não obrigações. Não entram agora, porque exigiriam novos indicadores ou cálculo no servidor e decisão do usuário.
 - **N1 — Paginação ou mudança do limite de 100 notificações** (`NotificationService.java:38`). A tela só informa o limite.
@@ -685,7 +685,7 @@ São propostas do autor do plano, já ajustadas pela revisão. Não são acordos
 - Cobertura do estudo: Dashboard → 1a e 1b; Notificações → 2a, 2b, 3, 4a, 4b e 5; Relatórios → 6 a 9; decisões globais e estados → restrições, contrato de carga, contrato de abas, tabela de recarga e roteiro.
 - Cada tarefa tem **Files**, **Interfaces**, testes novos com o motivo do vermelho, preservação separada, comando, implementação mínima e um commit. As partes que já passam hoje estão marcadas como preservação dentro dos testes:
   - a mensagem de erro e o `getUserSummary` por perfil no dashboard;
-  - o `50%` de garantia e as duas entradas de auditoria do mesmo RMA;
+  - o `50%` de garantia e as duas entradas de auditoria do mesma OS;
   - a abertura por rota interna e a recarga depois de adiar;
   - a ausência de botão nas preferências obrigatórias;
   - os seis campos e a mensagem de sucesso das regras;

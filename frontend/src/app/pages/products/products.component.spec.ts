@@ -472,7 +472,7 @@ describe('ProductsComponent collection layout and states', () => {
   it('identifies name and SKU in the delete confirmation and shows the error in the dialog', async () => {
     await mount();
     deleteProduct.mockImplementation(() => throwError(() =>
-      new HttpErrorResponse({ status: 409, error: { message: 'Produto possui RMAs vinculados.' } })));
+      new HttpErrorResponse({ status: 409, error: { message: 'Produto possui ordens de serviço vinculadas.' } })));
 
     component.openDeleteModal(product(1, 'Alfa'));
     fixture.detectChanges();
@@ -482,7 +482,7 @@ describe('ProductsComponent collection layout and states', () => {
 
     component.confirmDeleteProduct();
     fixture.detectChanges();
-    expect(element.querySelector('[role="alertdialog"] [role="alert"]')?.textContent).toContain('Produto possui RMAs vinculados.');
+    expect(element.querySelector('[role="alertdialog"] [role="alert"]')?.textContent).toContain('Produto possui ordens de serviço vinculadas.');
   });
 });
 

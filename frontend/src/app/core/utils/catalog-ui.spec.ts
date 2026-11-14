@@ -43,7 +43,7 @@ describe('extractHttpErrorMessage', () => {
   });
 
   it('preserves the exact API message without details', () => {
-    const conflict = 'RMA status changed. Refresh the item before trying again.';
+    const conflict = 'OS status changed. Refresh the item before trying again.';
     expect(extractHttpErrorMessage({ error: { message: conflict, details: [] } }, '')).toBe(conflict);
   });
 });
