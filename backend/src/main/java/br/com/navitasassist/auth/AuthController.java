@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+@lombok.extern.slf4j.Slf4j
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -51,9 +52,16 @@ public class AuthController {
         HttpServletRequest request,
         HttpServletResponse response
     ) {
-        Authentication authentication = authenticationManager.authenticate(
-            UsernamePasswordAuthenticationToken.unauthenticated(loginRequest.username().trim(), loginRequest.password())
-        );
+        Authentication authentication;
+        String username = loginRequest.username().trim().toLowerCase(java.util.Locale.ROOT).replaceAll("[\\r\\n\\t]", "_");
+        username = username.substring(0, Math.min(60, username.length()));
+        try {
+            authentication = authenticationManager.authenticate(
+                UsernamePasswordAuthenticationToken.unauthenticated(loginRequest.username().trim(), loginRequest.password()));
+        } catch (AuthenticationException failure) {
+            log.warn("action=LOGIN_FAILURE username={} ip={}", username, request.getRemoteAddr());
+            throw failure;
+        }
         CurrentUserResponse user = userAccountService.getCurrentUser(authentication.getName());
 
         if (request.getSession(false) != null) {
@@ -71,6 +79,7 @@ public class AuthController {
         SecurityContextHolder.setContext(securityContext);
         securityContextRepository.saveContext(securityContext, request, response);
         sessionRegistry.registerNewSession(request.getSession().getId(), user.id());
+        log.info("action=LOGIN_SUCCESS username={} ip={}", username, request.getRemoteAddr());
         return user;
     }
 

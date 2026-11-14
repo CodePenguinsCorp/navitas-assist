@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+@lombok.extern.slf4j.Slf4j
 @RestControllerAdvice
 public class RestExceptionHandler {
 
@@ -78,7 +79,9 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception exception) {
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error", List.of());
+        String code = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase(java.util.Locale.ROOT);
+        log.error("action=UNEXPECTED_ERROR occurrenceCode={}", code, exception);
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Erro inesperado. Informe o código " + code + " ao suporte.", List.of());
     }
 
     private ResponseEntity<ApiError> buildResponse(HttpStatus status, String message, List<String> details) {
