@@ -69,18 +69,20 @@ describe('NotificationsComponent', () => {
     fixture.detectChanges();
   }
 
-  it('lists the inbox with context and opens the related RMA through an internal route', async () => {
+  it('lists the inbox with context and opens the detail dialog before any navigation', async () => {
     await setUp('TECHNICIAN');
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const text: string = fixture.nativeElement.textContent;
 
     expect(text).toContain('RMA RMA-2026-000007 atribuído a Técnico');
-    expect(text).toContain('Nova atribuição');
+    expect(fixture.nativeElement.querySelector('.notification-meta')!.textContent).not.toContain('Nova atribuição');
     expect(text).not.toContain('Regras');
 
     component.open(NOTIFICATION);
-    expect(service['markRead']).toHaveBeenCalledWith(5);
-    expect(navigate).toHaveBeenCalledWith(['/rmas'], { queryParams: { rma: '7' } });
+    fixture.detectChanges();
+    expect(service['markRead']).toHaveBeenCalledWith(5, { silent: true });
+    expect(fixture.nativeElement.querySelector('app-notification-detail-modal [role="dialog"]')).not.toBeNull();
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('snoozes for the chosen period', async () => {

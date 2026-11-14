@@ -84,8 +84,8 @@ export class NotificationService {
     return this.http.post<void>('/api/notifications/read-all', {}, { context: requestContext(options) });
   }
 
-  snooze(id: number, minutes: number): Observable<NotificationResponse> {
-    return this.http.post<NotificationResponse>(`/api/notifications/${id}/snooze`, { minutes });
+  snooze(id: number, minutes: number, options: NotificationRequestOptions = {}): Observable<NotificationResponse> {
+    return this.http.post<NotificationResponse>(`/api/notifications/${id}/snooze`, { minutes }, { context: requestContext(options) });
   }
 
   listPreferences(): Observable<NotificationPreferenceResponse[]> {

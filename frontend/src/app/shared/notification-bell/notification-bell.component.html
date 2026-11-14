@@ -61,6 +61,7 @@
                     <span class="bell-item__title">{{ notification.title }}</span>
                     <span class="bell-item__meta">
                       <span class="mini-chip" [class]="severityClass(notification.severity)">{{ severityLabels[notification.severity] }}</span>
+                      <span class="bell-item__summary">{{ notification.message }}</span>
                     </span>
                   </button>
                   <span class="bell-item__action" [attr.aria-hidden]="notification.read ? 'true' : null">
@@ -77,4 +78,21 @@
       }
     </div>
   </section>
+}
+
+@if (selected(); as detail) {
+  <app-notification-detail-modal
+    [notification]="detail"
+    [busy]="busy()"
+    [error]="actionError()"
+    [hasPrevious]="hasPreviousSelected()"
+    [hasNext]="hasNextSelected()"
+    [fallbackFocus]="bellElement()"
+    (closed)="closeDetail()"
+    (openAction)="openDetailAction()"
+    (markRead)="markSelectedRead()"
+    (snoozed)="snoozeSelected($event)"
+    (previous)="step(-1)"
+    (next)="step(1)"
+  />
 }

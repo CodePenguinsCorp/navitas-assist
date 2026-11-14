@@ -2,7 +2,9 @@ import { AuthService } from '../../core/services/auth.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { Router, provideRouter } from '@angular/router';
+import { NotificationDetailModalComponent } from '../../shared/notification-detail-modal/notification-detail-modal.component';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { NotificationResponse } from '../../core/models';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
@@ -319,22 +321,131 @@ describe('NotificationsComponent inbox loading', () => {
     const tabLabelled = (label: string) => tabs().find((tab) => tab.textContent!.trim().startsWith(label))!;
     const key = (target: HTMLElement, value: string) => { target.dispatchEvent(new KeyboardEvent('keydown', { key: value, bubbles: true })); render(); };
 
-    // Vermelho: cada item tem "Abrir RMA" em .button-primary, inclusive para URL externa.
-    it('opens the RMA from the notification title', async () => {
+    it('shows only the useful summary on the second line, without repeating the event type', async () => {
       await setup();
-      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-      const title = item().querySelector<HTMLButtonElement>('button.link-button')!;
-      expect(title.textContent!.trim()).toBe('RMA RMA-2026-000007 atribuído a Técnico');
-      expect(item().querySelector('.button-primary')).toBeNull();
-      title.click();
-      expect(service['markRead']).toHaveBeenCalledWith(5);
-      expect(navigate).toHaveBeenCalledWith(['/rmas'], { queryParams: { rma: '7' } });
+      const meta = item().querySelector<HTMLElement>('.notification-meta')!;
+      expect(meta.textContent!.trim()).toBe('Cliente · Produto');
+      expect(meta.querySelector('.notification-event')).toBeNull();
+      expect(meta.querySelector<HTMLElement>('.notification-message')!.title).toBe('Cliente · Produto');
+    });
 
-      TestBed.resetTestingModule();
-      await setup({ list: [of([{ ...NOTIFICATION, actionPath: 'https://externo' }])] });
-      expect(item().querySelector('button.link-button')).toBeNull();
-      expect(Array.from(item().querySelectorAll('button')).some((entry) => /abrir/i.test(entry.textContent!))).toBe(false);
-      expect(item().textContent).toContain('RMA RMA-2026-000007 atribuído a Técnico');
+    describe('detail dialog', () => {
+      const dialog = () => root().querySelector<HTMLElement>('app-notification-detail-modal [role="dialog"]');
+      const titleButton = () => item().querySelector<HTMLButtonElement>('button.notification-title')!;
+      const dialogButton = (label: string) => Array.from(dialog()!.querySelectorAll('button')).find((entry) => entry.textContent?.trim() === label);
+      const dialogText = () => dialog()!.textContent!.replace(/[\s\u00a0]+/g, ' ').trim();
+      const unreadFull = { ...NOTIFICATION, message: 'Primeira linha\nSegunda linha <b>não é HTML</b>' };
+
+      afterEach(() => { document.body.style.overflow = ''; });
+
+      it('opens from the row title with the full content, marks it read and does not navigate', async () => {
+        await setup({ list: [of([unreadFull])] });
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        titleButton().click();
+        render();
+
+        expect(dialog()).not.toBeNull();
+        expect(dialog()!.getAttribute('aria-modal')).toBe('true');
+        expect(dialog()!.querySelector('h3')!.textContent).toBe('RMA RMA-2026-000007 atribuído a Técnico');
+        expect(dialogText()).toContain('Informativo');
+        expect(dialogText()).toContain('Nova atribuição');
+        expect(dialogText()).toContain('24 de outubro de 2026 às 09:00');
+        expect(dialogText()).toContain('(há 1 h)');
+        expect(dialogText()).toContain('RMA-2026-000007');
+        expect(dialog()!.querySelector('.notification-detail__message')!.textContent).toBe('Primeira linha\nSegunda linha <b>não é HTML</b>');
+        expect(dialog()!.querySelector('.notification-detail__message b')).toBeNull();
+        expect(service['markRead']).toHaveBeenCalledWith(5, { silent: true });
+        expect(dialogText()).toContain('Lida');
+        expect(dialogButton('Marcar como lida')).toBeUndefined();
+        expect(navigate).not.toHaveBeenCalled();
+      });
+
+      it('follows the internal path only through Abrir OS and closes', async () => {
+        await setup();
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        titleButton().click();
+        render();
+        dialogButton('Abrir OS')!.click();
+        render();
+        expect(navigate).toHaveBeenCalledExactlyOnceWith(['/rmas'], { queryParams: { rma: '7' } });
+        expect(dialog()).toBeNull();
+      });
+
+      it('offers no Abrir OS for an external path', async () => {
+        await setup({ list: [of([{ ...NOTIFICATION, actionPath: 'https://externo' }])] });
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        titleButton().click();
+        render();
+        expect(dialog()).not.toBeNull();
+        expect(dialogButton('Abrir OS')).toBeUndefined();
+        expect(dialogText()).toContain('RMA-2026-000007');
+        expect(navigate).not.toHaveBeenCalled();
+      });
+
+      it('closes with Fechar, X and Escape, returning focus to the row title', async () => {
+        await setup();
+        document.body.appendChild(fixture.nativeElement);
+        const close = async (action: () => void) => {
+          titleButton().focus();
+          titleButton().click();
+          render();
+          await fixture.whenStable();
+          expect(document.activeElement).toBe(dialog()!.querySelector('h3'));
+          action();
+          render();
+          await fixture.whenStable();
+          expect(dialog()).toBeNull();
+          expect(document.activeElement).toBe(titleButton());
+        };
+        await close(() => dialogButton('Fechar')!.click());
+        await close(() => dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Fechar"]')!.click());
+        await close(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+        fixture.nativeElement.remove();
+      });
+
+      it('keeps the row icon marking as read without opening the dialog', async () => {
+        await setup();
+        item().querySelector<HTMLButtonElement>('button[aria-label^="Marcar como lida"]')!.click();
+        render();
+        expect(service['markRead']).toHaveBeenCalledWith(5);
+        expect(dialog()).toBeNull();
+      });
+
+      it('offers Marcar como lida and shows the error when marking on open fails', async () => {
+        await setup({ markRead: failure() as never });
+        titleButton().click();
+        render();
+        expect(dialogText()).toContain('Não lida');
+        expect(dialogText()).toContain('Não foi possível concluir a ação agora.');
+        expect(dialogButton('Marcar como lida')).toBeDefined();
+      });
+
+      it('snoozes from the dialog, closes it and reloads the list', async () => {
+        await setup({ snooze: of({ ...NOTIFICATION, snoozedUntil: '2026-10-24T16:00:00Z' }) });
+        titleButton().click();
+        render();
+        fixture.debugElement.query(By.directive(NotificationDetailModalComponent)).componentInstance.snoozed.emit(60);
+        render();
+        expect(service['snooze']).toHaveBeenCalledWith(5, 60);
+        expect(dialog()).toBeNull();
+        expect(service['list']).toHaveBeenCalledTimes(2);
+      });
+
+      it('walks through the visible list with Anterior and Próxima', async () => {
+        await setup({ list: [of([NOTIFICATION, { ...OLD, read: true }])] });
+        titleButton().click();
+        render();
+        const previous = () => dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Notificação anterior"]')!;
+        const next = () => dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Próxima notificação"]')!;
+        expect(previous().disabled).toBe(true);
+        next().click();
+        render();
+        expect(dialog()!.querySelector('h3')!.textContent).toBe('Notificação antiga');
+        expect(next().disabled).toBe(true);
+        previous().click();
+        render();
+        expect(dialog()!.querySelector('h3')!.textContent).toBe('RMA RMA-2026-000007 atribuído a Técnico');
+      });
     });
 
     // Vermelho: "adiada até" aparece também depois do vencimento do adiamento.

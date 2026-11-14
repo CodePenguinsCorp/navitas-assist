@@ -24,9 +24,8 @@
 .notification-title.link-button { min-height: 0; padding-block: 2px; color: var(--brand-blue-deep); }
 .notification-severity { min-height: 20px; padding-inline: var(--space-2); font-size: 0.7rem; }
 .notification-meta { display: flex; flex-wrap: wrap; gap: 0 var(--space-2); margin: 0; color: var(--muted); font-size: var(--font-size-sm); line-height: 1.45; min-width: 0; }
-.notification-event { color: var(--muted-strong); font-weight: 600; }
 .notification-snoozed { display: inline-flex; align-items: center; gap: 4px; color: var(--warning-text); }
-.notification-message { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
+.notification-message { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .notification-time { color: var(--muted); font-size: var(--font-size-sm); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
 /* Fixed columns in every row: the mark-as-read slot keeps its width when the item is already read. */
 .notification-actions { display: grid; grid-template-columns: var(--control-height) 5.5rem; align-items: center; gap: var(--space-1); }

@@ -2,12 +2,14 @@ import { Component } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { Router, provideRouter } from '@angular/router';
 import { NotificationResponse } from '../../core/models';
 import { SKIP_GLOBAL_LOADING } from '../../core/interceptors/loading.interceptor';
 import { LoadingService } from '../../core/services/loading.service';
 import { ClockService } from '../../core/services/clock.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { NotificationDetailModalComponent } from '../notification-detail-modal/notification-detail-modal.component';
 import { NotificationBellComponent } from './notification-bell.component';
 
 @Component({ template: '' })
@@ -31,7 +33,10 @@ describe('NotificationBellComponent', () => {
 
   const host = (): HTMLElement => fixture.nativeElement;
   const bell = () => host().querySelector<HTMLButtonElement>('button.shell-notifications')!;
-  const panel = () => host().querySelector<HTMLElement>('[role="dialog"]');
+  const panel = () => host().querySelector<HTMLElement>('.bell-panel');
+  const dialog = () => host().querySelector<HTMLElement>('app-notification-detail-modal [role="dialog"]');
+  const dialogButton = (label: string) => Array.from(dialog()!.querySelectorAll('button')).find((item) => item.textContent?.trim() === label);
+  const dialogText = () => dialog()!.textContent!.replace(/[\s\u00a0]+/g, ' ').trim();
   const text = () => panel()!.textContent!.replace(/\s+/g, ' ').trim();
   const items = () => Array.from(host().querySelectorAll<HTMLButtonElement>('.bell-item__main'));
   const buttonByText = (label: string) => Array.from(panel()!.querySelectorAll('button')).find((item) => item.textContent?.trim() === label)!;
@@ -152,14 +157,133 @@ describe('NotificationBellComponent', () => {
     expect(panel()!.querySelector('.empty-state')?.textContent).toContain('Nenhuma notificação não lida');
   });
 
-  it('opening an item marks it read, refreshes the count and goes to the referenced RMA', async () => {
+  it('shows the summary beside the severity, without repeating the event type', async () => {
     await openWith([NOTIFICATION]);
-    items()[0].click();
-    http.expectOne({ method: 'POST', url: '/api/notifications/5/read' }).flush({ ...NOTIFICATION, read: true });
-    flushSummary(0);
-    await render();
-    expect(router.url).toBe('/rmas?rma=7');
-    expect(panel()).toBeNull();
+    const meta = items()[0].querySelector<HTMLElement>('.bell-item__meta')!;
+    expect(meta.querySelector('.mini-chip')!.textContent!.trim()).toBe('Crítico');
+    expect(meta.querySelector('.bell-item__summary')!.textContent!.trim()).toBe('Cliente · Produto');
+    expect(meta.textContent).not.toContain('Nova atribuição');
+  });
+
+  describe('detail dialog', () => {
+    async function openDetail(list: NotificationResponse[] = [NOTIFICATION]) {
+      await openWith(list);
+      items()[0].click();
+      await render();
+    }
+
+    async function settleRead(item: NotificationResponse = NOTIFICATION) {
+      const read = http.expectOne({ method: 'POST', url: `/api/notifications/${item.id}/read` });
+      expect(read.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+      read.flush({ ...item, read: true });
+      flushSummary(0);
+      await render();
+    }
+
+    afterEach(() => { document.body.style.overflow = ''; });
+
+    it('opens over the page with the full content, closes the popover, marks it read silently and does not navigate', async () => {
+      const navigate = vi.spyOn(router, 'navigate');
+      const loading = TestBed.inject(LoadingService);
+      await openDetail([{ ...NOTIFICATION, message: 'Linha 1\nLinha 2' }]);
+
+      expect(dialog()).not.toBeNull();
+      expect(panel()).toBeNull();
+      expect(dialog()!.querySelector('h3')!.textContent).toBe(NOTIFICATION.title);
+      expect(dialogText()).toContain('Crítico');
+      expect(dialogText()).toContain('Nova atribuição');
+      expect(dialogText()).toContain('24 de outubro de 2026 às 10:00');
+      expect(dialogText()).toContain('(há 5 h)');
+      expect(dialogText()).toContain('Não lida');
+      expect(dialog()!.querySelector('.notification-detail__message')!.textContent).toBe('Linha 1\nLinha 2');
+      expect(loading.pendingCount()).toBe(0);
+      await settleRead();
+      expect(dialogText()).toContain('Lida');
+      expect(dialogButton('Marcar como lida')).toBeUndefined();
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('Abrir OS is the only action that navigates, to the internal path, and closes the dialog', async () => {
+      await openDetail();
+      await settleRead();
+      dialogButton('Abrir OS')!.click();
+      await render();
+      expect(router.url).toBe('/rmas?rma=7');
+      expect(dialog()).toBeNull();
+    });
+
+    it('rejects an external path: no Abrir OS and no navigation', async () => {
+      const navigate = vi.spyOn(router, 'navigate');
+      await openDetail([{ ...NOTIFICATION, actionPath: 'https://externo' }]);
+      await settleRead();
+      expect(dialog()).not.toBeNull();
+      expect(dialogButton('Abrir OS')).toBeUndefined();
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('closes with Escape and returns focus to the bell', async () => {
+      bell().focus();
+      await openDetail();
+      await settleRead();
+      expect(document.activeElement).toBe(dialog()!.querySelector('h3'));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await render();
+      expect(dialog()).toBeNull();
+      expect(document.activeElement).toBe(bell());
+    });
+
+    it('closes with Fechar and keeps the read state in the list', async () => {
+      await openDetail();
+      await settleRead();
+      dialogButton('Fechar')!.click();
+      await render();
+      expect(dialog()).toBeNull();
+      bell().click();
+      await render();
+      listRequest().flush([{ ...NOTIFICATION, read: true }]);
+      flushSummary(0);
+      await render();
+      expect(host().querySelectorAll('.bell-item.is-unread').length).toBe(0);
+    });
+
+    it('snoozes silently from the dialog and closes it', async () => {
+      await openDetail();
+      await settleRead();
+      fixture.debugElement.query(By.directive(NotificationDetailModalComponent)).componentInstance.snoozed.emit(60);
+      const snooze = http.expectOne({ method: 'POST', url: '/api/notifications/5/snooze' });
+      expect(snooze.request.body).toEqual({ minutes: 60 });
+      expect(snooze.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+      snooze.flush({ ...NOTIFICATION, read: true, snoozedUntil: at(24, 16) });
+      flushSummary(0);
+      await render();
+      expect(dialog()).toBeNull();
+    });
+
+    it('walks through the listed notifications with Anterior and Próxima', async () => {
+      await openDetail([NOTIFICATION, READ]);
+      await settleRead();
+      const next = dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Próxima notificação"]')!;
+      expect(dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Notificação anterior"]')!.disabled).toBe(true);
+      next.click();
+      await render();
+      expect(dialog()!.querySelector('h3')!.textContent).toBe(READ.title);
+      expect(next.disabled).toBe(true);
+    });
+
+    it('the row icon marks as read without opening the dialog', async () => {
+      await openWith([NOTIFICATION]);
+      panel()!.querySelector<HTMLButtonElement>('button[aria-label="Marcar como lida RMA-2026-000007 atribuído"]')!.click();
+      await settleRead();
+      expect(dialog()).toBeNull();
+      expect(panel()).not.toBeNull();
+    });
+
+    it('closes when the route changes', async () => {
+      await openDetail([READ]);
+      await router.navigateByUrl('/notificacoes');
+      await render();
+      expect(dialog()).toBeNull();
+    });
   });
 
   it('marks a single item as read from its row action and keeps the panel open', async () => {

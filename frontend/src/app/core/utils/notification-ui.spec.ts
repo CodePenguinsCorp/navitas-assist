@@ -1,6 +1,4 @@
-import { of } from 'rxjs';
-import { NotificationResponse } from '../models';
-import { NOTIFICATION_EVENT_LABELS, formatNotificationDateTime, groupNotificationsByDay, internalRoute, openNotification, severityClass } from './notification-ui';
+import { NOTIFICATION_EVENT_LABELS, followNotification, formatNotificationDateTime, formatNotificationFullDateTime, formatTimeAgo, groupNotificationsByDay, internalRoute, severityClass } from './notification-ui';
 
 describe('Notification UI utilities', () => {
   it('maps internal action paths to router navigation and rejects external links', () => {
@@ -35,27 +33,33 @@ describe('Notification UI utilities', () => {
     expect(groupNotificationsByDay([], Date.now())).toEqual([]);
   });
 
-  describe('openNotification', () => {
-    const base = { id: 7, read: false, actionPath: '/rmas?rma=7' } as NotificationResponse;
-    const setup = () => {
-      const service = { markRead: vi.fn(() => of(base)), refreshSummary: vi.fn(() => of(0)) };
-      const router = { navigate: vi.fn(() => Promise.resolve(true)) };
-      return { service, router };
-    };
+  it('formats the full date and the relative age', () => {
+    expect(formatNotificationFullDateTime('2026-10-24T12:00:00Z')).toBe('24 de outubro de 2026 às 09:00');
+    expect(formatNotificationFullDateTime(null)).toBe('Não informado');
+    const now = Date.parse('2026-10-24T12:00:00Z');
+    expect(formatTimeAgo('2026-10-24T12:00:30Z', now)).toBe('agora');
+    expect(formatTimeAgo('2026-10-24T11:55:00Z', now)).toBe('há 5 min');
+    expect(formatTimeAgo('2026-10-24T09:00:00Z', now)).toBe('há 3 h');
+    expect(formatTimeAgo('2026-10-23T11:00:00Z', now)).toBe('há 1 dia');
+    expect(formatTimeAgo('2026-10-20T12:00:00Z', now)).toBe('há 4 dias');
+    expect(formatTimeAgo(null, now)).toBe('');
+  });
 
-    it('marks an unread notification as read, refreshes the summary and follows its internal link', () => {
-      const { service, router } = setup();
-      openNotification(base, service, router);
-      expect(service.markRead).toHaveBeenCalledWith(7);
-      expect(service.refreshSummary).toHaveBeenCalledOnce();
-      expect(router.navigate).toHaveBeenCalledWith(['/rmas'], { queryParams: { rma: '7' } });
+  describe('followNotification', () => {
+    const router = () => ({ navigate: vi.fn(() => Promise.resolve(true)) });
+
+    it('follows an internal link', () => {
+      const target = router();
+      expect(followNotification({ actionPath: '/rmas?rma=7' }, target)).toBe(true);
+      expect(target.navigate).toHaveBeenCalledWith(['/rmas'], { queryParams: { rma: '7' } });
     });
 
-    it('does not mark again when already read and never follows external links', () => {
-      const { service, router } = setup();
-      openNotification({ ...base, read: true, actionPath: 'https://exemplo.com' }, service, router);
-      expect(service.markRead).not.toHaveBeenCalled();
-      expect(router.navigate).not.toHaveBeenCalled();
+    it('never follows external or missing links', () => {
+      const target = router();
+      expect(followNotification({ actionPath: 'https://exemplo.com' }, target)).toBe(false);
+      expect(followNotification({ actionPath: '//exemplo.com' }, target)).toBe(false);
+      expect(followNotification({ actionPath: null }, target)).toBe(false);
+      expect(target.navigate).not.toHaveBeenCalled();
     });
   });
 });

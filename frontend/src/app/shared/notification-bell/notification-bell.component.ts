@@ -10,10 +10,11 @@ import {
   NOTIFICATION_SEVERITY_LABELS,
   formatNotificationDateTime,
   formatNotificationTime,
+  followNotification,
   groupNotificationsByDay,
-  openNotification,
   severityClass
 } from '../../core/utils/notification-ui';
+import { NotificationDetailModalComponent } from '../notification-detail-modal/notification-detail-modal.component';
 import { IconComponent } from '../icon/icon.component';
 import { RowActionComponent } from '../row-action/row-action.component';
 
@@ -31,7 +32,7 @@ let nextPanelId = 0;
  */
 @Component({
   selector: 'app-notification-bell',
-  imports: [IconComponent, RowActionComponent, RouterLink],
+  imports: [IconComponent, NotificationDetailModalComponent, RowActionComponent, RouterLink],
   templateUrl: './notification-bell.component.html',
   styleUrl: './notification-bell.component.css',
   host: {
@@ -60,6 +61,9 @@ export class NotificationBellComponent {
   protected readonly actionError = signal('');
   protected readonly busy = signal(false);
   protected readonly notifications = signal<NotificationResponse[]>([]);
+  /** Notification shown in the detail dialog; a snapshot kept in sync by the actions that change it. */
+  protected readonly selected = signal<NotificationResponse | null>(null);
+  protected readonly bellElement = computed(() => this.trigger().nativeElement);
 
   protected readonly unreadCount = this.notificationService.unreadCount;
   /** The count is shown only when the latest summary succeeded; otherwise it is unknown, not zero. */
@@ -78,6 +82,13 @@ export class NotificationBellComponent {
       .slice(0, RECENT_LIMIT);
     return groupNotificationsByDay(recent, this.clock.now());
   });
+  private readonly visibleItems = computed(() => this.groups().flatMap((group) => group.items));
+  private readonly selectedIndex = computed(() => {
+    const current = this.selected();
+    return current ? this.visibleItems().findIndex((item) => item.id === current.id) : -1;
+  });
+  protected readonly hasPreviousSelected = computed(() => this.selectedIndex() > 0);
+  protected readonly hasNextSelected = computed(() => this.selectedIndex() >= 0 && this.selectedIndex() < this.visibleItems().length - 1);
   /** Same rule as the inbox: the server summary decides, unless the list still shows an unread row. */
   protected readonly canMarkAll = computed(() =>
     !this.busy() && (!this.unreadKnown() || this.unreadCount() > 0 || this.notifications().some((item) => !item.read)));
@@ -91,7 +102,10 @@ export class NotificationBellComponent {
     this.router.events.pipe(
       filter((event) => event instanceof NavigationStart),
       takeUntilDestroyed()
-    ).subscribe(() => this.close(false));
+    ).subscribe(() => {
+      this.close(false);
+      this.selected.set(null);
+    });
   }
 
   protected toggle(): void {
@@ -114,14 +128,51 @@ export class NotificationBellComponent {
     if (!this.loading()) this.load();
   }
 
+  /** The dialog opens over the page and the popover closes; closing the dialog returns focus to the bell. */
   protected select(notification: NotificationResponse): void {
-    this.replaceRead(notification.id);
-    openNotification(notification, this.notificationService, this.router, SILENT);
+    this.close(false);
+    this.show(notification);
+  }
+
+  protected closeDetail(): void {
+    this.selected.set(null);
+  }
+
+  protected openDetailAction(): void {
+    const current = this.selected();
+    if (current && followNotification(current, this.router)) this.closeDetail();
+  }
+
+  protected step(delta: number): void {
+    const target = this.visibleItems()[this.selectedIndex() + delta];
+    if (target) this.show(target);
+  }
+
+  protected markSelectedRead(): void {
+    const current = this.selected();
+    if (current) this.markRead(current);
+  }
+
+  protected snoozeSelected(minutes: number): void {
+    const current = this.selected();
+    if (!current) return;
+    this.run(this.notificationService.snooze(current.id, minutes, SILENT), () => {
+      this.closeDetail();
+      this.notificationService.refreshSummary().subscribe();
+    });
+  }
+
+  /** Seeing a notification counts as reading it. */
+  private show(notification: NotificationResponse): void {
+    this.actionError.set('');
+    this.selected.set(notification);
+    if (!notification.read) this.markRead(notification);
   }
 
   protected markRead(notification: NotificationResponse): void {
     this.run(this.notificationService.markRead(notification.id, SILENT), () => {
       this.replaceRead(notification.id);
+      this.selected.update((current) => current?.id === notification.id ? { ...current, read: true } : current);
       this.notificationService.refreshSummary().subscribe();
     });
   }

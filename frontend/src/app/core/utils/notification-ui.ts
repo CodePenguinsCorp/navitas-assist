@@ -1,4 +1,3 @@
-import { Observable } from 'rxjs';
 import { NotificationEventType, NotificationResponse, NotificationSeverity } from '../models';
 
 const APP_TIME_ZONE = 'America/Sao_Paulo';
@@ -50,6 +49,26 @@ export function formatNotificationDateTime(value: string | null): string {
   return new Intl.DateTimeFormat('pt-BR', { timeZone: APP_TIME_ZONE, dateStyle: 'short', timeStyle: 'short' }).format(date);
 }
 
+/** Full date and time for the detail dialog, in the business time zone. */
+export function formatNotificationFullDateTime(value: string | null): string {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return 'Não informado';
+  return new Intl.DateTimeFormat('pt-BR', { timeZone: APP_TIME_ZONE, dateStyle: 'long', timeStyle: 'short' }).format(date);
+}
+
+/** Relative age such as "há 5 min"; instants slightly in the future read as "agora". */
+export function formatTimeAgo(value: string | null, now: number): string {
+  const time = value ? Date.parse(value) : NaN;
+  if (Number.isNaN(time)) return '';
+  const minutes = Math.floor((now - time) / 60_000);
+  if (minutes < 1) return 'agora';
+  if (minutes < 60) return `há ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `há ${hours} h`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? 'há 1 dia' : `há ${days} dias`;
+}
+
 /** Time of day only (the inbox groups rows by day), in the business time zone. */
 export function formatNotificationTime(value: string | null): string {
   const date = value ? new Date(value) : null;
@@ -82,21 +101,13 @@ export function groupNotificationsByDay<T extends { createdAt: string }>(items: 
   return [...groups.values()];
 }
 
-interface NotificationOpener {
-  markRead(id: number, options?: { silent?: boolean }): Observable<unknown>;
-  refreshSummary(): Observable<unknown>;
-}
-
-/** Opening a notification marks it read (then refreshes the shared count) and follows its internal link, if any. */
-export function openNotification(
-  notification: Pick<NotificationResponse, 'id' | 'read' | 'actionPath'>,
-  service: NotificationOpener,
-  router: { navigate(commands: unknown[], extras: { queryParams: Record<string, string> }): Promise<boolean> },
-  options: { silent?: boolean } = {}
-): void {
-  if (!notification.read) {
-    (options.silent ? service.markRead(notification.id, options) : service.markRead(notification.id)).subscribe({ next: () => service.refreshSummary().subscribe() });
-  }
+/** Follows the notification's internal link, if any; external or malformed paths are never followed. */
+export function followNotification(
+  notification: Pick<NotificationResponse, 'actionPath'>,
+  router: { navigate(commands: unknown[], extras: { queryParams: Record<string, string> }): Promise<boolean> }
+): boolean {
   const route = internalRoute(notification.actionPath);
-  if (route) void router.navigate([route.path], { queryParams: route.queryParams });
+  if (!route) return false;
+  void router.navigate([route.path], { queryParams: route.queryParams });
+  return true;
 }

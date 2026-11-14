@@ -36,7 +36,8 @@
 .bell-item__action { display: inline-flex; justify-content: center; width: var(--control-height); }
 .bell-item__time { color: var(--muted); font-size: var(--font-size-xs); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
 .bell-item__meta { display: flex; align-items: center; gap: var(--space-2); }
-.bell-item__meta .mini-chip { min-height: 20px; padding-inline: var(--space-2); font-size: 0.7rem; }
+.bell-item__summary { flex: 1 1 0; min-width: 0; overflow: hidden; color: var(--muted); font-size: var(--font-size-xs); text-overflow: ellipsis; white-space: nowrap; }
+.bell-item__meta .mini-chip { flex: none; min-height: 20px; padding-inline: var(--space-2); font-size: 0.7rem; }
 
 /* Narrow shell: the bell sits at the left of the header, so the panel opens from there across the usable width. */
 @media (max-width: 720px) {

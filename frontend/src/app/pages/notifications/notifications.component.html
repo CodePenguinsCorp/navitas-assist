@@ -30,7 +30,24 @@
     </article>
   }
 
-  <div class="notifications-panel" role="tabpanel" tabindex="0" id="notifications-panel-inbox" aria-labelledby="notifications-tab-inbox" [hidden]="activeTab() !== 'inbox'">
+  @if (selected(); as detail) {
+    <app-notification-detail-modal
+      [notification]="detail"
+      [busy]="busy()"
+      [error]="errorMessage()"
+      [hasPrevious]="hasPreviousSelected()"
+      [hasNext]="hasNextSelected()"
+      [fallbackFocus]="inboxPanel"
+      (closed)="closeDetail()"
+      (openAction)="openDetailAction()"
+      (markRead)="markSelectedRead()"
+      (snoozed)="snoozeSelected($event)"
+      (previous)="step(-1)"
+      (next)="step(1)"
+    />
+  }
+
+  <div #inboxPanel class="notifications-panel" role="tabpanel" tabindex="0" id="notifications-panel-inbox" aria-labelledby="notifications-tab-inbox" [hidden]="activeTab() !== 'inbox'">
     @if (activeTab() === 'inbox') {
       <section class="panel catalog-toolbar catalog-toolbar--filters inbox-filters" aria-label="Filtros da caixa de entrada">
         <div class="field-group">
@@ -92,19 +109,14 @@
                       <div class="notification-body">
                         <div class="notification-headline">
                           @if (!notification.read) { <span class="sr-only">Não lida: </span> }
-                          @if (canOpen(notification)) {
-                            <button type="button" class="link-button notification-title" (click)="open(notification)">{{ notification.title }}</button>
-                          } @else {
-                            <strong class="notification-title">{{ notification.title }}</strong>
-                          }
+                          <button type="button" class="link-button notification-title" (click)="open(notification)">{{ notification.title }}</button>
                           <span class="mini-chip notification-severity" [class]="severityClass(notification.severity)">{{ severityLabels[notification.severity] }}</span>
                         </div>
                         <p class="notification-meta">
-                          <span class="notification-event">{{ eventLabels[notification.eventType] }}</span>
                           @if (isSnoozed(notification)) {
                             <span class="notification-snoozed"><app-icon name="clock" [size]="13" />Adiada até {{ dateTime(notification.snoozedUntil) }}</span>
                           }
-                          <span class="notification-message">{{ notification.message }}</span>
+                          <span class="notification-message" [attr.title]="notification.message">{{ notification.message }}</span>
                         </p>
                       </div>
                       <div class="notification-actions">

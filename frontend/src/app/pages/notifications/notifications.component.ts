@@ -19,6 +19,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { ProfileService } from '../../core/services/profile.service';
 import { ClockService } from '../../core/services/clock.service';
+import { NotificationDetailModalComponent } from '../../shared/notification-detail-modal/notification-detail-modal.component';
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { ResultCountComponent } from '../../shared/result-count/result-count.component';
@@ -34,8 +35,7 @@ import {
   formatNotificationDateTime,
   formatNotificationTime,
   groupNotificationsByDay,
-  internalRoute,
-  openNotification,
+  followNotification,
   severityClass
 } from '../../core/utils/notification-ui';
 
@@ -51,7 +51,7 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
 
 @Component({
   selector: 'app-notifications',
-  imports: [IconComponent, CustomSelectComponent, ModalFocusDirective, PageHeaderComponent, ResultCountComponent, RowActionComponent, ReactiveFormsModule],
+  imports: [IconComponent, CustomSelectComponent, ModalFocusDirective, NotificationDetailModalComponent, PageHeaderComponent, ResultCountComponent, RowActionComponent, ReactiveFormsModule],
   templateUrl: './notifications.component.html',
   styleUrl: './notifications.component.css'
 })
@@ -101,6 +101,15 @@ export class NotificationsComponent {
   protected readonly inboxFilterCount = computed(() => [this.unreadOnly(), this.includeSnoozed(), !!this.eventFilter(), !!this.severityFilter()].filter(Boolean).length);
   protected readonly hasInboxFilters = computed(() => this.inboxFilterCount() > 0);
   protected readonly notificationGroups = computed(() => groupNotificationsByDay(this.notifications(), this.clock.now()));
+  /** Notification shown in the detail dialog; a snapshot kept in sync by the actions that change it. */
+  protected readonly selected = signal<NotificationResponse | null>(null);
+  private readonly visibleNotifications = computed(() => this.notificationGroups().flatMap((group) => group.items));
+  private readonly selectedIndex = computed(() => {
+    const current = this.selected();
+    return current ? this.visibleNotifications().findIndex((item) => item.id === current.id) : -1;
+  });
+  protected readonly hasPreviousSelected = computed(() => this.selectedIndex() > 0);
+  protected readonly hasNextSelected = computed(() => this.selectedIndex() >= 0 && this.selectedIndex() < this.visibleNotifications().length - 1);
   protected readonly notifications = signal<NotificationResponse[]>([]);
   protected readonly preferences = signal<NotificationPreferenceResponse[]>([]);
   protected readonly rules = signal<NotificationRuleResponse[]>([]);
@@ -209,9 +218,6 @@ export class NotificationsComponent {
     this.host.nativeElement.querySelector<HTMLElement>(`#notifications-tab-${tabs[next]}`)?.focus();
   }
 
-  protected canOpen(notification: NotificationResponse): boolean {
-    return internalRoute(notification.actionPath) !== null;
-  }
 
   /** An expired snooze is returned by the server as visible again, so it is not shown as active. */
   protected isSnoozed(notification: NotificationResponse): boolean {
@@ -248,13 +254,41 @@ export class NotificationsComponent {
     if (!this.inboxLoading()) this.loadInbox();
   }
 
+  /** Opens the detail dialog; seeing a notification counts as reading it. */
   protected open(notification: NotificationResponse): void {
-    openNotification(notification, this.notificationService, this.router);
+    this.selected.set(notification);
+    if (!notification.read) this.markRead(notification, true);
   }
 
-  protected markRead(notification: NotificationResponse): void {
-    this.run(this.notificationService.markRead(notification.id), () => {
+  protected closeDetail(): void {
+    this.selected.set(null);
+  }
+
+  protected openDetailAction(): void {
+    const current = this.selected();
+    if (current && followNotification(current, this.router)) this.closeDetail();
+  }
+
+  protected step(delta: number): void {
+    const target = this.visibleNotifications()[this.selectedIndex() + delta];
+    if (target) this.open(target);
+  }
+
+  protected snoozeSelected(minutes: number): void {
+    const current = this.selected();
+    if (current) this.snooze(current, minutes);
+  }
+
+  protected markSelectedRead(): void {
+    const current = this.selected();
+    if (current) this.markRead(current);
+  }
+
+  /** Opening the dialog reads silently: the global loading blocker would flash over it. */
+  protected markRead(notification: NotificationResponse, silent = false): void {
+    this.run(silent ? this.notificationService.markRead(notification.id, { silent: true }) : this.notificationService.markRead(notification.id), () => {
       this.replace(notification.id, (current) => ({ ...current, read: true }));
+      this.selected.update((current) => current?.id === notification.id ? { ...current, read: true } : current);
       this.refreshSummary();
     });
   }
@@ -274,6 +308,7 @@ export class NotificationsComponent {
     }
 
     this.run(this.notificationService.snooze(notification.id, value), (updated) => {
+      this.closeDetail();
       this.successMessage.set(updated.snoozedUntil ? `Notificação adiada até ${formatNotificationDateTime(updated.snoozedUntil)}.` : 'Notificação adiada.');
       this.loadInbox();
     });
