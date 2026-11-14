@@ -6,7 +6,7 @@ Sistema web para diagnóstico técnico e acompanhamento de ordens de serviço (p
 
 - Frontend: Angular 21 (`frontend/`)
 - Backend: Spring Boot 3.2, Java 17 (`backend/`)
-- Banco: MySQL 8 (migrações Flyway); testes com H2
+- Banco: PostgreSQL 16 (migrações Flyway), também nos testes (Testcontainers)
 - Execução local: Docker Compose
 
 ## Subir em 3 comandos

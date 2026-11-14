@@ -12,7 +12,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface ProtocolTemplateRepository extends JpaRepository<ProtocolTemplate, Long> {
 
-    @Query("select t from ProtocolTemplate t left join fetch t.product order by lower(t.name) asc, t.id asc")
+    @Query("select t from ProtocolTemplate t left join fetch t.product order by lower(unaccent(t.name)) asc, t.id asc")
     List<ProtocolTemplate> findAllOrderByName();
 
     @Query("select t from ProtocolTemplate t left join fetch t.product where t.active = true")

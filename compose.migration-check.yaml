@@ -1,18 +1,29 @@
+# Validação isolada das migrações num PostgreSQL descartável (projeto navitas-mig, porta 5417).
+# Ver docs/banco-de-dados.md: up -d postgres, run --rm flyway, down -v (só este projeto).
 services:
-  mysql:
-    image: mysql:8.0
+  postgres:
+    image: postgres:16
     ports:
-      - "127.0.0.1:3317:3306"
+      - "127.0.0.1:5417:5432"
     environment:
-      MYSQL_DATABASE: navitas_migration
-      MYSQL_ROOT_PASSWORD: migration_local_only
+      POSTGRES_DB: navitas_migration
+      POSTGRES_USER: navitas_migration
+      POSTGRES_PASSWORD: migration_local_only
     volumes:
-      - migration_data:/var/lib/mysql
+      - migration_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U navitas_migration -d navitas_migration"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
   flyway:
     image: flyway/flyway:9.22.3
     profiles: [validation]
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
       - ./backend/src/main/resources/db/migration:/flyway/sql:ro
-    command: ["-url=jdbc:mysql://mysql:3306/navitas_migration?allowPublicKeyRetrieval=true&useSSL=false", "-user=root", "-password=migration_local_only", "-connectRetries=60", "migrate"]
+    command: ["-url=jdbc:postgresql://postgres:5432/navitas_migration", "-user=navitas_migration", "-password=migration_local_only", "-connectRetries=60", "migrate", "info", "validate"]
 volumes:
   migration_data:

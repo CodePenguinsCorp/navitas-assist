@@ -5,31 +5,24 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
-import org.flywaydb.core.Flyway;
+import br.com.navitasassist.support.PostgresTestDatabase;
 import org.junit.jupiter.api.Test;
 
-/** V2: data limite do RMA, filtro de prazo das visualizações e fim de todas as linhas SLA_*. */
+/** Data limite do RMA, filtro de prazo das visualizações e ausência dos alertas SLA_* no schema final da baseline. */
 class DeadlineMigrationTest {
 
-    private static final String USER = "sa";
-    private static final String PASSWORD = "";
-
     @Test
-    void addsDeadlineSchema() throws SQLException {
-        String url = newDatabase();
-        migrateTo(url, "2");
+    void hasDeadlineSchema() throws SQLException {
+        PostgresTestDatabase.Coordinates database = PostgresTestDatabase.migrated("deadline");
 
-        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD); Statement statement = connection.createStatement()) {
+        try (Connection connection = database.connect(); Statement statement = connection.createStatement()) {
             assertEquals(Types.DATE, columnType(connection, "rmas", "due_date"));
             assertEquals(Set.of("id", "rma_id", "previous_due_date", "new_due_date", "changed_by", "changed_at"), columns(connection, "rma_due_date_history"));
             assertTrue(indexes(connection, "rma_due_date_history").contains("idx_rma_due_date_history_rma_id"));
@@ -42,28 +35,12 @@ class DeadlineMigrationTest {
     }
 
     @Test
-    void removesEverySlaRowAndKeepsTheOtherRules() throws SQLException {
-        String url = newDatabase();
-        migrateTo(url, "1");
+    void seedsNoSlaRules() throws SQLException {
+        PostgresTestDatabase.Coordinates database = PostgresTestDatabase.migrated("deadline_sla");
 
-        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD); Statement statement = connection.createStatement()) {
-            long userId = insertUser(statement, "tecnico.sla");
-            statement.executeUpdate("INSERT INTO notification_mutes (user_id, event_type, created_at) VALUES (" + userId + ", 'SLA_WARNING', CURRENT_TIMESTAMP)");
-            statement.executeUpdate("INSERT INTO notification_mutes (user_id, event_type, created_at) VALUES (" + userId + ", 'RMA_CREATED', CURRENT_TIMESTAMP)");
-            for (String type : List.of("SLA_OVERDUE", "RMA_CREATED")) {
-                statement.executeUpdate("INSERT INTO notification_events (event_key, event_type, status, recipient_count, occurred_at) VALUES ('KEY-" + type + "', '" + type + "', 'PROCESSED', 1, CURRENT_TIMESTAMP)");
-                statement.executeUpdate("""
-                    INSERT INTO notifications (event_id, recipient_id, event_type, severity, title, message, created_at, email_status)
-                    SELECT id, %d, event_type, 'INFO', 'Título', 'Mensagem', CURRENT_TIMESTAMP, 'NOT_REQUESTED'
-                    FROM notification_events WHERE event_key = 'KEY-%s'
-                    """.formatted(userId, type));
-            }
-        }
-
-        migrateTo(url, "2");
-
-        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
-            assertEquals(Set.of("RMA_CREATED", "RMA_ASSIGNED"), strings(connection, "SELECT event_type FROM notification_rules"));
+        try (Connection connection = database.connect()) {
+            assertEquals(Set.of("RMA_CREATED", "RMA_ASSIGNED", "RMA_BLOCKED", "PART_PENDING", "TEST_FAILED"),
+                strings(connection, "SELECT event_type FROM notification_rules"));
             assertEquals(0, strings(connection, """
                 SELECT CAST(rp.rule_id AS VARCHAR(20)) FROM notification_rule_recipient_profiles rp
                 LEFT JOIN notification_rules r ON r.id = rp.rule_id WHERE r.id IS NULL
@@ -73,18 +50,7 @@ class DeadlineMigrationTest {
                 JOIN notification_rules r ON r.id = rp.rule_id JOIN access_profiles p ON p.id = rp.profile_id
                 WHERE r.event_type = 'RMA_CREATED'
                 """));
-            assertEquals(Set.of("RMA_CREATED"), strings(connection, "SELECT event_type FROM notification_mutes"));
-            assertEquals(Set.of("RMA_CREATED"), strings(connection, "SELECT event_type FROM notifications"));
-            assertEquals(Set.of("RMA_CREATED"), strings(connection, "SELECT event_type FROM notification_events"));
         }
-    }
-
-    private static String newDatabase() {
-        return "jdbc:h2:mem:deadline_" + UUID.randomUUID().toString().replace("-", "") + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
-    }
-
-    private static void migrateTo(String url, String version) {
-        Flyway.configure().dataSource(url, USER, PASSWORD).locations("classpath:db/migration").target(version).load().migrate();
     }
 
     private static long insertUser(Statement statement, String username) throws SQLException {

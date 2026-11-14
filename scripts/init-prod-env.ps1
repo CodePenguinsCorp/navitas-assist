@@ -38,16 +38,14 @@ $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRul
 )))
 [System.IO.File]::SetAccessControl($OutputPath, $acl)
 
-$mysqlPassword = New-HexSecret 24
-$mysqlRootPassword = New-HexSecret 24
+$postgresPassword = New-HexSecret 24
 
 $content = @"
 # Production Compose
 FRONTEND_PORT=80
-MYSQL_DATABASE=navitas_assist
-MYSQL_USER=navitas_app
-MYSQL_PASSWORD=$mysqlPassword
-MYSQL_ROOT_PASSWORD=$mysqlRootPassword
+POSTGRES_DB=navitas_assist
+POSTGRES_USER=navitas_app
+POSTGRES_PASSWORD=$postgresPassword
 
 # Images published by CD
 BACKEND_IMAGE=$BackendImage

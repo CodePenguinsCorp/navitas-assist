@@ -44,7 +44,7 @@ function Resolve-ServiceSelection {
     }
 
     if ($DatabaseOnly) {
-        $selectedServices += "mysql"
+        $selectedServices += "postgres"
     }
 
     if ($selectedServices.Count -gt 1) {
@@ -134,7 +134,7 @@ if ($services.Count -eq 0) {
 }
 
 if ($DatabaseOnly) {
-    Write-Host "Parando o MySQL Docker selecionado..." -ForegroundColor Yellow
+    Write-Host "Parando o PostgreSQL Docker selecionado..." -ForegroundColor Yellow
 }
 else {
     Write-Host "Parando servicos Docker selecionados..." -ForegroundColor Yellow

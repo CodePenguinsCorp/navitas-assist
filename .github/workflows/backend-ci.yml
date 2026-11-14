@@ -18,16 +18,18 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: maven:3.9.9-eclipse-temurin-17
+    # O job roda dentro de um contêiner sem o socket do Docker, então o Testcontainers não sobe aqui: a suíte usa o
+    # PostgreSQL de serviço pelas variáveis TEST_DB_*. O usuário é o dono do servidor (os testes de migração criam
+    # bancos próprios e a baseline cria a extensão unaccent).
     services:
-      mysql:
-        image: mysql:8.0
+      postgres:
+        image: postgres:16
         env:
-          MYSQL_ROOT_PASSWORD: navitas-ci-root
-          MYSQL_DATABASE: navitas_ci
-          MYSQL_USER: navitas_ci
-          MYSQL_PASSWORD: navitas-ci-test
+          POSTGRES_DB: navitas_ci
+          POSTGRES_USER: navitas_ci
+          POSTGRES_PASSWORD: navitas-ci-test
         options: >-
-          --health-cmd "mysqladmin ping -h 127.0.0.1 --silent"
+          --health-cmd "pg_isready -U navitas_ci -d navitas_ci"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 12
@@ -37,15 +39,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Run tests and build
-        run: mvn -B -ntp verify
-      - name: Validate MySQL schema and enum persistence
+      - name: Run tests and build (PostgreSQL 16)
         env:
-          MYSQL_TEST_PASSWORD: navitas-ci-test
-        run: >-
-          mvn -B -ntp test
-          -Dtest=EnumPersistenceIntegrationTest
-          '-Dspring.datasource.url=jdbc:mysql://mysql:3306/navitas_ci?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC'
-          -Dspring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
-          -Dspring.datasource.username=navitas_ci
-          -Dspring.datasource.password="$MYSQL_TEST_PASSWORD"
+          TEST_DB_URL: jdbc:postgresql://postgres:5432/navitas_ci
+          TEST_DB_USER: navitas_ci
+          TEST_DB_PASSWORD: navitas-ci-test
+        run: mvn -B -ntp verify

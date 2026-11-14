@@ -6,7 +6,7 @@ Navitas Assist é um sistema web para diagnóstico técnico e acompanhamento de 
 
 - `frontend/`: SPA em Angular 21, servida por Nginx no Docker. Fala com a API em `/api` por proxy.
 - `backend/`: API REST em Spring Boot 3.2 (Java 17), JPA, Flyway e Spring Security com sessão.
-- Banco: MySQL 8. Os testes automatizados usam H2 em modo MySQL.
+- Banco: PostgreSQL 16 em todos os ambientes. Os testes automatizados rodam contra um PostgreSQL real (Testcontainers localmente, serviço no CI).
 
 ## Módulos
 

@@ -1,9 +1,10 @@
+# A conexão vem de PostgresContextInitializer (Testcontainers localmente; TEST_DB_* no CI).
 spring:
   datasource:
-    url: jdbc:h2:mem:navitas_assist;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    hikari:
+      # Cada contexto Spring em cache guarda o próprio pool; conexões ociosas fecham logo para não esgotar o
+      # max_connections (100 por padrão) do PostgreSQL de serviço do CI.
+      idle-timeout: 10000
   jpa:
     hibernate:
       ddl-auto: validate
@@ -11,8 +12,6 @@ spring:
     properties:
       hibernate:
         format_sql: false
-        type:
-          preferred_instant_jdbc_type: TIMESTAMP
 
 server:
   port: 0

@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -13,24 +12,20 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
-import org.flywaydb.core.Flyway;
+import br.com.navitasassist.support.PostgresTestDatabase;
 import org.junit.jupiter.api.Test;
 
 /**
- * Perfis, permissões e regras de notificação semeados pelas migrações (V1 e a limpeza do SLA na V2), num H2 próprio por teste.
+ * Perfis, permissões e regras de notificação semeados pelas migrações (V1 e a limpeza do SLA na V2), num PostgreSQL próprio por teste.
  */
 class AccessProfileMigrationTest {
 
-    private static final String USER = "sa";
-    private static final String PASSWORD = "";
-
     @Test
     void seedsLegacyProfilesWithExactPermissions() throws SQLException {
-        String url = migratedDatabase();
+        PostgresTestDatabase.Coordinates database = migratedDatabase();
 
-        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
+        try (Connection connection = database.connect()) {
             assertEquals(
                 Map.of("ADMIN", "Administrador", "SERVICE_DESK", "Atendimento", "TECHNICIAN", "Técnico", "VIEWER", "Consulta"),
                 profileNamesByLegacyCode(connection));
@@ -51,9 +46,9 @@ class AccessProfileMigrationTest {
 
     @Test
     void seedsNotificationRulesWithProfileRecipients() throws SQLException {
-        String url = migratedDatabase();
+        PostgresTestDatabase.Coordinates database = migratedDatabase();
 
-        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
+        try (Connection connection = database.connect()) {
             Map<String, String> rules = new HashMap<>();
             try (Statement statement = connection.createStatement();
                  ResultSet rows = statement.executeQuery("""
@@ -92,9 +87,9 @@ class AccessProfileMigrationTest {
     /** As colunas legadas dos roles fixos não fazem parte da migração-base. */
     @Test
     void hasNoLegacyRoleColumns() throws SQLException {
-        String url = migratedDatabase();
+        PostgresTestDatabase.Coordinates database = migratedDatabase();
 
-        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD)) {
+        try (Connection connection = database.connect()) {
             assertEquals(0, count(connection, """
                 SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
                 WHERE (UPPER(TABLE_NAME) = 'USER_ACCOUNTS' AND UPPER(COLUMN_NAME) = 'ROLE')
@@ -108,9 +103,9 @@ class AccessProfileMigrationTest {
 
     @Test
     void requiresProfileForEveryUser() throws SQLException {
-        String url = migratedDatabase();
+        PostgresTestDatabase.Coordinates database = migratedDatabase();
 
-        try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD);
+        try (Connection connection = database.connect();
              Statement statement = connection.createStatement()) {
             statement.executeUpdate("""
                 INSERT INTO user_accounts (username, full_name, password_hash, active, created_at, updated_at, profile_id)
@@ -128,10 +123,8 @@ class AccessProfileMigrationTest {
         }
     }
 
-    private static String migratedDatabase() {
-        String url = "jdbc:h2:mem:mig_" + UUID.randomUUID().toString().replace("-", "") + ";MODE=MySQL;DB_CLOSE_DELAY=-1";
-        Flyway.configure().dataSource(url, USER, PASSWORD).locations("classpath:db/migration").load().migrate();
-        return url;
+    private static PostgresTestDatabase.Coordinates migratedDatabase() {
+        return PostgresTestDatabase.migrated("mig_profiles");
     }
 
     private static int count(Connection connection, String sql) throws SQLException {
