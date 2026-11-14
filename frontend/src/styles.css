@@ -3485,3 +3485,9 @@ app-custom-select:has(> .custom-select--priority) {
 /* Notification email limit indicators. */
 .mini-chip.email-usage--limit { background: var(--warning-bg); color: var(--warning-text); }
 .field-hint.email-usage-note { color: var(--warning-text); }
+
+/* No box inside the tab: a divider and the same label/control rhythm as a form row. */
+.protocol-launch { display: grid; gap: var(--space-2); margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--line); }
+.protocol-launch__label { font-size: var(--font-size-sm); font-weight: 600; color: var(--muted); }
+.protocol-launch__row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.6rem; align-items: center; }
+.protocol-launch__row .button-primary { min-height: var(--control-height); }

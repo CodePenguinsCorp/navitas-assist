@@ -78,6 +78,7 @@ describe('RmaProtocolsComponent result entry', () => {
     expect(component().resultForm.getRawValue()).toEqual({ outcome: 'FAILED', measuredValue: '12,50', textValue: 'Registro local', evidence: 'Foto nova', justification: 'Após ajuste' });
     expect(button('Cancelar')?.disabled).toBe(false);
     component().saveResult(); render(); expect(form()).toBeNull();
+    (fixture.nativeElement.querySelector('.protocol-row__toggle') as HTMLButtonElement).click(); render();
     expect(fixture.nativeElement.textContent).toContain('Foto original'); expect(fixture.nativeElement.textContent).toContain('Foto nova');
     expect(service.recordResult).toHaveBeenCalledTimes(2);
   });
