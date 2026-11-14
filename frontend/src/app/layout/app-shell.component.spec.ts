@@ -232,4 +232,21 @@ describe('AppShellComponent menu by permission', () => {
     expect(rule('.nav-groups')).toMatch(/scrollbar-width:\s*none/);
     expect(css).toMatch(/\.nav-groups::-webkit-scrollbar\s*\{\s*display:\s*none/);
   });
+
+  it('keeps wide content from adding a page-level horizontal scrollbar', async () => {
+    const fsModule = 'node:fs';
+    const { readFileSync } = await import(/* @vite-ignore */ fsModule);
+    const css: string = readFileSync('src/styles.css', 'utf8');
+    const rule = (selector: string): string => {
+      const start = css.indexOf(`${String.fromCharCode(10)}${selector} {`);
+      return start < 0 ? '' : css.slice(start, css.indexOf('}', start));
+    };
+
+    expect(rule('.shell')).toMatch(/grid-template-columns:\s*272px minmax\(0, 1fr\)/);
+    expect(rule('.shell-content')).toMatch(/grid-template-columns:\s*minmax\(0, 1fr\)/);
+    expect(rule('.page-surface')).toMatch(/grid-template-columns:\s*minmax\(0, 1fr\)/);
+    expect(rule('.table-wrap')).toMatch(/position:\s*relative/);
+    expect(rule('.table-wrap')).toMatch(/overflow-x:\s*auto/);
+    expect(css).toMatch(/@media \(max-width: 900px\) \{\s*\.shell \{\s*grid-template-columns:\s*minmax\(0, 1fr\);\s*\}\s*\/\*[^*]*\*\/\s*\.shell-sidebar \{[^}]*overflow-x:\s*clip/);
+  });
 });

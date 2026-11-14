@@ -462,7 +462,7 @@ a {
 
 .shell {
   display: grid;
-  grid-template-columns: 272px 1fr;
+  grid-template-columns: 272px minmax(0, 1fr);
   min-height: 100vh;
   background: linear-gradient(180deg, #f7fbff 0%, var(--bg) 100%);
 }
@@ -675,9 +675,11 @@ a {
   justify-content: flex-end;
 }
 
+/* minmax(0, 1fr): the page column never grows past the viewport to fit a wide child (no page-level side scroll). */
 .shell-content {
   padding: 1rem 1.5rem 1.5rem;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
 
@@ -723,6 +725,7 @@ a {
 
 .page-surface {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
 
@@ -1778,7 +1781,9 @@ fieldset.form-section {
   color: var(--success-text);
 }
 
+/* relative: absolutely positioned children (.sr-only) scroll with the table instead of widening the page. */
 .table-wrap {
+  position: relative;
   overflow-x: auto;
 }
 
@@ -2179,14 +2184,16 @@ input[type="checkbox"].switch:disabled:checked {
 
 @media (max-width: 900px) {
   .shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
+  /* clip keeps the decorative ::before/::after glows from widening the page. */
   .shell-sidebar {
     position: relative;
     height: auto;
     min-height: auto;
     overflow: visible;
+    overflow-x: clip;
   }
 
   .nav-groups {
