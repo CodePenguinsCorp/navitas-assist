@@ -511,6 +511,11 @@ class NotificationEmailIntegrationTest {
     private org.springframework.test.web.servlet.ResultActions assignAndWait() throws Exception {
         org.springframework.test.web.servlet.ResultActions result = assign();
         NotificationTestSupport.awaitIdle(notificationExecutor);
+        // The producer timestamps events with wall time; keep this worker fixture due at its fixed test clock.
+        List<Notification> assigned = assignmentNotifications();
+        Notification latest = assigned.get(assigned.size() - 1);
+        latest.setEmailNextAttemptAt(clock.instant());
+        notificationRepository.saveAndFlush(latest);
         return result;
     }
 

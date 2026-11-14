@@ -24,8 +24,8 @@ class DatabaseMigrationTest {
 
         int executedMigrations = PostgresTestDatabase.flyway(database).migrate().migrationsExecuted;
 
-        // Baseline única em PostgreSQL: a V1 consolida o histórico das migrações MySQL.
-        assertEquals(1, executedMigrations);
+        // A V1 consolida o histórico MySQL; a V2 adiciona leitura em lote e prioridade das notificações.
+        assertEquals(2, executedMigrations);
         try (Connection connection = database.connect()) {
             assertTrue(tableExists(connection, "rmas"));
             assertTrue(tableExists(connection, "rma_code_generation_lock"));

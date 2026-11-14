@@ -207,8 +207,22 @@ class NotificationIntegrationTest {
             .andExpect(jsonPath("$[0].title").value(containsString(rma.code())))
             .andExpect(jsonPath("$[0].message").value(containsString("Cliente notificações")))
             .andExpect(jsonPath("$[0].rmaCode").value(rma.code()))
+            .andExpect(jsonPath("$[0].rmaPriority").value("HIGH"))
             .andExpect(jsonPath("$[0].actionPath").value("/rmas?rma=" + rma.id()))
             .andExpect(jsonPath("$[0].read").value(false));
+    }
+
+    @Test
+    void creationPriorityRemainsTheOriginalValueAfterTheRmaChanges() throws Exception {
+        RmaDetailResponse rma = createRma();
+        var record = rmaRecordRepository.findById(rma.id()).orElseThrow();
+        record.setPriority(RmaPriority.LOW);
+        rmaRecordRepository.saveAndFlush(record);
+
+        mockMvc.perform(get("/api/notifications").with(as(desk)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].rmaPriority").value("HIGH"))
+            .andExpect(jsonPath("$[0].message").value(containsString("prioridade alta")));
     }
 
     @Test
@@ -227,6 +241,7 @@ class NotificationIntegrationTest {
 
         mockMvc.perform(get("/api/notifications").with(as(technician)))
             .andExpect(jsonPath("$[0].eventType").value("RMA_ASSIGNED"))
+            .andExpect(jsonPath("$[0].rmaPriority").doesNotExist())
             .andExpect(jsonPath("$[0].title").value(containsString(rma.code())))
             .andExpect(jsonPath("$[0].message").value(containsString("nav40-desk")))
             .andExpect(jsonPath("$[0].actionPath").value("/rmas?rma=" + rma.id()));
@@ -289,7 +304,8 @@ class NotificationIntegrationTest {
         mockMvc.perform(get("/api/notifications/summary").with(as(desk))).andExpect(jsonPath("$.unread").value(0));
 
         createRma();
-        mockMvc.perform(post("/api/notifications/read-all").with(as(desk)).with(csrf())).andExpect(status().isNoContent());
+        mockMvc.perform(post("/api/notifications/read-all").with(as(desk)).with(csrf()))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.markedCount").value(2));
         mockMvc.perform(get("/api/notifications").param("unreadOnly", "true").param("includeSnoozed", "true").with(as(desk))).andExpect(jsonPath("$", hasSize(0)));
     }
 
@@ -408,7 +424,8 @@ class NotificationIntegrationTest {
         }
         mockMvc.perform(get("/api/notifications").param("eventType", "RMA_ASSIGNED").param("severity", "CRITICAL").param("includeSnoozed", "true").with(as(desk)))
             .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1))).andExpect(jsonPath("$[0].eventType").value("RMA_ASSIGNED"));
-        mockMvc.perform(post("/api/notifications/read-all").with(as(desk)).with(csrf())).andExpect(status().isNoContent());
+        mockMvc.perform(post("/api/notifications/read-all").with(as(desk)).with(csrf()))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.markedCount").value(106));
         assertEquals(0, notificationRepository.findAll().stream().filter(n -> n.getRecipient().getId().equals(desk.getId()) && n.getReadAt() == null).count());
         mockMvc.perform(get("/api/notifications").param("severity", "INVALID").with(as(desk))).andExpect(status().isBadRequest());
     }

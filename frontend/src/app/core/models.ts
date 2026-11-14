@@ -516,6 +516,7 @@ export interface NotificationResponse {
   message: string;
   rmaId: number | null;
   rmaCode: string | null;
+  rmaPriority?: RmaPriority | null;
   actionPath: string | null;
   createdAt: string;
   readAt: string | null;
@@ -525,6 +526,16 @@ export interface NotificationResponse {
 
 export interface NotificationSummaryResponse {
   unread: number;
+}
+
+export interface NotificationReadAllResponse {
+  markedCount: number;
+  undoToken: string | null;
+  expiresAt: string | null;
+}
+
+export interface NotificationReadUndoResponse {
+  restoredCount: number;
 }
 
 export interface NotificationPreferenceResponse {

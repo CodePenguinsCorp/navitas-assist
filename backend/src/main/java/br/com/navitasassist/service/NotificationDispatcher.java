@@ -13,6 +13,7 @@ import br.com.navitasassist.notification.Notification;
 import br.com.navitasassist.notification.NotificationEmailStatus;
 import br.com.navitasassist.notification.NotificationEvent;
 import br.com.navitasassist.notification.NotificationEventStatus;
+import br.com.navitasassist.notification.NotificationEventType;
 import br.com.navitasassist.notification.NotificationRule;
 import br.com.navitasassist.notification.RmaNotificationEvent;
 import br.com.navitasassist.repository.NotificationEventRepository;
@@ -69,6 +70,7 @@ public class NotificationDispatcher {
             notification.setRecipient(recipient);
             notification.setRma(rma);
             notification.setEventType(event.type());
+            notification.setRmaPriority(event.type() == NotificationEventType.RMA_CREATED ? rma.getPriority() : null);
             notification.setSeverity(rule.get().getSeverity());
             notification.setTitle(content.title());
             notification.setMessage(content.message());

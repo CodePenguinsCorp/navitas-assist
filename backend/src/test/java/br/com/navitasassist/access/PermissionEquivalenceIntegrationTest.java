@@ -111,6 +111,8 @@ class PermissionEquivalenceIntegrationTest {
         row(HttpMethod.GET, "/api/notifications/summary", ALL),
         row(HttpMethod.POST, "/api/notifications/{id}/read", ALL),
         row(HttpMethod.POST, "/api/notifications/read-all", ALL),
+        row(HttpMethod.POST, "/api/notifications/read-all/undo", ALL),
+        row(HttpMethod.POST, "/api/notifications/read-all/dismiss", ALL),
         row(HttpMethod.POST, "/api/notifications/{id}/snooze", ALL),
         row(HttpMethod.GET, "/api/notifications/preferences", ALL),
         row(HttpMethod.PUT, "/api/notifications/preferences/{eventType}", ALL),

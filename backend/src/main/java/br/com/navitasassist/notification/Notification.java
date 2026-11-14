@@ -1,10 +1,12 @@
 package br.com.navitasassist.notification;
 
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 
 import br.com.navitasassist.rma.RmaRecord;
+import br.com.navitasassist.rma.RmaPriority;
 import br.com.navitasassist.user.UserAccount;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -25,7 +27,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @Entity
-@org.hibernate.annotations.DynamicUpdate
+@DynamicUpdate
 @Table(name = "notifications")
 public class Notification {
 
@@ -44,6 +46,11 @@ public class Notification {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "rma_id", updatable = false)
     private RmaRecord rma;
+
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20, updatable = false)
+    private RmaPriority rmaPriority;
 
     @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
@@ -68,6 +75,11 @@ public class Notification {
     private Instant createdAt;
 
     private Instant readAt;
+
+    @Column(length = 36)
+    private String readBatchToken;
+
+    private Instant readBatchExpiresAt;
 
     private Instant snoozedUntil;
 

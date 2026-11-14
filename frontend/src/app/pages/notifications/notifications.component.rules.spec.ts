@@ -72,6 +72,8 @@ describe('NotificationsComponent rules', () => {
     service = {
       unreadCount: signal(0),
       summaryLoaded: signal(true),
+      latestReadAll: signal(null),
+      markingAll: signal(false),
       summaryLoadFailed: signal(false),
       list: vi.fn(() => of([])),
       refreshSummary: vi.fn(() => of(0)),

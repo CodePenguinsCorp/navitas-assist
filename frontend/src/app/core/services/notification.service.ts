@@ -1,6 +1,6 @@
 import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, catchError, defer, map, of, tap } from 'rxjs';
+import { EMPTY, Observable, catchError, defer, finalize, map, of, tap } from 'rxjs';
 import { SKIP_GLOBAL_LOADING } from '../interceptors/loading.interceptor';
 import {
   NotificationEventType,
@@ -10,6 +10,8 @@ import {
   NotificationEmailActionResponse,
   NotificationFailureResponse,
   NotificationPreferenceResponse,
+  NotificationReadAllResponse,
+  NotificationReadUndoResponse,
   NotificationResponse,
   NotificationRuleRequest,
   NotificationRuleResponse,
@@ -27,6 +29,10 @@ function requestContext(options: NotificationRequestOptions): HttpContext {
 export class NotificationService {
   private readonly http = inject(HttpClient);
   private readonly unreadSignal = signal(0);
+  private readonly latestReadAllSignal = signal<NotificationReadAllResponse | null>(null);
+  private readonly markingAllSignal = signal(false);
+  readonly latestReadAll = this.latestReadAllSignal.asReadonly();
+  readonly markingAll = this.markingAllSignal.asReadonly();
 
   /** Unread count shared by the shell badge and the notification center. */
   readonly unreadCount = this.unreadSignal.asReadonly();
@@ -80,8 +86,30 @@ export class NotificationService {
     return this.http.post<NotificationResponse>(`/api/notifications/${id}/read`, {}, { context: requestContext(options) });
   }
 
-  markAllRead(options: NotificationRequestOptions = {}): Observable<void> {
-    return this.http.post<void>('/api/notifications/read-all', {}, { context: requestContext(options) });
+  markAllRead(): Observable<NotificationReadAllResponse> {
+    return defer(() => {
+      // The inbox and bell share this mutation: a second request could replace the first undo token.
+      if (this.markingAllSignal()) return EMPTY;
+      this.markingAllSignal.set(true);
+      return this.http.post<NotificationReadAllResponse>('/api/notifications/read-all', {}, { context: requestContext({ silent: true }) }).pipe(
+        tap(batch => this.latestReadAllSignal.set(batch)),
+        finalize(() => this.markingAllSignal.set(false))
+      );
+    });
+  }
+
+  undoReadAll(token: string): Observable<NotificationReadUndoResponse> {
+    return this.http.post<NotificationReadUndoResponse>('/api/notifications/read-all/undo', { token }, { context: requestContext({ silent: true }) })
+      .pipe(tap(() => this.clearReadAll(token)));
+  }
+
+  dismissReadAll(token: string): Observable<void> {
+    return this.http.post<void>('/api/notifications/read-all/dismiss', { token }, { context: requestContext({ silent: true }) })
+      .pipe(tap(() => this.clearReadAll(token)));
+  }
+
+  private clearReadAll(token: string): void {
+    if (this.latestReadAllSignal()?.undoToken === token) this.latestReadAllSignal.set(null);
   }
 
   snooze(id: number, minutes: number, options: NotificationRequestOptions = {}): Observable<NotificationResponse> {

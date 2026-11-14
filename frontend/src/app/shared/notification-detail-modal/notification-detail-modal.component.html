@@ -31,7 +31,11 @@
       <p class="field-error" role="alert">{{ error() }}</p>
     }
 
-    <p class="notification-detail__message">{{ notification().message }}</p>
+    @if (messagePriority(); as priority) {
+      <p class="notification-detail__message">{{ priority.before }}<span class="notification-priority" [attr.data-priority]="priority.priority">Prioridade {{ priorityLabel(priority.priority) }}</span>{{ priority.after }}</p>
+    } @else {
+      <p class="notification-detail__message">{{ notification().message }}</p>
+    }
 
     <p class="notification-detail__meta">
       <time [attr.datetime]="notification().createdAt">{{ dateTime(notification().createdAt) }}</time> · {{ ago() }} · {{ notification().read ? 'Lida' : 'Não lida' }}

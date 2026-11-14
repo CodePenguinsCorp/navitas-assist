@@ -5,6 +5,7 @@ import br.com.navitasassist.config.NotificationProperties;
 import br.com.navitasassist.service.NotificationEmailContentFactory;
 import br.com.navitasassist.notification.email.EmailDeliveryException;
 import br.com.navitasassist.rma.RmaRecord;
+import br.com.navitasassist.rma.RmaPriority;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
@@ -39,6 +40,10 @@ class NotificationEmailContentFactoryTest {
         assertTrue(message.text().contains("http://localhost:4200/rmas?rma=42"));
         assertFalse(message.html().contains("Secret client"));
         assertEquals(message, factory.build(n, "to@example.invalid"));
+        for (RmaPriority priority : RmaPriority.values()) {
+            n.setRmaPriority(priority);
+            assertEquals(message, factory.build(n, "to@example.invalid"));
+        }
         rma.setCode("bad\r\ncode");
         assertThrows(EmailDeliveryException.class, () -> factory.build(n, "to@example.invalid"));
     }

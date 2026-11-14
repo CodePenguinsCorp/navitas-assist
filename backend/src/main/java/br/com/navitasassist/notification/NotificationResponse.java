@@ -2,6 +2,8 @@ package br.com.navitasassist.notification;
 
 import java.time.Instant;
 
+import br.com.navitasassist.rma.RmaPriority;
+
 public record NotificationResponse(
     Long id,
     NotificationEventType eventType,
@@ -10,6 +12,7 @@ public record NotificationResponse(
     String message,
     Long rmaId,
     String rmaCode,
+    RmaPriority rmaPriority,
     String actionPath,
     Instant createdAt,
     Instant readAt,
@@ -25,6 +28,7 @@ public record NotificationResponse(
             notification.getMessage(),
             notification.getRma() == null ? null : notification.getRma().getId(),
             notification.getRma() == null ? null : notification.getRma().getCode(),
+            notification.getRmaPriority(),
             notification.getActionPath(),
             notification.getCreatedAt(),
             notification.getReadAt(),

@@ -1,7 +1,19 @@
 <section class="page-surface">
   <app-page-header heading="Notificações">
-    <button type="button" class="button-secondary" (click)="markAllRead()" [disabled]="busy() || (unreadKnown() && unreadCount() === 0 && !hasUnread())"><app-icon name="check" [size]="16" />Marcar todas como lidas</button>
+    <button type="button" class="button-secondary" (click)="markAllRead()" [disabled]="busy() || markingAll()"><app-icon name="check" [size]="16" />Marcar todas como lidas</button>
   </app-page-header>
+
+  @if (readBatch(); as batch) {
+    <aside class="read-batch-toast alert-banner--success" aria-label="Leitura de notificações">
+      <p role="status" aria-live="polite" aria-atomic="true">{{ batch.markedCount }} mensagens marcada(s) como lida</p>
+      <button type="button" class="button-secondary button-secondary--small" (click)="undoReadAll()" [disabled]="busy()">Desmarcar mensagens</button>
+      <button type="button" class="icon-button read-batch-close" aria-label="Fechar aviso de leitura" title="Fechar" (click)="dismissReadAll()" [disabled]="busy()"><app-icon name="close" /></button>
+      <!-- A new batch recreates the bar to restart its CSS animation. -->
+      @for (token of [batch.undoToken]; track token) {
+        <div class="read-batch-progress" aria-hidden="true" [style.animation-duration.ms]="readBatchDurationMs()"></div>
+      }
+    </aside>
+  }
 
   <div class="tab-list" role="tablist" aria-label="Seções de notificações" (keydown)="onTabKeydown($event)">
     @for (tab of tabs(); track tab) {
@@ -61,6 +73,7 @@
         <div class="inbox-filters__actions">
           <button type="button" class="button-secondary inbox-toggle" [attr.aria-pressed]="unreadOnly()" (click)="toggleUnreadOnly()">@if (unreadOnly()) {<app-icon name="check" [size]="16" />}Somente não lidas</button>
           <button type="button" class="button-secondary inbox-toggle" [attr.aria-pressed]="includeSnoozed()" (click)="toggleIncludeSnoozed()">@if (includeSnoozed()) {<app-icon name="check" [size]="16" />}Mostrar adiadas</button>
+          <button type="button" class="button-secondary button-secondary--small" [attr.aria-label]="orderLabel()" [title]="orderLabel()" [attr.aria-pressed]="!newestFirst()" (click)="toggleOrder()"><app-icon [name]="newestFirst() ? 'sort-down' : 'sort-up'" /></button>
           <button type="button" class="button-secondary inbox-clear" [disabled]="inboxFilterCount() === 0" (click)="clearInboxFilters()">Limpar filtros{{ inboxFilterCount() ? ' (' + inboxFilterCount() + ')' : '' }}</button>
         </div>
       </section>
@@ -116,7 +129,11 @@
                           @if (isSnoozed(notification)) {
                             <span class="notification-snoozed"><app-icon name="clock" [size]="13" />Adiada até {{ dateTime(notification.snoozedUntil) }}</span>
                           }
-                          <span class="notification-message" [attr.title]="notification.message">{{ notification.message }}</span>
+                          @if (newRmaMessagePriority(notification); as priority) {
+                            <span class="notification-message" [attr.title]="notification.message">{{ priority.before }}<span class="notification-priority" [attr.data-priority]="priority.priority">Prioridade {{ priorityLabel(priority.priority) }}</span>{{ priority.after }}</span>
+                          } @else {
+                            <span class="notification-message" [attr.title]="notification.message">{{ notification.message }}</span>
+                          }
                         </p>
                       </div>
                       <div class="notification-actions">
@@ -136,7 +153,7 @@
           </div>
           <div class="list-foot">
             <app-result-count singular="notificação" plural="notificações" [count]="notifications().length" />
-            <span class="list-foot__note">Exibe as 100 mais recentes</span>
+            <span class="list-foot__note">Mostra as 100 notificações mais recentes, dentro dos filtros selecionados.</span>
             @if (unreadUnavailable()) { <span class="list-foot__note">Contagem de não lidas indisponível</span> }
           </div>
         }

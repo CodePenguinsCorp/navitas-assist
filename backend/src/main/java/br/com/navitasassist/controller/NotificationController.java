@@ -8,6 +8,9 @@ import br.com.navitasassist.notification.NotificationPreferenceResponse;
 import br.com.navitasassist.notification.NotificationResponse;
 import br.com.navitasassist.notification.NotificationSnoozeRequest;
 import br.com.navitasassist.notification.NotificationSummaryResponse;
+import br.com.navitasassist.notification.NotificationReadAllResponse;
+import br.com.navitasassist.notification.NotificationReadBatchRequest;
+import br.com.navitasassist.notification.NotificationReadUndoResponse;
 import br.com.navitasassist.service.NotificationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -45,9 +48,19 @@ public class NotificationController {
     }
 
     @PostMapping("/read-all")
+    public NotificationReadAllResponse markAllRead() {
+        return notificationService.markAllRead();
+    }
+
+    @PostMapping("/read-all/undo")
+    public NotificationReadUndoResponse undoReadAll(@Valid @RequestBody NotificationReadBatchRequest request) {
+        return notificationService.undoReadAll(request.token());
+    }
+
+    @PostMapping("/read-all/dismiss")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void markAllRead() {
-        notificationService.markAllRead();
+    public void dismissReadAll(@Valid @RequestBody NotificationReadBatchRequest request) {
+        notificationService.dismissReadAll(request.token());
     }
 
     @PostMapping("/{id}/snooze")

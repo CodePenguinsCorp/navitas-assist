@@ -26,6 +26,20 @@ Os alertas `SLA_*` foram removidos; a data limite não gera notificação ([praz
 - `GET /api/notifications` devolve um array de até 100 itens e aceita `unreadOnly`, `includeSnoozed`, `eventType` e `severity`. Caixa, resumo e ações pessoais ignoram linhas exclusivas de e-mail. `read-all` alcança todas as visíveis do usuário, inclusive adiadas e além das 100 linhas.
 - O sino e a caixa de entrada atualizam a cada 60 segundos, sem disparar o pop-up de carregamento.
 
+### Leitura em lote e ordenação (NAV-99)
+
+A caixa de entrada diferencia as não lidas pelo fundo e permite inverter a ordem do mesmo conjunto das 100 mais recentes, mantendo os filtros e o desempate por ID. O layout por dia, o modal de detalhes e as ações individuais permanecem disponíveis.
+
+Depois de **Marcar todas como lidas** na caixa de entrada, um aviso verde informa a quantidade alterada. **Desmarcar mensagens** desfaz somente o último lote durante até quatro segundos; a barra acompanha o tempo restante. Fechar, expirar ou iniciar outro lote encerra essa possibilidade. O backend valida destinatário, lote atual, uso único e prazo, preservando leituras anteriores, novas notificações e leituras individuais posteriores. O sino também usa o novo contrato e invalida o desfazer anterior.
+
+| Endpoint | Contrato |
+| --- | --- |
+| `POST /api/notifications/read-all` | **200**, `{markedCount, undoToken, expiresAt}`; atualiza todas as elegíveis, inclusive adiadas e além das 100 exibidas. |
+| `POST /api/notifications/read-all/undo` | Recebe `{token}`; retorna `{restoredCount}`. |
+| `POST /api/notifications/read-all/dismiss` | Recebe `{token}`; retorna **204**. |
+
+Frontend e backend devem ser atualizados juntos, pois `read-all` antes retornava 204. A migração aditiva `V2__notification_read_batch_and_priority.sql` preserva a baseline PostgreSQL V1 e os dados existentes; não exige recriar esse banco. Ela também guarda a prioridade histórica de novos avisos `RMA_CREATED`. A interface usa esse campo para colorir e capitalizar a prioridade; avisos legados continuam compatíveis pelo texto armazenado. Os templates de e-mail permanecem inalterados e não recebem essas cores.
+
 ## E-mail
 
 O backend usa o e-mail opcional de `user_accounts`, nunca o do cliente nem um endereço derivado do username (ver [acesso-e-permissoes.md](acesso-e-permissoes.md)). Variáveis em [configuracao.md](configuracao.md).

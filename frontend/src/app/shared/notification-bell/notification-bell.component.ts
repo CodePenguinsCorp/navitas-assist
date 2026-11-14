@@ -91,7 +91,7 @@ export class NotificationBellComponent {
   protected readonly hasNextSelected = computed(() => this.selectedIndex() >= 0 && this.selectedIndex() < this.visibleItems().length - 1);
   /** Same rule as the inbox: the server summary decides, unless the list still shows an unread row. */
   protected readonly canMarkAll = computed(() =>
-    !this.busy() && (!this.unreadKnown() || this.unreadCount() > 0 || this.notifications().some((item) => !item.read)));
+    !this.busy() && !this.notificationService.markingAll() && (!this.unreadKnown() || this.unreadCount() > 0 || this.notifications().some((item) => !item.read)));
 
   protected readonly severityLabels = NOTIFICATION_SEVERITY_LABELS;
   protected readonly severityClass = severityClass;
@@ -179,7 +179,11 @@ export class NotificationBellComponent {
 
   protected markAllRead(): void {
     if (!this.canMarkAll()) return;
-    this.run(this.notificationService.markAllRead(SILENT), () => this.load());
+    this.run(this.notificationService.markAllRead(), (batch) => {
+      // The bell does not show undo, so it must not leave a hidden batch active.
+      if (batch.undoToken) this.notificationService.dismissReadAll(batch.undoToken).subscribe({ error: () => undefined });
+      if (!this.destroyRef.destroyed) this.load();
+    });
   }
 
   /** Arrows, Home and End move between the items; Tab keeps its natural order. */

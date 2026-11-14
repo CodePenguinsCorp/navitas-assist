@@ -296,15 +296,43 @@ describe('NotificationBellComponent', () => {
     expect(panel()).not.toBeNull();
   });
 
-  it('marks all as read, reloads the list and is disabled when nothing is unread', async () => {
+  it('marks all as read with the batch contract, dismisses its hidden undo and reloads the list', async () => {
     await openWith([NOTIFICATION]);
     buttonByText('Marcar todas como lidas').click();
-    http.expectOne({ method: 'POST', url: '/api/notifications/read-all' }).flush(null);
+    const batch = { markedCount: 1, undoToken: 'bell-token', expiresAt: '2026-10-24T18:00:04Z' };
+    http.expectOne({ method: 'POST', url: '/api/notifications/read-all' }).flush(batch);
+    expect(TestBed.inject(NotificationService).latestReadAll()).toEqual(batch);
+    const dismiss = http.expectOne({ method: 'POST', url: '/api/notifications/read-all/dismiss' });
+    expect(dismiss.request.body).toEqual({ token: 'bell-token' });
+    dismiss.flush(null);
+    expect(TestBed.inject(NotificationService).latestReadAll()).toBeNull();
     await render();
     listRequest().flush([{ ...NOTIFICATION, read: true }]);
     flushSummary(0);
     await render();
     expect(buttonByText('Marcar todas como lidas').disabled).toBe(true);
+  });
+
+  it('does not dismiss a nonexistent batch when all notifications were already read', async () => {
+    await openWith([NOTIFICATION]);
+    buttonByText('Marcar todas como lidas').click();
+    http.expectOne('/api/notifications/read-all').flush({ markedCount: 0, undoToken: null, expiresAt: null });
+    http.expectNone('/api/notifications/read-all/dismiss');
+    listRequest().flush([{ ...NOTIFICATION, read: true }]);
+    flushSummary(0);
+    await render();
+    expect(buttonByText('Marcar todas como lidas').disabled).toBe(true);
+  });
+
+  it('cleans up a late batch after destruction without loading the destroyed bell', async () => {
+    await openWith([NOTIFICATION]);
+    buttonByText('Marcar todas como lidas').click();
+    const request = http.expectOne('/api/notifications/read-all');
+    fixture.destroy();
+    request.flush({ markedCount: 1, undoToken: 'late-token', expiresAt: '2026-10-24T18:00:04Z' });
+    http.expectOne('/api/notifications/read-all/dismiss').flush(null);
+    http.expectNone((candidate) => candidate.url === '/api/notifications');
+    expect(TestBed.inject(NotificationService).latestReadAll()).toBeNull();
   });
 
   it('shows the empty and error states, with retry', async () => {

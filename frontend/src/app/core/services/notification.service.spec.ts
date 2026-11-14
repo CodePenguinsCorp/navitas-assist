@@ -54,6 +54,69 @@ describe('NotificationService', () => {
     request.flush([]);
   });
 
+  it('preserves every list filter during a background inbox refresh', () => {
+    service.list({ unreadOnly: true, includeSnoozed: true, eventType: 'RMA_CREATED', severity: 'WARNING', silent: true }).subscribe();
+    const request = httpTesting.expectOne((candidate) => candidate.url === '/api/notifications');
+    expect(request.request.params.toString()).toBe('unreadOnly=true&includeSnoozed=true&eventType=RMA_CREATED&severity=WARNING');
+    expect(request.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+    request.flush([]);
+  });
+
+  describe('reversible read-all batch', () => {
+    it('serializes mark-all requests shared by the inbox and bell and releases the lock after an error', () => {
+      service.markAllRead().subscribe({ error: () => undefined });
+      expect(service.markingAll()).toBe(true);
+      service.markAllRead().subscribe();
+      httpTesting.expectOne('/api/notifications/read-all').flush({}, { status: 500, statusText: 'Error' });
+      expect(service.markingAll()).toBe(false);
+      service.markAllRead().subscribe();
+      httpTesting.expectOne('/api/notifications/read-all').flush({ markedCount: 0, undoToken: null, expiresAt: null });
+      expect(service.markingAll()).toBe(false);
+    });
+    const first = { markedCount: 2, undoToken: 'first-token', expiresAt: '2026-11-13T18:00:04Z' };
+    const second = { markedCount: 1, undoToken: 'second-token', expiresAt: '2026-11-13T18:00:05Z' };
+    const mark = (response = first) => {
+      service.markAllRead().subscribe((batch) => expect(batch).toEqual(response));
+      const request = httpTesting.expectOne({ method: 'POST', url: '/api/notifications/read-all' });
+      expect(request.request.body).toEqual({});
+      expect(request.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+      request.flush(response);
+    };
+
+    it('shares the latest batch and restores only its token through the background endpoint', () => {
+      expect(service.latestReadAll()).toBeNull();
+      mark();
+      expect(service.latestReadAll()).toEqual(first);
+      service.undoReadAll(first.undoToken).subscribe((response) => expect(response.restoredCount).toBe(2));
+      const undo = httpTesting.expectOne({ method: 'POST', url: '/api/notifications/read-all/undo' });
+      expect(undo.request.body).toEqual({ token: first.undoToken });
+      expect(undo.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+      undo.flush({ restoredCount: 2 });
+      expect(service.latestReadAll()).toBeNull();
+    });
+
+    it('does not clear a newer batch when an older dismiss response arrives', () => {
+      mark();
+      service.dismissReadAll(first.undoToken).subscribe();
+      const dismiss = httpTesting.expectOne({ method: 'POST', url: '/api/notifications/read-all/dismiss' });
+      expect(dismiss.request.body).toEqual({ token: first.undoToken });
+      expect(dismiss.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+      mark(second);
+      dismiss.flush(null);
+      expect(service.latestReadAll()).toEqual(second);
+      service.dismissReadAll(second.undoToken).subscribe();
+      httpTesting.expectOne('/api/notifications/read-all/dismiss').flush(null);
+      expect(service.latestReadAll()).toBeNull();
+    });
+
+    it('retains the active batch when a later mark-all request fails', () => {
+      mark();
+      service.markAllRead().subscribe({ error: () => {} });
+      httpTesting.expectOne('/api/notifications/read-all').flush({}, { status: 500, statusText: 'Server Error' });
+      expect(service.latestReadAll()).toEqual(first);
+    });
+  });
+
   it('keeps the shared unread count in sync with the summary endpoint', () => {
     service.refreshSummary().subscribe();
     httpTesting.expectOne('/api/notifications/summary').flush({ unread: 3 });
@@ -144,10 +207,10 @@ describe('NotificationService', () => {
       const one = httpTesting.expectOne('/api/notifications/3/read');
       expect(one.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
       one.flush({});
-      service.markAllRead({ silent: true }).subscribe();
+      service.markAllRead().subscribe();
       const all = httpTesting.expectOne('/api/notifications/read-all');
       expect(all.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
-      all.flush(null);
+      all.flush({ markedCount: 0, undoToken: null, expiresAt: null });
       service.markRead(4).subscribe();
       const regular = httpTesting.expectOne('/api/notifications/4/read');
       expect(regular.request.context.get(SKIP_GLOBAL_LOADING)).toBe(false);

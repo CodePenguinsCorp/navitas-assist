@@ -6,11 +6,13 @@ import {
   NOTIFICATION_SEVERITY_LABELS,
   SNOOZE_OPTIONS,
   formatNotificationDateTime,
+  notificationHeadline,
   formatTimeAgo,
   internalRoute,
-  notificationHeadline,
+  newRmaMessagePriority,
   severityClass
 } from '../../core/utils/notification-ui';
+import { priorityLabel } from '../../core/utils/rma-ui';
 import { CustomSelectComponent } from '../form-controls/custom-select/custom-select.component';
 import { IconComponent } from '../icon/icon.component';
 import { ModalFocusDirective } from '../modal-focus/modal-focus.directive';
@@ -51,8 +53,10 @@ export class NotificationDetailModalComponent {
   protected readonly snoozeOptions = SNOOZE_OPTIONS;
   protected readonly severityClass = severityClass;
   protected readonly dateTime = formatNotificationDateTime;
-
   protected readonly headline = computed(() => notificationHeadline(this.notification()));
+  protected readonly messagePriority = computed(() => newRmaMessagePriority(this.notification()));
+  protected readonly priorityLabel = priorityLabel;
+
   protected readonly ago = computed(() => formatTimeAgo(this.notification().createdAt, this.clock.now()));
   /** Only an active snooze is shown: the server returns an expired one as visible again. */
   protected readonly snoozedUntil = computed(() => {

@@ -1,4 +1,4 @@
-import { NOTIFICATION_EVENT_LABELS, followNotification, formatNotificationDateTime, formatTimeAgo, groupNotificationsByDay, internalRoute, notificationHeadline, severityClass } from './notification-ui';
+import { NOTIFICATION_EVENT_LABELS, followNotification, formatNotificationDateTime, formatTimeAgo, groupNotificationsByDay, internalRoute, notificationHeadline, newRmaMessagePriority, severityClass } from './notification-ui';
 
 describe('Notification UI utilities', () => {
   it('maps internal action paths to router navigation and rejects external links', () => {
@@ -51,6 +51,33 @@ describe('Notification UI utilities', () => {
     expect(formatTimeAgo('2026-10-23T11:00:00Z', now)).toBe('há 1 dia');
     expect(formatTimeAgo('2026-10-20T12:00:00Z', now)).toBe('há 4 dias');
     expect(formatTimeAgo(null, now)).toBe('');
+  });
+
+  describe('new RMA priority', () => {
+    it('keeps the current OS author outside the legacy priority clause', () => {
+      expect(newRmaMessagePriority({ eventType: 'RMA_CREATED', message: 'Cliente · prioridade alta. Aberta por Admin · prioridade baixa.' }))
+        .toEqual({ before: 'Cliente · ', priority: 'HIGH', after: '. Aberta por Admin · prioridade baixa.' });
+    });
+    it('prefers the captured priority over message text and leaves the input unchanged', () => {
+      const notification = { eventType: 'RMA_CREATED' as const, rmaPriority: 'HIGH' as const, message: 'Cliente · Produto · prioridade baixa. Aberto por prioridade low.' };
+      expect(newRmaMessagePriority(notification)).toEqual({ before: 'Cliente · Produto · ', priority: 'HIGH', after: '. Aberto por prioridade low.' });
+      expect(notification.message).toBe('Cliente · Produto · prioridade baixa. Aberto por prioridade low.');
+    });
+
+    it('keeps the entire message when the structured priority has no matching text clause', () => {
+      expect(newRmaMessagePriority({ eventType: 'RMA_CREATED', rmaPriority: 'MEDIUM', message: '<b>Novo formato</b>. Aberto por prioridade high.' }))
+        .toEqual({ before: '<b>Novo formato</b>. Aberto por prioridade high. · ', priority: 'MEDIUM', after: '' });
+    });
+
+    it.each([['baixa', 'LOW'], ['Medium', 'MEDIUM'], ['ALTA', 'HIGH']])('supports legacy %s without a structured snapshot', (label, priority) => {
+      expect(newRmaMessagePriority({ eventType: 'RMA_CREATED', message: `Cliente · prioridade ${label}. Aberto por Admin.` }))
+        .toEqual({ before: 'Cliente · ', priority, after: '. Aberto por Admin.' });
+    });
+
+    it('does not infer priority from an author name or another event type', () => {
+      expect(newRmaMessagePriority({ eventType: 'RMA_CREATED', message: 'Cliente. Aberto por prioridade high.' })).toBeNull();
+      expect(newRmaMessagePriority({ eventType: 'RMA_ASSIGNED', rmaPriority: 'HIGH', message: 'Cliente · prioridade high.' })).toBeNull();
+    });
   });
 
   describe('followNotification', () => {

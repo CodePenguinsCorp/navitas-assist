@@ -27,6 +27,21 @@ describe('NotificationDetailModalComponent', () => {
 
   afterEach(() => { document.body.style.overflow = ''; });
 
+  it('colors only new OS priority, prefers its snapshot and preserves HTML as plain text', async () => {
+    const message = '<b>Cliente</b> · prioridade baixa. Aberta por Admin.';
+    await setup({ ...NOTIFICATION, eventType: 'RMA_CREATED', rmaPriority: 'HIGH', message });
+    expect(root().querySelector('.notification-priority')?.getAttribute('data-priority')).toBe('HIGH');
+    expect(text()).toContain('<b>Cliente</b> · Prioridade Alta. Aberta por Admin.');
+    expect(root().querySelector('b')).toBeNull();
+    fixture.componentRef.setInput('notification', { ...NOTIFICATION, eventType: 'RMA_CREATED', message });
+    fixture.detectChanges();
+    expect(root().querySelector('.notification-priority')?.getAttribute('data-priority')).toBe('LOW');
+    fixture.componentRef.setInput('notification', { ...NOTIFICATION, rmaPriority: 'HIGH', message });
+    fixture.detectChanges();
+    expect(root().querySelector('.notification-priority')).toBeNull();
+    expect(text()).toContain(message);
+  });
+
   it('shows a short headline with the OS code once, the chips, the message and one meta line', async () => {
     await setup({ ...NOTIFICATION, title: 'Impedimento na OS OS-2026-000007', message: 'Aguardando peça' });
     const dialog = root().querySelector('[role="dialog"]')!;

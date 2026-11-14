@@ -9,6 +9,7 @@ import {
   NotificationEventType,
   NotificationEmailStatusResponse,
   NotificationPreferenceResponse,
+  NotificationReadAllResponse,
   NotificationResponse,
   NotificationRuleRequest,
   NotificationRuleResponse,
@@ -27,6 +28,7 @@ import { RowActionComponent } from '../../shared/row-action/row-action.component
 import { CustomSelectComponent } from '../../shared/form-controls/custom-select/custom-select.component';
 import { NotificationService } from '../../core/services/notification.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
+import { priorityLabel } from '../../core/utils/rma-ui';
 import {
   NOTIFICATION_EVENT_LABELS,
   NOTIFICATION_SEVERITIES,
@@ -36,6 +38,7 @@ import {
   formatNotificationTime,
   groupNotificationsByDay,
   followNotification,
+  newRmaMessagePriority,
   severityClass
 } from '../../core/utils/notification-ui';
 
@@ -71,6 +74,10 @@ export class NotificationsComponent {
   private preferencesRequest?: Subscription;
   private rulesRequest?: Subscription;
   private failuresRequest?: Subscription;
+  private readBatchTimer?: ReturnType<typeof setTimeout>;
+  private dismissingToken: string | null = null;
+  private observedReadAll = this.notificationService.latestReadAll();
+  protected readonly markingAll = this.notificationService.markingAll;
 
   protected readonly activeTab = signal<NotificationsTab>('inbox');
   protected readonly inboxLoading = signal(false);
@@ -100,7 +107,7 @@ export class NotificationsComponent {
   protected readonly severityFilterOptions = [{ value: '', label: 'Todas as severidades' }, ...NOTIFICATION_SEVERITIES.map(value => ({ value, label: NOTIFICATION_SEVERITY_LABELS[value] }))];
   protected readonly inboxFilterCount = computed(() => [this.unreadOnly(), this.includeSnoozed(), !!this.eventFilter(), !!this.severityFilter()].filter(Boolean).length);
   protected readonly hasInboxFilters = computed(() => this.inboxFilterCount() > 0);
-  protected readonly notificationGroups = computed(() => groupNotificationsByDay(this.notifications(), this.clock.now()));
+  protected readonly notificationGroups = computed(() => groupNotificationsByDay(this.orderedNotifications(), this.clock.now()));
   /** Notification shown in the detail dialog; a snapshot kept in sync by the actions that change it. */
   protected readonly selected = signal<NotificationResponse | null>(null);
   private readonly visibleNotifications = computed(() => this.notificationGroups().flatMap((group) => group.items));
@@ -111,6 +118,13 @@ export class NotificationsComponent {
   protected readonly hasPreviousSelected = computed(() => this.selectedIndex() > 0);
   protected readonly hasNextSelected = computed(() => this.selectedIndex() >= 0 && this.selectedIndex() < this.visibleNotifications().length - 1);
   protected readonly notifications = signal<NotificationResponse[]>([]);
+  protected readonly newestFirst = signal(true);
+  // The server already orders by createdAt DESC, id DESC (including sub-millisecond precision).
+  protected readonly orderedNotifications = computed(() => this.newestFirst() ? this.notifications() : [...this.notifications()].reverse());
+  protected readonly orderLabel = computed(() => this.newestFirst()
+    ? 'Ordem: mais recentes primeiro. Inverter ordem' : 'Ordem: mais antigas primeiro. Inverter ordem');
+  protected readonly readBatch = signal<NotificationReadAllResponse | null>(null);
+  protected readonly readBatchDurationMs = signal(0);
   protected readonly preferences = signal<NotificationPreferenceResponse[]>([]);
   protected readonly rules = signal<NotificationRuleResponse[]>([]);
   protected readonly failures = signal<NotificationFailureResponse[]>([]);
@@ -141,6 +155,8 @@ export class NotificationsComponent {
   protected readonly profileOptionsState = signal<'idle' | 'loading' | 'ready' | 'failed'>('idle');
 
   protected readonly eventLabels = NOTIFICATION_EVENT_LABELS;
+  protected readonly newRmaMessagePriority = newRmaMessagePriority;
+  protected readonly priorityLabel = priorityLabel;
   protected readonly severityLabels = NOTIFICATION_SEVERITY_LABELS;
   protected readonly severities = NOTIFICATION_SEVERITIES;
   protected readonly severityOptions = NOTIFICATION_SEVERITIES.map((severity) => ({ value: severity, label: NOTIFICATION_SEVERITY_LABELS[severity] }));
@@ -155,14 +171,29 @@ export class NotificationsComponent {
   protected readonly unreadKnown = computed(() =>
     this.notificationService.summaryLoaded() && !this.notificationService.summaryLoadFailed());
   protected readonly unreadUnavailable = this.notificationService.summaryLoadFailed;
-  protected readonly hasUnread = computed(() => this.notifications().some((notification) => !notification.read));
   protected readonly tabs = computed<NotificationsTab[]>(() => this.canManageRules() ? ['inbox', 'preferences', 'rules'] : ['inbox', 'preferences']);
 
   /** O cache de opções de perfil vale o app inteiro: a primeira abertura da aba Regras busca a lista atual. */
   private rulesOpened = false;
 
   constructor() {
+    this.destroyRef.onDestroy(() => {
+      const token = this.readBatch()?.undoToken;
+      this.clearReadBatch();
+      // Best effort on navigation; the server deadline remains authoritative even if the request fails.
+      if (token && token !== this.dismissingToken) this.notificationService.dismissReadAll(token).subscribe({ error: () => undefined });
+    });
     this.loadInbox();
+    effect(() => {
+      const latest = this.notificationService.latestReadAll();
+      if (latest === this.observedReadAll) return;
+      this.observedReadAll = latest;
+      untracked(() => {
+        const hadBatch = this.readBatch() !== null;
+        this.clearReadBatch();
+        if (latest || hadBatch) this.loadInbox(true);
+      });
+    });
     // Sem a permissão (após um 403 ou ao mudar o próprio perfil), a aba Regras some: volta para a caixa de entrada.
     effect(() => {
       if (!this.canManageRules()) untracked(() => {
@@ -294,11 +325,49 @@ export class NotificationsComponent {
   }
 
   protected markAllRead(): void {
-    if (this.busy()) return;
-    this.run(this.notificationService.markAllRead(), () => {
-      this.successMessage.set('Todas as notificações, inclusive as adiadas, foram marcadas como lidas.');
-      this.loadInbox();
+    if (this.markingAll()) return;
+    this.run(this.notificationService.markAllRead(), (batch) => {
+      if (this.destroyRef.destroyed) {
+        if (batch.undoToken) this.notificationService.dismissReadAll(batch.undoToken).subscribe({ error: () => undefined });
+        return;
+      }
+      this.observedReadAll = batch;
+      this.clearReadBatch();
+      const remaining = batch.expiresAt ? Math.min(4000, Date.parse(batch.expiresAt) - Date.now()) : 0;
+      if (batch.markedCount > 0 && batch.undoToken && remaining > 0) {
+        this.readBatchDurationMs.set(remaining);
+        this.readBatch.set(batch);
+        this.readBatchTimer = setTimeout(() => this.clearReadBatch(), remaining);
+      }
+      this.loadInbox(true);
     });
+  }
+
+  protected toggleOrder(): void {
+    this.newestFirst.update(value => !value);
+  }
+
+  protected undoReadAll(): void {
+    const batch = this.readBatch();
+    if (!batch?.undoToken || !batch.expiresAt || Date.parse(batch.expiresAt) <= Date.now()) return;
+    this.run(this.notificationService.undoReadAll(batch.undoToken).pipe(takeUntilDestroyed(this.destroyRef)), () => {
+      this.clearReadBatch();
+      this.successMessage.set('Leitura desfeita.');
+      this.loadInbox(true);
+    });
+  }
+
+  protected dismissReadAll(): void {
+    const token = this.readBatch()?.undoToken;
+    if (!token || this.busy()) return;
+    this.dismissingToken = token;
+    this.run(this.notificationService.dismissReadAll(token).pipe(finalize(() => this.dismissingToken = null)), () => this.clearReadBatch());
+  }
+
+  private clearReadBatch(): void {
+    clearTimeout(this.readBatchTimer);
+    this.readBatchTimer = undefined;
+    this.readBatch.set(null);
   }
 
   protected snooze(notification: NotificationResponse, minutes: string | number): void {
@@ -520,10 +589,15 @@ export class NotificationsComponent {
     this.loadInbox();
   }
 
-  private loadInbox(): void {
+  private loadInbox(background = false): void {
     this.inboxRequest?.unsubscribe();
     this.inboxLoading.set(true);
-    this.inboxRequest = this.notificationService.list({ unreadOnly: this.unreadOnly(), includeSnoozed: this.includeSnoozed(), ...(this.eventFilter() ? { eventType: this.eventFilter() as NotificationEventType } : {}), ...(this.severityFilter() ? { severity: this.severityFilter() as NotificationSeverity } : {}) }).pipe(
+    this.inboxRequest = this.notificationService.list({
+      unreadOnly: this.unreadOnly(), includeSnoozed: this.includeSnoozed(),
+      ...(this.eventFilter() ? { eventType: this.eventFilter() as NotificationEventType } : {}),
+      ...(this.severityFilter() ? { severity: this.severityFilter() as NotificationSeverity } : {}),
+      ...(background ? { silent: true } : {})
+    }).pipe(
       takeUntilDestroyed(this.destroyRef),
       finalize(() => this.inboxLoading.set(false))
     ).subscribe({
