@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://SEU-BACKEND.onrender.com/api/:path*"
+      "destination": "https://navitas-assist-testes.onrender.com/api/:path*"
     },
     {
       "source": "/((?!api(?:/|$)|assets(?:/|$)|media(?:/|$)|.*\\.[^/]+$).*)",
