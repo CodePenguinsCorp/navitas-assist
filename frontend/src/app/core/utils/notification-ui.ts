@@ -83,7 +83,7 @@ export function groupNotificationsByDay<T extends { createdAt: string }>(items: 
 }
 
 interface NotificationOpener {
-  markRead(id: number): Observable<unknown>;
+  markRead(id: number, options?: { silent?: boolean }): Observable<unknown>;
   refreshSummary(): Observable<unknown>;
 }
 
@@ -91,10 +91,11 @@ interface NotificationOpener {
 export function openNotification(
   notification: Pick<NotificationResponse, 'id' | 'read' | 'actionPath'>,
   service: NotificationOpener,
-  router: { navigate(commands: unknown[], extras: { queryParams: Record<string, string> }): Promise<boolean> }
+  router: { navigate(commands: unknown[], extras: { queryParams: Record<string, string> }): Promise<boolean> },
+  options: { silent?: boolean } = {}
 ): void {
   if (!notification.read) {
-    service.markRead(notification.id).subscribe({ next: () => service.refreshSummary().subscribe() });
+    (options.silent ? service.markRead(notification.id, options) : service.markRead(notification.id)).subscribe({ next: () => service.refreshSummary().subscribe() });
   }
   const route = internalRoute(notification.actionPath);
   if (route) void router.navigate([route.path], { queryParams: route.queryParams });

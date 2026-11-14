@@ -124,6 +124,37 @@ describe('NotificationService', () => {
     });
   });
 
+  describe('silent requests (bell popover)', () => {
+    it('keeps the global loading overlay only for non-silent calls', () => {
+      service.list({ unreadOnly: true, silent: true }).subscribe();
+      const silent = httpTesting.expectOne(r => r.url === '/api/notifications');
+      expect(silent.request.params.get('unreadOnly')).toBe('true');
+      expect(silent.request.params.has('silent')).toBe(false);
+      expect(silent.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+      silent.flush([]);
+
+      service.list().subscribe();
+      const regular = httpTesting.expectOne(r => r.url === '/api/notifications');
+      expect(regular.request.context.get(SKIP_GLOBAL_LOADING)).toBe(false);
+      regular.flush([]);
+    });
+
+    it('marks one and all as read without the overlay when silent', () => {
+      service.markRead(3, { silent: true }).subscribe();
+      const one = httpTesting.expectOne('/api/notifications/3/read');
+      expect(one.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+      one.flush({});
+      service.markAllRead({ silent: true }).subscribe();
+      const all = httpTesting.expectOne('/api/notifications/read-all');
+      expect(all.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+      all.flush(null);
+      service.markRead(4).subscribe();
+      const regular = httpTesting.expectOne('/api/notifications/4/read');
+      expect(regular.request.context.get(SKIP_GLOBAL_LOADING)).toBe(false);
+      regular.flush({});
+    });
+  });
+
   describe('summary preservation', () => {
     it('requests the summary outside the global loading overlay', () => {
       service.refreshSummary().subscribe();

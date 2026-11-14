@@ -20,6 +20,8 @@ import { RowActionComponent } from '../row-action/row-action.component';
 const UNREAD_UNAVAILABLE = 'Contagem de não lidas indisponível';
 /** The popover is a glance at the latest items; the full inbox lives at /notificacoes. */
 const RECENT_LIMIT = 20;
+/** The popover must stay open: its calls never raise the global loading dialog, which would steal focus and close it. */
+const SILENT = { silent: true } as const;
 
 let nextPanelId = 0;
 
@@ -114,11 +116,11 @@ export class NotificationBellComponent {
 
   protected select(notification: NotificationResponse): void {
     this.replaceRead(notification.id);
-    openNotification(notification, this.notificationService, this.router);
+    openNotification(notification, this.notificationService, this.router, SILENT);
   }
 
   protected markRead(notification: NotificationResponse): void {
-    this.run(this.notificationService.markRead(notification.id), () => {
+    this.run(this.notificationService.markRead(notification.id, SILENT), () => {
       this.replaceRead(notification.id);
       this.notificationService.refreshSummary().subscribe();
     });
@@ -126,7 +128,7 @@ export class NotificationBellComponent {
 
   protected markAllRead(): void {
     if (!this.canMarkAll()) return;
-    this.run(this.notificationService.markAllRead(), () => this.load());
+    this.run(this.notificationService.markAllRead(SILENT), () => this.load());
   }
 
   /** Arrows, Home and End move between the items; Tab keeps its natural order. */
@@ -171,7 +173,7 @@ export class NotificationBellComponent {
     this.listRequest?.unsubscribe();
     this.loading.set(true);
     this.loadError.set('');
-    this.listRequest = this.notificationService.list({ unreadOnly: this.unreadOnly() }).pipe(
+    this.listRequest = this.notificationService.list({ unreadOnly: this.unreadOnly(), ...SILENT }).pipe(
       takeUntilDestroyed(this.destroyRef),
       finalize(() => this.loading.set(false))
     ).subscribe({

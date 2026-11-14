@@ -16,6 +16,13 @@ import {
   NotificationSummaryResponse
 } from '../models';
 
+/** `silent` keeps the global loading overlay out of the call: the bell popover shows its own inline state. */
+export interface NotificationRequestOptions { silent?: boolean }
+
+function requestContext(options: NotificationRequestOptions): HttpContext {
+  return new HttpContext().set(SKIP_GLOBAL_LOADING, options.silent === true);
+}
+
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
   private readonly http = inject(HttpClient);
@@ -32,7 +39,7 @@ export class NotificationService {
   /** True while the most recent summary request failed; consumers hide the stale count. */
   readonly summaryLoadFailed = this.summaryLoadFailedSignal.asReadonly();
 
-  list(options: { unreadOnly?: boolean; includeSnoozed?: boolean; eventType?: NotificationEventType; severity?: NotificationSeverity } = {}): Observable<NotificationResponse[]> {
+  list(options: { unreadOnly?: boolean; includeSnoozed?: boolean; eventType?: NotificationEventType; severity?: NotificationSeverity } & NotificationRequestOptions = {}): Observable<NotificationResponse[]> {
     let params = new HttpParams();
     if (options.unreadOnly) {
       params = params.set('unreadOnly', 'true');
@@ -43,7 +50,7 @@ export class NotificationService {
 
     if (options.eventType) params = params.set('eventType', options.eventType);
     if (options.severity) params = params.set('severity', options.severity);
-    return this.http.get<NotificationResponse[]>('/api/notifications', { params });
+    return this.http.get<NotificationResponse[]>('/api/notifications', { params, context: requestContext(options) });
   }
 
   /** Only the most recently started request updates the shared count and its state. */
@@ -69,12 +76,12 @@ export class NotificationService {
     });
   }
 
-  markRead(id: number): Observable<NotificationResponse> {
-    return this.http.post<NotificationResponse>(`/api/notifications/${id}/read`, {});
+  markRead(id: number, options: NotificationRequestOptions = {}): Observable<NotificationResponse> {
+    return this.http.post<NotificationResponse>(`/api/notifications/${id}/read`, {}, { context: requestContext(options) });
   }
 
-  markAllRead(): Observable<void> {
-    return this.http.post<void>('/api/notifications/read-all', {});
+  markAllRead(options: NotificationRequestOptions = {}): Observable<void> {
+    return this.http.post<void>('/api/notifications/read-all', {}, { context: requestContext(options) });
   }
 
   snooze(id: number, minutes: number): Observable<NotificationResponse> {
