@@ -1552,26 +1552,26 @@ fieldset.form-section {
   background-clip: padding-box;
 }
 
-.modal-panel::-webkit-scrollbar {
+:is(.modal-panel, .app-scroll)::-webkit-scrollbar {
   width: 12px;
 }
 
-.modal-panel::-webkit-scrollbar-track {
+:is(.modal-panel, .app-scroll)::-webkit-scrollbar-track {
   margin-block: 0.75rem;
   border-radius: 999px;
   background: rgba(205, 220, 235, 0.65);
 }
 
-.modal-panel::-webkit-scrollbar-thumb {
+:is(.modal-panel, .app-scroll)::-webkit-scrollbar-thumb {
   border-radius: 999px;
   background: linear-gradient(180deg, #1c76bb 0%, #2ea8d4 100%);
 }
 
-.modal-panel::-webkit-scrollbar-thumb:hover {
+:is(.modal-panel, .app-scroll)::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, #165f98 0%, #238cb4 100%);
 }
 
-.modal-panel::-webkit-scrollbar-button {
+:is(.modal-panel, .app-scroll)::-webkit-scrollbar-button {
   display: none;
   width: 0;
   height: 0;

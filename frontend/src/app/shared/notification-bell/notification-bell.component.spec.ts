@@ -106,6 +106,20 @@ describe('NotificationBellComponent', () => {
     expect(panel()!.querySelector<HTMLAnchorElement>('a[href="/notificacoes"]')?.textContent?.trim()).toBe('Ver todas');
   });
 
+  it('keeps row actions working inside the shared scroll area without opening detail', async () => {
+    await openWith([NOTIFICATION, READ]);
+    const body = panel()!.querySelector('.bell-panel__body.app-scroll');
+    expect(body).not.toBeNull();
+    body!.querySelector<HTMLButtonElement>('button[aria-label^="Marcar como lida"]')!.click();
+    http.expectOne({ method: 'POST', url: '/api/notifications/5/read' }).flush({ ...NOTIFICATION, read: true });
+    flushSummary(0);
+    await render();
+    expect(panel()).not.toBeNull();
+    expect(dialog()).toBeNull();
+    expect(items()).toHaveLength(2);
+    expect(body!.querySelector('button[aria-label^="Marcar como lida"]')).toBeNull();
+  });
+
   it('never opens the global loading while the panel loads or acts', async () => {
     const loading = TestBed.inject(LoadingService);
     bell().click();
