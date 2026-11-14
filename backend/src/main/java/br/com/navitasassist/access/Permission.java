@@ -34,7 +34,8 @@ public enum Permission {
     RELATORIOS_VER(Codes.RELATORIOS_VER, PermissionModule.RELATORIOS, "Ver relatórios"),
     USUARIOS_GERIR(Codes.USUARIOS_GERIR, PermissionModule.ADMINISTRACAO, "Gerenciar usuários"),
     PERFIS_GERIR(Codes.PERFIS_GERIR, PermissionModule.ADMINISTRACAO, "Gerenciar perfis e permissões"),
-    NOTIFICACOES_REGRAS(Codes.NOTIFICACOES_REGRAS, PermissionModule.ADMINISTRACAO, "Configurar regras de notificação");
+    NOTIFICACOES_REGRAS(Codes.NOTIFICACOES_REGRAS, PermissionModule.ADMINISTRACAO, "Configurar regras de notificação"),
+    AUDITORIA_VER(Codes.AUDITORIA_VER, PermissionModule.ADMINISTRACAO, "Consultar a trilha de auditoria");
 
     private static final Map<String, Permission> BY_CODE = Arrays.stream(values())
         .collect(Collectors.toUnmodifiableMap(Permission::code, Function.identity()));
@@ -106,6 +107,7 @@ public enum Permission {
         public static final String USUARIOS_GERIR = "usuarios.gerir";
         public static final String PERFIS_GERIR = "perfis.gerir";
         public static final String NOTIFICACOES_REGRAS = "notificacoes.regras";
+        public static final String AUDITORIA_VER = "auditoria.ver";
 
         private Codes() {
         }

@@ -79,6 +79,7 @@ class RmaWarrantyIntegrationTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$.warrantyHistory", hasSize(2)));
         assertThat(jdbc.queryForObject("select count(*) from rma_item_warranty_history where rma_item_id = ?", Integer.class, itemId)).isEqualTo(2);
         assertThat(jdbc.queryForObject("select warranty_override from rma_items where id = ?", String.class, itemId)).isNull();
+        assertThat(jdbc.queryForObject("select count(*) from audit_events where entity_type = 'RMA_ITEM' and entity_id = ?", Integer.class, itemId)).isEqualTo(2);
     }
 
     @ParameterizedTest
@@ -193,6 +194,7 @@ class RmaWarrantyIntegrationTest {
             TestTransaction.flagForRollback();
             TestTransaction.end();
             assertThat(jdbc.queryForObject("select warranty_override from rma_items where id = ?", String.class, itemId)).isNull();
+            assertThat(jdbc.queryForObject("select count(*) from audit_events where entity_type = 'RMA_ITEM' and entity_id = ?", Integer.class, itemId)).isZero();
             assertThat(jdbc.queryForObject("select count(*) from rma_item_warranty_history where rma_item_id = ?", Integer.class, itemId)).isZero();
         } finally {
             if (TestTransaction.isActive()) {

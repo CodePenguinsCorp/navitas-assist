@@ -91,6 +91,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/kanban-views/**").authenticated()
                 .requestMatchers("/api/notifications/**").authenticated()
                 .requestMatchers("/api/notification-rules/**").hasAuthority(Codes.NOTIFICACOES_REGRAS)
+                .requestMatchers(HttpMethod.GET, "/api/audit-events").hasAuthority(Codes.AUDITORIA_VER)
                 .requestMatchers("/api/users/**").hasAuthority(Codes.USUARIOS_GERIR)
                 .requestMatchers(HttpMethod.GET, "/api/reports/rmas", "/api/reports/rmas/summary", "/api/reports/rmas/export.csv",
                     "/api/reports/rmas/summary/export.csv").hasAuthority(Codes.RELATORIOS_VER)

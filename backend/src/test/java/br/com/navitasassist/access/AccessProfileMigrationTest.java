@@ -39,7 +39,7 @@ class AccessProfileMigrationTest {
             assertEquals(LegacyProfiles.PERMISSIONS, permissions);
 
             // Totais conferidos de forma independente da tabela usada pelos mocks.
-            assertEquals(20, permissions.get("ADMIN").size());
+            assertEquals(21, permissions.get("ADMIN").size());
             assertEquals(Set.of("ADMIN"), permissions.entrySet().stream()
                 .filter(entry -> entry.getValue().contains("cadastros.importar"))
                 .map(Map.Entry::getKey).collect(java.util.stream.Collectors.toSet()));

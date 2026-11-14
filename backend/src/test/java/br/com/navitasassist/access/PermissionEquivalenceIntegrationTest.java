@@ -81,6 +81,7 @@ class PermissionEquivalenceIntegrationTest {
     }
 
     static final List<Row> MATRIX = List.of(
+        row(HttpMethod.GET, "/api/audit-events", A),
         row(HttpMethod.GET, "/api/clients/imports/template", A),
         row(HttpMethod.POST, "/api/clients/imports/preview", A),
         row(HttpMethod.POST, "/api/clients/imports/confirm", A),

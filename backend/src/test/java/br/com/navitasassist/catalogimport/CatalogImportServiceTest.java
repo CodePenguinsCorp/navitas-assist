@@ -27,7 +27,7 @@ class CatalogImportServiceTest {
         productService = mock(ProductService.class);
         when(clients.findImportDocuments()).thenReturn(List.of("12.345/0001-00"));
         when(products.findImportSkus()).thenReturn(List.of("EXISTENTE"));
-        service = new CatalogImportService(clients, products, clientService, productService, Validation.buildDefaultValidatorFactory().getValidator());
+        service = new CatalogImportService(org.mockito.Mockito.mock(br.com.navitasassist.service.AuditService.class), clients, products, clientService, productService, Validation.buildDefaultValidatorFactory().getValidator());
     }
 
     @Test void previewClassifiesBeforeDeduplicationAndDoesNotWrite() {

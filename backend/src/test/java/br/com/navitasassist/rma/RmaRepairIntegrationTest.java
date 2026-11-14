@@ -38,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class RmaRepairIntegrationTest {
     @Autowired private MockMvc mvc;
+    @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbc;
     @Autowired private ObjectMapper mapper;
     @Autowired private RmaRecordRepository rmas;
     @Autowired private ClientRepository clients;
@@ -125,6 +126,7 @@ class RmaRepairIntegrationTest {
         mvc.perform(get(base()).with(asProfile("viewer", "VIEWER"))).andExpect(status().isOk())
             .andExpect(jsonPath("$.totalServiceHours").value(0)).andExpect(jsonPath("$.interventions", hasSize(1)));
         write("interventions/" + id + "/void", Map.of("reason", "De novo")).andExpect(status().isBadRequest());
+        assertEquals(1, jdbc.queryForObject("select count(*) from audit_events where action = 'REPAIR_VOID' and entity_type = 'INTERVENTION' and entity_id = ?", Integer.class, id));
         mvc.perform(get("/api/rmas/" + rma.getId()).with(asProfile("viewer", "VIEWER"))).andExpect(status().isOk())
             .andExpect(jsonPath("$.repairHistory", hasSize(3))).andExpect(jsonPath("$.repairHistory[0].changedBy").isNotEmpty())
             .andExpect(jsonPath("$.repairHistory[0].id").isNumber()).andExpect(jsonPath("$.repairHistory[0].action").value("VOID"));
@@ -148,6 +150,7 @@ class RmaRepairIntegrationTest {
         write("external-components/" + id + "/void", Map.of("reason", "Erro")).andExpect(status().isBadRequest());
         rma.setStatus(RmaStatus.IN_REPAIR); rmas.saveAndFlush(rma);
         write("external-components/" + id + "/void", Map.of("reason", "Erro")).andExpect(status().isOk());
+        assertEquals(1, jdbc.queryForObject("select count(*) from audit_events where action = 'REPAIR_VOID' and entity_type = 'EXTERNAL_COMPONENT' and entity_id = ?", Integer.class, id));
     }
 
     @Test

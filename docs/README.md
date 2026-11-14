@@ -23,6 +23,7 @@
 
 | Documento | Conteúdo |
 | --- | --- |
+| [auditoria.md](auditoria.md) | Logs, trilha transacional, consulta e retenção em aberto. |
 | [prazo-e-garantia.md](prazo-e-garantia.md) | Tempo por etapa, data limite, garantia e ajuste manual. |
 | [notificacoes-e-emails.md](notificacoes-e-emails.md) | Eventos, regras, fila de e-mail, provedores, tetos, falhas e reenvio. |
 | [relatorios-e-exportacoes.md](relatorios-e-exportacoes.md) | Relatórios, CSV, laudo em PDF, importação CSV de clientes e produtos. |

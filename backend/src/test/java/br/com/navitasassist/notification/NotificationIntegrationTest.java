@@ -67,6 +67,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class NotificationIntegrationTest {
+    @Autowired org.springframework.jdbc.core.JdbcTemplate auditJdbc;
 
     private static final RequestPostProcessor ADMIN = asProfile("admin", "ADMIN");
 
@@ -241,6 +242,7 @@ class NotificationIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.enabled").value(false))
             .andExpect(jsonPath("$.updatedBy").value("admin"));
+        org.assertj.core.api.Assertions.assertThat(auditJdbc.queryForObject("select count(*) from audit_events where action = 'RULE_UPDATE' and entity_type = 'NOTIFICATION_RULE'", Long.class)).isPositive();
 
         RmaResponse skipped = createRma();
         assertEquals(0, countFor(desk, NotificationEventType.RMA_CREATED));

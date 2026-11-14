@@ -21,6 +21,7 @@ import static org.mockito.Mockito.*;
 class CatalogImportIntegrationTest {
     @Autowired CatalogImportService imports;
     @Autowired ProductRepository products;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @SpyBean ProductService productService;
 
     @AfterEach void cleanup() {
@@ -38,6 +39,7 @@ class CatalogImportIntegrationTest {
         assertEquals(1, result.importedRows());
         assertEquals(1, result.ignoredDuplicateRows());
         assertEquals(count + 2, products.count());
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForList("select summary from audit_events where action = 'CSV_IMPORT'", String.class)).anySatisfy(summary -> org.assertj.core.api.Assertions.assertThat(summary).contains("1 importados", "1 duplicados"));
     }
 
     @Test void failureOnLastCreationRollsBackEarlierRows() {

@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class NotificationRuleService {
+    private final AuditService audit;
 
     private static final int FAILURE_LIMIT = 50;
 
@@ -55,11 +56,14 @@ public class NotificationRuleService {
         rule.setEmailEnabled(request.emailEnabled());
         rule.setUserMutable(request.userMutable());
         try {
-            return NotificationRuleResponse.from(notificationRuleRepository.saveAndFlush(rule));
+            notificationRuleRepository.saveAndFlush(rule);
+
         } catch (DataIntegrityViolationException exception) {
             // Perfil apagado entre a validação e a gravação: a FK recusa e a resposta é 400, não 500.
             throw new BusinessException("Um dos perfis destinatários não existe mais.");
         }
+        audit.record("RULE_UPDATE", "NOTIFICATION_RULE", rule.getId(), eventType.name(), "Regra de notificação alterada.");
+        return NotificationRuleResponse.from(rule);
     }
 
     @Transactional(readOnly = true)

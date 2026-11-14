@@ -130,7 +130,7 @@ class HttpInputValidationIntegrationTest {
             .perform(get("/unexpected"))
             .andExpect(status().isInternalServerError())
             .andExpect(jsonPath("$.status").value(500))
-            .andExpect(jsonPath("$.message").value("Unexpected error"))
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.matchesPattern("Erro inesperado\\. Informe o código [A-F0-9]{8} ao suporte\\.")))
             .andExpect(jsonPath("$.details").isEmpty())
             .andExpect(content().string(not(containsString("sensitive-input"))));
     }

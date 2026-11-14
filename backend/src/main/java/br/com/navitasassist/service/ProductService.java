@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class ProductService {
+    private final AuditService audit;
 
     private final ProductRepository productRepository;
     private final RmaRecordRepository rmaRecordRepository;
@@ -76,15 +77,20 @@ public class ProductService {
 
         Product product = new Product();
         apply(product, request);
-        return ProductResponse.from(productRepository.save(product));
+        productRepository.save(product);
+        audit.record("CREATE", "PRODUCT", product.getId(), product.getSku() + " · " + product.getName(), "Registro criado.");
+        return ProductResponse.from(product);
     }
 
     public ProductResponse update(Long id, ProductRequest request) {
         Product product = getEntityById(id);
         validateSku(product, request.sku());
 
+        var before = ProductResponse.from(product);
         apply(product, request);
-        return ProductResponse.from(productRepository.save(product));
+        productRepository.save(product);
+        audit.record("UPDATE", "PRODUCT", product.getId(), product.getSku() + " · " + product.getName(), AuditService.changedFields(before, ProductResponse.from(product)));
+        return ProductResponse.from(product);
     }
 
     public void delete(Long id) {
@@ -95,6 +101,7 @@ public class ProductService {
         }
 
         productRepository.delete(product);
+        audit.record("DELETE", "PRODUCT", id, product.getSku() + " · " + product.getName(), "Registro excluído.");
     }
 
     @Transactional(readOnly = true)

@@ -56,12 +56,12 @@ class RmaStatusNoteIntegrationTest {
     @Test
     void editsOnlyNoteAndPersistsAudit() throws Exception {
         RmaStatusHistory event = new RmaStatusHistory(); event.setStatus(rma.getStatus()); event.setChangedBy("original");
-        event.setChangedAt(java.time.Instant.parse("2026-01-01T10:00:00Z")); event.setNote("Antes"); rma.addStatusHistory(event); rma = rmas.saveAndFlush(rma); event = rma.getStatusHistory().get(0);
+        event.setChangedAt(java.time.Instant.parse("2026-01-01T10:00:00Z")); event.setNote("Avenida Teste 321; old@example.invalid; senha=OldSecret"); rma.addStatusHistory(event); rma = rmas.saveAndFlush(rma); event = rma.getStatusHistory().get(0);
         String path = "/api/rmas/" + rma.getId() + "/status-history/" + event.getId() + "/note";
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(path).with(asProfile("editor", "SERVICE_DESK")).with(csrf())
-            .contentType(MediaType.APPLICATION_JSON).content("{\"note\":\"  Corrigida  \"}"))
+            .contentType(MediaType.APPLICATION_JSON).content("{\"note\":\"  Rua Teste 123; new@example.invalid; senha=NewSecret  \"}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.statusHistory[0].id").value(event.getId()))
-            .andExpect(jsonPath("$.statusHistory[0].note").value("Corrigida"))
+            .andExpect(jsonPath("$.statusHistory[0].note").value("Rua Teste 123; new@example.invalid; senha=NewSecret"))
             .andExpect(jsonPath("$.statusHistory[0].changedBy").value("original"))
             .andExpect(jsonPath("$.statusHistory[0].changedAt").value("2026-01-01T10:00:00Z"))
             .andExpect(jsonPath("$.statusHistory[0].noteEditedBy").value("editor"))
@@ -75,11 +75,33 @@ class RmaStatusNoteIntegrationTest {
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(path.replace("/status-history/" + event.getId(), "/status-history/999999")).with(asProfile("editor", "SERVICE_DESK")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content("{\"note\":\"X\"}"))
             .andExpect(status().isNotFound());
+        assertEquals(2, jdbc.queryForObject("select count(*) from audit_events where entity_type = 'RMA_STATUS_NOTE' and entity_id = ?", Integer.class, event.getId()));
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForList("select summary from audit_events where entity_type = 'RMA_STATUS_NOTE' and entity_id = ? order by id", String.class, event.getId()).get(0))
+            .contains("Observação anterior:", "; nova:", "[endereço omitido]", "[e-mail omitido]", "senha [omitido]")
+            .doesNotContain("Avenida Teste", "old@example.invalid", "OldSecret", "Rua Teste", "new@example.invalid", "NewSecret");
         rma.setStatus(RmaStatus.COMPLETED); rmas.saveAndFlush(rma);
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(path).with(asProfile("editor", "SERVICE_DESK")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content("{\"note\":\"X\"}"))
             .andExpect(status().isBadRequest());
     }
+    @Test
+    void auditKeepsThePreviousNoteLimitedToTwoHundredCharactersAndTheNewNote() throws Exception {
+        RmaStatusHistory event = new RmaStatusHistory();
+        event.setStatus(rma.getStatus()); event.setChangedBy("original");
+        event.setChangedAt(java.time.Instant.now()); event.setNote("x".repeat(220));
+        rma.addStatusHistory(event); rma = rmas.saveAndFlush(rma);
+        Long eventId = rma.getStatusHistory().get(0).getId();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(
+                "/api/rmas/" + rma.getId() + "/status-history/" + eventId + "/note")
+            .with(asProfile("editor", "SERVICE_DESK")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(Map.of("note", "y".repeat(255)))))
+            .andExpect(status().isOk());
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject(
+            "select summary from audit_events where entity_type = 'RMA_STATUS_NOTE' and entity_id = ?", String.class, eventId))
+            .contains("Observação anterior: " + "x".repeat(200) + "; nova: " + "y".repeat(255))
+            .doesNotContain("x".repeat(201));
+    }
+
     @Test
     void rejectsEventBelongingToAnotherRma() throws Exception {
         RmaRecord other = new RmaRecord(); other.setCode("RMA-NOTE-OTHER"); other.setClient(rma.getClient()); other.setProduct(rma.getProduct());

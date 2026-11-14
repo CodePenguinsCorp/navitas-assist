@@ -56,6 +56,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class RmaService {
+    private final AuditService audit;
 
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
     private static final Set<RmaStatus> CLOSED_STATUSES = EnumSet.of(RmaStatus.COMPLETED, RmaStatus.RETURNED, RmaStatus.IRREPARABLE);
@@ -223,9 +224,11 @@ public class RmaService {
         if (CLOSED_STATUSES.contains(rma.getStatus())) throw new BusinessException("Não é permitido editar observações de um RMA encerrado.");
         String note = trimToNull(request.note());
         if (note != null && note.length() > 255) throw new BusinessException("Use até 255 caracteres na observação.");
+        String previousNote = event.getNote();
         event.setNote(note);
         event.setNoteEditedBy(currentUsername());
         event.setNoteEditedAt(Instant.now());
+        audit.record("STATUS_NOTE_UPDATE", "RMA_STATUS_NOTE", eventId, rma.getCode(), "Observação anterior: " + AuditService.safeNote(previousNote) + "; nova: " + AuditService.safeNote(note, 255));
         return toResponse(rmaRecordRepository.saveAndFlush(rma));
     }
 
@@ -266,6 +269,7 @@ public class RmaService {
         item.setWarrantyOverrideBy(next == null ? null : history.getChangedBy());
         item.setWarrantyOverrideAt(next == null ? null : now);
         rma.setUpdatedAt(now);
+        audit.record("WARRANTY_UPDATE", "RMA_ITEM", itemId, rma.getCode(), "Garantia ajustada. Consulte o histórico de garantia do item #" + itemId + " no RMA #" + id + ".");
         return toResponse(rmaRecordRepository.save(rma));
     }
 

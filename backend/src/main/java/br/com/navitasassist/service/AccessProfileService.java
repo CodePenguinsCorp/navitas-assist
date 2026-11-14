@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class AccessProfileService {
+    private final AuditService audit;
 
     private final AccessProfileRepository accessProfileRepository;
     private final UserAccountRepository userAccountRepository;
@@ -58,7 +59,9 @@ public class AccessProfileService {
         AccessProfile profile = new AccessProfile();
         profile.setName(name);
         profile.setPermissions(new HashSet<>(Permission.codes(permissions)));
-        return toResponse(save(profile));
+        save(profile);
+        audit.record("CREATE", "ACCESS_PROFILE", profile.getId(), profile.getName(), "Perfil criado.");
+        return toResponse(profile);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -80,11 +83,16 @@ public class AccessProfileService {
         if (!codes.equals(profile.getPermissions())) {
             administratorGuard.ensureRemainsAfterProfileChange(profile, codes);
         }
+        Set<String> beforePermissions = new HashSet<>(profile.getPermissions());
+        boolean nameChanged = !Objects.equals(profile.getName(), name);
         profile.setName(name);
         profile.getPermissions().clear();
         profile.getPermissions().addAll(codes);
         // D8: sem revogação de sessões; as permissões são recalculadas na próxima requisição de cada usuário.
-        return toResponse(save(profile));
+        save(profile);
+        audit.record("UPDATE", "ACCESS_PROFILE", profile.getId(), profile.getName(), nameChanged ? "Campos alterados: name." : "Perfil alterado.");
+        audit.recordPermissionChanges("ACCESS_PROFILE", id, profile.getName(), beforePermissions, codes);
+        return toResponse(profile);
     }
 
     public void delete(Long id, String actor) {
@@ -98,6 +106,7 @@ public class AccessProfileService {
             throw new BusinessException("Perfil possui usuários vinculados e não pode ser excluído.");
         }
         accessProfileRepository.delete(profile);
+        audit.record("DELETE", "ACCESS_PROFILE", id, profile.getName(), "Perfil excluído.");
     }
 
     /** Perfil referenciado por outro cadastro (usuário, regra): id inexistente é erro de validação (400). */

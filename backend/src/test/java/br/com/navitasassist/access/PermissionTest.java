@@ -33,7 +33,8 @@ class PermissionTest {
         "relatorios.ver",
         "usuarios.gerir",
         "perfis.gerir",
-        "notificacoes.regras"
+        "notificacoes.regras",
+        "auditoria.ver"
     );
 
     @Test

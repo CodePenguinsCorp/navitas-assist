@@ -17,7 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CatalogImportControllerTest {
     MockMvc mvc;
     @BeforeEach void setup() {
-        var service = new CatalogImportService(mock(br.com.navitasassist.repository.ClientRepository.class), mock(br.com.navitasassist.repository.ProductRepository.class), mock(br.com.navitasassist.service.ClientService.class), mock(br.com.navitasassist.service.ProductService.class), jakarta.validation.Validation.buildDefaultValidatorFactory().getValidator());
+        var service = new CatalogImportService(org.mockito.Mockito.mock(br.com.navitasassist.service.AuditService.class), mock(br.com.navitasassist.repository.ClientRepository.class), mock(br.com.navitasassist.repository.ProductRepository.class), mock(br.com.navitasassist.service.ClientService.class), mock(br.com.navitasassist.service.ProductService.class), jakarta.validation.Validation.buildDefaultValidatorFactory().getValidator());
         mvc = MockMvcBuilders.standaloneSetup(new CatalogImportController(service)).setControllerAdvice(new CatalogImportExceptionHandler()).build();
     }
     @Test void templateIsUtf8BomAttachmentWithExample() throws Exception {

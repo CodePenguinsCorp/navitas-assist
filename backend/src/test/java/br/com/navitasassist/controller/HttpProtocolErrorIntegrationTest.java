@@ -101,7 +101,7 @@ class HttpProtocolErrorIntegrationTest {
         boundary.perform(get("/api/products"))
             .andExpect(status().isInternalServerError())
             .andExpect(jsonPath("$.status").value(500))
-            .andExpect(jsonPath("$.message").value("Unexpected error"))
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.matchesPattern("Erro inesperado\\. Informe o código [A-F0-9]{8} ao suporte\\.")))
             .andExpect(content().string(not(containsString("private-service-details"))));
     }
 }

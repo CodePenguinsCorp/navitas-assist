@@ -166,7 +166,7 @@ class ProfileControllerIntegrationTest {
             .andExpect(jsonPath("$[0].permissions.length()").value(8))
             .andExpect(jsonPath("$[0].permissions[5].code").value("rma.atribuivel"))
             .andExpect(jsonPath("$[0].permissions[5].label").value("Pode ser responsável por RMAs"))
-            .andExpect(jsonPath("$[5].permissions[*].code", contains("usuarios.gerir", "perfis.gerir", "notificacoes.regras")));
+            .andExpect(jsonPath("$[5].permissions[*].code", contains("usuarios.gerir", "perfis.gerir", "notificacoes.regras", "auditoria.ver")));
         mvc.perform(get("/api/permissions").with(user("rules").authorities(authorities("notificacoes.regras")))).andExpect(status().isForbidden());
     }
 

@@ -58,6 +58,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @ActiveProfiles("test")
 @TestPropertySource(properties = { "navitas.notifications.email.enabled=true", "navitas.notifications.email.from=from@example.invalid", "navitas.notifications.email.app-base-url=http://localhost:4200", "navitas.notifications.email.poll-ms=600000" })
 class NotificationEmailIntegrationTest {
+    @Autowired org.springframework.jdbc.core.JdbcTemplate auditJdbc;
 
     @MockBean
     private br.com.navitasassist.notification.email.EmailProvider mailSender;
@@ -231,6 +232,7 @@ class NotificationEmailIntegrationTest {
         var message = org.mockito.ArgumentCaptor.forClass(br.com.navitasassist.notification.email.EmailMessage.class);
         verify(mailSender).send(message.capture(), any());
         assertEquals("tech@example.invalid", message.getValue().to());
+        org.assertj.core.api.Assertions.assertThat(auditJdbc.queryForObject("select count(*) from audit_events where action = 'EMAIL_TEST' and actor_username = ?", Long.class, technician.getUsername())).isPositive();
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/notification-rules/emails/test").with(user(technician.getUsername()).authorities(org.springframework.security.core.authority.AuthorityUtils.createAuthorityList("notificacoes.regras"))).with(csrf()))
             .andExpect(status().isTooManyRequests());
     }
@@ -249,6 +251,7 @@ class NotificationEmailIntegrationTest {
             .andExpect(status().isAccepted()).andExpect(jsonPath("$.status").value("PENDING"));
         assertEquals(count, notificationRepository.count());
         assertEquals(0, assignmentNotification().getEmailAttempts());
+        assertEquals(1, auditJdbc.queryForObject("select count(*) from audit_events where action = 'EMAIL_RETRY' and entity_id = ?", Integer.class, id));
         mockMvc.perform(get("/api/notification-rules/email-status").with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.enabled").value(true)).andExpect(jsonPath("$.provider").value("fake"));
     }

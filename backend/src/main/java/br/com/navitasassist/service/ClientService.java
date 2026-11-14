@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class ClientService {
+    private final AuditService audit;
 
     private final ClientRepository clientRepository;
     private final RmaRecordRepository rmaRecordRepository;
@@ -56,13 +57,18 @@ public class ClientService {
     public ClientResponse create(ClientRequest request) {
         Client client = new Client();
         apply(client, request);
-        return ClientResponse.from(clientRepository.save(client));
+        clientRepository.save(client);
+        audit.record("CREATE", "CLIENT", client.getId(), client.getLegalName(), "Registro criado.");
+        return ClientResponse.from(client);
     }
 
     public ClientResponse update(Long id, ClientRequest request) {
         Client client = getEntityById(id);
+        var before = ClientResponse.from(client);
         apply(client, request);
-        return ClientResponse.from(clientRepository.save(client));
+        clientRepository.save(client);
+        audit.record("UPDATE", "CLIENT", client.getId(), client.getLegalName(), AuditService.changedFields(before, ClientResponse.from(client)));
+        return ClientResponse.from(client);
     }
 
     public void delete(Long id) {
@@ -73,6 +79,7 @@ public class ClientService {
         }
 
         clientRepository.delete(client);
+        audit.record("DELETE", "CLIENT", id, client.getLegalName(), "Registro excluído.");
     }
 
     @Transactional(readOnly = true)

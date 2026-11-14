@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @RequiredArgsConstructor
 public class CatalogImportService {
+    private final AuditService audit;
     private final ClientRepository clients;
     private final ProductRepository products;
     private final ClientService clientService;
@@ -116,6 +117,7 @@ public class CatalogImportService {
             else productService.create(productRequest(row.values()));
         }
         if (isClient) clients.flush(); else products.flush();
+        audit.record("CSV_IMPORT", "CATALOG_IMPORT", null, isClient ? "Clientes" : "Produtos", "Importação confirmada: " + preview.validRows() + " importados, " + preview.invalidRows() + " inválidos, " + preview.duplicateRows() + " duplicados.");
         return new ImportResultResponse(preview.validRows(), preview.invalidRows(), preview.duplicateRows());
     }
 

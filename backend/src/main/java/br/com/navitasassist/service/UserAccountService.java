@@ -33,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class UserAccountService {
+    private final AuditService audit;
 
     private final UserAccountRepository userAccountRepository;
     private final AccessProfileService accessProfileService;
@@ -90,12 +91,16 @@ public class UserAccountService {
         userAccount.setExtraPermissions(extras);
         userAccount.setActive(request.active());
 
-        return UserAccountResponse.from(saveWithEmailConstraint(userAccount));
+        saveWithEmailConstraint(userAccount);
+        audit.record("CREATE", "USER", userAccount.getId(), userAccount.getUsername(), "Usuário criado.");
+        return UserAccountResponse.from(userAccount);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public UserAccountResponse update(Long id, UserAccountUpdateRequest request, String actor) {
         UserAccount userAccount = getEntityForAdministration(id);
+        var before = UserAccountResponse.from(userAccount);
+        Set<String> beforePermissions = new HashSet<>(Permission.codes(effectivePermissionService.effectivePermissions(userAccount)));
         AccessProfile newProfile = accessProfileService.getEntity(request.profileId());
         Set<String> newExtras = validateExtras(request.extraPermissions());
         administratorGuard.ensureRemainsAfterUserChange(userAccount, newProfile, newExtras, request.active());
@@ -128,6 +133,15 @@ public class UserAccountService {
         userAccount.setActive(request.active());
 
         UserAccountResponse response = UserAccountResponse.from(saveWithEmailConstraint(userAccount));
+        String summary = AuditService.changedFields(before, response);
+        if (!Objects.equals(before.email(), response.email())) summary += " E-mail alterado.";
+        if (passwordChanged) summary += " Senha alterada.";
+        if (before.active() != response.active()) summary += response.active() ? " Usuário ativado." : " Usuário desativado.";
+        audit.record("UPDATE", "USER", id, userAccount.getUsername(), summary);
+        if (!Objects.equals(before.profile().id(), newProfile.getId())) {
+            audit.recordPermissionChanges("USER", id, userAccount.getUsername(), beforePermissions, Permission.codes(effectivePermissionService.effectivePermissions(userAccount)));
+        }
+        audit.recordPermissionChanges("USER", id, userAccount.getUsername(), new HashSet<>(before.extraPermissions()), newExtras, "extra ");
         if (sessionsRevoked) {
             events.publishEvent(new AccountSessionRevoker.AccessChanged(id));
         }
@@ -148,6 +162,7 @@ public class UserAccountService {
         }
 
         userAccountRepository.delete(userAccount);
+        audit.record("DELETE", "USER", id, userAccount.getUsername(), "Usuário excluído.");
         events.publishEvent(new AccountSessionRevoker.AccessChanged(id));
     }
 

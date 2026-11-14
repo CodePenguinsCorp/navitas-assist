@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class RmaRepairService {
+    private final AuditService audit;
     private final RmaRecordRepository rmas;
     private final PartRepository parts;
     private final RmaExternalComponentRepository externalComponents;
@@ -85,6 +86,7 @@ public class RmaRepairService {
         requireActive(item.getVoidedAt());
         item.setVoidedBy(currentUsername()); item.setVoidedAt(Instant.now()); item.setVoidReason(request.reason().trim());
         RmaRepairHistory.record(rma, "EXTERNAL_COMPONENT", id, "VOID", "Componente anulado: " + item.getDescription() + " · Motivo: " + item.getVoidReason(), currentUsername());
+        audit.record("REPAIR_VOID", "EXTERNAL_COMPONENT", id, rma.getCode(), "Reparo anulado. Consulte o histórico de reparo do RMA #" + rmaId + ", registro #EXTERNAL_COMPONENT:" + id + ".");
         return ExternalComponentResponse.from(item);
     }
 
@@ -96,6 +98,7 @@ public class RmaRepairService {
         item.setVoidedBy(currentUsername()); item.setVoidedAt(Instant.now()); item.setVoidReason(request.reason().trim());
         String description = item.getDescription().length() > 120 ? item.getDescription().substring(0, 120) + "…" : item.getDescription();
         RmaRepairHistory.record(rma, "INTERVENTION", id, "VOID", "Intervenção anulada: " + description + " · Motivo: " + item.getVoidReason(), currentUsername());
+        audit.record("REPAIR_VOID", "INTERVENTION", id, rma.getCode(), "Reparo anulado. Consulte o histórico de reparo do RMA #" + rmaId + ", registro #INTERVENTION:" + id + ".");
         return InterventionResponse.from(item);
     }
 
