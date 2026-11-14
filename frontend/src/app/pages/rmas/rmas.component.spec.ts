@@ -200,9 +200,7 @@ describe('RmasComponent pending editor lifecycle', () => {
     http = TestBed.inject(HttpTestingController);
     TestBed.inject(AuthService).restoreSession().subscribe();
     http.expectOne('/api/auth/me').flush({
-      id: 1, username: 'tester', fullName: 'Tester', profile: { id: 1, name: 'Administrador' }, extraPermissions: [],
-      permissions: profilePermissions('ADMIN'), active: true,
-      createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt
+      username: 'tester', fullName: 'Tester', profileName: 'Administrador', permissions: profilePermissions('ADMIN')
     });
     fixture = TestBed.createComponent(RmasComponent);
     http.expectOne('/api/clients/options').flush([client]);

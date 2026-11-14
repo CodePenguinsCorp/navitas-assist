@@ -107,12 +107,16 @@ export interface PermissionModuleResponse {
   permissions: PermissionItem[];
 }
 
-/** Usuário da sessão (`POST /api/auth/login` e `GET /api/auth/me`), com as permissões efetivas na ordem do catálogo. */
-export interface CurrentUserResponse extends UserAccountResponse {
+/** Sessão (`POST /api/auth/login` e `GET /api/auth/me`), com as permissões efetivas na ordem do catálogo. */
+export interface SessionResponse {
+  username: string;
+  fullName: string;
+  email?: string | null;
+  profileName: string | null;
   permissions: string[];
 }
 
-export type AuthUserResponse = CurrentUserResponse;
+export type AuthUserResponse = SessionResponse;
 
 export interface UserAccountRequest {
   username: string;

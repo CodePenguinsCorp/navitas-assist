@@ -149,10 +149,13 @@ class AuthSecurityIntegrationTest {
             .andExpect(jsonPath("$.permissions", contains(
                 "rma.ver", "rma.status", "rma.atribuivel", "rma.diagnosticar", "rma.impedimentos",
                 "cadastros.ver", "pecas.ver", "pecas.reservar", "protocolos.ver", "protocolos.executar", "relatorios.ver")))
-            .andExpect(jsonPath("$.profile.name").value("Técnico"))
-            .andExpect(jsonPath("$.extraPermissions", hasSize(0)))
+            .andExpect(jsonPath("$.profileName").value("Técnico"))
+            .andExpect(jsonPath("$.extraPermissions").doesNotExist())
             .andExpect(jsonPath("$.role").doesNotExist())
-            .andExpect(jsonPath("$.passwordHash").doesNotExist());
+            .andExpect(jsonPath("$.passwordHash").doesNotExist())
+            .andExpect(jsonPath("$.id").doesNotExist())
+            .andExpect(jsonPath("$.active").doesNotExist())
+            .andExpect(jsonPath("$.profile").doesNotExist());
     }
 
     @Test
@@ -166,8 +169,8 @@ class AuthSecurityIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.permissions", contains(
                 "rma.ver", "rma.abrir", "cadastros.ver", "pecas.ver", "protocolos.ver", "relatorios.ver")))
-            .andExpect(jsonPath("$.extraPermissions", contains("rma.abrir")))
-            .andExpect(jsonPath("$.profile.name").value("Consulta"))
+            .andExpect(jsonPath("$.extraPermissions").doesNotExist())
+            .andExpect(jsonPath("$.profileName").value("Consulta"))
             .andExpect(jsonPath("$.role").doesNotExist());
     }
 
@@ -179,7 +182,7 @@ class AuthSecurityIntegrationTest {
         mockMvc.perform(get("/api/auth/me").session(session))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.permissions", contains("relatorios.ver")))
-            .andExpect(jsonPath("$.profile.name").value(CUSTOM_PROFILE))
+            .andExpect(jsonPath("$.profileName").value(CUSTOM_PROFILE))
             .andExpect(jsonPath("$.role").doesNotExist());
 
         custom.getPermissions().add("rma.ver");
@@ -326,7 +329,7 @@ class AuthSecurityIntegrationTest {
                     """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.username").value("admin"))
-            .andExpect(jsonPath("$.profile.name").value("Administrador"))
+            .andExpect(jsonPath("$.profileName").value("Administrador"))
             .andReturn();
 
         MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);

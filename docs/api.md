@@ -19,7 +19,7 @@ Convenções:
 | `GET /api/auth/csrf` | pública | Cria o cookie CSRF se ausente (`204`). |
 | `POST /api/auth/login` | pública | Login com usuário e senha; renova o cookie CSRF no sucesso (S9). Falhas recebem atraso progressivo por usuário e origem, sem bloqueio de conta (S1). |
 | `POST /api/auth/logout` | autenticado | Encerra a sessão (`204`). |
-| `GET /api/auth/me` | autenticado | Usuário atual e permissões efetivas. |
+| `GET /api/auth/me` | autenticado | Sessão atual: `{username, fullName, email, profileName, permissions}` (permissões efetivas); o login devolve o mesmo formato. |
 
 ## ordens de serviço
 

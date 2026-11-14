@@ -14,7 +14,7 @@ const REPLENISHMENT: PartReplenishmentResponse = { ...PART, partId: PART.id, pen
 const PENDING: PartReservationResponse = {
   id: 2, rmaId: 7, rmaCode: 'OS-7', partId: 4, partCode: 'PCA-1', partName: 'Capacitor', unit: 'm', location: 'A1',
   quantity: 3, status: 'PENDING', partAvailable: 6, unitCost: 10, totalCost: 30, note: null, createdBy: 'tech',
-  createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+  createdAt: '2026-10-24T12:00:00Z', updatedAt: '2026-10-24T12:00:00Z'
 };
 
 type Harness = { [K in 'openCreateModal' | 'closeModals' | 'savePart' | 'retryLoad']: () => void } & {

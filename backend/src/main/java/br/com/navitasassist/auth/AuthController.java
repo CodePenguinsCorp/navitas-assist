@@ -4,6 +4,7 @@ import java.util.Map;
 
 import br.com.navitasassist.service.UserAccountService;
 import br.com.navitasassist.user.CurrentUserResponse;
+import br.com.navitasassist.user.SessionResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -38,7 +39,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public CurrentUserResponse login(
+    public SessionResponse login(
         @Valid @RequestBody LoginRequest loginRequest,
         HttpServletRequest request,
         HttpServletResponse response
@@ -49,7 +50,7 @@ public class AuthController {
             CurrentUserResponse user = loginSessionService.login(loginRequest, request, response);
             loginAttemptDelay.succeeded(loginRequest.username(), request.getRemoteAddr());
             log.info("action=LOGIN_SUCCESS username={} ip={}", username, request.getRemoteAddr());
-            return user;
+            return user.session();
         } catch (AuthenticationException failure) {
             log.warn("action=LOGIN_FAILURE username={} ip={}", username, request.getRemoteAddr());
             long delayMillis = loginAttemptDelay.failed(loginRequest.username(), request.getRemoteAddr()).toMillis();
@@ -60,8 +61,8 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public CurrentUserResponse me(Authentication authentication) {
-        return userAccountService.getCurrentUser(authentication.getName());
+    public SessionResponse me(Authentication authentication) {
+        return userAccountService.getCurrentUser(authentication.getName()).session();
     }
 
     @ExceptionHandler(AuthenticationException.class)

@@ -9,9 +9,7 @@ import { LegacyProfileCode, profilePermissions } from '../testing/permission-fix
 import { AppShellComponent } from './app-shell.component';
 
 const AUTH_USER: AuthUserResponse = {
-  id: 1, username: 'admin', fullName: 'Administrador', profile: { id: 1, name: 'Administrador' }, extraPermissions: [],
-  permissions: ['rma.ver'], active: true,
-  updatedAt: '2026-10-20T12:00:00Z'
+  username: 'admin', fullName: 'Administrador', profileName: 'Administrador', permissions: ['rma.ver']
 };
 
 describe('AppShellComponent logout', () => {
@@ -214,7 +212,7 @@ describe('AppShellComponent menu by permission', () => {
   });
 
   it('shows the profile name in the sidebar footer', async () => {
-    const page = await render({ profile: { id: 9, name: 'Suporte N1' } });
+    const page = await render({ profileName: 'Suporte N1' });
 
     expect(page.querySelector('.sidebar-user__meta span')?.textContent?.trim()).toBe('Suporte N1');
   });

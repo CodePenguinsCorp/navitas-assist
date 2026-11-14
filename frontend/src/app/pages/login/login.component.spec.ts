@@ -108,9 +108,7 @@ describe('Login failure feedback', () => {
     const login = http.expectOne('/api/auth/login');
     expect(login.request.method).toBe('POST');
     expect(login.request.body).toEqual({ username: 'operator', password: 'fake-password' });
-    login.flush({ id: 2, username: 'operator', fullName: 'Operador', profile: { id: 2, name: 'Atendimento' },
-      extraPermissions: [], permissions: ['rma.ver'], active: true,
-      createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' });
+    login.flush({ username: 'operator', fullName: 'Operador', profileName: 'Atendimento', permissions: ['rma.ver'] });
     fixture.detectChanges();
 
     expect(page.querySelector('[role="alert"]')).toBeNull();

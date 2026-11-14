@@ -76,7 +76,7 @@ describe('AuthService permissions session', () => {
   it('maps the profile name and drops unknown permission codes', () => {
     service.restoreSession().subscribe();
     http.expectOne('/api/auth/me').flush(authUser({
-      profile: { id: 7, name: 'Suporte' },
+      profileName: 'Suporte',
       permissions: ['rma.ver', 'ADMIN', 'rma.apagar', 'pecas.ver'],
     }));
 
@@ -93,7 +93,7 @@ describe('AuthService permissions session', () => {
     const second = firstValueFrom(service.refreshSession());
     const request = http.expectOne('/api/auth/me');
     expect(request.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
-    request.flush(authUser({ profile: { id: 3, name: 'Técnico' }, permissions: ['rma.ver', 'rma.status'] }));
+    request.flush(authUser({ profileName: 'Técnico', permissions: ['rma.ver', 'rma.status'] }));
 
     const expected = { username: 'admin', name: 'Administrador', profileName: 'Técnico', permissions: ['rma.ver', 'rma.status'] };
     await expect(first).resolves.toEqual(expected);
@@ -142,14 +142,10 @@ describe('AuthService permissions session', () => {
 
 function authUser(overrides: Partial<AuthUserResponse> = {}): AuthUserResponse {
   return {
-    id: 1,
     username: 'admin',
     fullName: 'Administrador',
-    profile: { id: 1, name: 'Administrador' },
-    extraPermissions: [],
+    profileName: 'Administrador',
     permissions: ADMIN_PERMISSIONS,
-    active: true,
-    updatedAt: '2026-10-20T12:00:00Z',
     ...overrides,
   };
 }
