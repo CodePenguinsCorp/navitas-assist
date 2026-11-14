@@ -50,8 +50,8 @@ describe('permission catalog', () => {
     expect(PERMISSIONS.filter((permission) => !LEGACY_PROFILE_PERMISSIONS.ADMIN.includes(permission))).toEqual(['rma.atribuivel']);
   });
 
-  it('keeps the legacy profile fixtures equal to the incremental migrations', async () => {
-    const migration = await readBackendFile(LEGACY_MIGRATION) + await readBackendFile('../backend/src/main/resources/db/migration/V9__catalog_import_permission.sql') + await readBackendFile('../backend/src/main/resources/db/migration/V13__audit_events.sql');
+  it('keeps the legacy profile fixtures equal to the baseline migration', async () => {
+    const migration = await readBackendFile(LEGACY_MIGRATION);
     const grants = [...migration.matchAll(/SELECT id, '([a-z.]+)' FROM access_profiles WHERE legacy_code IN \(([^)]*)\)/g)]
       .map((match) => ({ permission: match[1], profiles: [...match[2].matchAll(/'([A-Z_]+)'/g)].map((profile) => profile[1]) }));
     expect(grants).toHaveLength(PERMISSIONS.length);

@@ -11,8 +11,8 @@ import org.hibernate.type.SqlTypes;
 import org.junit.jupiter.api.Test;
 
 /**
- * Part enums are VARCHAR columns. Without the explicit type, Hibernate expects a native ENUM on MySQL and schema validation
- * stops the application at startup, which the H2 tests cannot detect.
+ * Part enums are VARCHAR columns with CHECK constraints. The explicit type keeps the mapping independent of the dialect's
+ * default for enums (a native ENUM or SMALLINT would fail schema validation at startup).
  */
 class PartEnumMappingTest {
 

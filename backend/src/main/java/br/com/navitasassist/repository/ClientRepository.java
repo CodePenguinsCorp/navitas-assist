@@ -20,15 +20,15 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
         from Client c
         where (
             :query is null
-            or lower(c.legalName) like lower(concat('%', :query, '%'))
-            or lower(coalesce(c.tradeName, '')) like lower(concat('%', :query, '%'))
-            or lower(coalesce(c.documentNumber, '')) like lower(concat('%', :query, '%'))
-            or lower(coalesce(c.email, '')) like lower(concat('%', :query, '%'))
-            or lower(coalesce(c.phone, '')) like lower(concat('%', :query, '%'))
+            or lower(unaccent(c.legalName)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(c.tradeName, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(c.documentNumber, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(c.email, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(c.phone, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
           )
           and (:hasDocument is null or (case when trim(coalesce(c.documentNumber, '')) <> '' then true else false end) = :hasDocument)
           and (:hasEmail is null or (case when trim(coalesce(c.email, '')) <> '' then true else false end) = :hasEmail)
-        order by lower(c.legalName), c.id
+        order by lower(unaccent(c.legalName)), c.id
         """)
     Page<Client> search(
         @Param("query") String query,

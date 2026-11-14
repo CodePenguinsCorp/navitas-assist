@@ -134,10 +134,11 @@ class AuditIntegrationTest {
 
     @Test
     void dateFiltersRespectSaoPauloMidnightAndStableIdOrdering() throws Exception {
-        jdbc.update("insert into audit_events(occurred_at, actor_username, action, entity_type, entity_label, summary) values (?, 'date.actor', 'CREATE', 'DATE_TEST', 'before', 'Criado.')", java.sql.Timestamp.valueOf("2026-11-13 02:59:59"));
-        jdbc.update("insert into audit_events(occurred_at, actor_username, action, entity_type, entity_label, summary) values (?, 'date.actor', 'CREATE', 'DATE_TEST', 'first', 'Criado.')", java.sql.Timestamp.valueOf("2026-11-13 03:00:00"));
-        jdbc.update("insert into audit_events(occurred_at, actor_username, action, entity_type, entity_label, summary) values (?, 'date.actor', 'CREATE', 'DATE_TEST', 'second', 'Criado.')", java.sql.Timestamp.valueOf("2026-11-13 03:00:00"));
-        jdbc.update("insert into audit_events(occurred_at, actor_username, action, entity_type, entity_label, summary) values (?, 'date.actor', 'CREATE', 'DATE_TEST', 'after', 'Criado.')", java.sql.Timestamp.valueOf("2026-11-14 03:00:00"));
+        // Instantes em UTC (timestamptz): 03:00Z é a meia-noite de São Paulo.
+        jdbc.update("insert into audit_events(occurred_at, actor_username, action, entity_type, entity_label, summary) values (?, 'date.actor', 'CREATE', 'DATE_TEST', 'before', 'Criado.')", java.time.OffsetDateTime.parse("2026-11-13T02:59:59Z"));
+        jdbc.update("insert into audit_events(occurred_at, actor_username, action, entity_type, entity_label, summary) values (?, 'date.actor', 'CREATE', 'DATE_TEST', 'first', 'Criado.')", java.time.OffsetDateTime.parse("2026-11-13T03:00:00Z"));
+        jdbc.update("insert into audit_events(occurred_at, actor_username, action, entity_type, entity_label, summary) values (?, 'date.actor', 'CREATE', 'DATE_TEST', 'second', 'Criado.')", java.time.OffsetDateTime.parse("2026-11-13T03:00:00Z"));
+        jdbc.update("insert into audit_events(occurred_at, actor_username, action, entity_type, entity_label, summary) values (?, 'date.actor', 'CREATE', 'DATE_TEST', 'after', 'Criado.')", java.time.OffsetDateTime.parse("2026-11-14T03:00:00Z"));
         mvc.perform(get("/api/audit-events").param("from", "2026-11-13").param("to", "2026-11-13").param("entityType", "DATE_TEST").param("size", "1")
             .with(user("reader").authorities(new SimpleGrantedAuthority("auditoria.ver"))))
             .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(2)).andExpect(jsonPath("$.totalPages").value(2)).andExpect(jsonPath("$.content[0].entityLabel").value("second"));

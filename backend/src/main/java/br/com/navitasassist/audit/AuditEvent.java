@@ -9,7 +9,6 @@ import lombok.Getter;
 @Getter
 public class AuditEvent {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
-    @Convert(converter = AuditInstantConverter.class)
     @Column(nullable = false, updatable = false) private Instant occurredAt;
     @Column(updatable = false) private Long actorId;
     @Column(nullable = false, length = 60, updatable = false) private String actorUsername;

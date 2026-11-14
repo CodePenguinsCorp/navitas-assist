@@ -21,15 +21,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         from Product p
         where (
             :query is null
-            or lower(p.sku) like lower(concat('%', :query, '%'))
-            or lower(p.name) like lower(concat('%', :query, '%'))
-            or lower(coalesce(p.category, '')) like lower(concat('%', :query, '%'))
-            or lower(coalesce(p.hardwareVersion, '')) like lower(concat('%', :query, '%'))
-            or lower(coalesce(p.firmwareVersion, '')) like lower(concat('%', :query, '%'))
+            or lower(unaccent(p.sku)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(p.name)) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(p.category, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(p.hardwareVersion, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
+            or lower(unaccent(coalesce(p.firmwareVersion, ''))) like lower(unaccent(concat('%', cast(:query as String), '%')))
           )
-          and (:category is null or lower(trim(coalesce(p.category, ''))) = lower(:category))
+          and (:category is null or lower(trim(coalesce(p.category, ''))) = lower(cast(:category as String)))
           and (:hasFirmware is null or (case when trim(coalesce(p.firmwareVersion, '')) <> '' then true else false end) = :hasFirmware)
-        order by lower(p.name), p.id
+        order by lower(unaccent(p.name)), p.id
         """)
     Page<Product> search(
         @Param("query") String query,
@@ -46,6 +46,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("select coalesce(round(avg(p.defaultWarrantyMonths), 0), 0) from Product p")
     long averageWarrantyMonths();
 
-    @Query("select distinct trim(p.category) from Product p where trim(coalesce(p.category, '')) <> ''")
+    // Grafias distintas na ordem do primeiro cadastro: o serviço junta as que diferem só na caixa e fica com a primeira.
+    @Query("select trim(p.category) from Product p where trim(coalesce(p.category, '')) <> '' group by trim(p.category) order by min(p.id)")
     List<String> findDistinctCategories();
 }

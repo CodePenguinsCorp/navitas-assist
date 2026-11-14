@@ -135,7 +135,7 @@ public class AccessProfileService {
         }
     }
 
-    /** O índice único pega a corrida (e, no MySQL, nomes que diferem só por acento). */
+    /** O índice único em lower(name) pega a corrida entre gravações do mesmo nome, mesmo com caixa diferente. */
     private AccessProfile save(AccessProfile profile) {
         try {
             return accessProfileRepository.saveAndFlush(profile);

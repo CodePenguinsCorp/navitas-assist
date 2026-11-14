@@ -9,7 +9,14 @@ spring:
     url: ${DB_URL}
     username: ${DB_USER}
     password: ${DB_PASSWORD}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    # Pool pequeno: cabe no limite de conexões de um PostgreSQL gerenciado gratuito, que também pode suspender o banco
+    # ocioso (a primeira conexão demora; daí o timeout de 30 s e nenhuma conexão ociosa obrigatória).
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:5}
+      minimum-idle: 0
+      idle-timeout: 120000
+      max-lifetime: 300000
+      connection-timeout: 30000
   jpa:
     hibernate:
       ddl-auto: validate
@@ -17,7 +24,14 @@ spring:
     properties:
       hibernate:
         format_sql: false
+        jdbc:
+          time_zone: UTC
+  # O Flyway pode usar outro endpoint (ex.: o direto, quando o app passa por um pooler em modo transaction).
+  # Sem MIGRATION_DB_*, usa a mesma conexão do app.
   flyway:
+    url: ${MIGRATION_DB_URL:${spring.datasource.url}}
+    user: ${MIGRATION_DB_USER:${spring.datasource.username}}
+    password: ${MIGRATION_DB_PASSWORD:${spring.datasource.password}}
     validate-on-migrate: true
 
 server:
