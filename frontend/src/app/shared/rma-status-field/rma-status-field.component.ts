@@ -44,11 +44,11 @@ type StatusTarget = Pick<RmaResponse, 'id' | 'status'> & { statusHistory?: RmaSt
     @if (error()) { <p class="field-error" role="alert">{{ error() }}</p> }
     @if (editing()) {
       <div class="status-note" (keydown.escape)="cancelOnEscape($event)">
-        <label>Observação
-          <textarea [formControl]="note" rows="3" maxlength="255" [attr.aria-invalid]="note.invalid || null"></textarea>
+        <label class="field-group"><span>Observação</span>
+          <textarea [formControl]="note" rows="2" maxlength="255" [attr.aria-invalid]="note.invalid || null"></textarea>
         </label>
         @if (note.invalid) { <p class="field-error" role="alert">Use até 255 caracteres.</p> }
-        <div class="form-actions">
+        <div class="form-actions status-note__actions">
           <button type="button" class="button-secondary" (click)="cancelNote()">Cancelar</button>
           <button type="button" class="button-primary" [disabled]="busy() || disabled()" (click)="saveNote()">Salvar</button>
         </div>
@@ -58,10 +58,13 @@ type StatusTarget = Pick<RmaResponse, 'id' | 'status'> & { statusHistory?: RmaSt
   styles: [`
     :host { display: block; min-width: 0; overflow-wrap: anywhere; }
     .status-feedback { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: baseline; margin-top: var(--space-2); }
-    .status-note { display: grid; gap: var(--space-2); margin-top: var(--space-3); }
-    label { display: grid; gap: var(--space-2); }
-    textarea { box-sizing: border-box; width: 100%; min-width: 0; }
-    .form-actions { display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); }
+    /* Same field and buttons as the other inline forms of the detail (shared .field-group and buttons), compact. */
+    .status-note { display: grid; gap: var(--space-2); margin-top: var(--space-2); max-width: 40rem; }
+    .status-note .field-group { grid-template-rows: auto; gap: var(--space-1); }
+    .status-note .field-group > span { color: var(--muted-strong); font-size: var(--font-size-sm); }
+    .status-note textarea { box-sizing: border-box; min-height: 0; padding: var(--space-2) var(--control-padding-x); font-size: var(--font-size-md); line-height: var(--line-height-body); resize: vertical; field-sizing: content; max-height: 10rem; }
+    .status-note__actions { flex-direction: row; justify-content: flex-end; gap: var(--space-2); }
+    .status-note__actions button { min-height: var(--control-height); padding-inline: var(--space-4); font-size: var(--font-size-md); }
   `]
 })
 export class RmaStatusFieldComponent {

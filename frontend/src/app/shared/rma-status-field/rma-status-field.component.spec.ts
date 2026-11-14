@@ -80,6 +80,15 @@ describe('Status inline da OS', () => {
     expect(host().textContent).not.toContain('próxima mudança');
   });
 
+  it('edita a observação no campo padrão, com Cancelar e Salvar juntos no fim', () => {
+    pick(); button('Adicionar observação').click(); render();
+    const field = host().querySelector('.status-note label.field-group')!;
+    expect(field.querySelector('span')?.textContent?.trim()).toBe('Observação');
+    expect(field.querySelector('textarea')).toBe(document.activeElement);
+    const actions = [...host().querySelectorAll('.status-note__actions button')].map(b => b.textContent?.trim());
+    expect(actions).toEqual(['Cancelar', 'Salvar']);
+  });
+
   it('recusa observações com mais de 255 caracteres', () => {
     pick(); button('Adicionar observação').click(); render();
     const textarea = host().querySelector('textarea')!;
