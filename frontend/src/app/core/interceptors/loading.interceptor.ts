@@ -7,7 +7,7 @@ export const SKIP_GLOBAL_LOADING = new HttpContextToken<boolean>(() => false);
 
 export const loadingInterceptor: HttpInterceptorFn = (request, next) => {
   // Login, logout and the CSRF token already give their own feedback on the screen that triggers them.
-  if (request.context.get(SKIP_GLOBAL_LOADING) || request.url.startsWith('/api/auth/')) return next(request);
+  if (request.context.get(SKIP_GLOBAL_LOADING) || isAuthenticationCall(request.url)) return next(request);
 
   const loading = inject(LoadingService);
   return defer(() => {
@@ -15,3 +15,12 @@ export const loadingInterceptor: HttpInterceptorFn = (request, next) => {
     return next(request);
   }).pipe(finalize(() => loading.finish()));
 };
+
+/** `/api/auth/...` by path, relative or absolute, ignoring query string and fragment. */
+function isAuthenticationCall(url: string): boolean {
+  try {
+    return new URL(url, 'http://relative.invalid').pathname.startsWith('/api/auth/');
+  } catch {
+    return false;
+  }
+}

@@ -48,13 +48,24 @@ describe('loadingInterceptor', () => {
     expect(loading.visible()).toBe(false);
   });
 
-  it.each(['/api/auth/csrf', '/api/auth/login', '/api/auth/logout'])('never blocks the screen for the authentication call %s', (url) => {
+  it.each([
+    '/api/auth/csrf', '/api/auth/login', '/api/auth/logout', '/api/auth/me?refresh=1', '/api/auth/login#entrar',
+    'https://navitas.example/api/auth/login', '//navitas.example/api/auth/csrf'
+  ])('never blocks the screen for the authentication call %s', (url) => {
     http.post(url, {}).subscribe();
     expect(loading.pendingCount()).toBe(0);
     vi.advanceTimersByTime(1000);
     expect(loading.visible()).toBe(false);
     backend.expectOne(url).flush({});
   });
+
+  it.each(['/api/authors', '/api/auth', '/api/rmas?next=/api/auth/login', 'https://navitas.example/api/rmas', '/api/auth/../rmas'])(
+    'keeps the overlay for the non-authentication call %s', (url) => {
+      http.get(url).subscribe();
+      expect(loading.pendingCount()).toBe(1);
+      backend.expectOne(url).flush({});
+      expect(loading.pendingCount()).toBe(0);
+    });
 
   it.each(['server', 'network'] as const)('finishes and forwards a %s error', (kind) => {
     let received: HttpErrorResponse | undefined;

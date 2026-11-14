@@ -99,6 +99,66 @@ describe('LoadingService', () => {
     expect(service.visible()).toBe(true);
   });
 
+  it('hides an open overlay at once while suppressed and keeps the pending count', () => {
+    service.start();
+    vi.advanceTimersByTime(200);
+    expect(service.visible()).toBe(true);
+    const release = service.suppress();
+    expect(service.visible()).toBe(false);
+    expect(service.suppressed()).toBe(true);
+    expect(service.pendingCount()).toBe(1);
+    service.start();
+    vi.advanceTimersByTime(1000);
+    expect(service.visible()).toBe(false);
+    service.finish();
+    service.finish();
+    release();
+    vi.advanceTimersByTime(1000);
+    expect(service.visible()).toBe(false);
+  });
+
+  it('never schedules the overlay while suppressed and waits a fresh delay after release', () => {
+    const release = service.suppress();
+    service.start();
+    vi.advanceTimersByTime(1000);
+    expect(service.visible()).toBe(false);
+    release();
+    expect(service.suppressed()).toBe(false);
+    vi.advanceTimersByTime(199);
+    expect(service.visible()).toBe(false);
+    vi.advanceTimersByTime(1);
+    expect(service.visible()).toBe(true);
+    service.finish();
+    vi.advanceTimersByTime(400);
+    expect(service.visible()).toBe(false);
+  });
+
+  it('cancels the delay of a request started just before suppression', () => {
+    service.start();
+    vi.advanceTimersByTime(150);
+    const release = service.suppress();
+    vi.advanceTimersByTime(1000);
+    expect(service.visible()).toBe(false);
+    service.finish();
+    release();
+    vi.advanceTimersByTime(1000);
+    expect(service.visible()).toBe(false);
+  });
+
+  it('stays suppressed until every holder releases, and a repeated release counts once', () => {
+    const first = service.suppress();
+    const second = service.suppress();
+    service.start();
+    first();
+    first();
+    vi.advanceTimersByTime(1000);
+    expect(service.suppressed()).toBe(true);
+    expect(service.visible()).toBe(false);
+    second();
+    vi.advanceTimersByTime(200);
+    expect(service.visible()).toBe(true);
+  });
+
   it('cleans up pending visibility timers when its injector is destroyed', () => {
     service.start();
     TestBed.resetTestingModule();

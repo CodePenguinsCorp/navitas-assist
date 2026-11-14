@@ -18,7 +18,7 @@ export class App {
   private readonly loadingDialog = viewChild<ElementRef<HTMLDialogElement>>('loadingDialog');
   private focusedElement: HTMLElement | null = null;
 
-  protected readonly busy = computed(() => this.loading.pendingCount() > 0 || this.loading.visible());
+  protected readonly busy = computed(() => !this.loading.suppressed() && (this.loading.pendingCount() > 0 || this.loading.visible()));
 
   constructor() {
     effect(() => {

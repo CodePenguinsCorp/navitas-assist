@@ -1,9 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 import { AuthService } from '../../core/services/auth.service';
+import { LoadingService } from '../../core/services/loading.service';
 
 @Component({
   selector: 'app-login',
@@ -28,6 +29,9 @@ export class LoginComponent {
   });
 
   constructor() {
+    // O botão Entrar já dá o retorno: o carregamento global não cobre esta tela, nem com requisições
+    // de uma tela anterior ainda pendentes nem durante a navegação depois do login.
+    inject(DestroyRef).onDestroy(inject(LoadingService).suppress());
     this.authService.restoreSession().subscribe((session) => {
       if (session) {
         void this.router.navigateByUrl('/dashboard');
