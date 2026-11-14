@@ -27,35 +27,19 @@
   </div>
 }
 
-<div class="permission-picker__panel" [id]="panelId" [hidden]="mode() === 'extras' && !expanded()">
-  <div class="permission-picker__tools">
-    <label class="search-field permission-picker__filter">
-      <span class="sr-only">Filtrar permissões</span>
-      <input #filterInput type="search" placeholder="Filtrar permissões" [value]="query()" (input)="query.set(filterInput.value)" />
-    </label>
-    <span class="permission-picker__total" aria-live="polite">{{ total() }}</span>
-  </div>
-
-  @if (visibleModules().length === 0) {
-    <p class="permission-picker__empty">Nenhuma permissão encontrada.</p>
-  }
+<div #panel class="permission-picker__panel" [id]="panelId" [hidden]="mode() === 'extras' && !expanded()">
+  <span class="permission-picker__total" aria-live="polite">{{ total() }}</span>
 
   <div class="permission-picker__grid">
-    @for (entry of visibleModules(); track entry.module.module) {
+    @for (module of catalog(); track module.module) {
       <fieldset class="permission-module">
         <legend>
-          <span class="permission-module__tile" aria-hidden="true"><app-icon [name]="iconFor(entry.module.module)" [size]="16" /></span>
+          <span class="permission-module__tile" aria-hidden="true"><app-icon [name]="iconFor(module.module)" [size]="16" /></span>
           <span class="permission-module__heading">
-            <span class="permission-module__name">{{ entry.module.label }}</span>{{ ' ' }}<span class="permission-module__count">{{ onCount(entry.module) }} de {{ entry.module.permissions.length }}</span>
+            <span class="permission-module__name">{{ module.label }}</span>{{ ' ' }}<span class="permission-module__count">{{ onCount(module) }} de {{ module.permissions.length }}</span>
           </span>
         </legend>
-        @if (mode() === 'profile') {
-          <div class="permission-module__actions">
-            <button type="button" class="link-button" [disabled]="disabled() || onCount(entry.module) === entry.module.permissions.length" (click)="setModule(entry.module, true)">Marcar todas</button>
-            <button type="button" class="link-button" [disabled]="disabled() || onCount(entry.module) === 0" (click)="setModule(entry.module, false)">Limpar</button>
-          </div>
-        }
-        @for (item of entry.items; track item.code) {
+        @for (item of module.permissions; track item.code) {
           <label
             class="permission-row"
             [class.is-on]="isOn(item.code)"

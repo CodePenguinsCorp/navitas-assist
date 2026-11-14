@@ -73,7 +73,7 @@ describe('ProfilesComponent form', () => {
     open(() => component.openEditModal(TECHNICIAN));
     const sets = moduleSets();
     expect(sets.map((set) => set.querySelector('legend')?.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
-      'RMAs 3 de 8', 'Clientes e produtos 0 de 3', 'Peças 1 de 3', 'Protocolos técnicos 0 de 3', 'Relatórios 0 de 1', 'Administração 0 de 3'
+      'RMAs 3 de 8', 'Clientes e produtos 0 de 3', 'Peças 1 de 3', 'Protocolos técnicos 0 de 3', 'Relatórios 0 de 1', 'Administração 0 de 4'
     ]);
     checkbox('Abrir RMAs').click();
     fixture.detectChanges();
@@ -86,7 +86,7 @@ describe('ProfilesComponent form', () => {
     const sections = Array.from(dialog()!.querySelectorAll('fieldset.form-section')).map((section) => section.querySelector('legend')?.textContent?.trim());
     expect(sections).toEqual(['Identificação', 'Permissões']);
     const boxes = Array.from(dialog()!.querySelectorAll<HTMLInputElement>('fieldset.permission-module input[type="checkbox"]'));
-    expect(boxes.length).toBe(21);
+    expect(boxes.length).toBe(22);
     expect(boxes.every((box) => box.getAttribute('role') === 'switch' && box.closest('label')?.classList.contains('permission-row'))).toBe(true);
     expect(boxes.every((box) => !box.checked)).toBe(true);
     expect(dialog()!.querySelector('h3')?.textContent?.trim()).toBe('Novo perfil');
@@ -125,18 +125,6 @@ describe('ProfilesComponent form', () => {
     expect(element.querySelector('.alert-banner--success')?.textContent).toContain('Perfil Supervisor cadastrado com sucesso.');
     expect(service.list).toHaveBeenCalledTimes(1);
     expect(service.invalidateOptions).toHaveBeenCalled();
-  });
-
-  it('marks and clears a whole module before saving', async () => {
-    await mount();
-    open(() => component.openEditModal(TECHNICIAN));
-    const action = (index: number, label: string) => Array.from(moduleSets()[index].querySelectorAll<HTMLButtonElement>('button'))
-      .find((button) => button.textContent?.trim() === label)!;
-    action(2, 'Marcar todas').click();
-    action(0, 'Limpar').click();
-    fixture.detectChanges();
-    submit();
-    expect(service.update).toHaveBeenCalledWith(3, { name: 'Técnico', permissions: ['pecas.ver', 'pecas.movimentar', 'pecas.reservar'] });
   });
 
   it('edits profile and refreshes own session after save', async () => {

@@ -1,15 +1,10 @@
-import { Component, ElementRef, Injector, afterNextRender, computed, inject, input, model, signal, viewChild } from '@angular/core';
-import { PermissionItem, PermissionModuleResponse } from '../../core/models';
+import { Component, ElementRef, Injector, afterNextRender, computed, inject, input, model, viewChild } from '@angular/core';
+import { PermissionModuleResponse } from '../../core/models';
 import { Permission, isPermission } from '../../core/permissions';
 import { IconComponent, IconName } from '../icon/icon.component';
 
 /** `profile`: todas editáveis. `extras`: as do perfil (`locked`) ficam ligadas e travadas; o resto é extra. */
 export type PermissionPickerMode = 'extras' | 'profile';
-
-interface VisibleModule {
-  module: PermissionModuleResponse;
-  items: PermissionItem[];
-}
 
 const MODULE_ICONS: Record<string, IconName> = {
   RMA: 'clipboard',
@@ -21,8 +16,6 @@ const MODULE_ICONS: Record<string, IconName> = {
 };
 
 let nextPanelId = 0;
-
-const normalize = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('pt-BR');
 
 @Component({
   selector: 'app-permission-picker',
@@ -37,9 +30,7 @@ const normalize = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, 
     .permission-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
     .permission-picker__panel { display: grid; gap: var(--space-3); min-width: 0; }
     .permission-picker__panel[hidden] { display: none; }
-    .permission-picker__tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); }
-    .permission-picker__filter { flex: 0 1 320px; min-width: 0; }
-    .permission-picker__total, .permission-picker__empty { margin: 0; color: var(--muted); font-size: var(--font-size-md); font-variant-numeric: tabular-nums; }
+    .permission-picker__total { justify-self: end; margin: 0; color: var(--muted); font-size: var(--font-size-md); font-variant-numeric: tabular-nums; }
     .permission-picker__grid {
       display: grid; gap: var(--space-3); align-items: start;
       grid-template-columns: repeat(auto-fill, minmax(min(100%, max(240px, (100% - 2 * var(--space-3)) / 3)), 1fr));
@@ -60,13 +51,12 @@ const normalize = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, 
     .permission-module__heading { display: grid; line-height: var(--line-height-tight); }
     .permission-module__name { font-weight: var(--font-weight-semibold); }
     .permission-module__count { color: var(--muted); font-size: var(--font-size-sm); font-variant-numeric: tabular-nums; }
-    .permission-module__actions { display: flex; flex: 1 1 100%; gap: var(--space-4); margin-top: calc(var(--space-2) * -1); padding-left: 40px; }
     .permission-module > .permission-row { flex: 1 1 100%; }
   `]
 })
 export class PermissionPickerComponent {
   private readonly injector = inject(Injector);
-  private readonly filterInput = viewChild<ElementRef<HTMLInputElement>>('filterInput');
+  private readonly panel = viewChild<ElementRef<HTMLElement>>('panel');
 
   readonly catalog = input.required<readonly PermissionModuleResponse[]>();
   readonly mode = input<PermissionPickerMode>('profile');
@@ -78,21 +68,8 @@ export class PermissionPickerComponent {
   readonly expanded = model(false);
 
   protected readonly panelId = `permission-picker-${++nextPanelId}`;
-  protected readonly query = signal('');
 
   private readonly allItems = computed(() => this.catalog().flatMap((module) => module.permissions));
-
-  protected readonly visibleModules = computed<VisibleModule[]>(() => {
-    const query = normalize(this.query().trim());
-    return this.catalog()
-      .map((module) => ({
-        module,
-        items: !query || normalize(module.label).includes(query)
-          ? module.permissions
-          : module.permissions.filter((item) => normalize(item.label).includes(query))
-      }))
-      .filter((entry) => entry.items.length > 0);
-  });
 
   /** Extras concedidas que o perfil não inclui, na ordem do catálogo. */
   protected readonly grantedExtras = computed(() =>
@@ -140,15 +117,11 @@ export class PermissionPickerComponent {
     this.update([code], checked);
   }
 
-  protected setModule(module: PermissionModuleResponse, checked: boolean): void {
-    this.update(module.permissions.map((item) => item.code), checked);
-  }
-
   protected toggleExpanded(): void {
     const open = !this.expanded();
     this.expanded.set(open);
     if (open) {
-      afterNextRender(() => this.filterInput()?.nativeElement.focus(), { injector: this.injector });
+      afterNextRender(() => this.panel()?.nativeElement.querySelector<HTMLInputElement>('input:not(:disabled)')?.focus(), { injector: this.injector });
     }
   }
 

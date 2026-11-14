@@ -49,8 +49,6 @@ describe('PermissionPickerComponent', () => {
     .find((item) => text(item.querySelector('.permission-row__label')) === label)!;
   const switchOf = (label: string) => row(label).querySelector<HTMLInputElement>('input[type="checkbox"]')!;
   const counter = (index: number) => text(modules()[index].querySelector('.permission-module__count'));
-  const moduleAction = (index: number, label: string) => Array.from(modules()[index].querySelectorAll<HTMLButtonElement>('button'))
-    .find((button) => text(button) === label)!;
   const toggleButton = () => element.querySelector<HTMLButtonElement>('button[aria-controls]')!;
   const panel = () => element.querySelector<HTMLElement>('.permission-picker__panel')!;
   const chips = () => Array.from(element.querySelectorAll('.permission-chip')).map((chip) => text(chip.querySelector('.permission-chip__label')));
@@ -64,11 +62,13 @@ describe('PermissionPickerComponent', () => {
       ]);
       expect([0, 1, 2].map(counter)).toEqual(['2 de 8', '0 de 3', '1 de 3']);
       const switches = Array.from(element.querySelectorAll<HTMLInputElement>('fieldset.permission-module input[type="checkbox"]'));
-      expect(switches.length).toBe(21);
+      expect(switches.length).toBe(22);
       expect(switches.every((input) => input.getAttribute('role') === 'switch')).toBe(true);
-      expect(text(element.querySelector('.permission-picker__total'))).toBe('3 de 21 selecionadas');
+      expect(text(element.querySelector('.permission-picker__total'))).toBe('3 de 22 selecionadas');
       expect(panel().hidden).toBe(false);
       expect(toggleButton()).toBeNull();
+      expect(element.querySelector('input[type="search"]')).toBeNull();
+      expect(Array.from(element.querySelectorAll('button')).map(text)).toEqual([]);
     });
 
     it('toggles a permission and updates the counters', async () => {
@@ -82,40 +82,6 @@ describe('PermissionPickerComponent', () => {
       render();
       expect(host.selected().size).toBe(0);
       expect(counter(0)).toBe('0 de 8');
-    });
-
-    it('marks all and clears a module without touching the others', async () => {
-      await mount((h) => h.selected.set(new Set<Permission>(['relatorios.ver'])));
-      moduleAction(2, 'Marcar todas').click();
-      render();
-      expect([...host.selected()].sort()).toEqual(['pecas.movimentar', 'pecas.reservar', 'pecas.ver', 'relatorios.ver']);
-      expect(counter(2)).toBe('3 de 3');
-      expect(moduleAction(2, 'Marcar todas').disabled).toBe(true);
-      moduleAction(2, 'Limpar').click();
-      render();
-      expect([...host.selected()]).toEqual(['relatorios.ver']);
-      expect(moduleAction(2, 'Limpar').disabled).toBe(true);
-    });
-
-    it('filters the permissions locally, ignoring case and accents', async () => {
-      await mount();
-      const filter = element.querySelector<HTMLInputElement>('input[type="search"]')!;
-      filter.value = 'RESPONSAVEL';
-      filter.dispatchEvent(new Event('input'));
-      render();
-      expect(modules().map((set) => text(set.querySelector('.permission-module__name')))).toEqual(['RMAs']);
-      expect(modules()[0].querySelectorAll('label.permission-row').length).toBe(2);
-      // The module name also matches: the whole module stays.
-      filter.value = 'pecas';
-      filter.dispatchEvent(new Event('input'));
-      render();
-      expect(modules().map((set) => text(set.querySelector('.permission-module__name')))).toEqual(['Peças']);
-      expect(modules()[0].querySelectorAll('label.permission-row').length).toBe(3);
-      filter.value = 'nada assim';
-      filter.dispatchEvent(new Event('input'));
-      render();
-      expect(modules().length).toBe(0);
-      expect(text(element.querySelector('.permission-picker__empty'))).toBe('Nenhuma permissão encontrada.');
     });
 
     it('keeps the switches as native, tabbable checkboxes so Space toggles them', async () => {
@@ -181,7 +147,7 @@ describe('PermissionPickerComponent', () => {
       expect(host.expanded()).toBe(true);
       expect(panel().hidden).toBe(false);
       expect(toggleButton().getAttribute('aria-expanded')).toBe('true');
-      expect(document.activeElement).toBe(panel().querySelector('input[type="search"]'));
+      expect(document.activeElement).toBe(panel().querySelector('input[type="checkbox"]:not(:disabled)'));
       toggleButton().click();
       render();
       expect(host.expanded()).toBe(false);
@@ -202,7 +168,7 @@ describe('PermissionPickerComponent', () => {
       expect(text(element.querySelector('.permission-picker__summary'))).toBe('1 permissão extra');
     });
 
-    it('ignores toggles on locked permissions and hides module actions', async () => {
+    it('ignores toggles on locked permissions', async () => {
       // An extra the profile also grants stays stored (it comes back if the profile changes).
       await mount((h) => extras(h, ['rma.abrir']));
       switchOf('Abrir RMAs').click();
@@ -213,7 +179,6 @@ describe('PermissionPickerComponent', () => {
       render();
       expect([...host.selected()]).toEqual(['rma.abrir']);
       expect(chips()).toEqual([]);
-      expect(modules()[0].querySelector('.permission-module__actions')).toBeNull();
     });
 
     it('disables the chip removal while disabled', async () => {
