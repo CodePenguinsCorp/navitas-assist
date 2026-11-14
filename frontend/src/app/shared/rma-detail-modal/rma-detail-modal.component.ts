@@ -4,7 +4,7 @@ import { RmaRepairPanelComponent } from '../rma-repair-panel/rma-repair-panel.co
 import { RmaPartsPanelComponent } from '../rma-parts-panel/rma-parts-panel.component';
 import { RmaWarrantyFieldComponent } from '../rma-warranty-field/rma-warranty-field.component';
 import { RmaDiagnosisComponent } from '../rma-diagnosis/rma-diagnosis.component';
-import { Component, EventEmitter, Output, computed, inject, input, signal } from '@angular/core';
+import { Component, EventEmitter, Injector, Output, afterNextRender, computed, inject, input, signal, viewChild, viewChildren } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AssignableUserResponse, RmaResponse } from '../../core/models';
 import { ClockService } from '../../core/services/clock.service';
@@ -21,6 +21,7 @@ import {
   stageFact
 } from '../../core/utils/rma-detail';
 import { CustomSelectComponent, CustomSelectOption } from '../form-controls/custom-select/custom-select.component';
+import { CollapsibleSectionComponent } from '../collapsible-section/collapsible-section.component';
 import { IconComponent } from '../icon/icon.component';
 import { ModalFocusDirective } from '../modal-focus/modal-focus.directive';
 import { RmaBlocksSectionComponent } from '../rma-blocks-section/rma-blocks-section.component';
@@ -43,7 +44,7 @@ import {
 
 @Component({
   selector: 'app-rma-detail-modal',
-  imports: [RmaRepairPanelComponent, RmaPartsPanelComponent, RmaWarrantyFieldComponent, CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaStatusFieldComponent, RmaDiagnosisComponent, RouterLink],
+  imports: [CollapsibleSectionComponent, RmaRepairPanelComponent, RmaPartsPanelComponent, RmaWarrantyFieldComponent, CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaStatusFieldComponent, RmaDiagnosisComponent, RouterLink],
   templateUrl: './rma-detail-modal.component.html',
   styleUrl: './rma-detail-modal.component.css'
 })
@@ -121,8 +122,29 @@ export class RmaDetailModalComponent {
 
   /** Block flag beside the status: brings the Impedimentos section into view and moves focus there. */
   protected showBlocks(section: HTMLElement): void {
+    const fold = this.blocksFold();
+    const wasOpen = fold?.isOpen() ?? true;
+    fold?.setOpen(true);
     section.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
-    section.querySelector<HTMLElement>('.blocks-section')?.focus({ preventScroll: true });
+    const focus = () => section.querySelector<HTMLElement>('.blocks-section')?.focus({ preventScroll: true });
+    // A folded body is hidden until the next render, when it can take focus.
+    if (wasOpen) focus(); else afterNextRender(focus, { injector: this.injector });
+  }
+
+  private readonly injector = inject(Injector);
+  private readonly blocksFold = viewChild<CollapsibleSectionComponent>('blocksFold');
+  private readonly ownSections = viewChildren(CollapsibleSectionComponent);
+  private readonly diagnosis = viewChild(RmaDiagnosisComponent);
+  /** Every folding section of the main column, the diagnosis row included. */
+  private readonly sections = computed(() => {
+    const diagnosis = this.diagnosis()?.section();
+    return diagnosis ? [...this.ownSections(), diagnosis] : [...this.ownSections()];
+  });
+  protected readonly allOpen = computed(() => this.sections().every((section) => section.isOpen()));
+  /** "Recolher tudo" while every section is open; otherwise "Expandir tudo". */
+  protected toggleAll(): void {
+    const open = !this.allOpen();
+    this.sections().forEach((section) => section.setOpen(open));
   }
 
   protected chooseAssignee(assigneeId: unknown): void {

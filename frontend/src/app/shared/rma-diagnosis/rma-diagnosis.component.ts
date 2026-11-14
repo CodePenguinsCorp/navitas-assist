@@ -1,4 +1,5 @@
-import { Component, ElementRef, EventEmitter, Injector, Output, afterNextRender, computed, effect, inject, input, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { Component, ElementRef, EventEmitter, Injector, Output, afterNextRender, computed, effect, inject, input, signal, viewChild } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { catchError, finalize, of, switchMap } from 'rxjs';
 import { CLOSED_RMA_STATUSES, FAILURE_CAUSE_LABELS, FAILURE_CAUSE_OPTIONS, FAILURE_TYPE_LABELS, FAILURE_TYPE_OPTIONS } from '../../core/mock-data';
@@ -11,11 +12,12 @@ import { todayInputValue } from '../../core/utils/date';
 import { diagnosisFacts, NO_DIAGNOSIS_LABEL } from '../../core/utils/rma-detail';
 import { normalizeText } from '../../core/utils/rma-ui';
 import { CustomSelectComponent } from '../form-controls/custom-select/custom-select.component';
+import { CollapsibleSectionComponent } from '../collapsible-section/collapsible-section.component';
 import { IconComponent } from '../icon/icon.component';
 
 @Component({
   selector: 'app-rma-diagnosis',
-  imports: [ReactiveFormsModule, CustomSelectComponent, IconComponent],
+  imports: [ReactiveFormsModule, NgTemplateOutlet, CustomSelectComponent, CollapsibleSectionComponent, IconComponent],
   templateUrl: './rma-diagnosis.component.html',
   styles: [`
     :host { display: block; min-width: 0; overflow-wrap: anywhere; }
@@ -34,6 +36,10 @@ import { IconComponent } from '../icon/icon.component';
 export class RmaDiagnosisComponent {
   readonly rma = input.required<RmaResponse>();
   readonly disabled = input(false);
+  /** Title row folds the section (Kanban detail); the tab in the list keeps the plain heading. */
+  readonly collapsible = input(false);
+  /** Folding row of the Kanban detail, for hosts that fold every section together. */
+  readonly section = viewChild(CollapsibleSectionComponent);
   @Output() readonly saved = new EventEmitter<RmaResponse>();
   @Output() readonly busyChange = new EventEmitter<boolean>();
   private readonly service = inject(RmaService);
@@ -81,6 +87,7 @@ export class RmaDiagnosisComponent {
       notes: diagnosis?.notes ?? '', diagnosedAt: diagnosis?.diagnosedAt ?? todayInputValue(), technicianName: diagnosis?.technicianName ?? user?.name ?? user?.username ?? 'Usuário'
     });
     this.diagnosisErrorMessage.set(''); this.message.set(''); this.diagnosisSubmitAttempted.set(false); this.editing.set(true);
+    this.section()?.setOpen(true);
     this.focus('[formControlName="foundFailure"]');
   }
 

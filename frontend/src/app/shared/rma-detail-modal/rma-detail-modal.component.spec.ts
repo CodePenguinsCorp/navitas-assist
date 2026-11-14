@@ -101,11 +101,11 @@ async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; can
   /** Heading text without the count chip. */
   const headingText = (heading: Element) => {
     const clone = heading.cloneNode(true) as Element;
-    clone.querySelectorAll('.mini-chip').forEach((chip) => chip.remove());
+    clone.querySelectorAll('.mini-chip, .collapsible__count').forEach((chip) => chip.remove());
     return clone.textContent?.trim();
   };
   const section = (title: string) =>
-    [...host.querySelectorAll<HTMLElement>('.rma-detail__section')].find((item) => headingText(item.querySelector('.rma-detail__heading, app-rma-diagnosis h3')!) === title) ?? null;
+    [...host.querySelectorAll<HTMLElement>('.rma-detail__section')].find((item) => headingText(item.querySelector('.rma-detail__heading, .collapsible__heading, app-rma-diagnosis h3')!) === title) ?? null;
   const tiles = (root: Element) =>
     [...root.querySelectorAll('.rma-detail__tile, app-rma-diagnosis dl > div')].map((tile) => [tile.querySelector('span, dt')?.textContent?.trim(), tile.querySelector('strong, em, dd')?.textContent?.trim()]);
   const sidePairs = () =>
@@ -115,6 +115,70 @@ async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; can
 
   return { fixture, host, component, headingText, section, tiles, sidePairs, buttonByText };
 }
+
+describe('RmaDetailModalComponent collapsible sections', () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  const toggles = (host: HTMLElement) => [...host.querySelectorAll<HTMLButtonElement>('.rma-detail__main .collapsible__toggle')];
+  const states = (host: HTMLElement) => Object.fromEntries(toggles(host).map((button) => [button.querySelector('.collapsible__title')!.textContent!.trim(), button.getAttribute('aria-expanded')]));
+
+  it('opens failure, blocks (active) and diagnosis; folds products (several), receipt, repair and history', async () => {
+    const { host } = await setup();
+    expect(states(host)).toEqual({
+      'Falha relatada': 'true', Impedimentos: 'true', Produtos: 'false', Recebimento: 'false', Diagnóstico: 'true', 'Reparo e testes': 'false', Histórico: 'false'
+    });
+  });
+
+  it('folds Impedimentos without an active block and opens Produtos with a single item', async () => {
+    const { host } = await setup({ rma: { ...fullRma, currentBlock: null, items: [fullRma.items[0]] } });
+    expect(states(host)['Impedimentos']).toBe('false');
+    expect(states(host)['Produtos']).toBe('true');
+  });
+
+  it('shows the event count on Histórico and the product count on Produtos', async () => {
+    const { host, section, component } = await setup();
+    const count = (title: string) => section(title)!.querySelector('.collapsible__count')?.textContent?.trim();
+    expect(count('Histórico')).toBe(String((component as unknown as { activity: () => unknown[] }).activity().length));
+    expect(count('Produtos')).toBe('2');
+    expect(host.querySelector('.rma-detail__main .collapsible__count')).not.toBeNull();
+  });
+
+  it('Recolher tudo folds every section and Expandir tudo opens them, remembering the choice', async () => {
+    const { fixture, host, buttonByText } = await setup();
+    expect(buttonByText('Expandir tudo')).toBeDefined();
+    buttonByText('Expandir tudo')!.click();
+    fixture.detectChanges();
+    expect(Object.values(states(host)).every((value) => value === 'true')).toBe(true);
+    expect(buttonByText('Recolher tudo')).toBeDefined();
+    buttonByText('Recolher tudo')!.click();
+    fixture.detectChanges();
+    expect(Object.values(states(host)).every((value) => value === 'false')).toBe(true);
+    expect(localStorage.getItem('navitas.section.rma.diagnosis')).toBe('0');
+    expect(localStorage.getItem('navitas.section.rma.history')).toBe('0');
+  });
+
+  it('the block flag opens a folded Impedimentos before focusing it', async () => {
+    const { fixture, host, section } = await setup();
+    toggles(host).find((button) => button.textContent?.includes('Impedimentos'))!.click();
+    fixture.detectChanges();
+    expect(states(host)['Impedimentos']).toBe('false');
+    host.querySelector<HTMLButtonElement>('.detail-actions button.detail-block-flag')!.click();
+    fixture.detectChanges(); TestBed.tick();
+    expect(states(host)['Impedimentos']).toBe('true');
+    expect(document.activeElement).toBe(section('Impedimentos')!.querySelector('.blocks-section'));
+  });
+
+  it('Editar no diagnóstico recolhido abre a seção', async () => {
+    const { fixture, host, section } = await setup();
+    toggles(host).find((button) => button.textContent?.includes('Diagnóstico'))!.click();
+    fixture.detectChanges();
+    expect(states(host)['Diagnóstico']).toBe('false');
+    section('Diagnóstico')!.querySelector<HTMLButtonElement>('.diagnosis-trigger')!.click();
+    fixture.detectChanges(); TestBed.tick();
+    expect(states(host)['Diagnóstico']).toBe('true');
+  });
+});
 
 describe('RmaDetailModalComponent with the shared information contract', () => {
   it('renders shared repair and parts panels even without legacy summaries', async () => {
@@ -141,7 +205,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     // Hoje os títulos são "Itens", "Reparo" e "Atividade".
     const { host, headingText } = await setup();
 
-    expect([...host.querySelectorAll('.rma-detail__heading, app-rma-diagnosis h3')].map(headingText)).toEqual([
+    expect([...host.querySelectorAll('.rma-detail__heading, .collapsible__heading, app-rma-diagnosis h3')].map(headingText)).toEqual([
       'Falha relatada', 'Impedimentos', 'Produtos', 'Recebimento', 'Diagnóstico', 'Reparo e testes', 'Histórico'
     ]);
   });
