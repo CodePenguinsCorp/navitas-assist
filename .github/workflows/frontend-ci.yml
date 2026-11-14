@@ -18,6 +18,9 @@ on:
       - "backend/src/main/java/br/com/navitasassist/access/PermissionModule.java"
       - "backend/src/main/resources/db/migration/V1__baseline.sql"
 
+permissions:
+  contents: read
+
 jobs:
   test-and-build:
     runs-on: ubuntu-latest

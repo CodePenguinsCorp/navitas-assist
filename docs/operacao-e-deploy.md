@@ -70,3 +70,9 @@ As respostas incluem `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
 S1: o caminho exato `/api/auth/login` aplica limite por IP de 10 requisições por minuto, com `burst=5` sem espera; excesso retorna 429. O IP usado é o endereço remoto da conexão ao nginx. Ambientes com proxy na frente precisam tratar a origem confiável no próprio ambiente, sem confiar cegamente em cabeçalhos enviados pelo cliente.
 
 Após `npm --prefix frontend run build`, `powershell -File scripts/test-nginx.ps1` monta o `dist` e a configuração em um nginx isolado na porta 18080, verifica gzip, cache, cabeçalhos, fallback e limitação e remove o contêiner ao terminar. A porta pode ser alterada com `-Port`; nenhuma pilha do repositório é usada.
+
+## Privilégios de execução e CI
+
+S14: a imagem backend executa o JAR como `USER 10001`. O JAR pertence a esse UID, `/app` permite escrita por ele e `/tmp` mantém a área temporária da JVM, evitando execução como root. A imagem foi construída e iniciada com `docker run --rm` em porta isolada 18081, conectada ao MySQL de validação `navitas-mig`; `/health` respondeu 200. O contêiner temporário foi removido ao fim.
+
+O workflow `frontend-ci.yml` declara `permissions: contents: read`, limitando o token do GitHub ao acesso de leitura necessário ao checkout.
