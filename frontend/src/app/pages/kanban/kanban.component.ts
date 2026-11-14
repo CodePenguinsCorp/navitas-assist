@@ -329,7 +329,7 @@ export class KanbanComponent {
     this.pageError.set('');
   }
 
-  /** A save made inside the detail (impediment, due date) replaces the card in place. */
+  /** Each write (assignee, status, priority, impediment, due date) replaces only its card with the response. */
   protected applyRmaUpdate(updated: RmaResponse): void {
     this.rmasSignal.update((rmas) => rmas.map((rma) => rma.id === updated.id ? updated : rma));
   }
@@ -660,7 +660,7 @@ export class KanbanComponent {
       .subscribe({
         next: (updated) => {
           this.selectedRmaId.set(updated.id);
-          this.loadKanban();
+          this.applyRmaUpdate(updated);
         },
         error: (error) => {
           this.assignmentError.set(

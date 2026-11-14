@@ -389,6 +389,18 @@ describe('KanbanComponent filters', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Novo responsável');
   });
 
+  it('replaces only the assigned card with the response instead of reloading the board', () => {
+    fixture.detectChanges();
+    const boardReads = vi.spyOn(TestBed.inject(RmaService), 'listBoard');
+    component.openDetail(TEST_RMAS[0]);
+    fixture.detectChanges();
+    chooseDetailAssignee('Sem responsável');
+    fixture.detectChanges();
+    expect(boardReads).not.toHaveBeenCalled();
+    expect(component.filteredRmas().find((rma) => rma.id === TEST_RMAS[0].id)?.assigneeId).toBeNull();
+    expect(component.filteredRmas().map((rma) => rma.id)).toEqual(TEST_RMAS.map((rma) => rma.id));
+  });
+
   it('shows a failed inline assignment inside the detail modal', () => {
     failAssignee = true;
     fixture.detectChanges();
