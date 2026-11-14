@@ -1,37 +1,20 @@
-@if (editing()) {
-  <div class="due-date-field__form" [formGroup]="form" (keydown.escape)="cancelOnEscape($event)">
-    <div class="field-group due-date-field__group">
-      <div class="due-date-field__control">
-        <input
-          type="date"
-          aria-label="Data limite"
-          formControlName="dueDate"
-          [min]="rma().entryDate"
-          [attr.aria-invalid]="invalid() ? 'true' : null"
-          [attr.aria-describedby]="invalid() ? 'rma-due-date-error' : null"
-          (input)="invalid.set(false)"
-          (change)="selectDate($event)"
-        />
-
-      </div>
-      @if (invalid()) {
-        <small id="rma-due-date-error" class="field-error" role="alert">A data limite não pode ser anterior à entrada.</small>
-      }
-    </div>
-    @if (error(); as message) {
-      <p class="field-error due-date-field__error" role="alert">{{ message }}</p>
-    }
-    @if (rma().dueDate) {
-      <button type="button" class="due-date-field__clear" [disabled]="busy() || disabled()" (click)="clear()">Remover data</button>
-    }
-  </div>
-} @else if (canEdit()) {
-  <button type="button" class="due-date-field__trigger" [class.is-empty]="!rma().dueDate" [disabled]="disabled()" (click)="edit()">
-    <app-icon class="due-date-field__icon" name="calendar" [size]="16" />
-    <span class="due-date-field__text">{{ rma().dueDate ? dateLabel(rma().dueDate) : 'Sem data limite' }}</span>
+@if (canEdit()) {
+  <div class="due-date-field__row">
+    <app-date-picker
+      class="due-date-field__picker"
+      ariaLabel="Data limite"
+      placeholder="Sem data limite"
+      [formControl]="control"
+      [minDate]="rma().entryDate"
+      [ariaInvalid]="error() !== null"
+      [ariaDescribedBy]="error() ? 'rma-due-date-error' : null"
+      (valueChange)="pick($event)"
+    />
     @if (rma().dueDate) { <app-rma-deadline-chip [rma]="rma()" mode="detail" /> }
-    <span class="sr-only">Alterar data limite</span>
-  </button>
+  </div>
+  @if (error(); as message) {
+    <p id="rma-due-date-error" class="field-error due-date-field__error" role="alert">{{ message }}</p>
+  }
 } @else {
   <span class="due-date-field__static" [class.is-empty]="!rma().dueDate">
     <span class="due-date-field__text">{{ rma().dueDate ? dateLabel(rma().dueDate) : 'Sem data limite' }}</span>

@@ -509,31 +509,33 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
   });
 
   it('makes the due date value clickable only with rma.editar and emits the OS saved inline', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-20T12:00:00Z'));
     let view = await setup();
     expect(view.buttonByText('Alterar')).toBeUndefined();
-    expect(view.host.querySelector('.rma-detail__deadline .due-date-field__trigger')).toBeNull();
+    expect(view.host.querySelector('.rma-detail__deadline button.date-picker__trigger')).toBeNull();
     TestBed.resetTestingModule();
 
     view = await setup({ canEditDueDate: true, rma: { ...fullRma, dueDate: null } });
+    const updateDueDate = vi.spyOn(TestBed.inject(RmaService), 'updateDueDate');
     const updated: RmaResponse[] = [];
     view.component.rmaUpdated.subscribe((rma) => updated.push(rma));
     expect(view.buttonByText('Alterar')).toBeUndefined();
-    const trigger = view.host.querySelector<HTMLButtonElement>('.rma-detail__deadline .due-date-field__trigger')!;
-    expect(trigger.querySelector('.due-date-field__text')?.textContent?.trim()).toBe('Sem data limite');
+    const trigger = view.host.querySelector<HTMLButtonElement>('.rma-detail__deadline button.date-picker__trigger')!;
+    expect(trigger.querySelector('.date-picker__value')?.textContent?.trim()).toBe('Sem data limite');
     trigger.click();
     view.fixture.detectChanges();
     expect(view.host.querySelector('app-rma-due-date-dialog, [role="dialog"] [role="dialog"]')).toBeNull();
-    const input = view.host.querySelector<HTMLInputElement>('.rma-detail__deadline input[type="date"]')!;
-    input.value = '2026-10-30';
-    input.dispatchEvent(new Event('input'));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
+    [...view.host.querySelectorAll<HTMLButtonElement>('button.date-picker__day:not(.is-outside)')].find((day) => day.textContent?.trim() === '30')!.click();
     view.fixture.detectChanges();
+    expect(updateDueDate).toHaveBeenCalledWith(5, '2026-10-30');
     expect(updated.map((rma) => rma.dueDate)).toEqual(['2026-10-30']);
+    vi.useRealTimers();
   });
 
   it('keeps the due date trigger inactive while disabled', async () => {
     const { host } = await setup({ canEditDueDate: true, disabled: true });
-    expect(host.querySelector<HTMLButtonElement>('.rma-detail__deadline .due-date-field__trigger')!.disabled).toBe(true);
+    expect(host.querySelector<HTMLButtonElement>('.rma-detail__deadline button.date-picker__trigger')!.disabled).toBe(true);
   });
 
   it('omits Nesta etapa from open and closed order summaries', async () => {

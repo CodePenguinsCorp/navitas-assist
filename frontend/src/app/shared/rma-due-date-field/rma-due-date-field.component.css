@@ -1,36 +1,8 @@
 :host { display: block; flex: 1 1 100%; min-width: 0; }
 
-/* Value as the trigger: no border, soft background on hover and focus, wraps whole pieces at 320 px. */
-.due-date-field__trigger,
-.due-date-field__static {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-2);
-  max-width: 100%;
-  min-width: 0;
-  color: var(--text);
-  font-weight: var(--font-weight-semibold);
-}
-.due-date-field__trigger {
-  min-height: var(--control-height-xs);
-  margin-inline: calc(-1 * var(--space-2));
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-xs);
-  background: transparent;
-  text-align: start;
-  transition: background-color 160ms ease;
-}
-.due-date-field__trigger:hover:not(:disabled) { background: var(--brand-tint); }
-.due-date-field__trigger:focus-visible { outline: none; background: var(--brand-tint); box-shadow: var(--focus-ring); }
-.due-date-field__trigger:disabled { cursor: not-allowed; opacity: var(--disabled-opacity); }
-.due-date-field__icon { color: var(--muted); }
+/* The shared picker is the control; its calendar floats over the page, so opening it never moves the layout. */
+.due-date-field__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
+.due-date-field__picker { flex: 0 1 12rem; min-width: 0; }
+.due-date-field__static { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); max-width: 100%; color: var(--text); font-weight: var(--font-weight-semibold); }
 .is-empty .due-date-field__text { color: var(--muted); font-weight: var(--font-weight-regular); }
-
-.due-date-field__form { display: grid; gap: var(--space-1); justify-items: start; }
-.due-date-field__group { min-width: 0; }
-.due-date-field__control input { width: 11rem; max-width: 100%; }
-.due-date-field__clear { padding: 0; background: transparent; color: var(--muted); font-size: var(--font-size-sm); text-decoration: underline; }
-.due-date-field__clear:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-.due-date-field__clear:disabled { opacity: var(--disabled-opacity); }
-.due-date-field__error { margin: 0; }
+.due-date-field__error { margin: var(--space-1) 0 0; }

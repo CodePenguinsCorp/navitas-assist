@@ -382,10 +382,12 @@ describe('RmasComponent detail with the shared information contract', () => {
   });
 
   it('makes the due date value clickable only with rma.editar and saves it inline', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-20T12:00:00Z'));
     let view = await setup({ role: 'TECHNICIAN' });
     view.open();
     expect([...view.detail().querySelectorAll('button')].some((button) => button.textContent?.trim() === 'Alterar')).toBe(false);
-    expect(view.detail().querySelector('.rma-details__deadline .due-date-field__trigger')).toBeNull();
+    expect(view.detail().querySelector('.rma-details__deadline button.date-picker__trigger')).toBeNull();
     expect(view.detail().querySelector('.rma-details__deadline')?.textContent).toContain('Sem data limite');
     TestBed.resetTestingModule();
 
@@ -397,17 +399,15 @@ describe('RmasComponent detail with the shared information contract', () => {
     view.open();
     const deadline = view.detail().querySelector<HTMLElement>('.rma-details__deadline')!;
     expect([...deadline.querySelectorAll('button')].some((button) => button.textContent?.trim() === 'Alterar')).toBe(false);
-    deadline.querySelector<HTMLButtonElement>('.due-date-field__trigger')!.click();
+    deadline.querySelector<HTMLButtonElement>('button.date-picker__trigger')!.click();
     view.render();
     expect(view.page.querySelector('app-rma-due-date-dialog, .modal-panel--narrow')).toBeNull();
-    const input = deadline.querySelector<HTMLInputElement>('input[type="date"]')!;
-    input.value = '2026-10-30';
-    input.dispatchEvent(new Event('input'));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
+    [...deadline.querySelectorAll<HTMLButtonElement>('button.date-picker__day:not(.is-outside)')].find((day) => day.textContent?.trim() === '30')!.click();
     view.render();
     expect(updateDueDate).toHaveBeenCalledWith(5, '2026-10-30');
     expect(deadline.querySelector('input[type="date"]')).toBeNull();
     expect(view.detail().querySelector('.rma-details__summary')?.textContent).toContain('30/10/2026');
+    vi.useRealTimers();
   });
 
   it('omits Nesta etapa from open and closed order summaries', async () => {

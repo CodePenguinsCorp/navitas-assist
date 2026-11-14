@@ -44,172 +44,104 @@ describe('RmaDueDateFieldComponent', () => {
 
   const host = () => fixture.nativeElement as HTMLElement;
   const text = (element: Element | null | undefined) => (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
-  const trigger = () => host().querySelector<HTMLButtonElement>('button.due-date-field__trigger');
-  const input = () => host().querySelector<HTMLInputElement>('input[type="date"]');
-  const button = (label: string) => [...host().querySelectorAll<HTMLButtonElement>('button')].find((item) => text(item) === label || item.getAttribute('aria-label') === label);
-  const edit = () => { trigger()!.click(); render(); };
-  const type = (value: string) => { input()!.value = value; input()!.dispatchEvent(new Event('input')); render(); };
-  const submit = () => { input()!.dispatchEvent(new Event('change', { bubbles: true })); render(); };
+  const trigger = () => host().querySelector<HTMLButtonElement>('button.date-picker__trigger');
+  const open = () => { trigger()!.click(); render(); };
+  const day = (label: string) => [...host().querySelectorAll<HTMLButtonElement>('button.date-picker__day:not(.is-outside)')].find((item) => text(item) === label);
+  const action = (label: string) => [...host().querySelectorAll<HTMLButtonElement>('button.date-picker__footer-action')].find((item) => text(item) === label);
 
-  it('shows the value as a borderless clickable trigger with a calendar icon and no Alterar button', () => {
+  it('shows the shared picker with the current value and the deadline chip', () => {
     mount();
-    expect(button('Alterar')).toBeUndefined();
-    expect(trigger()).not.toBeNull();
-    expect(trigger()!.className).not.toContain('button-secondary');
-    expect(trigger()!.querySelector('app-icon')).not.toBeNull();
+    expect(host().querySelector('input[type="date"]')).toBeNull();
     expect(text(trigger())).toContain('20/11/2026');
-    expect(trigger()!.querySelector('.deadline-chip')).not.toBeNull();
-    expect(trigger()!.hasAttribute('aria-label')).toBe(false);
-    expect(text(trigger()!.querySelector('.sr-only'))).toBe('Alterar data limite');
+    expect(trigger()!.getAttribute('aria-label')).toBe('Data limite');
+    expect(host().querySelector('.deadline-chip')).not.toBeNull();
   });
 
-  it('shows Sem data limite in the muted empty state', () => {
+  it('shows Sem data limite when empty', () => {
     mount({ rma: { ...RMA, dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null } } });
-    expect(text(trigger()!.querySelector('.due-date-field__text'))).toBe('Sem data limite');
-    expect(trigger()!.classList).toContain('is-empty');
+    expect(text(trigger())).toContain('Sem data limite');
   });
 
-  it('shows plain text without a trigger when the user cannot edit', () => {
+  it('shows plain text without a picker when the user cannot edit', () => {
     mount({ canEdit: false });
-    expect(trigger()).toBeNull();
     expect(host().querySelector('button')).toBeNull();
     expect(text(host())).toContain('20/11/2026');
   });
 
-  it('keeps the trigger inactive while the host is busy', () => {
+  it('keeps the picker inactive while the host is busy', () => {
     mount({ disabled: true });
     expect(trigger()!.disabled).toBe(true);
   });
 
-  it('opens an inline date field focused on the current value with the entry date as minimum', () => {
+  it('opens the calendar without Cancelar/Salvar buttons and disables days before the entry', () => {
     mount();
-    edit();
-    expect(host().querySelector('[role="dialog"], app-rma-due-date-dialog')).toBeNull();
-    expect(input()!.closest('.field-group')).not.toBeNull();
-    expect(input()!.value).toBe('2026-11-20');
-    expect(input()!.min).toBe('2026-11-02');
-    expect(input()!.getAttribute('aria-label')).toBe('Data limite');
-    expect(document.activeElement).toBe(input());
-    expect(button('Cancelar')).toBeUndefined();
-    expect(button('Salvar')).toBeUndefined();
+    open();
+    expect([...host().querySelectorAll('button')].map((item) => text(item))).not.toContain('Salvar');
+    expect([...host().querySelectorAll('button')].map((item) => text(item))).not.toContain('Cancelar');
+    expect(host().querySelector('.date-picker__panel')).not.toBeNull();
   });
 
-  it('saves the chosen date, emits the OS and returns focus to the trigger', () => {
+  it('saves once when a day is chosen and emits the OS', () => {
     mount();
-    edit();
-    type('2026-11-25');
-    submit();
+    open();
+    day('25')!.click();
+    render();
     expect(calls).toEqual([[4, '2026-11-25']]);
     expect(saved.map((rma) => rma.dueDate)).toEqual(['2026-11-25']);
-    expect(input()).toBeNull();
-    expect(document.activeElement).toBe(trigger());
+    expect(host().querySelector('.date-picker__panel')).toBeNull();
   });
 
-  it('removes the date immediately and saves null (clearDueDate)', () => {
+  it('removes the date with Limpar and saves null (clearDueDate)', () => {
     mount();
-    edit();
-    button('Remover data')!.click();
+    open();
+    action('Limpar')!.click();
     render();
-    expect(input()).toBeNull();
-    // RmaService.updateDueDate turns null into { clearDueDate: true } (rma.service.spec.ts).
     expect(calls).toEqual([[4, null]]);
   });
 
-  it('closes without a request when the value did not change', () => {
+  it('does not save when the same date is chosen again', () => {
     mount();
-    edit();
-    submit();
+    open();
+    day('20')!.click();
+    render();
     expect(calls).toEqual([]);
-    expect(input()).toBeNull();
   });
 
-  it('blocks a date before the entry without a request', () => {
+  it('does not allow a date before the entry', () => {
     mount();
-    edit();
-    type('2026-11-01');
-    submit();
+    open();
+    expect(day('1')!.disabled).toBe(true);
+    day('1')!.click();
+    render();
     expect(calls).toEqual([]);
-    const error = host().querySelector<HTMLElement>('.field-error[role="alert"]')!;
-    expect(text(error)).toBe('A data limite não pode ser anterior à entrada.');
-    expect(input()!.getAttribute('aria-invalid')).toBe('true');
-    expect(input()!.getAttribute('aria-describedby')).toBe(error.id);
   });
 
-  it('shows the server error and keeps the field open', () => {
-    response = () => throwError(() => ({ error: { message: 'Due date cannot be before entry date.' } }));
+  it('shows the server error inline and restores the previous value', () => {
+    response = () => throwError(() => ({ status: 400, error: { message: 'Data inválida.' } }));
     mount();
-    edit();
-    type('2026-11-25');
-    submit();
-    expect(text(host().querySelector('[role="alert"]'))).toBe('Due date cannot be before entry date.');
+    open();
+    day('25')!.click();
+    render();
+    expect(text(host().querySelector('[role="alert"]'))).toContain('Data inválida.');
+    expect(text(trigger())).toContain('20/11/2026');
     expect(saved).toEqual([]);
-    expect(input()).not.toBeNull();
-
-    response = () => throwError(() => ({}));
-    submit();
-    expect(text(host().querySelector('[role="alert"]'))).toBe('Não foi possível salvar a data limite.');
   });
 
-  it('outside click closes without a request', () => {
-    mount();
-    edit();
-    type('2026-11-25');
-    document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
-    render();
-    expect(input()).toBeNull();
-    expect(calls).toEqual([]);
-  });
-
-  it('Escape cancels the edit and is consumed before the detail sees it', () => {
-    mount();
-    edit();
-    type('2026-11-25');
-    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
-    input()!.dispatchEvent(escape);
-    render();
-    expect(escape.defaultPrevented).toBe(true);
-    expect(calls).toEqual([]);
-    expect(input()).toBeNull();
-  });
-
-  it('saves once and locks the field while saving', () => {
+  it('reports pending writes until completion and ignores picks while saving', () => {
     const pending = new Subject<RmaResponse>();
-    response = () => pending;
+    response = () => pending.asObservable();
+    const busy: boolean[] = [];
     mount();
-    edit();
-    type('2026-11-25');
-    submit();
-    submit();
-    expect(calls).toEqual([[4, '2026-11-25']]);
-    expect(button('Remover data')!.disabled).toBe(true);
-    expect(input()!.disabled).toBe(true);
+    fixture.componentInstance.busyChange.subscribe((value: boolean) => busy.push(value));
+    open();
+    day('25')!.click();
+    render();
+    expect(busy).toEqual([true]);
+    expect(trigger()!.disabled).toBe(true);
     pending.next({ ...RMA, dueDate: '2026-11-25' });
     pending.complete();
     render();
-    expect(input()).toBeNull();
+    expect(busy).toEqual([true, false]);
+    expect(calls).toEqual([[4, '2026-11-25']]);
   });
-  it('does not save empty or invalid native dates', () => {
-    mount(); edit();
-    for (const value of ['', 'invalid']) { type(value); submit(); }
-    expect(calls).toEqual([]);
-    expect(input()).not.toBeNull();
-  });
-
-  it('reports pending writes until completion and prevents cancellation during saving', () => {
-    const pending = new Subject<RmaResponse>();
-    response = () => pending;
-    mount();
-    const states: boolean[] = [];
-    fixture.componentInstance.busyChange.subscribe((busy) => states.push(busy));
-    edit(); type('2026-11-25'); submit();
-    document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
-    input()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    render();
-    expect(input()).not.toBeNull();
-    expect(states).toEqual([true]);
-    pending.next({ ...RMA, dueDate: '2026-11-25' }); pending.complete(); render();
-    expect(states).toEqual([true, false]);
-    expect(saved).toHaveLength(1);
-  });
-
 });
