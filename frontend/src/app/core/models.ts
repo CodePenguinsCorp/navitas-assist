@@ -358,6 +358,51 @@ export interface RmaDueDateHistoryResponse {
 
 export type UpdateRmaDueDateRequest = { dueDate: string } | { clearDueDate: true };
 
+/** `GET /api/rmas/dashboard`: indicadores calculados no servidor, sem históricos. */
+export interface RmaDashboardResponse {
+  statusCounts: Partial<Record<RmaStatus, number>>;
+  initialQueueHighPriority: number;
+  /** OS abertas com prazo vencido e perto do limite. */
+  overdue: number;
+  dueSoon: number;
+  /** Itens de todas as OS registradas. */
+  items: number;
+  itemsInWarranty: number;
+  itemsPendingWarranty: number;
+  /** Até cinco OS abertas, por prioridade e entrada mais antiga. */
+  queue: RmaDashboardQueueItem[];
+  /** As quatro OS atualizadas por último, encerradas incluídas. */
+  recent: RmaDashboardRecentItem[];
+  /** Os quatro eventos de status mais recentes. */
+  statusEvents: RmaDashboardStatusEvent[];
+}
+
+export interface RmaDashboardQueueItem {
+  id: number;
+  code: string;
+  clientName: string;
+  entryDate: string;
+  status: RmaStatus;
+  priority: RmaPriority;
+}
+
+export interface RmaDashboardRecentItem {
+  id: number;
+  code: string;
+  clientName: string;
+  assigneeName: string | null;
+  updatedAt: string;
+}
+
+export interface RmaDashboardStatusEvent {
+  rmaId: number;
+  code: string;
+  status: RmaStatus;
+  changedBy: string;
+  note: string | null;
+  changedAt: string;
+}
+
 export interface RmaResponse {
   id: number;
   code: string;

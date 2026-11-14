@@ -8,22 +8,18 @@ import {
   RMA_STATUS_LABELS
 } from '../../core/mock-data';
 import {
+  RmaDashboardResponse,
   RmaPriority,
-  RmaResponse,
   RmaStatus,
-  UserSummaryResponse,
-  WarrantyStatus
+  UserSummaryResponse
 } from '../../core/models';
 import { PermissionService } from '../../core/services/permission.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
 import { IconComponent, IconName } from '../../shared/icon/icon.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
-import { compareRmasForQueue, initialsOf } from '../../core/utils/rma-ui';
-import { businessToday, deadlineStatus } from '../../core/utils/rma-deadline';
+import { initialsOf } from '../../core/utils/rma-ui';
 import { formatBusinessDateTime as formatDateTime, formatDateOnly } from '../../core/utils/date';
-
-const QUEUE_SIZE = 5;
 
 interface DashboardIndicator {
   label: string;
@@ -183,27 +179,28 @@ export class DashboardComponent {
   protected readonly hasLoaded = signal(false);
   protected readonly loadErrorMessage = signal('');
 
-  private readonly rmasSignal = signal<RmaResponse[]>([]);
+  private readonly dashboardSignal = signal<RmaDashboardResponse>(EMPTY_DASHBOARD);
   private readonly clientTotalSignal = signal(0);
   private readonly productTotalSignal = signal(0);
   private readonly userTotalSignal = signal(0);
 
-  private readonly activeRmas = computed(() =>
-    this.rmasSignal().filter((rma) => !CLOSED_RMA_STATUSES.includes(rma.status))
+  private readonly totalCount = computed(() =>
+    Object.values(this.dashboardSignal().statusCounts).reduce((sum, count) => sum + (count ?? 0), 0)
   );
 
+  protected readonly activeCount = computed(() => {
+    const counts = this.dashboardSignal().statusCounts;
+    return this.totalCount() - CLOSED_RMA_STATUSES.reduce((sum, status) => sum + (counts[status] ?? 0), 0);
+  });
+
   protected readonly indicators = computed<DashboardIndicator[]>(() => {
-    const rmas = this.rmasSignal();
-    const activeRmas = this.activeRmas();
-    const initialQueue = rmas.filter((rma) => rma.status === 'RECEIVED' || rma.status === 'TRIAGE');
-    const rmaItems = rmas.flatMap((rma) => rma.items);
-    const inWarrantyCount = rmaItems.filter((item) => item.warrantyStatus === WarrantyStatus.IN_WARRANTY).length;
-    const pendingWarrantyCount = rmaItems.filter((item) => item.warrantyStatus === WarrantyStatus.PENDING).length;
-    const warrantyRate = rmaItems.length === 0 ? 0 : Math.round((inWarrantyCount / rmaItems.length) * 100);
-    const today = businessToday(Date.now());
-    const deadlines = activeRmas.map((rma) => deadlineStatus(rma, today));
-    const overdueCount = deadlines.filter((status) => status === 'OVERDUE').length;
-    const dueSoonCount = deadlines.filter((status) => status === 'DUE_SOON').length;
+    const dashboard = this.dashboardSignal();
+    const total = this.totalCount();
+    const active = this.activeCount();
+    const initialQueue = (dashboard.statusCounts.RECEIVED ?? 0) + (dashboard.statusCounts.TRIAGE ?? 0);
+    const items = dashboard.items;
+    const warrantyRate = items === 0 ? 0 : Math.round((dashboard.itemsInWarranty / items) * 100);
+    const pending = dashboard.itemsPendingWarranty;
     const catalog = [
       `${this.clientTotalSignal()} ${this.clientTotalSignal() === 1 ? 'cliente' : 'clientes'}`,
       `${this.productTotalSignal()} ${this.productTotalSignal() === 1 ? 'produto' : 'produtos'}`,
@@ -213,29 +210,29 @@ export class DashboardComponent {
     return [
       {
         label: 'Ordens de serviço em andamento',
-        value: String(activeRmas.length),
-        detail: `de ${rmas.length} ${rmas.length === 1 ? 'registrada' : 'registradas'}`,
+        value: String(active),
+        detail: `de ${total} ${total === 1 ? 'registrada' : 'registradas'}`,
         icon: 'clipboard',
         tone: 'brand'
       },
       {
         label: 'Atrasadas',
-        value: String(overdueCount),
-        detail: `· ${dueSoonCount} perto do limite`,
+        value: String(dashboard.overdue),
+        detail: `· ${dashboard.dueSoon} perto do limite`,
         icon: 'clock',
         tone: 'danger'
       },
       {
         label: 'Fila inicial (Recebida e Triagem)',
-        value: String(initialQueue.length),
-        detail: `· ${countHighPriority(initialQueue)} com prioridade alta`,
+        value: String(initialQueue),
+        detail: `· ${dashboard.initialQueueHighPriority} com prioridade alta`,
         icon: 'inbox',
         tone: 'sky'
       },
       {
         label: 'Itens em garantia',
         value: `${warrantyRate}%`,
-        detail: `· ${inWarrantyCount} de ${rmaItems.length} ${rmaItems.length === 1 ? 'item' : 'itens'} · ${pendingWarrantyCount} ${pendingWarrantyCount === 1 ? 'pendente' : 'pendentes'}, em todas as ordens de serviço registradas`,
+        detail: `· ${dashboard.itemsInWarranty} de ${items} ${items === 1 ? 'item' : 'itens'} · ${pending} ${pending === 1 ? 'pendente' : 'pendentes'}, em todas as ordens de serviço registradas`,
         icon: 'shield',
         tone: 'success'
       },
@@ -250,54 +247,42 @@ export class DashboardComponent {
     ];
   });
 
-  protected readonly activeCount = computed(() => this.activeRmas().length);
-
   protected readonly queue = computed<QueueRow[]>(() =>
-    [...this.activeRmas()]
-      .sort(compareRmasForQueue)
-      .slice(0, QUEUE_SIZE)
-      .map((rma) => ({
-        id: rma.id,
-        code: rma.code,
-        client: rma.clientName,
-        entryDate: formatDateOnly(rma.entryDate),
-        status: RMA_STATUS_LABELS[rma.status],
-        statusCode: rma.status,
-        priority: RMA_PRIORITY_LABELS[rma.priority],
-        priorityCode: rma.priority
-      }))
+    this.dashboardSignal().queue.map((rma) => ({
+      id: rma.id,
+      code: rma.code,
+      client: rma.clientName,
+      entryDate: formatDateOnly(rma.entryDate),
+      status: RMA_STATUS_LABELS[rma.status],
+      statusCode: rma.status,
+      priority: RMA_PRIORITY_LABELS[rma.priority],
+      priorityCode: rma.priority
+    }))
   );
 
   protected readonly auditEvents = computed<AuditRow[]>(() =>
-    this.rmasSignal()
-      .flatMap((rma) => rma.statusHistory.map((event) => ({ rma, event })))
-      .sort((left, right) => compareDateStrings(right.event.changedAt, left.event.changedAt))
-      .slice(0, 4)
-      .map(({ rma, event }) => ({
-        id: `${rma.code}-${event.changedAt}-${event.status}`,
-        rmaId: rma.id,
-        code: rma.code,
-        statusCode: event.status,
-        label: `Status registrado: ${RMA_STATUS_LABELS[event.status]}`,
-        by: event.changedBy,
-        note: event.note?.trim() || null,
-        time: formatDateTime(event.changedAt)
-      }))
+    this.dashboardSignal().statusEvents.map((event) => ({
+      id: `${event.code}-${event.changedAt}-${event.status}`,
+      rmaId: event.rmaId,
+      code: event.code,
+      statusCode: event.status,
+      label: `Status registrado: ${RMA_STATUS_LABELS[event.status]}`,
+      by: event.changedBy,
+      note: event.note?.trim() || null,
+      time: formatDateTime(event.changedAt)
+    }))
   );
 
   protected readonly recentRmas = computed<RecentRmaRow[]>(() =>
-    [...this.rmasSignal()]
-      .sort((left, right) => compareDateStrings(right.updatedAt, left.updatedAt))
-      .slice(0, 4)
-      .map((rma) => ({
-        id: rma.id,
-        code: rma.code,
-        client: rma.clientName,
-        owner: extractOwner(rma),
-        ownerInitials: initialsOf(rma.assigneeName),
-        hasOwner: !!rma.assigneeName?.trim(),
-        updatedAt: formatDateTime(rma.updatedAt)
-      }))
+    this.dashboardSignal().recent.map((rma) => ({
+      id: rma.id,
+      code: rma.code,
+      client: rma.clientName,
+      owner: rma.assigneeName?.trim() || 'Sem responsável',
+      ownerInitials: initialsOf(rma.assigneeName),
+      hasOwner: !!rma.assigneeName?.trim(),
+      updatedAt: formatDateTime(rma.updatedAt)
+    }))
   );
 
   constructor() {
@@ -318,7 +303,7 @@ export class DashboardComponent {
       : of<UserSummaryResponse>({ total: 0 });
 
     this.loadRequest = forkJoin({
-      rmas: this.rmaService.listBoard(),
+      dashboard: this.rmaService.getDashboard(),
       clients: this.catalogService.getClientSummary(),
       products: this.catalogService.getProductSummary(),
       users: usersRequest
@@ -326,8 +311,8 @@ export class DashboardComponent {
       takeUntilDestroyed(this.destroyRef),
       finalize(() => this.loading.set(false))
     ).subscribe({
-      next: ({ rmas, clients, products, users }) => {
-        this.rmasSignal.set(rmas);
+      next: ({ dashboard, clients, products, users }) => {
+        this.dashboardSignal.set(dashboard);
         this.clientTotalSignal.set(clients.total);
         this.productTotalSignal.set(products.total);
         this.userTotalSignal.set(users.total);
@@ -343,22 +328,7 @@ export class DashboardComponent {
   }
 }
 
-function countHighPriority(rmas: RmaResponse[]): number {
-  return rmas.filter((rma) => rma.priority === 'HIGH').length;
-}
-
-function compareDateStrings(left: string | null, right: string | null): number {
-  return parseDateValue(left) - parseDateValue(right);
-}
-
-function parseDateValue(value: string | null): number {
-  if (!value) {
-    return 0;
-  }
-
-  return new Date(value).getTime();
-}
-
-function extractOwner(rma: RmaResponse): string {
-  return rma.assigneeName?.trim() || 'Sem responsável';
-}
+const EMPTY_DASHBOARD: RmaDashboardResponse = {
+  statusCounts: {}, initialQueueHighPriority: 0, overdue: 0, dueSoon: 0,
+  items: 0, itemsInWarranty: 0, itemsPendingWarranty: 0, queue: [], recent: [], statusEvents: []
+};

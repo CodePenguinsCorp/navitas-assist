@@ -5,6 +5,7 @@ import { RmaResponse, WarrantyStatus } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
 import { DashboardComponent } from './dashboard.component';
+import { dashboardFromBoard } from '../../testing/dashboard-fixtures';
 import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
 describe('Dashboard timestamp display', () => {
@@ -28,7 +29,7 @@ describe('Dashboard timestamp display', () => {
       providers: [
         provideRouter([]),
         providePermissions([]),
-        { provide: RmaService, useValue: { listBoard: () => of([rma]), getSummary: () => of({ total: 1, ongoing: 1, highPriority: 0 }) } },
+        { provide: RmaService, useValue: { getDashboard: () => of(dashboardFromBoard([rma])) } },
         { provide: CatalogService, useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]), getClientSummary: () => of({ total: 0 }), getProductSummary: () => of({ total: 0, categories: [] }), getUserSummary: () => of({ total: 0 }) } },
       ],
     }).compileComponents();

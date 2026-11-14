@@ -9,6 +9,7 @@ import {
   RmaAssigneeUpdateRequest,
   RmaBlockRequest,
   RmaBlockResolveRequest,
+  RmaDashboardResponse,
   RmaResponse,
   RmaItemWarrantyRequest,
   RmaSummaryResponse,
@@ -41,6 +42,10 @@ export class RmaService {
   listBoard(filters: Pick<RmaFilters, 'query' | 'status'> = {}): Observable<RmaResponse[]> {
     const params = buildPageParams({}, { query: filters.query, status: filters.status });
     return this.http.get<RmaResponse[]>('/api/rmas/board', { params });
+  }
+
+  getDashboard(): Observable<RmaDashboardResponse> {
+    return this.http.get<RmaDashboardResponse>('/api/rmas/dashboard');
   }
 
   getById(id: number, context?: HttpContext): Observable<RmaResponse> {

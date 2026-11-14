@@ -27,7 +27,8 @@ Convenções:
 | --- | --- | --- |
 | `GET /api/rmas` | `rma.ver` | Lista paginada (`query`, `status`, `page`, `size`). |
 | `GET /api/rmas/summary` | `rma.ver` | Totais para os indicadores (`query`, `status`). |
-| `GET /api/rmas/board` | `rma.ver` | Todos as ordens de serviço do Kanban e do dashboard, sem paginação. |
+| `GET /api/rmas/board` | `rma.ver` | Todas as ordens de serviço do Kanban, sem paginação. |
+| `GET /api/rmas/dashboard` | `rma.ver` | Indicadores do dashboard calculados no servidor: `statusCounts`, `initialQueueHighPriority`, `overdue` e `dueSoon` (OS abertas), `items`, `itemsInWarranty` e `itemsPendingWarranty` (todos os itens), `queue` (até 5 OS abertas por prioridade e entrada), `recent` (4 últimas atualizadas) e `statusEvents` (4 últimos eventos de status), sem históricos completos. |
 | `GET /api/rmas/{id}` | `rma.ver` | Detalhe. |
 | `GET /api/rmas/{id}/report.pdf` | `rma.ver` | Laudo final em PDF. |
 | `POST /api/rmas` | `rma.abrir` | Abre uma OS. |

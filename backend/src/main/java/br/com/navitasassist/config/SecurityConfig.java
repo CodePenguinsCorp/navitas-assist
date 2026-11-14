@@ -100,6 +100,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/clients/imports/preview", "/api/clients/imports/confirm",
                     "/api/products/imports/preview", "/api/products/imports/confirm").hasAuthority(Codes.CADASTROS_IMPORTAR)
                 .requestMatchers(HttpMethod.GET, "/api/auth/me", "/api/clients/**", "/api/products/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/rmas/dashboard").hasAuthority(Codes.RMA_VER)
                 .requestMatchers(HttpMethod.GET, "/api/rmas/*/report.pdf").hasAuthority(Codes.RMA_VER)
                 .requestMatchers(HttpMethod.GET, "/api/rmas/*/repair", "/api/rmas/*/repair/external-components").hasAuthority(Codes.RMA_VER)
                 .requestMatchers(HttpMethod.GET, "/api/rmas/**").hasAuthority(Codes.RMA_VER)

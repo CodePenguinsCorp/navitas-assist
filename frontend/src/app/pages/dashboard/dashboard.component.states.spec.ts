@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Signal, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { Observable, Subject, of, throwError } from 'rxjs';
+import { Observable, Subject, map, of, throwError } from 'rxjs';
 import {
   ClientSummaryResponse,
   ProductSummaryResponse,
@@ -14,6 +14,7 @@ import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
 import { businessToday } from '../../core/utils/rma-deadline';
 import { DashboardComponent } from './dashboard.component';
+import { dashboardFromBoard } from '../../testing/dashboard-fixtures';
 import { Permission } from '../../core/permissions';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
@@ -40,12 +41,13 @@ const CLIENTS: ClientSummaryResponse = { total: 0 };
 const PRODUCTS: ProductSummaryResponse = { total: 0, categories: [] };
 const USERS: UserSummaryResponse = { total: 0 };
 
-type Source = 'listBoard' | 'getClientSummary' | 'getProductSummary' | 'getUserSummary';
+type Source = 'getDashboard' | 'getClientSummary' | 'getProductSummary' | 'getUserSummary';
 
 describe('DashboardComponent load states', () => {
   let fixture: ComponentFixture<DashboardComponent>;
-  let rmaService: { listBoard: ReturnType<typeof vi.fn> };
-  let catalogService: { [K in Exclude<Source, 'listBoard'>]: ReturnType<typeof vi.fn> };
+  let rmaService: { getDashboard: ReturnType<typeof vi.fn> };
+  let catalogService: { [K in Exclude<Source, 'getDashboard'>]: ReturnType<typeof vi.fn> };
+  const asDashboard = (board: Observable<RmaResponse[]>) => board.pipe(map((rmas) => dashboardFromBoard(rmas)));
   const root = (): HTMLElement => fixture.nativeElement.querySelector('.page-surface');
   const text = () => root().textContent!.replace(/\s+/g, ' ').trim();
   const button = (label: string) => Array.from(root().querySelectorAll('button')).find((item) => item.textContent?.trim() === label);
@@ -58,9 +60,9 @@ describe('DashboardComponent load states', () => {
     clients?: Observable<ClientSummaryResponse>;
     products?: Observable<ProductSummaryResponse>;
     users?: Observable<UserSummaryResponse>;
-    listBoard?: ReturnType<typeof vi.fn>;
+    getDashboard?: ReturnType<typeof vi.fn>;
   } = {}) {
-    rmaService = { listBoard: sources.listBoard ?? vi.fn(() => sources.board ?? of([RMA_OPEN])) };
+    rmaService = { getDashboard: sources.getDashboard ?? vi.fn(() => asDashboard(sources.board ?? of([RMA_OPEN]))) };
     catalogService = {
       getClientSummary: vi.fn(() => sources.clients ?? of(CLIENTS)),
       getProductSummary: vi.fn(() => sources.products ?? of(PRODUCTS)),
@@ -90,10 +92,10 @@ describe('DashboardComponent load states', () => {
   });
 
   // Vermelho: não há botão de nova tentativa, e os vazios aparecem depois da falha.
-  it.each(['listBoard', 'getClientSummary', 'getProductSummary', 'getUserSummary'] as Source[])('replaces the dashboard with a retryable failure when %s fails', async (source) => {
+  it.each(['getDashboard', 'getClientSummary', 'getProductSummary', 'getUserSummary'] as Source[])('replaces the dashboard with a retryable failure when %s fails', async (source) => {
     await setup({
       role: 'ADMIN',
-      board: source === 'listBoard' ? failure() : undefined,
+      board: source === 'getDashboard' ? failure() : undefined,
       clients: source === 'getClientSummary' ? failure() : undefined,
       products: source === 'getProductSummary' ? failure() : undefined,
       users: source === 'getUserSummary' ? failure() : undefined
@@ -112,7 +114,7 @@ describe('DashboardComponent load states', () => {
   // Vermelho: não há nova tentativa.
   it('retries the complete snapshot', async () => {
     const board = new Subject<RmaResponse[]>();
-    await setup({ listBoard: vi.fn().mockReturnValueOnce(failure()).mockReturnValueOnce(board) });
+    await setup({ getDashboard: vi.fn().mockReturnValueOnce(failure()).mockReturnValueOnce(asDashboard(board)) });
 
     const retry = button('Tentar novamente')!;
     retry.click();
@@ -127,14 +129,14 @@ describe('DashboardComponent load states', () => {
     fixture.detectChanges();
     expect(root().querySelector('.alert-banner--error')).toBeNull();
     expect(text()).toContain('OS-OPEN');
-    expect(rmaService.listBoard).toHaveBeenCalledTimes(2);
+    expect(rmaService.getDashboard).toHaveBeenCalledTimes(2);
     expect(catalogService.getClientSummary).toHaveBeenCalledTimes(2);
   });
 
-  it.each(['TECHNICIAN', 'SERVICE_DESK', 'VIEWER'] as LegacyProfileCode[])('preserves a single unfiltered board request without user summary for %s', async (role) => {
+  it.each(['TECHNICIAN', 'SERVICE_DESK', 'VIEWER'] as LegacyProfileCode[])('requests the server-side dashboard once, without user summary, for %s', async (role) => {
     await setup({ role });
-    expect(rmaService.listBoard).toHaveBeenCalledTimes(1);
-    expect(rmaService.listBoard).toHaveBeenCalledWith();
+    expect(rmaService.getDashboard).toHaveBeenCalledTimes(1);
+    expect(rmaService.getDashboard).toHaveBeenCalledWith();
     expect(catalogService.getUserSummary).not.toHaveBeenCalled();
   });
 

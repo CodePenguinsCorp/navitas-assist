@@ -124,6 +124,7 @@ class PermissionEquivalenceIntegrationTest {
         row(HttpMethod.GET, "/api/rmas", ALL),
         row(HttpMethod.GET, "/api/rmas/summary", ALL),
         row(HttpMethod.GET, "/api/rmas/board", ALL),
+        row(HttpMethod.GET, "/api/rmas/dashboard", ALL),
         row(HttpMethod.GET, "/api/rmas/{id}", ALL),
         row(HttpMethod.GET, "/api/rmas/{id}/report.pdf", ALL),
         row(HttpMethod.GET, "/api/rmas/{rmaId}/parts", ALL),

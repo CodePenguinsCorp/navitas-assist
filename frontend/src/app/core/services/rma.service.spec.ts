@@ -69,6 +69,15 @@ describe('RmaService', () => {
     request.flush([]);
   });
 
+  it('loads the server-side dashboard aggregates', () => {
+    service.getDashboard().subscribe();
+
+    const request = httpTesting.expectOne('/api/rmas/dashboard');
+    expect(request.request.method).toBe('GET');
+    expect(request.request.params.keys()).toEqual([]);
+    request.flush({ statusCounts: {}, initialQueueHighPriority: 0, overdue: 0, dueSoon: 0, items: 0, itemsInWarranty: 0, itemsPendingWarranty: 0, queue: [], recent: [], statusEvents: [] });
+  });
+
   it('loads summary totals with the same filters as the list', () => {
     service.getSummary({ query: ' OS ', status: 'TRIAGE' }).subscribe();
 

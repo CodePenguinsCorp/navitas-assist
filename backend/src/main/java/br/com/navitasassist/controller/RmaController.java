@@ -8,12 +8,14 @@ import br.com.navitasassist.rma.CreateRmaRequest;
 import br.com.navitasassist.rma.RmaAssigneeUpdateRequest;
 import br.com.navitasassist.rma.RmaBlockRequest;
 import br.com.navitasassist.rma.RmaBlockResolveRequest;
+import br.com.navitasassist.rma.RmaDashboardResponse;
 import br.com.navitasassist.rma.RmaResponse;
 import br.com.navitasassist.rma.RmaItemWarrantyRequest;
 import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusUpdateRequest;
 import br.com.navitasassist.rma.RmaSummaryResponse;
 import br.com.navitasassist.rma.UpdateRmaRequest;
+import br.com.navitasassist.service.RmaDashboardService;
 import br.com.navitasassist.service.RmaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class RmaController {
 
     private final RmaService rmaService;
+    private final RmaDashboardService rmaDashboardService;
 
     @GetMapping
     public PageResponse<RmaResponse> searchPage(
@@ -60,6 +63,11 @@ public class RmaController {
         @RequestParam(required = false) RmaStatus status
     ) {
         return rmaService.search(query, status);
+    }
+
+    @GetMapping("/dashboard")
+    public RmaDashboardResponse dashboard() {
+        return rmaDashboardService.summarize();
     }
 
     @GetMapping("/{id}")
