@@ -126,6 +126,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/rmas/*/items/*/warranty").hasAuthority(Codes.RMA_EDITAR)
                 .requestMatchers(HttpMethod.PUT, "/api/rmas/*").hasAuthority(Codes.RMA_EDITAR)
                 .requestMatchers(HttpMethod.DELETE, "/api/clients/*", "/api/products/*").hasAuthority(Codes.CADASTROS_EDITAR)
+                .requestMatchers(HttpMethod.GET, "/api/protocols/rmas/*/executions").hasAuthority(Codes.RMA_VER)
                 .requestMatchers(HttpMethod.GET, "/api/protocols/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/protocols/templates").hasAuthority(Codes.PROTOCOLOS_CATALOGO)
                 .requestMatchers(HttpMethod.PUT, "/api/protocols/templates/*").hasAuthority(Codes.PROTOCOLOS_CATALOGO)

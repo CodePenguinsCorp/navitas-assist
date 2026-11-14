@@ -307,6 +307,17 @@ class PermissionEquivalenceIntegrationTest {
     }
 
     @Test
+    void protocolExecutionReadsRequireRmaView() throws Exception {
+        String path = "/api/protocols/rmas/999999/executions";
+        mvc.perform(request(HttpMethod.GET, path).with(user("reader").authorities(
+                new org.springframework.security.core.authority.SimpleGrantedAuthority(Permission.Codes.RMA_VER))))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
+        mvc.perform(request(HttpMethod.GET, path).with(user("catalog").authorities(
+                new org.springframework.security.core.authority.SimpleGrantedAuthority(Permission.Codes.PROTOCOLOS_VER))))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+    }
+
+    @Test
     void everyHandlerMappingIsInMatrix() {
         Set<String> inMatrix = new TreeSet<>();
         MATRIX.stream()

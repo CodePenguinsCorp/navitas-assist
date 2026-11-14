@@ -1,5 +1,9 @@
 # Acesso e permissões
 
+## Leitura de protocolos
+
+- S4: a leitura de execuções em `GET /api/protocols/rmas/{rmaId}/executions` exige `rma.ver`, pois expõe dados da OS; acesso ao catálogo de protocolos sozinho não permite essa leitura.
+
 ## Modelo
 
 A API autoriza por **permissão**, não por perfil. Um **perfil** é um nome mais um conjunto de permissões de um catálogo fixo (`Permission.java`). Cada usuário tem exatamente um perfil e, opcionalmente, **permissões extras**. As permissões efetivas são as do perfil mais as extras e são recalculadas a cada requisição.

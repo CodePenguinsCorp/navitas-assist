@@ -58,7 +58,7 @@ Convenções:
 | `POST /api/rmas/{rmaId}/repair/interventions/{id}/void` | `rma.diagnosticar` | Anula intervenção com `{ reason }` obrigatório (até 1000). |
 | `PUT /api/rmas/{rmaId}/repair/external-components/{id}` | `pecas.reservar` | Edita componente externo ativo em OS aberta. |
 | `POST /api/rmas/{rmaId}/repair/external-components/{id}/void` | `pecas.reservar` | Anula componente externo com `{ reason }` obrigatório (até 1000). |
-| `GET /api/protocols/rmas/{rmaId}/executions` | autenticado | Execuções de protocolo da OS. |
+| `GET /api/protocols/rmas/{rmaId}/executions` | `rma.ver` | Execuções de protocolo da OS. |
 | `POST /api/protocols/rmas/{rmaId}/executions` | `protocolos.executar` | Inicia execução. |
 | `POST /api/protocols/executions/{executionId}/items/{itemId}/results` | `protocolos.executar` | Registra resultado de um item. |
 | `POST /api/protocols/executions/{executionId}/complete` | `protocolos.executar` | Conclui a execução. |
