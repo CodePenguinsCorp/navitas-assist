@@ -8,7 +8,7 @@
         aria-controls="shell-sidebar"
         [attr.aria-expanded]="expanded()"
         [attr.aria-label]="expanded() ? 'Recolher menu' : 'Expandir menu'"
-        [attr.title]="expanded() ? 'Recolher menu' : 'Expandir menu'"
+        [appNavTip]="expanded() ? 'Recolher menu' : 'Expandir menu'"
         (click)="toggleSidebar()"
       >
         <app-icon name="chevron" [size]="18" />
@@ -17,7 +17,7 @@
         @if (expanded()) {
           <img class="brand-lockup__logo" src="brand/navitas-logo-white.svg" alt="Navitas" width="192" height="108" />
         } @else {
-          <img class="brand-lockup__logo brand-lockup__logo--symbol" src="brand/navitas-symbol-white.svg" alt="Navitas" width="108" height="36" />
+          <span class="brand-lockup__monogram" role="img" aria-label="Navitas">N</span>
         }
       </div>
     </div>
@@ -34,7 +34,7 @@
                 routerLinkActive="is-active"
                 class="nav-item"
                 ariaCurrentWhenActive="page"
-                [attr.title]="expanded() ? null : item.label"
+                [appNavTip]="expanded() ? null : item.label"
                 [attr.aria-label]="expanded() ? null : item.label"
                 (click)="closeOverlay()"
               >
@@ -53,7 +53,7 @@
         <strong>{{ currentUser()?.name }}</strong>
         <span>{{ currentProfileName() }}</span>
       </div>
-      <button type="button" class="sidebar-user__logout" (click)="logout()" [disabled]="loggingOut()" [attr.title]="loggingOut() ? 'Saindo...' : 'Sair'">
+      <button type="button" class="sidebar-user__logout" (click)="logout()" [disabled]="loggingOut()" [appNavTip]="loggingOut() ? 'Saindo...' : 'Sair'" [attr.aria-label]="loggingOut() ? 'Saindo...' : 'Sair'">
         <app-icon name="logout" />
         <span class="sr-only">{{ loggingOut() ? 'Saindo...' : 'Sair' }}</span>
       </button>

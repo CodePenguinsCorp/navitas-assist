@@ -10,6 +10,7 @@ import { NAV_GROUPS } from '../core/mock-data';
 import { allowsPermissions, firstAllowedRoute } from '../core/navigation';
 import { Permission } from '../core/permissions';
 import { AuthService } from '../core/services/auth.service';
+import { NavTipDirective } from '../shared/nav-tip/nav-tip.directive';
 import { NotificationService } from '../core/services/notification.service';
 import { PermissionService } from '../core/services/permission.service';
 
@@ -36,7 +37,7 @@ function writeSidebarChoice(expanded: boolean): void {
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet, IconComponent, NotificationBellComponent],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, IconComponent, NotificationBellComponent, NavTipDirective],
   templateUrl: './app-shell.component.html',
   styles: [':host { display: block; }'],
   host: { '(document:keydown.escape)': 'closeOverlay(true)' }

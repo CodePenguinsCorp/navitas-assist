@@ -324,7 +324,7 @@ describe('AppShellComponent collapsible sidebar', () => {
     expect(backdrop()).toBeNull();
   });
 
-  it('starts collapsed up to 900px and names each icon-only item by title and aria-label', async () => {
+  it('starts collapsed up to 900px and names each icon-only item by aria-label and shows the dark tooltip on hover', async () => {
     localStorage.setItem(STORAGE_KEY, 'expanded');
     await render(true);
 
@@ -332,10 +332,15 @@ describe('AppShellComponent collapsible sidebar', () => {
     expect(toggle().getAttribute('aria-expanded')).toBe('false');
     expect(toggle().getAttribute('aria-label')).toBe('Expandir menu');
     const first = items()[0];
-    expect(first.getAttribute('title')).toBe('Dashboard');
+    expect(first.getAttribute('title')).toBeNull();
     expect(first.getAttribute('aria-label')).toBe('Dashboard');
+    first.dispatchEvent(new Event('mouseenter'));
+    expect(first.querySelector('.nav-tip.row-action__tip')?.textContent).toBe('Dashboard');
+    first.dispatchEvent(new Event('mouseleave'));
+    expect(first.querySelector('.nav-tip')).toBeNull();
     expect(page.querySelector('.sidebar-user__logout')).not.toBeNull();
-    expect(page.querySelector('.brand-lockup__logo')?.getAttribute('src')).toContain('navitas-symbol-white.svg');
+    expect(page.querySelector('.brand-lockup__logo')).toBeNull();
+    expect(page.querySelector('.brand-lockup__monogram')?.textContent?.trim()).toBe('N');
   });
 
   it('collapses and expands on wide screens and remembers the choice', async () => {
