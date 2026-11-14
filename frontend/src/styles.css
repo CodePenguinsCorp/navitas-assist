@@ -3329,6 +3329,36 @@ app-custom-select:has(> .custom-select--priority) {
   white-space: nowrap;
 }
 
+/* Every fact starts at the top of its row, so labels of one row share a line even when a value is an inline control. */
+.detail-summary > div {
+  align-content: start;
+}
+
+/* Inline menus among the facts (Jira style): the value lines up with the label and the plain values beside it;
+   the hover box grows around it instead of pushing it right or down. */
+.detail-summary app-custom-select:has(> :is(.custom-select--priority, .custom-select--person)) {
+  display: inline-block;
+  width: auto;
+  max-width: calc(100% + var(--space-2) + 1px);
+  margin-block: calc(-1 * (var(--space-1) + 1px));
+  margin-inline-start: calc(-1 * (var(--space-2) + 1px));
+}
+
+.detail-summary :is(.custom-select--priority, .custom-select--person) .custom-select__trigger {
+  width: auto;
+  min-height: 0;
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+}
+
+.detail-summary .custom-select--person {
+  width: auto;
+}
+
+.detail-summary .custom-select--person .custom-select__label {
+  flex: 0 1 auto;
+}
+
 @media (max-width: 900px) {
   .detail-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
