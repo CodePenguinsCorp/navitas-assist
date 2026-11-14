@@ -25,6 +25,8 @@ Os alertas `SLA_*` foram removidos; a data limite não gera notificação ([praz
 
 - `GET /api/notifications` devolve um array de até 100 itens e aceita `unreadOnly`, `includeSnoozed`, `eventType` e `severity`. Caixa, resumo e ações pessoais ignoram linhas exclusivas de e-mail. `read-all` alcança todas as visíveis do usuário, inclusive adiadas e além das 100 linhas.
 - O sino e a caixa de entrada atualizam a cada 60 segundos, sem disparar o pop-up de carregamento.
+- **Adiar** existe só para notificações que pedem uma ação do destinatário: `RMA_BLOCKED` (impedimento), `PART_PENDING` (peça pendente) e `TEST_FAILED` (teste reprovado). `RMA_CREATED` e `RMA_ASSIGNED` são informativas: o modal de detalhe e a caixa de entrada não oferecem Adiar para elas, e `POST /api/notifications/{id}/snooze` responde 400 ("Esta notificação é apenas informativa e não pode ser adiada."). O critério é o tipo do evento, não a severidade, porque a severidade é editável em cada regra. A lista fica em `NotificationEventType.isSnoozable()` no backend e em `SNOOZABLE_EVENT_TYPES` (`core/utils/notification-ui.ts`) no front.
+- Uma informativa adiada antes dessa regra tem o adiamento ignorado: aparece na caixa, conta como não lida e volta com `snoozedUntil` nulo. O valor antigo continua gravado no banco, sem migração.
 
 ## E-mail
 

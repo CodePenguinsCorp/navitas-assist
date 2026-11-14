@@ -141,7 +141,7 @@ Qualquer outra rota de `/api/protocols/**` é negada.
 | `GET /api/notifications/summary` | Contagem de não lidas. |
 | `POST /api/notifications/{id}/read` | Marca como lida. |
 | `POST /api/notifications/read-all` | Marca todas as visíveis como lidas. |
-| `POST /api/notifications/{id}/snooze` | Adia. |
+| `POST /api/notifications/{id}/snooze` | Adia (`minutes` de 5 a 10080). Só `RMA_BLOCKED`, `PART_PENDING` e `TEST_FAILED`; as informativas (`RMA_CREATED`, `RMA_ASSIGNED`) recebem 400. |
 | `GET /api/notifications/preferences` | Preferências de silenciamento. |
 | `PUT /api/notifications/preferences/{eventType}` | Altera a preferência de um evento. |
 
