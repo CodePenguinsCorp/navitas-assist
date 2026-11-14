@@ -2,14 +2,12 @@ import { Component } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { By } from '@angular/platform-browser';
 import { Router, provideRouter } from '@angular/router';
 import { NotificationResponse } from '../../core/models';
 import { SKIP_GLOBAL_LOADING } from '../../core/interceptors/loading.interceptor';
 import { LoadingService } from '../../core/services/loading.service';
 import { ClockService } from '../../core/services/clock.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { NotificationDetailModalComponent } from '../notification-detail-modal/notification-detail-modal.component';
 import { NotificationBellComponent } from './notification-bell.component';
 
 @Component({ template: '' })
@@ -37,7 +35,6 @@ describe('NotificationBellComponent', () => {
   const dialog = () => host().querySelector<HTMLElement>('app-notification-detail-modal [role="dialog"]');
   const dialogButton = (label: string) => Array.from(dialog()!.querySelectorAll('button')).find((item) => item.textContent?.trim() === label);
   const dialogText = () => dialog()!.textContent!.replace(/[\s\u00a0]+/g, ' ').trim();
-  const text = () => panel()!.textContent!.replace(/\s+/g, ' ').trim();
   const items = () => Array.from(host().querySelectorAll<HTMLButtonElement>('.bell-item__main'));
   const buttonByText = (label: string) => Array.from(panel()!.querySelectorAll('button')).find((item) => item.textContent?.trim() === label)!;
   const unreadSwitch = () => panel()!.querySelector<HTMLInputElement>('input[role="switch"]')!;
@@ -106,18 +103,18 @@ describe('NotificationBellComponent', () => {
     expect(panel()!.querySelector<HTMLAnchorElement>('a[href="/notificacoes"]')?.textContent?.trim()).toBe('Ver todas');
   });
 
-  it('keeps row actions working inside the shared scroll area without opening detail', async () => {
+  it('opens detail from the shared scroll area and marks the notification read', async () => {
     await openWith([NOTIFICATION, READ]);
-    const body = panel()!.querySelector('.bell-panel__body.app-scroll');
-    expect(body).not.toBeNull();
-    body!.querySelector<HTMLButtonElement>('button[aria-label^="Marcar como lida"]')!.click();
+    const body = panel()!.querySelector('.bell-panel__body.app-scroll')!;
+    expect(body.querySelectorAll('.bell-item__main')).toHaveLength(2);
+    body.querySelector<HTMLButtonElement>('.bell-item__main')!.click();
+    await render();
+    expect(panel()).toBeNull();
+    expect(dialog()).not.toBeNull();
     http.expectOne({ method: 'POST', url: '/api/notifications/5/read' }).flush({ ...NOTIFICATION, read: true });
     flushSummary(0);
     await render();
-    expect(panel()).not.toBeNull();
-    expect(dialog()).toBeNull();
-    expect(items()).toHaveLength(2);
-    expect(body!.querySelector('button[aria-label^="Marcar como lida"]')).toBeNull();
+    expect(dialogText()).toContain('Lida');
   });
 
   it('never opens the global loading while the panel loads or acts', async () => {
@@ -133,30 +130,38 @@ describe('NotificationBellComponent', () => {
     summary.flush({ unread: 1 });
     await render();
 
-    panel()!.querySelector<HTMLButtonElement>('button[aria-label="Marcar como lida OS-2026-000007 atribuída"]')!.click();
+    items()[0].click();
+    await render();
     const read = http.expectOne({ method: 'POST', url: '/api/notifications/5/read' });
     expect(read.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
     read.flush({ ...NOTIFICATION, read: true });
     flushSummary(0);
     await render();
 
-    buttonByText('Marcar todas como lidas').disabled = false;
+    dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Fechar"]')!.click();
+    await render();
+    bell().click();
+    await render();
+    listRequest().flush([{ ...NOTIFICATION, read: true }]);
+    flushSummary(0);
+    await render();
     unreadSwitch().click();
     await render();
-    expect(listRequest().request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+    const filtered = listRequest();
+    expect(filtered.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+    filtered.flush([]);
     flushSummary(0);
     expect(loading.pendingCount()).toBe(0);
     expect(panel()).not.toBeNull();
   });
 
-  it('keeps the action column in read and unread rows so the time stays aligned', async () => {
+  it('keeps timestamps beside both read and unread notifications', async () => {
     await openWith([NOTIFICATION, READ]);
     const rows = Array.from(host().querySelectorAll<HTMLElement>('.bell-item'));
-    const slots = rows.map((row) => row.querySelector('.bell-item__action'));
-    expect(slots.every(Boolean)).toBe(true);
-    expect(slots[0]!.querySelector('button')).not.toBeNull();
-    expect(slots[1]!.querySelector('button')).toBeNull();
-    expect(slots[1]!.getAttribute('aria-hidden')).toBe('true');
+    expect(rows.map((row) => row.querySelector('time')!.getAttribute('datetime')))
+      .toEqual([NOTIFICATION.createdAt, READ.createdAt]);
+    expect(rows.map((row) => row.classList.contains('is-unread'))).toEqual([true, false]);
+    expect(rows.every((row) => row.querySelector('.bell-item__side time'))).toBe(true);
   });
 
   it('reloads with only unread items when the switch is turned on', async () => {
@@ -179,7 +184,7 @@ describe('NotificationBellComponent', () => {
     ]);
     expect(items().map((item) => item.querySelector('.bell-item__title')!.textContent!.trim()))
       .toEqual(['Nova OS · OS-2026-000007', 'Impedimento · OS-2026-000004']);
-    expect(panel()!.querySelector<HTMLButtonElement>('button[aria-label="Marcar como lida Nova OS · OS-2026-000007"]')).not.toBeNull();
+    expect(items()[0].textContent).toContain('Não lida:');
   });
 
   it('lays each row out as content beside a time-and-action column, with the severity, title and message on their own lines', async () => {
@@ -287,6 +292,7 @@ describe('NotificationBellComponent', () => {
       dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Fechar"]')!.click();
       await render();
       expect(dialog()).toBeNull();
+      expect(document.activeElement).toBe(bell());
       bell().click();
       await render();
       listRequest().flush([{ ...NOTIFICATION, read: true }]);
@@ -300,7 +306,11 @@ describe('NotificationBellComponent', () => {
       await openDetail([blocked]);
       await settleRead(blocked);
       expect(dialog()!.querySelector('app-custom-select')).not.toBeNull();
-      fixture.debugElement.query(By.directive(NotificationDetailModalComponent)).componentInstance.snoozed.emit(60);
+      dialog()!.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]')!.click();
+      await render();
+      const option = Array.from(host().querySelectorAll<HTMLButtonElement>('[role="option"]'))
+        .find((item) => item.textContent?.includes('1 hora'))!;
+      option.click();
       const snooze = http.expectOne({ method: 'POST', url: '/api/notifications/5/snooze' });
       expect(snooze.request.body).toEqual({ minutes: 60 });
       expect(snooze.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
@@ -322,18 +332,42 @@ describe('NotificationBellComponent', () => {
       await settleRead();
       const next = dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Próxima notificação"]')!;
       expect(dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Notificação anterior"]')!.disabled).toBe(true);
+      expect(dialog()!.querySelectorAll('button[aria-label="Fechar"]')).toHaveLength(1);
+      expect(dialogButton('Fechar')).toBeUndefined();
       next.click();
       await render();
-      expect(dialog()!.querySelector('h3')!.textContent!.trim()).toBe('Nova atribuição');
+      expect(dialog()!.querySelector('time')!.getAttribute('datetime')).toBe(READ.createdAt);
       expect(next.disabled).toBe(true);
+      dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Notificação anterior"]')!.click();
+      await render();
+      expect(dialog()!.querySelector('time')!.getAttribute('datetime')).toBe(NOTIFICATION.createdAt);
+      expect(next.disabled).toBe(false);
+      http.expectNone((request) => request.url.endsWith('/read'));
     });
 
-    it('the row icon marks as read without opening the dialog', async () => {
-      await openWith([NOTIFICATION]);
-      panel()!.querySelector<HTMLButtonElement>('button[aria-label="Marcar como lida OS-2026-000007 atribuída"]')!.click();
+    it('uses left and right arrows to change detail without navigating or reading an already read item again', async () => {
+      const navigate = vi.spyOn(router, 'navigate');
+      await openDetail([NOTIFICATION, READ]);
       await settleRead();
+      dialog()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      await render();
+      expect(dialog()!.querySelector('time')!.getAttribute('datetime')).toBe(READ.createdAt);
+      dialog()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+      await render();
+      expect(dialog()!.querySelector('time')!.getAttribute('datetime')).toBe(NOTIFICATION.createdAt);
+      http.expectNone((request) => request.url.endsWith('/read'));
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('closes on the overlay, keeps clicks inside open and returns focus to the bell', async () => {
+      await openDetail([READ]);
+      dialog()!.click();
+      await render();
+      expect(dialog()).not.toBeNull();
+      host().querySelector<HTMLElement>('.modal-overlay')!.click();
+      await render();
       expect(dialog()).toBeNull();
-      expect(panel()).not.toBeNull();
+      expect(document.activeElement).toBe(bell());
     });
 
     it('closes when the route changes', async () => {
@@ -344,20 +378,12 @@ describe('NotificationBellComponent', () => {
     });
   });
 
-  it('marks a single item as read from its row action and keeps the panel open', async () => {
-    await openWith([NOTIFICATION, READ]);
-    panel()!.querySelector<HTMLButtonElement>('button[aria-label="Marcar como lida OS-2026-000007 atribuída"]')!.click();
-    http.expectOne({ method: 'POST', url: '/api/notifications/5/read' }).flush({ ...NOTIFICATION, read: true });
-    flushSummary(0);
-    await render();
-    expect(host().querySelectorAll('.bell-item.is-unread').length).toBe(0);
-    expect(panel()).not.toBeNull();
-  });
-
   it('marks all as read, reloads the list and is disabled when nothing is unread', async () => {
     await openWith([NOTIFICATION]);
     buttonByText('Marcar todas como lidas').click();
-    http.expectOne({ method: 'POST', url: '/api/notifications/read-all' }).flush(null);
+    const readAll = http.expectOne({ method: 'POST', url: '/api/notifications/read-all' });
+    expect(readAll.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+    readAll.flush(null);
     await render();
     listRequest().flush([{ ...NOTIFICATION, read: true }]);
     flushSummary(0);
