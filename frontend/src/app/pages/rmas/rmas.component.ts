@@ -75,6 +75,7 @@ import { RmaPartsPanelComponent } from '../../shared/rma-parts-panel/rma-parts-p
 import { RmaDueDateFieldComponent } from '../../shared/rma-due-date-field/rma-due-date-field.component';
 import { RmaPriorityFieldComponent } from '../../shared/rma-priority-field/rma-priority-field.component';
 import { RmaStageTimesComponent } from '../../shared/rma-stage-times/rma-stage-times.component';
+import { RmaAssigneeFieldComponent } from '../../shared/rma-assignee-field/rma-assignee-field.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
 type SearchStatusValue = RmaStatus | '';
@@ -96,7 +97,7 @@ export interface RmaListFilters {
 
 @Component({
   selector: 'app-rmas',
-  imports: [RmaWarrantyFieldComponent, RmaDiagnosisComponent, RmaStatusFieldComponent, IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, RmaRepairPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent],
+  imports: [RmaWarrantyFieldComponent, RmaDiagnosisComponent, RmaStatusFieldComponent, IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, RmaRepairPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaAssigneeFieldComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {
@@ -552,6 +553,8 @@ export class RmasComponent {
 
   /** `rma.editar`: general data, including the due date. */
   protected readonly canEditRma = computed(() => this.permissions.hasPermission('rma.editar'));
+  /** `rma.responsavel`: the assignee in the detail becomes a selector (same rule as the Kanban). */
+  protected readonly canUpdateAssignee = computed(() => this.permissions.hasPermission('rma.responsavel'));
 
   protected readonly filtersForm = this.formBuilder.nonNullable.group({
     query: [''],

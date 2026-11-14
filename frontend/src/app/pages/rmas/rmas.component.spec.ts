@@ -46,7 +46,7 @@ describe('RmasComponent form', () => {
         },
         {
           provide: CatalogService,
-          useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]) },
+          useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]), listAssignableUsers: () => of([]) },
         },
         { provide: RmaService, useValue: rmaService },
         { provide: ProtocolService, useValue: { listExecutions: () => of([]), listTemplates: () => of([]) } },
@@ -222,6 +222,7 @@ describe('RmasComponent pending editor lifecycle', () => {
     fixture.detectChanges();
     http.expectOne('/api/rmas/1').flush(detailBody);
     fixture.detectChanges();
+    http.match('/api/users/assignable').forEach((request) => request.flush([]));
   }
 
   function openEditor(mode: 'create' | 'diagnosis'): void {

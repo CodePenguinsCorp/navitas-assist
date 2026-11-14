@@ -55,7 +55,7 @@ async function setup(options: { role?: LegacyProfileCode; create?: CreateFn } = 
         provide: AuthService,
         useValue: { currentUser: currentUser.asReadonly() }
       },
-      { provide: CatalogService, useValue: { listClientOptions: () => of([client]), listProductOptions: () => of([product]) } },
+      { provide: CatalogService, useValue: { listClientOptions: () => of([client]), listProductOptions: () => of([product]), listAssignableUsers: () => of([]) } },
       { provide: RmaService, useValue: rmaService },
       { provide: ProtocolService, useValue: { listExecutions: () => of([]), listTemplates: () => of([]) } }
     ]

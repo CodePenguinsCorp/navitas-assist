@@ -22,6 +22,7 @@ import {
 } from '../../core/utils/rma-detail';
 import { CustomSelectComponent, CustomSelectOption } from '../form-controls/custom-select/custom-select.component';
 import { CollapsibleSectionComponent } from '../collapsible-section/collapsible-section.component';
+import { assigneeSelectOptions } from '../rma-assignee-field/rma-assignee-field.component';
 import { IconComponent } from '../icon/icon.component';
 import { ModalFocusDirective } from '../modal-focus/modal-focus.directive';
 import { RmaBlocksSectionComponent } from '../rma-blocks-section/rma-blocks-section.component';
@@ -102,18 +103,8 @@ export class RmaDetailModalComponent {
   protected readonly historyEntryTitle = historyEntryTitle;
   protected readonly stage = computed(() => stageFact(this.rma(), this.clock.now()));
   /** Same choices as the former assignment dialog: unassigned plus the eligible users. */
-  protected readonly assigneeOptions = computed<ReadonlyArray<CustomSelectOption<number | null>>>(() => {
-    const rma = this.rma();
-    const users = this.assignableUsers();
-    const options: CustomSelectOption<number | null>[] = [
-      { value: null, label: 'Sem responsável', avatar: '' },
-      ...users.map((user) => ({ value: user.id, label: user.fullName, hint: '@' + user.username, avatar: initialsOf(user.fullName) }))
-    ];
-    if (rma.assigneeId !== null && !users.some((user) => user.id === rma.assigneeId)) {
-      options.push({ value: rma.assigneeId, label: rma.assigneeName ?? 'Responsável atual', avatar: initialsOf(rma.assigneeName), hint: 'Não pode receber novas atribuições', disabled: true });
-    }
-    return options;
-  });
+  protected readonly assigneeOptions = computed<ReadonlyArray<CustomSelectOption<number | null>>>(() =>
+    assigneeSelectOptions(this.rma(), this.assignableUsers()));
 
   /** Button, backdrop and Escape close the detail only while no write is pending. */
   protected requestClose(): void {

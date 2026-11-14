@@ -211,7 +211,7 @@
           <div><dt>{{ invoice.label }}</dt><dd [class.is-empty]="invoice.empty">{{ invoice.value }}</dd></div>
           @let purchase = purchaseFact(rma);
           <div><dt>{{ purchase.label }}</dt><dd [class.is-empty]="purchase.empty">{{ purchase.value }}</dd></div>
-          <div><dt>Responsável</dt><dd class="person" [class.is-empty]="!rma.assigneeId"><span class="avatar" [class.avatar--empty]="!rma.assigneeId" aria-hidden="true">{{ rma.assigneeId ? initials(rma.assigneeName) : '–' }}</span><span [title]="ownerLabel(rma)">{{ ownerLabel(rma) }}</span></dd></div>
+          <div><dt>Responsável</dt><dd><app-rma-assignee-field [rma]="rma" [canEdit]="canUpdateAssignee()" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy()" (saved)="detailRmaSaved($event)" /></dd></div>
           <div><dt>Prioridade</dt><dd><app-rma-priority-field [rma]="rma" [canEdit]="canEditRma()" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy()" (saved)="detailRmaSaved($event)" /></dd></div>
           <div class="detail-summary__wide rma-details__deadline">
             <dt>Data limite</dt>

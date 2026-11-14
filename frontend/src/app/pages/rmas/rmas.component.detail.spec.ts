@@ -85,7 +85,7 @@ async function setup(options: { role?: LegacyProfileCode } = {}) {
       { provide: ClockService, useValue: { now: signal(NOW) } },
       providePermissions(profilePermissions(role)),
       { provide: AuthService, useValue: { currentUser: currentUser.asReadonly() } },
-      { provide: CatalogService, useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]) } },
+      { provide: CatalogService, useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]), listAssignableUsers: () => of([{ id: 3, username: 'ana', fullName: 'Ana Lima' }]) } },
       { provide: RmaService, useValue: rmaService },
       { provide: PartService, useValue: partService },
       { provide: RmaRepairService, useValue: { listExternalComponents: () => of([]), getRepair: () => of({ interventions: [], totalServiceHours: 0 }) } },
@@ -294,8 +294,32 @@ describe('RmasComponent detail with the shared information contract', () => {
     expect(deadline.classList).toContain('detail-summary__wide');
     expect(detail().querySelector('[role="tablist"]')!.classList).toContain('tab-list--raised');
     expect(tabPanel().classList).toContain('detail-card');
-    const owner = summary.querySelector('.person > span:last-child')!;
-    expect(owner.getAttribute('title')).toBe(owner.textContent?.trim());
+    // With rma.responsavel the assignee is an inline selector among the facts, like the Kanban detail.
+    const owner = summary.querySelector('app-rma-assignee-field .custom-select__trigger')!;
+    expect(owner.getAttribute('aria-label')).toMatch(/^Trocar responsável, atual: /);
+  });
+
+  it('changes the assignee from the summary through the Kanban endpoint and shows the saved OS', async () => {
+    const { open, detail, render, rmaService } = await setup();
+    const updateAssignee = vi.fn((id: number, body: { assigneeId: number | null }) => of({ ...fullRma, id, assigneeId: body.assigneeId, assigneeName: 'Ana Lima' }));
+    (rmaService as unknown as { updateAssignee: typeof updateAssignee }).updateAssignee = updateAssignee;
+    open({ ...fullRma, assigneeId: null, assigneeName: null });
+    const field = detail().querySelector('app-rma-assignee-field')!;
+    field.querySelector<HTMLButtonElement>('.custom-select__trigger')!.click();
+    render();
+    [...document.querySelectorAll<HTMLButtonElement>('.custom-select__option')]
+      .find((item) => item.querySelector('.custom-select__name')?.textContent?.trim() === 'Ana Lima')!.click();
+    render();
+    expect(updateAssignee).toHaveBeenCalledWith(fullRma.id, { assigneeId: 3 });
+    expect(field.querySelector('.custom-select__trigger')!.getAttribute('aria-label')).toBe('Trocar responsável, atual: Ana Lima');
+  });
+
+  it('keeps the assignee read only without rma.responsavel', async () => {
+    const { open, detail } = await setup({ role: 'TECHNICIAN' });
+    open({ ...fullRma, assigneeId: 3, assigneeName: 'Ana Lima' });
+    const field = detail().querySelector('app-rma-assignee-field')!;
+    expect(field.querySelector('.custom-select__trigger')).toBeNull();
+    expect(field.textContent).toContain('Ana Lima');
   });
 
   it('shows status records and assignee changes in the Histórico tab, newest first', async () => {

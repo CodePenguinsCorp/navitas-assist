@@ -23,7 +23,7 @@ describe('Diagnóstico no detalhe da lista', () => {
       imports: [RmasComponent],
       providers: [provideRouter([]), providePermissions(['rma.ver', 'rma.diagnosticar']),
         { provide: AuthService, useValue: { currentUser: () => ({ name: 'Ana' }) } },
-        { provide: CatalogService, useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]) } },
+        { provide: CatalogService, useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]), listAssignableUsers: () => of([]) } },
         { provide: RmaService, useValue: { list: () => of(buildRmaPage([rma])), getSummary: () => of({ total: 1, ongoing: 1, highPriority: 0 }), getById: () => of(rma) } }
       ]
     }).compileComponents();

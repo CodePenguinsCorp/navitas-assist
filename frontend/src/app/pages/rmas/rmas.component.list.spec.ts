@@ -40,7 +40,7 @@ const defaultSummary: SummaryFn = () => of({ total: 45, ongoing: 30, highPriorit
 
 async function setup(options: SetupOptions = {}) {
   const role = options.role ?? 'ADMIN';
-  const catalogService = { listClientOptions: vi.fn(() => of([])), listProductOptions: vi.fn(() => of([])) };
+  const catalogService = { listClientOptions: vi.fn(() => of([])), listProductOptions: vi.fn(() => of([])), listAssignableUsers: vi.fn(() => of([])) };
   const rmaService = {
     list: vi.fn(options.list ?? defaultList),
     getSummary: vi.fn(options.summary ?? defaultSummary),
