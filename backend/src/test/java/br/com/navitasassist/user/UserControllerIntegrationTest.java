@@ -734,12 +734,17 @@ class UserControllerIntegrationTest {
         assertThat(persisted.isActive()).isEqualTo(original.isActive());
     }
 
+    private String storedUsername(Long id) {
+        return userAccountRepository.findById(id).orElseThrow().getUsername();
+    }
+
     private void assertLogin(Long id, String username, String password) throws Exception {
         MockHttpSession session = (MockHttpSession) mockMvc.perform(post("/api/auth/login").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(Map.of("username", username, "password", password))))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").value(id))
+            .andExpect(jsonPath("$.id").doesNotExist())
+            .andExpect(jsonPath("$.username").value(storedUsername(id)))
             .andExpect(jsonPath("$.password").doesNotExist())
             .andExpect(jsonPath("$.passwordHash").doesNotExist())
             .andReturn().getRequest().getSession(false);
@@ -747,7 +752,8 @@ class UserControllerIntegrationTest {
         assertThat(session).isNotNull();
         mockMvc.perform(get("/api/auth/me").session(session))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").value(id))
+            .andExpect(jsonPath("$.id").doesNotExist())
+            .andExpect(jsonPath("$.username").value(storedUsername(id)))
             .andExpect(jsonPath("$.passwordHash").doesNotExist());
     }
 
