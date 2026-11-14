@@ -601,7 +601,7 @@ class RmaControllerIntegrationTest {
 
     @Test
     void shouldRecordPriorityHistoryAndRestrictWhoCanChangeIt() throws Exception {
-        Long id = saveBulkTestRma("RMA-BULK-PRIORITY");
+        Long id = saveTestRma("RMA-BULK-PRIORITY");
         mockMvc.perform(put("/api/rmas/{id}", id).with(asProfile("tech", "TECHNICIAN"))
                 .with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"priority\":\"HIGH\"}"))
             .andExpect(status().isForbidden());
@@ -734,7 +734,7 @@ class RmaControllerIntegrationTest {
         return objectMapper.readTree(result.andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asLong();
     }
 
-    private Long saveBulkTestRma(String code) {
+    private Long saveTestRma(String code) {
         Client client = new Client();
         client.setLegalName("Bulk test client " + code);
         RmaRecord rma = new RmaRecord();

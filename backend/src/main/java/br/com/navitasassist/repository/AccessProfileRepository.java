@@ -16,8 +16,6 @@ public interface AccessProfileRepository extends JpaRepository<AccessProfile, Lo
 
     Optional<AccessProfile> findByLegacyCode(String legacyCode);
 
-    boolean existsByNameIgnoreCase(String name);
-
     Optional<AccessProfile> findByNameIgnoreCase(String name);
 
     List<AccessProfile> findAllByOrderByNameAscIdAsc();

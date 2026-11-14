@@ -22,8 +22,6 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
     @Query("select r from RmaRecord r where r.id = :id")
     Optional<RmaRecord> findByIdForUpdate(@Param("id") Long id);
 
-    List<RmaRecord> findByStatusNotIn(Collection<RmaStatus> statuses);
-
     boolean existsByProduct_Id(Long productId);
 
     boolean existsByItems_Product_Id(Long productId);
@@ -114,15 +112,6 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
 
     @Query("select distinct r from RmaRecord r left join fetch r.statusHistory where r in :rmas")
     List<RmaRecord> fetchStatusHistory(@Param("rmas") List<RmaRecord> rmas);
-
-    @Query("select distinct r from RmaRecord r left join fetch r.assignmentHistory where r in :rmas")
-    List<RmaRecord> fetchAssignmentHistory(@Param("rmas") List<RmaRecord> rmas);
-
-    @Query("select distinct r from RmaRecord r left join fetch r.dueDateHistory where r in :rmas")
-    List<RmaRecord> fetchDueDateHistory(@Param("rmas") List<RmaRecord> rmas);
-
-    @Query("select distinct r from RmaRecord r left join fetch r.blockHistory where r in :rmas")
-    List<RmaRecord> fetchBlockHistory(@Param("rmas") List<RmaRecord> rmas);
 
     @Query("""
         select distinct r

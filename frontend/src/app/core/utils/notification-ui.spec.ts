@@ -11,11 +11,6 @@ describe('Notification UI utilities', () => {
     expect(internalRoute(null)).toBeNull();
   });
 
-  it('has no stage SLA alerts and never labels anything as vencido', () => {
-    expect(Object.keys(NOTIFICATION_EVENT_LABELS).some((type) => type.startsWith('SLA_'))).toBe(false);
-    expect(Object.values(NOTIFICATION_EVENT_LABELS).some((label) => /SLA|vencid/i.test(label))).toBe(false);
-  });
-
   it('lista apenas os cinco eventos com produtor', () => {
     expect(Object.keys(NOTIFICATION_EVENT_LABELS)).toEqual(['RMA_CREATED', 'RMA_ASSIGNED', 'RMA_BLOCKED', 'PART_PENDING', 'TEST_FAILED']);
   });

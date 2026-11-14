@@ -1,10 +1,6 @@
 import type { IconName } from '../shared/icon/icon.component';
 import type { Permission } from './permissions';
 
-export type MetricTone = 'brand' | 'sky' | 'slate' | 'light';
-
-export type HealthState = 'checking' | 'online' | 'offline';
-
 export type RmaPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export enum WarrantyStatus {
@@ -533,10 +529,6 @@ export interface PartMovementRequest {
   reason: string | null;
 }
 
-export interface PartReversalRequest {
-  reason: string;
-}
-
 export interface PartMovementResponse {
   id: number;
   partId: number;
@@ -749,13 +741,6 @@ export interface NavItem {
 export interface NavGroup {
   label: string;
   items: NavItem[];
-}
-
-export interface MetricCard {
-  label: string;
-  value: string;
-  variation: string;
-  tone: MetricTone;
 }
 
 export interface PageQuery {

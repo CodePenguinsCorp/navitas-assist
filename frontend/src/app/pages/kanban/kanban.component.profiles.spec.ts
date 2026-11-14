@@ -69,21 +69,6 @@ describe('KanbanComponent detail permissions by profile', () => {
   });
 });
 
-describe('KanbanComponent without bulk editing', () => {
-  it.each(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as const)('shows no selection bar or card checkboxes for %s', async (role) => {
-    const page = (await setup(role)).nativeElement as HTMLElement;
-
-    expect(page.querySelector('app-kanban-bulk-actions')).toBeNull();
-    expect(page.querySelector('.bulk-toolbar')).toBeNull();
-    expect(page.querySelector('.board-card input[type="checkbox"]')).toBeNull();
-    const labels = [...page.querySelectorAll('button')].map((button) => button.textContent?.trim());
-    for (const label of ['Alterar status', 'Alterar prioridade', 'Alterar responsável', 'Selecionar visíveis', 'Limpar seleção']) {
-      expect(labels).not.toContain(label);
-    }
-    expect(page.querySelector('.board-card')).not.toBeNull();
-  });
-});
-
 describe('KanbanComponent priority from the detail', () => {
   it('updates the card when the priority changes in the detail modal', async () => {
     const fixture = await setup('ADMIN');

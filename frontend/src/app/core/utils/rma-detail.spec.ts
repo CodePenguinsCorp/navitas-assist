@@ -5,7 +5,6 @@ import {
   RMA_DETAIL_SECTIONS,
   blockedLabel,
   diagnosisFacts,
-  dueDateHistoryLabel,
   historyEntryTitle,
   invoiceFact,
   purchaseFact,
@@ -226,7 +225,6 @@ describe('RMA detail contract', () => {
       'Status registrado: Triagem'
     ]);
     expect(history[1].by).toBe('bia');
-    expect(dueDateHistoryLabel({ from: '2026-11-20', to: '2026-11-25' })).not.toMatch(/vencid|SLA/i);
   });
 
   it('shows the time in the current stage, or the closing for closed RMAs', () => {

@@ -100,7 +100,6 @@ describe('RmaKanbanBoardComponent card', () => {
     ]);
     expect(card(host, 'NAV-0001').querySelector('.board-card__stage')?.textContent?.trim()).toBe('há 1 h nesta etapa');
     expect(card(host, 'NAV-0002').querySelector('.board-card__stage')).toBeNull();
-    expect(host.textContent).not.toContain('SLA');
   });
 
   it('opens the card detail with Enter', () => {

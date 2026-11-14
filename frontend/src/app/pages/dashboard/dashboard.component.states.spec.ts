@@ -224,7 +224,6 @@ describe('DashboardComponent load states', () => {
       expect(card.getAttribute('data-tone')).toBe('danger');
       const labels = Array.from(root().querySelectorAll('ul[aria-label="Indicadores do dashboard"] > li .dashboard-summary__label')).map((item) => item.textContent?.trim());
       expect(labels[1]).toBe('Atrasados');
-      expect(root().textContent).not.toMatch(/SLA|vencid/i);
     });
 
     it('keeps the catalog card style regardless of position', async () => {

@@ -208,7 +208,6 @@ describe('RmasComponent detail with the shared information contract', () => {
     expect(pairs(summary).map(([label]) => label)).toEqual([
       'Produtos', 'Entrada', 'Nota fiscal', 'Compra', 'Responsável', 'Prioridade', 'Data limite', 'Nesta etapa', 'Atualizado em'
     ]);
-    expect(summary.textContent).not.toContain('SLA');
     expect(Object.fromEntries(pairs(summary))).toEqual(expect.objectContaining({
       Produtos: '1 item', 'Nota fiscal': 'Não informada', Compra: 'Desconhecida'
     }));

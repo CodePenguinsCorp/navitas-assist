@@ -102,7 +102,4 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     @EntityGraph(attributePaths = { "rma", "recipient", "event" })
     List<Notification> findByEmailStatusOrderByCreatedAtDesc(NotificationEmailStatus status, Pageable pageable);
-
-    @EntityGraph(attributePaths = { "rma", "recipient" })
-    List<Notification> findByIdIn(List<Long> ids);
 }

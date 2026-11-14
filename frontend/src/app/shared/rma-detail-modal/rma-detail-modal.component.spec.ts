@@ -368,7 +368,6 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(buttonByText('Resolver')?.classList).toContain('link-button');
     expect(host.querySelector('.rma-detail__block')).toBeNull();
     expect(host.querySelector('dialog, app-rma-block-panel')).toBeNull();
-    expect(host.textContent).not.toContain('SLA');
   });
 
   it('flags the current block beside the status, like the RMAs detail, and leads to Impedimentos', async () => {

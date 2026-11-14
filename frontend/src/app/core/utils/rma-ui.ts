@@ -12,7 +12,6 @@ import {
   RmaItemResponse,
   RmaResponse,
   RmaStatus,
-  RmaStatusHistoryResponse,
   WarrantyStatus
 } from '../models';
 import { formatDateOnly } from './date';
@@ -107,16 +106,6 @@ export function ownerLabel(
 export function initialsOf(name: string | null): string {
   const parts = (name ?? '').replace(/\[[^\]]*\]/g, '').trim().split(/\s+/).filter(Boolean);
   return parts.length === 0 ? '?' : ((parts[0][0] ?? '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
-}
-
-export function latestStatusUpdate(
-  history: RmaStatusHistoryResponse[]
-): RmaStatusHistoryResponse | null {
-  if (history.length === 0) {
-    return null;
-  }
-
-  return [...history].sort((left, right) => compareDateStrings(right.changedAt, left.changedAt))[0] ?? null;
 }
 
 export function compareRmasForBoard(left: RmaResponse, right: RmaResponse): number {
