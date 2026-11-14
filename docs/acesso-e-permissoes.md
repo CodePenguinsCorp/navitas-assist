@@ -1,5 +1,11 @@
 # Acesso e permissões
 
+## Proteção do login
+
+- S1: falhas consecutivas são contadas em memória por usuário normalizado e endereço remoto da conexão. A terceira falha atrasa a resposta em 1 segundo; as seguintes usam 2, 4, 8, 16 e no máximo 30 segundos. O sucesso limpa somente esse par. A conta continua disponível para uma senha correta, sem bloqueio. O histórico guarda no máximo 10.000 pares, descartando o menos recentemente usado ao atingir o limite; reiniciar a instância limpa o histórico.
+- A senha é verificada antes da situação ativa. Conta inexistente, senha errada e conta inativa recebem o mesmo `401` e a mesma mensagem. O atraso ocorre depois de encerrar a transação, sem manter o lock da conta durante a espera.
+- S9: cada login bem-sucedido grava um novo cookie `XSRF-TOKEN`, para renovar o segredo de proteção CSRF na transição para a sessão autenticada. O navegador deve usar o novo valor nas próximas escritas.
+
 ## Leitura de protocolos
 
 - S4: a leitura de execuções em `GET /api/protocols/rmas/{rmaId}/executions` exige `rma.ver`, pois expõe dados da OS; acesso ao catálogo de protocolos sozinho não permite essa leitura.

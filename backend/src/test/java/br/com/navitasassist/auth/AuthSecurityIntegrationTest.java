@@ -64,6 +64,8 @@ class AuthSecurityIntegrationTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired private org.springframework.security.authentication.AuthenticationManager authenticationManager;
+
     private static final String CUSTOM_PROFILE = "Teste auth personalizado";
     private static final String CUSTOM_USER = "auth.custom";
 
@@ -85,6 +87,56 @@ class AuthSecurityIntegrationTest {
     }
 
     // Permissões efetivas no login e em /me (etapa 8A)
+
+    @Test
+    void successfulLoginRenewsTheCsrfCookie() throws Exception {
+        Cookie original = requestCsrfCookie();
+        Cookie renewed = mockMvc.perform(post("/api/auth/login").with(csrfCookie(original))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"admin\",\"password\":\"password123\"}"))
+            .andExpect(status().isOk()).andExpect(cookie().exists("XSRF-TOKEN"))
+            .andReturn().getResponse().getCookie("XSRF-TOKEN");
+        assertNotNull(renewed);
+        org.junit.jupiter.api.Assertions.assertFalse(renewed.getValue().isBlank());
+        assertNotEquals(original.getValue(), renewed.getValue());
+        mockMvc.perform(post("/api/auth/logout").with(user("admin"))
+                .cookie(renewed).header("X-XSRF-TOKEN", original.getValue()))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/auth/logout").with(user("admin")).with(csrfCookie(renewed)))
+            .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void inactiveAccountStillChecksItsPasswordBeforeRefusal() {
+        UserAccount inactive = userAccountRepository.findByUsernameIgnoreCase("viewer").orElseThrow();
+        inactive.setActive(false);
+        userAccountRepository.saveAndFlush(inactive);
+        org.junit.jupiter.api.Assertions.assertThrows(org.springframework.security.authentication.BadCredentialsException.class,
+            () -> authenticationManager.authenticate(org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+                .unauthenticated("viewer", "wrong-password")));
+        org.junit.jupiter.api.Assertions.assertThrows(org.springframework.security.authentication.DisabledException.class,
+            () -> authenticationManager.authenticate(org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+                .unauthenticated("viewer", "password123")));
+    }
+
+    @Test
+    void inactiveAccountHasTheSameLoginErrorAsWrongAndUnknownCredentials() throws Exception {
+        UserAccount inactive = userAccountRepository.findByUsernameIgnoreCase("viewer").orElseThrow();
+        inactive.setActive(false);
+        userAccountRepository.saveAndFlush(inactive);
+        for (String name : java.util.List.of("viewer", "admin", "missing.same.error")) {
+            mockMvc.perform(post("/api/auth/login").with(csrfCookie(requestCsrfCookie()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"username\":\"" + name + "\",\"password\":\"wrong-password\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Usu\u00e1rio ou senha inv\u00e1lidos."));
+        }
+        mockMvc.perform(post("/api/auth/login").with(csrfCookie(requestCsrfCookie()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"viewer\",\"password\":\"password123\"}"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.message").value("Usuário ou senha inválidos."));
+    }
 
     @Test
     void loginReturnsEffectivePermissions() throws Exception {

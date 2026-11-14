@@ -163,6 +163,24 @@ public class SecurityConfig {
     }
 
     @Bean
+    public org.springframework.security.authentication.dao.DaoAuthenticationProvider authenticationProvider(
+            NavitasUserDetailsService users, PasswordEncoder passwords) {
+        var provider = new org.springframework.security.authentication.dao.DaoAuthenticationProvider();
+        provider.setUserDetailsService(users);
+        provider.setPasswordEncoder(passwords);
+        // A conta inativa percorre a mesma verificacao de senha que a ativa.
+        provider.setPreAuthenticationChecks(user -> {
+            if (!user.isAccountNonLocked()) throw new org.springframework.security.authentication.LockedException("Invalid credentials");
+            if (!user.isAccountNonExpired()) throw new org.springframework.security.authentication.AccountExpiredException("Invalid credentials");
+        });
+        provider.setPostAuthenticationChecks(user -> {
+            if (!user.isEnabled()) throw new org.springframework.security.authentication.DisabledException("Invalid credentials");
+            if (!user.isCredentialsNonExpired()) throw new org.springframework.security.authentication.CredentialsExpiredException("Invalid credentials");
+        });
+        return provider;
+    }
+
+    @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
     }

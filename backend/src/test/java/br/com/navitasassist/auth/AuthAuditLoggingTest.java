@@ -18,10 +18,28 @@ import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 
 class AuthAuditLoggingTest {
+    @Test void thirdConsecutiveFailureDelaysTheResponse() {
+        var manager = mock(AuthenticationManager.class);
+        when(manager.authenticate(any())).thenThrow(new BadCredentialsException("invalid"));
+        var controller = new AuthController(mock(UserAccountService.class), mock(CsrfTokenRepository.class),
+            new LoginSessionService(mock(UserAccountService.class), manager, mock(SecurityContextRepository.class),
+                mock(CsrfTokenRepository.class), mock(SessionRegistry.class)), new LoginAttemptDelay());
+        var request = new MockHttpServletRequest(); request.setRemoteAddr("192.0.2.11");
+        for (int failure = 0; failure < 2; failure++) {
+            assertThatThrownBy(() -> controller.login(new LoginRequest("delayed", "wrong"), request,
+                new MockHttpServletResponse())).isInstanceOf(BadCredentialsException.class);
+        }
+        long start = System.nanoTime();
+        assertThatThrownBy(() -> controller.login(new LoginRequest("delayed", "wrong"), request,
+            new MockHttpServletResponse())).isInstanceOf(BadCredentialsException.class);
+        assertThat(java.time.Duration.ofNanos(System.nanoTime() - start)).isGreaterThanOrEqualTo(java.time.Duration.ofSeconds(1));
+    }
+
     @Test void loginLogsSafeNormalizedUsernameAndRemoteAddressAtTheRightLevels() {
         var accounts = mock(UserAccountService.class);
         var manager = mock(AuthenticationManager.class);
-        var controller = new AuthController(accounts, manager, mock(SecurityContextRepository.class), mock(CsrfTokenRepository.class), mock(SessionRegistry.class));
+        var controller = new AuthController(accounts, mock(CsrfTokenRepository.class),
+            new LoginSessionService(accounts, manager, mock(SecurityContextRepository.class), mock(CsrfTokenRepository.class), mock(SessionRegistry.class)), new LoginAttemptDelay());
         Logger logger = (Logger) LoggerFactory.getLogger(AuthController.class);
         var appender = new ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>(); appender.start(); logger.addAppender(appender);
         var request = new MockHttpServletRequest(); request.setRemoteAddr("192.0.2.10"); request.addHeader("X-Forwarded-For", "198.51.100.1");
