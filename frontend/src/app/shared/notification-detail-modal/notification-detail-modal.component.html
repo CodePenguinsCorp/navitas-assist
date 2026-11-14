@@ -45,7 +45,9 @@
       @if (!notification().read) {
         <button type="button" class="button-secondary" [disabled]="busy()" (click)="markRead.emit()">Marcar como lida</button>
       }
-      <app-custom-select size="compact" [actionMenu]="true" [ariaLabel]="'Adiar ' + notification().title" placeholder="Adiar" [options]="snoozeOptions" [disabled]="busy()" (valueChange)="snooze($any($event))" />
+      @if (canSnooze()) {
+        <app-custom-select size="compact" [actionMenu]="true" [ariaLabel]="'Adiar ' + notification().title" placeholder="Adiar" [options]="snoozeOptions" [disabled]="busy()" (valueChange)="snooze($any($event))" />
+      }
       @if (canOpen()) {
         <button type="button" class="button-primary" (click)="openAction.emit()">Abrir OS</button>
       }

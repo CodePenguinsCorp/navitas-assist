@@ -24,6 +24,23 @@ export const SNOOZE_OPTIONS: ReadonlyArray<{ value: number; label: string }> = [
   { value: 1440, label: '1 dia' }
 ];
 
+/**
+ * Events that ask the recipient to act (impedimento, peça pendente, teste reprovado): only these can be adiadas.
+ * Nova OS and atribuição are informative. The criterion is the event type, not the severity, which each rule can change;
+ * the server applies the same list and rejects snoozing the others.
+ */
+export const SNOOZABLE_EVENT_TYPES: ReadonlySet<NotificationEventType> = new Set<NotificationEventType>(['RMA_BLOCKED', 'PART_PENDING', 'TEST_FAILED']);
+
+export function canSnooze(notification: Pick<NotificationResponse, 'eventType'>): boolean {
+  return SNOOZABLE_EVENT_TYPES.has(notification.eventType);
+}
+
+/** The snooze still in effect, if any; an expired one, or one stored on an informative event, does not count. */
+export function activeSnoozeUntil(notification: Pick<NotificationResponse, 'eventType' | 'snoozedUntil'>, now: number): string | null {
+  const until = notification.snoozedUntil;
+  return until && canSnooze(notification) && Date.parse(until) > now ? until : null;
+}
+
 export function severityClass(severity: NotificationSeverity): string {
   switch (severity) {
     case 'CRITICAL':

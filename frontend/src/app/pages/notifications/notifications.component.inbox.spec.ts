@@ -19,6 +19,8 @@ const NOTIFICATION: NotificationResponse = {
 };
 const OLD: NotificationResponse = { ...NOTIFICATION, id: 8, title: 'Notificação antiga' };
 const NEW: NotificationResponse = { ...NOTIFICATION, id: 9, title: 'Notificação nova' };
+/** Same row, but for an event that asks for action: only these can be adiadas. */
+const BLOCKED: NotificationResponse = { ...NOTIFICATION, eventType: 'RMA_BLOCKED', severity: 'WARNING' };
 
 const failure = () => throwError(() => new HttpErrorResponse({ status: 500 }));
 
@@ -279,16 +281,16 @@ describe('NotificationsComponent inbox loading', () => {
 
   // Vermelho: a recarga com os mesmos filtros não anuncia "Atualizando notificações...".
   it('renders an empty busy inbox during a same-filter reload', async () => {
-    await setup({ list: [of([NOTIFICATION]), new Subject<NotificationResponse[]>()] });
-    component.snooze(NOTIFICATION, '60');
+    await setup({ list: [of([BLOCKED]), new Subject<NotificationResponse[]>()] });
+    component.snooze(BLOCKED, '60');
     render();
     expectPending(root());
   });
 
   describe('preservation', () => {
     it('hides stale rows while reloading the same filters after snoozing', async () => {
-      await setup({ list: [of([NOTIFICATION]), new Subject<NotificationResponse[]>()] });
-      component.snooze(NOTIFICATION, '60');
+      await setup({ list: [of([BLOCKED]), new Subject<NotificationResponse[]>()] });
+      component.snooze(BLOCKED, '60');
       render();
       expect(text()).not.toContain('OS OS-2026-000007 atribuída a Técnico');
       expectPending(root());
@@ -420,7 +422,7 @@ describe('NotificationsComponent inbox loading', () => {
       });
 
       it('snoozes from the dialog, closes it and reloads the list', async () => {
-        await setup({ snooze: of({ ...NOTIFICATION, snoozedUntil: '2026-10-24T16:00:00Z' }) });
+        await setup({ list: [of([BLOCKED])], snooze: of({ ...BLOCKED, snoozedUntil: '2026-10-24T16:00:00Z' }) });
         titleButton().click();
         render();
         fixture.debugElement.query(By.directive(NotificationDetailModalComponent)).componentInstance.snoozed.emit(60);
@@ -449,21 +451,21 @@ describe('NotificationsComponent inbox loading', () => {
 
     // Vermelho: "adiada até" aparece também depois do vencimento do adiamento.
     it('marks only active snoozes', async () => {
-      await setup({ list: [of([{ ...NOTIFICATION, snoozedUntil: '2026-10-24T16:00:00Z' }])] });
+      await setup({ list: [of([{ ...BLOCKED, snoozedUntil: '2026-10-24T16:00:00Z' }])] });
       expect(text()).toContain('Adiada até 24/10/2026, 13:00');
       clock.set(Date.parse('2026-10-24T16:00:00Z'));
       render();
       expect(text()).not.toMatch(/adiada até/i);
 
       TestBed.resetTestingModule();
-      await setup({ list: [of([{ ...NOTIFICATION, snoozedUntil: '2026-10-24T12:30:00Z' }])] });
+      await setup({ list: [of([{ ...BLOCKED, snoozedUntil: '2026-10-24T12:30:00Z' }])] });
       expect(text()).not.toMatch(/adiada até/i);
     });
 
     // Vermelho: a mensagem é só "Notificação adiada.".
     it('confirms when the snooze ends', async () => {
-      await setup({ snooze: of({ ...NOTIFICATION, snoozedUntil: '2026-10-24T16:00:00Z' }) });
-      component.snooze(NOTIFICATION, '240');
+      await setup({ snooze: of({ ...BLOCKED, snoozedUntil: '2026-10-24T16:00:00Z' }) });
+      component.snooze(BLOCKED, '240');
       render();
       expect(root().querySelector('[role="status"].alert-banner')!.textContent!.replace(/[\s ]+/g, ' ').trim()).toBe('Notificação adiada até 24/10/2026, 13:00.');
       expect(service['list']).toHaveBeenCalledTimes(2);
@@ -574,13 +576,22 @@ describe('NotificationsComponent inbox loading', () => {
 
     describe('preservation', () => {
       it('keeps mark as read and snooze as discreet row actions', async () => {
-        await setup();
+        await setup({ list: [of([BLOCKED])] });
         expect(button('Marcar como lida')!.classList).toContain('row-action');
         expect(button('Marcar como lida')!.getAttribute('aria-label')).toBe('Marcar como lida OS OS-2026-000007 atribuída a Técnico');
         expect(item().querySelector('app-custom-select')).not.toBeNull();
         expect(item().querySelector('.button-secondary')).toBeNull();
-        component.snooze(NOTIFICATION, '1440');
+        component.snooze(BLOCKED, '1440');
         expect(service['snooze']).toHaveBeenCalledWith(5, 1440);
+      });
+
+      it('offers no Adiar on an informative row and ignores an old snooze stored on it', async () => {
+        await setup({ list: [of([{ ...NOTIFICATION, snoozedUntil: '2026-10-24T16:00:00Z' }])] });
+        expect(button('Marcar como lida')).toBeDefined();
+        expect(item().querySelector('app-custom-select')).toBeNull();
+        expect(text()).not.toMatch(/adiada até/i);
+        component.snooze(NOTIFICATION, '60');
+        expect(service['snooze']).not.toHaveBeenCalled();
       });
 
       it('disables actions while busy and mark all without unread', async () => {

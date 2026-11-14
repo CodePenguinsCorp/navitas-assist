@@ -87,7 +87,7 @@ describe('NotificationsComponent', () => {
 
   it('snoozes for the chosen period', async () => {
     await setUp('TECHNICIAN');
-    component.snooze(NOTIFICATION, '240');
+    component.snooze({ ...NOTIFICATION, eventType: 'RMA_BLOCKED' }, '240');
     expect(service['snooze']).toHaveBeenCalledWith(5, 240);
   });
 

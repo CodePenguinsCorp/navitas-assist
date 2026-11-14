@@ -125,7 +125,9 @@
                             <button appRowAction icon="check" label="Marcar como lida" [target]="notification.title" (click)="markRead(notification)" [disabled]="busy()"></button>
                           }
                         </span>
-                        <app-custom-select size="compact" [actionMenu]="true" [ariaLabel]="'Adiar ' + notification.title" placeholder="Adiar" [options]="snoozeOptions" [disabled]="busy()" (valueChange)="snooze(notification, $any($event))" />
+                        @if (canSnooze(notification)) {
+                          <app-custom-select size="compact" [actionMenu]="true" [ariaLabel]="'Adiar ' + notification.title" placeholder="Adiar" [options]="snoozeOptions" [disabled]="busy()" (valueChange)="snooze(notification, $any($event))" />
+                        }
                       </div>
                       <time class="notification-time" [attr.datetime]="notification.createdAt" [title]="dateTime(notification.createdAt)">{{ timeOf(notification.createdAt) }}</time>
                     </li>

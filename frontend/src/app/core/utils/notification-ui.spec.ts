@@ -1,6 +1,23 @@
-import { NOTIFICATION_EVENT_LABELS, followNotification, formatNotificationDateTime, formatTimeAgo, groupNotificationsByDay, internalRoute, notificationHeadline, severityClass } from './notification-ui';
+import { NOTIFICATION_EVENT_LABELS, SNOOZABLE_EVENT_TYPES, activeSnoozeUntil, canSnooze, followNotification, formatNotificationDateTime, formatTimeAgo, groupNotificationsByDay, internalRoute, notificationHeadline, severityClass } from './notification-ui';
 
 describe('Notification UI utilities', () => {
+  it('só permite adiar eventos que pedem ação, independentemente da severidade', () => {
+    expect([...SNOOZABLE_EVENT_TYPES]).toEqual(['RMA_BLOCKED', 'PART_PENDING', 'TEST_FAILED']);
+    expect(canSnooze({ eventType: 'RMA_BLOCKED' })).toBe(true);
+    expect(canSnooze({ eventType: 'PART_PENDING' })).toBe(true);
+    expect(canSnooze({ eventType: 'TEST_FAILED' })).toBe(true);
+    expect(canSnooze({ eventType: 'RMA_CREATED' })).toBe(false);
+    expect(canSnooze({ eventType: 'RMA_ASSIGNED' })).toBe(false);
+  });
+
+  it('considera só o adiamento futuro de um evento adiável', () => {
+    const now = Date.parse('2026-10-24T15:00:00Z');
+    expect(activeSnoozeUntil({ eventType: 'RMA_BLOCKED', snoozedUntil: '2026-10-24T16:00:00Z' }, now)).toBe('2026-10-24T16:00:00Z');
+    expect(activeSnoozeUntil({ eventType: 'RMA_BLOCKED', snoozedUntil: '2026-10-24T14:00:00Z' }, now)).toBeNull();
+    expect(activeSnoozeUntil({ eventType: 'RMA_BLOCKED', snoozedUntil: null }, now)).toBeNull();
+    expect(activeSnoozeUntil({ eventType: 'RMA_CREATED', snoozedUntil: '2026-10-24T16:00:00Z' }, now)).toBeNull();
+  });
+
   it('maps internal action paths to router navigation and rejects external links', () => {
     expect(internalRoute('/rmas?rma=7')).toEqual({ path: '/rmas', queryParams: { rma: '7' } });
     expect(internalRoute('/notificacoes')).toEqual({ path: '/notificacoes', queryParams: {} });

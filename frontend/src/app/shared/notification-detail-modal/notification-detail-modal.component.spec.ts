@@ -50,6 +50,20 @@ describe('NotificationDetailModalComponent', () => {
     expect(meta()).not.toContain('Adiada até');
   });
 
+  it('offers Adiar only for a notification that asks for action', async () => {
+    const snoozeMenu = () => root().querySelector('app-custom-select');
+    await setup(NOTIFICATION);
+    expect(snoozeMenu()).not.toBeNull();
+
+    for (const eventType of ['RMA_CREATED', 'RMA_ASSIGNED'] as const) {
+      fixture.componentRef.setInput('notification', { ...NOTIFICATION, eventType, severity: 'INFO', snoozedUntil: '2026-10-24T18:00:00Z' });
+      fixture.detectChanges();
+      expect(snoozeMenu()).toBeNull();
+      expect(text()).not.toContain('Adiar');
+      expect(text()).not.toContain('Adiada até');
+    }
+  });
+
   it('emits the requested actions', async () => {
     await setup(NOTIFICATION);
     const events: string[] = [];

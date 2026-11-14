@@ -8,6 +8,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import {
   NOTIFICATION_SEVERITY_LABELS,
+  canSnooze,
   formatNotificationDateTime,
   formatNotificationTime,
   followNotification,
@@ -157,7 +158,7 @@ export class NotificationBellComponent {
 
   protected snoozeSelected(minutes: number): void {
     const current = this.selected();
-    if (!current) return;
+    if (!current || !canSnooze(current)) return;
     this.run(this.notificationService.snooze(current.id, minutes, SILENT), () => {
       this.closeDetail();
       this.notificationService.refreshSummary().subscribe();

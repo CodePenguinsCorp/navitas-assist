@@ -270,16 +270,25 @@ describe('NotificationBellComponent', () => {
     });
 
     it('snoozes silently from the dialog and closes it', async () => {
-      await openDetail();
-      await settleRead();
+      const blocked: NotificationResponse = { ...NOTIFICATION, eventType: 'RMA_BLOCKED', severity: 'WARNING' };
+      await openDetail([blocked]);
+      await settleRead(blocked);
+      expect(dialog()!.querySelector('app-custom-select')).not.toBeNull();
       fixture.debugElement.query(By.directive(NotificationDetailModalComponent)).componentInstance.snoozed.emit(60);
       const snooze = http.expectOne({ method: 'POST', url: '/api/notifications/5/snooze' });
       expect(snooze.request.body).toEqual({ minutes: 60 });
       expect(snooze.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
-      snooze.flush({ ...NOTIFICATION, read: true, snoozedUntil: at(24, 16) });
+      snooze.flush({ ...blocked, read: true, snoozedUntil: at(24, 16) });
       flushSummary(0);
       await render();
       expect(dialog()).toBeNull();
+    });
+
+    it('offers no Adiar for an informative notification', async () => {
+      await openDetail();
+      await settleRead();
+      expect(dialog()!.querySelector('app-custom-select')).toBeNull();
+      expect(dialogText()).not.toContain('Adiar');
     });
 
     it('walks through the listed notifications with Anterior and Próxima', async () => {

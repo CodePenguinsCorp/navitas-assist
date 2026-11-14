@@ -5,6 +5,8 @@ import {
   NOTIFICATION_EVENT_LABELS,
   NOTIFICATION_SEVERITY_LABELS,
   SNOOZE_OPTIONS,
+  activeSnoozeUntil,
+  canSnooze,
   formatNotificationDateTime,
   formatTimeAgo,
   internalRoute,
@@ -54,15 +56,14 @@ export class NotificationDetailModalComponent {
 
   protected readonly headline = computed(() => notificationHeadline(this.notification()));
   protected readonly ago = computed(() => formatTimeAgo(this.notification().createdAt, this.clock.now()));
+  /** Adiar exists only for notifications that ask for action; informative ones are never snoozed. */
+  protected readonly canSnooze = computed(() => canSnooze(this.notification()));
   /** Only an active snooze is shown: the server returns an expired one as visible again. */
-  protected readonly snoozedUntil = computed(() => {
-    const until = this.notification().snoozedUntil;
-    return until && Date.parse(until) > this.clock.now() ? until : null;
-  });
+  protected readonly snoozedUntil = computed(() => activeSnoozeUntil(this.notification(), this.clock.now()));
   protected readonly canOpen = computed(() => internalRoute(this.notification().actionPath) !== null);
 
   protected snooze(minutes: string | number): void {
     const value = Number(minutes);
-    if (value) this.snoozed.emit(value);
+    if (value && this.canSnooze()) this.snoozed.emit(value);
   }
 }

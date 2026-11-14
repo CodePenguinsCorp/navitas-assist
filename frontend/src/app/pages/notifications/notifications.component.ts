@@ -32,6 +32,8 @@ import {
   NOTIFICATION_SEVERITIES,
   NOTIFICATION_SEVERITY_LABELS,
   SNOOZE_OPTIONS,
+  activeSnoozeUntil,
+  canSnooze,
   formatNotificationDateTime,
   formatNotificationTime,
   groupNotificationsByDay,
@@ -145,6 +147,7 @@ export class NotificationsComponent {
   protected readonly severities = NOTIFICATION_SEVERITIES;
   protected readonly severityOptions = NOTIFICATION_SEVERITIES.map((severity) => ({ value: severity, label: NOTIFICATION_SEVERITY_LABELS[severity] }));
   protected readonly snoozeOptions = SNOOZE_OPTIONS;
+  protected readonly canSnooze = canSnooze;
   protected readonly severityClass = severityClass;
   protected readonly dateTime = formatNotificationDateTime;
   protected readonly timeOf = formatNotificationTime;
@@ -221,7 +224,7 @@ export class NotificationsComponent {
 
   /** An expired snooze is returned by the server as visible again, so it is not shown as active. */
   protected isSnoozed(notification: NotificationResponse): boolean {
-    return notification.snoozedUntil !== null && Date.parse(notification.snoozedUntil) > this.clock.now();
+    return activeSnoozeUntil(notification, this.clock.now()) !== null;
   }
 
   protected toggleUnreadOnly(): void {
@@ -303,7 +306,7 @@ export class NotificationsComponent {
 
   protected snooze(notification: NotificationResponse, minutes: string | number): void {
     const value = Number(minutes);
-    if (!value) {
+    if (!value || !canSnooze(notification)) {
       return;
     }
 
