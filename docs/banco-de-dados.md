@@ -76,3 +76,5 @@ docker compose -p navitas-mig -f compose.migration-check.yaml down -v
 | V15 | `V15__performance_indexes.sql` | Cria `rmas(entry_date, id)`, `rmas(status, entry_date)` e `notifications(recipient_id, created_at)` para filtros e ordenação. Remove `idx_kanban_views_owner_id`, coberto pelo prefixo do unique `(owner_id, name)`. |
 
 A migração preserva os dados e recria a mesma FK de proprietário com `ON DELETE CASCADE` para soltar a dependência do índice simples no H2. O unique composto continua garantindo nomes distintos por proprietário.
+
+O teste `ServiceOrderCodeMigrationTest` verifica a idempotência da V14 com o alvo explícito `14` e depois aplica as migrações posteriores. Isso preserva a verificação da conversão para Ordem de Serviço (OS) sem confundir a V15 de índices, ou futuras migrações, com reaplicação da V14. Nenhum SQL ou schema foi alterado nesta correção do teste.

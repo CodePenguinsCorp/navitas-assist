@@ -30,6 +30,7 @@ class ServiceOrderCodeMigrationTest {
             }
             assertThrows(SQLException.class, () -> sql.executeUpdate(insert.formatted(904, "OS-2026-000042")));
         }
-        assertEquals(0, Flyway.configure().dataSource(url, "sa", "").load().migrate().migrationsExecuted);
+        assertEquals(0, Flyway.configure().dataSource(url, "sa", "").target("14").load().migrate().migrationsExecuted);
+        Flyway.configure().dataSource(url, "sa", "").load().migrate();
     }
 }

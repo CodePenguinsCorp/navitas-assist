@@ -76,3 +76,14 @@ Após `npm --prefix frontend run build`, `powershell -File scripts/test-nginx.ps
 S14: a imagem backend executa o JAR como `USER 10001`. O JAR pertence a esse UID, `/app` permite escrita por ele e `/tmp` mantém a área temporária da JVM, evitando execução como root. A imagem foi construída e iniciada com `docker run --rm` em porta isolada 18081, conectada ao MySQL de validação `navitas-mig`; `/health` respondeu 200. O contêiner temporário foi removido ao fim.
 
 O workflow `frontend-ci.yml` declara `permissions: contents: read`, limitando o token do GitHub ao acesso de leitura necessário ao checkout.
+
+## Verificação da retomada de segurança (13/11/2026)
+
+S1, S9 e S12 foram conferidos com testes de atraso e reset por usuário/origem, senha antes da situação ativa, erro uniforme, renovação do CSRF e limites HTTP de 100/101 caracteres e 20/21 itens. Desativar temporariamente as proteções produziu falhas nas verificações correspondentes; o código foi restaurado antes da validação final.
+
+- `mvn -B -ntp -f backend/pom.xml verify`: 1.131 testes, nenhuma falha, erro ou teste ignorado; JAR gerado. O log mantém avisos existentes de Hibernate e compatibilidade Flyway/H2.
+- Frontend com `TZ=UTC` e o `--runner-config` indicado em [desenvolvimento](desenvolvimento.md): 1.560 testes em 112 arquivos aprovados, saída zero. Duas execuções também imprimiram `ECONNRESET` sem teste associado; há evidência compatível com requisições nativas do Happy DOM, mas o disparador não foi confirmado.
+- `npm --prefix frontend run build`: concluído sem avisos.
+- `scripts/test-nginx.ps1 -Port 18080`: cache, gzip, cabeçalhos, fallback da SPA e limite de login com `429` aprovados em container isolado, removido ao fim.
+
+A única correção fora de S1/S9/S12 foi no teste de idempotência da V14, que precisava distinguir a V15 já existente (ver [banco de dados](banco-de-dados.md)). Não houve alteração de schema. As provas anteriores de MySQL real e da imagem backend sem root não foram repetidas nesta retomada; as implementações comitadas foram preservadas. Nenhuma pilha em uso foi alterada. Não houve conferência visual em navegador nesta retomada.
