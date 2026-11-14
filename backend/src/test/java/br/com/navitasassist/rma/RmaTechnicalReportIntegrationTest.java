@@ -107,10 +107,14 @@ class RmaTechnicalReportIntegrationTest {
         for (String expected : List.of("Laudo técnico", "OS-2026/0001", "Cliente Ação Ltda", "Controlador térmico", "CTRL-LAUDO", "LOTE-9",
             "SN-123", "Pendente", "Não liga após queda de energia", "Regulador queimado", "Fonte", "Sobrecarga", "João Técnico",
             "Substituição do regulador", "Teste de bancada aprovado", "Regulador 5V", "REG-5V", "Regulador de tensão", "Carcaça riscada",
-            "Fonte original", "Concluída", "Motivo não registrado", "Intervenções", "Total de horas")) {
+            "Fonte original", "Concluída", "Equipamento recebido", "Sem intervenções registradas", "Técnico responsável", "Cliente — ciência", "Página 1 de 1")) {
             assertTrue(text.contains(expected), "PDF sem \"" + expected + "\":\n" + text);
         }
         assertFalse(text.contains("Capacitor cancelado"), text);
+        assertFalse(text.contains("Não informado"), text);
+        assertFalse(text.contains("Diagnóstico pendente") || text.contains("Laudo parcial"), text);
+        assertTrue(text.contains("Falha encontrada"), text);
+        assertTrue(text.contains("OS-2026/0001 · Emitido em"), "Rodapé com código e emissão: " + text);
         assertFalse(text.contains("12,50") || text.contains("25,00"), "O laudo não mostra custo");
     }
 
@@ -128,7 +132,7 @@ class RmaTechnicalReportIntegrationTest {
         intervention.setPerformedOn(LocalDate.parse("2026-10-07")); intervention.setHours(new BigDecimal("1.125")); intervention.setTechnicianName("maria"); interventions.saveAndFlush(intervention);
         String report = text(mockMvc.perform(get("/api/rmas/{id}/report.pdf", rma.getId()).with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
-        for (String expected : List.of("Curto na alimentação", "REG-LOTE", "Conector externo", "EXT-9", "EXT-LOTE", "Oxidação dos contatos", "Ressolda", "Ressolda do circuito", "1,125", "maria", "07/10/2026")) {
+        for (String expected : List.of("Curto na alimentação", "REG-LOTE", "Conector externo", "EXT-9", "EXT-LOTE", "Oxidação dos contatos", "Ressolda", "Ressolda do circuito", "1,125 h", "maria", "07/10/2026", "Fora do estoque", "Total de horas: 1,125 h", "Duração", "Técnico")) {
             assertTrue(report.contains(expected), "PDF sem " + expected + ": " + report);
         }
     }
@@ -145,7 +149,72 @@ class RmaTechnicalReportIntegrationTest {
         String report = text(mockMvc.perform(get("/api/rmas/{id}/report.pdf", rma.getId()).with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
         assertFalse(report.contains("EXTERNO-ANULADO"), report); assertFalse(report.contains("INTERVENCAO-ANULADA"), report);
-        assertFalse(report.contains("7,125"), report); assertTrue(report.contains("Total de horas: 0"), report);
+        assertFalse(report.contains("7,125"), report); assertTrue(report.contains("Sem intervenções registradas"), report); assertFalse(report.contains("Total de horas"), report);
+    }
+
+    @Test
+    void marksPartialReportAndOmitsFoundFailureWithoutDiagnosis() throws Exception {
+        rma.setDiagnosis(null);
+        rmas.saveAndFlush(rma);
+        String report = download();
+        assertTrue(report.contains("Laudo parcial: diagnóstico ainda não registrado"), report);
+        assertFalse(report.contains("Falha encontrada"), report);
+        assertFalse(report.contains("Diagnóstico pendente"), report);
+        assertTrue(report.indexOf("Laudo parcial") < report.indexOf("Cliente"), "O aviso fica no topo: " + report);
+    }
+
+    @Test
+    void hidesEmptySectionsAndFieldsInsteadOfRepeatingNaoInformado() throws Exception {
+        reservations.deleteAll();
+        rma.setRepairSummary(null);
+        rma.setTestSummary(" ");
+        rma.setReplacedPartsSummary(null);
+        rma.setPhysicalCondition(null);
+        rma.setReceivedAccessories(null);
+        rmas.saveAndFlush(rma);
+        String report = download();
+        assertFalse(report.contains("Não informado"), report);
+        assertFalse(report.contains("Ações executadas"), report);
+        assertFalse(report.contains("Equipamento recebido"), report);
+        assertTrue(report.contains("Sem peças trocadas"), report);
+        assertTrue(report.contains("Sem intervenções registradas"), report);
+    }
+
+    @Test
+    void showsReceivedEquipmentAndTheTechnicianOnTheSignatureLine() throws Exception {
+        String report = download();
+        assertTrue(report.indexOf("Equipamento recebido") > report.indexOf("Produtos"), report);
+        assertTrue(report.indexOf("Equipamento recebido") < report.indexOf("Falha relatada"), report);
+        assertTrue(report.contains("Estado físico") && report.contains("Carcaça riscada") && report.contains("Acessórios recebidos"), report);
+        assertTrue(report.indexOf("João Técnico", report.indexOf("Peças trocadas")) > 0, "Nome do técnico na assinatura: " + report);
+        assertTrue(report.indexOf("Cliente — ciência") > report.indexOf("Técnico responsável"), report);
+    }
+
+    @Test
+    void numbersPagesAndWrapsLongTextWithoutOverflowing() throws Exception {
+        String longWord = "X".repeat(400);
+        for (int index = 0; index < 40; index++) {
+            RmaIntervention item = new RmaIntervention();
+            item.setRma(rma); item.setType(InterventionType.CLEANING); item.setDescription("Etapa " + index + " " + longWord);
+            item.setPerformedOn(LocalDate.parse("2026-10-07")); item.setHours(BigDecimal.ONE); item.setTechnicianName("maria");
+            interventions.save(item);
+        }
+        interventions.flush();
+        byte[] pdf = mockMvc.perform(get("/api/rmas/{id}/report.pdf", rma.getId()).with(asProfile("viewer", "VIEWER")))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        PdfReader reader = new PdfReader(pdf);
+        int pages = reader.getNumberOfPages();
+        reader.close();
+        assertTrue(pages > 1, "O laudo longo ocupa mais de uma página");
+        String report = text(pdf);
+        assertTrue(report.contains("Página 1 de " + pages) && report.contains("Página " + pages + " de " + pages), report);
+        assertTrue(report.contains("Total de horas: 40 h"), report);
+        assertTrue(report.contains("Cliente — ciência"), report);
+    }
+
+    private String download() throws Exception {
+        return text(mockMvc.perform(get("/api/rmas/{id}/report.pdf", rma.getId()).with(asProfile("viewer", "VIEWER")))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
     }
 
     @Test

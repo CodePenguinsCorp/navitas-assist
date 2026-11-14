@@ -28,7 +28,14 @@ Formato dos arquivos exportados: UTF-8 **com BOM**, separador `;`, fim de linha 
 
 ## Laudo final em PDF
 
-`GET /api/rmas/{id}/report.pdf` (`rma.ver`). O PDF traz código, cliente, entrada, status, produtos (lote, série e garantia efetiva), falha relatada, diagnóstico (falha encontrada, tipo, causa, técnico, data e notas), ações executadas (reparo e testes), peças trocadas (resumo em texto e reservas aplicadas, com componentes externos, motivo e lote), intervenções com técnico e horas, e observações (estado físico e acessórios), sem custos. Usa OpenPDF com a fonte Helvetica padrão (Cp1252, cobre os acentos), sem baixar nada em tempo de execução. O arquivo se chama `laudo-<código>.pdf`, com o código reduzido a letras, números, `_` e `-`.
+`GET /api/rmas/{id}/report.pdf` (`rma.ver`). O PDF traz, nesta ordem: título com o código, faixa "Laudo parcial: diagnóstico ainda não registrado" (só quando não há diagnóstico), cliente, status, entrada e emissão (America/Sao_Paulo); **Produtos** (lote, série e garantia efetiva); **Equipamento recebido** (estado físico e acessórios); **Falha relatada**; **Falha encontrada** (tipo, causa, técnico, data e notas; a seção some sem diagnóstico); **Ações executadas** (reparo e testes); **Peças trocadas**; **Intervenções**; e o bloco de assinatura. Sem custos.
+
+- **Peças trocadas**: resumo em texto (se houver) e tabela com código, descrição, quantidade com unidade, lote e motivo das reservas consumidas e dos componentes externos não anulados; os externos levam "Fora do estoque" sob a descrição. Sem nada: "Sem peças trocadas".
+- **Intervenções**: tabela das não anuladas (data, técnico, tipo em português, descrição, duração em horas) e "Total de horas" ao final. Sem nenhuma: "Sem intervenções registradas".
+- **Campos ausentes**: seções sem dado (Equipamento recebido, Ações executadas) e campos sem valor dentro de um bloco são omitidos; célula de tabela sem valor mostra "—".
+- **Fechamento**: duas linhas de assinatura, "Técnico responsável" (com o nome do técnico do diagnóstico ou, sem ele, da primeira intervenção) e "Cliente — ciência". Todas as páginas têm rodapé com o código da OS, a data e hora de emissão e "Página X de Y".
+
+Usa OpenPDF com a fonte Helvetica padrão (Cp1252, cobre os acentos), sem baixar nada em tempo de execução; texto longo quebra dentro da célula. O arquivo se chama `laudo-<código>.pdf`, com o código reduzido a letras, números, `_` e `-`.
 
 Na interface, o link "Laudo (PDF)" fica no cabeçalho do detalhe da OS, no modal, na tela ordens de serviço e na lista do relatório.
 
