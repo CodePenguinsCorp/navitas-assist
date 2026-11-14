@@ -38,7 +38,7 @@ public class RmaController {
 
     @GetMapping
     public PageResponse<RmaResponse> searchPage(
-        @RequestParam(required = false) String query,
+        @RequestParam(required = false) @jakarta.validation.constraints.Size(max = 100, message = "A busca deve ter no máximo 100 caracteres.") String query,
         @RequestParam(required = false) RmaStatus status,
         @RequestParam(required = false) Integer page,
         @RequestParam(required = false) Integer size
@@ -48,7 +48,7 @@ public class RmaController {
 
     @GetMapping("/summary")
     public RmaSummaryResponse summarize(
-        @RequestParam(required = false) String query,
+        @RequestParam(required = false) @jakarta.validation.constraints.Size(max = 100, message = "A busca deve ter no máximo 100 caracteres.") String query,
         @RequestParam(required = false) RmaStatus status
     ) {
         return rmaService.summarize(query, status);
@@ -56,7 +56,7 @@ public class RmaController {
 
     @GetMapping("/board")
     public List<RmaResponse> search(
-        @RequestParam(required = false) String query,
+        @RequestParam(required = false) @jakarta.validation.constraints.Size(max = 100, message = "A busca deve ter no máximo 100 caracteres.") String query,
         @RequestParam(required = false) RmaStatus status
     ) {
         return rmaService.search(query, status);

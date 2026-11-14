@@ -31,7 +31,7 @@ public class ProfileController {
 
     @GetMapping
     public PageResponse<ProfileResponse> search(
-        @RequestParam(required = false) String query,
+        @RequestParam(required = false) @jakarta.validation.constraints.Size(max = 100, message = "A busca deve ter no máximo 100 caracteres.") String query,
         @RequestParam(required = false) Integer page,
         @RequestParam(required = false) Integer size
     ) {

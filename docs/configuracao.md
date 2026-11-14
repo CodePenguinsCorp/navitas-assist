@@ -91,3 +91,9 @@ O Hikari usa `maximum-pool-size: 10` e `connection-timeout: 10000` ms explicitam
 ## Resumo de usuários (P9)
 
 O resumo usa contagens no banco, inclusive administradores com permissões combinadas entre perfil e extras, ativos ou inativos. Isso evita hidratar todas as contas apenas para exibir totais. O teste verifica as permissões divididas e extras, inclui uma conta inativa e exige zero entidades carregadas.
+
+## Limites de autenticação e entrada
+
+S1: o atraso do login usa constantes da aplicação, sem novas variáveis de ambiente: terceira falha com 1 segundo, crescimento até 30 segundos e no máximo 10.000 pares de usuário/origem em memória por instância. O sucesso limpa o par; reinício e descarte do par mais antigo também removem seu histórico. Isso reduz tentativas repetidas sem permitir bloqueio de uma conta. A origem é `request.getRemoteAddr()`, sem confiar em `X-Forwarded-For` enviado pelo cliente; atrás do nginx, pode representar a conexão do proxy. O limite adicional de 10 requisições/minuto por IP fica no nginx (ver [operação e deploy](operacao-e-deploy.md)).
+
+S9: cada login renova o cookie CSRF para trocar o segredo usado antes da autenticação; o cabeçalho das próximas escritas deve acompanhar o novo cookie. S12: `items` tem teto de 20 na criação e edição de Ordem de Serviço (OS), e `query` tem teto de 100 caracteres nas buscas e filtros salvos do Kanban. A validação recusa cargas excessivas antes do serviço, sem alterar o schema, o teto da paginação ou a senha mínima.

@@ -47,6 +47,13 @@ public class RestExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "Validation failed", details);
     }
 
+    @ExceptionHandler(org.springframework.web.method.annotation.HandlerMethodValidationException.class)
+    public ResponseEntity<ApiError> handleMethodValidation(org.springframework.web.method.annotation.HandlerMethodValidationException exception) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Parâmetros de busca inválidos.",
+            exception.getAllValidationResults().stream().flatMap(result -> result.getResolvableErrors().stream())
+                .map(org.springframework.context.MessageSourceResolvable::getDefaultMessage).toList());
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleUnreadableBody(HttpMessageNotReadableException exception) {
         return buildResponse(HttpStatus.BAD_REQUEST, "Malformed request body", List.of());

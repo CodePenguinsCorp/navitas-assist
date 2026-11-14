@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 public record KanbanViewFilters(
-    @Size(max = 200) String query,
+    @Size(max = 100, message = "A busca deve ter no máximo 100 caracteres.") String query,
     RmaPriority priority,
     RmaStatus status,
     WarrantyStatus warranty,

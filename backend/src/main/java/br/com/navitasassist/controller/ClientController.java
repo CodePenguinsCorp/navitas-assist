@@ -30,7 +30,7 @@ public class ClientController {
 
     @GetMapping
     public PageResponse<ClientResponse> search(
-        @RequestParam(required = false) String query,
+        @RequestParam(required = false) @jakarta.validation.constraints.Size(max = 100, message = "A busca deve ter no máximo 100 caracteres.") String query,
         @RequestParam(required = false) Boolean hasDocument,
         @RequestParam(required = false) Boolean hasEmail,
         @RequestParam(required = false) Integer page,

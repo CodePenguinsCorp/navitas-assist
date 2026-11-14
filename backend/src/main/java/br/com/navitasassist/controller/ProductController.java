@@ -30,7 +30,7 @@ public class ProductController {
 
     @GetMapping
     public PageResponse<ProductResponse> search(
-        @RequestParam(required = false) String query,
+        @RequestParam(required = false) @jakarta.validation.constraints.Size(max = 100, message = "A busca deve ter no máximo 100 caracteres.") String query,
         @RequestParam(required = false) String category,
         @RequestParam(required = false) Boolean hasFirmware,
         @RequestParam(required = false) Integer page,

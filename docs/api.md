@@ -8,6 +8,7 @@ Convenções:
 - Escritas (`POST`, `PUT`, `PATCH`, `DELETE`) exigem o header `X-XSRF-TOKEN` (ver `GET /api/auth/csrf`).
 - Sem sessão: `401`; sem permissão: `403`; validação e regra de negócio: `400` com mensagem em português; não encontrado: `404`.
 - Listagens paginadas: ver [visao-geral.md](visao-geral.md#paginação-das-consultas).
+- S12: o parâmetro `query` aceita até 100 caracteres nas buscas de clientes, produtos, peças, perfis, usuários e OS (lista, resumo e quadro); o filtro salvo do Kanban segue o mesmo limite. A criação e a atualização de OS aceitam até 20 itens. Os limites recusam cargas excessivas com `400`, antes de executar a consulta ou persistir os itens. Modelos de protocolo mantêm o teto existente de 100 itens.
 - Rotas de `/api/**` não listadas aqui exigem `usuarios.gerir` e `perfis.gerir`.
 
 ## Público e autenticação
@@ -16,7 +17,7 @@ Convenções:
 | --- | --- | --- |
 | `GET /health` | pública | Healthcheck. |
 | `GET /api/auth/csrf` | pública | Cria o cookie CSRF se ausente (`204`). |
-| `POST /api/auth/login` | pública | Login com usuário e senha. |
+| `POST /api/auth/login` | pública | Login com usuário e senha; renova o cookie CSRF no sucesso (S9). Falhas recebem atraso progressivo por usuário e origem, sem bloqueio de conta (S1). |
 | `POST /api/auth/logout` | autenticado | Encerra a sessão (`204`). |
 | `GET /api/auth/me` | autenticado | Usuário atual e permissões efetivas. |
 
