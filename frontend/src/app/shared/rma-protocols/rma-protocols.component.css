@@ -1,29 +1,18 @@
 :host { display: block; min-width: 0; }
 
-.protocol-execution {
-  display: grid;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--line);
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.protocol-execution:first-of-type { border-top: 0; padding-top: 0; }
-
 /* One header line: name and version, state chip, compact action on the right. */
 .protocol-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
 .protocol-head__name { flex: 0 1 auto; min-width: 0; font-size: var(--font-size-md); }
 .protocol-head__action { margin-left: auto; white-space: nowrap; min-height: var(--control-height-xs); padding: 0 var(--space-3); font-size: var(--font-size-sm); }
 
-.protocol-progress-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); color: var(--muted); font-size: var(--font-size-sm); }
-.protocol-progress { flex: 1 1 96px; max-width: 220px; height: 4px; border-radius: var(--radius-pill); background: var(--line); overflow: hidden; }
+.protocol-progress-row { padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); color: var(--muted); font-size: var(--font-size-sm); }
+.protocol-progress { flex: 1 1 96px; max-width: 220px; height: 6px; border-radius: var(--radius-pill); background: var(--line); overflow: hidden; }
 .protocol-progress span { display: block; height: 100%; background: var(--brand-blue-deep); }
 .protocol-progress-row__text { color: var(--text); font-variant-numeric: tabular-nums; }
 .protocol-progress-row__meta { margin-left: auto; font-size: var(--font-size-xs); }
 
-.protocol-group { margin: var(--space-2) 0 0; color: var(--muted); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); }
+.protocol-group { margin: var(--space-2) 0 0; color: var(--muted); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); letter-spacing: 0.05em; text-transform: uppercase; }
+.protocol-list + .protocol-group { margin-top: var(--space-4); }
 .protocol-list { display: grid; margin: 0; padding: 0; list-style: none; }
 
 /* Compact row: number, title and range, outcome chip, action, chevron. */
@@ -42,7 +31,6 @@
 .protocol-row__toggle { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1); min-height: var(--control-height-xs); border: 0; border-radius: var(--radius-xs); background: transparent; color: var(--brand-blue-deep); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); cursor: pointer; }
 .protocol-row__action { padding: 0 var(--space-2); }
 .protocol-row__toggle { width: 28px; padding: 0; color: var(--muted); }
-.protocol-row__toggle app-icon { }
 .protocol-row__toggle.is-open app-icon { transform: rotate(90deg); }
 .protocol-row__action:hover,
 .protocol-row__toggle:hover,
