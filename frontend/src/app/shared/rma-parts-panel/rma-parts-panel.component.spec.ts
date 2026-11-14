@@ -29,7 +29,7 @@ describe('RmaPartsPanelComponent', () => {
   async function setUp(role: LegacyProfileCode, status: 'IN_REPAIR' | 'COMPLETED' = 'IN_REPAIR'): Promise<void> {
     partService = {
       getRmaParts: vi.fn(() => of(RMA_PARTS)),
-      list: vi.fn(() => of([])),
+      listOptions: vi.fn(() => of([])),
       reserve: vi.fn(() => of(reservation(4, 'PENDING'))),
       updateReservation: vi.fn(() => of(reservation(1, 'CANCELLED')))
     };
@@ -60,7 +60,7 @@ describe('RmaPartsPanelComponent', () => {
     expect(text).toContain('Custo aplicado');
     expect(text).not.toContain('Aplicar');
     expect(fixture.nativeElement.querySelector('form')).toBeNull();
-    expect(partService['list']).not.toHaveBeenCalled();
+    expect(partService['listOptions']).not.toHaveBeenCalled();
   });
 
   it('lets technicians reserve and act on reservations', async () => {

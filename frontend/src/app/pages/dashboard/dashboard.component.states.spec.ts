@@ -37,9 +37,9 @@ function rmaFactory(overrides: Partial<RmaResponse> = {}): RmaResponse {
 }
 
 const RMA_OPEN = rmaFactory();
-const CLIENTS: ClientSummaryResponse = { total: 0, withContact: 0, withDocument: 0, withEmail: 0 };
-const PRODUCTS: ProductSummaryResponse = { total: 0, withFirmware: 0, averageWarrantyMonths: 0, categories: [] };
-const USERS: UserSummaryResponse = { total: 0, active: 0, admins: 0, roles: 0 };
+const CLIENTS: ClientSummaryResponse = { total: 0 };
+const PRODUCTS: ProductSummaryResponse = { total: 0, categories: [] };
+const USERS: UserSummaryResponse = { total: 0 };
 
 type Source = 'listBoard' | 'getClientSummary' | 'getProductSummary' | 'getUserSummary';
 

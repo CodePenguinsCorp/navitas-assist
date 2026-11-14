@@ -68,19 +68,5 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
         Pageable pageable
     );
 
-    @Query("""
-        select count(account) from UserAccount account
-        where ('usuarios.gerir' member of account.profile.permissions
-               or 'usuarios.gerir' member of account.extraPermissions)
-          and ('perfis.gerir' member of account.profile.permissions
-               or 'perfis.gerir' member of account.extraPermissions)
-        """)
-    long countAdministrators();
-
-    long countByActiveTrue();
-
     long countByProfile_Id(Long profileId);
-
-    @Query("select count(distinct account.profile.id) from UserAccount account")
-    long countDistinctProfiles();
 }

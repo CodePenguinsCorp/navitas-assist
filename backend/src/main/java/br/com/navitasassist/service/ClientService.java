@@ -5,6 +5,7 @@ import java.util.List;
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.client.ClientRequest;
 import br.com.navitasassist.client.ClientResponse;
+import br.com.navitasassist.client.ClientOptionResponse;
 import br.com.navitasassist.client.ClientSummaryResponse;
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
@@ -40,8 +41,8 @@ public class ClientService {
     }
 
     @Transactional(readOnly = true)
-    public List<ClientResponse> listOptions() {
-        return clientRepository.findAllByOrderByLegalNameAscIdAsc().stream().map(ClientResponse::from).toList();
+    public List<ClientOptionResponse> listOptions() {
+        return clientRepository.findAllByOrderByLegalNameAscIdAsc().stream().map(ClientOptionResponse::from).toList();
     }
 
     @Transactional(readOnly = true)

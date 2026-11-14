@@ -40,12 +40,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     List<Product> findAllByOrderByNameAscIdAsc();
 
-    @Query("select count(p) from Product p where trim(coalesce(p.firmwareVersion, '')) <> ''")
-    long countWithFirmware();
-
-    @Query("select coalesce(round(avg(p.defaultWarrantyMonths), 0), 0) from Product p")
-    long averageWarrantyMonths();
-
     @Query("select distinct trim(p.category) from Product p where trim(coalesce(p.category, '')) <> ''")
     List<String> findDistinctCategories();
 }

@@ -28,8 +28,8 @@ class UserSummaryQueryIntegrationTest {
     @Autowired EntityManagerFactory factory;
 
     @Test
-    void countsEffectiveAdministratorsIncludingInactiveWithoutLoadingAccounts() {
-        long before = service.summarize().admins();
+    void countsAllAccountsIncludingInactiveWithoutLoadingAccounts() {
+        long before = service.summarize().total();
         var split = AccessTestSupport.saveProfile(profiles, "Resumo dividido", "usuarios.gerir");
         var empty = AccessTestSupport.saveProfile(profiles, "Resumo vazio");
         var inactive = AccessTestSupport.saveAccountWithProfile(users, encoder, "summary-inactive", split, Set.of("perfis.gerir"));
@@ -42,9 +42,9 @@ class UserSummaryQueryIntegrationTest {
         stats.setStatisticsEnabled(true);
         stats.clear();
         try {
-            assertEquals(before + 2, service.summarize().admins());
+            assertEquals(before + 3, service.summarize().total());
             assertEquals(0, stats.getEntityLoadCount(), "O resumo deve usar somente contagens.");
-            assertTrue(stats.getPrepareStatementCount() <= 4);
+            assertTrue(stats.getPrepareStatementCount() == 1);
         } finally {
             stats.setStatisticsEnabled(false);
         }

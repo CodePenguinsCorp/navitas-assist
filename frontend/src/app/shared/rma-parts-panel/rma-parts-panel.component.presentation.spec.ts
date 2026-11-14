@@ -43,7 +43,7 @@ type Harness = {
 describe('RmaPartsPanelComponent presentation', () => {
   afterEach(() => localStorage.clear());
   let fixture: ComponentFixture<RmaPartsPanelComponent>;
-  let service: { getRmaParts: ReturnType<typeof vi.fn>; list: ReturnType<typeof vi.fn>; reserve: ReturnType<typeof vi.fn>; updateReservation: ReturnType<typeof vi.fn> };
+  let service: { getRmaParts: ReturnType<typeof vi.fn>; listOptions: ReturnType<typeof vi.fn>; reserve: ReturnType<typeof vi.fn>; updateReservation: ReturnType<typeof vi.fn> };
   const root = (): HTMLElement => fixture.nativeElement;
   const component = () => fixture.componentInstance as unknown as Harness;
   const render = () => { fixture.componentRef.injector.get(ChangeDetectorRef).markForCheck(); fixture.detectChanges(); };
@@ -58,7 +58,7 @@ describe('RmaPartsPanelComponent presentation', () => {
   async function setup(sources: { role?: LegacyProfileCode; permissions?: readonly Permission[]; status?: RmaStatus; reservations?: PartReservationResponse[]; catalog?: PartResponse[]; update?: Observable<PartReservationResponse> } = {}) {
     service = {
       getRmaParts: vi.fn(() => of(rmaParts(sources.reservations ?? [reservation(1, 'ACTIVE'), reservation(2, 'CONSUMED'), reservation(3, 'PENDING')]))),
-      list: vi.fn(() => of(sources.catalog ?? [part(4, 'm'), part(5, 'un')])),
+      listOptions: vi.fn(() => of(sources.catalog ?? [part(4, 'm'), part(5, 'un')])),
       reserve: vi.fn(() => of(reservation(9, 'ACTIVE'))),
       updateReservation: vi.fn(() => sources.update ?? of(reservation(1, 'CANCELLED')))
     };

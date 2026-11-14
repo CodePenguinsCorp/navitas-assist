@@ -69,8 +69,8 @@ Convenções:
 | Rota | Permissão | Descrição |
 | --- | --- | --- |
 | `GET /api/clients` · `/api/products` | autenticado | Lista paginada com filtros. |
-| `GET /api/clients/options` · `/api/products/options` | autenticado | Opções para seletores, sem paginação. |
-| `GET /api/clients/summary` · `/api/products/summary` | autenticado | Totais dos cartões. |
+| `GET /api/clients/options` · `/api/products/options` | autenticado | Opções para seletores, sem paginação: clientes `{id, legalName}`, produtos `{id, sku, name}`. |
+| `GET /api/clients/summary` · `/api/products/summary` | autenticado | Totais dos cartões: clientes `{total}`, produtos `{total, categories}`. |
 | `GET /api/clients/{id}` · `/api/products/{id}` | autenticado | Detalhe. |
 | `POST /api/clients` · `/api/products` | `cadastros.editar` | Cria. |
 | `PUT /api/clients/{id}` · `/api/products/{id}` | `cadastros.editar` | Altera. |
@@ -83,6 +83,7 @@ Convenções:
 
 | Rota | Permissão | Descrição |
 | --- | --- | --- |
+| `GET /api/parts/options` | autenticado | Seletor de peças da OS: `{id, code, name, unit, available, active}`. |
 | `GET /api/parts` | autenticado | Busca peças (`query`). |
 | `GET /api/parts/pending` | autenticado | Reservas pendentes. |
 | `GET /api/parts/replenishment` | autenticado | Peças a repor. |
@@ -117,7 +118,7 @@ Qualquer outra rota de `/api/protocols/**` é negada.
 | Rota | Permissão | Descrição |
 | --- | --- | --- |
 | `GET /api/users` | `usuarios.gerir` | Lista paginada (`query`, `profileId`, `active`). |
-| `GET /api/users/summary` | `usuarios.gerir` | Totais. |
+| `GET /api/users/summary` | `usuarios.gerir` | Total de usuários (`{total}`). |
 | `POST /api/users` | `usuarios.gerir` | Cria usuário. |
 | `PUT /api/users/{id}` | `usuarios.gerir` | Altera usuário. |
 | `DELETE /api/users/{id}` | `usuarios.gerir` | Exclui usuário. |

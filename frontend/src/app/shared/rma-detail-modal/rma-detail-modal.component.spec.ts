@@ -75,7 +75,7 @@ async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; can
       { provide: ClockService, useValue: { now: signal(NOW) } },
       providePermissions(profilePermissions('ADMIN')),
       { provide: RmaRepairService, useValue: { getRepair: () => of({ interventions: [], totalServiceHours: 0 }), listExternalComponents: () => of([]) } },
-      { provide: PartService, useValue: { getRmaParts: () => of({ reservations: [], movements: [], reservedCost: 0, consumedCost: 0, pendingCount: 0 }), list: () => of([]) } },
+      { provide: PartService, useValue: { getRmaParts: () => of({ reservations: [], movements: [], reservedCost: 0, consumedCost: 0, pendingCount: 0 }), listOptions: () => of([]) } },
       { provide: ReportService, useValue: { downloadTechnicalReport: () => of() } },
       { provide: RmaService, useValue: {
         updateStatus: (id: number, payload: { status: RmaResponse['status'] }) => of({ ...(inputs.rma ?? fullRma), id, status: payload.status }),

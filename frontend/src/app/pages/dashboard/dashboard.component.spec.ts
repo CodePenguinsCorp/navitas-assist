@@ -30,7 +30,7 @@ describe('Dashboard timestamp display', () => {
         provideRouter([]),
         providePermissions([]),
         { provide: RmaService, useValue: { listBoard: () => of([rma]), getSummary: () => of({ total: 1, ongoing: 1, highPriority: 0 }) } },
-        { provide: CatalogService, useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]), getClientSummary: () => of({ total: 0, withContact: 0, withDocument: 0, withEmail: 0 }), getProductSummary: () => of({ total: 0, withFirmware: 0, averageWarrantyMonths: 0, categories: [] }), getUserSummary: () => of({ total: 0, active: 0, admins: 0, roles: 0 }) } },
+        { provide: CatalogService, useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]), getClientSummary: () => of({ total: 0 }), getProductSummary: () => of({ total: 0, categories: [] }), getUserSummary: () => of({ total: 0 }) } },
       ],
     }).compileComponents();
 

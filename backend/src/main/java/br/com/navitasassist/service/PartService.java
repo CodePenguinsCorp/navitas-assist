@@ -7,6 +7,7 @@ import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.part.Part;
 import br.com.navitasassist.part.PartRequest;
 import br.com.navitasassist.part.PartResponse;
+import br.com.navitasassist.part.PartOptionResponse;
 import br.com.navitasassist.repository.PartRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,11 @@ public class PartService {
     @Transactional(readOnly = true)
     public List<PartResponse> search(String query) {
         return partRepository.search(trimToNull(query)).stream().map(PartResponse::from).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<PartOptionResponse> listOptions() {
+        return partRepository.search(null).stream().map(PartOptionResponse::from).toList();
     }
 
     @Transactional(readOnly = true)

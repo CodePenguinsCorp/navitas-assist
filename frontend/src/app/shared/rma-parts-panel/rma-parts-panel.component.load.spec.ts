@@ -32,7 +32,7 @@ type Harness = {
 
 describe('RmaPartsPanelComponent loading', () => {
   let fixture: ComponentFixture<RmaPartsPanelComponent>;
-  let service: { getRmaParts: ReturnType<typeof vi.fn>; list: ReturnType<typeof vi.fn>; reserve: ReturnType<typeof vi.fn>; updateReservation: ReturnType<typeof vi.fn> };
+  let service: { getRmaParts: ReturnType<typeof vi.fn>; listOptions: ReturnType<typeof vi.fn>; reserve: ReturnType<typeof vi.fn>; updateReservation: ReturnType<typeof vi.fn> };
   const component = () => fixture.componentInstance as unknown as Harness;
   const render = () => { fixture.componentRef.injector.get(ChangeDetectorRef).markForCheck(); fixture.detectChanges(); };
   const text = () => (fixture.nativeElement.textContent as string).replace(/\s+/g, ' ').trim();
@@ -41,7 +41,7 @@ describe('RmaPartsPanelComponent loading', () => {
   async function setup(sources: { role?: LegacyProfileCode; status?: RmaStatus; parts?: Observable<RmaPartsResponse>; catalog?: Observable<PartResponse[]> } = {}) {
     service = {
       getRmaParts: vi.fn(() => sources.parts ?? of(rmaParts([reservation(1, 'ACTIVE')]))),
-      list: vi.fn(() => sources.catalog ?? of([PART])),
+      listOptions: vi.fn(() => sources.catalog ?? of([PART])),
       reserve: vi.fn(() => of(reservation(9, 'ACTIVE'))),
       updateReservation: vi.fn(() => of(reservation(1, 'CONSUMED')))
     };
@@ -142,7 +142,7 @@ describe('RmaPartsPanelComponent loading', () => {
   it('keeps the catalog retry label and failure while the retry is pending', async () => {
     await setup({ catalog: throwError(() => new Error()) });
     const retry$ = new Subject<PartResponse[]>();
-    service.list.mockReturnValue(retry$);
+    service.listOptions.mockReturnValue(retry$);
     button('Tentar novamente')!.click(); render();
     const retry = button('Tentar novamente');
     expect(retry?.disabled).toBe(true);
@@ -176,7 +176,7 @@ describe('RmaPartsPanelComponent loading', () => {
     expect(text()).not.toContain('Nenhuma peça ativa disponível');
     expect(button('Reservar')!.disabled).toBe(true);
 
-    service.list.mockReturnValue(of([PART]));
+    service.listOptions.mockReturnValue(of([PART]));
     button('Tentar novamente')!.click(); render();
     expect(text()).not.toContain('Não foi possível carregar as opções de peças.');
     expect(button('Reservar')!.disabled).toBe(false);
@@ -230,7 +230,7 @@ describe('RmaPartsPanelComponent loading', () => {
     ['VIEWER', 'IN_REPAIR'], ['SERVICE_DESK', 'IN_REPAIR'], ['ADMIN', 'COMPLETED'], ['TECHNICIAN', 'RETURNED']
   ] as Array<[LegacyProfileCode, RmaStatus]>)('does not request the catalog for %s on %s', async (role, status) => {
     await setup({ role, status });
-    expect(service.list).not.toHaveBeenCalled();
+    expect(service.listOptions).not.toHaveBeenCalled();
     expect(text()).toContain('Capacitor');
   });
 
@@ -247,16 +247,16 @@ describe('RmaPartsPanelComponent loading', () => {
 
   it('reloads parts and catalog after reserving and after each action', async () => {
     await setup();
-    expect(service.list).toHaveBeenCalledTimes(1);
+    expect(service.listOptions).toHaveBeenCalledTimes(1);
     component().reserveForm.setValue({ partId: 4, quantity: 1, note: '' });
     component().reserve(); render();
     expect(service.getRmaParts).toHaveBeenCalledTimes(2);
-    expect(service.list).toHaveBeenCalledTimes(2);
+    expect(service.listOptions).toHaveBeenCalledTimes(2);
     button('Aplicar')!.click(); render();
     (fixture.componentInstance as any).consumptionForm.setValue({ replacementReason: 'Falha', componentBatch: '' });
     button('Confirmar')!.click(); render();
     expect(service.getRmaParts).toHaveBeenCalledTimes(3);
-    expect(service.list).toHaveBeenCalledTimes(3);
+    expect(service.listOptions).toHaveBeenCalledTimes(3);
   });
 });
 

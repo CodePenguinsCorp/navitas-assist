@@ -41,10 +41,7 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
 
     @Query("""
         select new br.com.navitasassist.client.ClientSummaryResponse(
-            count(c),
-            coalesce(sum(case when trim(coalesce(c.phone, '')) <> '' then 1L else 0L end), 0L),
-            coalesce(sum(case when trim(coalesce(c.documentNumber, '')) <> '' then 1L else 0L end), 0L),
-            coalesce(sum(case when trim(coalesce(c.email, '')) <> '' then 1L else 0L end), 0L)
+            count(c)
         )
         from Client c
         """)

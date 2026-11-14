@@ -14,9 +14,9 @@ import {
   RMA_STATUS_LABELS
 } from '../../core/mock-data';
 import {
-  ClientResponse,
+  ClientOptionResponse,
   CreateRmaRequest,
-  ProductResponse,
+  ProductOptionResponse,
   RmaPriority,
   RmaResponse,
   RmaSummaryResponse,
@@ -439,8 +439,8 @@ export class RmasComponent {
       this.syncSelection(rmas);
     }
   );
-  private readonly clientsSignal = signal<ClientResponse[]>([]);
-  private readonly productsSignal = signal<ProductResponse[]>([]);
+  private readonly clientsSignal = signal<ClientOptionResponse[]>([]);
+  private readonly productsSignal = signal<ProductOptionResponse[]>([]);
   private readonly selectedRmaSignal = signal<RmaResponse | null>(null);
 
   protected readonly rmas = this.rmaList.items;

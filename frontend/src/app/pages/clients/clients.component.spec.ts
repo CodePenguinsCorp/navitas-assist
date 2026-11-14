@@ -37,7 +37,7 @@ describe('ClientsComponent pagination', () => {
   beforeEach(async () => {
     vi.useFakeTimers();
     listClients = vi.fn((filters: ClientFilters) => of(page([client(1, 'Alfa'), client(2, 'Beta')], filters.page, filters.size, 45)));
-    getClientSummary = vi.fn(() => of({ total: 45, withContact: 10, withDocument: 20, withEmail: 30 }));
+    getClientSummary = vi.fn(() => of({ total: 45 }));
     deleteClient = vi.fn(() => of(undefined));
 
     await TestBed.configureTestingModule({
@@ -161,7 +161,7 @@ describe('ClientsComponent collection layout and states', () => {
     vi.useFakeTimers();
     listClients = vi.fn(options.list ?? ((filters: ClientFilters) =>
       of(page([client(1, 'Alfa'), client(2, 'Beta')], filters.page, filters.size, 45))));
-    getClientSummary = vi.fn(options.summary ?? (() => of({ total: 45, withContact: 10, withDocument: 20, withEmail: 30 })));
+    getClientSummary = vi.fn(options.summary ?? (() => of({ total: 45 })));
     deleteClient = vi.fn(() => of(undefined));
 
     await TestBed.configureTestingModule({
@@ -464,7 +464,7 @@ describe('ClientsComponent dialog focus', () => {
       imports: [ClientsComponent],
       providers: [provideRouter([{ path: '', component: ClientsComponent }]), { provide: CatalogService, useValue: {
         listClients: (filters: ClientFilters) => of(page(rows, filters.page, filters.size)),
-        getClientSummary: () => of({ total: rows.length, withContact: 0, withDocument: 0, withEmail: 0 }),
+        getClientSummary: () => of({ total: rows.length }),
         createClient: () => (save = new Subject<ClientResponse>()),
         updateClient: () => (save = new Subject<ClientResponse>()),
         deleteClient: () => (remove = new Subject<void>())

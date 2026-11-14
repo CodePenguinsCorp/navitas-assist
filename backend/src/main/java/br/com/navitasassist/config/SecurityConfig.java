@@ -110,6 +110,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/status-history/*/note").hasAuthority(Codes.RMA_STATUS)
                 .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/status").hasAuthority(Codes.RMA_STATUS)
                 .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/assignee").hasAuthority(Codes.RMA_RESPONSAVEL)
+                .requestMatchers(HttpMethod.GET, "/api/parts/options").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/parts/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/rmas/*/repair/external-components", "/api/rmas/*/parts/*/consume").hasAuthority(Codes.PECAS_RESERVAR)
                 .requestMatchers(HttpMethod.POST, "/api/rmas/*/repair/interventions").hasAuthority(Codes.RMA_DIAGNOSTICAR)

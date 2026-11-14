@@ -55,7 +55,7 @@ describe('ProductsComponent pagination', () => {
 
   beforeEach(async () => {
     vi.useFakeTimers();
-    summary = { total: 45, withFirmware: 20, averageWarrantyMonths: 18, categories: ['Controle', 'Sensor'] };
+    summary = { total: 45, categories: ['Controle', 'Sensor'] };
     listProducts = vi.fn((filters: ProductFilters) => of(page([product(1, 'Alfa'), product(2, 'Beta')], filters.page, filters.size, 45)));
     getProductSummary = vi.fn(() => of(summary));
 
@@ -150,7 +150,7 @@ describe('ProductsComponent collection layout and states', () => {
   let getProductSummary: ReturnType<typeof vi.fn>;
   let deleteProduct: ReturnType<typeof vi.fn>;
 
-  const summary: ProductSummaryResponse = { total: 45, withFirmware: 20, averageWarrantyMonths: 18, categories: ['Controle', 'Sensor'] };
+  const summary: ProductSummaryResponse = { total: 45, categories: ['Controle', 'Sensor'] };
   const loadError = () => throwError(() => new HttpErrorResponse({ status: 503, error: { message: 'Serviço indisponível.' } }));
 
   async function mount(options: {
@@ -503,7 +503,7 @@ interface ProductsHarness {
 
 function flushProductLists(http: HttpTestingController, content: unknown[], categories: string[] = []): void {
   http.expectOne(r => r.method === 'GET' && r.url.split('?')[0] === '/api/products').flush({ content, page: 0, size: 20, totalElements: content.length, totalPages: 1 });
-  http.expectOne('/api/products/summary').flush({ total: content.length, withFirmware: 0, averageWarrantyMonths: 12, categories });
+  http.expectOne('/api/products/summary').flush({ total: content.length, categories });
 }
 
 describe('ProductsComponent pending save lifecycle', () => {
@@ -694,7 +694,7 @@ describe('ProductsComponent dialog focus', () => {
       imports: [ProductsComponent],
       providers: [provideRouter([{ path: '', component: ProductsComponent }]), { provide: CatalogService, useValue: {
         listProducts: (filters: { page: number; size: number }) => of(page(rows, filters.page, filters.size)),
-        getProductSummary: () => of({ total: rows.length, withFirmware: 0, averageWarrantyMonths: 12, categories: ['Controle'] }),
+        getProductSummary: () => of({ total: rows.length, categories: ['Controle'] }),
         createProduct: () => (save = new Subject<ProductResponse>()),
         updateProduct: () => (save = new Subject<ProductResponse>()),
         deleteProduct: () => (remove = new Subject<void>())

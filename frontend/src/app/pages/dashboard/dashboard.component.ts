@@ -315,7 +315,7 @@ export class DashboardComponent {
 
     const usersRequest = this.isAdmin()
       ? this.catalogService.getUserSummary()
-      : of<UserSummaryResponse>({ total: 0, active: 0, admins: 0, roles: 0 });
+      : of<UserSummaryResponse>({ total: 0 });
 
     this.loadRequest = forkJoin({
       rmas: this.rmaService.listBoard(),

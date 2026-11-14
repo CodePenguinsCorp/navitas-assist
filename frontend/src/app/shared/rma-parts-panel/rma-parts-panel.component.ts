@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription, finalize } from 'rxjs';
 import { CLOSED_RMA_STATUSES } from '../../core/mock-data';
-import { ExternalComponentResponse, PartConsumptionRequest, PartMovementResponse, PartMovementType, PartReservationResponse, PartResponse, RmaPartsResponse, RmaStatus } from '../../core/models';
+import { ExternalComponentResponse, PartConsumptionRequest, PartMovementResponse, PartMovementType, PartReservationResponse, PartOptionResponse, RmaPartsResponse, RmaStatus } from '../../core/models';
 import { RmaRepairService } from '../../core/services/rma-repair.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { PartReservationAction, PartService } from '../../core/services/part.service';
@@ -182,7 +182,7 @@ export class RmaPartsPanelComponent {
   protected readonly errorMessage = signal('');
   protected readonly successMessage = signal('');
   protected readonly parts = signal<RmaPartsResponse | null>(null);
-  protected readonly catalog = signal<PartResponse[]>([]);
+  protected readonly catalog = signal<PartOptionResponse[]>([]);
 
   protected readonly statusLabels = PART_RESERVATION_STATUS_LABELS;
   protected readonly movementLabels = PART_MOVEMENT_LABELS;
@@ -261,7 +261,7 @@ export class RmaPartsPanelComponent {
     return control.invalid && (control.dirty || control.touched);
   }
 
-  protected selectedPart(): PartResponse | null {
+  protected selectedPart(): PartOptionResponse | null {
     const partId = this.reserveForm.controls.partId.value;
     return partId === null ? null : this.catalog().find((part) => part.id === partId) ?? null;
   }
@@ -480,7 +480,7 @@ export class RmaPartsPanelComponent {
     this.catalogRequest?.unsubscribe();
     this.catalogLoading.set(true);
 
-    this.catalogRequest = this.partService.list().pipe(
+    this.catalogRequest = this.partService.listOptions().pipe(
       takeUntilDestroyed(this.destroyRef),
       finalize(() => this.catalogLoading.set(false))
     ).subscribe({

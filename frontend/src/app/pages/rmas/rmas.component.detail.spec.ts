@@ -75,7 +75,7 @@ async function setup(options: { role?: LegacyProfileCode } = {}) {
   };
   const partService = {
     getRmaParts: vi.fn(() => of({ rmaId: 5, rmaCode: fullRma.code, reservations: [], movements: [], reservedCost: 0, consumedCost: 0, pendingCount: 0 })),
-    list: vi.fn(() => of([]))
+    listOptions: vi.fn(() => of([]))
   };
   const protocolService = { listExecutions: vi.fn(() => of([])), listTemplates: vi.fn(() => of([])) };
   const currentUser = signal<UserSession | null>({ username: 'tester', name: 'Tester', profileName: 'Perfil', permissions: [] });

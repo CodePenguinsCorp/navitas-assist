@@ -52,7 +52,7 @@ describe('ProductsComponent HTTP error feedback', () => {
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(ProductsComponent);
     http.expectOne(r => r.method === 'GET' && r.url.split('?')[0] === '/api/products').flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 1 });
-    http.expectOne('/api/products/summary').flush({ total: 1, withFirmware: 0, averageWarrantyMonths: 12, categories: [] });
+    http.expectOne('/api/products/summary').flush({ total: 1, categories: [] });
     fixture.detectChanges();
     page = fixture.nativeElement as HTMLElement;
     page.querySelector<HTMLButtonElement>('.page-heading button')!.click();
@@ -98,7 +98,7 @@ describe('ProductsComponent HTTP error feedback', () => {
     const saved: ProductResponse = { ...INITIAL_PRODUCTS[0], sku: 'SKU-NAV-81', name: 'Produto salvo' };
     retry.flush(saved);
     http.expectOne(r => r.method === 'GET' && r.url.split('?')[0] === '/api/products').flush({ content: [saved], page: 0, size: 20, totalElements: 1, totalPages: 1 });
-    http.expectOne('/api/products/summary').flush({ total: 1, withFirmware: 0, averageWarrantyMonths: 12, categories: [] });
+    http.expectOne('/api/products/summary').flush({ total: 1, categories: [] });
     fixture.detectChanges();
     expect(page.querySelector('.modal-overlay')).toBeNull();
     expect(page.querySelector('tbody')?.textContent).toContain('Produto salvo');

@@ -18,6 +18,13 @@ describe('PartService', () => {
 
   afterEach(() => httpTesting.verify());
 
+  it('uses the minimal catalog endpoint for the OS selector', () => {
+    service.listOptions().subscribe();
+    const request = httpTesting.expectOne('/api/parts/options');
+    expect(request.request.method).toBe('GET');
+    request.flush([{ id: 1, code: 'P1', name: 'Peça', unit: 'un', available: 2, active: true }]);
+  });
+
   it('trims the search query and omits it when blank', () => {
     service.list('  PCA  ').subscribe();
     const search = httpTesting.expectOne((candidate) => candidate.url === '/api/parts');

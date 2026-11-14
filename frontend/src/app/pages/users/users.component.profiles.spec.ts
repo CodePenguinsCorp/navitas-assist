@@ -56,7 +56,7 @@ describe('UsersComponent profile and extra permissions', () => {
       imports: [UsersComponent],
       providers: [
         { provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }), refreshSession } },
-        { provide: CatalogService, useValue: { listUsers, getUserSummary: () => of({ total: 1, active: 1, admins: 1, roles: 2 }), createUser, updateUser } },
+        { provide: CatalogService, useValue: { listUsers, getUserSummary: () => of({ total: 1 }), createUser, updateUser } },
         { provide: ProfileService, useValue: { options, permissionCatalog: sources.catalog ?? (() => of(PERMISSION_CATALOG)), invalidateOptions: vi.fn() } }
       ]
     }).compileComponents();
@@ -284,7 +284,7 @@ describe('UsersComponent profile requests', () => {
     const component = fixture.componentInstance as unknown as UsersHarness;
     fixture.detectChanges();
     http.expectOne((request) => request.url === '/api/users').flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 });
-    http.match('/api/users/summary').forEach((request) => request.flush({ total: 0, active: 0, admins: 0, roles: 0 }));
+    http.match('/api/users/summary').forEach((request) => request.flush({ total: 0 }));
     http.expectOne('/api/profiles/options').flush(OPTIONS);
     component.openCreateModal(); fixture.detectChanges();
     http.match('/api/permissions').forEach((request) => request.flush(PERMISSION_CATALOG));

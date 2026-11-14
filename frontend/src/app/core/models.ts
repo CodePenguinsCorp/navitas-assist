@@ -764,23 +764,15 @@ export interface RmaSummaryResponse {
 
 export interface ClientSummaryResponse {
   total: number;
-  withContact: number;
-  withDocument: number;
-  withEmail: number;
 }
 
 export interface ProductSummaryResponse {
   total: number;
-  withFirmware: number;
-  averageWarrantyMonths: number;
   categories: string[];
 }
 
 export interface UserSummaryResponse {
   total: number;
-  active: number;
-  admins: number;
-  roles: number;
 }
 
 export interface PageResponse<T> {
@@ -946,4 +938,24 @@ export interface AuditQuery extends PageQuery {
   actor?: string;
   action?: string;
   entityType?: string;
+}
+
+export interface ClientOptionResponse {
+  id: number;
+  legalName: string;
+}
+
+export interface ProductOptionResponse {
+  id: number;
+  sku: string;
+  name: string;
+}
+
+export interface PartOptionResponse {
+  id: number;
+  code: string;
+  name: string;
+  unit: string;
+  available: number;
+  active: boolean;
 }

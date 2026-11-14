@@ -4,6 +4,8 @@ import { Observable } from 'rxjs';
 import {
   AssignableUserResponse,
   CatalogImportKind, CatalogImportPreview, CatalogImportResult,
+  ClientOptionResponse,
+  ProductOptionResponse,
   ClientRequest,
   ClientResponse,
   ClientSummaryResponse,
@@ -66,8 +68,8 @@ export class CatalogService {
     return this.http.get<PageResponse<ClientResponse>>('/api/clients', { params });
   }
 
-  listClientOptions(): Observable<ClientResponse[]> {
-    return this.http.get<ClientResponse[]>('/api/clients/options');
+  listClientOptions(): Observable<ClientOptionResponse[]> {
+    return this.http.get<ClientOptionResponse[]>('/api/clients/options');
   }
 
   getClientSummary(): Observable<ClientSummaryResponse> {
@@ -95,8 +97,8 @@ export class CatalogService {
     return this.http.get<PageResponse<ProductResponse>>('/api/products', { params });
   }
 
-  listProductOptions(): Observable<ProductResponse[]> {
-    return this.http.get<ProductResponse[]>('/api/products/options');
+  listProductOptions(): Observable<ProductOptionResponse[]> {
+    return this.http.get<ProductOptionResponse[]>('/api/products/options');
   }
 
   getProductSummary(): Observable<ProductSummaryResponse> {

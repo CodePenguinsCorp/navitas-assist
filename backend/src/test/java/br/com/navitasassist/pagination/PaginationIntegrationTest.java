@@ -180,9 +180,9 @@ class PaginationIntegrationTest {
         mockMvc.perform(get("/api/clients/summary").with(admin()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.total").value(3))
-            .andExpect(jsonPath("$.withContact").value(1))
-            .andExpect(jsonPath("$.withDocument").value(1))
-            .andExpect(jsonPath("$.withEmail").value(2));
+            .andExpect(jsonPath("$.withContact").doesNotExist())
+            .andExpect(jsonPath("$.withDocument").doesNotExist())
+            .andExpect(jsonPath("$.withEmail").doesNotExist());
     }
 
     @Test
@@ -221,8 +221,8 @@ class PaginationIntegrationTest {
 
         mockMvc.perform(get("/api/products/summary").with(admin()))
             .andExpect(jsonPath("$.total").value(4))
-            .andExpect(jsonPath("$.withFirmware").value(2))
-            .andExpect(jsonPath("$.averageWarrantyMonths").value(12))
+            .andExpect(jsonPath("$.withFirmware").doesNotExist())
+            .andExpect(jsonPath("$.averageWarrantyMonths").doesNotExist())
             .andExpect(jsonPath("$.categories", contains("Network", "Video")));
     }
 
@@ -243,9 +243,9 @@ class PaginationIntegrationTest {
 
         mockMvc.perform(get("/api/users/summary").with(admin()))
             .andExpect(jsonPath("$.total").value(4))
-            .andExpect(jsonPath("$.active").value(3))
-            .andExpect(jsonPath("$.admins").value(2))
-            .andExpect(jsonPath("$.roles").value(2));
+            .andExpect(jsonPath("$.active").doesNotExist())
+            .andExpect(jsonPath("$.admins").doesNotExist())
+            .andExpect(jsonPath("$.roles").doesNotExist());
     }
 
     /** Perfis personalizados entram no filtro e no resumo pelo perfil e pelas permissões efetivas (D13). */
@@ -269,9 +269,9 @@ class PaginationIntegrationTest {
 
         mockMvc.perform(get("/api/users/summary").with(admin()))
             .andExpect(jsonPath("$.total").value(5))
-            .andExpect(jsonPath("$.active").value(4))
-            .andExpect(jsonPath("$.admins").value(3))
-            .andExpect(jsonPath("$.roles").value(4));
+            .andExpect(jsonPath("$.active").doesNotExist())
+            .andExpect(jsonPath("$.admins").doesNotExist())
+            .andExpect(jsonPath("$.roles").doesNotExist());
     }
 
     @Test

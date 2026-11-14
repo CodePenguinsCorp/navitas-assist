@@ -113,7 +113,7 @@ export class ProductsComponent {
     },
     () => this.loadFailed.set(false)
   );
-  private readonly summarySignal = signal<ProductSummaryResponse>({ total: 0, withFirmware: 0, averageWarrantyMonths: 0, categories: [] });
+  private readonly summarySignal = signal<ProductSummaryResponse>({ total: 0, categories: [] });
   private readonly editingProductSignal = signal<ProductResponse | null>(null);
   private readonly deletingProductSignal = signal<ProductResponse | null>(null);
 

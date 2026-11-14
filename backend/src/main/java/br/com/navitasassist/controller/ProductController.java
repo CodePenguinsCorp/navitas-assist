@@ -5,6 +5,7 @@ import java.util.List;
 import br.com.navitasassist.pagination.PageResponse;
 import br.com.navitasassist.product.ProductRequest;
 import br.com.navitasassist.product.ProductResponse;
+import br.com.navitasassist.product.ProductOptionResponse;
 import br.com.navitasassist.product.ProductSummaryResponse;
 import br.com.navitasassist.service.ProductService;
 import jakarta.validation.Valid;
@@ -40,7 +41,7 @@ public class ProductController {
     }
 
     @GetMapping("/options")
-    public List<ProductResponse> listOptions() {
+    public List<ProductOptionResponse> listOptions() {
         return productService.listOptions();
     }
 

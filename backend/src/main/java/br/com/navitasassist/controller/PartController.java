@@ -8,6 +8,7 @@ import br.com.navitasassist.part.PartReplenishmentResponse;
 import br.com.navitasassist.part.PartRequest;
 import br.com.navitasassist.part.PartReservationResponse;
 import br.com.navitasassist.part.PartResponse;
+import br.com.navitasassist.part.PartOptionResponse;
 import br.com.navitasassist.part.PartReversalRequest;
 import br.com.navitasassist.service.PartService;
 import br.com.navitasassist.service.PartStockService;
@@ -35,6 +36,11 @@ public class PartController {
     @GetMapping
     public List<PartResponse> search(@RequestParam(required = false) @jakarta.validation.constraints.Size(max = 100, message = "A busca deve ter no máximo 100 caracteres.") String query) {
         return partService.search(query);
+    }
+
+    @GetMapping("/options")
+    public List<PartOptionResponse> listOptions() {
+        return partService.listOptions();
     }
 
     @GetMapping("/pending")

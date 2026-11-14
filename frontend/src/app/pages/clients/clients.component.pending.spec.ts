@@ -12,7 +12,7 @@ import { ClientsComponent } from './clients.component';
 
 function flushClientLists(http: HttpTestingController, content: unknown[]): void {
   http.expectOne(r => r.method === 'GET' && r.url.split('?')[0] === '/api/clients').flush({ content, page: 0, size: 20, totalElements: content.length, totalPages: 1 });
-  http.expectOne('/api/clients/summary').flush({ total: content.length, withContact: 0, withDocument: 0, withEmail: 0 });
+  http.expectOne('/api/clients/summary').flush({ total: content.length });
 }
 
 describe('ClientsComponent pending save lifecycle', () => {

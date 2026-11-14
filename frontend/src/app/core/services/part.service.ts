@@ -10,6 +10,7 @@ import {
   PartReservationRequest,
   PartReservationResponse,
   PartResponse,
+  PartOptionResponse,
   RmaPartsResponse
 } from '../models';
 
@@ -26,6 +27,10 @@ export class PartService {
     }
 
     return this.http.get<PartResponse[]>('/api/parts', { params });
+  }
+
+  listOptions(): Observable<PartOptionResponse[]> {
+    return this.http.get<PartOptionResponse[]>('/api/parts/options');
   }
 
   create(payload: PartRequest): Observable<PartResponse> {

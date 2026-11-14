@@ -10,6 +10,7 @@ import br.com.navitasassist.pagination.PageResponse;
 import br.com.navitasassist.product.Product;
 import br.com.navitasassist.product.ProductRequest;
 import br.com.navitasassist.product.ProductResponse;
+import br.com.navitasassist.product.ProductOptionResponse;
 import br.com.navitasassist.product.ProductSummaryResponse;
 import br.com.navitasassist.repository.ProductRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
@@ -41,8 +42,8 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProductResponse> listOptions() {
-        return productRepository.findAllByOrderByNameAscIdAsc().stream().map(ProductResponse::from).toList();
+    public List<ProductOptionResponse> listOptions() {
+        return productRepository.findAllByOrderByNameAscIdAsc().stream().map(ProductOptionResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
@@ -57,8 +58,6 @@ public class ProductService {
 
         return new ProductSummaryResponse(
             productRepository.count(),
-            productRepository.countWithFirmware(),
-            productRepository.averageWarrantyMonths(),
             categories
         );
     }

@@ -107,7 +107,7 @@ export class UsersComponent {
     },
     () => this.loadFailed.set(false)
   );
-  private readonly summarySignal = signal<UserSummaryResponse>({ total: 0, active: 0, admins: 0, roles: 0 });
+  private readonly summarySignal = signal<UserSummaryResponse>({ total: 0 });
   private readonly editingUserSignal = signal<UserAccountResponse | null>(null);
   private readonly deletingUserSignal = signal<UserAccountResponse | null>(null);
 

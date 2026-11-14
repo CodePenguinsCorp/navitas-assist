@@ -46,7 +46,7 @@ describe('UsersComponent pagination', () => {
         { provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }), refreshSession: () => of(null) } },
         { provide: CatalogService, useValue: {
           listUsers,
-          getUserSummary: () => of({ total: 45, active: 40, admins: 3, roles: 4 }),
+          getUserSummary: () => of({ total: 45 }),
           deleteUser: () => of(undefined)
         } }
       ]
@@ -117,7 +117,7 @@ describe('UsersComponent collection layout and states', () => {
         { provide: AuthService, useValue: { currentUser: () => ({ username: 'admin' }), refreshSession: () => of(null) } },
         { provide: CatalogService, useValue: {
           listUsers,
-          getUserSummary: options.summary ?? (() => of({ total: 45, active: 40, admins: 3, roles: 4 })),
+          getUserSummary: options.summary ?? (() => of({ total: 45 })),
           deleteUser,
           createUser: () => of(user(9, 'Novo')),
           updateUser: () => of(ana)

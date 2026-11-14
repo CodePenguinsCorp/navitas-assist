@@ -4,6 +4,7 @@ import java.util.List;
 
 import br.com.navitasassist.client.ClientRequest;
 import br.com.navitasassist.client.ClientResponse;
+import br.com.navitasassist.client.ClientOptionResponse;
 import br.com.navitasassist.client.ClientSummaryResponse;
 import br.com.navitasassist.pagination.PageResponse;
 import br.com.navitasassist.service.ClientService;
@@ -40,7 +41,7 @@ public class ClientController {
     }
 
     @GetMapping("/options")
-    public List<ClientResponse> listOptions() {
+    public List<ClientOptionResponse> listOptions() {
         return clientService.listOptions();
     }
 

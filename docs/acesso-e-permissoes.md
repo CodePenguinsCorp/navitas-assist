@@ -106,3 +106,7 @@ O registro de sessões fica em memória por instância, como as sessões HTTP; a
 **E-mail do usuário.** Opcional. No `PUT`, campo ausente preserva o endereço atual; `null` explícito ou texto em branco o limpa (o frontend sempre envia o campo). É normalizado para minúsculas, limitado a 254 caracteres e único sem diferenciar caixa. Aparece na sessão e nas respostas de usuários; a lista de atribuíveis não o expõe.
 
 **Contas.** A aplicação não cria nem altera usuários na inicialização. Ver o primeiro administrador em [banco-de-dados.md](banco-de-dados.md).
+
+### Contratos dos seletores
+
+Os seletores de clientes e produtos usam `/api/clients/options` e `/api/products/options`, com identificação e nome (e SKU do produto). O painel de peças da Ordem de Serviço (OS) usa `/api/parts/options`, sem dados de custo, localização ou estoque interno. Nesta etapa, o acesso dessas leituras continua disponível a usuários autenticados.

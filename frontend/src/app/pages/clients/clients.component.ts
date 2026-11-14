@@ -79,7 +79,7 @@ export class ClientsComponent {
     },
     () => this.loadFailed.set(false)
   );
-  private readonly summarySignal = signal<ClientSummaryResponse>({ total: 0, withContact: 0, withDocument: 0, withEmail: 0 });
+  private readonly summarySignal = signal<ClientSummaryResponse>({ total: 0 });
   private readonly editingClientSignal = signal<ClientResponse | null>(null);
   private readonly deletingClientSignal = signal<ClientResponse | null>(null);
 

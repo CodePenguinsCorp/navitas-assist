@@ -25,7 +25,7 @@ describe('RmaPartsPanelComponent compact sections', () => {
     await TestBed.configureTestingModule({
       imports: [RmaPartsPanelComponent],
       providers: [
-        { provide: PartService, useValue: { getRmaParts: () => of(response), list: () => of([]), reserve: vi.fn(() => of(reservation(9, 'ACTIVE'))), updateReservation: vi.fn() } },
+        { provide: PartService, useValue: { getRmaParts: () => of(response), listOptions: () => of([]), reserve: vi.fn(() => of(reservation(9, 'ACTIVE'))), updateReservation: vi.fn() } },
         { provide: RmaRepairService, useValue: { listExternalComponents: () => of([]), addExternalComponent: vi.fn(() => of({ id: 8 })) } },
         providePermissions(permissions)
       ]
