@@ -60,3 +60,13 @@ Limitação conhecida: o registro de sessões é em memória, por instância; re
 ## Proteção do arquivo de ambiente
 
 S13: `init-prod-env.sh` usa `umask 077` antes de criar o arquivo e confirma modo `600` após a escrita. No Windows, `init-prod-env.ps1` cria o arquivo vazio, remove herança e regras de acesso anteriores e concede controle total somente ao SID do usuário atual antes de gravar segredos, inclusive com `-Force`. Isso evita leitura das credenciais por outros usuários locais. Os testes `scripts/test-init-prod-env.ps1` e `scripts/test-init-prod-env.sh` verificam a ACL e o modo reais, sem exibir valores.
+
+## Entrega HTTP do frontend
+
+P15: o nginx comprime JavaScript, CSS, JSON e SVG a partir de 1 kB, com `Vary: Accept-Encoding`. Arquivos com hash no nome recebem `Cache-Control: public, max-age=31536000, immutable`; `index.html` e o fallback das rotas recebem `no-cache`, para permitir atualização da SPA sem baixar novamente assets já versionados.
+
+As respostas incluem `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin` e `Permissions-Policy: camera=(), microphone=(), geolocation=()`. `server_tokens off` oculta a versão do nginx. Não foi adicionada CSP; TLS e HSTS continuam a cargo do ambiente.
+
+S1: o caminho exato `/api/auth/login` aplica limite por IP de 10 requisições por minuto, com `burst=5` sem espera; excesso retorna 429. O IP usado é o endereço remoto da conexão ao nginx. Ambientes com proxy na frente precisam tratar a origem confiável no próprio ambiente, sem confiar cegamente em cabeçalhos enviados pelo cliente.
+
+Após `npm --prefix frontend run build`, `powershell -File scripts/test-nginx.ps1` monta o `dist` e a configuração em um nginx isolado na porta 18080, verifica gzip, cache, cabeçalhos, fallback e limitação e remove o contêiner ao terminar. A porta pode ser alterada com `-Port`; nenhuma pilha do repositório é usada.
