@@ -68,3 +68,11 @@ docker compose -p navitas-mig -f compose.migration-check.yaml down -v
 - Os testes rodam em H2 com `MODE=MySQL`. A V4 usa comentários condicionais do MySQL 8 (`/*!80000 ... */`) para a collation do e-mail; o H2 os ignora.
 - Hoje não há suporte a PostgreSQL no código. Por decisão do dono do produto (13 de novembro de 2026), o PostgreSQL passará a ser o único banco, em todos os ambientes, com uma nova baseline em dialeto PostgreSQL; o plano está em [superpowers/plans/2026-11-13-migracao-para-postgres.md](superpowers/plans/2026-11-13-migracao-para-postgres.md) e ainda não foi executado. Quando for, este documento, `configuracao.md` e `desenvolvimento.md` precisam ser atualizados.
 - As URLs JDBC de desenvolvimento usam `serverTimezone=UTC`; as regras de negócio por dia usam `America/Sao_Paulo` no código, não no banco.
+
+## Índices de consulta (P4)
+
+| Versão | Arquivo | Motivo |
+| --- | --- | --- |
+| V15 | `V15__performance_indexes.sql` | Cria `rmas(entry_date, id)`, `rmas(status, entry_date)` e `notifications(recipient_id, created_at)` para filtros e ordenação. Remove `idx_kanban_views_owner_id`, coberto pelo prefixo do unique `(owner_id, name)`. |
+
+A migração preserva os dados e recria a mesma FK de proprietário com `ON DELETE CASCADE` para soltar a dependência do índice simples no H2. O unique composto continua garantindo nomes distintos por proprietário.
