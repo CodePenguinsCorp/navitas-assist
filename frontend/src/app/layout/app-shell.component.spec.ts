@@ -218,4 +218,20 @@ describe('AppShellComponent menu by permission', () => {
 
     expect(page.querySelector('.sidebar-user__meta span')?.textContent?.trim()).toBe('Suporte N1');
   });
+
+  it('keeps the sidebar fixed and only lets the menu list scroll, with its scrollbar hidden', async () => {
+    const fsModule = 'node:fs';
+    const { readFileSync } = await import(/* @vite-ignore */ fsModule);
+    const css: string = readFileSync('src/styles.css', 'utf8');
+    const rule = (selector: string): string => {
+      const start = css.indexOf(`${String.fromCharCode(10)}${selector} {`);
+      return start < 0 ? '' : css.slice(start, css.indexOf('}', start));
+    };
+
+    expect(rule('.shell-sidebar')).toMatch(/overflow:\s*hidden/);
+    expect(rule('.shell-sidebar')).not.toMatch(/overflow-y:\s*auto/);
+    expect(rule('.nav-groups')).toMatch(/overflow-y:\s*auto/);
+    expect(rule('.nav-groups')).toMatch(/scrollbar-width:\s*none/);
+    expect(css).toMatch(/\.nav-groups::-webkit-scrollbar\s*\{\s*display:\s*none/);
+  });
 });
