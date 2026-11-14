@@ -24,16 +24,14 @@ print(secrets.token_hex(int(sys.argv[1])))
 PY
 }
 
-mysql_password="$(new_hex_secret 24)"
-mysql_root_password="$(new_hex_secret 24)"
+postgres_password="$(new_hex_secret 24)"
 
 cat >"$output_path" <<EOF
 # Production Compose
 FRONTEND_PORT=80
-MYSQL_DATABASE=navitas_assist
-MYSQL_USER=navitas_app
-MYSQL_PASSWORD=$mysql_password
-MYSQL_ROOT_PASSWORD=$mysql_root_password
+POSTGRES_DB=navitas_assist
+POSTGRES_USER=navitas_app
+POSTGRES_PASSWORD=$postgres_password
 
 # Images published by CD
 BACKEND_IMAGE=$backend_image
