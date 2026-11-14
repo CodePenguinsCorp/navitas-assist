@@ -59,6 +59,17 @@
   flex-shrink: 0;
 }
 
+/* Trigger chevron: a box as tall as the icon, centred on the row (no inline baseline gap). */
+.custom-select__icon {
+  display: inline-flex;
+  align-self: center;
+  line-height: 0;
+}
+
+.custom-select__icon svg {
+  display: block;
+}
+
 .custom-select__icon svg,
 .custom-select__check {
   width: 18px;
