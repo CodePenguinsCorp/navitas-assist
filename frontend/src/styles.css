@@ -160,6 +160,12 @@ textarea {
   font: inherit;
 }
 
+/* Textareas have a fixed height and scroll; no drag handle anywhere. */
+textarea {
+  resize: none;
+  overflow-y: auto;
+}
+
 button {
   border: 0;
   cursor: pointer;
@@ -545,8 +551,19 @@ a {
   filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.18));
 }
 
-.brand-lockup__logo--symbol {
-  width: 44px;
+/* Collapsed rail: a bold N reads better than a shrunken logo. */
+.brand-lockup__monogram {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-family: var(--font-display, inherit);
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .sidebar-head {
@@ -619,6 +636,12 @@ a {
   font-size: 0;
   color: transparent;
   background: rgba(255, 255, 255, 0.24);
+}
+
+/* Room inside the scroller so the active border, hover shadow and focus ring are not cut by overflow-x. */
+.is-collapsed .nav-groups {
+  margin-inline: -0.4rem;
+  padding-inline: 0.4rem;
 }
 
 .is-collapsed .nav-item {
@@ -1552,26 +1575,26 @@ fieldset.form-section {
   background-clip: padding-box;
 }
 
-:is(.modal-panel, .app-scroll)::-webkit-scrollbar {
+:is(.modal-panel, .app-scroll, textarea)::-webkit-scrollbar {
   width: 12px;
 }
 
-:is(.modal-panel, .app-scroll)::-webkit-scrollbar-track {
+:is(.modal-panel, .app-scroll, textarea)::-webkit-scrollbar-track {
   margin-block: 0.75rem;
   border-radius: 999px;
   background: rgba(205, 220, 235, 0.65);
 }
 
-:is(.modal-panel, .app-scroll)::-webkit-scrollbar-thumb {
+:is(.modal-panel, .app-scroll, textarea)::-webkit-scrollbar-thumb {
   border-radius: 999px;
   background: linear-gradient(180deg, #1c76bb 0%, #2ea8d4 100%);
 }
 
-:is(.modal-panel, .app-scroll)::-webkit-scrollbar-thumb:hover {
+:is(.modal-panel, .app-scroll, textarea)::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, #165f98 0%, #238cb4 100%);
 }
 
-:is(.modal-panel, .app-scroll)::-webkit-scrollbar-button {
+:is(.modal-panel, .app-scroll, textarea)::-webkit-scrollbar-button {
   display: none;
   width: 0;
   height: 0;
@@ -3699,7 +3722,7 @@ app-custom-select:has(> .custom-select--priority) {
 .repair-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: var(--space-3); margin: var(--space-2) 0 var(--space-3); }
 .repair-form .field-group { gap: var(--space-1); min-width: 0; }
 .repair-form .field-group--full, .repair-form .form-actions--full { grid-column: 1 / -1; }
-.repair-form textarea { min-height: 0; resize: vertical; field-sizing: content; max-height: 10rem; }
+.repair-form textarea { min-height: 6rem; max-height: 6rem; resize: none; overflow-y: auto; }
 .repair-inline textarea, .repair-form input, .repair-form textarea { box-sizing: border-box; max-width: 100%; min-width: 0; }
 .form-actions.repair-actions { flex-direction: row; align-items: center; justify-content: space-between; }
 
@@ -3721,6 +3744,7 @@ app-custom-select:has(> .custom-select--priority) {
 }
 
 /* Notification email limit indicators. */
+.mini-chip.mini-chip--muted { background: var(--surface-muted, #eef2f6); color: var(--muted); }
 .mini-chip.email-usage--limit { background: var(--warning-bg); color: var(--warning-text); }
 .field-hint.email-usage-note { color: var(--warning-text); }
 
