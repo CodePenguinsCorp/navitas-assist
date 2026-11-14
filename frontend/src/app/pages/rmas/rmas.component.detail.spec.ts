@@ -123,6 +123,21 @@ async function setup(options: { role?: LegacyProfileCode } = {}) {
 afterEach(settleRmaLazyChunks);
 
 describe('RmasComponent detail with the shared information contract', () => {
+  it('limits history through the shared Ver mais control and resets for another OS', async () => {
+    const { open, selectTab, tabPanel, render } = await setup();
+    const rma: RmaResponse = { ...fullRma, assignmentHistory: [], statusHistory: Array.from({ length: 12 }, (_, i) => ({
+      ...fullRma.statusHistory[0], id: i + 1, changedAt: `2026-11-14T10:${String(i).padStart(2, '0')}:00Z`
+    })) };
+    open(rma); selectTab('Hist\u00f3rico');
+    expect(tabPanel().querySelectorAll('ol.record-list > li')).toHaveLength(5);
+    const more = [...tabPanel().querySelectorAll('button')].find(b => b.textContent?.trim() === 'Ver mais (7 restantes)')!;
+    more.click(); render();
+    expect(tabPanel().querySelectorAll('ol.record-list > li')).toHaveLength(12);
+    expect(tabPanel().textContent).not.toContain('Ver mais');
+    open({ ...rma, id: 999 }); selectTab('Hist\u00f3rico');
+    expect(tabPanel().querySelectorAll('ol.record-list > li')).toHaveLength(5);
+  });
+
   it('renders the shared interventions panel in diagnosis without legacy repair summaries', async () => {
     const { open, selectTab, tabPanel, fixture } = await setup();
     open({ ...fullRma, repairSummary: null, replacedPartsSummary: null, testSummary: null }); selectTab('Diagnóstico');

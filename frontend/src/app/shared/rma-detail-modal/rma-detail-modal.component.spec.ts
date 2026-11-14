@@ -122,6 +122,23 @@ describe('RmaDetailModalComponent collapsible sections', () => {
   const toggles = (host: HTMLElement) => [...host.querySelectorAll<HTMLButtonElement>('.rma-detail__main .collapsible__toggle')];
   const states = (host: HTMLElement) => Object.fromEntries(toggles(host).map((button) => [button.querySelector('.collapsible__title')!.textContent!.trim(), button.getAttribute('aria-expanded')]));
 
+  it('limits the Kanban timeline through Ver mais and resets for another OS', async () => {
+    const rma: RmaResponse = { ...fullRma, assignmentHistory: [], statusHistory: Array.from({ length: 12 }, (_, i) => ({
+      ...fullRma.statusHistory[0], id: i + 1, changedAt: `2026-11-14T10:${String(i).padStart(2, '0')}:00Z`
+    })) };
+    const { fixture, section } = await setup({ rma });
+    const history = () => section('Hist\u00f3rico')!;
+    history().querySelector<HTMLButtonElement>('.collapsible__toggle')!.click();
+    fixture.detectChanges();
+    expect(history().querySelectorAll('li.rma-detail__event')).toHaveLength(5);
+    const more = [...history().querySelectorAll('button')].find(b => b.textContent?.trim() === 'Ver mais (7 restantes)')!;
+    more.click(); fixture.detectChanges();
+    expect(history().querySelectorAll('li.rma-detail__event')).toHaveLength(12);
+    expect(history().textContent).not.toContain('Ver mais');
+    fixture.componentRef.setInput('rma', { ...rma, id: 999 }); fixture.detectChanges();
+    expect(history().querySelectorAll('li.rma-detail__event')).toHaveLength(5);
+  });
+
   it('opens failure, blocks (active) and diagnosis; folds products (several), receipt, repair and history', async () => {
     const { host } = await setup();
     expect(states(host)).toEqual({

@@ -309,7 +309,8 @@
             }
             @case ('history') {
               <app-rma-stage-times class="rma-details__stage-times" [rma]="rma" />
-              @let history = rmaHistory(rma);
+              <app-rma-history-list #historyList="rmaHistoryList" [rma]="rma" [showHeading]="true">
+              @let history = historyList.entries();
               @if (history.length > 0) {
                 <ol class="record-list">
                   @for (entry of history; track $index) {
@@ -329,6 +330,7 @@
               } @else {
                 <p class="rma-detail-copy">Nenhuma alteração registrada.</p>
               }
+              </app-rma-history-list>
             }
           }
         </div>

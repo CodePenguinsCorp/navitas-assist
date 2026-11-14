@@ -118,11 +118,12 @@
 
         <section class="rma-detail__section detail-card">
           <app-collapsible-section [title]="sectionLabel('history')" icon="history" [count]="activity().length" [open]="false" storageKey="rma.history">
+            <app-rma-history-list #historyList="rmaHistoryList" [rma]="rma()">
             @if (activity().length === 0) {
               <p class="rma-detail__muted">Nenhuma atividade registrada.</p>
             }
             <ol class="rma-detail__timeline">
-              @for (entry of activity(); track $index) {
+              @for (entry of historyList.entries(); track $index) {
                 <li class="rma-detail__event" [class.is-assignee]="entry.kind === 'assignee'">
                   <span class="avatar" aria-hidden="true">{{ initials(entry.by) }}</span>
                   <div class="rma-detail__event-body">
@@ -144,6 +145,7 @@
                 </li>
               }
             </ol>
+            </app-rma-history-list>
           </app-collapsible-section>
         </section>
       </div>
