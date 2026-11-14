@@ -1,7 +1,11 @@
 // Node 18+, somente APIs nativas. Execute uma instância por vez.
 const base = new URL(process.env.SEED_BASE_URL || 'http://localhost:4201');
-if (!['localhost', '127.0.0.1', '[::1]'].includes(base.hostname) || !['http:', 'https:'].includes(base.protocol) || base.pathname !== '/' || base.search || base.hash || base.username || base.password) {
-  throw new Error('SEED_BASE_URL deve ser uma origem LOCAL, sem caminho ou credenciais.');
+const local = ['localhost', '127.0.0.1', '[::1]'].includes(base.hostname);
+if (!['http:', 'https:'].includes(base.protocol) || base.pathname !== '/' || base.search || base.hash || base.username || base.password) {
+  throw new Error('SEED_BASE_URL deve ser uma origem HTTP(S), sem caminho ou credenciais.');
+}
+if (!local && (process.env.SEED_ALLOW_REMOTE !== '1' || base.protocol !== 'https:' || !process.env.SEED_USER?.trim() || !process.env.SEED_PASSWORD?.trim())) {
+  throw new Error('Carga remota exige HTTPS, SEED_ALLOW_REMOTE=1, SEED_USER e SEED_PASSWORD explícitos. Use somente ambiente de testes.');
 }
 const password = 'DemoNavitas123!';
 const cookies = new Map();
@@ -65,7 +69,7 @@ async function ensure(kind, path, rows, field, body) {
 }
 
 async function main() {
-  console.log(`Carga de demonstração LOCAL: ${base.origin}`);
+  console.log(`Carga de demonstração ${local ? 'LOCAL' : 'REMOTA (ambiente de testes)'}: ${base.origin}`);
   await api('/api/auth/me', 'GET', undefined, true);
   if (!cookies.has('XSRF-TOKEN')) await api('/api/auth/csrf');
   await api('/api/auth/login', 'POST', {

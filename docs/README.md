@@ -34,6 +34,7 @@
 | Documento | Conteúdo |
 | --- | --- |
 | [operacao-e-deploy.md](operacao-e-deploy.md) | CI, build de produção, scripts de deploy, checklist de ambiente. |
+| [ambiente-de-testes.md](ambiente-de-testes.md) | Publicação manual para o dono: Vercel, Render, PostgreSQL gerenciado, administrador e demonstração. |
 
 ## Para conversar com o dono
 

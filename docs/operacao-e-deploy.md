@@ -18,6 +18,12 @@ Não há workflow de entrega (CD) no repositório: nada publica as imagens Docke
 - **Backend** (`backend/Dockerfile`): build com `maven:3.9.9-eclipse-temurin-17` (`mvn package -DskipTests`) e execução em `eclipse-temurin:17-jre`, porta 8080.
 - **Frontend** (`frontend/Dockerfile`): `ng build --configuration production` em `node:20-alpine` e entrega por `nginx:1.27-alpine`, porta 80. O `nginx.conf` serve a SPA (com fallback para `index.html`) e faz proxy de `/api/` e `/health` para `backend:8080`.
 
+## Ambiente de testes na Vercel e no Render
+
+O passo a passo para o responsável está em [ambiente-de-testes.md](ambiente-de-testes.md): PostgreSQL Neon/Supabase, Blueprint `render.yaml`, frontend com raiz `frontend` e `frontend/vercel.json`, administrador e carga de demonstração. Antes de publicar, troque o placeholder do backend no rewrite `/api/:path*`. Mantenha uma instância, profile `prod`, cookies seguros e `SERVER_FORWARD_HEADERS_STRATEGY=framework`. A publicação depende da versão PostgreSQL do backend; o Blueprint deixa atualizações posteriores em deploy manual. Nenhuma conta ou publicação é criada pelos scripts locais.
+
+Essa arquitetura usa o proxy da Vercel para sessão/CSRF na mesma origem e HTTPS dos provedores. O nginx dos parágrafos abaixo não participa dela, inclusive seu limite de login por IP. Confira custos e regras de uso da Vercel antes de escolher o plano.
+
 ## Stack de produção
 
 `compose.prod.yaml` sobe PostgreSQL 16, backend (profile `prod`, cookie `Secure`, porta 8080 apenas exposta na rede interna) e frontend (porta `FRONTEND_PORT`, padrão 80). Os dados do PostgreSQL ficam no volume `postgres_data`. Como o cookie é `Secure`, o acesso real precisa de HTTPS na frente do Nginx (por exemplo, um proxy reverso com TLS); isso não é provisionado pelo repositório.

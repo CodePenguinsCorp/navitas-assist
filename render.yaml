@@ -1,0 +1,46 @@
+# Blueprint: veja docs/ambiente-de-testes.md antes de publicar.
+services:
+  - type: web
+    name: navitas-assist-testes
+    runtime: docker
+    plan: free
+    region: virginia
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    autoDeployTrigger: "off"
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: SERVER_PORT
+        value: "10000"
+      - key: SERVER_FORWARD_HEADERS_STRATEGY
+        value: framework
+      - key: DB_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_POOL_MAX
+        value: "5"
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: APP_BASE_URL
+        sync: false
+      - key: NOTIFICATIONS_EMAIL_ENABLED
+        value: "false"
+      - key: NOTIFICATIONS_EMAIL_PROVIDER
+        value: fake
+      - key: MAIL_FROM
+        value: notificacoes@example.invalid
+      - key: NOTIFICATIONS_EMAIL_DAILY_LIMIT
+        value: "100"
+      - key: NOTIFICATIONS_EMAIL_MONTHLY_LIMIT
+        value: "3000"
+      - key: NOTIFICATIONS_EMAIL_SEND_INTERVAL_MS
+        value: "500"
+      - key: DEADLINE_WARNING_DAYS
+        value: "7"
+      - key: JAVA_TOOL_OPTIONS
+        value: "-XX:MaxRAMPercentage=65 -XX:+ExitOnOutOfMemoryError"

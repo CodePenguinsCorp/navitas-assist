@@ -40,6 +40,7 @@ Só do Docker Compose (não chegam ao Spring diretamente; o Compose monta `DB_UR
 | Variável | Padrão | Observação |
 | --- | --- | --- |
 | `SERVER_PORT` | `8080` | Porta do processo do backend. |
+| `SERVER_FORWARD_HEADERS_STRATEGY` | Padrão do Spring conforme ambiente | No Blueprint Render: `framework`. Propriedade nativa do Spring que interpreta cabeçalhos dos proxies; conferir cadeia de confiança ao publicar. Não altera `application*.yml`. |
 | `SESSION_TIMEOUT` | `30m` | Expiração da sessão por inatividade. |
 | `SESSION_COOKIE_SECURE` | `true` | Define `Secure` nos cookies `JSESSIONID` e `XSRF-TOKEN`. O profile `local` força `false`; `compose.yaml` usa `false` e `compose.prod.yaml` usa `true` (fixos no arquivo). |
 
@@ -74,6 +75,8 @@ Detalhes de comportamento em [notificacoes-e-emails.md](notificacoes-e-emails.md
 Configuração inválida falha na inicialização, sem mostrar segredos. Os exemplos e ambos os Compose mantêm o canal desligado (os três `NOTIFICATIONS_ASYNC_*` não são repassados pelo Compose).
 
 ## Exemplo para desenvolvimento com e-mail simulado
+
+Para variáveis e checklist do ambiente Vercel/Render (`JAVA_TOOL_OPTIONS`, `APP_BASE_URL`, segredos no painel e `SEED_ALLOW_REMOTE` da carga), veja [ambiente-de-testes.md](ambiente-de-testes.md). Não é necessário criar `.env` para o Blueprint.
 
 ```
 NOTIFICATIONS_EMAIL_ENABLED=true
