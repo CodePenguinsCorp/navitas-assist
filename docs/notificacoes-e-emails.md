@@ -61,3 +61,7 @@ O plano do provedor (por exemplo, o Resend gratuito: cerca de 100 por dia e 3.00
 
 - Falhas do canal não desfazem a OS nem a notificação do app. Existe uma janela de perda entre o commit da OS e a distribuição pelo listener; não há outbox de negócio.
 - O provedor pode reconhecer a tentativa anterior pelo `Idempotency-Key`; mudanças de endereço ou conteúdo podem conflitar na janela de retenção dele, e um timeout após aceitação pode duplicar fora dela.
+
+## Consulta da fila vazia (P10)
+
+O worker consulta primeiro os IDs com envio vencido (`due()`). Se a fila estiver vazia, retorna sem consultar o consumo das cotas diárias e mensais. Com itens pendentes, preserva a verificação das cotas antes de preparar cada envio.

@@ -22,11 +22,13 @@ public class NotificationEmailWorker {
     @Scheduled(fixedDelayString = "${navitas.notifications.email.poll-ms:5000}", initialDelayString = "${navitas.notifications.email.poll-ms:5000}")
     public synchronized void poll() {
         if (!properties.getEmail().isEnabled()) return;
+        var due = queue.due();
+        if (due.isEmpty()) return;
         // Teto do plano: atingido, nada é preparado; as linhas seguem PENDING, sem gastar tentativas, até o próximo dia/mês.
         NotificationEmailQuota.Usage usage = quota.usage();
         long sentToday = usage.sentToday();
         long sentThisMonth = usage.sentThisMonth();
-        for (Long id : queue.due()) {
+        for (Long id : due) {
             if (usage.reached(sentToday, sentThisMonth)) {
                 log.info("result=EMAIL_LIMIT_REACHED sentToday={} sentThisMonth={}", sentToday, sentThisMonth);
                 return;

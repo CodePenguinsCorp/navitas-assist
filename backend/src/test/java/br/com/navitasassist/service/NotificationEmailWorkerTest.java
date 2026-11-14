@@ -38,6 +38,16 @@ class NotificationEmailWorkerTest {
     }
 
     @Test
+    void emptyQueueDoesNotQueryQuota() {
+        properties.getEmail().setEnabled(true);
+        when(queue.due()).thenReturn(List.of());
+        when(quota.usage()).thenReturn(new NotificationEmailQuota.Usage(0, 100, 0, 3000));
+        new NotificationEmailWorker(queue, provider, properties, quota).poll();
+        verify(quota, never()).usage();
+        verify(provider, never()).send(any(), any());
+    }
+
+    @Test
     void spacesRealProviderSendsToRespectTheRateLimit() {
         NotificationEmailWorker worker = worker("resend", 200, new NotificationEmailQuota.Usage(0, 100, 0, 3000));
         long start = System.nanoTime();
