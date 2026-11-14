@@ -27,25 +27,10 @@
 .due-date-field__icon { color: var(--muted); }
 .is-empty .due-date-field__text { color: var(--muted); font-weight: var(--font-weight-regular); }
 
-.due-date-field__form { display: grid; gap: var(--space-2); min-width: 0; }
+.due-date-field__form { display: grid; gap: var(--space-1); justify-items: start; }
 .due-date-field__group { min-width: 0; }
-.due-date-field__control { position: relative; min-width: 0; }
-.due-date-field__control input { padding-inline-end: calc(var(--control-height) + var(--space-1)); }
-.due-date-field__clear {
-  position: absolute;
-  inset-block: 0;
-  inset-inline-end: var(--space-1);
-  display: inline-grid;
-  place-items: center;
-  width: var(--control-height-xs);
-  height: var(--control-height-xs);
-  margin-block: auto;
-  border-radius: var(--radius-xs);
-  background: transparent;
-  color: var(--muted);
-}
-.due-date-field__clear:hover:not(:disabled) { background: var(--brand-tint); color: var(--text); }
+.due-date-field__control input { width: 11rem; max-width: 100%; }
+.due-date-field__clear { padding: 0; background: transparent; color: var(--muted); font-size: var(--font-size-sm); text-decoration: underline; }
 .due-date-field__clear:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-.due-date-field__clear:disabled { opacity: 0; pointer-events: none; }
-.due-date-field__actions { justify-content: flex-end; gap: var(--space-2); }
-.due-date-field__save { min-height: var(--control-height); padding-inline: var(--space-3); }
+.due-date-field__clear:disabled { opacity: var(--disabled-opacity); }
+.due-date-field__error { margin: 0; }

@@ -49,7 +49,7 @@ describe('RmaDueDateFieldComponent', () => {
   const button = (label: string) => [...host().querySelectorAll<HTMLButtonElement>('button')].find((item) => text(item) === label || item.getAttribute('aria-label') === label);
   const edit = () => { trigger()!.click(); render(); };
   const type = (value: string) => { input()!.value = value; input()!.dispatchEvent(new Event('input')); render(); };
-  const submit = () => { host().querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true })); render(); };
+  const submit = () => { input()!.dispatchEvent(new Event('change', { bubbles: true })); render(); };
 
   it('shows the value as a borderless clickable trigger with a calendar icon and no Alterar button', () => {
     mount();
@@ -90,7 +90,8 @@ describe('RmaDueDateFieldComponent', () => {
     expect(input()!.min).toBe('2026-11-02');
     expect(input()!.getAttribute('aria-label')).toBe('Data limite');
     expect(document.activeElement).toBe(input());
-    expect([...host().querySelectorAll('.due-date-field__actions button')].map(text)).toEqual(['Cancelar', 'Salvar']);
+    expect(button('Cancelar')).toBeUndefined();
+    expect(button('Salvar')).toBeUndefined();
   });
 
   it('saves the chosen date, emits the OS and returns focus to the trigger', () => {
@@ -104,14 +105,12 @@ describe('RmaDueDateFieldComponent', () => {
     expect(document.activeElement).toBe(trigger());
   });
 
-  it('clears with the x button and saves null (clearDueDate)', () => {
+  it('removes the date immediately and saves null (clearDueDate)', () => {
     mount();
     edit();
-    button('Limpar data limite')!.click();
+    button('Remover data')!.click();
     render();
-    expect(input()!.value).toBe('');
-    expect(document.activeElement).toBe(input());
-    submit();
+    expect(input()).toBeNull();
     // RmaService.updateDueDate turns null into { clearDueDate: true } (rma.service.spec.ts).
     expect(calls).toEqual([[4, null]]);
   });
@@ -151,41 +150,66 @@ describe('RmaDueDateFieldComponent', () => {
     expect(text(host().querySelector('[role="alert"]'))).toBe('Não foi possível salvar a data limite.');
   });
 
-  it('Cancelar closes without a request and returns focus to the trigger', () => {
+  it('outside click closes without a request', () => {
     mount();
     edit();
     type('2026-11-25');
-    button('Cancelar')!.click();
+    document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
     render();
     expect(input()).toBeNull();
     expect(calls).toEqual([]);
-    expect(document.activeElement).toBe(trigger());
   });
 
   it('Escape cancels the edit and is consumed before the detail sees it', () => {
     mount();
     edit();
+    type('2026-11-25');
     const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
     input()!.dispatchEvent(escape);
     render();
     expect(escape.defaultPrevented).toBe(true);
+    expect(calls).toEqual([]);
     expect(input()).toBeNull();
   });
 
-  it('shows Salvando... and locks the field while saving', () => {
+  it('saves once and locks the field while saving', () => {
     const pending = new Subject<RmaResponse>();
     response = () => pending;
     mount();
     edit();
     type('2026-11-25');
     submit();
-    expect(text(button('Salvando...'))).toBe('Salvando...');
-    expect(button('Salvando...')!.disabled).toBe(true);
-    expect(button('Cancelar')!.disabled).toBe(true);
+    submit();
+    expect(calls).toEqual([[4, '2026-11-25']]);
+    expect(button('Remover data')!.disabled).toBe(true);
     expect(input()!.disabled).toBe(true);
     pending.next({ ...RMA, dueDate: '2026-11-25' });
     pending.complete();
     render();
     expect(input()).toBeNull();
   });
+  it('does not save empty or invalid native dates', () => {
+    mount(); edit();
+    for (const value of ['', 'invalid']) { type(value); submit(); }
+    expect(calls).toEqual([]);
+    expect(input()).not.toBeNull();
+  });
+
+  it('reports pending writes until completion and prevents cancellation during saving', () => {
+    const pending = new Subject<RmaResponse>();
+    response = () => pending;
+    mount();
+    const states: boolean[] = [];
+    fixture.componentInstance.busyChange.subscribe((busy) => states.push(busy));
+    edit(); type('2026-11-25'); submit();
+    document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    input()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    render();
+    expect(input()).not.toBeNull();
+    expect(states).toEqual([true]);
+    pending.next({ ...RMA, dueDate: '2026-11-25' }); pending.complete(); render();
+    expect(states).toEqual([true, false]);
+    expect(saved).toHaveLength(1);
+  });
+
 });

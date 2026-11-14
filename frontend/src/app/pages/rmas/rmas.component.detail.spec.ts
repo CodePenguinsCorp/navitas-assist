@@ -215,13 +215,13 @@ describe('RmasComponent detail with the shared information contract', () => {
     expect(getComputedStyle(actions).display).toBe('flex');
   });
 
-  it('lists the summary facts in contract order with Data limite and Nesta etapa', async () => {
+  it('lists the summary facts in contract order with Data limite and no duplicate stage time', async () => {
     const { open, detail, pairs } = await setup();
     open();
     const summary = detail().querySelector('.rma-details__summary')!;
 
     expect(pairs(summary).map(([label]) => label)).toEqual([
-      'Produtos', 'Entrada', 'Nota fiscal', 'Compra', 'Responsável', 'Prioridade', 'Data limite', 'Nesta etapa', 'Atualizado em'
+      'Produtos', 'Entrada', 'Nota fiscal', 'Compra', 'Responsável', 'Prioridade', 'Data limite', 'Atualizado em'
     ]);
     expect(Object.fromEntries(pairs(summary))).toEqual(expect.objectContaining({
       Produtos: '1 item', 'Nota fiscal': 'Não informada', Compra: 'Desconhecida'
@@ -403,19 +403,19 @@ describe('RmasComponent detail with the shared information contract', () => {
     const input = deadline.querySelector<HTMLInputElement>('input[type="date"]')!;
     input.value = '2026-10-30';
     input.dispatchEvent(new Event('input'));
-    input.closest('form')!.dispatchEvent(new Event('submit'));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
     view.render();
     expect(updateDueDate).toHaveBeenCalledWith(5, '2026-10-30');
     expect(deadline.querySelector('input[type="date"]')).toBeNull();
     expect(view.detail().querySelector('.rma-details__summary')?.textContent).toContain('30/10/2026');
   });
 
-  it('shows há 2 d 4 h in Nesta etapa and Encerrada em for closed ordens de serviço', async () => {
+  it('omits Nesta etapa from open and closed order summaries', async () => {
     const { open, detail, pairs } = await setup();
     open({ ...fullRma, stagePeriods: [{ status: 'TRIAGE', enteredAt: '2026-10-18T08:00:00Z', leftAt: null, durationSeconds: 0 }] });
-    expect(Object.fromEntries(pairs(detail().querySelector('.rma-details__summary')!))['Nesta etapa']).toBe('há 2 d 4 h');
+    expect(Object.fromEntries(pairs(detail().querySelector('.rma-details__summary')!))['Nesta etapa']).toBeUndefined();
     open({ ...fullRma, status: 'COMPLETED', stagePeriods: [{ status: 'COMPLETED', enteredAt: '2026-10-19T13:00:00Z', leftAt: null, durationSeconds: 0 }] });
-    expect(Object.fromEntries(pairs(detail().querySelector('.rma-details__summary')!))['Nesta etapa']).toBe('Encerrada em 19/10/2026 10:00');
+    expect(Object.fromEntries(pairs(detail().querySelector('.rma-details__summary')!))['Nesta etapa']).toBeUndefined();
   });
 
   it('lists the time of each previous stage in Histórico', async () => {

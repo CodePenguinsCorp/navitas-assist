@@ -7,12 +7,13 @@ Substitui o antigo SLA por etapa (prazos de 24/48/72/120 h e alertas `SLA_WARNIN
 - O backend devolve `stagePeriods` em cada OS: períodos em ordem cronológica, cada um com `status`, `enteredAt`, `leftAt` (nulo na etapa atual) e `durationSeconds`. O último é a etapa atual.
 - Registros consecutivos com o mesmo status formam um período só: notas e trocas de prioridade não reiniciam a etapa. Sair e voltar abre um período novo. Empates de instante usam o ID do histórico.
 - ordens de serviço legados sem histórico começam em `createdAt`; se faltar, em `entryDate` à meia-noite de `America/Sao_Paulo`. Durações nunca são negativas.
-- Os cards do Kanban mostram "há 2 d 4 h nesta etapa" para ordens de serviço abertas. O detalhe mostra "Nesta etapa" (ou "Encerrado em ..." para encerrados) e, no Histórico, a lista "Tempo por etapa". O tempo de impedimento continua contando na etapa.
+- Os cards do Kanban mostram "há 2 d 4 h nesta etapa" para ordens de serviço abertas. Nos dois detalhes, o resumo omite "Nesta etapa"; o bloco "Tempo por etapa" identifica a etapa atual com "(atual)". O tempo de impedimento continua contando na etapa.
 - A tela recalcula os tempos a cada 30 segundos (`ClockService`), sem recarregar.
 
 ## Data limite
 
-- Opcional e só data (`dueDate`, `YYYY-MM-DD`). Quem abre a OS (`rma.abrir`, `POST /api/rmas`) pode preenchê-la; depois, quem tem `rma.editar` altera ou remove pelo botão "Alterar" do detalhe: `PUT /api/rmas/{id}` com `{"dueDate": "..."}` ou `{"clearDueDate": true}` (enviar os dois dá `400`).
+- Opcional e só data (`dueDate`, `YYYY-MM-DD`). Quem abre a OS (`rma.abrir`, `POST /api/rmas`) pode preenchê-la; depois, quem tem `rma.editar` altera ou remove clicando na data do resumo do detalhe: `PUT /api/rmas/{id}` com `{"dueDate": "..."}` ou `{"clearDueDate": true}` (enviar os dois dá `400`).
+- A escolha de uma data válida salva automaticamente e fecha o editor, sem botões de confirmação. Esc ou clique fora cancela; "Remover data" salva a remoção. Erros aparecem no campo.
 - Não pode ser anterior à entrada, inclusive quando a edição muda só a entrada. Datas no passado são aceitas, porque uma OS antigo pode já estar atrasado.
 - Cada mudança fica em `dueDateHistory` (tabela `rma_due_date_history`) com autor, instante, valor anterior e novo, e aparece no Histórico do detalhe.
 - A situação vem em `deadline` (`status`, `dueSoonFrom`, `daysUntilDue`), com "hoje" na data civil de `America/Sao_Paulo`:

@@ -43,8 +43,7 @@ import {
   repairFacts,
   rmaHistory,
   rmaItemFacts,
-  sectionLabel,
-  stageFact
+  sectionLabel
 } from '../../core/utils/rma-detail';
 import {
   formatDate,
@@ -511,7 +510,6 @@ export class RmasComponent {
   protected readonly repairFacts = repairFacts;
   protected readonly rmaHistory = rmaHistory;
   protected readonly historyEntryTitle = historyEntryTitle;
-  protected readonly stageFact = stageFact;
 
   protected get todayDate(): string {
     return todayInputValue();
@@ -548,6 +546,7 @@ export class RmasComponent {
 
   protected readonly canOpenRma = computed(() => this.permissions.hasPermission('rma.abrir'));
 
+  protected readonly dueDateBusy = signal(false);
   protected readonly warrantyBusy = signal(false);
   protected readonly statusBusy = signal(false);
   protected readonly canUpdateStatus = computed(() => this.permissions.hasPermission('rma.status'));
@@ -701,7 +700,7 @@ export class RmasComponent {
 
   /** Same tab contract as notifications: arrows wrap, Home/End jump to the ends; selection follows focus. */
   protected onDetailTabKeydown(event: KeyboardEvent): void {
-    if (this.statusBusy() || this.diagnosisBusy() || this.warrantyBusy()) return;
+    if (this.statusBusy() || this.diagnosisBusy() || this.warrantyBusy() || this.dueDateBusy()) return;
     const ids = this.detailTabs.map((tab) => tab.id);
     const current = ids.indexOf(this.detailTab());
     let next: number;
@@ -723,7 +722,7 @@ export class RmasComponent {
   }
 
   protected closeModal(): void {
-    if (this.createSubmitting() || this.diagnosisBusy() || this.statusBusy() || this.warrantyBusy()) return;
+    if (this.createSubmitting() || this.diagnosisBusy() || this.statusBusy() || this.warrantyBusy() || this.dueDateBusy()) return;
     this.resetModal();
   }
 

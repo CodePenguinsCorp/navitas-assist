@@ -526,7 +526,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     const input = view.host.querySelector<HTMLInputElement>('.rma-detail__deadline input[type="date"]')!;
     input.value = '2026-10-30';
     input.dispatchEvent(new Event('input'));
-    input.closest('form')!.dispatchEvent(new Event('submit'));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
     view.fixture.detectChanges();
     expect(updated.map((rma) => rma.dueDate)).toEqual(['2026-10-30']);
   });
@@ -536,13 +536,13 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(host.querySelector<HTMLButtonElement>('.rma-detail__deadline .due-date-field__trigger')!.disabled).toBe(true);
   });
 
-  it('shows há 2 d 4 h in Nesta etapa and Encerrada em for closed ordens de serviço', async () => {
+  it('omits Nesta etapa from open and closed order summaries', async () => {
     let view = await setup({ rma: { ...fullRma, stagePeriods: [{ status: 'TRIAGE', enteredAt: '2026-10-18T08:00:00Z', leftAt: null, durationSeconds: 0 }] } });
-    expect(view.sidePairs()['Nesta etapa']).toBe('há 2 d 4 h');
+    expect(view.sidePairs()['Nesta etapa']).toBeUndefined();
     TestBed.resetTestingModule();
 
     view = await setup({ rma: { ...fullRma, status: 'COMPLETED', stagePeriods: [{ status: 'COMPLETED', enteredAt: '2026-10-19T13:00:00Z', leftAt: null, durationSeconds: 0 }] } });
-    expect(view.sidePairs()['Nesta etapa']).toBe('Encerrada em 19/10/2026 10:00');
+    expect(view.sidePairs()['Nesta etapa']).toBeUndefined();
   });
 
   it('shows the time of each stage in the side column', async () => {

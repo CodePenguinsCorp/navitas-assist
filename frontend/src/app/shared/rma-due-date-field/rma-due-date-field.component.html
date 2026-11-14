@@ -1,5 +1,5 @@
 @if (editing()) {
-  <form class="due-date-field__form" [formGroup]="form" (ngSubmit)="save()" (keydown.escape)="cancelOnEscape($event)">
+  <div class="due-date-field__form" [formGroup]="form" (keydown.escape)="cancelOnEscape($event)">
     <div class="field-group due-date-field__group">
       <div class="due-date-field__control">
         <input
@@ -10,10 +10,9 @@
           [attr.aria-invalid]="invalid() ? 'true' : null"
           [attr.aria-describedby]="invalid() ? 'rma-due-date-error' : null"
           (input)="invalid.set(false)"
+          (change)="selectDate($event)"
         />
-        <button type="button" class="due-date-field__clear" aria-label="Limpar data limite" [disabled]="busy() || !control.value" (click)="clear()">
-          <app-icon name="close" [size]="16" />
-        </button>
+
       </div>
       @if (invalid()) {
         <small id="rma-due-date-error" class="field-error" role="alert">A data limite não pode ser anterior à entrada.</small>
@@ -22,11 +21,10 @@
     @if (error(); as message) {
       <p class="field-error due-date-field__error" role="alert">{{ message }}</p>
     }
-    <div class="form-actions due-date-field__actions">
-      <button type="button" class="button-secondary button-secondary--small" [disabled]="busy()" (click)="cancel()">Cancelar</button>
-      <button type="submit" class="button-primary due-date-field__save" [disabled]="busy()">{{ busy() ? 'Salvando...' : 'Salvar' }}</button>
-    </div>
-  </form>
+    @if (rma().dueDate) {
+      <button type="button" class="due-date-field__clear" [disabled]="busy() || disabled()" (click)="clear()">Remover data</button>
+    }
+  </div>
 } @else if (canEdit()) {
   <button type="button" class="due-date-field__trigger" [class.is-empty]="!rma().dueDate" [disabled]="disabled()" (click)="edit()">
     <app-icon class="due-date-field__icon" name="calendar" [size]="16" />

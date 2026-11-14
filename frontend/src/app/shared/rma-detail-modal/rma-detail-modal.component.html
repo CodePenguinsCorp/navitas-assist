@@ -36,7 +36,7 @@
 
         <div class="detail-actions">
           @if (canUpdateStatus()) {
-            <app-rma-status-field [rma]="rma()" [disabled]="disabled() || diagnosisBusy() || warrantyBusy()"
+            <app-rma-status-field [rma]="rma()" [disabled]="disabled() || diagnosisBusy() || warrantyBusy() || dueDateBusy()"
               (saved)="rmaUpdated.emit($event)" (busyChange)="statusBusy.set($event); busyChange.emit($event)" />
           } @else {
             <span class="status-chip rma-detail__status" [attr.data-status]="rma().status">{{ statusLabel(rma().status) }}</span>
@@ -97,7 +97,7 @@
         }
 
         <section class="rma-detail__section detail-card">
-          <app-rma-diagnosis [collapsible]="true" [rma]="rma()" [disabled]="disabled() || statusBusy() || warrantyBusy()" (saved)="rmaUpdated.emit($event)"
+          <app-rma-diagnosis [collapsible]="true" [rma]="rma()" [disabled]="disabled() || statusBusy() || warrantyBusy() || dueDateBusy()" (saved)="rmaUpdated.emit($event)"
             (busyChange)="diagnosisBusy.set($event); busyChange.emit($event)" />
         </section>
 
@@ -181,10 +181,9 @@
             <div class="detail-facts__block rma-detail__deadline">
               <dt>Data limite</dt>
               <dd [class.is-empty]="!rma().dueDate">
-                <app-rma-due-date-field [rma]="rma()" [canEdit]="canEditDueDate()" [disabled]="writePending()" (saved)="rmaUpdated.emit($event)" />
+                <app-rma-due-date-field [rma]="rma()" [canEdit]="canEditDueDate()" [disabled]="writePending()" (saved)="rmaUpdated.emit($event)" (busyChange)="dueDateBusy.set($event); busyChange.emit($event)" />
               </dd>
             </div>
-            <div><dt>{{ stage().label }}</dt><dd>{{ stage().value }}</dd></div>
           </dl>
         </section>
         <section class="rma-detail__info rma-detail__info--stages detail-card">

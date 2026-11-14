@@ -18,8 +18,7 @@ import {
   repairFacts,
   rmaHistory,
   rmaItemFacts,
-  sectionLabel,
-  stageFact
+  sectionLabel
 } from '../../core/utils/rma-detail';
 import { CustomSelectComponent, CustomSelectOption } from '../form-controls/custom-select/custom-select.component';
 import { CollapsibleSectionComponent } from '../collapsible-section/collapsible-section.component';
@@ -75,10 +74,11 @@ export class RmaDetailModalComponent {
   readonly fallbackFocus = input<HTMLElement | null>(null);
   @Output() readonly closed = new EventEmitter<void>();
   @Output() readonly busyChange = new EventEmitter<boolean>();
+  protected readonly dueDateBusy = signal(false);
   protected readonly warrantyBusy = signal(false);
   protected readonly statusBusy = signal(false);
   protected readonly diagnosisBusy = signal(false);
-  protected readonly writePending = computed(() => this.disabled() || this.statusBusy() || this.diagnosisBusy() || this.warrantyBusy());
+  protected readonly writePending = computed(() => this.disabled() || this.statusBusy() || this.diagnosisBusy() || this.warrantyBusy() || this.dueDateBusy());
   /** A person (or null, unassigned) picked in the inline selector; the host saves it. */
   @Output() readonly assigneeChange = new EventEmitter<{ rma: RmaResponse; assigneeId: number | null }>();
   /** The OS returned by a save made inside the detail (impediments, due date). */
@@ -102,7 +102,6 @@ export class RmaDetailModalComponent {
   protected readonly repairFacts = repairFacts;
   protected readonly activity = computed(() => rmaHistory(this.rma()));
   protected readonly historyEntryTitle = historyEntryTitle;
-  protected readonly stage = computed(() => stageFact(this.rma(), this.clock.now()));
   /** Same choices as the former assignment dialog: unassigned plus the eligible users. */
   protected readonly assigneeOptions = computed<ReadonlyArray<CustomSelectOption<number | null>>>(() =>
     assigneeSelectOptions(this.rma(), this.assignableUsers()));

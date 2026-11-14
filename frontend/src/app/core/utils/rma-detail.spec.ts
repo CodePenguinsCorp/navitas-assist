@@ -13,7 +13,6 @@ import {
   rmaHistory,
   rmaItemFacts,
   sectionLabel,
-  stageFact,
   warrantyExpiryLabel,
   warrantyTermLabel
 } from './rma-detail';
@@ -226,13 +225,6 @@ describe('OS detail contract', () => {
     expect(history[1].by).toBe('bia');
   });
 
-  it('shows the time in the current stage, or the closing for closed ordens de serviço', () => {
-    const now = Date.parse('2026-10-22T16:00:00Z');
-    expect(stageFact(buildRma({ status: 'IN_REPAIR', stagePeriods: [{ status: 'IN_REPAIR', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 0 }] }), now))
-      .toEqual({ label: 'Nesta etapa', value: 'há 2 d 4 h', empty: false });
-    expect(stageFact(buildRma({ status: 'COMPLETED', stagePeriods: [{ status: 'COMPLETED', enteredAt: '2026-10-21T13:30:00Z', leftAt: null, durationSeconds: 0 }] }), now).value)
-      .toBe('Encerrada em 21/10/2026 10:30');
-  });
 });
 
 

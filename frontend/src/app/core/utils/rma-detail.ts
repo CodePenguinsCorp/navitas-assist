@@ -7,11 +7,8 @@ import {
   RmaStatusHistoryResponse,
   WarrantyOverrideStatus
 } from '../models';
-import { CLOSED_RMA_STATUSES } from '../mock-data';
 import { formatBusinessDateTime, formatDateOnly } from './date';
-import { formatDuration } from './duration';
 import { blockDuration } from './rma-block';
-import { currentStagePeriod, stageElapsedSeconds } from './rma-stage';
 import { failureCauseLabel, failureTypeLabel, statusLabel, warrantyLabel } from './rma-ui';
 
 /**
@@ -112,14 +109,6 @@ export function blockedLabel(block: RmaBlockResponse, now: number): string {
   return `Impedida há ${blockDuration(block, now)}`;
 }
 
-/** "Nesta etapa": "há 2 d 4 h" while open, "Encerrada em dd/mm/aaaa hh:mm" once closed. */
-export function stageFact(rma: Pick<RmaResponse, 'status' | 'stagePeriods'>, now: number): RmaFact {
-  const current = currentStagePeriod(rma);
-  if (CLOSED_RMA_STATUSES.includes(rma.status)) {
-    return fact('Nesta etapa', `Encerrada em ${formatBusinessDateTime(current.enteredAt).replace(', ', ' ')}`);
-  }
-  return fact('Nesta etapa', `há ${formatDuration(stageElapsedSeconds(current, now))}`);
-}
 
 export type RmaHistoryEntry =
   | { kind: 'status'; at: string; by: string; label: string; status: RmaStatus; note: string | null; event: RmaStatusHistoryResponse }

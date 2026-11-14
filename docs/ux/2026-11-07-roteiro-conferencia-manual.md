@@ -99,8 +99,9 @@ As seções acima foram escritas antes destas entregas. Onde citam SLA por etapa
 ## 13. Prazo: tempo por etapa e data limite
 - Abrir uma OS com data limite; tentar uma data anterior à entrada: o formulário recusa. Data no passado é aceita.
 - Kanban: card aberto mostra "há N d N h nesta etapa"; OS encerrada não mostra. O valor avança sozinho (cerca de 30 s), sem recarregar.
-- Detalhe: "Nesta etapa" (ou "Encerrado em ...") e, no Histórico, "Tempo por etapa" e o histórico da data limite (autor, antes e depois). Mudar status só para anotar ou trocar a prioridade não reinicia a etapa.
-- Com `rma.editar`: "Alterar" a data limite e remover a data. Sem a permissão (VIEWER): o botão não aparece.
+- Detalhe: o resumo não mostra "Nesta etapa". "Tempo por etapa" preserva a etapa com "(atual)" e o histórico da data limite (autor, antes e depois). Mudar status só para anotar ou trocar a prioridade não reinicia a etapa.
+- Data limite nos dois detalhes: escolher data salva e fecha sem Cancelar/Salvar; Esc/clique fora cancela; "Remover data" remove o prazo. Conferir editor compacto em 320 px e desktop, erro inline e leitura sem permissão.
+- Com `rma.editar`: clicar na data do resumo para editar. Sem a permissão (VIEWER): somente leitura.
 - Card com data limite: "Vence em N dias" / "Vence hoje" (perto do limite) ou "Atrasado há N dias"; sem texto quando está no prazo, sem data ou encerrado.
 - Filtro "Prazo" (Todos, Atrasados, Perto do limite, No prazo, Sem data limite); encerrados só em "Todos"; o filtro entra na visualização salva e uma visualização antiga abre em "Todos". Dashboard: indicador "Atrasados" com o detalhe "perto do limite".
 - Virada do dia: uma OS com limite hoje passa de "Vence hoje" para "Atrasado há 1 dia" depois da meia-noite de São Paulo, sem recarregar.
