@@ -3439,6 +3439,15 @@ app-custom-select:has(> .custom-select--priority) {
 
 /* Intervenções e componentes trocados (detalhe do RMA): cabeçalho com ação à direita, linhas compactas, formulário recolhido. */
 .repair-panel { display: block; }
+/* Cards of these panels keep the same inner padding as the other detail cards (Kanban detail). */
+.repair-panel.detail-card, .parts-panel > .detail-card { padding: 1.1rem 1.25rem 1.25rem; }
+/* In the list detail the tab panel is already the card: no box inside box, sections separated by space. */
+.rma-details__panel .detail-card { padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.rma-details__panel > app-rma-repair-panel { display: block; margin-top: var(--space-5); }
+.rma-details__panel > app-rma-repair-panel + .rma-details__section { margin-top: var(--space-5); }
+.rma-details__panel .parts-panel { gap: var(--space-5); }
+/* Note of a history entry (status change), flush with the text above it. */
+.history-note { margin: var(--space-1) 0 0; padding: var(--space-1) var(--space-3); border-left: 3px solid var(--line); color: var(--muted); font-size: var(--font-size-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
 .collapsible__actions .link-button { display: inline-flex; align-items: center; gap: var(--space-1); white-space: nowrap; }
 .repair-total { color: var(--muted); font-size: var(--font-size-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .repair-empty { margin: 0; padding: var(--space-2) 0; color: var(--muted); font-size: var(--font-size-sm); }
@@ -3462,7 +3471,8 @@ app-custom-select:has(> .custom-select--priority) {
 .form-actions.repair-actions { flex-direction: row; align-items: center; justify-content: space-between; }
 
 /* Movimentos de peças: cabeçalho com chevron e linhas em colunas alinhadas. */
-.parts-panel { display: grid; gap: var(--space-3); min-width: 0; }
+/* Same gap as the cards of the Kanban detail column. */
+.parts-panel { display: grid; gap: 1.25rem; min-width: 0; }
 .movements__list { display: grid; gap: var(--space-1); margin: var(--space-2) 0 0; padding: 0; list-style: none; font-size: var(--font-size-sm); }
 .movements__list li { display: grid; grid-template-columns: 9.5rem 7rem 6rem 3.5rem 5rem minmax(0, 1fr); align-items: center; gap: var(--space-2); min-width: 0; }
 .movements__list li.is-reversed { color: var(--muted); }

@@ -1,15 +1,19 @@
 @if (collapsible()) {
   <app-collapsible-section title="Diagnóstico" icon="clipboard" [open]="true" storageKey="rma.diagnosis">
-    @if (canEdit() && rma().diagnosis && !editing()) {
-      <button sectionActions type="button" class="link-button diagnosis-trigger" [disabled]="disabled()" (click)="edit()">Editar</button>
+    @if (canEdit() && !editing()) {
+      <button sectionActions type="button" class="link-button diagnosis-trigger" [disabled]="disabled()" (click)="edit()">
+        @if (rma().diagnosis) { Editar } @else { <app-icon name="plus" [size]="14" /> Registrar diagnóstico }
+      </button>
     }
     <ng-container *ngTemplateOutlet="content" />
   </app-collapsible-section>
 } @else {
   <header class="diagnosis-header">
     <h3 class="detail-card__title"><app-icon name="clipboard" [size]="16" /> Diagnóstico</h3>
-    @if (canEdit() && rma().diagnosis && !editing()) {
-      <button type="button" class="link-button diagnosis-trigger" [disabled]="disabled()" (click)="edit()">Editar</button>
+    @if (canEdit() && !editing()) {
+      <button type="button" class="link-button diagnosis-trigger" [disabled]="disabled()" (click)="edit()">
+        @if (rma().diagnosis) { Editar } @else { <app-icon name="plus" [size]="14" /> Registrar diagnóstico }
+      </button>
     }
   </header>
   <ng-container *ngTemplateOutlet="content" />
@@ -78,10 +82,7 @@
     }
   </dl>
 } @else {
-  <p class="muted-inline">{{ noDiagnosisLabel }}</p>
-  @if (canEdit()) {
-    <button type="button" class="link-button diagnosis-trigger" [disabled]="disabled()" (click)="edit()">Registrar diagnóstico</button>
-  }
+  <p class="repair-empty">{{ noDiagnosisLabel }}</p>
 }
 @if (message()) { <p role="status" class="muted-inline">{{ message() }}</p> }
 </ng-template>

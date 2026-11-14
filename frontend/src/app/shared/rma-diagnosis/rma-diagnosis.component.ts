@@ -23,6 +23,7 @@ import { IconComponent } from '../icon/icon.component';
     :host { display: block; min-width: 0; overflow-wrap: anywhere; }
     .diagnosis-header { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-3); }
     h3 { display: flex; align-items: center; gap: var(--space-2); margin: 0; }
+    .diagnosis-trigger { display: inline-flex; align-items: center; gap: var(--space-1); white-space: nowrap; }
     fieldset.diagnosis-fields { min-inline-size: 0; border: 0; padding: 0; margin: 0; grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
     legend { font-weight: var(--font-weight-bold); margin-bottom: var(--space-2); }
     .form-actions { justify-content: space-between; }

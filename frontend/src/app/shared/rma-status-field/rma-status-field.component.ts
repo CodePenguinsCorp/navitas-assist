@@ -26,7 +26,7 @@ type StatusTarget = Pick<RmaResponse, 'id' | 'status'> & { statusHistory?: RmaSt
       }
     }
     @if (event(); as entry) {
-      @if (entry.note) { <blockquote>{{ entry.note }}</blockquote> }
+      @if (entry.note) { <blockquote class="history-note">{{ entry.note }}</blockquote> }
       @if (entry.noteEditedAt) { <small class="muted-inline" [title]="editedTooltip(entry)">(editada)</small> }
       @if (noteAllowed() && !editing()) {
         <button type="button" class="link-button status-note-trigger" [disabled]="busy() || disabled()" (click)="editNote()">{{ entry.note ? 'Editar observação' : 'Adicionar observação' }}</button>

@@ -261,7 +261,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     const empty = await setup({ rma: { ...fullRma, diagnosis: null } });
     const block = empty.section('Diagnóstico');
     expect(block).not.toBeNull();
-    expect(block!.querySelector('.muted-inline')?.textContent?.trim()).toBe('Sem diagnóstico registrado.');
+    expect(block!.querySelector('.repair-empty')?.textContent?.trim()).toBe('Sem diagnóstico registrado.');
     expect(block!.querySelector('button.link-button')?.textContent?.trim()).toBe('Registrar diagnóstico');
   });
 
