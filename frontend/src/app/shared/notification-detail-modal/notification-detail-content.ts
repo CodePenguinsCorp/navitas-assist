@@ -1,0 +1,28 @@
+import { NotificationResponse } from '../../core/models';
+
+/** Only exact NotificationContentFactory formats are split; ambiguous text stays intact. */
+export function notificationDetailContent({ message, eventType, title, rmaCode }:
+  Pick<NotificationResponse, 'message' | 'eventType'> & Partial<Pick<NotificationResponse, 'title' | 'rmaCode'>>): {
+  fields: Array<{ label: string; value: string }>;
+  message: string;
+} {
+  const parts = message.split(' · ');
+  const detail = eventType === 'RMA_CREATED'
+    ? /^prioridade (alta|média|baixa)\. Aberta por ((?:(?!\. ).)+)\.$/u.exec(parts[2] ?? '')
+    : eventType === 'RMA_ASSIGNED'
+      ? /^etapa (.+)\. Atribuída por ((?:(?!\. ).)+)\.$/u.exec(parts[2] ?? '')
+      : null;
+  const recognized = parts.length === 3 && parts[0].trim() && parts[1].trim() && detail;
+  const fields = recognized ? [
+      { label: 'Cliente', value: parts[0] },
+      { label: 'Equipamento', value: parts[1] },
+      { label: eventType === 'RMA_CREATED' ? 'Prioridade' : 'Etapa', value: detail[1] },
+      { label: eventType === 'RMA_CREATED' ? 'Aberta por' : 'Atribuída por', value: detail[2] }
+    ] : [];
+  if (eventType === 'RMA_ASSIGNED' && title) {
+    const prefix = rmaCode ? `OS ${rmaCode} atribuída a ` : '';
+    const assignee = prefix && title.startsWith(prefix) ? title.slice(prefix.length) : '';
+    fields.push(assignee.trim() ? { label: 'Responsável', value: assignee } : { label: 'Atribuição', value: title });
+  }
+  return { fields, message: recognized ? '' : message };
+}

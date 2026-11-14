@@ -1,56 +1,65 @@
 <div class="modal-overlay" (click)="closed.emit()">
-  <section
-    class="modal-panel panel notification-detail"
-    role="dialog"
-    aria-modal="true"
-    [attr.aria-labelledby]="titleId"
-    appModalFocus
-    modalInitialFocus=".notification-detail__title"
-    [modalFallbackFocus]="fallbackFocus()"
-    (modalCloseRequested)="closed.emit()"
-    (click)="$event.stopPropagation()"
-  >
+  <section class="modal-panel panel notification-detail" role="dialog" aria-modal="true"
+    [attr.aria-labelledby]="titleId" appModalFocus modalInitialFocus=".notification-detail__title"
+    [modalFallbackFocus]="fallbackFocus()" (modalCloseRequested)="closed.emit()"
+    (click)="$event.stopPropagation()" (keydown)="onKeydown($event)">
     <header class="modal-header">
+      <span class="notification-detail__seal" [class]="severityClass(notification().severity)"
+        role="img" [attr.aria-label]="severityLabels[notification().severity]">
+        <app-icon [name]="notification().severity === 'INFO' ? 'bell' : 'alert'" [size]="24" />
+      </span>
       <div class="notification-detail__heading">
-        <div class="notification-detail__chips">
-          <span class="mini-chip" [class]="severityClass(notification().severity)">{{ severityLabels[notification().severity] }}</span>
-          <span class="mini-chip">{{ eventLabels[notification().eventType] }}</span>
-        </div>
         <h3 class="notification-detail__title" [id]="titleId" tabindex="-1">{{ headline() }}</h3>
+        @if (notification().rmaCode; as code) { <span class="mini-chip notification-detail__code">{{ code }}</span> }
       </div>
-      <div class="notification-detail__nav">
-        <button type="button" class="modal-close notification-detail__prev" aria-label="Notificação anterior" [disabled]="!hasPrevious()" (click)="previous.emit()"><app-icon name="chevron" [size]="18" /></button>
-        <button type="button" class="modal-close" aria-label="Próxima notificação" [disabled]="!hasNext()" (click)="next.emit()"><app-icon name="chevron" [size]="18" /></button>
-        <button type="button" class="modal-close" aria-label="Fechar" (click)="closed.emit()">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
-        </button>
-      </div>
+      <button type="button" class="modal-close" aria-label="Fechar" (click)="closed.emit()"><app-icon name="close" [size]="20" /></button>
     </header>
 
-    @if (error()) {
-      <p class="field-error" role="alert">{{ error() }}</p>
-    }
+    <div class="notification-detail__body app-scroll" [attr.aria-busy]="busy()">
+      @if (content().fields.length) {
+        <dl class="notification-detail__fields">
+          @for (field of content().fields; track field.label) {
+            <div><dt>{{ field.label }}</dt><dd>{{ field.value }}</dd></div>
+          }
+        </dl>
+      }
+      @if (content().message) {
+        <div class="notification-detail__copy">
+          <h4>{{ notification().eventType === 'RMA_BLOCKED' ? 'Motivo do impedimento' : 'Mensagem' }}</h4>
+          <p class="notification-detail__message">{{ content().message }}</p>
+        </div>
+      }
+      <div class="notification-detail__meta">
+        <time [attr.datetime]="notification().createdAt">{{ dateTime(notification().createdAt) }}</time>
+        <span>· {{ ago() }}</span>
+        <span class="mini-chip" [class.priority-low]="!notification().read">{{ notification().read ? 'Lida' : 'Não lida' }}</span>
+        @if (snoozedUntil(); as until) {
+          <span class="notification-detail__snoozed"><app-icon name="clock" [size]="14" />Adiada até {{ dateTime(until) }}</span>
+        }
+      </div>
+    </div>
 
-    <p class="notification-detail__message">{{ notification().message }}</p>
-
-    <p class="notification-detail__meta">
-      <time [attr.datetime]="notification().createdAt">{{ dateTime(notification().createdAt) }}</time> · {{ ago() }} · {{ notification().read ? 'Lida' : 'Não lida' }}
-      @if (snoozedUntil(); as until) {
-        · <span class="notification-detail__snoozed"><app-icon name="clock" [size]="13" />Adiada até {{ dateTime(until) }}</span>
-      }
-    </p>
-
-    <footer class="form-actions notification-detail__actions">
-      <button type="button" class="button-secondary" (click)="closed.emit()">Fechar</button>
-      @if (!notification().read) {
-        <button type="button" class="button-secondary" [disabled]="busy()" (click)="markRead.emit()">Marcar como lida</button>
-      }
-      @if (canSnooze()) {
-        <app-custom-select size="compact" [actionMenu]="true" [ariaLabel]="'Adiar ' + notification().title" placeholder="Adiar" [options]="snoozeOptions" [disabled]="busy()" (valueChange)="snooze($any($event))" />
-      }
-      @if (canOpen()) {
-        <button type="button" class="button-primary" (click)="openAction.emit()">Abrir OS</button>
-      }
+    <footer class="notification-detail__footer">
+      @if (error()) { <p class="field-error" role="alert">{{ error() }}</p> }
+      @if (busy()) { <p class="notification-detail__pending" role="status">Salvando…</p> }
+      <nav class="notification-detail__nav" aria-label="Navegar pelas notificações">
+        <button type="button" class="button-secondary notification-detail__ghost notification-detail__prev" aria-label="Notificação anterior"
+          aria-keyshortcuts="ArrowLeft" [disabled]="!hasPrevious() || busy()" (click)="previous.emit()"><app-icon name="chevron" [size]="16" />Anterior</button>
+        @if (position() !== null && total() !== null) { <span aria-live="polite">{{ position() }} de {{ total() }}</span> }
+        <button type="button" class="button-secondary notification-detail__ghost" aria-label="Próxima notificação"
+          aria-keyshortcuts="ArrowRight" [disabled]="!hasNext() || busy()" (click)="next.emit()">Próxima<app-icon name="chevron" [size]="16" /></button>
+      </nav>
+      <div class="notification-detail__actions">
+        <div class="notification-detail__secondary">
+          @if (canSnooze()) {
+            <app-custom-select [actionMenu]="true" [ariaLabel]="'Adiar ' + headline()" placeholder="Adiar" [options]="snoozeOptions" [disabled]="busy()" (valueChange)="snooze($any($event))" />
+          }
+          @if (!notification().read) {
+            <button type="button" class="button-secondary" [disabled]="busy()" (click)="markRead.emit()">Marcar como lida</button>
+          }
+        </div>
+        @if (canOpen()) { <button type="button" class="button-primary" (click)="openAction.emit()">Abrir OS<app-icon name="external" [size]="16" /></button> }
+      </div>
     </footer>
   </section>
 </div>

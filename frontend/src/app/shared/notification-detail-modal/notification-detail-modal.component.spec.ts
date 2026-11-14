@@ -27,23 +27,36 @@ describe('NotificationDetailModalComponent', () => {
 
   afterEach(() => { document.body.style.overflow = ''; });
 
-  it('shows a short headline with the OS code once, the chips, the message and one meta line', async () => {
-    await setup({ ...NOTIFICATION, title: 'Impedimento na OS OS-2026-000007', message: 'Aguardando peça' });
+  it('shows a human title, a separate OS code, structured fields and a single close control', async () => {
+    await setup({ ...NOTIFICATION, eventType: 'RMA_CREATED', severity: 'INFO', message: '[DEMO] Vale Verde · [DEMO] Switch · prioridade alta. Aberta por admin.' });
     const dialog = root().querySelector('[role="dialog"]')!;
     const title = root().querySelector('h3')!;
     expect(dialog.getAttribute('aria-labelledby')).toBe(title.id);
-    expect(title.textContent!.trim()).toBe('Impedimento · OS-2026-000007');
-    expect(Array.from(root().querySelectorAll('.notification-detail__chips .mini-chip')).map((chip) => chip.textContent!.trim())).toEqual(['Atenção', 'Bloqueio']);
-    expect(root().querySelector('.notification-detail__message')!.textContent).toBe('Aguardando peça');
-    expect(root().querySelector('.notification-detail__meta')!.textContent!.replace(/[\s ]+/g, ' ').trim()).toBe('24/10/2026, 11:30 · há 30 min · Não lida');
-    expect(root().querySelector('dl')).toBeNull();
+    expect(title.textContent!.trim()).toBe('Nova OS');
+    expect(root().querySelectorAll('button[aria-label="Fechar"]').length).toBe(1);
+    expect(button('Fechar')).toBeUndefined();
+    expect(Array.from(root().querySelectorAll('dt')).map(el => el.textContent!.trim())).toEqual(['Cliente', 'Equipamento', 'Prioridade', 'Aberta por']);
+    expect(Array.from(root().querySelectorAll('dd')).map(el => el.textContent!.trim())).toEqual(['[DEMO] Vale Verde', '[DEMO] Switch', 'alta', 'admin']);
     expect(text().split('OS-2026-000007').length - 1).toBe(1);
+    expect(root().querySelector('.notification-detail__meta time')!.textContent).toBe('24/10/2026, 11:30');
+    expect(root().querySelector('.notification-detail__meta .mini-chip')!.textContent!.trim()).toBe('Não lida');
+  });
+
+  it('keeps unrecognized content intact and labels an impediment reason', async () => {
+    await setup({ ...NOTIFICATION, message: 'Aguardando peça · detalhe <b>literal</b>\nOutra linha' });
+    expect(root().querySelector('h3')!.textContent!.trim()).toBe('Impedimento');
+    expect(text()).toContain('Motivo do impedimento');
+    expect(root().querySelector('.notification-detail__message')!.textContent).toBe('Aguardando peça · detalhe <b>literal</b>\nOutra linha');
+    expect(root().querySelector('b')).toBeNull();
   });
 
   it('shows the read state and an active snooze, but not an expired one', async () => {
     await setup({ ...NOTIFICATION, read: true, readAt: '2026-10-24T14:40:00Z', snoozedUntil: '2026-10-24T18:00:00Z' });
     const meta = () => root().querySelector('.notification-detail__meta')!.textContent!.replace(/[\s ]+/g, ' ').trim();
-    expect(meta()).toBe('24/10/2026, 11:30 · há 30 min · Lida · Adiada até 24/10/2026, 15:00');
+    expect(root().querySelector('.notification-detail__meta time')!.textContent).toBe('24/10/2026, 11:30');
+    expect(root().querySelector('.notification-detail__meta .mini-chip')!.textContent!.trim()).toBe('Lida');
+    expect(meta()).toContain('há 30 min');
+    expect(meta()).toContain('Adiada até 24/10/2026, 15:00');
 
     fixture.componentRef.setInput('notification', { ...NOTIFICATION, read: true, snoozedUntil: '2026-10-24T14:00:00Z' });
     fixture.detectChanges();
@@ -72,20 +85,35 @@ describe('NotificationDetailModalComponent', () => {
     fixture.componentInstance.closed.subscribe(() => events.push('close'));
     button('Abrir OS')!.click();
     button('Marcar como lida')!.click();
-    button('Fechar')!.click();
+    root().querySelector<HTMLButtonElement>('button[aria-label="Fechar"]')!.click();
     expect(events).toEqual(['open', 'read', 'close']);
+  });
+
+  it('keeps the snooze options and emits the chosen delay', async () => {
+    await setup(NOTIFICATION);
+    const snoozed = vi.fn();
+    fixture.componentInstance.snoozed.subscribe(snoozed);
+    root().querySelector<HTMLButtonElement>('app-custom-select button')!.click();
+    fixture.detectChanges();
+    const options = Array.from(root().querySelectorAll<HTMLButtonElement>('[role="option"]'));
+    expect(options.map(option => option.textContent!.trim())).toEqual(['1 hora', '4 horas', '1 dia']);
+    options[1].click();
+    expect(snoozed).toHaveBeenCalledExactlyOnceWith(240);
   });
 
   it('keeps the code in the headline and offers no Abrir OS when the path is not internal', async () => {
     await setup({ ...NOTIFICATION, actionPath: '//externo' });
-    expect(root().querySelector('h3')!.textContent).toContain('OS-2026-000007');
+    expect(text()).toContain('OS-2026-000007');
     expect(button('Abrir OS')).toBeUndefined();
   });
 
   it('asks for the previous and next notification and disables them at the ends', async () => {
     await setup(NOTIFICATION);
     fixture.componentRef.setInput('hasNext', true);
+    fixture.componentRef.setInput('position', 1);
+    fixture.componentRef.setInput('total', 12);
     fixture.detectChanges();
+    expect(text()).toContain('1 de 12');
     const events: string[] = [];
     fixture.componentInstance.previous.subscribe(() => events.push('previous'));
     fixture.componentInstance.next.subscribe(() => events.push('next'));
@@ -94,5 +122,38 @@ describe('NotificationDetailModalComponent', () => {
     expect(previous.disabled).toBe(true);
     next.click();
     expect(events).toEqual(['next']);
+    fixture.componentRef.setInput('position', 12);
+    fixture.componentRef.setInput('hasNext', false);
+    fixture.componentRef.setInput('hasPrevious', true);
+    fixture.detectChanges();
+    expect(text()).toContain('12 de 12');
+    expect(next.disabled).toBe(true);
+    expect(previous.disabled).toBe(false);
+    previous.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(events).toEqual(['next', 'previous']);
+  });
+});
+
+describe('notification detail keyboard and pending state', () => {
+  it('navigates with arrows, ignores menu keys, and shows inline pending/error feedback', async () => {
+    await TestBed.configureTestingModule({ imports: [NotificationDetailModalComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(NotificationDetailModalComponent);
+    fixture.componentRef.setInput('notification', NOTIFICATION);
+    fixture.componentRef.setInput('hasNext', true);
+    fixture.detectChanges();
+    const root: HTMLElement = fixture.nativeElement;
+    const dialog = root.querySelector<HTMLElement>('[role="dialog"]')!;
+    const next = vi.fn();
+    fixture.componentInstance.next.subscribe(next);
+    dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(next).toHaveBeenCalledTimes(1);
+    root.querySelector('app-custom-select button')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(next).toHaveBeenCalledTimes(1);
+    fixture.componentRef.setInput('busy', true);
+    fixture.componentRef.setInput('error', 'Não foi possível adiar.');
+    fixture.detectChanges();
+    expect(root.querySelector('[role="status"]')!.textContent).toContain('Salvando');
+    expect(root.querySelector('[role="alert"]')!.textContent).toBe('Não foi possível adiar.');
+    expect(root.querySelector<HTMLButtonElement>('button[aria-label="Próxima notificação"]')!.disabled).toBe(true);
   });
 });

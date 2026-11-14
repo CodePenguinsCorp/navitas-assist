@@ -348,8 +348,8 @@ describe('NotificationsComponent inbox loading', () => {
 
         expect(dialog()).not.toBeNull();
         expect(dialog()!.getAttribute('aria-modal')).toBe('true');
-        expect(dialog()!.querySelector('h3')!.textContent!.trim()).toBe('OS atribuída a Técnico · OS-2026-000007');
-        expect(dialogText()).toContain('Informativo');
+        expect(dialog()!.querySelector('h3')!.textContent!.trim()).toBe('Nova atribuição');
+        expect(dialog()!.querySelector('[role="img"]')!.getAttribute('aria-label')).toBe('Informativo');
         expect(dialogText()).toContain('Nova atribuição');
         expect(dialog()!.querySelector('.notification-detail__meta')!.textContent).toContain('24/10/2026, 09:00');
         expect(dialogText()).toContain('há 1 h');
@@ -383,7 +383,7 @@ describe('NotificationsComponent inbox loading', () => {
         expect(navigate).not.toHaveBeenCalled();
       });
 
-      it('closes with Fechar, X and Escape, returning focus to the row title', async () => {
+      it('closes with the backdrop, X and Escape, returning focus to the row title', async () => {
         await setup();
         document.body.appendChild(fixture.nativeElement);
         const close = async (action: () => void) => {
@@ -398,7 +398,7 @@ describe('NotificationsComponent inbox loading', () => {
           expect(dialog()).toBeNull();
           expect(document.activeElement).toBe(titleButton());
         };
-        await close(() => dialogButton('Fechar')!.click());
+        await close(() => root().querySelector<HTMLElement>('.modal-overlay')!.click());
         await close(() => dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Fechar"]')!.click());
         await close(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
         fixture.nativeElement.remove();
@@ -419,6 +419,9 @@ describe('NotificationsComponent inbox loading', () => {
         expect(dialogText()).toContain('Não lida');
         expect(dialogText()).toContain('Não foi possível concluir a ação agora.');
         expect(dialogButton('Marcar como lida')).toBeDefined();
+        dialogButton('Marcar como lida')!.click();
+        render();
+        expect(service['markRead']).toHaveBeenLastCalledWith(5);
       });
 
       it('snoozes from the dialog, closes it and reloads the list', async () => {
@@ -439,13 +442,15 @@ describe('NotificationsComponent inbox loading', () => {
         const previous = () => dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Notificação anterior"]')!;
         const next = () => dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Próxima notificação"]')!;
         expect(previous().disabled).toBe(true);
+        expect(dialogText()).toContain('1 de 2');
         next().click();
         render();
-        expect(dialog()!.querySelector('h3')!.textContent!.trim()).toBe('Notificação antiga · OS-2026-000007');
+        expect(dialogText()).toContain('2 de 2');
         expect(next().disabled).toBe(true);
-        previous().click();
+        previous().dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
         render();
-        expect(dialog()!.querySelector('h3')!.textContent!.trim()).toBe('OS atribuída a Técnico · OS-2026-000007');
+        expect(dialogText()).toContain('1 de 2');
+        expect(dialog()!.querySelector('h3')!.textContent!.trim()).toBe('Nova atribuição');
       });
     });
 

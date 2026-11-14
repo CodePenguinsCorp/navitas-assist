@@ -37,6 +37,8 @@
       [error]="errorMessage()"
       [hasPrevious]="hasPreviousSelected()"
       [hasNext]="hasNextSelected()"
+      [position]="selectedIndex() + 1"
+      [total]="visibleNotifications().length"
       [fallbackFocus]="inboxPanel"
       (closed)="closeDetail()"
       (openAction)="openDetailAction()"

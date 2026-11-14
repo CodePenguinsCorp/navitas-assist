@@ -10,12 +10,12 @@ import {
   formatNotificationDateTime,
   formatTimeAgo,
   internalRoute,
-  notificationHeadline,
   severityClass
 } from '../../core/utils/notification-ui';
 import { CustomSelectComponent } from '../form-controls/custom-select/custom-select.component';
 import { IconComponent } from '../icon/icon.component';
 import { ModalFocusDirective } from '../modal-focus/modal-focus.directive';
+import { notificationDetailContent } from './notification-detail-content';
 
 let nextId = 0;
 
@@ -37,6 +37,8 @@ export class NotificationDetailModalComponent {
   readonly error = input('');
   readonly hasPrevious = input(false);
   readonly hasNext = input(false);
+  readonly position = input<number | null>(null);
+  readonly total = input<number | null>(null);
   /** Where focus goes when the opening row no longer exists (for example the bell panel closed). */
   readonly fallbackFocus = input<HTMLElement | null>(null);
 
@@ -54,7 +56,8 @@ export class NotificationDetailModalComponent {
   protected readonly severityClass = severityClass;
   protected readonly dateTime = formatNotificationDateTime;
 
-  protected readonly headline = computed(() => notificationHeadline(this.notification()));
+  protected readonly headline = computed(() => this.notification().eventType === 'RMA_BLOCKED' ? 'Impedimento' : this.eventLabels[this.notification().eventType]);
+  protected readonly content = computed(() => notificationDetailContent(this.notification()));
   protected readonly ago = computed(() => formatTimeAgo(this.notification().createdAt, this.clock.now()));
   /** Adiar exists only for notifications that ask for action; informative ones are never snoozed. */
   protected readonly canSnooze = computed(() => canSnooze(this.notification()));
@@ -64,6 +67,19 @@ export class NotificationDetailModalComponent {
 
   protected snooze(minutes: string | number): void {
     const value = Number(minutes);
-    if (value && this.canSnooze()) this.snoozed.emit(value);
+    if (value && this.canSnooze() && !this.busy()) this.snoozed.emit(value);
+  }
+
+  protected onKeydown(event: KeyboardEvent): void {
+    if (event.defaultPrevented || this.busy() || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const target = event.target;
+    if (target instanceof Element && target.closest('app-custom-select, input, textarea, select, [contenteditable]')) return;
+    if (event.key === 'ArrowLeft' && this.hasPrevious()) {
+      event.preventDefault();
+      this.previous.emit();
+    } else if (event.key === 'ArrowRight' && this.hasNext()) {
+      event.preventDefault();
+      this.next.emit();
+    }
   }
 }

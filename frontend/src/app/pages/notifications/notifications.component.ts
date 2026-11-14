@@ -105,8 +105,8 @@ export class NotificationsComponent {
   protected readonly notificationGroups = computed(() => groupNotificationsByDay(this.notifications(), this.clock.now()));
   /** Notification shown in the detail dialog; a snapshot kept in sync by the actions that change it. */
   protected readonly selected = signal<NotificationResponse | null>(null);
-  private readonly visibleNotifications = computed(() => this.notificationGroups().flatMap((group) => group.items));
-  private readonly selectedIndex = computed(() => {
+  protected readonly visibleNotifications = computed(() => this.notificationGroups().flatMap((group) => group.items));
+  protected readonly selectedIndex = computed(() => {
     const current = this.selected();
     return current ? this.visibleNotifications().findIndex((item) => item.id === current.id) : -1;
   });
