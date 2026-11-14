@@ -2316,6 +2316,12 @@ input[type="checkbox"].switch:disabled:checked {
 .tone-slate { --tone: var(--tone-slate); }
 .tone-violet { --tone: var(--tone-violet); }
 
+/* Chip tinted by a .tone-* class (ex.: tipo de movimento de peça); text darkened for contrast. */
+.tone-chip {
+  background: color-mix(in srgb, var(--tone, var(--brand-blue)) 12%, #ffffff);
+  color: color-mix(in srgb, var(--tone, var(--brand-blue)) 78%, #000000);
+}
+
 .avatar {
   display: inline-grid;
   place-items: center;

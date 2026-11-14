@@ -41,6 +41,7 @@ describe('PartsComponent movement history', () => {
   const render = () => { fixture.componentRef.injector.get(ChangeDetectorRef).markForCheck(); fixture.detectChanges(); };
   const button = (label: string, root: Element = panel()!) => Array.from(root.querySelectorAll('button')).find((item) => item.textContent?.trim() === label);
   const confirmation = (): HTMLElement | null => panel()!.querySelector('.movement-reversal');
+  const items = (): HTMLElement[] => Array.from(panel()!.querySelectorAll<HTMLElement>('ol.movement-list > li.movement-item'));
   const start = () => { component.startReversal(CONSUMPTION); render(); };
   const historyFailure = () => throwError(() => new Error());
 
@@ -74,7 +75,7 @@ describe('PartsComponent movement history', () => {
   });
 
   // Vermelho: a confirmação tem só placeholder e Confirmar, sem identificação ou consequência.
-  it('identifies the movement and its reason field in a separate table row', async () => {
+  it('identifies the movement and opens its reason field inside the movement item', async () => {
     await setup(); start();
     expect(text(confirmation())).toContain('Estornar movimento 9');
     for (const value of ['Aplicação', '24/10/2026', 'PCA-1', 'Capacitor', 'O movimento original será mantido.']) expect(text(confirmation())).toContain(value);
@@ -82,9 +83,9 @@ describe('PartsComponent movement history', () => {
     const label = confirmation()!.querySelector<HTMLLabelElement>('label')!;
     expect(text(label)).toContain('Motivo do estorno'); expect(label.control).toBe(input);
     expect(input.maxLength).toBe(255); expect(button('Confirmar estorno', confirmation()!)!.type).toBe('button');
-    const row = confirmation()!.closest('tr')!;
-    expect(row.previousElementSibling?.textContent).toContain('tech');
-    expect(row.querySelector('td')!.colSpan).toBe(panel()!.querySelectorAll('thead th').length);
+    const item = confirmation()!.closest('li.movement-item')!;
+    expect(item).toBe(items()[0]); expect(text(item)).toContain('tech');
+    expect(item.querySelector('[data-reverse]')).toBeNull();
   });
 
   // Vermelho: confirmReversal direto repete a escrita; a guarda de fechamento já existe.
@@ -170,13 +171,39 @@ describe('PartsComponent movement history', () => {
     expect(component.reversalReason.value).toHaveLength(256);
   });
 
-  // Vermelho: não há colunas próprias para autor/motivo/reservado após, nem unidade nas variações.
-  it('separates author, reason and resulting balances', async () => {
+  // Vermelho: a tabela de 10 colunas espreme cabeçalhos, datas e motivo no modal.
+  it('shows each movement as a list item with type chip, one-line time, change, balances, OS, author and reason', async () => {
     await setup();
-    const headers = Array.from(panel()!.querySelectorAll('thead th')).map((item) => text(item));
-    expect(headers).toEqual(['Instante', 'Tipo', 'Variação em estoque', 'Variação reservada', 'Em estoque após', 'Reservado após', 'OS', 'Autor', 'Motivo', 'Ações']);
-    const cells = Array.from(panel()!.querySelectorAll('tbody tr:first-child td')).map((item) => text(item));
-    expect(cells[0]).toContain('24/10/2026'); expect(cells.slice(2, 9)).toEqual(['-1,5 m', '-1,5 m', '10 m', '4 m', 'OS-7', 'tech', 'Peça instalada']);
+    expect(panel()!.querySelector('table')).toBeNull();
+    const [item] = items();
+    const chip = item.querySelector('.movement-item__type')!;
+    expect(text(chip)).toBe('Aplicação'); expect(chip.classList).toContain('mini-chip'); expect(chip.classList).toContain('tone-violet');
+    const time = item.querySelector('time')!;
+    expect(time.getAttribute('datetime')).toBe('2026-10-24T12:00:00Z'); expect(text(time)).toBe('24/10/2026, 09:00');
+    expect(text(item.querySelector('.movement-item__change'))).toBe('-1,5 m em estoque · -1,5 m reservado');
+    expect(Array.from(item.querySelectorAll('.movement-item__change strong')).map((node) => text(node))).toEqual(['-1,5 m', '-1,5 m']);
+    expect(text(item.querySelector('.movement-item__balance'))).toBe('Em estoque 10 m · Reservado 4 m');
+    expect(text(item.querySelector('.movement-item__meta'))).toBe('OS-7 · tech');
+    expect(text(item.querySelector('.movement-item__meta .code-text'))).toBe('OS-7');
+    expect(text(item.querySelector('.movement-item__reason'))).toBe('Peça instalada');
+  });
+
+  it('omits the empty OS and reason, and shows only the balance that changed', async () => {
+    await setup({ movements: () => of([{ ...CONSUMPTION, type: 'ENTRY', onHandChange: 20, reservedChange: 0, onHandAfter: 20, reservedAfter: 0, rmaCode: null, reason: null }]) });
+    const [item] = items();
+    expect(item.querySelector('.movement-item__type')!.classList).toContain('tone-success');
+    expect(text(item.querySelector('.movement-item__change'))).toBe('+20 m em estoque');
+    expect(text(item.querySelector('.movement-item__meta'))).toBe('tech');
+    expect(item.querySelector('.movement-item__reason')).toBeNull();
+    expect(text(item.querySelector('.movement-item__balance'))).toBe('Em estoque 20 m · Reservado 0 m');
+  });
+
+  it('offers Estornar as a named icon action', async () => {
+    await setup();
+    const action = items()[0].querySelector<HTMLButtonElement>('button[data-reverse="9"]')!;
+    expect(action.classList).toContain('row-action');
+    expect(action.getAttribute('aria-label')).toBe('Estornar movimento 9 Aplicação 24/10/2026, 09:00');
+    expect(action.disabled).toBe(false);
   });
 
   // Vermelho: fechar não cancela a leitura pendente do histórico.
@@ -196,7 +223,7 @@ describe('PartsComponent movement history', () => {
     expect(service['listMovements']).toHaveBeenCalledTimes(2); expect(service['listMovements']).toHaveBeenLastCalledWith(4);
     for (const name of ['list', 'listReplenishment', 'listPending']) expect(service[name]).toHaveBeenCalledTimes(2);
     expect(text()).toContain('Estornado'); expect(text()).toContain('do movimento 9');
-    expect(Array.from(panel()!.querySelectorAll('tbody tr')).map((row) => text(row))).toEqual([
+    expect(items().map((row) => text(row))).toEqual([
       expect.stringContaining('Peça instalada'), expect.stringContaining('Peça não utilizada')
     ]);
     expect(button('Estornar')).toBeUndefined(); expect(service['reserve']).not.toHaveBeenCalled(); expect(service['updateReservation']).not.toHaveBeenCalled();
@@ -221,7 +248,7 @@ describe('PartsComponent movement history', () => {
       { ...CONSUMPTION, id: 4, type: 'ENTRY' }, { ...CONSUMPTION, id: 5, type: 'EXIT' },
       { ...CONSUMPTION, id: 6, type: 'ADJUSTMENT' }, CONSUMPTION
     ]) });
-    expect(Array.from(panel()!.querySelectorAll('tbody tr')).map((row) => Boolean(button('Estornar', row)))).toEqual([false, false, false, false, true, true, true, true]);
+    expect(items().map((row) => Boolean(button('Estornar', row)))).toEqual([false, false, false, false, true, true, true, true]);
     expect(button('Editar')).toBeUndefined(); expect(button('Excluir')).toBeUndefined();
   });
 
@@ -305,7 +332,7 @@ describe('PartsComponent movement history focus', () => {
   it('keeps focus in the history while a reversal is started and cancelled', async () => {
     const { page, find, activate, dialog } = await setupPartsFocus(historyService());
     activate(find('button[aria-label="Histórico PCA-1 Capacitor"]'));
-    const estornar = () => [...page.querySelectorAll<HTMLButtonElement>('[role="dialog"] tbody button')].find((item) => item.textContent?.trim() === 'Estornar');
+    const estornar = () => [...page.querySelectorAll<HTMLButtonElement>('[role="dialog"] .movement-item button')].find((item) => item.textContent?.trim() === 'Estornar');
     activate(estornar()!);
     expect(document.activeElement).toBe(find('#reversal-reason-9'));
     const cancel = [...find('.movement-reversal').querySelectorAll<HTMLButtonElement>('button')].find((item) => item.textContent?.trim() === 'Cancelar')!;

@@ -35,6 +35,34 @@ export function reservationStatusClass(status: PartReservationStatus): string {
   }
 }
 
+const MOVEMENT_TYPE_TONES: Record<PartMovementType, string> = {
+  ENTRY: 'tone-success',
+  EXIT: 'tone-danger',
+  ADJUSTMENT: 'tone-warning',
+  RESERVATION: 'tone-sky',
+  RESERVATION_CANCEL: 'tone-slate',
+  CONSUMPTION: 'tone-violet',
+  REVERSAL: 'tone-slate'
+};
+
+/** Tone class (`tone-*` in styles.css) for the movement type chip. */
+export function movementTypeTone(type: PartMovementType): string {
+  return MOVEMENT_TYPE_TONES[type];
+}
+
+export interface MovementChange {
+  amount: string;
+  label: 'em estoque' | 'reservado';
+}
+
+/** Signed changes the movement made; a movement that changed nothing still shows "0 em estoque". */
+export function movementChanges(movement: Pick<PartMovementResponse, 'onHandChange' | 'reservedChange'>): MovementChange[] {
+  const changes: MovementChange[] = [];
+  if (movement.onHandChange !== 0) changes.push({ amount: formatSignedQuantity(movement.onHandChange), label: 'em estoque' });
+  if (movement.reservedChange !== 0) changes.push({ amount: formatSignedQuantity(movement.reservedChange), label: 'reservado' });
+  return changes.length ? changes : [{ amount: formatSignedQuantity(0), label: 'em estoque' }];
+}
+
 export function canReverseMovement(movement: Pick<PartMovementResponse, 'type' | 'reversed'>): boolean {
   return !movement.reversed && REVERSIBLE_MOVEMENT_TYPES.includes(movement.type);
 }
