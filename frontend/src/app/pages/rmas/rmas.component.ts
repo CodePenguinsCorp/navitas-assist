@@ -483,7 +483,7 @@ export class RmasComponent {
     if (!this.hasCurrentResult()) return null;
     const count = this.totalElements();
     const overall = this.hasActiveFilters() ? this.overallTotal() : null;
-    return { count, overall, label: (overall ?? count) === 1 ? 'OS' : 'ordens de serviço' };
+    return { count, overall, label: (overall ?? count) === 1 ? 'OS' : 'OS' };
   });
 
   protected readonly statusLabel = statusLabel;

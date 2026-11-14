@@ -107,7 +107,7 @@ afterEach(settleRmaLazyChunks);
 describe('RmasComponent list state', () => {
   describe('header and indicators', () => {
     it('shows a single total at the foot of the list, in the pagination, and no statistics cards', async () => {
-      // Hoje o rodapé repete o total em app-result-count ("45 ordens de serviço") além da paginação ("registro(s)").
+      // Hoje o rodapé repete o total em app-result-count ("45 OS") além da paginação ("registro(s)").
       const { page } = await setup();
       expect(page.querySelector('app-result-count')).toBeNull();
       expect(page.querySelectorAll('.table-card .pagination__summary').length).toBe(1);
@@ -129,7 +129,7 @@ describe('RmasComponent list state', () => {
       expect(row!.closest('.catalog-toolbar')).toBeNull();
       expect(page.querySelector('.rma-summary')).toBeNull();
       expect(row!.previousElementSibling?.tagName.toLowerCase()).toBe('app-page-header');
-      expect(totalIndicator(page)).toBe('45 ordens de serviço');
+      expect(totalIndicator(page)).toBe('45 OS');
       expect(summaryText(page)).toBe('Em atendimento 30 | Prioridade alta 7');
       expect(page.textContent).not.toContain('No resultado');
       expect(page.textContent).not.toContain('nesta página');
@@ -141,12 +141,12 @@ describe('RmasComponent list state', () => {
       });
       confirmFilters(component, 'B');
       render();
-      expect(totalIndicator(page)).toBe('2 de 45 ordens de serviço');
+      expect(totalIndicator(page)).toBe('2 de 45 OS');
       expect(countLabel(page)).toBe('1–1 de 2 ordens de serviço');
 
       component.clearFilters();
       render();
-      expect(totalIndicator(page)).toBe('45 ordens de serviço');
+      expect(totalIndicator(page)).toBe('45 OS');
     });
 
     it('uses the singular of the total in the filtered indicator', async () => {
@@ -180,7 +180,7 @@ describe('RmasComponent list state', () => {
       list$.next(buildRmaPage([defaultRma], 0, 20, 45));
       summary$.next({ total: 45, ongoing: 30, highPriority: 7 });
       render();
-      expect(totalIndicator(page)).toBe('45 ordens de serviço');
+      expect(totalIndicator(page)).toBe('45 OS');
       expect(summaryText(page)).toContain('30');
       expect(summaryText(page)).toContain('7');
     });
@@ -201,7 +201,7 @@ describe('RmasComponent list state', () => {
       const alerts = [...page.querySelectorAll('[role="alert"]')].map((el) => el.textContent ?? '');
       expect(alerts.some((text) => text.includes('resumo') || text.includes('Falha no servidor'))).toBe(false);
       expect(countLabel(page)).toBe('1–1 de 45 ordens de serviço');
-      expect(totalIndicator(page)).toBe('45 de 45 ordens de serviço');
+      expect(totalIndicator(page)).toBe('45 de 45 OS');
     });
 
     it('never shows the summary of filter A next to the list of filter B', async () => {
@@ -222,7 +222,7 @@ describe('RmasComponent list state', () => {
       expect(page.textContent).not.toContain('30');
       expect(page.textContent).not.toContain('7');
       expect(summaryText(page)).toBeNull();
-      expect(totalIndicator(page)).toBe('2 de 45 ordens de serviço');
+      expect(totalIndicator(page)).toBe('2 de 45 OS');
 
       summaryB$.next({ total: 2, ongoing: 4, highPriority: 1 });
       render();
@@ -285,7 +285,7 @@ describe('RmasComponent list state', () => {
 
       listB$.next(buildRmaPage([defaultRma], 0, 20, 2));
       render();
-      expect(totalIndicator(page)).toBe('2 de 45 ordens de serviço');
+      expect(totalIndicator(page)).toBe('2 de 45 OS');
       expect(summaryText(page)).toContain('Em atendimento 4');
     });
 
@@ -313,7 +313,7 @@ describe('RmasComponent list state', () => {
 
       list$.next(buildRmaPage([defaultRma], 0, 20, 2));
       render();
-      expect(totalIndicator(page)).toBe('2 ordens de serviço');
+      expect(totalIndicator(page)).toBe('2 OS');
       expect(summaryText(page)).toContain('Em atendimento 4');
     });
 
@@ -349,7 +349,7 @@ describe('RmasComponent list state', () => {
 
       listA$.next(buildRmaPage([defaultRma], 0, 20, 1));
       render();
-      expect(totalIndicator(page)).toBe('1 de 45 ordens de serviço');
+      expect(totalIndicator(page)).toBe('1 de 45 OS');
       expect(summaryText(page)).toContain('Em atendimento 1');
       expect(summaryText(page)).toContain('Prioridade alta 0');
     });
@@ -390,7 +390,7 @@ describe('RmasComponent list state', () => {
       listB$.complete();
       render();
       expect(countLabel(page)).toBe('1–1 de 2 ordens de serviço');
-      expect(totalIndicator(page)).toBe('2 de 45 ordens de serviço');
+      expect(totalIndicator(page)).toBe('2 de 45 OS');
     });
   });
 

@@ -264,7 +264,7 @@ export class KanbanComponent {
     if (!this.boardReady()) return null;
     const count = this.filteredRmas().length;
     const overall = this.activeFilterCount() > 0 ? this.totalRmas() : null;
-    return { count, overall, label: (overall ?? count) === 1 ? 'OS' : 'ordens de serviço' };
+    return { count, overall, label: (overall ?? count) === 1 ? 'OS' : 'OS' };
   });
   protected readonly heroStats = computed<ReadonlyArray<KanbanHeroStat>>(() => [
     {

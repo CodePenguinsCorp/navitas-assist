@@ -127,7 +127,7 @@ describe('KanbanComponent reading states and count', () => {
     respond(0, []);
     expect(text()).toContain('Nenhuma OS cadastrada');
     expect(text()).not.toContain('Nenhuma OS encontrada');
-    expect(firstIndicator()).toBe('0 ordens de serviço');
+    expect(firstIndicator()).toBe('0 OS');
   });
 
   it('offers Limpar filtros when a filter hides every OS', () => {
@@ -170,10 +170,10 @@ describe('KanbanComponent reading states and count', () => {
     (fixture.componentInstance as unknown as { retryLoad(): void }).retryLoad();
     render();
     respond(1, [FIRST, SECOND]);
-    expect(firstIndicator()).toBe('2 ordens de serviço');
+    expect(firstIndicator()).toBe('2 OS');
     filters().patchValue({ priority: 'HIGH' });
     render();
-    expect(firstIndicator()).toBe('1 de 2 ordens de serviço');
+    expect(firstIndicator()).toBe('1 de 2 OS');
     expect(summary()!.textContent).toContain('Alta prioridade');
   });
 });
