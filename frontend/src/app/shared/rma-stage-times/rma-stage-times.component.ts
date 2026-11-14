@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { CLOSED_RMA_STATUSES } from '../../core/mock-data';
 import { RmaResponse } from '../../core/models';
 import { ClockService } from '../../core/services/clock.service';
@@ -10,6 +10,9 @@ interface StageRow {
   key: string;
   status: RmaResponse['status'];
   text: string;
+  /** Stage name and time, shown as two columns in the expanded list. */
+  label: string;
+  value: string;
   /** Share of the bar; the closing stage of a closed RMA takes no space. */
   weight: number;
 }
@@ -36,16 +39,18 @@ export class RmaStageTimesComponent {
       const label = statusLabel(period.status);
       const closing = current && closed;
       const seconds = closing ? 0 : stageElapsedSeconds(period, now);
-      const text = closing
-        ? `${label} · Encerrado em ${formatDateTime(period.enteredAt).replace(", ", " ")}`
-        : `${label} · ${formatDuration(seconds)}${current ? ' (atual)' : ''}`;
-      return { key: `${period.status}-${period.enteredAt}-${index}`, status: period.status, text, seconds, closing };
+      const value = closing
+        ? `Encerrado em ${formatDateTime(period.enteredAt).replace(", ", " ")}`
+        : `${formatDuration(seconds)}${current ? ' (atual)' : ''}`;
+      return { key: `${period.status}-${period.enteredAt}-${index}`, status: period.status, text: `${label} · ${value}`, label, value, seconds, closing };
     });
     const total = rows.reduce((sum, row) => sum + row.seconds, 0);
     return rows.map((row) => ({
       key: row.key,
       status: row.status,
       text: row.text,
+      label: row.label,
+      value: row.value,
       weight: row.closing ? 0 : Math.max(row.seconds, total * MIN_SHARE, 1)
     }));
   });
@@ -64,4 +69,11 @@ export class RmaStageTimesComponent {
   });
 
   protected readonly closingRow = computed(() => this.rows().find((row) => row.weight === 0) ?? null);
+
+  /** The per-stage list below the bar is collapsed until the user opens it with the arrow. */
+  protected readonly expanded = signal(false);
+
+  protected toggle(): void {
+    this.expanded.update((value) => !value);
+  }
 }

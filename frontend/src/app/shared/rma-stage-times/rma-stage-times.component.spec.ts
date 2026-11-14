@@ -48,7 +48,7 @@ describe('RmaStageTimesComponent', () => {
     expect(rendered.join(' ')).not.toContain('(atual)');
   });
 
-  it('draws one proportional bar segment per stage with the total and a hover tip', () => {
+  it('draws one proportional bar segment per stage with the total', () => {
     fixture.componentRef.setInput('rma', {
       status: 'IN_DIAGNOSIS',
       stagePeriods: [
@@ -59,9 +59,40 @@ describe('RmaStageTimesComponent', () => {
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
     const segments = [...element.querySelectorAll<HTMLElement>('.stage-times__segment')];
-    expect(segments.map((segment) => segment.dataset['tip'])).toEqual(['Recebido · 2 h', 'Diagnóstico · 3 d (atual)']);
     expect(segments.map((segment) => segment.dataset['status'])).toEqual(['RECEIVED', 'IN_DIAGNOSIS']);
     expect(Number(segments[1].style.flexGrow)).toBeGreaterThan(Number(segments[0].style.flexGrow));
     expect(element.querySelector('.stage-times__total')?.textContent?.trim()).toBe('3 d 2 h');
+  });
+
+  it('keeps the per-stage list collapsed until the arrow is used, then shows colour, name and time of every stage', () => {
+    fixture.componentRef.setInput('rma', {
+      status: 'IN_REPAIR',
+      stagePeriods: [
+        { status: 'RECEIVED', enteredAt: '2026-11-10T00:00:00Z', leftAt: '2026-11-12T00:00:00Z', durationSeconds: 172800 },
+        { status: 'TRIAGE', enteredAt: '2026-11-12T00:00:00Z', leftAt: '2026-11-12T00:10:00Z', durationSeconds: 600 },
+        { status: 'IN_REPAIR', enteredAt: '2026-11-12T00:10:00Z', leftAt: null, durationSeconds: 0 }
+      ]
+    });
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const toggle = element.querySelector<HTMLButtonElement>('.stage-times__toggle')!;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(element.querySelector('.stage-times__list')).toBeNull();
+    toggle.click();
+    fixture.detectChanges();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    const rows = [...element.querySelectorAll('.stage-times__list li')].map((item) => [
+      item.getAttribute('data-status'),
+      item.querySelector('.stage-times__name')?.textContent?.trim(),
+      item.querySelector('.stage-times__value')?.textContent?.trim()
+    ]);
+    expect(rows).toEqual([
+      ['RECEIVED', 'Recebido', '2 d'],
+      ['TRIAGE', 'Triagem', '10 min'],
+      ['IN_REPAIR', 'Reparo', '1 d 11 h (atual)']
+    ]);
+    toggle.click();
+    fixture.detectChanges();
+    expect(element.querySelector('.stage-times__list')).toBeNull();
   });
 });

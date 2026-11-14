@@ -49,34 +49,73 @@
   outline-offset: 2px;
 }
 
-/* Tooltip: names the stage and its time; follows hover and keyboard focus. */
-.stage-times__segment::after {
-  content: attr(data-tip);
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  z-index: 5;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--text);
-  color: var(--surface);
-  font-size: var(--font-size-sm);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  transform: translateX(-50%);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 120ms ease;
+/* The arrow opens the per-stage list: colour dot, stage name and time. */
+.stage-times__toggle {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--muted);
 }
 
-/* Edge segments anchor their tip to the bar's edge so the card never clips it. */
-.stage-times__segment:first-child::after { left: 0; transform: none; }
-.stage-times__segment:last-child::after { right: 0; left: auto; transform: none; }
-.stage-times__segment:only-child::after { left: 0; right: auto; transform: none; }
+.stage-times__toggle:hover,
+.stage-times__toggle:focus-visible {
+  background: var(--brand-tint);
+  color: var(--brand-blue-deep);
+}
 
-.stage-times__segment:hover::after,
-.stage-times__segment:focus-visible::after {
-  opacity: 1;
+.stage-times__toggle svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  transition: transform 160ms ease;
+}
+
+.stage-times__toggle.is-open svg {
+  transform: rotate(180deg);
+}
+
+.stage-times__list {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-sm);
+}
+
+.stage-times__list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.stage-times__dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tone, var(--brand-blue));
+}
+
+.stage-times__name {
+  flex: 1;
+  min-width: 0;
+}
+
+.stage-times__value {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .stage-times__closing {
