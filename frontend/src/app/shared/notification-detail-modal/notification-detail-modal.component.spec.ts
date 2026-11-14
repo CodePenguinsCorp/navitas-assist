@@ -84,7 +84,11 @@ describe('NotificationDetailModalComponent', () => {
     fixture.componentInstance.markRead.subscribe(() => events.push('read'));
     fixture.componentInstance.closed.subscribe(() => events.push('close'));
     button('Abrir OS')!.click();
-    button('Marcar como lida')!.click();
+    expect(button('Marcar como lida')).toBeUndefined();
+    expect(button('Tentar novamente')).toBeUndefined();
+    fixture.componentRef.setInput('error', 'Falha na leitura.');
+    fixture.detectChanges();
+    button('Tentar novamente')!.click();
     root().querySelector<HTMLButtonElement>('button[aria-label="Fechar"]')!.click();
     expect(events).toEqual(['open', 'read', 'close']);
   });

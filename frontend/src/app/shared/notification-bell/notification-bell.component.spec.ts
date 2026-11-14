@@ -226,8 +226,8 @@ describe('NotificationBellComponent', () => {
 
       expect(dialog()).not.toBeNull();
       expect(panel()).toBeNull();
-      expect(dialog()!.querySelector('h3')!.textContent!.trim()).toBe(NOTIFICATION.title);
-      expect(dialogText()).toContain('Crítico');
+      expect(dialog()!.querySelector('h3')!.textContent!.trim()).toBe('Nova atribuição');
+      expect(dialog()!.querySelector('[role="img"]')!.getAttribute('aria-label')).toBe('Crítico');
       expect(dialogText()).toContain('Nova atribuição');
       expect(dialog()!.querySelector('.notification-detail__meta')!.textContent).toContain('24/10/2026, 10:00');
       expect(dialogText()).toContain('há 5 h');
@@ -238,6 +238,18 @@ describe('NotificationBellComponent', () => {
       expect(dialogText()).toContain('Lida');
       expect(dialogButton('Marcar como lida')).toBeUndefined();
       expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('retries a failed automatic read inside the dialog', async () => {
+      await openDetail();
+      http.expectOne({ method: 'POST', url: '/api/notifications/5/read' })
+        .flush({ message: 'Falha na leitura.' }, { status: 500, statusText: 'Server Error' });
+      await render();
+      expect(dialogText()).toContain('Falha na leitura.');
+      expect(dialogButton('Marcar como lida')).toBeUndefined();
+      dialogButton('Tentar novamente')!.click();
+      await settleRead();
+      expect(dialogButton('Tentar novamente')).toBeUndefined();
     });
 
     it('Abrir OS is the only action that navigates, to the internal path, and closes the dialog', async () => {
@@ -272,7 +284,7 @@ describe('NotificationBellComponent', () => {
     it('closes with Fechar and keeps the read state in the list', async () => {
       await openDetail();
       await settleRead();
-      dialogButton('Fechar')!.click();
+      dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Fechar"]')!.click();
       await render();
       expect(dialog()).toBeNull();
       bell().click();
@@ -312,7 +324,7 @@ describe('NotificationBellComponent', () => {
       expect(dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Notificação anterior"]')!.disabled).toBe(true);
       next.click();
       await render();
-      expect(dialog()!.querySelector('h3')!.textContent!.trim()).toBe('Peça pendente · OS-2026-000007');
+      expect(dialog()!.querySelector('h3')!.textContent!.trim()).toBe('Nova atribuição');
       expect(next.disabled).toBe(true);
     });
 

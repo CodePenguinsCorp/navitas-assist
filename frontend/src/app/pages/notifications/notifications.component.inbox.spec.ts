@@ -257,11 +257,8 @@ describe('NotificationsComponent inbox loading', () => {
   it('keeps the same columns in read and unread rows, with the time last', async () => {
     await setup({ list: [of([NOTIFICATION, { ...OLD, read: true }])] });
     const rows = Array.from(root().querySelectorAll<HTMLElement>('.notification-item'));
-    const slots = rows.map((row) => row.querySelector('.notification-actions .notification-action-slot'));
-    expect(slots.every(Boolean)).toBe(true);
-    expect(slots[0]!.querySelector('button')).not.toBeNull();
-    expect(slots[1]!.querySelector('button')).toBeNull();
-    expect(slots[1]!.getAttribute('aria-hidden')).toBe('true');
+    expect(rows.every((row) => row.querySelectorAll('button').length === 1)).toBe(true);
+    expect(rows.every((row) => row.querySelector('app-custom-select, .notification-actions') === null)).toBe(true);
     expect(rows.every((row) => row.lastElementChild!.matches('time.notification-time'))).toBe(true);
   });
 
@@ -404,22 +401,15 @@ describe('NotificationsComponent inbox loading', () => {
         fixture.nativeElement.remove();
       });
 
-      it('keeps the row icon marking as read without opening the dialog', async () => {
-        await setup();
-        item().querySelector<HTMLButtonElement>('button[aria-label^="Marcar como lida"]')!.click();
-        render();
-        expect(service['markRead']).toHaveBeenCalledWith(5);
-        expect(dialog()).toBeNull();
-      });
-
-      it('offers Marcar como lida and shows the error when marking on open fails', async () => {
+      it('offers retry only when marking on open fails', async () => {
         await setup({ markRead: failure() as never });
         titleButton().click();
         render();
         expect(dialogText()).toContain('Não lida');
         expect(dialogText()).toContain('Não foi possível concluir a ação agora.');
-        expect(dialogButton('Marcar como lida')).toBeDefined();
-        dialogButton('Marcar como lida')!.click();
+        expect(dialogButton('Marcar como lida')).toBeUndefined();
+        expect(dialogButton('Tentar novamente')).toBeDefined();
+        dialogButton('Tentar novamente')!.click();
         render();
         expect(service['markRead']).toHaveBeenLastCalledWith(5);
       });
@@ -580,19 +570,18 @@ describe('NotificationsComponent inbox loading', () => {
     });
 
     describe('preservation', () => {
-      it('keeps mark as read and snooze as discreet row actions', async () => {
+      it('keeps snooze exclusively in the detail dialog', async () => {
         await setup({ list: [of([BLOCKED])] });
-        expect(button('Marcar como lida')!.classList).toContain('row-action');
-        expect(button('Marcar como lida')!.getAttribute('aria-label')).toBe('Marcar como lida OS OS-2026-000007 atribuída a Técnico');
-        expect(item().querySelector('app-custom-select')).not.toBeNull();
-        expect(item().querySelector('.button-secondary')).toBeNull();
-        component.snooze(BLOCKED, '1440');
-        expect(service['snooze']).toHaveBeenCalledWith(5, 1440);
+        expect(item().querySelectorAll('button').length).toBe(1);
+        expect(item().querySelector('app-custom-select')).toBeNull();
+        item().querySelector<HTMLButtonElement>('button.notification-title')!.click();
+        render();
+        expect(root().querySelector('[role="dialog"] app-custom-select')).not.toBeNull();
       });
 
       it('offers no Adiar on an informative row and ignores an old snooze stored on it', async () => {
         await setup({ list: [of([{ ...NOTIFICATION, snoozedUntil: '2026-10-24T16:00:00Z' }])] });
-        expect(button('Marcar como lida')).toBeDefined();
+        expect(button('Marcar como lida')).toBeUndefined();
         expect(item().querySelector('app-custom-select')).toBeNull();
         expect(text()).not.toMatch(/adiada até/i);
         component.snooze(NOTIFICATION, '60');
@@ -603,7 +592,7 @@ describe('NotificationsComponent inbox loading', () => {
         await setup({ markRead: new Subject<NotificationResponse>() });
         component.markRead(NOTIFICATION);
         render();
-        expect(button('Marcar como lida')!.disabled).toBe(true);
+        expect(button('Marcar todas como lidas')!.disabled).toBe(true);
         TestBed.resetTestingModule();
         // Sem não lidas no resumo do servidor nem na lista, a leitura em massa fica desabilitada.
         await setup({ unread: 0, list: [of([{ ...NOTIFICATION, read: true }])] });

@@ -40,7 +40,12 @@
     </div>
 
     <footer class="notification-detail__footer">
-      @if (error()) { <p class="field-error" role="alert">{{ error() }}</p> }
+      @if (error()) {
+        <p class="field-error" role="alert">{{ error() }}</p>
+        @if (!notification().read) {
+          <button type="button" class="button-secondary" [disabled]="busy()" (click)="markRead.emit()">Tentar novamente</button>
+        }
+      }
       @if (busy()) { <p class="notification-detail__pending" role="status">Salvando…</p> }
       <nav class="notification-detail__nav" aria-label="Navegar pelas notificações">
         <button type="button" class="button-secondary notification-detail__ghost notification-detail__prev" aria-label="Notificação anterior"
@@ -53,9 +58,6 @@
         <div class="notification-detail__secondary">
           @if (canSnooze()) {
             <app-custom-select [actionMenu]="true" [ariaLabel]="'Adiar ' + headline()" placeholder="Adiar" [options]="snoozeOptions" [disabled]="busy()" (valueChange)="snooze($any($event))" />
-          }
-          @if (!notification().read) {
-            <button type="button" class="button-secondary" [disabled]="busy()" (click)="markRead.emit()">Marcar como lida</button>
           }
         </div>
         @if (canOpen()) { <button type="button" class="button-primary" (click)="openAction.emit()">Abrir OS<app-icon name="external" [size]="16" /></button> }

@@ -31,7 +31,6 @@ import {
   NOTIFICATION_EVENT_LABELS,
   NOTIFICATION_SEVERITIES,
   NOTIFICATION_SEVERITY_LABELS,
-  SNOOZE_OPTIONS,
   activeSnoozeUntil,
   canSnooze,
   formatNotificationDateTime,
@@ -146,8 +145,6 @@ export class NotificationsComponent {
   protected readonly severityLabels = NOTIFICATION_SEVERITY_LABELS;
   protected readonly severities = NOTIFICATION_SEVERITIES;
   protected readonly severityOptions = NOTIFICATION_SEVERITIES.map((severity) => ({ value: severity, label: NOTIFICATION_SEVERITY_LABELS[severity] }));
-  protected readonly snoozeOptions = SNOOZE_OPTIONS;
-  protected readonly canSnooze = canSnooze;
   protected readonly severityClass = severityClass;
   protected readonly dateTime = formatNotificationDateTime;
   protected readonly timeOf = formatNotificationTime;
@@ -259,6 +256,7 @@ export class NotificationsComponent {
 
   /** Opens the detail dialog; seeing a notification counts as reading it. */
   protected open(notification: NotificationResponse): void {
+    this.errorMessage.set('');
     this.selected.set(notification);
     if (!notification.read) this.markRead(notification, true);
   }
