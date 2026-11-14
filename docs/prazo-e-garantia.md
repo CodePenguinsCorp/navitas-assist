@@ -62,7 +62,7 @@ O detalhe do RMA (lista e Kanban) oferece os registros de reparo.
 
 | Operação | Rota | Permissão |
 | --- | --- | --- |
-| Consumir reserva | `POST /api/rmas/{id}/parts/{reservationId}/consume` | `pecas.reservar` |
+| Aplicar reserva | `POST /api/rmas/{id}/parts/{reservationId}/consume` | `pecas.reservar` |
 | Adicionar componente externo | `POST /api/rmas/{id}/repair/external-components` | `pecas.reservar` |
 | Consultar componentes externos | `GET /api/rmas/{id}/repair/external-components` | `rma.ver` |
 | Registrar intervenção | `POST /api/rmas/{id}/repair/interventions` | `rma.diagnosticar` |
@@ -72,7 +72,7 @@ O detalhe do RMA (lista e Kanban) oferece os registros de reparo.
 | Anular componente externo | `POST /api/rmas/{rmaId}/repair/external-components/{id}/void` | `pecas.reservar` |
 | Consultar intervenções e total de horas | `GET /api/rmas/{id}/repair` | `rma.ver` |
 
-- **Consumo**: exige `{ "replacementReason": "Curto na placa", "componentBatch": "L24" }`; motivo obrigatório (até 1000) e lote opcional (até 120). Ficam na reserva com `appliedAt` e `appliedBy`, definidos pelo servidor na mesma transação do movimento. `GET /api/rmas/{id}/parts` devolve esses campos e `replacedComponents` (reservas `CONSUMED`). Consumos antigos exibem "Motivo não registrado".
+- **Aplicação**: exige `{ "replacementReason": "Curto na placa", "componentBatch": "L24" }`; motivo obrigatório (até 1000) e lote opcional (até 120). Ficam na reserva com `appliedAt` e `appliedBy`, definidos pelo servidor na mesma transação do movimento. `GET /api/rmas/{id}/parts` devolve esses campos e `replacedComponents` (reservas `CONSUMED`). Consumos antigos exibem "Motivo não registrado".
 - **Componente externo**: `code` opcional (60), `description` obrigatória (120), `quantity` positiva com até 3 casas, `unit` (20, padrão `un`), `componentBatch` opcional (120) e `replacementReason` obrigatório (1000). Não altera estoque. Código já existente no catálogo de peças (inclusive inativo, sem diferenciar caixa) é recusado, com orientação de usar a reserva. A lista "Componentes trocados" reúne estoque consumido e externos.
 - **Intervenção**: `type`, `description` obrigatória (1000), `performedOn` (data não futura) e `hours` positivas com até 3 casas. Tipos: `RESOLDERING` (Ressolda), `CLEANING` (Limpeza), `REPROGRAMMING` (Regravação), `FIRMWARE_UPDATE` (Atualização de firmware), `HARNESS_REPLACEMENT` (Troca de chicote) e `OTHER` (Outra). `technicianName` guarda o usuário autenticado; o tempo é registrado só em horas e somado em `totalServiceHours`.
 - RMAs `COMPLETED`, `RETURNED` e `IRREPARABLE` recusam criação, edição e anulação (`400`, em português); a leitura continua. Registros anulados permanecem visíveis com motivo, `voidedBy` e `voidedAt`, mas saem do total de horas e do laudo PDF. Edições preservam autor/data originais e expõem `editedBy` e `editedAt`.

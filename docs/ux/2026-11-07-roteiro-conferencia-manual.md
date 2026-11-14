@@ -114,10 +114,10 @@ As seções acima foram escritas antes destas entregas. Onde citam SLA por etapa
 - RMA encerrado: o ajuste é recusado. VIEWER e TECHNICIAN não veem o controle.
 
 ## 15. Componentes trocados e intervenções
-- Peças reservadas: ao consumir, o motivo é obrigatório (até 1000) e o lote é opcional; aparecem em "Componentes trocados" com aplicado por e quando. Consumos antigos mostram "Motivo não registrado".
+- Peças reservadas: ao aplicar, o motivo é obrigatório (até 1000) e o lote é opcional; aparecem em "Componentes trocados" com aplicado por e quando. Consumos antigos mostram "Motivo não registrado".
 - Componente externo (`pecas.reservar`): código opcional, descrição, quantidade (até 3 casas), unidade e motivo; estoque não muda. Código que já existe no catálogo, inclusive inativo, é recusado com orientação para usar a reserva.
 - Intervenção (`rma.diagnosticar`): tipo, descrição, data (não futura) e horas (até 3 casas); o total de horas é somado. SERVICE_DESK e VIEWER só leem.
-- RMA encerrado: novos consumos, componentes e intervenções são recusados com mensagem em português; a leitura continua.
+- RMA encerrado: novas aplicações, componentes e intervenções são recusados com mensagem em português; a leitura continua.
 - O laudo PDF lista componentes (motivo e lote), intervenções, técnico e horas, sem custos.
 
 ## 16. Relatórios, laudo e CSV (`relatorios.ver`)

@@ -16,7 +16,7 @@ Navitas Assist é um sistema web para diagnóstico técnico e acompanhamento de 
 | Kanban | Quadro por status, filtros avançados, visualizações salvas por usuário, arrastar para mudar de status. |
 | Dashboard | Indicadores de RMAs abertos, prioridade e atrasados. |
 | Clientes e produtos | Cadastros com busca paginada e importação CSV. |
-| Peças | Cadastro, estoque, movimentações, reservas e consumo nos RMAs. |
+| Peças | Cadastro, estoque, movimentações, reservas e aplicação nos RMAs. |
 | Protocolos | Modelos versionados de checklist, executados durante o RMA. |
 | Relatórios | Resumo, lista, CSV e laudo em PDF. |
 | Notificações | Sino e caixa de entrada no app, regras por evento e e-mail opcional. |
@@ -31,7 +31,7 @@ Status (`RmaStatus`): `RECEIVED` (Recebido), `TRIAGE` (Triagem), `IN_DIAGNOSIS` 
 3. O responsável (técnico) é atribuído por quem tem `rma.responsavel`. Só usuários ativos com `rma.atribuivel` aparecem como opção; perder a permissão ou ser inativado não apaga a atribuição existente. Cada troca registra anterior, novo, autor e horário.
 4. O técnico registra o diagnóstico (`rma.diagnosticar`), reserva e consome peças, adiciona componentes externos e intervenções (ver [prazo-e-garantia.md](prazo-e-garantia.md)) e executa protocolos (`protocolos.executar`).
 5. Impedimentos (`rma.impedimentos`) registram bloqueios com motivo e resolução. Bloquear não muda a coluna nem para o tempo da etapa.
-6. Ao encerrar, o laudo em PDF fica disponível ([relatorios-e-exportacoes.md](relatorios-e-exportacoes.md)). RMAs encerrados recusam novos consumos de peça, componentes externos, intervenções e ajustes de garantia.
+6. Ao encerrar, o laudo em PDF fica disponível ([relatorios-e-exportacoes.md](relatorios-e-exportacoes.md)). RMAs encerrados recusam novas aplicações de peça, componentes externos, intervenções e ajustes de garantia.
 
 Status, responsável e prioridade são alterados individualmente; não há edição em massa. A prioridade é trocada no detalhe, no Kanban e na tela de RMAs por quem tem `rma.editar` (enquanto o RMA não está encerrado), com `PUT /api/rmas/{id}` enviando só `{ "priority": ... }`; a API registra a nota `Priority changed from X to Y` no histórico de status.
 
