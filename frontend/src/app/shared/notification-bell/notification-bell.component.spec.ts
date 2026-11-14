@@ -98,7 +98,8 @@ describe('NotificationBellComponent', () => {
     expect(bell().getAttribute('aria-controls')).toBe(panel()!.id);
     expect(document.activeElement).toBe(panel());
     expect(Array.from(host().querySelectorAll('.bell-day')).map((day) => day.textContent?.trim())).toEqual(['Hoje', 'Ontem', '20/10/2026']);
-    expect(items().map((item) => item.querySelector('.bell-item__title')?.textContent?.trim())).toEqual([NOTIFICATION.title, READ.title, OLD.title]);
+    expect(items().map((item) => item.querySelector('.bell-item__title')?.textContent?.trim()))
+      .toEqual([NOTIFICATION.title, 'Peça pendente · OS-2026-000007', 'Antiga · OS-2026-000007']);
     expect(items()[0].querySelector('.mini-chip')?.textContent?.trim()).toBe('Crítico');
     expect(host().querySelector('.bell-item time')?.textContent?.trim()).toBe('10:00');
     expect(host().querySelectorAll('.bell-item.is-unread').length).toBe(1);
@@ -157,12 +158,34 @@ describe('NotificationBellComponent', () => {
     expect(panel()!.querySelector('.empty-state')?.textContent).toContain('Nenhuma notificação não lida');
   });
 
-  it('shows the summary beside the severity, without repeating the event type', async () => {
+  it('names the OS code once in the row title, as in the detail dialog', async () => {
+    await openWith([
+      { ...NOTIFICATION, id: 8, title: 'Nova OS OS-2026-000007' },
+      { ...NOTIFICATION, id: 9, title: 'Impedimento na OS OS-2026-000004', rmaCode: 'OS-2026-000004', createdAt: at(24, 9) }
+    ]);
+    expect(items().map((item) => item.querySelector('.bell-item__title')!.textContent!.trim()))
+      .toEqual(['Nova OS · OS-2026-000007', 'Impedimento · OS-2026-000004']);
+    expect(panel()!.querySelector<HTMLButtonElement>('button[aria-label="Marcar como lida Nova OS · OS-2026-000007"]')).not.toBeNull();
+  });
+
+  it('lays each row out as content beside a time-and-action column, with the severity, title and message on their own lines', async () => {
     await openWith([NOTIFICATION]);
-    const meta = items()[0].querySelector<HTMLElement>('.bell-item__meta')!;
-    expect(meta.querySelector('.mini-chip')!.textContent!.trim()).toBe('Crítico');
-    expect(meta.querySelector('.bell-item__summary')!.textContent!.trim()).toBe('Cliente · Produto');
-    expect(meta.textContent).not.toContain('Nova atribuição');
+    const row = host().querySelector<HTMLElement>('.bell-item')!;
+    expect(Array.from(row.children).map((child) => child.className)).toEqual(['bell-item__main', 'bell-item__side']);
+
+    const main = items()[0];
+    expect(Array.from(main.querySelectorAll(':scope > span:not(.sr-only)')).map((part) => part.className))
+      .toEqual(['bell-item__head', 'bell-item__title', 'bell-item__summary']);
+    const head = main.querySelector('.bell-item__head')!;
+    expect(head.querySelector('.mini-chip')!.textContent!.trim()).toBe('Crítico');
+    expect(head.querySelector('.bell-item__dot')).not.toBeNull();
+    expect(head.textContent).not.toContain('Cliente');
+    expect(main.querySelector('.bell-item__summary')!.textContent!.trim()).toBe('Cliente · Produto');
+    expect(main.textContent).not.toContain('Nova atribuição');
+
+    const side = row.querySelector('.bell-item__side')!;
+    expect(Array.from(side.children).map((child) => child.className)).toEqual(['bell-item__time', 'bell-item__action']);
+    expect(side.querySelector('time')!.textContent!.trim()).toBe('10:00');
   });
 
   describe('detail dialog', () => {

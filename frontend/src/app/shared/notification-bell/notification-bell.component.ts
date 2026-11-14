@@ -12,6 +12,7 @@ import {
   formatNotificationTime,
   followNotification,
   groupNotificationsByDay,
+  notificationHeadline,
   severityClass
 } from '../../core/utils/notification-ui';
 import { NotificationDetailModalComponent } from '../notification-detail-modal/notification-detail-modal.component';
@@ -95,6 +96,7 @@ export class NotificationBellComponent {
 
   protected readonly severityLabels = NOTIFICATION_SEVERITY_LABELS;
   protected readonly severityClass = severityClass;
+  protected readonly headlineOf = notificationHeadline;
   protected readonly timeOf = formatNotificationTime;
   protected readonly dateTime = formatNotificationDateTime;
 
