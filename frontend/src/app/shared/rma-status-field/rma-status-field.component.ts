@@ -62,7 +62,7 @@ type StatusTarget = Pick<RmaResponse, 'id' | 'status'> & { statusHistory?: RmaSt
     .status-note { display: grid; gap: var(--space-2); margin-top: var(--space-2); max-width: 40rem; }
     .status-note .field-group { grid-template-rows: auto; gap: var(--space-1); }
     .status-note .field-group > span { color: var(--muted-strong); font-size: var(--font-size-sm); }
-    .status-note textarea { box-sizing: border-box; min-height: 0; padding: var(--space-2) var(--control-padding-x); font-size: var(--font-size-md); line-height: var(--line-height-body); resize: vertical; field-sizing: content; max-height: 10rem; }
+    .status-note textarea { box-sizing: border-box; min-height: 6rem; max-height: 6rem; padding: var(--space-2) var(--control-padding-x); font-size: var(--font-size-md); line-height: var(--line-height-body); resize: none; overflow-y: auto; }
     .status-note__actions { flex-direction: row; justify-content: flex-end; gap: var(--space-2); }
     .status-note__actions button { min-height: var(--control-height); padding-inline: var(--space-4); font-size: var(--font-size-md); }
   `]

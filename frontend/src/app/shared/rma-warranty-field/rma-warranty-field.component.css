@@ -5,7 +5,7 @@
 .warranty-field__trigger:disabled, .warranty-field__reason:disabled { cursor: not-allowed; opacity: var(--disabled-opacity); }
 .warranty-field__form { display: grid; gap: var(--space-2); min-width: 0; }
 .warranty-field__form app-custom-select, .warranty-field__form .field-group, .warranty-field__form textarea { min-width: 0; max-width: 100%; }
-.warranty-field__form textarea { width: 100%; box-sizing: border-box; resize: vertical; }
+.warranty-field__form textarea { width: 100%; box-sizing: border-box; resize: none; }
 .warranty-field__reasons { display: flex; flex-wrap: wrap; gap: var(--space-1); }
 .warranty-field__reason { padding: var(--space-1) var(--space-2); background: var(--brand-tint); color: var(--text); border-radius: var(--radius-xs); overflow-wrap: anywhere; }
 .warranty-field__actions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); }
