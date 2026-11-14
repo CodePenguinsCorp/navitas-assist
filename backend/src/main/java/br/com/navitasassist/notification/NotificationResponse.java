@@ -28,7 +28,8 @@ public record NotificationResponse(
             notification.getActionPath(),
             notification.getCreatedAt(),
             notification.getReadAt(),
-            notification.getSnoozedUntil(),
+            // A snooze stored on an informative notification (before the rule existed) has no effect, so it is not reported.
+            notification.getEventType().isSnoozable() ? notification.getSnoozedUntil() : null,
             notification.getReadAt() != null
         );
     }

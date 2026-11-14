@@ -275,8 +275,7 @@ class NotificationIntegrationTest {
 
     @Test
     void snoozedNotificationsLeaveTheInboxUntilTheirTime() throws Exception {
-        createRma();
-        Long id = notificationRepository.findAll().stream().filter(notification -> notification.getRecipient().getId().equals(desk.getId())).findFirst().orElseThrow().getId();
+        Long id = saveNotification(desk, NotificationEventType.RMA_BLOCKED, null).getId();
 
         mockMvc.perform(post("/api/notifications/{id}/snooze", id).with(as(desk)).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"minutes\":1}"))
             .andExpect(status().isBadRequest());
@@ -291,6 +290,48 @@ class NotificationIntegrationTest {
         createRma();
         mockMvc.perform(post("/api/notifications/read-all").with(as(desk)).with(csrf())).andExpect(status().isNoContent());
         mockMvc.perform(get("/api/notifications").param("unreadOnly", "true").param("includeSnoozed", "true").with(as(desk))).andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "PART_PENDING", "TEST_FAILED"})
+    void notificationsThatAskForActionCanBeSnoozed(NotificationEventType type) throws Exception {
+        assertTrue(type.isSnoozable());
+        Long id = saveNotification(desk, type, null).getId();
+
+        mockMvc.perform(post("/api/notifications/{id}/snooze", id).with(as(desk)).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"minutes\":60}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.snoozedUntil").isNotEmpty());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_CREATED", "RMA_ASSIGNED"})
+    void informationalNotificationsCannotBeSnoozed(NotificationEventType type) throws Exception {
+        org.junit.jupiter.api.Assertions.assertFalse(type.isSnoozable());
+        Long id = saveNotification(desk, type, null).getId();
+
+        mockMvc.perform(post("/api/notifications/{id}/snooze", id).with(as(desk)).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"minutes\":60}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Esta notificação é apenas informativa e não pode ser adiada."));
+
+        org.junit.jupiter.api.Assertions.assertNull(notificationRepository.findById(id).orElseThrow().getSnoozedUntil());
+        mockMvc.perform(get("/api/notifications").with(as(desk))).andExpect(jsonPath("$", hasSize(1)));
+    }
+
+    @Test
+    void informationalNotificationsSnoozedBeforeTheRuleStayVisibleAndCounted() throws Exception {
+        Instant later = Instant.now().plusSeconds(3600);
+        Notification legacy = saveNotification(desk, NotificationEventType.RMA_CREATED, later);
+        saveNotification(desk, NotificationEventType.RMA_BLOCKED, later);
+
+        mockMvc.perform(get("/api/notifications").with(as(desk)))
+            .andExpect(jsonPath("$", hasSize(1)))
+            .andExpect(jsonPath("$[0].id").value(legacy.getId()))
+            .andExpect(jsonPath("$[0].snoozedUntil").value(org.hamcrest.Matchers.nullValue()));
+        mockMvc.perform(get("/api/notifications").param("includeSnoozed", "true").with(as(desk)))
+            .andExpect(jsonPath("$", hasSize(2)))
+            .andExpect(jsonPath("$[?(@.eventType == 'RMA_BLOCKED')].snoozedUntil", hasSize(1)))
+            .andExpect(jsonPath("$[?(@.eventType == 'RMA_CREATED')].snoozedUntil", contains(org.hamcrest.Matchers.nullValue())));
+        mockMvc.perform(get("/api/notifications/summary").with(as(desk))).andExpect(jsonPath("$.unread").value(1));
     }
 
     @Test
@@ -582,6 +623,25 @@ class NotificationIntegrationTest {
             default -> throw new IllegalArgumentException();
         }
         NotificationTestSupport.awaitIdle(notificationExecutor);
+    }
+
+    private Notification saveNotification(UserAccount recipient, NotificationEventType type, Instant snoozedUntil) {
+        NotificationEvent event = new NotificationEvent();
+        event.setEventKey("direct-" + type + "-" + System.nanoTime());
+        event.setEventType(type);
+        event.setStatus(NotificationEventStatus.PROCESSED);
+        event.setOccurredAt(Instant.now());
+        event = notificationEventRepository.save(event);
+        Notification notification = new Notification();
+        notification.setEvent(event);
+        notification.setRecipient(recipient);
+        notification.setEventType(type);
+        notification.setSeverity(type.isSnoozable() ? NotificationSeverity.WARNING : NotificationSeverity.INFO);
+        notification.setTitle("Teste " + type);
+        notification.setMessage("Teste");
+        notification.setCreatedAt(Instant.now());
+        notification.setSnoozedUntil(snoozedUntil);
+        return notificationRepository.save(notification);
     }
 
     private RmaDetailResponse createRma() {

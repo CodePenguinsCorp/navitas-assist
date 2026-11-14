@@ -68,7 +68,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
           and (:eventType is null or n.eventType = :eventType)
           and (:severity is null or n.severity = :severity)
           and (:unreadOnly = false or n.readAt is null)
-          and (:includeSnoozed = true or n.snoozedUntil is null or n.snoozedUntil <= :now)
+          and (:includeSnoozed = true or n.snoozedUntil is null or n.snoozedUntil <= :now or n.eventType not in :snoozableTypes)
         order by n.createdAt desc, n.id desc
         """)
     List<Notification> findForRecipient(
@@ -77,6 +77,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
         @Param("includeSnoozed") boolean includeSnoozed,
         @Param("now") Instant now,
         @Param("visibleTypes") java.util.Collection<br.com.navitasassist.notification.NotificationEventType> visibleTypes,
+        /* Only these types honor snoozedUntil; on the others an old snooze is ignored. */
+        @Param("snoozableTypes") java.util.Collection<br.com.navitasassist.notification.NotificationEventType> snoozableTypes,
         @Param("eventType") br.com.navitasassist.notification.NotificationEventType eventType,
         @Param("severity") br.com.navitasassist.notification.NotificationSeverity severity,
         Pageable pageable
@@ -88,10 +90,11 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
         where n.recipient.id = :recipientId
           and n.appVisible = true
           and n.readAt is null
-          and (n.snoozedUntil is null or n.snoozedUntil <= :now)
+          and (n.snoozedUntil is null or n.snoozedUntil <= :now or n.eventType not in :snoozableTypes)
         group by n.eventType
         """)
-    List<Object[]> countUnreadByType(@Param("recipientId") Long recipientId, @Param("now") Instant now);
+    List<Object[]> countUnreadByType(@Param("recipientId") Long recipientId, @Param("now") Instant now,
+        @Param("snoozableTypes") java.util.Collection<br.com.navitasassist.notification.NotificationEventType> snoozableTypes);
 
     @EntityGraph(attributePaths = { "rma" })
     Optional<Notification> findByIdAndRecipient_Id(Long id, Long recipientId);

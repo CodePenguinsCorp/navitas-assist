@@ -46,7 +46,7 @@ public class NotificationService {
     @Transactional(readOnly = true)
     public List<NotificationResponse> list(boolean unreadOnly, boolean includeSnoozed, NotificationEventType eventType, br.com.navitasassist.notification.NotificationSeverity severity) {
         UserAccount user = currentUser();
-        return notificationRepository.findForRecipient(user.getId(), unreadOnly, includeSnoozed, Instant.now(), visibleTypes(user), eventType, severity, PageRequest.of(0, PAGE_SIZE)).stream()
+        return notificationRepository.findForRecipient(user.getId(), unreadOnly, includeSnoozed, Instant.now(), visibleTypes(user), NotificationEventType.snoozableTypes(), eventType, severity, PageRequest.of(0, PAGE_SIZE)).stream()
             .filter(notification -> notification.isAppVisible() && visibilityPolicy.canView(user, notification.getEventType()))
             .map(NotificationResponse::from)
             .toList();
@@ -55,7 +55,7 @@ public class NotificationService {
     @Transactional(readOnly = true)
     public NotificationSummaryResponse summary() {
         UserAccount user = currentUser();
-        long unread = notificationRepository.countUnreadByType(user.getId(), Instant.now()).stream()
+        long unread = notificationRepository.countUnreadByType(user.getId(), Instant.now(), NotificationEventType.snoozableTypes()).stream()
             .filter(row -> visibilityPolicy.canView(user, (NotificationEventType) row[0]))
             .mapToLong(row -> (Long) row[1])
             .sum();
@@ -77,6 +77,9 @@ public class NotificationService {
 
     public NotificationResponse snooze(Long id, int minutes) {
         Notification notification = getOwned(id);
+        if (!notification.getEventType().isSnoozable()) {
+            throw new BusinessException("Esta notificação é apenas informativa e não pode ser adiada.");
+        }
         notification.setSnoozedUntil(Instant.now().plus(Duration.ofMinutes(minutes)));
         return NotificationResponse.from(notification);
     }
