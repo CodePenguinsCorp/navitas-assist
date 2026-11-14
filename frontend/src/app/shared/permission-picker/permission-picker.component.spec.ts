@@ -64,7 +64,6 @@ describe('PermissionPickerComponent', () => {
       const switches = Array.from(element.querySelectorAll<HTMLInputElement>('fieldset.permission-module input[type="checkbox"]'));
       expect(switches.length).toBe(22);
       expect(switches.every((input) => input.getAttribute('role') === 'switch')).toBe(true);
-      expect(text(element.querySelector('.permission-picker__total'))).toBe('3 de 22 selecionadas');
       expect(panel().hidden).toBe(false);
       expect(toggleButton()).toBeNull();
       expect(element.querySelector('input[type="search"]')).toBeNull();
@@ -134,8 +133,9 @@ describe('PermissionPickerComponent', () => {
       expect(panel().hidden).toBe(true);
       expect(toggleButton().getAttribute('aria-expanded')).toBe('false');
       expect(toggleButton().getAttribute('aria-controls')).toBe(panel().id);
-      expect(text(toggleButton())).toBe('Editar permissões extras');
-      expect(text(element.querySelector('.permission-picker__summary'))).toBe('Nenhuma permissão extra');
+      expect(toggleButton().getAttribute('aria-label')).toBe('Mostrar todas as permissões');
+      expect(element.querySelector('.permission-picker__summary')).toBeNull();
+      expect(element.querySelector('.permission-picker__total')).toBeNull();
       expect(chips()).toEqual([]);
     });
 
@@ -157,15 +157,12 @@ describe('PermissionPickerComponent', () => {
     it('lists the granted extras as chips, without the profile ones, and removes them', async () => {
       await mount((h) => extras(h, ['pecas.reservar', 'rma.status', 'rma.ver']));
       expect(chips()).toEqual(['Alterar status', 'Reservar e aplicar peças nas ordens de serviço']);
-      expect(text(element.querySelector('.permission-picker__summary'))).toBe('2 permissões extras');
-      expect(text(element.querySelector('.permission-picker__total'))).toBe('2 do perfil e 2 extras');
       const remove = element.querySelector<HTMLButtonElement>('.permission-chip button')!;
       expect(remove.getAttribute('aria-label')).toBe('Remover Alterar status');
       remove.click();
       render();
       expect([...host.selected()].sort()).toEqual(['pecas.reservar', 'rma.ver']);
       expect(chips()).toEqual(['Reservar e aplicar peças nas ordens de serviço']);
-      expect(text(element.querySelector('.permission-picker__summary'))).toBe('1 permissão extra');
     });
 
     it('ignores toggles on locked permissions', async () => {

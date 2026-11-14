@@ -23,10 +23,14 @@ let nextPanelId = 0;
   templateUrl: './permission-picker.component.html',
   styles: [`
     :host { display: grid; gap: var(--space-3); grid-column: 1 / -1; min-width: 0; }
-    .permission-picker__head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+    .permission-picker__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: var(--control-height); }
     .permission-picker__granted { display: grid; gap: var(--space-2); flex: 1 1 260px; min-width: 0; }
-    .permission-picker__summary { display: flex; align-items: center; min-height: var(--control-height-xs); font-weight: var(--font-weight-semibold); }
-    .permission-picker__summary.is-empty { color: var(--muted); font-weight: var(--font-weight-regular); }
+    .permission-picker__chevron { display: inline-flex; align-items: center; justify-content: center; align-self: center; width: var(--control-height); height: var(--control-height); margin-inline-start: auto; padding: 0; border-radius: var(--radius-xs); background: transparent; color: var(--muted); }
+    .permission-picker__chevron:hover { color: var(--brand-blue-deep); background: var(--brand-tint); }
+    .permission-picker__chevron:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+    .permission-picker__chevron app-icon { display: inline-flex; transition: transform 160ms ease; }
+    .permission-picker__chevron.is-open app-icon { transform: rotate(90deg); }
+    .permission-picker__head { cursor: pointer; }
     .permission-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
     .permission-picker__panel { display: grid; gap: var(--space-3); min-width: 0; }
     .permission-picker__panel[hidden] { display: none; }
@@ -75,11 +79,6 @@ export class PermissionPickerComponent {
   protected readonly grantedExtras = computed(() =>
     this.allItems().filter((item) => this.isSelected(item.code) && !this.isLocked(item.code)));
 
-  protected readonly summary = computed(() => {
-    const count = this.grantedExtras().length;
-    return count === 0 ? 'Nenhuma permissão extra' : count === 1 ? '1 permissão extra' : `${count} permissões extras`;
-  });
-
   protected readonly total = computed(() => {
     const items = this.allItems();
     if (this.mode() === 'profile') {
@@ -115,6 +114,12 @@ export class PermissionPickerComponent {
       return;
     }
     this.update([code], checked);
+  }
+
+  /** Clicking the empty part of the box opens it like the arrow does; chips keep their own buttons. */
+  protected onHeadClick(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (!target.closest('button, .permission-chip')) this.toggleExpanded();
   }
 
   protected toggleExpanded(): void {

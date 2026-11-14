@@ -1,7 +1,6 @@
 @if (mode() === 'extras') {
-  <div class="permission-picker__head">
+  <div class="permission-picker__head" (click)="onHeadClick($event)">
     <div class="permission-picker__granted">
-      <span class="permission-picker__summary" [class.is-empty]="grantedExtras().length === 0">{{ summary() }}</span>
       @if (grantedExtras().length) {
         <ul class="permission-chips" aria-label="Permissões extras concedidas">
           @for (item of grantedExtras(); track item.code) {
@@ -17,18 +16,20 @@
     </div>
     <button
       type="button"
-      class="button-secondary"
+      class="permission-picker__chevron"
+      [class.is-open]="expanded()"
+      [attr.aria-label]="expanded() ? 'Ocultar permissões' : 'Mostrar todas as permissões'"
       [attr.aria-expanded]="expanded()"
       [attr.aria-controls]="panelId"
       (click)="toggleExpanded()"
     >
-      <app-icon name="pencil" [size]="16" />{{ expanded() ? 'Ocultar permissões' : 'Editar permissões extras' }}
+      <app-icon name="chevron" [size]="18" />
     </button>
   </div>
 }
 
 <div #panel class="permission-picker__panel" [id]="panelId" [hidden]="mode() === 'extras' && !expanded()">
-  <span class="permission-picker__total" aria-live="polite">{{ total() }}</span>
+  @if (mode() === 'profile') { <span class="permission-picker__total" aria-live="polite">{{ total() }}</span> }
 
   <div class="permission-picker__grid">
     @for (module of catalog(); track module.module) {

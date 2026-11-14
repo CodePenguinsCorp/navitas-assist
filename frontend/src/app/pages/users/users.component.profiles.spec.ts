@@ -107,14 +107,14 @@ describe('UsersComponent profile and extra permissions', () => {
   describe('collapsible extra permissions', () => {
     const toggle = () => dialog().querySelector<HTMLButtonElement>('.extra-permissions button[aria-controls]')!;
     const details = () => ({ open: toggle().getAttribute('aria-expanded') === 'true' && !dialog().querySelector<HTMLElement>(`#${toggle().getAttribute('aria-controls')}`)!.hidden });
-    const summary = () => dialog().querySelector('.extra-permissions .permission-picker__summary')!.textContent!.replace(/\s+/g, ' ').trim();
+    const chipCount = () => dialog().querySelectorAll('.extra-permissions .permission-chip').length;
 
     it('starts minimized for a new user and keeps the checkboxes in the DOM', async () => {
       await mount();
       component.openCreateModal();
       fixture.detectChanges();
       expect(details().open).toBe(false);
-      expect(summary()).toContain('Nenhuma permissão extra');
+      expect(chipCount()).toBe(0);
       expect(dialog().querySelectorAll('.extra-permissions fieldset.permission-module').length).toBe(6);
     });
 
@@ -123,17 +123,17 @@ describe('UsersComponent profile and extra permissions', () => {
       component.openEditModal(account({ extraPermissions: ['rma.status', 'pecas.reservar'] }));
       fixture.detectChanges();
       expect(details().open).toBe(true);
-      expect(summary()).toContain('2 permissões extras');
+      expect(chipCount()).toBe(2);
     });
 
     it('counts a single extra in the singular and ignores permissions the profile already has', async () => {
       await mount();
       component.openEditModal(account({ extraPermissions: ['rma.ver'] }));
       fixture.detectChanges();
-      expect(summary()).toContain('Nenhuma permissão extra');
+      expect(chipCount()).toBe(0);
       extraBox('Alterar status').querySelector('input')!.click();
       fixture.detectChanges();
-      expect(summary()).toContain('1 permissão extra');
+      expect(chipCount()).toBe(1);
     });
 
     it('is minimized again the next time a new user is created', async () => {
