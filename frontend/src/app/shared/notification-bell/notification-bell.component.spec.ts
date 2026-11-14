@@ -189,11 +189,11 @@ describe('NotificationBellComponent', () => {
 
       expect(dialog()).not.toBeNull();
       expect(panel()).toBeNull();
-      expect(dialog()!.querySelector('h3')!.textContent).toBe(NOTIFICATION.title);
+      expect(dialog()!.querySelector('h3')!.textContent!.trim()).toBe(NOTIFICATION.title);
       expect(dialogText()).toContain('Crítico');
       expect(dialogText()).toContain('Nova atribuição');
-      expect(dialogText()).toContain('24 de outubro de 2026 às 10:00');
-      expect(dialogText()).toContain('(há 5 h)');
+      expect(dialog()!.querySelector('.notification-detail__meta')!.textContent).toContain('24/10/2026, 10:00');
+      expect(dialogText()).toContain('há 5 h');
       expect(dialogText()).toContain('Não lida');
       expect(dialog()!.querySelector('.notification-detail__message')!.textContent).toBe('Linha 1\nLinha 2');
       expect(loading.pendingCount()).toBe(0);
@@ -266,7 +266,7 @@ describe('NotificationBellComponent', () => {
       expect(dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Notificação anterior"]')!.disabled).toBe(true);
       next.click();
       await render();
-      expect(dialog()!.querySelector('h3')!.textContent).toBe(READ.title);
+      expect(dialog()!.querySelector('h3')!.textContent!.trim()).toBe('Peça pendente · OS-2026-000007');
       expect(next.disabled).toBe(true);
     });
 

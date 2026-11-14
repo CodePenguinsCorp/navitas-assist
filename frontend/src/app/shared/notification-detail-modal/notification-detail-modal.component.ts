@@ -6,9 +6,9 @@ import {
   NOTIFICATION_SEVERITY_LABELS,
   SNOOZE_OPTIONS,
   formatNotificationDateTime,
-  formatNotificationFullDateTime,
   formatTimeAgo,
   internalRoute,
+  notificationHeadline,
   severityClass
 } from '../../core/utils/notification-ui';
 import { CustomSelectComponent } from '../form-controls/custom-select/custom-select.component';
@@ -51,8 +51,8 @@ export class NotificationDetailModalComponent {
   protected readonly snoozeOptions = SNOOZE_OPTIONS;
   protected readonly severityClass = severityClass;
   protected readonly dateTime = formatNotificationDateTime;
-  protected readonly fullDateTime = formatNotificationFullDateTime;
 
+  protected readonly headline = computed(() => notificationHeadline(this.notification()));
   protected readonly ago = computed(() => formatTimeAgo(this.notification().createdAt, this.clock.now()));
   /** Only an active snooze is shown: the server returns an expired one as visible again. */
   protected readonly snoozedUntil = computed(() => {

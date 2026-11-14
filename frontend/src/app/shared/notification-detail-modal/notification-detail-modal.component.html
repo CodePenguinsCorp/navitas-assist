@@ -12,11 +12,11 @@
   >
     <header class="modal-header">
       <div class="notification-detail__heading">
-        <h3 class="notification-detail__title" [id]="titleId" tabindex="-1">{{ notification().title }}</h3>
         <div class="notification-detail__chips">
           <span class="mini-chip" [class]="severityClass(notification().severity)">{{ severityLabels[notification().severity] }}</span>
           <span class="mini-chip">{{ eventLabels[notification().eventType] }}</span>
         </div>
+        <h3 class="notification-detail__title" [id]="titleId" tabindex="-1">{{ headline() }}</h3>
       </div>
       <div class="notification-detail__nav">
         <button type="button" class="modal-close notification-detail__prev" aria-label="Notificação anterior" [disabled]="!hasPrevious()" (click)="previous.emit()"><app-icon name="chevron" [size]="18" /></button>
@@ -33,32 +33,12 @@
 
     <p class="notification-detail__message">{{ notification().message }}</p>
 
-    <dl class="notification-detail__facts">
-      <div>
-        <dt>Recebida em</dt>
-        <dd><time [attr.datetime]="notification().createdAt">{{ fullDateTime(notification().createdAt) }}</time> <span class="notification-detail__ago">({{ ago() }})</span></dd>
-      </div>
-      <div>
-        <dt>Estado</dt>
-        <dd>
-          {{ notification().read ? 'Lida' : 'Não lida' }}
-          @if (notification().readAt) { <span class="notification-detail__ago">em {{ dateTime(notification().readAt) }}</span> }
-          @if (snoozedUntil(); as until) { <span class="notification-snoozed"><app-icon name="clock" [size]="13" />Adiada até {{ dateTime(until) }}</span> }
-        </dd>
-      </div>
-      @if (notification().rmaCode; as code) {
-        <div>
-          <dt>Ordem de serviço</dt>
-          <dd>
-            @if (canOpen()) {
-              <button type="button" class="link-button code-text" (click)="openAction.emit()">{{ code }}</button>
-            } @else {
-              <span class="code-text">{{ code }}</span>
-            }
-          </dd>
-        </div>
+    <p class="notification-detail__meta">
+      <time [attr.datetime]="notification().createdAt">{{ dateTime(notification().createdAt) }}</time> · {{ ago() }} · {{ notification().read ? 'Lida' : 'Não lida' }}
+      @if (snoozedUntil(); as until) {
+        · <span class="notification-detail__snoozed"><app-icon name="clock" [size]="13" />Adiada até {{ dateTime(until) }}</span>
       }
-    </dl>
+    </p>
 
     <footer class="form-actions notification-detail__actions">
       <button type="button" class="button-secondary" (click)="closed.emit()">Fechar</button>

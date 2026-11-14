@@ -49,11 +49,16 @@ export function formatNotificationDateTime(value: string | null): string {
   return new Intl.DateTimeFormat('pt-BR', { timeZone: APP_TIME_ZONE, dateStyle: 'short', timeStyle: 'short' }).format(date);
 }
 
-/** Full date and time for the detail dialog, in the business time zone. */
-export function formatNotificationFullDateTime(value: string | null): string {
-  const date = value ? new Date(value) : null;
-  if (!date || Number.isNaN(date.getTime())) return 'Não informado';
-  return new Intl.DateTimeFormat('pt-BR', { timeZone: APP_TIME_ZONE, dateStyle: 'long', timeStyle: 'short' }).format(date);
+/**
+ * Short headline for the detail dialog: drops the "na OS <código>" wording the server puts in the title
+ * and names the OS code once, after a middle dot.
+ */
+export function notificationHeadline(notification: Pick<NotificationResponse, 'title' | 'rmaCode'>): string {
+  const { title, rmaCode: code } = notification;
+  if (!code) return title;
+  if (!title.includes(code)) return `${title} · ${code}`;
+  const short = title.replace(` na OS ${code}`, '').replace(`OS ${code}`, 'OS');
+  return short.includes(code) ? title : `${short.replace(/\s+/g, ' ').trim()} · ${code}`;
 }
 
 /** Relative age such as "há 5 min"; instants slightly in the future read as "agora". */

@@ -346,12 +346,11 @@ describe('NotificationsComponent inbox loading', () => {
 
         expect(dialog()).not.toBeNull();
         expect(dialog()!.getAttribute('aria-modal')).toBe('true');
-        expect(dialog()!.querySelector('h3')!.textContent).toBe('OS OS-2026-000007 atribuída a Técnico');
+        expect(dialog()!.querySelector('h3')!.textContent!.trim()).toBe('OS atribuída a Técnico · OS-2026-000007');
         expect(dialogText()).toContain('Informativo');
         expect(dialogText()).toContain('Nova atribuição');
-        expect(dialogText()).toContain('24 de outubro de 2026 às 09:00');
-        expect(dialogText()).toContain('(há 1 h)');
-        expect(dialogText()).toContain('OS-2026-000007');
+        expect(dialog()!.querySelector('.notification-detail__meta')!.textContent).toContain('24/10/2026, 09:00');
+        expect(dialogText()).toContain('há 1 h');
         expect(dialog()!.querySelector('.notification-detail__message')!.textContent).toBe('Primeira linha\nSegunda linha <b>não é HTML</b>');
         expect(dialog()!.querySelector('.notification-detail__message b')).toBeNull();
         expect(service['markRead']).toHaveBeenCalledWith(5, { silent: true });
@@ -440,11 +439,11 @@ describe('NotificationsComponent inbox loading', () => {
         expect(previous().disabled).toBe(true);
         next().click();
         render();
-        expect(dialog()!.querySelector('h3')!.textContent).toBe('Notificação antiga');
+        expect(dialog()!.querySelector('h3')!.textContent!.trim()).toBe('Notificação antiga · OS-2026-000007');
         expect(next().disabled).toBe(true);
         previous().click();
         render();
-        expect(dialog()!.querySelector('h3')!.textContent).toBe('OS OS-2026-000007 atribuída a Técnico');
+        expect(dialog()!.querySelector('h3')!.textContent!.trim()).toBe('OS atribuída a Técnico · OS-2026-000007');
       });
     });
 

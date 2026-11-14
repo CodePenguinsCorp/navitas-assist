@@ -27,24 +27,27 @@ describe('NotificationDetailModalComponent', () => {
 
   afterEach(() => { document.body.style.overflow = ''; });
 
-  it('labels the dialog with the full title and shows severity, event, age and state', async () => {
-    await setup(NOTIFICATION);
+  it('shows a short headline with the OS code once, the chips, the message and one meta line', async () => {
+    await setup({ ...NOTIFICATION, title: 'Impedimento na OS OS-2026-000007', message: 'Aguardando peça' });
     const dialog = root().querySelector('[role="dialog"]')!;
-    expect(dialog.getAttribute('aria-labelledby')).toBe(root().querySelector('h3')!.id);
-    expect(text()).toContain('Atenção');
-    expect(text()).toContain('Bloqueio');
-    expect(text()).toContain('(há 30 min)');
-    expect(text()).toContain('Não lida');
+    const title = root().querySelector('h3')!;
+    expect(dialog.getAttribute('aria-labelledby')).toBe(title.id);
+    expect(title.textContent!.trim()).toBe('Impedimento · OS-2026-000007');
+    expect(Array.from(root().querySelectorAll('.notification-detail__chips .mini-chip')).map((chip) => chip.textContent!.trim())).toEqual(['Atenção', 'Bloqueio']);
+    expect(root().querySelector('.notification-detail__message')!.textContent).toBe('Aguardando peça');
+    expect(root().querySelector('.notification-detail__meta')!.textContent!.replace(/[\s ]+/g, ' ').trim()).toBe('24/10/2026, 11:30 · há 30 min · Não lida');
+    expect(root().querySelector('dl')).toBeNull();
+    expect(text().split('OS-2026-000007').length - 1).toBe(1);
   });
 
-  it('shows read time and an active snooze, but not an expired one', async () => {
+  it('shows the read state and an active snooze, but not an expired one', async () => {
     await setup({ ...NOTIFICATION, read: true, readAt: '2026-10-24T14:40:00Z', snoozedUntil: '2026-10-24T18:00:00Z' });
-    expect(text()).toContain('Lida em 24/10/2026, 11:40');
-    expect(text()).toContain('Adiada até 24/10/2026, 15:00');
+    const meta = () => root().querySelector('.notification-detail__meta')!.textContent!.replace(/[\s ]+/g, ' ').trim();
+    expect(meta()).toBe('24/10/2026, 11:30 · há 30 min · Lida · Adiada até 24/10/2026, 15:00');
 
     fixture.componentRef.setInput('notification', { ...NOTIFICATION, read: true, snoozedUntil: '2026-10-24T14:00:00Z' });
     fixture.detectChanges();
-    expect(text()).not.toContain('Adiada até');
+    expect(meta()).not.toContain('Adiada até');
   });
 
   it('emits the requested actions', async () => {
@@ -59,10 +62,23 @@ describe('NotificationDetailModalComponent', () => {
     expect(events).toEqual(['open', 'read', 'close']);
   });
 
-  it('shows the code without a link when the path is not internal', async () => {
+  it('keeps the code in the headline and offers no Abrir OS when the path is not internal', async () => {
     await setup({ ...NOTIFICATION, actionPath: '//externo' });
-    expect(text()).toContain('OS-2026-000007');
-    expect(root().querySelector('.link-button.code-text')).toBeNull();
+    expect(root().querySelector('h3')!.textContent).toContain('OS-2026-000007');
     expect(button('Abrir OS')).toBeUndefined();
+  });
+
+  it('asks for the previous and next notification and disables them at the ends', async () => {
+    await setup(NOTIFICATION);
+    fixture.componentRef.setInput('hasNext', true);
+    fixture.detectChanges();
+    const events: string[] = [];
+    fixture.componentInstance.previous.subscribe(() => events.push('previous'));
+    fixture.componentInstance.next.subscribe(() => events.push('next'));
+    const previous = root().querySelector<HTMLButtonElement>('button[aria-label="Notificação anterior"]')!;
+    const next = root().querySelector<HTMLButtonElement>('button[aria-label="Próxima notificação"]')!;
+    expect(previous.disabled).toBe(true);
+    next.click();
+    expect(events).toEqual(['next']);
   });
 });

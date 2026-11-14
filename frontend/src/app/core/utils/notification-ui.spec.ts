@@ -1,4 +1,4 @@
-import { NOTIFICATION_EVENT_LABELS, followNotification, formatNotificationDateTime, formatNotificationFullDateTime, formatTimeAgo, groupNotificationsByDay, internalRoute, severityClass } from './notification-ui';
+import { NOTIFICATION_EVENT_LABELS, followNotification, formatNotificationDateTime, formatTimeAgo, groupNotificationsByDay, internalRoute, notificationHeadline, severityClass } from './notification-ui';
 
 describe('Notification UI utilities', () => {
   it('maps internal action paths to router navigation and rejects external links', () => {
@@ -33,9 +33,17 @@ describe('Notification UI utilities', () => {
     expect(groupNotificationsByDay([], Date.now())).toEqual([]);
   });
 
-  it('formats the full date and the relative age', () => {
-    expect(formatNotificationFullDateTime('2026-10-24T12:00:00Z')).toBe('24 de outubro de 2026 às 09:00');
-    expect(formatNotificationFullDateTime(null)).toBe('Não informado');
+  it('builds a short headline that names the OS code once', () => {
+    const code = 'OS-2026-000004';
+    expect(notificationHeadline({ title: `Impedimento na OS ${code}`, rmaCode: code })).toBe(`Impedimento · ${code}`);
+    expect(notificationHeadline({ title: `Nova OS ${code}`, rmaCode: code })).toBe(`Nova OS · ${code}`);
+    expect(notificationHeadline({ title: `OS ${code} atribuída a Ana`, rmaCode: code })).toBe(`OS atribuída a Ana · ${code}`);
+    expect(notificationHeadline({ title: `${code} atribuída`, rmaCode: code })).toBe(`${code} atribuída`);
+    expect(notificationHeadline({ title: 'Peça pendente', rmaCode: code })).toBe(`Peça pendente · ${code}`);
+    expect(notificationHeadline({ title: 'Aviso geral', rmaCode: null })).toBe('Aviso geral');
+  });
+
+  it('formats the relative age', () => {
     const now = Date.parse('2026-10-24T12:00:00Z');
     expect(formatTimeAgo('2026-10-24T12:00:30Z', now)).toBe('agora');
     expect(formatTimeAgo('2026-10-24T11:55:00Z', now)).toBe('há 5 min');
