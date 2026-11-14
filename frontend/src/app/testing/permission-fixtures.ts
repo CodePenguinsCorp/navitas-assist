@@ -10,7 +10,7 @@ export const LEGACY_PROFILE_PERMISSIONS: Readonly<Record<LegacyProfileCode, read
     'rma.ver', 'rma.abrir', 'rma.editar', 'rma.status', 'rma.responsavel', 'rma.diagnosticar', 'rma.impedimentos',
     'cadastros.ver', 'cadastros.editar', 'cadastros.importar', 'pecas.ver', 'pecas.movimentar', 'pecas.reservar', 'protocolos.ver',
     'protocolos.executar', 'protocolos.catalogo', 'relatorios.ver', 'usuarios.gerir', 'perfis.gerir',
-    'notificacoes.regras'
+    'notificacoes.regras', 'auditoria.ver'
   ],
   SERVICE_DESK: [
     'rma.ver', 'rma.abrir', 'rma.editar', 'rma.status', 'rma.responsavel', 'rma.impedimentos', 'cadastros.ver',

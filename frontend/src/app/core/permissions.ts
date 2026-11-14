@@ -20,7 +20,8 @@ export const PERMISSIONS = [
   'relatorios.ver',
   'usuarios.gerir',
   'perfis.gerir',
-  'notificacoes.regras'
+  'notificacoes.regras',
+  'auditoria.ver'
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

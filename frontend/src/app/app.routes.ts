@@ -108,6 +108,13 @@ export const routes: Routes = [
         title: 'Perfis | Navitas Assist'
       },
       {
+        path: 'auditoria',
+        loadComponent: () => import('./pages/audit/audit.component').then(module => module.AuditComponent),
+        canActivate: [permissionGuard],
+        data: { permissions: ['auditoria.ver'] },
+        title: 'Auditoria | Navitas Assist'
+      },
+      {
         path: 'relatorios',
         loadComponent: () => import('./pages/reports/reports.component').then((module) => module.ReportsComponent),
         canActivate: [permissionGuard],

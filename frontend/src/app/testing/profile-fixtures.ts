@@ -33,7 +33,8 @@ export const PERMISSION_CATALOG: PermissionModuleResponse[] = [
   { module: 'ADMINISTRACAO', label: 'Administração', permissions: [
     { code: 'usuarios.gerir', label: 'Gerenciar usuários' },
     { code: 'perfis.gerir', label: 'Gerenciar perfis e permissões' },
-    { code: 'notificacoes.regras', label: 'Configurar regras de notificação' }
+    { code: 'notificacoes.regras', label: 'Configurar regras de notificação' },
+    { code: 'auditoria.ver', label: 'Consultar a trilha de auditoria' }
   ] }
 ];
 

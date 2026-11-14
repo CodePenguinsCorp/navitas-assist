@@ -928,3 +928,22 @@ export interface CatalogImportPreview {
   rows: CatalogImportRow[];
 }
 export interface CatalogImportResult { importedRows: number; ignoredInvalidRows: number; ignoredDuplicateRows: number; }
+
+export interface AuditEventResponse {
+  id: number;
+  occurredAt: string;
+  actorUsername: string;
+  action: string;
+  entityType: string;
+  entityId: number | null;
+  entityLabel: string | null;
+  summary: string;
+}
+
+export interface AuditQuery extends PageQuery {
+  from?: string;
+  to?: string;
+  actor?: string;
+  action?: string;
+  entityType?: string;
+}

@@ -197,7 +197,7 @@ describe('AppShellComponent menu by permission', () => {
   const operation = ['Dashboard', 'RMAs', 'Kanban', 'Notificações', 'Peças'];
 
   it.each([
-    ['ADMIN', { 'Operação': operation, Cadastros: ['Clientes', 'Produtos', 'Protocolos', 'Usuários', 'Perfis'], 'Relatórios': ['Relatórios'] }],
+    ['ADMIN', { 'Operação': operation, Cadastros: ['Clientes', 'Produtos', 'Protocolos', 'Usuários', 'Perfis', 'Auditoria'], 'Relatórios': ['Relatórios'] }],
     ['SERVICE_DESK', { 'Operação': operation, Cadastros: ['Clientes', 'Produtos'] }],
     ['TECHNICIAN', { 'Operação': operation, 'Relatórios': ['Relatórios'] }],
     ['VIEWER', { 'Operação': operation, 'Relatórios': ['Relatórios'] }],

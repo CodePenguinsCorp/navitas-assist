@@ -60,11 +60,12 @@ describe('NAV_GROUPS', () => {
         ['/protocolos', 'checklist', ['protocolos.ver', 'protocolos.catalogo']],
         ['/usuarios', 'users', ['usuarios.gerir']],
         ['/perfis', 'shield', ['perfis.gerir']],
+        ['/auditoria', 'checklist', ['auditoria.ver']],
       ]],
       ['Relatórios', [
         ['/relatorios', 'chart', ['relatorios.ver']],
       ]],
     ]);
-    expect(NAV_GROUPS[1].items.at(-1)?.label).toBe('Perfis');
+    expect(NAV_GROUPS[1].items.at(-1)?.label).toBe('Auditoria');
   });
 });

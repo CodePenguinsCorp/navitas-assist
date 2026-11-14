@@ -19,6 +19,7 @@ describe('app routes', () => {
   describe('new: pages load on demand', () => {
     it.each([
       ['dashboard', 'DashboardComponent'],
+      ['auditoria', 'AuditComponent'],
       ['rmas', 'RmasComponent'],
       ['kanban', 'KanbanComponent'],
       ['clientes', 'ClientsComponent'],
@@ -44,6 +45,7 @@ describe('app routes', () => {
 
     it('keeps titles and guards every page with the permissions of spec §3.2', () => {
       const expected: Record<string, { title: string; permissions?: string[]; alternativePermissions?: string[] }> = {
+        auditoria: { title: 'Auditoria | Navitas Assist', permissions: ['auditoria.ver'] },
         dashboard: { title: 'Dashboard | Navitas Assist', permissions: ['rma.ver'] },
         rmas: { title: 'RMAs | Navitas Assist', permissions: ['rma.ver'] },
         kanban: { title: 'Kanban | Navitas Assist', permissions: ['rma.ver'] },

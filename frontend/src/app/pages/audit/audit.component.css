@@ -1,0 +1,12 @@
+.audit-filters { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem; padding: .75rem 0; }
+.audit-filters label { flex: 1 1 160px; min-width: 0; }
+.audit-filter-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+td { overflow-wrap: anywhere; vertical-align: top; }
+@media (max-width: 720px) {
+  .table-wrap { overflow: visible; }
+  table, tbody, tr, td { display: block; width: 100%; min-width: 0; }
+  thead { display: none; }
+  tr { padding: .75rem 0; border-bottom: 1px solid var(--border); }
+  td { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: .5rem; padding: .4rem; }
+  td::before { content: attr(data-label); font-weight: 600; color: var(--muted); }
+}

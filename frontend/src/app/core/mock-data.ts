@@ -105,7 +105,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Produtos', route: '/produtos', icon: 'box', permissions: ['cadastros.ver', 'cadastros.editar'], alternativePermissions: ['cadastros.importar'] },
       { label: 'Protocolos', route: '/protocolos', icon: 'checklist', permissions: ['protocolos.ver', 'protocolos.catalogo'] },
       { label: 'Usuários', route: '/usuarios', icon: 'users', permissions: ['usuarios.gerir'] },
-      { label: 'Perfis', route: '/perfis', icon: 'shield', permissions: ['perfis.gerir'] }
+      { label: 'Perfis', route: '/perfis', icon: 'shield', permissions: ['perfis.gerir'] },
+      { label: 'Auditoria', route: '/auditoria', icon: 'checklist', permissions: ['auditoria.ver'] }
     ]
   },
   {

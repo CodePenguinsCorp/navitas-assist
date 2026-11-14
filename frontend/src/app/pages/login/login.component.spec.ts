@@ -69,6 +69,12 @@ describe('Login failure feedback', () => {
     expectFailure('Credenciais inválidas.');
   });
 
+  it('shows the occurrence code returned for an unexpected login failure', () => {
+    startLogin().flush(null);
+    http.expectOne('/api/auth/login').flush({ message: 'Erro inesperado. Informe o código ABCD1234 ao suporte.' }, { status: 500, statusText: 'Failure' });
+    expectFailure('Erro inesperado. Informe o código ABCD1234 ao suporte.');
+  });
+
   it.each([0, 400, 403, 429, 500, 502])('does not blame credentials for login failure %s', (status) => {
     startLogin().flush(null);
     const login = http.expectOne('/api/auth/login');
