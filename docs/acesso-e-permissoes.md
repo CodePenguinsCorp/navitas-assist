@@ -64,7 +64,7 @@ Rota a rota em [api.md](api.md).
 | Registrar diagnóstico; registrar intervenção | `rma.diagnosticar` |
 | Registrar e resolver impedimentos | `rma.impedimentos` |
 | Cadastrar peças e movimentar estoque | `pecas.movimentar` |
-| Reservar, alocar, consumir e cancelar peças; componentes externos | `pecas.reservar` |
+| Reservar, alocar, aplicar e cancelar peças; componentes externos | `pecas.reservar` |
 | Executar protocolos | `protocolos.executar` |
 | Gerenciar modelos de protocolo | `protocolos.catalogo` |
 | Relatórios e exportações CSV | `relatorios.ver` |

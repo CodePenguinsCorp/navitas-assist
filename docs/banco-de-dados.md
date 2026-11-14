@@ -10,7 +10,7 @@ MySQL 8, com schema gerido pelo Flyway (`backend/src/main/resources/db/migration
 | V2 | `V2__rma_due_date_and_remove_stage_sla.sql` | Data limite (`rmas.due_date`, `rma_due_date_history`, `kanban_views.deadline_status`) e remoção dos alertas `SLA_WARNING`/`SLA_OVERDUE` (regras, silenciamentos, eventos e notificações desses tipos). |
 | V3 | `V3__rma_item_warranty_override.sql` | Ajuste manual de garantia por item e tabela de auditoria `rma_item_warranty_history`. |
 | V4 | `V4__notification_email_delivery.sql` | E-mail opcional e único do usuário; canal App/E-mail por regra; colunas e índice da fila de e-mail; regras dos tipos reservados. |
-| V5 | `V5__rma_repair.sql` | Motivo, lote e aplicação nas reservas consumidas; `rma_external_components` e `rma_interventions`. |
+| V5 | `V5__rma_repair.sql` | Motivo, lote e aplicação nas reservas aplicadas; `rma_external_components` e `rma_interventions`. |
 | V6 | `V6__notification_email_generation.sql` | `email_generation`: chave de idempotência por reenvio manual. |
 | V7 | `V7__notification_email_sent_index.sql` | Índice usado pela contagem dos tetos diário e mensal. |
 | V8 | `V8__rma_item_position.sql` | `item_position`: ordem dos itens (o primeiro é o principal). |

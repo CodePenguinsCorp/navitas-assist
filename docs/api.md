@@ -48,7 +48,7 @@ Convenções:
 | `GET /api/rmas/{id}/parts` | `rma.ver` | Reservas e componentes trocados do RMA. |
 | `POST /api/rmas/{id}/parts` | `pecas.reservar` | Reserva peça. |
 | `POST /api/rmas/{id}/parts/{reservationId}/allocate` | `pecas.reservar` | Aloca a reserva. |
-| `POST /api/rmas/{id}/parts/{reservationId}/consume` | `pecas.reservar` | Consome a reserva (motivo e lote). |
+| `POST /api/rmas/{id}/parts/{reservationId}/consume` | `pecas.reservar` | Aplica a reserva (ação `consume`) (motivo e lote). |
 | `POST /api/rmas/{id}/parts/{reservationId}/cancel` | `pecas.reservar` | Cancela a reserva. |
 | `GET /api/rmas/{id}/repair` | `rma.ver` | Intervenções e `totalServiceHours`. |
 | `GET /api/rmas/{id}/repair/external-components` | `rma.ver` | Componentes externos. |
