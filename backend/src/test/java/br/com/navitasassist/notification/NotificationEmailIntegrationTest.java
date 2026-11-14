@@ -108,7 +108,8 @@ class NotificationEmailIntegrationTest {
     @org.springframework.boot.test.mock.mockito.SpyBean private br.com.navitasassist.service.NotificationEmailContentFactory contentFactory;
     @org.springframework.boot.test.mock.mockito.SpyBean private br.com.navitasassist.service.NotificationVisibilityPolicy visibility;
     @MockBean private java.time.Clock clock;
-    private final java.time.Instant now = java.time.Instant.parse("2026-11-14T12:00:00Z");
+    // Relogio logo depois da criacao dos dados do teste, para os envios ja estarem devidos sem depender da data de hoje.
+    private final java.time.Instant now = java.time.Instant.now().plus(java.time.Duration.ofMinutes(10)).truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
     private UserAccount technician;
     private RmaDetailResponse rma;
 
