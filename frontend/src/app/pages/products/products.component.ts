@@ -4,7 +4,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { Component, DestroyRef, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable, Subject, debounceTime, filter, finalize } from 'rxjs';
+import { Observable, Subject, debounceTime, filter, finalize, of } from 'rxjs';
 import { ProductRequest, ProductResponse, ProductSummaryResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import {
@@ -78,6 +78,8 @@ export class ProductsComponent {
   protected readonly createButtonElement = viewChild<ElementRef<HTMLButtonElement>>('createButton');
   protected readonly canImport = computed(() => this.permissions.hasPermission('cadastros.importar'));
   protected readonly canEdit = computed(() => this.permissions.hasPermission('cadastros.editar'));
+  /** `cadastros.ver`: the list and its totals; a profile that only imports reaches the page for the import action. */
+  protected readonly canView = computed(() => this.permissions.hasPermission('cadastros.ver'));
 
   private readonly formBuilder = inject(FormBuilder);
   private readonly catalogService = inject(CatalogService);
@@ -101,7 +103,7 @@ export class ProductsComponent {
 
   private readonly searchChanges = new Subject<'search' | 'cancel'>();
   private readonly productList = new PagedList<ProductResponse>(
-    (pageQuery) => this.catalogService.listProducts({
+    (pageQuery) => !this.canView() ? of({ content: [], page: 0, size: pageQuery.size ?? 20, totalElements: 0, totalPages: 0 }) : this.catalogService.listProducts({
       ...pageQuery,
       query: this.searchTerm(),
       category: this.categoryFilter(),
@@ -323,6 +325,7 @@ export class ProductsComponent {
   }
 
   private loadSummary(): void {
+    if (!this.canView()) return;
     this.catalogService.getProductSummary().subscribe({
       next: (summary) => {
         this.summarySignal.set(summary);

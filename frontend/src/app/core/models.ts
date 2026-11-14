@@ -651,8 +651,9 @@ export interface PartReservationResponse {
   quantity: number;
   status: PartReservationStatus;
   partAvailable: number;
-  unitCost: number;
-  totalCost: number;
+  /** Nulos para quem não tem `pecas.ver`. */
+  unitCost: number | null;
+  totalCost: number | null;
   note: string | null;
   replacementReason?: string | null;
   componentBatch?: string | null;
@@ -669,8 +670,9 @@ export interface RmaPartsResponse {
   reservations: PartReservationResponse[];
   replacedComponents?: PartReservationResponse[];
   movements: PartMovementResponse[];
-  reservedCost: number;
-  consumedCost: number;
+  /** Nulos para quem não tem `pecas.ver`. */
+  reservedCost: number | null;
+  consumedCost: number | null;
   pendingCount: number;
 }
 

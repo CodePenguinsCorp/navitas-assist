@@ -95,11 +95,15 @@ public class SecurityConfig {
                 .requestMatchers("/api/users/**").hasAuthority(Codes.USUARIOS_GERIR)
                 .requestMatchers(HttpMethod.GET, "/api/reports/rmas", "/api/reports/rmas/summary", "/api/reports/rmas/export.csv",
                     "/api/reports/rmas/summary/export.csv").hasAuthority(Codes.RELATORIOS_VER)
-                // D2: leituras auxiliares (dashboard, relatórios, RMAs e painéis) seguem abertas a quem tem login.
                 .requestMatchers(HttpMethod.GET, "/api/clients/imports/template", "/api/products/imports/template").hasAuthority(Codes.CADASTROS_IMPORTAR)
                 .requestMatchers(HttpMethod.POST, "/api/clients/imports/preview", "/api/clients/imports/confirm",
                     "/api/products/imports/preview", "/api/products/imports/confirm").hasAuthority(Codes.CADASTROS_IMPORTAR)
-                .requestMatchers(HttpMethod.GET, "/api/auth/me", "/api/clients/**", "/api/products/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
+                // Minimização: seletores para quem abre, consulta ou relata OS e protocolos; totais para o dashboard; lista e detalhe só com cadastros.ver.
+                .requestMatchers(HttpMethod.GET, "/api/clients/options", "/api/products/options").hasAnyAuthority(Codes.CADASTROS_VER, Codes.RMA_VER,
+                    Codes.RMA_ABRIR, Codes.RELATORIOS_VER, Codes.PROTOCOLOS_VER, Codes.PROTOCOLOS_CATALOGO)
+                .requestMatchers(HttpMethod.GET, "/api/clients/summary", "/api/products/summary").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/clients", "/api/clients/*", "/api/products", "/api/products/*").hasAuthority(Codes.CADASTROS_VER)
                 .requestMatchers(HttpMethod.GET, "/api/rmas/dashboard").hasAuthority(Codes.RMA_VER)
                 .requestMatchers(HttpMethod.GET, "/api/rmas/*/report.pdf").hasAuthority(Codes.RMA_VER)
                 .requestMatchers(HttpMethod.GET, "/api/rmas/*/repair", "/api/rmas/*/repair/external-components").hasAuthority(Codes.RMA_VER)
@@ -111,8 +115,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/status-history/*/note").hasAuthority(Codes.RMA_STATUS)
                 .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/status").hasAuthority(Codes.RMA_STATUS)
                 .requestMatchers(HttpMethod.PATCH, "/api/rmas/*/assignee").hasAuthority(Codes.RMA_RESPONSAVEL)
-                .requestMatchers(HttpMethod.GET, "/api/parts/options").authenticated()
-                .requestMatchers(HttpMethod.GET, "/api/parts/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/parts/options").hasAnyAuthority(Codes.PECAS_VER, Codes.PECAS_RESERVAR)
+                .requestMatchers(HttpMethod.GET, "/api/parts/**").hasAuthority(Codes.PECAS_VER)
                 .requestMatchers(HttpMethod.POST, "/api/rmas/*/repair/external-components", "/api/rmas/*/parts/*/consume").hasAuthority(Codes.PECAS_RESERVAR)
                 .requestMatchers(HttpMethod.POST, "/api/rmas/*/repair/interventions").hasAuthority(Codes.RMA_DIAGNOSTICAR)
                 .requestMatchers(HttpMethod.PUT, "/api/rmas/*/repair/interventions/*").hasAuthority(Codes.RMA_DIAGNOSTICAR)
@@ -129,7 +133,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/rmas/*").hasAuthority(Codes.RMA_EDITAR)
                 .requestMatchers(HttpMethod.DELETE, "/api/clients/*", "/api/products/*").hasAuthority(Codes.CADASTROS_EDITAR)
                 .requestMatchers(HttpMethod.GET, "/api/protocols/rmas/*/executions").hasAuthority(Codes.RMA_VER)
-                .requestMatchers(HttpMethod.GET, "/api/protocols/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/protocols/templates").hasAnyAuthority(Codes.PROTOCOLOS_VER, Codes.PROTOCOLOS_EXECUTAR, Codes.RMA_VER)
                 .requestMatchers(HttpMethod.POST, "/api/protocols/templates").hasAuthority(Codes.PROTOCOLOS_CATALOGO)
                 .requestMatchers(HttpMethod.PUT, "/api/protocols/templates/*").hasAuthority(Codes.PROTOCOLOS_CATALOGO)
                 .requestMatchers(HttpMethod.POST, "/api/protocols/rmas/*/executions", "/api/protocols/executions/*/items/*/results", "/api/protocols/executions/*/complete").hasAuthority(Codes.PROTOCOLOS_EXECUTAR)

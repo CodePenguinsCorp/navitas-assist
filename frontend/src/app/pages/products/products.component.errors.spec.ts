@@ -47,7 +47,7 @@ describe('ProductsComponent HTTP error feedback', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ProductsComponent],
-      providers: [providePermissions(['cadastros.editar']), provideHttpClient(), provideHttpClientTesting()]
+      providers: [providePermissions(['cadastros.ver', 'cadastros.editar']), provideHttpClient(), provideHttpClientTesting()]
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(ProductsComponent);

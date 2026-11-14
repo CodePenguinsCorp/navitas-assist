@@ -102,10 +102,11 @@ class EffectivePermissionIntegrationTest {
     void customProfileOnlyReports() throws Exception {
         mvc.perform(get("/api/reports/rmas").with(as(REPORTS_ONLY))).andExpect(status().isOk());
         mvc.perform(get("/api/rmas").with(as(REPORTS_ONLY))).andExpect(status().isForbidden());
-        // D2: as leituras auxiliares continuam abertas a qualquer usuário autenticado.
-        mvc.perform(get("/api/clients").with(as(REPORTS_ONLY))).andExpect(status().isOk());
-        mvc.perform(get("/api/parts").with(as(REPORTS_ONLY))).andExpect(status().isOk());
-        mvc.perform(get("/api/protocols/templates").with(as(REPORTS_ONLY))).andExpect(status().isOk());
+        // Minimização (etapa 3): só o seletor de clientes do relatório; listas de cadastros, peças e protocolos exigem a permissão da área.
+        mvc.perform(get("/api/clients/options").with(as(REPORTS_ONLY))).andExpect(status().isOk());
+        mvc.perform(get("/api/clients").with(as(REPORTS_ONLY))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/parts").with(as(REPORTS_ONLY))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/protocols/templates").with(as(REPORTS_ONLY))).andExpect(status().isForbidden());
     }
 
     @Test

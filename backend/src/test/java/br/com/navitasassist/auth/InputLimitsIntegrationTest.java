@@ -32,7 +32,8 @@ class InputLimitsIntegrationTest {
         "/api/rmas", "/api/rmas/summary", "/api/rmas/board"})
     void searchRejectsMoreThanOneHundredCharacters(String path) throws Exception {
         mvc.perform(get(path).param("query", "x".repeat(101)).with(user("reader").authorities(
-                new SimpleGrantedAuthority("rma.ver"), new SimpleGrantedAuthority("usuarios.gerir"),
+                new SimpleGrantedAuthority("rma.ver"), new SimpleGrantedAuthority("cadastros.ver"), new SimpleGrantedAuthority("pecas.ver"),
+                new SimpleGrantedAuthority("usuarios.gerir"),
                 new SimpleGrantedAuthority("perfis.gerir"))))
             .andExpect(status().isBadRequest());
     }
@@ -42,7 +43,8 @@ class InputLimitsIntegrationTest {
         "/api/rmas", "/api/rmas/summary", "/api/rmas/board"})
     void searchAcceptsOneHundredCharacters(String path) throws Exception {
         mvc.perform(get(path).param("query", "x".repeat(100)).with(user("reader").authorities(
-                new SimpleGrantedAuthority("rma.ver"), new SimpleGrantedAuthority("usuarios.gerir"),
+                new SimpleGrantedAuthority("rma.ver"), new SimpleGrantedAuthority("cadastros.ver"), new SimpleGrantedAuthority("pecas.ver"),
+                new SimpleGrantedAuthority("usuarios.gerir"),
                 new SimpleGrantedAuthority("perfis.gerir"))))
             .andExpect(status().isOk());
     }

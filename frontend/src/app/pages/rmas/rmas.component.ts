@@ -840,6 +840,8 @@ export class RmasComponent {
     this.pageError.set('');
     this.loadListAndSummary();
 
+    // Os seletores só servem para abrir OS: sem `rma.abrir`, nenhuma chamada.
+    if (!this.canOpenRma()) return;
     forkJoin({
       clients: this.catalogService.listClientOptions(),
       products: this.catalogService.listProductOptions()

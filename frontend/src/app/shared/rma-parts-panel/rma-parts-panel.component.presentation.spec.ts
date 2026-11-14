@@ -115,6 +115,14 @@ describe('RmaPartsPanelComponent presentation', () => {
     expect(text()).not.toContain('pendente(s)');
   });
 
+  it('hides every cost block without pecas.ver', async () => {
+    await setup({ permissions: ['rma.ver', 'pecas.reservar'] });
+    expect(text()).not.toContain('Custo aplicado');
+    expect(text()).not.toContain('Custo reservado');
+    expect(facts(items()[0]).has('Custo da reserva')).toBe(false);
+    expect(facts(items()[0]).get('Quantidade')).toBeTruthy();
+  });
+
   // Vermelho: o formulário não tem seção nomeada nem mensagens junto dos campos; só há alerta geral.
   it('groups the inline reservation form and shows existing errors by field', async () => {
     await setup();

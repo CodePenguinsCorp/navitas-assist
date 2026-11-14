@@ -84,7 +84,9 @@
               <dl class="meta-list">
                 <div><dt>Quantidade</dt><dd>{{ quantity(reservation.quantity, reservation.unit) }}</dd></div>
                 <div><dt>Disponível</dt><dd>{{ quantity(reservation.partAvailable, reservation.unit) }}</dd></div>
-                <div><dt>Custo da reserva</dt><dd>{{ currency(reservation.totalCost) }}</dd></div>
+                @if (canSeeCosts()) {
+                  <div><dt>Custo da reserva</dt><dd>{{ currency(reservation.totalCost ?? 0) }}</dd></div>
+                }
                 @if (reservation.location) {
                   <div><dt>Local</dt><dd>{{ reservation.location }}</dd></div>
                 }

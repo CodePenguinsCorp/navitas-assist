@@ -207,8 +207,8 @@ export class RmaPartsPanelComponent {
       { label: 'Ativas', value: String(this.activeCount()), show: this.activeCount() > 0 },
       { label: 'Aplicadas', value: String(this.consumedCount()), show: this.consumedCount() > 0 },
       { label: 'Pendentes', value: String(parts.pendingCount), show: parts.pendingCount > 0 },
-      { label: 'Custo aplicado', value: formatCurrency(parts.consumedCost), show: this.canSeeCosts() && parts.consumedCost > 0 },
-      { label: 'Custo reservado', value: formatCurrency(parts.reservedCost), show: this.canSeeCosts() && parts.reservedCost > 0 }
+      { label: 'Custo aplicado', value: formatCurrency(parts.consumedCost ?? 0), show: this.canSeeCosts() && (parts.consumedCost ?? 0) > 0 },
+      { label: 'Custo reservado', value: formatCurrency(parts.reservedCost ?? 0), show: this.canSeeCosts() && (parts.reservedCost ?? 0) > 0 }
     ];
     return rows.filter(row => row.show);
   });

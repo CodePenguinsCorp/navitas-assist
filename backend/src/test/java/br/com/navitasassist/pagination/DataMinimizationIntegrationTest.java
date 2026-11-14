@@ -22,6 +22,11 @@ import org.springframework.transaction.annotation.Transactional;
 @ActiveProfiles("test")
 @Transactional
 class DataMinimizationIntegrationTest {
+    /** Leitor com as permissões de consulta das áreas lidas aqui (exigidas desde a etapa 3). */
+    private static final org.springframework.test.web.servlet.request.RequestPostProcessor READER = user("reader").authorities(
+        new org.springframework.security.core.authority.SimpleGrantedAuthority("cadastros.ver"),
+        new org.springframework.security.core.authority.SimpleGrantedAuthority("pecas.ver"),
+        new org.springframework.security.core.authority.SimpleGrantedAuthority("rma.ver"));
     @Autowired MockMvc mvc;
     @Autowired ClientRepository clients;
     @Autowired ProductRepository products;
@@ -44,13 +49,13 @@ class DataMinimizationIntegrationTest {
         part.setName("Peça minimizada");
         part.setUnit("UN");
         parts.saveAndFlush(part);
-        mvc.perform(get("/api/clients/options").with(user("reader")))
+        mvc.perform(get("/api/clients/options").with(READER))
             .andExpect(status().isOk()).andExpect(jsonPath("$[0]", aMapWithSize(2)))
             .andExpect(jsonPath("$[0].legalName").exists());
-        mvc.perform(get("/api/products/options").with(user("reader")))
+        mvc.perform(get("/api/products/options").with(READER))
             .andExpect(status().isOk()).andExpect(jsonPath("$[0]", aMapWithSize(3)))
             .andExpect(jsonPath("$[0].sku").exists());
-        mvc.perform(get("/api/parts/options").with(user("reader")))
+        mvc.perform(get("/api/parts/options").with(READER))
             .andExpect(status().isOk()).andExpect(jsonPath("$[0]", aMapWithSize(6)))
             .andExpect(jsonPath("$[0].available").exists());
     }
@@ -69,13 +74,13 @@ class DataMinimizationIntegrationTest {
         part.setName("Peça com datas");
         part.setUnit("UN");
         parts.saveAndFlush(part);
-        mvc.perform(get("/api/clients").param("query", "Cliente com datas").with(user("reader")))
+        mvc.perform(get("/api/clients").param("query", "Cliente com datas").with(READER))
             .andExpect(jsonPath("$.content[0].updatedAt").exists())
             .andExpect(jsonPath("$.content[0].createdAt").doesNotExist());
-        mvc.perform(get("/api/products").param("query", "MIN-DATES").with(user("reader")))
+        mvc.perform(get("/api/products").param("query", "MIN-DATES").with(READER))
             .andExpect(jsonPath("$.content[0].updatedAt").exists())
             .andExpect(jsonPath("$.content[0].createdAt").doesNotExist());
-        mvc.perform(get("/api/parts").param("query", "MIN-DATES").with(user("reader")))
+        mvc.perform(get("/api/parts").param("query", "MIN-DATES").with(READER))
             .andExpect(jsonPath("$[0].code").value("MIN-DATES"))
             .andExpect(jsonPath("$[0].createdAt").doesNotExist())
             .andExpect(jsonPath("$[0].updatedAt").doesNotExist());
@@ -92,11 +97,11 @@ class DataMinimizationIntegrationTest {
         client.setAddress("Rua interna, 10");
         client.setNotes("Observação interna");
         clients.saveAndFlush(client);
-        mvc.perform(get("/api/clients").param("query", "Cliente da edição").with(user("reader")))
+        mvc.perform(get("/api/clients").param("query", "Cliente da edição").with(READER))
             .andExpect(jsonPath("$.content[0]", aMapWithSize(7)))
             .andExpect(jsonPath("$.content[0].address").doesNotExist())
             .andExpect(jsonPath("$.content[0].notes").doesNotExist());
-        mvc.perform(get("/api/clients/" + client.getId()).with(user("reader")))
+        mvc.perform(get("/api/clients/" + client.getId()).with(READER))
             .andExpect(jsonPath("$.address").value("Rua interna, 10"))
             .andExpect(jsonPath("$.notes").value("Observação interna"));
     }
@@ -134,9 +139,9 @@ class DataMinimizationIntegrationTest {
 
     @Test
     void summariesExposeOnlyTheCountersDisplayed() throws Exception {
-        mvc.perform(get("/api/clients/summary").with(user("reader")))
+        mvc.perform(get("/api/clients/summary").with(READER))
             .andExpect(status().isOk()).andExpect(jsonPath("$", aMapWithSize(1)));
-        mvc.perform(get("/api/products/summary").with(user("reader")))
+        mvc.perform(get("/api/products/summary").with(READER))
             .andExpect(status().isOk()).andExpect(jsonPath("$", aMapWithSize(2)));
         mvc.perform(get("/api/users/summary").with(user("reader").authorities(
                 new org.springframework.security.core.authority.SimpleGrantedAuthority("usuarios.gerir"))))

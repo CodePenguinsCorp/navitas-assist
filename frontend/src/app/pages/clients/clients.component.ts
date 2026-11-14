@@ -4,7 +4,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { Component, DestroyRef, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable, Subject, Subscription, debounceTime, filter, finalize } from 'rxjs';
+import { Observable, Subject, Subscription, debounceTime, filter, finalize, of } from 'rxjs';
 import { ClientListItemResponse, ClientRequest, ClientResponse, ClientSummaryResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import {
@@ -45,6 +45,8 @@ export class ClientsComponent {
   protected readonly createButtonElement = viewChild<ElementRef<HTMLButtonElement>>('createButton');
   protected readonly canImport = computed(() => this.permissions.hasPermission('cadastros.importar'));
   protected readonly canEdit = computed(() => this.permissions.hasPermission('cadastros.editar'));
+  /** `cadastros.ver`: the list and its totals; a profile that only imports reaches the page for the import action. */
+  protected readonly canView = computed(() => this.permissions.hasPermission('cadastros.ver'));
 
   private readonly formBuilder = inject(FormBuilder);
   private readonly catalogService = inject(CatalogService);
@@ -67,7 +69,7 @@ export class ClientsComponent {
 
   private readonly searchChanges = new Subject<'search' | 'cancel'>();
   private readonly clientList = new PagedList<ClientListItemResponse>(
-    (pageQuery) => this.catalogService.listClients({
+    (pageQuery) => !this.canView() ? of({ content: [], page: 0, size: pageQuery.size ?? 20, totalElements: 0, totalPages: 0 }) : this.catalogService.listClients({
       ...pageQuery,
       query: this.searchTerm(),
       hasDocument: presenceToFlag(this.documentFilter()),
@@ -335,6 +337,7 @@ export class ClientsComponent {
   }
 
   private loadSummary(): void {
+    if (!this.canView()) return;
     this.catalogService.getClientSummary().subscribe({
       next: (summary) => this.summarySignal.set(summary),
       error: () => undefined

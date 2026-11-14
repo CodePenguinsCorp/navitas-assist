@@ -26,6 +26,12 @@ public record PartReservationResponse(
     Instant appliedAt,
     String appliedBy
 ) {
+    /** Mesma reserva sem custos, para quem não tem `pecas.ver`. */
+    public PartReservationResponse withoutCosts() {
+        return new PartReservationResponse(id, rmaId, rmaCode, partId, partCode, partName, unit, location, quantity, status, partAvailable,
+            null, null, note, createdBy, createdAt, updatedAt, replacementReason, componentBatch, appliedAt, appliedBy);
+    }
+
     public static PartReservationResponse from(PartReservation reservation, BigDecimal unitCost, BigDecimal totalCost) {
         Part part = reservation.getPart();
         return new PartReservationResponse(

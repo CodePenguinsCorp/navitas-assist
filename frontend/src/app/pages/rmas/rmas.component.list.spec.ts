@@ -40,6 +40,7 @@ const defaultSummary: SummaryFn = () => of({ total: 45, ongoing: 30, highPriorit
 
 async function setup(options: SetupOptions = {}) {
   const role = options.role ?? 'ADMIN';
+  const catalogService = { listClientOptions: vi.fn(() => of([])), listProductOptions: vi.fn(() => of([])) };
   const rmaService = {
     list: vi.fn(options.list ?? defaultList),
     getSummary: vi.fn(options.summary ?? defaultSummary),
@@ -55,7 +56,7 @@ async function setup(options: SetupOptions = {}) {
       provide: AuthService,
       useValue: { currentUser: currentUser.asReadonly() }
     },
-    { provide: CatalogService, useValue: { listClientOptions: () => of([]), listProductOptions: () => of([]) } },
+    { provide: CatalogService, useValue: catalogService },
     { provide: RmaService, useValue: rmaService },
     { provide: ProtocolService, useValue: { listExecutions: () => of([]), listTemplates: () => of([]) } }
   ];
@@ -71,7 +72,7 @@ async function setup(options: SetupOptions = {}) {
   const component = fixture.componentInstance as unknown as ListHarness;
   const page = fixture.nativeElement as HTMLElement;
   const render = () => fixture.detectChanges();
-  return { fixture, component, page, rmaService, render };
+  return { fixture, component, page, rmaService, catalogService, render };
 }
 
 function confirmFilters(component: ListHarness, query: string, status = ''): void {
@@ -484,6 +485,12 @@ describe('RmasComponent list state', () => {
 
       expect(rmaService.list).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 }));
       expect(component.page()).toBe(1);
+    });
+
+    it.each([['ADMIN', 1], ['SERVICE_DESK', 1], ['TECHNICIAN', 0], ['VIEWER', 0]] as const)('loads the opening selectors only with rma.abrir (%s)', async (role, calls) => {
+      const { catalogService } = await setup({ role });
+      expect(catalogService.listClientOptions).toHaveBeenCalledTimes(calls);
+      expect(catalogService.listProductOptions).toHaveBeenCalledTimes(calls);
     });
 
     it('opens the OS requested by a notification link on the Produtos tab', async () => {

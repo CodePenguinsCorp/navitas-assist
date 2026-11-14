@@ -44,7 +44,11 @@
   }
 
   <article class="table-card table-card--list panel">
-    @if (loadFailed()) {
+    @if (!canView()) {
+      <section class="empty-state">
+        <p>Seu perfil pode importar clientes, mas não consultar a lista.</p>
+      </section>
+    } @else if (loadFailed()) {
       <section class="empty-state" role="alert">
         <span class="icon-tile tone-danger"><app-icon name="alert" [size]="20" /></span>
         <h3>Não foi possível carregar os clientes.</h3>

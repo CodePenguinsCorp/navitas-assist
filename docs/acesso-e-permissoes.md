@@ -55,7 +55,7 @@ A = Administrador (`ADMIN`), S = Atendimento (`SERVICE_DESK`), T = Técnico (`TE
 
 Total: 22 permissões. Administrador tem 21 (todas menos `rma.atribuivel`), Atendimento 11, Técnico 11 e Consulta 5. `cadastros.importar` chega só ao Administrador, pela migração `V9`. `auditoria.ver` chega somente ao Administrador pela `V13`.
 
-`cadastros.ver`, `pecas.ver` e `protocolos.ver` controlam telas e menus; as leituras `GET` correspondentes na API continuam abertas a qualquer usuário autenticado, exceto os modelos de importação.
+`cadastros.ver`, `pecas.ver` e `protocolos.ver` controlam telas e menus e também as leituras `GET` correspondentes na API (minimização de dados, etapa 3). Os seletores aceitam as permissões das telas que os usam, e os totais de clientes e produtos seguem abertos ao dashboard. Os quatro perfis prontos têm `rma.ver`, `cadastros.ver`, `pecas.ver` e `protocolos.ver`, então nada muda para eles; perfis personalizados sem a permissão da área recebem `403`.
 
 ## Matriz resumida
 
@@ -63,7 +63,14 @@ Rota a rota em [api.md](api.md).
 
 | Recurso/operação | Permissão |
 |:---|:---|
-| Consultar clientes, produtos, peças e protocolos (`GET`, exceto importação) | qualquer usuário autenticado |
+| Listar e detalhar clientes e produtos (`GET /api/clients`, `/{id}`, `/api/products`) | `cadastros.ver` |
+| Seletores de clientes e produtos (`/options`) | qualquer uma de `cadastros.ver`, `rma.ver`, `rma.abrir`, `relatorios.ver`, `protocolos.ver`, `protocolos.catalogo` |
+| Totais de clientes e produtos (`/summary`) | qualquer usuário autenticado |
+| Consultar peças, pendências, reposição e movimentos (`GET /api/parts/**`) | `pecas.ver` |
+| Seletor de peças da OS (`GET /api/parts/options`) | qualquer uma de `pecas.ver`, `pecas.reservar` |
+| Custos de peças na OS (`unitCost`, `totalCost`, `reservedCost`, `consumedCost` em `/api/rmas/{id}/parts` e nas respostas das reservas) | `pecas.ver`; sem ela os campos vêm nulos e o painel esconde os blocos de custo |
+| Modelos de protocolo (`GET /api/protocols/templates`) | qualquer uma de `protocolos.ver`, `protocolos.executar`, `rma.ver` |
+| Execuções de protocolo da OS (`GET /api/protocols/rmas/{id}/executions`) | `rma.ver` |
 | Consultar ordens de serviço, Kanban e dashboard (`GET /api/rmas/**`) e laudo PDF | `rma.ver` |
 | Criar, alterar ou excluir clientes e produtos | `cadastros.editar` |
 | Baixar modelo, prévia e confirmação de importação CSV | `cadastros.importar` |
@@ -109,4 +116,4 @@ O registro de sessões fica em memória por instância, como as sessões HTTP; a
 
 ### Contratos dos seletores
 
-Os seletores de clientes e produtos usam `/api/clients/options` e `/api/products/options`, com identificação e nome (e SKU do produto). O painel de peças da Ordem de Serviço (OS) usa `/api/parts/options`, sem dados de custo, localização ou estoque interno. Nesta etapa, o acesso dessas leituras continua disponível a usuários autenticados.
+Os seletores de clientes e produtos usam `/api/clients/options` e `/api/products/options`, com identificação e nome (e SKU do produto). O painel de peças da Ordem de Serviço (OS) usa `/api/parts/options`, sem dados de custo, localização ou estoque interno. A tela de OS só carrega os seletores de cliente e produto com `rma.abrir`; as telas de Clientes e Produtos não leem a lista para quem só tem `cadastros.importar`.

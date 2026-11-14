@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { Signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { FormGroup } from '@angular/forms';
 import { of } from 'rxjs';
 import { ClientRequest, ClientResponse } from '../../core/models';
@@ -23,7 +24,7 @@ describe('ClientsComponent pending save lifecycle', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ClientsComponent],
-      providers: [providePermissions(['cadastros.editar']), provideHttpClient(), provideHttpClientTesting()],
+      providers: [providePermissions(['cadastros.ver', 'cadastros.editar']), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(ClientsComponent);
@@ -170,3 +171,18 @@ const CLIENTS: ClientResponse[] = [
     updatedAt: '2026-10-20T12:00:00Z'
   }
 ];
+
+describe('ClientsComponent for a profile that only imports', () => {
+  it('requests neither the list nor the totals without cadastros.ver', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ClientsComponent],
+      providers: [providePermissions(['cadastros.importar']), provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    }).compileComponents();
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(ClientsComponent);
+    fixture.detectChanges();
+    http.expectNone((request) => request.url.startsWith('/api/clients'));
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Seu perfil pode importar clientes, mas não consultar a lista.');
+    http.verify();
+  });
+});

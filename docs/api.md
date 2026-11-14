@@ -45,7 +45,7 @@ Convenções:
 
 | Rota | Permissão | Descrição |
 | --- | --- | --- |
-| `GET /api/rmas/{id}/parts` | `rma.ver` | Reservas e componentes trocados da OS. |
+| `GET /api/rmas/{id}/parts` | `rma.ver` | Reservas e componentes trocados da OS. Custos (`unitCost`, `totalCost`, `reservedCost`, `consumedCost`) só com `pecas.ver`; sem ela vêm nulos, também nas respostas de reservar, alocar, aplicar e cancelar. |
 | `POST /api/rmas/{id}/parts` | `pecas.reservar` | Reserva peça. |
 | `POST /api/rmas/{id}/parts/{reservationId}/allocate` | `pecas.reservar` | Aloca a reserva. |
 | `POST /api/rmas/{id}/parts/{reservationId}/consume` | `pecas.reservar` | Aplica a reserva (ação `consume`) (motivo e lote). |
@@ -67,10 +67,10 @@ Convenções:
 
 | Rota | Permissão | Descrição |
 | --- | --- | --- |
-| `GET /api/clients` · `/api/products` | autenticado | Lista paginada com filtros. A de clientes não traz endereço nem observações. |
-| `GET /api/clients/options` · `/api/products/options` | autenticado | Opções para seletores, sem paginação: clientes `{id, legalName}`, produtos `{id, sku, name}`. |
+| `GET /api/clients` · `/api/products` | `cadastros.ver` | Lista paginada com filtros. A de clientes não traz endereço nem observações. |
+| `GET /api/clients/options` · `/api/products/options` | qualquer uma de `cadastros.ver`, `rma.ver`, `rma.abrir`, `relatorios.ver`, `protocolos.ver`, `protocolos.catalogo` | Opções para seletores, sem paginação: clientes `{id, legalName}`, produtos `{id, sku, name}`. |
 | `GET /api/clients/summary` · `/api/products/summary` | autenticado | Totais dos cartões: clientes `{total}`, produtos `{total, categories}`. |
-| `GET /api/clients/{id}` | autenticado | Cliente completo, lido ao abrir a edição. |
+| `GET /api/clients/{id}` | `cadastros.ver` | Cliente completo, lido ao abrir a edição. |
 | `POST /api/clients` · `/api/products` | `cadastros.editar` | Cria. |
 | `PUT /api/clients/{id}` · `/api/products/{id}` | `cadastros.editar` | Altera. |
 | `DELETE /api/clients/{id}` · `/api/products/{id}` | `cadastros.editar` | Exclui. |
@@ -82,11 +82,11 @@ Convenções:
 
 | Rota | Permissão | Descrição |
 | --- | --- | --- |
-| `GET /api/parts/options` | autenticado | Seletor de peças da OS: `{id, code, name, unit, available, active}`. |
-| `GET /api/parts` | autenticado | Busca peças (`query`). |
-| `GET /api/parts/pending` | autenticado | Reservas pendentes. |
-| `GET /api/parts/replenishment` | autenticado | Peças a repor. |
-| `GET /api/parts/{id}/movements` | autenticado | Movimentações, sem custos (os custos ficam na peça e nas reservas). |
+| `GET /api/parts/options` | `pecas.ver` ou `pecas.reservar` | Seletor de peças da OS: `{id, code, name, unit, available, active}`. |
+| `GET /api/parts` | `pecas.ver` | Busca peças (`query`). |
+| `GET /api/parts/pending` | `pecas.ver` | Reservas pendentes. |
+| `GET /api/parts/replenishment` | `pecas.ver` | Peças a repor. |
+| `GET /api/parts/{id}/movements` | `pecas.ver` | Movimentações, sem custos (os custos ficam na peça e nas reservas). |
 | `POST /api/parts` | `pecas.movimentar` | Cadastra peça. |
 | `PUT /api/parts/{id}` | `pecas.movimentar` | Altera peça. |
 | `POST /api/parts/{id}/movements` | `pecas.movimentar` | Registra movimentação. |
@@ -96,7 +96,7 @@ Convenções:
 
 | Rota | Permissão | Descrição |
 | --- | --- | --- |
-| `GET /api/protocols/templates` | autenticado | Lista dos modelos. |
+| `GET /api/protocols/templates` | `protocolos.ver`, `protocolos.executar` ou `rma.ver` | Lista dos modelos. |
 | `POST /api/protocols/templates` | `protocolos.catalogo` | Cria modelo. |
 | `PUT /api/protocols/templates/{id}` | `protocolos.catalogo` | Altera (cria nova versão). |
 
