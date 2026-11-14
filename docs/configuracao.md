@@ -87,3 +87,7 @@ O provedor fake guarda só as últimas 100 mensagens em memória (limpas ao rein
 `spring.jpa.open-in-view: false` mantém o acesso lazy dentro das transações dos serviços, evitando consultas durante a serialização HTTP. O Hibernate usa `default_batch_fetch_size: 50` para agrupar carregamentos de relações; o teste de regressão limita uma página de 20 OS a 30 statements, com contexto de persistência limpo e clientes/produtos distintos.
 
 O Hikari usa `maximum-pool-size: 10` e `connection-timeout: 10000` ms explicitamente para limitar concorrência no banco e espera por conexão. São valores fixos da aplicação, sem novas variáveis de ambiente.
+
+## Resumo de usuários (P9)
+
+O resumo usa contagens no banco, inclusive administradores com permissões combinadas entre perfil e extras, ativos ou inativos. Isso evita hidratar todas as contas apenas para exibir totais. O teste verifica as permissões divididas e extras, inclui uma conta inativa e exige zero entidades carregadas.

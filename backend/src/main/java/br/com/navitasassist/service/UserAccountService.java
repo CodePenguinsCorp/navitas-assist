@@ -56,9 +56,7 @@ public class UserAccountService {
     @Transactional(readOnly = true)
     public UserSummaryResponse summarize() {
         // D13: admins = usuários, ativos ou não, com usuarios.gerir e perfis.gerir efetivas; roles = perfis em uso.
-        long administrators = userAccountRepository.findAll().stream()
-            .filter(effectivePermissionService::isAdministrator)
-            .count();
+        long administrators = userAccountRepository.countAdministrators();
         return new UserSummaryResponse(
             userAccountRepository.count(),
             userAccountRepository.countByActiveTrue(),
