@@ -81,15 +81,15 @@
           <div class="report-grid">
             <article class="panel table-card">
               <h2>Status atual</h2>
-              <ng-container [ngTemplateOutlet]="shares" [ngTemplateOutletContext]="{ rows: data.byStatus, base: data.totalRmas, unit: 'RMAs' }" />
+              <app-bar-chart [rows]="toBars(data.byStatus)" ariaLabel="RMAs por status atual" />
             </article>
             <article class="panel table-card">
               <h2>Garantia</h2>
-              <ng-container [ngTemplateOutlet]="shares" [ngTemplateOutletContext]="{ rows: data.byWarranty, base: data.totalItems, unit: 'Itens' }" />
+              <app-donut-chart [slices]="warrantySlices(data.byWarranty)" centerLabel="itens" [centerValue]="data.totalItems" ariaLabel="Itens por situação de garantia" />
             </article>
             <article class="panel table-card">
               <h2>Entradas por mês</h2>
-              <ng-container [ngTemplateOutlet]="counts" [ngTemplateOutletContext]="{ rows: data.byMonth, head: 'Mês', unit: 'RMAs' }" />
+              <app-bar-chart [rows]="toBars(data.byMonth)" ariaLabel="RMAs por mês de entrada" />
             </article>
             <article class="panel table-card">
               <h2>Tempo na etapa atual</h2>
@@ -178,15 +178,6 @@
     }
   </section>
 </section>
-
-<ng-template #shares let-rows="rows" let-base="base" let-unit="unit">
-  <div class="table-wrap"><table>
-    <thead><tr><th scope="col">Situação</th><th scope="col" class="num">{{ unit }}</th><th scope="col" class="num">%</th></tr></thead>
-    <tbody>@for (row of rows; track row.key) {
-      <tr><td>{{ row.label }}</td><td class="num">{{ row.count }}</td><td class="num">{{ percent(row.count, base) }}</td></tr>
-    } @empty { <tr><td colspan="3" class="report-muted">Sem dados no período.</td></tr> }</tbody>
-  </table></div>
-</ng-template>
 
 <ng-template #counts let-rows="rows" let-head="head" let-unit="unit">
   @if (rows.length) {

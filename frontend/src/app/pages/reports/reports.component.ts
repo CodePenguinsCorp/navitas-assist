@@ -13,6 +13,8 @@ import { saveDownload } from '../../core/utils/download';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { formatDuration } from '../../core/utils/duration';
 import { DEFAULT_PAGE_SIZE } from '../../core/utils/pagination';
+import { BarChartComponent } from '../../shared/bar-chart/bar-chart.component';
+import { DonutChartComponent } from '../../shared/donut-chart/donut-chart.component';
 import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -22,12 +24,14 @@ import { RmaReportLinkComponent } from '../../shared/rma-report-link/rma-report-
 
 type ReportTab = 'summary' | 'failures' | 'recurrence' | 'rmas';
 
+const WARRANTY_TONES: Record<string, string> = { IN_WARRANTY: 'success', OUT_OF_WARRANTY: 'danger', PENDING: 'slate' };
+
 const DEFAULT_PERIOD_DAYS = 90;
 const MAX_PERIOD_DAYS = 366;
 
 @Component({
   selector: 'app-reports',
-  imports: [NgTemplateOutlet, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, IconComponent, PageHeaderComponent, PaginationComponent, RmaReportLinkComponent],
+  imports: [NgTemplateOutlet, ReactiveFormsModule, BarChartComponent, CustomSelectComponent, DatePickerComponent, DonutChartComponent, IconComponent, PageHeaderComponent, PaginationComponent, RmaReportLinkComponent],
   templateUrl: './reports.component.html',
   styleUrl: './reports.component.css'
 })
@@ -171,6 +175,14 @@ export class ReportsComponent {
   protected barWidth(count: number, rows: { count: number }[]): number {
     const max = rows.reduce((value, row) => Math.max(value, row.count), 0);
     return max ? Math.round((count / max) * 100) : 0;
+  }
+
+  protected toBars(rows: { label: string; count: number }[]): { label: string; value: number }[] {
+    return rows.map((row) => ({ label: row.label, value: row.count }));
+  }
+
+  protected warrantySlices(rows: { key: string; label: string; count: number }[]): { label: string; value: number; tone: string }[] {
+    return rows.map((row) => ({ label: row.label, value: row.count, tone: WARRANTY_TONES[row.key] ?? 'slate' }));
   }
 
   protected productLabel(row: RmaReportRow): string {

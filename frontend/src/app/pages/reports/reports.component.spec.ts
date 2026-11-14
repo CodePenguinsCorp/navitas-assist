@@ -80,12 +80,23 @@ describe('ReportsComponent', () => {
     expect(text()).toContain('no máximo 366 dias');
   });
 
+  it('draws warranty as a donut with the item total instead of a table', () => {
+    respond();
+    const root = fixture.nativeElement as HTMLElement;
+    const donut = root.querySelector('app-donut-chart') as HTMLElement;
+    expect(donut).not.toBeNull();
+    expect(donut.querySelector('.donut__value')?.textContent).toBe('5');
+    const row = Array.from(donut.querySelectorAll('tbody tr')).find((tr) => tr.textContent?.includes('Em garantia')) as Element;
+    expect(Array.from(row.children).map((cell) => cell.textContent?.trim())).toEqual(['Em garantia', '4', '80,0%']);
+    expect(root.querySelectorAll('app-bar-chart').length).toBe(2);
+    expect(Array.from(root.querySelectorAll('th')).some((cell) => cell.textContent?.trim() === 'Situação' && !donut.contains(cell))).toBe(false);
+  });
+
   it('shows the summary with shares, months and stage times', () => {
     respond();
     expect(text()).toContain('4 RMAs');
     expect(text()).toContain('5 itens');
     expect(text()).toContain('Recebido');
-    expect(text()).toContain('75,0%');
     expect(text()).toContain('Em garantia');
     expect(text()).toContain('80,0%');
     expect(text()).toContain('10/2026');

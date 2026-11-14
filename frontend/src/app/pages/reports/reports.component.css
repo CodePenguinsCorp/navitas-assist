@@ -4,6 +4,7 @@
 .report-period-error { flex-basis: 100%; margin: 0; }
 .report-panel, .report-filters { min-width: 0; }
 .report-panel:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-sm); }
+.report-grid { align-items: start; }
 .report-grid .table-card { min-width: 0; }
 .report-loading { min-height: 160px; }
 td { vertical-align: top; overflow-wrap: break-word; }

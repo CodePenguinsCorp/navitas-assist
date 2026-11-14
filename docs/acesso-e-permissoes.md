@@ -41,8 +41,9 @@ A = Administrador (`ADMIN`), S = Atendimento (`SERVICE_DESK`), T = Técnico (`TE
 | `usuarios.gerir` | Administração | Gerenciar usuários | ✓ | | | |
 | `perfis.gerir` | Administração | Gerenciar perfis e permissões | ✓ | | | |
 | `notificacoes.regras` | Administração | Configurar regras de notificação | ✓ | | | |
+| `auditoria.ver` | Administração | Consultar a trilha de auditoria | ✓ | | | |
 
-Total: 21 permissões. Administrador tem 20 (todas menos `rma.atribuivel`), Atendimento 11, Técnico 11 e Consulta 5. `cadastros.importar` chega só ao Administrador, pela migração `V9`.
+Total: 22 permissões. Administrador tem 21 (todas menos `rma.atribuivel`), Atendimento 11, Técnico 11 e Consulta 5. `cadastros.importar` chega só ao Administrador, pela migração `V9`. `auditoria.ver` chega somente ao Administrador pela `V13`.
 
 `cadastros.ver`, `pecas.ver` e `protocolos.ver` controlam telas e menus; as leituras `GET` correspondentes na API continuam abertas a qualquer usuário autenticado, exceto os modelos de importação.
 
@@ -70,6 +71,7 @@ Rota a rota em [api.md](api.md).
 | Usuários (`/api/users/**`, exceto `assignable`) | `usuarios.gerir` |
 | Perfis (`/api/profiles/**`) | `perfis.gerir` |
 | Regras de notificação (`/api/notification-rules/**`) | `notificacoes.regras` |
+| Consultar auditoria (`GET /api/audit-events`, tela `/auditoria`) | `auditoria.ver` |
 | `GET /api/profiles/options` | qualquer uma de `perfis.gerir`, `usuarios.gerir`, `notificacoes.regras` |
 | `GET /api/permissions` | qualquer uma de `perfis.gerir`, `usuarios.gerir` |
 | Visualizações do Kanban, notificações pessoais, técnicos atribuíveis, `/api/auth/me`, logout | qualquer usuário autenticado |

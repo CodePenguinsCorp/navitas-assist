@@ -158,3 +158,11 @@ Qualquer outra rota de `/api/protocols/**` é negada.
 | `POST /api/notification-rules/emails/test` | Envia e-mail de teste ao endereço da própria sessão. |
 
 Comportamento em [notificacoes-e-emails.md](notificacoes-e-emails.md).
+
+## Auditoria
+
+| Rota | Permissão | Descrição |
+| --- | --- | --- |
+| `GET /api/audit-events` | `auditoria.ver` | Trilha paginada, com `from`, `to` (datas inclusivas no fuso America/Sao_Paulo), `actor` (username completo), `action`, `entityType`, `page` e `size` (padrão 20, máximo 100). Ordem por instante e ID decrescentes. |
+
+Contrato e eventos em [auditoria.md](auditoria.md). Não há edição, exclusão ou exportação.
