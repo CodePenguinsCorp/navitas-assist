@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "angular",
+  "git": { "deploymentEnabled": false },
   "buildCommand": "npm run build",
   "outputDirectory": "dist/navitas-assist-frontend/browser",
   "rewrites": [

@@ -53,6 +53,8 @@ O navegador acessa somente `https://SEU-SITE.vercel.app/api/...`. A Vercel encam
 
    Confirme a criação. Aguarde o build, aplicação do Flyway e status **Live**. Abra `https://SEU-BACKEND.onrender.com/health`: deve responder HTTP 200. Se o processo reiniciar por memória, consulte os logs e reduza carga ou mude o plano; o limite de heap não limita toda a memória da JVM. Novas versões exigem deploy manual (`autoDeployTrigger: off`).
 
+   **Vercel também é manual:** o `frontend/vercel.json` traz `git.deploymentEnabled: false`, então um push não publica nada. Para publicar uma versão, rode `npx vercel --prod` dentro da pasta `frontend` (login na primeira vez) ou, no painel da Vercel, use **Deployments** e crie o deploy a partir do commit desejado.
+
 5. **Crie o primeiro administrador.** Só depois de o Flyway criar o schema, gere o BCrypt na raiz do repositório, pelo prompt oculto:
 
    ```powershell
