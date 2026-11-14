@@ -15,7 +15,6 @@ import { PartsComponent } from './parts.component';
 const PART: PartResponse = {
   id: 4, code: 'PCA-1', name: 'Capacitor', unit: 'm', location: 'A1', minimumStock: 8, unitCost: 10,
   onHand: 10, reserved: 4, available: 6, belowMinimum: true, active: true,
-  createdAt: '2026-10-24T12:00:00Z', updatedAt: '2026-10-24T12:00:00Z'
 };
 const VALUES = { code: ' PCA-1 ', name: ' Capacitor ', unit: ' m ', location: '   ', minimumStock: 2.5, unitCost: 12.75, active: false };
 const PAYLOAD = { code: 'PCA-1', name: 'Capacitor', unit: 'm', location: null, minimumStock: 2.5, unitCost: 12.75, active: false };

@@ -29,11 +29,11 @@ interface CreateHarness {
 
 const client: ClientResponse = {
   id: 1, legalName: 'Cliente', tradeName: null, documentNumber: null, email: null, phone: null,
-  address: null, notes: null, createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+  address: null, notes: null, updatedAt: '2026-10-20T12:00:00Z'
 };
 const product: ProductResponse = {
   id: 2, sku: 'SKU-2', name: 'Produto', category: null, hardwareVersion: null, firmwareVersion: null,
-  defaultWarrantyMonths: 12, technicalNotes: null, createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+  defaultWarrantyMonths: 12, technicalNotes: null, updatedAt: '2026-10-20T12:00:00Z'
 };
 
 async function setup(options: { role?: LegacyProfileCode; create?: CreateFn } = {}) {

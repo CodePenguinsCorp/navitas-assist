@@ -10,14 +10,13 @@ import { PartsComponent } from './parts.component';
 const PART: PartResponse = {
   id: 4, code: 'PCA-1', name: 'Capacitor', unit: 'm', location: 'A1', minimumStock: 8, unitCost: 10,
   onHand: 10, reserved: 4, available: 6, belowMinimum: true, active: true,
-  createdAt: '2026-10-24T12:00:00Z', updatedAt: '2026-10-24T12:00:00Z'
 };
 const INACTIVE: PartResponse = { ...PART, id: 5, code: 'CAB-2', name: 'Cabo', location: 'B2', active: false, onHand: 2, unitCost: 5 };
 const REPLENISHMENT: PartReplenishmentResponse = { ...PART, partId: 4, pendingQuantity: 3.5, suggestedQuantity: 12.5 };
 const PENDING: PartReservationResponse = {
   id: 2, rmaId: 7, rmaCode: 'OS-7', partId: 4, partCode: 'PCA-1', partName: 'Capacitor', unit: 'm', location: 'A1',
   quantity: 3.5, status: 'PENDING', partAvailable: 6, unitCost: 10, totalCost: 35, note: null, createdBy: 'tech',
-  createdAt: PART.createdAt, updatedAt: PART.updatedAt
+  createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
 };
 
 describe('PartsComponent presentation', () => {

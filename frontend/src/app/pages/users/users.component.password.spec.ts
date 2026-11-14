@@ -9,7 +9,7 @@ import { PERMISSION_CATALOG } from '../../testing/profile-fixtures';
 import { UsersComponent } from './users.component';
 
 const USER: UserAccountResponse = { id: 2, username: 'operator', fullName: 'Operator', profile: { id: 4, name: 'Consulta' }, extraPermissions: [], active: true,
-  createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' };
+  updatedAt: '2026-10-20T12:00:00Z' };
 const EXCESSIVE = [{ name: 'ASCII', password: 'a'.repeat(73) }, { name: 'accented', password: 'á'.repeat(37) },
   { name: 'emoji', password: '😀'.repeat(19) }, { name: 'Unicode whitespace', password: '\u3000'.repeat(25) }];
 const VALID = [{ name: 'ASCII boundary', password: 'a'.repeat(72) }, { name: 'accented boundary', password: 'á'.repeat(36) },

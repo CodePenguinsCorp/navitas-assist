@@ -60,7 +60,6 @@ export interface UserAccountResponse {
   /** Extras do usuário, na ordem do catálogo; podem repetir permissões do perfil. */
   extraPermissions: string[];
   active: boolean;
-  createdAt: string;
   updatedAt: string;
   email?: string | null;
 }
@@ -76,13 +75,12 @@ export interface ProfileRef {
   name: string;
 }
 
-/** `GET /api/profiles` e `/api/profiles/{id}`: permissões na ordem do catálogo. */
+/** `GET /api/profiles`: permissões na ordem do catálogo. */
 export interface ProfileResponse {
   id: number;
   name: string;
   permissions: string[];
   userCount: number;
-  createdAt: string;
   updatedAt: string;
 }
 
@@ -145,7 +143,6 @@ export interface ClientResponse {
   phone: string | null;
   address: string | null;
   notes: string | null;
-  createdAt: string;
   updatedAt: string;
 }
 
@@ -168,7 +165,6 @@ export interface ProductResponse {
   firmwareVersion: string | null;
   defaultWarrantyMonths: number;
   technicalNotes: string | null;
-  createdAt: string;
   updatedAt: string;
 }
 
@@ -252,8 +248,6 @@ export interface KanbanViewRequest {
 
 export interface KanbanViewResponse extends KanbanViewRequest {
   id: number;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface DiagnosisRequest {
@@ -519,8 +513,6 @@ export interface PartResponse {
   available: number;
   belowMinimum: boolean;
   active: boolean;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface PartMovementRequest {

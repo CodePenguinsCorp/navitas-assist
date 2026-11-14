@@ -41,7 +41,7 @@ export const PERMISSION_CATALOG: PermissionModuleResponse[] = [
 export function buildProfile(overrides: Partial<ProfileResponse> = {}): ProfileResponse {
   return {
     id: 1, name: 'Técnico', permissions: ['rma.ver', 'rma.status', 'rma.diagnosticar'], userCount: 0,
-    createdAt: '2026-11-10T12:00:00Z', updatedAt: '2026-11-11T15:30:00Z',
+    updatedAt: '2026-11-11T15:30:00Z',
     ...overrides
   };
 }

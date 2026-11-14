@@ -126,7 +126,7 @@ class ProfileControllerIntegrationTest {
             .andExpect(jsonPath("$.content[0].name").value(PREFIX + "B usado"))
             .andExpect(jsonPath("$.content[0].userCount").value(1))
             .andExpect(jsonPath("$.content[0].permissions", contains("rma.ver", "relatorios.ver")))
-            .andExpect(jsonPath("$.content[0].createdAt").isNotEmpty())
+            .andExpect(jsonPath("$.content[0].createdAt").doesNotExist())
             .andExpect(jsonPath("$.content[0].updatedAt").isNotEmpty());
     }
 

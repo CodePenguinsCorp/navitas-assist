@@ -20,7 +20,6 @@ public record CurrentUserResponse(
     List<String> extraPermissions,
     List<String> permissions,
     boolean active,
-    Instant createdAt,
     Instant updatedAt
 ) {
     public static CurrentUserResponse from(UserAccount userAccount, Set<Permission> effectivePermissions) {
@@ -34,7 +33,6 @@ public record CurrentUserResponse(
             user.extraPermissions(),
             List.copyOf(Permission.codes(effectivePermissions)),
             user.active(),
-            user.createdAt(),
             user.updatedAt()
         );
     }

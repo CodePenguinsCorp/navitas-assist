@@ -11,7 +11,6 @@ public record ProductResponse(
     String firmwareVersion,
     Integer defaultWarrantyMonths,
     String technicalNotes,
-    Instant createdAt,
     Instant updatedAt
 ) {
     public static ProductResponse from(Product product) {
@@ -24,7 +23,6 @@ public record ProductResponse(
             product.getFirmwareVersion(),
             product.getDefaultWarrantyMonths(),
             product.getTechnicalNotes(),
-            product.getCreatedAt(),
             product.getUpdatedAt()
         );
     }

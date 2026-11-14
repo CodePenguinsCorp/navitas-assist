@@ -55,6 +55,37 @@ class DataMinimizationIntegrationTest {
             .andExpect(jsonPath("$[0].available").exists());
     }
     @Test
+    void listsOmitTimestampsNoScreenReads() throws Exception {
+        Client client = new Client();
+        client.setLegalName("Cliente com datas");
+        clients.saveAndFlush(client);
+        Product product = new Product();
+        product.setSku("MIN-DATES");
+        product.setName("Produto com datas");
+        product.setDefaultWarrantyMonths(12);
+        products.saveAndFlush(product);
+        Part part = new Part();
+        part.setCode("MIN-DATES");
+        part.setName("Peça com datas");
+        part.setUnit("UN");
+        parts.saveAndFlush(part);
+        mvc.perform(get("/api/clients").param("query", "Cliente com datas").with(user("reader")))
+            .andExpect(jsonPath("$.content[0].updatedAt").exists())
+            .andExpect(jsonPath("$.content[0].createdAt").doesNotExist());
+        mvc.perform(get("/api/products").param("query", "MIN-DATES").with(user("reader")))
+            .andExpect(jsonPath("$.content[0].updatedAt").exists())
+            .andExpect(jsonPath("$.content[0].createdAt").doesNotExist());
+        mvc.perform(get("/api/parts").param("query", "MIN-DATES").with(user("reader")))
+            .andExpect(jsonPath("$[0].code").value("MIN-DATES"))
+            .andExpect(jsonPath("$[0].createdAt").doesNotExist())
+            .andExpect(jsonPath("$[0].updatedAt").doesNotExist());
+        mvc.perform(get("/api/users").with(user("manager").authorities(
+                new org.springframework.security.core.authority.SimpleGrantedAuthority("usuarios.gerir"))))
+            .andExpect(jsonPath("$.content[0].updatedAt").exists())
+            .andExpect(jsonPath("$.content[0].createdAt").doesNotExist());
+    }
+
+    @Test
     void readsWithoutConsumersAreNoLongerServed() throws Exception {
         var viewer = user("reader").authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("rma.ver"));
         assertNotServed(get("/api/rmas/history").param("serialNumber", "X").with(viewer));

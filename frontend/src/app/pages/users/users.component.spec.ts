@@ -22,7 +22,7 @@ import { UsersComponent } from './users.component';
 function user(id: number, fullName: string): UserAccountResponse {
   return {
     id, username: `user${id}`, fullName, profile: { id: 3, name: 'Técnico' }, extraPermissions: [], active: true,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+    updatedAt: '2026-10-20T12:00:00Z'
   };
 }
 

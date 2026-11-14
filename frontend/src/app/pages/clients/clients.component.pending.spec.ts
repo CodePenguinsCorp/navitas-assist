@@ -140,16 +140,16 @@ const CLIENTS: ClientResponse[] = [
     ...{ contactName: 'Contato legado reservado' },
     id: 1, legalName: 'Alfa', tradeName: null, documentNumber: '123',
     email: 'alfa@example.com', phone: null, address: null, notes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+    updatedAt: '2026-10-20T12:00:00Z'
   },
   {
     id: 2, legalName: 'Beta', tradeName: null, documentNumber: null,
     email: 'beta@example.com', phone: '123', address: null, notes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+    updatedAt: '2026-10-20T12:00:00Z'
   },
   {
     id: 3, legalName: 'Gama', tradeName: null, documentNumber: '456',
     email: '   ', phone: null, address: null, notes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+    updatedAt: '2026-10-20T12:00:00Z'
   }
 ];

@@ -185,11 +185,11 @@ describe('RmasComponent pending editor lifecycle', () => {
   const client: ClientResponse = {
     id: 1, legalName: 'Cliente', tradeName: null, documentNumber: null,
     email: null, phone: null, address: null, notes: null,
-    createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt
+    updatedAt: createdRma.updatedAt
   };
   const product: ProductResponse = {
     id: 2, sku: 'SKU-2', name: 'Produto', category: null, hardwareVersion: null, firmwareVersion: null,
-    defaultWarrantyMonths: 12, technicalNotes: null, createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt
+    defaultWarrantyMonths: 12, technicalNotes: null, updatedAt: createdRma.updatedAt
   };
 
   beforeEach(async () => {

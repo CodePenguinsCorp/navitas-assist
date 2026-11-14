@@ -11,7 +11,6 @@ public record ClientResponse(
     String phone,
     String address,
     String notes,
-    Instant createdAt,
     Instant updatedAt
 ) {
     public static ClientResponse from(Client client) {
@@ -24,7 +23,6 @@ public record ClientResponse(
             client.getPhone(),
             client.getAddress(),
             client.getNotes(),
-            client.getCreatedAt(),
             client.getUpdatedAt()
         );
     }

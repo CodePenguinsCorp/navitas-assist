@@ -19,7 +19,7 @@ function client(id: number, legalName: string): ClientResponse {
   return {
     id, legalName, tradeName: null, documentNumber: null, email: null,
     phone: null, address: null, notes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+    updatedAt: '2026-10-20T12:00:00Z'
   };
 }
 

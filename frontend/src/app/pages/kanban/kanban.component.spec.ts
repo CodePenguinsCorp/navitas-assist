@@ -596,7 +596,7 @@ describe('KanbanComponent filters', () => {
       query: null, priority: 'HIGH', status: null, warranty: null, assigneeId: null, unassignedOnly: false,
       entryFrom: null, entryTo: null, updatedFrom: null, updatedTo: null,
     } as KanbanViewResponse['filters'];
-    views.set([{ id: 9, name: 'Antiga', defaultView: false, filters: legacyFilters, createdAt: '2026-10-01T12:00:00Z', updatedAt: '2026-10-01T12:00:00Z' }]);
+    views.set([{ id: 9, name: 'Antiga', defaultView: false, filters: legacyFilters}]);
     component.filtersForm.patchValue({ deadline: 'OVERDUE' });
 
     component.applyView(9);

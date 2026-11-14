@@ -18,7 +18,7 @@ const OPTIONS: ProfileOption[] = [
 function account(overrides: Partial<UserAccountResponse> = {}): UserAccountResponse {
   return {
     id: 7, username: 'ana', fullName: 'Ana Souza', profile: { id: 4, name: 'Consulta' }, extraPermissions: [], active: true,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z', ...overrides
+    updatedAt: '2026-10-20T12:00:00Z', ...overrides
   };
 }
 

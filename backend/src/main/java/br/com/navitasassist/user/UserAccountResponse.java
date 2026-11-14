@@ -15,7 +15,6 @@ public record UserAccountResponse(
     ProfileSummary profile,
     List<String> extraPermissions,
     boolean active,
-    Instant createdAt,
     Instant updatedAt
 ) {
     public static UserAccountResponse from(UserAccount userAccount) {
@@ -27,7 +26,6 @@ public record UserAccountResponse(
             ProfileSummary.from(userAccount.getProfile()),
             List.copyOf(Permission.codes(Permission.fromCodes(userAccount.getExtraPermissions()))),
             userAccount.isActive(),
-            userAccount.getCreatedAt(),
             userAccount.getUpdatedAt()
         );
     }

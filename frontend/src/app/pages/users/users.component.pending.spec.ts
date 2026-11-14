@@ -9,7 +9,7 @@ import { UsersComponent } from './users.component';
 
 const SAMPLE_USER: UserAccountResponse = {
   id: 1, username: 'technician', fullName: 'Operador', profile: { id: 3, name: 'Técnico' }, extraPermissions: [], active: true,
-  createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+  updatedAt: '2026-10-20T12:00:00Z'
 };
 
 function flushUserLists(http: HttpTestingController, content: unknown[]): void {

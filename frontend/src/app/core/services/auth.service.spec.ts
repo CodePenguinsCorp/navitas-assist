@@ -149,7 +149,6 @@ function authUser(overrides: Partial<AuthUserResponse> = {}): AuthUserResponse {
     extraPermissions: [],
     permissions: ADMIN_PERMISSIONS,
     active: true,
-    createdAt: '2026-10-20T12:00:00Z',
     updatedAt: '2026-10-20T12:00:00Z',
     ...overrides,
   };

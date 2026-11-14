@@ -29,7 +29,6 @@ const rmaParts = (reservations: PartReservationResponse[]): RmaPartsResponse => 
 const part = (id: number, unit: string, available = 3): PartResponse => ({
   id, code: `P-${id}`, name: `Peça ${id}`, unit, location: null, minimumStock: 1, unitCost: 10,
   onHand: available, reserved: 0, available, belowMinimum: false, active: true,
-  createdAt: '2026-10-24T12:00:00Z', updatedAt: '2026-10-24T12:00:00Z'
 });
 
 type Harness = {

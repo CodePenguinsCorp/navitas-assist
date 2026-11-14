@@ -9,7 +9,6 @@ import { PartsComponent } from './parts.component';
 const PART: PartResponse = {
   id: 4, code: 'PCA-1', name: 'Capacitor', unit: 'un', location: 'A1', minimumStock: 5, unitCost: 10,
   onHand: 4, reserved: 1, available: 3, belowMinimum: true, active: true,
-  createdAt: '2026-10-24T12:00:00Z', updatedAt: '2026-10-24T12:00:00Z'
 };
 
 const CONSUMPTION: PartMovementResponse = {

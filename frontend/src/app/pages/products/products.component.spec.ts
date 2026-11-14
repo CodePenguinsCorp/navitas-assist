@@ -20,13 +20,13 @@ import { ProductsComponent } from './products.component';
 const INITIAL_PRODUCTS: ProductResponse[] = [
   { id: 1, sku: 'A', name: 'Controlador Alfa', category: 'Controle', hardwareVersion: null,
     firmwareVersion: '1.0', defaultWarrantyMonths: 12, technicalNotes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' },
+    updatedAt: '2026-10-20T12:00:00Z' },
   { id: 2, sku: 'B', name: 'Controlador Beta', category: 'controle', hardwareVersion: null,
     firmwareVersion: null, defaultWarrantyMonths: 12, technicalNotes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' },
+    updatedAt: '2026-10-20T12:00:00Z' },
   { id: 3, sku: 'C', name: 'Sensor Gama', category: 'Sensor', hardwareVersion: null,
     firmwareVersion: ' ', defaultWarrantyMonths: 12, technicalNotes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z' }
+    updatedAt: '2026-10-20T12:00:00Z' }
 ];
 
 
@@ -36,7 +36,7 @@ function product(id: number, name: string): ProductResponse {
   return {
     id, sku: `SKU-${id}`, name, category: 'Controle', hardwareVersion: null, firmwareVersion: null,
     defaultWarrantyMonths: 12, technicalNotes: null,
-    createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z'
+    updatedAt: '2026-10-20T12:00:00Z'
   };
 }
 
