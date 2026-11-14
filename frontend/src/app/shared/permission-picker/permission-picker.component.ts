@@ -33,7 +33,7 @@ let nextPanelId = 0;
     .permission-picker__total { justify-self: end; margin: 0; color: var(--muted); font-size: var(--font-size-md); font-variant-numeric: tabular-nums; }
     .permission-picker__grid {
       display: grid; gap: var(--space-3); align-items: start;
-      grid-template-columns: repeat(auto-fill, minmax(min(100%, max(240px, (100% - 2 * var(--space-3)) / 3)), 1fr));
+      grid-template-columns: minmax(0, 1fr);
     }
     .permission-module {
       display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--space-2);
