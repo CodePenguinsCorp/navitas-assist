@@ -81,8 +81,24 @@ class DataMinimizationIntegrationTest {
             .andExpect(jsonPath("$[0].updatedAt").doesNotExist());
         mvc.perform(get("/api/users").with(user("manager").authorities(
                 new org.springframework.security.core.authority.SimpleGrantedAuthority("usuarios.gerir"))))
-            .andExpect(jsonPath("$.content[0].updatedAt").exists())
-            .andExpect(jsonPath("$.content[0].createdAt").doesNotExist());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[*].createdAt").isEmpty());
+    }
+
+    @Test
+    void clientListLeavesAddressAndNotesToTheDetail() throws Exception {
+        Client client = new Client();
+        client.setLegalName("Cliente da edição");
+        client.setAddress("Rua interna, 10");
+        client.setNotes("Observação interna");
+        clients.saveAndFlush(client);
+        mvc.perform(get("/api/clients").param("query", "Cliente da edição").with(user("reader")))
+            .andExpect(jsonPath("$.content[0]", aMapWithSize(7)))
+            .andExpect(jsonPath("$.content[0].address").doesNotExist())
+            .andExpect(jsonPath("$.content[0].notes").doesNotExist());
+        mvc.perform(get("/api/clients/" + client.getId()).with(user("reader")))
+            .andExpect(jsonPath("$.address").value("Rua interna, 10"))
+            .andExpect(jsonPath("$.notes").value("Observação interna"));
     }
 
     @Test

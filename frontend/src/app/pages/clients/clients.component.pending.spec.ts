@@ -37,6 +37,11 @@ describe('ClientsComponent pending save lifecycle', () => {
   function openEditor(mode: 'create' | 'edit'): void {
     page.querySelector<HTMLButtonElement>(mode === 'create' ? '.page-heading button' : '.row-actions button')!.click();
     fixture.detectChanges();
+    if (mode === 'edit') {
+      // A edição lê o cliente completo (endereço e observações) antes de liberar o salvar.
+      http.expectOne('/api/clients/1').flush(CLIENTS[0]);
+      fixture.detectChanges();
+    }
   }
 
   function enterName(): void {
@@ -132,6 +137,18 @@ describe('ClientsComponent pending save lifecycle', () => {
     http.expectNone({ method: 'POST', url: '/api/clients' });
     expect(page.querySelector('[role="alert"]')?.textContent).toContain('Revise os campos destacados');
     expect(page.querySelector<HTMLButtonElement>('.modal-close')!.disabled).toBe(false);
+  });
+
+  it('fills address and notes from the client detail and only then allows saving', () => {
+    page.querySelector<HTMLButtonElement>('.row-actions button')!.click();
+    fixture.detectChanges();
+    const submit = page.querySelector<HTMLButtonElement>('form button[type="submit"]')!;
+    expect(submit.disabled).toBe(true);
+    http.expectOne('/api/clients/1').flush({ ...CLIENTS[0], address: 'Rua do detalhe, 5', notes: 'Observação do detalhe' });
+    fixture.detectChanges();
+    expect(page.querySelector<HTMLInputElement>('[formControlName="address"]')!.value).toBe('Rua do detalhe, 5');
+    expect(page.querySelector<HTMLTextAreaElement>('[formControlName="notes"]')!.value).toBe('Observação do detalhe');
+    expect(submit.disabled).toBe(false);
   });
 });
 

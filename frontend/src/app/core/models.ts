@@ -150,6 +150,17 @@ export interface ClientResponse {
   updatedAt: string;
 }
 
+/** Linha da lista de clientes; endereço e observações ficam no detalhe (`GET /api/clients/{id}`). */
+export interface ClientListItemResponse {
+  id: number;
+  legalName: string;
+  tradeName: string | null;
+  documentNumber: string | null;
+  email: string | null;
+  phone: string | null;
+  updatedAt: string;
+}
+
 export interface ClientRequest {
   legalName: string;
   tradeName: string | null;

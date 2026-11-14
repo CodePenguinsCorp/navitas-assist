@@ -182,10 +182,13 @@
       @if (modalErrorMessage()) {
         <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
           <strong>{{ modalErrorMessage() }}</strong>
+          @if (editLoadFailed()) {
+            <button type="button" class="button-secondary" (click)="retryEditLoad()">Tentar novamente</button>
+          }
         </article>
       }
 
-      <form class="form-grid" [formGroup]="form" (ngSubmit)="saveClient()">
+      <form class="form-grid" [formGroup]="form" (ngSubmit)="saveClient()" [attr.aria-busy]="editLoading() || null">
         <fieldset class="form-section">
           <legend>Identificação</legend>
 
@@ -249,7 +252,7 @@
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="submitting()">
             Cancelar
           </button>
-          <button type="submit" class="button-primary" [disabled]="submitting()">
+          <button type="submit" class="button-primary" [disabled]="submitting() || editLoading()">
             {{ submitting() ? 'Salvando...' : editingClient() ? 'Salvar alterações' : 'Cadastrar cliente' }}
           </button>
         </div>

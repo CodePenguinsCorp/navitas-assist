@@ -4,8 +4,8 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { Component, DestroyRef, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable, Subject, debounceTime, filter, finalize } from 'rxjs';
-import { ClientRequest, ClientResponse, ClientSummaryResponse } from '../../core/models';
+import { Observable, Subject, Subscription, debounceTime, filter, finalize } from 'rxjs';
+import { ClientListItemResponse, ClientRequest, ClientResponse, ClientSummaryResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import {
   extractHttpErrorMessage,
@@ -66,7 +66,7 @@ export class ClientsComponent {
   protected readonly loadFailed = signal(false);
 
   private readonly searchChanges = new Subject<'search' | 'cancel'>();
-  private readonly clientList = new PagedList<ClientResponse>(
+  private readonly clientList = new PagedList<ClientListItemResponse>(
     (pageQuery) => this.catalogService.listClients({
       ...pageQuery,
       query: this.searchTerm(),
@@ -80,8 +80,12 @@ export class ClientsComponent {
     () => this.loadFailed.set(false)
   );
   private readonly summarySignal = signal<ClientSummaryResponse>({ total: 0 });
-  private readonly editingClientSignal = signal<ClientResponse | null>(null);
-  private readonly deletingClientSignal = signal<ClientResponse | null>(null);
+  private readonly editingClientSignal = signal<ClientListItemResponse | null>(null);
+  private readonly deletingClientSignal = signal<ClientListItemResponse | null>(null);
+  /** The edit form waits for `GET /api/clients/{id}` (address and notes) before it can be saved. */
+  protected readonly editLoading = signal(false);
+  protected readonly editLoadFailed = signal(false);
+  private editRequest?: Subscription;
 
   protected readonly clients = this.clientList.items;
   protected readonly loading = this.clientList.loading;
@@ -179,7 +183,7 @@ export class ClientsComponent {
     this.clearMessages();
   }
 
-  protected openEditModal(client: ClientResponse): void {
+  protected openEditModal(client: ClientListItemResponse): void {
     if (!this.canEdit()) return;
     this.editingClientSignal.set(client);
     this.form.reset({
@@ -188,11 +192,44 @@ export class ClientsComponent {
       documentNumber: client.documentNumber ?? '',
       email: client.email ?? '',
       phone: client.phone ?? '',
-      address: client.address ?? '',
-      notes: client.notes ?? ''
+      address: '',
+      notes: ''
     });
     this.activeModal.set('edit');
     this.clearMessages();
+    this.loadEditedClient(client.id);
+  }
+
+  protected retryEditLoad(): void {
+    const client = this.editingClientSignal();
+    if (client) this.loadEditedClient(client.id);
+  }
+
+  private loadEditedClient(id: number): void {
+    this.editRequest?.unsubscribe();
+    this.editLoading.set(true);
+    this.editLoadFailed.set(false);
+    this.modalErrorMessage.set('');
+    this.editRequest = this.catalogService.getClient(id).subscribe({
+      next: (full) => {
+        if (this.editingClientSignal()?.id !== id) return;
+        this.form.reset({
+          legalName: full.legalName,
+          tradeName: full.tradeName ?? '',
+          documentNumber: full.documentNumber ?? '',
+          email: full.email ?? '',
+          phone: full.phone ?? '',
+          address: full.address ?? '',
+          notes: full.notes ?? ''
+        });
+        this.editLoading.set(false);
+      },
+      error: (error) => {
+        if (this.editingClientSignal()?.id !== id) return;
+        this.editLoadFailed.set(true);
+        this.modalErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar o cliente.'));
+      }
+    });
   }
 
   protected closeModal(): void {
@@ -204,7 +241,7 @@ export class ClientsComponent {
   }
 
   protected saveClient(): void {
-    if (!this.canEdit()) return;
+    if (!this.canEdit() || this.editLoading()) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.modalErrorMessage.set('Revise os campos destacados antes de salvar o cliente.');
@@ -241,7 +278,7 @@ export class ClientsComponent {
     });
   }
 
-  protected openDeleteModal(client: ClientResponse): void {
+  protected openDeleteModal(client: ClientListItemResponse): void {
     if (!this.canEdit()) return;
     this.deletingClientSignal.set(client);
     this.clearMessages();
@@ -288,7 +325,7 @@ export class ClientsComponent {
     return control.invalid && (control.dirty || control.touched);
   }
 
-  protected updatedAtLabel(client: ClientResponse): string {
+  protected updatedAtLabel(client: ClientListItemResponse): string {
     return formatDateTime(client.updatedAt);
   }
 
@@ -314,6 +351,9 @@ export class ClientsComponent {
   private resetModal(): void {
     this.activeModal.set(null);
     this.modalErrorMessage.set('');
+    this.editRequest?.unsubscribe();
+    this.editLoading.set(false);
+    this.editLoadFailed.set(false);
   }
 
   private resetDeleteModal(): void {

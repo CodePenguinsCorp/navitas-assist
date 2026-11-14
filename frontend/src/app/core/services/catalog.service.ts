@@ -1,9 +1,11 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
+import { SKIP_GLOBAL_LOADING } from '../interceptors/loading.interceptor';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   AssignableUserResponse,
   CatalogImportKind, CatalogImportPreview, CatalogImportResult,
+  ClientListItemResponse,
   ClientOptionResponse,
   ProductOptionResponse,
   ClientRequest,
@@ -59,13 +61,18 @@ export class CatalogService {
     return this.http.post<CatalogImportResult>(`/api/${kind}/imports/confirm`, body);
   }
 
-  listClients(filters: ClientFilters = {}): Observable<PageResponse<ClientResponse>> {
+  listClients(filters: ClientFilters = {}): Observable<PageResponse<ClientListItemResponse>> {
     const params = buildPageParams(filters, {
       query: filters.query,
       hasDocument: filters.hasDocument,
       hasEmail: filters.hasEmail
     });
-    return this.http.get<PageResponse<ClientResponse>>('/api/clients', { params });
+    return this.http.get<PageResponse<ClientListItemResponse>>('/api/clients', { params });
+  }
+
+  /** Cliente completo para o formulário de edição, sem o carregamento global (o modal mostra o próprio estado). */
+  getClient(id: number): Observable<ClientResponse> {
+    return this.http.get<ClientResponse>(`/api/clients/${id}`, { context: new HttpContext().set(SKIP_GLOBAL_LOADING, true) });
   }
 
   listClientOptions(): Observable<ClientOptionResponse[]> {

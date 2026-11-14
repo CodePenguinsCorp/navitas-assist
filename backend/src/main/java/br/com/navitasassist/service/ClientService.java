@@ -4,6 +4,7 @@ import java.util.List;
 
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.client.ClientRequest;
+import br.com.navitasassist.client.ClientListItemResponse;
 import br.com.navitasassist.client.ClientResponse;
 import br.com.navitasassist.client.ClientOptionResponse;
 import br.com.navitasassist.client.ClientSummaryResponse;
@@ -27,7 +28,7 @@ public class ClientService {
     private final RmaRecordRepository rmaRecordRepository;
 
     @Transactional(readOnly = true)
-    public PageResponse<ClientResponse> search(
+    public PageResponse<ClientListItemResponse> search(
         String query,
         Boolean hasDocument,
         Boolean hasEmail,
@@ -36,7 +37,7 @@ public class ClientService {
     ) {
         return PageResponse.from(
             clientRepository.search(blankToNull(query), hasDocument, hasEmail, PageParams.of(page, size)),
-            ClientResponse::from
+            ClientListItemResponse::from
         );
     }
 

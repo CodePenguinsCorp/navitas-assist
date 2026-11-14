@@ -67,10 +67,10 @@ Convenções:
 
 | Rota | Permissão | Descrição |
 | --- | --- | --- |
-| `GET /api/clients` · `/api/products` | autenticado | Lista paginada com filtros. |
+| `GET /api/clients` · `/api/products` | autenticado | Lista paginada com filtros. A de clientes não traz endereço nem observações. |
 | `GET /api/clients/options` · `/api/products/options` | autenticado | Opções para seletores, sem paginação: clientes `{id, legalName}`, produtos `{id, sku, name}`. |
 | `GET /api/clients/summary` · `/api/products/summary` | autenticado | Totais dos cartões: clientes `{total}`, produtos `{total, categories}`. |
-| `GET /api/clients/{id}` | autenticado | Detalhe do cliente. |
+| `GET /api/clients/{id}` | autenticado | Cliente completo, lido ao abrir a edição. |
 | `POST /api/clients` · `/api/products` | `cadastros.editar` | Cria. |
 | `PUT /api/clients/{id}` · `/api/products/{id}` | `cadastros.editar` | Altera. |
 | `DELETE /api/clients/{id}` · `/api/products/{id}` | `cadastros.editar` | Exclui. |
