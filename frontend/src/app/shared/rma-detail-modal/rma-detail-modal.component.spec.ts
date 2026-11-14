@@ -687,7 +687,7 @@ describe('RmaDetailModalComponent status selector', () => {
     const { fixture, host } = await setup();
     await openMenu(fixture, host);
 
-    document.body.click();
+    document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
     fixture.detectChanges();
 
     expect(host.querySelector('.rma-detail__status [role="listbox"]')).toBeNull();

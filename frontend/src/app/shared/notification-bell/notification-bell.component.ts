@@ -19,6 +19,7 @@ import {
 import { NotificationDetailModalComponent } from '../notification-detail-modal/notification-detail-modal.component';
 import { IconComponent } from '../icon/icon.component';
 import { RowActionComponent } from '../row-action/row-action.component';
+import { popupDismiss } from '../popup-dismiss/popup-dismiss';
 
 const UNREAD_UNAVAILABLE = 'Contagem de não lidas indisponível';
 /** The popover is a glance at the latest items; the full inbox lives at /notificacoes. */
@@ -38,7 +39,6 @@ let nextPanelId = 0;
   templateUrl: './notification-bell.component.html',
   styleUrl: './notification-bell.component.css',
   host: {
-    '(document:pointerdown)': 'onDocumentPointerDown($event)',
     '(document:keydown.escape)': 'onEscape()',
     '(focusout)': 'onFocusOut($event)'
   }
@@ -50,6 +50,8 @@ export class NotificationBellComponent {
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
+  /** Press or focus outside closes the panel; opening it closes any other popup. */
+  private readonly dismiss = popupDismiss(() => this.close(false), this.host.nativeElement);
   private readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
   private readonly panel = viewChild<ElementRef<HTMLElement>>('panel');
   private listRequest?: Subscription;
@@ -117,6 +119,7 @@ export class NotificationBellComponent {
       return;
     }
     this.open.set(true);
+    this.dismiss.opened();
     this.actionError.set('');
     this.load();
     afterNextRender(() => this.panel()?.nativeElement.focus(), { injector: this.injector });
@@ -202,10 +205,6 @@ export class NotificationBellComponent {
     items[next].focus();
   }
 
-  protected onDocumentPointerDown(event: Event): void {
-    if (this.open() && !this.host.nativeElement.contains(event.target as Node)) this.close(false);
-  }
-
   protected onEscape(): void {
     if (this.open()) this.close(true);
   }
@@ -217,6 +216,7 @@ export class NotificationBellComponent {
   }
 
   private close(restoreFocus: boolean): void {
+    this.dismiss.closed();
     if (!this.open()) return;
     this.open.set(false);
     this.listRequest?.unsubscribe();

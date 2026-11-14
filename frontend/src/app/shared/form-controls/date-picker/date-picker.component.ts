@@ -4,7 +4,6 @@ import {
   ElementRef,
   EventEmitter,
   HostListener,
-  OnDestroy,
   Output,
   computed,
   effect,
@@ -15,6 +14,7 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { todayInputValue } from '../../../core/utils/date';
+import { popupDismiss } from '../../popup-dismiss/popup-dismiss';
 
 interface CalendarDay {
   iso: string;
@@ -53,9 +53,10 @@ interface CalendarPosition {
     }
   ]
 })
-export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
-  private static openPicker: DatePickerComponent | null = null;
+export class DatePickerComponent implements ControlValueAccessor {
   private readonly hostElement: ElementRef<HTMLElement> = inject(ElementRef);
+  /** Press or focus outside closes the calendar; opening it closes any other popup (another picker included). */
+  private readonly dismiss = popupDismiss(() => this.close());
 
   readonly placeholder = input('Selecione uma data');
   readonly ariaLabel = input('Selecionar data');
@@ -111,11 +112,10 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
     }
 
     if (!this.isOpen()) {
-      DatePickerComponent.openPicker?.close();
       this.focusCurrentMonth();
       this.placeCalendar();
       this.isOpen.set(true);
-      DatePickerComponent.openPicker = this;
+      this.dismiss.opened();
     } else {
       this.close();
     }
@@ -171,12 +171,6 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
     }
   }
 
-  ngOnDestroy(): void {
-    if (DatePickerComponent.openPicker === this) {
-      DatePickerComponent.openPicker = null;
-    }
-  }
-
   @HostListener('keydown.escape', ['$event'])
   protected handleEscape(event: Event): void {
     if (!this.isOpen() || event.defaultPrevented) return;
@@ -219,13 +213,6 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
     });
   }
 
-  @HostListener('document:click', ['$event'])
-  protected handleDocumentClick(event: MouseEvent): void {
-    if (!this.hostElement.nativeElement.contains(event.target as Node)) {
-      this.close();
-    }
-  }
-
   private applyValue(value: string): void {
     if (this.isDisabled()) return;
     this.selectedValue.set(value);
@@ -247,9 +234,7 @@ export class DatePickerComponent implements ControlValueAccessor, OnDestroy {
   }
 
   private close(): void {
-    if (DatePickerComponent.openPicker === this) {
-      DatePickerComponent.openPicker = null;
-    }
+    this.dismiss.closed();
     if (this.isOpen()) {
       this.isOpen.set(false);
       this.onTouched();

@@ -109,14 +109,15 @@ describe('Shared popover keyboard dismissal', () => {
         expect(host.parentKeys).toEqual(['Escape']);
       });
 
+      // Moving focus out closes the panel (shared popup dismissal), so these keys come from elsewhere without a focus move.
       it('ignores Escape outside the control without stealing focus', () => {
         open(triggerSelector);
         const outside = element('.outside');
-        outside.focus();
+        const focused = page.ownerDocument.activeElement;
         const touched = host[definition.name].touched;
         const event = key(outside);
         expect(page.querySelector(panelSelector)).not.toBeNull();
-        expect(page.ownerDocument.activeElement).toBe(outside);
+        expect(page.ownerDocument.activeElement).toBe(focused);
         expect(host[definition.name].touched).toBe(touched);
         expect(host[definition.name].value).toBe(definition.value);
         expect(event.defaultPrevented).toBe(false);
@@ -153,11 +154,11 @@ describe('Shared popover keyboard dismissal', () => {
       it('does not react to Escape in another instance of the same control', () => {
         open(triggerSelector);
         const other = element(definition.second + ' ' + definition.trigger);
-        other.focus();
+        const focused = page.ownerDocument.activeElement;
         const touched = host[definition.name].touched;
         const event = key(other);
         expect(page.querySelector(panelSelector)).not.toBeNull();
-        expect(page.ownerDocument.activeElement).toBe(other);
+        expect(page.ownerDocument.activeElement).toBe(focused);
         expect(host[definition.name].touched).toBe(touched);
         expect(event.defaultPrevented).toBe(false);
         expect(host.parentKeys).toEqual(['Escape']);

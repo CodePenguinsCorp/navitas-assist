@@ -1,5 +1,6 @@
-import { Component, ElementRef, computed, forwardRef, inject, input, signal } from '@angular/core';
+import { Component, ElementRef, computed, effect, forwardRef, inject, input, signal } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { popupDismiss } from '../../popup-dismiss/popup-dismiss';
 
 let nextSuggestId = 0;
 
@@ -14,8 +15,7 @@ const normalize = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, 
   selector: 'app-suggest-input',
   providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => SuggestInputComponent), multi: true }],
   host: {
-    class: 'suggest-input',
-    '(document:pointerdown)': 'onDocumentPointerDown($event)'
+    class: 'suggest-input'
   },
   template: `
     <input
@@ -86,6 +86,12 @@ export class SuggestInputComponent implements ControlValueAccessor {
     return term && matches.length === 1 && normalize(matches[0]) === term ? [] : matches;
   });
   protected readonly open = computed(() => this.expanded() && !this.disabled() && this.filtered().length > 0);
+  /** Clique ou foco fora fecha a lista; abri-la fecha qualquer outro popup aberto. */
+  private readonly dismiss = popupDismiss(() => this.close(), this.host.nativeElement);
+
+  constructor() {
+    effect(() => (this.expanded() ? this.dismiss.opened() : this.dismiss.closed()));
+  }
 
   private onChange: (value: string) => void = () => undefined;
   protected onTouched: () => void = () => undefined;
@@ -166,10 +172,6 @@ export class SuggestInputComponent implements ControlValueAccessor {
     this.value.set(option);
     this.onChange(option);
     this.close();
-  }
-
-  protected onDocumentPointerDown(event: Event): void {
-    if (this.expanded() && !this.host.nativeElement.contains(event.target as Node)) this.close();
   }
 
   private close(): void {

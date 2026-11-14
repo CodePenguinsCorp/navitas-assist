@@ -135,8 +135,75 @@ describe('CustomSelectComponent disabled lifecycle', () => {
 
   it('preserves outside-click closure while enabled', () => {
     open();
-    document.body.click();
+    document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
     fixture.detectChanges();
     expect(page.querySelector('.custom-select__menu')).toBeNull();
+  });
+});
+
+@Component({
+  imports: [CustomSelectComponent],
+  template: `
+    <section class="panel" (click)="$event.stopPropagation()" (pointerdown)="$event.stopPropagation()">
+      <p class="outside">Fora</p>
+      <app-custom-select class="first" [options]="options" ariaLabel="Primeiro" />
+      <app-custom-select class="second" [options]="options" ariaLabel="Segundo" />
+    </section>
+  `
+})
+class TwoSelectsHost {
+  readonly options = OPTIONS;
+}
+
+describe('CustomSelectComponent dismissal', () => {
+  let fixture: ComponentFixture<TwoSelectsHost>;
+  let page: HTMLElement;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [TwoSelectsHost] }).compileComponents();
+    fixture = TestBed.createComponent(TwoSelectsHost);
+    fixture.detectChanges();
+    page = fixture.nativeElement as HTMLElement;
+  });
+
+  const trigger = (which: string) => page.querySelector<HTMLButtonElement>(`.${which} .custom-select__trigger`)!;
+  const menu = (which: string) => page.querySelector(`.${which} .custom-select__menu`);
+  const press = (target: Element) => { target.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true })); fixture.detectChanges(); };
+  const open = (which: string) => { trigger(which).click(); fixture.detectChanges(); };
+
+  it('closes on a press outside even inside a panel that stops propagation (modal detail)', () => {
+    open('first');
+    expect(menu('first')).not.toBeNull();
+    press(page.querySelector('.outside')!);
+    expect(menu('first')).toBeNull();
+  });
+
+  it('stays open on a press inside the menu', () => {
+    open('first');
+    press(page.querySelector('.first .custom-select__option')!);
+    expect(menu('first')).not.toBeNull();
+  });
+
+  it('closes on Escape and returns focus to its trigger', () => {
+    open('first');
+    page.querySelector<HTMLButtonElement>('.first .custom-select__option')!.focus();
+    page.querySelector('.first .custom-select__menu')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+    expect(menu('first')).toBeNull();
+    expect(document.activeElement).toBe(trigger('first'));
+  });
+
+  it('closes when focus moves outside (Tab away)', () => {
+    open('first');
+    trigger('second').focus();
+    fixture.detectChanges();
+    expect(menu('first')).toBeNull();
+  });
+
+  it('keeps only one menu open at a time', () => {
+    open('first');
+    open('second');
+    expect(menu('first')).toBeNull();
+    expect(menu('second')).not.toBeNull();
   });
 });

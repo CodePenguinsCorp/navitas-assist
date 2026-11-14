@@ -129,7 +129,7 @@ describe('shared form control touched state', () => {
 
     it('preserves touch when an open panel closes after an outside click', () => {
       open(kind);
-      document.body.click();
+      document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
       fixture.detectChanges();
       expectOnlyTouched(kind);
       expect(host.changes).toEqual([]);

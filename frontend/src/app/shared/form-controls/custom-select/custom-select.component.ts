@@ -15,6 +15,7 @@ import {
   signal
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { popupDismiss } from '../../popup-dismiss/popup-dismiss';
 
 export interface CustomSelectOption<T = unknown> {
   value: T;
@@ -72,6 +73,8 @@ export class CustomSelectComponent implements ControlValueAccessor {
   protected readonly menuId = `custom-select-menu-${nextMenuId++}`;
   protected readonly isOpen = signal(false);
   private readonly injector = inject(Injector);
+  /** Press or focus outside closes the menu; opening it closes any other popup. */
+  private readonly dismiss = popupDismiss(() => this.close());
   private typeahead = '';
   private typeaheadTimer: ReturnType<typeof setTimeout> | undefined;
   /** Menu is fixed to the viewport so it never stretches a scrolling modal or table. */
@@ -117,6 +120,7 @@ export class CustomSelectComponent implements ControlValueAccessor {
   private open(): void {
     this.placeMenu();
     this.isOpen.set(true);
+    this.dismiss.opened();
   }
 
   /** A pointer open leaves focus on the trigger; arrow keys open the list and move into it. */
@@ -247,13 +251,6 @@ export class CustomSelectComponent implements ControlValueAccessor {
     this.focusTrigger();
   }
 
-  @HostListener('document:click', ['$event'])
-  protected handleDocumentClick(event: MouseEvent): void {
-    if (!this.hostElement.nativeElement.contains(event.target as Node)) {
-      this.close();
-    }
-  }
-
   @HostListener('focusout', ['$event'])
   protected handleFocusOut(event: FocusEvent): void {
     if (!this.isDisabled() && !this.hostElement.nativeElement.contains(event.relatedTarget as Node | null)) {
@@ -262,6 +259,7 @@ export class CustomSelectComponent implements ControlValueAccessor {
   }
 
   private close(): void {
+    this.dismiss.closed();
     if (this.isOpen()) {
       this.isOpen.set(false);
       this.onTouched();
