@@ -128,7 +128,7 @@ describe('RmasComponent detail with the shared information contract', () => {
     open({ ...fullRma, repairSummary: null, replacedPartsSummary: null, testSummary: null }); selectTab('Diagnóstico');
     const [block] = await fixture.getDeferBlocks(); await block.render(DeferBlockState.Complete); fixture.detectChanges();
     expect(tabPanel().querySelector('app-rma-repair-panel')).not.toBeNull();
-    expect(tabPanel().textContent).toContain('Intervenções'); expect(tabPanel().textContent).toContain('Total de horas: 0 h');
+    expect(tabPanel().textContent).toContain('Intervenções'); expect(tabPanel().textContent).toContain('Nenhuma intervenção'); expect(tabPanel().textContent).not.toContain('Total de horas');
   });
 
   it('follows the Kanban detail: code bar, product title, client, status row with the block flag and priority among the facts', async () => {

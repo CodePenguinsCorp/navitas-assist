@@ -78,7 +78,7 @@ describe('PartsComponent movement history', () => {
   it('identifies the movement and its reason field in a separate table row', async () => {
     await setup(); start();
     expect(text(confirmation())).toContain('Estornar movimento 9');
-    for (const value of ['Consumo', '24/10/2026', 'PCA-1', 'Capacitor', 'O movimento original será mantido.']) expect(text(confirmation())).toContain(value);
+    for (const value of ['Aplicação', '24/10/2026', 'PCA-1', 'Capacitor', 'O movimento original será mantido.']) expect(text(confirmation())).toContain(value);
     const input = confirmation()!.querySelector<HTMLInputElement>('input')!;
     const label = confirmation()!.querySelector<HTMLLabelElement>('label')!;
     expect(text(label)).toContain('Motivo do estorno'); expect(label.control).toBe(input);

@@ -57,6 +57,8 @@ describe('RmaPartsPanelComponent loading', () => {
     fixture.componentRef.setInput('rmaId', 7);
     fixture.componentRef.setInput('rmaStatus', sources.status ?? 'IN_REPAIR');
     render();
+    fixture.nativeElement.querySelector('#reserve-trigger')?.click();
+    render();
   }
 
   it('preserves the loading-options select placeholder without a loading status', async () => {
@@ -97,11 +99,11 @@ describe('RmaPartsPanelComponent loading', () => {
     await setup();
     expect(text()).toContain('R$ 20,00');
     service.getRmaParts.mockReturnValue(throwError(() => new Error()));
-    button('Consumir')!.click(); render();
+    button('Aplicar')!.click(); render();
     (fixture.componentInstance as any).consumptionForm.setValue({ replacementReason: 'Falha', componentBatch: '' });
     button('Confirmar')!.click(); render();
     expectFailureOnly();
-    expect(button('Consumir')).toBeUndefined();
+    expect(button('Aplicar')).toBeUndefined();
   });
 
   // Vermelho: não há botão de nova tentativa para a leitura principal.
@@ -126,12 +128,12 @@ describe('RmaPartsPanelComponent loading', () => {
     expect(text()).toContain('R$ 20,00');
     const reload$ = new Subject<RmaPartsResponse>();
     service.getRmaParts.mockReturnValue(reload$);
-    button('Consumir')!.click(); render();
+    button('Aplicar')!.click(); render();
     (fixture.componentInstance as any).consumptionForm.setValue({ replacementReason: 'Falha', componentBatch: '' });
     button('Confirmar')!.click(); render();
     expectPending(fixture.nativeElement);
     expect(text()).not.toContain('R$ 20,00');
-    expect(button('Consumir')).toBeUndefined();
+    expect(button('Aplicar')).toBeUndefined();
     reload$.next(rmaParts([reservation(1, 'ACTIVE')])); reload$.complete(); render();
     expect(fixture.nativeElement.querySelector('[aria-busy="true"]')).toBeNull();
     expect(text()).toContain('R$ 20,00');
@@ -171,7 +173,7 @@ describe('RmaPartsPanelComponent loading', () => {
     expect(text()).toContain('Tentar novamente');
     expect(text()).toContain('Capacitor');
     expect(text()).not.toContain('Não foi possível carregar as peças do RMA.');
-    expect(text()).not.toContain('Nenhuma peça ativa disponível para reserva.');
+    expect(text()).not.toContain('Nenhuma peça ativa disponível');
     expect(button('Reservar')!.disabled).toBe(true);
 
     service.list.mockReturnValue(of([PART]));
@@ -184,7 +186,7 @@ describe('RmaPartsPanelComponent loading', () => {
   // Vermelho: um catálogo sem peças ativas não é identificado.
   it('explains an empty active catalog without filtering parts without stock', async () => {
     await setup({ catalog: of([{ ...PART, active: false }]) });
-    expect(text()).toContain('Nenhuma peça ativa disponível para reserva.');
+    expect(text()).toContain('Nenhuma peça ativa disponível');
     expect(text()).not.toContain('Não foi possível carregar as opções de peças.');
   });
 
@@ -235,7 +237,7 @@ describe('RmaPartsPanelComponent loading', () => {
   it('keeps a valid reading when a reservation write fails', async () => {
     await setup();
     service.updateReservation.mockReturnValue(throwError(() => ({ error: { message: 'Saldo insuficiente.' } })));
-    button('Consumir')!.click(); render();
+    button('Aplicar')!.click(); render();
     (fixture.componentInstance as any).consumptionForm.setValue({ replacementReason: 'Falha', componentBatch: '' });
     button('Confirmar')!.click(); render();
     expect(text()).toContain('Saldo insuficiente.');
@@ -250,7 +252,7 @@ describe('RmaPartsPanelComponent loading', () => {
     component().reserve(); render();
     expect(service.getRmaParts).toHaveBeenCalledTimes(2);
     expect(service.list).toHaveBeenCalledTimes(2);
-    button('Consumir')!.click(); render();
+    button('Aplicar')!.click(); render();
     (fixture.componentInstance as any).consumptionForm.setValue({ replacementReason: 'Falha', componentBatch: '' });
     button('Confirmar')!.click(); render();
     expect(service.getRmaParts).toHaveBeenCalledTimes(3);

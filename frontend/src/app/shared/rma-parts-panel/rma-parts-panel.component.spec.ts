@@ -45,6 +45,8 @@ describe('RmaPartsPanelComponent', () => {
     fixture.componentRef.setInput('rmaId', 7);
     fixture.componentRef.setInput('rmaStatus', status);
     fixture.detectChanges();
+    fixture.nativeElement.querySelector('#reserve-trigger')?.click();
+    fixture.detectChanges();
   }
 
   it('shows reserved, consumed and pending parts with consumed cost', async () => {
@@ -53,10 +55,10 @@ describe('RmaPartsPanelComponent', () => {
 
     expect(partService['getRmaParts']).toHaveBeenCalledWith(7);
     expect(text).toMatch(/Ativas\s*1/);
-    expect(text).toMatch(/Consumidas\s*1/);
+    expect(text).toMatch(/Aplicadas\s*1/);
     expect(text).toMatch(/Pendentes\s*1/);
-    expect(text).toContain('Custo consumido');
-    expect(text).not.toContain('Consumir');
+    expect(text).toContain('Custo aplicado');
+    expect(text).not.toContain('Aplicar');
     expect(fixture.nativeElement.querySelector('form')).toBeNull();
     expect(partService['list']).not.toHaveBeenCalled();
   });
@@ -64,7 +66,7 @@ describe('RmaPartsPanelComponent', () => {
   it('lets technicians reserve and act on reservations', async () => {
     await setUp('TECHNICIAN');
     const text: string = fixture.nativeElement.textContent;
-    expect(text).toContain('Consumir');
+    expect(text).toContain('Aplicar');
     expect(text).toContain('Efetivar reserva');
     expect(fixture.nativeElement.querySelector('form')).not.toBeNull();
 
@@ -88,13 +90,13 @@ describe('RmaPartsPanelComponent', () => {
     const text: string = fixture.nativeElement.textContent;
 
     expect(fixture.nativeElement.querySelector('form')).toBeNull();
-    expect(text).not.toContain('Consumir');
+    expect(text).not.toContain('Aplicar');
     expect(text).not.toContain('Efetivar reserva');
     expect(text).toContain('Cancelar reserva');
   });
   it('opens inline consumption and requires a reason before posting its batch', async () => {
     await setUp('TECHNICIAN');
-    const consume = [...fixture.nativeElement.querySelectorAll('button')].find((button: any) => button.textContent.trim() === 'Consumir') as HTMLButtonElement;
+    const consume = [...fixture.nativeElement.querySelectorAll('button')].find((button: any) => button.textContent.trim() === 'Aplicar') as HTMLButtonElement;
     consume.click();
     fixture.detectChanges();
     expect(partService['updateReservation']).not.toHaveBeenCalled();
@@ -131,7 +133,7 @@ describe('RmaPartsPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Fora do estoque');
     expect(fixture.nativeElement.textContent).toContain('Motivo não registrado');
     component.startConsumption(reservation(1, 'ACTIVE')); fixture.detectChanges();
-    const buttons = Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('.repair-actions button'));
+    const buttons = Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('form:has([formControlName="replacementReason"]) .repair-actions button'));
     expect(buttons.map(b => b.textContent?.trim())).toEqual(['Cancelar', 'Confirmar']);
     buttons[0].click(); fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[formControlName="replacementReason"]')).toBeNull();

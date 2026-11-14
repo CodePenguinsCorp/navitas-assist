@@ -14,7 +14,7 @@
         <span>Abaixo do mínimo</span>
         <strong>{{ belowMinimumCount() }}</strong>
       </li>
-      <li class="page-summary__item" [class.tone-warning]="pending().length > 0" title="Reservas ainda não consumidas nem canceladas">
+      <li class="page-summary__item" [class.tone-warning]="pending().length > 0" title="Reservas ainda não aplicadas nem canceladas">
         <app-icon name="clock" [size]="16" />
         <span>Reservas pendentes</span>
         <strong>{{ pending().length }}</strong>

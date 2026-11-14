@@ -1,14 +1,21 @@
-<section class="repair-panel">
-  <h4>Intervenções</h4>
+<section class="repair-panel detail-card">
+  <app-collapsible-section title="Intervenções" icon="wrench" storageKey="rma.interventions">
+  @if (totalHours() > 0) { <span sectionActions class="repair-total" title="Total de horas de serviço">{{ hours(totalHours()) }} h</span> }
+  @if (canWrite()) {
+    <button sectionActions type="button" class="link-button repair-trigger" [attr.aria-expanded]="formOpen() && !editing()" aria-controls="repair-form" (click)="toggleForm()"><app-icon name="plus" [size]="14" /> Registrar</button>
+  }
   @if (error()) { <p class="field-error" role="alert">{{ error() }}</p><button type="button" class="button-secondary button-secondary--small" (click)="load()" [disabled]="loading()">Tentar novamente</button> }
   @if (success()) { <p class="muted-inline" role="status">{{ success() }}</p> }
   @if (loading()) { <div aria-busy="true"></div> }
+  @if (formOpen() && !editing() && canWrite()) { <ng-container [ngTemplateOutlet]="interventionForm" /> }
   @if (repair(); as data) {
-    <p><strong>Total de horas: {{ hours(data.totalServiceHours) }} h</strong></p>
     @for (item of data.interventions; track item.id) {
       <div class="repair-entry">
-        <div class="repair-entry__head">
-          <strong [class.repair-voided]="!!item.voidedAt">{{ labels[item.type] }} · {{ hours(item.hours) }} h</strong>
+        <div class="repair-line">
+          <strong class="repair-line__title" [class.repair-voided]="!!item.voidedAt">{{ labels[item.type] }}</strong>
+          <small class="repair-line__meta">{{ date(item.performedOn) }} · {{ item.technicianName }}</small>
+          <span class="repair-line__value" [class.repair-voided]="!!item.voidedAt">{{ hours(item.hours) }} h</span>
+          <button type="button" class="repair-line__desc" [class.is-expanded]="expanded().has(item.id)" [class.repair-voided]="!!item.voidedAt" [attr.aria-expanded]="expanded().has(item.id)" [title]="item.description" (click)="toggleExpanded(item.id)">{{ item.description }}</button>
           @if (canWrite() && !item.voidedAt) {
             <span class="repair-row-actions">
               <button appRowAction icon="pencil" label="Editar" [target]="item.description" [disabled]="saving()" (click)="edit(item)"></button>
@@ -16,29 +23,32 @@
             </span>
           }
         </div>
-        <p [class.repair-voided]="!!item.voidedAt">{{ item.description }}</p>
-        <small>{{ date(item.performedOn) }} · {{ item.technicianName }}</small>
-        @if (item.voidedAt) { <p class="muted-inline">Anulada: {{ item.voidReason }} · {{ item.voidedBy }}</p> }
+        @if (item.voidedAt) { <small class="repair-note">Anulada: {{ item.voidReason }} · {{ item.voidedBy }}</small> }
         @if (voiding()?.id === item.id && canWrite()) {
           <div class="repair-inline">
-            <label class="field-group">Motivo da anulação<textarea [formControl]="voidReason" rows="2" maxlength="1000"></textarea></label>
+            <label class="field-group"><span>Motivo da anulação</span><textarea [formControl]="voidReason" rows="2" maxlength="1000"></textarea></label>
             @if (voidReason.invalid && voidReason.touched) { <p class="field-error" role="alert">Informe um motivo de até 1000 caracteres.</p> }
             <div class="form-actions repair-actions"><button type="button" class="button-secondary" [disabled]="saving()" (click)="voiding.set(null)">Cancelar</button><button type="button" class="button-primary" [disabled]="saving()" (click)="confirmVoid()">Anular</button></div>
           </div>
         }
         @if (editing()?.id === item.id && canWrite()) { <ng-container [ngTemplateOutlet]="interventionForm" /> }
       </div>
-    } @empty { <p class="muted-inline">Nenhuma intervenção registrada.</p> }
+    } @empty { @if (!formOpen()) { <p class="repair-empty">Nenhuma intervenção</p> } }
   }
-  @if (canWrite() && !editing()) { <ng-container [ngTemplateOutlet]="interventionForm" /> }
   <ng-template #interventionForm>
-    <form class="form-grid repair-form" [formGroup]="form" (ngSubmit)="save()">
+    <form id="repair-form" class="repair-form" [formGroup]="form" (ngSubmit)="save()" (keydown.escape)="$event.stopPropagation(); closeForm(true)" novalidate>
       <label class="field-group"><span>Tipo</span><app-custom-select ariaLabel="Tipo de intervenção" [options]="options" formControlName="type" /></label>
-      <label class="field-group"><span>Data</span><app-date-picker ariaLabel="Data da intervenção" [maxDate]="today()" formControlName="performedOn" /></label>
-      <label class="field-group"><span>Horas</span><input type="number" min="0.001" max="999999.999" step="0.001" formControlName="hours" /></label>
-      <label class="field-group field-group--full"><span>Descrição</span><textarea rows="2" maxlength="1000" formControlName="description"></textarea></label>
-      @if (form.invalid && form.touched) { <p class="field-error field-group--full" role="alert">Informe descrição, data não futura e horas positivas com até 3 casas decimais.</p> }
-      <div class="form-actions form-actions--full repair-actions">@if (editing()) { <button type="button" class="button-secondary" [disabled]="saving()" (click)="cancelEdit()">Cancelar</button> }<button class="button-primary" type="submit" [disabled]="saving()">{{ editing() ? 'Salvar' : 'Registrar intervenção' }}</button></div>
+      <label class="field-group"><span>Data</span><app-date-picker ariaLabel="Data da intervenção" [maxDate]="today()" formControlName="performedOn" [allowClear]="false" [ariaInvalid]="hasError(form.controls.performedOn)" />
+        @if (hasError(form.controls.performedOn)) { <small class="field-error" role="alert">{{ form.controls.performedOn.errors?.['future'] ? 'A data não pode ser futura' : 'Informe a data' }}</small> }
+      </label>
+      <label class="field-group"><span>Horas</span><input type="number" min="0.001" max="999999.999" step="0.001" placeholder="0,0" inputmode="decimal" formControlName="hours" [attr.aria-invalid]="hasError(form.controls.hours) ? 'true' : null" />
+        @if (hasError(form.controls.hours)) { <small class="field-error" role="alert">Informe as horas (maior que 0, até 3 casas)</small> }
+      </label>
+      <label class="field-group field-group--full"><span>Descrição</span><textarea rows="2" maxlength="1000" formControlName="description" [attr.aria-invalid]="hasError(form.controls.description) ? 'true' : null"></textarea>
+        @if (hasError(form.controls.description)) { <small class="field-error" role="alert">Informe a descrição</small> }
+      </label>
+      <div class="form-actions form-actions--full repair-actions"><button type="button" class="button-secondary" [disabled]="saving()" (click)="closeForm(true)">Cancelar</button><button class="button-primary" type="submit" [disabled]="saving()">{{ editing() ? 'Salvar' : 'Registrar' }}</button></div>
     </form>
   </ng-template>
+  </app-collapsible-section>
 </section>

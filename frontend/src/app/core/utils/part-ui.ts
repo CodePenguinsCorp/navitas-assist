@@ -6,7 +6,7 @@ export const PART_MOVEMENT_LABELS: Record<PartMovementType, string> = {
   ADJUSTMENT: 'Ajuste',
   RESERVATION: 'Reserva',
   RESERVATION_CANCEL: 'Cancelamento de reserva',
-  CONSUMPTION: 'Consumo',
+  CONSUMPTION: 'Aplicação',
   REVERSAL: 'Estorno'
 };
 
@@ -15,7 +15,7 @@ export const MANUAL_MOVEMENT_TYPES: ManualPartMovementType[] = ['ENTRY', 'EXIT',
 export const PART_RESERVATION_STATUS_LABELS: Record<PartReservationStatus, string> = {
   PENDING: 'Pendente',
   ACTIVE: 'Reservada',
-  CONSUMED: 'Consumida',
+  CONSUMED: 'Aplicada',
   CANCELLED: 'Cancelada',
   REVERSED: 'Estornada'
 };
