@@ -56,3 +56,7 @@ Limitação conhecida: o registro de sessões é em memória, por instância; re
 
 - P17: o resumo do sino é consultado a cada 60 segundos somente enquanto a aba está visível. Ao voltar, a consulta ocorre imediatamente; ocultar a aba cancela o temporizador e a consulta pendente. Isso reduz chamadas sem atrasar a atualização na volta.
 - P18: removidos os dois PNGs antigos da marca de `frontend/public`, sem uso em `src` (incluindo `index.html`) ou `angular.json`. Login e lateral usam `brand/*.svg`. A única referência em `docs` estava no plano histórico de conferência de 9/11, preservado como registro; o build deixa de copiar 75.940 bytes sem uso.
+
+## Proteção do arquivo de ambiente
+
+S13: `init-prod-env.sh` usa `umask 077` antes de criar o arquivo e confirma modo `600` após a escrita. No Windows, `init-prod-env.ps1` cria o arquivo vazio, remove herança e regras de acesso anteriores e concede controle total somente ao SID do usuário atual antes de gravar segredos, inclusive com `-Force`. Isso evita leitura das credenciais por outros usuários locais. Os testes `scripts/test-init-prod-env.ps1` e `scripts/test-init-prod-env.sh` verificam a ACL e o modo reais, sem exibir valores.

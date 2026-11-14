@@ -1,5 +1,6 @@
 #!/usr/bin/env sh
 set -eu
+umask 077
 
 output_path="${1:-.env.prod}"
 backend_image="${BACKEND_IMAGE:-navitas-assist-backend:ci}"
@@ -39,6 +40,8 @@ MYSQL_ROOT_PASSWORD=$mysql_root_password
 BACKEND_IMAGE=$backend_image
 FRONTEND_IMAGE=$frontend_image
 EOF
+
+chmod 600 "$output_path"
 
 echo "Arquivo $output_path criado com segredos fortes."
 echo "As contas da aplicacao sao gerenciadas no banco e nao sao criadas pelo deploy."

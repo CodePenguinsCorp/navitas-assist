@@ -25,6 +25,19 @@ function New-HexSecret {
     }
 }
 
+# Restringe o arquivo vazio antes de escrever qualquer segredo.
+$fileMode = if ($Force) { [System.IO.FileMode]::Create } else { [System.IO.FileMode]::CreateNew }
+$stream = [System.IO.File]::Open($OutputPath, $fileMode, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
+$stream.Dispose()
+$currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+$acl = Get-Acl -LiteralPath $OutputPath
+$acl.SetAccessRuleProtection($true, $false)
+$acl.Access | ForEach-Object { $acl.RemoveAccessRuleSpecific($_) }
+$acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule(
+    $currentUser, 'FullControl', 'Allow'
+)))
+[System.IO.File]::SetAccessControl($OutputPath, $acl)
+
 $mysqlPassword = New-HexSecret 24
 $mysqlRootPassword = New-HexSecret 24
 
