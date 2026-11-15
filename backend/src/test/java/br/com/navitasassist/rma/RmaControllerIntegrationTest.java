@@ -572,7 +572,8 @@ class RmaControllerIntegrationTest {
             .andExpect(jsonPath("$.stagePeriods[1].leftAt").doesNotExist());
         mockMvc.perform(get("/api/rmas/board").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].stagePeriods[1].status").value("IN_DIAGNOSIS"));
+            .andExpect(jsonPath("$[0].stagePeriods").doesNotExist())
+            .andExpect(jsonPath("$[0].currentStageEnteredAt").value(detailCurrentStageEnteredAt(id)));
         mockMvc.perform(patch("/api/rmas/{id}/status", id).with(asProfile("tech", "TECHNICIAN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"COMPLETED\"}"))
             .andExpect(status().isOk())
@@ -744,6 +745,15 @@ class RmaControllerIntegrationTest {
     private org.springframework.test.web.servlet.ResultActions putJson(long id, String body) throws Exception {
         return mockMvc.perform(put("/api/rmas/{id}", id).with(asProfile("admin", "ADMIN")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    /** Início da etapa atual lido do detalhe (último período), no formato do card: instante sem fração de segundo. */
+    private String detailCurrentStageEnteredAt(Long id) throws Exception {
+        String body = mockMvc.perform(get("/api/rmas/{id}", id).with(asProfile("viewer", "VIEWER")))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        var periods = objectMapper.readTree(body).get("stagePeriods");
+        return java.time.Instant.parse(periods.get(periods.size() - 1).get("enteredAt").asText())
+            .truncatedTo(java.time.temporal.ChronoUnit.SECONDS).toString();
     }
 
     private long createdId(org.springframework.test.web.servlet.ResultActions result) throws Exception {

@@ -58,12 +58,18 @@ class RmaCollectionContractIntegrationTest {
         mvc.perform(get("/api/rmas/board").param("query", "COLL-SUMMARY").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].id").value(id))
-            .andExpect(jsonPath("$[0]", aMapWithSize(14)))
-            .andExpect(jsonPath("$[0].items[0]", aMapWithSize(6)))
-            .andExpect(jsonPath("$[0].currentBlock", aMapWithSize(2)))
-            .andExpect(jsonPath("$[0].currentBlock.reason").value("Aguardando cliente"))
-            .andExpect(jsonPath("$[0].stagePeriods[0].status").value("RECEIVED"))
-            .andExpect(jsonPath("$[0].deadline.status").value("ON_TRACK"))
+            .andExpect(jsonPath("$[0]", aMapWithSize(16)))
+            .andExpect(jsonPath("$[0].productName").value("Produto COLL-SUMMARY"))
+            .andExpect(jsonPath("$[0].additionalItems").doesNotExist())
+            .andExpect(jsonPath("$[0].searchText").value("COLL-SUMMARY COLL-SUMMARY"))
+            .andExpect(jsonPath("$[0].warranty").value("P"))
+            .andExpect(jsonPath("$[0].dueSoonFrom").value(TODAY.plusDays(30).minusDays(7).toString()))
+            .andExpect(jsonPath("$[0].blockedAt").isNotEmpty())
+            .andExpect(jsonPath("$[0].currentStageEnteredAt").isNotEmpty())
+            .andExpect(jsonPath("$[0].items").doesNotExist())
+            .andExpect(jsonPath("$[0].deadline").doesNotExist())
+            .andExpect(jsonPath("$[0].currentBlock").doesNotExist())
+            .andExpect(jsonPath("$[0].stagePeriods").doesNotExist())
             .andExpect(jsonPath("$[0].statusHistory").doesNotExist())
             .andExpect(jsonPath("$[0].blockHistory").doesNotExist())
             .andExpect(jsonPath("$[0].diagnosis").doesNotExist())
@@ -82,6 +88,41 @@ class RmaCollectionContractIntegrationTest {
             .andExpect(jsonPath("$.reportedFailure").value("Não liga"))
             .andExpect(jsonPath("$.blockHistory[0].reason").value("Aguardando cliente"))
             .andExpect(jsonPath("$.statusHistory[1].note").value("Em triagem"));
+    }
+
+    @Test
+    void boardCardOmitsBlockedAtWithoutImpedimentAndCountsAdditionalItems() throws Exception {
+        Client client = new Client();
+        client.setLegalName("Cliente COLL-MULTI");
+        clients.saveAndFlush(client);
+        Product first = product("COLL-MULTI-A", "Produto A");
+        Product second = product("COLL-MULTI-B", "Produto B");
+        mvc.perform(post("/api/rmas").with(asProfile("admin", "ADMIN")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(Map.of(
+                    "clientId", client.getId(),
+                    "items", List.of(Map.of("productId", first.getId(), "serialNumber", "SER-A"),
+                        Map.of("productId", second.getId(), "batchNumber", "LOT-B")),
+                    "purchaseDateUnknown", true,
+                    "entryDate", TODAY.toString(),
+                    "reportedFailure", "Não liga"))))
+            .andExpect(status().isCreated());
+
+        mvc.perform(get("/api/rmas/board").param("query", "COLL-MULTI").with(asProfile("viewer", "VIEWER")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].productName").value("Produto A"))
+            .andExpect(jsonPath("$[0].additionalItems").value(1))
+            .andExpect(jsonPath("$[0].searchText").value("COLL-MULTI-A SER-A Produto B COLL-MULTI-B LOT-B"))
+            .andExpect(jsonPath("$[0].warranty").value("P"))
+            .andExpect(jsonPath("$[0].blockedAt").doesNotExist())
+            .andExpect(jsonPath("$[0].items").doesNotExist());
+    }
+
+    private Product product(String sku, String name) {
+        Product product = new Product();
+        product.setSku(sku);
+        product.setName(name);
+        product.setDefaultWarrantyMonths(12);
+        return products.saveAndFlush(product);
     }
 
     private long createBlockedRmaWithNote(String serial) throws Exception {

@@ -11,6 +11,7 @@ import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaStagePeriodResponse;
 import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusHistory;
+import br.com.navitasassist.rma.RmaStatusPoint;
 import org.springframework.stereotype.Service;
 
 /**
@@ -51,6 +52,26 @@ public class RmaStageTimeService {
             periods.add(new RmaStagePeriodResponse(block.status(), block.enteredAt(), leftAt, seconds));
         }
         return periods;
+    }
+
+    /**
+     * Início da etapa atual a partir do histórico já ordenado (sem carregar as entidades): a mesma regra do último
+     * período de {@link #periods}.
+     */
+    public Instant currentStageEnteredAt(RmaRecord rma, List<RmaStatusPoint> sortedHistory, Instant now) {
+        if (sortedHistory.isEmpty()) {
+            return fallbackStart(rma, now);
+        }
+        RmaStatus lastStatus = null;
+        Instant blockStart = null;
+        for (RmaStatusPoint point : sortedHistory) {
+            if (lastStatus != point.status()) {
+                lastStatus = point.status();
+                blockStart = point.changedAt();
+            }
+        }
+        // Histórico legado inconsistente: a etapa atual começa na última mudança registrada.
+        return lastStatus == rma.getStatus() ? blockStart : sortedHistory.get(sortedHistory.size() - 1).changedAt();
     }
 
     private Instant fallbackStart(RmaRecord rma, Instant now) {

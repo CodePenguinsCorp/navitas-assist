@@ -134,7 +134,7 @@ class RmaWarrantyIntegrationTest {
         em.flush();
         em.clear();
         mvc.perform(get("/api/rmas/board").param("query", rma.getCode()).with(asProfile("reader", "VIEWER")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$[0].items[0].warrantyStatus").value("IN_WARRANTY"));
+            .andExpect(status().isOk()).andExpect(jsonPath("$[0].warranty").value("I"));
         mvc.perform(get("/api/rmas").param("query", rma.getCode()).with(asProfile("reader", "VIEWER")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].items[0].warrantyStatus").value("IN_WARRANTY"));
         mvc.perform(get("/api/reports/rmas").param("entryFrom", "2026-01-01").param("entryTo", "2026-01-01")
@@ -171,10 +171,11 @@ class RmaWarrantyIntegrationTest {
         var board = mvc.perform(get("/api/rmas/board").param("query", rma.getCode()).with(asProfile(username, "ADMIN")))
             .andExpect(status().isOk()).andReturn();
         var row = mapper.readTree(board.getResponse().getContentAsString()).get(0);
-        // The Kanban applies the saved filter to items[].warrantyStatus from this response.
-        assertThat(row.path("items").findValuesAsText("warrantyStatus")).contains(warrantyFilter);
-        // O card leva só a garantia efetiva; a calculada fica no detalhe.
-        assertThat(row.path("items").findValuesAsText("calculatedWarrantyStatus")).isEmpty();
+        // The Kanban applies the saved filter to the warranty letters of this response (I = IN_WARRANTY).
+        assertThat(row.path("warranty").asText()).isEqualTo("I");
+        assertThat(warrantyFilter).isEqualTo("IN_WARRANTY");
+        // O card leva só a garantia efetiva; os itens e a garantia calculada ficam no detalhe.
+        assertThat(row.has("items")).isFalse();
     }
 
     @Test

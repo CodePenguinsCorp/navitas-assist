@@ -28,6 +28,11 @@ public class RmaDeadlineService {
         return LocalDate.ofInstant(now, BUSINESS_ZONE);
     }
 
+    /** Dia a partir do qual a OS aberta está perto do limite; o cartão do Kanban o leva para recalcular o prazo no cliente. */
+    public LocalDate dueSoonFrom(RmaRecord rma) {
+        return rma.getDueDate() == null ? null : rma.getDueDate().minusDays(properties.getWarningDays());
+    }
+
     public RmaDeadlineResponse evaluate(RmaRecord rma, LocalDate today) {
         LocalDate dueDate = rma.getDueDate();
         LocalDate dueSoonFrom = dueDate == null ? null : dueDate.minusDays(properties.getWarningDays());

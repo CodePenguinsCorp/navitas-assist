@@ -122,6 +122,27 @@ class RmaStageTimeServiceTest {
         assertEquals(List.of(new RmaStagePeriodResponse(RmaStatus.RECEIVED, TEN, null, 60)), service.periods(rma, TEN.plusSeconds(60)));
     }
 
+    @Test
+    void currentStageEnteredAtFollowsTheLastPeriodOfTheFullHistory() {
+        RmaRecord rma = rma(RmaStatus.TRIAGE);
+        List<RmaStatusPoint> points = List.of(
+            point(RmaStatus.TRIAGE, 0), point(RmaStatus.IN_DIAGNOSIS, 100), point(RmaStatus.TRIAGE, 300), point(RmaStatus.TRIAGE, 500));
+        assertEquals(TEN.plusSeconds(300), service.currentStageEnteredAt(rma, points, TEN.plusSeconds(900)));
+
+        // Histórico atrasado em relação ao status atual: a etapa atual começa na última mudança registrada.
+        assertEquals(TEN.plusSeconds(500), service.currentStageEnteredAt(rma(RmaStatus.IN_REPAIR), points, TEN.plusSeconds(900)));
+    }
+
+    @Test
+    void currentStageEnteredAtFallsBackToCreationWithoutHistory() {
+        RmaRecord rma = rma(RmaStatus.IN_REPAIR);
+        assertEquals(TEN.minusSeconds(86400), service.currentStageEnteredAt(rma, List.of(), TEN));
+    }
+
+    private RmaStatusPoint point(RmaStatus status, long offsetSeconds) {
+        return new RmaStatusPoint(1L, status, TEN.plusSeconds(offsetSeconds), offsetSeconds);
+    }
+
     private RmaRecord rma(RmaStatus status) {
         RmaRecord rma = new RmaRecord();
         rma.setStatus(status);

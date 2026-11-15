@@ -5,7 +5,9 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.EnumSet;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -21,6 +23,7 @@ import br.com.navitasassist.pagination.PageParams;
 import br.com.navitasassist.pagination.PageResponse;
 import br.com.navitasassist.part.PartReservationStatus;
 import br.com.navitasassist.repository.PartReservationRepository;
+import br.com.navitasassist.repository.RmaBoardRepository;
 import br.com.navitasassist.repository.RmaCodeGenerationLockRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.CreateRmaRequest;
@@ -42,6 +45,7 @@ import br.com.navitasassist.rma.RmaDetailResponse;
 import br.com.navitasassist.rma.RmaListItemResponse;
 import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusHistory;
+import br.com.navitasassist.rma.RmaStatusPoint;
 import br.com.navitasassist.rma.RmaStatusUpdateRequest;
 import br.com.navitasassist.rma.RmaSummaryResponse;
 import br.com.navitasassist.rma.UpdateRmaRequest;
@@ -64,9 +68,11 @@ public class RmaService {
     private static final Set<RmaStatus> CLOSED_STATUSES = EnumSet.of(RmaStatus.COMPLETED, RmaStatus.RETURNED, RmaStatus.IRREPARABLE);
     private static final Set<PartReservationStatus> OPEN_RESERVATION_STATUSES = EnumSet.of(PartReservationStatus.ACTIVE, PartReservationStatus.PENDING);
     private static final int MAX_YEARLY_SEQUENCE = 999_999;
+    private static final int BOARD_BATCH = 1000;
 
     private final RmaRecordRepository rmaRecordRepository;
     private final RmaCodeGenerationLockRepository rmaCodeGenerationLockRepository;
+    private final RmaBoardRepository rmaBoardRepository;
     private final RmaStageTimeService rmaStageTimeService;
     private final RmaDeadlineService rmaDeadlineService;
     private final ClientService clientService;
@@ -76,15 +82,27 @@ public class RmaService {
     private final ApplicationEventPublisher eventPublisher;
     private final PartReservationRepository partReservationRepository;
 
-    /** Cards do Kanban: o histórico de status só é lido no servidor para calcular o tempo por etapa. */
+    /**
+     * Cards do Kanban. O histórico de status e os impedimentos entram por duas consultas em lote só com as colunas
+     * necessárias (início da etapa atual e do impedimento aberto), sem carregar as coleções de cada OS.
+     */
     @Transactional(readOnly = true)
     public List<RmaBoardCardResponse> search(String query, RmaStatus status) {
         List<RmaRecord> records = rmaRecordRepository.search(trimToNull(query), status);
-        if (!records.isEmpty()) rmaRecordRepository.fetchItemsWithProducts(records);
+        if (records.isEmpty()) return List.of();
+        rmaRecordRepository.fetchItemsWithProducts(records);
+        List<Long> ids = records.stream().map(RmaRecord::getId).toList();
+        Map<Long, List<RmaStatusPoint>> history = new HashMap<>();
+        Map<Long, Instant> openBlocks = new HashMap<>();
+        for (int from = 0; from < ids.size(); from += BOARD_BATCH) {
+            List<Long> batch = ids.subList(from, Math.min(ids.size(), from + BOARD_BATCH));
+            rmaBoardRepository.findStatusPoints(batch).forEach(point -> history.computeIfAbsent(point.rmaId(), key -> new ArrayList<>()).add(point));
+            rmaBoardRepository.findOpenBlocks(batch).forEach(block -> openBlocks.put(block.rmaId(), block.blockedAt()));
+        }
         Instant now = Instant.now();
-        LocalDate today = RmaDeadlineService.businessDate(now);
         return records.stream()
-            .map(rma -> RmaBoardCardResponse.from(rma, rmaStageTimeService.periods(rma, now), rmaDeadlineService.evaluate(rma, today)))
+            .map(rma -> RmaBoardCardResponse.from(rma, rmaDeadlineService.dueSoonFrom(rma), openBlocks.get(rma.getId()),
+                rmaStageTimeService.currentStageEnteredAt(rma, history.getOrDefault(rma.getId(), List.of()), now)))
             .toList();
     }
 

@@ -111,7 +111,8 @@ public interface RmaRecordRepository extends JpaRepository<RmaRecord, Long> {
     @Query("""
         select distinct r
         from RmaRecord r
-        join r.client c
+        join fetch r.client c
+        left join fetch r.assignee
         join r.product p
         left join r.items i
         left join i.product ip
