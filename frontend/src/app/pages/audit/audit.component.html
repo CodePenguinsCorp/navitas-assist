@@ -1,6 +1,6 @@
 <section class="page-surface">
   <app-page-header heading="Auditoria" />
-  <form class="audit-filters" [formGroup]="filters" (ngSubmit)="applyFilters()">
+  <form class="panel catalog-toolbar catalog-toolbar--filters audit-filters" [formGroup]="filters" (ngSubmit)="applyFilters()">
     <label class="filter-field"><span>De</span><app-date-picker ariaLabel="Data inicial" formControlName="from" [maxDate]="filters.controls.to.value" /></label>
     <label class="filter-field"><span>Até</span><app-date-picker ariaLabel="Data final" formControlName="to" [minDate]="filters.controls.from.value" /></label>
     <label class="search-field"><span>Usuário</span><input type="search" formControlName="actor" maxlength="60" placeholder="Nome de usuário" /></label>

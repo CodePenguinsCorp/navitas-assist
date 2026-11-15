@@ -75,7 +75,7 @@ describe('RmaRepairPanelComponent', () => {
     input.dispatchEvent(new Event('focusin', { bubbles: true })); fixture.detectChanges();
     input.dispatchEvent(new Event('focusin', { bubbles: true })); fixture.detectChanges();
     expect(suggestions.interventionTypes).toHaveBeenCalledTimes(1);
-    expect(component.typeSuggestions.list()).toEqual(['Atualização de firmware', 'Limpeza', 'Outro', 'Regravação', 'Ressolda', 'Troca de chicote', 'Troca de conector USB']);
+    expect(component.typeSuggestions.list()).toEqual(['Atualização de firmware', 'Limpeza', 'Regravação', 'Ressolda', 'Troca de chicote', 'Troca de conector USB']);
   });
   it('shows no hours chip, no hours stat and no total for interventions without hours', async () => {
     const { fixture } = await setup([], 'IN_REPAIR', [{ id: 1, type: 'Limpeza', description: 'Placa limpa', performedOn: '2026-11-12', hours: null, technicianName: 'ana' }]);

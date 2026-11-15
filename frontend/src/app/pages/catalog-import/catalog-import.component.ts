@@ -31,11 +31,11 @@ export class CatalogImportComponent {
   protected readonly page = signal(0);
   protected readonly size = signal(10);
   protected readonly metrics = [
-    { status: 'VALID', field: 'validRows', label: 'válida' },
-    { status: 'INVALID', field: 'invalidRows', label: 'inválida' },
-    { status: 'DUPLICATE', field: 'duplicateRows', label: 'duplicada' }
+    { status: 'VALID', field: 'validRows', label: 'Válida' },
+    { status: 'INVALID', field: 'invalidRows', label: 'Inválida' },
+    { status: 'DUPLICATE', field: 'duplicateRows', label: 'Duplicada' }
   ] as const;
-  protected readonly statuses: Record<CatalogImportStatus, string> = { VALID: 'válida', INVALID: 'inválida', DUPLICATE: 'duplicada' };
+  protected readonly statuses: Record<CatalogImportStatus, string> = { VALID: 'Válida', INVALID: 'Inválida', DUPLICATE: 'Duplicada' };
   protected readonly tones: Record<CatalogImportStatus, string> = { VALID: 'success', INVALID: 'danger', DUPLICATE: 'warning' };
   protected counted(count: number, singular: string, plural = singular + 's'): string {
     return `${count} ${count === 1 ? singular : plural}`;

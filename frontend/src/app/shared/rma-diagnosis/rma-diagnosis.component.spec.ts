@@ -89,7 +89,7 @@ describe('Diagnóstico inline', () => {
     suggestField('failureType').dispatchEvent(new Event('focusin', { bubbles: true })); render();
     suggestField('failureType').dispatchEvent(new Event('focus')); render();
     expect(suggestionReads).toBe(1);
-    expect(options('failureType')).toEqual(['Comunicação', 'Display', 'Firmware', 'Fonte de alimentação', 'Mecânica', 'Outro', 'Placa trincada', 'PWM', 'Sensor']);
+    expect(options('failureType')).toEqual(['Comunicação', 'Display', 'Firmware', 'Fonte de alimentação', 'Mecânica', 'Placa trincada', 'PWM', 'Sensor']);
     suggestField('probableCause').dispatchEvent(new Event('focusin', { bubbles: true })); suggestField('probableCause').dispatchEvent(new Event('focus')); render();
     expect(suggestionReads).toBe(1);
     expect(options('probableCause')).toContain('Queda no transporte');

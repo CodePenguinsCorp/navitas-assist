@@ -1,7 +1,7 @@
 :host { display: block; min-width: 0; }
 .import-page { min-width: 0; overflow-wrap: anywhere; gap: var(--space-4); }
 .import-card { padding: var(--space-4); min-width: 0; }
-.import-step { color: var(--muted); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); }
+.import-step { color: var(--brand-blue-deep); font-weight: var(--font-weight-bold); }
 .import-instruction { margin: 0; font-size: var(--font-size-md); }
 .import-hint { margin: var(--space-2) 0 var(--space-3); color: var(--muted); font-size: var(--font-size-sm); line-height: var(--line-height-body); }
 .import-page :is(.button-primary, .button-secondary, .link-button) { min-height: var(--control-height); font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); }
@@ -19,7 +19,6 @@
 .import-file:has(input:focus-visible) .import-dropzone { box-shadow: var(--focus-ring); }
 .import-file:has(input:disabled) { opacity: var(--disabled-opacity); }
 .import-file input:disabled { cursor: not-allowed; }
-.import-file-info { margin: var(--space-2) 0 var(--space-3); font-size: var(--font-size-control); line-height: var(--line-height-body); }
 .import-col-line { width: 8%; }
 .import-col-name { width: 30%; }
 .import-col-status { width: 14%; }

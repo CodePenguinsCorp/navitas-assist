@@ -48,11 +48,11 @@ export const FAILURE_TEXT_MAX_LENGTH = 80;
 
 /** Sugestões iniciais; as já usadas em outros diagnósticos são somadas a elas. */
 export const FAILURE_TYPE_SUGGESTIONS: readonly string[] = [
-  'Fonte de alimentação', 'PWM', 'Sensor', 'Comunicação', 'Display', 'Firmware', 'Mecânica', 'Outro'
+  'Fonte de alimentação', 'PWM', 'Sensor', 'Comunicação', 'Display', 'Firmware', 'Mecânica'
 ];
 
 export const FAILURE_CAUSE_SUGGESTIONS: readonly string[] = [
-  'Componente', 'Solda', 'Umidade', 'Sobrecarga', 'ESD', 'Uso incorreto', 'Outro'
+  'Componente', 'Solda', 'Umidade', 'Sobrecarga', 'ESD', 'Uso incorreto'
 ];
 
 export const NAV_GROUPS: NavGroup[] = [
@@ -86,7 +86,7 @@ export const NAV_GROUPS: NavGroup[] = [
 ];
 
 export const INTERVENTION_TYPE_SUGGESTIONS: readonly string[] = [
-  'Ressolda', 'Limpeza', 'Regravação', 'Atualização de firmware', 'Troca de chicote', 'Outro'
+  'Ressolda', 'Limpeza', 'Regravação', 'Atualização de firmware', 'Troca de chicote'
 ];
 export const INTERVENTION_TYPE_MAX_LENGTH = 80;
 
