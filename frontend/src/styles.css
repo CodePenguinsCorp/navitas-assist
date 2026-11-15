@@ -3423,7 +3423,7 @@ app-custom-select:has(> .custom-select--priority) {
 }
 
 /* Label/value pairs: one label column as wide as the longest label, values take the rest.
-   A .detail-facts__block row stacks its value under the label across the full width. */
+   Editable facts use shared rows with controls aligned to the right. */
 .detail-facts {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
@@ -3450,13 +3450,7 @@ app-custom-select:has(> .custom-select--priority) {
   overflow-wrap: anywhere;
 }
 
-.detail-facts > .detail-facts__block > :is(dt, dd) {
-  grid-column: 1 / -1;
-}
 
-.detail-facts > .detail-facts__block > dd {
-  margin-top: calc(-1 * var(--space-2));
-}
 
 /* A titled strip on top of a card (side cards of the detail modals). */
 .detail-card__header {
@@ -3485,7 +3479,7 @@ app-custom-select:has(> .custom-select--priority) {
 }
 
 /* Summary strip of a detail modal: label above value, three columns, then two, then one.
-   A .detail-summary__wide fact (the due date) takes a row of its own at the end. */
+   Editable facts take one full row each. */
 .detail-summary {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-auto-flow: row dense;
@@ -3493,23 +3487,8 @@ app-custom-select:has(> .custom-select--priority) {
   padding: var(--space-4) var(--space-5) var(--space-5);
 }
 
-.detail-summary > .detail-summary__wide {
-  grid-column: 1 / -1;
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--line);
-}
 
-.detail-summary > .detail-summary__wide > dd {
-  max-width: 440px;
-}
 
-/* Due date fact: the inline field (app-rma-due-date-field) takes the whole row and wraps its pieces at 320 px. */
-.detail-summary > .rma-details__deadline > dd {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
 
 .rma-details__stage-times {
   margin-bottom: var(--space-4);
@@ -3539,9 +3518,6 @@ app-custom-select:has(> .custom-select--priority) {
   margin-top: calc(0.35rem - 0.15rem);
 }
 
-.detail-facts > .detail-facts__block > dd:has(app-custom-select) {
-  margin-top: calc(0.35rem - var(--space-3));
-}
 
 .custom-select:is(.custom-select--priority, .custom-select--person):where(.detail-summary *, .detail-facts *) {
   width: auto;
@@ -3760,3 +3736,37 @@ app-custom-select:has(> .custom-select--priority) {
 .protocol-launch__label { font-size: var(--font-size-sm); font-weight: 600; color: var(--muted); }
 .protocol-launch__row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.6rem; align-items: center; }
 .protocol-launch__row .button-primary { min-height: var(--control-height); }
+
+/* Shared information rows in the list and Kanban details. */
+:is(.detail-summary, .detail-facts) > .detail-control-row {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+}
+:is(.detail-summary, .detail-facts) > .detail-control-row > dt { flex: 0 0 auto; }
+:is(.detail-summary, .detail-facts) > .detail-control-row.detail-control-row > dd {
+  width: min(60%, 12rem);
+  margin: 0;
+  text-align: right;
+}
+:is(.detail-summary, .detail-facts) .detail-control-row dd app-custom-select {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+}
+:is(.detail-summary, .detail-facts) .detail-control-row .custom-select,
+:is(.detail-summary, .detail-facts) .detail-control-row .custom-select .custom-select__trigger {
+  width: 100%;
+  min-height: var(--control-height);
+}
+.detail-control-row .due-date-field__picker { flex: 1 1 100%; }
+.detail-control-row .due-date-field__row { justify-content: flex-end; }
+.detail-control-row .person { justify-content: flex-end; }
+@media (max-width: 480px) {
+  :is(.detail-summary, .detail-facts) > .detail-control-row { flex-direction: column; align-items: stretch; }
+  :is(.detail-summary, .detail-facts) > .detail-control-row.detail-control-row > dd { width: 100%; }
+}

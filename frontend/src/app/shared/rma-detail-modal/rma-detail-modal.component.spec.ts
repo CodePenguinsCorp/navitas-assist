@@ -528,7 +528,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     vi.setSystemTime(new Date('2026-10-20T12:00:00Z'));
     let view = await setup();
     expect(view.buttonByText('Alterar')).toBeUndefined();
-    expect(view.host.querySelector('.rma-detail__deadline button.date-picker__trigger')).toBeNull();
+    expect(view.host.querySelector('.detail-control-row:has(app-rma-due-date-field) button.date-picker__trigger')).toBeNull();
     TestBed.resetTestingModule();
 
     view = await setup({ canEditDueDate: true, rma: { ...fullRma, dueDate: null } });
@@ -536,7 +536,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     const updated: RmaResponse[] = [];
     view.component.rmaUpdated.subscribe((rma) => updated.push(rma));
     expect(view.buttonByText('Alterar')).toBeUndefined();
-    const trigger = view.host.querySelector<HTMLButtonElement>('.rma-detail__deadline button.date-picker__trigger')!;
+    const trigger = view.host.querySelector<HTMLButtonElement>('.detail-control-row:has(app-rma-due-date-field) button.date-picker__trigger')!;
     expect(trigger.querySelector('.date-picker__value')?.textContent?.trim()).toBe('Sem data limite');
     trigger.click();
     view.fixture.detectChanges();
@@ -550,7 +550,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
 
   it('keeps the due date trigger inactive while disabled', async () => {
     const { host } = await setup({ canEditDueDate: true, disabled: true });
-    expect(host.querySelector<HTMLButtonElement>('.rma-detail__deadline button.date-picker__trigger')!.disabled).toBe(true);
+    expect(host.querySelector<HTMLButtonElement>('.detail-control-row:has(app-rma-due-date-field) button.date-picker__trigger')!.disabled).toBe(true);
   });
 
   it('omits Nesta etapa from open and closed order summaries', async () => {
@@ -870,3 +870,13 @@ describe('RmaDetailModalComponent priority selector', () => {
     expect(priorityRow(host).querySelector<HTMLButtonElement>('.custom-select__trigger')!.disabled).toBe(true);
   });
 });
+
+ it('mantem os tres controles em linhas rotuladas e respeita bloqueio de escrita', async () => {
+   const { host } = await setup({ disabled: true, canEditDueDate: true });
+   const rows = [...host.querySelectorAll('.detail-control-row')];
+   expect(rows.map(row => row.querySelector('dt')?.textContent?.trim())).toEqual(['Respons\u00e1vel', 'Prioridade', 'Data limite']);
+   for (const row of rows) {
+     expect(row.querySelector('dd button')).not.toBeNull();
+     expect(row.querySelector<HTMLButtonElement>('dd button')!.disabled).toBe(true);
+   }
+ });

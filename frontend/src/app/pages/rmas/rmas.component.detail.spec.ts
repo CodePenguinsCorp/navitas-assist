@@ -321,7 +321,7 @@ describe('RmasComponent detail with the shared information contract', () => {
     expect(detail().classList).toContain('detail-surface');
     expect(summary.classList).toContain('detail-card');
     expect(summary.classList).toContain('detail-summary');
-    expect(deadline.classList).toContain('rma-details__deadline');
+    expect(deadline.classList).toContain('detail-control-row');
     expect(detail().querySelector('[role="tablist"]')!.classList).toContain('tab-list--raised');
     expect(tabPanel().classList).toContain('detail-card');
     // With rma.responsavel the assignee is an inline selector among the facts, like the Kanban detail.
@@ -402,8 +402,8 @@ describe('RmasComponent detail with the shared information contract', () => {
     let view = await setup({ role: 'TECHNICIAN' });
     view.open();
     expect([...view.detail().querySelectorAll('button')].some((button) => button.textContent?.trim() === 'Alterar')).toBe(false);
-    expect(view.detail().querySelector('.rma-details__deadline button.date-picker__trigger')).toBeNull();
-    expect(view.detail().querySelector('.rma-details__deadline')?.textContent).toContain('Sem data limite');
+    expect(view.detail().querySelector('.detail-control-row:has(app-rma-due-date-field) button.date-picker__trigger')).toBeNull();
+    expect(view.detail().querySelector('.detail-control-row:has(app-rma-due-date-field)')?.textContent).toContain('Sem data limite');
     TestBed.resetTestingModule();
 
     view = await setup({ role: 'ADMIN' });
@@ -412,7 +412,7 @@ describe('RmasComponent detail with the shared information contract', () => {
     (view.rmaService as unknown as { updateDueDate: typeof updateDueDate }).updateDueDate = updateDueDate;
     view.rmaService.list.mockReturnValue(of(buildRmaPage([updated], 0, 20, 1)));
     view.open();
-    const deadline = view.detail().querySelector<HTMLElement>('.rma-details__deadline')!;
+    const deadline = view.detail().querySelector<HTMLElement>('.detail-control-row:has(app-rma-due-date-field)')!;
     expect([...deadline.querySelectorAll('button')].some((button) => button.textContent?.trim() === 'Alterar')).toBe(false);
     deadline.querySelector<HTMLButtonElement>('button.date-picker__trigger')!.click();
     view.render();
@@ -739,3 +739,11 @@ describe('RmasComponent detail priority selector', () => {
     expect(view.page.querySelector('.modal-panel--narrow')).toBeNull();
   });
 });
+
+ it('apresenta cada seletor junto ao seu rotulo no resumo', async () => {
+   const { open, detail } = await setup();
+   open();
+   const rows = [...detail().querySelectorAll('.detail-control-row')];
+   expect(rows.map(row => row.querySelector('dt')?.textContent?.trim())).toEqual(['Respons\u00e1vel', 'Prioridade', 'Data limite']);
+   for (const row of rows) expect(row.querySelector('dd button')).not.toBeNull();
+ });

@@ -53,13 +53,6 @@
 @media (max-width: 860px) { .rma-detail__layout { grid-template-columns: minmax(0, 1fr); } .rma-detail__side { order: -1; } .rma-detail__tiles { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 520px) { .rma-detail { padding: 1rem 0.4rem 1rem 0.9rem; } .rma-detail__section { padding: 1rem; } }
 
-/* Due date fact: the inline field (app-rma-due-date-field) takes the whole row and wraps its pieces at 320 px. */
-.rma-detail__deadline dd {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
 
 /* Quiet text control at the end of the action row (Jira style). */
 .rma-detail__fold-all { margin-left: auto; font-size: 0.8rem; }

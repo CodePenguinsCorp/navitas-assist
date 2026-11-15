@@ -152,3 +152,8 @@ As seções acima foram escritas antes destas entregas. Onde citam SLA por etapa
 ### Tempo por etapa
 
 - Nos dois detalhes da OS, conferir cabeçalho sem ícone, seta ou sublinhado, inclusive em hover: título e total à direita. Conteúdo sempre aberto e cursor comum.
+
+### Seletores de informações
+
+- Em Kanban e lista, conferir Responsável, Prioridade e Data limite: rótulo à esquerda e controle à direita, larguras uniformes e altura de 40 px.
+- Em 320 px, rótulo acima do controle, sem rolagem horizontal. Preservar permissões e bloqueio durante salvamento. Validação visual: pendente.
