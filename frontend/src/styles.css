@@ -3258,7 +3258,7 @@ app-custom-select:has(> .custom-select--priority) {
   width: auto;
   min-height: var(--control-height-xs);
   gap: 0.4rem;
-  margin-inline: calc(-1 * var(--space-2));
+  margin-inline: 0;
   padding: 0 var(--space-2);
   border-color: transparent;
   background: transparent;
@@ -3505,8 +3505,8 @@ app-custom-select:has(> .custom-select--priority) {
   --fact-menu-pad-x: 0.7rem;
   display: inline-block;
   width: auto;
-  max-width: calc(100% + var(--fact-menu-pad-x) + 1px);
-  margin-inline-start: calc(-1 * (var(--fact-menu-pad-x) + 1px));
+  max-width: 100%;
+  margin-inline-start: 0;
 }
 
 .detail-summary > div > dd:has(> * > app-custom-select) {
@@ -3524,13 +3524,13 @@ app-custom-select:has(> .custom-select--priority) {
 :is(.detail-summary, .detail-facts) .custom-select.custom-select--priority .custom-select__trigger,
 :is(.detail-summary, .detail-facts) .custom-select.custom-select--person .custom-select__trigger {
   width: auto;
-  min-height: 2.375rem;
+  min-height: var(--control-height);
   margin: 0;
   gap: 0.5rem;
   padding: 0.35rem var(--fact-menu-pad-x);
-  border-color: transparent;
+  border-color: var(--line);
   border-radius: var(--radius-sm);
-  background: transparent;
+  background: var(--surface);
   box-shadow: none;
   font-size: 0.88rem;
   font-weight: 600;
