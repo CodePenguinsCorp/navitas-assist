@@ -1,3 +1,6 @@
 @if (label(); as text) {
-  <span class="deadline-chip" [attr.data-deadline]="status()">{{ text }}</span>
+  <span class="deadline-chip" [class.deadline-chip--card]="mode() === 'card'" [attr.data-deadline]="status()">
+    <app-icon name="clock" [size]="14" />
+    <span class="deadline-chip__text">{{ text }}</span>
+  </span>
 }

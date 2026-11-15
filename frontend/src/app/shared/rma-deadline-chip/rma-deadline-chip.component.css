@@ -13,18 +13,27 @@
   color: var(--deadline-tone);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  min-width: 0;
 }
 
-.deadline-chip::before {
-  content: '';
-  flex-shrink: 0;
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  background: currentColor;
+.deadline-chip__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deadline-chip--card {
+  justify-self: start;
+  min-height: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .deadline-chip[data-deadline='OVERDUE'] { --deadline-tone: var(--deadline-overdue); }
 .deadline-chip[data-deadline='DUE_SOON'] { --deadline-tone: var(--deadline-soon); }
-.deadline-chip[data-deadline='ON_TRACK'] { --deadline-tone: var(--tone-success); }
+.deadline-chip[data-deadline='ON_TRACK'] {
+  --deadline-tone: var(--muted);
+  background: transparent;
+  font-weight: var(--font-weight-regular);
+}

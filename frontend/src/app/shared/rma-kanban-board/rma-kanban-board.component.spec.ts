@@ -57,13 +57,14 @@ describe('RmaKanbanBoardComponent card', () => {
     return { dueDate, deadline: { status: dueDate ? 'ON_TRACK' : 'NO_DUE_DATE', dueSoonFrom: dueDate ? dueSoonFrom : null }, ...overrides };
   }
 
-  it('hides the deadline when on track, without due date and when closed', () => {
+  it('mostra prazo em dia e omite sem data e encerradas', () => {
     const host = render([
       buildRma({ id: 1, code: 'NAV-0001', ...due('2026-12-30') }),
       buildRma({ id: 2, code: 'NAV-0002', ...due(null) }),
       buildRma({ id: 3, code: 'NAV-0003', status: 'COMPLETED', ...due('2026-10-01') }),
     ]);
-    for (const code of ['NAV-0001', 'NAV-0002', 'NAV-0003']) {
+    expect(card(host, 'NAV-0001').querySelector('.deadline-chip')?.textContent?.trim()).toBe('Prazo 30/12');
+    for (const code of ['NAV-0002', 'NAV-0003']) {
       expect(card(host, code).querySelector('.deadline-chip')).toBeNull();
     }
   });
@@ -74,22 +75,30 @@ describe('RmaKanbanBoardComponent card', () => {
       buildRma({ id: 2, code: 'NAV-0002', ...due('2026-10-23') }),
     ]);
     const late = card(host, 'NAV-0001').querySelector('.deadline-chip');
-    expect(late?.textContent?.trim()).toBe('Atrasado há 2 dias');
+    expect(late?.textContent?.trim()).toBe('Atrasado há 2 dias (18/10)');
     expect(late?.getAttribute('data-deadline')).toBe('OVERDUE');
     const soon = card(host, 'NAV-0002').querySelector('.deadline-chip');
-    expect(soon?.textContent?.trim()).toBe('Vence em 3 dias');
+    expect(soon?.textContent?.trim()).toBe('Vence em 3 dias (23/10)');
     expect(soon?.getAttribute('data-deadline')).toBe('DUE_SOON');
+    for (const code of ['NAV-0001', 'NAV-0002']) {
+      const element = card(host, code);
+      expect(element.querySelector('.deadline-chip app-icon svg')).not.toBeNull();
+      const children = [...element.children];
+      const title = children.findIndex(child => child.matches('.board-card__title'));
+      expect(children[title + 1].querySelector('.deadline-chip')).not.toBeNull();
+      expect(children[title + 2].matches('.board-card__stage')).toBe(true);
+    }
   });
 
   it('turns the card overdue at São Paulo midnight as the shared clock advances', () => {
     now.set(Date.parse('2026-10-21T02:59:00Z'));
     const host = render([buildRma(due('2026-10-20'))]);
     const chip = () => card(host, 'NAV-0100').querySelector('.deadline-chip');
-    expect(chip()?.textContent?.trim()).toBe('Vence hoje');
+    expect(chip()?.textContent?.trim()).toBe('Vence hoje (20/10)');
 
     now.set(Date.parse('2026-10-21T03:01:00Z'));
     fixture.detectChanges();
-    expect(chip()?.textContent?.trim()).toBe('Atrasado há 1 dia');
+    expect(chip()?.textContent?.trim()).toBe('Atrasado há 1 dia (20/10)');
     expect(chip()?.getAttribute('data-deadline')).toBe('OVERDUE');
   });
 
