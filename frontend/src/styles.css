@@ -494,12 +494,10 @@ a {
   padding: clamp(0.75rem, 2.4vh, 1.5rem) 1rem clamp(0.6rem, 1.6vh, 1rem);
   overflow: hidden;
   border: 0;
-  border-right: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 0;
   background:
     radial-gradient(circle at 16% 12%, rgba(255, 255, 255, 0.2), transparent 22%),
     linear-gradient(180deg, #0a4f93 0%, #0f79d4 52%, #1599ef 100%);
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.06);
 }
 
 .shell-sidebar::before,
@@ -638,12 +636,6 @@ a {
   background: rgba(255, 255, 255, 0.24);
 }
 
-/* Room inside the scroller so the active border, hover shadow and focus ring are not cut by overflow-x. */
-.is-collapsed .nav-groups {
-  margin-inline: -0.4rem;
-  padding-inline: 0.4rem;
-}
-
 .is-collapsed .nav-item {
   justify-content: center;
   padding-inline: 0;
@@ -672,6 +664,9 @@ a {
   flex: 1 1 auto;
   align-content: start;
   gap: clamp(0.3rem, 1.1vh, 1rem);
+  /* Room inside the scroller so the item border, shadow and 2px slide are never cut by overflow-x. */
+  margin: -0.5rem -0.75rem -1rem;
+  padding: 0.5rem 0.75rem 1rem;
   min-height: 0;
   overflow-x: hidden;
   /* Safety net for very short windows: the list scrolls, with no visible bar. */
