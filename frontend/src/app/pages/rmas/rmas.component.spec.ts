@@ -269,7 +269,7 @@ describe('RmasComponent pending editor lifecycle', () => {
 
   function exitControl(control: 'overlay' | 'close' | 'cancel'): HTMLElement {
     const selector = control === 'overlay' ? '.modal-overlay'
-      : control === 'close' ? '.modal-close' : '.modal-overlay .form-actions--full .button-secondary';
+      : control === 'close' ? '.modal-close' : '.modal-overlay :is(.form-actions--full, .inline-form__actions) .button-secondary';
     return page.querySelector<HTMLElement>(selector)!;
   }
 
