@@ -261,8 +261,7 @@ describe('RmaPartsPanelComponent loading', () => {
 
 function expectPending(root: HTMLElement): void {
   const busy = root.querySelector('[aria-busy="true"]');
-  expect(busy?.textContent?.trim()).toBe('');
+  expect(busy?.textContent?.trim()).toBe('Carregando peças...');
   expect(busy?.children.length).toBe(0);
-  expect(busy?.hasAttribute('role')).toBe(false);
-  expect(root.textContent).not.toMatch(/Carregando(?! opções)|Atualizando (estoque|notificações|preferências|regras|falhas)/);
+  expect(busy?.getAttribute('role')).toBe('status');
 }

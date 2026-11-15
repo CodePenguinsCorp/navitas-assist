@@ -96,7 +96,7 @@ describe('RmaPartsPanelComponent presentation', () => {
     expect(buttons(items()[0])).not.toContain('Cancelar');
     const cancel = buttons(items()[0]).find((label) => label.startsWith('Cancelar'));
     expect(cancel).toBe('Cancelar reserva');
-    (items()[0].querySelectorAll('button')[1] as HTMLButtonElement).click();
+    Array.from(items()[0].querySelectorAll('button')).find(button => button.textContent?.trim() === 'Cancelar reserva')!.click();
     expect(service.updateReservation).toHaveBeenCalledWith(7, 1, 'cancel');
   });
 
@@ -155,8 +155,8 @@ describe('RmaPartsPanelComponent presentation', () => {
   const STATUSES: ReservationStatus[] = ['ACTIVE', 'PENDING', 'CONSUMED', 'CANCELLED', 'REVERSED'];
   const expectedActions = (canAct: boolean, closed: boolean, status: ReservationStatus): string[] => {
     if (!canAct) return [];
-    if (status === 'ACTIVE') return closed ? ['Cancelar reserva'] : ['Aplicar', 'Cancelar reserva'];
-    if (status === 'PENDING') return closed ? ['Cancelar reserva'] : ['Efetivar reserva', 'Cancelar reserva'];
+    if (status === 'ACTIVE') return closed ? ['Cancelar reserva'] : ['Cancelar reserva', 'Aplicar'];
+    if (status === 'PENDING') return closed ? ['Cancelar reserva'] : ['Cancelar reserva', 'Efetivar reserva'];
     return [];
   };
 
@@ -204,7 +204,7 @@ describe('RmaPartsPanelComponent presentation', () => {
     (fixture.componentInstance as any).consumptionForm.setValue({ replacementReason: 'Falha', componentBatch: '' });
     button('Confirmar')!.click(); render();
     for (const label of ['Aplicar', 'Efetivar reserva', 'Cancelar reserva']) expect(button(label)!.disabled).toBe(true);
-    (items()[0].querySelectorAll('button')[1] as HTMLButtonElement).click();
+    Array.from(items()[0].querySelectorAll('button')).find(button => button.textContent?.trim() === 'Cancelar reserva')!.click();
     expect(service.updateReservation).toHaveBeenCalledTimes(1);
   });
 

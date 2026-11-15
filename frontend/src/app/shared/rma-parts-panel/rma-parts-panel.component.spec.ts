@@ -27,6 +27,19 @@ describe('RmaPartsPanelComponent', () => {
   let fixture: ComponentFixture<RmaPartsPanelComponent>;
   let partService: Record<string, ReturnType<typeof vi.fn>>;
 
+  it('separa identificação, dados e ações de cada reserva sem alterar a ordem', async () => {
+    await setUp('TECHNICIAN');
+    const items = Array.from(fixture.nativeElement.querySelectorAll('.parts-item')) as HTMLElement[];
+    expect(items.map(item => item.querySelector('dl')?.getAttribute('aria-label'))).toEqual([
+      'Dados da reserva de PCA-1', 'Dados da reserva de PCA-1', 'Dados da reserva de PCA-1'
+    ]);
+    expect(items.map(item => item.querySelector('.mini-chip')?.textContent?.trim())).toEqual(['Reservada', 'Aplicada', 'Pendente']);
+    expect(items[0].querySelector('.parts-item__title strong')?.textContent?.trim()).toBe('Capacitor');
+    expect(Array.from(items[0].querySelectorAll('dt')).map(label => label.textContent)).toEqual(['Quantidade', 'Disponível', 'Custo da reserva', 'Local']);
+    expect(items[0].querySelector('.parts-item__body .parts-item__actions')).toBeNull();
+    expect(items[0].querySelector('.parts-item__actions button')?.textContent?.trim()).toBe('Cancelar reserva');
+  });
+
   async function setUp(role: LegacyProfileCode, status: 'IN_REPAIR' | 'COMPLETED' = 'IN_REPAIR'): Promise<void> {
     partService = {
       getRmaParts: vi.fn(() => of(RMA_PARTS)),

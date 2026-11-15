@@ -11,10 +11,10 @@
       @if (loading()) { <div aria-busy="true"></div> }
     </div>
   } @else if (loading() || !hasLoaded()) {
-    <div class="rma-detail-copy" aria-busy="true"></div>
+    <div class="empty-state" role="status" aria-busy="true">Carregando peças...</div>
   } @else {
     @if (stats().length > 0) {
-      <dl class="parts-stats" aria-label="Resumo das peças da OS">
+      <dl class="page-summary parts-stats" aria-label="Resumo das peças da OS">
         @for (stat of stats(); track stat.label) {
           <div><dt>{{ stat.label }}</dt><dd>{{ stat.value }}</dd></div>
         }
@@ -71,17 +71,17 @@
     }
 
     @if (reservations().length === 0) {
-      <p class="repair-empty">Nenhuma peça reservada</p>
+      <div class="empty-state"><span class="icon-tile tone-slate"><app-icon name="chip" /></span><h3 class="repair-empty">Nenhuma peça reservada</h3></div>
     } @else {
       <div class="parts-list">
         @for (reservation of reservations(); track reservation.id) {
           <div class="parts-item">
             <div class="parts-item__body">
               <div class="parts-item__title">
-                <strong><span class="code-text">{{ reservation.partCode }}</span> · {{ reservation.partName }}</strong>
+                <div class="parts-item__identity"><span class="code-text">{{ reservation.partCode }}</span><strong>{{ reservation.partName }}</strong></div>
                 <span class="mini-chip" [class]="statusClass(reservation.status)">{{ statusLabels[reservation.status] }}</span>
               </div>
-              <dl class="meta-list">
+              <dl class="parts-facts" [attr.aria-label]="'Dados da reserva de ' + reservation.partCode">
                 <div><dt>Quantidade</dt><dd>{{ quantity(reservation.quantity, reservation.unit) }}</dd></div>
                 <div><dt>Disponível</dt><dd>{{ quantity(reservation.partAvailable, reservation.unit) }}</dd></div>
                 @if (canSeeCosts()) {
@@ -92,21 +92,22 @@
                 }
               </dl>
               @if (reservation.note) {
-                <small>{{ reservation.note }}</small>
+                <small class="parts-item__note">{{ reservation.note }}</small>
               }
             </div>
 
             @if (canReserve()) {
               <div class="parts-item__actions">
+                @if (reservation.status === 'ACTIVE' || reservation.status === 'PENDING') {
+                  <button type="button" class="link-button parts-item__cancel" (click)="runAction(reservation, 'cancel')" [disabled]="busyReservationId() !== null">Cancelar reserva</button>
+                }
                 @if (reservation.status === 'ACTIVE' && !isClosed()) {
                   <button type="button" class="button-secondary button-secondary--small" (click)="startConsumption(reservation)" [disabled]="busyReservationId() !== null">Aplicar</button>
                 }
                 @if (reservation.status === 'PENDING' && !isClosed()) {
                   <button type="button" class="button-secondary button-secondary--small" (click)="runAction(reservation, 'allocate')" [disabled]="busyReservationId() !== null">Efetivar reserva</button>
                 }
-                @if (reservation.status === 'ACTIVE' || reservation.status === 'PENDING') {
-                  <button type="button" class="button-secondary button-secondary--small" (click)="runAction(reservation, 'cancel')" [disabled]="busyReservationId() !== null">Cancelar reserva</button>
-                }
+
               </div>
             }
           </div>
@@ -165,7 +166,7 @@
           }
           @if (component.external && editingExternal()?.id === component.id && canCreateReservation()) { <ng-container [ngTemplateOutlet]="externalEditor" /> }
         </div>
-      } @empty { @if (!externalOpen()) { <p class="repair-empty">Nenhum componente trocado</p> } }
+      } @empty { @if (!externalOpen()) { <div class="empty-state"><span class="icon-tile tone-slate"><app-icon name="wrench" /></span><h3 class="repair-empty">Nenhum componente trocado</h3></div> } }
   </app-collapsible-section>
 </section>
 

@@ -1,3 +1,4 @@
+import { IconComponent } from '../icon/icon.component';
 import { TipDirective } from '../tip/tip.directive';
 import { viewChildren, Component, ElementRef, EventEmitter, Injector, Output, DestroyRef, afterNextRender, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -24,128 +25,9 @@ const ACTION_MESSAGES: Record<PartReservationAction, string> = {
 
 @Component({
   selector: 'app-rma-parts-panel',
-  imports: [TipDirective, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, CollapsibleSectionComponent],
+  imports: [IconComponent, TipDirective, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, CollapsibleSectionComponent],
   templateUrl: './rma-parts-panel.component.html',
-  styles: [`
-    :host {
-      display: block;
-    }
-
-    /* One compact line of figures (label and value side by side); only non-zero ones render. */
-    .parts-stats {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--space-1) var(--space-4);
-      margin: 0 0 var(--space-2);
-      font-size: var(--font-size-sm);
-    }
-
-    .parts-stats div {
-      display: flex;
-      gap: var(--space-1);
-      white-space: nowrap;
-    }
-
-    .parts-stats dt {
-      color: var(--muted);
-    }
-
-    .parts-stats dd {
-      margin: 0;
-      font-weight: var(--font-weight-semibold);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .parts-load-error {
-      display: grid;
-      justify-items: start;
-      gap: var(--space-2);
-      margin: var(--space-2) 0 var(--space-3);
-      border: 1px solid var(--danger-line);
-      border-radius: var(--radius-md);
-    }
-
-    .parts-item__body {
-      display: grid;
-      gap: 0.6rem;
-      min-width: 0;
-    }
-
-    .parts-item__title {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .parts-item .meta-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0 var(--space-3);
-      font-size: var(--font-size-sm);
-    }
-
-    .parts-list {
-      display: grid;
-      gap: 0.6rem;
-    }
-
-    .parts-item {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: var(--space-1) var(--space-3);
-      padding: var(--space-2) 0;
-      border-top: 1px solid var(--line);
-    }
-
-    .parts-item .meta-list div {
-      display: flex;
-      gap: var(--space-1);
-    }
-
-    .parts-item .meta-list dt {
-      color: var(--muted);
-    }
-
-    .parts-item .meta-list dd {
-      margin: 0;
-    }
-
-    .parts-item small {
-      color: var(--muted);
-    }
-
-    .parts-item__actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem;
-      justify-content: flex-end;
-      align-items: start;
-    }
-
-    .parts-reserve-form {
-      margin-top: var(--space-4);
-    }
-
-    .parts-history {
-      margin-top: 0.75rem;
-    }
-
-    .parts-history li {
-      color: var(--muted);
-      font-size: 0.85rem;
-    }
-
-    @media (max-width: 720px) {
-      .parts-item {
-        grid-template-columns: 1fr;
-      }
-
-      .parts-item__actions {
-        justify-content: flex-start;
-      }
-    }
-  `]
+  styleUrl: './rma-parts-panel.component.css'
 })
 export class RmaPartsPanelComponent {
   readonly sections = viewChildren(CollapsibleSectionComponent);
