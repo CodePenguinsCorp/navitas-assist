@@ -122,7 +122,7 @@ describe('RmaProtocolsComponent checklist', () => {
     expect(history.textContent).toContain('ana'); expect(history.textContent).toContain('bruno');
     expect(history.textContent).toContain(formatBusinessDateTime(FIRST.completedAt));
     expect(history.textContent).toContain(formatBusinessDateTime(LATEST.completedAt));
-    expect(history.textContent).toContain('12.10 V'); expect(history.textContent).toContain('0 V');
+    expect(history.textContent).toContain('12,10 V'); expect(history.textContent).not.toContain('12.10'); expect(history.textContent).toContain('0 V');
     expect(text()).toContain('Reprovado');
     expect(Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('.protocol-execution button')).every((b) => b.classList.contains('protocol-row__toggle'))).toBe(true);
   });
@@ -133,5 +133,11 @@ describe('RmaProtocolsComponent checklist', () => {
     const finish = Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button')).find((b) => b.textContent?.trim().startsWith('Concluir'))!;
     expect(finish.disabled).toBe(false); finish.click(); render();
     expect(complete).toHaveBeenCalledWith(9); expect(text()).toContain('Concluído com reprovação');
+  });
+
+  it('shows measured values with a decimal comma preserving every digit', async () => {
+    const big = { ...MEASUREMENT, latest: { ...LATEST, measuredValue: '1234567890123.123456', outcome: 'PASSED' as const }, attempts: [{ ...LATEST, measuredValue: '1234567890123.123456' }] };
+    await setup({ ...EXECUTION, items: [big, CHECK, OPTIONAL] });
+    expect(text()).toContain('1234567890123,123456 V');
   });
 });

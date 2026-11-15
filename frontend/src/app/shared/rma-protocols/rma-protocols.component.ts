@@ -257,7 +257,7 @@ export class RmaProtocolsComponent {
   protected readonly dateTime = formatBusinessDateTime;
 
   protected resultValue(result: ProtocolItemResultResponse): string {
-    return result.measuredValue !== null ? `${result.measuredValue} ${result.unit ?? ''}`.trim() : result.textValue ?? '';
+    return result.measuredValue !== null ? `${result.measuredValue.replace('.', ',')} ${result.unit ?? ''}`.trim() : result.textValue ?? '';
   }
 
   protected statusLabel(execution: ProtocolExecutionResponse): string {
