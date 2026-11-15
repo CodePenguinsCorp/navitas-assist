@@ -120,6 +120,10 @@ export class PartsComponent {
   protected readonly movementTypeOptions = MOVEMENT_TYPE_OPTIONS;
   protected readonly movementLabels = PART_MOVEMENT_LABELS;
   protected readonly quantity = formatQuantity;
+  /** "10 UN → 11 UN"; just "10 UN" when nothing changes. */
+  protected transition(before: number, after: number, unit: string): string {
+    return before === after ? formatQuantity(after, unit) : `${formatQuantity(before, unit)} → ${formatQuantity(after, unit)}`;
+  }
   protected readonly currency = formatCurrency;
   protected readonly dateTime = formatBusinessDateTime;
   protected readonly canReverse = canReverseMovement;

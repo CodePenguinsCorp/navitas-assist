@@ -185,7 +185,7 @@ describe('PartsComponent movement history', () => {
     expect(item.classList).toContain('record-row');
     expect(item.querySelector('.icon-tile app-icon')).not.toBeNull();
 
-    expect(text(item.querySelector('.movement-item__balance'))).toBe('Estoque11,5 para 10 mReservado5,5 para 4 m');
+    expect(text(item.querySelector('.movement-item__balance'))).toBe('Estoque11,5 m → 10 mReservado5,5 m → 4 m');
     expect(text(item.querySelector('.movement-item__meta'))).toContain('OS-7 · tech');
     expect(text(item.querySelector('.movement-item__meta .code-text'))).toBe('OS-7');
     expect(text(item.querySelector('.movement-item__reason'))).toBe('Motivo: Peça instalada');
@@ -198,7 +198,7 @@ describe('PartsComponent movement history', () => {
     expect(text(item.querySelector('.record-row__title'))).toBe('Entrada de 20 m');
     expect(text(item.querySelector('.movement-item__meta'))).toContain('tech');
     expect(item.querySelector('.movement-item__reason')).toBeNull();
-    expect(text(item.querySelector('.movement-item__balance'))).toBe('Estoque0 para 20 mReservado0 para 0 m');
+    expect(text(item.querySelector('.movement-item__balance'))).toBe('Estoque0 m → 20 mReservado0 m');
   });
 
   it('offers Reverter as a named icon action', async () => {

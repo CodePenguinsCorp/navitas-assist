@@ -340,9 +340,9 @@
           <h4 id="movement-preview-title">Impacto estimado</h4>
           @if (movementPreview(); as preview) {
             <dl>
-              <div><dt>Em estoque</dt><dd>{{ quantity(preview.onHandBefore, part.unit) }} para {{ quantity(preview.onHandAfter, part.unit) }}</dd></div>
-              <div><dt>Reservado</dt><dd>{{ quantity(preview.reserved, part.unit) }} para {{ quantity(preview.reserved, part.unit) }}</dd></div>
-              <div class="movement-preview__available"><dt>Disponível</dt><dd>{{ quantity(preview.availableBefore, part.unit) }} para {{ quantity(preview.availableAfter, part.unit) }}</dd></div>
+              <div><dt>Em estoque</dt><dd>{{ transition(preview.onHandBefore, preview.onHandAfter, part.unit) }}</dd></div>
+              <div><dt>Reservado</dt><dd>{{ transition(preview.reserved, preview.reserved, part.unit) }}</dd></div>
+              <div class="movement-preview__available"><dt>Disponível</dt><dd>{{ transition(preview.availableBefore, preview.availableAfter, part.unit) }}</dd></div>
             </dl>
             @if (preview.availableAfter < 0) { <p class="field-error">Saldo disponível insuficiente.</p> }
             <p>Saldo confirmado ao registrar.</p>
@@ -410,8 +410,8 @@
                   @if (movement.reversedMovementId) { · do movimento {{ movement.reversedMovementId }} }
                 </p>
                 <dl class="record-stats record-stats--compact movement-item__balance">
-                  <div><dt>Estoque</dt><dd>{{ quantity(movement.onHandAfter - movement.onHandChange) }} para {{ quantity(movement.onHandAfter, part.unit) }}</dd></div>
-                  <div><dt>Reservado</dt><dd>{{ quantity(movement.reservedAfter - movement.reservedChange) }} para {{ quantity(movement.reservedAfter, part.unit) }}</dd></div>
+                  <div><dt>Estoque</dt><dd>{{ transition(movement.onHandAfter - movement.onHandChange, movement.onHandAfter, part.unit) }}</dd></div>
+                  <div><dt>Reservado</dt><dd>{{ transition(movement.reservedAfter - movement.reservedChange, movement.reservedAfter, part.unit) }}</dd></div>
                 </dl>
                 @if (movement.reason) { <p class="movement-item__reason"><strong>Motivo:</strong> {{ movement.reason }}</p> }
               </div>

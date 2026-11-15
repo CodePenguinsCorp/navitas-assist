@@ -72,8 +72,8 @@ describe('PartsComponent stock movement', () => {
     const input = panel()!.querySelector<HTMLInputElement>('[formControlName="quantity"]')!;
     input.value = '1.5'; input.dispatchEvent(new Event('input', { bubbles: true })); fixture.detectChanges();
     const preview = text(panel()!.querySelector('.movement-preview'));
-    expect(preview).toContain('Em estoque10 m para 8,5 m');
-    expect(preview).toContain('Disponível6 m para 4,5 m'); expect(preview).toContain('Reservado4 m para 4 m');
+    expect(preview).toContain('Em estoque10 m → 8,5 m');
+    expect(preview).toContain('Disponível6 m → 4,5 m'); expect(preview).toContain('Reservado4 m');
     expect(preview).toContain('Saldo confirmado ao registrar.');
     expect(service['registerMovement']).not.toHaveBeenCalled();
     expect(component.movementForm.controls['quantity'].value).toBe(1.5);
@@ -81,14 +81,14 @@ describe('PartsComponent stock movement', () => {
 
   // Vermelho: entrada e ajuste assinado não atualizam uma estimativa antes/depois.
   it.each([
-    { type: 'ENTRY', quantity: 2, stock: '10 m para 12 m', available: '6 m para 8 m' },
-    { type: 'ADJUSTMENT', quantity: -2, stock: '10 m para 8 m', available: '6 m para 4 m' },
-    { type: 'ADJUSTMENT', quantity: 2, stock: '10 m para 12 m', available: '6 m para 8 m' }
+    { type: 'ENTRY', quantity: 2, stock: '10 m → 12 m', available: '6 m → 8 m' },
+    { type: 'ADJUSTMENT', quantity: -2, stock: '10 m → 8 m', available: '6 m → 4 m' },
+    { type: 'ADJUSTMENT', quantity: 2, stock: '10 m → 12 m', available: '6 m → 8 m' }
   ] as const)('updates the estimate for $type $quantity', async ({ type, quantity, stock, available }) => {
     await setup(); values(type, quantity, 'Inventário');
     const preview = text(panel()!.querySelector('.movement-preview'));
     expect(preview).toContain(`Em estoque${stock}`); expect(preview).toContain(`Disponível${available}`);
-    expect(preview).toContain('Reservado4 m para 4 m');
+    expect(preview).toContain('Reservado4 m');
   });
 
   // Vermelho: quantidade inválida não oferece orientação em lugar dos números projetados.
@@ -116,7 +116,7 @@ describe('PartsComponent stock movement', () => {
   // Vermelho: falta explicar o disponível negativo, embora a decisão continue no servidor.
   it('explains a negative estimate and still submits to the server', async () => {
     await setup(throwError(() => ({ error: { message: 'Saldo insuficiente' } }))); values('EXIT', 7);
-    expect(text()).toContain('Disponível6 m para -1 m');
+    expect(text()).toContain('Disponível6 m → -1 m');
     expect(text()).toContain('Saldo disponível insuficiente.');
     expect(panel()!.querySelector<HTMLButtonElement>('[type="submit"]')!.disabled).toBe(false);
     submit(); expect(service['registerMovement']).toHaveBeenCalledWith(4, { type: 'EXIT', quantity: 7, reason: null });
