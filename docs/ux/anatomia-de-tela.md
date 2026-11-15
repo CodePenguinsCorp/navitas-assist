@@ -229,7 +229,8 @@ O spec `frontend/src/app/testing/ui-guard.spec.ts` varre `src/app/**/*.css`, `*.
 - A baseline só pode **diminuir**. Se um arquivo ficar abaixo da contagem, o spec também falha e pede para reduzir o número, para a conquista não se perder.
 - Para reduzir: troque os literais por tokens, rode `UI_GUARD_UPDATE=1 npm --prefix frontend test -- --watch=false` e commite o JSON atualizado. O modo de atualização só grava números menores ou iguais.
 - Nunca aumente um número à mão para fazer o teste passar.
-- `styles.css` global é varrido de forma separada (os tokens vivem lá) e fica fora da contagem de hexadecimais da seção `:root`.
+- `src/styles.css` também é varrido (hoje com a maior parte da dívida). Declarações de variável (`--token: valor`) não contam, porque é nelas que os literais devem viver. Os blocos compartilhados só podem ser definidos em `styles.css`.
+- Baseline inicial: 18 arquivos e 251 violações; o spec reporta por arquivo o que sobrou.
 
 ## 8. Checklist de anatomia
 
