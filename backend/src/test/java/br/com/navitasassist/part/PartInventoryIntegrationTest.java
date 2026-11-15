@@ -494,6 +494,18 @@ class PartInventoryIntegrationTest {
         return payload;
     }
 
+    @Test
+    void shouldRejectManualMovementQuantityBeyondThreeDecimalsWithPortugueseMessage() throws Exception {
+        long partId = createPart("PCA-PREC", "10.00", "0");
+        for (String quantity : new String[] {"1.0001", "1000000000"}) {
+            movement(partId, "ENTRY", quantity, null, ADMIN)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Dados inválidos"))
+                .andExpect(jsonPath("$.details[0]").value("quantity: valor numérico fora do limite (esperado <9 dígitos>.<3 dígitos>)"));
+        }
+        movement(partId, "ENTRY", "999999999.999", null, ADMIN).andExpect(status().isCreated());
+    }
+
     private org.springframework.test.web.servlet.ResultActions movement(long partId, String type, String quantity, String reason, RequestPostProcessor role) throws Exception {
         Map<String, Object> payload = new HashMap<>();
         payload.put("type", type);
