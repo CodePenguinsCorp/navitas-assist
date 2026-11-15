@@ -740,6 +740,6 @@ describe('garantia efetiva na lista', () => {
     const chip = page.querySelector('.warranty-tag')!;
     expect(chip.classList.contains('warranty-ok')).toBe(true);
     chip!.dispatchEvent(new Event('mouseenter'));
-    expect(document.querySelector('[role="tooltip"]')?.textContent).toContain('Em garantia');
+    expect(document.querySelector('.app-tip')?.textContent).toContain('Em garantia');
   });
 });

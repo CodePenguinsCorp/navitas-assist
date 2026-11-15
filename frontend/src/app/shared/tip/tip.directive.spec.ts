@@ -19,6 +19,19 @@ describe('TipDirective', () => {
     }
     expect(button.getAttribute('aria-label')).toBe('Abrir');
   });
+  it('preserva a descricao atual do campo ao fechar a dica', () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.detectChanges();
+    const button = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    button.dispatchEvent(new Event('focus'));
+    button.setAttribute('aria-describedby', 'erro-atual');
+    button.dispatchEvent(new Event('blur'));
+    expect(button.getAttribute('aria-describedby')).toBe('erro-atual');
+    button.dispatchEvent(new Event('focus'));
+    expect(button.getAttribute('aria-describedby')).toContain('erro-atual');
+    button.dispatchEvent(new Event('blur'));
+    expect(button.getAttribute('aria-describedby')).toBe('erro-atual');
+  });
   it.each(['right', 'top', 'bottom'] as const)('posiciona %s sem ultrapassar a viewport', (position) => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.position.set(position);

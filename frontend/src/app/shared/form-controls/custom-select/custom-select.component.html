@@ -2,7 +2,7 @@
 <div class="custom-select" [class.is-open]="isOpen()" [class.is-disabled]="isDisabled()" [class.custom-select--compact]="size() === 'compact'" [class.custom-select--status]="appearance() === 'status'" [class.custom-select--person]="appearance() === 'person'" [class.custom-select--priority]="appearance() === 'priority'">
   <button
     type="button"
-    class="custom-select__trigger"
+    class="custom-select__trigger" [appTip]="current?.label || placeholder()"
     aria-haspopup="listbox"
     [disabled]="isDisabled()"
     [attr.aria-expanded]="isOpen()"

@@ -18,11 +18,10 @@ export class TipDirective {
   readonly tipPosition = input<'right' | 'top' | 'bottom'>('top');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private tip: HTMLElement | null = null;
-  private previousDescription: string | null = null;
 
   constructor() {
     const element = this.host.nativeElement;
-    const needsTabStop = !element.matches('button, a[href], input, select, textarea, [tabindex], [aria-hidden="true"]');
+    const needsTabStop = !element.matches('[tabindex]') && !element.closest('button, a[href], input, select, textarea, [aria-hidden="true"]');
     if (needsTabStop) element.setAttribute('tabindex', '0');
     const onScroll = () => this.hide();
     document.addEventListener('scroll', onScroll, true);
@@ -60,16 +59,17 @@ export class TipDirective {
     } else if (top < GAP) top = rect.bottom + GAP;
     tip.style.left = `${Math.max(GAP, Math.min(left, innerWidth - width - GAP))}px`;
     tip.style.top = `${Math.max(GAP, Math.min(top, innerHeight - height - GAP))}px`;
-    this.previousDescription = element.getAttribute('aria-describedby');
-    element.setAttribute('aria-describedby', [this.previousDescription, tip.id].filter(Boolean).join(' '));
+    element.setAttribute('aria-describedby', [element.getAttribute('aria-describedby'), tip.id].filter(Boolean).join(' '));
     this.tip = tip;
   }
 
   protected hide(): void {
     if (!this.tip) return;
+    const element = this.host.nativeElement;
+    const description = (element.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(id => id && id !== this.tip!.id).join(' ');
     this.tip.remove();
     this.tip = null;
-    if (this.previousDescription === null) this.host.nativeElement.removeAttribute('aria-describedby');
-    else this.host.nativeElement.setAttribute('aria-describedby', this.previousDescription);
+    if (description) element.setAttribute('aria-describedby', description);
+    else element.removeAttribute('aria-describedby');
   }
 }

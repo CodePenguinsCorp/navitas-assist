@@ -1,3 +1,4 @@
+import { TipDirective } from '../tip/tip.directive';
 import { Component, ElementRef, Injector, afterNextRender, computed, inject, input, model, viewChild } from '@angular/core';
 import { PermissionModuleResponse } from '../../core/models';
 import { Permission, isPermission } from '../../core/permissions';
@@ -19,7 +20,7 @@ let nextPanelId = 0;
 
 @Component({
   selector: 'app-permission-picker',
-  imports: [IconComponent],
+  imports: [TipDirective, IconComponent],
   templateUrl: './permission-picker.component.html',
   host: { '[class.is-extras]': "mode() === 'extras'" },
   styles: [`

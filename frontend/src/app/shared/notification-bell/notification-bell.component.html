@@ -56,14 +56,14 @@
               @for (notification of group.items; track notification.id) {
                 @let headline = headlineOf(notification);
                 <li class="bell-item" [class.is-unread]="!notification.read">
-                  <button type="button" class="bell-item__main" (click)="select(notification)">
+                  <button type="button" class="bell-item__main" [appTip]="headline + ': ' + notification.message" (click)="select(notification)">
                     @if (!notification.read) { <span class="sr-only">Não lida: </span> }
                     <span class="bell-item__head">
                       <span class="bell-item__dot" aria-hidden="true"></span>
                       <span class="mini-chip" [class]="severityClass(notification.severity)">{{ severityLabels[notification.severity] }}</span>
                     </span>
-                    <span class="bell-item__title" [appTip]="headline">{{ headline }}</span>
-                    <span class="bell-item__summary" [appTip]="notification.message">{{ notification.message }}</span>
+                    <span class="bell-item__title">{{ headline }}</span>
+                    <span class="bell-item__summary">{{ notification.message }}</span>
                   </button>
                   <div class="bell-item__side">
                     <time class="bell-item__time" [attr.datetime]="notification.createdAt" [appTip]="dateTime(notification.createdAt)">{{ timeOf(notification.createdAt) }}</time>

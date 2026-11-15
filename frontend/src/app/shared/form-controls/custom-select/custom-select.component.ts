@@ -1,3 +1,4 @@
+import { TipDirective } from '../../tip/tip.directive';
 import {
   Component,
   DestroyRef,
@@ -36,6 +37,7 @@ let nextMenuId = 0;
 
 @Component({
   selector: 'app-custom-select',
+  imports: [TipDirective],
   templateUrl: './custom-select.component.html',
   styleUrl: './custom-select.component.css',
   providers: [

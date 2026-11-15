@@ -5,7 +5,7 @@
         <ul class="permission-chips" aria-label="Permissões extras concedidas">
           @for (item of grantedExtras(); track item.code) {
             <li class="permission-chip removable-chip">
-              <span class="permission-chip__label">{{ item.label }}</span>
+              <span class="permission-chip__label" [appTip]="item.label">{{ item.label }}</span>
               <button type="button" [attr.aria-label]="'Remover ' + item.label" [disabled]="disabled()" (click)="toggle(item.code, false)">
                 <app-icon name="close" [size]="14" />
               </button>

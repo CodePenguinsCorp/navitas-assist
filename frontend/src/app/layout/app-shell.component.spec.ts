@@ -149,7 +149,7 @@ describe('AppShellComponent unread summary', () => {
     refresh('fail');
     expect(bell().getAttribute('aria-label')).toBe('Notificações: Contagem de não lidas indisponível');
     bell()!.dispatchEvent(new Event('mouseenter'));
-    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe('Contagem de não lidas indisponível');
+    expect(document.querySelector('.app-tip')?.textContent).toBe('Contagem de não lidas indisponível');
     expect(badge()).toBeNull();
     expect(bell().classList.contains('has-unread')).toBe(false);
 

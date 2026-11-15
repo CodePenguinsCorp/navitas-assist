@@ -34,7 +34,7 @@
                 routerLinkActive="is-active"
                 class="nav-item"
                 ariaCurrentWhenActive="page"
-                tipPosition="right" [appTip]="expanded() ? null : item.label"
+                tipPosition="right" [appTip]="item.label"
                 [attr.aria-label]="expanded() ? null : item.label"
                 (click)="closeOverlay()"
               >
@@ -50,8 +50,8 @@
     <div class="sidebar-user">
       <span class="avatar avatar--lg" aria-hidden="true">{{ initials(currentUser()?.name ?? null) }}</span>
       <div class="sidebar-user__meta">
-        <strong>{{ currentUser()?.name }}</strong>
-        <span>{{ currentProfileName() }}</span>
+        <strong [appTip]="currentUser()?.name" tipPosition="right">{{ currentUser()?.name }}</strong>
+        <span [appTip]="currentProfileName()" tipPosition="right">{{ currentProfileName() }}</span>
       </div>
       <button type="button" class="sidebar-user__logout" (click)="logout()" [disabled]="loggingOut()" tipPosition="right" [appTip]="loggingOut() ? 'Saindo...' : 'Sair'" [attr.aria-label]="loggingOut() ? 'Saindo...' : 'Sair'">
         <app-icon name="logout" />

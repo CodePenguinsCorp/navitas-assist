@@ -152,7 +152,7 @@ describe('RmaKanbanBoardComponent card', () => {
     const client = element.querySelector('.board-card__client');
     expect(client?.textContent?.trim()).toBe(longClient);
     client!.dispatchEvent(new Event('mouseenter'));
-    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(longClient);
+    expect(document.querySelector('.app-tip')?.textContent).toBe(longClient);
     const avatar = element.querySelector('.board-card__avatar');
     expect(avatar?.getAttribute('aria-label')).toBe('Responsável: Sem responsável');
     expect(avatar?.classList.contains('is-empty')).toBe(true);

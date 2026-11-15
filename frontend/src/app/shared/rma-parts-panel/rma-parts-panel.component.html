@@ -177,9 +177,9 @@
         <li [class.is-reversed]="movement.reversed">
           <time class="movements__date">{{ dateTime(movement.createdAt) }}</time>
           <span class="mini-chip movements__type">{{ movementChip(movement.type) }}</span>
-          <span class="code-text movements__part">{{ movement.partCode }}</span>
+          <span class="code-text movements__part" [appTip]="movement.partCode">{{ movement.partCode }}</span>
           <span class="movements__qty">{{ quantity(movement.quantity) }}</span>
-          <span class="movements__user">{{ movement.createdBy }}</span>
+          <span class="movements__user" [appTip]="movement.createdBy">{{ movement.createdBy }}</span>
           <span class="movements__note" [appTip]="movementNote(movement)">{{ movementNote(movement) }}</span>
         </li>
       }

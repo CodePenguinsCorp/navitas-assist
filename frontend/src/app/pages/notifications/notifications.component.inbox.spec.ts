@@ -252,7 +252,7 @@ describe('NotificationsComponent inbox loading', () => {
     expect(rows[1].querySelector('.mini-chip')!.textContent!.trim()).toBe('Crítico');
     expect(rows[0].querySelector('time')!.textContent!.trim()).toBe('09:00');
     rows[0].querySelector('time')!!.dispatchEvent(new Event('mouseenter'));
-    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe('24/10/2026, 09:00');
+    expect(document.querySelector('.app-tip')?.textContent).toBe('24/10/2026, 09:00');
   });
 
   it('keeps the same columns in read and unread rows, with the time last', async () => {
@@ -326,7 +326,8 @@ describe('NotificationsComponent inbox loading', () => {
       const meta = item().querySelector<HTMLElement>('.notification-meta')!;
       expect(meta.textContent!.trim()).toBe('Cliente · Produto');
       expect(meta.querySelector('.notification-event')).toBeNull();
-      expect(meta.querySelector<HTMLElement>('.notification-message')!.title).toBe('Cliente · Produto');
+      meta.querySelector<HTMLElement>('.notification-message')!.dispatchEvent(new Event('mouseenter'));
+      expect(document.querySelector('.app-tip')?.textContent).toBe('Cliente · Produto');
     });
 
     describe('detail dialog', () => {

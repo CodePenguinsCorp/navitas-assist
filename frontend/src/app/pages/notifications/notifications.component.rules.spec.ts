@@ -149,7 +149,8 @@ describe('NotificationsComponent rules', () => {
     await setup({ emailStatus: REAL }); openRules();
     const usage = root().querySelector<HTMLElement>('.email-usage')!;
     expect(normalize(usage.textContent)).toBe('Enviados hoje 12/100');
-    expect(usage.title).toBe('No mês 340/3000');
+    usage.dispatchEvent(new Event('mouseenter'));
+    expect(document.querySelector('.app-tip')?.textContent).toBe('No mês 340/3000');
     expect(text()).not.toContain('Limite atingido');
   });
 
@@ -157,7 +158,8 @@ describe('NotificationsComponent rules', () => {
     await setup({ emailStatus: { ...REAL, dailyLimit: 0, monthlyLimit: 0 } }); openRules();
     const usage = root().querySelector<HTMLElement>('.email-usage')!;
     expect(normalize(usage.textContent)).toBe('Enviados hoje 12');
-    expect(usage.title).toBe('No mês 340');
+    usage.dispatchEvent(new Event('mouseenter'));
+    expect(document.querySelector('.app-tip')?.textContent).toBe('No mês 340');
   });
 
   it('não mostra contagem com provedor falso', async () => {
