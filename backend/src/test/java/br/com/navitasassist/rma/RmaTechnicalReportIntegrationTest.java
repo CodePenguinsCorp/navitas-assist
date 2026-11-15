@@ -107,7 +107,7 @@ class RmaTechnicalReportIntegrationTest {
         for (String expected : List.of("Laudo técnico", "OS-2026/0001", "Cliente Ação Ltda", "Controlador térmico", "CTRL-LAUDO", "LOTE-9",
             "SN-123", "Pendente", "Não liga após queda de energia", "Regulador queimado", "Fonte", "Sobrecarga", "João Técnico",
             "Substituição do regulador", "Teste de bancada aprovado", "Regulador 5V", "REG-5V", "Regulador de tensão", "Carcaça riscada",
-            "Fonte original", "Concluída", "Equipamento recebido", "Sem intervenções registradas", "Técnico responsável", "Cliente (ciência)", "Página 1 de 1")) {
+            "Fonte original", "Concluída", "Equipamento recebido", "Sem intervenções registradas", "Técnico responsável", "Cliente", "Página 1 de 1")) {
             assertTrue(text.contains(expected), "PDF sem \"" + expected + "\":\n" + text);
         }
         assertFalse(text.contains("Capacitor cancelado"), text);
@@ -187,7 +187,8 @@ class RmaTechnicalReportIntegrationTest {
         assertTrue(report.indexOf("Equipamento recebido") < report.indexOf("Falha relatada"), report);
         assertTrue(report.contains("Estado físico") && report.contains("Carcaça riscada") && report.contains("Acessórios recebidos"), report);
         assertTrue(report.indexOf("João Técnico", report.indexOf("Peças trocadas")) > 0, "Nome do técnico na assinatura: " + report);
-        assertTrue(report.indexOf("Cliente (ciência)") > report.indexOf("Técnico responsável"), report);
+        assertTrue(report.lastIndexOf("Cliente") > report.indexOf("Técnico responsável"), report);
+        assertFalse(report.contains("ciência"), report);
     }
 
     @Test
@@ -209,7 +210,7 @@ class RmaTechnicalReportIntegrationTest {
         String report = text(pdf);
         assertTrue(report.contains("Página 1 de " + pages) && report.contains("Página " + pages + " de " + pages), report);
         assertTrue(report.contains("Total de horas: 40 h"), report);
-        assertTrue(report.contains("Cliente (ciência)"), report);
+        assertTrue(report.contains("Técnico responsável"), report);
     }
 
     private String download() throws Exception {

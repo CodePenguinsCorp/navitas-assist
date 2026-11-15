@@ -227,7 +227,7 @@ public class RmaReportPdfService {
         PdfPCell gap = new PdfPCell(new Phrase(""));
         gap.setBorder(Rectangle.NO_BORDER);
         table.addCell(gap);
-        table.addCell(signatureCell(null, "Cliente (ciência)"));
+        table.addCell(signatureCell(null, "Cliente"));
         return table;
     }
 
