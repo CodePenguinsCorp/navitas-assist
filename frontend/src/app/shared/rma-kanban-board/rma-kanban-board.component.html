@@ -18,7 +18,7 @@
           <span class="status-pill">{{ columnStates()[column.status]?.total ?? column.items.length }}</span>
         </header>
 
-        <div class="board-column__stack" #stack [attr.aria-busy]="columnStates()[column.status]?.loadingMore || null">
+        <div class="board-column__stack app-scroll" #stack [attr.aria-busy]="columnStates()[column.status]?.loadingMore || null">
             @for (item of column.items; track item.id) {
               @if (isDropTarget(column.status) && insertionBefore() === item.id) {
                 <div class="board-insertion" aria-hidden="true"></div>
