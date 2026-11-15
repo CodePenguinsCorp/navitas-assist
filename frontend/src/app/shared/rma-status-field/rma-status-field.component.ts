@@ -1,5 +1,6 @@
+import { ToastAction, ToastService } from '../../core/services/toast.service';
 import { TipDirective } from '../tip/tip.directive';
-import { Component, ElementRef, EventEmitter, Injector, Output, afterNextRender, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { Component, DestroyRef, ElementRef, EventEmitter, Injector, Output, afterNextRender, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { CLOSED_RMA_STATUSES, RMA_STATUS_FLOW } from '../../core/mock-data';
@@ -33,15 +34,6 @@ type StatusTarget = Pick<RmaResponse, 'id' | 'status'> & { statusHistory?: RmaSt
         <button type="button" class="link-button status-note-trigger" [disabled]="busy() || disabled()" (click)="editNote()">{{ entry.note ? 'Editar observação' : 'Adicionar observação' }}</button>
       }
     }
-    @if (message()) {
-      <div class="status-feedback" role="status">
-        <span>{{ message() }}</span>
-        @if (allowed() && previous()) {
-          <button type="button" class="link-button" [disabled]="busy() || disabled() || editing()" (click)="undo()">Desfazer</button>
-          @if (noteAllowed()) { <button type="button" class="link-button status-note-trigger" [disabled]="busy() || disabled() || editing()" (click)="editNote()">{{ noteTarget()?.note ? 'Editar observação' : 'Adicionar observação' }}</button> }
-        }
-      </div>
-    }
     @if (error()) { <p class="field-error" role="alert">{{ error() }}</p> }
     @if (editing()) {
       <div class="inline-form" (keydown.escape)="cancelOnEscape($event)">
@@ -58,7 +50,6 @@ type StatusTarget = Pick<RmaResponse, 'id' | 'status'> & { statusHistory?: RmaSt
   `,
   styles: [`
     :host { display: block; min-width: 0; overflow-wrap: anywhere; }
-    .status-feedback { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: baseline; margin-top: var(--space-2); }
   `]
 })
 export class RmaStatusFieldComponent {
@@ -70,6 +61,9 @@ export class RmaStatusFieldComponent {
   @Output() readonly saved = new EventEmitter<RmaResponse>();
   @Output() readonly busyChange = new EventEmitter<boolean>();
   private readonly service = inject(RmaService);
+  private readonly toasts = inject(ToastService);
+  private readonly destroyRef = inject(DestroyRef);
+  private toastId: number | null = null;
   private readonly permissions = inject(PermissionService);
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -79,7 +73,6 @@ export class RmaStatusFieldComponent {
   protected readonly options = computed(() => RMA_STATUS_FLOW.map(status => ({ value: status, label: statusLabel(status), status, hint: status === this.rma()?.status ? 'Status atual' : undefined })));
   protected readonly busy = signal(false);
   protected readonly error = signal('');
-  protected readonly message = signal('');
   protected readonly previous = signal<{ before: StatusTarget; after: RmaResponse } | null>(null);
   protected readonly editing = signal(false);
   protected readonly noteTarget = computed(() => {
@@ -90,11 +83,12 @@ export class RmaStatusFieldComponent {
   protected readonly note = new FormControl('', { nonNullable: true, validators: [Validators.maxLength(255)] });
 
   constructor() {
+    this.destroyRef.onDestroy(() => this.dismissToast());
     effect(() => {
       const next = this.rma()?.id ?? null;
       if (next !== this.contextRmaId) {
         this.contextRmaId = next;
-        this.previous.set(null); this.message.set(''); this.error.set(''); this.editing.set(false);
+        this.previous.set(null); this.dismissToast(); this.error.set(''); this.editing.set(false);
       }
     });
     // Permission revoked (or the OS closed) while the note is open: close it without saving.
@@ -108,7 +102,7 @@ export class RmaStatusFieldComponent {
     if (!target || !this.allowed() || this.disabled() || this.busy()) return;
     if (this.contextRmaId !== target.id) {
       this.contextRmaId = target.id;
-      this.previous.set(null); this.message.set(''); this.editing.set(false);
+      this.previous.set(null); this.dismissToast(); this.editing.set(false);
     }
     if (this.editing() || status === target.status) return;
     this.submit(target, status, '', false);
@@ -131,11 +125,32 @@ export class RmaStatusFieldComponent {
       this.busy.set(false); this.busyChange.emit(false);
     })).subscribe({
       next: updated => {
+        if (this.destroyRef.destroyed || this.contextRmaId !== target.id) return;
         this.previous.set(undo ? null : { before: target, after: updated });
-        this.message.set(undo ? 'Alteração desfeita' : `Movido para ${statusLabel(updated.status)}`);
         this.saved.emit(updated);
+        if (!this.destroyRef.destroyed) this.showToast(undo, target.id);
       },
       error: error => this.error.set(extractHttpErrorMessage(error, 'Não foi possível atualizar o status da OS.'))
+    });
+  }
+
+  private dismissToast(): void {
+    if (this.toastId !== null) this.toasts.dismiss(this.toastId);
+    this.toastId = null;
+  }
+
+  private showToast(undo: boolean, rmaId: number): void {
+    this.dismissToast();
+    const safe = (run: () => void) => () => {
+      // Ao fechar o campo ou trocar de OS, callbacks já capturados também viram no-op.
+      if (!this.destroyRef.destroyed && this.contextRmaId === rmaId && (!this.rma() || this.rma()?.id === rmaId)) run();
+    };
+    const actions: ToastAction[] = [];
+    if (this.allowed() && this.previous()) actions.push({ label: 'Desfazer', run: safe(() => this.undo()) });
+    if (this.noteAllowed()) actions.push({ label: this.noteTarget()?.note ? 'Editar observação' : 'Adicionar observação', run: safe(() => this.editNote()) });
+    this.toastId = this.toasts.show({
+      message: undo ? 'Alteração desfeita' : `Movido para ${statusLabel(this.previous()!.after.status)}`,
+      tone: 'success', actions
     });
   }
 

@@ -1,3 +1,4 @@
+import { ToastService } from '../../core/services/toast.service';
 import { RmaWarrantyFieldComponent } from '../../shared/rma-warranty-field/rma-warranty-field.component';
 import { signal } from '@angular/core';
 import { ComponentFixture, DeferBlockState, TestBed } from '@angular/core/testing';
@@ -68,6 +69,7 @@ async function setup(options: { role?: LegacyProfileCode } = {}) {
     list: vi.fn(() => of(buildRmaPage([fullRma], 0, 20, 1))),
     getSummary: vi.fn(() => of({ total: 1, ongoing: 1, highPriority: 0 })),
     getById: vi.fn((id: number) => of({ ...fullRma, id })),
+    updateStatus: vi.fn((id: number, payload: { status: RmaResponse['status'] }) => of({ ...fullRma, id, status: payload.status })),
     create: vi.fn(),
     upsertDiagnosis: vi.fn(),
     resolveBlock: vi.fn((id: number, blockId: number, body: { resolutionNote: string }) => of({
@@ -133,6 +135,15 @@ interface ConcurrencyHarness {
 }
 
 describe('RmasComponent detail write concurrency', () => {
+  it('confirma a troca de status no serviço de avisos sem mensagem inline', async () => {
+    const { open, fixture, detail, render } = await setup(); open();
+    detail().querySelector<HTMLButtonElement>('.rma-detail__status .custom-select__trigger')!.click(); render();
+    await fixture.whenStable();
+    detail().querySelector<HTMLButtonElement>('.rma-detail__status [data-status="IN_REPAIR"][role="option"]')!.click(); render();
+    expect(TestBed.inject(ToastService).toasts().map(item => item.message)).toContain('Movido para Reparo');
+    expect(detail().querySelector('.status-feedback')).toBeNull();
+  });
+
   it('blocks the siblings, the tabs and closing while any writer is busy, counted per writer', async () => {
     const { fixture, open, render, detail, tab } = await setup(); open();
     const writer = <T,>(type: new (...args: never[]) => T) => fixture.debugElement.query(By.directive(type)).componentInstance as { busyChange: { emit(value: boolean): void } };

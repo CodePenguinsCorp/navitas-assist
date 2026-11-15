@@ -1,3 +1,4 @@
+import { ToastService } from '../../core/services/toast.service';
 import { Signal, signal } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -333,7 +334,8 @@ describe('KanbanComponent filters', () => {
   it('saves the selected stage immediately inside the detail', () => {
     fixture.detectChanges(); component.openDetail(TEST_RMAS[0]); fixture.detectChanges();
     chooseDetailStatus('IN_REPAIR');
-    expect(fixture.nativeElement.textContent).toContain('Movido para Reparo');
+    expect(TestBed.inject(ToastService).toasts().map(item => item.message)).toContain('Movido para Reparo');
+    expect(fixture.nativeElement.querySelector('.status-feedback')).toBeNull();
     expect(fixture.nativeElement.querySelectorAll('.modal-overlay')).toHaveLength(1);
     expect(fixture.nativeElement.querySelector('#kanbanStatusNote')).toBeNull();
   });
@@ -347,7 +349,8 @@ describe('KanbanComponent filters', () => {
     actions.startCardDrag(new Event('dragstart') as DragEvent, TEST_RMAS[0]);
     actions.dropOnColumn(new Event('drop') as DragEvent, 'IN_REPAIR');
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Movido para Reparo');
+    expect(TestBed.inject(ToastService).toasts().map(item => item.message)).toContain('Movido para Reparo');
+    expect(fixture.nativeElement.querySelector('.status-feedback')).toBeNull();
     expect(component.filteredRmas().find(rma => rma.id === TEST_RMAS[0].id)?.status).toBe('IN_REPAIR');
     expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeNull();
   });
@@ -367,7 +370,7 @@ describe('KanbanComponent filters', () => {
     fixture.nativeElement.querySelector('app-rma-detail-modal .modal-close').click();
     fixture.detectChanges();
     const feedback = fixture.nativeElement.querySelector('.kanban-stage > app-rma-status-field') as HTMLElement;
-    [...feedback.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent?.trim() === 'Desfazer')!.click();
+    TestBed.inject(ToastService).toasts().find(item => item.message === 'Movido para Reparo')!.actions!.find(action => action.label === 'Desfazer')!.run();
     fixture.detectChanges();
     expect(component.filteredRmas().find(rma => rma.id === TEST_RMAS[0].id)?.status).toBe('IN_TESTS');
     expect(feedback.querySelector('[role="alert"]')?.textContent).toContain('O status mudou.');

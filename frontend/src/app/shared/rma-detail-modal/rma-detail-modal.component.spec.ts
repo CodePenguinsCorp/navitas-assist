@@ -1,3 +1,4 @@
+import { ToastService } from '../../core/services/toast.service';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { RmaWarrantyFieldComponent } from '../rma-warranty-field/rma-warranty-field.component';
 import { By } from '@angular/platform-browser';
@@ -636,6 +637,8 @@ describe('RmaDetailModalComponent status selector', () => {
     fixture.detectChanges();
 
     expect(statusChange).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: fullRma.id, status: 'IN_REPAIR' }));
+    expect(TestBed.inject(ToastService).toasts().map(item => item.message)).toContain('Movido para Reparo');
+    expect(host.querySelector('.status-feedback')).toBeNull();
     expect(host.querySelector('.rma-detail__status [role="listbox"]')).toBeNull();
     expect(document.activeElement).toBe(trigger(host));
     expect(trigger(host).textContent?.trim()).toBe('Triagem');

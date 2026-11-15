@@ -1,3 +1,4 @@
+import { ToastOutletComponent } from './shared/toast-outlet/toast-outlet.component';
 import { DOCUMENT } from '@angular/common';
 import { Component, ElementRef, computed, effect, inject, viewChild } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
@@ -7,7 +8,7 @@ import { modalFocusOwnsReturn } from './shared/modal-focus/modal-focus.directive
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, LoadingOverlayComponent],
+  imports: [RouterOutlet, LoadingOverlayComponent, ToastOutletComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

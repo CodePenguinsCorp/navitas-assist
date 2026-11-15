@@ -16,6 +16,7 @@ import { LoadingService } from '../../core/services/loading.service';
 
 /** Elements that can never be background: the global loading blocker and its status. */
 const GLOBAL_LOADING = 'app-loading-overlay, .global-loading-dialog';
+const GLOBAL_TOAST = 'app-toast-outlet';
 const SKIPPED_TAGS = new Set(['SCRIPT', 'STYLE', 'TEMPLATE', 'LINK', 'META']);
 const CANDIDATES =
   'a[href], area[href], button, input, select, textarea, iframe, summary, [tabindex], [contenteditable]:not([contenteditable="false"])';
@@ -131,7 +132,7 @@ export class ModalFocusDirective {
     }
     if (!this.isTop() || this.isNative || this.loading.visible()) return;
     if (!(target instanceof Node) || this.host.contains(target)) return;
-    if (target instanceof Element && target.closest(GLOBAL_LOADING)) return;
+    if (target instanceof Element && target.closest(`${GLOBAL_LOADING}, ${GLOBAL_TOAST}`)) return;
     (focusableWithin(this.host)[0] ?? this.host).focus({ preventScroll: true });
   }
 
@@ -144,7 +145,7 @@ export class ModalFocusDirective {
   /** Recomputes the cycle on every Tab so hidden or disabled controls never receive focus. */
   private cycle(event: KeyboardEvent): void {
     event.preventDefault();
-    const items = focusableWithin(this.host);
+    const items = [...focusableWithin(this.host), ...Array.from(document.querySelectorAll<HTMLElement>(`${GLOBAL_TOAST} button`)).filter(element => isFocusable(element))];
     if (items.length === 0) {
       this.host.focus({ preventScroll: true });
       return;
@@ -309,7 +310,7 @@ function syncBackground(): void {
   while (node && node !== document.body && node.parentElement) {
     for (const sibling of Array.from(node.parentElement.children)) {
       if (sibling === node || !(sibling instanceof HTMLElement) || SKIPPED_TAGS.has(sibling.tagName)) continue;
-      if (sibling.matches(GLOBAL_LOADING) || sibling.querySelector(GLOBAL_LOADING)) continue;
+      if (sibling.matches(`${GLOBAL_LOADING}, ${GLOBAL_TOAST}`) || sibling.querySelector(`${GLOBAL_LOADING}, ${GLOBAL_TOAST}`)) continue;
       if (nativeAbove.some((element) => sibling.contains(element))) continue;
       desired.add(sibling);
     }

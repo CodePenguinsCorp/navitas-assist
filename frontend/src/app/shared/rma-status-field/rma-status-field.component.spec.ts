@@ -1,3 +1,5 @@
+import { ToastService } from '../../core/services/toast.service';
+import { ToastOutletComponent } from '../toast-outlet/toast-outlet.component';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Permission } from '../../core/permissions';
@@ -10,6 +12,7 @@ import { RmaStatusFieldComponent } from './rma-status-field.component';
 import { expectInlineForm } from '../../testing/inline-form';
 
 describe('Status inline da OS', () => {
+  let outlet: ComponentFixture<ToastOutletComponent>;
   let fixture: ComponentFixture<RmaStatusFieldComponent>;
   let request: ReturnType<RmaService['updateStatus']>;
   let calls: RmaStatusUpdateRequest[];
@@ -18,8 +21,8 @@ describe('Status inline da OS', () => {
   const original = buildRma();
   const moved = buildRma({ status: 'TRIAGE', statusHistory: [{ id: 7, status: 'TRIAGE', changedBy: 'tester', changedAt: '2026-11-13T10:00:00Z', note: null }] });
   const host = () => fixture.nativeElement as HTMLElement;
-  const render = () => { fixture.detectChanges(); TestBed.tick(); };
-  const button = (label: string) => [...host().querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent?.trim() === label)!;
+  const render = () => { fixture.detectChanges(); outlet.detectChanges(); TestBed.tick(); };
+  const button = (label: string) => [...host().querySelectorAll<HTMLButtonElement>('button'), ...outlet.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>].find(b => b.textContent?.trim() === label)!;
   const pick = () => { fixture.componentInstance.move('TRIAGE'); render(); };
 
   beforeEach(async () => {
@@ -32,6 +35,7 @@ describe('Status inline da OS', () => {
         updateStatus: (_id: number, payload: RmaStatusUpdateRequest) => { calls.push(payload); return request; }
       } }]
     }).compileComponents();
+    outlet = TestBed.createComponent(ToastOutletComponent);
     fixture = TestBed.createComponent(RmaStatusFieldComponent);
     fixture.componentRef.setInput('rma', original);
     fixture.componentInstance.saved.subscribe(rma => fixture.componentRef.setInput('rma', rma));
@@ -42,11 +46,12 @@ describe('Status inline da OS', () => {
     pick();
     expect(calls).toEqual([{ status: 'TRIAGE', note: '' }]);
     expect(host().querySelector('[role="dialog"]')).toBeNull();
-    expect(host().textContent).toContain('Movido para Triagem');
+    expect(host().querySelector('.status-feedback')).toBeNull();
+    expect(outlet.nativeElement.textContent).toContain('Movido para Triagem');
     request = of(original);
     button('Desfazer').click(); render();
     expect(calls[1]).toEqual({ status: 'RECEIVED', note: '' });
-    expect(host().textContent).toContain('Alteração desfeita');
+    expect(outlet.nativeElement.textContent).toContain('Alteração desfeita');
     expect(button('Desfazer')).toBeUndefined();
   });
 
@@ -65,13 +70,13 @@ describe('Status inline da OS', () => {
     expect(host().querySelector('[role="alert"]')?.textContent).toContain('Protocolo obrigatório pendente.');
   });
 
-  it('mantém o movimento e o desfazer disponível se a reversão for recusada', () => {
+  it('mantém o movimento e a recusa inline quando a reversão falha', () => {
     pick();
     request = throwError(() => ({ error: { message: 'Transição bloqueada.' } }));
     button('Desfazer').click(); render();
     expect(fixture.componentInstance.rma()?.status).toBe('TRIAGE');
     expect(host().textContent).toContain('Transição bloqueada.');
-    expect(button('Desfazer')).toBeDefined();
+    expect(button('Desfazer')).toBeUndefined();
   });
 
   it('fecha o editor da observação sem salvar quando a permissão é revogada', () => {
@@ -117,11 +122,12 @@ describe('Status inline da OS', () => {
   });
 
   it('descarta a observação reservada ao desfazer antes de mover outra OS', () => {
-    pick(); button('Adicionar observação').click(); render();
+    pick(); const undo = TestBed.inject(ToastService).toasts()[0].actions![0].run;
+    button('Adicionar observação').click(); render();
     const textarea = host().querySelector('textarea')!;
-    textarea.value = 'Nota do primeira OS'; textarea.dispatchEvent(new Event('input'));
+    textarea.value = 'Nota da primeira OS'; textarea.dispatchEvent(new Event('input'));
     button('Salvar').click(); render();
-    request = of(original); button('Desfazer').click(); render();
+    request = of(original); undo(); render();
     const other = buildRma({ id: 2 });
     request = of({ ...other, status: 'TRIAGE' });
     fixture.componentInstance.move('TRIAGE', other); render();
@@ -139,11 +145,31 @@ describe('Status inline da OS', () => {
     fixture.componentRef.setInput('disabled', true); render(); pick();
     expect(calls).toHaveLength(0);
   });
-  it('uses the current event after its note was edited from the timeline', () => {
+  it('abre a versão atual da observação após edição no histórico', () => {
     pick();
     fixture.componentRef.setInput('rma', { ...moved, statusHistory: [{ ...moved.statusHistory[0], note: 'Atualizada' }] }); render();
-    button('Editar observação').click(); render();
+    button('Adicionar observação').click(); render();
     expect(host().querySelector<HTMLTextAreaElement>('textarea')?.value).toBe('Atualizada');
+  });
+
+  it('remove o aviso e torna callbacks inofensivos ao destruir o campo', () => {
+    pick(); const actions = TestBed.inject(ToastService).toasts()[0].actions!;
+    fixture.destroy();
+    expect(TestBed.inject(ToastService).toasts()).toHaveLength(0);
+    for (const action of actions) expect(() => action.run()).not.toThrow();
+    expect(calls).toHaveLength(1);
+  });
+  it('remove o aviso e impede desfazer após trocar de OS antes do efeito', () => {
+    pick(); const undo = TestBed.inject(ToastService).toasts()[0].actions![0].run;
+    fixture.componentRef.setInput('rma', buildRma({ id: 2 }));
+    undo(); render();
+    expect(calls).toHaveLength(1);
+    expect(TestBed.inject(ToastService).toasts()).toHaveLength(0);
+  });
+  it('não publica aviso quando a resposta chega após destruir o campo', () => {
+    const pending = new Subject<RmaResponse>(); request = pending;
+    pick(); fixture.destroy(); pending.next(moved); pending.complete();
+    expect(TestBed.inject(ToastService).toasts()).toHaveLength(0);
   });
 
 });

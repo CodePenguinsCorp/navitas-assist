@@ -1,3 +1,5 @@
+import { ToastOutletComponent } from '../toast-outlet/toast-outlet.component';
+import { ToastService } from '../../core/services/toast.service';
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -8,8 +10,9 @@ import { simulateNativeModality } from '../../testing/native-dialog';
 import { ModalFocusDirective, modalFocusOwnsReturn } from './modal-focus.directive';
 
 @Component({
-  imports: [ModalFocusDirective, CustomSelectComponent, LoadingOverlayComponent],
+  imports: [ModalFocusDirective, CustomSelectComponent, LoadingOverlayComponent, ToastOutletComponent],
   template: `
+    <app-toast-outlet />
     <div class="loading-root"><app-loading-overlay /></div>
     <div class="page">
       <aside class="background"><button type="button" class="outside">Fora</button></aside>
@@ -120,6 +123,18 @@ describe('ModalFocusDirective', () => {
   let host: ModalHost;
   let page: HTMLElement;
   let loading: LoadingService;
+
+  it('permite focar ações do aviso acima do modal sem fechar o diálogo com Escape', () => {
+    host.open.set(true); render();
+    TestBed.inject(ToastService).show({ message: 'Movido', tone: 'success' }); render();
+    const outlet = page.querySelector<HTMLElement>('app-toast-outlet')!;
+    expect(outlet.inert).toBe(false);
+    const close = outlet.querySelector<HTMLButtonElement>('button')!;
+    close.focus(); expect(document.activeElement).toBe(close);
+    close.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); render();
+    expect(TestBed.inject(ToastService).toasts()).toHaveLength(0);
+    expect(host.parentRequests).toBe(0);
+  });
 
   beforeEach(async () => {
     document.body.style.overflow = 'scroll';
