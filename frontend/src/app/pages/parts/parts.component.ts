@@ -64,7 +64,6 @@ const MOVEMENT_TYPE_OPTIONS: ReadonlyArray<CustomSelectOption<ManualPartMovement
       max-width: 120px;
     }
 
-    .history-panel { width: min(100%, 720px); }
     .movement-summary { display: grid; gap: var(--space-1); min-width: 0; overflow-wrap: anywhere; }
     .movement-summary .record-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .movement-preview { grid-column: 1 / -1; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--surface-alt); }

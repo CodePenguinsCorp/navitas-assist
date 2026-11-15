@@ -195,7 +195,7 @@
 @if (formOpen()) {
   <div class="modal-overlay" (click)="closeModals()">
     <section
-      class="modal-panel panel"
+      class="modal-panel modal-panel--md panel"
       role="dialog"
       aria-modal="true"
       aria-labelledby="part-form-title"
@@ -270,7 +270,7 @@
             </span>
           </label>
 
-        <div class="form-actions inline-form__actions">
+        <div class="modal-footer form-actions inline-form__actions">
           <button type="button" class="button-secondary" (click)="closeModals()" [disabled]="submitting()">Cancelar</button>
           <button type="submit" class="button-primary" [disabled]="submitting()">{{ submitting() ? 'Salvando...' : 'Salvar' }}</button>
         </div>
@@ -282,7 +282,7 @@
 @if (movementPart(); as part) {
   <div class="modal-overlay" (click)="closeModals()">
     <section
-      class="modal-panel modal-panel--narrow panel"
+      class="modal-panel modal-panel--sm panel"
       role="dialog"
       aria-modal="true"
       aria-labelledby="part-movement-title"
@@ -351,7 +351,7 @@
             <p>Informe uma quantidade válida.</p>
           }
         </section>
-        <div class="form-actions inline-form__actions">
+        <div class="modal-footer form-actions inline-form__actions">
           <button type="button" class="button-secondary" (click)="closeModals()" [disabled]="submitting()">Cancelar</button>
           <button type="submit" class="button-primary" [disabled]="submitting()">{{ submitting() ? 'Registrando...' : 'Registrar' }}</button>
         </div>
@@ -363,7 +363,7 @@
 @if (historyPart(); as part) {
   <div class="modal-overlay" (click)="closeModals()">
     <section
-      class="modal-panel panel history-panel"
+      class="modal-panel modal-panel--md panel"
       role="dialog"
       aria-modal="true"
       aria-labelledby="part-history-title"

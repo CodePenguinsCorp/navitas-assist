@@ -118,7 +118,7 @@
 
     @if (canReserve() && cancelling(); as reservation) {
       <div class="modal-overlay" (click)="closeCancellation()">
-        <section class="modal-panel modal-panel--narrow panel" role="alertdialog" aria-modal="true" aria-labelledby="cancel-reservation-title" aria-describedby="cancel-reservation-description"
+        <section class="modal-panel modal-panel--sm panel" role="alertdialog" aria-modal="true" aria-labelledby="cancel-reservation-title" aria-describedby="cancel-reservation-description"
           appModalFocus modalInitialFocus=".form-actions .button-secondary" [modalCloseBlocked]="busyReservationId() !== null" (modalCloseRequested)="closeCancellation()" (click)="$event.stopPropagation()">
           <header class="modal-header">
             <div class="danger-heading">
@@ -130,7 +130,7 @@
             <p>@if (reservation.status === 'ACTIVE') { A reserva de {{ reservation.partName }} será cancelada e {{ quantity(reservation.quantity, reservation.unit) }} voltará ao estoque disponível. } @else { A reserva pendente de {{ reservation.partName }} será cancelada. }</p>
           </div>
           @if (errorMessage()) { <p class="field-error" role="alert">{{ errorMessage() }}</p> }
-          <div class="form-actions">
+          <div class="modal-footer form-actions">
             <button type="button" class="button-secondary" [disabled]="busyReservationId() !== null" (click)="closeCancellation()">Voltar</button>
             <button type="button" class="button-primary button-primary--danger" [disabled]="busyReservationId() !== null" (click)="runAction(reservation, 'cancel')">{{ busyReservationId() === reservation.id ? 'Cancelando...' : 'Cancelar reserva' }}</button>
           </div>

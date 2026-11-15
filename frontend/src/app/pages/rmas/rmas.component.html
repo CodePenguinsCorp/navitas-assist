@@ -160,7 +160,7 @@
   @if (selectedRma(); as rma) {
     <section class="modal-overlay" (click)="closeModal()">
       <article
-        class="panel modal-panel modal-panel--wide rma-details detail-surface"
+        class="panel modal-panel modal-panel--lg rma-details detail-surface"
         role="dialog"
         aria-modal="true"
         [attr.aria-label]="'Detalhes do ' + rma.code"
@@ -343,7 +343,7 @@
   } @else {
     <section class="modal-overlay" (click)="closeModal()">
       <article
-        class="panel modal-panel modal-panel--narrow"
+        class="panel modal-panel modal-panel--sm"
         role="dialog"
         aria-modal="true"
         aria-label="Detalhes da OS"
@@ -369,7 +369,7 @@
 @if (activeModal() === 'create') {
   <section class="modal-overlay" (click)="closeModal()">
     <article
-      class="panel modal-panel modal-panel--form-wide"
+      class="panel modal-panel modal-panel--lg"
       role="dialog"
       aria-modal="true"
       aria-labelledby="rma-create-title"
@@ -616,7 +616,7 @@
           </div>
         </app-collapsible-section>
 
-        <div class="form-actions form-actions--full">
+        <div class="modal-footer form-actions form-actions--full">
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="createSubmitting()">Cancelar</button>
           <button type="submit" class="button-primary" [disabled]="createSubmitting()">
             {{ createSubmitting() ? 'Abrindo...' : 'Abrir OS' }}

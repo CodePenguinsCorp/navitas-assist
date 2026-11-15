@@ -217,12 +217,7 @@ Dois contextos, um só visual de campo.
 
 Estrutura: `.modal-overlay` > `section.modal-panel.panel role="dialog" aria-modal="true"` com `appModalFocus`, cabeçalho `.modal-header` (título `h3` e `.modal-close` de 40 px à direita), corpo, rodapé `.form-actions`.
 
-| Tamanho | Classe | Largura | Uso |
-| --- | --- | --- | --- |
-| Confirmação | `.modal-panel--narrow` | 560 px | Exclusão, confirmação, nome de visualização. |
-| Formulário | `.modal-panel` | 920 px | Cadastro padrão. |
-| Formulário largo | `.modal-panel--form-wide` | 1080 px | Protocolo, nova OS. |
-| Detalhe | `.modal-panel--wide` | 1080 px, altura 820 px | Detalhe da OS. |
+Os três tamanhos fixos (`.modal-panel--sm` 560 px, `--md` 760 px, `--lg` 1080 px, cada um com altura fixa) e as regras de rodapé estão em [anatomia de tela, seção 5](anatomia-de-tela.md#5-regra-de-modais).
 
 Regras: título curto no cabeçalho, sem subtítulo explicativo; erro no topo do corpo em `.alert-banner--error.modal-feedback`; fechar bloqueado enquanto grava (`modalCloseBlocked`); foco inicial no primeiro campo ou no Cancelar da confirmação. **Proposto:** nenhuma largura própria por tela; hoje `user-form-modal` (780 px), `profile-form-modal` (860 px) e `history-panel` (720 px) criam três larguras extras (V-11).
 

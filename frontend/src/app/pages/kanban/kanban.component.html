@@ -293,7 +293,7 @@
 } @else if (detailRmaId() !== null) {
   <section class="modal-overlay" (click)="closeDetail()">
     <article
-      class="panel modal-panel modal-panel--narrow"
+      class="panel modal-panel modal-panel--sm"
       role="dialog"
       aria-modal="true"
       aria-label="Detalhes da OS"
@@ -324,7 +324,7 @@
 @if (viewModalMode(); as mode) {
   <section class="modal-overlay" (click)="closeViewModal()">
     <article
-      class="panel modal-panel modal-panel--narrow"
+      class="panel modal-panel modal-panel--sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="kanban-view-title"
@@ -379,7 +379,7 @@
           <span>Aplicar automaticamente após o login</span>
         </label>
 
-        <div class="form-actions form-actions--full">
+        <div class="modal-footer form-actions form-actions--full">
           <button
             type="button"
             class="button-secondary"

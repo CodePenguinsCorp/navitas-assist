@@ -366,7 +366,7 @@
   @if (editingRule(); as rule) {
     <div class="modal-overlay" (click)="closeRuleEditor()">
       <section
-        class="modal-panel rule-form-modal panel"
+        class="modal-panel modal-panel--md panel"
         role="dialog"
         aria-modal="true"
         aria-labelledby="rule-form-title"
@@ -449,7 +449,7 @@
             </label>
           </fieldset>
 
-          <div class="form-actions form-actions--full">
+          <div class="modal-footer form-actions form-actions--full">
             <button type="button" class="button-secondary" (click)="closeRuleEditor()" [disabled]="ruleSubmitting()">Cancelar</button>
             <button type="submit" class="button-primary" [disabled]="ruleSubmitting() || rule.supported === false || profileOptionsState() !== 'ready'">{{ ruleSubmitting() ? 'Salvando...' : 'Salvar regra' }}</button>
           </div>
