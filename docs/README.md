@@ -26,6 +26,7 @@
 | --- | --- |
 | [auditoria.md](auditoria.md) | Logs, trilha transacional, consulta e retenção em aberto. |
 | [prazo-e-garantia.md](prazo-e-garantia.md) | Tempo por etapa, data limite, garantia e ajuste manual. |
+| [kanban-payload.md](kanban-payload.md) | Campos do card do Kanban, o que ficou no detalhe e as medições de peso. |
 | [notificacoes-e-emails.md](notificacoes-e-emails.md) | Eventos, regras, fila de e-mail, provedores, tetos, falhas e reenvio. |
 | [relatorios-e-exportacoes.md](relatorios-e-exportacoes.md) | Relatórios, CSV, laudo em PDF, importação CSV de clientes e produtos. |
 

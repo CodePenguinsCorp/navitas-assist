@@ -77,7 +77,7 @@ A ordem é fixa e estável (desempate por `id`): ordens de serviço na ordem da 
 | `/api/products` | `query`, `category`, `hasFirmware` |
 | `/api/users` | `query`, `profileId`, `active` |
 
-Para dados que não podem ficar incompletos há rotas sem paginação: `GET /api/rmas/board` (Kanban e dashboard, aceita `query` e `status`), `GET /api/clients/options` e `GET /api/products/options` (seletores, por nome). Os totais dos cartões vêm de `/api/clients/summary`, `/api/products/summary` (inclui `categories`) e `/api/users/summary`. No frontend, as telas oferecem 10, 20, 50 ou 100 por página; a busca por texto aguarda 300 ms, mudar busca, filtro ou tamanho volta à primeira página e, ao excluir o último item de uma página, a tela volta à última página existente.
+Para dados que não podem ficar incompletos há rotas sem paginação: `GET /api/rmas/board` (Kanban, aceita `query` e `status`; o payload enxuto está em [kanban-payload.md](kanban-payload.md)), `GET /api/clients/options` e `GET /api/products/options` (seletores, por nome). Os totais dos cartões vêm de `/api/clients/summary`, `/api/products/summary` (inclui `categories`) e `/api/users/summary`. No frontend, as telas oferecem 10, 20, 50 ou 100 por página; a busca por texto aguarda 300 ms, mudar busca, filtro ou tamanho volta à primeira página e, ao excluir o último item de uma página, a tela volta à última página existente.
 
 ## Limites de tempo
 
