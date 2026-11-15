@@ -54,8 +54,9 @@ describe('contexto operacional', () => {
       expect(result.message).toBe('');
       expect(result.fields).toEqual([
         { label: 'Cliente', value: 'Cliente' }, { label: 'Equipamento', value: 'Switch' },
-        { label: 'Etapa', value: 'Diagnóstico' }, { label, value: reason },
-        ...(actor ? [{ label: 'Registrado por', value: 'Maria Silva' }] : [])
+        { label: 'Etapa', value: 'Diagnóstico' },
+        ...(actor ? [{ label: 'Registrado por', value: 'Maria Silva' }] : []),
+        { label, value: reason }
       ]);
     }
     for (const message of [reason, `Cliente · Switch · etapa Diagnóstico. ${label}: "escape inválido\\q".`]) {
