@@ -195,7 +195,7 @@ function buildRma(values: Partial<RmaResponse>): RmaResponse {
     carrier: null,
     trackingCode: null,
     diagnosis: null,
-    statusHistory: [],
+    repairHistory: [], statusHistory: [],
     assignmentHistory: [],
     currentBlock: null,
     blockHistory: [],

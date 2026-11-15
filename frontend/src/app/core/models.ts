@@ -111,7 +111,7 @@ export interface PermissionModuleResponse {
 export interface SessionResponse {
   username: string;
   fullName: string;
-  email?: string | null;
+  email: string | null;
   profileName: string | null;
   permissions: string[];
 }
@@ -439,7 +439,7 @@ export interface RmaResponse {
   carrier: string | null;
   trackingCode: string | null;
   diagnosis: DiagnosisResponse | null;
-  repairHistory?: RmaRepairHistoryResponse[];
+  repairHistory: RmaRepairHistoryResponse[];
   statusHistory: RmaStatusHistoryResponse[];
   stagePeriods: RmaStagePeriodResponse[];
   assignmentHistory: RmaAssignmentHistoryResponse[];

@@ -765,7 +765,7 @@ function buildRma(values: {
     carrier: null,
     trackingCode: null,
     diagnosis: null,
-    statusHistory: [],
+    repairHistory: [], statusHistory: [],
     assignmentHistory: [],
     currentBlock: null,
     blockHistory: [],

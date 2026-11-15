@@ -168,5 +168,5 @@ describe('LoginComponent pending submissions', () => {
 });
 
 const authUser: AuthUserResponse = {
-  username: 'operator', fullName: 'Operador', profileName: 'Atendimento', permissions: ['rma.ver']
+  username: 'operator', fullName: 'Operador', email: null, profileName: 'Atendimento', permissions: ['rma.ver']
 };

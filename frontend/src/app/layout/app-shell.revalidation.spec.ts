@@ -17,7 +17,7 @@ import { AppShellComponent } from './app-shell.component';
 class StubPageComponent {}
 
 const user = (permissions: readonly Permission[]): AuthUserResponse => ({
-  username: 'admin', fullName: 'Administrador', profileName: 'Administrador', permissions: [...permissions]
+  username: 'admin', fullName: 'Administrador', email: null, profileName: 'Administrador', permissions: [...permissions]
 });
 
 describe('AppShellComponent revalidates the current screen when permissions change', () => {

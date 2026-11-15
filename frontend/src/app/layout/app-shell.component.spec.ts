@@ -9,7 +9,7 @@ import { LegacyProfileCode, profilePermissions } from '../testing/permission-fix
 import { AppShellComponent } from './app-shell.component';
 
 const AUTH_USER: AuthUserResponse = {
-  username: 'admin', fullName: 'Administrador', profileName: 'Administrador', permissions: ['rma.ver']
+  username: 'admin', fullName: 'Administrador', email: null, profileName: 'Administrador', permissions: ['rma.ver']
 };
 
 describe('AppShellComponent logout', () => {

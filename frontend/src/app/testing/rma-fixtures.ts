@@ -44,7 +44,7 @@ export function buildRma(overrides: Partial<RmaResponse> = {}): RmaResponse {
     carrier: null,
     trackingCode: null,
     diagnosis: null,
-    statusHistory: [],
+    repairHistory: [], statusHistory: [],
     stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 0 }],
     assignmentHistory: [],
     dueDateHistory: [], warrantyHistory: [],

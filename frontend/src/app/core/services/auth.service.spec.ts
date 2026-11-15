@@ -144,6 +144,7 @@ function authUser(overrides: Partial<AuthUserResponse> = {}): AuthUserResponse {
   return {
     username: 'admin',
     fullName: 'Administrador',
+    email: null,
     profileName: 'Administrador',
     permissions: ADMIN_PERMISSIONS,
     ...overrides,

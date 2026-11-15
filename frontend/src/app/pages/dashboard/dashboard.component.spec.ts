@@ -19,7 +19,7 @@ describe('Dashboard timestamp display', () => {
       physicalCondition: null, priority: 'MEDIUM', status: 'RECEIVED', assigneeId: null, assigneeName: null,
       repairSummary: null, replacedPartsSummary: null, testSummary: null, carrier: null,
       trackingCode: null, diagnosis: null, assignmentHistory: [],
-      statusHistory: [{ status: 'RECEIVED', changedBy: 'tester', changedAt: '2026-10-20T02:30:00Z', note: null }],
+      repairHistory: [], statusHistory: [{ status: 'RECEIVED', changedBy: 'tester', changedAt: '2026-10-20T02:30:00Z', note: null }],
       currentBlock: null, blockHistory: [],
       dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T02:30:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [], warrantyHistory: [],
       createdAt: '2026-10-20T02:30:00Z', updatedAt: '2026-12-31T23:15:00-02:00',
