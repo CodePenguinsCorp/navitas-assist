@@ -1,4 +1,4 @@
-<div class="collapsible__head detail-card__title" [class.is-collapsed]="!expanded()">
+<div class="collapsible__head detail-card__title" [class.is-collapsed]="!expanded()" (click)="toggleFromHeader($event)">
   <h3 class="collapsible__heading">
   @if (collapsible()) {
     <button type="button" class="collapsible__toggle" [appTip]="title()" [id]="buttonId" [attr.aria-expanded]="expanded()" [attr.aria-controls]="bodyId" (click)="toggle()">

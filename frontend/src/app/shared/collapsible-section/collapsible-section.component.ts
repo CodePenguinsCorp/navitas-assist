@@ -25,8 +25,9 @@ function writeChoice(key: string | null, open: boolean): void {
 }
 
 /**
- * Title row of a `.detail-card` that folds its content. It replaces the card's own heading
- * (it is not a card). Header actions go in `[sectionActions]` and never fold the section.
+ * A box of its own (border, white surface, hover on the whole header row) whose heading folds its content;
+ * a `.detail-card` that holds only this component gives up its own box, so stacked sections read as separate.
+ * The always-open variant (`collapsible=false`) is only a heading inside the card around it. Header actions go in `[sectionActions]` and never fold the section.
  */
 @Component({
   selector: 'app-collapsible-section',
@@ -34,7 +35,7 @@ function writeChoice(key: string | null, open: boolean): void {
   templateUrl: './collapsible-section.component.html',
   styleUrl: './collapsible-section.component.css',
   // `title` is an input: without this the host would keep it as a native tooltip over the whole section.
-  host: { '[attr.title]': 'null' }
+  host: { '[attr.title]': 'null', '[class.collapsible-section--static]': '!collapsible()' }
 })
 export class CollapsibleSectionComponent {
   readonly title = input.required<string>();
@@ -59,6 +60,11 @@ export class CollapsibleSectionComponent {
   toggle(): void {
     if (!this.collapsible()) return;
     this.setOpen(!this.expanded());
+  }
+
+  /** Click on the empty part of the header row (the button and the actions handle their own clicks). */
+  protected toggleFromHeader(event: Event): void {
+    if (event.target === event.currentTarget) this.toggle();
   }
 
   /** A header action (e.g. "Registrar") always shows its result: it unfolds a folded section. */

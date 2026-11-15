@@ -3679,9 +3679,14 @@ app-custom-select:has(> .custom-select--priority) {
 .repair-panel.detail-card, .parts-panel > .detail-card { padding: 1.1rem 1.25rem 1.25rem; }
 /* In the list detail the tab panel is already the card: no box inside box, sections separated by space. */
 .rma-details__panel .detail-card { padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
-.rma-details__panel > app-rma-repair-panel { display: block; margin-top: var(--space-5); }
-.rma-details__panel > app-rma-repair-panel + .rma-details__section { margin-top: var(--space-5); }
-.rma-details__panel .parts-panel { gap: var(--space-5); }
+/* Collapsible sections are boxes of their own: a tinted panel with white boxes on top, a small gap between them. */
+.rma-details__panel.detail-card { background: var(--surface-alt); }
+.rma-details__panel > app-rma-repair-panel { display: block; margin-top: var(--space-3); }
+.rma-details__panel > app-rma-repair-panel + .rma-details__section { margin-top: var(--space-3); }
+.rma-details__panel .parts-panel { gap: var(--space-3); }
+/* A card that holds only a collapsible section hands its box to the section, so stacked sections read as separate. */
+.detail-card:not(.rma-details__panel):has(> :is(app-collapsible-section, app-rma-blocks-section, app-rma-diagnosis):only-child) { padding: 0; border: 0; background: none; box-shadow: none; }
+.rma-detail__section--failure app-collapsible-section { border-color: var(--attention-line); background: var(--attention-bg); }
 /* Note of a history entry (status change), flush with the text above it. */
 .history-note { margin: var(--space-1) 0 0; padding: var(--space-1) var(--space-3); border-left: 3px solid var(--line); color: var(--muted); font-size: var(--font-size-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
 .collapsible__actions .link-button { display: inline-flex; align-items: center; gap: var(--space-1); white-space: nowrap; }

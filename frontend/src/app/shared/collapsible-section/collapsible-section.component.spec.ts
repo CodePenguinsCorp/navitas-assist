@@ -75,6 +75,24 @@ describe('CollapsibleSectionComponent', () => {
     expect(body().hidden).toBe(true);
   });
 
+  it('folds and unfolds by clicking the empty area of the header, the whole row being the target', () => {
+    create();
+    const head = el.querySelector<HTMLElement>('.collapsible__head')!;
+    head.click();
+    fixture.detectChanges();
+    expect(toggle().getAttribute('aria-expanded')).toBe('false');
+    expect(head.classList).toContain('is-collapsed');
+    head.click();
+    fixture.detectChanges();
+    expect(toggle().getAttribute('aria-expanded')).toBe('true');
+    expect(head.classList).not.toContain('is-collapsed');
+  });
+
+  it('is a box of its own, so only the always-open variant carries the static marker', () => {
+    create();
+    expect(el.querySelector('app-collapsible-section')!.classList).not.toContain('collapsible-section--static');
+  });
+
   it('starts folded when open is false', () => {
     create((h) => h.open.set(false));
     expect(toggle().getAttribute('aria-expanded')).toBe('false');

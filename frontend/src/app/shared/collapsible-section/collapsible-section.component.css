@@ -1,8 +1,15 @@
-:host { display: block; min-width: 0; }
-/* The row is the card's .detail-card__title; a folded section drops the rule and the gap under it.
-   It takes the card's width and never widens it (a long title or action would push the modal sideways at 320 px). */
-.collapsible__head { gap: var(--space-3); contain: inline-size; }
-.collapsible__head.is-collapsed { margin-bottom: 0; padding-bottom: 0; border-bottom-color: transparent; }
+:host { display: block; min-width: 0; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
+/* The row is a .detail-card__title: the whole row is the click target and the hover; a folded section drops the rule under it.
+   It takes the box's width and never widens it (a long title or action would push the modal sideways at 320 px). */
+.collapsible__head { gap: var(--space-3); contain: inline-size; margin: 0; padding: var(--space-2) var(--space-4); border-radius: calc(var(--radius-md) - 1px) calc(var(--radius-md) - 1px) 0 0; cursor: pointer; transition: background-color 160ms ease; }
+.collapsible__head:hover { background: var(--brand-tint); }
+.collapsible__head.is-collapsed { border-bottom-color: transparent; border-radius: calc(var(--radius-md) - 1px); }
+.collapsible__body { padding: var(--space-4); }
+/* Always open: only a heading inside the card around it, the previous look. */
+:host(.collapsible-section--static) { border: 0; border-radius: 0; background: none; }
+:host(.collapsible-section--static) .collapsible__head { margin-bottom: var(--space-4); padding: 0 0 var(--space-3); border-radius: 0; cursor: default; }
+:host(.collapsible-section--static) .collapsible__head:hover { background: none; }
+:host(.collapsible-section--static) .collapsible__body { padding: 0; }
 .collapsible__heading { display: flex; flex: 1 1 auto; min-width: 0; margin: 0; font: inherit; letter-spacing: inherit; text-transform: inherit; }
 .collapsible__toggle {
   display: flex; flex: 1 1 auto; align-items: center; gap: var(--space-2); min-width: 0; min-height: var(--control-height-xs);
@@ -22,7 +29,7 @@ button.collapsible__toggle:hover .collapsible__title { text-decoration: underlin
 .collapsible__actions:empty { display: none; }
 /* Fold control, set apart from the actions by a rule so it never reads as part of them. */
 .collapsible__actions:not(:empty) + .collapsible__chevron { margin-inline-start: calc(-1 * var(--space-1)); padding-inline-start: var(--space-3); border-inline-start: 1px solid var(--line); }
-.collapsible__chevron { display: inline-flex; align-items: center; align-self: stretch; color: var(--muted); cursor: pointer; }
+.collapsible__chevron { display: inline-flex; align-items: center; align-self: stretch; color: var(--muted); }
 .collapsible__chevron app-icon { display: inline-flex; transition: transform 160ms ease; }
 .collapsible__chevron.is-open app-icon { transform: rotate(90deg); }
 .collapsible__chevron:hover { color: var(--brand-blue-deep); }
