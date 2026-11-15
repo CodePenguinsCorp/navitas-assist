@@ -132,7 +132,7 @@ class RmaTechnicalReportIntegrationTest {
         intervention.setPerformedOn(LocalDate.parse("2026-10-07")); intervention.setHours(new BigDecimal("1.125")); intervention.setTechnicianName("maria"); interventions.saveAndFlush(intervention);
         String report = text(mockMvc.perform(get("/api/rmas/{id}/report.pdf", rma.getId()).with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
-        for (String expected : List.of("Curto na alimentação", "REG-LOTE", "Conector externo", "EXT-9", "EXT-LOTE", "Oxidação dos contatos", "Ressolda", "Ressolda do circuito", "1,125 h", "maria", "07/10/2026", "Fora do estoque", "Total de horas: 1,125 h", "Duração", "Técnico")) {
+        for (String expected : List.of("Curto na alimentação", "REG-LOTE", "Conector externo", "EXT-9", "EXT-LOTE", "Oxidação dos contatos", "Ressolda", "Ressolda do circuito", "1,125 h", "maria", "07/10/2026", "Externo", "Total de horas: 1,125 h", "Duração", "Técnico")) {
             assertTrue(report.contains(expected), "PDF sem " + expected + ": " + report);
         }
     }

@@ -71,7 +71,7 @@ public class RmaReportPdfService {
                 reservation.componentBatch(), reservation.replacementReason(), reservation.appliedAt(), reservation.appliedBy(), "Estoque"))
             .toList());
         repairService.listExternalComponents(rmaId).stream().filter(item -> item.voidedAt() == null).forEach(component -> components.add(new ReplacedComponent(component.code(), component.description(),
-            component.quantity(), component.unit(), component.componentBatch(), component.replacementReason(), component.appliedAt(), component.appliedBy(), "Fora do estoque")));
+            component.quantity(), component.unit(), component.componentBatch(), component.replacementReason(), component.appliedAt(), component.appliedBy(), "Externo")));
         var repair = repairService.getRepair(rmaId);
         RmaTechnicalReport report = new RmaTechnicalReport(rma, components, repair.interventions(), repair.totalServiceHours(), Instant.now());
         return new PdfFile("laudo-" + rma.code().replaceAll("[^A-Za-z0-9_-]", "-") + ".pdf", render(report));
@@ -142,7 +142,7 @@ public class RmaReportPdfService {
         } else {
             PdfPTable parts = table(new float[] {2f, 4f, 1.6f, 2f, 4.4f}, "Código", "Descrição", "Quantidade", "Lote", "Motivo");
             report.replacedComponents().forEach(part -> cells(parts, part.code(),
-                part.description() + ("Fora do estoque".equals(part.source()) ? "\nFora do estoque" : ""),
+                part.description() + ("Externo".equals(part.source()) ? "\nExterno" : ""),
                 quantity(part.quantity()) + (part.unit() == null ? "" : " " + part.unit()), part.componentBatch(),
                 dash(part.replacementReason()) + (part.appliedAt() == null ? "" : "\n" + INSTANT.format(part.appliedAt()) + " · " + dash(part.appliedBy()))));
             document.add(parts);

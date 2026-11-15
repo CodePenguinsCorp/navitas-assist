@@ -64,7 +64,7 @@ class RmaRepairIntegrationTest {
             .andExpect(jsonPath("$.unit").value("m")).andExpect(jsonPath("$.appliedBy").value("repair-tech"))
             .andExpect(jsonPath("$.appliedAt").isNotEmpty()).andExpect(jsonPath("$.replacementReason").value("Curto"));
         assertEquals(count, parts.count());
-        assertEquals("Componente fora do estoque: Resistor, 1,125 m. Motivo da troca: Curto. Lote: A1.",
+        assertEquals("Componente externo: Resistor, 1,125 m. Motivo da troca: Curto. Lote: A1.",
             rma.getRepairHistory().get(0).getSummary());
         assertEquals(0, parts.findById(part.getId()).orElseThrow().getOnHand().signum());
         write("external-components", Map.of("code", " catalog ", "description", "X", "quantity", "1", "replacementReason", "Falha"))

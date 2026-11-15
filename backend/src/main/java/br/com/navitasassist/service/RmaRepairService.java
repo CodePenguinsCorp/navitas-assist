@@ -44,7 +44,7 @@ public class RmaRepairService {
         component.setAppliedAt(Instant.now());
         component.setAppliedBy(currentUsername());
         externalComponents.saveAndFlush(component);
-        RmaRepairHistory.record(rma, "EXTERNAL_COMPONENT", component.getId(), "CREATE", RepairHistorySummary.component("Componente fora do estoque", component.getDescription(), component.getQuantity(), component.getUnit(), component.getReplacementReason(), component.getComponentBatch()), currentUsername());
+        RmaRepairHistory.record(rma, "EXTERNAL_COMPONENT", component.getId(), "CREATE", RepairHistorySummary.component("Componente externo", component.getDescription(), component.getQuantity(), component.getUnit(), component.getReplacementReason(), component.getComponentBatch()), currentUsername());
         return ExternalComponentResponse.from(component);
     }
 

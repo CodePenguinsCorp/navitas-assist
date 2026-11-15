@@ -18,8 +18,8 @@ class RepairHistorySummaryTest {
 
     @Test
     void keepsExistingPunctuationAndTrimsOptionalFields() {
-        assertEquals("Componente fora do estoque: Cabo, 2 un. Motivo da troca: Falha! Lote: A1.",
-            RepairHistorySummary.component("Componente fora do estoque", "Cabo", new BigDecimal("2.000"), "un", " Falha! ", " A1 "));
+        assertEquals("Componente externo: Cabo, 2 un. Motivo da troca: Falha! Lote: A1.",
+            RepairHistorySummary.component("Componente externo", "Cabo", new BigDecimal("2.000"), "un", " Falha! ", " A1 "));
     }
 
     @Test

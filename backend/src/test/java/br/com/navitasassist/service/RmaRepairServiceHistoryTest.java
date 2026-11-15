@@ -36,7 +36,7 @@ class RmaRepairServiceHistoryTest {
     void labelsComponentFieldsOnCreationEditionAndVoid() {
         var request = new ExternalComponentRequest(null, "Cabo X", new BigDecimal("2.000"), "un", "123", "queimado");
         service.addExternalComponent(7L, request);
-        assertEquals("Componente fora do estoque: Cabo X, 2 un. Motivo da troca: queimado. Lote: 123.", lastSummary());
+        assertEquals("Componente externo: Cabo X, 2 un. Motivo da troca: queimado. Lote: 123.", lastSummary());
         var item = new RmaExternalComponent(); item.setId(8L); item.setRma(rma);
         when(components.findById(8L)).thenReturn(Optional.of(item));
         service.updateExternalComponent(7L, 8L, new ExternalComponentRequest(null, "Cabo X", new BigDecimal("1.125"), "m", " ", "falha"));
