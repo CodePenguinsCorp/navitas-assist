@@ -1,6 +1,7 @@
 import { IconComponent } from '../../shared/icon/icon.component';
 import { SuggestInputComponent } from '../../shared/form-controls/suggest-input/suggest-input.component';
-import { Component, ElementRef, Injector, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, Injector, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable, finalize } from 'rxjs';
 import { RMA_STATUS_LABELS } from '../../core/mock-data';
@@ -75,6 +76,7 @@ export class ProtocolsComponent {
   private readonly permissions = inject(PermissionService);
   private readonly catalogService = inject(CatalogService);
   private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly canManage = computed(() => this.permissions.hasPermission('protocolos.catalogo'));
@@ -99,6 +101,9 @@ export class ProtocolsComponent {
   protected readonly submitAttempted = signal(false);
   /** Itens abertos no editor. Cada seta abre e fecha o próprio item; zero itens abertos é válido. */
   protected readonly expandedItems = signal<ReadonlySet<FormGroup>>(new Set());
+
+  protected readonly productOptionsLoading = signal(false);
+  protected readonly productOptionsError = signal('');
 
   private readonly templatesSignal = signal<ProtocolTemplateResponse[]>([]);
   private readonly productOptionsSignal = signal<ReadonlyArray<CustomSelectOption<number | null>>>([{ value: null, label: 'Por categoria' }]);
@@ -129,8 +134,19 @@ export class ProtocolsComponent {
 
   constructor() {
     this.loadTemplates();
-    this.catalogService.listProductOptions().subscribe({
-      next: (products) => this.productOptionsSignal.set([{ value: null, label: 'Por categoria' }, ...products.map((product) => ({ value: product.id, label: `${product.sku} · ${product.name}` }))])
+    this.loadProductOptions();
+  }
+
+  protected retryProductOptions(): void {
+    if (!this.productOptionsLoading()) this.loadProductOptions();
+  }
+
+  private loadProductOptions(): void {
+    this.productOptionsLoading.set(true);
+    this.productOptionsError.set('');
+    this.catalogService.listProductOptions().pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.productOptionsLoading.set(false))).subscribe({
+      next: (products) => this.productOptionsSignal.set([{ value: null, label: 'Por categoria' }, ...products.map((product) => ({ value: product.id, label: `${product.sku} · ${product.name}` }))]),
+      error: (error) => this.productOptionsError.set(extractHttpErrorMessage(error, 'Não foi possível carregar os produtos.'))
     });
   }
 

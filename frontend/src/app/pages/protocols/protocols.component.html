@@ -230,6 +230,10 @@
           <label class="field-group">
             <span>Produto</span>
             <app-custom-select ariaLabel="Produto" [options]="productOptions()" formControlName="productId" />
+            @if (productOptionsError()) {
+              <small class="field-error" role="alert">{{ productOptionsError() }}</small>
+              <button type="button" class="button-secondary" (click)="retryProductOptions()" [disabled]="productOptionsLoading()">Tentar novamente</button>
+            }
           </label>
 
           @if (form.controls.productId.value === null) {
