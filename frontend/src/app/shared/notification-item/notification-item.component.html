@@ -1,0 +1,16 @@
+<button type="button" class="notification-item__main" (click)="select.emit()">
+  @if (!notification().read) { <span class="sr-only">Não lida: </span> }
+  <span class="notification-item__icon mini-chip" [class]="severityClass(notification().severity)">
+    <app-icon [name]="notification().severity === 'INFO' ? 'bell' : 'alert'" [size]="18" />
+  </span>
+  <span class="notification-item__content">
+    <span class="notification-item__head"><span class="mini-chip notification-item__severity" [class]="severityClass(notification().severity)">{{ severityLabels[notification().severity] }}</span></span>
+    <span class="notification-item__top">
+      <span class="notification-item__title">@if (!notification().read) { <span class="notification-item__dot" aria-hidden="true"></span> }{{ headline() }}</span>
+      <time class="notification-item__time" [attr.datetime]="notification().createdAt" [appTip]="dateTime(notification().createdAt)">{{ timeOf(notification().createdAt) }}</time>
+    </span>
+    <span class="notification-item__summary">{{ summary() }}</span>
+    <ng-content />
+  </span>
+  <app-icon class="notification-item__chevron" name="chevron" [size]="16" />
+</button>

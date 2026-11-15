@@ -245,12 +245,20 @@ describe('NotificationsComponent inbox loading', () => {
     expect(clearFiltersButton().disabled).toBe(true);
   });
 
+  it('mostra o motivo abaixo do cliente e equipamento no resumo compartilhado', async () => {
+    await setup({ list: [of([{ ...BLOCKED, message: 'Cliente · Switch · etapa Diagnóstico. Motivo do impedimento: "Sem saldo".' }])] });
+    const item = root().querySelector('app-notification-item')!;
+    expect(item.querySelector('.notification-item__summary')?.textContent).toBe('Cliente - Switch\nSem saldo');
+    expect(item.querySelector('button')?.type).toBe('button');
+    expect(item.querySelector('.notification-item__chevron')).not.toBeNull();
+  });
+
   it('marks unread rows, shows the severity chip and the time of day', async () => {
     await setup({ list: [of([NOTIFICATION, { ...OLD, read: true, severity: 'CRITICAL' }])] });
-    const rows = Array.from(root().querySelectorAll<HTMLElement>('.notification-item'));
+    const rows = Array.from(root().querySelectorAll<HTMLElement>('app-notification-item'));
     expect(rows.map((row) => row.classList.contains('is-unread'))).toEqual([true, false]);
     expect(rows[0].textContent).toContain('Não lida:');
-    expect(rows[1].querySelector('.mini-chip')!.textContent!.trim()).toBe('Crítico');
+    expect(rows[1].querySelector('.notification-item__head .mini-chip')!.textContent!.trim()).toBe('Crítico');
     expect(rows[0].querySelector('time')!.textContent!.trim()).toBe('09:00');
     rows[0].querySelector('time')!!.dispatchEvent(new Event('mouseenter'));
     expect(document.querySelector('.app-tip')?.textContent).toBe('24/10/2026, 09:00');
@@ -258,10 +266,10 @@ describe('NotificationsComponent inbox loading', () => {
 
   it('keeps the same columns in read and unread rows, with the time last', async () => {
     await setup({ list: [of([NOTIFICATION, { ...OLD, read: true }])] });
-    const rows = Array.from(root().querySelectorAll<HTMLElement>('.notification-item'));
+    const rows = Array.from(root().querySelectorAll<HTMLElement>('app-notification-item'));
     expect(rows.every((row) => row.querySelectorAll('button').length === 1)).toBe(true);
     expect(rows.every((row) => row.querySelector('app-custom-select, .notification-actions') === null)).toBe(true);
-    expect(rows.every((row) => row.lastElementChild!.matches('time.notification-time'))).toBe(true);
+    expect(rows.every((row) => !!row.querySelector('.notification-item__top time'))).toBe(true);
   });
 
   // Vermelho: o erro da ação substitui a única mensagem e a troca de aba apaga a falha de carga.
@@ -317,25 +325,22 @@ describe('NotificationsComponent inbox loading', () => {
   });
 
   describe('presentation', () => {
-    const item = () => root().querySelector<HTMLElement>('.notification-item')!;
+    const item = () => root().querySelector<HTMLElement>('app-notification-item')!;
     const tabs = () => Array.from(root().querySelectorAll<HTMLButtonElement>('[role="tab"]'));
     const tabLabelled = (label: string) => tabs().find((tab) => tab.textContent!.trim().startsWith(label))!;
     const key = (target: HTMLElement, value: string) => { target.dispatchEvent(new KeyboardEvent('keydown', { key: value, bubbles: true })); render(); };
 
     it('shows only the useful summary on the second line, without repeating the event type', async () => {
       await setup();
-      const meta = item().querySelector<HTMLElement>('.notification-meta')!;
-      expect(meta.textContent!.trim()).toBe('Cliente · Produto');
-      expect(meta.querySelector('.notification-event')).toBeNull();
-      const message = meta.querySelector<HTMLElement>('.notification-message')!;
-      Object.defineProperty(message, 'scrollWidth', { configurable: true, value: 400 }); Object.defineProperty(message, 'clientWidth', { configurable: true, value: 100 });
+      const message = item().querySelector<HTMLElement>('.notification-item__summary')!;
+      expect(message.textContent!.trim()).toBe('Cliente · Produto');
       message.dispatchEvent(new Event('mouseenter'));
-      expect(document.querySelector('.app-tip')?.textContent).toBe('Cliente · Produto');
+      expect(document.querySelector('.app-tip')).toBeNull();
     });
 
     describe('detail dialog', () => {
       const dialog = () => root().querySelector<HTMLElement>('app-notification-detail-modal [role="dialog"]');
-      const titleButton = () => item().querySelector<HTMLButtonElement>('button.notification-title')!;
+      const titleButton = () => item().querySelector<HTMLButtonElement>('button.notification-item__main')!;
       const dialogButton = (label: string) => Array.from(dialog()!.querySelectorAll('button')).find((entry) => entry.textContent?.trim() === label);
       const dialogText = () => dialog()!.textContent!.replace(/[\s\u00a0]+/g, ' ').trim();
       const unreadFull = { ...NOTIFICATION, message: 'Primeira linha\nSegunda linha <b>não é HTML</b>' };
@@ -582,7 +587,7 @@ describe('NotificationsComponent inbox loading', () => {
         await setup({ list: [of([BLOCKED])] });
         expect(item().querySelectorAll('button').length).toBe(1);
         expect(item().querySelector('app-custom-select')).toBeNull();
-        item().querySelector<HTMLButtonElement>('button.notification-title')!.click();
+        item().querySelector<HTMLButtonElement>('button.notification-item__main')!.click();
         render();
         expect(root().querySelector('[role="dialog"] app-custom-select')).not.toBeNull();
       });

@@ -1,3 +1,4 @@
+import { NotificationItemComponent } from '../notification-item/notification-item.component';
 import { isBellNotification } from './bell-notifications';
 import { TipDirective } from '../tip/tip.directive';
 import { Component, DestroyRef, ElementRef, Injector, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
@@ -9,14 +10,11 @@ import { ClockService } from '../../core/services/clock.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import {
-  NOTIFICATION_SEVERITY_LABELS,
   canSnooze,
-  formatNotificationDateTime,
-  formatNotificationTime,
   followNotification,
   groupNotificationsByDay,
   notificationHeadline,
-  severityClass
+  notificationSummary,
 } from '../../core/utils/notification-ui';
 import { NotificationDetailModalComponent } from '../notification-detail-modal/notification-detail-modal.component';
 import { IconComponent } from '../icon/icon.component';
@@ -36,7 +34,7 @@ let nextPanelId = 0;
  */
 @Component({
   selector: 'app-notification-bell',
-  imports: [TipDirective, IconComponent, NotificationDetailModalComponent, RouterLink],
+  imports: [NotificationItemComponent, TipDirective, IconComponent, NotificationDetailModalComponent, RouterLink],
   templateUrl: './notification-bell.component.html',
   styleUrl: './notification-bell.component.css',
   host: {
@@ -99,11 +97,8 @@ export class NotificationBellComponent {
   protected readonly canMarkAll = computed(() =>
     !this.busy() && (!this.unreadKnown() || this.unreadCount() > 0 || this.notifications().some((item) => !item.read)));
 
-  protected readonly severityLabels = NOTIFICATION_SEVERITY_LABELS;
-  protected readonly severityClass = severityClass;
+  protected readonly summaryOf = notificationSummary;
   protected readonly headlineOf = notificationHeadline;
-  protected readonly timeOf = formatNotificationTime;
-  protected readonly dateTime = formatNotificationDateTime;
 
   constructor() {
     this.router.events.pipe(
@@ -194,7 +189,7 @@ export class NotificationBellComponent {
 
   /** Arrows, Home and End move between the items; Tab keeps its natural order. */
   protected onPanelKeydown(event: KeyboardEvent): void {
-    const items = Array.from(this.panel()?.nativeElement.querySelectorAll<HTMLElement>('.bell-item__main') ?? []);
+    const items = Array.from(this.panel()?.nativeElement.querySelectorAll<HTMLElement>('app-notification-item button') ?? []);
     if (!items.length) return;
     const current = items.indexOf(document.activeElement as HTMLElement);
     let next: number;

@@ -11,19 +11,4 @@
 .bell-panel__body { flex: 1; min-height: 0; overflow: hidden auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 0 var(--space-3) var(--space-3); background: var(--surface-alt); }
 .bell-day { margin: 0; padding: var(--space-4) var(--space-1) var(--space-2); color: var(--muted); font-size: var(--font-size-xs); }
 .bell-list { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
-.bell-item { min-width: 0; }
-.bell-item__main { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); width: 100%; min-width: 0; padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow); color: var(--text); font: inherit; text-align: left; white-space: normal; cursor: pointer; }
-.bell-item__main:hover { border-color: var(--brand-blue); background: var(--brand-tint); }
-.bell-item__main:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-.bell-item__icon.mini-chip { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border-radius: 50%; }
-.bell-item__content { display: grid; gap: var(--space-1); min-width: 0; }
-.bell-item__head { display: flex; align-items: center; gap: var(--space-2); }
-.bell-item__head .mini-chip { font-size: var(--font-size-xs); }
-.bell-item__top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
-.bell-item__dot { display: inline-block; width: 7px; height: 7px; margin-right: var(--space-2); border-radius: 50%; background: var(--brand-blue); vertical-align: middle; }
-.bell-item__title { font-size: var(--font-size-control); font-weight: var(--font-weight-bold); overflow-wrap: anywhere;  min-width: 0; flex: 1; }
-.bell-item__summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; color: var(--muted); font-size: var(--font-size-sm); }
-.bell-item__time, .bell-item__chevron { color: var(--muted); font-size: var(--font-size-xs);  }
-.bell-item__time { flex: none; white-space: nowrap; }
-.bell-item__head { display: flex; justify-content: flex-start; }
 @media (max-width: 720px) { .bell-panel { right: auto; left: 0; width: calc(100vw - 64px - 2rem); } }

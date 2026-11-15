@@ -1,3 +1,4 @@
+import { notificationDetailContent } from '../../shared/notification-detail-modal/notification-detail-content';
 import { NotificationEventType, NotificationResponse, NotificationSeverity } from '../models';
 import { businessDateInputValue } from './date';
 
@@ -133,4 +134,14 @@ export function followNotification(
   if (!route) return false;
   void router.navigate([route.path], { queryParams: route.queryParams });
   return true;
+}
+
+/** Summarizes recognized messages; legacy and ambiguous content stays intact. */
+export function notificationSummary(notification: Pick<NotificationResponse, 'eventType' | 'message'>): string {
+  const { fields } = notificationDetailContent(notification);
+  const client = fields.find(field => field.label === 'Cliente')?.value;
+  const equipment = fields.find(field => field.label === 'Equipamento')?.value;
+  if (!client || !equipment) return notification.message;
+  const reason = fields.find(field => field.label === 'Motivo do impedimento' || field.label === 'Item reprovado')?.value;
+  return [`${client} - ${equipment}`, reason].filter(Boolean).join('\n');
 }

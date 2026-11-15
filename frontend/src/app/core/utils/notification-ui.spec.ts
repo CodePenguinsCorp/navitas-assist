@@ -1,4 +1,4 @@
-import { NOTIFICATION_EVENT_LABELS, SNOOZABLE_EVENT_TYPES, activeSnoozeUntil, canSnooze, followNotification, formatNotificationDateTime, formatTimeAgo, groupNotificationsByDay, internalRoute, notificationHeadline, severityClass } from './notification-ui';
+import { NOTIFICATION_EVENT_LABELS, SNOOZABLE_EVENT_TYPES, activeSnoozeUntil, canSnooze, followNotification, formatNotificationDateTime, formatTimeAgo, groupNotificationsByDay, internalRoute, notificationHeadline, notificationSummary, severityClass } from './notification-ui';
 
 describe('Notification UI utilities', () => {
   it('só permite adiar eventos que pedem ação, independentemente da severidade', () => {
@@ -101,5 +101,19 @@ describe('Notification UI utilities', () => {
       expect(followNotification({ actionPath: null }, target)).toBe(false);
       expect(target.navigate).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('resumo legível', () => {
+  it.each([
+    ['RMA_CREATED', 'Cliente · Switch · prioridade média. Aberta por admin.', 'Cliente - Switch'],
+    ['RMA_ASSIGNED', 'Cliente · Switch · etapa Diagnóstico. Atribuída por admin.', 'Cliente - Switch'],
+    ['RMA_BLOCKED', 'Cliente · Switch · etapa Diagnóstico. Motivo do impedimento: "Sem saldo".', 'Cliente - Switch\nSem saldo'],
+    ['TEST_FAILED', 'Cliente · Switch · etapa Teste. Item reprovado: "Sem sinal". Registrado por "Maria".', 'Cliente - Switch\nSem sinal'],
+    ['RMA_BLOCKED', 'Motivo antigo · completo', 'Motivo antigo · completo'],
+    ['RMA_CREATED', 'Cliente · Produto', 'Cliente · Produto'],
+    ['RMA_ASSIGNED', 'Texto <b>literal</b>', 'Texto <b>literal</b>']
+  ] as const)('resume %s preservando mensagens desconhecidas', (eventType, message, expected) => {
+    expect(notificationSummary({ eventType, message })).toBe(expected);
   });
 });

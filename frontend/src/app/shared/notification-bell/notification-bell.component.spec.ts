@@ -35,7 +35,7 @@ describe('NotificationBellComponent', () => {
   const dialog = () => host().querySelector<HTMLElement>('app-notification-detail-modal [role="dialog"]');
   const dialogButton = (label: string) => Array.from(dialog()!.querySelectorAll('button')).find((item) => item.textContent?.trim() === label);
   const dialogText = () => dialog()!.textContent!.replace(/[\s\u00a0]+/g, ' ').trim();
-  const items = () => Array.from(host().querySelectorAll<HTMLButtonElement>('.bell-item__main'));
+  const items = () => Array.from(host().querySelectorAll<HTMLButtonElement>('.notification-item__main'));
   const buttonByText = (label: string) => Array.from(panel()!.querySelectorAll('button')).find((item) => item.textContent?.trim() === label)!;
   const unreadSwitch = () => panel()!.querySelector<HTMLInputElement>('input[role="switch"]')!;
   const render = async () => { fixture.detectChanges(); await fixture.whenStable(); fixture.detectChanges(); };
@@ -101,8 +101,8 @@ describe('NotificationBellComponent', () => {
   it('mantém antigas não lidas e exclui lidas anteriores a hoje', async () => {
     await openWith([OLD, { ...OLD, id: 30, read: false }, READ]);
     expect(items()).toHaveLength(2);
-    expect(host().querySelectorAll('.bell-item.is-unread')).toHaveLength(1);
-    expect(items().every(item => item.querySelector('.bell-item__chevron'))).toBe(true);
+    expect(host().querySelectorAll('app-notification-item.is-unread')).toHaveLength(1);
+    expect(items().every(item => item.querySelector('.notification-item__chevron'))).toBe(true);
   });
 
   it('is a popup button, closed by default, keeping the unread badge from the shared summary', async () => {
@@ -127,19 +127,19 @@ describe('NotificationBellComponent', () => {
     expect(bell().getAttribute('aria-controls')).toBe(panel()!.id);
     expect(document.activeElement).toBe(panel());
     expect(Array.from(host().querySelectorAll('.bell-day')).map((day) => day.textContent?.trim())).toEqual(['Hoje']);
-    expect(items().map((item) => item.querySelector('.bell-item__title')?.textContent?.trim()))
+    expect(items().map((item) => item.querySelector('.notification-item__title')?.textContent?.trim()))
       .toEqual([NOTIFICATION.title, 'Peça pendente - OS-2026-000007']);
-    expect(items()[0].querySelector('.bell-item__head .mini-chip')?.textContent?.trim()).toBe('Crítico');
-    expect(host().querySelector('.bell-item time')?.textContent?.trim()).toBe('10:00');
-    expect(host().querySelectorAll('.bell-item.is-unread').length).toBe(1);
+    expect(items()[0].querySelector('.notification-item__head .mini-chip')?.textContent?.trim()).toBe('Crítico');
+    expect(host().querySelector('app-notification-item time')?.textContent?.trim()).toBe('10:00');
+    expect(host().querySelectorAll('app-notification-item.is-unread').length).toBe(1);
     expect(panel()!.querySelector<HTMLAnchorElement>('a[href="/notificacoes"]')?.textContent?.trim()).toBe('Ver todas');
   });
 
   it('opens detail from the shared scroll area and marks the notification read', async () => {
     await openWith([NOTIFICATION, READ]);
     const body = panel()!.querySelector('.bell-panel__body.app-scroll')!;
-    expect(body.querySelectorAll('.bell-item__main')).toHaveLength(2);
-    body.querySelector<HTMLButtonElement>('.bell-item__main')!.click();
+    expect(body.querySelectorAll('.notification-item__main')).toHaveLength(2);
+    body.querySelector<HTMLButtonElement>('.notification-item__main')!.click();
     await render();
     expect(panel()).toBeNull();
     expect(dialog()).not.toBeNull();
@@ -187,13 +187,18 @@ describe('NotificationBellComponent', () => {
     expect(panel()).not.toBeNull();
   });
 
+  it('mostra cliente e equipamento sem os separadores da mensagem estruturada', async () => {
+    await openWith([{ ...NOTIFICATION, message: 'Cliente · Switch · etapa Diagnóstico. Atribuída por admin.' }]);
+    expect(items()[0].querySelector('.notification-item__summary')?.textContent).toBe('Cliente - Switch');
+  });
+
   it('keeps timestamps beside both read and unread notifications', async () => {
     await openWith([NOTIFICATION, READ]);
-    const rows = Array.from(host().querySelectorAll<HTMLElement>('.bell-item'));
+    const rows = Array.from(host().querySelectorAll<HTMLElement>('app-notification-item'));
     expect(rows.map((row) => row.querySelector('time')!.getAttribute('datetime')))
       .toEqual([NOTIFICATION.createdAt, READ.createdAt]);
     expect(rows.map((row) => row.classList.contains('is-unread'))).toEqual([true, false]);
-    expect(rows.every((row) => row.querySelector('.bell-item__top time'))).toBe(true);
+    expect(rows.every((row) => row.querySelector('.notification-item__top time'))).toBe(true);
   });
 
   it('reloads with only unread items when the switch is turned on', async () => {
@@ -214,7 +219,7 @@ describe('NotificationBellComponent', () => {
       { ...NOTIFICATION, id: 8, title: 'Nova OS OS-2026-000007' },
       { ...NOTIFICATION, id: 9, title: 'Impedimento na OS OS-2026-000004', rmaCode: 'OS-2026-000004', createdAt: at(24, 9) }
     ]);
-    expect(items().map((item) => item.querySelector('.bell-item__title')!.textContent!.trim()))
+    expect(items().map((item) => item.querySelector('.notification-item__title')!.textContent!.trim()))
       .toEqual(['Nova OS - OS-2026-000007', 'Impedimento - OS-2026-000004']);
     expect(items()[0].textContent).toContain('Não lida:');
   });
@@ -222,10 +227,10 @@ describe('NotificationBellComponent', () => {
   it('oferece toda a superfície como botão com ícone, resumo, hora e seta', async () => {
     await openWith([NOTIFICATION]);
     const main = items()[0];
-    expect(main.querySelector('.bell-item__icon app-icon')).not.toBeNull();
-    expect(main.querySelector('.bell-item__summary')!.textContent!.trim()).toBe('Cliente - Produto');
+    expect(main.querySelector('.notification-item__icon app-icon')).not.toBeNull();
+    expect(main.querySelector('.notification-item__summary')!.textContent!.trim()).toBe('Cliente - Produto');
     expect(main.querySelector('time')!.textContent!.trim()).toBe('10:00');
-    expect(main.querySelector('.bell-item__chevron')).not.toBeNull();
+    expect(main.querySelector('.notification-item__chevron')).not.toBeNull();
   });
 
   describe('detail dialog', () => {
@@ -319,7 +324,7 @@ describe('NotificationBellComponent', () => {
       listRequest().flush([{ ...NOTIFICATION, read: true }]);
       flushSummary(0);
       await render();
-      expect(host().querySelectorAll('.bell-item.is-unread').length).toBe(0);
+      expect(host().querySelectorAll('app-notification-item.is-unread').length).toBe(0);
     });
 
     it('snoozes silently from the dialog and closes it', async () => {

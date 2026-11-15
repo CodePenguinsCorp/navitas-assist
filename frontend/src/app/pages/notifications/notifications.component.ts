@@ -1,3 +1,4 @@
+import { NotificationItemComponent } from '../../shared/notification-item/notification-item.component';
 import { ToastService } from '../../core/services/toast.service';
 import { TipDirective } from '../../shared/tip/tip.directive';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -36,7 +37,7 @@ import {
   activeSnoozeUntil,
   canSnooze,
   formatNotificationDateTime,
-  formatNotificationTime,
+  notificationSummary,
   groupNotificationsByDay,
   followNotification,
   severityClass
@@ -54,7 +55,7 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
 
 @Component({
   selector: 'app-notifications',
-  imports: [TipDirective, IconComponent, CustomSelectComponent, ModalFocusDirective, NotificationDetailModalComponent, PageHeaderComponent, ResultCountComponent, RowActionComponent, ReactiveFormsModule],
+  imports: [NotificationItemComponent, TipDirective, IconComponent, CustomSelectComponent, ModalFocusDirective, NotificationDetailModalComponent, PageHeaderComponent, ResultCountComponent, RowActionComponent, ReactiveFormsModule],
   templateUrl: './notifications.component.html',
   styleUrl: './notifications.component.css'
 })
@@ -148,7 +149,7 @@ export class NotificationsComponent {
   protected readonly severityOptions = NOTIFICATION_SEVERITIES.map((severity) => ({ value: severity, label: NOTIFICATION_SEVERITY_LABELS[severity] }));
   protected readonly severityClass = severityClass;
   protected readonly dateTime = formatNotificationDateTime;
-  protected readonly timeOf = formatNotificationTime;
+  protected readonly summaryOf = notificationSummary;
 
   protected readonly canManageRules = computed(() => this.permissions.hasPermission('notificacoes.regras'));
   protected readonly unreadCount = this.notificationService.unreadCount;

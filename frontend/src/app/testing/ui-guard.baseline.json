@@ -1,7 +1,7 @@
 {
   "src/app/pages/dashboard/dashboard.component.ts": 4,
   "src/app/pages/login/login.component.css": 26,
-  "src/app/pages/notifications/notifications.component.css": 3,
+  "src/app/pages/notifications/notifications.component.css": 2,
   "src/app/pages/parts/parts.component.ts": 1,
   "src/app/pages/reports/reports.component.css": 2,
   "src/app/pages/rmas/rmas.component.ts": 2,
@@ -9,7 +9,6 @@
   "src/app/shared/form-controls/custom-select/custom-select.component.css": 5,
   "src/app/shared/form-controls/date-picker/date-picker.component.css": 7,
   "src/app/shared/loading-overlay/loading-overlay.component.css": 2,
-  "src/app/shared/notification-bell/notification-bell.component.css": 2,
   "src/app/shared/pagination/pagination.component.ts": 2,
   "src/app/shared/rma-block-history/rma-block-history.component.ts": 1,
   "src/app/shared/rma-detail-modal/rma-detail-modal.component.css": 8,

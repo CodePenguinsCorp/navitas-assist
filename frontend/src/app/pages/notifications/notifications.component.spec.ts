@@ -75,7 +75,7 @@ describe('NotificationsComponent', () => {
     const text: string = fixture.nativeElement.textContent;
 
     expect(text).toContain('OS OS-2026-000007 atribuída a Técnico');
-    expect(fixture.nativeElement.querySelector('.notification-meta')!.textContent).not.toContain('Nova atribuição');
+    expect(fixture.nativeElement.querySelector('.notification-item__summary')!.textContent).not.toContain('Nova atribuição');
     expect(text).not.toContain('Regras');
 
     component.open(NOTIFICATION);

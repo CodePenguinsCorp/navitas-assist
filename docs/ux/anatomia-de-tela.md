@@ -16,6 +16,7 @@ Corrija a família, não o caso: ao mexer em um bloco, procure todos os usos del
 
 | Bloco | Onde vive | Papel |
 | --- | --- | --- |
+| `app-notification-item` | `shared/notification-item` | Item compartilhado entre sino e caixa de entrada: botão inteiro com ícone tonal, severidade, ponto de não lida, título, hora, resumo em até duas linhas e chevron. Aceita linha extra de adiamento. |
 | `app-page-header` | `shared/page-header` | Título (`h1`) e ações da página. Só isso. |
 | `.page-summary` / `.page-summary__item` | `styles.css` | Único indicador do sistema. Item estático ou clicável (`button.page-summary__item`, `aria-pressed`). Tom por `.tone-*`. |
 | `.panel.table-card` e `.table-card--list` | `styles.css` | Painel de conteúdo com tabela. Cabeçalho tonal, zebra, hover. |
@@ -144,9 +145,11 @@ painéis de conteúdo        .panel.table-card com tabela, app-donut-chart ou ap
 app-page-header (h1) + ações
 abas                       .tab-list (caixa de entrada, regras, canais)
 barra de filtros           .inbox-filters (no padrão do Kanban)
-lista                      itens-botão com ponto de não lida e chevron
-rodapé                     app-pagination
+lista                      app-notification-item agrupado por dia
+rodapé                     app-result-count + limite das 100 mais recentes
 ```
+
+Itens por dia usam `app-notification-item`, o mesmo bloco do sino, com resumo via `notificationSummary`. Cliente e equipamento usam hífen; motivo reconhecido fica na linha seguinte. Mensagens antigas permanecem integrais. Apenas a hora tem dica com data completa.
 
 Detalhe em modal médio. Regra de notificação em modal médio.
 

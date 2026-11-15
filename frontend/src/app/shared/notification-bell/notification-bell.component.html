@@ -54,23 +54,8 @@
             <h3 class="bell-day">{{ group.label }}</h3>
             <ul class="bell-list">
               @for (notification of group.items; track notification.id) {
-                @let headline = headlineOf(notification);
-                <li class="bell-item" [class.is-unread]="!notification.read">
-                  <button type="button" class="bell-item__main" (click)="select(notification)">
-                    @if (!notification.read) { <span class="sr-only">Não lida: </span> }
-                    <span class="bell-item__icon mini-chip" [class]="severityClass(notification.severity)" [appTip]="severityLabels[notification.severity]">
-                      <app-icon [name]="notification.severity === 'INFO' ? 'bell' : 'alert'" [size]="18" />
-                    </span>
-                    <span class="bell-item__content">
-                      <span class="bell-item__head"><span class="mini-chip" [class]="severityClass(notification.severity)">{{ severityLabels[notification.severity] }}</span></span>
-                      <span class="bell-item__top">
-                        <span class="bell-item__title">@if (!notification.read) { <span class="bell-item__dot" aria-hidden="true"></span> }{{ headline }}</span>
-                        <time class="bell-item__time" [attr.datetime]="notification.createdAt" [appTip]="dateTime(notification.createdAt)">{{ timeOf(notification.createdAt) }}</time>
-                      </span>
-                      <span class="bell-item__summary">{{ notification.message }}</span>
-                    </span>
-                    <app-icon class="bell-item__chevron" name="chevron" [size]="16" />
-                  </button>
+                <li>
+                  <app-notification-item [notification]="notification" [headline]="headlineOf(notification)" [summary]="summaryOf(notification)" (select)="select(notification)" />
                 </li>
               }
             </ul>
