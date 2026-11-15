@@ -6,14 +6,14 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription, finalize } from 'rxjs';
 import { CLOSED_RMA_STATUSES } from '../../core/mock-data';
-import { ExternalComponentResponse, PartConsumptionRequest, PartMovementResponse, PartMovementType, PartReservationResponse, PartOptionResponse, RmaPartsResponse, RmaStatus } from '../../core/models';
+import { ExternalComponentResponse, PartConsumptionRequest, PartReservationResponse, PartOptionResponse, RmaPartsResponse, RmaStatus } from '../../core/models';
 import { RmaRepairService } from '../../core/services/rma-repair.service';
 import { ToastService } from '../../core/services/toast.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { PartReservationAction, PartService } from '../../core/services/part.service';
 import { extractHttpErrorMessage, normalizeOptionalText } from '../../core/utils/catalog-ui';
 import { formatBusinessDateTime } from '../../core/utils/date';
-import { PART_MOVEMENT_LABELS, PART_RESERVATION_STATUS_LABELS, formatCurrency, formatQuantity, formatSignedQuantity, reservationStatusClass } from '../../core/utils/part-ui';
+import { PART_RESERVATION_STATUS_LABELS, formatCurrency, formatQuantity, reservationStatusClass } from '../../core/utils/part-ui';
 import { NgTemplateOutlet } from '@angular/common';
 import { CollapsibleSectionComponent } from '../collapsible-section/collapsible-section.component';
 import { RowActionComponent } from '../row-action/row-action.component';
@@ -70,7 +70,6 @@ export class RmaPartsPanelComponent {
   protected readonly catalog = signal<PartOptionResponse[]>([]);
 
   protected readonly statusLabels = PART_RESERVATION_STATUS_LABELS;
-  protected readonly movementLabels = PART_MOVEMENT_LABELS;
   protected readonly statusClass = reservationStatusClass;
   protected readonly quantity = formatQuantity;
   protected readonly currency = formatCurrency;
@@ -109,19 +108,6 @@ export class RmaPartsPanelComponent {
     if (active.length === 0) return [];
     const external = active.filter((component) => component.external).length;
     return [{ label: 'Componentes', value: String(active.length) }, { label: 'Fora do estoque', value: String(external) }, { label: 'Do estoque', value: String(active.length - external) }];
-  });
-  protected readonly movementStats = computed(() => {
-    const movements = this.parts()?.movements ?? [];
-    if (movements.length === 0) return [];
-    const units = new Set(movements.map((movement) => this.unitOf(movement.partId)));
-    const unit = units.size === 1 ? [...units][0] : '';
-    const entries = movements.filter((movement) => movement.onHandChange > 0).reduce((sum, movement) => sum + movement.onHandChange, 0);
-    const exits = movements.filter((movement) => movement.onHandChange < 0).reduce((sum, movement) => sum - movement.onHandChange, 0);
-    return [
-      { label: 'Entradas', value: formatQuantity(entries, unit) },
-      { label: 'Saídas', value: formatQuantity(exits, unit) },
-      { label: 'Saldo líquido', value: formatQuantity(entries - exits, unit) }
-    ];
   });
 
   protected readonly consuming = signal<PartReservationResponse | null>(null);
@@ -295,29 +281,8 @@ export class RmaPartsPanelComponent {
     const next = new Set(this.expandedKeys()); if (!next.delete(key)) next.add(key); this.expandedKeys.set(next);
   }
 
-  protected readonly signedQuantity = formatSignedQuantity;
   protected readonly reservationTone = (status: PartReservationResponse['status']): string =>
     ({ ACTIVE: 'tone-sky', PENDING: 'tone-warning', CONSUMED: 'tone-success' } as Record<string, string>)[status] ?? 'tone-slate';
-  protected readonly movementTone = (type: PartMovementType): string =>
-    ({ ENTRY: 'tone-success', EXIT: 'tone-danger', ADJUSTMENT: 'tone-warning', RESERVATION: 'tone-sky', RESERVATION_CANCEL: 'tone-slate', CONSUMPTION: 'tone-violet', REVERSAL: 'tone-warning' })[type];
-
-  /** Variação mostrada no movimento: a do estoque físico ou, se ela não mudou, a da reserva. */
-  protected movementDelta(movement: PartMovementResponse): number {
-    return movement.onHandChange !== 0 ? movement.onHandChange : movement.reservedChange;
-  }
-
-  protected unitOf(partId: number): string {
-    return this.reservations().find((reservation) => reservation.partId === partId)?.unit ?? '';
-  }
-
-  protected movementChip(type: PartMovementType): string {
-    return type === 'RESERVATION_CANCEL' ? 'Cancelamento' : this.movementLabels[type];
-  }
-
-  protected movementNote(movement: PartMovementResponse): string {
-    return [movement.reversed ? 'revertido' : '', movement.reason ?? ''].filter(Boolean).join(' · ');
-  }
-
   private focusFirstExternalField(): void {
     afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>('#external-form input, #external-form textarea')?.focus(), { injector: this.injector });
   }

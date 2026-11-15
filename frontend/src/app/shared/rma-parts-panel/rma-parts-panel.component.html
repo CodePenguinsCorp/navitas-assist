@@ -193,35 +193,6 @@
   </app-collapsible-section>
 </section>
 
-@if (parts()?.movements?.length) {
-<section class="detail-card">
-  <app-collapsible-section title="Movimentos de peças" icon="history" [count]="parts()!.movements.length" [open]="parts()!.movements.length > 0" storageKey="rma.part-movements">
-    <dl class="record-stats" aria-label="Resumo dos movimentos">
-      @for (stat of movementStats(); track stat.label) { <div><dt>{{ stat.label }}</dt><dd>{{ stat.value }}</dd></div> }
-    </dl>
-    <ul class="record-rows" id="parts-movements">
-      @for (movement of parts()!.movements; track movement.id) {
-        <li class="record-row" [class]="movementTone(movement.type)" [class.is-reversed]="movement.reversed">
-          <span class="icon-tile icon-tile--sm" aria-hidden="true"><app-icon name="move" /></span>
-          <div class="record-row__main">
-            <div class="record-row__head">
-              <strong class="record-row__title">{{ movement.partName }}</strong>
-              <span class="code-text record-row__code">{{ movement.partCode }}</span>
-            </div>
-            <div class="record-row__chips">
-              <span class="mini-chip tone-chip">{{ movementChip(movement.type) }}</span>
-              @if (movement.reversed) { <span class="mini-chip mini-chip--muted">Revertida</span> }
-              <span class="record-row__value" [class.record-row__value--in]="movement.onHandChange > 0" [class.record-row__value--out]="movement.onHandChange < 0">{{ signedQuantity(movementDelta(movement)) }}@if (unitOf(movement.partId); as unit) { {{ unit }} }</span>
-            </div>
-            <small class="record-row__meta"><time>{{ dateTime(movement.createdAt) }}</time> · {{ movement.createdBy }} · Saldo: {{ quantity(movement.onHandAfter, unitOf(movement.partId)) }}@if (movement.reservedChange !== 0) { · Reservado: {{ quantity(movement.reservedAfter, unitOf(movement.partId)) }} }</small>
-            @if (movement.reason) { <small class="record-row__meta">Observação: {{ movement.reason }}</small> }
-          </div>
-        </li>
-      }
-    </ul>
-  </app-collapsible-section>
-</section>
-}
   }
 </div>
 

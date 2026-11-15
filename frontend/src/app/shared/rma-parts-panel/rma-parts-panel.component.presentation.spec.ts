@@ -1,7 +1,7 @@
 import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, Subject, of } from 'rxjs';
-import { PartMovementResponse, PartReservationResponse, PartResponse, RmaPartsResponse, RmaStatus } from '../../core/models';
+import { PartReservationResponse, PartResponse, RmaPartsResponse, RmaStatus } from '../../core/models';
 import { Permission } from '../../core/permissions';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { RmaRepairService } from '../../core/services/rma-repair.service';
@@ -16,14 +16,8 @@ const reservation = (id: number, status: ReservationStatus): PartReservationResp
   createdAt: '2026-10-24T12:00:00Z', updatedAt: '2026-10-24T12:00:00Z'
 });
 
-const MOVEMENT: PartMovementResponse = {
-  id: 30, partId: 4, partCode: 'PCA-1', partName: 'Capacitor', type: 'CONSUMPTION', quantity: 2,
-  onHandChange: -2, reservedChange: -2, onHandAfter: 3, reservedAfter: 0, rmaCode: 'OS-7', 
-  reason: 'Troca da placa', reversed: true, reversedMovementId: null, createdBy: 'tech', createdAt: '2026-10-24T13:00:00Z'
-};
-
 const rmaParts = (reservations: PartReservationResponse[]): RmaPartsResponse => ({
-  rmaId: 7, rmaCode: 'OS-7', reservations, movements: [MOVEMENT], reservedCost: 20, consumedCost: 20, pendingCount: 1
+  rmaId: 7, rmaCode: 'OS-7', reservations, movements: [], reservedCost: 20, consumedCost: 20, pendingCount: 1
 });
 
 const part = (id: number, unit: string, available = 3): PartResponse => ({
@@ -211,21 +205,4 @@ describe('RmaPartsPanelComponent presentation', () => {
     expect(service.updateReservation).toHaveBeenCalledTimes(1);
   });
 
-  it('opens the movement history with content and lists aligned columns with reversal and reason', async () => {
-    await setup();
-    const section = Array.from(root().querySelectorAll('app-collapsible-section')).find((item) => normalize(item.querySelector('h3')!.textContent).startsWith('Movimentos de peças'))!;
-    const toggle = section.querySelector<HTMLButtonElement>('.collapsible__toggle')!;
-    expect(normalize(toggle.textContent)).toBe('Movimentos de peças1');
-    expect(toggle.getAttribute('aria-expanded')).toBe('true');
-    expect(section.querySelector<HTMLElement>('.collapsible__body')!.hidden).toBe(false);
-    const row = section.querySelector('.record-rows li')!;
-    expect(normalize(row.querySelector('.record-row__chips .mini-chip')!.textContent)).toBe('Aplicação');
-    expect(normalize(row.querySelector('.record-row__code')!.textContent)).toBe('PCA-1');
-    expect(normalize(row.querySelector('.record-row__meta')!.textContent)).toContain('tech');
-    expect(normalize(row.textContent)).toContain('Revertida');
-    expect(normalize(row.textContent)).toContain('Troca da placa');
-    expect(root().querySelector('details')).toBeNull();
-    toggle.click(); render();
-    expect(section.querySelector<HTMLElement>('.collapsible__body')!.hidden).toBe(true);
-  });
 });
