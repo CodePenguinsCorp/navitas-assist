@@ -21,6 +21,7 @@ Fora de `local` e `test`, `DB_URL`, `DB_USER` e `DB_PASSWORD` são obrigatórias
 | `DB_PASSWORD` | local: `navitas123` | Fora de `local`/`test` | Não pode ser senha de exemplo. |
 | `MIGRATION_DB_URL`, `MIGRATION_DB_USER`, `MIGRATION_DB_PASSWORD` | os de `DB_*` | Não | Conexão própria do Flyway (ex.: endpoint direto quando o app usa pooler). Não as defina vazias. |
 | `DB_POOL_MAX` | `5` | Não | Máximo de conexões do Hikari (sem conexão ociosa obrigatória; 30 s para conectar). |
+| `DB_STATEMENT_TIMEOUT` | `50s` | Não | Limite por consulta no PostgreSQL (`statement_timeout`, aplicado na conexão do pool da aplicação). Estourou: `503`. O Flyway usa conexão própria e não herda o limite. Aceita unidades do PostgreSQL (`50s`, `2min`); `0` desliga. |
 | `TEST_DB_URL`, `TEST_DB_USER`, `TEST_DB_PASSWORD` | sem padrão | Só nos testes | Com elas, a suíte usa esse PostgreSQL em vez de subir um contêiner (CI). O usuário precisa poder criar bancos. |
 
 Só do Docker Compose (não chegam ao Spring diretamente; o Compose monta `DB_URL`, `DB_USER` e `DB_PASSWORD` a partir delas):

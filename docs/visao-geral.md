@@ -79,6 +79,10 @@ A ordem é fixa e estável (desempate por `id`): ordens de serviço na ordem da 
 
 Para dados que não podem ficar incompletos há rotas sem paginação: `GET /api/rmas/board` (Kanban e dashboard, aceita `query` e `status`), `GET /api/clients/options` e `GET /api/products/options` (seletores, por nome). Os totais dos cartões vêm de `/api/clients/summary`, `/api/products/summary` (inclui `categories`) e `/api/users/summary`. No frontend, as telas oferecem 10, 20, 50 ou 100 por página; a busca por texto aguarda 300 ms, mudar busca, filtro ou tamanho volta à primeira página e, ao excluir o último item de uma página, a tela volta à última página existente.
 
+## Limites de tempo
+
+Nenhuma tela fica carregando para sempre. O frontend interrompe qualquer chamada à API que passe de 45 s e mostra "A operação demorou mais do que o esperado e foi interrompida. Verifique a conexão e tente novamente."; nas escritas o texto acrescenta "Confira se a alteração foi salva antes de repetir.", porque o servidor pode ter concluído a operação, e nenhuma escrita é repetida sozinha. O banco cancela cada consulta que passe de 50 s (`DB_STATEMENT_TIMEOUT`) e a API responde `503` com mensagem em português; o Flyway não herda esse limite. Têm limite de 120 s no frontend as exportações CSV (`/api/reports/rmas/export.csv`, `/api/reports/rmas/summary/export.csv`), o laudo em PDF (`/api/rmas/{id}/report.pdf`) e a prévia e a confirmação da importação CSV (`/api/{clients|products}/imports/preview` e `/confirm`). O contador de notificações (`/api/notifications/summary`) e as chamadas de `/api/auth/` ficam fora do limite do frontend.
+
 ## Glossário
 
 OS significa Ordem de Serviço. RMA é o nome interno mantido em identificadores de código, rotas, tabelas e permissões (`rma`/`Rma`). A interface e os textos usam Ordem de Serviço ou OS; o código sequencial segue `OS-AAAA-NNNNNN`.

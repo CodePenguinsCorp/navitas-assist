@@ -6,7 +6,7 @@ Convenções:
 
 - Prefixo `/api`; JSON, exceto onde indicado (CSV, PDF, `multipart/form-data`).
 - Escritas (`POST`, `PUT`, `PATCH`, `DELETE`) exigem o header `X-XSRF-TOKEN` (ver `GET /api/auth/csrf`).
-- Sem sessão: `401`; sem permissão: `403`; validação e regra de negócio: `400` com mensagem em português; não encontrado: `404`.
+- Sem sessão: `401`; sem permissão: `403`; validação e regra de negócio: `400` com mensagem em português; não encontrado: `404`; consulta que passa do limite do banco (50 s): `503` com a mensagem "A consulta demorou mais do que o esperado e foi interrompida. Tente novamente ou use filtros mais específicos." (ver [visao-geral.md](visao-geral.md#limites-de-tempo)).
 - Listagens paginadas: ver [visao-geral.md](visao-geral.md#paginação-das-consultas).
 - S12: o parâmetro `query` aceita até 100 caracteres nas buscas de clientes, produtos, peças, perfis, usuários e OS (lista, resumo e quadro); o filtro salvo do Kanban segue o mesmo limite. A criação e a atualização de OS aceitam até 20 itens. Os limites recusam cargas excessivas com `400`, antes de executar a consulta ou persistir os itens. Modelos de protocolo mantêm o teto existente de 100 itens.
 - Rotas de `/api/**` não listadas aqui exigem `usuarios.gerir` e `perfis.gerir`.
