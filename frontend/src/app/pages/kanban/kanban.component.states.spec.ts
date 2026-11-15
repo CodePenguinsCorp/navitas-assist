@@ -3,7 +3,8 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
 import { provideRouter } from '@angular/router';
-import { Subject, of } from 'rxjs';
+import { Subject, of, map } from 'rxjs';
+import { RMA_STATUS_FLOW, CLOSED_RMA_STATUSES } from '../../core/mock-data';
 import { AssignableUserResponse, RmaBoardCardResponse, RmaResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
@@ -38,7 +39,10 @@ describe('KanbanComponent reading states and count', () => {
         providePermissions(profilePermissions('ADMIN')),
         { provide: CatalogService, useValue: { listAssignableUsers: () => { const source = new Subject<AssignableUserResponse[]>(); users.push(source); return source; } } },
         { provide: KanbanViewService, useValue: { list: () => of([]) } },
-        { provide: RmaService, useValue: { listBoard: () => { const source = new Subject<RmaBoardCardResponse[]>(); boards.push(source); return source; } } }
+        { provide: RmaService, useValue: { listBoardColumn: (filters: { status: string }) => {
+          if (filters.status === RMA_STATUS_FLOW[0]) boards.push(new Subject<RmaBoardCardResponse[]>());
+          return boards.at(-1)!.pipe(map(cards => ({ cards: cards.filter(card => card.status === filters.status), total: cards.filter(card => card.status === filters.status).length, hasMore: false, page: 0, size: 20 })));
+        }, getBoardCounts: () => boards.at(-1)!.pipe(map(cards => ({ total: cards.length, statusCounts: {}, highPriority: cards.filter(card => card.priority === 'HIGH').length, active: cards.filter(card => !CLOSED_RMA_STATUSES.includes(card.status)).length, closed: cards.filter(card => CLOSED_RMA_STATUSES.includes(card.status)).length, waitingPart: 0 }))) } }
       ]
     }).compileComponents();
     fixture = TestBed.createComponent(KanbanComponent);
@@ -131,21 +135,6 @@ describe('KanbanComponent reading states and count', () => {
     expect(firstIndicator()).toBe('0 OS');
   });
 
-  it('offers Limpar filtros when a filter hides every OS', () => {
-    respond(0, [FIRST, SECOND]);
-    filters().patchValue({ query: 'inexistente' });
-    render();
-    const empty = [...page.querySelectorAll<HTMLElement>('.kanban-empty')].find((item) => item.textContent?.includes('Nenhuma OS encontrada'));
-    expect(empty).toBeDefined();
-    expect(text()).not.toContain('Nenhuma OS cadastrada');
-    const clear = [...empty!.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.trim() === 'Limpar filtros');
-    expect(clear).toBeDefined();
-    clear!.click();
-    render();
-    expect(filters().getRawValue().query).toBe('');
-    expect(page.querySelectorAll('.board-card')).toHaveLength(2);
-  });
-
   it('discards an older read that answers after a newer one', () => {
     (fixture.componentInstance as unknown as { retryLoad(): void }).retryLoad();
     render();
@@ -158,23 +147,5 @@ describe('KanbanComponent reading states and count', () => {
     expect(boards[0].observed).toBe(true);
     fixture.destroy();
     expect(boards[0].observed).toBe(false);
-  });
-
-  it('puts the total first: "1 OS" without filter and "X de Y" with filter, with the real singular', () => {
-    respond(0, [FIRST]);
-    expect(firstIndicator()).toBe('1 OS');
-    filters().patchValue({ priority: 'HIGH' });
-    render();
-    expect(firstIndicator()).toBe('1 de 1 OS');
-    filters().patchValue({ priority: 'all' });
-    render();
-    (fixture.componentInstance as unknown as { retryLoad(): void }).retryLoad();
-    render();
-    respond(1, [FIRST, SECOND]);
-    expect(firstIndicator()).toBe('2 OS');
-    filters().patchValue({ priority: 'HIGH' });
-    render();
-    expect(firstIndicator()).toBe('1 de 2 OS');
-    expect(summary()!.textContent).toContain('Alta prioridade');
   });
 });

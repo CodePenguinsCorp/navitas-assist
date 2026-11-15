@@ -14,7 +14,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Subscription, finalize, forkJoin, map } from 'rxjs';
+import { Subscription, finalize, forkJoin, map, of } from 'rxjs';
 import {
   CLOSED_RMA_STATUSES,
   RMA_PRIORITY_LABELS,
@@ -30,19 +30,20 @@ import {
   RmaPriority,
   RmaAssigneeUpdateRequest,
   RmaBoardCardResponse,
+  RmaBoardCountsResponse,
+  RmaBoardFilters,
+  RmaBoardPageResponse,
   RmaResponse,
   RmaStatus,
   WarrantyStatus,
 } from '../../core/models';
-import { ClockService } from '../../core/services/clock.service';
-import { DEADLINE_FILTER_OPTIONS, DeadlineFilterValue, businessToday, deadlineStatus } from '../../core/utils/rma-deadline';
+import { DEADLINE_FILTER_OPTIONS, DeadlineFilterValue } from '../../core/utils/rma-deadline';
 import { PermissionService } from '../../core/services/permission.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
-import { businessDateInputValue } from '../../core/utils/date';
-import { boardProductSummary, formatDate, normalizeText, statusLabel, toBoardCard, warrantyCode } from '../../core/utils/rma-ui';
+import { boardProductSummary, formatDate, normalizeText, statusLabel, toBoardCard } from '../../core/utils/rma-ui';
 import {
   CustomSelectComponent,
   CustomSelectOption,
@@ -50,9 +51,9 @@ import {
 import { BoundedFilterPanelsDirective } from '../../shared/form-controls/bounded-filter-panels.directive';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
-import { RmaKanbanBoardComponent } from '../../shared/rma-kanban-board/rma-kanban-board.component';
+import { RmaBoardColumnState, RmaKanbanBoardComponent } from '../../shared/rma-kanban-board/rma-kanban-board.component';
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
-import { RmaStatusFieldComponent } from '../../shared/rma-status-field/rma-status-field.component';
+import { ToastService } from '../../core/services/toast.service';
 import { RmaDetailModalComponent } from '../../shared/rma-detail-modal/rma-detail-modal.component';
 
 interface KanbanHeroStat {
@@ -123,7 +124,6 @@ const FILTER_LABELS: Record<AdvancedFilterKey, string> = {
     DatePickerComponent,
     RmaKanbanBoardComponent,
     RmaDetailModalComponent,
-    RmaStatusFieldComponent,
     ModalFocusDirective,
     PageHeaderComponent,
   ],
@@ -131,7 +131,6 @@ const FILTER_LABELS: Record<AdvancedFilterKey, string> = {
   styleUrl: './kanban.component.css',
 })
 export class KanbanComponent {
-  private readonly clock = inject(ClockService);
   protected readonly deadlineFilterOptions = DEADLINE_FILTER_OPTIONS;
   private readonly formBuilder = inject(FormBuilder);
   private readonly permissions = inject(PermissionService);
@@ -142,6 +141,16 @@ export class KanbanComponent {
   private readonly destroyRef = inject(DestroyRef);
   private loadRequest?: Subscription;
   private detailRequest?: Subscription;
+  private incrementalRequests = new Subscription();
+  private reconcileRequest?: Subscription;
+  private queryGeneration = 0;
+  private searchTimer?: ReturnType<typeof setTimeout>;
+  protected readonly columnStates = signal<Partial<Record<RmaStatus, RmaBoardColumnState>>>({});
+  protected readonly liveMessage = signal('');
+  protected readonly columnFeedback = computed(() => Object.values(this.columnStates()).some(column => column?.loadingMore || column?.error));
+  private readonly countsSignal = signal<RmaBoardCountsResponse | null>(null);
+  private readonly overallCount = signal(0);
+  private readonly board = viewChild(RmaKanbanBoardComponent);
   private readonly filtersToggle = viewChild.required<ElementRef<HTMLButtonElement>>('filtersToggle');
   private readonly chipRemoveButtons = viewChildren<ElementRef<HTMLButtonElement>>('chipRemove');
 
@@ -175,13 +184,12 @@ export class KanbanComponent {
   protected readonly detailCard = computed(() => this.rmasSignal().find((rma) => rma.id === this.detailRmaId()) ?? null);
   protected readonly productSummary = boardProductSummary;
   protected readonly statusText = statusLabel;
-  private readonly statusFeedbackRmaId = signal<number | null>(null);
-  protected readonly statusFeedbackRma = computed(() => this.rmasSignal().find(rma => rma.id === this.statusFeedbackRmaId()) ?? null);
   private readonly assignableUsersSignal = signal<AssignableUserResponse[]>([]);
   private readonly viewsSignal = signal<KanbanViewResponse[]>([]);
   /** Set by the first change to the filters: a late default view must not overwrite what the person already chose. */
   private filtersEdited = false;
-  private readonly boardStatus = viewChild.required<RmaStatusFieldComponent>('boardStatus');
+  private readonly toasts = inject(ToastService);
+  private readonly cardRevisions = new Map<number, number>();
 
   protected readonly filtersForm = this.formBuilder.nonNullable.group({
     blocked: ['all' as KanbanFilterValues['blocked']],
@@ -202,9 +210,7 @@ export class KanbanComponent {
       initialValue: this.filtersForm.getRawValue(),
     },
   );
-  protected readonly filteredRmas = computed(() =>
-    filterKanbanRmas(this.rmasSignal(), this.filters(), this.clock.now()),
-  );
+  protected readonly filteredRmas = this.rmasSignal.asReadonly();
   protected readonly activeFilterCount = computed(() => countActiveFilters(this.filters()));
   protected readonly advancedFiltersOpen = signal(false);
   protected readonly activeFilterChips = computed<ReadonlyArray<KanbanFilterChip>>(() => {
@@ -214,7 +220,7 @@ export class KanbanComponent {
       label: `${FILTER_LABELS[key]}: ${this.filterValueLabel(key, filters[key])}`,
     }));
   });
-  protected readonly totalRmas = computed(() => this.rmasSignal().length);
+  protected readonly totalRmas = this.overallCount.asReadonly();
   protected readonly activeView = computed(() =>
     this.viewsSignal().find((view) => view.id === this.activeViewId()),
   );
@@ -248,26 +254,18 @@ export class KanbanComponent {
   protected readonly canUpdateAssignee = computed(() => this.permissions.hasPermission('rma.responsavel'));
   /** `rma.editar`: due date, priority and warranty become editable in the detail. */
   protected readonly canEditRma = computed(() => this.permissions.hasPermission('rma.editar'));
-  protected readonly activeCount = computed(
-    () => this.filteredRmas().filter((rma) => !CLOSED_RMA_STATUSES.includes(rma.status)).length,
-  );
-  protected readonly highPriorityCount = computed(
-    () => this.filteredRmas().filter((rma) => rma.priority === 'HIGH').length,
-  );
-  protected readonly waitingPartCount = computed(
-    () => this.filteredRmas().filter((rma) => rma.status === 'WAITING_PART').length,
-  );
-  protected readonly closedCount = computed(
-    () => this.filteredRmas().filter((rma) => CLOSED_RMA_STATUSES.includes(rma.status)).length,
-  );
+  protected readonly activeCount = computed(() => this.countsSignal()?.active ?? 0);
+  protected readonly highPriorityCount = computed(() => this.countsSignal()?.highPriority ?? 0);
+  protected readonly waitingPartCount = computed(() => this.countsSignal()?.waitingPart ?? 0);
+  protected readonly closedCount = computed(() => this.countsSignal()?.closed ?? 0);
   /** Indicators belong to a current successful read: hidden before it and after a failure. */
-  protected readonly boardReady = computed(() => this.hasLoaded() && !this.loadFailed());
+  protected readonly boardReady = computed(() => this.hasLoaded() && !this.loadFailed() && !this.loading());
   /**
    * First indicator: "Y ordens de serviço" without filter, "X de Y ordens de serviço" with one, with the singular of the last number.
    */
   protected readonly totalSummary = computed(() => {
     if (!this.boardReady()) return null;
-    const count = this.filteredRmas().length;
+    const count = this.countsSignal()?.total ?? 0;
     const overall = this.activeFilterCount() > 0 ? this.totalRmas() : null;
     return { count, overall, label: (overall ?? count) === 1 ? 'OS' : 'OS' };
   });
@@ -308,9 +306,21 @@ export class KanbanComponent {
   });
 
   constructor() {
+    let previousQuery = this.filtersForm.getRawValue().query;
+    this.destroyRef.onDestroy(() => { this.cancelReads(); clearTimeout(this.searchTimer); });
     this.filtersForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
       this.filtersEdited = true;
       this.releaseDivergentView();
+      const query = this.filtersForm.getRawValue().query;
+      const debounce = query !== previousQuery;
+      previousQuery = query;
+      this.cancelReads();
+      clearTimeout(this.searchTimer);
+      this.columnStates.set({});
+      this.rmasSignal.set([]);
+      this.loading.set(true);
+      if (debounce) this.searchTimer = setTimeout(() => this.loadKanban(), 300);
+      else this.loadKanban();
     });
     this.loadKanban();
     this.loadViews();
@@ -371,9 +381,16 @@ export class KanbanComponent {
 
   /** Each write (assignee, status, priority, impediment, due date) replaces only its card with the response. */
   protected applyRmaUpdate(updated: RmaResponse): void {
+    if (this.loading()) {
+      if (this.detailRmaId() === updated.id) this.detailSignal.set(updated);
+      this.loadKanban();
+      return;
+    }
     const card = toBoardCard(updated);
-    this.rmasSignal.update((rmas) => rmas.map((rma) => rma.id === updated.id ? card : rma));
+    const previous = this.rmasSignal().find(rma => rma.id === updated.id);
+    this.applyCard(card);
     if (this.detailRmaId() === updated.id) this.detailSignal.set(updated);
+    this.reconcileColumns([...new Set([previous?.status ?? card.status, card.status])]);
   }
 
   protected clearFilters(): void {
@@ -599,56 +616,229 @@ export class KanbanComponent {
     }
   }
 
-  protected dropOnColumn(event: DragEvent, status: RmaStatus): void {
+  protected dropOnColumn(event: DragEvent, status: RmaStatus, beforeId: number | null = null): void {
     event.preventDefault();
-
-    if (!this.canUpdateStatus() || this.boardUpdatingId() !== null) {
-      this.clearBoardDragState();
-      return;
-    }
-
-    const draggedId = this.draggedRmaId();
-    const dragged = this.rmasSignal().find((item) => item.id === draggedId);
-    if (!dragged) {
-      this.clearBoardDragState();
-      return;
-    }
-
-    if (dragged.status === status) {
-      this.selectRma(dragged);
-      this.clearBoardDragState();
-      return;
-    }
-
-    this.statusFeedbackRmaId.set(dragged.id);
-    this.boardStatus().move(status, dragged);
+    const dragged = this.rmasSignal().find(item => item.id === this.draggedRmaId());
+    if (dragged) this.reorderCard(dragged, status, beforeId);
     this.clearBoardDragState();
   }
 
-  /** Only the latest read counts: a newer one (retry or reload) cancels the previous, as does destroy. */
-  private loadKanban(): void {
-    this.loadRequest?.unsubscribe();
-    this.loading.set(true);
+  protected moveByKeyboard(rma: RmaBoardCardResponse, direction: number): void {
+    if (!this.canUpdateStatus() || this.boardUpdatingId() !== null) return;
+    const state = this.columnStates()[rma.status];
+    if (!state || state.loadingMore) return;
+    const index = state.cards.findIndex(card => card.id === rma.id);
+    if (index < 0 || index + direction < 0) return;
+    if (index + direction >= state.cards.length) {
+      if (state.hasMore) this.loadMore(rma.status);
+      return;
+    }
+    const beforeId = direction < 0 ? state.cards[index - 1].id : state.cards[index + 2]?.id ?? null;
+    this.reorderCard(rma, rma.status, beforeId);
+  }
 
-    this.loadRequest = forkJoin({
-      rmas: this.rmaService.listBoard(),
-      assignableUsers: this.catalogService.listAssignableUsers(),
-    })
-      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false)))
+  protected reorderCard(rma: RmaBoardCardResponse, status: RmaStatus, beforeId: number | null): void {
+    if (!this.canUpdateStatus() || this.boardUpdatingId() !== null) return;
+    if (!this.columnStates()[rma.status]?.cards.some(card => card.id === rma.id)) return;
+    const target = this.columnStates()[status] ?? { cards: [], total: 0, hasMore: false, loadingMore: false, error: false, nextPage: 1, generation: this.queryGeneration };
+    if (beforeId === rma.id) return;
+    this.pauseColumnReads();
+    const snapshot = this.columnStates();
+    const source = snapshot[rma.status]!.cards;
+    const originalBefore = source[source.findIndex(card => card.id === rma.id) + 1]?.id ?? null;
+    const counts = this.countsSignal();
+    const generation = this.queryGeneration;
+    const items = target.cards.filter(card => card.id !== rma.id);
+    const index = beforeId === null ? items.length : items.findIndex(card => card.id === beforeId);
+    if (index < 0) return;
+    const afterId = items[index - 1]?.id ?? null;
+    const moved = { ...rma, status };
+    if (!this.columnStates()[status]) this.setColumn(status, target);
+    this.applyCard(moved);
+    this.setColumn(status, { cards: [...items.slice(0, index), moved, ...items.slice(index)] });
+    this.syncCards();
+    this.boardUpdatingId.set(rma.id);
+    this.selectedRmaId.set(rma.id);
+    this.pageError.set('');
+    this.rmaService.updateBoardPosition(rma.id, { status, afterId, beforeId })
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.boardUpdatingId.set(null)))
       .subscribe({
-        next: ({ rmas, assignableUsers }) => {
-          this.rmasSignal.set(rmas);
-          this.assignableUsersSignal.set(assignableUsers);
-          this.syncSelection(rmas);
-          this.hasLoaded.set(true);
-          this.loadFailed.set(false);
-          this.loadErrorMessage.set('');
+        next: card => {
+          if (generation !== this.queryGeneration) { this.loadKanban(); return; }
+          this.applyCard(card);
+          const revision = this.cardRevisions.get(card.id);
+          this.toasts.show({ message: rma.status === status ? 'Ordem atualizada' : `Movido para ${statusLabel(status)}`, tone: 'success',
+            actions: [{ label: 'Desfazer', run: () => {
+              const current = this.rmasSignal().find(item => item.id === card.id);
+              if (!current || revision !== this.cardRevisions.get(card.id)) {
+                this.pageError.set('O status mudou. Não é possível desfazer esta movimentação.'); return;
+              }
+              this.reorderCard(current, rma.status, originalBefore);
+            } }],
+          });
+          this.liveMessage.set(`${card.code} na posição ${index + 1} de ${statusLabel(status)}.`);
+          this.restoreCardFocus(card.id);
+          this.reconcileColumns([...new Set([rma.status, status])], card.id);
         },
-        error: (error) => {
+        error: error => {
+          if (generation !== this.queryGeneration) return;
+          this.columnStates.set(snapshot); this.countsSignal.set(counts); this.syncCards();
+          const message = extractHttpErrorMessage(error, 'Não foi possível mover a OS. Tente novamente.');
+          this.pageError.set(message); this.liveMessage.set(message); this.restoreCardFocus(rma.id);
+        },
+      });
+  }
+
+  protected loadMore(status: RmaStatus): void {
+    const state = this.columnStates()[status];
+    if (!state || state.loadingMore || !state.hasMore || this.boardUpdatingId() !== null) return;
+    if (state.nextPage === 0) { this.reconcileColumns([status]); return; }
+    const generation = this.queryGeneration;
+    this.setColumn(status, { loadingMore: true, error: false });
+    this.liveMessage.set(`Carregando mais em ${statusLabel(status)}.`);
+    const request = this.rmaService.listBoardColumn({ ...this.serverFilters(), status }, state.nextPage)
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: page => {
+          if (generation !== this.queryGeneration) return;
+          const existing = this.columnStates()[status]!.cards;
+          this.setColumn(status, this.pageState(page, generation, uniqueCards([...existing, ...page.cards])));
+          this.syncCards();
+          this.liveMessage.set(`${this.columnStates()[status]!.cards.length} de ${page.total} OS em ${statusLabel(status)}.`);
+        },
+        error: () => {
+          if (generation !== this.queryGeneration) return;
+          this.setColumn(status, { loadingMore: false, error: true });
+          this.liveMessage.set('Não foi possível carregar mais. Tentar novamente.');
+        },
+      });
+    this.incrementalRequests.add(request);
+  }
+
+  private cancelReads(): void {
+    this.queryGeneration++;
+    this.loadRequest?.unsubscribe(); this.reconcileRequest?.unsubscribe();
+    this.incrementalRequests.unsubscribe(); this.incrementalRequests = new Subscription();
+  }
+
+  private pauseColumnReads(): void {
+    this.incrementalRequests.unsubscribe(); this.incrementalRequests = new Subscription();
+    this.reconcileRequest?.unsubscribe();
+    for (const status of this.visibleStatuses()) {
+      if (this.columnStates()[status]?.loadingMore) this.setColumn(status, { loadingMore: false, nextPage: 0, hasMore: true });
+    }
+  }
+
+  private serverFilters(): RmaBoardFilters { return toPersistedFilters(this.filtersForm.getRawValue()); }
+
+  private visibleStatuses(): RmaStatus[] {
+    const status = this.filtersForm.getRawValue().status;
+    return RMA_STATUS_FLOW.filter(item => status === 'all' || status === item);
+  }
+
+  private pageState(page: RmaBoardPageResponse, generation: number, cards = page.cards): RmaBoardColumnState {
+    return { cards, total: page.total, hasMore: page.hasMore, loadingMore: false, error: false, nextPage: page.page + 1, generation };
+  }
+
+  private setColumn(status: RmaStatus, patch: Partial<RmaBoardColumnState>): void {
+    this.columnStates.update(columns => ({ ...columns, [status]: { ...columns[status]!, ...patch } }));
+  }
+
+  private syncCards(): void { this.rmasSignal.set(RMA_STATUS_FLOW.flatMap(status => this.columnStates()[status]?.cards ?? [])); }
+
+  private loadKanban(): void {
+    clearTimeout(this.searchTimer);
+    this.cancelReads();
+    const generation = this.queryGeneration;
+    this.loading.set(true);
+    const filters = this.serverFilters();
+    this.loadRequest = forkJoin({
+      pages: forkJoin(this.visibleStatuses().map(status => this.rmaService.listBoardColumn({ ...filters, status }))),
+      counts: this.rmaService.getBoardCounts(filters),
+      overall: this.rmaService.getBoardCounts(),
+      assignableUsers: this.catalogService.listAssignableUsers(),
+    }).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => { if (generation === this.queryGeneration) this.loading.set(false); }))
+      .subscribe({
+        next: ({ pages, counts, overall, assignableUsers }) => {
+          if (generation !== this.queryGeneration) return;
+          const columns: Partial<Record<RmaStatus, RmaBoardColumnState>> = {};
+          this.visibleStatuses().forEach((status, index) => columns[status] = this.pageState(pages[index], generation));
+          this.columnStates.set(columns); this.syncCards();
+          this.countsSignal.set(counts); this.overallCount.set(overall.total);
+          this.assignableUsersSignal.set(assignableUsers); this.syncSelection(this.rmasSignal());
+          this.hasLoaded.set(true); this.loadFailed.set(false); this.loadErrorMessage.set('');
+        },
+        error: error => {
+          if (generation !== this.queryGeneration) return;
           this.loadFailed.set(true);
           this.loadErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível carregar o Kanban.'));
         },
       });
+  }
+
+  private applyCard(card: RmaBoardCardResponse): void {
+    this.cardRevisions.set(card.id, (this.cardRevisions.get(card.id) ?? 0) + 1);
+    const previous = this.rmasSignal().find(item => item.id === card.id);
+    if (previous && previous.status !== card.status) this.setColumn(previous.status, {
+      cards: this.columnStates()[previous.status]!.cards.filter(item => item.id !== card.id),
+      total: Math.max(0, this.columnStates()[previous.status]!.total - 1),
+    });
+    const target = this.columnStates()[card.status];
+    if (target) {
+      const exists = target.cards.some(item => item.id === card.id);
+      this.setColumn(card.status, { cards: exists ? target.cards.map(item => item.id === card.id ? card : item) : [...target.cards, card], total: target.total + (exists ? 0 : 1) });
+    }
+    if (previous) this.countsSignal.update(counts => {
+      if (!counts) return counts;
+      const statusCounts = { ...counts.statusCounts };
+      if (previous.status !== card.status) {
+        statusCounts[previous.status] = Math.max(0, (statusCounts[previous.status] ?? 0) - 1);
+        statusCounts[card.status] = (statusCounts[card.status] ?? 0) + 1;
+      }
+      const closedDelta = Number(CLOSED_RMA_STATUSES.includes(card.status)) - Number(CLOSED_RMA_STATUSES.includes(previous.status));
+      return { ...counts, statusCounts, highPriority: counts.highPriority + Number(card.priority === 'HIGH') - Number(previous.priority === 'HIGH'),
+        closed: counts.closed + closedDelta, active: counts.active - closedDelta, waitingPart: statusCounts.WAITING_PART ?? 0 };
+    });
+    this.syncCards();
+  }
+
+  private reconcileColumns(affected: RmaStatus[], focusId?: number): void {
+    this.reconcileRequest?.unsubscribe();
+    this.incrementalRequests.unsubscribe(); this.incrementalRequests = new Subscription();
+    const visible = this.visibleStatuses();
+    this.columnStates.update(columns => Object.fromEntries(Object.entries(columns).filter(([status]) => visible.includes(status as RmaStatus))));
+    this.syncCards();
+    const statuses = [...new Set([...affected, ...visible.filter(status => this.columnStates()[status]?.loadingMore || this.columnStates()[status]?.nextPage === 0)])]
+      .filter(status => visible.includes(status) && this.columnStates()[status]);
+    const generation = this.queryGeneration;
+    const filters = this.serverFilters();
+    const requests = statuses.map(status => {
+      const count = Math.max(1, Math.ceil(this.columnStates()[status]!.cards.length / 20));
+      this.setColumn(status, { nextPage: 0, loadingMore: true, error: false });
+      return forkJoin(Array.from({ length: count }, (_, page) => this.rmaService.listBoardColumn({ ...filters, status }, page)));
+    });
+    this.reconcileRequest = forkJoin({ pages: requests.length ? forkJoin(requests) : of([]), counts: this.rmaService.getBoardCounts(filters) })
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: ({ pages, counts }) => {
+          if (generation !== this.queryGeneration) return;
+          statuses.forEach((status, index) => {
+            const batch = pages[index];
+            this.setColumn(status, this.pageState(batch.at(-1)!, generation, uniqueCards(batch.flatMap(page => page.cards))));
+          });
+          this.countsSignal.set(counts); this.syncCards();
+          if (focusId !== undefined) this.restoreCardFocus(focusId);
+        },
+        error: () => {
+          if (generation !== this.queryGeneration) return;
+          statuses.forEach(status => this.setColumn(status, { loadingMore: false, error: true, hasMore: true }));
+          this.pageError.set('Não foi possível atualizar o quadro. Tente novamente na coluna.');
+        },
+      });
+  }
+
+  private restoreCardFocus(id: number): void {
+    afterNextRender(() => {
+      if (!this.board()?.focusCard(id)) this.filtersToggle().nativeElement.focus({ preventScroll: true });
+    }, { injector: this.injector });
   }
 
   private loadViews(): void {
@@ -760,63 +950,10 @@ const WARRANTY_FILTER_OPTIONS: ReadonlyArray<CustomSelectOption<WarrantyFilterVa
   })),
 ];
 
-function filterKanbanRmas(rmas: RmaBoardCardResponse[], filters: KanbanFilterValues, now: number): RmaBoardCardResponse[] {
-  const query = normalizeSearch(filters.query);
-  const today = businessToday(now);
-  const filtersUpdated = Boolean(filters.updatedFrom || filters.updatedTo);
-
-  return rmas.filter((rma) => {
-    const matchesQuery = !query || rmaSearchText(rma).includes(query);
-    const matchesPriority = filters.priority === 'all' || rma.priority === filters.priority;
-    const matchesStatus = filters.status === 'all' || rma.status === filters.status;
-    const matchesWarranty =
-      filters.warranty === 'all' ||
-      rma.warranty.includes(warrantyCode(filters.warranty));
-    const matchesAssignee =
-      filters.assignee === 'all' ||
-      (filters.assignee === 'unassigned'
-        ? rma.assigneeId === null
-        : rma.assigneeId === filters.assignee);
-    const matchesEntryDate = isWithinRange(rma.entryDate, filters.entryFrom, filters.entryTo);
-    const matchesUpdatedDate =
-      !filtersUpdated ||
-      isWithinRange(businessDateInputValue(new Date(rma.updatedAt)), filters.updatedFrom, filters.updatedTo);
-
-    return (
-      (filters.blocked === 'all' || Boolean(rma.blockedAt) === (filters.blocked === 'blocked')) &&
-      (filters.deadline === 'all' || deadlineStatus(rma, today) === filters.deadline) &&
-      matchesQuery &&
-      matchesPriority &&
-      matchesStatus &&
-      matchesWarranty &&
-      matchesAssignee &&
-      matchesEntryDate &&
-      matchesUpdatedDate
-    );
-  });
-}
-
-/** Code, client, first product and `searchText` (SKU, batch and serial of every item, names of the others). */
-function rmaSearchText(rma: RmaBoardCardResponse): string {
-  return normalizeSearch([rma.code, rma.clientName, rma.productName, rma.searchText].join(' '));
-}
-
-function normalizeSearch(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('pt-BR')
-    .trim();
-}
-
-function isWithinRange(value: string, from: string, to: string): boolean {
-  return (!from || value >= from) && (!to || value <= to);
-}
-
 function countActiveFilters(filters: KanbanFilterValues): number {
   return Object.entries(filters).filter(([key, value]) => {
     if (key === 'query') {
-      return Boolean(normalizeSearch(String(value)));
+      return Boolean(String(value).trim());
     }
     return value !== '' && value !== 'all';
   }).length;
@@ -876,4 +1013,9 @@ function fromPersistedFilters(filters: KanbanViewFilters): KanbanFilterValues {
 
 function sortViews(views: KanbanViewResponse[]): KanbanViewResponse[] {
   return [...views].sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
+}
+
+function uniqueCards(cards: RmaBoardCardResponse[]): RmaBoardCardResponse[] {
+  const ids = new Set<number>();
+  return cards.filter(card => !ids.has(card.id) && Boolean(ids.add(card.id)));
 }

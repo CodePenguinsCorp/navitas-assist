@@ -110,15 +110,6 @@ export function initialsOf(name: string | null): string {
   return parts.length === 0 ? '?' : ((parts[0][0] ?? '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
 }
 
-export function compareRmasForBoard(left: Pick<RmaResponse, 'priority' | 'updatedAt'>, right: Pick<RmaResponse, 'priority' | 'updatedAt'>): number {
-  const priorityDiff = priorityWeight(right.priority) - priorityWeight(left.priority);
-  if (priorityDiff !== 0) {
-    return priorityDiff;
-  }
-
-  return compareDateStrings(right.updatedAt, left.updatedAt);
-}
-
 /** Projeção explícita do detalhe devolvido por uma escrita no item resumido das coleções. */
 export function toItemSummary(item: RmaItemResponse): RmaItemSummaryResponse {
   return {
@@ -144,7 +135,7 @@ export function warrantyCode(status: WarrantyStatus): string {
   return WARRANTY_CODES[status];
 }
 
-/** Texto da busca local do Kanban: SKU, lote e série de todos os itens e o nome dos itens além do primeiro (como no servidor). */
+/** Texto de compatibilidade do cartão do Kanban: SKU, lote e série de todos os itens e o nome dos itens além do primeiro (como no servidor). */
 function boardSearchText(items: ReadonlyArray<RmaItemSummaryResponse>): string {
   return items
     .flatMap((item, index) => (index === 0 ? [] : [item.productName]).concat(item.productSku, item.batchNumber ?? '', item.serialNumber ?? ''))
@@ -172,27 +163,4 @@ export function toBoardCard(rma: RmaResponse): RmaBoardCardResponse {
 export function normalizeText(value: string): string | null {
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
-}
-
-function priorityWeight(priority: RmaPriority): number {
-  switch (priority) {
-    case 'HIGH':
-      return 3;
-    case 'MEDIUM':
-      return 2;
-    default:
-      return 1;
-  }
-}
-
-function compareDateStrings(left: string | null, right: string | null): number {
-  return parseDateValue(left) - parseDateValue(right);
-}
-
-function parseDateValue(value: string | null): number {
-  if (!value) {
-    return 0;
-  }
-
-  return new Date(value).getTime();
 }

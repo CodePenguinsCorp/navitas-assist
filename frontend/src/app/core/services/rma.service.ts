@@ -1,6 +1,8 @@
-import { HttpClient, HttpContext } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { SKIP_GLOBAL_LOADING } from '../interceptors/loading.interceptor';
+import { RmaBoardFilters, RmaBoardPageResponse, RmaBoardCountsResponse, RmaBoardPositionRequest } from '../models';
 import {
   CreateRmaRequest,
   DiagnosisRequest,
@@ -30,6 +32,20 @@ export interface RmaFilters extends PageQuery {
 @Injectable({ providedIn: 'root' })
 export class RmaService {
   private readonly http = inject(HttpClient);
+
+  listBoardColumn(filters: RmaBoardFilters, page = 0, size = 20): Observable<RmaBoardPageResponse> {
+    const params = boardParams(filters).set('page', page).set('size', size);
+    const context = new HttpContext().set(SKIP_GLOBAL_LOADING, page > 0);
+    return this.http.get<RmaBoardPageResponse>('/api/rmas/board/column', { params, context });
+  }
+
+  getBoardCounts(filters: RmaBoardFilters = {}): Observable<RmaBoardCountsResponse> {
+    return this.http.get<RmaBoardCountsResponse>('/api/rmas/board/counts', { params: boardParams(filters) });
+  }
+
+  updateBoardPosition(id: number, payload: RmaBoardPositionRequest): Observable<RmaBoardCardResponse> {
+    return this.http.put<RmaBoardCardResponse>(`/api/rmas/${id}/board-position`, payload);
+  }
 
   list(filters: RmaFilters = {}): Observable<PageResponse<RmaListItemResponse>> {
     const params = buildPageParams(filters, { query: filters.query, status: filters.status });
@@ -95,4 +111,12 @@ export class RmaService {
   upsertDiagnosis(id: number, payload: DiagnosisRequest): Observable<RmaResponse> {
     return this.http.put<RmaResponse>(`/api/rmas/${id}/diagnosis`, payload);
   }
+}
+
+function boardParams(filters: RmaBoardFilters): HttpParams {
+  let params = new HttpParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== null && value !== undefined && String(value).trim() !== '') params = params.set(key, String(value).trim());
+  }
+  return params;
 }

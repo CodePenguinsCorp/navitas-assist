@@ -1,3 +1,4 @@
+import { boardTestApi } from '../../testing/rma-board-fixtures';
 import { Signal, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -26,6 +27,7 @@ async function setup(role: LegacyProfileCode) {
 }
 
 async function setupWith(permissions: readonly Permission[] | Signal<readonly Permission[]>) {
+  const boardApi = boardTestApi(() => [RMA]);
   await TestBed.configureTestingModule({
     imports: [KanbanComponent],
     providers: [
@@ -37,7 +39,7 @@ async function setupWith(permissions: readonly Permission[] | Signal<readonly Pe
         provide: KanbanViewService,
         useValue: { list: () => of([]), create: vi.fn(), update: vi.fn(), setDefault: () => of({}), delete: () => of(undefined) }
       },
-      { provide: RmaService, useValue: { listBoard: () => of([toBoardCard(RMA)]), getById: () => of(RMA), updatePriority: (id: number, priority: RmaResponse['priority']) => of({ ...RMA, id, priority }) } }
+      { provide: RmaService, useValue: { ...boardApi, getById: () => of(RMA), updatePriority: (id: number, priority: RmaResponse['priority']) => of(boardApi.remember({ ...RMA, id, priority })) } }
     ]
   }).compileComponents();
   const fixture: ComponentFixture<KanbanComponent> = TestBed.createComponent(KanbanComponent);

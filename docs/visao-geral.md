@@ -13,7 +13,7 @@ Navitas Assist é um sistema web para diagnóstico técnico e acompanhamento de 
 | Módulo | O que faz |
 | --- | --- |
 | Ordens de serviço | Abertura, lista, detalhe, histórico de status, impedimentos, responsável, diagnóstico, reparo, garantia e data limite. |
-| Kanban | Quadro por status, filtros avançados, visualizações salvas por usuário, arrastar para mudar de status. |
+| Kanban | Quadro paginado por status com rolagem infinita, ordem manual persistida, filtros no servidor, visualizações salvas, arraste e Alt+Setas. |
 | Dashboard | Indicadores de ordens de serviço abertas, prioridade e atrasados. |
 | Clientes e produtos | Cadastros com busca paginada e importação CSV. |
 | Peças | Cadastro, estoque, movimentações, reservas e aplicação nas ordens de serviço. |
@@ -77,7 +77,7 @@ A ordem é fixa e estável (desempate por `id`): ordens de serviço na ordem da 
 | `/api/products` | `query`, `category`, `hasFirmware` |
 | `/api/users` | `query`, `profileId`, `active` |
 
-Para dados que não podem ficar incompletos há rotas sem paginação: `GET /api/rmas/board` (Kanban, aceita `query` e `status`; o payload enxuto está em [kanban-payload.md](kanban-payload.md)), `GET /api/clients/options` e `GET /api/products/options` (seletores, por nome). Os totais dos cartões vêm de `/api/clients/summary`, `/api/products/summary` (inclui `categories`) e `/api/users/summary`. No frontend, as telas oferecem 10, 20, 50 ou 100 por página; a busca por texto aguarda 300 ms, mudar busca, filtro ou tamanho volta à primeira página e, ao excluir o último item de uma página, a tela volta à última página existente.
+O Kanban usa `GET /api/rmas/board/column` (20 cartões por coluna) e `/api/rmas/board/counts` (totais filtrados), com ordem manual acima dos cartões automáticos. O contrato está em [kanban-payload.md](kanban-payload.md). `/api/rmas/board` continua compatível para leitura completa. Seletores usam `GET /api/clients/options` e `GET /api/products/options`, sem paginação e por nome. Os totais dos cartões vêm de `/api/clients/summary`, `/api/products/summary` (inclui `categories`) e `/api/users/summary`. No frontend, as telas oferecem 10, 20, 50 ou 100 por página; a busca por texto aguarda 300 ms, mudar busca, filtro ou tamanho volta à primeira página e, ao excluir o último item de uma página, a tela volta à última página existente.
 
 ## Limites de tempo
 

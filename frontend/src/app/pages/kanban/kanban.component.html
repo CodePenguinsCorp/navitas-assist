@@ -22,7 +22,7 @@
   }
 
   @if (pageError()) {
-    <article class="status-card panel">
+    <article class="status-card panel" role="alert">
       <h3>{{ pageError() }}</h3>
     </article>
   }
@@ -242,7 +242,7 @@
         <strong>Nenhuma OS cadastrada</strong>
         <p>As ordens de serviço abertas aparecem aqui por etapa do atendimento.</p>
       </article>
-    } @else if (!loading() && filteredRmas().length === 0) {
+    } @else if (!loading() && filteredRmas().length === 0 && !columnFeedback()) {
       <article class="kanban-empty">
         <strong>Nenhuma OS encontrada</strong>
         <p>Ajuste ou limpe os filtros para voltar a visualizar os atendimentos.</p>
@@ -250,25 +250,26 @@
       </article>
     }
 
-    <app-rma-status-field #boardStatus [rma]="statusFeedbackRma()" [showSelector]="false" (saved)="applyRmaUpdate($event)" (busyChange)="boardUpdatingId.set($event ? selectedRmaId() : null)" />
 
-    @if (boardReady() && (loading() || filteredRmas().length > 0)) {
+    @if (boardReady() && (filteredRmas().length > 0 || columnFeedback())) {
       <app-rma-kanban-board
         [rmas]="filteredRmas()"
+        [columnStates]="columnStates()"
+        [announcement]="liveMessage()"
         [loading]="loading()"
         [canUpdateStatus]="canUpdateStatus()"
-        [canUpdateAssignee]="canUpdateAssignee()"
         [boardUpdatingId]="boardUpdatingId()"
         [selectedRmaId]="selectedRmaId()"
         [draggedRmaId]="draggedRmaId()"
         [dragTargetStatus]="dragTargetStatus()"
-        [showToolbar]="false"
         (cardSelect)="openDetail($event)"
         (cardDragStart)="startCardDrag($event.event, $event.rma)"
         (cardDragEnd)="endCardDrag()"
         (columnDragOver)="allowColumnDrop($event.event, $event.status)"
         (columnDragLeave)="leaveColumn($event)"
-        (columnDrop)="dropOnColumn($event.event, $event.status)"
+        (columnDrop)="dropOnColumn($event.event, $event.status, $event.beforeId)"
+        (loadMore)="loadMore($event)"
+        (cardReorder)="moveByKeyboard($event.rma, $event.direction)"
       />
     }
   </section>

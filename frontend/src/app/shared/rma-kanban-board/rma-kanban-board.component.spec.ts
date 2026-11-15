@@ -24,7 +24,6 @@ describe('RmaKanbanBoardComponent card', () => {
 
   function renderCards(cards: RmaBoardCardResponse[], inputs: Record<string, unknown> = {}): HTMLElement {
     fixture.componentRef.setInput('rmas', cards);
-    fixture.componentRef.setInput('showToolbar', false);
     for (const [name, value] of Object.entries(inputs)) {
       fixture.componentRef.setInput(name, value);
     }
@@ -37,6 +36,37 @@ describe('RmaKanbanBoardComponent card', () => {
     expect(found, code).toBeDefined();
     return found!;
   }
+
+  it('preserva a ordem recebida em vez de reordenar por prioridade', () => {
+    const host = render([buildRma({ id: 1, code: 'PRIMEIRO', priority: 'LOW' }), buildRma({ id: 2, code: 'SEGUNDO', priority: 'HIGH' })]);
+    expect([...host.querySelectorAll('.board-card h4')].map(c => c.textContent?.trim())).toEqual(['PRIMEIRO', 'SEGUNDO']);
+  });
+
+  it('oferece Alt+Setas com a mesma permissão do arraste', () => {
+    const moved = vi.fn();
+    (fixture.componentInstance as any).cardReorder.subscribe(moved);
+    const host = render([buildRma({})], { canUpdateStatus: true });
+    card(host, 'NAV-0100').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', altKey: true, bubbles: true, cancelable: true }));
+    expect(moved).toHaveBeenCalledWith(expect.objectContaining({ direction: 1 }));
+    render([buildRma({})], { canUpdateStatus: false });
+    moved.mockClear();
+    card(host, 'NAV-0100').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', altKey: true, bubbles: true }));
+    expect(moved).not.toHaveBeenCalled();
+  });
+
+  it('mostra a linha de inserção e envia o sucessor indicado pelo arraste', () => {
+    const dropped = vi.fn();
+    fixture.componentInstance.columnDrop.subscribe(dropped);
+    const host = render([buildRma({ id: 1, code: 'A', status: 'RECEIVED' }), buildRma({ id: 2, code: 'B', status: 'RECEIVED' })],
+      { canUpdateStatus: true, draggedRmaId: 1, dragTargetStatus: 'RECEIVED' });
+    vi.spyOn(card(host, 'B'), 'getBoundingClientRect').mockReturnValue({ top: 100, height: 100 } as DOMRect);
+    const column = host.querySelector<HTMLElement>('[data-status="RECEIVED"]')!;
+    column.dispatchEvent(new MouseEvent('dragover', { clientY: 120, bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+    expect(card(host, 'B').previousElementSibling?.classList.contains('board-insertion')).toBe(true);
+    column.dispatchEvent(new Event('drop', { bubbles: true, cancelable: true }));
+    expect(dropped).toHaveBeenCalledWith(expect.objectContaining({ status: 'RECEIVED', beforeId: 2 }));
+  });
 
   it.each([{ rmas: [] }, { rmas: [buildRma({})] }])('renders only an empty busy container while loading instead of previous cards or column empties ($rmas.length)', ({ rmas }) => {
     const host = render(rmas, { loading: true });

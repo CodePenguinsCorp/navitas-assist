@@ -1,38 +1,32 @@
 @if (loading()) {
   <div class="board-shell" aria-busy="true"></div>
 } @else {
-@if (showToolbar()) {
-  <article class="panel board-toolbar">
-    <div>
-      <h3>{{ toolbarTitle() }}</h3>
-      <p>{{ toolbarDescription() }}</p>
-    </div>
-    @if (boardUpdatingId()) {
-      <span class="status-pill status-checking">Movendo item...</span>
-    }
-  </article>
-}
-
 <div class="board-shell">
+  <p class="sr-only" aria-live="polite" aria-atomic="true">{{ announcement() }}</p>
   <section class="board-grid">
     @for (column of columns(); track column.status) {
       <article
         class="board-column panel"
         [class.is-drop-target]="isDropTarget(column.status)"
         [attr.data-status]="column.status"
-        (dragover)="columnDragOver.emit({ event: $event, status: column.status })"
+        (dragover)="dragOver($event, column.status)"
         (dragleave)="columnDragLeave.emit(column.status)"
-        (drop)="columnDrop.emit({ event: $event, status: column.status })"
+        (drop)="columnDrop.emit({ event: $event, status: column.status, beforeId: insertionBefore() })"
       >
         <header class="board-column__header">
           <h3>{{ column.label }}</h3>
-          <span class="status-pill">{{ column.items.length }}</span>
+          <span class="status-pill">{{ columnStates()[column.status]?.total ?? column.items.length }}</span>
         </header>
 
-        <div class="board-column__stack">
+        <div class="board-column__stack" #stack [attr.aria-busy]="columnStates()[column.status]?.loadingMore || null">
             @for (item of column.items; track item.id) {
+              @if (isDropTarget(column.status) && insertionBefore() === item.id) {
+                <div class="board-insertion" aria-hidden="true"></div>
+              }
               <article
                 class="board-card interactive-card"
+                [attr.data-rma-id]="item.id"
+                [attr.aria-keyshortcuts]="canUpdateStatus() ? 'Alt+ArrowUp Alt+ArrowDown' : null"
                 [class.is-selected]="isSelected(item)"
                 [class.is-dragging]="isDragging(item)"
                 [class.is-updating]="isStatusUpdating(item)"
@@ -40,6 +34,7 @@
                 tabindex="0"
                 (click)="cardSelect.emit(item)"
                 (keydown.enter)="cardSelect.emit(item)"
+                (keydown)="keyboardMove($event, item)"
                 (dragstart)="cardDragStart.emit({ event: $event, rma: item })"
                 (dragend)="cardDragEnd.emit()"
               >
@@ -72,6 +67,22 @@
                 </footer>
               </article>
             }
+          @if (isDropTarget(column.status) && insertionBefore() === null) {
+            <div class="board-insertion" aria-hidden="true"></div>
+          }
+          @if (columnStates()[column.status]?.loadingMore) {
+            @for (placeholder of [1, 2, 3]; track placeholder) {
+              <div class="board-skeleton" aria-hidden="true"></div>
+            }
+          }
+          @if (columnStates()[column.status]?.error) {
+            <p class="board-more-error" role="alert">Não foi possível carregar mais.
+              <button type="button" class="link-button" (click)="loadMore.emit(column.status)">Tentar novamente</button>
+            </p>
+          }
+          <div appBoardSentinel [boardRoot]="stack"
+            [sentinelActive]="boardUpdatingId() === null && !!columnStates()[column.status]?.hasMore && !columnStates()[column.status]?.loadingMore && !columnStates()[column.status]?.error"
+            (reached)="loadMore.emit(column.status)" aria-hidden="true"></div>
 
           @if (!loading() && column.items.length === 0) {
             <p class="board-empty-note">Nenhum item.</p>

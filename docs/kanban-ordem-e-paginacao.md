@@ -1,14 +1,14 @@
 # Kanban: ordem manual e paginação por coluna
 
-Projeto aprovado pelo dono em 15/11/2026. Este documento descreve o contrato a implementar; os endpoints atuais continuam vigentes.
+Projeto aprovado pelo dono em 15/11/2026. Este documento registra o contrato aprovado e a implementação. O endpoint completo continua compatível.
 
-## Análise rápida
+## Análise inicial
 
-Só `pages/kanban` consome `GET /api/rmas/board`. `RmaService.search` carrega todas as OS, busca itens em lote e consulta pontos de status e impedimentos. `RmaBoardRepository` hoje contém apenas essas duas consultas auxiliares. O componente compartilhado agrupa e ordena no cliente; os filtros ficam na página. `KanbanViewService` persiste valores de filtros, sem cartões ou ordem. Existe apenas `V1__baseline.sql`; a próxima versão livre na conferência inicial é V2, a reconferir antes da criação.
+Na análise inicial, só `pages/kanban` consumia `GET /api/rmas/board`. `RmaService.search` carrega todas as OS, busca itens em lote e consulta pontos de status e impedimentos. `RmaBoardRepository` hoje contém apenas essas duas consultas auxiliares. O componente compartilhado agrupava e ordenava no cliente; os filtros ficavam na página. `KanbanViewService` persiste valores de filtros, sem cartões ou ordem. Havia apenas `V1__baseline.sql`; a versão V2 foi reconferida e usada para a coluna de posição.
 
-Decisão proposta: consultas paginadas no PostgreSQL, preservando a montagem enxuta dos cartões. Paginar o resultado já carregado em Java manteria o custo atual. Paginar no cliente não atenderia à redução da carga inicial. Manter `/board` compatível durante a implementação permite entregar backend e frontend separadamente.
+Decisão adotada: consultas paginadas no PostgreSQL, preservando a montagem enxuta dos cartões. Paginar o resultado já carregado em Java manteria o custo atual. Paginar no cliente não atenderia à redução da carga inicial. Manter `/board` compatível durante a implementação permite entregar backend e frontend separadamente.
 
-## Contratos propostos
+## Contratos
 
 | Rota | Permissão | Resposta |
 | --- | --- | --- |
@@ -44,7 +44,7 @@ Ações de status, responsável e prioridade aplicam a resposta localmente e aju
 
 1. Backend e migração: TDD de ordem manual, trecho automático, paginação, filtros combinados, garantia efetiva, prazo, contagens, escrita, movimentação, concorrência com threads reais e permissões/CSRF. Atualizar `SecurityConfig`, `PermissionEquivalenceIntegrationTest`, contratos espelhados e documentação da API, acesso e banco. Commit local próprio.
 2. Frontend: TDD de parâmetros HTTP, exclusão do loading global só nas páginas incrementais, cancelamento, visualizações, observador, repetição após erro, drag, teclado, foco, reversão e indicadores. Remover filtros/comparador locais apenas depois de conferir os demais consumidores. Commit local próprio.
-3. Documentação final em `api.md`, `kanban-payload.md`, `visao-geral.md`, `acesso-e-permissoes.md`, `banco-de-dados.md` e índice. Remover deste documento o estado de proposta somente após implementar e verificar. Commit separado.
+3. Documentação final em `api.md`, `kanban-payload.md`, `visao-geral.md`, `acesso-e-permissoes.md`, `banco-de-dados.md` e índice. Remover deste documento o estado de proposta somente após implementar e verificar. Incluída no commit da etapa 2.
 
 Verificação final: `mvn -B -ntp -f backend/pom.xml verify`; suíte completa do frontend com `TZ=UTC` e o runner informado; `npm --prefix frontend run build`, sem avisos. Apenas um Maven por vez; PostgreSQL via Testcontainers. Sem Docker direto, alterações nas portas reservadas, push ou reescrita de commits. A conferência no navegador fica fora desta prova e será declarada como não realizada.
 
@@ -57,3 +57,19 @@ Verificação final: `mvn -B -ntp -f backend/pom.xml verify`; suíte completa do
 - A renumeração excepcional pode fixar toda a coluna; inserções normais fixam somente o prefixo automático necessário.
 - Trabalho realizado na branch local `feat/kanban-ordem-paginacao`, no repositório solicitado.
 - Etapa 1 verificada com `mvn -B -ntp -f backend/pom.xml verify`: 1.189 testes, nenhuma falha, erro ou teste ignorado; JAR gerado. PostgreSQL isolado via Testcontainers, incluindo migração, equivalência de schema e duas threads reais.
+
+- No frontend, reconciliação preserva os cartões visíveis enquanto relê todas as páginas já carregadas das colunas afetadas; novos offsets ficam bloqueados até concluir.
+- Leituras incrementais são suspensas antes de capturar o estado otimista. A reversão não restaura requisições encerradas nem perde páginas concluídas em paralelo.
+- Se a geração de filtros mudar durante a escrita, o sucesso recarrega a consulta atual; o cartão da geração anterior não é aplicado diretamente.
+- Movimentações para status excluído pelo filtro continuam permitidas. Após reconciliar, o cartão sai do resultado e o foco retorna aos filtros caso deixe de estar visível.
+- Mantida a ação Desfazer, com proteção contra nova alteração da mesma OS. Removidos o seletor oculto de status, filtros locais e comparador sem consumidores.
+
+- Removida também a toolbar interna sem consumidores do componente do quadro, preservando o cabeçalho da página e mantendo o CSS dentro do orçamento de 4 kB.
+- Uma edição do detalhe concluída durante a recarga reinicia a consulta atual, impedindo que uma leitura anterior à escrita recoloque dados antigos.
+
+## Verificação da entrega
+
+- Backend: `mvn -B -ntp -f backend/pom.xml verify`, 1.189 testes aprovados e JAR gerado.
+- Frontend: `TZ=UTC npm --prefix frontend test -- --watch=false --runner-config "C:\Users\joseh\AppData\Local\Temp\vitest-runner.config.mjs"`, 1.863 testes aprovados em 132 arquivos e código de saída zero. Nesta máquina foi usado `npm.cmd` para preservar os argumentos no PowerShell. O log registrou `ECONNRESET`, sem reprovar testes nem alterar o código de saída.
+- Build: `npm --prefix frontend run build`, código de saída zero e nenhum aviso, incluindo os orçamentos de CSS e pacote inicial.
+- Não houve conferência no navegador, nova medição de desempenho ou teste de carga. A concorrência foi exercitada com duas threads reais no PostgreSQL isolado. A migração não foi aplicada à pilha em uso.

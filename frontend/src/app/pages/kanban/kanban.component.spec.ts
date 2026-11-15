@@ -1,3 +1,4 @@
+import { boardTestApi } from '../../testing/rma-board-fixtures';
 import { ToastService } from '../../core/services/toast.service';
 import { Signal, signal } from '@angular/core';
 import { FormGroup } from '@angular/forms';
@@ -30,6 +31,7 @@ describe('KanbanComponent filters', () => {
     failCreateView = false;
     assigneeUpdates = [];
     failAssignee = false;
+    const boardApi = boardTestApi(() => TEST_RMAS);
     await TestBed.configureTestingModule({
       imports: [KanbanComponent],
       providers: [
@@ -73,17 +75,17 @@ describe('KanbanComponent filters', () => {
         {
           provide: RmaService,
           useValue: {
-            listBoard: () => of(TEST_RMAS.map(toBoardCard)),
+            ...boardApi,
             getById: (id: number) => of(TEST_RMAS.find((rma) => rma.id === id)),
-            updateStatus: (id: number, payload: { status: RmaResponse['status'] }) => of({ ...TEST_RMAS.find(rma => rma.id === id)!, status: payload.status }),
+            updateStatus: (id: number, payload: { status: RmaResponse['status'] }) => of(boardApi.remember({ ...TEST_RMAS.find(rma => rma.id === id)!, status: payload.status })),
             updateAssignee: (id: number, payload: { assigneeId: number | null }) => {
               assigneeUpdates.push([id, payload]);
               if (failAssignee) return throwError(() => ({ error: { message: 'Técnico inativo' } }));
-              return of({ ...TEST_RMAS.find((rma) => rma.id === id)!, assigneeId: payload.assigneeId });
+              return of(boardApi.remember({ ...TEST_RMAS.find((rma) => rma.id === id)!, assigneeId: payload.assigneeId }));
             },
             block: (id: number, payload: { reason: string; category: string | null }) => {
               const block = { id: 77, reason: payload.reason, category: payload.category, blockedBy: 'admin', blockedAt: '2026-10-20T11:00:00Z', resolvedBy: null, resolvedAt: null, resolutionNote: null };
-              return of({ ...TEST_RMAS.find((rma) => rma.id === id)!, currentBlock: block, blockHistory: [block] });
+              return of(boardApi.remember({ ...TEST_RMAS.find((rma) => rma.id === id)!, currentBlock: block, blockHistory: [block] }));
             },
           },
         },
@@ -92,22 +94,6 @@ describe('KanbanComponent filters', () => {
 
     fixture = TestBed.createComponent(KanbanComponent);
     component = fixture.componentInstance as unknown as KanbanHarness;
-  });
-
-  it('filtra pela garantia efetiva mesmo quando a calculada diverge', () => {
-    const original = TEST_RMAS[0].items[0];
-    TEST_RMAS[0].items[0] = { ...original, warrantyStatus: WarrantyStatus.IN_WARRANTY,
-      calculatedWarrantyStatus: WarrantyStatus.OUT_OF_WARRANTY, warrantyExpiresAt: '2020-01-01',
-      warrantyOverride: { status: WarrantyStatus.IN_WARRANTY, reason: 'Cortesia', changedBy: 'ana', changedAt: '2026-11-13T12:00:00Z' } };
-    try {
-      reloadBoard();
-      component.filtersForm.patchValue({ warranty: WarrantyStatus.IN_WARRANTY });
-      fixture.detectChanges();
-      expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
-      component.filtersForm.patchValue({ warranty: WarrantyStatus.OUT_OF_WARRANTY });
-      fixture.detectChanges();
-      expect(component.filteredRmas().map((rma) => rma.id)).toEqual([2]);
-    } finally { TEST_RMAS[0].items[0] = original; }
   });
 
   /** Re-reads the board after a spec changed TEST_RMAS: cards are projected once per read, as in the server. */
@@ -165,13 +151,14 @@ describe('KanbanComponent filters', () => {
   it('shows an active advanced filter as a removable chip while the panel is closed', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelectorAll('.board-card')).toHaveLength(2);
+    const reads = vi.spyOn(TestBed.inject(RmaService), 'listBoardColumn');
     component.filtersForm.patchValue({ priority: 'HIGH' });
     fixture.detectChanges();
     expect(component.advancedFiltersOpen()).toBe(false);
     const chips = chipTexts();
     expect(chips).toEqual(['Prioridade: Alta']);
     expect(fixture.nativeElement.querySelector('[aria-label="Remover filtro Prioridade: Alta"]')).not.toBeNull();
-    expect(fixture.nativeElement.querySelectorAll('.board-card')).toHaveLength(1);
+    expect(reads).toHaveBeenCalledWith(expect.objectContaining({ priority: 'HIGH' }));
     expect(findButton('Filtros').textContent).toContain('1');
   });
 
@@ -375,7 +362,7 @@ describe('KanbanComponent filters', () => {
     chooseDetailStatus('IN_TESTS');
     fixture.nativeElement.querySelector('app-rma-detail-modal .modal-close').click();
     fixture.detectChanges();
-    const feedback = fixture.nativeElement.querySelector('.kanban-stage > app-rma-status-field') as HTMLElement;
+    const feedback = fixture.nativeElement as HTMLElement;
     TestBed.inject(ToastService).toasts().find(item => item.message === 'Movido para Reparo')!.actions!.find(action => action.label === 'Desfazer')!.run();
     fixture.detectChanges();
     expect(component.filteredRmas().find(rma => rma.id === TEST_RMAS[0].id)?.status).toBe('IN_TESTS');
@@ -435,14 +422,14 @@ describe('KanbanComponent filters', () => {
     expect(host.querySelectorAll('[role="dialog"]')).toHaveLength(1);
   });
 
-  it('replaces only the assigned card with the response instead of reloading the board', () => {
+  it('reconcilia o cartão atribuído e as contagens com o servidor', () => {
     fixture.detectChanges();
-    const boardReads = vi.spyOn(TestBed.inject(RmaService), 'listBoard');
+    const boardReads = vi.spyOn(TestBed.inject(RmaService), 'getBoardCounts');
     component.openDetail(TEST_RMAS[0]);
     fixture.detectChanges();
     chooseDetailAssignee('Sem responsável');
     fixture.detectChanges();
-    expect(boardReads).not.toHaveBeenCalled();
+    expect(boardReads).toHaveBeenCalled();
     expect(component.filteredRmas().find((rma) => rma.id === TEST_RMAS[0].id)?.assigneeId).toBeNull();
     expect(component.filteredRmas().map((rma) => rma.id)).toEqual(TEST_RMAS.map((rma) => rma.id));
   });
@@ -498,110 +485,6 @@ describe('KanbanComponent filters', () => {
     expect(component.filtersForm.getRawValue().priority).toBe(TEST_RMAS[1].priority);
   });
 
-  it.each([
-    ['nav-0001', 1],
-    ['ARVORE', 1],
-    ['controlador premium', 1],
-    ['lote-beta', 2],
-    ['SERIE-ALFA', 1],
-  ])(
-    'searches by code, client and item tracking data without case or accent sensitivity',
-    (query, id) => {
-      component.filtersForm.patchValue({ query });
-
-      expect(component.filteredRmas().map((rma) => rma.id)).toEqual([id]);
-    },
-  );
-
-  it('combines blockage with existing filters, persists it and clears it', () => {
-    Object.assign(TEST_RMAS[0], { currentBlock: { id: 9, reason: 'Peça pendente', blockedAt: '2026-10-20T10:00:00Z' } });
-    reloadBoard();
-    component.filtersForm.patchValue({ blocked: 'blocked', priority: 'HIGH' });
-    expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
-    component.openCreateViewModal();
-    component.viewForm.patchValue({ name: 'Impedidos' });
-    component.saveView();
-    expect(createdViewRequest?.filters).toEqual(expect.objectContaining({ blocked: true }));
-    component.filtersForm.patchValue({ blocked: 'unblocked', priority: 'all' });
-    expect(component.filteredRmas().map((rma) => rma.id)).toEqual([2]);
-    component.applyView(5);
-    expect(component.filtersForm.getRawValue().blocked).toBe('blocked');
-    component.clearFilters();
-    expect(component.filteredRmas()).toHaveLength(2);
-    expect(component.filtersForm.getRawValue().blocked).toBe('all');
-    Object.assign(TEST_RMAS[0], { currentBlock: null });
-    reloadBoard();
-  });
-
-  it('combines priority, status, warranty, assignee and business-date filters', () => {
-    component.filtersForm.patchValue({
-      priority: 'HIGH',
-      status: 'TRIAGE',
-      warranty: WarrantyStatus.IN_WARRANTY,
-      assignee: 7,
-      entryFrom: '2026-10-10',
-      entryTo: '2026-10-10',
-      updatedFrom: '2026-10-19',
-      updatedTo: '2026-10-19',
-    });
-
-    expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
-    expect(component.highPriorityCount()).toBe(1);
-    expect(component.activeCount()).toBe(1);
-  });
-
-  it('combines Prazo with advanced filters and clears the entire form', () => {
-    component.filtersForm.patchValue({ deadline: 'DUE_SOON', priority: 'HIGH', assignee: 7, query: 'arvore' });
-    expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
-    expect(component.activeFilterCount()).toBe(4);
-    component.filtersForm.patchValue({ deadline: 'NO_DUE_DATE' });
-    expect(component.filteredRmas()).toEqual([]);
-    component.clearFilters();
-    expect(component.filteredRmas()).toHaveLength(2);
-    expect(component.filtersForm.getRawValue().deadline).toBe('all');
-    expect(component.activeFilterCount()).toBe(0);
-  });
-
-  it('filters by each deadline option and keeps closed ordens de serviço only under Todos', () => {
-    const extra = (id: number, dueDate: string | null, status: RmaResponse['status'] = 'TRIAGE'): RmaResponse => ({
-      ...TEST_RMAS[0], id, code: `NAV-00${id}`, status, dueDate,
-      deadline: { status: 'ON_TRACK', dueSoonFrom: dueDate ? shiftDate(dueDate, -7) : null },
-    });
-    (component as unknown as { rmasSignal: { set(value: ReturnType<typeof toBoardCard>[]): void } }).rmasSignal.set([
-      extra(11, '2026-10-19'), extra(12, '2026-10-22'), extra(13, '2026-12-01'), extra(14, null), extra(15, '2026-10-01', 'COMPLETED'),
-    ].map(toBoardCard));
-    const ids = (deadline: 'all' | 'OVERDUE' | 'DUE_SOON' | 'ON_TRACK' | 'NO_DUE_DATE') => {
-      component.filtersForm.patchValue({ deadline });
-      return component.filteredRmas().map((rma) => rma.id);
-    };
-    expect(ids('OVERDUE')).toEqual([11]);
-    expect(ids('DUE_SOON')).toEqual([12]);
-    expect(ids('ON_TRACK')).toEqual([13]);
-    expect(ids('NO_DUE_DATE')).toEqual([14]);
-    expect(ids('all')).toEqual([11, 12, 13, 14, 15]);
-  });
-
-  it('updates the Prazo filter when the day turns', () => {
-    component.filtersForm.patchValue({ deadline: 'OVERDUE', priority: 'HIGH', assignee: 7 });
-    expect(component.filteredRmas()).toEqual([]);
-    now.set(Date.parse('2026-10-21T03:00:00Z'));
-    expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
-  });
-
-  it('returns an empty result and restores all cards and counters when filters are cleared', () => {
-    component.filtersForm.patchValue({ query: 'não existe' });
-
-    expect(component.filteredRmas()).toEqual([]);
-    expect(component.activeCount()).toBe(0);
-
-    component.clearFilters();
-
-    expect(component.filteredRmas()).toHaveLength(2);
-    expect(component.activeCount()).toBe(1);
-    expect(component.closedCount()).toBe(1);
-    expect(component.activeFilterCount()).toBe(0);
-  });
-
   it('saves and reapplies the current filters, then resets them when the active view is deleted', () => {
     component.filtersForm.patchValue({ priority: 'HIGH', query: 'árvore' });
     component.openCreateViewModal();
@@ -621,7 +504,6 @@ describe('KanbanComponent filters', () => {
     component.filtersForm.patchValue({ priority: 'all', query: '', deadline: 'NO_DUE_DATE' });
     component.applyView(5);
     expect(component.filtersForm.getRawValue().deadline).toBe('all');
-    expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
     expect(component.filtersForm.getRawValue()).toEqual(
       expect.objectContaining({ priority: 'HIGH', query: 'árvore' }),
     );
@@ -837,7 +719,7 @@ describe('KanbanComponent dialog focus', () => {
         {
           provide: RmaService,
           useValue: {
-            listBoard: () => of(TEST_RMAS.map(toBoardCard)),
+            ...boardTestApi(() => TEST_RMAS),
             getById: (id: number) => of(TEST_RMAS.find((rma) => rma.id === id)),
             updateStatus: () => (statusSave = new Subject<RmaResponse>()),
             updateAssignee: () => (assigneeSave = new Subject<RmaResponse>()),
@@ -1010,7 +892,7 @@ describe('KanbanComponent dialog focus under the root blocker', () => {
         {
           provide: RmaService,
           useValue: {
-            listBoard: () => of(TEST_RMAS.map(toBoardCard)),
+            ...boardTestApi(() => TEST_RMAS),
             getById: (id: number) => of(TEST_RMAS.find((rma) => rma.id === id)),
             updateStatus: () => (statusSave = new Subject<RmaResponse>()),
           },
@@ -1109,7 +991,7 @@ describe('KanbanComponent default view', () => {
         providePermissions(profilePermissions('ADMIN')),
         { provide: CatalogService, useValue: { listAssignableUsers: () => of([]) } },
         { provide: KanbanViewService, useValue: { list: () => views } },
-        { provide: RmaService, useValue: { listBoard: () => of(TEST_RMAS.map(toBoardCard)) } },
+        { provide: RmaService, useValue: { ...boardTestApi(() => TEST_RMAS) } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(KanbanComponent);

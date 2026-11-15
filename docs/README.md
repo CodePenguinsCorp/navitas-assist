@@ -27,7 +27,7 @@
 | [auditoria.md](auditoria.md) | Logs, trilha transacional, consulta e retenção em aberto. |
 | [prazo-e-garantia.md](prazo-e-garantia.md) | Tempo por etapa, data limite, garantia e ajuste manual. |
 | [kanban-payload.md](kanban-payload.md) | Campos do card do Kanban, o que ficou no detalhe e as medições de peso. |
-| [kanban-ordem-e-paginacao.md](kanban-ordem-e-paginacao.md) | Projeto proposto para ordem manual, filtros no servidor e paginação por coluna. |
+| [kanban-ordem-e-paginacao.md](kanban-ordem-e-paginacao.md) | Ordem manual, filtros no servidor, paginação por coluna e registro das verificações. |
 | [notificacoes-e-emails.md](notificacoes-e-emails.md) | Eventos, regras, fila de e-mail, provedores, tetos, falhas e reenvio. |
 | [relatorios-e-exportacoes.md](relatorios-e-exportacoes.md) | Relatórios, CSV, laudo em PDF, importação CSV de clientes e produtos. |
 
