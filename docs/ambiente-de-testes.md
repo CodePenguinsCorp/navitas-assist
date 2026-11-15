@@ -136,3 +136,15 @@ O backend continua publicamente acessível no Render, protegido pela autenticaç
 - **Site abre em branco após atualização:** confira a saída `browser`, erro de arquivo JS/CSS e revalidação do HTML; arquivos estáticos ausentes devem responder 404.
 
 Nenhum login, teste de sessão entre os provedores ou envio real é comprovado apenas por build local. As verificações dos passos 4, 7 e 8 devem ser feitas pelo responsável após publicar.
+
+## Reconstruir a base local
+
+A mudança de peças reescreveu `V1__baseline.sql`. Como ainda não há produção, não há conversão de reservas nem preservação de dados. Na raiz do repositório, para apagar os dados locais e aplicar V1 a V4 do zero:
+
+```powershell
+docker compose down -v
+docker compose up -d postgres
+docker compose up --build -d
+```
+
+Esses comandos removem os volumes do projeto. Depois execute o seed descrito em [desenvolvimento.md](desenvolvimento.md). Perfis recebem `pecas.usar`, usos debitam estoque imediatamente e não há evento de peça pendente. Os comandos acima são instruções para execução manual, não uma etapa dos testes unitários.

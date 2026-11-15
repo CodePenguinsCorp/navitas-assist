@@ -72,7 +72,7 @@ Ao registrar peças aplicadas e horas gastas pelos técnicos, o sistema aplicari
 * **Médio** para a versão completa (novas configurações, tabelas e filtros nos relatórios).
 
 ### O que o sistema JÁ tem hoje
-* `Part.unitCost` e cálculo automático de `consumedCost` e `reservedCost` no backend (`PartStockService`).
+* `Part.unitCost` e cálculo automático de `usedCost` no backend (`PartStockService`).
 * Painel de peças no frontend já exibe o custo de peças aplicadas na OS.
 * Registro de intervenções com horas (`hours`) e soma total (`totalServiceHours`).
 * Geração do laudo PDF estruturada (já inclui peças e horas, hoje sem valores).

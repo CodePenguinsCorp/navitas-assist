@@ -182,13 +182,13 @@ async function main() {
       count('Impedimentos', true);
     }
     if ([3, 4].includes(i)) {
-      const { reservations } = await api(`${path}/parts`);
-      const note = `[DEMO] Reserva ${serialNumber}`;
-      const exists = reservations.some(r => r.note === note);
+      const { usages } = await api(`${path}/parts`);
+      const notes = `[DEMO] Uso ${serialNumber}`;
+      const exists = usages.some(u => u.notes === notes);
       if (!exists && !['COMPLETED', 'RETURNED', 'IRREPARABLE'].includes(rma.status)) {
-        await api(`${path}/parts`, 'POST', { partId: demoParts[i % 3].id, quantity: 1, note });
-        count('Reservas', true);
-      } else count('Reservas', false);
+        await api(`${path}/parts/usages`, 'POST', { partId: demoParts[i % 3].id, quantity: 1, replacementReason: 'Falha identificada na bancada', componentBatch: null, notes });
+        count('Usos de peça', true);
+      } else count('Usos de peça', false);
     }
     if ([0, 3, 6].includes(i)) {
       const executionPath = `/api/protocols/rmas/${rma.id}/executions`;
@@ -350,11 +350,11 @@ async function seedVolume({ users, volume, demoClients, demoProducts, demoParts,
       }
       if ([3, 4].includes(stageIdx) && i % 2 === 0) {
         try {
-          await api(`${path}/parts`, 'POST', { partId: volumeParts[(i % (volumeParts.length - 1)) + 1].id, quantity: 1 + (i % 2), note: `[DEMO] Reserva volume ${serialNumber}` });
-          count('Reservas (volume)', true);
+          await api(`${path}/parts/usages`, 'POST', { partId: volumeParts[(i % (volumeParts.length - 1)) + 1].id, quantity: 1 + (i % 2), replacementReason: 'Falha identificada na bancada', componentBatch: null, notes: `[DEMO] Uso volume ${serialNumber}` });
+          count('Usos de peça (volume)', true);
         } catch (error) {
-          count('Reservas (volume)', false);
-          console.warn(`  aviso: reserva não criada para ${serialNumber}: ${error.message}`);
+          count('Usos de peça (volume)', false);
+          console.warn(`  aviso: uso de peça não registrado para ${serialNumber}: ${error.message}`);
         }
       }
       if (i % 4 === 1) {
