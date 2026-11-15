@@ -3685,6 +3685,10 @@ app-custom-select:has(> .custom-select--priority) {
 /* A card that holds only a collapsible section hands its box to the section, so stacked sections read as separate. */
 .detail-card:not(.rma-details__panel):has(> :is(app-collapsible-section, app-rma-blocks-section, app-rma-diagnosis):only-child) { padding: 0; border: 0; background: none; box-shadow: none; }
 .rma-detail__section--failure app-collapsible-section { border-color: var(--attention-line); background: var(--attention-bg); }
+/* The attention box keeps its own tones: the rule under the title and the hover are amber, never the blue of the other sections. */
+.rma-detail__section--failure app-collapsible-section .collapsible__head { border-bottom-color: var(--attention-line); background: transparent; }
+.rma-detail__section--failure app-collapsible-section .collapsible__head:hover { background: color-mix(in srgb, var(--attention-line) 22%, var(--attention-bg)); }
+.rma-detail__section--failure app-collapsible-section .collapsible__head.is-collapsed { border-bottom-color: transparent; }
 /* Note of a history entry (status change), flush with the text above it. */
 .history-note { margin: var(--space-1) 0 0; padding: var(--space-1) var(--space-3); border-left: 3px solid var(--line); color: var(--muted); font-size: var(--font-size-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
 .collapsible__actions .link-button { display: inline-flex; align-items: center; gap: var(--space-1); white-space: nowrap; }
