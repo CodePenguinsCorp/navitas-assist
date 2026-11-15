@@ -9,7 +9,7 @@
 .protocol-progress span { display: block; height: 100%; background: var(--brand-blue-deep); }
 .protocol-progress-row__text { color: var(--text); font-variant-numeric: tabular-nums; }
 
-.protocol-group { margin: var(--space-2) 0 0; color: var(--muted); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); letter-spacing: 0.05em; text-transform: uppercase; }
+.protocol-group { margin: var(--space-3) 0 0; color: var(--muted); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); letter-spacing: 0.05em; text-transform: uppercase; }
 .protocol-list { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
 
 .protocol-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); min-width: 0; }
@@ -45,4 +45,4 @@
 .protocol-form .field-group { gap: var(--space-1); }
 
 .protocol-execution { padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-alt); box-shadow: var(--shadow); }
-.protocol-group-card { display: grid; gap: var(--space-2); min-width: 0; padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); }
+.protocol-group-card { display: grid; gap: var(--space-2); min-width: 0; }
