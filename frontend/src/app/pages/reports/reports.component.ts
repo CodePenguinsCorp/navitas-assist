@@ -26,7 +26,7 @@ type ReportTab = 'summary' | 'failures' | 'recurrence' | 'rmas';
 
 const WARRANTY_TONES: Record<string, string> = { IN_WARRANTY: 'success', OUT_OF_WARRANTY: 'danger', PENDING: 'slate' };
 
-const DEFAULT_PERIOD_DAYS = 90;
+const DEFAULT_PERIOD_DAYS = 30;
 const MAX_PERIOD_DAYS = 366;
 
 @Component({
@@ -116,7 +116,7 @@ export class ReportsComponent {
     this.loadPage(0);
   }
 
-  /** Volta aos filtros iniciais (últimos 90 dias, todos os status e clientes) e consulta. */
+  /** Volta aos filtros iniciais (últimos 30 dias, todos os status e clientes) e consulta. */
   protected clearFilters(): void {
     this.form.reset({ entryFrom: shiftDate(todayInputValue(), -(DEFAULT_PERIOD_DAYS - 1)), entryTo: todayInputValue(), status: '', clientId: null });
     this.consult();
@@ -169,7 +169,7 @@ export class ReportsComponent {
   }
 
   protected percent(part: number, base: number): string {
-    return base ? `${(Math.round((part / base) * 1000) / 10).toFixed(1).replace('.', ',')}%` : '—';
+    return base ? `${(Math.round((part / base) * 1000) / 10).toFixed(1).replace('.', ',')}%` : '-';
   }
 
   protected barWidth(count: number, rows: { count: number }[]): number {

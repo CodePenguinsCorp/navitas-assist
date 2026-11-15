@@ -7,7 +7,7 @@
 .report-grid { align-items: start; }
 .report-grid .table-card { min-width: 0; }
 .report-loading { min-height: 160px; }
-td { vertical-align: top; overflow-wrap: break-word; }
+td { vertical-align: middle; overflow-wrap: break-word; }
 .code-text, .status-chip { white-space: nowrap; }
 .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .report-muted { margin: var(--space-3) 0 0; color: var(--muted); }

@@ -67,7 +67,7 @@ describe('ReportsComponent', () => {
     const list = listRequest();
     const from = summary.request.params.get('entryFrom') as string;
     const to = summary.request.params.get('entryTo') as string;
-    expect((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000).toBe(89);
+    expect((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000).toBe(29);
     expect(list.request.params.get('page')).toBe('0');
     expect(list.request.params.get('size')).toBe('20');
     summary.flush(SUMMARY);
@@ -182,7 +182,7 @@ describe('ReportsComponent', () => {
     const summary = summaryRequest();
     const from = summary.request.params.get('entryFrom') as string;
     const to = summary.request.params.get('entryTo') as string;
-    expect((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000).toBe(89);
+    expect((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000).toBe(29);
     expect(summary.request.params.has('status')).toBe(false);
     expect(summary.request.params.has('clientId')).toBe(false);
     summary.flush(SUMMARY);
