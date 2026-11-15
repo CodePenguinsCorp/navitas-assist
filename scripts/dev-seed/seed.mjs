@@ -146,10 +146,12 @@ async function main() {
   const rmas = await list('/api/rmas');
   const stages = ['RECEIVED', 'TRIAGE', 'IN_DIAGNOSIS', 'WAITING_PART', 'IN_REPAIR', 'IN_TESTS', 'COMPLETED'];
   const failures = ['Não liga após oscilação de energia.', 'Reinicia durante operação contínua.', 'Portas de rede apresentam desconexões intermitentes.'];
+  // Dia civil de São Paulo (não o UTC): à noite o UTC já está no dia seguinte e a API recusa data de entrada futura.
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const date = daysAgo => {
-    const now = new Date();
-    now.setUTCDate(now.getUTCDate() - daysAgo);
-    return now.toISOString().slice(0, 10);
+    const day = new Date(`${today}T00:00:00Z`);
+    day.setUTCDate(day.getUTCDate() - daysAgo);
+    return day.toISOString().slice(0, 10);
   };
   for (let i = 0; i < stages.length; i++) {
     const serialNumber = `DEMO-SN-${String(i + 1).padStart(4, '0')}`;
@@ -280,6 +282,16 @@ async function seedVolume({ users, volume, demoClients, demoProducts, demoParts,
       ],
     }));
   }
+  // Modelos por categoria (sem produto): garantem que toda OS do volume tenha ao menos um modelo aplicável.
+  for (const category of categories) {
+    volumeTemplates.push(await ensure('Modelos de protocolo (volume)', '/api/protocols/templates', templates, 'name', {
+      name: `[DEMO] Protocolo geral de ${category}`, category, active: true, blockedStatuses: [],
+      items: [
+        { stepName: 'Preparação', title: `Conferir identificação do equipamento (${category})`, type: 'CHECK', required: true, evidenceRequired: false },
+        { stepName: 'Fechamento', title: 'Registrar observações finais', type: 'CHECK', required: false, evidenceRequired: false },
+      ],
+    }));
+  }
   const priorities = ['LOW', 'MEDIUM', 'HIGH'];
   for (let i = 0; i < volume; i++) {
     const serialNumber = `DEMO-V-${String(i + 1).padStart(4, '0')}`;
@@ -340,13 +352,27 @@ async function seedVolume({ users, volume, demoClients, demoProducts, demoParts,
         try {
           await api(`${path}/parts`, 'POST', { partId: volumeParts[(i % (volumeParts.length - 1)) + 1].id, quantity: 1 + (i % 2), note: `[DEMO] Reserva volume ${serialNumber}` });
           count('Reservas (volume)', true);
-        } catch (error) { count('Reservas (volume)', false); }
+        } catch (error) {
+          count('Reservas (volume)', false);
+          console.warn(`  aviso: reserva não criada para ${serialNumber}: ${error.message}`);
+        }
       }
       if (i % 4 === 1) {
-        try {
-          await api(`/api/protocols/rmas/${rma.id}/executions`, 'POST', { templateId: volumeTemplates[i % 7].id });
-          count('Execuções de protocolo (volume)', true);
-        } catch (error) { count('Execuções de protocolo (volume)', false); }
+        // A API só aceita modelo ativo que se aplique à OS: o do mesmo produto ou, sem produto, o da mesma categoria.
+        const product = extraProducts.find(p => p.sku === rma.items[0].productSku) ?? extraProducts[(i * 2) % extraProducts.length];
+        const applicable = volumeTemplates.filter(t => t.active && (t.productId ? t.productId === product.id : t.category?.toLowerCase() === product.category?.toLowerCase()));
+        if (!applicable.length) {
+          count('Execuções de protocolo (volume)', false);
+          console.warn(`  aviso: nenhum modelo de protocolo aplicável a ${serialNumber} (${product.sku}, ${product.category}).`);
+        } else {
+          try {
+            await api(`/api/protocols/rmas/${rma.id}/executions`, 'POST', { templateId: applicable[i % applicable.length].id });
+            count('Execuções de protocolo (volume)', true);
+          } catch (error) {
+            count('Execuções de protocolo (volume)', false);
+            console.warn(`  aviso: execução de protocolo não criada para ${serialNumber}: ${error.message}`);
+          }
+        }
       }
     }
     if ((i + 1) % 20 === 0) console.log(`  volume: ${i + 1}/${volume} OS`);
