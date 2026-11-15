@@ -353,6 +353,16 @@ class NotificationEmailIntegrationTest {
         org.mockito.Mockito.verifyNoInteractions(mailSender);
     }
 
+    private static final java.time.ZoneId SAO_PAULO = java.time.ZoneId.of("America/Sao_Paulo");
+
+    private static java.time.Instant nextSaoPauloMidnight(java.time.Instant from) {
+        return from.atZone(SAO_PAULO).toLocalDate().plusDays(1).atStartOfDay(SAO_PAULO).toInstant();
+    }
+
+    private static java.time.Instant nextSaoPauloMonth(java.time.Instant from) {
+        return from.atZone(SAO_PAULO).toLocalDate().withDayOfMonth(1).plusMonths(1).atStartOfDay(SAO_PAULO).toInstant();
+    }
+
     @Test
     void dailyCapHoldsPendingWithoutConsumingAttemptsUntilTheNextSaoPauloDay() throws Exception {
         useRealProviderWithLimits(1, 0);
@@ -372,11 +382,12 @@ class NotificationEmailIntegrationTest {
         assertEquals(0, held.getEmailAttempts());
         verify(mailSender, org.mockito.Mockito.times(1)).send(any(), any());
 
-        // 12:00Z é 09:00 em São Paulo; 02:59Z do dia seguinte ainda é o mesmo dia lá, 03:00Z já é o próximo.
-        org.mockito.Mockito.when(clock.instant()).thenReturn(java.time.Instant.parse("2026-11-15T02:59:59Z"));
+        // Relativo a "agora": 1 s antes da meia-noite de São Paulo ainda é o mesmo dia, a própria meia-noite já é o próximo.
+        java.time.Instant nextDay = nextSaoPauloMidnight(now);
+        org.mockito.Mockito.when(clock.instant()).thenReturn(nextDay.minusSeconds(1));
         worker.poll();
         assertEquals(NotificationEmailStatus.PENDING, assignmentNotifications().get(1).getEmailStatus());
-        org.mockito.Mockito.when(clock.instant()).thenReturn(java.time.Instant.parse("2026-11-15T03:00:00Z"));
+        org.mockito.Mockito.when(clock.instant()).thenReturn(nextDay);
         worker.poll();
         assertEquals(NotificationEmailStatus.SENT, assignmentNotifications().get(1).getEmailStatus());
         assertEquals(1, assignmentNotifications().get(1).getEmailAttempts());
@@ -390,11 +401,11 @@ class NotificationEmailIntegrationTest {
         assignAndWait();
         worker.poll();
         reassignAndWait();
-        org.mockito.Mockito.when(clock.instant()).thenReturn(java.time.Instant.parse("2026-12-01T02:59:59Z"));
+        org.mockito.Mockito.when(clock.instant()).thenReturn(nextSaoPauloMonth(now).minusSeconds(1));
         worker.poll();
         assertEquals(NotificationEmailStatus.PENDING, assignmentNotifications().get(1).getEmailStatus());
         assertEquals(0, assignmentNotifications().get(1).getEmailAttempts());
-        org.mockito.Mockito.when(clock.instant()).thenReturn(java.time.Instant.parse("2026-12-01T03:00:00Z"));
+        org.mockito.Mockito.when(clock.instant()).thenReturn(nextSaoPauloMonth(now));
         worker.poll();
         assertEquals(NotificationEmailStatus.SENT, assignmentNotifications().get(1).getEmailStatus());
     }

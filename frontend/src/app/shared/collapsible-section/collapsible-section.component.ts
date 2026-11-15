@@ -1,4 +1,3 @@
-import { TipDirective } from '../tip/tip.directive';
 import { Component, computed, input, linkedSignal } from '@angular/core';
 import { IconComponent, IconName } from '../icon/icon.component';
 
@@ -31,7 +30,7 @@ function writeChoice(key: string | null, open: boolean): void {
  */
 @Component({
   selector: 'app-collapsible-section',
-  imports: [TipDirective, IconComponent],
+  imports: [IconComponent],
   templateUrl: './collapsible-section.component.html',
   styleUrl: './collapsible-section.component.css',
   // `title` is an input: without this the host would keep it as a native tooltip over the whole section.

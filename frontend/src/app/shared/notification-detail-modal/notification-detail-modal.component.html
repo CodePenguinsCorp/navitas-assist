@@ -9,8 +9,8 @@
         <app-icon [name]="notification().severity === 'INFO' ? 'bell' : 'alert'" [size]="24" />
       </span>
       <div class="notification-detail__heading">
-        <h3 class="notification-detail__title" [appTip]="headline()" [id]="titleId" tabindex="-1">{{ headline() }}</h3>
-        @if (notification().rmaCode; as code) { <span class="mini-chip notification-detail__code" [appTip]="code">{{ code }}</span> }
+        <h3 class="notification-detail__title" [id]="titleId" tabindex="-1">{{ headline() }}</h3>
+        @if (notification().rmaCode; as code) { <span class="mini-chip notification-detail__code">{{ code }}</span> }
       </div>
       <button type="button" class="modal-close" aria-label="Fechar" (click)="closed.emit()"><app-icon name="close" [size]="20" /></button>
     </header>
