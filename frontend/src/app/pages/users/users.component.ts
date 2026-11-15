@@ -1,3 +1,4 @@
+import { ToastService } from '../../core/services/toast.service';
 import { initialsOf } from '../../core/utils/rma-ui';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
@@ -75,6 +76,7 @@ const passwordByteLengthValidator: ValidatorFn = control =>
 export class UsersComponent {
   protected readonly initials = initialsOf;
   private readonly formBuilder = inject(FormBuilder);
+  private readonly toasts = inject(ToastService);
   private readonly catalogService = inject(CatalogService);
   private readonly authService = inject(AuthService);
   private readonly profileService = inject(ProfileService);
@@ -85,7 +87,6 @@ export class UsersComponent {
   protected readonly errorMessage = signal('');
   protected readonly modalErrorMessage = signal('');
   protected readonly deleteModalErrorMessage = signal('');
-  protected readonly successMessage = signal('');
   protected readonly searchTerm = signal('');
   protected readonly profileFilter = signal<number | null>(null);
   protected readonly statusFilter = signal<UserStatusFilter>('all');
@@ -261,11 +262,7 @@ export class UsersComponent {
       finalize(() => this.submitting.set(false))
     ).subscribe({
       next: (user) => {
-        this.successMessage.set(
-          currentUser
-            ? `Usuário ${user.fullName} atualizado com sucesso.`
-            : `Usuário ${user.fullName} cadastrado com sucesso.`
-        );
+        this.toasts.show({ message: currentUser ? `Usuário ${user.fullName} atualizado.` : `Usuário ${user.fullName} cadastrado.`, tone: 'success' });
         this.resetModal();
         this.loadUsers();
         this.loadSummary();
@@ -313,7 +310,7 @@ export class UsersComponent {
       next: () => {
         this.loadUsers();
         this.loadSummary();
-        this.successMessage.set(`Usuário ${user.fullName} excluído com sucesso.`);
+        this.toasts.show({ message: `Usuário ${user.fullName} excluído.`, tone: 'success' });
         this.resetDeleteModal();
       },
       error: (error) => {
@@ -405,7 +402,6 @@ export class UsersComponent {
     this.errorMessage.set('');
     this.modalErrorMessage.set('');
     this.deleteModalErrorMessage.set('');
-    this.successMessage.set('');
   }
 
   private configurePasswordValidation(required: boolean): void {
