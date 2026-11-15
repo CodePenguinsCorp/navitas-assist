@@ -396,11 +396,11 @@
         </article>
       }
 
-      <form [formGroup]="createForm" (ngSubmit)="createRma()" class="form-grid rma-create-form">
+      <form [formGroup]="createForm" (ngSubmit)="createRma()" class="form-grid inline-form rma-create-form">
         <fieldset class="form-section">
           <legend>Atendimento</legend>
 
-          <div class="field-group">
+          <div class="field-group field-group--required">
             <label>Cliente</label>
             <app-custom-select
               formControlName="clientId"
@@ -423,7 +423,7 @@
             />
           </div>
 
-          <div class="field-group field-group--full">
+          <div class="field-group field-group--full field-group--required">
             <label for="reportedFailure">Falha relatada</label>
             <textarea id="reportedFailure" formControlName="reportedFailure" rows="4" maxlength="1000"
               [attr.aria-invalid]="showCreateError(createForm.controls.reportedFailure) || null"
@@ -436,13 +436,12 @@
 
         <fieldset class="form-section">
           <legend>Produtos e identificação</legend>
-          <p class="muted-inline field-group--full">Informe o lote, a série ou os dois para cada produto.</p>
 
           <div class="rma-items-editor field-group--full" formArrayName="items">
             @for (itemForm of createItems.controls; track itemForm; let index = $index) {
-              @let missingIdentification = itemForm.hasError('identificationRequired') && (itemForm.touched || createSubmitAttempted());
-              <div class="rma-item-editor rma-item-editor--row" [formGroupName]="index" role="group" [attr.aria-label]="'Produto ' + (index + 1)">
-                <div class="field-group">
+              @let missingIdentification = itemForm.hasError('identificationRequired') && ((itemForm.controls.batchNumber.touched && itemForm.controls.serialNumber.touched) || createSubmitAttempted());
+              <div class="rma-item-editor" [formGroupName]="index" role="group" [attr.aria-label]="'Produto ' + (index + 1)">
+                <div class="field-group field-group--required">
                   <label>Produto</label>
                   <app-custom-select
                     formControlName="productId"
@@ -504,7 +503,7 @@
               </div>
             }
 
-            <div>
+            <div class="rma-items-editor__add">
               <button type="button" class="button-secondary" (click)="addCreateItem()" [disabled]="!canAddCreateItem">Adicionar produto</button>
               @if (!canAddCreateItem) {
                 <small class="field-hint">Limite de 20 produtos por OS atingido. Abra outra OS para os demais.</small>
@@ -526,30 +525,34 @@
             }
           </div>
 
-          <div class="field-group rma-purchase col-2" role="group" aria-labelledby="rma-purchase-label">
-            <span id="rma-purchase-label">Data da compra</span>
-            <app-date-picker
-              formControlName="purchaseDate"
-              ariaLabel="Data da compra"
-              [disabled]="createForm.controls.purchaseDateUnknown.value"
-              [minDate]="purchaseMinDate"
-              [maxDate]="todayDate"
-              [ariaInvalid]="!!dateErrors().purchaseDate"
-              [ariaDescribedBy]="dateErrors().purchaseDate ? 'purchaseDate-error' : null"
-            />
-            <label class="checkbox-row">
-              <input type="checkbox" formControlName="purchaseDateUnknown" />
-              <span>Compra desconhecida</span>
-            </label>
-            @if (createForm.controls.purchaseDateUnknown.value) {
-              <small class="muted-inline">Sem data da compra, a garantia fica pendente.</small>
-            }
-            @if (dateErrors().purchaseDate) {
-              <small class="field-error" id="purchaseDate-error">{{ dateErrors().purchaseDate }}</small>
-            }
+          <div class="rma-purchase col-2" role="group" aria-labelledby="rma-purchase-label">
+            <div class="field-group">
+              <span id="rma-purchase-label">Data da compra</span>
+              <app-date-picker
+                formControlName="purchaseDate"
+                ariaLabel="Data da compra"
+                [disabled]="createForm.controls.purchaseDateUnknown.value"
+                [minDate]="purchaseMinDate"
+                [maxDate]="todayDate"
+                [ariaInvalid]="!!dateErrors().purchaseDate"
+                [ariaDescribedBy]="dateErrors().purchaseDate ? 'purchaseDate-error' : null"
+              />
+              @if (dateErrors().purchaseDate) {
+                <small class="field-error" id="purchaseDate-error">{{ dateErrors().purchaseDate }}</small>
+              }
+            </div>
+            <div class="rma-purchase__unknown">
+              <label class="checkbox-row">
+                <input type="checkbox" formControlName="purchaseDateUnknown" />
+                <span>Compra desconhecida</span>
+              </label>
+              @if (createForm.controls.purchaseDateUnknown.value) {
+                <small class="muted-inline">Sem data da compra, a garantia fica pendente.</small>
+              }
+            </div>
           </div>
 
-          <div class="field-group col-2">
+          <div class="field-group col-2 field-group--required">
             <label>Entrada</label>
             <app-date-picker formControlName="entryDate" ariaLabel="Data de entrada" [allowClear]="false" [minDate]="entryMinDate"
               [ariaInvalid]="!!dateErrors().entryDate" [ariaDescribedBy]="dateErrors().entryDate ? 'entryDate-error' : null" />
@@ -569,24 +572,22 @@
 
           <div class="field-group col-3">
             <label for="receivedAccessories">Acessórios</label>
-            <textarea id="receivedAccessories" formControlName="receivedAccessories" rows="3" maxlength="500"></textarea>
+            <textarea id="receivedAccessories" formControlName="receivedAccessories" maxlength="500"></textarea>
           </div>
 
           <div class="field-group col-3">
             <label for="physicalCondition">Condição física</label>
-            <textarea id="physicalCondition" formControlName="physicalCondition" rows="3" maxlength="500"></textarea>
+            <textarea id="physicalCondition" formControlName="physicalCondition" maxlength="500"></textarea>
           </div>
         </fieldset>
 
-        <details class="rma-create-form__done" [open]="retroactiveOpen()" (toggle)="retroactiveOpen.set($any($event.target).open)">
-          <summary>Atendimento já realizado</summary>
-          <fieldset class="form-section">
-            <legend class="sr-only">Atendimento já realizado</legend>
-            <p class="muted-inline field-group--full">Para registrar reparo, peças trocadas e testes feitos antes da abertura.</p>
+        <app-collapsible-section #retroactiveSection title="Atendimento já realizado" [open]="false">
+          <div class="rma-create-form__done">
+            <p class="empty-note field-group--full">Para registrar reparo, peças trocadas e testes feitos antes da abertura.</p>
 
             <div class="field-group">
               <label for="repairSummary">Reparo</label>
-              <textarea id="repairSummary" formControlName="repairSummary" rows="3" maxlength="600"
+              <textarea id="repairSummary" formControlName="repairSummary" maxlength="600"
                 [attr.aria-invalid]="showCreateError(createForm.controls.repairSummary) || null"
                 [attr.aria-describedby]="showCreateError(createForm.controls.repairSummary) ? 'repairSummary-error' : null"></textarea>
               @if (showCreateError(createForm.controls.repairSummary)) {
@@ -596,7 +597,7 @@
 
             <div class="field-group">
               <label for="replacedPartsSummary">Peças trocadas</label>
-              <textarea id="replacedPartsSummary" formControlName="replacedPartsSummary" rows="3" maxlength="600"
+              <textarea id="replacedPartsSummary" formControlName="replacedPartsSummary" maxlength="600"
                 [attr.aria-invalid]="showCreateError(createForm.controls.replacedPartsSummary) || null"
                 [attr.aria-describedby]="showCreateError(createForm.controls.replacedPartsSummary) ? 'replacedPartsSummary-error' : null"></textarea>
               @if (showCreateError(createForm.controls.replacedPartsSummary)) {
@@ -606,15 +607,15 @@
 
             <div class="field-group field-group--full">
               <label for="testSummary">Testes</label>
-              <textarea id="testSummary" formControlName="testSummary" rows="3" maxlength="800"
+              <textarea id="testSummary" formControlName="testSummary" maxlength="800"
                 [attr.aria-invalid]="showCreateError(createForm.controls.testSummary) || null"
                 [attr.aria-describedby]="showCreateError(createForm.controls.testSummary) ? 'testSummary-error' : null"></textarea>
               @if (showCreateError(createForm.controls.testSummary)) {
                 <small class="field-error" id="testSummary-error">Use até 800 caracteres.</small>
               }
             </div>
-          </fieldset>
-        </details>
+          </div>
+        </app-collapsible-section>
 
         <div class="form-actions form-actions--full">
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="createSubmitting()">Cancelar</button>

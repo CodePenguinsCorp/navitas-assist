@@ -49,6 +49,9 @@
 
 .date-picker__value {
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   flex: 1;
   text-align: left;
 }

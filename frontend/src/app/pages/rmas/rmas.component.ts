@@ -6,7 +6,7 @@ import { RmaDiagnosisComponent } from '../../shared/rma-diagnosis/rma-diagnosis.
 import { RmaStatusFieldComponent } from '../../shared/rma-status-field/rma-status-field.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { NgComponentOutlet } from '@angular/common';
-import { Component, ElementRef, Injector, Type, afterNextRender, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, Injector, Type, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormArray, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -196,13 +196,7 @@ export interface RmaListFilters {
       flex-shrink: 0;
     }
 
-    .rma-items-editor {
-      padding: var(--space-3) var(--space-4);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      background: var(--surface-alt);
-    }
-
+    /* Products sit straight on the section: no box of their own, only a rule between rows. */
     .rma-items-editor {
       gap: var(--space-3);
     }
@@ -232,12 +226,22 @@ export interface RmaListFilters {
 
     .rma-item-editor {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: var(--space-3);
-      padding: var(--space-4);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      background: var(--surface);
+      grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)) minmax(0, 1.1fr) auto;
+      gap: var(--space-1) var(--space-3);
+      align-items: start;
+    }
+
+    .rma-item-editor + .rma-item-editor {
+      padding-top: var(--space-3);
+      border-top: 1px solid var(--line);
+    }
+
+    .rma-items-editor__add {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2) var(--space-3);
+      padding-top: var(--space-1);
     }
 
     .rma-item-editor__error {
@@ -250,7 +254,7 @@ export interface RmaListFilters {
       display: flex;
       align-items: center;
       min-height: var(--control-height);
-      margin-top: calc(1lh + var(--space-2));
+      margin-top: calc(1lh + var(--space-1));
     }
 
     /* Grid layout comes from the shared .detail-tile. */
@@ -287,10 +291,6 @@ export interface RmaListFilters {
       grid-column: 1 / -1;
     }
 
-    .rma-create-form textarea {
-      min-height: 84px;
-    }
-
     .rma-create-form__receipt {
       grid-template-columns: repeat(6, minmax(0, 1fr));
     }
@@ -303,27 +303,39 @@ export interface RmaListFilters {
       grid-column: span 3;
     }
 
-    /* Purchase date, "Compra desconhecida" and its consequence stacked in one group;
-       .modal-panel .field-group would otherwise impose three rows. */
+    /* Purchase date spans two receipt rows: the date on the first, "Compra desconhecida" on the second,
+       level with the due date beside it. Subgrid keeps both rows as tall as their neighbours. */
     .rma-purchase {
-      grid-template-rows: auto;
+      display: grid;
+      grid-row: span 2;
+      grid-template-rows: subgrid;
+      gap: var(--space-1);
+    }
+
+    .rma-purchase__unknown {
+      display: grid;
+      align-content: center;
+      align-self: end;
+      gap: var(--space-1);
+      min-height: var(--control-height);
+    }
+
+    .rma-purchase .checkbox-row {
+      font-weight: var(--font-weight-regular);
+    }
+
+    .rma-purchase__unknown .muted-inline {
+      margin: 0;
     }
 
     .rma-create-form__done {
       display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: var(--space-3);
-      padding-top: var(--space-4);
-      border-top: 1px solid var(--line);
     }
 
-    .rma-create-form__done > summary {
-      width: fit-content;
-      cursor: pointer;
-      font-weight: var(--font-weight-semibold);
-    }
-
-    .rma-item-editor--row {
-      grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr)) auto;
+    .rma-create-form__done > p {
+      margin: 0;
     }
 
     @media (max-width: 900px) {
@@ -336,8 +348,13 @@ export interface RmaListFilters {
         grid-column: span 1;
       }
 
-      .rma-item-editor--row {
+      .rma-item-editor {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .rma-purchase {
+        grid-row: auto;
+        grid-template-rows: none;
       }
 
       .rma-item-editor__action {
@@ -351,8 +368,8 @@ export interface RmaListFilters {
 
     @media (max-width: 720px) {
       .rma-create-form__receipt,
-      .rma-item-editor,
-      .rma-item-editor--row {
+      .rma-create-form__done,
+      .rma-item-editor {
         grid-template-columns: 1fr;
       }
 
@@ -389,10 +406,10 @@ export class RmasComponent {
   protected readonly createErrorMessage = signal('');
   protected readonly createSubmitAttempted = signal(false);
   /**
-   * "Atendimento já realizado" group. Collapsing only hides the presentation:
+   * "Atendimento já realizado" section. Collapsing only hides the presentation:
    * its controls stay in the DOM and in createForm.
    */
-  protected readonly retroactiveOpen = signal(false);
+  private readonly retroactiveSection = viewChild<CollapsibleSectionComponent>('retroactiveSection');
   protected readonly dateErrors = signal<CreateDateErrors>({ manufacturedAt: [], purchaseDate: '', entryDate: '', dueDate: '' });
   protected readonly pageError = signal('');
   protected readonly pageMessage = signal('');
@@ -844,12 +861,12 @@ export class RmasComponent {
     this.refreshRmas();
   }
 
-  /** Opens the collapsed retroactive group and focuses its first invalid field, if any. */
+  /** Opens the collapsed retroactive section and focuses its first invalid field, if any. */
   private revealInvalidRetroactiveField(): void {
     const invalid = RETROACTIVE_CONTROLS.find((name) => this.createForm.controls[name].invalid);
     if (!invalid) return;
 
-    this.retroactiveOpen.set(true);
+    this.retroactiveSection()?.setOpen(true);
     afterNextRender(() => {
       this.host.nativeElement.querySelector<HTMLElement>(`#${invalid}`)?.focus();
     }, { injector: this.injector });
@@ -932,7 +949,6 @@ export class RmasComponent {
       testSummary: ''
     });
     this.dateErrors.set({ manufacturedAt: [], purchaseDate: '', entryDate: '', dueDate: '' });
-    this.retroactiveOpen.set(false);
   }
 
   private validateCreateDates(): CreateDateErrors {

@@ -327,8 +327,8 @@ describe('RmasComponent creation sections', () => {
 
   function sections(form: HTMLFormElement): Map<string, HTMLElement> {
     const result = new Map<string, HTMLElement>();
-    for (const heading of form.querySelectorAll<HTMLElement>(':scope > fieldset.form-section > legend, :scope > details > summary')) {
-      result.set(heading.textContent?.trim() ?? '', heading.parentElement!);
+    for (const heading of form.querySelectorAll<HTMLElement>(':scope > fieldset.form-section > legend, :scope > app-collapsible-section .collapsible__title')) {
+      result.set(heading.textContent?.trim() ?? '', heading.closest<HTMLElement>('fieldset, app-collapsible-section')!);
     }
     return result;
   }
@@ -353,21 +353,24 @@ describe('RmasComponent creation sections', () => {
     }
   });
 
-  it('keeps Atendimento já realizado collapsed by default', async () => {
-    // Hoje não há details: os campos retroativos ficam no mesmo nível do recebimento.
+  it('keeps Atendimento já realizado collapsed by default, in the shared collapsible section', async () => {
     const { open, render, panel } = await setup();
     open();
-    const details = panel()!.querySelector<HTMLDetailsElement>('details.rma-create-form__done');
+    const section = panel()!.querySelector<HTMLElement>('form > app-collapsible-section')!;
+    const toggle = section.querySelector<HTMLButtonElement>('button.collapsible__toggle')!;
 
-    expect(details).not.toBeNull();
-    expect(details!.open).toBe(false);
-    details!.open = true;
-    details!.dispatchEvent(new Event('toggle'));
+    expect(panel()!.querySelector('details')).toBeNull();
+    expect(toggle.textContent?.trim()).toBe('Atendimento já realizado');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(section.querySelector('.collapsible__chevron')).not.toBeNull();
+    toggle.click();
     render();
-    expect(details!.open).toBe(true);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
     for (const name of ['repairSummary', 'replacedPartsSummary', 'testSummary']) {
-      expect(details!.querySelector(`textarea[formControlName="${name}"]`)).not.toBeNull();
+      expect(section.querySelector(`textarea[formControlName="${name}"]`)).not.toBeNull();
     }
+    expect(section.querySelector('p.empty-note')?.textContent).toContain('Para registrar reparo, peças trocadas e testes feitos antes da abertura.');
+    expect(section.querySelector('fieldset, details, .panel')).toBeNull();
   });
 
   it('opens the retroactive group, shows the message and focuses an invalid field', async () => {
@@ -381,10 +384,10 @@ describe('RmasComponent creation sections', () => {
     await fixture.whenStable();
     render();
 
-    const details = panel()!.querySelector<HTMLDetailsElement>('details.rma-create-form__done');
-    expect(details?.open).toBe(true);
-    expect(details!.textContent).toContain('Use até 600 caracteres.');
-    expect(document.activeElement).toBe(details!.querySelector('textarea[formControlName="repairSummary"]'));
+    const section = panel()!.querySelector<HTMLElement>('form > app-collapsible-section')!;
+    expect(section.querySelector('button.collapsible__toggle')?.getAttribute('aria-expanded')).toBe('true');
+    expect(section.textContent).toContain('Use até 600 caracteres.');
+    expect(document.activeElement).toBe(section.querySelector('textarea[formControlName="repairSummary"]'));
     expect(rmaService.create).not.toHaveBeenCalled();
   });
 
@@ -432,15 +435,14 @@ describe('RmasComponent creation sections', () => {
     expect(removeButtons().length).toBe(0);
   });
 
-  it('shows one identification hint and the Série label', async () => {
-    // Hoje cada campo tem o placeholder "Informe lote ou serial" e o rótulo é "Serial".
+  it('has no identification help text and labels the field Série', async () => {
     const { open, panel } = await setup();
     open();
     const form = panel()!.querySelector('form')!;
 
     expect(form.querySelector('[placeholder="Informe lote ou serial"]')).toBeNull();
     expect(form.textContent).not.toContain('Cada produto pode ter seu próprio lote ou serial.');
-    expect(form.textContent?.split('Informe o lote, a série ou os dois para cada produto.').length).toBe(2);
+    expect(form.textContent).not.toContain('Informe o lote, a série ou os dois para cada produto.');
     const labels = [...form.querySelectorAll('label')].map((label) => label.textContent?.trim());
     expect(labels).toContain('Lote');
     expect(labels).toContain('Série');
@@ -460,8 +462,7 @@ describe('RmasComponent creation sections', () => {
     render();
     component.createItems.at(1).patchValue({ productId: 2, serialNumber: ' S2 ' });
     render();
-    const details = panel()!.querySelector<HTMLDetailsElement>('details.rma-create-form__done');
-    expect(details?.open ?? false).toBe(false);
+    expect(panel()!.querySelector('form > app-collapsible-section button.collapsible__toggle')?.getAttribute('aria-expanded')).toBe('false');
     submit();
 
     expect(rmaService.create).toHaveBeenCalledOnce();
@@ -651,5 +652,101 @@ describe('RmasComponent creation contract limits', () => {
     expect(panel()!.textContent).toContain('Use até 80 caracteres.');
     component.createForm.patchValue({ invoiceNumber: 'N'.repeat(80) }); submit();
     expect(rmaService.create).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('RmasComponent creation layout', () => {
+  const group = (panel: HTMLElement, legend: string) =>
+    [...panel.querySelectorAll<HTMLElement>('form > fieldset.form-section')].find((f) => f.querySelector('legend')?.textContent?.trim() === legend)!;
+
+  it('lists products without an inner box, one row per product with a rule between them', async () => {
+    const { open, render, panel } = await setup();
+    open();
+    [...panel()!.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === 'Adicionar produto')!.click();
+    render();
+    const section = group(panel()!, 'Produtos e identificação');
+    const rows = [...section.querySelectorAll<HTMLElement>('.rma-item-editor')];
+
+    expect(rows.length).toBe(2);
+    expect(section.querySelector('.panel, .detail-card, article')).toBeNull();
+    for (const row of rows) {
+      expect(row.querySelectorAll('label').length).toBe(4);
+      expect(row.querySelector('app-custom-select[formControlName="productId"]')).not.toBeNull();
+      expect(row.querySelector('app-date-picker[formControlName="manufacturedAt"]')).not.toBeNull();
+    }
+    expect(section.querySelector('.rma-items-editor__add button')?.textContent?.trim()).toBe('Adicionar produto');
+  });
+
+  it('shows the identification error only after touching both fields or submitting', async () => {
+    const { open, render, submit, panel, component } = await setup();
+    open();
+    const batch = () => panel()!.querySelector<HTMLInputElement>('#batchNumber-0')!;
+    const serial = () => panel()!.querySelector<HTMLInputElement>('#serialNumber-0')!;
+    const message = 'Informe ao menos o lote ou a série deste produto.';
+
+    expect(panel()!.textContent).not.toContain(message);
+    expect(batch().getAttribute('aria-invalid')).toBeNull();
+    component.createItems.at(0).controls['productId'].markAsTouched();
+    render();
+    expect(panel()!.textContent).not.toContain(message);
+    expect(batch().getAttribute('aria-invalid')).toBeNull();
+    expect(serial().getAttribute('aria-invalid')).toBeNull();
+
+    submit();
+    expect(panel()!.textContent).toContain(message);
+    expect(batch().getAttribute('aria-invalid')).toBe('true');
+    expect(serial().getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('shows the identification error after the user passes through Lote and Série', async () => {
+    const { open, render, panel, component } = await setup();
+    open();
+    const item = component.createItems.at(0).controls;
+    item['batchNumber'].markAsTouched();
+    render();
+    expect(panel()!.textContent).not.toContain('Informe ao menos o lote ou a série deste produto.');
+    item['serialNumber'].markAsTouched();
+    render();
+    expect(panel()!.querySelector('#identification-0-error')?.textContent?.trim()).toBe('Informe ao menos o lote ou a série deste produto.');
+  });
+
+  it('lays Recebimento on a three-column grid with the unknown-purchase checkbox beside the due date', async () => {
+    const { open, panel } = await setup();
+    open();
+    const receipt = group(panel()!, 'Recebimento');
+    const cells = [...receipt.querySelectorAll<HTMLElement>(':scope > .col-2, :scope > .col-3')];
+    const names = cells.map((cell) => cell.querySelector('label, span')?.textContent?.trim());
+
+    expect(names).toEqual(['Nota fiscal', 'Data da compra', 'Entrada', 'Data limite', 'Acessórios', 'Condição física']);
+    expect(cells.slice(0, 4).every((cell) => cell.classList.contains('col-2'))).toBe(true);
+    expect(cells.slice(4).every((cell) => cell.classList.contains('col-3'))).toBe(true);
+    const purchase = receipt.querySelector<HTMLElement>('.rma-purchase')!;
+    expect(purchase.querySelector('.rma-purchase__unknown input[type="checkbox"]')).not.toBeNull();
+    expect(purchase.querySelector('.rma-purchase__unknown label')?.textContent?.trim()).toBe('Compra desconhecida');
+  });
+
+  it('puts every textarea of the form in an inline-form so they share the 6rem height', async () => {
+    const { open, render, panel } = await setup();
+    open();
+    panel()!.querySelector<HTMLButtonElement>('form > app-collapsible-section button.collapsible__toggle')!.click();
+    render();
+    const form = panel()!.querySelector('form')!;
+    const areas = [...form.querySelectorAll('textarea')].filter((area) => area.id !== 'reportedFailure');
+
+    expect(form.classList.contains('inline-form')).toBe(true);
+    expect(areas.map((area) => area.id)).toEqual(['receivedAccessories', 'physicalCondition', 'repairSummary', 'replacedPartsSummary', 'testSummary']);
+    for (const area of areas) {
+      expect(area.closest('.inline-form')).toBe(form);
+      expect(area.hasAttribute('rows')).toBe(false);
+    }
+    expect(form.querySelector('.rma-create-form__done .field-group--full textarea#testSummary')).not.toBeNull();
+  });
+
+  it('marks the required fields with the shared required class', async () => {
+    const { open, panel } = await setup();
+    open();
+    const required = [...panel()!.querySelectorAll('.field-group--required > label')].map((label) => label.textContent?.trim());
+
+    expect(required).toEqual(['Cliente', 'Falha relatada', 'Produto', 'Entrada']);
   });
 });
