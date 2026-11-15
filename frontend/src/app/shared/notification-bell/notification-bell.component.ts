@@ -1,3 +1,4 @@
+import { isBellNotification } from './bell-notifications';
 import { TipDirective } from '../tip/tip.directive';
 import { Component, DestroyRef, ElementRef, Injector, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -81,18 +82,19 @@ export class NotificationBellComponent {
   });
   protected readonly unreadUnavailableMessage = UNREAD_UNAVAILABLE;
   protected readonly groups = computed(() => {
-    const recent = [...this.notifications()]
+    const recent = this.notifications().filter(item => isBellNotification(item, this.clock.now()) && (!this.unreadOnly() || !item.read))
       .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
       .slice(0, RECENT_LIMIT);
     return groupNotificationsByDay(recent, this.clock.now());
   });
   private readonly visibleItems = computed(() => this.groups().flatMap((group) => group.items));
+  private readonly detailItems = signal<NotificationResponse[]>([]);
   private readonly selectedIndex = computed(() => {
     const current = this.selected();
-    return current ? this.visibleItems().findIndex((item) => item.id === current.id) : -1;
+    return current ? this.detailItems().findIndex((item) => item.id === current.id) : -1;
   });
   protected readonly hasPreviousSelected = computed(() => this.selectedIndex() > 0);
-  protected readonly hasNextSelected = computed(() => this.selectedIndex() >= 0 && this.selectedIndex() < this.visibleItems().length - 1);
+  protected readonly hasNextSelected = computed(() => this.selectedIndex() >= 0 && this.selectedIndex() < this.detailItems().length - 1);
   /** Same rule as the inbox: the server summary decides, unless the list still shows an unread row. */
   protected readonly canMarkAll = computed(() =>
     !this.busy() && (!this.unreadKnown() || this.unreadCount() > 0 || this.notifications().some((item) => !item.read)));
@@ -136,12 +138,14 @@ export class NotificationBellComponent {
 
   /** The dialog opens over the page and the popover closes; closing the dialog returns focus to the bell. */
   protected select(notification: NotificationResponse): void {
+    this.detailItems.set(this.visibleItems());
     this.close(false);
     this.show(notification);
   }
 
   protected closeDetail(): void {
     this.selected.set(null);
+    this.detailItems.set([]);
   }
 
   protected openDetailAction(): void {
@@ -150,7 +154,7 @@ export class NotificationBellComponent {
   }
 
   protected step(delta: number): void {
-    const target = this.visibleItems()[this.selectedIndex() + delta];
+    const target = this.detailItems()[this.selectedIndex() + delta];
     if (target) this.show(target);
   }
 
@@ -255,6 +259,7 @@ export class NotificationBellComponent {
   }
 
   private replaceRead(id: number): void {
+    this.detailItems.update((items) => items.map((item) => item.id === id ? { ...item, read: true } : item));
     this.notifications.update((items) => items.map((item) => item.id === id ? { ...item, read: true } : item));
   }
 }

@@ -21,7 +21,7 @@ const NOTIFICATION: NotificationResponse = {
   id: 5, eventType: 'RMA_ASSIGNED', severity: 'CRITICAL', title: 'OS-2026-000007 atribuída', message: 'Cliente · Produto',
   rmaId: 7, rmaCode: 'OS-2026-000007', actionPath: '/rmas?rma=7', createdAt: at(24, 10), readAt: null, snoozedUntil: null, read: false
 };
-const READ: NotificationResponse = { ...NOTIFICATION, id: 6, severity: 'INFO', title: 'Peça pendente', createdAt: at(23, 9), read: true, readAt: at(23, 10) };
+const READ: NotificationResponse = { ...NOTIFICATION, id: 6, severity: 'INFO', title: 'Peça pendente', createdAt: at(24, 9), read: true, readAt: at(24, 10) };
 const OLD: NotificationResponse = { ...READ, id: 4, title: 'Antiga', createdAt: at(20, 9) };
 
 describe('NotificationBellComponent', () => {
@@ -73,6 +73,38 @@ describe('NotificationBellComponent', () => {
     http.verify();
   });
 
+  it('considera a virada do dia em São Paulo, mesmo com a data UTC de hoje', async () => {
+    await openWith([
+      { ...READ, id: 40, createdAt: '2026-10-24T02:59:59Z' },
+      { ...READ, id: 41, createdAt: '2026-10-24T03:00:00Z' }
+    ]);
+    expect(items()).toHaveLength(1);
+    expect(host().querySelector('time')?.getAttribute('datetime')).toBe('2026-10-24T03:00:00Z');
+  });
+
+  it('mantém a navegação no modal após ler uma antiga que sai do sino', async () => {
+    await openWith([{ ...OLD, read: false }, { ...READ, createdAt: at(19, 9), read: false }]);
+    items()[0].click(); await render();
+    http.expectOne({ method: 'POST', url: '/api/notifications/4/read' }).flush({ ...OLD, read: true });
+    flushSummary(1); await render();
+    const next = dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Próxima notificação"]')!;
+    expect(next.disabled).toBe(false);
+    next.click(); await render();
+    http.expectOne({ method: 'POST', url: '/api/notifications/6/read' }).flush({ ...READ, read: true });
+    flushSummary(0); await render();
+    const previous = dialog()!.querySelector<HTMLButtonElement>('button[aria-label="Notificação anterior"]')!;
+    expect(previous.disabled).toBe(false);
+    previous.click(); await render();
+    http.expectNone((request) => request.url.endsWith('/read'));
+  });
+
+  it('mantém antigas não lidas e exclui lidas anteriores a hoje', async () => {
+    await openWith([OLD, { ...OLD, id: 30, read: false }, READ]);
+    expect(items()).toHaveLength(2);
+    expect(host().querySelectorAll('.bell-item.is-unread')).toHaveLength(1);
+    expect(items().every(item => item.querySelector('.bell-item__chevron'))).toBe(true);
+  });
+
   it('is a popup button, closed by default, keeping the unread badge from the shared summary', async () => {
     expect(bell().getAttribute('aria-haspopup')).toBe('dialog');
     expect(bell().getAttribute('aria-expanded')).toBe('false');
@@ -94,10 +126,10 @@ describe('NotificationBellComponent', () => {
     expect(bell().getAttribute('aria-expanded')).toBe('true');
     expect(bell().getAttribute('aria-controls')).toBe(panel()!.id);
     expect(document.activeElement).toBe(panel());
-    expect(Array.from(host().querySelectorAll('.bell-day')).map((day) => day.textContent?.trim())).toEqual(['Hoje', 'Ontem', '20/10/2026']);
+    expect(Array.from(host().querySelectorAll('.bell-day')).map((day) => day.textContent?.trim())).toEqual(['Hoje']);
     expect(items().map((item) => item.querySelector('.bell-item__title')?.textContent?.trim()))
-      .toEqual([NOTIFICATION.title, 'Peça pendente · OS-2026-000007', 'Antiga · OS-2026-000007']);
-    expect(items()[0].querySelector('.mini-chip')?.textContent?.trim()).toBe('Crítico');
+      .toEqual([NOTIFICATION.title, 'Peça pendente · OS-2026-000007']);
+    expect(items()[0].querySelector('.bell-item__head .mini-chip')?.textContent?.trim()).toBe('Crítico');
     expect(host().querySelector('.bell-item time')?.textContent?.trim()).toBe('10:00');
     expect(host().querySelectorAll('.bell-item.is-unread').length).toBe(1);
     expect(panel()!.querySelector<HTMLAnchorElement>('a[href="/notificacoes"]')?.textContent?.trim()).toBe('Ver todas');
@@ -187,24 +219,13 @@ describe('NotificationBellComponent', () => {
     expect(items()[0].textContent).toContain('Não lida:');
   });
 
-  it('lays each row out as content beside a time-and-action column, with the severity, title and message on their own lines', async () => {
+  it('oferece toda a superfície como botão com ícone, resumo, hora e seta', async () => {
     await openWith([NOTIFICATION]);
-    const row = host().querySelector<HTMLElement>('.bell-item')!;
-    expect(Array.from(row.children).map((child) => child.className)).toEqual(['bell-item__main', 'bell-item__side']);
-
     const main = items()[0];
-    expect(Array.from(main.querySelectorAll(':scope > span:not(.sr-only)')).map((part) => part.className))
-      .toEqual(['bell-item__head', 'bell-item__title', 'bell-item__summary']);
-    const head = main.querySelector('.bell-item__head')!;
-    expect(head.querySelector('.mini-chip')!.textContent!.trim()).toBe('Crítico');
-    expect(head.querySelector('.bell-item__dot')).not.toBeNull();
-    expect(head.textContent).not.toContain('Cliente');
+    expect(main.querySelector('.bell-item__icon app-icon')).not.toBeNull();
     expect(main.querySelector('.bell-item__summary')!.textContent!.trim()).toBe('Cliente · Produto');
-    expect(main.textContent).not.toContain('Nova atribuição');
-
-    const side = row.querySelector('.bell-item__side')!;
-    expect(Array.from(side.children).map((child) => child.className)).toEqual(['bell-item__time']);
-    expect(side.querySelector('time')!.textContent!.trim()).toBe('10:00');
+    expect(main.querySelector('time')!.textContent!.trim()).toBe('10:00');
+    expect(main.querySelector('.bell-item__chevron')).not.toBeNull();
   });
 
   describe('detail dialog', () => {
@@ -427,7 +448,7 @@ describe('NotificationBellComponent', () => {
   });
 
   it('moves focus between items with the arrow keys', async () => {
-    await openWith([NOTIFICATION, READ, OLD]);
+    await openWith([NOTIFICATION, READ, { ...OLD, read: false }]);
     const key = (name: string) => (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true }));
     key('ArrowDown');
     expect(document.activeElement).toBe(items()[0]);
