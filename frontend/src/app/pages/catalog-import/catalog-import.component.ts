@@ -94,8 +94,22 @@ export class CatalogImportComponent {
   protected identification(row: CatalogImportRow): string {
     return this.kind === 'clients' ? String(row.values['legalName'] ?? 'Sem razão social') : [row.values['sku'], row.values['name']].filter(Boolean).join(' · ') || 'Sem identificação';
   }
+  protected fieldLabel(field: string): string {
+    const labels: Record<string, string> = {
+      legalName: 'Razão social', tradeName: 'Nome fantasia', documentNumber: 'Documento', email: 'E-mail',
+      phone: 'Telefone', address: 'Endereço', notes: 'Observações', sku: 'Código do produto', name: 'Nome',
+      category: 'Categoria', hardwareVersion: 'Versão de hardware', firmwareVersion: 'Versão de firmware',
+      defaultWarrantyMonths: 'Garantia em meses', technicalNotes: 'Notas técnicas'
+    };
+    return labels[field] ?? 'Linha';
+  }
   private showError(error: unknown): void {
     const status = (error as { status?: number })?.status;
-    this.error.set(status === 413 ? 'Arquivo grande demais. Reduza o tamanho do CSV e tente novamente.' : status === 415 ? 'Formato não suportado. Selecione um arquivo CSV.' : extractHttpErrorMessage(error, 'Não foi possível processar o CSV. Revise o arquivo e tente novamente.'));
+    const message = extractHttpErrorMessage(error, 'Não foi possível processar o CSV. Revise o arquivo e tente novamente.');
+    if (/UTF-?8/i.test(message)) {
+      this.error.set('Não foi possível ler a codificação do arquivo. Salve o arquivo como CSV UTF-8 e tente novamente.');
+      return;
+    }
+    this.error.set(status === 413 ? 'Arquivo grande demais. Reduza o tamanho do CSV e tente novamente.' : status === 415 ? 'Formato não suportado. Selecione um arquivo CSV.' : message);
   }
 }

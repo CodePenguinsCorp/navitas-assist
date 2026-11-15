@@ -1,12 +1,16 @@
 :host { display: block; min-width: 0; }
+.import-card { padding: var(--space-4); margin-top: var(--space-4); min-width: 0; }
+.import-card h2 { margin: 0 0 var(--space-3); font-size: var(--font-size-lg); }
+.import-card p { color: var(--muted); }
+.import-summary > span { flex: 1 1 7rem; padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-alt); }
 .import-page { min-width: 0; overflow-wrap: anywhere; }
 .import-upload, .import-summary, .import-actions { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; }
 .import-upload { margin-block: 1.5rem; }
 .import-upload label { flex: 1; min-width: 0; }
 input[type=file] {
-  width: 100%; max-width: 100%; min-height: var(--control-height); padding: var(--space-1) var(--space-2);
+  width: 100%; max-width: 100%; min-height: var(--control-height); padding: var(--space-4);
   border: 1px dashed var(--line-strong, var(--line)); border-radius: var(--radius-sm);
-  background: var(--surface); color: var(--muted); font-size: var(--font-size-md); cursor: pointer;
+  background: var(--surface-alt); color: var(--muted); font-size: var(--font-size-md); cursor: pointer;
 }
 input[type=file]:hover:not(:disabled) { border-color: var(--brand-blue); background: var(--brand-tint); }
 input[type=file]:focus-visible { outline: none; box-shadow: var(--focus-ring); }
@@ -23,7 +27,7 @@ input[type=file]::file-selector-button {
 .import-table th:first-child { width: 5rem; }
 .import-table td { overflow-wrap: anywhere; }
 .import-table td p { margin: 0 0 .3rem; }
-.import-actions { justify-content: space-between; margin-top: 2rem; }
+.import-actions { justify-content: flex-end; margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--line); }
 @media (max-width: 600px) {
   .import-table thead { display: none; }
   .import-table tr { display: block; border-bottom: 1px solid var(--line); padding-block: .75rem; }

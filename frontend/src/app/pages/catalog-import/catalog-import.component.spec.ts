@@ -21,6 +21,15 @@ describe('CatalogImportComponent', () => {
     fixture.detectChanges();
     return { fixture, page: fixture.componentInstance as any, service, router, confirmation };
   }
+  it('separa modelo, arquivo e prévia e orienta salvar em UTF-8', () => {
+    const { page, service, fixture } = setup();
+    expect(fixture.nativeElement.querySelector('section[aria-label="Modelo"] button').textContent).toContain('Baixar modelo');
+    service.previewImport.mockReturnValue(throwError(() => ({ status: 400, error: { message: 'Arquivo deve estar em UTF-8' } })) as any);
+    page.selectFile({ target: { files: [new File(['a'], 'a.csv')] } });
+    page.generatePreview(); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('section[aria-label="Arquivo"] [role="alert"]').textContent).toContain('Salve o arquivo como CSV UTF-8');
+  });
+
   it('confirma o mesmo File da prévia uma única vez e volta à lista com resumo', () => {
     const { page, service, router, confirmation } = setup();
     const file = new File(['dados'], 'dados.csv');
@@ -49,6 +58,8 @@ describe('CatalogImportComponent', () => {
     page.generatePreview();
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('<b>Aviso</b>');
+    expect(fixture.nativeElement.querySelector('section[aria-label="Prévia"] table')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Telefone: <b>Aviso</b>');
     expect(fixture.nativeElement.querySelector('tbody b')).toBeNull();
     page.changeFilter('INVALID');
     expect(page.visibleRows().map((row: any) => row.lineNumber)).toEqual([3]);

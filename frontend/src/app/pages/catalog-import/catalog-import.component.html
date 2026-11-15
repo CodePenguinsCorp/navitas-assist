@@ -1,14 +1,21 @@
 <section class="page-surface import-page">
-  <app-page-header [heading]="'Importar ' + label + ' por CSV'">
+  <app-page-header [heading]="'Importar ' + label + ' por CSV'" />
+  <section class="panel import-card" aria-label="Modelo">
+    <h2>1. Modelo</h2>
+    <p>Preencha o modelo e substitua ou apague a linha de exemplo. Somente linhas válidas serão cadastradas.</p>
     <button type="button" class="button-secondary" (click)="downloadTemplate()" [disabled]="busy()">Baixar modelo CSV</button>
-  </app-page-header>
-  <p>Baixe o modelo, preencha os dados e confira a prévia antes de importar. Somente linhas válidas serão cadastradas. Substitua ou apague a linha de exemplo do modelo.</p>
+  </section>
+  <section class="panel import-card" aria-label="Arquivo">
+    <h2>2. Arquivo</h2>
   <div class="import-upload">
     <label class="field-group"><span>Arquivo CSV</span><small>UTF-8 · até 2 MiB · 2.000 registros</small><input type="file" accept=".csv,text/csv" (change)="selectFile($event)" [disabled]="busy()" /></label>
     <button type="button" class="button-secondary" (click)="generatePreview()" [disabled]="!file() || busy()">Gerar prévia</button>
   </div>
   @if (error()) { <div class="alert-banner alert-banner--error" role="alert">{{ error() }}</div> }
+  </section>
   @if (preview(); as result) {
+    <section class="panel import-card" aria-label="Prévia">
+    <h2>3. Prévia</h2>
     <div class="import-summary" role="status">
       <span><strong>{{ result.validRows }}</strong> Válidas</span><span><strong>{{ result.invalidRows }}</strong> Inválidas</span><span><strong>{{ result.duplicateRows }}</strong> Duplicadas</span>
     </div>
@@ -20,8 +27,8 @@
         <tbody>
           @for (row of visibleRows(); track row.lineNumber) {
             <tr><td data-label="Linha">{{ row.lineNumber }}</td><td data-label="Identificação">{{ identification(row) }}</td><td data-label="Situação">{{ statuses[row.status] }}</td><td data-label="Motivos e avisos">
-              @for (issue of row.reasons; track $index) { <p>{{ issue.field }}: {{ issue.message }}</p> }
-              @for (warning of row.warnings; track $index) { <p>Aviso: {{ warning.field }}: {{ warning.message }}</p> }
+              @for (issue of row.reasons; track $index) { <p>{{ fieldLabel(issue.field) }}: {{ issue.message }}</p> }
+              @for (warning of row.warnings; track $index) { <p>Aviso: {{ fieldLabel(warning.field) }}: {{ warning.message }}</p> }
               @if (!row.reasons.length && !row.warnings.length) { <span>Sem observações</span> }
             </td></tr>
           } @empty { <tr><td colspan="4">Nenhuma linha nesta situação.</td></tr> }
@@ -29,6 +36,7 @@
       </table>
     </div>
     <app-pagination singular="linha" plural="linhas" [page]="page()" [size]="size()" [totalElements]="filteredRows().length" [totalPages]="totalPages()" [shown]="visibleRows().length" [loading]="busy()" (pageChange)="page.set($event)" (sizeChange)="changeSize($event)" />
+    </section>
   }
-  <div class="import-actions"><button type="button" class="button-secondary" (click)="cancel()" [disabled]="busy()">Cancelar</button><button type="button" class="button-primary" (click)="confirm()" [disabled]="!preview()?.validRows || busy()">Importar {{ preview()?.validRows ?? 0 }} linhas válidas</button></div>
+  <footer class="import-actions"><button type="button" class="button-secondary" (click)="cancel()" [disabled]="busy()">Cancelar</button><button type="button" class="button-primary" (click)="confirm()" [disabled]="!preview()?.validRows || busy()">Importar {{ preview()?.validRows ?? 0 }} linhas válidas</button></footer>
 </section>
