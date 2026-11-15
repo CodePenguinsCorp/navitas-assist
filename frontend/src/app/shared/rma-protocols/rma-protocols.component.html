@@ -107,13 +107,11 @@
                     }
                     <label class="field-group">
                       <span>{{ requiresEvidence() ? 'Evidência obrigatória' : 'Evidência (opcional)' }}</span>
-                      <input type="text" formControlName="evidence" maxlength="500" [attr.aria-required]="requiresEvidence()" aria-describedby="protocol-evidence-hint" />
-                      <small id="protocol-evidence-hint">Obrigatória ao aprovar item que exige evidência.</small>
+                      <input type="text" formControlName="evidence" maxlength="500" [attr.aria-required]="requiresEvidence()" />
                     </label>
                     <label class="field-group">
                       <span>{{ requiresJustification() ? 'Justificativa obrigatória' : 'Justificativa (opcional)' }}</span>
-                      <input type="text" formControlName="justification" maxlength="500" [attr.aria-required]="requiresJustification()" aria-describedby="protocol-justification-hint" />
-                      <small id="protocol-justification-hint">Obrigatória ao repetir, reprovar ou marcar como não se aplica.</small>
+                      <input type="text" formControlName="justification" maxlength="500" [attr.aria-required]="requiresJustification()" />
                     </label>
                   </fieldset>
                   <div class="form-actions inline-form__actions">
