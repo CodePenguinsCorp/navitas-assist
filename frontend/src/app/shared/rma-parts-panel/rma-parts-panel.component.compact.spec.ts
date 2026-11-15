@@ -40,7 +40,7 @@ describe('RmaPartsPanelComponent compact sections', () => {
     await setup();
     expect(root().querySelector('form')).toBeNull();
     expect(trigger('reserve-trigger').textContent).toContain('Reservar peça');
-    expect(trigger('external-trigger').textContent).toContain('Adicionar fora do estoque');
+    expect(trigger('external-trigger').textContent).toContain('Adicionar componente externo');
     expect(trigger('reserve-trigger').closest('.collapsible__head')!.querySelector('h3')!.textContent!.trim()).toBe('Peças');
     expect(trigger('external-trigger').closest('.collapsible__head')!.querySelector('h3')!.textContent!.trim()).toBe('Componentes trocados');
     expect(trigger('reserve-trigger').getAttribute('aria-expanded')).toBe('false');
@@ -51,6 +51,19 @@ describe('RmaPartsPanelComponent compact sections', () => {
     await setup();
     expect(root().querySelector('.record-stats')).toBeNull();
     expect(Array.from(root().querySelectorAll('.repair-empty')).map((e) => e.textContent?.trim())).toEqual(['Nenhuma peça reservada', 'Nenhum componente trocado']);
+  });
+
+  it('hides the empty state while a form is open and shows it again when closed', async () => {
+    await setup();
+    const empties = () => Array.from(root().querySelectorAll('.repair-empty')).map((e) => e.textContent?.trim());
+    click('reserve-trigger');
+    expect(empties()).toEqual(['Nenhuma peça ativa disponível', 'Nenhum componente trocado']);
+    click('reserve-trigger');
+    expect(empties()).toEqual(['Nenhuma peça reservada', 'Nenhum componente trocado']);
+    click('external-trigger');
+    expect(empties()).toEqual(['Nenhuma peça reservada']);
+    click('external-trigger');
+    expect(empties()).toEqual(['Nenhuma peça reservada', 'Nenhum componente trocado']);
   });
 
   it('expands and collapses the reserve form with aria-expanded and focuses its first field', async () => {

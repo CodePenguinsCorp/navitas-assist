@@ -68,11 +68,13 @@
     }
 
     @if (reservations().length === 0) {
-      <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="box" /></span><h3 class="repair-empty">Nenhuma peça reservada</h3>@if (canCreateReservation() && !reserveOpen()) { <button type="button" class="button-secondary" (click)="toggleReserve()">Reservar peça</button> }</div>
+      @if (!reserveOpen()) {
+        <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="box" /></span><h3 class="repair-empty">Nenhuma peça reservada</h3>@if (canCreateReservation()) { <button type="button" class="button-secondary" (click)="toggleReserve()">Reservar peça</button> }</div>
+      }
     } @else {
       <div class="record-rows" aria-label="Reservas de peças">
         @for (reservation of reservations(); track reservation.id) {
-          <div class="record-row" [class]="reservationTone(reservation.status)">
+          <div class="record-row record-row--stacked" [class]="reservationTone(reservation.status)">
             <span class="icon-tile icon-tile--sm" aria-hidden="true"><app-icon name="box" /></span>
             <div class="record-row__main">
               <div class="record-row__head">
@@ -80,18 +82,18 @@
                 <span class="code-text record-row__code">{{ reservation.partCode }}</span>
                 <span class="mini-chip" [class]="statusClass(reservation.status)">{{ statusLabels[reservation.status] }}</span>
               </div>
-              <dl class="record-stats record-stats--compact" [attr.aria-label]="'Dados da reserva de ' + reservation.partCode">
+              <dl class="record-stats record-stats--compact record-stats--metrics" [style.--cols]="canSeeCosts() ? 3 : 2" [attr.aria-label]="'Dados da reserva de ' + reservation.partCode">
                 <div><dt>Quantidade</dt><dd>{{ quantity(reservation.quantity, reservation.unit) }}</dd></div>
                 <div><dt>Disponível</dt><dd>{{ quantity(reservation.partAvailable, reservation.unit) }}</dd></div>
                 @if (canSeeCosts()) {
                   <div><dt>Custo</dt><dd>{{ currency(reservation.totalCost ?? 0) }}</dd></div>
                 }
-                @if (reservation.location) {
-                  <div><dt>Local</dt><dd>{{ reservation.location }}</dd></div>
-                }
               </dl>
-              @if (reservation.note) {
-                <small class="record-row__meta">Observação: {{ reservation.note }}</small>
+              @if (reservation.location || reservation.note) {
+                <dl class="record-fields record-fields--single">
+                  @if (reservation.location) { <div><dt>Local</dt><dd>{{ reservation.location }}</dd></div> }
+                  @if (reservation.note) { <div><dt>Observação</dt><dd>{{ reservation.note }}</dd></div> }
+                </dl>
               }
             </div>
 
@@ -126,7 +128,7 @@
     @if (consuming(); as reservation) {
       @if (canCreateReservation()) {
         <form class="inline-form" [formGroup]="consumptionForm" (ngSubmit)="confirmConsumption()" (keydown.escape)="$event.stopPropagation(); consuming.set(null)" novalidate>
-          <strong class="field-group--full">Aplicar {{ reservation.partCode }} · {{ reservation.partName }}</strong>
+          <strong class="field-group--full">Aplicar {{ reservation.partCode }} - {{ reservation.partName }}</strong>
           <label class="field-group field-group--full field-group--required"><span>Motivo da troca</span><textarea rows="4" maxlength="1000" formControlName="replacementReason" [attr.aria-invalid]="hasError(consumptionForm.controls.replacementReason) ? 'true' : null"></textarea>
             @if (hasError(consumptionForm.controls.replacementReason)) { <small class="field-error" role="alert">Informe o motivo da troca</small> }
           </label>
@@ -144,7 +146,7 @@
 <section class="repair-panel detail-card">
   <app-collapsible-section title="Componentes trocados" icon="wrench" [count]="replacedComponents().length || null" [open]="replacedComponents().length > 0 || externalOpen() || !!externalError()" storageKey="rma.components">
       @if (canCreateReservation()) {
-        <button sectionActions type="button" id="external-trigger" class="link-button" [attr.aria-expanded]="externalOpen() && !editingExternal()" aria-controls="external-form" (click)="toggleExternal()">Adicionar fora do estoque</button>
+        <button sectionActions type="button" id="external-trigger" class="link-button" [attr.aria-expanded]="externalOpen() && !editingExternal()" aria-controls="external-form" (click)="toggleExternal()">Adicionar componente externo</button>
       }
       @if (externalError()) { <p class="field-error" role="alert">{{ externalError() }}</p><button type="button" class="button-secondary button-secondary--small" (click)="loadExternal()">Tentar novamente</button> }
       @if (componentStats().length > 0) {
@@ -161,17 +163,21 @@
             <div class="record-row__head">
               <strong class="record-row__title">{{ component.description }}</strong>
               @if (component.code) { <span class="code-text record-row__code">{{ component.code }}</span> }
-              @if (component.voidedAt) { <span class="mini-chip tone-chip tone-danger">Anulado</span> }
-            </div>
-            <div class="record-row__chips">
               <span class="mini-chip tone-chip">{{ component.source }}</span>
               <span class="mini-chip mini-chip--muted">{{ quantity(component.quantity, component.unit) }}</span>
+              @if (component.voidedAt) { <span class="mini-chip tone-chip tone-danger">Anulado</span> }
             </div>
-            <button type="button" class="record-row__desc" [class.is-expanded]="expandedKeys().has(component.key)" [attr.aria-expanded]="expandedKeys().has(component.key)" [appTip]="component.replacementReason || 'Motivo não registrado'" (click)="toggleExpanded(component.key)">Motivo da troca: {{ component.replacementReason || 'Motivo não registrado' }}</button>
-            @if (component.componentBatch || component.appliedAt) {
-              <small class="record-row__meta">@if (component.componentBatch) { Lote: {{ component.componentBatch }} }@if (component.componentBatch && component.appliedAt) { · }@if (component.appliedAt) { {{ dateTime(component.appliedAt) }} · {{ component.appliedBy }} }</small>
+            <dl class="record-fields record-fields--reason">
+              <div><dt>Motivo da troca</dt><dd>{{ component.replacementReason || 'Motivo não registrado' }}</dd></div>
+              @if (component.componentBatch) { <div><dt>Lote</dt><dd>{{ component.componentBatch }}</dd></div> }
+              @if (component.appliedAt) { <div><dt>Registrado</dt><dd>{{ dateTime(component.appliedAt) }}, {{ component.appliedBy }}</dd></div> }
+            </dl>
+            @if (component.voidedAt) {
+              <dl class="record-fields record-fields--reason record-fields--void">
+                <div><dt>Motivo da anulação</dt><dd>{{ component.voidReason }}</dd></div>
+                <div><dt>Anulado por</dt><dd>{{ component.voidedBy }}</dd></div>
+              </dl>
             }
-            @if (component.voidedAt) { <small class="record-row__void">Anulado: {{ component.voidReason }} · {{ component.voidedBy }}</small> }
           </div>
           @if (component.external && canCreateReservation() && !component.voidedAt) {
             <span class="record-row__actions">
@@ -188,7 +194,7 @@
           }
           @if (component.external && editingExternal()?.id === component.id && canCreateReservation()) { <ng-container [ngTemplateOutlet]="externalEditor" /> }
         </div>
-      } @empty { @if (!externalOpen()) { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="chip" /></span><h3 class="repair-empty">Nenhum componente trocado</h3>@if (canCreateReservation()) { <button type="button" class="button-secondary" (click)="toggleExternal()">Adicionar fora do estoque</button> }</div> } }
+      } @empty { @if (!externalOpen()) { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="chip" /></span><h3 class="repair-empty">Nenhum componente trocado</h3>@if (canCreateReservation()) { <button type="button" class="button-secondary" (click)="toggleExternal()">Adicionar componente externo</button> }</div> } }
       </div>
   </app-collapsible-section>
 </section>

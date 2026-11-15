@@ -377,7 +377,7 @@
       <header class="modal-header">
         <div>
           <h3 id="part-history-title" tabindex="-1">Histórico de movimentos</h3>
-          <p><span class="code-text">{{ part.code }}</span> · {{ part.name }}</p>
+          <p><span class="code-text">{{ part.code }}</span> - {{ part.name }}</p>
         </div>
         <button type="button" class="modal-close" aria-label="Fechar" (click)="closeModals()" [disabled]="submitting()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
@@ -405,16 +405,14 @@
                   <span class="mini-chip tone-chip movement-item__type" [class]="movementTone(movement.type)">{{ movementLabels[movement.type] }}</span>
                   @if (movement.reversed) { <span class="mini-chip warranty-off">Revertida</span> }
                 </div>
-                <p class="record-row__meta movement-item__meta">
-                  <time [attr.datetime]="movement.createdAt">{{ dateTime(movement.createdAt) }}</time> ·
-                  @if (movement.rmaCode) {<span class="code-text">{{ movement.rmaCode }}</span> · }{{ movement.createdBy }}
-                  @if (movement.reversedMovementId) { · do movimento {{ movement.reversedMovementId }} }
-                </p>
-                <dl class="record-stats record-stats--compact movement-item__balance">
+                <dl class="record-fields">
+                  <div><dt>Registrado</dt><dd><time [attr.datetime]="movement.createdAt">{{ dateTime(movement.createdAt) }}</time>, {{ movement.createdBy }}</dd></div>
+                  @if (movement.rmaCode) { <div><dt>Ordem de serviço</dt><dd><span class="code-text">{{ movement.rmaCode }}</span></dd></div> }
+                  @if (movement.reversedMovementId) { <div><dt>Reverte o movimento</dt><dd>{{ movement.reversedMovementId }}</dd></div> }
                   <div><dt>Estoque</dt><dd>{{ transition(movement.onHandAfter - movement.onHandChange, movement.onHandAfter, part.unit) }}</dd></div>
                   <div><dt>Reservado</dt><dd>{{ transition(movement.reservedAfter - movement.reservedChange, movement.reservedAfter, part.unit) }}</dd></div>
+                  @if (movement.reason) { <div class="is-wide"><dt>Motivo</dt><dd>{{ movement.reason }}</dd></div> }
                 </dl>
-                @if (movement.reason) { <p class="movement-item__reason"><strong>Motivo:</strong> {{ movement.reason }}</p> }
               </div>
               @if (canManage() && reversingMovementId() !== movement.id && canReverse(movement)) {
                 <div class="record-row__actions">
@@ -426,7 +424,7 @@
               @if (canManage() && reversingMovementId() === movement.id) {
                 <section class="inline-form movement-reversal" [attr.aria-labelledby]="'reversal-title-' + movement.id">
                   <h4 [id]="'reversal-title-' + movement.id">Reverter movimento {{ movement.id }}</h4>
-                  <p>{{ movementLabels[movement.type] }} · {{ dateTime(movement.createdAt) }} · {{ part.code }} · {{ part.name }}</p>
+                  <p>{{ movementLabels[movement.type] }}, {{ dateTime(movement.createdAt) }}, {{ part.code }} - {{ part.name }}</p>
                   <p>O movimento original será mantido.</p>
                   <label class="field-group field-group--full field-group--required" [attr.for]="'reversal-reason-' + movement.id">
                     <span>Motivo da reversão</span>

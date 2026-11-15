@@ -164,15 +164,15 @@ describe('RmaRepairPanelComponent', () => {
       ]);
       const lines = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.record-row'));
       expect(lines).toHaveLength(2);
-      const parts = (l: HTMLElement) => ['.record-row__title', '.record-row__chips', '.record-row__desc', '.record-row__meta'].map(q => l.querySelector(q)!.textContent!.trim());
-      expect(parts(lines[0])).toEqual(['Limpeza', '1,5 h', 'Placa limpa', '12/11/2026 · ana']);
+      const parts = (l: HTMLElement) => ['.record-row__title', '.record-row__head .mini-chip', '.record-row__desc', '.record-fields'].map(q => l.querySelector(q)!.textContent!.replace(/\s+/g, ' ').trim());
+      expect(parts(lines[0])).toEqual(['Limpeza', '1,5 h', 'Placa limpa', 'Realizada em12/11/2026Técnicoana']);
       const desc = lines[0].querySelector('.record-row__desc')!;
       Object.defineProperty(desc, 'scrollWidth', { configurable: true, value: 400 }); Object.defineProperty(desc, 'clientWidth', { configurable: true, value: 100 });
       desc.dispatchEvent(new Event('mouseenter'));
       expect(document.querySelector('.app-tip')?.textContent).toBe('Placa limpa');
       expect(lines[1].classList.contains('is-voided')).toBe(true);
       expect(lines[1].querySelector('[aria-label*="Editar"]')).toBeNull();
-      expect(fixture.nativeElement.textContent).toContain('Anulada: Duplicada · admin');
+      expect(fixture.nativeElement.textContent).toContain('Motivo da anulaçãoDuplicadaAnulada poradmin');
     });
   });
 });

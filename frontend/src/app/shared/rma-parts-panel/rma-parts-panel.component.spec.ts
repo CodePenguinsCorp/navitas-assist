@@ -141,7 +141,7 @@ describe('RmaPartsPanelComponent', () => {
     component.parts.set({ ...RMA_PARTS, reservations: [{ ...reservation(1, 'ACTIVE'), note: '1' }] });
     fixture.detectChanges();
     const root: HTMLElement = fixture.nativeElement;
-    expect(root.querySelector('.record-row__meta')?.textContent).toContain('Observação: 1');
+    expect(root.querySelector('.record-fields')?.textContent?.replace(/\s+/g, ' ')).toContain('LocalA1Observação1');
     root.querySelector<HTMLButtonElement>('[aria-label="Cancelar reserva Capacitor"]')!.click();
     fixture.detectChanges();
     root.querySelector<HTMLButtonElement>('[aria-label="Manter reserva"]')!.click();
@@ -247,7 +247,7 @@ describe('RmaPartsPanelComponent', () => {
     vi.mocked(service.listExternalComponents).mockReturnValue(of([{ id: 9, code: 'EXT', description: 'Conector externo', quantity: 1.125, unit: 'un', replacementReason: 'Oxidação', componentBatch: 'B1', appliedAt: '2026-11-12T12:00:00Z', appliedBy: 'ana' }]));
     component.loadExternal(); fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Conector externo');
-    expect(fixture.nativeElement.textContent).toContain('Fora do estoque');
+    expect(fixture.nativeElement.textContent).toContain('Externo');
     expect(fixture.nativeElement.textContent).toContain('Motivo não registrado');
     component.startConsumption(reservation(1, 'ACTIVE')); fixture.detectChanges();
     const buttons = Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('form:has([formControlName="replacementReason"]) .inline-form__actions button'));
@@ -255,6 +255,21 @@ describe('RmaPartsPanelComponent', () => {
     buttons[0].click(); fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[formControlName="replacementReason"]')).toBeNull();
     expect(partService['updateReservation']).not.toHaveBeenCalled();
+  });
+
+  it('organiza o componente externo com chips no topo e pares rotulados em colunas', async () => {
+    await setUp('TECHNICIAN');
+    const component = fixture.componentInstance as any;
+    const service = TestBed.inject(RmaRepairService);
+    vi.mocked(service.listExternalComponents).mockReturnValue(of([{ id: 9, code: '123', description: 'Teste', quantity: 2, unit: 'un', replacementReason: 'Falha', componentBatch: 'B1', appliedAt: '2026-11-12T12:00:00Z', appliedBy: 'ana' }]));
+    component.loadExternal(); fixture.detectChanges();
+    const row: HTMLElement = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.record-row')).find(item => item.textContent?.includes('Teste'))!;
+    expect(Array.from(row.querySelectorAll('.record-row__head .mini-chip')).map(chip => chip.textContent?.trim())).toEqual(['Externo', '2 un']);
+    expect(Array.from(row.querySelectorAll('.record-fields dt')).map(dt => dt.textContent?.trim())).toEqual(['Motivo da troca', 'Lote', 'Registrado']);
+    expect(row.textContent).not.toContain(' · ');
+    const reservationRow: HTMLElement = fixture.nativeElement.querySelector('.record-row--stacked');
+    expect(Array.from(reservationRow.querySelectorAll('.record-stats--metrics dt')).map(dt => dt.textContent?.trim())).toEqual(['Quantidade', 'Disponível', 'Custo']);
+    expect(reservationRow.querySelector('.record-row__actions')).not.toBeNull();
   });
 
   it('blocks external writes for a viewer and after closure and rejects whitespace and excess precision', async () => {

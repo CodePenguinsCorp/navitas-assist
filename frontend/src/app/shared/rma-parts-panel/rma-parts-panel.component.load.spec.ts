@@ -26,6 +26,7 @@ const PART: PartResponse = {
 
 type Harness = {
   reserveForm: { setValue(value: unknown): void };
+  reserveOpen: { set(value: boolean): void };
   reserve(): void;
   runAction(reservation: PartReservationResponse, action: 'consume' | 'allocate' | 'cancel'): void;
 };
@@ -87,7 +88,9 @@ describe('RmaPartsPanelComponent loading', () => {
   // Vermelho: depois de uma leitura vazia, a recarga com erro mantém "Nenhuma peça reservada".
   it('replaces an empty result with the failure after reserving', async () => {
     await setup({ parts: of(rmaParts([])) });
+    component().reserveOpen.set(false); render();
     expect(text()).toContain('Nenhuma peça reservada');
+    component().reserveOpen.set(true);
     service.getRmaParts.mockReturnValue(throwError(() => new Error()));
     component().reserveForm.setValue({ partId: 4, quantity: 1, note: '' });
     component().reserve(); render();

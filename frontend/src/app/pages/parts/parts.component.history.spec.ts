@@ -134,7 +134,7 @@ describe('PartsComponent movement history', () => {
     expect(text()).toContain('Tentar novamente'); expect(text()).not.toContain('tech'); expect(text()).not.toContain('Peça instalada');
     expect(text()).not.toContain('Nenhum movimento registrado.'); expect(text()).not.toContain('Reverter movimento 9');
     service['listMovements'].mockReturnValue(of([{ ...CONSUMPTION, reversed: true }, REVERSAL]));
-    button('Tentar novamente')!.click(); render(); expect(text()).toContain('Revertida'); expect(text()).toContain('do movimento 9');
+    button('Tentar novamente')!.click(); render(); expect(text()).toContain('Revertida'); expect(text()).toContain('Reverte o movimento9');
   });
 
   // Vermelho: resposta da peça A substitui os movimentos da peça B.
@@ -185,10 +185,8 @@ describe('PartsComponent movement history', () => {
     expect(item.classList).toContain('record-row');
     expect(item.querySelector('.icon-tile app-icon')).not.toBeNull();
 
-    expect(text(item.querySelector('.movement-item__balance'))).toBe('Estoque11,5 m → 10 mReservado5,5 m → 4 m');
-    expect(text(item.querySelector('.movement-item__meta'))).toContain('OS-7 · tech');
-    expect(text(item.querySelector('.movement-item__meta .code-text'))).toBe('OS-7');
-    expect(text(item.querySelector('.movement-item__reason'))).toBe('Motivo: Peça instalada');
+    expect(text(item.querySelector('.record-fields'))).toBe('Registrado24/10/2026, 09:00, techOrdem de serviçoOS-7Estoque11,5 m → 10 mReservado5,5 m → 4 mMotivoPeça instalada');
+    expect(text(item.querySelector('.record-fields .code-text'))).toBe('OS-7');
   });
 
   it('omits the empty OS and reason, and shows only the balance that changed', async () => {
@@ -196,9 +194,7 @@ describe('PartsComponent movement history', () => {
     const [item] = items();
     expect(item.querySelector('.movement-item__type')!.classList).toContain('tone-success');
     expect(text(item.querySelector('.record-row__title'))).toBe('Entrada de 20 m');
-    expect(text(item.querySelector('.movement-item__meta'))).toContain('tech');
-    expect(item.querySelector('.movement-item__reason')).toBeNull();
-    expect(text(item.querySelector('.movement-item__balance'))).toBe('Estoque0 m → 20 mReservado0 m');
+    expect(text(item.querySelector('.record-fields'))).toBe('Registrado24/10/2026, 09:00, techEstoque0 m → 20 mReservado0 m');
   });
 
   it('offers Reverter as a named icon action', async () => {
@@ -225,7 +221,7 @@ describe('PartsComponent movement history', () => {
     expect(service['reverseMovement']).toHaveBeenCalledWith(9, 'Peça não utilizada');
     expect(service['listMovements']).toHaveBeenCalledTimes(2); expect(service['listMovements']).toHaveBeenLastCalledWith(4);
     for (const name of ['list', 'listReplenishment', 'listPending']) expect(service[name]).toHaveBeenCalledTimes(2);
-    expect(text()).toContain('Revertida'); expect(text()).toContain('do movimento 9');
+    expect(text()).toContain('Revertida'); expect(text()).toContain('Reverte o movimento9');
     expect(items().map((row) => text(row))).toEqual([
       expect.stringContaining('Peça instalada'), expect.stringContaining('Peça não utilizada')
     ]);

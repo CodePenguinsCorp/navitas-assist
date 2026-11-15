@@ -1,6 +1,5 @@
 import { allowsFraction, quantityError, quantityValidator } from '../../core/utils/quantity-rules';
 import { IconComponent } from '../icon/icon.component';
-import { TipDirective } from '../tip/tip.directive';
 import { viewChildren, Component, ElementRef, EventEmitter, Injector, Output, DestroyRef, afterNextRender, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -27,7 +26,7 @@ const ACTION_MESSAGES: Record<PartReservationAction, string> = {
 
 @Component({
   selector: 'app-rma-parts-panel',
-  imports: [IconComponent, TipDirective, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, CollapsibleSectionComponent],
+  imports: [IconComponent, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, CollapsibleSectionComponent],
   templateUrl: './rma-parts-panel.component.html',
   styleUrl: './rma-parts-panel.component.css'
 })
@@ -40,7 +39,6 @@ export class RmaPartsPanelComponent {
   private readonly toasts = inject(ToastService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
-  protected readonly expandedKeys = signal<ReadonlySet<string>>(new Set());
   protected readonly reserveOpen = signal(false);
 
   @Output() readonly changed = new EventEmitter<void>();
@@ -100,14 +98,14 @@ export class RmaPartsPanelComponent {
   protected readonly partOptions = computed<ReadonlyArray<CustomSelectOption<number>>>(() =>
     this.catalog()
       .filter((part) => part.active)
-      .map((part) => ({ value: part.id, label: `${part.code} · ${part.name} (disponível: ${formatQuantity(part.available, part.unit)})` }))
+      .map((part) => ({ value: part.id, label: `${part.code} - ${part.name} (disponível: ${formatQuantity(part.available, part.unit)})` }))
   );
 
   protected readonly componentStats = computed(() => {
     const active = this.replacedComponents().filter((component) => !component.voidedAt);
     if (active.length === 0) return [];
     const external = active.filter((component) => component.external).length;
-    return [{ label: 'Componentes', value: String(active.length) }, { label: 'Fora do estoque', value: String(external) }, { label: 'Do estoque', value: String(active.length - external) }];
+    return [{ label: 'Componentes', value: String(active.length) }, { label: 'Externos', value: String(external) }, { label: 'Do estoque', value: String(active.length - external) }];
   });
 
   protected readonly consuming = signal<PartReservationResponse | null>(null);
@@ -118,7 +116,7 @@ export class RmaPartsPanelComponent {
   protected readonly externalError = signal('');
   protected readonly replacedComponents = computed(() => [
     ...(this.parts()?.replacedComponents ?? this.reservations().filter(r => r.status === 'CONSUMED')).map(r => ({ ...r, key: `stock-${r.id}`, description: r.partName, code: r.partCode, source: 'Do estoque', external: false as const, voidedAt: null, voidReason: null, voidedBy: null })),
-    ...this.externalComponents().map(c => ({ ...c, key: `external-${c.id}`, source: 'Fora do estoque', external: true as const }))
+    ...this.externalComponents().map(c => ({ ...c, key: `external-${c.id}`, source: 'Externo', external: true as const }))
   ]);
   protected readonly consumptionForm = this.formBuilder.nonNullable.group({
     replacementReason: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(1000)]],
@@ -277,10 +275,6 @@ export class RmaPartsPanelComponent {
     if (restoreFocus) afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>('#external-trigger')?.focus(), { injector: this.injector });
   }
 
-  protected toggleExpanded(key: string): void {
-    const next = new Set(this.expandedKeys()); if (!next.delete(key)) next.add(key); this.expandedKeys.set(next);
-  }
-
   protected readonly reservationTone = (status: PartReservationResponse['status']): string =>
     ({ ACTIVE: 'tone-sky', PENDING: 'tone-warning', CONSUMED: 'tone-success' } as Record<string, string>)[status] ?? 'tone-slate';
   private focusFirstExternalField(): void {
@@ -310,7 +304,7 @@ export class RmaPartsPanelComponent {
     this.externalError.set('');
     this.externalRequest = this.repairService.listExternalComponents(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: components => { if (id === this.rmaId()) this.externalComponents.set(components); },
-      error: error => { if (id === this.rmaId()) this.externalError.set(extractHttpErrorMessage(error, 'Não foi possível carregar componentes fora do estoque.')); }
+      error: error => { if (id === this.rmaId()) this.externalError.set(extractHttpErrorMessage(error, 'Não foi possível carregar componentes externos.')); }
     });
   }
 

@@ -20,14 +20,20 @@
         <div class="record-row__main">
           <div class="record-row__head">
             <strong class="record-row__title">{{ labels[item.type] }}</strong>
+            <span class="mini-chip tone-chip">{{ hours(item.hours) }} h</span>
             @if (item.voidedAt) { <span class="mini-chip tone-chip tone-danger">Anulada</span> }
           </div>
-          <div class="record-row__chips">
-            <span class="mini-chip tone-chip">{{ hours(item.hours) }} h</span>
-          </div>
           <button type="button" class="record-row__desc" [class.is-expanded]="expanded().has(item.id)" [attr.aria-expanded]="expanded().has(item.id)" [appTip]="item.description" (click)="toggleExpanded(item.id)">{{ item.description }}</button>
-          <small class="record-row__meta">{{ date(item.performedOn) }} · {{ item.technicianName }}</small>
-          @if (item.voidedAt) { <small class="record-row__void">Anulada: {{ item.voidReason }} · {{ item.voidedBy }}</small> }
+          <dl class="record-fields record-fields--reason">
+            <div><dt>Realizada em</dt><dd>{{ date(item.performedOn) }}</dd></div>
+            <div><dt>Técnico</dt><dd>{{ item.technicianName }}</dd></div>
+          </dl>
+          @if (item.voidedAt) {
+            <dl class="record-fields record-fields--reason record-fields--void">
+              <div><dt>Motivo da anulação</dt><dd>{{ item.voidReason }}</dd></div>
+              <div><dt>Anulada por</dt><dd>{{ item.voidedBy }}</dd></div>
+            </dl>
+          }
         </div>
         @if (canWrite() && !item.voidedAt) {
           <span class="record-row__actions">
