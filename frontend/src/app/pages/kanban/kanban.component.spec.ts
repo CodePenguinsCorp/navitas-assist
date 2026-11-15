@@ -900,7 +900,7 @@ describe('KanbanComponent dialog focus', () => {
     expect(document.activeElement).toBe(statusTrigger());
   });
 
-  it('keeps Tab from an open selector menu under the selector, without option stops', () => {
+  it('moves on from an open selector menu with a single Tab, without option stops', () => {
     openDetailFromCard();
     statusTrigger().focus();
     press('ArrowDown');
@@ -908,8 +908,7 @@ describe('KanbanComponent dialog focus', () => {
     expect(option.getAttribute('role')).toBe('option');
     press('Tab');
     expect(page.querySelector('app-rma-detail-modal .custom-select__menu')).toBeNull();
-    expect(document.activeElement).toBe(statusTrigger());
-    press('Tab');
+    expect(document.activeElement).not.toBe(statusTrigger());
     expect(detail()!.contains(document.activeElement)).toBe(true);
     expect((document.activeElement as HTMLElement).getAttribute('role')).not.toBe('option');
   });
