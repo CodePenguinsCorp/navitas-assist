@@ -83,7 +83,7 @@ describe('PartsComponent presentation', () => {
     expect(edit.getAttribute('aria-label')).toBe('Editar PCA-1 Capacitor');
     expect(action('Histórico', row)?.getAttribute('aria-label')).toBe('Histórico PCA-1 Capacitor');
     expect(action('Movimentar', row)?.getAttribute('aria-label')).toBe('Movimentar PCA-1 Capacitor');
-    edit.focus(); edit.dispatchEvent(new FocusEvent('focus')); render();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })); edit.focus(); edit.dispatchEvent(new FocusEvent('focus')); render();
     const tooltip = edit.querySelector('[role="tooltip"]');
     expect(normalized(tooltip)).toBe('Editar');
     expect(tooltip?.classList.contains('is-open')).toBe(true);

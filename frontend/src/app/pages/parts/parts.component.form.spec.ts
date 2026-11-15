@@ -62,7 +62,7 @@ describe('PartsComponent part form', () => {
     submit();
     expect(service['update']).not.toHaveBeenCalled();
     expect(panel()!.textContent).toContain('Informe um número inteiro.');
-    expect(panel()!.textContent).toContain('saldo fracionado');
+    expect(panel()!.textContent).toContain('estoque fracionado');
     component.form.controls['minimumStock'].setValue(0);
     submit();
     expect(service['update']).toHaveBeenCalled();
