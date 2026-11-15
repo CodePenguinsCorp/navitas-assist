@@ -298,7 +298,7 @@ export class NotificationsComponent {
   protected markAllRead(): void {
     if (this.busy()) return;
     this.run(this.notificationService.markAllRead(), () => {
-      this.toasts.show({ message: 'Todas as notificações, inclusive as adiadas, foram marcadas como lidas.', tone: 'success' });
+      this.toasts.show({ message: 'Notificações marcadas como lidas.', tone: 'success' });
       this.loadInbox();
     });
   }
@@ -311,7 +311,7 @@ export class NotificationsComponent {
 
     this.run(this.notificationService.snooze(notification.id, value), (updated) => {
       this.closeDetail();
-      this.toasts.show({ message: updated.snoozedUntil ? `Notificação adiada até ${formatNotificationDateTime(updated.snoozedUntil)}.` : 'Notificação adiada.', tone: 'success' });
+      this.toasts.show({ message: updated.snoozedUntil ? `Adiada até ${formatNotificationDateTime(updated.snoozedUntil)}.` : 'Notificação adiada.', tone: 'success' });
       this.loadInbox();
     });
   }

@@ -467,7 +467,7 @@ describe('NotificationsComponent inbox loading', () => {
       await setup({ snooze: of({ ...BLOCKED, snoozedUntil: '2026-10-24T16:00:00Z' }) });
       component.snooze(BLOCKED, '240');
       render();
-      expect(toastMessages()).toEqual(['Notificação adiada até 24/10/2026, 13:00.']);
+      expect(toastMessages()).toEqual(['Adiada até 24/10/2026, 13:00.']);
       expect(toastTones()).toEqual(['success']);
       expect(root().querySelector('[role="status"].alert-banner')).toBeNull();
       expect(service['list']).toHaveBeenCalledTimes(2);
@@ -478,7 +478,7 @@ describe('NotificationsComponent inbox loading', () => {
       await setup();
       component.markAllRead();
       render();
-      expect(toastMessages()).toEqual(['Todas as notificações, inclusive as adiadas, foram marcadas como lidas.']);
+      expect(toastMessages()).toEqual(['Notificações marcadas como lidas.']);
       expect(text()).not.toContain('foram marcadas como lidas');
     });
 

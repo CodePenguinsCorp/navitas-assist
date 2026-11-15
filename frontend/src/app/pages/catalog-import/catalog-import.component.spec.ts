@@ -154,8 +154,8 @@ describe('CatalogImportComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith([kind === 'clients' ? '/clientes' : '/produtos'], expect.anything());
     const summary = (router.navigate.mock.calls as any)[0][1].state.importSummary;
     expect(summary).toBe(count === 1
-      ? '1 linha importada. 1 inválida ignorada e 1 duplicada ignorada.'
-      : `${count} linhas importadas. ${count} inválidas ignoradas e ${count} duplicadas ignoradas.`);
+      ? '1 linha importada. 2 ignoradas.'
+      : count === 0 ? '0 linhas importadas.' : `${count} linhas importadas. ${count * 2} ignoradas.`);
   });
 
 });

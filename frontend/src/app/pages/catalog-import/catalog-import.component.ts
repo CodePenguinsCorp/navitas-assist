@@ -93,7 +93,8 @@ export class CatalogImportComponent {
       next: result => {
         this.file.set(null);
         this.preview.set(null);
-        const importSummary = `${this.counted(result.importedRows, 'linha importada', 'linhas importadas')}. ${this.counted(result.ignoredInvalidRows, 'inválida ignorada', 'inválidas ignoradas')} e ${this.counted(result.ignoredDuplicateRows, 'duplicada ignorada', 'duplicadas ignoradas')}.`;
+        const ignored = result.ignoredInvalidRows + result.ignoredDuplicateRows;
+        const importSummary = `${this.counted(result.importedRows, 'linha importada', 'linhas importadas')}.${ignored ? ` ${this.counted(ignored, 'ignorada', 'ignoradas')}.` : ''}`;
         void this.router.navigate([this.origin], { state: { importSummary } });
       },
       error: error => this.showError(error)
