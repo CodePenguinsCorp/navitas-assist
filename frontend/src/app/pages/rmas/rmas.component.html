@@ -317,7 +317,7 @@
                       <div class="record-row__main">
                         <div class="record-row__head">
                           <strong class="record-row__title">@if (entry.kind === 'status') { <app-rma-status-transition [status]="entry.status" [previous]="entry.previous" [initial]="entry.initial" /> } @else { {{ historyEntryTitle(entry) }} }</strong>
-                          @if (entry.kind === 'repair' && entry.voided) { <span class="mini-chip tone-chip tone-danger">Anulada</span> }
+                          @if (entry.kind === 'repair' && entry.voided) { <span class="mini-chip tone-chip tone-danger">Anulado</span> }
                         </div>
                         @if (entry.kind === 'status') {
                           <app-rma-status-field [rma]="rma" [event]="entry.event" [showSelector]="false" [disabled]="writeBusy()" (saved)="detailRmaSaved($event)" (busyChange)="setWriterBusy('status', $event)" />

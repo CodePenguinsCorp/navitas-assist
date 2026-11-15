@@ -45,7 +45,7 @@ describe('RmaRepairPanelComponent', () => {
     component.form.setValue({ type: 'Limpeza', description: ' Limpeza ', performedOn: '2026-11-12', hours: 0.125 });
     component.save();
     expect(service.addIntervention).toHaveBeenCalledWith(7, { type: 'Limpeza', description: 'Limpeza', performedOn: '2026-11-12', hours: 0.125 });
-    expect(toastMessages()).toEqual(['Intervenção salva.']);
+    expect(toastMessages()).toEqual(['Reparo salvo.']);
     expect(toastTones()).toEqual(['success']);
     expect(fixture.nativeElement.querySelector('[role="status"], .muted-inline')).toBeNull();
   });
@@ -108,7 +108,7 @@ describe('RmaRepairPanelComponent', () => {
     component.confirmVoid(); expect(service.voidIntervention).not.toHaveBeenCalled();
     component.voidReason.setValue(' Duplicado '); component.confirmVoid();
     expect(service.voidIntervention).toHaveBeenCalledWith(7, 1, 'Duplicado');
-    expect(toastMessages()).toEqual(['Intervenção salva.', 'Intervenção anulada.']);
+    expect(toastMessages()).toEqual(['Reparo salvo.', 'Reparo anulado.']);
   });
 
   describe('compact layout', () => {
@@ -132,7 +132,7 @@ describe('RmaRepairPanelComponent', () => {
       const { fixture, component } = await setup();
       const root: HTMLElement = fixture.nativeElement;
       open(fixture);
-      expectInlineForm(root.querySelector('form'), ['Tipo', 'Data', 'Descrição'], 'Registrar');
+      expectInlineForm(root.querySelector('form'), ['Tipo de reparo', 'Data', 'Descrição'], 'Registrar');
       open(fixture);
       component.startVoid({ id: 1, type: 'Limpeza', description: 'Placa limpa', performedOn: '2026-11-12', hours: 1.125, technicianName: 'ana' }); fixture.detectChanges();
       expectInlineForm(root.querySelector('.record-row .inline-form'), ['Motivo da anulação'], 'Anular');
@@ -191,7 +191,7 @@ describe('RmaRepairPanelComponent', () => {
       const empty = await setupEmpty();
       expect(empty.nativeElement.querySelector('.repair-total')).toBeNull();
       expect(empty.nativeElement.textContent).not.toContain('Total de horas');
-      expect(empty.nativeElement.querySelector('.repair-empty').textContent.trim()).toBe('Nenhuma intervenção registrada');
+      expect(empty.nativeElement.querySelector('.repair-empty').textContent.trim()).toBe('Nenhum reparo registrado');
       // A ação continua só no cabeçalho da seção: o estado vazio mostra apenas o ícone e o texto.
       expect(empty.nativeElement.querySelector('.record-empty button')).toBeNull();
       expect(Array.from(empty.nativeElement.querySelectorAll('button')).filter((button: any) => button.textContent.trim() === 'Registrar')).toHaveLength(1);
@@ -205,14 +205,14 @@ describe('RmaRepairPanelComponent', () => {
       const lines = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.record-row'));
       expect(lines).toHaveLength(2);
       const parts = (l: HTMLElement) => ['.record-row__title', '.record-row__head .mini-chip', '.record-row__desc', '.record-fields'].map(q => l.querySelector(q)!.textContent!.replace(/\s+/g, ' ').trim());
-      expect(parts(lines[0])).toEqual(['Limpeza', '1,5 h', 'Placa limpa', 'Realizada em12/11/2026Técnicoana']);
+      expect(parts(lines[0])).toEqual(['Limpeza', '1,5 h', 'Placa limpa', 'Realizado em12/11/2026Técnicoana']);
       const desc = lines[0].querySelector('.record-row__desc')!;
       Object.defineProperty(desc, 'scrollWidth', { configurable: true, value: 400 }); Object.defineProperty(desc, 'clientWidth', { configurable: true, value: 100 });
       desc.dispatchEvent(new Event('mouseenter'));
       expect(document.querySelector('.app-tip')?.textContent).toBe('Placa limpa');
       expect(lines[1].classList.contains('is-voided')).toBe(true);
       expect(lines[1].querySelector('[aria-label*="Editar"]')).toBeNull();
-      expect(fixture.nativeElement.textContent).toContain('Motivo da anulaçãoDuplicadaAnulada poradmin');
+      expect(fixture.nativeElement.textContent).toContain('Motivo da anulaçãoDuplicadaAnulado poradmin');
     });
   });
 });

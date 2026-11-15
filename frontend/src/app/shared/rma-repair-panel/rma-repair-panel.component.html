@@ -1,5 +1,5 @@
 <section class="repair-panel detail-card">
-  <app-collapsible-section title="Intervenções" icon="wrench" [count]="repair()?.interventions?.length || null" [open]="!!repair()?.interventions?.length || formOpen() || !!error()" storageKey="rma.interventions">
+  <app-collapsible-section title="Reparos" icon="wrench" [count]="repair()?.interventions?.length || null" [open]="!!repair()?.interventions?.length || formOpen() || !!error()" storageKey="rma.interventions">
   @if (totalHours() > 0) { <span sectionActions class="repair-total" appTip="Total de horas de serviço">{{ hours(totalHours()) }} h</span> }
   @if (canWrite()) {
     <button sectionActions type="button" class="link-button repair-trigger" [attr.aria-expanded]="formOpen() && !editing()" aria-controls="repair-form" (click)="toggleForm()">Registrar</button>
@@ -9,7 +9,7 @@
   @if (formOpen() && !editing() && canWrite()) { <ng-container [ngTemplateOutlet]="interventionForm" /> }
   @if (repair(); as data) {
     @if (stats().length > 0) {
-      <dl class="record-stats" aria-label="Resumo das intervenções">
+      <dl class="record-stats" aria-label="Resumo dos reparos">
         @for (stat of stats(); track stat.label) { <div><dt>{{ stat.label }}</dt><dd>{{ stat.value }}</dd></div> }
       </dl>
     }
@@ -21,17 +21,17 @@
           <div class="record-row__head">
             <strong class="record-row__title">{{ item.type }}</strong>
             @if (item.hours != null) { <span class="mini-chip tone-chip">{{ hours(item.hours) }} h</span> }
-            @if (item.voidedAt) { <span class="mini-chip tone-chip tone-danger">Anulada</span> }
+            @if (item.voidedAt) { <span class="mini-chip tone-chip tone-danger">Anulado</span> }
           </div>
           <button type="button" class="record-row__desc" [class.is-expanded]="expanded().has(item.id)" [attr.aria-expanded]="expanded().has(item.id)" [appTip]="item.description" (click)="toggleExpanded(item.id)">{{ item.description }}</button>
           <dl class="record-fields record-fields--reason">
-            <div><dt>Realizada em</dt><dd>{{ date(item.performedOn) }}</dd></div>
+            <div><dt>Realizado em</dt><dd>{{ date(item.performedOn) }}</dd></div>
             <div><dt>Técnico</dt><dd>{{ item.technicianName }}</dd></div>
           </dl>
           @if (item.voidedAt) {
             <dl class="record-fields record-fields--reason record-fields--void">
               <div><dt>Motivo da anulação</dt><dd>{{ item.voidReason }}</dd></div>
-              <div><dt>Anulada por</dt><dd>{{ item.voidedBy }}</dd></div>
+              <div><dt>Anulado por</dt><dd>{{ item.voidedBy }}</dd></div>
             </dl>
           }
         </div>
@@ -50,17 +50,17 @@
         }
         @if (editing()?.id === item.id && canWrite()) { <ng-container [ngTemplateOutlet]="interventionForm" /> }
       </div>
-    } @empty { @if (!formOpen()) { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="wrench" /></span><p class="repair-empty">Nenhuma intervenção registrada</p></div> } }
+    } @empty { @if (!formOpen()) { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="wrench" /></span><p class="repair-empty">Nenhum reparo registrado</p></div> } }
     </div>
   }
   <ng-template #interventionForm>
     <form id="repair-form" class="inline-form" [formGroup]="form" (ngSubmit)="save()" (keydown.escape)="$event.stopPropagation(); closeForm(true)" novalidate>
       <div class="field-group field-group--required" (focusin)="typeSuggestions.load()">
-        <span id="repair-type-label">Tipo</span>
-        <app-suggest-input formControlName="type" labelledBy="repair-type-label" listLabel="Tipos de intervenção" placeholder="Digite ou escolha um tipo" [suggestions]="typeSuggestions.list()" [maxlength]="typeMaxLength" [invalid]="hasError(form.controls.type)" />
+        <span id="repair-type-label">Tipo de reparo</span>
+        <app-suggest-input formControlName="type" labelledBy="repair-type-label" listLabel="Tipos de reparo" placeholder="Digite ou escolha um tipo" [suggestions]="typeSuggestions.list()" [maxlength]="typeMaxLength" [invalid]="hasError(form.controls.type)" />
         @if (hasError(form.controls.type)) { <small class="field-error" role="alert">Informe o tipo (até {{ typeMaxLength }} caracteres)</small> }
       </div>
-      <label class="field-group field-group--required"><span>Data</span><app-date-picker ariaLabel="Data da intervenção" [maxDate]="today()" formControlName="performedOn" [allowClear]="false" [ariaInvalid]="hasError(form.controls.performedOn)" />
+      <label class="field-group field-group--required"><span>Data</span><app-date-picker ariaLabel="Data do reparo" [maxDate]="today()" formControlName="performedOn" [allowClear]="false" [ariaInvalid]="hasError(form.controls.performedOn)" />
         @if (hasError(form.controls.performedOn)) { <small class="field-error" role="alert">{{ form.controls.performedOn.errors?.['future'] ? 'A data não pode ser futura' : 'Informe a data' }}</small> }
       </label>
       <label class="field-group"><span>Horas</span><input type="number" min="0.001" max="999999.999" step="any" placeholder="0,0" inputmode="decimal" formControlName="hours" [attr.aria-invalid]="hasError(form.controls.hours) ? 'true' : null" />

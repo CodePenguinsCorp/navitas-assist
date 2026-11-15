@@ -63,7 +63,7 @@ export class RmaRepairPanelComponent {
     return [
       ...(withHours ? [{ label: 'Horas de serviço', value: `${this.hours(this.totalHours())} h` }] : []),
       { label: 'Registros', value: String(active.length) },
-      { label: 'Última intervenção', value: this.date(last) }
+      { label: 'Último reparo', value: this.date(last) }
     ];
   });
   protected readonly form = this.fb.nonNullable.group({
@@ -85,7 +85,7 @@ export class RmaRepairPanelComponent {
     this.loading.set(true); this.error.set('');
     this.request = this.service.getRepair(id).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false))).subscribe({
       next: repair => { if (id === this.rmaId()) this.repair.set(repair); },
-      error: error => { if (id === this.rmaId()) this.error.set(extractHttpErrorMessage(error, 'Não foi possível carregar as intervenções.')); }
+      error: error => { if (id === this.rmaId()) this.error.set(extractHttpErrorMessage(error, 'Não foi possível carregar os reparos.')); }
     });
   }
 
@@ -97,8 +97,8 @@ export class RmaRepairPanelComponent {
     const payload = { ...value, type: value.type.trim(), hours: value.hours ?? null, description: value.description.trim() };
     const editing = this.editing();
     (editing ? this.service.updateIntervention(id, editing.id, payload) : this.service.addIntervention(id, payload)).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.saving.set(false))).subscribe({
-      next: () => { this.toasts.show({ message: 'Intervenção salva.', tone: 'success' }); if (id !== this.rmaId()) return; this.closeForm(false); this.load(id); this.changed.emit(); },
-      error: error => { if (id === this.rmaId()) this.error.set(extractHttpErrorMessage(error, 'Não foi possível registrar a intervenção.')); }
+      next: () => { this.toasts.show({ message: 'Reparo salvo.', tone: 'success' }); if (id !== this.rmaId()) return; this.closeForm(false); this.load(id); this.changed.emit(); },
+      error: error => { if (id === this.rmaId()) this.error.set(extractHttpErrorMessage(error, 'Não foi possível registrar o reparo.')); }
     });
   }
   protected edit(item: InterventionResponse): void {
@@ -142,8 +142,8 @@ export class RmaRepairPanelComponent {
     if (this.voidReason.invalid) { this.voidReason.markAsTouched(); return; }
     const id = this.rmaId(); this.saving.set(true); this.error.set('');
     this.service.voidIntervention(id, item.id, this.voidReason.value.trim()).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.saving.set(false))).subscribe({
-      next: () => { this.toasts.show({ message: 'Intervenção anulada.', tone: 'success' }); if (id !== this.rmaId()) return; this.voiding.set(null); this.load(id); this.changed.emit(); },
-      error: error => { if (id === this.rmaId()) this.error.set(extractHttpErrorMessage(error, 'Não foi possível anular a intervenção.')); }
+      next: () => { this.toasts.show({ message: 'Reparo anulado.', tone: 'success' }); if (id !== this.rmaId()) return; this.voiding.set(null); this.load(id); this.changed.emit(); },
+      error: error => { if (id === this.rmaId()) this.error.set(extractHttpErrorMessage(error, 'Não foi possível anular o reparo.')); }
     });
   }
 }

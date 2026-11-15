@@ -202,7 +202,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     const [block] = await fixture.getDeferBlocks(); await block.render(DeferBlockState.Complete); fixture.detectChanges();
     expect(fixture.debugElement.query(By.directive(RmaRepairPanelComponent)).componentInstance.rmaId()).toBe(5);
     expect(fixture.debugElement.query(By.directive(RmaPartsPanelComponent)).componentInstance.rmaStatus()).toBe(fullRma.status);
-    expect(host.textContent).toContain('Intervenções'); expect(host.textContent).toContain('Componentes trocados');
+    expect(host.textContent).toContain('Reparos'); expect(host.textContent).toContain('Componentes trocados');
   });
 
   it('edita o diagnóstico no mesmo cartão e cancela sem fechar o detalhe', async () => {
@@ -310,16 +310,16 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(history.textContent).not.toContain('Moveu para');
   });
 
-  it('shows a voided intervention once, without strike-through, with the Anulada chip and the reason', async () => {
+  it('shows a voided intervention once, without strike-through, with the Anulado chip and the reason', async () => {
     const { section } = await setup({ rma: { ...fullRma, repairHistory: [
-      { id: 1, entityType: 'INTERVENTION', entityId: 8, action: 'CREATE', changedBy: 'ana', changedAt: '2026-11-12T10:00:00Z', summary: 'Intervenção registrada: teste - 0.017 h' },
-      { id: 2, entityType: 'INTERVENTION', entityId: 8, action: 'VOID', changedBy: 'bia', changedAt: '2026-11-13T10:00:00Z', summary: 'Intervenção anulada: teste - Motivo: teste' }
+      { id: 1, entityType: 'INTERVENTION', entityId: 8, action: 'CREATE', changedBy: 'ana', changedAt: '2026-11-12T10:00:00Z', summary: 'Reparo registrado: teste - 0.017 h' },
+      { id: 2, entityType: 'INTERVENTION', entityId: 8, action: 'VOID', changedBy: 'bia', changedAt: '2026-11-13T10:00:00Z', summary: 'Reparo anulado: teste - Motivo: teste' }
     ] } });
     const history = section('Histórico')!;
-    const entries = [...history.querySelectorAll('li.rma-detail__event')].filter((event) => event.textContent?.includes('Intervenção'));
+    const entries = [...history.querySelectorAll('li.rma-detail__event')].filter((event) => event.textContent?.includes('Reparo'));
     expect(entries).toHaveLength(1);
-    expect(entries[0].querySelector('p')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Intervenção registrada: teste - 0,017 h Anulada');
-    expect(entries[0].querySelector('.mini-chip')?.textContent?.trim()).toBe('Anulada');
+    expect(entries[0].querySelector('p')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Reparo registrado: teste - 0,017 h Anulado');
+    expect(entries[0].querySelector('.mini-chip')?.textContent?.trim()).toBe('Anulado');
     expect(entries[0].querySelector('small.muted-inline')?.textContent?.trim()).toBe('teste');
     expect(history.querySelector('.repair-voided')).toBeNull();
   });
