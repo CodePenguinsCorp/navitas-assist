@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { todayInputValue } from '../../../core/utils/date';
 import { DatePickerComponent } from './date-picker.component';
 
 @Component({
@@ -237,5 +238,57 @@ describe('DatePickerComponent new: viewport placement and dismissal', () => {
     const panel = open();
     expect(panel.style.width).toBe('264px');
     expect(panel.style.left).toBe('8px');
+  });
+});
+
+describe('DatePickerComponent day buttons for assistive technology', () => {
+  let fixture: ComponentFixture<DatePickerComponent>;
+  let page: HTMLElement;
+  let emitted: ReturnType<typeof vi.fn<(value: unknown) => void>>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [DatePickerComponent] }).compileComponents();
+    fixture = TestBed.createComponent(DatePickerComponent);
+    fixture.componentInstance.writeValue('2026-10-15');
+    emitted = vi.fn<(value: unknown) => void>();
+    fixture.componentInstance.valueChange.subscribe(emitted);
+    fixture.detectChanges();
+    page = fixture.nativeElement as HTMLElement;
+    page.querySelector<HTMLButtonElement>('.date-picker__trigger')!.click();
+    fixture.detectChanges();
+  });
+
+  const days = () => [...page.querySelectorAll<HTMLButtonElement>('.date-picker__day')];
+  const named = (name: string) => days().find((day) => day.getAttribute('aria-label') === name)!;
+
+  it('names every day with its full date, so repeated numbers from adjacent months stay distinct', () => {
+    const labels = days().map((day) => day.getAttribute('aria-label'));
+    expect(labels).toContain('15 de outubro de 2026');
+    expect(labels).toContain('1 de outubro de 2026');
+    // October 2026 starts on a Thursday: the grid opens with the last days of September and closes with November.
+    expect(labels).toContain('30 de setembro de 2026');
+    expect(labels).toContain('1 de novembro de 2026');
+    expect(new Set(labels).size).toBe(42);
+  });
+
+  it('keeps the day number as the visible text and marks the selected date as pressed', () => {
+    const selected = named('15 de outubro de 2026');
+    expect(selected.textContent?.trim()).toBe('15');
+    expect(selected.getAttribute('aria-pressed')).toBe('true');
+    expect(named('16 de outubro de 2026').getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('marks today with aria-current, and only today', () => {
+    fixture.componentInstance.writeValue(todayInputValue());
+    fixture.detectChanges();
+    const current = days().filter((day) => day.getAttribute('aria-current') === 'date');
+    expect(current.length).toBe(1);
+    expect(current[0].classList).toContain('is-today');
+    expect(days().filter((day) => day.classList.contains('is-today')).length).toBe(1);
+  });
+
+  it('records the ISO date of the day picked by its full name', () => {
+    named('20 de outubro de 2026').click();
+    expect(emitted).toHaveBeenCalledWith('2026-10-20');
   });
 });

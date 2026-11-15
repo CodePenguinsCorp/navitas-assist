@@ -18,11 +18,15 @@ import { popupDismiss } from '../../popup-dismiss/popup-dismiss';
 
 interface CalendarDay {
   iso: string;
+  /** Full date such as "14 de novembro de 2026": the visible number alone is ambiguous across adjacent months. */
+  label: string;
   day: number;
   inCurrentMonth: boolean;
   isToday: boolean;
   isSelected: boolean;
 }
+
+const FULL_DATE = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
 
 const WEEKDAY_LABELS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
@@ -256,6 +260,7 @@ function buildCalendarDays(viewMonth: Date, selectedValue: string): CalendarDay[
 
     return {
       iso,
+      label: FULL_DATE.format(date),
       day: date.getDate(),
       inCurrentMonth: date.getMonth() === month,
       isToday: iso === todayIso,

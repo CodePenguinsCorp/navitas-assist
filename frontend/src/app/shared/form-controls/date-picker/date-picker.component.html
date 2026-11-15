@@ -47,6 +47,9 @@
             [class.is-today]="day.isToday"
             [class.is-selected]="day.isSelected"
             [disabled]="isDateDisabled(day.iso)"
+            [attr.aria-label]="day.label"
+            [attr.aria-pressed]="day.isSelected"
+            [attr.aria-current]="day.isToday ? 'date' : null"
             (click)="selectDay(day)"
           >
             {{ day.day }}
