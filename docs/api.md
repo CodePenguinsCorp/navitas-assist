@@ -95,6 +95,8 @@ Convenções:
 | `POST /api/parts/{id}/movements` | `pecas.movimentar` | Registra movimentação. |
 | `POST /api/parts/movements/{movementId}/reversal` | `pecas.movimentar` | Estorna movimentação. |
 
+Quantidade de peça: quando a unidade (campo `unit` da peça ou do componente externo, texto livre) é contável, a quantidade deve ser um número inteiro positivo; só unidades de medida aceitam decimais, até 3 casas. A comparação ignora acento, caixa e ponto final. São medidas: kg, g, mg, t, l, lt, litro(s), ml, m, metro(s), cm, mm, km, m2, m², m3, m³, pol e as formas por extenso (quilograma, grama, tonelada, mililitro, centímetro, milímetro, quilômetro, polegada, no plural também); tudo o mais (un, und, pc, peça, par, jogo, kit, cx, caixa, rolo, unidade em branco etc.) é contável. A regra vale para reserva, alocação, aplicação, movimentação (entrada, saída, ajuste), estoque mínimo e componente externo; a recusa é 400 com "A unidade UN não aceita quantidade fracionada. Informe um número inteiro." Saldos e reservas antigos fracionados continuam exibidos e podem ser cancelados ou corrigidos por estorno, mas não podem ser alocados nem aplicados enquanto a unidade for contável; ao editar a peça, o estoque mínimo existente é preservado se não for alterado. No frontend a regra única fica em `core/utils/quantity-rules.ts`; no backend, em `part/QuantityRules.java`.
+
 ## Protocolos (modelos)
 
 | Rota | Permissão | Descrição |

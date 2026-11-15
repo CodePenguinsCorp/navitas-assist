@@ -5,6 +5,7 @@ import java.util.List;
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.part.Part;
+import br.com.navitasassist.part.QuantityRules;
 import br.com.navitasassist.part.PartRequest;
 import br.com.navitasassist.part.PartResponse;
 import br.com.navitasassist.part.PartOptionResponse;
@@ -65,6 +66,10 @@ public class PartService {
     }
 
     private void apply(Part part, PartRequest request) {
+        // Preserve an unchanged legacy minimum when editing registration data or the unit.
+        if (part.getId() == null || part.getMinimumStock().compareTo(request.minimumStock()) != 0) {
+            QuantityRules.validateMinimum(request.minimumStock(), request.unit());
+        }
         part.setCode(request.code().trim());
         part.setName(request.name().trim());
         part.setUnit(request.unit().trim());

@@ -39,8 +39,8 @@ class RmaRepairServiceHistoryTest {
         assertEquals("Componente fora do estoque: Cabo X, 2 un. Motivo da troca: queimado. Lote: 123.", lastSummary());
         var item = new RmaExternalComponent(); item.setId(8L); item.setRma(rma);
         when(components.findById(8L)).thenReturn(Optional.of(item));
-        service.updateExternalComponent(7L, 8L, new ExternalComponentRequest(null, "Cabo X", new BigDecimal("1.125"), "un", " ", "falha"));
-        assertEquals("Componente editado: Cabo X, 1,125 un. Motivo da troca: falha.", lastSummary());
+        service.updateExternalComponent(7L, 8L, new ExternalComponentRequest(null, "Cabo X", new BigDecimal("1.125"), "m", " ", "falha"));
+        assertEquals("Componente editado: Cabo X, 1,125 m. Motivo da troca: falha.", lastSummary());
         service.voidExternalComponent(7L, 8L, new RepairVoidRequest("duplicado"));
         assertEquals("Componente anulado: Cabo X. Motivo: duplicado.", lastSummary());
     }

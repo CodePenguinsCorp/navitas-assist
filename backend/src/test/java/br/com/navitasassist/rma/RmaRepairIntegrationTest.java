@@ -59,12 +59,12 @@ class RmaRepairIntegrationTest {
     void createsExternalComponentWithoutStockAndRejectsCatalogCode() throws Exception {
         Part part = new Part(); part.setCode("CATALOG"); part.setName("Catálogo"); part.setUnit("un"); part.setUnitCost(BigDecimal.ONE); part.setActive(false); parts.saveAndFlush(part);
         long count = parts.count();
-        write("external-components", Map.of("description", "  Resistor  ", "quantity", "1.125", "replacementReason", " Curto ", "componentBatch", " A1 "))
+        write("external-components", Map.of("description", "  Resistor  ", "quantity", "1.125", "unit", "m", "replacementReason", " Curto ", "componentBatch", " A1 "))
             .andExpect(status().isCreated()).andExpect(jsonPath("$.description").value("Resistor"))
-            .andExpect(jsonPath("$.unit").value("un")).andExpect(jsonPath("$.appliedBy").value("repair-tech"))
+            .andExpect(jsonPath("$.unit").value("m")).andExpect(jsonPath("$.appliedBy").value("repair-tech"))
             .andExpect(jsonPath("$.appliedAt").isNotEmpty()).andExpect(jsonPath("$.replacementReason").value("Curto"));
         assertEquals(count, parts.count());
-        assertEquals("Componente fora do estoque: Resistor, 1,125 un. Motivo da troca: Curto. Lote: A1.",
+        assertEquals("Componente fora do estoque: Resistor, 1,125 m. Motivo da troca: Curto. Lote: A1.",
             rma.getRepairHistory().get(0).getSummary());
         assertEquals(0, parts.findById(part.getId()).orElseThrow().getOnHand().signum());
         write("external-components", Map.of("code", " catalog ", "description", "X", "quantity", "1", "replacementReason", "Falha"))

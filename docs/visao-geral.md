@@ -87,6 +87,10 @@ Nenhuma tela fica carregando para sempre. O frontend interrompe qualquer chamada
 
 O histórico de reparo identifica componentes criados, editados e anulados, peças aplicadas do estoque e intervenções registradas, editadas e anuladas. Novos resumos usam frases curtas, quantidade com unidade, `Motivo da troca:`, `Lote:` quando preenchido e horas com vírgula decimal, como `Intervenção registrada: Limpeza (1,5 h).`. Anulações mantêm `Motivo:`; a tela usa esse marcador para associar o motivo ao registro original. Textos já gravados são preservados e continuam aceitos pela tela.
 
+## Quantidades de peças
+
+Quantidade de peça: quando a unidade (campo `unit` da peça ou do componente externo, texto livre) é contável, a quantidade deve ser um número inteiro positivo; só unidades de medida aceitam decimais, até 3 casas. A comparação ignora acento, caixa e ponto final. São medidas: kg, g, mg, t, l, lt, litro(s), ml, m, metro(s), cm, mm, km, m2, m², m3, m³, pol e as formas por extenso (quilograma, grama, tonelada, mililitro, centímetro, milímetro, quilômetro, polegada, no plural também); tudo o mais (un, und, pc, peça, par, jogo, kit, cx, caixa, rolo, unidade em branco etc.) é contável. A regra vale para reserva, alocação, aplicação, movimentação (entrada, saída, ajuste), estoque mínimo e componente externo; a recusa é 400 com "A unidade UN não aceita quantidade fracionada. Informe um número inteiro." Saldos e reservas antigos fracionados continuam exibidos e podem ser cancelados ou corrigidos por estorno, mas não podem ser alocados nem aplicados enquanto a unidade for contável; ao editar a peça, o estoque mínimo existente é preservado se não for alterado. No frontend a regra única fica em `core/utils/quantity-rules.ts`; no backend, em `part/QuantityRules.java`.
+
 ## Glossário
 
 OS significa Ordem de Serviço. RMA é o nome interno mantido em identificadores de código, rotas, tabelas e permissões (`rma`/`Rma`). A interface e os textos usam Ordem de Serviço ou OS; o código sequencial segue `OS-AAAA-NNNNNN`.

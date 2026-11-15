@@ -497,6 +497,9 @@ class PartInventoryIntegrationTest {
     @Test
     void shouldRejectManualMovementQuantityBeyondThreeDecimalsWithPortugueseMessage() throws Exception {
         long partId = createPart("PCA-PREC", "10.00", "0");
+        Part measurePart = partRepository.findById(partId).orElseThrow();
+        measurePart.setUnit("kg");
+        partRepository.saveAndFlush(measurePart);
         for (String quantity : new String[] {"1.0001", "1000000000"}) {
             movement(partId, "ENTRY", quantity, null, ADMIN)
                 .andExpect(status().isBadRequest())
@@ -504,6 +507,70 @@ class PartInventoryIntegrationTest {
                 .andExpect(jsonPath("$.details[0]").value("quantity: valor numérico fora do limite (esperado <9 dígitos>.<3 dígitos>)"));
         }
         movement(partId, "ENTRY", "999999999.999", null, ADMIN).andExpect(status().isCreated());
+    }
+
+    @Test
+    void rejectsFractionsForCountablePartsAcrossStockEndpoints() throws Exception {
+        long partId = createPart("PCA-COUNTABLE", "1", "0");
+        String message = "A unidade UN não aceita quantidade fracionada. Informe um número inteiro.";
+        movement(partId, "ENTRY", "10", null, ADMIN).andExpect(status().isCreated());
+        for (String type : new String[]{"ENTRY", "EXIT", "ADJUSTMENT"}) {
+            movement(partId, type, type.equals("ADJUSTMENT") ? "-1.5" : "1.5", "Inventário", ADMIN)
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(message));
+        }
+        reserve(rma.getId(), partId, "3.5", TECHNICIAN).andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value(message));
+        reserve(rma.getId(), partId, "30.5", TECHNICIAN).andExpect(status().isBadRequest());
+        assertEquals(0, partReservationRepository.count());
+        assertEquals(1, partMovementRepository.count());
+        assertEquals(0, new BigDecimal("10").compareTo(partRepository.findById(partId).orElseThrow().getOnHand()));
+
+        mockMvc.perform(post("/api/parts").with(ADMIN).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(json(partPayload("PCA-FRACTIONAL-MIN", "1", "0.5"))))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(message));
+        mockMvc.perform(put("/api/parts/{id}", partId).with(ADMIN).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(json(partPayload("PCA-COUNTABLE", "1", "0.5"))))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(message));
+    }
+
+    @Test
+    void acceptsMeasureFractionsThroughReserveAllocateConsumeAndStockMovements() throws Exception {
+        var payload = partPayload("PCA-MEASURE", "1", "0.125"); payload.put("unit", "M².");
+        long partId = id(mockMvc.perform(post("/api/parts").with(ADMIN).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+            .content(json(payload))).andExpect(status().isCreated()));
+        long reservationId = id(reserve(rma.getId(), partId, "1.222", TECHNICIAN)
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("PENDING")));
+        movement(partId, "ENTRY", "4.444", null, ADMIN).andExpect(status().isCreated());
+        action(rma.getId(), reservationId, "allocate", TECHNICIAN).andExpect(status().isOk());
+        action(rma.getId(), reservationId, "consume", TECHNICIAN).andExpect(status().isOk())
+            .andExpect(jsonPath("$.quantity").value(1.222));
+        movement(partId, "EXIT", "0.111", null, ADMIN).andExpect(status().isCreated());
+        movement(partId, "ADJUSTMENT", "-0.111", "Inventário", ADMIN).andExpect(status().isCreated());
+        assertEquals(0, new BigDecimal("3.000").compareTo(partRepository.findById(partId).orElseThrow().getOnHand()));
+        assertEquals(PartReservationStatus.CONSUMED, partReservationRepository.findById(reservationId).orElseThrow().getStatus());
+    }
+
+    @Test
+    void unitChangePreservesLegacyBalancesButBlocksApplyingFractionsAndAllowsCorrection() throws Exception {
+        var payload = partPayload("PCA-LEGACY", "1", "0.125"); payload.put("unit", "m");
+        long partId = id(mockMvc.perform(post("/api/parts").with(ADMIN).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+            .content(json(payload))).andExpect(status().isCreated()));
+        long entry = id(movement(partId, "ENTRY", "3.5", null, ADMIN).andExpect(status().isCreated()));
+        long active = id(reserve(rma.getId(), partId, "1.222", TECHNICIAN).andExpect(status().isCreated()));
+        long pending = id(reserve(rma.getId(), partId, "5.222", TECHNICIAN).andExpect(status().isCreated()));
+        payload.put("unit", "un");
+        mockMvc.perform(put("/api/parts/{id}", partId).with(ADMIN).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+            .content(json(payload))).andExpect(status().isOk()).andExpect(jsonPath("$.onHand").value(3.5))
+            .andExpect(jsonPath("$.minimumStock").value(0.125));
+        mockMvc.perform(get("/api/rmas/{id}/parts", rma.getId()).with(VIEWER)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.reservations[0].quantity").value(1.222));
+        action(rma.getId(), active, "consume", TECHNICIAN).andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("A unidade UN não aceita quantidade fracionada. Informe um número inteiro."));
+        action(rma.getId(), pending, "allocate", TECHNICIAN).andExpect(status().isBadRequest());
+        action(rma.getId(), active, "cancel", TECHNICIAN).andExpect(status().isOk());
+        action(rma.getId(), pending, "cancel", TECHNICIAN).andExpect(status().isOk());
+        reverse(entry, "Corrigir saldo legado", ADMIN).andExpect(status().isCreated())
+            .andExpect(jsonPath("$.onHandAfter").value(0));
     }
 
     private org.springframework.test.web.servlet.ResultActions movement(long partId, String type, String quantity, String reason, RequestPostProcessor role) throws Exception {

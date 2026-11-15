@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.part.Part;
+import br.com.navitasassist.part.QuantityRules;
 import br.com.navitasassist.part.PartConsumptionRequest;
 import br.com.navitasassist.part.PartMovement;
 import br.com.navitasassist.part.PartMovementRequest;
@@ -90,6 +91,7 @@ public class PartStockService {
         };
 
         Part part = lockPart(partId);
+        QuantityRules.validate(quantity.abs(), part.getUnit());
         PartMovement movement = record(part, request.type(), onHandChange, BigDecimal.ZERO, part.getUnitCost(), null, null, null, reason);
         return PartMovementResponse.from(movement, false);
     }
@@ -157,6 +159,7 @@ public class PartStockService {
             throw new BusinessException("A peça está inativa: " + part.getCode());
         }
 
+        QuantityRules.validate(request.quantity(), part.getUnit());
         PartReservation reservation = new PartReservation();
         reservation.setPart(part);
         reservation.setRma(rma);
@@ -186,6 +189,7 @@ public class PartStockService {
             throw new BusinessException("A peça está inativa: " + part.getCode());
         }
 
+        QuantityRules.validate(reservation.getQuantity(), part.getUnit());
         record(part, PartMovementType.RESERVATION, BigDecimal.ZERO, reservation.getQuantity(), part.getUnitCost(), reservation.getRma(), reservation, null, null);
         reservation.setStatus(PartReservationStatus.ACTIVE);
         return toReservationResponse(partReservationRepository.save(reservation));
@@ -198,6 +202,7 @@ public class PartStockService {
         PartReservation reservation = lockReservation(reservationId);
         requireStatus(reservation, "Somente reservas ativas podem ser aplicadas.", PartReservationStatus.ACTIVE);
 
+        QuantityRules.validate(reservation.getQuantity(), part.getUnit());
         record(part, PartMovementType.CONSUMPTION, reservation.getQuantity().negate(), reservation.getQuantity().negate(), part.getUnitCost(), reservation.getRma(), reservation, null, null);
         reservation.setStatus(PartReservationStatus.CONSUMED);
         reservation.setReplacementReason(request.replacementReason().trim());

@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.List;
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
+import br.com.navitasassist.part.QuantityRules;
 import br.com.navitasassist.repository.*;
 import br.com.navitasassist.rma.*;
 import lombok.RequiredArgsConstructor;
@@ -102,6 +103,7 @@ public class RmaRepairService {
     }
 
     private void fillExternal(RmaExternalComponent component, ExternalComponentRequest request) {
+        QuantityRules.validate(request.quantity(), trimToNull(request.unit()) == null ? "un" : request.unit());
         String code = trimToNull(request.code());
         if (code != null && parts.existsByCodeIgnoreCase(code)) throw new BusinessException("Código já cadastrado no estoque. Use a reserva de peças.");
         component.setCode(code); component.setDescription(request.description().trim()); component.setQuantity(request.quantity());
