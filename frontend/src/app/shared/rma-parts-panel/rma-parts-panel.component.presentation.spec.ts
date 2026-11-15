@@ -93,7 +93,7 @@ describe('RmaPartsPanelComponent presentation', () => {
     Array.from(items()[0].querySelectorAll('button')).find(button => button.textContent?.trim() === 'Cancelar reserva')!.click();
     render();
     expect(service.updateReservation).not.toHaveBeenCalled();
-    root().querySelector<HTMLButtonElement>('[aria-label="Confirmar cancelamento da reserva"]')!.click();
+    root().querySelector<HTMLButtonElement>('[role="alertdialog"] .button-primary--danger')!.click();
     expect(service.updateReservation).toHaveBeenCalledWith(7, 1, 'cancel');
   });
 

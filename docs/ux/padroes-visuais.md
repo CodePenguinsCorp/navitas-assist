@@ -269,7 +269,7 @@ Regra: confirmação de sucesso é aviso flutuante (`ToastService.show({ message
 
 Fica inline: erro de validação junto do campo, erro de API (`role="alert"`, `.field-error` ou `.alert-banner--error`), estado que descreve a tela (vazio, "Adiada até ...", resumo da prévia de importação, limite de e-mail atingido, status do canal, "Salvando...") e qualquer mensagem que o usuário precise reler.
 
-Cancelar reserva exige confirmação inline na própria linha, com Cancelar antes de Confirmar (nome acessível "Confirmar cancelamento da reserva") e bloqueio durante o envio. Desistir mantém a reserva sem chamada à API. O sucesso continua no aviso flutuante; erros permanecem no painel.
+Cancelar reserva abre o mesmo modal de confirmação usado para excluir registros (`modal-panel--narrow`, `alertdialog`, `appModalFocus`): título "Cancelar reserva?", texto curto com o nome da peça e a quantidade devolvida ao estoque disponível, botões "Voltar" (secundário, com o foco inicial) e "Cancelar reserva" (perigo), com bloqueio durante o envio. Voltar, Escape e clique fora mantêm a reserva sem chamada à API. O sucesso continua no aviso flutuante; erros aparecem no modal.
 
 Inventário da migração (tela, texto, destino):
 

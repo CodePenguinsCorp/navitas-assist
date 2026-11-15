@@ -15,6 +15,7 @@ import { formatBusinessDateTime } from '../../core/utils/date';
 import { PART_RESERVATION_STATUS_LABELS, formatCurrency, formatQuantity, reservationStatusClass } from '../../core/utils/part-ui';
 import { NgTemplateOutlet } from '@angular/common';
 import { CollapsibleSectionComponent } from '../collapsible-section/collapsible-section.component';
+import { ModalFocusDirective } from '../modal-focus/modal-focus.directive';
 import { RowActionComponent } from '../row-action/row-action.component';
 import { CustomSelectComponent, CustomSelectOption } from '../form-controls/custom-select/custom-select.component';
 
@@ -26,7 +27,7 @@ const ACTION_MESSAGES: Record<PartReservationAction, string> = {
 
 @Component({
   selector: 'app-rma-parts-panel',
-  imports: [IconComponent, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, CollapsibleSectionComponent],
+  imports: [IconComponent, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, CollapsibleSectionComponent, ModalFocusDirective],
   templateUrl: './rma-parts-panel.component.html',
   styleUrl: './rma-parts-panel.component.css'
 })
@@ -219,7 +220,6 @@ export class RmaPartsPanelComponent {
   protected startCancellation(reservation: PartReservationResponse): void {
     if (!this.canReserve() || this.busyReservationId() !== null) return;
     this.cancelling.set(reservation); this.consuming.set(null);
-    afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>('[aria-label="Manter reserva"]')?.focus(), { injector: this.injector });
   }
 
   protected closeCancellation(): void {

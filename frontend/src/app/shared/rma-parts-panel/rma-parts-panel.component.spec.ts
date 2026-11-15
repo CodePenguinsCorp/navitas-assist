@@ -129,7 +129,12 @@ describe('RmaPartsPanelComponent', () => {
     cancel.click();
     fixture.detectChanges();
     expect(partService['updateReservation']).not.toHaveBeenCalled();
-    fixture.nativeElement.querySelector('[aria-label="Confirmar cancelamento da reserva"]')!.click();
+    const dialog = fixture.nativeElement.querySelector('[role="alertdialog"]')!;
+    expect(dialog.querySelector('h3').textContent).toBe('Cancelar reserva?');
+    expect(dialog.textContent).toContain('A reserva de Capacitor será cancelada e 2 un voltará ao estoque disponível.');
+    expect(Array.from<HTMLElement>(dialog.querySelectorAll('.form-actions button')).map(b => b.textContent?.trim())).toEqual(['Voltar', 'Cancelar reserva']);
+    expect(fixture.nativeElement.querySelector('.record-row .inline-form')).toBeNull();
+    dialog.querySelector('.button-primary--danger')!.click();
     expect(partService['updateReservation']).toHaveBeenCalledWith(7, 1, 'cancel');
     expect(toastMessages()).toEqual(['Reserva cancelada e disponibilidade devolvida.']);
     expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
@@ -144,9 +149,9 @@ describe('RmaPartsPanelComponent', () => {
     expect(root.querySelector('.record-fields')?.textContent?.replace(/\s+/g, ' ')).toContain('LocalA1Observação1');
     root.querySelector<HTMLButtonElement>('[aria-label="Cancelar reserva Capacitor"]')!.click();
     fixture.detectChanges();
-    root.querySelector<HTMLButtonElement>('[aria-label="Manter reserva"]')!.click();
+    root.querySelector<HTMLButtonElement>('[role="alertdialog"] .button-secondary')!.click();
     fixture.detectChanges();
-    expect(root.querySelector('[aria-label="Confirmar cancelamento da reserva"]')).toBeNull();
+    expect(root.querySelector('[role="alertdialog"]')).toBeNull();
     expect(document.activeElement).toBe(root.querySelector('[aria-label="Cancelar reserva Capacitor"]'));
     expect(partService['updateReservation']).not.toHaveBeenCalled();
   });
@@ -156,7 +161,9 @@ describe('RmaPartsPanelComponent', () => {
     const root: HTMLElement = fixture.nativeElement;
     const trigger = root.querySelector<HTMLButtonElement>('[aria-label="Cancelar reserva Capacitor"]')!;
     trigger.click(); fixture.detectChanges();
-    const cancel = root.querySelector<HTMLButtonElement>('[aria-label="Manter reserva"]')!;
+    const cancel = root.querySelector<HTMLButtonElement>('[role="alertdialog"] .button-secondary')!;
+    expect(cancel.textContent?.trim()).toBe('Voltar');
+    await fixture.whenStable();
     expect(document.activeElement).toBe(cancel);
     cancel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     fixture.detectChanges();
