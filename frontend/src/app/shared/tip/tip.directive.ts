@@ -44,7 +44,7 @@ export class TipDirective {
     tip.textContent = text;
     tip.style.pointerEvents = 'none';
     tip.style.maxHeight = `${Math.max(0, innerHeight - GAP * 2)}px`;
-    tip.style.overflow = 'auto';
+    tip.style.overflow = 'hidden';
     document.body.appendChild(tip);
     const { width, height } = tip.getBoundingClientRect();
     let left = rect.left + (rect.width - width) / 2;

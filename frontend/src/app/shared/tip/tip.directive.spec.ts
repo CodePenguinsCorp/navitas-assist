@@ -19,6 +19,15 @@ describe('TipDirective', () => {
     }
     expect(button.getAttribute('aria-label')).toBe('Abrir');
   });
+  it('nunca mostra barra de rolagem dentro da dica', () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.detectChanges();
+    const button = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    button.dispatchEvent(new Event('mouseenter'));
+    const tip = document.querySelector('[role="tooltip"]') as HTMLElement;
+    expect(tip.style.overflow).toBe('hidden');
+    button.dispatchEvent(new Event('mouseleave'));
+  });
   it('preserva a descricao atual do campo ao fechar a dica', () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.detectChanges();
