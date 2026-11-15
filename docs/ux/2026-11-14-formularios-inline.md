@@ -1,6 +1,6 @@
 # Formulários inline do detalhe da OS
 
-Diagnóstico, impedimentos, intervenções, peças (reservar, aplicar, componente externo, anular), garantia e observação do status abriam formulários com rótulos, alturas e botões diferentes. Todos usam agora um único padrão, definido em `frontend/src/styles.css`.
+Diagnóstico, impedimentos, reparos, peças (reservar, aplicar, componente externo, anular), garantia e observação do status abriam formulários com rótulos, alturas e botões diferentes. Todos usam agora um único padrão, definido em `frontend/src/styles.css`.
 
 - Container: `.inline-form` (grade de 2 colunas, 1 coluna até 600 px). Vale para `<form>` e para `<div>` quando o envio é por botão.
 - Campo: `.field-group` com o rótulo como filho direto (`<label>` ou `<span>`), sempre visível, em semibold e `--font-size-md`. Campo largo usa `.field-group--full`.

@@ -45,7 +45,7 @@ Biblioteca **OpenPDF** (`com.github.librepdf:openpdf`, versão fixa, LGPL/MPL, s
 
 Conteúdo: código, cliente, entrada, status, emissão (São Paulo); por item: produto, SKU, lote, série e garantia efetiva (com "ajuste manual" quando houver); falha relatada; diagnóstico (falha encontrada, tipo, causa, técnico, data, notas); ações executadas (`repairSummary`, `testSummary`); peças trocadas (`replacedPartsSummary` mais as reservas `CONSUMED` de `PartStockService.getRmaParts`, com código, nome e quantidade, **sem custo**); observações (`physicalCondition`, `receivedAccessories`). Campo vazio aparece como "Não informado".
 
-O laudo é montado por um `RmaReportPdfService` a partir de um modelo próprio (`RmaTechnicalReport`), para que componentes trocados e intervenções estruturadas (projeto futuro) entrem como novas seções sem mudar a rota.
+O laudo é montado por um `RmaReportPdfService` a partir de um modelo próprio (`RmaTechnicalReport`), para que componentes trocados e reparos estruturados (projeto futuro) entrem como novas seções sem mudar a rota.
 
 Resposta: `application/pdf`, `Content-Disposition: attachment; filename="laudo-<código>.pdf"`, com o código reduzido a `[A-Za-z0-9_-]`. OS inexistente: `404`.
 
@@ -55,4 +55,4 @@ Resposta: `application/pdf`, `Content-Disposition: attachment; filename="laudo-<
 
 ## 6. Fora
 
-Custo por OS; XLSX nativo; PDF em lote; gráficos; componentes trocados/intervenções estruturados; recorrência de ordens de serviço legados sem `rma_items`; tempo histórico por etapa de ordens de serviço encerradas.
+Custo por OS; XLSX nativo; PDF em lote; gráficos; componentes trocados/reparos estruturados; recorrência de ordens de serviço legados sem `rma_items`; tempo histórico por etapa de ordens de serviço encerradas.

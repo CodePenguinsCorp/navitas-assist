@@ -46,7 +46,7 @@ No cadastro ou no detalhe da OS, um botão "Imprimir Etiqueta" geraria um PDF fo
 ## 2. Custo por OS (Peças + Horas de Serviço)
 
 ### O que seria
-Cálculo automático do custo total de cada reparo: `Custo Total = Custo das Peças Consumidas + (Horas de Intervenção × Valor da Hora)`.
+Cálculo automático do custo total de cada reparo: `Custo Total = Custo das Peças Consumidas + (Horas de Reparo × Valor da Hora)`.
 
 ### Como funcionaria no sistema
 Ao registrar peças aplicadas e horas gastas pelos técnicos, o sistema aplicaria o valor-hora configurado para calcular o custo total do atendimento.
@@ -54,7 +54,7 @@ Ao registrar peças aplicadas e horas gastas pelos técnicos, o sistema aplicari
 ### Opções, Prós e Contras
 * **Cálculo da hora técnica**:
   * *Taxa horária global única* (ex.: R$ 80/h para toda a assistência) - Pró: configuração simples, manutenção zero. Contra: não reflete especialidades diferentes.
-  * *Taxa por tipo de intervenção* (ex.: diagnóstico R$ 90/h, limpeza R$ 50/h) - Pró: mais preciso. Contra: exige tabela de preços de serviços.
+  * *Taxa por tipo de reparo* (ex.: diagnóstico R$ 90/h, limpeza R$ 50/h) - Pró: mais preciso. Contra: exige tabela de preços de serviços.
   * *Taxa por técnico* - Não recomendado: complexidade contábil e risco de exposição salarial.
 * **Peças fora do estoque (sem cadastro prévio)**: atualmente são registradas em `RmaExternalComponent` sem campo de valor. Opções: incluir campo opcional de custo na inclusão vs. considerar custo R$ 0,00 vs. exigir que toda peça venha do estoque cadastrado.
 * **Garantia**: ordens de serviço dentro da garantia representam **custo interno para a Navitas** (prejuízo/cobertura) e não são cobrados do cliente. Já atendimentos fora de garantia podem ser faturados.
@@ -74,11 +74,11 @@ Ao registrar peças aplicadas e horas gastas pelos técnicos, o sistema aplicari
 ### O que o sistema JÁ tem hoje
 * `Part.unitCost` e cálculo automático de `usedCost` no backend (`PartStockService`).
 * Painel de peças no frontend já exibe o custo de peças aplicadas na OS.
-* Registro de intervenções com horas (`hours`) e soma total (`totalServiceHours`).
+* Registro de reparos com horas (`hours`) e soma total (`totalServiceHours`).
 * Geração do laudo PDF estruturada (já inclui peças e horas, hoje sem valores).
 
 ### O que depende de decisão do dono
-1. Definição do modelo da taxa horária (taxa única vs. por tipo de intervenção).
+1. Definição do modelo da taxa horária (taxa única vs. por tipo de reparo).
 2. Tratamento para peças fora do estoque (campo de valor livre vs. sem custo).
 3. Nível de sigilo: quem na empresa pode ver valores financeiros de custo.
 

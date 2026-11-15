@@ -2,10 +2,10 @@
 
 Fonte de requisitos: solicitação enxuta do usuário, com precedência sobre o desenho anterior.
 
-1. Backend com TDD: V5 aditiva, motivo/lote na reserva aplicada, componentes externos sem estoque e intervenções em horas; preservar travas OS → peça → reserva.
-2. Frontend com TDD: contratos espelhados, formulários inline, lista unificada e painel compartilhado de intervenções nas duas superfícies.
+1. Backend com TDD: V5 aditiva, motivo/lote na reserva aplicada, componentes externos sem estoque e reparos em horas; preservar travas OS → peça → reserva.
+2. Frontend com TDD: contratos espelhados, formulários inline, lista unificada e painel compartilhado de reparos nas duas superfícies.
 3. Segurança: permissões existentes, matchers explícitos antes dos genéricos e matriz com autoridades isoladas.
-4. Laudo: componentes estruturados, motivo/lote, intervenções e horas, validados pela extração do PDF.
+4. Laudo: componentes estruturados, motivo/lote, reparos e horas, validados pela extração do PDF.
 5. Integração: README e Flyway V1–V5 em MySQL 8 isolado no projeto navitas-mig (3317), encerrando somente esse projeto com down -v.
 6. Verificação final: Maven verify, suíte frontend com runner informado e build; commits locais por tarefa lógica, staging por caminho, relatório de testes e desvios.
 

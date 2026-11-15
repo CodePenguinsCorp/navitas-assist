@@ -114,12 +114,12 @@ As seções acima foram escritas antes destas entregas. Onde citam SLA por etapa
 - Editar a OS (cliente, datas, outros itens) preserva ajustes e prazos; remover ou trocar um item que já tem histórico de ajuste é recusado.
 - OS encerrada: o ajuste é recusado. VIEWER e TECHNICIAN não veem o controle.
 
-## 15. Componentes trocados e intervenções
+## 15. Componentes trocados e reparos
 - Usar peça: motivo obrigatório (até 1000), lote e observação opcionais. Ao confirmar, o estoque cai imediatamente; sem saldo, erro 409 sem pendência. A lista mostra peça, quantidade, motivo, lote, autoria, data e chip Usada. Desfazer uso exige motivo, devolve o estoque e troca o chip para Uso desfeito. As duas ações só aparecem em OS aberta com `pecas.usar`.
 - Componente externo (`pecas.usar`): código opcional, descrição, quantidade (até 3 casas), unidade e motivo; estoque não muda. Código que já existe no catálogo, inclusive inativo, é recusado com orientação para usar a peça do estoque.
-- Intervenção (`rma.diagnosticar`): tipo, descrição, data (não futura) e horas (até 3 casas); o total de horas é somado. SERVICE_DESK e VIEWER só leem.
-- OS encerrada: novos usos, componentes e intervenções são recusados com mensagem em português; a leitura continua.
-- O laudo PDF lista componentes (motivo e lote), intervenções, técnico e horas, sem custos.
+- Reparo (`rma.diagnosticar`): tipo, descrição, data (não futura) e horas (até 3 casas); o total de horas é somado. SERVICE_DESK e VIEWER só leem.
+- OS encerrada: novos usos, componentes e reparos são recusados com mensagem em português; a leitura continua.
+- O laudo PDF lista componentes (motivo e lote), reparos, técnico e horas, sem custos.
 
 ## 16. Relatórios, laudo e CSV (`relatorios.ver`)
 - Sem período, o relatório cobre os últimos 30 dias; período maior que 366 dias ou invertido é recusado. Filtros por status e cliente.

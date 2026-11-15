@@ -1,4 +1,4 @@
-# Componentes trocados e intervenções - desenho
+# Componentes trocados e reparos - desenho
 
 **Objetivo:** atender ao §3.4 informado do PDF do cliente com componentes trocados, retrabalho e tempo efetivo de serviço estruturados, reutilizáveis pelo futuro laudo (projeto C). O PDF não foi disponibilizado nesta tarefa; o requisito considerado é o trecho fornecido pelo solicitante.
 
@@ -41,7 +41,7 @@ Criar `rma_external_components`: `id BIGINT`, `rma_id` FK, `code VARCHAR(60)` op
 
 Sem `part_id`, reserva, movimento, custo estimado ou efeito nos totais existentes. UI oferece “Fora do estoque”; se o código informado corresponder ao catálogo, orientar o fluxo de reserva e recusar o cadastro externo, inclusive para peça inativa. Texto livre atende peça sem cadastro; não é atalho para saldo insuficiente. Correção auditada e anulação lógica; não excluir fisicamente.
 
-### 3.3 Intervenções e tempo
+### 3.3 Reparos e tempo
 
 Criar `rma_interventions`: `id`, `rma_id` FK, `type VARCHAR(40)`, `description VARCHAR(1000)`, `performed_on DATE`, `technician_id` FK para `user_accounts`, `technician_name VARCHAR(120)` snapshot, `time_mode VARCHAR(10)`, `hours DECIMAL(9,3)` ou `started_at`/`finished_at DATETIME(6)`, anulação lógica com motivo e campos de auditoria.
 
@@ -49,15 +49,15 @@ Lista fixa, espelhada em enum Java e union/map de rótulos TypeScript: `RESOLDER
 
 - `HOURS`: horas > 0, até três casas, sem início/fim. `INTERVAL`: ambos os instantes obrigatórios, fim > início, sem horas informadas. Não aceitar ambos os modos ou ausência de duração.
 - Persistir `Instant` para intervalos e exibir em `America/Sao_Paulo`. `performedOn` é a data civil do início nesse fuso no modo intervalo; no modo horas é obrigatória. Não permitir data/instantes futuros. Intervalos podem cruzar meia-noite.
-- `durationSeconds`: intervalo exato em segundos; horas × 3600, arredondado uma vez com `HALF_UP`. Total = soma das intervenções não anuladas, nunca soma de horas com intervalo do mesmo registro. Proposta: não há cronômetro em andamento nem dedução automática de pausas; lançar sessões separadas.
+- `durationSeconds`: intervalo exato em segundos; horas × 3600, arredondado uma vez com `HALF_UP`. Total = soma dos reparos não anulados, nunca soma de horas com intervalo do mesmo registro. Proposta: não há cronômetro em andamento nem dedução automática de pausas; lançar sessões separadas.
 - Técnico padrão é o usuário autenticado. Seleção de outro exige usuário ativo elegível a atribuição (`rma.atribuivel`), usando a consulta existente de atribuíveis. Autor da alteração vem sempre da autenticação, separado do técnico executante. Técnico histórico desativado permanece legível pelo snapshot.
-- Não inferir intervenção a partir do consumo: trocar uma peça e lançar o trabalho são registros distintos. A descrição pode mencionar o componente sem repetir sua quantidade no total de peças.
+- Não inferir reparo a partir do consumo: trocar uma peça e lançar o trabalho são registros distintos. A descrição pode mencionar o componente sem repetir sua quantidade no total de peças.
 
 V3 cria FKs sem cascata destrutiva, índices por `rma_id` e checks de quantidade, enum, modo de tempo e consistência da anulação. Aplicar validações equivalentes no serviço. SQL compatível com MySQL 8 e H2 dos testes. Campos novos nas reservas são anuláveis para compatibilidade; não impor `NOT NULL` global a consumos antigos.
 
 ## 4. Contrato da API
 
-Manter controllers finos, records de request/response e regras transacionais nos serviços. Estender `RmaPartController`/`PartStockService`; criar `RmaRepairController` e `RmaRepairService` para externos/intervenções. Prefixo abaixo: `/api/rmas/{rmaId}`.
+Manter controllers finos, records de request/response e regras transacionais nos serviços. Estender `RmaPartController`/`PartStockService`; criar `RmaRepairController` e `RmaRepairService` para externos/reparos. Prefixo abaixo: `/api/rmas/{rmaId}`.
 
 | Método e sufixo | Contrato e resultado |
 |---|---|
@@ -67,13 +67,13 @@ Manter controllers finos, records de request/response e regras transacionais nos
 | `POST /repair/external-components` | `ExternalComponentRequest(code?, description, quantity, unit, componentBatch?, replacementReason)`; 201 com componente. |
 | `PUT /repair/external-components/{id}` | Mesmo request; 200, somente registro não anulado. |
 | `POST /repair/external-components/{id}/void` | `RepairVoidRequest(reason)`; 200 com registro anulado. |
-| `GET /repair` | `RmaRepairResponse(interventions, totalServiceSeconds)`; inclui intervenções anuladas identificadas, sem somá-las. |
+| `GET /repair` | `RmaRepairResponse(interventions, totalServiceSeconds)`; inclui reparos anulados identificados, sem somá-los. |
 | `POST /repair/interventions` | `InterventionRequest(type, description, performedOn, technicianId?, timeMode, hours?, startedAt?, finishedAt?)`; 201. |
-| `PUT /repair/interventions/{id}` | Mesmo request; 200 com intervenção atualizada. |
+| `PUT /repair/interventions/{id}` | Mesmo request; 200 com reparo atualizado. |
 | `POST /repair/interventions/{id}/void` | `RepairVoidRequest(reason)`; 200. |
 | `GET /repair/history` | Lista de eventos imutáveis de reparo, para timeline e auditoria. |
 
-`ReplacedComponentResponse`: `source` (`STOCK`/`EXTERNAL`), `sourceId`, `reservationId?`, `partId?`, `code?`, `description`, `quantity`, `unit`, `componentBatch?`, `replacementReason?`, `appliedAt?`, `appliedBy?`, `metadataComplete`, `identitySnapshot`. Identidade da UI = par source/id. O projeto C usa essa projeção e intervenções não anuladas; não interpreta resumos livres nem trata movimento de reserva como aplicação.
+`ReplacedComponentResponse`: `source` (`STOCK`/`EXTERNAL`), `sourceId`, `reservationId?`, `partId?`, `code?`, `description`, `quantity`, `unit`, `componentBatch?`, `replacementReason?`, `appliedAt?`, `appliedBy?`, `metadataComplete`, `identitySnapshot`. Identidade da UI = par source/id. O projeto C usa essa projeção e reparos não anulados; não interpreta resumos livres nem trata movimento de reserva como aplicação.
 
 `InterventionResponse` acrescenta `id`, técnico id/nome, `durationSeconds`, auditoria e anulação ao request normalizado. Não aceitar auditoria, custo, status da reserva ou `rmaId` do corpo. Strings recebem trim e branco opcional vira nulo; validar limites da seção 3 com Bean Validation e regras cruzadas no serviço.
 
@@ -85,7 +85,7 @@ Hoje o handler tem textos genéricos em inglês. Na implementação, fornecer me
 
 ## 5. Permissões
 
-Não criar a 21ª permissão: `pecas.reservar` já significa “Reservar e aplicar peças nas ordens de serviço”; cobre consumo com metadados, correção da troca e componentes externos. `pecas.movimentar` continua sendo necessário para estorno de estoque, sem conceder edição técnica. `rma.diagnosticar` cobre criar/editar/anular intervenções por serem execução técnica; propor ampliar apenas seu rótulo para “Registrar diagnóstico e intervenções”.
+Não criar a 21ª permissão: `pecas.reservar` já significa “Reservar e aplicar peças nas ordens de serviço”; cobre consumo com metadados, correção da troca e componentes externos. `pecas.movimentar` continua sendo necessário para estorno de estoque, sem conceder edição técnica. `rma.diagnosticar` cobre criar/editar/anular reparos por serem execução técnica; propor ampliar apenas seu rótulo para “Registrar diagnóstico e reparos”.
 
 Leituras sob `/api/rmas/**` seguem `rma.ver`, como o painel atual. Não adicionar exigência de `pecas.ver` ao detalhe: seria regressão para perfis personalizados e divergiria das leituras auxiliares existentes. `pecas.ver` permanece a visibilidade do catálogo de peças. Não exigir permissão de diagnóstico para aplicar, nem de peças para lançar ressolda. Perfis prontos: ADMIN/TECHNICIAN escrevem; SERVICE_DESK/VIEWER leem; permissões personalizadas devem funcionar independentemente desses nomes.
 
@@ -94,9 +94,9 @@ Adicionar matchers explícitos em `SecurityConfig` para cada nova escrita, antes
 ## 6. UI e histórico
 
 - **Peças:** ampliar `app-rma-parts-panel` nas duas superfícies de detalhe. “Aplicar” abre formulário de motivo e lote; código/descrição/quantidade são somente leitura da reserva. Exibir lista “Componentes trocados” e ação “Adicionar fora do estoque”; manter reservas e movimentações existentes. Consumos antigos sinalizam “Motivo não registrado”; estornados permanecem no histórico.
-- **Reparo e testes:** painel compartilhado de intervenções, lista de tipo, descrição, data, técnico e duração, total de serviço e ações de edição/anulação. Manter resumos existentes como “Resumo informado”, sem convertê-los ou concatená-los aos dados estruturados.
+- **Reparo e testes:** painel compartilhado de reparos, lista de tipo, descrição, data, técnico e duração, total de serviço e ações de edição/anulação. Manter resumos existentes como “Resumo informado”, sem convertê-los ou concatená-los aos dados estruturados.
 - Reusar `app-page-header` na página hospedeira, sem cabeçalho de página dentro de cada card; `app-custom-select` para tipo/modo/técnico e controles de data existentes. Reusar `appModalFocus`, botões e estados de carregamento globais, erros junto aos campos, Cancelar à esquerda, proteção contra envio duplo, tentativa de recarga e cancelamento de requests ao trocar OS. Em 320 px, cards empilhados sem rolagem horizontal. Permissões e estado fechado controlam ações, sem impedir leitura.
-- Criar `rma_repair_history`: `id`, `rma_id` FK, `entity_type`, `entity_id`, `action`, `changed_at`, `changed_by`, snapshots JSON anterior/posterior como texto. Eventos: consumo, correção, estorno, criação/edição/anulação de externo e intervenção. Persistir no mesmo commit transacional do dado. Estorno registra evento mesmo em OS encerrada quando autorizado pelas regras existentes.
+- Criar `rma_repair_history`: `id`, `rma_id` FK, `entity_type`, `entity_id`, `action`, `changed_at`, `changed_by`, snapshots JSON anterior/posterior como texto. Eventos: consumo, correção, estorno, criação/edição/anulação de externo e reparo. Persistir no mesmo commit transacional do dado. Estorno registra evento mesmo em OS encerrada quando autorizado pelas regras existentes.
 - Integrar eventos por `GET /repair/history` a `rmaHistory` nas duas telas; ordenar por instante decrescente e desempate estável por origem/id. Mostrar ação, autor e data da alteração; data executada aparece no conteúdo. Não inserir “status fictício” em `rma_status_history`, que alimenta tempos por etapa. Mesclar os eventos de prazo da V2. Emitir sinal de atualização após salvar, aplicar ou estornar para recarregar projeção/timeline; erro na leitura do reparo deve permitir retry sem apagar histórico de status/atribuições/prazos.
 
 ## 7. Testes, riscos e limites
@@ -107,14 +107,14 @@ Frontend: requests e DTOs espelhados, consumo exige motivo, lote opcional, valid
 
 Riscos: quebra intencional do consumo com `{}` exige deploy coordenado; lote informado não assegura rastreabilidade de entrada; textos antigos não fornecem motivo confiável; sobreposição de lançamentos pode inflar horas; alterações concorrentes podem sobrescrever correções; detalhes e modelos compartilhados podem conflitar com o trabalho de prazos. Integrar após V2 e revisar apenas os pontos comuns, sem reescrever seu desenho.
 
-Fora de escopo: gerar PDF, precificar mão de obra, criar estoque por lote, consumo parcial, cronômetro, aprovação de apontamentos, folha de ponto, catálogo editável de tipos, conversão automática de texto antigo, mudar fluxo de status/prazo e vínculo de intervenção a um item específico da OS. O registro é por OS, como as reservas atuais.
+Fora de escopo: gerar PDF, precificar mão de obra, criar estoque por lote, consumo parcial, cronômetro, aprovação de apontamentos, folha de ponto, catálogo editável de tipos, conversão automática de texto antigo, mudar fluxo de status/prazo e vínculo de reparo a um item específico da OS. O registro é por OS, como as reservas atuais.
 
 ## 8. Perguntas abertas ao produto
 
 - Lote deve ser obrigatório? Há casos sem identificação física ou com mais de um lote por aplicação?
 - O técnico pode lançar trabalho de outro ou somente o próprio? A proposta permite selecionar outro atribuível e audita o autor.
 - Horas são esforço acumulado ou duração cronológica? A proposta soma sessões e permite simultaneidade; deve haver alerta de sobreposição?
-- Precisamos relacionar cada troca/intervenção a equipamento/serial em ordens de serviço com vários itens?
+- Precisamos relacionar cada troca/reparo a equipamento/serial em ordens de serviço com vários itens?
 - É necessário corrigir reparo após encerramento com permissão especial? A proposta bloqueia novas escritas técnicas e preserva o estorno existente.
 - Confirmar os seis tipos e se “regravação” precisa ser distinguida de firmware no laudo; confirmar lote opcional e motivo obrigatório apenas para novos consumos.
 
@@ -142,11 +142,11 @@ Formato dos planos existentes: tarefas numeradas, arquivos, interfaces e passos 
 - [ ] **Step 2:** implementar projeção e escritas com validação e auditoria, preservando locks/custos.
 - [ ] **Step 3:** executar testes novos e regressão de estoque; esperar PASS.
 
-### Task 3: Intervenções, duração e eventos (backend)
+### Task 3: Reparos, duração e eventos (backend)
 
 **Files:** ampliar `RmaRepairController`/`RmaRepairService`; criar DTOs e persistência de histórico em `rma/`/`repository/`; testes em `backend/src/test/java/br/com/navitasassist/rma/`.
 
-**Interfaces:** `/repair`, intervenções e `/repair/history` da seção 4.
+**Interfaces:** `/repair`, reparos e `/repair/history` da seção 4.
 
 - [ ] **Step 1:** testes falhando de modos exclusivos, técnico, datas, total, edição/anulação e rollback do histórico.
 - [ ] **Step 2:** implementar regras e eventos transacionais, incluindo consumo/estorno da Task 2.
@@ -172,7 +172,7 @@ Formato dos planos existentes: tarefas numeradas, arquivos, interfaces e passos 
 - [ ] **Step 2:** implementar formulários/listagem com componentes compartilhados.
 - [ ] **Step 3:** executar testes dirigidos e conferir teclado e 320 px; esperar PASS.
 
-### Task 6: Intervenções e timeline nas duas telas (frontend)
+### Task 6: Reparos e timeline nas duas telas (frontend)
 
 **Files:** criar `core/services/rma-repair.service.ts` e `shared/rma-interventions-panel/*`; alterar `core/utils/rma-detail.ts`, `pages/rmas/*`, `shared/rma-detail-modal/*` e testes; conferir `core/permissions.spec.ts`.
 

@@ -60,6 +60,6 @@ Build sem avisos: bundle inicial de 488,52 kB e CSS global de 64,19 kB (antes: 6
 
 Suíte completa com `TZ=UTC`, `--watch=false` e o runner solicitado: 129 arquivos e 1.856 testes aprovados. O processo terminou com código 1 por erros `socket hang up` (`ECONNRESET`), sem falhas de asserção na execução final. Essa limitação impede considerar a execução totalmente limpa. No PowerShell, foi usado `npm.cmd` para preservar os argumentos do comando. Uma execução intermediária falhou na busca textual de `.shell.is-collapsed` enquanto o espaçamento do CSS estava sendo corrigido; a execução final passou esse teste.
 
-`node scripts/test-rma-responsive-css.mjs` falhou antes e passou depois da correção A. Confere regras de quebra e restrição da grade; não calcula layout. Diagnóstico, Impedimentos, Peças, Componentes trocados, Movimentos, Protocolos, Intervenções, Tempo por etapa e as seções dos dois detalhes usam `app-collapsible-section`. As ações são projetadas no mesmo slot.
+`node scripts/test-rma-responsive-css.mjs` falhou antes e passou depois da correção A. Confere regras de quebra e restrição da grade; não calcula layout. Diagnóstico, Impedimentos, Peças, Componentes trocados, Movimentos, Protocolos, Reparos, Tempo por etapa e as seções dos dois detalhes usam `app-collapsible-section`. As ações são projetadas no mesmo slot.
 
 Não houve medição em navegador da rolagem de 29px, comparação visual ou prova de ausência de overflow a 320px. A suíte usa DOM sem cálculo de layout.

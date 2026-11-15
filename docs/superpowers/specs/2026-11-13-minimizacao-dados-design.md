@@ -62,6 +62,6 @@ Cada tarefa começa com teste que falha por comportamento. Cobrir ausência de c
 
 Ao fim de cada etapa: Maven verify; suíte frontend com TZ=UTC e runner-config informado; build frontend sem avisos e CSS por componente até 4 kB. Registrar contagens reais. Não encerrar etapa com falhas conhecidas. Atualizar docs/api.md e docs/acesso-e-permissoes.md no mesmo conjunto de mudanças.
 
-Commits locais por tarefa lógica, com caminhos explícitos, mensagens Conventional Commits em português e justificativas de remoção de rotas. Sem push, reescrita de histórico, intervenção em Docker, segredos ou configuração global. Leituras das skills e do relatório externo são somente leitura; artefatos de trabalho ficam no repositório.
+Commits locais por tarefa lógica, com caminhos explícitos, mensagens Conventional Commits em português e justificativas de remoção de rotas. Sem push, reescrita de histórico, reparo em Docker, segredos ou configuração global. Leituras das skills e do relatório externo são somente leitura; artefatos de trabalho ficam no repositório.
 
 Relato por etapa: hashes, contagens de testes, endpoints alterados/removidos e desvios. Nenhuma suíte foi executada nesta fase de especificação.

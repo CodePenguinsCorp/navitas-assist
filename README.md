@@ -45,7 +45,7 @@ Todo o detalhamento está em [docs/](docs/README.md):
 | [acesso-e-permissoes](docs/acesso-e-permissoes.md) | Perfis, permissões, sessão, regras anti-escalada |
 | [api](docs/api.md) | Rotas por módulo e permissão exigida |
 | [banco-de-dados](docs/banco-de-dados.md) | Migrações, baseline, recriar o banco, primeiro administrador |
-| [prazo-e-garantia](docs/prazo-e-garantia.md) | Tempo por etapa, data limite, garantia, componentes e intervenções |
+| [prazo-e-garantia](docs/prazo-e-garantia.md) | Tempo por etapa, data limite, garantia, componentes e reparos |
 | [notificacoes-e-emails](docs/notificacoes-e-emails.md) | Eventos, regras, fila de e-mail, provedores, tetos |
 | [relatorios-e-exportacoes](docs/relatorios-e-exportacoes.md) | Relatórios, CSV, laudo em PDF, importação CSV |
 | [operacao-e-deploy](docs/operacao-e-deploy.md) | CI, build de produção, deploy, checklist |

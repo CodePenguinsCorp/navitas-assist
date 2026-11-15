@@ -288,7 +288,7 @@ O pedido de logo em SVG permanece **bloqueado pela decisão do usuário** sobre 
 
 **Modificar:** `frontend/src/app/app.routes.ts`. **Criar:** `frontend/src/app/app.routes.spec.ts`. Primeiro dos **dois commits separados** da antiga Tarefa 8; a consolidação de CSS fica na 8b.
 
-**Decisão:** vale reduzir agora, com intervenção limitada. **626 kB contra 510 kB** significa excedente de 116 kB (~23%); é a referência recebida, não uma medição feita nesta elaboração. `frontend/angular.json` confirma warning inicial 510 kB/error 1 MB e CSS por componente 4/8 kB; manter esses valores em 8a/8b.
+**Decisão:** vale reduzir agora, com reparo limitado. **626 kB contra 510 kB** significa excedente de 116 kB (~23%); é a referência recebida, não uma medição feita nesta elaboração. `frontend/angular.json` confirma warning inicial 510 kB/error 1 MB e CSS por componente 4/8 kB; manter esses valores em 8a/8b.
 
 - [ ] Antes/depois de 8a, executar `npm --prefix frontend run build -- --stats-json` e registrar bundle inicial bruto, maior chunk e CSS compilado de ordens de serviço/detalhe como base para 8b. Não comparar bytes do fonte com orçamento do build nem tamanho transferido com tamanho bruto.
 - [ ] `app.routes.ts:5-11` importa antecipadamente dashboard, Kanban, ordens de serviço, clientes, produtos e usuários. Converter essas seis rotas para `loadComponent`, removendo imports estáticos; manter login/shell, guards, `data.roles`, títulos, redirects e query params. Notificações/peças/protocolos já são lazy. Rota de relatórios permanece intocada.

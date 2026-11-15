@@ -71,7 +71,7 @@ Rota a rota em [api.md](api.md).
 | Custos de peças na OS (`unitCost`, `totalCost`, `usedCost` em `/api/rmas/{id}/parts` e nas respostas dos usos) | `pecas.ver`; sem ela os campos vêm nulos e o painel esconde os blocos de custo |
 | Modelos de protocolo (`GET /api/protocols/templates`) | qualquer uma de `protocolos.ver`, `protocolos.executar`, `rma.ver` |
 | Execuções de protocolo da OS (`GET /api/protocols/rmas/{id}/executions`) | `rma.ver` |
-| Consultar ordens de serviço, Kanban e dashboard (`GET /api/rmas/**`), sugestões de tipo de falha e causa (`GET /api/rmas/diagnosis/suggestions`), de tipo de intervenção e de categoria de impedimento (`GET /api/suggestions/intervention-types` e `/block-categories`) e laudo PDF | `rma.ver` |
+| Consultar ordens de serviço, Kanban e dashboard (`GET /api/rmas/**`), sugestões de tipo de falha e causa (`GET /api/rmas/diagnosis/suggestions`), de tipo de reparo e de categoria de impedimento (`GET /api/suggestions/intervention-types` e `/block-categories`) e laudo PDF | `rma.ver` |
 | Sugestões de unidade e de localização de peças (`GET /api/suggestions/part-units`, `/part-locations`) | `pecas.ver`, `pecas.usar` ou `pecas.movimentar` (localização: `pecas.ver` ou `pecas.movimentar`) |
 | Criar, alterar ou excluir clientes e produtos | `cadastros.editar` |
 | Baixar modelo, prévia e confirmação de importação CSV | `cadastros.importar` |
@@ -79,7 +79,7 @@ Rota a rota em [api.md](api.md).
 | Alterar dados gerais e prioridade; ajustar garantia dos itens | `rma.editar` |
 | Alterar o status | `rma.status` |
 | Atribuir ou remover responsável | `rma.responsavel` |
-| Registrar diagnóstico; registrar intervenção | `rma.diagnosticar` |
+| Registrar diagnóstico; registrar reparo | `rma.diagnosticar` |
 | Registrar e resolver impedimentos | `rma.impedimentos` |
 | Cadastrar peças e movimentar estoque | `pecas.movimentar` |
 | Usar peças e desfazer uso; componentes externos | `pecas.usar` |

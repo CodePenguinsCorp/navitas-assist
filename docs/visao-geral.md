@@ -29,9 +29,9 @@ Status (`RmaStatus`): `RECEIVED` (Recebido), `TRIAGE` (Triagem), `IN_DIAGNOSIS` 
 1. Quem tem `rma.abrir` abre a OS com cliente, um ou mais itens (produto, lote, série), data de entrada, falha relatada, acessórios, estado físico, prioridade e data limite opcional. A OS nasce em `RECEIVED` e o usuário autenticado é gravado em `receivedBy` (somente leitura na API).
 2. O status muda arrastando o card no Kanban ou pelo seletor do detalhe (`rma.status`). Não há ordem obrigatória entre etapas; o único bloqueio é o de protocolo (abaixo). Cada mudança entra no histórico; a observação de um evento do histórico pode ser editada depois (`rma.status`, até 255 caracteres, com autor e horário da edição) enquanto a OS não está encerrado.
 3. O responsável (técnico) é atribuído por quem tem `rma.responsavel`. Só usuários ativos com `rma.atribuivel` aparecem como opção; perder a permissão ou ser inativado não apaga a atribuição existente. Cada troca registra anterior, novo, autor e horário.
-4. O técnico registra o diagnóstico (`rma.diagnosticar`; tipo de falha e causa provável são texto livre de até 80 caracteres com sugestões dos valores já usados, como a categoria do produto), marca peças como usadas, adiciona componentes externos e intervenções (tipo de intervenção também é texto livre com sugestões; horas são opcionais; ver [prazo-e-garantia.md](prazo-e-garantia.md)) e executa protocolos (`protocolos.executar`).
+4. O técnico registra o diagnóstico (`rma.diagnosticar`; tipo de falha e causa provável são texto livre de até 80 caracteres com sugestões dos valores já usados, como a categoria do produto), marca peças como usadas, adiciona componentes externos e reparos (tipo de reparo também é texto livre com sugestões; horas são opcionais; ver [prazo-e-garantia.md](prazo-e-garantia.md)) e executa protocolos (`protocolos.executar`).
 5. Impedimentos (`rma.impedimentos`) registram bloqueios com motivo e resolução. Bloquear não muda a coluna nem para o tempo da etapa.
-6. Ao encerrar, o laudo em PDF fica disponível ([relatorios-e-exportacoes.md](relatorios-e-exportacoes.md)). ordens de serviço encerradas recusam novas aplicações de peça, componentes externos, intervenções e ajustes de garantia.
+6. Ao encerrar, o laudo em PDF fica disponível ([relatorios-e-exportacoes.md](relatorios-e-exportacoes.md)). ordens de serviço encerradas recusam novas aplicações de peça, componentes externos, reparos e ajustes de garantia.
 
 Status, responsável e prioridade são alterados individualmente; não há edição em massa. A prioridade é trocada no detalhe, no Kanban e na tela de ordens de serviço por quem tem `rma.editar` (enquanto a OS não está encerrado), com `PUT /api/rmas/{id}` enviando só `{ "priority": ... }`; a API registra a nota `Priority changed from X to Y` no histórico de status.
 
@@ -85,7 +85,7 @@ Nenhuma tela fica carregando para sempre. O frontend interrompe qualquer chamada
 
 ## Histórico de reparo
 
-O histórico de reparo identifica componentes criados, editados e anulados, peças usadas do estoque e intervenções registradas, editadas e anuladas. Novos resumos usam frases curtas, quantidade com unidade, `Motivo da troca:`, `Lote:` quando preenchido e horas com vírgula decimal, como `Intervenção registrada: Limpeza (1,5 h).`. Anulações mantêm `Motivo:`; a tela usa esse marcador para associar o motivo ao registro original. Textos já gravados são preservados e continuam aceitos pela tela.
+O histórico de reparo identifica componentes criados, editados e anulados, peças usadas do estoque e reparos registrados, editados e anulados. Novos resumos usam frases curtas, quantidade com unidade, `Motivo da troca:`, `Lote:` quando preenchido e horas com vírgula decimal, como `Reparo registrado: Limpeza (1,5 h).`. Anulações mantêm `Motivo:`; a tela usa esse marcador para associar o motivo ao registro original. Textos já gravados são preservados e continuam aceitos pela tela.
 
 ## Quantidades de peças
 
@@ -98,3 +98,9 @@ OS significa Ordem de Serviço. RMA é o nome interno mantido em identificadores
 ## Uso de peças
 
 O técnico usa a peça em uma única ação com motivo da troca obrigatório, quantidade obrigatória, lote e observação opcionais. O estoque é descontado na hora. Sem saldo, a operação é recusada sem pendência. Desfazer uso exige motivo e devolve a quantidade ao estoque. As duas ações exigem OS aberta e `pecas.usar`, geram histórico e auditoria. Custos somam apenas usos ativos, com o preço registrado no consumo. Não há conversão de dados: a base será reconstruída com `part_usages` e estados `USED` e `REVERTED`.
+
+## Nomenclatura dos reparos
+
+Cada registro de serviço é apresentado como reparo, no masculino. A etapa Reparo (`IN_REPAIR`) e a seção Reparo e testes permanecem; a lista dentro dela se chama Reparos. Tipo livre com sugestões, horas opcionais, anulação com motivo e totais mantêm o mesmo comportamento.
+
+Os identificadores internos `InterventionRequest`, `InterventionResponse`, `RmaIntervention`, `INTERVENTION`, o campo JSON `interventions`, as rotas `/repair/interventions` e `/suggestions/intervention-types`, a tabela `rma_interventions` e os nomes das migrações foram preservados. A troca interna atravessaria contrato, autorização e persistência e exigiria validação integrada com PostgreSQL. Esta alteração limita-se ao vocabulário exibido e documentado, sem colisões com `RmaRepairService` e `RmaRepairHistory`.
