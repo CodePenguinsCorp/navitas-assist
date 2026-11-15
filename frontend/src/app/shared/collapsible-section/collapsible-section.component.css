@@ -35,6 +35,11 @@
 .collapsible__body:not([hidden]) { animation: collapsible-in 160ms ease; }
 .collapsible__body[hidden] { display: none; }
 @keyframes collapsible-in { from { opacity: 0; transform: translateY(-4px); } }
+@media (max-width: 480px) {
+  .collapsible__head { flex-wrap: wrap; }
+  .collapsible__title { white-space: normal; overflow-wrap: anywhere; }
+  .collapsible__actions { order: 1; flex-basis: 100%; flex-wrap: wrap; }
+}
 @media (prefers-reduced-motion: reduce) {
   .collapsible__chevron app-icon { transition: none; }
   .collapsible__body:not([hidden]) { animation: none; }

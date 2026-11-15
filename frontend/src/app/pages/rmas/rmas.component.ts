@@ -266,6 +266,7 @@ export interface RmaListFilters {
 
     .rma-item-detail__header {
       display: flex;
+      flex-wrap: wrap;
       align-items: flex-start;
       justify-content: space-between;
       gap: var(--space-3);
@@ -285,6 +286,8 @@ export interface RmaListFilters {
 
     .rma-item-warranties {
       display: grid;
+      min-width: 0;
+      grid-template-columns: minmax(0, 1fr);
       justify-items: start;
       gap: var(--space-2);
     }
