@@ -47,7 +47,7 @@ class RmaRepairServiceHistoryTest {
 
     @Test
     void showsInterventionHoursInPortugueseAndLabelsVoidReason() {
-        var request = new InterventionRequest(InterventionType.CLEANING, "Limpeza", LocalDate.now(), new BigDecimal("1.500"));
+        var request = new InterventionRequest("Limpeza", "Limpeza", LocalDate.now(), new BigDecimal("1.500"));
         service.addIntervention(7L, request);
         assertEquals("Intervenção registrada: Limpeza (1,5 h).", lastSummary());
         var item = new RmaIntervention(); item.setId(8L); item.setRma(rma);

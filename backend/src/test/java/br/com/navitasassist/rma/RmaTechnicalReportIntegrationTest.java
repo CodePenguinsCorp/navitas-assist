@@ -126,7 +126,7 @@ class RmaTechnicalReportIntegrationTest {
         component.setUnit("un"); component.setComponentBatch("EXT-LOTE"); component.setReplacementReason("Oxidação dos contatos");
         component.setAppliedAt(java.time.Instant.now()); component.setAppliedBy("maria"); externalComponents.saveAndFlush(component);
         RmaIntervention intervention = new RmaIntervention();
-        intervention.setRma(rma); intervention.setType(InterventionType.RESOLDERING); intervention.setDescription("Ressolda do circuito");
+        intervention.setRma(rma); intervention.setType("Ressolda"); intervention.setDescription("Ressolda do circuito");
         intervention.setPerformedOn(LocalDate.parse("2026-10-07")); intervention.setHours(new BigDecimal("1.125")); intervention.setTechnicianName("maria"); interventions.saveAndFlush(intervention);
         String report = text(mockMvc.perform(get("/api/rmas/{id}/report.pdf", rma.getId()).with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
@@ -136,12 +136,22 @@ class RmaTechnicalReportIntegrationTest {
     }
 
     @Test
+    void interventionWithoutHoursShowsDashAndOmitsTheTotal() throws Exception {
+        RmaIntervention item = new RmaIntervention(); item.setRma(rma); item.setType("Reflow");
+        item.setDescription("Semtempo"); item.setPerformedOn(LocalDate.now()); item.setTechnicianName("tech"); interventions.saveAndFlush(item);
+        String report = text(mockMvc.perform(get("/api/rmas/{id}/report.pdf", rma.getId()).with(asProfile("viewer", "VIEWER")))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
+        assertTrue(report.contains("Reflow"), report); assertTrue(report.contains("Semtempo"), report);
+        assertFalse(report.contains("Total de horas"), report);
+    }
+
+    @Test
     void excludesVoidedComponentsAndInterventionsFromPdfAndHours() throws Exception {
         RmaExternalComponent component = new RmaExternalComponent();
         component.setRma(rma); component.setDescription("EXTERNO-ANULADO"); component.setQuantity(BigDecimal.ONE); component.setUnit("un");
         component.setReplacementReason("Erro"); component.setAppliedAt(java.time.Instant.now()); component.setAppliedBy("tech");
         component.setVoidedAt(java.time.Instant.now()); component.setVoidedBy("tech"); component.setVoidReason("Duplicado"); externalComponents.saveAndFlush(component);
-        RmaIntervention item = new RmaIntervention(); item.setRma(rma); item.setType(InterventionType.CLEANING);
+        RmaIntervention item = new RmaIntervention(); item.setRma(rma); item.setType("Limpeza");
         item.setDescription("INTERVENCAO-ANULADA"); item.setPerformedOn(LocalDate.now()); item.setHours(new BigDecimal("7.125")); item.setTechnicianName("tech");
         item.setVoidedAt(java.time.Instant.now()); item.setVoidedBy("tech"); item.setVoidReason("Duplicado"); interventions.saveAndFlush(item);
         String report = text(mockMvc.perform(get("/api/rmas/{id}/report.pdf", rma.getId()).with(asProfile("viewer", "VIEWER")))
@@ -194,7 +204,7 @@ class RmaTechnicalReportIntegrationTest {
         String longWord = "X".repeat(400);
         for (int index = 0; index < 40; index++) {
             RmaIntervention item = new RmaIntervention();
-            item.setRma(rma); item.setType(InterventionType.CLEANING); item.setDescription("Etapa " + index + " " + longWord);
+            item.setRma(rma); item.setType("Limpeza"); item.setDescription("Etapa " + index + " " + longWord);
             item.setPerformedOn(LocalDate.parse("2026-10-07")); item.setHours(BigDecimal.ONE); item.setTechnicianName("maria");
             interventions.save(item);
         }

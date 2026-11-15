@@ -27,7 +27,7 @@ public class RmaRepairService {
     public RmaRepairResponse getRepair(Long rmaId) {
         requireRma(rmaId);
         List<InterventionResponse> records = interventions.findByRma_IdOrderByIdAsc(rmaId).stream().map(InterventionResponse::from).toList();
-        return new RmaRepairResponse(records, records.stream().filter(item -> item.voidedAt() == null).map(InterventionResponse::hours).reduce(BigDecimal.ZERO, BigDecimal::add));
+        return new RmaRepairResponse(records, records.stream().filter(item -> item.voidedAt() == null).map(InterventionResponse::hours).filter(java.util.Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add));
     }
 
     @Transactional(readOnly = true)
@@ -112,7 +112,7 @@ public class RmaRepairService {
     }
 
     private void fillIntervention(RmaIntervention item, InterventionRequest request) {
-        item.setType(request.type()); item.setDescription(request.description().trim()); item.setPerformedOn(request.performedOn()); item.setHours(request.hours());
+        item.setType(request.type().trim()); item.setDescription(request.description().trim()); item.setPerformedOn(request.performedOn()); item.setHours(request.hours());
     }
 
     private void requireActive(Instant voidedAt) {

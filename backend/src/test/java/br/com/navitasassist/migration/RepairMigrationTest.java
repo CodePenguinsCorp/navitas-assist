@@ -31,7 +31,9 @@ class RepairMigrationTest {
             String intervention = "INSERT INTO rma_interventions (rma_id, type, description, performed_on, hours, technician_name, created_at, updated_at) VALUES (900, '%s', 'Reparo', CURRENT_DATE, %s, 'tech', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
             sql.executeUpdate(intervention.formatted("CLEANING", "0.125"));
             assertThrows(SQLException.class, () -> sql.executeUpdate(intervention.formatted("CLEANING", "0")));
-            assertThrows(SQLException.class, () -> sql.executeUpdate(intervention.formatted("INVALID", "1")));
+            sql.executeUpdate(intervention.formatted("Texto livre", "1"));
+            sql.executeUpdate(intervention.formatted("CLEANING", "NULL"));
+            assertThrows(SQLException.class, () -> sql.executeUpdate(intervention.formatted("T".repeat(81), "1")));
             assertThrows(SQLException.class, () -> sql.executeUpdate(intervention.formatted("CLEANING", "1").replace("(900,", "(999,")));
             sql.executeUpdate("INSERT INTO rma_repair_history (rma_id, entity_type, entity_id, action, changed_by, changed_at, summary) VALUES (900, 'INTERVENTION', 1, 'CREATE', 'tech', CURRENT_TIMESTAMP, 'Intervenção registrada')");
             assertThrows(SQLException.class, () -> sql.executeUpdate("INSERT INTO rma_repair_history (rma_id, entity_type, entity_id, action, changed_by, changed_at, summary) VALUES (999, 'INTERVENTION', 1, 'CREATE', 'tech', CURRENT_TIMESTAMP, 'Órfão')"));

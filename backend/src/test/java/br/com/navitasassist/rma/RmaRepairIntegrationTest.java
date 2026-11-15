@@ -84,12 +84,32 @@ class RmaRepairIntegrationTest {
     }
 
     @Test
+    void acceptsFreeTextTypeUpToEightyCharactersAndTrimsIt() throws Exception {
+        write("interventions", Map.of("type", "  Troca de conector USB  ", "description", "X", "performedOn", LocalDate.now().toString(), "hours", 1))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.type").value("Troca de conector USB"));
+        write("interventions", Map.of("type", "T".repeat(80), "description", "X", "performedOn", LocalDate.now().toString(), "hours", 1)).andExpect(status().isCreated());
+    }
+
+    @Test
+    void hoursAreOptionalAndAbsentHoursDoNotCountInTheTotal() throws Exception {
+        write("interventions", Map.of("type", "Limpeza", "description", "Sem horas", "performedOn", LocalDate.now().toString()))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.hours").doesNotExist());
+        write("interventions", intervention("0.5", LocalDate.now())).andExpect(status().isCreated());
+        mvc.perform(get(base()).with(asProfile("viewer", "VIEWER"))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.interventions", hasSize(2))).andExpect(jsonPath("$.totalServiceHours").value(0.5));
+        mvc.perform(get("/api/rmas/" + rma.getId()).with(asProfile("viewer", "VIEWER"))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.repairHistory[?(@.summary == 'Intervenção registrada: Sem horas.')]").exists());
+    }
+
+    @Test
     void rejectsInvalidRepairInputs() throws Exception {
         write("interventions", intervention("0", LocalDate.now())).andExpect(status().isBadRequest());
         write("interventions", intervention("1.0001", LocalDate.now())).andExpect(status().isBadRequest());
         write("interventions", intervention("1", LocalDate.now().plusDays(1))).andExpect(status().isBadRequest());
-        write("interventions", Map.of("type", "INVALID", "description", "X", "performedOn", LocalDate.now().toString(), "hours", 1)).andExpect(status().isBadRequest());
-        write("interventions", Map.of("type", "CLEANING", "description", " ", "performedOn", LocalDate.now().toString(), "hours", 1)).andExpect(status().isBadRequest());
+        write("interventions", Map.of("type", "T".repeat(81), "description", "X", "performedOn", LocalDate.now().toString(), "hours", 1)).andExpect(status().isBadRequest());
+        write("interventions", Map.of("type", " ", "description", "X", "performedOn", LocalDate.now().toString(), "hours", 1)).andExpect(status().isBadRequest());
+        write("interventions", Map.of("description", "X", "performedOn", LocalDate.now().toString(), "hours", 1)).andExpect(status().isBadRequest());
+        write("interventions", Map.of("type", "Limpeza", "description", " ", "performedOn", LocalDate.now().toString(), "hours", 1)).andExpect(status().isBadRequest());
         write("external-components", Map.of("description", "X", "quantity", "0", "replacementReason", "Falha")).andExpect(status().isBadRequest());
         write("external-components", Map.of("description", "X", "quantity", "1.0001", "replacementReason", "Falha")).andExpect(status().isBadRequest());
         write("external-components", Map.of("description", "X", "quantity", "1", "replacementReason", " ")).andExpect(status().isBadRequest());
@@ -178,7 +198,7 @@ class RmaRepairIntegrationTest {
     }
 
     private Map<String, Object> intervention(String hours, LocalDate date) {
-        return Map.of("type", "CLEANING", "description", " Limpeza da placa ", "performedOn", date.toString(), "hours", hours);
+        return Map.of("type", "Limpeza", "description", " Limpeza da placa ", "performedOn", date.toString(), "hours", hours);
     }
     private String base() { return "/api/rmas/" + rma.getId() + "/repair"; }
     private org.springframework.test.web.servlet.ResultActions write(String path, Object payload) throws Exception {

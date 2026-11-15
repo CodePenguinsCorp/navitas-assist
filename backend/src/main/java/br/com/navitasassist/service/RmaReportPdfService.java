@@ -14,7 +14,6 @@ import br.com.navitasassist.diagnosis.DiagnosisResponse;
 import br.com.navitasassist.report.RmaTechnicalReport;
 import br.com.navitasassist.report.RmaTechnicalReport.ReplacedComponent;
 import br.com.navitasassist.rma.InterventionResponse;
-import br.com.navitasassist.rma.InterventionType;
 import br.com.navitasassist.rma.ReportLabels;
 import br.com.navitasassist.rma.RmaItemResponse;
 import br.com.navitasassist.rma.RmaDetailResponse;
@@ -154,13 +153,15 @@ public class RmaReportPdfService {
             document.add(text("Sem intervenções registradas"));
         } else {
             PdfPTable interventions = table(new float[] {1.8f, 2.6f, 2.8f, 5.6f, 1.8f}, "Data", "Técnico", "Tipo", "Descrição", "Duração");
-            active.forEach(item -> cells(interventions, date(item.performedOn()), item.technicianName(), interventionLabel(item.type()),
+            active.forEach(item -> cells(interventions, date(item.performedOn()), item.technicianName(), item.type(),
                 item.description(), item.hours() == null ? null : quantity(item.hours()) + " h"));
             document.add(interventions);
-            Paragraph total = new Paragraph("Total de horas: " + quantity(report.totalServiceHours()) + " h", SECTION);
-            total.setSpacingBefore(4);
-            total.setAlignment(Element.ALIGN_RIGHT);
-            document.add(total);
+            if (active.stream().anyMatch(item -> item.hours() != null)) {
+                Paragraph total = new Paragraph("Total de horas: " + quantity(report.totalServiceHours()) + " h", SECTION);
+                total.setSpacingBefore(4);
+                total.setAlignment(Element.ALIGN_RIGHT);
+                document.add(total);
+            }
         }
 
         document.add(signatures(technicianName(report, active)));
@@ -174,20 +175,6 @@ public class RmaReportPdfService {
             return diagnosis.technicianName();
         }
         return active.stream().map(InterventionResponse::technicianName).filter(name -> name != null && !name.isBlank()).findFirst().orElse(null);
-    }
-
-    private static String interventionLabel(InterventionType type) {
-        if (type == null) {
-            return null;
-        }
-        return switch (type) {
-            case RESOLDERING -> "Ressolda";
-            case CLEANING -> "Limpeza";
-            case REPROGRAMMING -> "Regravação";
-            case FIRMWARE_UPDATE -> "Atualização de firmware";
-            case HARNESS_REPLACEMENT -> "Troca de chicote";
-            case OTHER -> "Outra";
-        };
     }
 
     private static void section(Document document, String name) {

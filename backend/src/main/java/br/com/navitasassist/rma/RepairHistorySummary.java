@@ -12,7 +12,7 @@ public final class RepairHistorySummary {
     }
 
     public static String intervention(String title, String description, BigDecimal hours) {
-        return title + ": " + description + " (" + number(hours) + " h).";
+        return hours == null ? sentence(title + ": " + description) : title + ": " + description + " (" + number(hours) + " h).";
     }
 
     public static String voided(String title, String description, String reason) {

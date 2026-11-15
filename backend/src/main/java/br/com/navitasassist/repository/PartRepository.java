@@ -16,6 +16,12 @@ public interface PartRepository extends JpaRepository<Part, Long> {
     @Query("select p from Part p where p.id = :id")
     Optional<Part> findByIdForUpdate(@Param("id") Long id);
 
+    @Query("select trim(p.unit) from Part p where trim(coalesce(p.unit, '')) <> '' group by trim(p.unit) order by min(p.id)")
+    List<String> findDistinctUnits();
+
+    @Query("select trim(p.location) from Part p where trim(coalesce(p.location, '')) <> '' group by trim(p.location) order by min(p.id)")
+    List<String> findDistinctLocations();
+
     boolean existsByCodeIgnoreCase(String code);
 
     @Query("""
