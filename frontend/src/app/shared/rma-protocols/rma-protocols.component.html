@@ -16,7 +16,7 @@
     </div>
   } @else if (loading() || !hasLoaded()) {
     <div class="rma-detail-copy" aria-busy="true"></div>
-  } @else if (executions().length === 0) {
+  } @else if (executions().length === 0 && !(canExecute() && launchOpen())) {
     <p class="repair-empty">Nenhum protocolo executado nesta OS.</p>
   }
 
@@ -131,10 +131,9 @@
   }
 
   @if (canExecute() && launchOpen()) {
-    <div class="protocol-launch">
-      <span class="protocol-launch__label">Executar protocolo</span>
+    <div class="protocol-launch inline-form">
       @if (templatesLoadFailed()) {
-        <p class="field-error" role="alert">{{ templatesLoadErrorMessage() }}</p>
+        <p class="field-error inline-form__actions" role="alert">{{ templatesLoadErrorMessage() }}</p>
         <button type="button" class="button-secondary" (click)="retryTemplates()" [disabled]="templatesLoading()">Tentar novamente</button>
         @if (templatesLoading()) { <div aria-busy="true"></div> }
       } @else if (templatesLoading()) {
@@ -142,11 +141,15 @@
       } @else if (templateOptions().length === 0) {
         <p>Nenhum protocolo ativo disponível.</p>
       } @else {
-      <div class="protocol-launch__row">
-        <app-custom-select ariaLabel="Protocolo a executar" placeholder="Selecione o protocolo" [options]="templateOptions()" [value]="selectedTemplateId()" (valueChange)="selectTemplate($any($event))" [disabled]="submitting()" />
+        <div class="field-group field-group--full field-group--required">
+          <span id="protocol-launch-label">Protocolo</span>
+          <app-custom-select ariaLabel="Protocolo a executar" placeholder="Selecione o protocolo" [options]="templateOptions()" [value]="selectedTemplateId()" (valueChange)="selectTemplate($any($event))" [disabled]="submitting()" />
+        </div>
+      }
+      <div class="form-actions inline-form__actions">
+        <button type="button" class="button-secondary" (click)="cancelLaunch()" [disabled]="submitting()">Cancelar</button>
         <button type="button" class="button-primary" (click)="startExecution()" [disabled]="submitting() || !selectedTemplateId()">Iniciar protocolo</button>
       </div>
-      }
     </div>
   }
   </app-collapsible-section>

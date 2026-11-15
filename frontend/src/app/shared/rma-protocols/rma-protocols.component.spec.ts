@@ -75,6 +75,20 @@ describe('RmaProtocolsComponent', () => {
     expect(host.querySelector<HTMLElement>('.collapsible__body')!.hidden).toBe(true);
   });
 
+  it('hides the empty text while the launcher is open, using the inline form pattern', async () => {
+    await setup('TECHNICIAN', []);
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.textContent).toContain('Nenhum protocolo executado nesta OS.');
+    host.querySelector<HTMLButtonElement>('.collapsible__actions button')!.click(); fixture.detectChanges();
+    expect(host.textContent).not.toContain('Nenhum protocolo executado nesta OS.');
+    expect(host.querySelector('.protocol-launch.inline-form')).not.toBeNull();
+    const buttons = [...host.querySelectorAll<HTMLButtonElement>('.protocol-launch .inline-form__actions button')].map((b) => b.textContent?.trim());
+    expect(buttons).toEqual(['Cancelar', 'Iniciar protocolo']);
+    host.querySelector<HTMLButtonElement>('.protocol-launch .button-secondary')!.click(); fixture.detectChanges();
+    expect(host.querySelector('.protocol-launch')).toBeNull();
+    expect(host.textContent).toContain('Nenhum protocolo executado nesta OS.');
+  });
+
   it('shows protocol, version and progress without execution actions for viewers', async () => {
     await setup('VIEWER');
 

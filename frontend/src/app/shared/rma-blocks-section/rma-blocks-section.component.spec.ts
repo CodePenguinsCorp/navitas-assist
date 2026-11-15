@@ -105,6 +105,16 @@ describe('RmaBlocksSectionComponent', () => {
     expect(host().querySelector('dialog')).toBeNull();
   });
 
+  it('hides Sem impedimento while the form is open and shows it again when closed', () => {
+    mount();
+    control('Sinalizar impedimento')!.click();
+    render();
+    expect(host().querySelector('.blocks-section__empty')).toBeNull();
+    control('Cancelar')!.click();
+    render();
+    expect(text(host().querySelector('.blocks-section__empty'))).toBe('Sem impedimento');
+  });
+
   it('uses the inline form pattern for blocking and resolving', () => {
     mount();
     control('Sinalizar impedimento')!.click();

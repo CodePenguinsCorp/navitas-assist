@@ -98,6 +98,13 @@ export class RmaProtocolsComponent {
     this.selectedTemplateId.set(value);
   }
 
+  protected cancelLaunch(): void {
+    if (this.submitting()) return;
+    this.launchOpen.set(false);
+    this.selectedTemplateId.set(null);
+    this.errorMessage.set('');
+  }
+
   protected startExecution(): void {
     if (this.submitting()) return;
     const templateId = this.selectedTemplateId();
@@ -110,7 +117,7 @@ export class RmaProtocolsComponent {
     this.submitting.set(true);
     this.errorMessage.set('');
     this.writeRequest = this.protocolService.startExecution(rmaId, templateId).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.submitting.set(false))).subscribe({
-      next: (execution) => { if (this.rmaId() === rmaId) this.executions.update((executions) => [...executions, execution]); },
+      next: (execution) => { if (this.rmaId() === rmaId) { this.executions.update((executions) => [...executions, execution]); this.launchOpen.set(false); this.selectedTemplateId.set(null); } },
       error: (error) => { if (this.rmaId() === rmaId) this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível iniciar o protocolo.')); }
     });
   }
