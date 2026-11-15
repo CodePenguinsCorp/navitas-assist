@@ -25,7 +25,7 @@ import { IconComponent } from '../icon/icon.component';
     h3 { display: flex; align-items: center; gap: var(--space-2); margin: 0; }
     .diagnosis-trigger { display: inline-flex; align-items: center; gap: var(--space-1); white-space: nowrap; }
     .diagnosis-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
-    .diagnosis-facts > div { min-width: 0; }
+    .diagnosis-facts > div { min-width: 0; align-self: start; align-content: start; }
     .diagnosis-facts dd { white-space: pre-wrap; }
     @media (max-width: 600px) { .diagnosis-facts { grid-template-columns: minmax(0, 1fr); } }
   `]
