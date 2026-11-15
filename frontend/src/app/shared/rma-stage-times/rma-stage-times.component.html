@@ -1,5 +1,5 @@
 <section class="stage-times" aria-label="Tempo por etapa">
-  <app-collapsible-section title="Tempo por etapa" icon="history" [collapsible]="false">
+  <app-collapsible-section title="Tempo por etapa" [collapsible]="false">
     <span sectionActions class="stage-times__total" appTip="Tempo total nas etapas" aria-label="Tempo total nas etapas">{{ totalLabel() }}</span>
   <div class="stage-times__bar" aria-hidden="true">
     @for (row of segments(); track row.key) {

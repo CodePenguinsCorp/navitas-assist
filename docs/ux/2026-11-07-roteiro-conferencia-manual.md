@@ -148,3 +148,7 @@ As seções acima foram escritas antes destas entregas. Onde citam SLA por etapa
 - Conferir dicas escuras na barra lateral, listas, indicadores e textos truncados: texto completo em hover e foco, sem corte pela viewport.
 - Clicar, sair do item ou pressionar Esc fecha a dica. O nome acessível permanece no controle.
 - Conferência visual em navegador: pendente.
+
+### Tempo por etapa
+
+- Nos dois detalhes da OS, conferir cabeçalho sem ícone, seta ou sublinhado, inclusive em hover: título e total à direita. Conteúdo sempre aberto e cursor comum.

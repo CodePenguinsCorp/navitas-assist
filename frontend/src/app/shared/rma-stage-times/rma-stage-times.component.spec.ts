@@ -79,6 +79,7 @@ describe('RmaStageTimesComponent', () => {
     // Always open: same header as the other sections, with no toggle and no arrow.
     expect(element.querySelector('button.collapsible__toggle')).toBeNull();
     expect(element.querySelector('.collapsible__chevron')).toBeNull();
+    expect(element.querySelector('.collapsible__head app-icon')).toBeNull();
     expect(element.querySelector<HTMLElement>('.collapsible__body')!.hidden).toBe(false);
     const rows = [...element.querySelectorAll('.stage-times__list li')].map((item) => [
       item.getAttribute('data-status'),
