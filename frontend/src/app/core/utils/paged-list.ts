@@ -63,6 +63,9 @@ export class PagedList<T> {
       return;
     }
 
+    // Nothing at all (total zero): the empty result is the answer, and the page goes back to the first without another request.
+    if (result.totalPages === 0 && this.page() !== 0) this.page.set(0);
+
     this.result.set(result);
     this.onLoaded(result.content);
   }
