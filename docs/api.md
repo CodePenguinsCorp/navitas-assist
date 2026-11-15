@@ -40,7 +40,8 @@ Convenções:
 | `PATCH /api/rmas/{id}/status` | `rma.status` | Muda o status. |
 | `PATCH /api/rmas/{id}/status-history/{eventId}/note` | `rma.status` | Edita a observação (`note`, até 255 caracteres) de um evento do histórico de status; recusado em OS encerrada. |
 | `PATCH /api/rmas/{id}/assignee` | `rma.responsavel` | Atribui, troca ou remove o responsável. |
-| `PUT /api/rmas/{id}/diagnosis` | `rma.diagnosticar` | Registra ou altera o diagnóstico. |
+| `GET /api/rmas/diagnosis/suggestions` | `rma.ver` | Sugestões para o diagnóstico: `{failureTypes, probableCauses}`, valores distintos já usados em outros diagnósticos (sem vazios, sem repetir por maiúsculas ou acentos), em ordem alfabética. |
+| `PUT /api/rmas/{id}/diagnosis` | `rma.diagnosticar` | Registra ou altera o diagnóstico. `failureType` e `probableCause` são texto livre opcional de até 80 caracteres (aparados; vazio vira nulo), como a categoria do produto. |
 | `POST /api/rmas/{id}/blocks` | `rma.impedimentos` | Inicia um impedimento. |
 | `PATCH /api/rmas/{id}/blocks/{blockId}` | `rma.impedimentos` | Resolve aquele impedimento. |
 

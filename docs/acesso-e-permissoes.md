@@ -71,7 +71,7 @@ Rota a rota em [api.md](api.md).
 | Custos de peças na OS (`unitCost`, `totalCost`, `reservedCost`, `consumedCost` em `/api/rmas/{id}/parts` e nas respostas das reservas) | `pecas.ver`; sem ela os campos vêm nulos e o painel esconde os blocos de custo |
 | Modelos de protocolo (`GET /api/protocols/templates`) | qualquer uma de `protocolos.ver`, `protocolos.executar`, `rma.ver` |
 | Execuções de protocolo da OS (`GET /api/protocols/rmas/{id}/executions`) | `rma.ver` |
-| Consultar ordens de serviço, Kanban e dashboard (`GET /api/rmas/**`) e laudo PDF | `rma.ver` |
+| Consultar ordens de serviço, Kanban e dashboard (`GET /api/rmas/**`), sugestões de tipo de falha e causa (`GET /api/rmas/diagnosis/suggestions`) e laudo PDF | `rma.ver` |
 | Criar, alterar ou excluir clientes e produtos | `cadastros.editar` |
 | Baixar modelo, prévia e confirmação de importação CSV | `cadastros.importar` |
 | Abrir OS | `rma.abrir` |
