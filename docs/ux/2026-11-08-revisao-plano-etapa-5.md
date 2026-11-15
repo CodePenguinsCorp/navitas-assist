@@ -1,13 +1,13 @@
 # Revisão do plano da etapa 5 - Operações especializadas
 
+Referência histórica de UX. O fluxo de peças vigente está em [padrões visuais](padroes-visuais.md) e [API](../api.md): uso imediato com motivo e reversão em OS aberta.
+
 **Plano revisado:** `docs/ux/2026-11-07-plano-etapa-5-operacoes.md` (525 linhas, tarefas 1–11 com 6a/6b e 7a/7b).
 **Base conferida:** `main` em `f889f70`, leitura de `frontend/src/app` (peças, painéis da OS, protocolos, cabeçalho, ação de linha, `styles.css`, `core/*`), backend citado pelo plano, estudo de UI/UX e planos das etapas 3 e 4.
 
 **Precedência:** onde este documento diverge do plano, vale este documento. Os trechos "Substituir por" são o texto que o implementador deve seguir no lugar do trecho citado.
 
 ## Veredito
-
-**Aprovar com ajustes.** As evidências do inventário estão quase todas corretas. As regras de negócio (saldos, estorno, matriz de reservas, impedimentos, progresso e conclusão de protocolos) estão bem descritas e conferem com o backend. O plano não pode ser executado como está escrito: ele se declara não executável e tem seis lacunas de severidade alta. São elas: o momento de recarga do catálogo de reservas, a remoção não autorizada de um indicador, mensagens por campo que entram em conflito com specs e com "não mudar `save`", a formatação incorreta dos limites de medição, a estimativa negativa sem explicação e a forma de disparar os cenários "falha após sucesso". Também há escopo inflado na Tarefa 11 e na Tarefa 1.
 
 ## Problemas por severidade
 
@@ -16,10 +16,6 @@
 **A1. O plano proíbe a própria execução.** Plano `:3` ("a solicitação atual não autoriza implementar nem commitar código") e `:19` ("Esta entrega escreve somente…").
 - Linha 3, substituir a última frase por: "A implementação e os commits por tarefa estão autorizados conforme Global Constraints."
 - Linha 19, substituir o item inteiro por: "**Escrita na execução:** somente os **Files** de cada tarefa. Não alterar outros documentos, o estado das etapas nem este plano. Testes e build devem ser executados de fato e relatados com a saída real."
-
-**A2. Catálogo de reservas desatualizado (6a).** Hoje `load()` também relê o catálogo depois de cada reserva e de cada ação (`rma-parts-panel.component.ts:181,200,216-218`). Isso mantém atualizado o texto "disponível: X" das opções (`:143-147`). O plano (`:236`) cria `loadCatalog()` sem dizer quando ela é chamada, e quem implementar tende a chamá-la só na troca de OS.
-- Acrescentar em 6a **Interfaces**: "`load(rmaId)` continua chamando `loadCatalog()` a cada execução, como hoje (abertura, troca de OS, depois de reservar e depois de cada ação), sempre que `canCreateReservation()`. Cada chamada cancela a leitura anterior do catálogo. `retryCatalog()` chama somente `loadCatalog()`."
-- Acrescentar em 6a **Preservação**: "Depois de `reserve` ou `runAction` com sucesso, `list` é chamado de novo (contagem de chamadas +1)."
 
 **A3. Remoção de "Valor em estoque" sem decisão do usuário (Task 2).** Plano `:81,154,159,458,499`. O próprio plano registra essa remoção como proposta do autor (`:496-499`). A decisão "indicadores avaliados por tela" não autoriza retirar informação existente (`parts.component.html:24-28`, `parts.component.ts:120`).
 - Tabela de indicadores, linha "Valor em estoque", substituir por: "Manter o valor na linha compacta, sem cartão: `Valor em estoque (saldo × custo unitário atual): R$ X`. Usar o mesmo `stockValue` sobre `parts()` completo, oculto na primeira carga e na falha. Mover o cálculo para o backend ou dashboard fica no backlog."
@@ -35,16 +31,7 @@
 **A5. Limites de medição com precisão errada (Task 9).** `formatQuantity` arredonda para no máximo 3 casas (`part-ui.ts:43`), e os limites aceitam até 6 (`protocols.component.ts:15,248`). Com `formatQuantity`, um mínimo de `0.000125` apareceria como `0`.
 - Acrescentar em Task 9 **Interfaces**: "Helper local `formatProtocolLimit(value: number, decimalPlaces: number | null, unit: string | null): string` com `Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: decimalPlaces ?? 6 })` mais a unidade. Não usar `formatQuantity`." O teste `keeps expected range…` ganha um caso com `decimalPlaces: 6`, `minValue: 0.000125` → `'Mínimo: 0,000125 V'`.
 
-**A6. Estimativa negativa sem explicação (Task 4).** O servidor recusa movimento em que `onHand` ficaria abaixo de `reserved` (`PartStockService.java:229-232`). O plano (`:197`) manda exibir o número negativo sem dizer o que ele significa.
-- Substituir a última frase de **Preservação** de `:197` por: "Se `availableAfter < 0`, exibir os números e, abaixo deles, o texto `O disponível estimado ficaria negativo; o registro deve ser recusado por saldo insuficiente.`. Não desabilitar o envio. A resposta do servidor continua sendo a decisão, e o input é preservado no erro." Novo caso de teste: saída de 7 sobre 10/4/6 mostra o texto, e `registerMovement` continua sendo chamado ao enviar.
-
 ### Média
-
-**M1. Cenários "falha após sucesso" sem gatilho definido.** Tarefas 1 (`:125`), 5 (`:218`), 6a (`:239`) e 8 (`:335`). `load()` é privado e não existe retry depois de um sucesso. Usar estes gatilhos:
-- T1: sucesso inicial com `Capacitor`, depois `savePart` (ou `saveMovement`) com sucesso e a recarga de `list` com erro.
-- T5: histórico da peça A com sucesso, fechar, reabrir A com `listMovements` em erro. Para "registro antigo", usar `confirmReversal` com sucesso e a recarga do histórico com erro.
-- T6a: sucesso com reserva, depois `runAction` com sucesso e a recarga de `getRmaParts` com erro. Para troca de contexto, `setInput('rmaId', 8)` com erro.
-- T8: sucesso na OS 4, depois `setInput('rmaId', 5)` com `listExecutions` em erro. O retry repete a OS 5.
 
 **M2. Bloqueio de escrita durante a atualização (T1) não tem teste e é inflado.** Plano `:89` ("com ações de mutação desabilitadas durante a carga") e `:136` ("Desabilitar ações de escrita sobre snapshot em atualização"). Substituir por: "A atualização depois de um sucesso mantém os dados e mostra `Atualizando estoque...` com `role="status"`. As ações continuam habilitadas, porque o servidor decide concorrência e saldo." Cortar o item correspondente do roteiro (`:491`, "impedir operação sobre snapshot…").
 
@@ -60,10 +47,6 @@
 **M6. Specs aplicadores fora dos comandos.** `rmas.component.detail.spec.ts:280-302` monta os painéis de peças, protocolos e o histórico de impedimentos, e `rmas.component.html:318` também usa `app-rma-block-history`. Isso contradiz o plano em `:320`, que trata o painel como único aplicador. Nos Steps 2/4 das tarefas 6a, 6b, 7b, 8, 9 e 10, acrescentar `--include 'src/app/pages/rmas/rmas.component.detail.spec.ts'`. Em 7b Step 4, substituir "inclusive painel aplicador" por "inclusive `rma-block-panel` e o detalhe de ordens de serviço".
 
 **M7. Confirmação de estorno sem lugar definido (Task 5).** A coluna de ações (`parts.component.html:370-380`) não comporta rótulo, consequência e dois botões de 40 px. Acrescentar em Step 3: "A confirmação é uma linha própria `<tr>` logo abaixo do movimento, com uma `<td>` de `colspan` igual ao número de colunas. A validação e o erro do estorno continuam em `modalErrorMessage` (o spec `:93` não muda), mostrados dentro dessa linha com `role="alert"`. O erro de leitura do histórico vai para `historyLoadErrorMessage`. A unidade das variações é concatenada no template (`signedQuantity(v) + ' ' + part.unit`), sem alterar `formatSignedQuantity` (`part-ui.ts:47`, coberto por `part-ui.spec.ts`)."
-
-**M8. Decisões em aberto na 6a.**
-- Substituir o trecho "Após falha principal ocultar operações…" (`:249`) por: "Com `loadFailed()`, ocultar resumo, lista, ações por reserva **e** o formulário de nova reserva, até uma recarga com sucesso."
-- A regra "Callbacks de escrita conferem o id capturado" (`:236`) precisa de teste. Acrescentar: `ignores a write result after switching OS` - com `reserve` pendente na OS 7, trocar para o 8 e só então emitir o sucesso; `getRmaParts` não é chamado de novo com 7 e o painel do 8 não mostra a mensagem de sucesso.
 
 **M9. Efeito dos protocolos (Task 8).** O `effect` atual não usa `untracked` (`rma-protocols.component.ts:137`). Em `:332`, substituir "usando `untracked` se…" por: "Obrigatório: `effect(() => { const id = this.rmaId(); untracked(() => this.loadExecutions(id)); })`, como em `rma-parts-panel.component.ts:156-159`."
 
@@ -83,8 +66,6 @@
 **B3. Rótulo "Concluir" entre as tarefas 9 e 10.** Os testes da Task 9 devem localizar o botão com `textContent.trim().startsWith('Concluir')`, porque a Task 10 o renomeia para "Concluir protocolo".
 
 **B4. Aplicadores de `protocolProgress*`.** Já conferido: só `rma-protocols.component.ts:15-16,211-217`. Substituir "Antes de mudar, buscar todos os aplicadores…" (`:362`) por "Aplicador único: `rma-protocols`."
-
-**B5. Estrutura do formulário inline de reserva (6b, `:273`).** Usar `form.form-grid` > `fieldset.form-section` (legenda "Reservar peças") com Peça e Quantidade, Observação em `field-group--full` e `.form-actions.form-actions--full` contendo apenas "Reservar". Remover `.parts-reserve`. A coluna única abaixo de 720 px já vem de `styles.css:1769,1807-1809`; não duplicar no CSS local.
 
 ## Testes classificados como novos que já passariam hoje (tratar como preservação)
 
@@ -109,7 +90,6 @@
 | Textareas de instruções e esperado (T11) | **Manter** | Pedido pelo estudo ("espaço adequado"). |
 | Bloquear seleção, Adicionar e Remover durante a publicação (T11) | **Manter** | Coerente com a estabilidade da etapa 3. |
 | Mensagens por campo nos impedimentos (7a) | **Manter** | Não é validação nova: usa os validadores existentes (`rma-block-panel.component.ts:31-32`). Remover só a mensagem genérica (A4). |
-| Unidade no rótulo de Quantidade da reserva (6b) | **Manter** | Pequeno, sem cálculo, com dado do catálogo. |
 | `requiresEvidence` / `requiresJustification` (T10) | **Manter** | Só informam as regras do servidor (`ProtocolExecutionService.java:94-101,204`), sem `required` nem bloqueio. |
 | Progresso A/B via `requiredItems - pendingRequiredItems` (T9) | **Manter** | Os dois números vêm do servidor (`:238-239,245-250`). Não derivar elegibilidade de conclusão. |
 | Histórico de tentativas em `<details>` (T9) | **Manter** | Os dados já chegam (`models.ts:683-684`); o estudo pede o histórico. |
@@ -117,10 +97,3 @@
 | F1 (coordenação global de foco) | **Backlog** | Concordo com a justificativa do plano. |
 
 ## O que está correto
-
-- **Evidências.** Todas as âncoras de linha do inventário conferem, exceto as nuances de B1. Conferidas: `parts.component.html/ts`, `rma-parts-panel` (`:39`, `:57-58`, `:6-8`, `:206-217`), `rma-block-panel` (`:30-32`, `:39`, html `:4,13-31`), `rma-block-history:29-41`, `rma-protocols` (`:22,28,33-34,63-71`, ts `:137-139,168-169,231-238,245-250`), `protocol-ui.ts:34-40`, `protocols.component.html:97-103,171-246`, `models.ts:417-419,446,476,683-684`, `styles.css:35-36,1041-1065,1807-1809` e `rma-detail-modal.component.ts:68-91`.
-- **Backend.** Estoque e estorno (`PartStockService.java:73-88,107-115`). Satisfação de obrigatórios (`ProtocolItemOutcome.java:8-9`, `ProtocolExecutionService.java:245-250`). Justificativa e evidência (`:94-101,204-205`). Conclusão com reprovação permitida quando todo obrigatório tem registro (`:132-145`). As restrições dos Global Constraints correspondem exatamente a esse código.
-- **Regras preservadas.** Matriz de reservas por estado, encerramento e perfil (`rma-parts-panel.component.html:49-59`, ts `:135-137`). Estorno por `reverseMovement`, sem DELETE, mantendo o original. Proibição de recalcular saldos a partir de reservas. Permissões citadas (`parts.component.ts:114`, `rma-protocols.component.ts:119`). Custos visíveis para todos os perfis, como hoje.
-- **Specs.** Os existentes afetados estão bem identificados: `parts.component.spec.ts`, mais o `:80` acrescentado por A4; `rma-parts-panel.component.spec.ts:53-55,69`; `rma-protocols.component.spec.ts:59`; `protocols.component.spec.ts:333-339`. O spec do histórico de impedimentos não existe e o de `protocol-ui` também não, como o plano afirma.
-- **Padrões das etapas 1–4.** Uso correto de `app-page-header` (count/total), `button[appRowAction]` (o tooltip mantém o texto "Histórico" no DOM, então `parts.component.spec.ts:69` continua passando), `fieldset.form-section`, `expectCancelBeforePrimary` e Cancelar à esquerda. A recusa de `PagedList` e de debounce em listas em memória está certa. O `<dialog>` nativo dos impedimentos é preservado e F1 fica explícito.
-- **Commits.** Um por tarefa, somente com os **Files** listados, sem coautoria e sem `git add .`. A conferência final não cria commit.

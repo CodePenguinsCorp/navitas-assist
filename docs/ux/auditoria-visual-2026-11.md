@@ -1,5 +1,7 @@
 # Auditoria visual do frontend (novembro de 2026)
 
+Referência histórica de UX. O fluxo de peças vigente está em [padrões visuais](padroes-visuais.md) e [API](../api.md): uso imediato com motivo e reversão em OS aberta.
+
 Auditoria completa da aparência do frontend, pedida pelo dono do produto depois de queixas repetidas: telas com "cara de bloco de texto", falta de caixas que separem as informações, botões que fazem a mesma coisa com cor ou formato diferente, telas com o mesmo conceito e visuais diferentes (dois formulários com o mesmo objetivo e aparência distinta) e correções feitas só nos casos apontados, não em todos.
 
 Este documento só audita e propõe. Nenhum código nem estilo foi alterado. O catálogo de padrões que resulta dele está em [padroes-visuais.md](padroes-visuais.md); a correção em massa só começa depois que o dono validar as decisões da [seção 9](#9-decisões-que-o-dono-precisa-tomar).
@@ -159,7 +161,6 @@ Níveis aninhados medidos por leitura:
 | --- | --- |
 | Cabeçalho | `S:1071` faixa `--brand-tint`, 12,8 px, peso 700 em `.table-card`; relatórios repetem o padrão. |
 | Zebra, divisória e hover juntos | `S:1065`, `S:1087`, `S:1095`. Três sinais para separar linhas ao mesmo tempo. A OS ainda troca o hover por outra cor (`.rma-table-row:hover`, `rmas.component.ts`). |
-| Alinhamento | Texto à esquerda em tudo; só Relatórios (`reports.component.css:12` `.num`) e movimentos de peça (`S:3728`) alinham número à direita. A tabela de Peças (`parts.component.html:80-87`) tem cinco colunas numéricas (Em estoque, Reservado, Disponível, Mínimo, Custo unitário) à esquerda. |
 | Vazio | `.empty-state` em todas, com ícone, título e, às vezes, ação. Dashboard usa só frase, sem título (`dashboard.component.html:29,65,91`). |
 | Ações | Coluna `.table-actions-col` com ícones. Padrão sólido. |
 | Linha clicável | Só OS e Dashboard; as demais abrem por ícone. |

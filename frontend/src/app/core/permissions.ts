@@ -13,7 +13,7 @@ export const PERMISSIONS = [
   'cadastros.importar',
   'pecas.ver',
   'pecas.movimentar',
-  'pecas.reservar',
+  'pecas.usar',
   'protocolos.ver',
   'protocolos.executar',
   'protocolos.catalogo',

@@ -32,7 +32,7 @@ Cliente e equipamento ocupam linhas próprias com valores maiores e semibold; pr
 
 Um único rodapé agrupa setas e contador à esquerda, Adiar quando permitido e Abrir OS à direita. Em até 480 px, Abrir OS fica em ícone, preservando o nome acessível e os controles de 40 px. Mantidos outputs, atalhos, `aria-labelledby` e `appModalFocus`, incluindo fechamento por Esc e retorno de foco.
 
-Tipos conferidos em `NotificationEventType` no backend e `core/utils/notification-ui.ts`: `RMA_CREATED` (Nova OS, clipboard), `RMA_ASSIGNED` (Nova atribuição, users), `RMA_BLOCKED` (Impedimento, lock), `PART_PENDING` (Peça pendente, box) e `TEST_FAILED` (Falha de teste, alert). Specs geram as cinco variações sem campos de OS, além de criação estruturada, atribuição com etapa e pessoas, texto livre, valores longos, leitura, navegação e ações. A severidade vem do payload, independentemente do tipo.
+Tipos conferidos em `NotificationEventType` no backend e `core/utils/notification-ui.ts`: `RMA_CREATED` (Nova OS, clipboard), `RMA_ASSIGNED` (Nova atribuição, users), `RMA_BLOCKED` (Impedimento, lock) e `TEST_FAILED` (Falha de teste, alert). Specs geram as quatro variações sem campos de OS, além de criação estruturada, atribuição com etapa e pessoas, texto livre, valores longos, leitura, navegação e ações. A severidade vem do payload, independentemente do tipo.
 
 O contrato `NotificationResponse` não oferece status atual da OS. Não foi criado status presumido nem chamada adicional; a etapa da atribuição continua sendo contexto do evento, sem chip de status atual. A validação de aparência, encaixe em 320 px, contraste calculado e foco em navegador permanece pendente, pois esta rodada não usa navegador.
 

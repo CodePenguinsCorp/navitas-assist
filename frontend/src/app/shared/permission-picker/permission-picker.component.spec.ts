@@ -153,14 +153,14 @@ describe('PermissionPickerComponent', () => {
     });
 
     it('lists the granted extras as chips, without the profile ones, and removes them', async () => {
-      await mount((h) => extras(h, ['pecas.reservar', 'rma.status', 'rma.ver']));
-      expect(chips()).toEqual(['Alterar status', 'Reservar e aplicar peças nas ordens de serviço']);
+      await mount((h) => extras(h, ['pecas.usar', 'rma.status', 'rma.ver']));
+      expect(chips()).toEqual(['Alterar status', 'Usar peças nas OS']);
       const remove = element.querySelector<HTMLButtonElement>('.permission-chip button')!;
       expect(remove.getAttribute('aria-label')).toBe('Remover Alterar status');
       remove.click();
       render();
-      expect([...host.selected()].sort()).toEqual(['pecas.reservar', 'rma.ver']);
-      expect(chips()).toEqual(['Reservar e aplicar peças nas ordens de serviço']);
+      expect([...host.selected()].sort()).toEqual(['pecas.usar', 'rma.ver']);
+      expect(chips()).toEqual(['Usar peças nas OS']);
     });
 
     it('ignores toggles on locked permissions', async () => {

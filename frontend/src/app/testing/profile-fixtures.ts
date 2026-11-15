@@ -20,7 +20,7 @@ export const PERMISSION_CATALOG: PermissionModuleResponse[] = [
   { module: 'PECAS', label: 'Peças', permissions: [
     { code: 'pecas.ver', label: 'Consultar peças e estoque' },
     { code: 'pecas.movimentar', label: 'Cadastrar peças e movimentar estoque' },
-    { code: 'pecas.reservar', label: 'Reservar e aplicar peças nas ordens de serviço' }
+    { code: 'pecas.usar', label: 'Usar peças nas OS' }
   ] },
   { module: 'PROTOCOLOS', label: 'Protocolos técnicos', permissions: [
     { code: 'protocolos.ver', label: 'Consultar protocolos e execuções' },

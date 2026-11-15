@@ -115,10 +115,10 @@ As seções acima foram escritas antes destas entregas. Onde citam SLA por etapa
 - OS encerrada: o ajuste é recusado. VIEWER e TECHNICIAN não veem o controle.
 
 ## 15. Componentes trocados e intervenções
-- Peças reservadas: ao aplicar, o motivo é obrigatório (até 1000) e o lote é opcional; aparecem em "Componentes trocados" com aplicado por e quando. Consumos antigos mostram "Motivo não registrado".
-- Componente externo (`pecas.reservar`): código opcional, descrição, quantidade (até 3 casas), unidade e motivo; estoque não muda. Código que já existe no catálogo, inclusive inativo, é recusado com orientação para usar a reserva.
+- Usar peça: motivo obrigatório (até 1000), lote e observação opcionais. Ao confirmar, o estoque cai imediatamente; sem saldo, erro 409 sem pendência. A lista mostra peça, quantidade, motivo, lote, autoria, data e chip Usada. Desfazer uso exige motivo, devolve o estoque e troca o chip para Uso desfeito. As duas ações só aparecem em OS aberta com `pecas.usar`.
+- Componente externo (`pecas.usar`): código opcional, descrição, quantidade (até 3 casas), unidade e motivo; estoque não muda. Código que já existe no catálogo, inclusive inativo, é recusado com orientação para usar a peça do estoque.
 - Intervenção (`rma.diagnosticar`): tipo, descrição, data (não futura) e horas (até 3 casas); o total de horas é somado. SERVICE_DESK e VIEWER só leem.
-- OS encerrada: novas aplicações, componentes e intervenções são recusados com mensagem em português; a leitura continua.
+- OS encerrada: novos usos, componentes e intervenções são recusados com mensagem em português; a leitura continua.
 - O laudo PDF lista componentes (motivo e lote), intervenções, técnico e horas, sem custos.
 
 ## 16. Relatórios, laudo e CSV (`relatorios.ver`)
@@ -157,3 +157,5 @@ As seções acima foram escritas antes destas entregas. Onde citam SLA por etapa
 
 - Em Kanban e lista, conferir Responsável, Prioridade e Data limite: rótulo à esquerda e controle à direita, larguras uniformes e altura de 40 px.
 - Em 320 px, rótulo acima do controle, sem rolagem horizontal. Preservar permissões e bloqueio durante salvamento. Validação visual: pendente.
+
+- Reposição de peças: somente estoque abaixo do mínimo. Não há saldo reservado, coluna Disponível ou fila de pedidos sem saldo. A notificação de falta de peça não existe nas regras e preferências.

@@ -30,7 +30,7 @@ describe('NotificationDetailModalComponent', () => {
   afterEach(() => { document.body.style.overflow = ''; });
 
   it.each([
-    ['RMA_BLOCKED', 'Motivo do impedimento'], ['PART_PENDING', 'Pendência da peça'], ['TEST_FAILED', 'Item reprovado']
+    ['RMA_BLOCKED', 'Motivo do impedimento'], ['TEST_FAILED', 'Item reprovado']
   ] as const)('exibe contexto e motivo antigo de %s', async (eventType, label) => {
     const reason = 'Sem saldo. Lote · 2\nOutra linha';
     await setup({ ...NOTIFICATION, eventType, message: `Cliente · Switch · etapa Diagnóstico. ${label}: ${JSON.stringify(reason)}. Registrado por "Maria Silva".` });
@@ -74,8 +74,7 @@ describe('NotificationDetailModalComponent', () => {
 
   it.each([
     ['RMA_CREATED', 'Nova OS', 'clipboard'], ['RMA_ASSIGNED', 'Nova atribuição', 'users'],
-    ['RMA_BLOCKED', 'Impedimento', 'lock'], ['PART_PENDING', 'Peça pendente', 'box'],
-    ['TEST_FAILED', 'Falha de teste', 'alert']
+    ['RMA_BLOCKED', 'Impedimento', 'lock'], ['TEST_FAILED', 'Falha de teste', 'alert']
   ] as const)('apresenta %s sem depender dos campos de OS', async (eventType, title, icon) => {
     await setup({ ...NOTIFICATION, eventType, title: '', rmaId: null, rmaCode: null, actionPath: null,
       message: 'Contexto específico preservado', severity: 'CRITICAL' });

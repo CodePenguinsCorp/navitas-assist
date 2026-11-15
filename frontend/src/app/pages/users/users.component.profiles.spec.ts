@@ -120,7 +120,7 @@ describe('UsersComponent profile and extra permissions', () => {
 
     it('shows the extras already granted as chips while the groups stay collapsed', async () => {
       await mount();
-      component.openEditModal(account({ extraPermissions: ['rma.status', 'pecas.reservar'] }));
+      component.openEditModal(account({ extraPermissions: ['rma.status', 'pecas.usar'] }));
       fixture.detectChanges();
       expect(toggles().every((toggle) => toggle.getAttribute('aria-expanded') === 'false')).toBe(true);
       expect(chipCount()).toBe(2);
@@ -139,26 +139,26 @@ describe('UsersComponent profile and extra permissions', () => {
 
   it('removes an extra from its chip without opening the panel', async () => {
     await mount();
-    component.openEditModal(account({ extraPermissions: ['rma.status', 'pecas.reservar'] }));
+    component.openEditModal(account({ extraPermissions: ['rma.status', 'pecas.usar'] }));
     fixture.detectChanges();
     const chips = () => Array.from(dialog().querySelectorAll('.extra-permissions .permission-chip')).map((chip) => chip.querySelector('.permission-chip__label')?.textContent?.trim());
-    expect(chips()).toEqual(['Alterar status', 'Reservar e aplicar peças nas ordens de serviço']);
+    expect(chips()).toEqual(['Alterar status', 'Usar peças nas OS']);
     dialog().querySelector<HTMLButtonElement>('.permission-chip button[aria-label="Remover Alterar status"]')!.click();
     fixture.detectChanges();
-    expect(chips()).toEqual(['Reservar e aplicar peças nas ordens de serviço']);
+    expect(chips()).toEqual(['Usar peças nas OS']);
     component.saveUser();
-    expect(updateUser).toHaveBeenCalledWith(7, expect.objectContaining({ extraPermissions: ['pecas.reservar'] }));
+    expect(updateUser).toHaveBeenCalledWith(7, expect.objectContaining({ extraPermissions: ['pecas.usar'] }));
   });
 
   it('sends only extras not in the selected profile', async () => {
-    await mount({ rows: [account({ extraPermissions: ['rma.ver', 'pecas.reservar'] })] });
-    component.openEditModal(account({ extraPermissions: ['rma.ver', 'pecas.reservar'] }));
+    await mount({ rows: [account({ extraPermissions: ['rma.ver', 'pecas.usar'] })] });
+    component.openEditModal(account({ extraPermissions: ['rma.ver', 'pecas.usar'] }));
     fixture.detectChanges();
     expect(component.form.controls['profileId'].value).toBe(4);
     extraBox('Alterar status').querySelector('input')!.click();
     fixture.detectChanges();
     component.saveUser();
-    expect(updateUser).toHaveBeenCalledWith(7, expect.objectContaining({ profileId: 4, extraPermissions: ['rma.status', 'pecas.reservar'] }));
+    expect(updateUser).toHaveBeenCalledWith(7, expect.objectContaining({ profileId: 4, extraPermissions: ['rma.status', 'pecas.usar'] }));
     expect(updateUser.mock.calls[0][1]).not.toHaveProperty('role');
   });
 
@@ -194,7 +194,7 @@ describe('UsersComponent profile and extra permissions', () => {
 
   it('shows profile name and extras count', async () => {
     await mount({ rows: [account(), account({ id: 8, fullName: 'Bia', username: 'bia', extraPermissions: ['rma.status'] }),
-      account({ id: 9, fullName: 'Caio', username: 'caio', extraPermissions: ['rma.status', 'pecas.reservar'] })] });
+      account({ id: 9, fullName: 'Caio', username: 'caio', extraPermissions: ['rma.status', 'pecas.usar'] })] });
     const profileCell = (row: number) => element.querySelectorAll('tbody tr')[row].querySelectorAll('td')[3].textContent?.replace(/\s+/g, ' ').trim();
     expect(profileCell(0)).toBe('Consulta');
     expect(profileCell(1)).toBe('Consulta +1 extra');

@@ -5,7 +5,7 @@ import { PERMISSIONS, isPermission } from './permissions';
 // Lista literal da spec §3, na ordem do catálogo. A mesma lista está em PermissionTest (backend).
 const SPEC_CATALOG = [
   'rma.ver', 'rma.abrir', 'rma.editar', 'rma.status', 'rma.responsavel', 'rma.atribuivel', 'rma.diagnosticar',
-  'rma.impedimentos', 'cadastros.ver', 'cadastros.editar', 'cadastros.importar', 'pecas.ver', 'pecas.movimentar', 'pecas.reservar',
+  'rma.impedimentos', 'cadastros.ver', 'cadastros.editar', 'cadastros.importar', 'pecas.ver', 'pecas.movimentar', 'pecas.usar',
   'protocolos.ver', 'protocolos.executar', 'protocolos.catalogo', 'relatorios.ver', 'usuarios.gerir',
   'perfis.gerir', 'notificacoes.regras', 'auditoria.ver',
 ];

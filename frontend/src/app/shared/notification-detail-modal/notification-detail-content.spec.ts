@@ -46,7 +46,7 @@ describe('notificationDetailContent', () => {
 
 describe('contexto operacional', () => {
   it.each([
-    ['RMA_BLOCKED', 'Motivo do impedimento'], ['PART_PENDING', 'Pendência da peça'], ['TEST_FAILED', 'Item reprovado']
+    ['RMA_BLOCKED', 'Motivo do impedimento'], ['TEST_FAILED', 'Item reprovado']
   ] as const)('reconhece %s e preserva o formato antigo', (eventType, label) => {
     const reason = 'Peça. Sem saldo · lote "2"\nOutra linha';
     for (const actor of ['', '. Registrado por "Maria Silva"']) {

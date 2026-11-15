@@ -1,284 +1,122 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, Subject } from 'rxjs';
-import { PartReservationResponse, RmaPartsResponse } from '../../core/models';
-import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { TestBed, ComponentFixture } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { of, Subject, throwError } from 'rxjs';
+import { PartUsageResponse, RmaPartsResponse, RmaStatus } from '../../core/models';
 import { PartService } from '../../core/services/part.service';
 import { RmaRepairService } from '../../core/services/rma-repair.service';
+import { ToastService } from '../../core/services/toast.service';
+import { providePermissions, profilePermissions, LegacyProfileCode } from '../../testing/permission-fixtures';
 import { RmaPartsPanelComponent } from './rma-parts-panel.component';
-import { expectInlineForm } from '../../testing/inline-form';
-import { toastMessages, toastTones } from '../../testing/toast';
 
-const reservation = (id: number, status: PartReservationResponse['status']): PartReservationResponse => ({
-  id, rmaId: 7, rmaCode: 'OS-2026-000007', partId: 4, partCode: 'PCA-1', partName: 'Capacitor', unit: 'un',
-  location: 'A1', quantity: 2, status, partAvailable: 3, unitCost: 10, totalCost: 20, note: null, createdBy: 'tech',
-  createdAt: '2026-10-24T12:00:00Z', updatedAt: '2026-10-24T12:00:00Z'
+const usage = (id = 1, status: PartUsageResponse['status'] = 'USED'): PartUsageResponse => ({
+  id, rmaId: 7, rmaCode: 'OS-7', partId: 4, partCode: 'PCA-1', partName: 'Capacitor', unit: 'UN', location: null,
+  quantity: 2, status, partOnHand: 3, unitCost: 10, totalCost: 20, notes: 'Conferido',
+  replacementReason: 'Curto', componentBatch: 'L1', appliedAt: '2026-10-24T12:00:00Z', appliedBy: 'tech',
+  createdBy: 'tech', createdAt: '2026-10-24T12:00:00Z', updatedAt: '2026-10-24T12:00:00Z'
 });
+const response = (usages = [usage()]): RmaPartsResponse => ({ rmaId: 7, rmaCode: 'OS-7', usages,
+  movements: [], usedCost: usages.filter(u => u.status === 'USED').length * 20,
+  replacedComponents: usages.filter(u => u.status === 'USED') });
 
-const RMA_PARTS: RmaPartsResponse = {
-  rmaId: 7,
-  rmaCode: 'OS-2026-000007',
-  reservations: [reservation(1, 'ACTIVE'), reservation(2, 'CONSUMED'), reservation(3, 'PENDING')],
-  movements: [],
-  reservedCost: 20,
-  consumedCost: 20,
-  pendingCount: 1
-};
-
-describe('RmaPartsPanelComponent', () => {
+describe('RmaPartsPanelComponent - uso de peças', () => {
   let fixture: ComponentFixture<RmaPartsPanelComponent>;
-  let partService: Record<string, ReturnType<typeof vi.fn>>;
-
-  it('separa identificação, dados e ações de cada reserva sem alterar a ordem', async () => {
-    await setUp('TECHNICIAN');
-    const items = Array.from(fixture.nativeElement.querySelectorAll('[aria-label="Reservas de peças"] > .record-row')) as HTMLElement[];
-    expect(items.map(item => item.querySelector('dl')?.getAttribute('aria-label'))).toEqual([
-      'Dados da reserva de PCA-1', 'Dados da reserva de PCA-1', 'Dados da reserva de PCA-1'
-    ]);
-    expect(items.map(item => item.querySelector('.mini-chip')?.textContent?.trim())).toEqual(['Reservada', 'Aplicada', 'Pendente']);
-    expect(items[0].querySelector('.record-row__title')?.textContent?.trim()).toBe('Capacitor');
-    expect(Array.from(items[0].querySelectorAll('dt')).map(label => label.textContent)).toEqual(['Quantidade', 'Disponível', 'Custo', 'Local']);
-    expect(items[0].querySelector('.record-row__main .record-row__actions')).toBeNull();
-    expect(items[0].querySelector('button[aria-label="Cancelar reserva Capacitor"]')?.classList).toContain('icon-button--danger');
-    expect(items[0].querySelector('dl')?.classList).toContain('record-stats');
-    expect(items[0].querySelector('.record-row__meta')).toBeNull();
-  });
-
-  it('bloqueia frações contáveis na reserva e revalida ao trocar a peça', async () => {
-    await setUp('TECHNICIAN');
-    const c = fixture.componentInstance as any;
-    c.catalog.set([{ id: 4, code: 'P1', name: 'Peça', unit: 'UN', active: true, available: 10 }, { id: 5, code: 'M1', name: 'Medida', unit: 'kg', active: true, available: 10 }]);
-    c.reserveForm.patchValue({ partId: 4, quantity: 3.5 });
-    c.reserve(); fixture.detectChanges();
-    expect(partService['reserve']).not.toHaveBeenCalled();
-    expect(fixture.nativeElement.querySelector('#reserve-quantity-error')?.textContent).toContain('Informe um número inteiro.');
-    expect(fixture.nativeElement.querySelector('#reserve-form input[type="number"]')?.getAttribute('step')).toBe('1');
-    c.reserveForm.controls.partId.setValue(5); fixture.detectChanges();
-    expect(c.reserveForm.controls.quantity.valid).toBe(true);
-    expect(fixture.nativeElement.querySelector('#reserve-form input[type="number"]')?.getAttribute('step')).toBe('any');
-  });
-
-  it('revalida componente externo quando muda a unidade e impede envio inválido', async () => {
-    await setUp('TECHNICIAN');
-    const c = fixture.componentInstance as any;
-    c.toggleExternal();
-    c.externalForm.patchValue({ description: 'Componente', quantity: 1.222, unit: 'un', replacementReason: 'Troca' });
-    c.saveExternal(); fixture.detectChanges();
-    expect(c.externalForm.controls.quantity.invalid).toBe(true);
-    expect(fixture.nativeElement.querySelector('#external-form')?.textContent).toContain('Informe um número inteiro.');
-    c.externalForm.controls.unit.setValue('m³'); fixture.detectChanges();
-    expect(c.externalForm.controls.quantity.valid).toBe(true);
-  });
-
-  it('exibe legado fracionado, bloqueia aplicação e efetivação e permite cancelar', async () => {
-    await setUp('TECHNICIAN');
-    const c = fixture.componentInstance as any;
-    const legacy = { ...reservation(1, 'ACTIVE'), quantity: 1.222 };
-    c.parts.set({ ...RMA_PARTS, reservations: [legacy] }); fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('1,222 un');
-    c.runAction(legacy, 'consume'); c.runAction({ ...legacy, status: 'PENDING' }, 'allocate');
-    expect(partService['updateReservation']).not.toHaveBeenCalled();
-    c.runAction(legacy, 'cancel');
-    expect(partService['updateReservation']).toHaveBeenCalledWith(7, 1, 'cancel');
-  });
-
-  async function setUp(role: LegacyProfileCode, status: 'IN_REPAIR' | 'COMPLETED' = 'IN_REPAIR'): Promise<void> {
-    partService = {
-      getRmaParts: vi.fn(() => of(RMA_PARTS)),
-      listOptions: vi.fn(() => of([])),
-      reserve: vi.fn(() => of(reservation(4, 'PENDING'))),
-      updateReservation: vi.fn(() => of(reservation(1, 'CANCELLED')))
-    };
-    await TestBed.configureTestingModule({
-      imports: [RmaPartsPanelComponent],
-      providers: [
-        { provide: PartService, useValue: partService },
-        { provide: RmaRepairService, useValue: { listExternalComponents: vi.fn(() => of([])), addExternalComponent: vi.fn(() => of({ id: 8 })) } },
-        providePermissions(profilePermissions(role))
-      ]
-    }).compileComponents();
+  let service: { getRmaParts: ReturnType<typeof vi.fn>; listOptions: ReturnType<typeof vi.fn>; use: ReturnType<typeof vi.fn>; undoUse: ReturnType<typeof vi.fn> };
+  const root = (): HTMLElement => fixture.nativeElement;
+  const text = () => root().textContent ?? '';
+  const component = () => fixture.componentInstance as any;
+  const render = () => fixture.detectChanges();
+  const button = (label: string) => Array.from(root().querySelectorAll<HTMLButtonElement>('button')).find(b => b.textContent?.trim() === label);
+  async function setUp(role: LegacyProfileCode = 'TECHNICIAN', status: RmaStatus = 'IN_REPAIR') {
+    service = { getRmaParts: vi.fn(() => of(response())), listOptions: vi.fn(() => of([
+      { id: 4, code: 'PCA-1', name: 'Capacitor', unit: 'UN', onHand: 3, active: true },
+      { id: 5, code: 'CABO', name: 'Cabo', unit: 'm', onHand: 10, active: true }
+    ])), use: vi.fn(() => of(usage())), undoUse: vi.fn(() => of(usage(1, 'REVERTED'))) };
+    await TestBed.configureTestingModule({ imports: [RmaPartsPanelComponent], providers: [provideHttpClient(),
+      providePermissions(profilePermissions(role)), { provide: PartService, useValue: service },
+      { provide: RmaRepairService, useValue: { listExternalComponents: vi.fn(() => of([])), addExternalComponent: vi.fn(() => of({})) } }
+    ] }).compileComponents();
     fixture = TestBed.createComponent(RmaPartsPanelComponent);
-    fixture.componentRef.setInput('rmaId', 7);
-    fixture.componentRef.setInput('rmaStatus', status);
-    fixture.detectChanges();
-    fixture.nativeElement.querySelector('#reserve-trigger')?.click();
-    fixture.detectChanges();
+    fixture.componentRef.setInput('rmaId', 7); fixture.componentRef.setInput('rmaStatus', status);
+    render(); await fixture.whenStable(); render();
   }
+  afterEach(() => { fixture?.destroy(); localStorage.clear(); });
 
-  it('shows reserved, consumed and pending parts with consumed cost', async () => {
-    await setUp('VIEWER');
-    const text: string = fixture.nativeElement.textContent;
-
-    expect(partService['getRmaParts']).toHaveBeenCalledWith(7);
-    expect(text).toMatch(/Ativas\s*1/);
-    expect(text).toMatch(/Aplicadas\s*1/);
-    expect(text).toMatch(/Pendentes\s*1/);
-    expect(text).toContain('Custo aplicado');
-    expect(text).not.toContain('Aplicar');
-    expect(fixture.nativeElement.querySelector('form')).toBeNull();
-    expect(partService['listOptions']).not.toHaveBeenCalled();
+  it('mostra identificação, motivo, lote, autoria, observação e custo no padrão de registros', async () => {
+    await setUp();
+    const row = root().querySelector('[aria-label="Peças usadas"] .record-row')!;
+    for (const value of ['Capacitor', 'PCA-1', '2 UN', 'Usada', 'Curto', 'L1', 'tech', 'Conferido']) expect(row.textContent).toContain(value);
+    expect(row.querySelector('.record-row__actions button')?.getAttribute('aria-label')).toContain('Desfazer uso');
+    expect(text()).toContain('Peças usadas'); expect(text()).toContain('Custo das peças');
+    expect(text()).toMatch(/R\$\s*20,00/); expect(text()).toContain('Componentes trocados');
   });
 
-  it('lets technicians reserve and act on reservations', async () => {
-    await setUp('TECHNICIAN');
-    const text: string = fixture.nativeElement.textContent;
-    expect(text).toContain('Aplicar');
-    expect(text).toContain('Efetivar reserva');
-    expect(fixture.nativeElement.querySelector('form')).not.toBeNull();
-
-    const cancel = [...fixture.nativeElement.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent?.trim() === 'Cancelar reserva') as HTMLButtonElement;
-    cancel.click();
-    fixture.detectChanges();
-    expect(partService['updateReservation']).not.toHaveBeenCalled();
-    const dialog = fixture.nativeElement.querySelector('[role="alertdialog"]')!;
-    expect(dialog.querySelector('h3').textContent).toBe('Cancelar reserva?');
-    expect(dialog.textContent).toContain('A reserva de Capacitor será cancelada e 2 un voltará ao estoque disponível.');
-    expect(Array.from<HTMLElement>(dialog.querySelectorAll('.form-actions button')).map(b => b.textContent?.trim())).toEqual(['Voltar', 'Cancelar reserva']);
-    expect(fixture.nativeElement.querySelector('.record-row .inline-form')).toBeNull();
-    dialog.querySelector('.button-primary--danger')!.click();
-    expect(partService['updateReservation']).toHaveBeenCalledWith(7, 1, 'cancel');
-    expect(toastMessages()).toEqual(['Reserva cancelada.']);
-    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
+  it('abre formulário inline e valida quantidade e motivo por campo antes de enviar', async () => {
+    await setUp(); root().querySelector<HTMLButtonElement>('#usage-trigger')!.click(); render();
+    component().usageForm.patchValue({ partId: 4, quantity: 1.5, replacementReason: '  ' });
+    component().use(); render(); expect(service.use).not.toHaveBeenCalled();
+    expect(text()).toContain('Em estoque: 3 UN');
+    expect(root().querySelector('#usage-quantity-error')?.textContent).toContain('número inteiro');
+    component().usageForm.patchValue({ partId: 5, quantity: 1.5, replacementReason: ' Falha ', componentBatch: ' L2 ', notes: ' Conferido ' });
+    component().use(); render();
+    expect(service.use).toHaveBeenCalledWith(7, { partId: 5, quantity: 1.5, replacementReason: 'Falha', componentBatch: 'L2', notes: 'Conferido' });
+    expect(TestBed.inject(ToastService).toasts().map(t => t.message)).toContain('Peça usada.');
   });
 
-  it('rotula a observação e permite desistir do cancelamento sem alterar a reserva', async () => {
-    await setUp('TECHNICIAN');
-    const component = fixture.componentInstance as any;
-    component.parts.set({ ...RMA_PARTS, reservations: [{ ...reservation(1, 'ACTIVE'), note: '1' }] });
-    fixture.detectChanges();
-    const root: HTMLElement = fixture.nativeElement;
-    expect(root.querySelector('.record-fields')?.textContent?.replace(/\s+/g, ' ')).toContain('LocalA1Observação1');
-    root.querySelector<HTMLButtonElement>('[aria-label="Cancelar reserva Capacitor"]')!.click();
-    fixture.detectChanges();
-    root.querySelector<HTMLButtonElement>('[role="alertdialog"] .button-secondary')!.click();
-    fixture.detectChanges();
-    expect(root.querySelector('[role="alertdialog"]')).toBeNull();
-    expect(document.activeElement).toBe(root.querySelector('[aria-label="Cancelar reserva Capacitor"]'));
-    expect(partService['updateReservation']).not.toHaveBeenCalled();
+  it('exibe estoque insuficiente sem apagar a leitura ou fechar o formulário', async () => {
+    await setUp(); service.use.mockReturnValue(throwError(() => ({ error: { message: 'Estoque insuficiente para a peça PCA-1. Em estoque: 3.' } })));
+    component().usageOpen.set(true); component().usageForm.patchValue({ partId: 4, quantity: 4, replacementReason: 'Falha' }); component().use(); render();
+    expect(text()).toContain('Estoque insuficiente'); expect(root().querySelector('#usage-form')).not.toBeNull();
+    expect(text()).toContain('Capacitor'); expect(service.getRmaParts).toHaveBeenCalledTimes(1);
   });
 
-  it('devolve o foco à reserva ao desistir pelo Escape', async () => {
-    await setUp('TECHNICIAN');
-    const root: HTMLElement = fixture.nativeElement;
-    const trigger = root.querySelector<HTMLButtonElement>('[aria-label="Cancelar reserva Capacitor"]')!;
-    trigger.click(); fixture.detectChanges();
-    const cancel = root.querySelector<HTMLButtonElement>('[role="alertdialog"] .button-secondary')!;
-    expect(cancel.textContent?.trim()).toBe('Voltar');
-    await fixture.whenStable();
-    expect(document.activeElement).toBe(cancel);
-    cancel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    fixture.detectChanges();
-    expect(document.activeElement).toBe(trigger);
-    expect(partService['updateReservation']).not.toHaveBeenCalled();
+  it('exige motivo no modal e reverte o uso uma ?nica vez durante o envio', async () => {
+    await setUp(); root().querySelector<HTMLButtonElement>('[aria-label="Desfazer uso Capacitor"]')!.click(); render();
+    expect(root().querySelector('[role="alertdialog"] h3')?.textContent).toBe('Desfazer uso?');
+    button('Reverter')!.click(); render(); expect(service.undoUse).not.toHaveBeenCalled();
+    const pending = new Subject<PartUsageResponse>(); service.undoUse.mockReturnValue(pending);
+    component().undoReason.setValue(' Erro '); button('Reverter')!.click(); component().confirmUndo(); render();
+    expect(service.undoUse).toHaveBeenCalledTimes(1); expect(service.undoUse).toHaveBeenCalledWith(7, 1, 'Erro');
+    pending.next(usage(1, 'REVERTED')); pending.complete(); render();
+    expect(root().querySelector('[role="alertdialog"]')).toBeNull();
+    expect(TestBed.inject(ToastService).toasts().map(t => t.message)).toContain('Uso desfeito.');
   });
 
-  it('reports pending reservations when stock is insufficient', async () => {
-    await setUp('TECHNICIAN');
-    const component = fixture.componentInstance as unknown as { reserveForm: { setValue(value: unknown): void }; reserve(): void };
-    component.reserveForm.setValue({ partId: 4, quantity: 5, note: '  ' });
-    component.reserve();
-
-    expect(partService['reserve']).toHaveBeenCalledWith(7, { partId: 4, quantity: 5, note: null });
-    expect(toastMessages()[0]).toBe('Reserva pendente de reposição.');
-    expect(toastTones()).toEqual(['info']);
-    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
+  it.each(['COMPLETED', 'RETURNED', 'IRREPARABLE'] as RmaStatus[])('bloqueia uso e reversão na OS %s', async status => {
+    await setUp('TECHNICIAN', status); expect(root().querySelector('#usage-trigger')).toBeNull();
+    expect(root().querySelector('[aria-label="Desfazer uso Capacitor"]')).toBeNull();
+    component().use(); component().startUndo(usage()); expect(service.use).not.toHaveBeenCalled();
   });
 
-  it.each([[1.0001, false], [1000000000, false], [0.001, true], [1.125, true], [999999999.999, true]])('validates the reserved quantity %s against the contract (accepted=%s)', async (quantity, accepted) => {
-    await setUp('TECHNICIAN');
-    const component = fixture.componentInstance as unknown as { reserveForm: { setValue(value: unknown): void }; reserve(): void };
-    (fixture.componentInstance as any).catalog.set([{ id: 4, unit: 'm', active: true }]);
-    component.reserveForm.setValue({ partId: 4, quantity, note: '' });
-    component.reserve();
-    expect(vi.mocked(partService['reserve']).mock.calls.length).toBe(accepted ? 1 : 0);
+  it('mantém histórico revertido sem ação e sem incluí-lo nos custos e componentes', async () => {
+    await setUp(); component().parts.set(response([usage(1, 'REVERTED')])); render();
+    expect(text()).toContain('Uso desfeito'); expect(text()).toMatch(/R\$\s*0,00/);
+    expect(root().querySelector('[aria-label="Desfazer uso Capacitor"]')).toBeNull();
+    expect(text()).toContain('Nenhum componente trocado');
   });
 
-  it('only allows cancelling reservations of closed ordens de serviço', async () => {
-    await setUp('ADMIN', 'COMPLETED');
-    const text: string = fixture.nativeElement.textContent;
-
-    expect(fixture.nativeElement.querySelector('form')).toBeNull();
-    expect(text).not.toContain('Aplicar');
-    expect(text).not.toContain('Efetivar reserva');
-    expect(text).toContain('Cancelar reserva');
-  });
-  it('opens inline consumption and requires a reason before posting its batch', async () => {
-    await setUp('TECHNICIAN');
-    const consume = [...fixture.nativeElement.querySelectorAll('button')].find((button: any) => button.textContent.trim() === 'Aplicar') as HTMLButtonElement;
-    consume.click();
-    fixture.detectChanges();
-    expect(partService['updateReservation']).not.toHaveBeenCalled();
-    expect(fixture.nativeElement.querySelector('[formControlName="replacementReason"]')).not.toBeNull();
-    const component = fixture.componentInstance as any;
-    component.confirmConsumption();
-    expect(partService['updateReservation']).not.toHaveBeenCalled();
-    component.consumptionForm.setValue({ replacementReason: '  Capacitor em curto  ', componentBatch: ' L24 ' });
-    component.confirmConsumption();
-    expect(partService['updateReservation']).toHaveBeenCalledWith(7, 1, 'consume', { replacementReason: 'Capacitor em curto', componentBatch: 'L24' });
-    expect(toastMessages()).toEqual(['Peça aplicada.']);
+  it('mantém o vazio sem ação duplicada e oculta o vazio quando o formulário abre', async () => {
+    await setUp(); component().parts.set(response([])); render(); expect(text()).toContain('Nenhuma peça usada');
+    root().querySelector<HTMLButtonElement>('#usage-trigger')!.click(); render(); expect(text()).not.toContain('Nenhuma peça usada');
+    expect(Array.from(root().querySelectorAll('button')).filter(b => b.textContent?.trim() === 'Usar peça')).toHaveLength(2);
   });
 
-  it('uses the inline form pattern for reserving, applying, adding externals and voiding', async () => {
-    await setUp('TECHNICIAN');
-    const root: HTMLElement = fixture.nativeElement;
-    expectInlineForm(root.querySelector('#reserve-form'), ['Peça', 'Quantidade'], 'Reservar');
-    const component = fixture.componentInstance as any;
-    const consume = [...root.querySelectorAll('button')].find((button: any) => button.textContent.trim() === 'Aplicar') as HTMLButtonElement;
-    consume.click(); fixture.detectChanges();
-    expectInlineForm(root.querySelector('form:not(#reserve-form)'), ['Motivo da troca'], 'Confirmar');
-    component.consuming.set(null);
-    root.querySelector<HTMLButtonElement>('#external-trigger')!.click(); fixture.detectChanges();
-    expectInlineForm(root.querySelector('#external-form'), ['Descrição', 'Quantidade', 'Motivo da troca'], 'Registrar');
+  it('permite leitura sem ações para o observador', async () => {
+    await setUp('VIEWER'); expect(root().querySelector('#usage-trigger')).toBeNull();
+    expect(root().querySelector('[aria-label="Desfazer uso Capacitor"]')).toBeNull();
   });
 
-  it('shows a missing reason for historic consumption', async () => {
-    await setUp('VIEWER');
-    expect(fixture.nativeElement.textContent).toContain('Motivo não registrado');
+  it('mostra falha e nova tentativa sem apresentar vazio', async () => {
+    await setUp(); service.getRmaParts.mockReturnValueOnce(throwError(() => ({ error: { message: 'Falha na leitura.' } })));
+    component().retryLoad(); render(); expect(text()).toContain('Falha na leitura.'); expect(text()).not.toContain('Nenhuma peça usada');
+    button('Tentar novamente')!.click(); render(); expect(text()).toContain('Capacitor');
   });
 
-  it('adds an external component inline with trimmed text and a default unit', async () => {
-    await setUp('TECHNICIAN');
-    const component = fixture.componentInstance as any;
-    const service = TestBed.inject(RmaRepairService);
-    component.externalForm.setValue({ code: ' ', description: ' Conector ', quantity: 1.125, unit: 'm', componentBatch: ' L1 ', replacementReason: ' Oxidação ' });
-    component.saveExternal();
-    expect(service.addExternalComponent).toHaveBeenCalledWith(7, { code: null, description: 'Conector', quantity: 1.125, unit: 'm', componentBatch: 'L1', replacementReason: 'Oxidação' });
-    expect(toastMessages()).toEqual(['Componente salvo.']);
-    expect(toastTones()).toEqual(['success']);
-    expect(fixture.nativeElement.querySelector('[role="status"], .muted-inline')).toBeNull();
+  it('ignora leitura antiga ao trocar de OS e reinicia os formulários', async () => {
+    await setUp(); const stale = new Subject<RmaPartsResponse>(); service.getRmaParts.mockReturnValueOnce(stale);
+    component().retryLoad(); fixture.componentRef.setInput('rmaId', 8); render();
+    stale.next(response([{ ...usage(), partName: 'Leitura antiga' }])); render();
+    expect(text()).not.toContain('Leitura antiga'); expect(root().querySelector('#usage-form')).toBeNull();
   });
-
-  it('cancels inline consumption without writing and lists external and stock components together', async () => {
-    await setUp('TECHNICIAN');
-    const component = fixture.componentInstance as any;
-    const service = TestBed.inject(RmaRepairService);
-    vi.mocked(service.listExternalComponents).mockReturnValue(of([{ id: 9, code: 'EXT', description: 'Conector externo', quantity: 1.125, unit: 'un', replacementReason: 'Oxidação', componentBatch: 'B1', appliedAt: '2026-11-12T12:00:00Z', appliedBy: 'ana' }]));
-    component.loadExternal(); fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Conector externo');
-    expect(fixture.nativeElement.textContent).toContain('Externo');
-    expect(fixture.nativeElement.textContent).toContain('Motivo não registrado');
-    component.startConsumption(reservation(1, 'ACTIVE')); fixture.detectChanges();
-    const buttons = Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('form:has([formControlName="replacementReason"]) .inline-form__actions button'));
-    expect(buttons.map(b => b.textContent?.trim())).toEqual(['Cancelar', 'Confirmar']);
-    buttons[0].click(); fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('[formControlName="replacementReason"]')).toBeNull();
-    expect(partService['updateReservation']).not.toHaveBeenCalled();
-  });
-
-  it('organiza o componente externo com chips no topo e pares rotulados em colunas', async () => {
-    await setUp('TECHNICIAN');
-    const component = fixture.componentInstance as any;
-    const service = TestBed.inject(RmaRepairService);
-    vi.mocked(service.listExternalComponents).mockReturnValue(of([{ id: 9, code: '123', description: 'Teste', quantity: 2, unit: 'un', replacementReason: 'Falha', componentBatch: 'B1', appliedAt: '2026-11-12T12:00:00Z', appliedBy: 'ana' }]));
-    component.loadExternal(); fixture.detectChanges();
-    const row: HTMLElement = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.record-row')).find(item => item.textContent?.includes('Teste'))!;
-    expect(Array.from(row.querySelectorAll('.record-row__head .mini-chip')).map(chip => chip.textContent?.trim())).toEqual(['Externo', '2 un']);
-    expect(Array.from(row.querySelectorAll('.record-fields dt')).map(dt => dt.textContent?.trim())).toEqual(['Motivo da troca', 'Lote', 'Registrado']);
-    expect(row.textContent).not.toContain(' · ');
-    const reservationRow: HTMLElement = fixture.nativeElement.querySelector('.record-row--stacked');
-    expect(Array.from(reservationRow.querySelectorAll('.record-stats--metrics dt')).map(dt => dt.textContent?.trim())).toEqual(['Quantidade', 'Disponível', 'Custo']);
-    expect(reservationRow.querySelector('.record-row__actions')).not.toBeNull();
-  });
-
   it('blocks external writes for a viewer and after closure and rejects whitespace and excess precision', async () => {
     await setUp('TECHNICIAN');
     const component = fixture.componentInstance as any;

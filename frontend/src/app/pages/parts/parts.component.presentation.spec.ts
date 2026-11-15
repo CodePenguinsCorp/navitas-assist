@@ -1,7 +1,7 @@
 import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
-import { PartReplenishmentResponse, PartReservationResponse, PartResponse } from '../../core/models';
+import { PartReplenishmentResponse, PartResponse } from '../../core/models';
 import { Permission } from '../../core/permissions';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { PartService } from '../../core/services/part.service';
@@ -9,19 +9,14 @@ import { PartsComponent } from './parts.component';
 
 const PART: PartResponse = {
   id: 4, code: 'PCA-1', name: 'Capacitor', unit: 'm', location: 'A1', minimumStock: 8, unitCost: 10,
-  onHand: 10, reserved: 4, available: 6, belowMinimum: true, active: true,
+  onHand: 10, belowMinimum: true, active: true,
 };
 const INACTIVE: PartResponse = { ...PART, id: 5, code: 'CAB-2', name: 'Cabo', location: 'B2', active: false, onHand: 2, unitCost: 5 };
-const REPLENISHMENT: PartReplenishmentResponse = { ...PART, partId: 4, pendingQuantity: 3.5, suggestedQuantity: 12.5 };
-const PENDING: PartReservationResponse = {
-  id: 2, rmaId: 7, rmaCode: 'OS-7', partId: 4, partCode: 'PCA-1', partName: 'Capacitor', unit: 'm', location: 'A1',
-  quantity: 3.5, status: 'PENDING', partAvailable: 6, unitCost: 10, totalCost: 35, note: null, createdBy: 'tech',
-  createdAt: '2026-10-24T12:00:00Z', updatedAt: '2026-10-24T12:00:00Z'
-};
+const REPLENISHMENT: PartReplenishmentResponse = { ...PART, partId: 4, suggestedQuantity: 12.5 };
 
 describe('PartsComponent presentation', () => {
   let fixture: ComponentFixture<PartsComponent>;
-  let service: { list: ReturnType<typeof vi.fn>; listReplenishment: ReturnType<typeof vi.fn>; listPending: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+  let service: { list: ReturnType<typeof vi.fn>; listReplenishment: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
   const root = (): HTMLElement => fixture.nativeElement.querySelector('.page-surface');
   const normalized = (element: Element | null) => element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
   const render = () => { fixture.componentRef.injector.get(ChangeDetectorRef).markForCheck(); fixture.detectChanges(); };
@@ -38,7 +33,7 @@ describe('PartsComponent presentation', () => {
 
   async function setup(role: LegacyProfileCode | readonly Permission[] = 'ADMIN', pending = false) {
     const parts = new Subject<PartResponse[]>();
-    service = { list: vi.fn(() => pending ? parts : of([PART, INACTIVE])), listReplenishment: vi.fn(() => of([REPLENISHMENT])), listPending: vi.fn(() => of([PENDING])), update: vi.fn(() => of(PART)) };
+    service = { list: vi.fn(() => pending ? parts : of([PART, INACTIVE])), listReplenishment: vi.fn(() => of([REPLENISHMENT])), update: vi.fn(() => of(PART)) };
     await TestBed.configureTestingModule({ imports: [PartsComponent], providers: [
       { provide: PartService, useValue: service },
       providePermissions(typeof role === 'string' ? profilePermissions(role) : role)
@@ -66,7 +61,6 @@ describe('PartsComponent presentation', () => {
     source.next([PART, INACTIVE]); source.complete(); render();
     const line = root().querySelector('.page-summary')!;
     expect(normalized(line)).toMatch(/Abaixo do mínimo\s*1/);
-    expect(normalized(line)).toMatch(/Reservas pendentes\s*1/);
     expect(normalized(line)).toMatch(/Valor em estoque\s*R\$\s*110,00/);
     expect(root().querySelector('.stat-card')).toBeNull();
     const before = normalized(line);
@@ -113,8 +107,6 @@ describe('PartsComponent presentation', () => {
     const table = root().querySelector('table')!;
     const values = facts(table);
     expect(values.get('Em estoque')).toBe('10 m');
-    expect(values.get('Reservado')).toBe('4 m');
-    expect(values.get('Disponível')).toBe('6 m');
     expect(values.get('Mínimo')).toBe('8 m');
     const rows = table.querySelectorAll('tbody tr');
     expect(normalized(rows[0].querySelector('td'))).toContain('Repor');
@@ -122,17 +114,11 @@ describe('PartsComponent presentation', () => {
     expect(normalized(rows[1].querySelector('td'))).not.toContain('Repor');
   });
 
-  it('preserves API suggestion and pending quantity, OS and business date', async () => {
+  it('preserves the purchase suggestion based on minimum stock', async () => {
     await setup(); tab('Reposição');
     const tables = root().querySelectorAll<HTMLTableElement>('table');
     const replenishment = facts(tables[0]);
-    expect(replenishment.get('Pendente em ordens de serviço')).toBe('3,5 m');
     expect(replenishment.get('Sugestão de compra')).toBe('12,5 m');
-    const pending = facts(tables[1]);
-    expect(pending.get('OS')).toBe('OS-7');
-    expect(pending.get('Quantidade')).toBe('3,5 m');
-    expect(pending.get('Disponível')).toBe('6 m');
-    expect(pending.get('Solicitada em')).toBe('24/10/2026, 09:00');
   });
 
   it.each(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as LegacyProfileCode[])('preserves stock actions and visible BRL costs for %s', async (role) => {

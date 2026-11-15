@@ -15,7 +15,7 @@ import { toastMessages } from '../../testing/toast';
 
 const PART: PartResponse = {
   id: 4, code: 'PCA-1', name: 'Capacitor', unit: 'm', location: 'A1', minimumStock: 8, unitCost: 10,
-  onHand: 10, reserved: 4, available: 6, belowMinimum: true, active: true,
+  onHand: 10, belowMinimum: true, active: true,
 };
 const VALUES = { code: ' PCA-1 ', name: ' Capacitor ', unit: ' m ', location: '   ', minimumStock: 2.5, unitCost: 12.75, active: false };
 const PAYLOAD = { code: 'PCA-1', name: 'Capacitor', unit: 'm', location: null, minimumStock: 2.5, unitCost: 12.75, active: false };
@@ -40,8 +40,7 @@ describe('PartsComponent part form', () => {
   async function setup(mode: Mode = 'create', pending?: Subject<PartResponse>, loadFailed = false) {
     service = {
       list: vi.fn(() => loadFailed ? throwError(() => new Error()) : of([PART])),
-      listReplenishment: vi.fn(() => of([])), listPending: vi.fn(() => of([])),
-      create: vi.fn(() => mode === 'create' && pending ? pending : of(PART)),
+      listReplenishment: vi.fn(() => of([])), create: vi.fn(() => mode === 'create' && pending ? pending : of(PART)),
       update: vi.fn(() => mode === 'update' && pending ? pending : of(PART)),
       registerMovement: vi.fn()
     };
@@ -94,7 +93,7 @@ describe('PartsComponent part form', () => {
     expect(currentPanel.querySelector<HTMLInputElement>('[formControlName="name"]')!.value).toBe(' Capacitor ');
     request.next(PART); request.complete(); render();
     expect(panel()).toBeNull();
-    for (const method of ['list', 'listReplenishment', 'listPending']) expect(service[method]).toHaveBeenCalledTimes(2);
+    for (const method of ['list', 'listReplenishment']) expect(service[method]).toHaveBeenCalledTimes(2);
     expect(toastMessages()).toEqual([mode === 'create' ? 'Peça cadastrada.' : 'Peça atualizada.']);
     expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
   });
@@ -199,8 +198,7 @@ async function setupPartsFocus(serviceOverrides: Record<string, unknown>) {
   await TestBed.configureTestingModule({ imports: [PartsComponent], providers: [
     provideRouter([{ path: '', component: PartsComponent }]),
     { provide: PartService, useValue: {
-      list: vi.fn(() => of([PART])), listReplenishment: vi.fn(() => of([])), listPending: vi.fn(() => of([])),
-      ...serviceOverrides
+      list: vi.fn(() => of([PART])), listReplenishment: vi.fn(() => of([])), ...serviceOverrides
     } },
     providePermissions(profilePermissions('ADMIN'))
   ] }).compileComponents();

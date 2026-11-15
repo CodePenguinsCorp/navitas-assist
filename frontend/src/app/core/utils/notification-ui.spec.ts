@@ -2,9 +2,8 @@ import { NOTIFICATION_EVENT_LABELS, SNOOZABLE_EVENT_TYPES, activeSnoozeUntil, ca
 
 describe('Notification UI utilities', () => {
   it('só permite adiar eventos que pedem ação, independentemente da severidade', () => {
-    expect([...SNOOZABLE_EVENT_TYPES]).toEqual(['RMA_BLOCKED', 'PART_PENDING', 'TEST_FAILED']);
+    expect([...SNOOZABLE_EVENT_TYPES]).toEqual(['RMA_BLOCKED', 'TEST_FAILED']);
     expect(canSnooze({ eventType: 'RMA_BLOCKED' })).toBe(true);
-    expect(canSnooze({ eventType: 'PART_PENDING' })).toBe(true);
     expect(canSnooze({ eventType: 'TEST_FAILED' })).toBe(true);
     expect(canSnooze({ eventType: 'RMA_CREATED' })).toBe(false);
     expect(canSnooze({ eventType: 'RMA_ASSIGNED' })).toBe(false);
@@ -27,7 +26,7 @@ describe('Notification UI utilities', () => {
   });
 
   it('lista apenas os cinco eventos com produtor', () => {
-    expect(Object.keys(NOTIFICATION_EVENT_LABELS)).toEqual(['RMA_CREATED', 'RMA_ASSIGNED', 'RMA_BLOCKED', 'PART_PENDING', 'TEST_FAILED']);
+    expect(Object.keys(NOTIFICATION_EVENT_LABELS)).toEqual(['RMA_CREATED', 'RMA_ASSIGNED', 'RMA_BLOCKED', 'TEST_FAILED']);
   });
 
   it('formats timestamps in America/Sao_Paulo', () => {

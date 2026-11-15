@@ -11,7 +11,6 @@ import {
   PartMovementResponse,
   PartReplenishmentResponse,
   PartRequest,
-  PartReservationResponse,
   PartResponse
 } from '../../core/models';
 import { PermissionService } from '../../core/services/permission.service';
@@ -70,13 +69,12 @@ const MOVEMENT_TYPE_OPTIONS: ReadonlyArray<CustomSelectOption<ManualPartMovement
 
     .history-panel { width: min(100%, 720px); }
     .movement-summary { display: grid; gap: var(--space-1); min-width: 0; overflow-wrap: anywhere; }
-    .movement-summary .record-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
     .movement-preview { grid-column: 1 / -1; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--surface-alt); }
     .movement-preview h4, .movement-preview p, .movement-item p { margin: 0; }
     .movement-preview dl { display: grid; gap: var(--space-2); margin: var(--space-2) 0; }
     .movement-preview dl > div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-1) var(--space-3); }
     .movement-preview dd { margin: 0; font-variant-numeric: tabular-nums; }
-    .movement-preview__available { font-weight: var(--font-weight-semibold); }
     .movement-preview p, .movement-item__reason { font-size: var(--font-size-sm); color: var(--muted); }
     .movement-item__reason { white-space: pre-wrap; overflow-wrap: anywhere; }
     .movement-item .movement-reversal { grid-column: 1 / -1; }
@@ -97,9 +95,9 @@ const MOVEMENT_TYPE_OPTIONS: ReadonlyArray<CustomSelectOption<ManualPartMovement
 })
 export class PartsComponent {
   /** Available stock against twice the minimum: half the bar means "at the minimum". */
-  protected stockPercent(part: { available: number; minimumStock: number }): number {
-    const reference = Math.max(part.minimumStock * 2, part.available, 1);
-    return Math.round((Math.max(part.available, 0) / reference) * 100);
+  protected stockPercent(part: { onHand: number; minimumStock: number }): number {
+    const reference = Math.max(part.minimumStock * 2, part.onHand, 1);
+    return Math.round((Math.max(part.onHand, 0) / reference) * 100);
   }
 
   private readonly formBuilder = inject(FormBuilder);
@@ -141,7 +139,6 @@ export class PartsComponent {
 
   protected readonly parts = signal<PartResponse[]>([]);
   protected readonly replenishment = signal<PartReplenishmentResponse[]>([]);
-  protected readonly pending = signal<PartReservationResponse[]>([]);
   protected readonly editingPart = signal<PartResponse | null>(null);
   protected readonly formOpen = signal(false);
   protected readonly movementPart = signal<PartResponse | null>(null);
@@ -185,7 +182,7 @@ export class PartsComponent {
   protected unitChangeWarning(): boolean {
     const current = this.editingPart();
     return !!current && current.unit !== this.form.controls.unit.value.trim() && !allowsFraction(this.form.controls.unit.value)
-      && [current.onHand, current.reserved, current.available].some(value => !Number.isInteger(value));
+      && [current.onHand].some(value => !Number.isInteger(value));
   }
 
   constructor() {
@@ -269,12 +266,12 @@ export class PartsComponent {
     this.clearMessages();
   }
 
-  protected movementPreview(): { onHandBefore: number; onHandAfter: number; reserved: number; availableBefore: number; availableAfter: number } | null {
+  protected movementPreview(): { onHandBefore: number; onHandAfter: number } | null {
     const part = this.movementPart();
     const { type, quantity } = this.movementForm.getRawValue();
     if (!part || !Number.isFinite(quantity) || !quantity || (type !== 'ADJUSTMENT' && quantity < 0)) return null;
     const change = type === 'EXIT' ? -quantity : quantity;
-    return { onHandBefore: part.onHand, onHandAfter: part.onHand + change, reserved: part.reserved, availableBefore: part.available, availableAfter: part.available + change };
+    return { onHandBefore: part.onHand, onHandAfter: part.onHand + change };
   }
 
   protected saveMovement(): void {
@@ -424,14 +421,13 @@ export class PartsComponent {
     this.loadRequest?.unsubscribe();
     this.loading.set(true);
 
-    this.loadRequest = forkJoin({ parts: this.partService.list(), replenishment: this.partService.listReplenishment(), pending: this.partService.listPending() }).pipe(
+    this.loadRequest = forkJoin({ parts: this.partService.list(), replenishment: this.partService.listReplenishment() }).pipe(
       takeUntilDestroyed(this.destroyRef),
       finalize(() => this.loading.set(false))
     ).subscribe({
-      next: ({ parts, replenishment, pending }) => {
+      next: ({ parts, replenishment }) => {
         this.parts.set(parts);
         this.replenishment.set(replenishment);
-        this.pending.set(pending);
         this.hasLoaded.set(true);
         this.loadFailed.set(false);
         this.loadErrorMessage.set('');

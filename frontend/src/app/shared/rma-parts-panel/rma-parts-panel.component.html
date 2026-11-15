@@ -1,8 +1,8 @@
 <div class="parts-panel">
 <section class="detail-card">
-  <app-collapsible-section title="Peças" icon="chip" [count]="reservations().length || null" [open]="reservations().length > 0 || reserveOpen() || loadFailed()" storageKey="rma.parts">
-    @if (canCreateReservation()) {
-      <button sectionActions type="button" id="reserve-trigger" class="link-button" [attr.aria-expanded]="reserveOpen()" aria-controls="reserve-form" (click)="toggleReserve()">Reservar peça</button>
+  <app-collapsible-section title="Peças" icon="chip" [count]="usages().length || null" [open]="usages().length > 0 || usageOpen() || loadFailed()" storageKey="rma.parts">
+    @if (canCreateUsage()) {
+      <button sectionActions type="button" id="usage-trigger" class="link-button" [attr.aria-expanded]="usageOpen()" aria-controls="usage-form" (click)="toggleUsage()">Usar peça</button>
     }
   @if (loadFailed()) {
     <div class="alert-banner alert-banner--error parts-load-error" role="alert">
@@ -25,8 +25,8 @@
       <p class="field-error" role="alert">{{ errorMessage() }}</p>
     }
 
-    @if (canCreateReservation() && reserveOpen()) {
-      <form id="reserve-form" class="inline-form" [formGroup]="reserveForm" (ngSubmit)="reserve()" (keydown.escape)="$event.stopPropagation(); closeReserve(true)" novalidate>
+    @if (canCreateUsage() && usageOpen()) {
+      <form id="usage-form" class="inline-form" [formGroup]="usageForm" (ngSubmit)="use()" (keydown.escape)="$event.stopPropagation(); closeUsage(true)" novalidate>
         @if (catalogLoadFailed()) {
           <div class="alert-banner alert-banner--error parts-load-error field-group--full" role="alert">
             <strong>{{ catalogLoadErrorMessage() }}</strong>
@@ -34,121 +34,93 @@
             @if (catalogLoading()) { <div aria-busy="true"></div> }
           </div>
         } @else if (catalogHasLoaded() && partOptions().length === 0) {
-          <p class="repair-empty field-group--full">Nenhuma peça ativa disponível</p>
+          <p class="repair-empty field-group--full">Nenhuma peça ativa</p>
         }
         <label class="field-group field-group--required">
           <span>Peça</span>
-          <app-custom-select ariaLabel="Peça para reservar" [placeholder]="catalogHasLoaded() ? 'Selecione a peça' : 'Carregando opções...'" [options]="partOptions()" formControlName="partId"
-            [ariaInvalid]="hasError(reserveForm.controls.partId)" [ariaDescribedBy]="hasError(reserveForm.controls.partId) ? 'reserve-part-error' : null" />
-          @if (hasError(reserveForm.controls.partId)) {
-            <small id="reserve-part-error" class="field-error" role="alert">Selecione a peça.</small>
+          <app-custom-select ariaLabel="Peça para usar" [placeholder]="catalogHasLoaded() ? 'Selecione a peça' : 'Carregando opções...'" [options]="partOptions()" formControlName="partId"
+            [ariaInvalid]="hasError(usageForm.controls.partId)" [ariaDescribedBy]="hasError(usageForm.controls.partId) ? 'usage-part-error' : null" />
+          @if (hasError(usageForm.controls.partId)) {
+            <small id="usage-part-error" class="field-error" role="alert">Selecione a peça.</small>
           }
         </label>
         <label class="field-group field-group--required">
           <span>Quantidade @if (selectedPart(); as part) { ({{ part.unit }}) }</span>
           <input type="number" min="0.001" max="999999999.999" [step]="allowsFraction(selectedPart()?.unit) ? 'any' : '1'" [attr.inputmode]="allowsFraction(selectedPart()?.unit) ? 'decimal' : 'numeric'" formControlName="quantity"
-            [attr.aria-invalid]="hasError(reserveForm.controls.quantity) ? 'true' : null" [attr.aria-describedby]="hasError(reserveForm.controls.quantity) ? 'reserve-quantity-error' : null" />
-          @if (hasError(reserveForm.controls.quantity)) {
-            <small id="reserve-quantity-error" class="field-error" role="alert">{{ reserveForm.controls.quantity.errors?.['quantity'] || 'Informe uma quantidade de 0,001 a 999.999.999,999, com até 3 casas decimais.' }}</small>
+            [attr.aria-invalid]="hasError(usageForm.controls.quantity) ? 'true' : null" [attr.aria-describedby]="hasError(usageForm.controls.quantity) ? 'usage-quantity-error' : null" />
+          @if (hasError(usageForm.controls.quantity)) {
+            <small id="usage-quantity-error" class="field-error" role="alert">{{ usageForm.controls.quantity.errors?.['quantity'] || 'Informe uma quantidade de 0,001 a 999.999.999,999, com até 3 casas decimais.' }}</small>
           }
+        </label>
+        @if (selectedPart(); as part) { <p class="field-hint field-group--full">Em estoque: {{ quantity(part.onHand, part.unit) }}</p> }
+        <label class="field-group field-group--full field-group--required"><span>Motivo da troca</span>
+          <textarea formControlName="replacementReason" maxlength="1000" [attr.aria-invalid]="hasError(usageForm.controls.replacementReason) ? 'true' : null"></textarea>
+          @if (hasError(usageForm.controls.replacementReason)) { <small class="field-error" role="alert">Informe um motivo de até 1000 caracteres.</small> }
+        </label>
+        <label class="field-group"><span>Lote</span><input formControlName="componentBatch" maxlength="120" />
+          @if (hasError(usageForm.controls.componentBatch)) { <small class="field-error" role="alert">Use até 120 caracteres.</small> }
         </label>
         <label class="field-group">
           <span>Observação</span>
-          <input type="text" maxlength="255" formControlName="note"
-            [attr.aria-invalid]="hasError(reserveForm.controls.note) ? 'true' : null" [attr.aria-describedby]="hasError(reserveForm.controls.note) ? 'reserve-note-error' : null" />
-          @if (hasError(reserveForm.controls.note)) {
-            <small id="reserve-note-error" class="field-error" role="alert">Use até 255 caracteres.</small>
+          <input type="text" maxlength="255" formControlName="notes"
+            [attr.aria-invalid]="hasError(usageForm.controls.notes) ? 'true' : null" [attr.aria-describedby]="hasError(usageForm.controls.notes) ? 'usage-note-error' : null" />
+          @if (hasError(usageForm.controls.notes)) {
+            <small id="usage-note-error" class="field-error" role="alert">Use até 255 caracteres.</small>
           }
         </label>
         <div class="form-actions inline-form__actions">
-          <button type="button" class="button-secondary" [disabled]="submitting()" (click)="closeReserve(true)">Cancelar</button>
-          <button type="submit" class="button-primary" [disabled]="submitting() || !catalogHasLoaded() || catalogLoadFailed()">{{ submitting() ? 'Reservando...' : 'Reservar' }}</button>
+          <button type="button" class="button-secondary" [disabled]="submitting()" (click)="closeUsage(true)">Cancelar</button>
+          <button type="submit" class="button-primary" [disabled]="submitting() || !catalogHasLoaded() || catalogLoadFailed()">{{ submitting() ? 'Registrando...' : 'Usar peça' }}</button>
         </div>
       </form>
     }
 
-    @if (reservations().length === 0) {
-      @if (!reserveOpen()) {
-        <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="box" /></span><h3 class="repair-empty">Nenhuma peça reservada</h3></div>
-      }
+    @if (usages().length === 0) {
+      @if (!usageOpen()) { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="box" /></span><h3 class="repair-empty">Nenhuma peça usada</h3></div> }
     } @else {
-      <div class="record-rows" aria-label="Reservas de peças">
-        @for (reservation of reservations(); track reservation.id) {
-          <div class="record-row record-row--stacked" [class]="reservationTone(reservation.status)">
+      <div class="record-rows" aria-label="Peças usadas">
+        @for (usage of usages(); track usage.id) {
+          <div class="record-row" [class]="usageTone(usage.status)" [class.is-voided]="usage.status === 'REVERTED'">
             <span class="icon-tile icon-tile--sm" aria-hidden="true"><app-icon name="box" /></span>
             <div class="record-row__main">
               <div class="record-row__head">
-                <strong class="record-row__title">{{ reservation.partName }}</strong>
-                <span class="code-text record-row__code">{{ reservation.partCode }}</span>
-                <span class="mini-chip" [class]="statusClass(reservation.status)">{{ statusLabels[reservation.status] }}</span>
+                <strong class="record-row__title">{{ usage.partName }}</strong>
+                <span class="code-text record-row__code">{{ usage.partCode }}</span>
+                <span class="mini-chip mini-chip--muted">{{ quantity(usage.quantity, usage.unit) }}</span>
+                <span class="mini-chip" [class]="statusClass(usage.status)">{{ statusLabels[usage.status] }}</span>
               </div>
-              <dl class="record-stats record-stats--compact record-stats--metrics" [style.--cols]="canSeeCosts() ? 3 : 2" [attr.aria-label]="'Dados da reserva de ' + reservation.partCode">
-                <div><dt>Quantidade</dt><dd>{{ quantity(reservation.quantity, reservation.unit) }}</dd></div>
-                <div><dt>Disponível</dt><dd>{{ quantity(reservation.partAvailable, reservation.unit) }}</dd></div>
-                @if (canSeeCosts()) {
-                  <div><dt>Custo</dt><dd>{{ currency(reservation.totalCost ?? 0) }}</dd></div>
-                }
+              <dl class="record-fields record-fields--reason">
+                <div><dt>Motivo da troca</dt><dd>{{ usage.replacementReason }}</dd></div>
+                @if (usage.componentBatch) { <div><dt>Lote</dt><dd>{{ usage.componentBatch }}</dd></div> }
               </dl>
-              @if (reservation.location || reservation.note) {
-                <dl class="record-fields record-fields--single">
-                  @if (reservation.location) { <div><dt>Local</dt><dd>{{ reservation.location }}</dd></div> }
-                  @if (reservation.note) { <div><dt>Observação</dt><dd>{{ reservation.note }}</dd></div> }
-                </dl>
-              }
+              @if (usage.appliedAt) { <p class="muted">{{ dateTime(usage.appliedAt) }}, {{ usage.appliedBy }}</p> }
+              @if (usage.notes) { <dl class="record-fields record-fields--single"><div><dt>Observação</dt><dd>{{ usage.notes }}</dd></div></dl> }
             </div>
-
-            @if (canReserve()) {
-              <div class="record-row__actions">
-                @if (reservation.status === 'ACTIVE' || reservation.status === 'PENDING') {
-                  <button appRowAction icon="close" label="Cancelar reserva" tone="danger" [id]="'reservation-cancel-' + reservation.id" [target]="reservation.partName" (click)="startCancellation(reservation)" [disabled]="busyReservationId() !== null"></button>
-                }
-                @if (reservation.status === 'ACTIVE' && !isClosed()) {
-                  <button type="button" class="button-secondary" (click)="startConsumption(reservation)" [disabled]="busyReservationId() !== null"><app-icon name="check" />Aplicar</button>
-                }
-                @if (reservation.status === 'PENDING' && !isClosed()) {
-                  <button type="button" class="button-secondary" (click)="runAction(reservation, 'allocate')" [disabled]="busyReservationId() !== null"><app-icon name="check" />Efetivar reserva</button>
-                }
-
-              </div>
+            @if (canCreateUsage() && usage.status === 'USED') {
+              <div class="record-row__actions"><button appRowAction icon="undo" label="Desfazer uso" tone="danger" [id]="'usage-undo-' + usage.id" [target]="usage.partName" (click)="startUndo(usage)" [disabled]="busyUsageId() !== null"></button></div>
             }
           </div>
         }
       </div>
     }
-
-    @if (canReserve() && cancelling(); as reservation) {
-      <div class="modal-overlay" (click)="closeCancellation()">
-        <section class="modal-panel modal-panel--narrow panel" role="alertdialog" aria-modal="true" aria-labelledby="cancel-reservation-title" aria-describedby="cancel-reservation-description"
-          appModalFocus modalInitialFocus=".form-actions .button-secondary" [modalCloseBlocked]="busyReservationId() !== null" (modalCloseRequested)="closeCancellation()" (click)="$event.stopPropagation()">
-          <header class="modal-header">
-            <div class="danger-heading">
-              <span class="icon-tile tone-danger"><app-icon name="close" [size]="20" /></span>
-              <h3 id="cancel-reservation-title">Cancelar reserva?</h3>
-            </div>
-          </header>
-          <div id="cancel-reservation-description" class="delete-confirmation">
-            <p>@if (reservation.status === 'ACTIVE') { A reserva de {{ reservation.partName }} será cancelada e {{ quantity(reservation.quantity, reservation.unit) }} voltará ao estoque disponível. } @else { A reserva pendente de {{ reservation.partName }} será cancelada. }</p>
+    @if (canCreateUsage() && undoing(); as usage) {
+      <div class="modal-overlay" (click)="closeUndo()">
+        <section class="modal-panel modal-panel--narrow panel" role="alertdialog" aria-modal="true" aria-labelledby="undo-usage-title" aria-describedby="undo-usage-description"
+          appModalFocus modalInitialFocus=".form-actions .button-secondary" [modalCloseBlocked]="busyUsageId() !== null" (modalCloseRequested)="closeUndo()" (click)="$event.stopPropagation()">
+          <header class="modal-header"><div class="danger-heading"><span class="icon-tile tone-danger"><app-icon name="undo" [size]="20" /></span><h3 id="undo-usage-title">Desfazer uso?</h3></div></header>
+          <div id="undo-usage-description" class="delete-confirmation"><p>{{ quantity(usage.quantity, usage.unit) }} de {{ usage.partName }} voltará ao estoque.</p></div>
+          <div class="inline-form">
+            <label class="field-group field-group--full field-group--required"><span>Motivo da reversão</span><textarea [formControl]="undoReason" maxlength="255" [attr.aria-invalid]="hasError(undoReason) ? 'true' : null"></textarea>
+              @if (hasError(undoReason)) { <small class="field-error" role="alert">Informe um motivo de até 255 caracteres.</small> }
+            </label>
           </div>
           @if (errorMessage()) { <p class="field-error" role="alert">{{ errorMessage() }}</p> }
           <div class="form-actions">
-            <button type="button" class="button-secondary" [disabled]="busyReservationId() !== null" (click)="closeCancellation()">Voltar</button>
-            <button type="button" class="button-primary button-primary--danger" [disabled]="busyReservationId() !== null" (click)="runAction(reservation, 'cancel')">{{ busyReservationId() === reservation.id ? 'Cancelando...' : 'Cancelar reserva' }}</button>
+            <button type="button" class="button-secondary" [disabled]="busyUsageId() !== null" (click)="closeUndo()">Voltar</button>
+            <button type="button" class="button-primary button-primary--danger" [disabled]="busyUsageId() !== null" (click)="confirmUndo()">{{ busyUsageId() === usage.id ? 'Revertendo...' : 'Reverter' }}</button>
           </div>
         </section>
       </div>
-    }
-
-    @if (consuming(); as reservation) {
-      @if (canCreateReservation()) {
-        <form class="inline-form" [formGroup]="consumptionForm" (ngSubmit)="confirmConsumption()" (keydown.escape)="$event.stopPropagation(); consuming.set(null)" novalidate>
-          <strong class="field-group--full">Aplicar {{ reservation.partCode }} - {{ reservation.partName }}</strong>
-          <label class="field-group field-group--full field-group--required"><span>Motivo da troca</span><textarea rows="4" maxlength="1000" formControlName="replacementReason" [attr.aria-invalid]="hasError(consumptionForm.controls.replacementReason) ? 'true' : null"></textarea>
-            @if (hasError(consumptionForm.controls.replacementReason)) { <small class="field-error" role="alert">Informe o motivo da troca</small> }
-          </label>
-          <label class="field-group"><span>Lote do componente</span><input maxlength="120" formControlName="componentBatch" /></label>
-          <div class="form-actions inline-form__actions"><button type="button" class="button-secondary" [disabled]="busyReservationId() !== null" (click)="consuming.set(null)">Cancelar</button><button type="submit" class="button-primary" [disabled]="busyReservationId() !== null">Confirmar</button></div>
-        </form>
-      }
     }
 
     }
@@ -158,7 +130,7 @@
 @if (hasLoaded() && !loading() && !loadFailed()) {
 <section class="repair-panel detail-card">
   <app-collapsible-section title="Componentes trocados" icon="wrench" [count]="replacedComponents().length || null" [open]="replacedComponents().length > 0 || externalOpen() || !!externalError()" storageKey="rma.components">
-      @if (canCreateReservation()) {
+      @if (canCreateUsage()) {
         <button sectionActions type="button" id="external-trigger" class="link-button" [attr.aria-expanded]="externalOpen() && !editingExternal()" aria-controls="external-form" (click)="toggleExternal()">Adicionar componente externo</button>
       }
       @if (externalError()) { <p class="field-error" role="alert">{{ externalError() }}</p><button type="button" class="button-secondary button-secondary--small" (click)="loadExternal()">Tentar novamente</button> }
@@ -167,7 +139,7 @@
           @for (stat of componentStats(); track stat.label) { <div><dt>{{ stat.label }}</dt><dd>{{ stat.value }}</dd></div> }
         </dl>
       }
-      @if (canCreateReservation() && externalOpen() && !editingExternal()) { <ng-container [ngTemplateOutlet]="externalEditor" /> }
+      @if (canCreateUsage() && externalOpen() && !editingExternal()) { <ng-container [ngTemplateOutlet]="externalEditor" /> }
       <div class="record-rows">
       @for (component of replacedComponents(); track component.key) {
         <div class="record-row" [class]="component.external ? 'tone-violet' : 'tone-success'" [class.is-voided]="!!component.voidedAt">
@@ -192,20 +164,20 @@
               </dl>
             }
           </div>
-          @if (component.external && canCreateReservation() && !component.voidedAt) {
+          @if (component.external && canCreateUsage() && !component.voidedAt) {
             <span class="record-row__actions">
               <button appRowAction icon="pencil" label="Editar" [target]="component.description" [disabled]="externalSaving()" (click)="editExternal(component)"></button>
               <button appRowAction icon="close" label="Anular" tone="danger" [target]="component.description" [disabled]="externalSaving()" (click)="startVoidExternal(component)"></button>
             </span>
           }
-          @if (component.external && voidingExternal()?.id === component.id && canCreateReservation()) {
+          @if (component.external && voidingExternal()?.id === component.id && canCreateUsage()) {
             <div class="inline-form">
               <label class="field-group field-group--full field-group--required"><span>Motivo da anulação</span><textarea [formControl]="voidReason" rows="4" maxlength="1000"></textarea></label>
               @if (voidReason.invalid && voidReason.touched) { <p class="field-error field-group--full" role="alert">Informe um motivo de até 1000 caracteres.</p> }
               <div class="form-actions inline-form__actions"><button type="button" class="button-secondary" [disabled]="externalSaving()" (click)="voidingExternal.set(null)">Cancelar</button><button type="button" class="button-primary" [disabled]="externalSaving()" (click)="confirmVoidExternal()">Anular</button></div>
             </div>
           }
-          @if (component.external && editingExternal()?.id === component.id && canCreateReservation()) { <ng-container [ngTemplateOutlet]="externalEditor" /> }
+          @if (component.external && editingExternal()?.id === component.id && canCreateUsage()) { <ng-container [ngTemplateOutlet]="externalEditor" /> }
         </div>
       } @empty { @if (!externalOpen()) { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="chip" /></span><h3 class="repair-empty">Nenhum componente trocado</h3></div> } }
       </div>

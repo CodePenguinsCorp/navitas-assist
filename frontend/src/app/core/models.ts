@@ -528,7 +528,6 @@ export type NotificationEventType =
   | 'RMA_CREATED'
   | 'RMA_ASSIGNED'
   | 'RMA_BLOCKED'
-  | 'PART_PENDING'
   | 'TEST_FAILED';
 
 export type NotificationSeverity = 'INFO' | 'WARNING' | 'CRITICAL';
@@ -599,14 +598,12 @@ export type PartMovementType =
   | 'ENTRY'
   | 'EXIT'
   | 'ADJUSTMENT'
-  | 'RESERVATION'
-  | 'RESERVATION_CANCEL'
   | 'CONSUMPTION'
   | 'REVERSAL';
 
 export type ManualPartMovementType = Extract<PartMovementType, 'ENTRY' | 'EXIT' | 'ADJUSTMENT'>;
 
-export type PartReservationStatus = 'PENDING' | 'ACTIVE' | 'CONSUMED' | 'CANCELLED' | 'REVERSED';
+export type PartUsageStatus = 'USED' | 'REVERTED';
 
 export interface PartRequest {
   code: string;
@@ -627,8 +624,6 @@ export interface PartResponse {
   minimumStock: number;
   unitCost: number;
   onHand: number;
-  reserved: number;
-  available: number;
   belowMinimum: boolean;
   active: boolean;
 }
@@ -647,9 +642,7 @@ export interface PartMovementResponse {
   type: PartMovementType;
   quantity: number;
   onHandChange: number;
-  reservedChange: number;
   onHandAfter: number;
-  reservedAfter: number;
   rmaCode: string | null;
   reversedMovementId: number | null;
   reversed: boolean;
@@ -658,13 +651,15 @@ export interface PartMovementResponse {
   createdAt: string;
 }
 
-export interface PartReservationRequest {
+export interface PartUsageRequest {
   partId: number;
   quantity: number;
-  note: string | null;
+  replacementReason: string;
+  componentBatch: string | null;
+  notes: string | null;
 }
 
-export interface PartReservationResponse {
+export interface PartUsageResponse {
   id: number;
   rmaId: number;
   rmaCode: string;
@@ -674,16 +669,16 @@ export interface PartReservationResponse {
   unit: string;
   location: string | null;
   quantity: number;
-  status: PartReservationStatus;
-  partAvailable: number;
+  status: PartUsageStatus;
+  partOnHand: number;
   /** Nulos para quem não tem `pecas.ver`. */
   unitCost: number | null;
   totalCost: number | null;
-  note: string | null;
-  replacementReason?: string | null;
-  componentBatch?: string | null;
-  appliedAt?: string | null;
-  appliedBy?: string | null;
+  notes: string | null;
+  replacementReason: string | null;
+  componentBatch: string | null;
+  appliedAt: string | null;
+  appliedBy: string | null;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -692,21 +687,19 @@ export interface PartReservationResponse {
 export interface RmaPartsResponse {
   rmaId: number;
   rmaCode: string;
-  reservations: PartReservationResponse[];
-  replacedComponents?: PartReservationResponse[];
+  usages: PartUsageResponse[];
+  replacedComponents: PartUsageResponse[];
   movements: PartMovementResponse[];
   /** Nulos para quem não tem `pecas.ver`. */
-  reservedCost: number | null;
-  consumedCost: number | null;
-  pendingCount: number;
+  usedCost: number | null;
 }
 
-export interface PartConsumptionRequest {
+export interface ComponentReplacement {
   replacementReason: string;
   componentBatch: string | null;
 }
 
-export interface ExternalComponentRequest extends PartConsumptionRequest {
+export interface ExternalComponentRequest extends ComponentReplacement {
   code: string | null;
   description: string;
   quantity: number;
@@ -725,7 +718,7 @@ export interface RmaRepairHistoryResponse {
   id: number;
   entityType: 'EXTERNAL_COMPONENT' | 'INTERVENTION' | 'STOCK_COMPONENT';
   entityId: number;
-  action: 'CREATE' | 'UPDATE' | 'VOID' | 'APPLY';
+  action: 'CREATE' | 'UPDATE' | 'VOID' | 'USE' | 'REVERT';
   changedBy: string;
   changedAt: string;
   summary: string;
@@ -764,9 +757,6 @@ export interface PartReplenishmentResponse {
   location: string | null;
   minimumStock: number;
   onHand: number;
-  reserved: number;
-  available: number;
-  pendingQuantity: number;
   suggestedQuantity: number;
   belowMinimum: boolean;
 }
@@ -1071,6 +1061,6 @@ export interface PartOptionResponse {
   code: string;
   name: string;
   unit: string;
-  available: number;
+  onHand: number;
   active: boolean;
 }

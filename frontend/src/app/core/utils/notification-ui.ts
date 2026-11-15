@@ -7,7 +7,6 @@ export const NOTIFICATION_EVENT_LABELS: Record<NotificationEventType, string> = 
   RMA_CREATED: 'Nova OS',
   RMA_ASSIGNED: 'Nova atribuição',
   RMA_BLOCKED: 'Bloqueio',
-  PART_PENDING: 'Peça pendente',
   TEST_FAILED: 'Falha de teste'
 };
 
@@ -30,7 +29,8 @@ export const SNOOZE_OPTIONS: ReadonlyArray<{ value: number; label: string }> = [
  * Nova OS and atribuição are informative. The criterion is the event type, not the severity, which each rule can change;
  * the server applies the same list and rejects snoozing the others.
  */
-export const SNOOZABLE_EVENT_TYPES: ReadonlySet<NotificationEventType> = new Set<NotificationEventType>(['RMA_BLOCKED', 'PART_PENDING', 'TEST_FAILED']);
+
+export const SNOOZABLE_EVENT_TYPES = new Set<NotificationEventType>(['RMA_BLOCKED', 'TEST_FAILED']);
 
 export function canSnooze(notification: Pick<NotificationResponse, 'eventType'>): boolean {
   return SNOOZABLE_EVENT_TYPES.has(notification.eventType);

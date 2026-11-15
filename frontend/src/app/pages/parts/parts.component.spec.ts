@@ -8,12 +8,12 @@ import { PartsComponent } from './parts.component';
 
 const PART: PartResponse = {
   id: 4, code: 'PCA-1', name: 'Capacitor', unit: 'un', location: 'A1', minimumStock: 5, unitCost: 10,
-  onHand: 4, reserved: 1, available: 3, belowMinimum: true, active: true,
+  onHand: 4, belowMinimum: true, active: true,
 };
 
 const CONSUMPTION: PartMovementResponse = {
   id: 9, partId: 4, partCode: 'PCA-1', partName: 'Capacitor', type: 'CONSUMPTION', quantity: 1, onHandChange: -1,
-  reservedChange: -1, onHandAfter: 4, reservedAfter: 1, rmaCode: 'OS-7',
+  onHandAfter: 4, rmaCode: 'OS-7',
   reversedMovementId: null, reversed: false, reason: null, createdBy: 'tech', createdAt: '2026-10-24T12:00:00Z'
 };
 
@@ -40,7 +40,6 @@ describe('PartsComponent', () => {
     partService = {
       list: vi.fn(() => of([PART])),
       listReplenishment: vi.fn(() => of([])),
-      listPending: vi.fn(() => of([])),
       registerMovement: vi.fn(() => of({ ...CONSUMPTION, type: 'ADJUSTMENT' })),
       listMovements: vi.fn(() => of([CONSUMPTION])),
       reverseMovement: vi.fn(() => of({ ...CONSUMPTION, id: 10, type: 'REVERSAL' }))

@@ -81,7 +81,7 @@ async function setup(inputs: { getById?: (id: number) => Observable<RmaResponse>
       providePermissions(profilePermissions('ADMIN')),
       { provide: ProtocolService, useValue: { listExecutions: () => of([]), listTemplates: () => of([]) } },
       { provide: RmaRepairService, useValue: { getRepair: () => of({ interventions: [], totalServiceHours: 0 }), listExternalComponents: () => of([]) } },
-      { provide: PartService, useValue: { getRmaParts: () => of({ reservations: [], movements: [], reservedCost: 0, consumedCost: 0, pendingCount: 0 }), listOptions: () => of([]) } },
+      { provide: PartService, useValue: { getRmaParts: () => of({ usages: [], replacedComponents: [], movements: [], usedCost: 0 }), listOptions: () => of([]) } },
       { provide: ReportService, useValue: { downloadTechnicalReport: () => of() } },
       { provide: RmaService, useValue: {
         getById: (id: number) => (inputs.getById ?? ((other: number) => of({ ...(inputs.rma ?? fullRma), id: other })))(id),

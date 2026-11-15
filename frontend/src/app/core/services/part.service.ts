@@ -3,18 +3,15 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   PartMovementRequest,
-  PartConsumptionRequest,
   PartMovementResponse,
   PartReplenishmentResponse,
   PartRequest,
-  PartReservationRequest,
-  PartReservationResponse,
+  PartUsageRequest,
+  PartUsageResponse,
   PartResponse,
   PartOptionResponse,
   RmaPartsResponse
 } from '../models';
-
-export type PartReservationAction = 'allocate' | 'consume' | 'cancel';
 
 @Injectable({ providedIn: 'root' })
 export class PartService {
@@ -53,10 +50,6 @@ export class PartService {
     return this.http.post<PartMovementResponse>(`/api/parts/movements/${movementId}/reversal`, { reason });
   }
 
-  listPending(): Observable<PartReservationResponse[]> {
-    return this.http.get<PartReservationResponse[]>('/api/parts/pending');
-  }
-
   listReplenishment(): Observable<PartReplenishmentResponse[]> {
     return this.http.get<PartReplenishmentResponse[]>('/api/parts/replenishment');
   }
@@ -65,11 +58,11 @@ export class PartService {
     return this.http.get<RmaPartsResponse>(`/api/rmas/${rmaId}/parts`);
   }
 
-  reserve(rmaId: number, payload: PartReservationRequest): Observable<PartReservationResponse> {
-    return this.http.post<PartReservationResponse>(`/api/rmas/${rmaId}/parts`, payload);
+  use(rmaId: number, payload: PartUsageRequest): Observable<PartUsageResponse> {
+    return this.http.post<PartUsageResponse>(`/api/rmas/${rmaId}/parts/usages`, payload);
   }
 
-  updateReservation(rmaId: number, reservationId: number, action: PartReservationAction, consumption?: PartConsumptionRequest): Observable<PartReservationResponse> {
-    return this.http.post<PartReservationResponse>(`/api/rmas/${rmaId}/parts/${reservationId}/${action}`, consumption ?? {});
+  undoUse(rmaId: number, usageId: number, reason: string): Observable<PartUsageResponse> {
+    return this.http.post<PartUsageResponse>(`/api/rmas/${rmaId}/parts/usages/${usageId}/reversal`, { reason });
   }
 }

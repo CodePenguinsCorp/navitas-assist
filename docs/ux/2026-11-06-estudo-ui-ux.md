@@ -1,5 +1,7 @@
 # Navitas Assist - estudo global de UI e UX
 
+Referência histórica de UX. O fluxo de peças vigente está em [padrões visuais](padroes-visuais.md) e [API](../api.md): uso imediato com motivo e reversão em OS aberta.
+
 Iniciado em 6 de novembro de 2026. Ampliado em 7 de novembro de 2026 para todas as telas e fluxos do projeto. Status: proposta para discussão, sem alteração das telas de produção.
 
 ## Resumo para decisão
@@ -17,13 +19,6 @@ Escopo: o produto inteiro (11 telas de entrada e seus fluxos internos), entregue
 | 7 | Usuário e sair | Rodapé da lateral; sino com contador no cabeçalho | Manter no topo | **Rodapé da lateral** (decidido em 7 nov; entregue no commit `71d51ba`) |
 
 ### Padrões globais em uma página
-
-- Cinco composições: acesso, visão operacional, coleção, trabalho/configuração e fluxo/análise, com os mesmos controles, estados e linguagem.
-- Tabela para comparar registros, pares rótulo/valor para propriedades, timeline para eventos e checklist para execução. Não transformar tudo em chips ou cards.
-- Nenhuma simplificação visual elimina permissões, filtros, paginação, rastreabilidade ou ações existentes.
-- Texto de implementação não aparece para o usuário (ex.: exportação indisponível em relatórios).
-- Ações de negócio mantêm texto (Iniciar protocolo, Aplicar, Efetivar reserva); ações recorrentes de linha usam ícone com tooltip e nome acessível.
-- Estado vazio, busca sem resultado, falha de carga e falta de permissão são casos distintos.
 
 ### Primeira entrega (fase 1, implementada em 7 nov; plano em `2026-11-07-plano-fase-1-fundacao.md`)
 
@@ -76,17 +71,8 @@ O inventário parte das rotas e de seus estados internos. `/cadastros`, a raiz e
 | Usuários | Lista, perfil/status, paginação, criar/editar, senha, ativação e exclusão | `pages/users/users.component.html` |
 | Relatórios | Laudo técnico, tempo por etapa, garantia por produto e devoluções; período, cliente, status, consulta e falhas | `pages/reports/reports.component.html` |
 | Estrutura compartilhada | Navegação por perfil, usuário, sair, sino, controles, paginação, mensagens e modais | `layout/app-shell.component.html`; `shared/form-controls`; `shared/pagination` |
-| Atendimento compartilhado | Produtos/garantia, diagnóstico, peças e reservas, protocolos e resultados, impedimentos, histórico e atribuição | `shared/rma-detail-modal`; `shared/rma-parts-panel`; `shared/rma-protocols`; `shared/rma-block-panel`; detalhe em `pages/rmas` |
 
 ### Achados globais mais relevantes
-
-1. **A mesma entidade tem dois detalhes.** A lista de ordens de serviço já usa seis abas: Produtos, Diagnóstico, Peças, Protocolos, Impedimentos e Histórico (`RmasComponent.detailTabs`). O Kanban abre `RmaDetailModalComponent`, com blocos e linha do tempo, sem abas. A revisão externa estava correta sobre o modal do Kanban, mas a conclusão não deve ser generalizada para o projeto todo. Primeiro unificar o contrato de informação e o acesso às ações; reaproveitar os dois avanços existentes antes de decidir uma estrutura única.
-2. **Estatísticas ocupam espaço em vários cadastros.** Clientes, produtos, usuários, peças, ordens de serviço e Kanban apresentam indicadores antes da lista/quadro. Avaliar a utilidade por tarefa: total pode ser contagem no título; indicadores de estoque podem orientar uma ação; métricas de gestão cabem no dashboard. Não retirar indicadores de todos os módulos automaticamente.
-3. **Formulários repetem instruções e variam nas ações.** Frases como “preencha os dados principais” não acrescentam contexto. Havia rodapés com Salvar antes de Cancelar e outros com ordem inversa; a fase 1 padronizou a maioria (restam rma-block-panel, estorno de peças e filtros). Definir Cancelar à esquerda e ação principal à direita, mantendo esse arranjo em todos os diálogos.
-4. **A abertura de OS mistura momentos do ciclo.** O formulário inclui recebimento, compra, falha, reparo, peças trocadas e testes. Propor agrupamento por momento operacional, preservando a possibilidade de registrar atendimento retroativo; não remover campos nem alterar sua obrigatoriedade sem validar o processo.
-5. **Regras também precisam de hierarquia.** O editor de protocolos expõe configuração, etapas bloqueadas e muitos campos de cada item; regras de notificações acumulam seletores e checkboxes. Priorizar visão resumida e edição da regra/item selecionado.
-6. **Relatórios têm conteúdo de produto a rever.** A tela expõe a justificativa técnica da exportação indisponível. O usuário precisa ver as opções disponíveis; detalhes de implementação pertencem à documentação. Manter período, instante de geração e critério da consulta, pois afetam a interpretação dos dados.
-7. **Peças têm semântica própria.** Disponível, reservado e em estoque são valores distintos. Estorno é uma operação rastreável, não exclusão. O sistema visual deve tornar essas diferenças claras.
 
 ## Um sistema visual, cinco composições
 
@@ -95,7 +81,6 @@ O inventário parte das rotas e de seus estados internos. `/cadastros`, a raiz e
 | Acesso | Login | Marca contida, rótulos persistentes, dois campos, ação principal e feedback local |
 | Visão operacional | Dashboard | Indicadores úteis, fila acionável e atividade; números com contexto e escopo |
 | Coleção | ordens de serviço, clientes, produtos, usuários, estoque e catálogo de protocolos | Cabeçalho, busca/filtros, tabela, ações de linha, paginação quando existente |
-| Trabalho e configuração | Detalhe da OS, diagnóstico, protocolos, reservas, movimentos, regras | Seções por tarefa, campos alinhados, contexto preservado e ação explícita |
 | Fluxo e análise | Kanban e relatórios | Quadro para etapas; tabelas/gráficos para comparação; mesmos controles, estados e linguagem |
 
 A referência Carbon reúne busca, filtros e ações na barra da tabela e apresenta ações em lote após seleção. Adotar o princípio de hierarquia contextual, preservando as funções que o Navitas já oferece. [Tabelas e ações em lote](https://www.carbondesignsystem.com/building-blocks/core/components/data-table/guidelines).
@@ -142,13 +127,7 @@ Estabelecer um contrato comum de conteúdo entre os dois detalhes existentes. Pr
 
 Diagnóstico: falha encontrada primeiro; tipo, causa, data e técnico em campos organizados; notas separadas; ação “Salvar diagnóstico”. Respeitar permissões de ADMIN/TECHNICIAN. Não usar alertas ou chips para substituir texto técnico que precisa ser lido.
 
-### Peças: estoque, reposição, movimento e reservas
-
-No estoque, destacar disponível, unidade e mínimo; manter reservado e saldo total comparáveis. Cor de atenção acompanha texto “Repor” e números reais. Reposição conserva sugestão de compra e pendência por OS em grupos relacionados, sem concatenar nome, código e localização.
-
 Cadastro de peça não altera saldo. Movimento apresenta tipo, quantidade/unidade, motivo e impacto antes/depois quando calculável. Histórico usa colunas para instante, tipo, variação, saldo, OS e autor. Estorno tem confirmação específica com motivo; conservar o movimento original.
-
-Na OS, peças reservadas, pendentes e aplicadas têm estados e ações distintos. “Aplicar”, “Efetivar reserva” e “Cancelar reserva” são operações de negócio e continuam nomeadas; não trocá-las por ícones ambíguos. Mostrar custos com moeda e escopo, respeitando as permissões atuais.
 
 ### Clientes
 
@@ -199,8 +178,6 @@ Lote: seleção visível, quantidade selecionada inclusive fora dos filtros atua
 | --- | --- |
 | Administrador | Navegação completa e ações administrativas, respeitando validações por operação |
 | Atendimento | Dashboard, ordens de serviço, Kanban, notificações, peças, clientes e produtos; abertura de OS e gestão de estoque conforme componentes |
-| Técnico | Dashboard, ordens de serviço, Kanban, notificações, peças e relatórios; diagnóstico, protocolos e reservas conforme regras |
-| Consulta | Dashboard, ordens de serviço, Kanban, notificações, peças e relatórios; sem receber ações de alteração de OS reservadas a outros perfis |
 
 Fonte: `app.routes.ts`, `NAV_GROUPS`, `canOpenRma`, `canRegisterDiagnosis`, `canManage`, `canReserve` e `canExecute`. A tabela resume o frontend; a autorização do backend permanece obrigatória e precisa de verificação na implementação. As preferências pessoais de notificações seguem suas próprias regras, inclusive para quem tem perfil de consulta.
 
@@ -293,8 +270,6 @@ Na implementação final, abertura move o foco para o diálogo, Tab permanece ne
 
 Estados adicionais: informação `#155D94`, sucesso `#216E4E`, atenção `#7F5F01`, perigo `#AE2A19`, acompanhados de fundos suaves e texto/ícone. São candidatos, sujeitos a validação por combinação e estado. Acentos não devem mudar entre páginas.
 
-Fonte: manter **Segoe UI**, com fallback de sistema, em todo o produto. Proposta de escala: 24/32 para página, 20/28 para título do detalhe, 16/24 para seção, 14/20 para corpo e controles, 12/16 para metadados curtos. Pesos 400, 500 e 600. Não usar caixa alta em todos os títulos. A documentação da Atlassian reforça hierarquia por estilos e reserva os menores tamanhos a usos limitados. [Tipografia](https://atlassian.design/foundations/typography/applying-typography).
-
 Espaçamento: 4, 8, 12, 16, 24 e 32 px. Controles de uma mesma barra: 36 px no desktop; 44 px como proposta de alvo confortável em toque. Ícones: 16 ou 20 px dentro do alvo. Raios: 6 px em controles, 8 px em cards e 12 px em diálogo. Sombras para elevação real, como menus e modal. Sem gradientes decorativos nos módulos de operação.
 
 Contraste de texto normal: pelo menos 4,5:1; texto grande tem limiar distinto. O mínimo AA para alvos de ponteiro é 24×24 CSS px, com exceções; 44 px é a recomendação de conforto adotada aqui, não o mínimo AA. Testar foco, estados e tema escuro separadamente. [Contraste](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html), [alvos](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html).
@@ -342,7 +317,6 @@ Pares rótulo/valor continuam adequados em metadados organizados. O problema é 
 | Coleções | Clientes, produtos, usuários, catálogo de protocolos e tabela de estoque com a mesma composição | Médio | Paginação, busca, categorias livres, validação e exclusões |
 | Piloto operacional | Cabeçalho/filtros do Kanban, card conservador, visualizações e lote preservados | Médio a alto | Arraste, seleção fora do filtro, permissões, SLA e resultados parciais |
 | Ciclo do atendimento | Lista/histórico e abertura de ordens de serviço, diagnóstico e contrato comum dos dois detalhes | Alto | Itens, garantia, registros retroativos, dados por etapa e trabalho recente do modal |
-| Operações especializadas | Protocolos/versões/execuções, reservas, movimentos, estornos e impedimentos | Alto | Rastreabilidade, medições, restrições de status e estoque |
 | Comunicação e análise | Notificações, preferências/regras/falhas, dashboard e quatro relatórios | Médio a alto | Escopo das métricas, dados temporais, configurações administrativas e textos técnicos |
 
 O shell pode ser a primeira mudança entregue por atingir todas as telas. O Kanban pode ser o primeiro piloto operacional, sem limitar o alcance global do estudo. Abas novas no modal são uma hipótese posterior, não um requisito de início. Essas faixas não equivalem a dias ou sprints; faltam decomposição técnica e validação em Angular para estimar prazo.
@@ -360,8 +334,6 @@ Antes de expandir a mudança, comparar a interface atual e a proposta com operad
 - Percorrer o fluxo por teclado e com zoom de 200%; avaliar a lista alternativa em tela estreita.
 
 Registrar sucesso da tarefa, tempo, erros, retornos desnecessários e dúvidas. Metas numéricas devem ser definidas após medir a situação atual. Ainda não há evidência de ganho percentual ou de conformidade integral com WCAG.
-
-Também avaliar cadastro de cliente/produto, edição de usuário, abertura com múltiplos produtos, consulta por lote/série, reserva e consumo de peça, estorno, publicação e execução de protocolo, adiamento de alerta e os quatro relatórios. O roteiro de validação deve alcançar os perfis reais de cada módulo.
 
 Decisões a validar: redução posterior do card, filtros mais frequentes, estrutura comum dos dois detalhes, agrupamento de campos retroativos e edição focada de regras/itens. Cliente, falha e SLA permanecem na proposta conservadora. O estudo cobre o produto inteiro; a implementação pode ser entregue por etapas.
 

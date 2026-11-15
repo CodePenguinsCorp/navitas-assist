@@ -8,7 +8,7 @@ export type LegacyProfileCode = 'ADMIN' | 'SERVICE_DESK' | 'TECHNICIAN' | 'VIEWE
 export const LEGACY_PROFILE_PERMISSIONS: Readonly<Record<LegacyProfileCode, readonly Permission[]>> = {
   ADMIN: [
     'rma.ver', 'rma.abrir', 'rma.editar', 'rma.status', 'rma.responsavel', 'rma.diagnosticar', 'rma.impedimentos',
-    'cadastros.ver', 'cadastros.editar', 'cadastros.importar', 'pecas.ver', 'pecas.movimentar', 'pecas.reservar', 'protocolos.ver',
+    'cadastros.ver', 'cadastros.editar', 'cadastros.importar', 'pecas.ver', 'pecas.movimentar', 'pecas.usar', 'protocolos.ver',
     'protocolos.executar', 'protocolos.catalogo', 'relatorios.ver', 'usuarios.gerir', 'perfis.gerir',
     'notificacoes.regras', 'auditoria.ver'
   ],
@@ -18,7 +18,7 @@ export const LEGACY_PROFILE_PERMISSIONS: Readonly<Record<LegacyProfileCode, read
   ],
   TECHNICIAN: [
     'rma.ver', 'rma.status', 'rma.atribuivel', 'rma.diagnosticar', 'rma.impedimentos', 'cadastros.ver', 'pecas.ver',
-    'pecas.reservar', 'protocolos.ver', 'protocolos.executar', 'relatorios.ver'
+    'pecas.usar', 'protocolos.ver', 'protocolos.executar', 'relatorios.ver'
   ],
   VIEWER: ['rma.ver', 'cadastros.ver', 'pecas.ver', 'protocolos.ver', 'relatorios.ver']
 };

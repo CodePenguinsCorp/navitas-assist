@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { PartMovementRequest, PartReservationRequest } from '../models';
+import { PartMovementRequest, PartUsageRequest } from '../models';
 import { PartService } from './part.service';
 
 describe('PartService', () => {
@@ -22,7 +22,7 @@ describe('PartService', () => {
     service.listOptions().subscribe();
     const request = httpTesting.expectOne('/api/parts/options');
     expect(request.request.method).toBe('GET');
-    request.flush([{ id: 1, code: 'P1', name: 'Peça', unit: 'un', available: 2, active: true }]);
+    request.flush([{ id: 1, code: 'P1', name: 'Peça', unit: 'un', active: true }]);
   });
 
   it('trims the search query and omits it when blank', () => {
@@ -52,17 +52,18 @@ describe('PartService', () => {
     reversal.flush({});
   });
 
-  it('reserves parts and runs reservation actions under the OS resource', () => {
-    const payload: PartReservationRequest = { partId: 4, quantity: 1, note: null };
-    service.reserve(7, payload).subscribe();
-    const reserve = httpTesting.expectOne('/api/rmas/7/parts');
-    expect(reserve.request.method).toBe('POST');
-    expect(reserve.request.body).toEqual(payload);
-    reserve.flush({});
+  it('uses parts and reverses usages under the OS resource', () => {
+    const payload: PartUsageRequest = { partId: 4, quantity: 1, notes: null, replacementReason: "Falha", componentBatch: null };
+    service.use(7, payload).subscribe();
+    const usage = httpTesting.expectOne('/api/rmas/7/parts/usages');
+    expect(usage.request.method).toBe('POST');
+    expect(usage.request.body).toEqual(payload);
+    usage.flush({});
 
-    service.updateReservation(7, 3, 'cancel').subscribe();
-    const cancel = httpTesting.expectOne('/api/rmas/7/parts/3/cancel');
+    service.undoUse(7, 3, 'Erro').subscribe();
+    const cancel = httpTesting.expectOne('/api/rmas/7/parts/usages/3/reversal');
     expect(cancel.request.method).toBe('POST');
+    expect(cancel.request.body).toEqual({ reason: 'Erro' });
     cancel.flush({});
   });
 });

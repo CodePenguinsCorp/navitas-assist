@@ -79,7 +79,7 @@ async function setup(options: { role?: LegacyProfileCode } = {}) {
     }))
   };
   const partService = {
-    getRmaParts: vi.fn(() => of({ rmaId: 5, rmaCode: fullRma.code, reservations: [], movements: [], reservedCost: 0, consumedCost: 0, pendingCount: 0 })),
+    getRmaParts: vi.fn(() => of({ rmaId: 5, rmaCode: fullRma.code, usages: [], replacedComponents: [], movements: [], usedCost: 0 })),
     listOptions: vi.fn(() => of([]))
   };
   const protocolService = { listExecutions: vi.fn(() => of([])), listTemplates: vi.fn(() => of([])) };

@@ -1805,7 +1805,7 @@ a.link-button:hover {
   cursor: not-allowed;
 }
 
-/* Header actions of a folding section (Registrar diagnóstico, Registrar, Reservar peça…): one ghost-button look,
+/* Header actions of a folding section (Registrar diagnóstico, Registrar, Usar peça…): one ghost-button look,
    icon and text on one line, a soft tint on hover instead of an underline. */
 .collapsible__actions .link-button {
   display: inline-flex;
@@ -3440,8 +3440,6 @@ app-rma-kanban-board .board-shell::-webkit-scrollbar-button, app-rma-kanban-boar
 .record-stats dd { margin: 0; color: var(--text); font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); font-variant-numeric: tabular-nums; line-height: var(--line-height-tight); overflow-wrap: anywhere; }
 .record-stats--compact { margin: var(--space-1) 0; padding: 0; background: transparent; gap: var(--space-2) var(--space-3); }
 .record-stats--compact dd { font-size: var(--font-size-sm); font-weight: var(--font-weight-regular); }
-/* Métricas do cartão de reserva: uma linha de colunas iguais (--cols), nunca três mais uma solta. */
-.record-stats--metrics { grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); gap: var(--space-2) var(--space-4); }
 /* Pares rótulo e valor dos registros: três colunas que viram uma em largura estreita. */
 .record-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3) var(--space-4); margin: 0; }
 .record-fields--reason { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.4fr); }
@@ -3451,9 +3449,6 @@ app-rma-kanban-board .board-shell::-webkit-scrollbar-button, app-rma-kanban-boar
 .record-fields dt { color: var(--muted); font-size: var(--font-size-sm); font-weight: var(--font-weight-regular); }
 .record-fields dd { margin: 0; color: var(--text); font-size: var(--font-size-sm); font-weight: var(--font-weight-regular); overflow-wrap: anywhere; }
 @container (max-width: 36rem) { .record-fields, .record-fields--reason { grid-template-columns: minmax(0, 1fr); } }
-/* Cartão de reserva: ações numa linha própria, à direita, sem disputar espaço com o título. */
-.record-row--stacked { grid-template-columns: auto minmax(0, 1fr); }
-.record-row--stacked > .record-row__actions { grid-column: 2; justify-self: end; margin-top: var(--space-1); }
 /* Vazio com ícone, frase curta e a ação ao lado. */
 .record-empty { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-3) 0; }
 .record-empty > .icon-tile { --tone: var(--tone-slate); }

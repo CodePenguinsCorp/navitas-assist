@@ -14,7 +14,6 @@ import { toastMessages, toastTones } from '../../testing/toast';
 const PREFERENCES: NotificationPreferenceResponse[] = [
   { eventType: 'RMA_CREATED', severity: 'INFO', enabled: true, userMutable: true, muted: false },
   { eventType: 'RMA_ASSIGNED', severity: 'INFO', enabled: true, userMutable: true, muted: true },
-  { eventType: 'PART_PENDING', severity: 'WARNING', enabled: false, userMutable: true, muted: false },
   { eventType: 'TEST_FAILED', severity: 'CRITICAL', enabled: true, userMutable: false, muted: true },
   { eventType: 'RMA_BLOCKED', severity: 'WARNING', enabled: true, userMutable: false, muted: false }
 ];
@@ -89,7 +88,7 @@ describe('NotificationsComponent preferences', () => {
   it('labels each preference with one of four states', async () => {
     await setup();
     openPreferences();
-    expect(column('Situação')).toEqual(['Recebendo', 'Silenciado', 'Desligado', 'Obrigatório', 'Obrigatório']);
+    expect(column('Situação')).toEqual(['Recebendo', 'Silenciado', 'Obrigatório', 'Obrigatório']);
   });
 
   // Cada alerta silenciável tem um interruptor nomeado pelo alerta; ligado = recebendo.
@@ -104,7 +103,7 @@ describe('NotificationsComponent preferences', () => {
     expect(toggle(1)!.checked).toBe(false);
     // Preservação: linhas obrigatórias não têm interruptor nem botão.
     expect(toggle(3)).toBeNull();
-    expect(toggle(4)).toBeNull();
+    expect(toggle(2)).toBeNull();
     expect(rows[3].querySelector('button')).toBeNull();
   });
 
@@ -209,9 +208,9 @@ describe('NotificationsComponent preferences', () => {
 
   describe('preservation', () => {
     it('keeps the mute action for a disabled preference that users may mute', async () => {
-      await setup();
+      await setup({ preferences: [of(PREFERENCES.map((p, i) => i === 0 ? { ...p, enabled: false } : p))] });
       openPreferences();
-      expect(Array.from(root().querySelectorAll('tbody tr'))[2].querySelector('input.switch')).not.toBeNull();
+      expect(Array.from(root().querySelectorAll('tbody tr'))[0].querySelector('input.switch')).not.toBeNull();
       expect(text()).toContain('Desligar vale para App e E-mail.');
     });
 

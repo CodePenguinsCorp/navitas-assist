@@ -25,7 +25,7 @@ Corrija a família, não o caso: ao mexer em um bloco, procure todos os usos del
 | `.form-actions` | `styles.css` | Ações finais: Cancelar (neutro) à esquerda do principal, alinhadas à direita. |
 | `.catalog-toolbar`, `.search-field`, `.filter-field`, `.kanban-filters__bar` | `styles.css` | Barra de busca e filtros. |
 | `app-collapsible-section` | `shared/` | Seção recolhível de cartão de detalhe. |
-| `.record-rows`, `.record-row`, `.record-stats`, `.record-fields`, `.record-empty` | `styles.css` | Cartão de registro (reserva, componente, intervenção, movimento, impedimento). |
+| `.record-rows`, `.record-row`, `.record-stats`, `.record-fields`, `.record-empty` | `styles.css` | Cartão de registro (uso de peça, componente, intervenção, movimento, impedimento). |
 | `button[appRowAction]` | `shared/row-action` | Ação de linha ou cabeçalho em ícone. |
 | `.status-chip`, `.mini-chip`, `.tone-chip`, `.count-badge`, `.warranty-tag`, `.priority-tag` | `styles.css`, `core/utils/rma-ui.ts` | Chips. Famílias do catálogo, ver padroes-visuais 3.2. |
 | `.empty-state` e `.icon-tile` | `styles.css` | Vazio, erro de carga. |
@@ -156,7 +156,7 @@ Toda página que não é item de menu usa a **seta de voltar** no cabeçalho, à
 
 ### 3.12 Cartão de registro
 
-`.record-row` dentro de `.record-rows`: borda de 1 px em `--record-line` (a `--line` clareada, sempre mais leve que a borda do painel que o contém, para não virar caixa dentro de caixa), raio `--radius-md`, fundo `--surface`, padding `--space-4`, **sem sombra** em repouso. Cartões com tom (`tone-*`) mantêm a barra de acento de 3 px à esquerda por dentro do raio. Espaço entre cartões por `gap` (`--space-3`), sem divisória. Vale para reservas, componentes, intervenções, impedimentos, histórico geral e histórico de movimentos de peças. Sombra só no hover de cartão clicável.
+`.record-row` dentro de `.record-rows`: borda de 1 px em `--record-line` (a `--line` clareada, sempre mais leve que a borda do painel que o contém, para não virar caixa dentro de caixa), raio `--radius-md`, fundo `--surface`, padding `--space-4`, **sem sombra** em repouso. Cartões com tom (`tone-*`) mantêm a barra de acento de 3 px à esquerda por dentro do raio. Espaço entre cartões por `gap` (`--space-3`), sem divisória. Vale para usos de peças, componentes, intervenções, impedimentos, histórico geral e histórico de movimentos de peças. Sombra só no hover de cartão clicável.
 
 ## 4. Estados
 

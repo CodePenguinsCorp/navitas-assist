@@ -1,35 +1,26 @@
 import { IconName } from '../../shared/icon/icon.component';
-import { ManualPartMovementType, PartMovementResponse, PartMovementType, PartReservationStatus } from '../models';
+import { ManualPartMovementType, PartMovementResponse, PartMovementType, PartUsageStatus } from '../models';
 
 export const PART_MOVEMENT_LABELS: Record<PartMovementType, string> = {
   ENTRY: 'Entrada',
   EXIT: 'Saída',
   ADJUSTMENT: 'Ajuste',
-  RESERVATION: 'Reserva',
-  RESERVATION_CANCEL: 'Cancelamento de reserva',
-  CONSUMPTION: 'Aplicação',
+  CONSUMPTION: 'Uso',
   REVERSAL: 'Reversão'
 };
 
 export const MANUAL_MOVEMENT_TYPES: ManualPartMovementType[] = ['ENTRY', 'EXIT', 'ADJUSTMENT'];
 
-export const PART_RESERVATION_STATUS_LABELS: Record<PartReservationStatus, string> = {
-  PENDING: 'Pendente',
-  ACTIVE: 'Reservada',
-  CONSUMED: 'Aplicada',
-  CANCELLED: 'Cancelada',
-  REVERSED: 'Revertida'
+export const PART_USAGE_STATUS_LABELS: Record<PartUsageStatus, string> = {
+  USED: 'Usada',
+  REVERTED: 'Uso desfeito'
 };
 
 const REVERSIBLE_MOVEMENT_TYPES: PartMovementType[] = ['ENTRY', 'EXIT', 'ADJUSTMENT', 'CONSUMPTION'];
 
-export function reservationStatusClass(status: PartReservationStatus): string {
+export function usageStatusClass(status: PartUsageStatus): string {
   switch (status) {
-    case 'ACTIVE':
-      return 'priority-low';
-    case 'PENDING':
-      return 'warranty-alert';
-    case 'CONSUMED':
+    case 'USED':
       return 'warranty-ok';
     default:
       return 'warranty-off';
@@ -40,8 +31,6 @@ const MOVEMENT_TYPE_TONES: Record<PartMovementType, string> = {
   ENTRY: 'tone-success',
   EXIT: 'tone-danger',
   ADJUSTMENT: 'tone-warning',
-  RESERVATION: 'tone-sky',
-  RESERVATION_CANCEL: 'tone-slate',
   CONSUMPTION: 'tone-violet',
   REVERSAL: 'tone-slate'
 };
@@ -53,14 +42,13 @@ export function movementTypeTone(type: PartMovementType): string {
 
 export interface MovementChange {
   amount: string;
-  label: 'em estoque' | 'reservado';
+  label: 'em estoque';
 }
 
 /** Signed changes the movement made; a movement that changed nothing still shows "0 em estoque". */
-export function movementChanges(movement: Pick<PartMovementResponse, 'onHandChange' | 'reservedChange'>): MovementChange[] {
+export function movementChanges(movement: Pick<PartMovementResponse, 'onHandChange'>): MovementChange[] {
   const changes: MovementChange[] = [];
   if (movement.onHandChange !== 0) changes.push({ amount: formatSignedQuantity(movement.onHandChange), label: 'em estoque' });
-  if (movement.reservedChange !== 0) changes.push({ amount: formatSignedQuantity(movement.reservedChange), label: 'reservado' });
   return changes.length ? changes : [{ amount: formatSignedQuantity(0), label: 'em estoque' }];
 }
 
@@ -86,8 +74,6 @@ export function movementTypeIcon(type: PartMovementType): IconName {
     case 'ENTRY': return 'plus';
     case 'EXIT': return 'logout';
     case 'ADJUSTMENT': return 'move';
-    case 'RESERVATION': return 'box';
-    case 'RESERVATION_CANCEL': return 'close';
     case 'CONSUMPTION': return 'wrench';
     case 'REVERSAL': return 'undo';
   }

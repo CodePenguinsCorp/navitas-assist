@@ -14,11 +14,6 @@
         <span>Abaixo do mínimo</span>
         <strong>{{ belowMinimumCount() }}</strong>
       </li>
-      <li class="page-summary__item" [class.tone-warning]="pending().length > 0" appTip="Reservas ainda não aplicadas nem canceladas">
-        <app-icon name="clock" [size]="16" />
-        <span>Reservas pendentes</span>
-        <strong>{{ pending().length }}</strong>
-      </li>
       <li class="page-summary__item tone-success" appTip="Saldo × custo unitário atual">
         <app-icon name="box" [size]="16" />
         <span>Valor em estoque</span>
@@ -58,7 +53,7 @@
           <section class="empty-state">
             <span class="icon-tile tone-slate"><app-icon name="inbox" [size]="20" /></span>
             <h3>Nenhuma peça cadastrada</h3>
-            <p>Cadastre peças de reposição para reservá-las nas ordens de serviço.</p>
+            <p>Cadastre peças para usar nas ordens de serviço.</p>
           </section>
         } @else if (filteredParts().length === 0) {
           <section class="empty-state">
@@ -75,8 +70,6 @@
                   <th>Nome / Código</th>
                   <th>Localização</th>
                   <th>Em estoque</th>
-                  <th>Reservado</th>
-                  <th>Disponível</th>
                   <th>Mínimo</th>
                   <th>Custo unitário</th>
                   <th class="table-actions-col">Ações</th>
@@ -95,10 +88,8 @@
                       }
                     </td>
                     <td>{{ part.location || 'Não informada' }}</td>
-                    <td>{{ quantity(part.onHand, part.unit) }}</td>
-                    <td>{{ quantity(part.reserved, part.unit) }}</td>
                     <td class="stock-cell">
-                      <strong>{{ quantity(part.available, part.unit) }}</strong>
+                      <strong>{{ quantity(part.onHand, part.unit) }}</strong>
                       <span class="meter" [class.tone-danger]="part.belowMinimum" [class.tone-success]="!part.belowMinimum" [appTip]="'Mínimo ' + quantity(part.minimumStock, part.unit)" aria-hidden="true"><span [style.width.%]="stockPercent(part)"></span></span>
                     </td>
                     <td>{{ quantity(part.minimumStock, part.unit) }}</td>
@@ -124,7 +115,7 @@
       <article class="table-card table-card--list panel">
         <h3>Alerta de reposição</h3>
         @if (replenishment().length === 0) {
-          <p>Nenhuma peça abaixo do mínimo ou com reserva pendente.</p>
+          <p>Nenhuma peça abaixo do mínimo.</p>
         } @else {
           <div class="table-wrap">
             <table>
@@ -132,9 +123,8 @@
                 <tr>
                   <th>Nome / Código</th>
                   <th>Localização</th>
-                  <th>Disponível</th>
+                  <th>Em estoque</th>
                   <th>Mínimo</th>
-                  <th>Pendente em ordens de serviço</th>
                   <th>Sugestão de compra</th>
                 </tr>
               </thead>
@@ -143,9 +133,8 @@
                   <tr>
                     <td><strong class="table-title">{{ item.name }}</strong><span class="table-subtitle code-text">{{ item.code }}</span></td>
                     <td>{{ item.location || 'Sem localização' }}</td>
-                    <td>{{ quantity(item.available, item.unit) }}</td>
+                    <td>{{ quantity(item.onHand, item.unit) }}</td>
                     <td>{{ quantity(item.minimumStock, item.unit) }}</td>
-                    <td>{{ quantity(item.pendingQuantity, item.unit) }}</td>
                     <td><strong>{{ quantity(item.suggestedQuantity, item.unit) }}</strong></td>
                   </tr>
                 }
@@ -155,39 +144,6 @@
         }
       </article>
 
-      <article class="table-card table-card--list panel">
-        <h3>Peças pendentes por OS</h3>
-        @if (pending().length === 0) {
-          <p>Nenhuma reserva aguardando saldo.</p>
-        } @else {
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>OS</th>
-                  <th>Nome / Código</th>
-                  <th>Localização</th>
-                  <th>Quantidade</th>
-                  <th>Disponível</th>
-                  <th>Solicitada em</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (reservation of pending(); track reservation.id) {
-                  <tr>
-                    <td><span class="code-text">{{ reservation.rmaCode }}</span></td>
-                    <td><strong class="table-title">{{ reservation.partName }}</strong><span class="table-subtitle code-text">{{ reservation.partCode }}</span></td>
-                    <td>{{ reservation.location || 'Sem localização' }}</td>
-                    <td>{{ quantity(reservation.quantity, reservation.unit) }}</td>
-                    <td>{{ quantity(reservation.partAvailable, reservation.unit) }}</td>
-                    <td>{{ dateTime(reservation.createdAt) }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        }
-      </article>
     }
   }
 </section>
@@ -307,8 +263,6 @@
         <span class="record-row__code code-text">{{ part.code }}</span>
         <dl class="record-stats record-stats--compact">
           <div><dt>Em estoque</dt><dd>{{ quantity(part.onHand, part.unit) }}</dd></div>
-          <div><dt>Reservado</dt><dd>{{ quantity(part.reserved, part.unit) }}</dd></div>
-          <div><dt>Disponível</dt><dd>{{ quantity(part.available, part.unit) }}</dd></div>
         </dl>
       </div>
 
@@ -342,10 +296,8 @@
           @if (movementPreview(); as preview) {
             <dl>
               <div><dt>Em estoque</dt><dd>{{ transition(preview.onHandBefore, preview.onHandAfter, part.unit) }}</dd></div>
-              <div><dt>Reservado</dt><dd>{{ transition(preview.reserved, preview.reserved, part.unit) }}</dd></div>
-              <div class="movement-preview__available"><dt>Disponível</dt><dd>{{ transition(preview.availableBefore, preview.availableAfter, part.unit) }}</dd></div>
             </dl>
-            @if (preview.availableAfter < 0) { <p class="field-error">Saldo disponível insuficiente.</p> }
+            @if (preview.onHandAfter < 0) { <p class="field-error">Estoque insuficiente.</p> }
             <p>Saldo confirmado ao registrar.</p>
           } @else {
             <p>Informe uma quantidade válida.</p>
@@ -410,7 +362,6 @@
                   @if (movement.rmaCode) { <div><dt>Ordem de serviço</dt><dd><span class="code-text">{{ movement.rmaCode }}</span></dd></div> }
                   @if (movement.reversedMovementId) { <div><dt>Reverte o movimento</dt><dd>{{ movement.reversedMovementId }}</dd></div> }
                   <div><dt>Estoque</dt><dd>{{ transition(movement.onHandAfter - movement.onHandChange, movement.onHandAfter, part.unit) }}</dd></div>
-                  <div><dt>Reservado</dt><dd>{{ transition(movement.reservedAfter - movement.reservedChange, movement.reservedAfter, part.unit) }}</dd></div>
                   @if (movement.reason) { <div class="is-wide"><dt>Motivo</dt><dd>{{ movement.reason }}</dd></div> }
                 </dl>
               </div>

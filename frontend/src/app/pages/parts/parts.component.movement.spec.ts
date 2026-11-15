@@ -11,12 +11,11 @@ import { PartsComponent } from './parts.component';
 
 const PART: PartResponse = {
   id: 4, code: 'PCA-1', name: 'Capacitor', unit: 'm', location: 'A1', minimumStock: 8, unitCost: 10,
-  onHand: 10, reserved: 4, available: 6, belowMinimum: true, active: true,
+  onHand: 10, belowMinimum: true, active: true,
 };
 const MOVEMENT: PartMovementResponse = {
   id: 9, partId: 4, partCode: 'PCA-1', partName: 'Capacitor', type: 'EXIT', quantity: 1.5,
-  onHandChange: -1.5, reservedChange: 0, onHandAfter: 8.5, reservedAfter: 4, 
-  rmaCode: null, reversedMovementId: null, reversed: false,
+  onHandChange: -1.5, onHandAfter: 8.5, rmaCode: null, reversedMovementId: null, reversed: false,
   reason: null, createdBy: 'desk', createdAt: '2026-10-24T12:00:00Z'
 };
 interface Harness {
@@ -39,8 +38,7 @@ describe('PartsComponent stock movement', () => {
 
   async function setup(request = of(MOVEMENT)) {
     service = {
-      list: vi.fn(() => of([PART])), listReplenishment: vi.fn(() => of([])), listPending: vi.fn(() => of([])),
-      registerMovement: vi.fn(() => request)
+      list: vi.fn(() => of([PART])), listReplenishment: vi.fn(() => of([])), registerMovement: vi.fn(() => request)
     };
     await TestBed.configureTestingModule({ imports: [PartsComponent], providers: [
       { provide: PartService, useValue: service },
@@ -71,20 +69,17 @@ describe('PartsComponent stock movement', () => {
     expect(text(summary.querySelector('strong'))).toBe('Capacitor');
     expect(text(summary.querySelector('.code-text'))).toBe('PCA-1');
     const facts = new Map(Array.from(summary.querySelectorAll('dt')).map((label) => [text(label), text(label.nextElementSibling)]));
-    expect(facts.get('Em estoque')).toBe('10 m'); expect(facts.get('Reservado')).toBe('4 m'); expect(facts.get('Disponível')).toBe('6 m');
     expect(panel()!.querySelector('textarea[formControlName="reason"]')).not.toBeNull();
     expect(panel()!.querySelector('[formControlName="type"]')!.closest('label')!.classList).toContain('field-group--required');
     expect(text(panel()!.querySelector('[formControlName="quantity"]')!.closest('label'))).toContain('Quantidade (m)');
   });
 
-  // Vermelho: a saída fracionária não apresenta estoque/disponível projetados nem reserva constante.
-  it('previews a fractional exit without changing reservations', async () => {
+  it('previews a fractional exit against stock', async () => {
     await setup(); values('EXIT', 1);
     const input = panel()!.querySelector<HTMLInputElement>('[formControlName="quantity"]')!;
     input.value = '1.5'; input.dispatchEvent(new Event('input', { bubbles: true })); fixture.detectChanges();
     const preview = text(panel()!.querySelector('.movement-preview'));
     expect(preview).toContain('Em estoque10 m → 8,5 m');
-    expect(preview).toContain('Disponível6 m → 4,5 m'); expect(preview).toContain('Reservado4 m');
     expect(preview).toContain('Saldo confirmado ao registrar.');
     expect(service['registerMovement']).not.toHaveBeenCalled();
     expect(component.movementForm.controls['quantity'].value).toBe(1.5);
@@ -92,14 +87,13 @@ describe('PartsComponent stock movement', () => {
 
   // Vermelho: entrada e ajuste assinado não atualizam uma estimativa antes/depois.
   it.each([
-    { type: 'ENTRY', quantity: 2, stock: '10 m → 12 m', available: '6 m → 8 m' },
-    { type: 'ADJUSTMENT', quantity: -2, stock: '10 m → 8 m', available: '6 m → 4 m' },
-    { type: 'ADJUSTMENT', quantity: 2, stock: '10 m → 12 m', available: '6 m → 8 m' }
-  ] as const)('updates the estimate for $type $quantity', async ({ type, quantity, stock, available }) => {
+    { type: 'ENTRY', quantity: 2, stock: '10 m → 12 m', },
+    { type: 'ADJUSTMENT', quantity: -2, stock: '10 m → 8 m', },
+    { type: 'ADJUSTMENT', quantity: 2, stock: '10 m → 12 m', }
+  ] as const)('updates the estimate for $type $quantity', async ({ type, quantity, stock }) => {
     await setup(); values(type, quantity, 'Inventário');
     const preview = text(panel()!.querySelector('.movement-preview'));
-    expect(preview).toContain(`Em estoque${stock}`); expect(preview).toContain(`Disponível${available}`);
-    expect(preview).toContain('Reservado4 m');
+    expect(preview).toContain(`Em estoque${stock}`);
   });
 
   // Vermelho: quantidade inválida não oferece orientação em lugar dos números projetados.
@@ -124,15 +118,15 @@ describe('PartsComponent stock movement', () => {
     values('ENTRY', 1); submit(); expect(service['registerMovement']).toHaveBeenCalledTimes(1);
   });
 
-  // Vermelho: falta explicar o disponível negativo, embora a decisão continue no servidor.
+  // Vermelho: falta explicar o estoque negativo, embora a decisão continue no servidor.
   it('explains a negative estimate and still submits to the server', async () => {
-    await setup(throwError(() => ({ error: { message: 'Saldo insuficiente' } }))); values('EXIT', 7);
-    expect(text()).toContain('Disponível6 m → -1 m');
-    expect(text()).toContain('Saldo disponível insuficiente.');
+    await setup(throwError(() => ({ error: { message: 'Saldo insuficiente' } }))); values('EXIT', 11);
+    expect(text()).toContain('Em estoque10 m → -1 m');
+    expect(text()).toContain('Estoque insuficiente.');
     expect(panel()!.querySelector<HTMLButtonElement>('[type="submit"]')!.disabled).toBe(false);
-    submit(); expect(service['registerMovement']).toHaveBeenCalledWith(4, { type: 'EXIT', quantity: 7, reason: null });
+    submit(); expect(service['registerMovement']).toHaveBeenCalledWith(4, { type: 'EXIT', quantity: 11, reason: null });
     expect(text(panel()!.querySelector('[role="alert"]'))).toContain('Saldo insuficiente');
-    expect(component.movementForm.controls['quantity'].value).toBe(7);
+    expect(component.movementForm.controls['quantity'].value).toBe(11);
   });
 
   // Vermelho: saveMovement direto repete a escrita pendente; fechar já é preservação da Tarefa 3.
@@ -158,7 +152,7 @@ describe('PartsComponent stock movement', () => {
     fixture.nativeElement.querySelector('.modal-overlay').click(); component.closeModals(); render();
     expect(currentPanel.isConnected).toBe(true); expect(service['registerMovement']).toHaveBeenCalledTimes(1);
     request.next(MOVEMENT); request.complete(); render(); expect(panel()).toBeNull();
-    for (const name of ['list', 'listReplenishment', 'listPending']) expect(service[name]).toHaveBeenCalledTimes(2);
+    for (const name of ['list', 'listReplenishment']) expect(service[name]).toHaveBeenCalledTimes(2);
   });
 
   it.each([
@@ -192,8 +186,7 @@ async function setupPartsFocus(serviceOverrides: Record<string, unknown>) {
   vi.useFakeTimers();
   await TestBed.configureTestingModule({ imports: [PartsComponent], providers: [
     { provide: PartService, useValue: {
-      list: vi.fn(() => of([PART])), listReplenishment: vi.fn(() => of([])), listPending: vi.fn(() => of([])),
-      ...serviceOverrides
+      list: vi.fn(() => of([PART])), listReplenishment: vi.fn(() => of([])), ...serviceOverrides
     } },
     providePermissions(profilePermissions('ADMIN'))
   ] }).compileComponents();

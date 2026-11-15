@@ -11,18 +11,17 @@ import { toastMessages } from '../../testing/toast';
 
 const PART: PartResponse = {
   id: 4, code: 'PCA-1', name: 'Capacitor', unit: 'm', location: 'A1', minimumStock: 8, unitCost: 10,
-  onHand: 10, reserved: 4, available: 6, belowMinimum: true, active: true,
+  onHand: 10, belowMinimum: true, active: true,
 };
 const OTHER_PART: PartResponse = { ...PART, id: 5, code: 'PCB-2', name: 'Peça B', unit: 'un' };
 const CONSUMPTION: PartMovementResponse = {
   id: 9, partId: 4, partCode: 'PCA-1', partName: 'Capacitor', type: 'CONSUMPTION', quantity: 1.5,
-  onHandChange: -1.5, reservedChange: -1.5, onHandAfter: 10, reservedAfter: 4,
-  rmaCode: 'OS-7', reversedMovementId: null, reversed: false,
+  onHandChange: -1.5, onHandAfter: 10, rmaCode: 'OS-7', reversedMovementId: null, reversed: false,
   reason: 'Peça instalada', createdBy: 'tech', createdAt: '2026-10-24T12:00:00Z'
 };
 const REVERSAL: PartMovementResponse = {
-  ...CONSUMPTION, id: 10, type: 'REVERSAL', onHandChange: 1.5, reservedChange: 0, onHandAfter: 11.5,
-  reservedAfter: 4, reversedMovementId: 9, reason: 'Peça não utilizada', createdBy: 'desk'
+  ...CONSUMPTION, id: 10, type: 'REVERSAL', onHandChange: 1.5, onHandAfter: 11.5,
+  reversedMovementId: 9, reason: 'Peça não utilizada', createdBy: 'desk'
 };
 interface Harness {
   openHistory(part: PartResponse): void;
@@ -50,8 +49,7 @@ describe('PartsComponent movement history', () => {
     role?: LegacyProfileCode; movements?: (id: number) => Observable<PartMovementResponse[]>; reverse?: Observable<PartMovementResponse>;
   } = {}) {
     service = {
-      list: vi.fn(() => of([PART, OTHER_PART])), listReplenishment: vi.fn(() => of([])), listPending: vi.fn(() => of([])),
-      listMovements: vi.fn(movements), reverseMovement: vi.fn(() => reverse), reserve: vi.fn(), updateReservation: vi.fn()
+      list: vi.fn(() => of([PART, OTHER_PART])), listReplenishment: vi.fn(() => of([])), listMovements: vi.fn(movements), reverseMovement: vi.fn(() => reverse),
     };
     await TestBed.configureTestingModule({ imports: [PartsComponent], providers: [
       { provide: PartService, useValue: service },
@@ -79,7 +77,7 @@ describe('PartsComponent movement history', () => {
   it('identifies the movement and opens its reason field inside the movement item', async () => {
     await setup(); start();
     expect(text(confirmation())).toContain('Reverter movimento 9');
-    for (const value of ['Aplicação', '24/10/2026', 'PCA-1', 'Capacitor', 'O movimento original será mantido.']) expect(text(confirmation())).toContain(value);
+    for (const value of ['Uso', '24/10/2026', 'PCA-1', 'Capacitor', 'O movimento original será mantido.']) expect(text(confirmation())).toContain(value);
     const input = confirmation()!.querySelector<HTMLInputElement>('input')!;
     const label = confirmation()!.querySelector<HTMLLabelElement>('label')!;
     expect(text(label)).toContain('Motivo da reversão'); expect(label.control).toBe(input);
@@ -178,30 +176,30 @@ describe('PartsComponent movement history', () => {
     expect(panel()!.querySelector('table')).toBeNull();
     const [item] = items();
     const chip = item.querySelector('.movement-item__type')!;
-    expect(text(chip)).toBe('Aplicação'); expect(chip.classList).toContain('mini-chip'); expect(chip.classList).toContain('tone-violet');
+    expect(text(chip)).toBe('Uso'); expect(chip.classList).toContain('mini-chip'); expect(chip.classList).toContain('tone-violet');
     const time = item.querySelector('time')!;
     expect(time.getAttribute('datetime')).toBe('2026-10-24T12:00:00Z'); expect(text(time)).toBe('24/10/2026, 09:00');
-    expect(text(item.querySelector('.record-row__title'))).toBe('Aplicação de 1,5 m');
+    expect(text(item.querySelector('.record-row__title'))).toBe('Uso de 1,5 m');
     expect(item.classList).toContain('record-row');
     expect(item.querySelector('.icon-tile app-icon')).not.toBeNull();
 
-    expect(text(item.querySelector('.record-fields'))).toBe('Registrado24/10/2026, 09:00, techOrdem de serviçoOS-7Estoque11,5 m → 10 mReservado5,5 m → 4 mMotivoPeça instalada');
+    expect(text(item.querySelector('.record-fields'))).toBe('Registrado24/10/2026, 09:00, techOrdem de serviçoOS-7Estoque11,5 m → 10 mMotivoPeça instalada');
     expect(text(item.querySelector('.record-fields .code-text'))).toBe('OS-7');
   });
 
   it('omits the empty OS and reason, and shows only the balance that changed', async () => {
-    await setup({ movements: () => of([{ ...CONSUMPTION, type: 'ENTRY', quantity: 20, onHandChange: 20, reservedChange: 0, onHandAfter: 20, reservedAfter: 0, rmaCode: null, reason: null }]) });
+    await setup({ movements: () => of([{ ...CONSUMPTION, type: 'ENTRY', quantity: 20, onHandChange: 20, onHandAfter: 20, rmaCode: null, reason: null }]) });
     const [item] = items();
     expect(item.querySelector('.movement-item__type')!.classList).toContain('tone-success');
     expect(text(item.querySelector('.record-row__title'))).toBe('Entrada de 20 m');
-    expect(text(item.querySelector('.record-fields'))).toBe('Registrado24/10/2026, 09:00, techEstoque0 m → 20 mReservado0 m');
+    expect(text(item.querySelector('.record-fields'))).toBe('Registrado24/10/2026, 09:00, techEstoque0 m → 20 m');
   });
 
   it('offers Reverter as a named icon action', async () => {
     await setup();
     const action = items()[0].querySelector<HTMLButtonElement>('button[data-reverse="9"]')!;
     expect(action.classList).toContain('row-action');
-    expect(action.getAttribute('aria-label')).toBe('Reverter movimento 9 Aplicação 24/10/2026, 09:00');
+    expect(action.getAttribute('aria-label')).toBe('Reverter movimento 9 Uso 24/10/2026, 09:00');
     expect(action.disabled).toBe(false);
   });
 
@@ -220,12 +218,12 @@ describe('PartsComponent movement history', () => {
     component.confirmReversal(CONSUMPTION); render();
     expect(service['reverseMovement']).toHaveBeenCalledWith(9, 'Peça não utilizada');
     expect(service['listMovements']).toHaveBeenCalledTimes(2); expect(service['listMovements']).toHaveBeenLastCalledWith(4);
-    for (const name of ['list', 'listReplenishment', 'listPending']) expect(service[name]).toHaveBeenCalledTimes(2);
+    for (const name of ['list', 'listReplenishment']) expect(service[name]).toHaveBeenCalledTimes(2);
     expect(text()).toContain('Revertida'); expect(text()).toContain('Reverte o movimento9');
     expect(items().map((row) => text(row))).toEqual([
       expect.stringContaining('Peça instalada'), expect.stringContaining('Peça não utilizada')
     ]);
-    expect(button('Reverter')).toBeUndefined(); expect(service['reserve']).not.toHaveBeenCalled(); expect(service['updateReservation']).not.toHaveBeenCalled();
+    expect(button('Reverter')).toBeUndefined();
   });
 
   it('preserves a genuine empty history after a successful read', async () => {
@@ -242,12 +240,11 @@ describe('PartsComponent movement history', () => {
 
   it('preserves eligibility and the absence of edit or delete actions', async () => {
     await setup({ movements: () => of([
-      { ...CONSUMPTION, id: 1, type: 'RESERVATION' }, { ...CONSUMPTION, id: 2, type: 'RESERVATION_CANCEL' },
       { ...CONSUMPTION, id: 3, reversed: true }, REVERSAL,
       { ...CONSUMPTION, id: 4, type: 'ENTRY' }, { ...CONSUMPTION, id: 5, type: 'EXIT' },
       { ...CONSUMPTION, id: 6, type: 'ADJUSTMENT' }, CONSUMPTION
     ]) });
-    expect(items().map((row) => Boolean(button('Reverter', row)))).toEqual([false, false, false, false, true, true, true, true]);
+    expect(items().map((row) => Boolean(button('Reverter', row)))).toEqual([false, false, true, true, true, true]);
     expect(button('Editar')).toBeUndefined(); expect(button('Excluir')).toBeUndefined();
   });
 
@@ -271,8 +268,7 @@ async function setupPartsFocus(serviceOverrides: Record<string, unknown>) {
   vi.useFakeTimers();
   await TestBed.configureTestingModule({ imports: [PartsComponent], providers: [
     { provide: PartService, useValue: {
-      list: vi.fn(() => of([PART])), listReplenishment: vi.fn(() => of([])), listPending: vi.fn(() => of([])),
-      ...serviceOverrides
+      list: vi.fn(() => of([PART])), listReplenishment: vi.fn(() => of([])), ...serviceOverrides
     } },
     providePermissions(profilePermissions('ADMIN'))
   ] }).compileComponents();

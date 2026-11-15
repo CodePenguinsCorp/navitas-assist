@@ -1,21 +1,16 @@
 import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
-import { PartReplenishmentResponse, PartReservationResponse, PartResponse } from '../../core/models';
+import { PartReplenishmentResponse, PartResponse } from '../../core/models';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { PartService } from '../../core/services/part.service';
 import { PartsComponent } from './parts.component';
 
 const PART: PartResponse = {
   id: 4, code: 'PCA-1', name: 'Capacitor', unit: 'm', location: 'A1', minimumStock: 8, unitCost: 10,
-  onHand: 10, reserved: 4, available: 6, belowMinimum: true, active: true,
+  onHand: 10, belowMinimum: true, active: true,
 };
-const REPLENISHMENT: PartReplenishmentResponse = { ...PART, partId: PART.id, pendingQuantity: 3, suggestedQuantity: 5 };
-const PENDING: PartReservationResponse = {
-  id: 2, rmaId: 7, rmaCode: 'OS-7', partId: 4, partCode: 'PCA-1', partName: 'Capacitor', unit: 'm', location: 'A1',
-  quantity: 3, status: 'PENDING', partAvailable: 6, unitCost: 10, totalCost: 30, note: null, createdBy: 'tech',
-  createdAt: '2026-10-24T12:00:00Z', updatedAt: '2026-10-24T12:00:00Z'
-};
+const REPLENISHMENT: PartReplenishmentResponse = { ...PART, partId: PART.id, suggestedQuantity: 5 };
 
 type Harness = { [K in 'openCreateModal' | 'closeModals' | 'savePart' | 'retryLoad']: () => void } & {
   openEditModal(part: PartResponse): void;
@@ -24,7 +19,7 @@ type Harness = { [K in 'openCreateModal' | 'closeModals' | 'savePart' | 'retryLo
 describe('PartsComponent snapshot loading', () => {
   let fixture: ComponentFixture<PartsComponent>;
   let component: Harness;
-  let service: { list: ReturnType<typeof vi.fn>; listReplenishment: ReturnType<typeof vi.fn>; listPending: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+  let service: { list: ReturnType<typeof vi.fn>; listReplenishment: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
   const root = (): HTMLElement => fixture.nativeElement.querySelector('.page-surface');
   const text = () => {
     const snapshot = root().cloneNode(true) as HTMLElement;
@@ -42,11 +37,10 @@ describe('PartsComponent snapshot loading', () => {
     return input;
   };
 
-  async function setup(sources: { role?: LegacyProfileCode; parts?: Observable<PartResponse[]>; replenishment?: Observable<PartReplenishmentResponse[]>; pending?: Observable<PartReservationResponse[]> } = {}) {
+  async function setup(sources: { role?: LegacyProfileCode; parts?: Observable<PartResponse[]>; replenishment?: Observable<PartReplenishmentResponse[]> } = {}) {
     service = {
       list: vi.fn(() => sources.parts ?? of([PART])),
       listReplenishment: vi.fn(() => sources.replenishment ?? of([REPLENISHMENT])),
-      listPending: vi.fn(() => sources.pending ?? of([PENDING])),
       update: vi.fn(() => of(PART))
     };
     await TestBed.configureTestingModule({ imports: [PartsComponent], providers: [
@@ -60,34 +54,32 @@ describe('PartsComponent snapshot loading', () => {
 
   // Vermelho: Reposição apresenta vazios e contagem zero enquanto as três fontes estão pendentes.
   it('never reports empty replenishment before the first response', async () => {
-    await setup({ parts: new Subject(), replenishment: new Subject(), pending: new Subject() });
+    await setup({ parts: new Subject(), replenishment: new Subject() });
     tab('Reposição');
     expectPending(root());
     expect(text()).not.toContain('Nenhuma peça abaixo do mínimo');
-    expect(text()).not.toContain('Nenhuma reserva aguardando saldo');
     expect(text()).not.toContain('R$');
     expect(button('Reposição (0)')).toBeUndefined();
   });
 
   // Vermelho: a falha mantém dados ou vazio no corpo em vez de um estado de erro recuperável.
   it.each([false, true])('hides both stale stock and empty results during refresh (empty=%s)', async (empty) => {
-    await setup(empty ? { parts: of([]), replenishment: of([]), pending: of([]) } : {});
+    await setup(empty ? { parts: of([]), replenishment: of([]) } : {});
     service.list.mockReturnValue(new Subject<PartResponse[]>());
     refresh();
     for (const label of ['Estoque', 'Reposição']) {
       tab(label);
       expectPending(root());
       expect(root().querySelector('table, .empty-state')).toBeNull();
-      expect(text()).not.toMatch(/Capacitor|Nenhuma peça cadastrada|Nenhuma reserva aguardando saldo/);
     }
   });
 
-  it.each((['list', 'listReplenishment', 'listPending'] as const).flatMap((source) => ['initial', 'data', 'empty'].map((previous) => ({ source, previous }))))('replaces both tabs after $source fails ($previous)', async ({ source, previous }) => {
+  it.each((['list', 'listReplenishment'] as const).flatMap((source) => ['initial', 'data', 'empty'].map((previous) => ({ source, previous }))))('replaces both tabs after $source fails ($previous)', async ({ source, previous }) => {
     const failure = throwError(() => new Error());
     if (previous === 'initial') {
-      await setup({ parts: source === 'list' ? failure : of([]), replenishment: source === 'listReplenishment' ? failure : of([]), pending: source === 'listPending' ? failure : of([]) });
+      await setup({ parts: source === 'list' ? failure : of([]), replenishment: source === 'listReplenishment' ? failure : of([]) });
     } else {
-      await setup({ parts: of(previous === 'data' ? [PART] : []), replenishment: of(previous === 'data' ? [REPLENISHMENT] : []), pending: of(previous === 'data' ? [PENDING] : []) });
+      await setup({ parts: of(previous === 'data' ? [PART] : []), replenishment: of(previous === 'data' ? [REPLENISHMENT] : []) });
       service[source].mockReturnValue(failure);
       refresh();
     }
@@ -96,7 +88,6 @@ describe('PartsComponent snapshot loading', () => {
       expect(text()).toContain('Não foi possível carregar as peças.');
       expect(text()).not.toContain('Nenhuma peça cadastrada');
       expect(text()).not.toContain('Nenhuma peça abaixo do mínimo');
-      expect(text()).not.toContain('Nenhuma reserva aguardando saldo');
       expect(text()).not.toContain('Capacitor');
       expect(text()).not.toContain('R$');
     }
@@ -115,19 +106,17 @@ describe('PartsComponent snapshot loading', () => {
     await setup({ parts: throwError(() => new Error()) });
     const parts = new Subject<PartResponse[]>();
     const replenishment = new Subject<PartReplenishmentResponse[]>();
-    const pending = new Subject<PartReservationResponse[]>();
-    service.list.mockReturnValue(parts); service.listReplenishment.mockReturnValue(replenishment); service.listPending.mockReturnValue(pending);
+    service.list.mockReturnValue(parts); service.listReplenishment.mockReturnValue(replenishment);
     button('Tentar novamente')?.click(); render();
     parts.next([PART]); parts.complete(); render();
     expect(button('Tentar novamente')?.disabled).toBe(true);
     expect(text()).toContain('Não foi possível carregar as peças.');
     expect(text()).not.toContain('Capacitor');
     replenishment.next([REPLENISHMENT]); replenishment.complete(); render();
-    expect(text()).not.toContain('Capacitor');
-    pending.next([PENDING]); pending.complete(); render();
+
     expect(text()).toContain('Capacitor');
     expect(text()).not.toContain('Tentar novamente');
-    for (const method of ['list', 'listReplenishment', 'listPending'] as const) expect(service[method]).toHaveBeenCalledTimes(2);
+    for (const method of ['list', 'listReplenishment'] as const) expect(service[method]).toHaveBeenCalledTimes(2);
   });
 
   // Vermelho: uma resposta antiga pode sobrescrever a recarga mais recente.
@@ -171,26 +160,24 @@ describe('PartsComponent snapshot loading', () => {
   it('preserves immediate code, name and location search and tab changes without HTTP', async () => {
     await setup();
     for (const query of ['PCA-1', 'capacitor', 'a1']) { search(query); expect(text()).toContain('Capacitor'); }
-    tab('Reposição'); expect(text()).toContain('OS-7'); tab('Estoque');
-    for (const method of ['list', 'listReplenishment', 'listPending'] as const) expect(service[method]).toHaveBeenCalledTimes(1);
+    tab('Reposição'); expect(text()).toContain('Capacitor'); tab('Estoque');
+    for (const method of ['list', 'listReplenishment'] as const) expect(service[method]).toHaveBeenCalledTimes(1);
   });
 
   it('preserves atomic publication on the first successful load', async () => {
     const parts = new Subject<PartResponse[]>();
     const replenishment = new Subject<PartReplenishmentResponse[]>();
-    const pending = new Subject<PartReservationResponse[]>();
-    await setup({ parts, replenishment, pending });
+    await setup({ parts, replenishment });
     parts.next([PART]); parts.complete(); render(); expect(text()).not.toContain('Capacitor');
-    replenishment.next([REPLENISHMENT]); replenishment.complete(); render(); expect(text()).not.toContain('Capacitor');
-    pending.next([PENDING]); pending.complete(); render(); expect(text()).toContain('Capacitor');
+    replenishment.next([REPLENISHMENT]); replenishment.complete(); render();
+    expect(text()).toContain('Capacitor');
   });
 
   it.each(['ADMIN', 'VIEWER'] as LegacyProfileCode[])('preserves a real empty catalog for %s', async (role) => {
-    await setup({ role, parts: of([]), replenishment: of([]), pending: of([]) });
+    await setup({ role, parts: of([]), replenishment: of([]) });
     expect(text()).toContain('Nenhuma peça cadastrada');
     tab('Reposição');
     expect(text()).toContain('Nenhuma peça abaixo do mínimo');
-    expect(text()).toContain('Nenhuma reserva aguardando saldo');
   });
 });
 
