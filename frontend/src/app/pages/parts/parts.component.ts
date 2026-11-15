@@ -177,8 +177,8 @@ export class PartsComponent {
     name: ['', [Validators.required, Validators.maxLength(PART_LIMITS.name)]],
     unit: ['un', [Validators.required, Validators.maxLength(PART_LIMITS.unit)]],
     location: ['', [Validators.maxLength(PART_LIMITS.location)]],
-    minimumStock: [0, [Validators.required, Validators.min(0)]],
-    unitCost: [0, [Validators.required, Validators.min(0)]],
+    minimumStock: [0, [Validators.required, Validators.min(0), Validators.max(999999999.999), Validators.pattern(/^\d+(\.\d{1,3})?$/)]],
+    unitCost: [0, [Validators.required, Validators.min(0), Validators.max(9999999999.99), Validators.pattern(/^\d+(\.\d{1,2})?$/)]],
     active: [true]
   });
 
@@ -292,6 +292,10 @@ export class PartsComponent {
     }
     if (raw.type !== 'ADJUSTMENT' && raw.quantity < 0) {
       this.movementFieldErrors.set({ quantity: 'Entradas e saídas usam quantidade positiva.', reason: '' });
+      return;
+    }
+    if (!/^\d+(\.\d{1,3})?$/.test(String(Math.abs(raw.quantity))) || Math.abs(raw.quantity) > 999999999.999) {
+      this.movementFieldErrors.set({ quantity: 'Use até 3 casas decimais e no máximo 999.999.999,999.', reason: '' });
       return;
     }
     if (raw.type === 'ADJUSTMENT' && !reason) {

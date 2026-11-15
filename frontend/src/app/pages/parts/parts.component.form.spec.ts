@@ -166,6 +166,13 @@ describe('PartsComponent part form', () => {
     expect(page.textContent).toContain('Não foi possível carregar as peças.');
     expect(page.textContent).toContain('Tentar novamente');
   });
+  it.each([
+    ['minimumStock', 0.0001, false], ['minimumStock', 1000000000, false], ['minimumStock', 999999999.999, true], ['minimumStock', 0, true],
+    ['unitCost', 0.001, false], ['unitCost', 10000000000, false], ['unitCost', 9999999999.99, true], ['unitCost', 0, true]
+  ] as const)('validates %s=%s against the contract (accepted=%s)', async (field, value, accepted) => {
+    await setup(); component.form.patchValue({ [field]: value }); render(); submit();
+    expect(service['create']).toHaveBeenCalledTimes(accepted ? 1 : 0);
+  });
 });
 
 /**

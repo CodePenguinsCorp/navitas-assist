@@ -161,6 +161,14 @@ describe('PartsComponent stock movement', () => {
     expect(panel()!.querySelector('[formControlName="reason"]')!.getAttribute('maxlength')).toBe('255');
     values('ENTRY', 1, 'a'.repeat(256)); submit(); expect(service['registerMovement']).not.toHaveBeenCalled();
   });
+  it.each([
+    ['ENTRY', 1.0001, false], ['ENTRY', 1000000000, false], ['ENTRY', 999999999.999, true], ['ENTRY', 1.125, true],
+    ['EXIT', -1.125, false], ['ADJUSTMENT', -1.125, true], ['ADJUSTMENT', -1.0001, false], ['ADJUSTMENT', -1000000000, false]
+  ] as const)('validates %s quantity %s locally (accepted=%s)', async (type, quantity, accepted) => {
+    await setup(); values(type, quantity, 'Contagem'); submit();
+    expect(service['registerMovement']).toHaveBeenCalledTimes(accepted ? 1 : 0);
+    if (!accepted && Math.abs(quantity) !== 1.125) expect(text()).toContain('até 3 casas decimais');
+  });
 });
 
 /** Focus harness shared by the three parts dialogs: real triggers, Escape and the global overlay. */
