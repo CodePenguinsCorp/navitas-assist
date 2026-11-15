@@ -1,4 +1,5 @@
 import { allowsFraction, quantityError, quantityValidator } from '../../core/utils/quantity-rules';
+import { NumberStepperDirective } from '../number-stepper/number-stepper.directive';
 import { IconComponent } from '../icon/icon.component';
 import { viewChildren, Component, ElementRef, EventEmitter, Injector, Output, DestroyRef, afterNextRender, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -25,7 +26,7 @@ import { PART_UNIT_SUGGESTIONS } from '../../core/mock-data';
 
 @Component({
   selector: 'app-rma-parts-panel',
-  imports: [IconComponent, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, CollapsibleSectionComponent, ModalFocusDirective, SuggestInputComponent],
+  imports: [NumberStepperDirective, IconComponent, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, CollapsibleSectionComponent, ModalFocusDirective, SuggestInputComponent],
   templateUrl: './rma-parts-panel.component.html',
   styleUrl: './rma-parts-panel.component.css'
 })

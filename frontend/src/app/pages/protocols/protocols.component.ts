@@ -1,4 +1,5 @@
 import { ToastService } from '../../core/services/toast.service';
+import { NumberStepperDirective } from '../../shared/number-stepper/number-stepper.directive';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { SuggestInputComponent } from '../../shared/form-controls/suggest-input/suggest-input.component';
 import { Component, DestroyRef, ElementRef, Injector, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
@@ -16,7 +17,8 @@ import { PROTOCOL_ITEM_TYPE_LABELS, normalizeDecimal } from '../../core/utils/pr
 import { CustomSelectComponent, CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
-import { ResultCountComponent } from '../../shared/result-count/result-count.component';
+import { DEFAULT_PAGE_SIZE } from '../../core/utils/pagination';
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
 /** Limite de itens do contrato (ProtocolTemplateRequest). */
@@ -25,7 +27,7 @@ const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
 
 @Component({
   selector: 'app-protocols',
-  imports: [IconComponent, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PageHeaderComponent, ResultCountComponent, SuggestInputComponent],
+  imports: [NumberStepperDirective, IconComponent, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PageHeaderComponent, PaginationComponent, SuggestInputComponent],
   templateUrl: './protocols.component.html',
   styles: [`
     :host {
@@ -174,6 +176,20 @@ export class ProtocolsComponent {
   protected readonly filteredTemplates = computed(() =>
     this.templatesSignal().filter((template) => includesQuery(this.searchTerm(), template.name, template.productName, template.category))
   );
+
+  /** The list is read whole and filtered here, so the standard footer pages it locally. */
+  protected readonly pageIndex = signal(0);
+  protected readonly pageSize = signal(DEFAULT_PAGE_SIZE);
+  protected readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filteredTemplates().length / this.pageSize())));
+  protected readonly pagedTemplates = computed(() => {
+    const page = Math.min(this.pageIndex(), this.totalPages() - 1);
+    return this.filteredTemplates().slice(page * this.pageSize(), (page + 1) * this.pageSize());
+  });
+
+  protected goToPage(page: number): void { this.pageIndex.set(Math.max(0, Math.min(page, this.totalPages() - 1))); }
+
+  protected changePageSize(size: number): void { this.pageSize.set(size); this.pageIndex.set(0); }
+
 
   protected readonly form = this.formBuilder.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(120)]],
@@ -490,4 +506,5 @@ function buildTemplatePayload(raw: ReturnType<ProtocolsComponent['form']['getRaw
       };
     })
   };
+
 }

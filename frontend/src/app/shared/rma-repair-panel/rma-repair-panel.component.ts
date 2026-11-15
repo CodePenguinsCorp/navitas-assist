@@ -1,4 +1,5 @@
 import { IconComponent } from '../icon/icon.component';
+import { NumberStepperDirective } from '../number-stepper/number-stepper.directive';
 import { TipDirective } from '../tip/tip.directive';
 import { NgTemplateOutlet } from '@angular/common';
 import { viewChildren, Component, ElementRef, viewChild, EventEmitter, Injector, Output, DestroyRef, afterNextRender, computed, effect, inject, input, signal, untracked } from '@angular/core';
@@ -21,7 +22,7 @@ import { DatePickerComponent } from '../form-controls/date-picker/date-picker.co
 
 @Component({
   selector: 'app-rma-repair-panel',
-  imports: [IconComponent, TipDirective, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, SuggestInputComponent, DatePickerComponent, CollapsibleSectionComponent],
+  imports: [NumberStepperDirective, IconComponent, TipDirective, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, SuggestInputComponent, DatePickerComponent, CollapsibleSectionComponent],
   templateUrl: './rma-repair-panel.component.html'
 })
 export class RmaRepairPanelComponent {

@@ -218,8 +218,8 @@ export class RmaProtocolsComponent {
   }
 
   protected summaryLabel(execution: ProtocolExecutionResponse): string {
-    const registered = `${execution.completedItems}/${execution.totalItems} registrados`;
-    return execution.requiredItems === 0 ? `Sem obrigatórios - ${registered}` : `${this.satisfiedRequiredItems(execution)}/${execution.requiredItems} obrigatórios - ${registered}`;
+    // Short on purpose: the obrigatórios met out of the obrigatórios, or the registered ones when none is required.
+    return execution.requiredItems === 0 ? `${execution.completedItems}/${execution.totalItems}` : `${this.satisfiedRequiredItems(execution)}/${execution.requiredItems}`;
   }
 
   protected executionClass(execution: ProtocolExecutionResponse): string {

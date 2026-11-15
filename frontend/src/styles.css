@@ -3492,7 +3492,7 @@ app-rma-kanban-board .board-shell::-webkit-scrollbar-button, app-rma-kanban-boar
 
 /* Resumo clicável (.page-summary): o item vira botão que filtra a lista. Ponto discreto na cor do tom,
    estado ativo em tinta suave de marca; sem fundo saturado. O item estático continua sendo texto em linha. */
-.page-summary > li { display: contents; }
+.page-summary > li:not(.page-summary__item) { display: contents; }
 button.page-summary__item {
   min-height: var(--control-height);
   padding: 0 var(--space-3);
@@ -3542,3 +3542,14 @@ button.page-summary__item:focus-visible { outline: none; box-shadow: var(--focus
 .page-heading__title:has(.page-heading__back) { align-items: center; flex-wrap: nowrap; }
 .page-heading__back { flex-shrink: 0; text-decoration: none; --_bg: transparent; --_border: transparent; --_bg-hover: var(--brand-tint); --_border-hover: transparent; }
 .rma-details__open-kanban, a.link-button.rma-details__open-kanban:hover { display: inline-flex; align-items: center; gap: var(--space-1); text-decoration: none; }
+.protocol-form .field-group > span { color: var(--text); font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); }
+.protocol-form .field-group > small { color: var(--muted); font-size: var(--font-size-sm); }
+/* Number fields: our own up/down buttons (shared/number-stepper) replace the browser spinner. */
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.number-stepper { position: relative; display: block; min-width: 0; }
+.number-stepper > input { width: 100%; padding-right: calc(var(--space-6) + var(--space-2)); }
+.number-stepper__buttons { position: absolute; inset-block: 2px; right: 2px; display: grid; grid-template-rows: 1fr 1fr; width: var(--space-6); }
+.number-stepper__button { display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--radius-xs); background: transparent; color: var(--muted); cursor: pointer; }
+.number-stepper__button:hover { background: var(--brand-tint); color: var(--brand-blue); }
+.number-stepper:has(> input:disabled) .number-stepper__buttons { opacity: 0.4; pointer-events: none; }

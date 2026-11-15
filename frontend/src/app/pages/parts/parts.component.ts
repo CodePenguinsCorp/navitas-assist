@@ -1,4 +1,5 @@
 import { allowsFraction, quantityError, quantityValidator } from '../../core/utils/quantity-rules';
+import { NumberStepperDirective } from '../../shared/number-stepper/number-stepper.directive';
 import { ToastService } from '../../core/services/toast.service';
 import { TipDirective } from '../../shared/tip/tip.directive';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -51,7 +52,7 @@ const MOVEMENT_TYPE_OPTIONS: ReadonlyArray<CustomSelectOption<ManualPartMovement
 
 @Component({
   selector: 'app-parts',
-  imports: [TipDirective, IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PageHeaderComponent, ResultCountComponent, RowActionComponent, SuggestInputComponent],
+  imports: [NumberStepperDirective, TipDirective, IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PageHeaderComponent, ResultCountComponent, RowActionComponent, SuggestInputComponent],
   templateUrl: './parts.component.html',
   styles: [`
     :host {

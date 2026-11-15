@@ -58,7 +58,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (template of filteredTemplates(); track template.id) {
+            @for (template of pagedTemplates(); track template.id) {
               <tr>
                 <td><strong class="table-title">{{ template.name }}</strong></td>
                 <td>{{ scopeLabel(template) }}</td>
@@ -97,12 +97,9 @@
         </table>
       </div>
     }
-    <app-result-count
-      singular="protocolo"
-      plural="protocolos"
-      [count]="loadFailed() || !loaded() ? null : filteredTemplates().length"
-      [total]="searchTerm().trim() ? templates().length : null"
-    />
+    @if (loaded() && !loadFailed() && filteredTemplates().length > 0) {
+      <app-pagination singular="protocolo" plural="protocolos" [page]="pageIndex()" [size]="pageSize()" [totalElements]="filteredTemplates().length" [totalPages]="totalPages()" [shown]="pagedTemplates().length" (pageChange)="goToPage($event)" (sizeChange)="changePageSize($event)" />
+    }
   </article>
 </section>
 

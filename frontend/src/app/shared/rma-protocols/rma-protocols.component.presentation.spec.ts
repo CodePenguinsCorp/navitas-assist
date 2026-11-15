@@ -46,7 +46,7 @@ describe('RmaProtocolsComponent checklist', () => {
   it('shows version, state chip and compact progress in two short lines', async () => {
     await setup();
     expect(text()).toContain('Bancada PWM - v3'); expect(text()).toContain('Em andamento');
-    expect(text()).toContain('1/2 obrigatórios - 2/3 registrados'); expect(text()).toContain('Iniciado por tech');
+    expect(text()).toContain('1/2'); expect(text()).toContain('Iniciado por tech');
     expect(text()).not.toContain('itens registrados'); expect(text()).not.toContain('Etapa:'); expect(text()).not.toContain('Sem registro');
     const head = fixture.nativeElement.querySelector('.protocol-head') as HTMLElement;
     expect(head.querySelector('.mini-chip')?.textContent?.trim()).toBe('Em andamento');
@@ -58,7 +58,7 @@ describe('RmaProtocolsComponent checklist', () => {
 
   it('shows no bar when there are no required items', async () => {
     await setup({ ...EXECUTION, requiredItems: 0, pendingRequiredItems: 0 });
-    expect(text()).toContain('Sem obrigatórios - 2/3 registrados'); expect(fixture.nativeElement.querySelector('.protocol-progress')).toBeNull();
+    expect(text()).toContain('2/3'); expect(fixture.nativeElement.querySelector('.protocol-progress')).toBeNull();
   });
 
   it('identifica os grupos também quando existe uma única etapa', async () => {

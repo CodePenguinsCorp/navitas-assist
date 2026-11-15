@@ -95,7 +95,7 @@ describe('ProtocolsComponent', () => {
   }
 
   function count(): string | null {
-    return element().querySelector('.result-count')?.textContent?.trim() ?? null;
+    return element().querySelector('.pagination__summary')?.textContent?.replace(/\s+/g, ' ').trim() ?? null;
   }
 
   function buttonByText(label: string): HTMLButtonElement | undefined {
@@ -131,13 +131,13 @@ describe('ProtocolsComponent', () => {
     it('shows the count at the foot of the list and "X de Y" while searching', async () => {
       await setup();
 
-      expect(count()).toBe('2 protocolos');
+      expect(count()).toBe('1–2 de 2 protocolos');
       expect(element().querySelector('.search-field')?.textContent).not.toContain('registro(s)');
 
       component.updateSearch('Alfa');
       fixture.detectChanges();
 
-      expect(count()).toBe('1 de 2 protocolos');
+      expect(count()).toBe('1–1 de 1 protocolo');
       expect(rows()).toHaveLength(1);
       expect(listTemplates).toHaveBeenCalledTimes(1);
     });
@@ -278,7 +278,7 @@ describe('ProtocolsComponent', () => {
 
       expect(text()).toContain('Nenhum protocolo cadastrado');
       expect(text()).not.toContain('Nenhum protocolo encontrado');
-      expect(count()).toBe('0 protocolos');
+      expect(count()).toBeNull();
 
       expect(element().querySelector('.empty-state button')).toBeNull();
       buttonByText('Novo protocolo')!.click();
@@ -296,13 +296,13 @@ describe('ProtocolsComponent', () => {
       expect(text()).toContain('Nenhum protocolo encontrado');
       expect(text()).toContain('Ajuste a busca.');
       expect(text()).not.toContain('Nenhum protocolo cadastrado');
-      expect(count()).toBe('0 de 2 protocolos');
+      expect(count()).toBeNull();
 
       buttonByText('Limpar busca')!.click();
       fixture.detectChanges();
 
       expect(rows()).toHaveLength(2);
-      expect(count()).toBe('2 protocolos');
+      expect(count()).toBe('1–2 de 2 protocolos');
       expect((element().querySelector('.search-field input') as HTMLInputElement).value).toBe('');
     });
 
@@ -346,7 +346,7 @@ describe('ProtocolsComponent', () => {
     it('shows the failure when a reload fails after an empty success', async () => {
       await setup(() => of([]));
       expect(text()).toContain('Nenhum protocolo cadastrado');
-      expect(count()).toBe('0 protocolos');
+      expect(count()).toBeNull();
 
       listTemplates.mockImplementation(loadError);
       component.retryLoad();
@@ -362,7 +362,7 @@ describe('ProtocolsComponent', () => {
 
     it('shows a disabled loading retry without the old table or count while the retry is pending, then recovers', async () => {
       await setup();
-      expect(count()).toBe('2 protocolos');
+      expect(count()).toBe('1–2 de 2 protocolos');
       listTemplates.mockImplementation(loadError);
       component.retryLoad();
       fixture.detectChanges();
@@ -388,7 +388,7 @@ describe('ProtocolsComponent', () => {
       expect(element().querySelector('[role="alert"]')).toBeNull();
       expect(rows()).toHaveLength(1);
       expect(rows()[0].textContent).toContain('Teste de bancada');
-      expect(count()).toBe('1 protocolo');
+      expect(count()).toBe('1–1 de 1 protocolo');
     });
 
     it('recovers with Tentar novamente', async () => {
@@ -401,7 +401,7 @@ describe('ProtocolsComponent', () => {
       expect(listTemplates).toHaveBeenCalledTimes(2);
       expect(element().querySelector('[role="alert"]')).toBeNull();
       expect(rows()).toHaveLength(2);
-      expect(count()).toBe('2 protocolos');
+      expect(count()).toBe('1–2 de 2 protocolos');
     });
 
     it('não mantém aviso de sucesso fixo na página', async () => {
