@@ -1,29 +1,2 @@
 :host { display: block; min-width: 0; }
 .parts-load-error { display: grid; justify-items: start; gap: var(--space-2); margin-bottom: var(--space-3); }
-.parts-list, .parts-item, .parts-item__body { display: grid; min-width: 0; }
-.parts-list { gap: var(--space-4); }
-.parts-item, .parts-item__body { gap: var(--space-3); }
-.parts-item + .parts-item { border-top: 1px solid var(--line); padding-top: var(--space-4); }
-.parts-item__title { display: flex; align-items: start; justify-content: space-between; gap: var(--space-3); }
-.parts-item__identity { flex: 1 1 auto; display: grid; gap: var(--space-1); min-width: 0; overflow-wrap: anywhere; }
-.parts-item__identity .code-text { color: var(--muted); font-size: var(--font-size-xs); }
-.parts-item__identity strong { font-size: var(--font-size-base); line-height: var(--line-height-tight); }
-.parts-item__title .mini-chip { flex-shrink: 0; margin-left: auto; }
-.parts-item__title { align-items: center; }
-.parts-item__title > .icon-tile { margin-right: var(--space-3); }
-.parts-item { padding-left: var(--space-3); box-shadow: inset 3px 0 0 var(--tone, transparent); }
-.parts-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); margin: 0; }
-.parts-facts div { display: grid; align-content: start; gap: var(--space-1); min-width: 0; }
-.parts-facts dd { margin: 0; font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.parts-item__note { color: var(--muted); font-size: var(--font-size-sm); overflow-wrap: anywhere; }
-.parts-item__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--space-2); }
-.parts-item__actions button { min-height: var(--control-height); font-size: var(--font-size-md); }
-.parts-item__cancel { color: var(--danger-text); padding-inline: var(--space-2); }
-.parts-item__cancel:hover { background: var(--danger-bg); }
-@media (max-width: 720px) {
-  .parts-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 480px) {
-  .parts-item__title { flex-wrap: wrap; }
-  .parts-item__actions { column-gap: var(--space-1); }
-}

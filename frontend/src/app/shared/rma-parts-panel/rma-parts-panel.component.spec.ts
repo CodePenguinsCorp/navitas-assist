@@ -30,15 +30,17 @@ describe('RmaPartsPanelComponent', () => {
 
   it('separa identificação, dados e ações de cada reserva sem alterar a ordem', async () => {
     await setUp('TECHNICIAN');
-    const items = Array.from(fixture.nativeElement.querySelectorAll('.parts-item')) as HTMLElement[];
+    const items = Array.from(fixture.nativeElement.querySelectorAll('[aria-label="Reservas de peças"] > .record-row')) as HTMLElement[];
     expect(items.map(item => item.querySelector('dl')?.getAttribute('aria-label'))).toEqual([
       'Dados da reserva de PCA-1', 'Dados da reserva de PCA-1', 'Dados da reserva de PCA-1'
     ]);
     expect(items.map(item => item.querySelector('.mini-chip')?.textContent?.trim())).toEqual(['Reservada', 'Aplicada', 'Pendente']);
-    expect(items[0].querySelector('.parts-item__title strong')?.textContent?.trim()).toBe('Capacitor');
-    expect(Array.from(items[0].querySelectorAll('dt')).map(label => label.textContent)).toEqual(['Quantidade', 'Disponível', 'Custo da reserva', 'Local']);
-    expect(items[0].querySelector('.parts-item__body .parts-item__actions')).toBeNull();
-    expect(items[0].querySelector('.parts-item__actions button')?.textContent?.trim()).toBe('Cancelar reserva');
+    expect(items[0].querySelector('.record-row__title')?.textContent?.trim()).toBe('Capacitor');
+    expect(Array.from(items[0].querySelectorAll('dt')).map(label => label.textContent)).toEqual(['Quantidade', 'Disponível', 'Custo', 'Local']);
+    expect(items[0].querySelector('.record-row__main .record-row__actions')).toBeNull();
+    expect(items[0].querySelector('button[aria-label="Cancelar reserva Capacitor"]')?.classList).toContain('icon-button--danger');
+    expect(items[0].querySelector('dl')?.classList).toContain('record-stats');
+    expect(items[0].querySelector('.record-row__meta')).toBeNull();
   });
 
   async function setUp(role: LegacyProfileCode, status: 'IN_REPAIR' | 'COMPLETED' = 'IN_REPAIR'): Promise<void> {
@@ -87,9 +89,41 @@ describe('RmaPartsPanelComponent', () => {
 
     const cancel = [...fixture.nativeElement.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent?.trim() === 'Cancelar reserva') as HTMLButtonElement;
     cancel.click();
+    fixture.detectChanges();
+    expect(partService['updateReservation']).not.toHaveBeenCalled();
+    fixture.nativeElement.querySelector('[aria-label="Confirmar cancelamento da reserva"]')!.click();
     expect(partService['updateReservation']).toHaveBeenCalledWith(7, 1, 'cancel');
     expect(toastMessages()).toEqual(['Reserva cancelada e disponibilidade devolvida.']);
     expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
+  });
+
+  it('rotula a observação e permite desistir do cancelamento sem alterar a reserva', async () => {
+    await setUp('TECHNICIAN');
+    const component = fixture.componentInstance as any;
+    component.parts.set({ ...RMA_PARTS, reservations: [{ ...reservation(1, 'ACTIVE'), note: '1' }] });
+    fixture.detectChanges();
+    const root: HTMLElement = fixture.nativeElement;
+    expect(root.querySelector('.record-row__meta')?.textContent).toContain('Observação: 1');
+    root.querySelector<HTMLButtonElement>('[aria-label="Cancelar reserva Capacitor"]')!.click();
+    fixture.detectChanges();
+    root.querySelector<HTMLButtonElement>('[aria-label="Manter reserva"]')!.click();
+    fixture.detectChanges();
+    expect(root.querySelector('[aria-label="Confirmar cancelamento da reserva"]')).toBeNull();
+    expect(document.activeElement).toBe(root.querySelector('[aria-label="Cancelar reserva Capacitor"]'));
+    expect(partService['updateReservation']).not.toHaveBeenCalled();
+  });
+
+  it('devolve o foco à reserva ao desistir pelo Escape', async () => {
+    await setUp('TECHNICIAN');
+    const root: HTMLElement = fixture.nativeElement;
+    const trigger = root.querySelector<HTMLButtonElement>('[aria-label="Cancelar reserva Capacitor"]')!;
+    trigger.click(); fixture.detectChanges();
+    const cancel = root.querySelector<HTMLButtonElement>('[aria-label="Manter reserva"]')!;
+    expect(document.activeElement).toBe(cancel);
+    cancel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+    expect(document.activeElement).toBe(trigger);
+    expect(partService['updateReservation']).not.toHaveBeenCalled();
   });
 
   it('reports pending reservations when stock is insufficient', async () => {

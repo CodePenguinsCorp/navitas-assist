@@ -106,7 +106,6 @@
   --btn-icon-bg: var(--brand-tint);
   --btn-icon-bg-hover: #d9e9f7;
   --btn-icon-border: #c9dceb;
-  --btn-icon-danger-bg: #fff0f2;
   --btn-icon-danger-bg-hover: #fde0e5;
 
   /* Spacing scale. */
@@ -1791,6 +1790,9 @@ fieldset.field-group > span {
 
 .link-button:hover:not(:disabled) {
   color: var(--brand-blue-deep);
+}
+
+a.link-button:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -2373,9 +2375,9 @@ fieldset.form-section {
 }
 
 .icon-button--danger {
-  --_bg: var(--btn-icon-danger-bg);
+  --_bg: transparent;
   --_bg-hover: var(--btn-icon-danger-bg-hover);
-  --_border: var(--danger-line);
+  --_border: transparent;
   --_border-hover: var(--btn-danger-border);
   --_text: var(--btn-danger-text);
   --_text-hover: var(--btn-danger-text-hover);
@@ -3403,8 +3405,14 @@ app-custom-select:has(> .custom-select--priority) {
 .collapsible__actions .link-button { display: inline-flex; align-items: center; gap: var(--space-1); white-space: nowrap; }
 .repair-total { color: var(--muted); font-size: var(--font-size-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .repair-empty { margin: 0; padding: var(--space-2) 0; color: var(--muted); font-size: var(--font-size-sm); }
-/* Linha de registro (componentes trocados, intervenções, movimentos de peças): título, chips com significado,
-   linha secundária e ações à direita, centralizadas na altura da linha. Divisória sutil, sem caixa. */
+/* Barra do quadro no mesmo padrão dos modais, fora do orçamento de CSS do componente. */
+app-rma-kanban-board .board-shell::-webkit-scrollbar { width: 12px; height: 12px; }
+app-rma-kanban-board .board-shell::-webkit-scrollbar-track { border-radius: 999px; background: rgba(205, 220, 235, 0.65); }
+app-rma-kanban-board .board-shell::-webkit-scrollbar-thumb { border-radius: 999px; background: linear-gradient(90deg, #1c76bb 0%, #2ea8d4 100%); }
+app-rma-kanban-board .board-shell::-webkit-scrollbar-thumb:hover { background: linear-gradient(90deg, #165f98 0%, #238cb4 100%); }
+app-rma-kanban-board .board-shell::-webkit-scrollbar-button, app-rma-kanban-board .board-shell::-webkit-scrollbar-corner { display: none; width: 0; height: 0; }
+/* Linha de registro (reservas, componentes, intervenções e movimentos): título, chips,
+   linha secundária e ações à direita no topo. Divisória sutil, sem caixa. */
 .record-rows { display: grid; margin: 0; padding: 0; list-style: none; min-width: 0; }
 .record-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-3); border-radius: var(--radius-xs); box-shadow: inset 3px 0 0 var(--tone, transparent); min-width: 0; overflow-wrap: anywhere; transition: background-color 120ms ease; }
 .record-row:hover { background: var(--surface-alt); }
@@ -3424,7 +3432,7 @@ app-custom-select:has(> .custom-select--priority) {
 .record-row__desc { justify-self: start; max-width: 100%; padding: 0; border: 0; background: transparent; color: var(--text); font: inherit; font-size: var(--font-size-md); text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: var(--radius-xs); }
 .record-row__desc.is-expanded { white-space: pre-wrap; overflow: visible; }
 .record-row__desc:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-.record-row__actions { display: flex; align-items: center; gap: var(--space-1); }
+.record-row__actions { display: flex; align-self: start; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-1); }
 .record-row.is-voided { --tone: var(--tone-slate); }
 .record-row.is-voided .record-row__title { text-decoration: line-through; }
 .record-row.is-voided .record-row__main > :not(.record-row__chips, .record-row__void) { color: var(--muted); }
@@ -3435,6 +3443,8 @@ app-custom-select:has(> .custom-select--priority) {
 .record-stats > div { display: grid; gap: var(--space-1); min-width: 0; }
 .record-stats dt { color: var(--muted); font-size: var(--font-size-sm); }
 .record-stats dd { margin: 0; font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); font-variant-numeric: tabular-nums; line-height: var(--line-height-tight); overflow-wrap: anywhere; }
+.record-stats--compact { margin: var(--space-1) 0; padding: 0; background: transparent; gap: var(--space-2) var(--space-3); }
+.record-stats--compact dd { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); }
 /* Vazio com ícone, frase curta e a ação ao lado. */
 .record-empty { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-3) 0; }
 .record-empty > .icon-tile { --tone: var(--tone-slate); }

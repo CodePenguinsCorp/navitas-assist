@@ -124,6 +124,7 @@ export class RmaPartsPanelComponent {
   });
 
   protected readonly consuming = signal<PartReservationResponse | null>(null);
+  protected readonly cancelling = signal<PartReservationResponse | null>(null);
   protected readonly externalOpen = signal(false);
   protected readonly externalSaving = signal(false);
   protected readonly externalComponents = signal<ExternalComponentResponse[]>([]);
@@ -221,8 +222,22 @@ export class RmaPartsPanelComponent {
     });
   }
 
+  protected startCancellation(reservation: PartReservationResponse): void {
+    if (!this.canReserve() || this.busyReservationId() !== null) return;
+    this.cancelling.set(reservation); this.consuming.set(null);
+    afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>('[aria-label="Manter reserva"]')?.focus(), { injector: this.injector });
+  }
+
+  protected closeCancellation(): void {
+    if (this.busyReservationId() !== null) return;
+    const id = this.cancelling()?.id;
+    this.cancelling.set(null);
+    afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>(`#reservation-cancel-${id}`)?.focus(), { injector: this.injector });
+  }
+
   protected startConsumption(reservation: PartReservationResponse): void {
     if (!this.canCreateReservation()) return;
+    this.cancelling.set(null);
     this.consuming.set(reservation); this.consumptionForm.reset();
   }
 
@@ -339,6 +354,7 @@ export class RmaPartsPanelComponent {
         this.toasts.show({ message: ACTION_MESSAGES[action], tone: 'success' });
         if (this.rmaId() !== rmaId) return;
         this.consuming.set(null);
+        this.cancelling.set(null);
         if (action === 'consume') this.changed.emit();
         this.load(rmaId);
       },
@@ -350,6 +366,7 @@ export class RmaPartsPanelComponent {
   }
 
   private resetContext(): void {
+    this.cancelling.set(null);
     this.loadRequest?.unsubscribe();
     this.catalogRequest?.unsubscribe();
     this.externalRequest?.unsubscribe();

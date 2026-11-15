@@ -70,42 +70,52 @@
     @if (reservations().length === 0) {
       <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="box" /></span><h3 class="repair-empty">Nenhuma peça reservada</h3>@if (canCreateReservation() && !reserveOpen()) { <button type="button" class="button-secondary" (click)="toggleReserve()">Reservar peça</button> }</div>
     } @else {
-      <div class="parts-list">
+      <div class="record-rows" aria-label="Reservas de peças">
         @for (reservation of reservations(); track reservation.id) {
-          <div class="parts-item" [class]="reservationTone(reservation.status)">
-            <div class="parts-item__body">
-              <div class="parts-item__title">
-                <span class="icon-tile icon-tile--sm" aria-hidden="true"><app-icon name="box" /></span>
-                <div class="parts-item__identity"><span class="code-text">{{ reservation.partCode }}</span><strong>{{ reservation.partName }}</strong></div>
+          <div class="record-row" [class]="reservationTone(reservation.status)">
+            <span class="icon-tile icon-tile--sm" aria-hidden="true"><app-icon name="box" /></span>
+            <div class="record-row__main">
+              <div class="record-row__head">
+                <strong class="record-row__title">{{ reservation.partName }}</strong>
+                <span class="code-text record-row__code">{{ reservation.partCode }}</span>
                 <span class="mini-chip" [class]="statusClass(reservation.status)">{{ statusLabels[reservation.status] }}</span>
               </div>
-              <dl class="parts-facts" [attr.aria-label]="'Dados da reserva de ' + reservation.partCode">
+              <dl class="record-stats record-stats--compact" [attr.aria-label]="'Dados da reserva de ' + reservation.partCode">
                 <div><dt>Quantidade</dt><dd>{{ quantity(reservation.quantity, reservation.unit) }}</dd></div>
                 <div><dt>Disponível</dt><dd>{{ quantity(reservation.partAvailable, reservation.unit) }}</dd></div>
                 @if (canSeeCosts()) {
-                  <div><dt>Custo da reserva</dt><dd>{{ currency(reservation.totalCost ?? 0) }}</dd></div>
+                  <div><dt>Custo</dt><dd>{{ currency(reservation.totalCost ?? 0) }}</dd></div>
                 }
                 @if (reservation.location) {
                   <div><dt>Local</dt><dd>{{ reservation.location }}</dd></div>
                 }
               </dl>
               @if (reservation.note) {
-                <small class="parts-item__note">{{ reservation.note }}</small>
+                <small class="record-row__meta">Observação: {{ reservation.note }}</small>
               }
             </div>
 
             @if (canReserve()) {
-              <div class="parts-item__actions">
+              <div class="record-row__actions">
                 @if (reservation.status === 'ACTIVE' || reservation.status === 'PENDING') {
-                  <button type="button" class="link-button parts-item__cancel" (click)="runAction(reservation, 'cancel')" [disabled]="busyReservationId() !== null">Cancelar reserva</button>
+                  <button appRowAction icon="close" label="Cancelar reserva" tone="danger" [id]="'reservation-cancel-' + reservation.id" [target]="reservation.partName" (click)="startCancellation(reservation)" [disabled]="busyReservationId() !== null"></button>
                 }
                 @if (reservation.status === 'ACTIVE' && !isClosed()) {
-                  <button type="button" class="button-secondary button-secondary--small" (click)="startConsumption(reservation)" [disabled]="busyReservationId() !== null">Aplicar</button>
+                  <button type="button" class="button-secondary" (click)="startConsumption(reservation)" [disabled]="busyReservationId() !== null"><app-icon name="check" />Aplicar</button>
                 }
                 @if (reservation.status === 'PENDING' && !isClosed()) {
-                  <button type="button" class="button-secondary button-secondary--small" (click)="runAction(reservation, 'allocate')" [disabled]="busyReservationId() !== null">Efetivar reserva</button>
+                  <button type="button" class="button-secondary" (click)="runAction(reservation, 'allocate')" [disabled]="busyReservationId() !== null"><app-icon name="check" />Efetivar reserva</button>
                 }
 
+              </div>
+            }
+            @if (canReserve() && cancelling()?.id === reservation.id) {
+              <div class="inline-form" (keydown.escape)="$event.stopPropagation(); closeCancellation()">
+                <strong class="field-group--full">Cancelar reserva de {{ reservation.partName }}?</strong>
+                <div class="form-actions inline-form__actions">
+                  <button type="button" class="button-secondary" aria-label="Manter reserva" [disabled]="busyReservationId() !== null" (click)="closeCancellation()">Cancelar</button>
+                  <button type="button" class="button-primary" aria-label="Confirmar cancelamento da reserva" [disabled]="busyReservationId() !== null" (click)="runAction(reservation, 'cancel')">Confirmar</button>
+                </div>
               </div>
             }
           </div>
@@ -157,7 +167,7 @@
               <span class="mini-chip tone-chip">{{ component.source }}</span>
               <span class="mini-chip mini-chip--muted">{{ quantity(component.quantity, component.unit) }}</span>
             </div>
-            <button type="button" class="record-row__desc" [class.is-expanded]="expandedKeys().has(component.key)" [attr.aria-expanded]="expandedKeys().has(component.key)" [appTip]="component.replacementReason || 'Motivo não registrado'" (click)="toggleExpanded(component.key)">{{ component.replacementReason || 'Motivo não registrado' }}</button>
+            <button type="button" class="record-row__desc" [class.is-expanded]="expandedKeys().has(component.key)" [attr.aria-expanded]="expandedKeys().has(component.key)" [appTip]="component.replacementReason || 'Motivo não registrado'" (click)="toggleExpanded(component.key)">Motivo da troca: {{ component.replacementReason || 'Motivo não registrado' }}</button>
             @if (component.componentBatch || component.appliedAt) {
               <small class="record-row__meta">@if (component.componentBatch) { Lote: {{ component.componentBatch }} }@if (component.componentBatch && component.appliedAt) { · }@if (component.appliedAt) { {{ dateTime(component.appliedAt) }} · {{ component.appliedBy }} }</small>
             }
@@ -204,7 +214,7 @@
               <span class="record-row__value" [class.record-row__value--in]="movement.onHandChange > 0" [class.record-row__value--out]="movement.onHandChange < 0">{{ signedQuantity(movementDelta(movement)) }}@if (unitOf(movement.partId); as unit) { {{ unit }} }</span>
             </div>
             <small class="record-row__meta"><time>{{ dateTime(movement.createdAt) }}</time> · {{ movement.createdBy }} · Saldo: {{ quantity(movement.onHandAfter, unitOf(movement.partId)) }}@if (movement.reservedChange !== 0) { · Reservado: {{ quantity(movement.reservedAfter, unitOf(movement.partId)) }} }</small>
-            @if (movement.reason) { <small class="record-row__meta">{{ movement.reason }}</small> }
+            @if (movement.reason) { <small class="record-row__meta">Observação: {{ movement.reason }}</small> }
           </div>
         </li>
       }

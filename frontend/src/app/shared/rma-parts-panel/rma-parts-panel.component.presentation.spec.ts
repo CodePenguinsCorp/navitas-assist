@@ -50,7 +50,7 @@ describe('RmaPartsPanelComponent presentation', () => {
   const text = () => normalize(root().textContent);
   const buttons = (scope: ParentNode = root()) => Array.from(scope.querySelectorAll('button')).map((item) => item.textContent!.trim());
   const button = (label: string) => Array.from<HTMLButtonElement>(root().querySelectorAll('button')).find((item) => item.textContent?.trim() === label);
-  const items = () => Array.from<HTMLElement>(root().querySelectorAll('.parts-item'));
+  const items = () => Array.from<HTMLElement>(root().querySelectorAll('[aria-label="Reservas de peças"] > .record-row'));
   const facts = (item: HTMLElement) => new Map(Array.from(item.querySelectorAll('dl > div')).map((row) => [normalize(row.querySelector('dt')!.textContent), normalize(row.querySelector('dd')!.textContent)]));
   const field = (control: string) => root().querySelector(`[formcontrolname="${control}"]`)!.closest('.field-group') as HTMLElement;
 
@@ -97,6 +97,9 @@ describe('RmaPartsPanelComponent presentation', () => {
     const cancel = buttons(items()[0]).find((label) => label.startsWith('Cancelar'));
     expect(cancel).toBe('Cancelar reserva');
     Array.from(items()[0].querySelectorAll('button')).find(button => button.textContent?.trim() === 'Cancelar reserva')!.click();
+    render();
+    expect(service.updateReservation).not.toHaveBeenCalled();
+    root().querySelector<HTMLButtonElement>('[aria-label="Confirmar cancelamento da reserva"]')!.click();
     expect(service.updateReservation).toHaveBeenCalledWith(7, 1, 'cancel');
   });
 
@@ -109,7 +112,7 @@ describe('RmaPartsPanelComponent presentation', () => {
     expect(stats.get('Pendentes')).toBe('1');
     expect(stats.get('Custo aplicado')).toBe('R$ 20,00');
     expect(stats.get('Custo reservado')).toBe('R$ 20,00');
-    expect(facts(items()[0]).get('Custo da reserva')).toBe('R$ 20,00');
+    expect(facts(items()[0]).get('Custo')).toBe('R$ 20,00');
     expect(text()).not.toContain('reservada(s)');
     expect(text()).not.toContain('aplicada(s)');
     expect(text()).not.toContain('pendente(s)');
@@ -119,7 +122,7 @@ describe('RmaPartsPanelComponent presentation', () => {
     await setup({ permissions: ['rma.ver', 'pecas.reservar'] });
     expect(text()).not.toContain('Custo aplicado');
     expect(text()).not.toContain('Custo reservado');
-    expect(facts(items()[0]).has('Custo da reserva')).toBe(false);
+    expect(facts(items()[0]).has('Custo')).toBe(false);
     expect(facts(items()[0]).get('Quantidade')).toBeTruthy();
   });
 
@@ -167,7 +170,7 @@ describe('RmaPartsPanelComponent presentation', () => {
       const closed = status === 'COMPLETED';
       STATUSES.forEach((value, index) => {
         expect(buttons(items()[index])).toEqual(expectedActions(canAct, closed, value));
-        expect(facts(items()[index]).get('Custo da reserva')).toBe('R$ 20,00');
+        expect(facts(items()[index]).get('Custo')).toBe('R$ 20,00');
       });
       expect(root().querySelector('form') !== null).toBe(canAct && !closed);
       expect(button('Reservar') !== undefined).toBe(canAct && !closed);

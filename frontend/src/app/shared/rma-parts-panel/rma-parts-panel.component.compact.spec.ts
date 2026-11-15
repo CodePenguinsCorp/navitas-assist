@@ -91,10 +91,10 @@ describe('RmaPartsPanelComponent compact sections', () => {
   it('shows only non-zero figures in one strip and hides costs without pecas.ver', async () => {
     const parts = { reservations: [reservation(1, 'ACTIVE')], reservedCost: 20, consumedCost: 0, pendingCount: 0 };
     await setup(parts);
-    expect(Array.from(root().querySelectorAll('.record-stats dt')).map((e) => e.textContent)).toEqual(['Ativas', 'Custo reservado']);
+    expect(Array.from(root().querySelectorAll('.record-stats:not(.record-stats--compact) dt')).map((e) => e.textContent)).toEqual(['Ativas', 'Custo reservado']);
     TestBed.resetTestingModule();
     await setup(parts, ['rma.ver', 'pecas.reservar']);
-    expect(Array.from(root().querySelectorAll('.record-stats dt')).map((e) => e.textContent)).toEqual(['Ativas']);
+    expect(Array.from(root().querySelectorAll('.record-stats:not(.record-stats--compact) dt')).map((e) => e.textContent)).toEqual(['Ativas']);
   });
 
   it('writes Aplicar and Aplicada instead of the old verb', async () => {
