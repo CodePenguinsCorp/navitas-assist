@@ -7,7 +7,7 @@ describe('notificationDetailContent', () => {
       fields: [
         { label: 'Cliente', value: '[DEMO] Cliente' }, { label: 'Equipamento', value: 'Switch' },
         { label: 'Prioridade', value: 'média' }, { label: 'Aberta por', value: 'admin.suporte' }
-      ], message: ''
+      ], message: 'Ordem de serviço aberta por admin.suporte.'
     });
   });
 

@@ -29,7 +29,11 @@ describe('NotificationDetailModalComponent', () => {
 
   it('shows a human title, a separate OS code, structured fields and a single close control', async () => {
     await setup({ ...NOTIFICATION, eventType: 'RMA_CREATED', severity: 'INFO', message: '[DEMO] Vale Verde · [DEMO] Switch · prioridade alta. Aberta por admin.' });
-    expect(root().querySelector('section[aria-label="Resumo"] dl')).not.toBeNull();
+    expect(root().querySelector('dl[aria-label="Detalhes da notificação"]')).not.toBeNull();
+    expect(root().querySelector('.notification-detail__summary')).toBeNull();
+    expect(root().querySelector('.notification-detail__message')!.textContent).toBe('Ordem de serviço aberta por admin.');
+    expect(root().querySelector('header .notification-detail__meta')).not.toBeNull();
+    expect(root().querySelectorAll('footer .button-primary')).toHaveLength(1);
     const dialog = root().querySelector('[role="dialog"]')!;
     const title = root().querySelector('h3')!;
     expect(dialog.getAttribute('aria-labelledby')).toBe(title.id);
@@ -40,13 +44,13 @@ describe('NotificationDetailModalComponent', () => {
     expect(Array.from(root().querySelectorAll('dd')).map(el => el.textContent!.trim())).toEqual(['[DEMO] Vale Verde', '[DEMO] Switch', 'alta', 'admin']);
     expect(text().split('OS-2026-000007').length - 1).toBe(1);
     expect(root().querySelector('.notification-detail__meta time')!.textContent).toBe('24/10/2026, 11:30');
-    expect(root().querySelector('.notification-detail__meta .mini-chip')!.textContent!.trim()).toBe('Não lida');
+    expect(root().querySelector('.notification-detail__read')!.textContent!.trim()).toBe('Não lida');
   });
 
-  it('keeps unrecognized content intact and labels an impediment reason', async () => {
+  it('keeps an impediment reason intact without extra headings', async () => {
     await setup({ ...NOTIFICATION, message: 'Aguardando peça · detalhe <b>literal</b>\nOutra linha' });
     expect(root().querySelector('h3')!.textContent!.trim()).toBe('Impedimento');
-    expect(text()).toContain('Motivo do impedimento');
+    expect(root().querySelector('.notification-detail__summary')).toBeNull();
     expect(root().querySelector('.notification-detail__message')!.textContent).toBe('Aguardando peça · detalhe <b>literal</b>\nOutra linha');
     expect(root().querySelector('b')).toBeNull();
   });
@@ -55,13 +59,25 @@ describe('NotificationDetailModalComponent', () => {
     await setup({ ...NOTIFICATION, read: true, readAt: '2026-10-24T14:40:00Z', snoozedUntil: '2026-10-24T18:00:00Z' });
     const meta = () => root().querySelector('.notification-detail__meta')!.textContent!.replace(/[\s ]+/g, ' ').trim();
     expect(root().querySelector('.notification-detail__meta time')!.textContent).toBe('24/10/2026, 11:30');
-    expect(root().querySelector('.notification-detail__meta .mini-chip')!.textContent!.trim()).toBe('Lida');
+    expect(root().querySelector('.notification-detail__read')!.textContent!.trim()).toBe('Lida');
     expect(meta()).toContain('há 30 min');
     expect(meta()).toContain('Adiada até 24/10/2026, 15:00');
 
     fixture.componentRef.setInput('notification', { ...NOTIFICATION, read: true, snoozedUntil: '2026-10-24T14:00:00Z' });
     fixture.detectChanges();
     expect(meta()).not.toContain('Adiada até');
+  });
+
+  it('preserva valores longos e mantém as ações no rodapé', async () => {
+    const client = 'Cliente com nome extenso '.repeat(12);
+    await setup({ ...NOTIFICATION, eventType: 'RMA_CREATED', message: `${client} · Equipamento · prioridade alta. Aberta por Maria.` });
+    expect(root().querySelector('dd')!.textContent).toBe(client);
+    expect(root().querySelectorAll('dl > div')).toHaveLength(4);
+    expect(root().querySelectorAll('h4')).toHaveLength(0);
+    expect(root().querySelector('header .mini-chip')!.textContent).toBe(NOTIFICATION.rmaCode);
+    expect(root().querySelector('footer nav')).not.toBeNull();
+    expect(root().querySelector('footer .button-primary')!.textContent).toContain('Abrir OS');
+    expect(root().querySelector('footer app-custom-select')).toBeNull();
   });
 
   it('offers Adiar only for a notification that asks for action', async () => {
