@@ -93,7 +93,7 @@ describe('RmaRepairPanelComponent', () => {
       expectInlineForm(root.querySelector('form'), ['Tipo', 'Data', 'Horas', 'Descrição'], 'Registrar');
       open(fixture);
       component.startVoid({ id: 1, type: 'CLEANING', description: 'Placa limpa', performedOn: '2026-11-12', hours: 1.125, technicianName: 'ana' }); fixture.detectChanges();
-      expectInlineForm(root.querySelector('.repair-entry .inline-form'), ['Motivo da anulação'], 'Anular');
+      expectInlineForm(root.querySelector('.record-row .inline-form'), ['Motivo da anulação'], 'Anular');
     });
 
     it('collapses with Cancelar and Escape, returning focus to the trigger', async () => {
@@ -149,7 +149,7 @@ describe('RmaRepairPanelComponent', () => {
       const empty = await setupEmpty();
       expect(empty.nativeElement.querySelector('.repair-total')).toBeNull();
       expect(empty.nativeElement.textContent).not.toContain('Total de horas');
-      expect(empty.nativeElement.querySelector('.repair-empty').textContent.trim()).toBe('Nenhuma intervenção');
+      expect(empty.nativeElement.querySelector('.repair-empty').textContent.trim()).toBe('Nenhuma intervenção registrada');
     });
 
     it('lists one compact line per record in order and strikes voided ones with the reason', async () => {
@@ -157,15 +157,15 @@ describe('RmaRepairPanelComponent', () => {
         { id: 1, type: 'CLEANING', description: 'Placa limpa', performedOn: '2026-11-12', hours: 1.5, technicianName: 'ana' },
         { id: 2, type: 'RESOLDERING', description: 'Ressolda errada', performedOn: '2026-11-11', hours: 2, technicianName: 'bia', voidedAt: '2026-11-12T10:00:00Z', voidReason: 'Duplicada', voidedBy: 'admin' }
       ]);
-      const lines = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.repair-line'));
+      const lines = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.record-row'));
       expect(lines).toHaveLength(2);
-      const parts = (l: HTMLElement) => [l.querySelector('.repair-line__title')!, l.querySelector('.repair-line__meta')!, l.querySelector('.repair-line__value')!, l.querySelector('.repair-line__desc')!].map(e => e.textContent!.trim());
-      expect(parts(lines[0])).toEqual(['Limpeza', '12/11/2026 · ana', '1,5 h', 'Placa limpa']);
-      const desc = lines[0].querySelector('.repair-line__desc')!;
+      const parts = (l: HTMLElement) => ['.record-row__title', '.record-row__chips', '.record-row__desc', '.record-row__meta'].map(q => l.querySelector(q)!.textContent!.trim());
+      expect(parts(lines[0])).toEqual(['Limpeza', '1,5 h', 'Placa limpa', '12/11/2026 · ana']);
+      const desc = lines[0].querySelector('.record-row__desc')!;
       Object.defineProperty(desc, 'scrollWidth', { configurable: true, value: 400 }); Object.defineProperty(desc, 'clientWidth', { configurable: true, value: 100 });
       desc.dispatchEvent(new Event('mouseenter'));
       expect(document.querySelector('.app-tip')?.textContent).toBe('Placa limpa');
-      expect(lines[1].querySelector('.repair-voided')).not.toBeNull();
+      expect(lines[1].classList.contains('is-voided')).toBe(true);
       expect(lines[1].querySelector('[aria-label*="Editar"]')).toBeNull();
       expect(fixture.nativeElement.textContent).toContain('Anulada: Duplicada · admin');
     });

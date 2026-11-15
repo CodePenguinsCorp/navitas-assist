@@ -1,5 +1,5 @@
 <section class="repair-panel detail-card">
-  <app-collapsible-section title="Intervenções" icon="wrench" [open]="!!repair()?.interventions?.length || formOpen() || !!error()" storageKey="rma.interventions">
+  <app-collapsible-section title="Intervenções" icon="wrench" [count]="repair()?.interventions?.length || null" [open]="!!repair()?.interventions?.length || formOpen() || !!error()" storageKey="rma.interventions">
   @if (totalHours() > 0) { <span sectionActions class="repair-total" appTip="Total de horas de serviço">{{ hours(totalHours()) }} h</span> }
   @if (canWrite()) {
     <button sectionActions type="button" class="link-button repair-trigger" [attr.aria-expanded]="formOpen() && !editing()" aria-controls="repair-form" (click)="toggleForm()">Registrar</button>
@@ -9,21 +9,33 @@
   @if (loading()) { <div aria-busy="true"></div> }
   @if (formOpen() && !editing() && canWrite()) { <ng-container [ngTemplateOutlet]="interventionForm" /> }
   @if (repair(); as data) {
+    @if (stats().length > 0) {
+      <dl class="record-stats" aria-label="Resumo das intervenções">
+        @for (stat of stats(); track stat.label) { <div><dt>{{ stat.label }}</dt><dd>{{ stat.value }}</dd></div> }
+      </dl>
+    }
+    <div class="record-rows">
     @for (item of data.interventions; track item.id) {
-      <div class="repair-entry">
-        <div class="repair-line">
-          <strong class="repair-line__title" [class.repair-voided]="!!item.voidedAt">{{ labels[item.type] }}</strong>
-          <small class="repair-line__meta">{{ date(item.performedOn) }} · {{ item.technicianName }}</small>
-          <span class="repair-line__value" [class.repair-voided]="!!item.voidedAt">{{ hours(item.hours) }} h</span>
-          <button type="button" class="repair-line__desc" [class.is-expanded]="expanded().has(item.id)" [class.repair-voided]="!!item.voidedAt" [attr.aria-expanded]="expanded().has(item.id)" [appTip]="item.description" (click)="toggleExpanded(item.id)">{{ item.description }}</button>
-          @if (canWrite() && !item.voidedAt) {
-            <span class="repair-row-actions">
-              <button appRowAction icon="pencil" label="Editar" [target]="item.description" [disabled]="saving()" (click)="edit(item)"></button>
-              <button appRowAction icon="close" label="Anular" tone="danger" [target]="item.description" [disabled]="saving()" (click)="startVoid(item)"></button>
-            </span>
-          }
+      <div class="record-row tone-sky" [class.is-voided]="!!item.voidedAt">
+        <span class="icon-tile icon-tile--sm" aria-hidden="true"><app-icon name="wrench" /></span>
+        <div class="record-row__main">
+          <div class="record-row__head">
+            <strong class="record-row__title">{{ labels[item.type] }}</strong>
+            @if (item.voidedAt) { <span class="mini-chip tone-chip tone-danger">Anulada</span> }
+          </div>
+          <div class="record-row__chips">
+            <span class="mini-chip tone-chip">{{ hours(item.hours) }} h</span>
+          </div>
+          <button type="button" class="record-row__desc" [class.is-expanded]="expanded().has(item.id)" [attr.aria-expanded]="expanded().has(item.id)" [appTip]="item.description" (click)="toggleExpanded(item.id)">{{ item.description }}</button>
+          <small class="record-row__meta">{{ date(item.performedOn) }} · {{ item.technicianName }}</small>
+          @if (item.voidedAt) { <small class="record-row__void">Anulada: {{ item.voidReason }} · {{ item.voidedBy }}</small> }
         </div>
-        @if (item.voidedAt) { <small class="repair-note">Anulada: {{ item.voidReason }} · {{ item.voidedBy }}</small> }
+        @if (canWrite() && !item.voidedAt) {
+          <span class="record-row__actions">
+            <button appRowAction icon="pencil" label="Editar" [target]="item.description" [disabled]="saving()" (click)="edit(item)"></button>
+            <button appRowAction icon="close" label="Anular" tone="danger" [target]="item.description" [disabled]="saving()" (click)="startVoid(item)"></button>
+          </span>
+        }
         @if (voiding()?.id === item.id && canWrite()) {
           <div class="inline-form">
             <label class="field-group field-group--full field-group--required"><span>Motivo da anulação</span><textarea [formControl]="voidReason" rows="4" maxlength="1000"></textarea></label>
@@ -33,7 +45,8 @@
         }
         @if (editing()?.id === item.id && canWrite()) { <ng-container [ngTemplateOutlet]="interventionForm" /> }
       </div>
-    } @empty { @if (!formOpen()) { <p class="repair-empty">Nenhuma intervenção</p> } }
+    } @empty { @if (!formOpen()) { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="wrench" /></span><p class="repair-empty">Nenhuma intervenção registrada</p>@if (canWrite()) { <button type="button" class="button-secondary" (click)="toggleForm()">Registrar</button> }</div> } }
+    </div>
   }
   <ng-template #interventionForm>
     <form id="repair-form" class="inline-form" [formGroup]="form" (ngSubmit)="save()" (keydown.escape)="$event.stopPropagation(); closeForm(true)" novalidate>

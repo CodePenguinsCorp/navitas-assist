@@ -11,7 +11,7 @@ import { PermissionService } from '../../core/services/permission.service';
 import { PartReservationAction, PartService } from '../../core/services/part.service';
 import { extractHttpErrorMessage, normalizeOptionalText } from '../../core/utils/catalog-ui';
 import { formatBusinessDateTime } from '../../core/utils/date';
-import { PART_MOVEMENT_LABELS, PART_RESERVATION_STATUS_LABELS, formatCurrency, formatQuantity, reservationStatusClass } from '../../core/utils/part-ui';
+import { PART_MOVEMENT_LABELS, PART_RESERVATION_STATUS_LABELS, formatCurrency, formatQuantity, formatSignedQuantity, reservationStatusClass } from '../../core/utils/part-ui';
 import { NgTemplateOutlet } from '@angular/common';
 import { CollapsibleSectionComponent } from '../collapsible-section/collapsible-section.component';
 import { RowActionComponent } from '../row-action/row-action.component';
@@ -102,13 +102,33 @@ export class RmaPartsPanelComponent {
       .map((part) => ({ value: part.id, label: `${part.code} · ${part.name} (disponível: ${formatQuantity(part.available, part.unit)})` }))
   );
 
+  protected readonly componentStats = computed(() => {
+    const active = this.replacedComponents().filter((component) => !component.voidedAt);
+    if (active.length === 0) return [];
+    const external = active.filter((component) => component.external).length;
+    return [{ label: 'Componentes', value: String(active.length) }, { label: 'Fora do estoque', value: String(external) }, { label: 'Do estoque', value: String(active.length - external) }];
+  });
+  protected readonly movementStats = computed(() => {
+    const movements = this.parts()?.movements ?? [];
+    if (movements.length === 0) return [];
+    const units = new Set(movements.map((movement) => this.unitOf(movement.partId)));
+    const unit = units.size === 1 ? [...units][0] : '';
+    const entries = movements.filter((movement) => movement.onHandChange > 0).reduce((sum, movement) => sum + movement.onHandChange, 0);
+    const exits = movements.filter((movement) => movement.onHandChange < 0).reduce((sum, movement) => sum - movement.onHandChange, 0);
+    return [
+      { label: 'Entradas', value: formatQuantity(entries, unit) },
+      { label: 'Saídas', value: formatQuantity(exits, unit) },
+      { label: 'Saldo líquido', value: formatQuantity(entries - exits, unit) }
+    ];
+  });
+
   protected readonly consuming = signal<PartReservationResponse | null>(null);
   protected readonly externalOpen = signal(false);
   protected readonly externalSaving = signal(false);
   protected readonly externalComponents = signal<ExternalComponentResponse[]>([]);
   protected readonly externalError = signal('');
   protected readonly replacedComponents = computed(() => [
-    ...(this.parts()?.replacedComponents ?? this.reservations().filter(r => r.status === 'CONSUMED')).map(r => ({ ...r, key: `stock-${r.id}`, description: r.partName, code: r.partCode, source: 'Estoque', external: false as const, voidedAt: null, voidReason: null, voidedBy: null })),
+    ...(this.parts()?.replacedComponents ?? this.reservations().filter(r => r.status === 'CONSUMED')).map(r => ({ ...r, key: `stock-${r.id}`, description: r.partName, code: r.partCode, source: 'Do estoque', external: false as const, voidedAt: null, voidReason: null, voidedBy: null })),
     ...this.externalComponents().map(c => ({ ...c, key: `external-${c.id}`, source: 'Fora do estoque', external: true as const }))
   ]);
   protected readonly consumptionForm = this.formBuilder.nonNullable.group({
@@ -245,6 +265,21 @@ export class RmaPartsPanelComponent {
 
   protected toggleExpanded(key: string): void {
     const next = new Set(this.expandedKeys()); if (!next.delete(key)) next.add(key); this.expandedKeys.set(next);
+  }
+
+  protected readonly signedQuantity = formatSignedQuantity;
+  protected readonly reservationTone = (status: PartReservationResponse['status']): string =>
+    ({ ACTIVE: 'tone-sky', PENDING: 'tone-warning', CONSUMED: 'tone-success' } as Record<string, string>)[status] ?? 'tone-slate';
+  protected readonly movementTone = (type: PartMovementType): string =>
+    ({ ENTRY: 'tone-success', EXIT: 'tone-danger', ADJUSTMENT: 'tone-warning', RESERVATION: 'tone-sky', RESERVATION_CANCEL: 'tone-slate', CONSUMPTION: 'tone-violet', REVERSAL: 'tone-warning' })[type];
+
+  /** Variação mostrada no movimento: a do estoque físico ou, se ela não mudou, a da reserva. */
+  protected movementDelta(movement: PartMovementResponse): number {
+    return movement.onHandChange !== 0 ? movement.onHandChange : movement.reservedChange;
+  }
+
+  protected unitOf(partId: number): string {
+    return this.reservations().find((reservation) => reservation.partId === partId)?.unit ?? '';
   }
 
   protected movementChip(type: PartMovementType): string {

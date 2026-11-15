@@ -103,7 +103,7 @@ describe('RmaPartsPanelComponent presentation', () => {
   // Vermelho: contagens usam plurais artificiais e custos não declaram escopo.
   it('states reservation count and OS cost scope', async () => {
     await setup();
-    const stats = facts(root().querySelector<HTMLElement>('.parts-stats')!);
+    const stats = facts(root().querySelector<HTMLElement>('.record-stats')!);
     expect(stats.get('Ativas')).toBe('1');
     expect(stats.get('Aplicadas')).toBe('1');
     expect(stats.get('Pendentes')).toBe('1');
@@ -215,11 +215,12 @@ describe('RmaPartsPanelComponent presentation', () => {
     expect(normalize(toggle.textContent)).toBe('Movimentos de peças1');
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     expect(section.querySelector<HTMLElement>('.collapsible__body')!.hidden).toBe(false);
-    const row = section.querySelector('.movements__list li')!;
-    expect(normalize(row.querySelector('.movements__type')!.textContent)).toBe('Aplicação');
-    expect(normalize(row.querySelector('.movements__part')!.textContent)).toBe('PCA-1');
-    expect(normalize(row.querySelector('.movements__user')!.textContent)).toBe('tech');
-    expect(normalize(row.querySelector('.movements__note')!.textContent)).toBe('estornado · Troca da placa');
+    const row = section.querySelector('.record-rows li')!;
+    expect(normalize(row.querySelector('.record-row__chips .mini-chip')!.textContent)).toBe('Aplicação');
+    expect(normalize(row.querySelector('.record-row__code')!.textContent)).toBe('PCA-1');
+    expect(normalize(row.querySelector('.record-row__meta')!.textContent)).toContain('tech');
+    expect(normalize(row.textContent)).toContain('Estornado');
+    expect(normalize(row.textContent)).toContain('Troca da placa');
     expect(root().querySelector('details')).toBeNull();
     toggle.click(); render();
     expect(section.querySelector<HTMLElement>('.collapsible__body')!.hidden).toBe(true);

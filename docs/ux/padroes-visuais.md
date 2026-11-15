@@ -246,6 +246,13 @@ Regras: título curto no cabeçalho, sem subtítulo explicativo; erro no topo do
 - Lista de registros com várias colunas: tabela.
 - Lista de itens expansíveis com edição no lugar: `.item-row` (cabeçalho em botão, editor na mesma caixa).
 - Histórico: `.record-list` com `.record-card` (título e hora, pares rótulo/valor) ou `.activity-list` para linha do tempo.
+- Registros de reparo (componentes trocados, intervenções, movimentos de peças): `.record-rows` com `.record-row`, mesmo desenho nas três seções, inspirado nas listas de atividade e inventário do Linear, Jira e Polaris.
+  - Faixa de resumo no topo, `.record-stats` (`dl` com rótulo pequeno e valor grande, fundo tonal sem borda). Valores: Intervenções (horas, registros, última data), Componentes (total, fora do estoque, do estoque), Movimentos (entradas, saídas, saldo líquido), Peças (ativas, aplicadas, custos).
+  - Cada linha: tile de ícone tonal (`.icon-tile--sm`: peça `box`, componente `chip`, intervenção `wrench`, movimento `move`), barra lateral de 3 px e chips na cor do estado, ambos vindos da classe `tone-*` da linha (`--tone`). Tons: ativa `tone-sky`, pendente `tone-warning`, aplicada ou do estoque `tone-success`, fora do estoque `tone-violet`, anulada `.is-voided` (cinza, só o título riscado, chip "Anulada" em `tone-danger` e motivo e autor em `.record-row__void`).
+  - Hierarquia: título semibold (`.record-row__title`), código discreto (`.record-row__code`), chips com significado (origem, quantidade com unidade, horas, tipo do movimento), motivo ou descrição, linha `.record-row__meta` em 0,8125 rem com lote, data e autor. Quantidade de movimento com sinal e cor (`.record-row__value--in` e `--out`), saldo rotulado ("Saldo:", "Reservado:").
+  - Ações (`appRowAction`) à direita, centralizadas na linha; em 480 px caem para baixo do texto. Divisória sutil entre linhas e hover suave, sem caixa por registro.
+  - Vazio: `.record-empty` com tile, frase curta e botão da ação principal ao lado. O contador de registros vai em chip no cabeçalho da seção (`[count]`, oculto quando zero).
+  - Movimentos usam linhas e não tabela: poucos registros por OS e cada um tem dados de tipos diferentes (peça, tipo, quantidade, saldo, motivo), que ficam melhor empilhados com rótulo do que em seis colunas estreitas.
 - Notificações: ver [affordance das notificações](2026-11-14-affordance-notificacoes.md); item inteiro é um botão com ponto de não lida e chevron.
 
 ### 3.12 Filtros

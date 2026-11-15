@@ -1,6 +1,6 @@
 <div class="parts-panel">
 <section class="detail-card">
-  <app-collapsible-section title="Peças" icon="chip" [open]="reservations().length > 0 || reserveOpen() || loadFailed()" storageKey="rma.parts">
+  <app-collapsible-section title="Peças" icon="chip" [count]="reservations().length || null" [open]="reservations().length > 0 || reserveOpen() || loadFailed()" storageKey="rma.parts">
     @if (canCreateReservation()) {
       <button sectionActions type="button" id="reserve-trigger" class="link-button" [attr.aria-expanded]="reserveOpen()" aria-controls="reserve-form" (click)="toggleReserve()">Reservar peça</button>
     }
@@ -14,7 +14,7 @@
     <div class="empty-state" role="status" aria-busy="true">Carregando peças...</div>
   } @else {
     @if (stats().length > 0) {
-      <dl class="page-summary parts-stats" aria-label="Resumo das peças da OS">
+      <dl class="record-stats" aria-label="Resumo das peças da OS">
         @for (stat of stats(); track stat.label) {
           <div><dt>{{ stat.label }}</dt><dd>{{ stat.value }}</dd></div>
         }
@@ -71,13 +71,14 @@
     }
 
     @if (reservations().length === 0) {
-      <div class="empty-state"><span class="icon-tile tone-slate"><app-icon name="chip" /></span><h3 class="repair-empty">Nenhuma peça reservada</h3></div>
+      <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="box" /></span><h3 class="repair-empty">Nenhuma peça reservada</h3>@if (canCreateReservation() && !reserveOpen()) { <button type="button" class="button-secondary" (click)="toggleReserve()">Reservar peça</button> }</div>
     } @else {
       <div class="parts-list">
         @for (reservation of reservations(); track reservation.id) {
-          <div class="parts-item">
+          <div class="parts-item" [class]="reservationTone(reservation.status)">
             <div class="parts-item__body">
               <div class="parts-item__title">
+                <span class="icon-tile icon-tile--sm" aria-hidden="true"><app-icon name="box" /></span>
                 <div class="parts-item__identity"><span class="code-text">{{ reservation.partCode }}</span><strong>{{ reservation.partName }}</strong></div>
                 <span class="mini-chip" [class]="statusClass(reservation.status)">{{ statusLabels[reservation.status] }}</span>
               </div>
@@ -134,29 +135,43 @@
 
 @if (hasLoaded() && !loading() && !loadFailed()) {
 <section class="repair-panel detail-card">
-  <app-collapsible-section title="Componentes trocados" icon="wrench" [open]="replacedComponents().length > 0 || externalOpen() || !!externalError()" storageKey="rma.components">
+  <app-collapsible-section title="Componentes trocados" icon="wrench" [count]="replacedComponents().length || null" [open]="replacedComponents().length > 0 || externalOpen() || !!externalError()" storageKey="rma.components">
       @if (canCreateReservation()) {
         <button sectionActions type="button" id="external-trigger" class="link-button" [attr.aria-expanded]="externalOpen() && !editingExternal()" aria-controls="external-form" (click)="toggleExternal()">Adicionar fora do estoque</button>
       }
       @if (externalError()) { <p class="field-error" role="alert">{{ externalError() }}</p><button type="button" class="button-secondary button-secondary--small" (click)="loadExternal()">Tentar novamente</button> }
+      @if (componentStats().length > 0) {
+        <dl class="record-stats" aria-label="Resumo dos componentes trocados">
+          @for (stat of componentStats(); track stat.label) { <div><dt>{{ stat.label }}</dt><dd>{{ stat.value }}</dd></div> }
+        </dl>
+      }
       @if (canCreateReservation() && externalOpen() && !editingExternal()) { <ng-container [ngTemplateOutlet]="externalEditor" /> }
+      <div class="record-rows">
       @for (component of replacedComponents(); track component.key) {
-        <div class="repair-entry">
-          <div class="repair-line">
-            <strong class="repair-line__title" [class.repair-voided]="!!component.voidedAt">@if (component.code) { {{ component.code }} · }{{ component.description }}</strong>
-            <small class="repair-line__meta">{{ quantity(component.quantity, component.unit) }} · {{ component.source }}</small>
-            <button type="button" class="repair-line__desc" [class.is-expanded]="expandedKeys().has(component.key)" [attr.aria-expanded]="expandedKeys().has(component.key)" [appTip]="component.replacementReason || 'Motivo não registrado'" (click)="toggleExpanded(component.key)">{{ component.replacementReason || 'Motivo não registrado' }}</button>
-            @if (component.external && canCreateReservation() && !component.voidedAt) {
-              <span class="repair-row-actions">
-                <button appRowAction icon="pencil" label="Editar" [target]="component.description" [disabled]="externalSaving()" (click)="editExternal(component)"></button>
-                <button appRowAction icon="close" label="Anular" tone="danger" [target]="component.description" [disabled]="externalSaving()" (click)="startVoidExternal(component)"></button>
-              </span>
+        <div class="record-row" [class]="component.external ? 'tone-violet' : 'tone-success'" [class.is-voided]="!!component.voidedAt">
+          <span class="icon-tile icon-tile--sm" aria-hidden="true"><app-icon name="chip" /></span>
+          <div class="record-row__main">
+            <div class="record-row__head">
+              <strong class="record-row__title">{{ component.description }}</strong>
+              @if (component.code) { <span class="code-text record-row__code">{{ component.code }}</span> }
+              @if (component.voidedAt) { <span class="mini-chip tone-chip tone-danger">Anulado</span> }
+            </div>
+            <div class="record-row__chips">
+              <span class="mini-chip tone-chip">{{ component.source }}</span>
+              <span class="mini-chip mini-chip--muted">{{ quantity(component.quantity, component.unit) }}</span>
+            </div>
+            <button type="button" class="record-row__desc" [class.is-expanded]="expandedKeys().has(component.key)" [attr.aria-expanded]="expandedKeys().has(component.key)" [appTip]="component.replacementReason || 'Motivo não registrado'" (click)="toggleExpanded(component.key)">{{ component.replacementReason || 'Motivo não registrado' }}</button>
+            @if (component.componentBatch || component.appliedAt) {
+              <small class="record-row__meta">@if (component.componentBatch) { Lote: {{ component.componentBatch }} }@if (component.componentBatch && component.appliedAt) { · }@if (component.appliedAt) { {{ dateTime(component.appliedAt) }} · {{ component.appliedBy }} }</small>
             }
+            @if (component.voidedAt) { <small class="record-row__void">Anulado: {{ component.voidReason }} · {{ component.voidedBy }}</small> }
           </div>
-          @if (component.componentBatch || component.appliedAt) {
-            <small class="repair-note">@if (component.componentBatch) { Lote: {{ component.componentBatch }} }@if (component.componentBatch && component.appliedAt) { · }@if (component.appliedAt) { {{ dateTime(component.appliedAt) }} · {{ component.appliedBy }} }</small>
+          @if (component.external && canCreateReservation() && !component.voidedAt) {
+            <span class="record-row__actions">
+              <button appRowAction icon="pencil" label="Editar" [target]="component.description" [disabled]="externalSaving()" (click)="editExternal(component)"></button>
+              <button appRowAction icon="close" label="Anular" tone="danger" [target]="component.description" [disabled]="externalSaving()" (click)="startVoidExternal(component)"></button>
+            </span>
           }
-          @if (component.voidedAt) { <small class="repair-note">Anulado: {{ component.voidReason }} · {{ component.voidedBy }}</small> }
           @if (component.external && voidingExternal()?.id === component.id && canCreateReservation()) {
             <div class="inline-form">
               <label class="field-group field-group--full field-group--required"><span>Motivo da anulação</span><textarea [formControl]="voidReason" rows="4" maxlength="1000"></textarea></label>
@@ -166,22 +181,34 @@
           }
           @if (component.external && editingExternal()?.id === component.id && canCreateReservation()) { <ng-container [ngTemplateOutlet]="externalEditor" /> }
         </div>
-      } @empty { @if (!externalOpen()) { <div class="empty-state"><span class="icon-tile tone-slate"><app-icon name="wrench" /></span><h3 class="repair-empty">Nenhum componente trocado</h3></div> } }
+      } @empty { @if (!externalOpen()) { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="chip" /></span><h3 class="repair-empty">Nenhum componente trocado</h3>@if (canCreateReservation()) { <button type="button" class="button-secondary" (click)="toggleExternal()">Adicionar fora do estoque</button> }</div> } }
+      </div>
   </app-collapsible-section>
 </section>
 
 @if (parts()?.movements?.length) {
 <section class="detail-card">
   <app-collapsible-section title="Movimentos de peças" icon="history" [count]="parts()!.movements.length" [open]="parts()!.movements.length > 0" storageKey="rma.part-movements">
-    <ul class="movements__list" id="parts-movements">
+    <dl class="record-stats" aria-label="Resumo dos movimentos">
+      @for (stat of movementStats(); track stat.label) { <div><dt>{{ stat.label }}</dt><dd>{{ stat.value }}</dd></div> }
+    </dl>
+    <ul class="record-rows" id="parts-movements">
       @for (movement of parts()!.movements; track movement.id) {
-        <li [class.is-reversed]="movement.reversed">
-          <time class="movements__date">{{ dateTime(movement.createdAt) }}</time>
-          <span class="mini-chip movements__type">{{ movementChip(movement.type) }}</span>
-          <span class="code-text movements__part" [appTip]="movement.partCode">{{ movement.partCode }}</span>
-          <span class="movements__qty">{{ quantity(movement.quantity) }}</span>
-          <span class="movements__user" [appTip]="movement.createdBy">{{ movement.createdBy }}</span>
-          <span class="movements__note" [appTip]="movementNote(movement)">{{ movementNote(movement) }}</span>
+        <li class="record-row" [class]="movementTone(movement.type)" [class.is-reversed]="movement.reversed">
+          <span class="icon-tile icon-tile--sm" aria-hidden="true"><app-icon name="move" /></span>
+          <div class="record-row__main">
+            <div class="record-row__head">
+              <strong class="record-row__title">{{ movement.partName }}</strong>
+              <span class="code-text record-row__code">{{ movement.partCode }}</span>
+            </div>
+            <div class="record-row__chips">
+              <span class="mini-chip tone-chip">{{ movementChip(movement.type) }}</span>
+              @if (movement.reversed) { <span class="mini-chip mini-chip--muted">Estornado</span> }
+              <span class="record-row__value" [class.record-row__value--in]="movement.onHandChange > 0" [class.record-row__value--out]="movement.onHandChange < 0">{{ signedQuantity(movementDelta(movement)) }}@if (unitOf(movement.partId); as unit) { {{ unit }} }</span>
+            </div>
+            <small class="record-row__meta"><time>{{ dateTime(movement.createdAt) }}</time> · {{ movement.createdBy }} · Saldo: {{ quantity(movement.onHandAfter, unitOf(movement.partId)) }}@if (movement.reservedChange !== 0) { · Reservado: {{ quantity(movement.reservedAfter, unitOf(movement.partId)) }} }</small>
+            @if (movement.reason) { <small class="record-row__meta">{{ movement.reason }}</small> }
+          </div>
         </li>
       }
     </ul>

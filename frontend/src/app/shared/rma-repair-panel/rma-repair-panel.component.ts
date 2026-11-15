@@ -1,3 +1,4 @@
+import { IconComponent } from '../icon/icon.component';
 import { TipDirective } from '../tip/tip.directive';
 import { NgTemplateOutlet } from '@angular/common';
 import { viewChildren, Component, ElementRef, viewChild, EventEmitter, Injector, Output, DestroyRef, afterNextRender, computed, effect, inject, input, signal, untracked } from '@angular/core';
@@ -21,7 +22,7 @@ export const INTERVENTION_LABELS: Record<InterventionType, string> = {
 
 @Component({
   selector: 'app-rma-repair-panel',
-  imports: [TipDirective, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, CollapsibleSectionComponent],
+  imports: [IconComponent, TipDirective, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, CollapsibleSectionComponent],
   templateUrl: './rma-repair-panel.component.html'
 })
 export class RmaRepairPanelComponent {
@@ -54,6 +55,12 @@ export class RmaRepairPanelComponent {
   protected readonly date = formatDateOnly;
   protected readonly today = todayInputValue;
   protected readonly hours = (value: number) => value.toLocaleString('pt-BR', { maximumFractionDigits: 3 });
+  protected readonly stats = computed(() => {
+    const active = (this.repair()?.interventions ?? []).filter((item) => !item.voidedAt);
+    if (active.length === 0) return [];
+    const last = active.reduce((max, item) => (item.performedOn > max ? item.performedOn : max), active[0].performedOn);
+    return [{ label: 'Horas de serviço', value: `${this.hours(this.totalHours())} h` }, { label: 'Registros', value: String(active.length) }, { label: 'Última intervenção', value: this.date(last) }];
+  });
   protected readonly form = this.fb.nonNullable.group({
     type: this.fb.nonNullable.control<InterventionType>('RESOLDERING', Validators.required),
     description: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(1000)]],
