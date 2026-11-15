@@ -17,10 +17,10 @@ public final class PageParams {
         int resolvedSize = size == null ? DEFAULT_SIZE : size;
 
         if (resolvedPage < 0) {
-            throw new BusinessException("Page must be greater than or equal to 0.");
+            throw new BusinessException("A página deve ser maior ou igual a 0.");
         }
         if (resolvedSize < 1 || resolvedSize > MAX_SIZE) {
-            throw new BusinessException("Size must be between 1 and " + MAX_SIZE + ".");
+            throw new BusinessException("O tamanho da página deve estar entre 1 e " + MAX_SIZE + ".");
         }
 
         return PageRequest.of(resolvedPage, resolvedSize);

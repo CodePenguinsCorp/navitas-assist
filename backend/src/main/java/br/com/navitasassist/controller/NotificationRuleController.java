@@ -37,7 +37,7 @@ public class NotificationRuleController {
 
     @org.springframework.web.bind.annotation.PostMapping("/emails/test")
     public br.com.navitasassist.notification.NotificationEmailTestResponse testEmail(@RequestBody(required = false) java.util.Map<String, Object> body, java.security.Principal principal) {
-        if (body != null && !body.isEmpty()) throw new br.com.navitasassist.controller.BusinessException("Email test accepts no recipient or payload.");
+        if (body != null && !body.isEmpty()) throw new br.com.navitasassist.controller.BusinessException("O teste de e-mail não aceita destinatário nem conteúdo.");
         return emailAdmin.test(principal.getName());
     }
 

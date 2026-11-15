@@ -387,7 +387,7 @@ class AuthSecurityIntegrationTest {
     void unauthenticatedApiRequestShouldReturnUnauthorized() throws Exception {
         mockMvc.perform(get("/api/rmas"))
             .andExpect(status().isUnauthorized())
-            .andExpect(jsonPath("$.message").value("Unauthorized"));
+            .andExpect(jsonPath("$.message").value("Sessão não autenticada ou expirada."));
     }
 
     @Test

@@ -43,7 +43,7 @@ public class PartService {
      */
     public PartResponse update(Long id, PartRequest request) {
         // Locked like stock movements, so saving the full row cannot overwrite a concurrently changed balance.
-        Part part = partRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Part not found: " + id));
+        Part part = partRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Peça não encontrada: " + id));
         validateCode(part, request.code());
 
         apply(part, request);
@@ -52,7 +52,7 @@ public class PartService {
 
     @Transactional(readOnly = true)
     public Part getEntityById(Long id) {
-        return partRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Part not found: " + id));
+        return partRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Peça não encontrada: " + id));
     }
 
     private void validateCode(Part existing, String code) {
@@ -60,7 +60,7 @@ public class PartService {
         boolean duplicate = partRepository.existsByCodeIgnoreCase(normalized) && (existing == null || !existing.getCode().equalsIgnoreCase(normalized));
 
         if (duplicate) {
-            throw new BusinessException("Part code already registered: " + normalized);
+            throw new BusinessException("Código de peça já cadastrado: " + normalized);
         }
     }
 

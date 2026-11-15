@@ -70,7 +70,7 @@ public class PartStockService {
 
     public PartMovementResponse registerMovement(Long partId, PartMovementRequest request) {
         if (!MANUAL_TYPES.contains(request.type())) {
-            throw new BusinessException("Only ENTRY, EXIT and ADJUSTMENT movements can be registered manually.");
+            throw new BusinessException("Somente movimentos de entrada, saída e ajuste podem ser registrados manualmente.");
         }
 
         BigDecimal quantity = request.quantity();
@@ -80,10 +80,10 @@ public class PartStockService {
             case EXIT -> requirePositive(quantity).negate();
             default -> {
                 if (quantity.signum() == 0) {
-                    throw new BusinessException("Adjustment quantity must not be zero.");
+                    throw new BusinessException("A quantidade do ajuste não pode ser zero.");
                 }
                 if (reason == null) {
-                    throw new BusinessException("A reason is required for stock adjustments.");
+                    throw new BusinessException("Informe o motivo do ajuste de estoque.");
                 }
                 yield quantity;
             }
@@ -95,18 +95,18 @@ public class PartStockService {
     }
 
     public PartMovementResponse reverse(Long movementId, PartReversalRequest request) {
-        Long partId = partMovementRepository.findById(movementId).map(movement -> movement.getPart().getId()).orElseThrow(() -> new ResourceNotFoundException("Movement not found: " + movementId));
+        Long partId = partMovementRepository.findById(movementId).map(movement -> movement.getPart().getId()).orElseThrow(() -> new ResourceNotFoundException("Movimento não encontrado: " + movementId));
         Part part = lockPart(partId);
         PartMovement original = partMovementRepository.findById(movementId).orElseThrow();
 
         if (original.getType() == PartMovementType.RESERVATION || original.getType() == PartMovementType.RESERVATION_CANCEL) {
-            throw new BusinessException("Reservation movements are corrected by cancelling the reservation.");
+            throw new BusinessException("Movimentos de reserva são corrigidos cancelando a reserva.");
         }
         if (original.getType() == PartMovementType.REVERSAL) {
-            throw new BusinessException("Reversal movements cannot be reversed.");
+            throw new BusinessException("Estornos não podem ser estornados.");
         }
         if (partMovementRepository.existsByReversedMovement_Id(movementId)) {
-            throw new BusinessException("Movement has already been reversed: " + movementId);
+            throw new BusinessException("O movimento já foi estornado: " + movementId);
         }
 
         // A reversed consumption returns the quantity to free stock; the reservation is closed as REVERSED.
@@ -121,7 +121,7 @@ public class PartStockService {
             return PartMovementResponse.from(movement, false);
         } catch (DataIntegrityViolationException exception) {
             // uk_part_movements_reversed guards concurrent reversals the snapshot read above could not see.
-            throw new BusinessException("Movement has already been reversed: " + movementId);
+            throw new BusinessException("O movimento já foi estornado: " + movementId);
         }
     }
 
@@ -154,7 +154,7 @@ public class PartStockService {
 
         Part part = lockPart(request.partId());
         if (!part.isActive()) {
-            throw new BusinessException("Part is inactive: " + part.getCode());
+            throw new BusinessException("A peça está inativa: " + part.getCode());
         }
 
         PartReservation reservation = new PartReservation();
@@ -181,9 +181,9 @@ public class PartStockService {
         lockOpenRma(rmaId, CLOSED_RMA_RESERVATION_MESSAGE);
         Part part = lockPart(partId);
         PartReservation reservation = lockReservation(reservationId);
-        requireStatus(reservation, "Only pending reservations can be allocated.", PartReservationStatus.PENDING);
+        requireStatus(reservation, "Somente reservas pendentes podem ser alocadas.", PartReservationStatus.PENDING);
         if (!part.isActive()) {
-            throw new BusinessException("Part is inactive: " + part.getCode());
+            throw new BusinessException("A peça está inativa: " + part.getCode());
         }
 
         record(part, PartMovementType.RESERVATION, BigDecimal.ZERO, reservation.getQuantity(), part.getUnitCost(), reservation.getRma(), reservation, null, null);
@@ -213,7 +213,7 @@ public class PartStockService {
     public PartReservationResponse cancel(Long rmaId, Long reservationId) {
         Part part = lockPart(findReservationPartId(rmaId, reservationId));
         PartReservation reservation = lockReservation(reservationId);
-        requireStatus(reservation, "Only active or pending reservations can be cancelled.", PartReservationStatus.ACTIVE, PartReservationStatus.PENDING);
+        requireStatus(reservation, "Somente reservas ativas ou pendentes podem ser canceladas.", PartReservationStatus.ACTIVE, PartReservationStatus.PENDING);
 
         if (reservation.getStatus() == PartReservationStatus.ACTIVE) {
             record(part, PartMovementType.RESERVATION_CANCEL, BigDecimal.ZERO, reservation.getQuantity().negate(), part.getUnitCost(), reservation.getRma(), reservation, null, null);
@@ -246,7 +246,7 @@ public class PartStockService {
         BigDecimal onHand = part.getOnHand().add(onHandChange);
         BigDecimal reservedQuantity = part.getReserved().add(reservedChange);
         if (reservedQuantity.signum() < 0 || onHand.compareTo(reservedQuantity) < 0) {
-            throw new BusinessException("Insufficient available stock for part " + part.getCode() + ". Available: " + format(part.getAvailable()));
+            throw new BusinessException("Estoque disponível insuficiente para a peça " + part.getCode() + ". Disponível: " + format(part.getAvailable()));
         }
 
         part.setOnHand(onHand);
@@ -296,20 +296,20 @@ public class PartStockService {
     }
 
     private Part lockPart(Long partId) {
-        return partRepository.findByIdForUpdate(partId).orElseThrow(() -> new ResourceNotFoundException("Part not found: " + partId));
+        return partRepository.findByIdForUpdate(partId).orElseThrow(() -> new ResourceNotFoundException("Peça não encontrada: " + partId));
     }
 
     private PartReservation lockReservation(Long reservationId) {
-        return partReservationRepository.findByIdForUpdate(reservationId).orElseThrow(() -> new ResourceNotFoundException("Reservation not found: " + reservationId));
+        return partReservationRepository.findByIdForUpdate(reservationId).orElseThrow(() -> new ResourceNotFoundException("Reserva não encontrada: " + reservationId));
     }
 
     private Long findReservationPartId(Long rmaId, Long reservationId) {
-        return partReservationRepository.findPartIdByIdAndRmaId(reservationId, rmaId).orElseThrow(() -> new ResourceNotFoundException("Reservation not found: " + reservationId));
+        return partReservationRepository.findPartIdByIdAndRmaId(reservationId, rmaId).orElseThrow(() -> new ResourceNotFoundException("Reserva não encontrada: " + reservationId));
     }
 
     private void ensurePartExists(Long partId) {
         if (!partRepository.existsById(partId)) {
-            throw new ResourceNotFoundException("Part not found: " + partId);
+            throw new ResourceNotFoundException("Peça não encontrada: " + partId);
         }
     }
 
@@ -321,7 +321,7 @@ public class PartStockService {
 
     private BigDecimal requirePositive(BigDecimal quantity) {
         if (quantity.signum() <= 0) {
-            throw new BusinessException("Quantity must be greater than zero.");
+            throw new BusinessException("A quantidade deve ser maior que zero.");
         }
         return quantity;
     }

@@ -87,7 +87,7 @@ public class ClientService {
     @Transactional(readOnly = true)
     public Client getEntityById(Long id) {
         return clientRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Client not found: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado: " + id));
     }
 
     private void apply(Client client, ClientRequest request) {

@@ -44,7 +44,7 @@ public class RestExceptionHandler {
             .map(this::formatFieldError)
             .toList();
 
-        return buildResponse(HttpStatus.BAD_REQUEST, "Validation failed", details);
+        return buildResponse(HttpStatus.BAD_REQUEST, "Dados inválidos", details);
     }
 
     @ExceptionHandler(org.springframework.web.method.annotation.HandlerMethodValidationException.class)
@@ -56,32 +56,32 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleUnreadableBody(HttpMessageNotReadableException exception) {
-        return buildResponse(HttpStatus.BAD_REQUEST, "Malformed request body", List.of());
+        return buildResponse(HttpStatus.BAD_REQUEST, "Corpo da requisição malformado.", List.of());
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiError> handleInvalidParameter(MethodArgumentTypeMismatchException exception) {
-        return buildResponse(HttpStatus.BAD_REQUEST, "Invalid request parameter", List.of(exception.getName() + ": invalid value"));
+        return buildResponse(HttpStatus.BAD_REQUEST, "Parâmetro da requisição inválido.", List.of(exception.getName() + ": valor inválido"));
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException exception) {
-        return buildResponse(HttpStatus.FORBIDDEN, "Access denied", List.of());
+        return buildResponse(HttpStatus.FORBIDDEN, "Acesso negado.", List.of());
     }
 
     @ExceptionHandler(BindException.class)
     public ResponseEntity<ApiError> handleQueryValidation(BindException exception) {
-        return buildResponse(HttpStatus.BAD_REQUEST, "Invalid query parameters", exception.getFieldErrors().stream().map(this::formatFieldError).toList());
+        return buildResponse(HttpStatus.BAD_REQUEST, "Parâmetros de consulta inválidos.", exception.getFieldErrors().stream().map(this::formatFieldError).toList());
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ApiError> handleMethodNotAllowed(HttpRequestMethodNotSupportedException exception) {
-        return buildResponse(HttpStatus.METHOD_NOT_ALLOWED, "HTTP method not supported", List.of(), exception.getHeaders());
+        return buildResponse(HttpStatus.METHOD_NOT_ALLOWED, "Método HTTP não suportado.", List.of(), exception.getHeaders());
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<ApiError> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException exception) {
-        return buildResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Content type not supported", List.of(), exception.getHeaders());
+        return buildResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Tipo de conteúdo não suportado.", List.of(), exception.getHeaders());
     }
 
     @ExceptionHandler(Exception.class)

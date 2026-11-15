@@ -66,7 +66,7 @@ public class ProtocolExecutionService {
         RmaRecord rma = rmaRecordRepository.findByIdForUpdate(rmaId).orElseThrow(() -> new ResourceNotFoundException("OS não encontrada: " + rmaId));
         ProtocolTemplate template = protocolTemplateService.getEntityById(templateId);
         if (!template.isActive()) {
-            throw new BusinessException("Inactive protocols cannot be started.");
+            throw new BusinessException("Protocolos inativos não podem ser iniciados.");
         }
         if (!protocolTemplateService.appliesTo(template, rma)) {
             throw new BusinessException("Este protocolo não se aplica aos produtos da OS.");
@@ -88,20 +88,20 @@ public class ProtocolExecutionService {
 
     public ProtocolExecutionResponse recordResult(Long executionId, Long itemId, ProtocolItemResultRequest request) {
         RmaProtocolExecution execution = rmaProtocolExecutionRepository.findByIdForUpdate(executionId)
-            .orElseThrow(() -> new ResourceNotFoundException("Protocol execution not found: " + executionId));
+            .orElseThrow(() -> new ResourceNotFoundException("Execução de protocolo não encontrada: " + executionId));
         if (execution.getStatus() != ProtocolExecutionStatus.IN_PROGRESS) {
-            throw new BusinessException("Finished protocol executions cannot receive new results. Start a new execution.");
+            throw new BusinessException("Execuções de protocolo concluídas não aceitam novos resultados. Inicie uma nova execução.");
         }
         ProtocolTemplateItem item = execution.getTemplateVersion().getItems().stream().filter(candidate -> candidate.getId().equals(itemId)).findFirst()
-            .orElseThrow(() -> new ResourceNotFoundException("Protocol item not found in this execution: " + itemId));
+            .orElseThrow(() -> new ResourceNotFoundException("Item de protocolo não encontrado nesta execução: " + itemId));
 
         int previousAttempts = (int) execution.getResults().stream().filter(result -> result.getItem().getId().equals(itemId)).count();
         String justification = trimToNull(request.justification());
         if (previousAttempts > 0 && justification == null) {
-            throw new BusinessException("Repeating an item requires a justification.");
+            throw new BusinessException("Repetir um item exige uma justificativa.");
         }
         if (request.outcome() != ProtocolItemOutcome.PASSED && justification == null) {
-            throw new BusinessException("Failed or not applicable items require a justification.");
+            throw new BusinessException("Itens reprovados ou não aplicáveis exigem uma justificativa.");
         }
 
         RmaProtocolItemResult result = new RmaProtocolItemResult();
@@ -116,7 +116,7 @@ public class ProtocolExecutionService {
         Instant now = Instant.now();
         Instant startedAt = request.startedAt() == null ? now : request.startedAt();
         if (startedAt.isAfter(now.plus(Duration.ofMinutes(5))) || startedAt.isBefore(execution.getStartedAt().minus(Duration.ofMinutes(5)))) {
-            throw new BusinessException("Item start must be between the protocol start and now.");
+            throw new BusinessException("O início do item deve estar entre o início do protocolo e o momento atual.");
         }
         result.setStartedAt(startedAt);
         result.setCompletedAt(now);
@@ -133,9 +133,9 @@ public class ProtocolExecutionService {
 
     public ProtocolExecutionResponse complete(Long executionId) {
         RmaProtocolExecution execution = rmaProtocolExecutionRepository.findByIdForUpdate(executionId)
-            .orElseThrow(() -> new ResourceNotFoundException("Protocol execution not found: " + executionId));
+            .orElseThrow(() -> new ResourceNotFoundException("Execução de protocolo não encontrada: " + executionId));
         if (execution.getStatus() != ProtocolExecutionStatus.IN_PROGRESS) {
-            throw new BusinessException("Protocol execution is already finished.");
+            throw new BusinessException("A execução do protocolo já foi concluída.");
         }
 
         Map<Long, RmaProtocolItemResult> latest = latestResults(execution);
@@ -144,7 +144,7 @@ public class ProtocolExecutionService {
             .map(ProtocolTemplateItem::getTitle)
             .toList();
         if (!missing.isEmpty()) {
-            throw new BusinessException("Required items are pending: " + String.join(", ", missing));
+            throw new BusinessException("Há itens obrigatórios pendentes: " + String.join(", ", missing));
         }
 
         boolean failed = latest.values().stream().anyMatch(result -> result.getOutcome() == ProtocolItemOutcome.FAILED);
@@ -191,14 +191,14 @@ public class ProtocolExecutionService {
         if (item.getType() == ProtocolItemType.MEASUREMENT && (applicable || request.measuredValue() != null)) {
             BigDecimal value = request.measuredValue();
             if (value == null) {
-                throw new BusinessException("Measurement value is required: " + item.getTitle());
+                throw new BusinessException("Informe o valor da medição: " + item.getTitle());
             }
             if (Math.max(value.stripTrailingZeros().scale(), 0) > item.getDecimalPlaces()) {
-                throw new BusinessException("Measurement must use at most " + item.getDecimalPlaces() + " decimal places: " + item.getTitle());
+                throw new BusinessException("A medição deve ter no máximo " + item.getDecimalPlaces() + " casas decimais: " + item.getTitle());
             }
             boolean outOfRange = (item.getMinValue() != null && value.compareTo(item.getMinValue()) < 0) || (item.getMaxValue() != null && value.compareTo(item.getMaxValue()) > 0);
             if (outOfRange && request.outcome() == ProtocolItemOutcome.PASSED) {
-                throw new BusinessException("Measurement outside the expected range cannot pass: " + item.getTitle());
+                throw new BusinessException("Medição fora da faixa esperada não pode ser aprovada: " + item.getTitle());
             }
             result.setMeasuredValue(value);
             result.setUnit(item.getUnit());
@@ -206,12 +206,12 @@ public class ProtocolExecutionService {
         if (item.getType() == ProtocolItemType.TEXT) {
             String text = trimToNull(request.textValue());
             if (applicable && text == null) {
-                throw new BusinessException("Text result is required: " + item.getTitle());
+                throw new BusinessException("Informe o resultado em texto: " + item.getTitle());
             }
             result.setTextValue(text);
         }
         if (item.isEvidenceRequired() && request.outcome() == ProtocolItemOutcome.PASSED && result.getEvidence() == null) {
-            throw new BusinessException("Evidence is required: " + item.getTitle());
+            throw new BusinessException("Informe a evidência: " + item.getTitle());
         }
     }
 

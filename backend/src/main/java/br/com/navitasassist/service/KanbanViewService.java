@@ -81,13 +81,13 @@ public class KanbanViewService {
             ? kanbanViewRepository.existsByOwnerIdAndNameIgnoreCase(ownerId, name)
             : kanbanViewRepository.existsByOwnerIdAndNameIgnoreCaseAndIdNot(ownerId, name, existingId);
         if (duplicate) {
-            throw new BusinessException("A Kanban view with this name already exists.");
+            throw new BusinessException("Já existe uma visão do Kanban com este nome.");
         }
         if (filters.assigneeId() != null && filters.unassignedOnly()) {
-            throw new BusinessException("Assignee and unassigned filters cannot be combined.");
+            throw new BusinessException("Os filtros de responsável e de sem responsável não podem ser combinados.");
         }
         if (filters.deadline() == RmaDeadlineStatus.CLOSED) {
-            throw new BusinessException("Deadline filter must be OVERDUE, DUE_SOON, ON_TRACK or NO_DUE_DATE.");
+            throw new BusinessException("O filtro de prazo deve ser OVERDUE, DUE_SOON, ON_TRACK ou NO_DUE_DATE.");
         }
         validateRange(filters.entryFrom(), filters.entryTo(), "entry");
         validateRange(filters.updatedFrom(), filters.updatedTo(), "updated");
@@ -95,7 +95,7 @@ public class KanbanViewService {
 
     private void validateRange(LocalDate from, LocalDate to, String field) {
         if (from != null && to != null && from.isAfter(to)) {
-            throw new BusinessException("The " + field + " start date cannot be after the end date.");
+            throw new BusinessException("A data inicial de " + field + " não pode ser posterior à data final.");
         }
     }
 
@@ -119,17 +119,17 @@ public class KanbanViewService {
 
     private UserAccount getOwner(String username) {
         return userAccountRepository.findByUsernameIgnoreCase(username)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+            .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado: " + username));
     }
 
     private UserAccount getOwnerForUpdate(String username) {
         return userAccountRepository.findByUsernameIgnoreCaseForUpdate(username)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+            .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado: " + username));
     }
 
     private KanbanView getOwnedView(Long ownerId, Long id) {
         return kanbanViewRepository.findByIdAndOwnerId(id, ownerId)
-            .orElseThrow(() -> new ResourceNotFoundException("Kanban view not found: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Visão do Kanban não encontrada: " + id));
     }
 
     private String trimToNull(String value) {

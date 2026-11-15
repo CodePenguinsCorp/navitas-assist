@@ -142,7 +142,7 @@ class PartInventoryIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json(partPayload("pca-dup", "1.00", "0"))))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Part code already registered: pca-dup"));
+            .andExpect(jsonPath("$.message").value("Código de peça já cadastrado: pca-dup"));
     }
 
     @Test
@@ -173,7 +173,7 @@ class PartInventoryIntegrationTest {
 
         movement(partId, "EXIT", "2", null, ADMIN)
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Insufficient available stock for part PCA-EXIT. Available: 1"));
+            .andExpect(jsonPath("$.message").value("Estoque disponível insuficiente para a peça PCA-EXIT. Disponível: 1"));
 
         movement(partId, "ADJUSTMENT", "-2", "Inventário", ADMIN).andExpect(status().isBadRequest());
         movement(partId, "EXIT", "1", null, ADMIN).andExpect(status().isCreated()).andExpect(jsonPath("$.onHandAfter").value(4));
@@ -185,7 +185,7 @@ class PartInventoryIntegrationTest {
 
         movement(partId, "ADJUSTMENT", "3", null, ADMIN)
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("A reason is required for stock adjustments."));
+            .andExpect(jsonPath("$.message").value("Informe o motivo do ajuste de estoque."));
 
         movement(partId, "ADJUSTMENT", "3", "Contagem física", ADMIN)
             .andExpect(status().isCreated())
@@ -300,7 +300,7 @@ class PartInventoryIntegrationTest {
 
         reverse(consumptionId, "De novo", ADMIN)
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Movement has already been reversed: " + consumptionId));
+            .andExpect(jsonPath("$.message").value("O movimento já foi estornado: " + consumptionId));
 
         mockMvc.perform(get("/api/parts").param("query", "PCA-REV").with(VIEWER)).andExpect(jsonPath("$[0].onHand").value(5));
 
@@ -322,7 +322,7 @@ class PartInventoryIntegrationTest {
 
         reverse(entryId, "Lançamento duplicado", ADMIN)
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Insufficient available stock for part PCA-REV-IN. Available: 1"));
+            .andExpect(jsonPath("$.message").value("Estoque disponível insuficiente para a peça PCA-REV-IN. Disponível: 1"));
     }
 
     @Test
@@ -334,7 +334,7 @@ class PartInventoryIntegrationTest {
 
         reverse(reservationMovementId, "Teste", ADMIN)
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Reservation movements are corrected by cancelling the reservation."));
+            .andExpect(jsonPath("$.message").value("Movimentos de reserva são corrigidos cancelando a reserva."));
     }
 
     @Test
@@ -390,7 +390,7 @@ class PartInventoryIntegrationTest {
 
         reserve(rma.getId(), partId, "1", TECHNICIAN)
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Part is inactive: PCA-UPD"));
+            .andExpect(jsonPath("$.message").value("A peça está inativa: PCA-UPD"));
     }
 
     @Test
@@ -442,7 +442,7 @@ class PartInventoryIntegrationTest {
 
         action(rma.getId(), pending, "allocate", TECHNICIAN)
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Part is inactive: PCA-INACTIVE"));
+            .andExpect(jsonPath("$.message").value("A peça está inativa: PCA-INACTIVE"));
     }
 
     private org.springframework.test.web.servlet.ResultActions changeStatus(long rmaId, String status) throws Exception {

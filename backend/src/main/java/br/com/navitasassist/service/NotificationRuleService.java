@@ -46,8 +46,8 @@ public class NotificationRuleService {
     }
 
     public NotificationRuleResponse update(NotificationEventType eventType, NotificationRuleRequest request) {
-        NotificationRule rule = notificationRuleRepository.findByEventType(eventType).orElseThrow(() -> new ResourceNotFoundException("Notification rule not found: " + eventType));
-        if (request.enabled() && !eventType.isSupported()) throw new BusinessException("Unsupported notification event.");
+        NotificationRule rule = notificationRuleRepository.findByEventType(eventType).orElseThrow(() -> new ResourceNotFoundException("Regra de notificação não encontrada: " + eventType));
+        if (request.enabled() && !eventType.isSupported()) throw new BusinessException("Evento de notificação não suportado.");
         rule.setEnabled(request.enabled());
         if (request.appEnabled() != null) rule.setAppEnabled(request.appEnabled());
         rule.setSeverity(request.severity());

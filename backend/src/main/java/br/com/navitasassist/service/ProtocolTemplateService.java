@@ -51,7 +51,7 @@ public class ProtocolTemplateService {
      * Editing never touches existing versions: a new version is appended and only new executions use it.
      */
     public ProtocolTemplateResponse update(Long id, ProtocolTemplateRequest request) {
-        ProtocolTemplate template = protocolTemplateRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Protocol template not found: " + id));
+        ProtocolTemplate template = protocolTemplateRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Modelo de protocolo não encontrado: " + id));
         applyMetadata(template, request);
         ProtocolTemplateVersion version = buildVersion(request, template.getCurrentVersion() + 1);
         template.addVersion(version);
@@ -61,7 +61,7 @@ public class ProtocolTemplateService {
 
     @Transactional(readOnly = true)
     public ProtocolTemplate getEntityById(Long id) {
-        return protocolTemplateRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Protocol template not found: " + id));
+        return protocolTemplateRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Modelo de protocolo não encontrado: " + id));
     }
 
     @Transactional(readOnly = true)
@@ -80,7 +80,7 @@ public class ProtocolTemplateService {
     private void applyMetadata(ProtocolTemplate template, ProtocolTemplateRequest request) {
         String category = trimToNull(request.category());
         if (request.productId() == null && category == null) {
-            throw new BusinessException("Inform a product or a category for the protocol.");
+            throw new BusinessException("Informe um produto ou uma categoria para o protocolo.");
         }
         template.setName(request.name().trim());
         template.setProduct(request.productId() == null ? null : productService.getEntityById(request.productId()));
@@ -114,12 +114,12 @@ public class ProtocolTemplateService {
 
         String unit = trimToNull(request.unit());
         if (unit == null || request.decimalPlaces() == null) {
-            throw new BusinessException("Measurement items require a unit and a number of decimal places: " + item.getTitle());
+            throw new BusinessException("Itens de medição exigem unidade e número de casas decimais: " + item.getTitle());
         }
         validateLimit(request.minValue(), request.decimalPlaces(), item.getTitle());
         validateLimit(request.maxValue(), request.decimalPlaces(), item.getTitle());
         if (request.minValue() != null && request.maxValue() != null && request.minValue().compareTo(request.maxValue()) > 0) {
-            throw new BusinessException("Minimum value cannot be greater than maximum value: " + item.getTitle());
+            throw new BusinessException("O valor mínimo não pode ser maior que o máximo: " + item.getTitle());
         }
         item.setUnit(unit);
         item.setDecimalPlaces(request.decimalPlaces());
@@ -130,7 +130,7 @@ public class ProtocolTemplateService {
 
     private void validateLimit(BigDecimal value, int decimalPlaces, String title) {
         if (value != null && Math.max(value.stripTrailingZeros().scale(), 0) > decimalPlaces) {
-            throw new BusinessException("Limits must use at most " + decimalPlaces + " decimal places: " + title);
+            throw new BusinessException("Os limites devem ter no máximo " + decimalPlaces + " casas decimais: " + title);
         }
     }
 

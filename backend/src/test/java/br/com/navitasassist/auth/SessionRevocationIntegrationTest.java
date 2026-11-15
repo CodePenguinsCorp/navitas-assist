@@ -114,7 +114,7 @@ class SessionRevocationIntegrationTest {
         }
         for (MockHttpSession session : List.of(first, second)) {
             mvc.perform(get("/api/products").session(session)).andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Unauthorized")).andExpect(header().doesNotExist(HttpHeaders.WWW_AUTHENTICATE));
+                .andExpect(jsonPath("$.message").value("Sessão não autenticada ou expirada.")).andExpect(header().doesNotExist(HttpHeaders.WWW_AUTHENTICATE));
             assertTrue(session.isInvalid());
         }
         mvc.perform(get("/api/users").session(actor)).andExpect(status().isOk());
@@ -230,7 +230,7 @@ class SessionRevocationIntegrationTest {
         mvc.perform(put("/api/users/{id}", target.getId()).session(actor).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(payload))).andExpect(status().isOk());
         mvc.perform(delete("/api/users/{id}", target.getId()).session(first))
-            .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.message").value("Unauthorized"));
+            .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.message").value("Sessão não autenticada ou expirada."));
         assertTrue(first.isInvalid());
         mvc.perform(get("/api/users").session(actor)).andExpect(status().isOk());
     }

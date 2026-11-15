@@ -279,7 +279,7 @@ class NotificationEmailIntegrationTest {
         long count = notificationRepository.count();
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/notification-rules/emails/test")
             .with(user(technician.getUsername()).authorities(org.springframework.security.core.authority.AuthorityUtils.createAuthorityList("notificacoes.regras"))).with(csrf()))
-            .andExpect(status().isBadGateway()).andExpect(jsonPath("$.message").value("Email provider could not accept the test."));
+            .andExpect(status().isBadGateway()).andExpect(jsonPath("$.message").value("O provedor de e-mail não aceitou o teste."));
         assertEquals(count, notificationRepository.count());
     }
 

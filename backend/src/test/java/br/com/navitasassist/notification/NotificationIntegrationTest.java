@@ -342,7 +342,7 @@ class NotificationIntegrationTest {
 
         mockMvc.perform(put("/api/notifications/preferences/RMA_ASSIGNED").with(as(technician)).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"muted\":true}"))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("This notification rule cannot be muted: RMA_ASSIGNED"));
+            .andExpect(jsonPath("$.message").value("Esta regra de notificação não pode ser silenciada: RMA_ASSIGNED"));
 
         mockMvc.perform(put("/api/notifications/preferences/RMA_CREATED").with(as(desk)).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"muted\":true}"))
             .andExpect(status().isOk())

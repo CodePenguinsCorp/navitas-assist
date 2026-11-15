@@ -192,7 +192,7 @@ class ProductControllerIntegrationTest {
                 .content(productJson(sku, "Category", "Notes")))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.status").value(400))
-            .andExpect(jsonPath("$.message").value("SKU already registered: " + sku.trim()))
+            .andExpect(jsonPath("$.message").value("SKU já cadastrado: " + sku.trim()))
             .andExpect(jsonPath("$.details").isEmpty());
 
         assertThat(productRepository.count()).isEqualTo(1);
@@ -212,7 +212,7 @@ class ProductControllerIntegrationTest {
                 .content(productJson(sku, "Changed category", "Changed notes")))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.status").value(400))
-            .andExpect(jsonPath("$.message").value("SKU already registered: " + sku.trim()));
+            .andExpect(jsonPath("$.message").value("SKU já cadastrado: " + sku.trim()));
 
         assertThat(productRepository.count()).isEqualTo(2);
         Product persisted = productRepository.findById(edited.getId()).orElseThrow();

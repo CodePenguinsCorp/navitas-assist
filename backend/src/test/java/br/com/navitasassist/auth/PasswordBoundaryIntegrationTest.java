@@ -124,7 +124,7 @@ class PasswordBoundaryIntegrationTest {
     @MethodSource("excessivePasswords")
     void shouldRejectExcessiveEncodingAtTheConfiguredEncoder(String password) {
         assertThatThrownBy(() -> encoder.encode(password)).isInstanceOf(BusinessException.class)
-            .hasMessage("Password must contain at most 72 UTF-8 bytes.");
+            .hasMessage("A senha deve ter no máximo 72 bytes UTF-8.");
     }
 
     @Test

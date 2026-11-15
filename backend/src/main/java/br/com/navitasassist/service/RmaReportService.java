@@ -137,7 +137,7 @@ public class RmaReportService {
 
     Period period(RmaReportRequest filters) {
         if (filters.entryFrom() != null && filters.entryTo() != null && filters.entryFrom().isAfter(filters.entryTo())) {
-            throw new BusinessException("Entry start date must not be after end date.");
+            throw new BusinessException("A data de entrada inicial não pode ser posterior à final.");
         }
         LocalDate today = LocalDate.now(BUSINESS_ZONE);
         LocalDate entryTo = filters.entryTo() != null ? filters.entryTo()
@@ -148,7 +148,7 @@ public class RmaReportService {
             entryTo = entryFrom;
         }
         if (ChronoUnit.DAYS.between(entryFrom, entryTo) + 1 > MAX_PERIOD_DAYS) {
-            throw new BusinessException("Report period must be at most " + MAX_PERIOD_DAYS + " days.");
+            throw new BusinessException("O período do relatório deve ter no máximo " + MAX_PERIOD_DAYS + " dias.");
         }
         return new Period(entryFrom, entryTo);
     }

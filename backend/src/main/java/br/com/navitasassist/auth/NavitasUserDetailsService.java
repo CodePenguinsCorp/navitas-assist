@@ -25,7 +25,7 @@ public class NavitasUserDetailsService implements UserDetailsService {
         // Login holds this lock until the authenticated session has been registered. The query locks only the
         // user_accounts row; profile and collections are loaded by their own selects, without locks.
         UserAccount userAccount = userAccountRepository.findByUsernameIgnoreCaseForUpdate(username)
-            .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+            .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + username));
 
         return User.builder()
             .username(userAccount.getUsername())

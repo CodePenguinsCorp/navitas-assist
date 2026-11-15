@@ -150,7 +150,7 @@ public class RmaService {
 
     public RmaDetailResponse update(Long id, UpdateRmaRequest request) {
         if (Boolean.TRUE.equals(request.clearDueDate()) && request.dueDate() != null) {
-            throw new BusinessException("Provide a due date or clear it, not both.");
+            throw new BusinessException("Informe uma data limite ou limpe-a, não os dois.");
         }
         RmaRecord rma = getEntityForUpdate(id);
 
@@ -162,7 +162,7 @@ public class RmaService {
             syncLegacyItem(rma);
         }
         if (request.priority() != null && request.priority() != rma.getPriority()) {
-            addStatusHistory(rma, rma.getStatus(), "Priority changed from " + rma.getPriority() + " to " + request.priority());
+            addStatusHistory(rma, rma.getStatus(), "Prioridade alterada de " + rma.getPriority() + " para " + request.priority());
             rma.setPriority(request.priority());
         }
 
@@ -360,7 +360,7 @@ public class RmaService {
 
     private List<RmaItem> buildItems(List<RmaItemRequest> requests) {
         if (requests == null || requests.isEmpty()) {
-            throw new BusinessException("At least one product must be provided.");
+            throw new BusinessException("Informe pelo menos um produto.");
         }
         if (requests.stream().anyMatch(Objects::isNull)) {
             throw new BusinessException("Cada item da OS deve ser informado.");
@@ -372,7 +372,7 @@ public class RmaService {
             item.setWarrantyMonths(item.getProduct().getDefaultWarrantyMonths());
             applyTrackableFields(item.getItemIdentification(), request.batchNumber(), request.serialNumber(), request.manufacturedAt());
             if (item.getItemIdentification().isEmpty()) {
-                throw new BusinessException("Each product must have at least a batch number or serial number.");
+                throw new BusinessException("Cada produto deve ter ao menos o número do lote ou o número de série.");
             }
             return item;
         }).toList();
@@ -477,22 +477,22 @@ public class RmaService {
 
     private void validateMandatoryFields(RmaRecord rma) {
         if (rma.getItems().isEmpty() && (rma.getProduct() == null || rma.getItemIdentification().isEmpty())) {
-            throw new BusinessException("At least one identified product must be provided.");
+            throw new BusinessException("Informe pelo menos um produto identificado.");
         }
         if (rma.getItems().stream().anyMatch(item -> item.getProduct() == null || item.getItemIdentification().isEmpty())) {
-            throw new BusinessException("Each product must have at least a batch number or serial number.");
+            throw new BusinessException("Cada produto deve ter ao menos o número do lote ou o número de série.");
         }
         if (rma.getPurchaseDate() == null && !rma.isPurchaseDateUnknown()) {
-            throw new BusinessException("Provide a purchase date or mark it as unknown.");
+            throw new BusinessException("Informe a data de compra ou marque-a como desconhecida.");
         }
         if (rma.getPurchaseDate() != null && rma.isPurchaseDateUnknown()) {
-            throw new BusinessException("Purchase date cannot be informed and unknown at the same time.");
+            throw new BusinessException("A data de compra não pode ser informada e desconhecida ao mesmo tempo.");
         }
         if (rma.getClient() == null) {
-            throw new BusinessException("Client is required.");
+            throw new BusinessException("Informe o cliente.");
         }
         if (rma.getEntryDate() == null || trimToNull(rma.getReportedFailure()) == null || trimToNull(rma.getReceivedBy()) == null) {
-            throw new BusinessException("Entry date, receiver and reported failure are required.");
+            throw new BusinessException("Informe a data de entrada, o recebedor e a falha relatada.");
         }
     }
 
@@ -508,22 +508,22 @@ public class RmaService {
                 .toList();
 
         if (manufacturedDates.stream().anyMatch(date -> date.isAfter(today))) {
-            throw new BusinessException("Manufacturing date cannot be after today.");
+            throw new BusinessException("A data de fabricação não pode ser posterior a hoje.");
         }
         if (rma.getPurchaseDate() != null && rma.getPurchaseDate().isAfter(today)) {
-            throw new BusinessException("Purchase date cannot be after today.");
+            throw new BusinessException("A data de compra não pode ser posterior a hoje.");
         }
         if (rma.getPurchaseDate() != null && manufacturedDates.stream().anyMatch(date -> rma.getPurchaseDate().isBefore(date))) {
-            throw new BusinessException("Purchase date cannot be before manufacturing date.");
+            throw new BusinessException("A data de compra não pode ser anterior à data de fabricação.");
         }
         if (rma.getPurchaseDate() != null && rma.getEntryDate().isBefore(rma.getPurchaseDate())) {
-            throw new BusinessException("Entry date cannot be before purchase date.");
+            throw new BusinessException("A data de entrada não pode ser anterior à data de compra.");
         }
         if (manufacturedDates.stream().anyMatch(date -> rma.getEntryDate().isBefore(date))) {
-            throw new BusinessException("Entry date cannot be before manufacturing date.");
+            throw new BusinessException("A data de entrada não pode ser anterior à data de fabricação.");
         }
         if (rma.getDueDate() != null && rma.getDueDate().isBefore(rma.getEntryDate())) {
-            throw new BusinessException("Due date cannot be before entry date.");
+            throw new BusinessException("A data limite não pode ser anterior à data de entrada.");
         }
     }
 

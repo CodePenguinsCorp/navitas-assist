@@ -41,10 +41,10 @@ public class NotificationEmailAdminService {
     @Transactional
     public NotificationEmailActionResponse retry(Long id, String actor) {
         requireActor(actor);
-        Notification n = notifications.findById(id).orElseThrow(() -> new ResourceNotFoundException("Notification not found."));
-        if (n.getEmailStatus() != NotificationEmailStatus.FAILED) throw new NotificationEmailActionException(HttpStatus.CONFLICT, "Only FAILED emails can be retried.");
-        if (!queue.eligible(n)) throw new BusinessException("Email is not eligible for delivery.");
-        if (notifications.retryFailedEmail(id, clock.instant()) != 1) throw new NotificationEmailActionException(HttpStatus.CONFLICT, "Email already rescheduled.");
+        Notification n = notifications.findById(id).orElseThrow(() -> new ResourceNotFoundException("Notificação não encontrada."));
+        if (n.getEmailStatus() != NotificationEmailStatus.FAILED) throw new NotificationEmailActionException(HttpStatus.CONFLICT, "Somente e-mails com falha podem ser reenviados.");
+        if (!queue.eligible(n)) throw new BusinessException("Este e-mail não é elegível para envio.");
+        if (notifications.retryFailedEmail(id, clock.instant()) != 1) throw new NotificationEmailActionException(HttpStatus.CONFLICT, "O e-mail já foi reagendado.");
         audit.record("EMAIL_RETRY", "NOTIFICATION", id, "Notificação #" + id, "Reenvio de e-mail solicitado.");
         log.info("action=EMAIL_RETRY notificationId={} actorId={}", id, users.findByUsernameIgnoreCase(actor).orElseThrow().getId());
         return new NotificationEmailActionResponse(id, NotificationEmailStatus.PENDING, properties.getEmail().getProvider());
@@ -53,14 +53,14 @@ public class NotificationEmailAdminService {
     /** Records the test request before HTTP; no transaction remains open during provider delivery. */
     public NotificationEmailTestResponse test(String actor) {
         UserAccount user = requireActor(actor);
-        if (!properties.getEmail().isEnabled() || !EmailMessage.validAddress(user.getEmail())) throw new BusinessException("Email channel disabled or no email registered.");
+        if (!properties.getEmail().isEnabled() || !EmailMessage.validAddress(user.getEmail())) throw new BusinessException("O canal de e-mail está desativado ou não há e-mail cadastrado.");
         // O teste não é gravado nem contado, mas consome a cota do provedor real: com o teto atingido, não sai.
         if (NotificationEmailQuota.countsTowardQuota(properties.getEmail().getProvider()) && quota.usage().limitReached()) {
-            throw new NotificationEmailActionException(HttpStatus.TOO_MANY_REQUESTS, "Email sending limit reached.");
+            throw new NotificationEmailActionException(HttpStatus.TOO_MANY_REQUESTS, "Limite de envio de e-mails atingido.");
         }
         Instant now = clock.instant();
         lastTests.entrySet().removeIf(entry -> !entry.getValue().plusSeconds(30).isAfter(now));
-        if (lastTests.putIfAbsent(user.getId(), now) != null) throw new NotificationEmailActionException(HttpStatus.TOO_MANY_REQUESTS, "Wait 30 seconds before another email test.");
+        if (lastTests.putIfAbsent(user.getId(), now) != null) throw new NotificationEmailActionException(HttpStatus.TOO_MANY_REQUESTS, "Aguarde 30 segundos antes de outro teste de e-mail.");
         audit.recordEmailTest(user.getId());
         try {
             provider.send(content.test(user.getEmail()), "test-" + user.getId() + "-" + java.util.UUID.randomUUID());
@@ -68,13 +68,13 @@ public class NotificationEmailAdminService {
             return new NotificationEmailTestResponse("fake".equals(properties.getEmail().getProvider()) ? "simulado" : "enviado", properties.getEmail().getProvider());
         } catch (RuntimeException error) {
             log.warn("action=EMAIL_TEST actorId={} result=PROVIDER_ERROR", user.getId());
-            throw new NotificationEmailActionException(HttpStatus.BAD_GATEWAY, "Email provider could not accept the test.");
+            throw new NotificationEmailActionException(HttpStatus.BAD_GATEWAY, "O provedor de e-mail não aceitou o teste.");
         }
     }
 
     private UserAccount requireActor(String actor) {
-        UserAccount user = users.findByUsernameIgnoreCase(actor).orElseThrow(() -> new ResourceNotFoundException("User not found."));
-        if (!user.isActive() || !permissions.has(user, Permission.NOTIFICACOES_REGRAS)) throw new org.springframework.security.access.AccessDeniedException("Access denied");
+        UserAccount user = users.findByUsernameIgnoreCase(actor).orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+        if (!user.isActive() || !permissions.has(user, Permission.NOTIFICACOES_REGRAS)) throw new org.springframework.security.access.AccessDeniedException("Acesso negado.");
         return user;
     }
 }

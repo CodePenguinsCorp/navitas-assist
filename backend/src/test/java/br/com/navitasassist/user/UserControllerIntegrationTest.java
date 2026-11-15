@@ -284,7 +284,7 @@ class UserControllerIntegrationTest {
                 .with(asProfile("admin", "ADMIN"))
                 .with(csrf()))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("You cannot delete your own user account."));
+            .andExpect(jsonPath("$.message").value("Você não pode excluir a própria conta de usuário."));
 
         assertTrue(userAccountRepository.existsById(admin.getId()));
     }
@@ -301,7 +301,7 @@ class UserControllerIntegrationTest {
                 .content(userJson(username, "Changed name", "changed-password", "ADMIN", false)))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.status").value(400))
-            .andExpect(jsonPath("$.message").value("Username already registered: " + username.trim()));
+            .andExpect(jsonPath("$.message").value("Nome de usuário já cadastrado: " + username.trim()));
 
         assertThat(userAccountRepository.count()).isEqualTo(count);
         assertUnchanged(existing);
@@ -320,7 +320,7 @@ class UserControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(userJson(username, "Changed name", "changed-password", "ADMIN", false)))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Username already registered: " + username.trim()));
+            .andExpect(jsonPath("$.message").value("Nome de usuário já cadastrado: " + username.trim()));
 
         assertThat(userAccountRepository.count()).isEqualTo(count);
         assertUnchanged(existing);

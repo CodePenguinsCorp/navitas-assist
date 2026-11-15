@@ -101,7 +101,7 @@ public class ProductService {
     @Transactional(readOnly = true)
     public Product getEntityById(Long id) {
         return productRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Produto não encontrado: " + id));
     }
 
     private void validateSku(Product existing, String sku) {
@@ -110,7 +110,7 @@ public class ProductService {
             && (existing == null || !existing.getSku().equalsIgnoreCase(normalizedSku));
 
         if (duplicate) {
-            throw new BusinessException("SKU already registered: " + normalizedSku);
+            throw new BusinessException("SKU já cadastrado: " + normalizedSku);
         }
     }
 

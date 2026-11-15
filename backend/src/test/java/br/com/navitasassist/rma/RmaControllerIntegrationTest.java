@@ -158,7 +158,7 @@ class RmaControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Each product must have at least a batch number or serial number."));
+            .andExpect(jsonPath("$.message").value("Cada produto deve ter ao menos o número do lote ou o número de série."));
     }
 
     @Test
@@ -209,7 +209,7 @@ class RmaControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(futureManufacturing)))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Manufacturing date cannot be after today."));
+            .andExpect(jsonPath("$.message").value("A data de fabricação não pode ser posterior a hoje."));
 
         Map<String, Object> purchaseBeforeManufacturing = Map.of(
             "clientId", savedClient.getId(),
@@ -225,7 +225,7 @@ class RmaControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(purchaseBeforeManufacturing)))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Purchase date cannot be before manufacturing date."));
+            .andExpect(jsonPath("$.message").value("A data de compra não pode ser anterior à data de fabricação."));
 
         Map<String, Object> entryBeforePurchase = Map.of(
             "clientId", savedClient.getId(),
@@ -241,7 +241,7 @@ class RmaControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(entryBeforePurchase)))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Entry date cannot be before purchase date."));
+            .andExpect(jsonPath("$.message").value("A data de entrada não pode ser anterior à data de compra."));
     }
 
     @Test
@@ -683,7 +683,7 @@ class RmaControllerIntegrationTest {
 
         putJson(id, "{\"dueDate\":\"" + entry.plusDays(2) + "\",\"clearDueDate\":true}")
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Provide a due date or clear it, not both."));
+            .andExpect(jsonPath("$.message").value("Informe uma data limite ou limpe-a, não os dois."));
     }
 
     @Test
@@ -691,12 +691,12 @@ class RmaControllerIntegrationTest {
         LocalDate entry = LocalDate.now(BUSINESS_ZONE);
         postDueDateRma("DUE-BEFORE", entry, entry.minusDays(1))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Due date cannot be before entry date."));
+            .andExpect(jsonPath("$.message").value("A data limite não pode ser anterior à data de entrada."));
 
         long id = createdId(postDueDateRma("DUE-BEFORE-2", entry, null));
         putJson(id, "{\"dueDate\":\"" + entry.minusDays(1) + "\"}")
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Due date cannot be before entry date."));
+            .andExpect(jsonPath("$.message").value("A data limite não pode ser anterior à data de entrada."));
         // A past due date is accepted when it is not before the entry date.
         putJson(id, "{\"entryDate\":\"" + entry.minusDays(20) + "\",\"dueDate\":\"" + entry.minusDays(3) + "\"}")
             .andExpect(status().isOk())
@@ -710,7 +710,7 @@ class RmaControllerIntegrationTest {
 
         putJson(id, "{\"entryDate\":\"" + entry.plusDays(3) + "\"}")
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Due date cannot be before entry date."));
+            .andExpect(jsonPath("$.message").value("A data limite não pode ser anterior à data de entrada."));
     }
 
     @Test

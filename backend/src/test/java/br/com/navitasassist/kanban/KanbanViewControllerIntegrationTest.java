@@ -99,7 +99,7 @@ class KanbanViewControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(viewJson("minha VISÃO", false, filters(null))))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("A Kanban view with this name already exists."));
+            .andExpect(jsonPath("$.message").value("Já existe uma visão do Kanban com este nome."));
     }
 
     @Test
@@ -189,7 +189,7 @@ class KanbanViewControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(viewJson("Conflito", false, invalidFilters)))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Assignee and unassigned filters cannot be combined."));
+            .andExpect(jsonPath("$.message").value("Os filtros de responsável e de sem responsável não podem ser combinados."));
 
         Map<String, Object> invalidRange = filters(null);
         invalidRange.put("entryFrom", "2026-10-20");
@@ -248,7 +248,7 @@ class KanbanViewControllerIntegrationTest {
         mockMvc.perform(post("/api/kanban-views").with(asProfile("view.alice", "VIEWER")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(viewJson("Encerrados", false, values)))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Deadline filter must be OVERDUE, DUE_SOON, ON_TRACK or NO_DUE_DATE."));
+            .andExpect(jsonPath("$.message").value("O filtro de prazo deve ser OVERDUE, DUE_SOON, ON_TRACK ou NO_DUE_DATE."));
     }
 
     @Test

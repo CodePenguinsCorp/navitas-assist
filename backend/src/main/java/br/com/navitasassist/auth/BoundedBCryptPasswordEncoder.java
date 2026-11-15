@@ -20,7 +20,7 @@ public final class BoundedBCryptPasswordEncoder extends BCryptPasswordEncoder {
 
     public static void validatePasswordLength(CharSequence password) {
         if (exceedsByteLimit(password)) {
-            throw new BusinessException("Password must contain at most 72 UTF-8 bytes.");
+            throw new BusinessException("A senha deve ter no máximo 72 bytes UTF-8.");
         }
     }
 

@@ -144,7 +144,7 @@ public class UserAccountService {
         UserAccount userAccount = getEntityForAdministration(id);
 
         if (userAccount.getUsername().equalsIgnoreCase(authenticatedUsername)) {
-            throw new BusinessException("You cannot delete your own user account.");
+            throw new BusinessException("Você não pode excluir a própria conta de usuário.");
         }
         administratorGuard.ensureRemainsAfterUserDeletion(userAccount);
         permissionGrantPolicy.ensureCanGrant(authenticatedUsername, effectivePermissionService.effectivePermissions(userAccount));
@@ -172,13 +172,13 @@ public class UserAccountService {
     @Transactional(readOnly = true)
     public UserAccount getEntityById(Long id) {
         return userAccountRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado: " + id));
     }
 
     @Transactional(readOnly = true)
     public UserAccount getEntityByUsername(String username) {
         return userAccountRepository.findByUsernameIgnoreCase(username)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+            .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado: " + username));
     }
 
     @Transactional(readOnly = true)
@@ -189,11 +189,11 @@ public class UserAccountService {
 
     private String validateEmail(Long id, String email) {
         if (email == null) return null;
-        if (email.indexOf('\r') >= 0 || email.indexOf('\n') >= 0 || email.length() > 254) throw new BusinessException("Invalid email address.");
+        if (email.indexOf('\r') >= 0 || email.indexOf('\n') >= 0 || email.length() > 254) throw new BusinessException("Endereço de e-mail inválido.");
         if (email.isBlank()) return null;
         String normalized = email.trim().toLowerCase(java.util.Locale.ROOT);
-        if (!br.com.navitasassist.notification.email.EmailMessage.validAddress(normalized)) throw new BusinessException("Invalid email address.");
-        if (userAccountRepository.findByEmailIgnoreCase(normalized).filter(user -> !Objects.equals(user.getId(), id)).isPresent()) throw new BusinessException("Email already registered.");
+        if (!br.com.navitasassist.notification.email.EmailMessage.validAddress(normalized)) throw new BusinessException("Endereço de e-mail inválido.");
+        if (userAccountRepository.findByEmailIgnoreCase(normalized).filter(user -> !Objects.equals(user.getId(), id)).isPresent()) throw new BusinessException("E-mail já cadastrado.");
         return normalized;
     }
 
@@ -204,7 +204,7 @@ public class UserAccountService {
             while (cause != null) {
                 if (cause instanceof org.hibernate.exception.ConstraintViolationException violation
                     && violation.getConstraintName() != null && violation.getConstraintName().toLowerCase(java.util.Locale.ROOT).contains("uk_user_accounts_email")) {
-                    throw new BusinessException("Email already registered.");
+                    throw new BusinessException("E-mail já cadastrado.");
                 }
                 cause = cause.getCause();
             }
@@ -218,14 +218,14 @@ public class UserAccountService {
             && (existing == null || !existing.getUsername().equalsIgnoreCase(normalizedUsername));
 
         if (duplicate) {
-            throw new BusinessException("Username already registered: " + normalizedUsername);
+            throw new BusinessException("Nome de usuário já cadastrado: " + normalizedUsername);
         }
     }
 
     private UserAccount getEntityForAdministration(Long id) {
         // All reductions take the same ordered locks (profiles, then active users) before locking their target.
         administratorGuard.lockAccessGraph();
-        return userAccountRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
+        return userAccountRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado: " + id));
     }
 
     /** D1: pode ser responsável por RMA quem tem {@code rma.atribuivel} efetiva. */

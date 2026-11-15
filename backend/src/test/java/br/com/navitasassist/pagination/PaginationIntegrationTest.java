@@ -153,10 +153,10 @@ class PaginationIntegrationTest {
     void shouldRejectInvalidPaginationParameters() throws Exception {
         mockMvc.perform(get("/api/clients").param("page", "-1").with(admin()))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Page must be greater than or equal to 0."));
+            .andExpect(jsonPath("$.message").value("A página deve ser maior ou igual a 0."));
         mockMvc.perform(get("/api/clients").param("size", "0").with(admin()))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Size must be between 1 and 100."));
+            .andExpect(jsonPath("$.message").value("O tamanho da página deve estar entre 1 e 100."));
         mockMvc.perform(get("/api/products").param("size", "101").with(admin()))
             .andExpect(status().isBadRequest());
         mockMvc.perform(get("/api/users").param("page", "abc").with(admin()))

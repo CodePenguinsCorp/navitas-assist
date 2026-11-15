@@ -47,7 +47,7 @@ class HttpProtocolErrorIntegrationTest {
             .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
             .andExpect(jsonPath("$.status").value(405))
             .andExpect(jsonPath("$.error").value("Method Not Allowed"))
-            .andExpect(jsonPath("$.message").value("HTTP method not supported"))
+            .andExpect(jsonPath("$.message").value("Método HTTP não suportado."))
             .andExpect(jsonPath("$.timestamp").isNotEmpty())
             .andExpect(jsonPath("$.details").isArray())
             .andExpect(content().string(not(containsString("private-payload"))));
@@ -63,7 +63,7 @@ class HttpProtocolErrorIntegrationTest {
             .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
             .andExpect(jsonPath("$.status").value(415))
             .andExpect(jsonPath("$.error").value("Unsupported Media Type"))
-            .andExpect(jsonPath("$.message").value("Content type not supported"))
+            .andExpect(jsonPath("$.message").value("Tipo de conteúdo não suportado."))
             .andExpect(jsonPath("$.timestamp").isNotEmpty())
             .andExpect(jsonPath("$.details").isArray())
             .andExpect(content().string(not(containsString("private-payload"))));
@@ -88,7 +88,7 @@ class HttpProtocolErrorIntegrationTest {
     void validRequestsValidationAndNotFoundKeepExistingStatusCodes() throws Exception {
         mvc.perform(get("/api/products").with(asProfile("viewer", "VIEWER"))).andExpect(status().isOk());
         mvc.perform(post("/api/products").with(asProfile("admin", "ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{}"))
-            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Validation failed"));
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Dados inválidos"));
         mvc.perform(get("/api/clients/9223372036854775807").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isNotFound());
     }

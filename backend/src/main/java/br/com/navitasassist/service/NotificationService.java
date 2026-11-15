@@ -97,9 +97,9 @@ public class NotificationService {
     public NotificationPreferenceResponse updatePreference(NotificationEventType eventType, boolean muted) {
         UserAccount user = currentUser();
         NotificationRule rule = notificationRuleRepository.findByEventType(eventType).filter(candidate -> visibilityPolicy.canView(user, candidate.getEventType()))
-            .orElseThrow(() -> new ResourceNotFoundException("Notification rule not found: " + eventType));
+            .orElseThrow(() -> new ResourceNotFoundException("Regra de notificação não encontrada: " + eventType));
         if (muted && !rule.isUserMutable()) {
-            throw new BusinessException("This notification rule cannot be muted: " + eventType);
+            throw new BusinessException("Esta regra de notificação não pode ser silenciada: " + eventType);
         }
 
         var existing = notificationMuteRepository.findByUser_IdAndEventType(user.getId(), eventType);
@@ -123,7 +123,7 @@ public class NotificationService {
         UserAccount user = currentUser();
         return notificationRepository.findByIdAndRecipient_Id(id, user.getId())
             .filter(notification -> notification.isAppVisible() && visibilityPolicy.canView(user, notification.getEventType()))
-            .orElseThrow(() -> new ResourceNotFoundException("Notification not found: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Notificação não encontrada: " + id));
     }
 
     private List<NotificationEventType> visibleTypes(UserAccount user) {
@@ -134,6 +134,6 @@ public class NotificationService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication == null ? null : authentication.getName();
         return userAccountRepository.findByUsernameIgnoreCase(username == null ? "" : username)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+            .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado: " + username));
     }
 }

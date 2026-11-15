@@ -210,7 +210,7 @@ public class SecurityConfig {
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.getWriter().write("""
-                {"message":"Unauthorized"}
+                {"message":"Sessão não autenticada ou expirada."}
                 """);
         };
     }
@@ -222,7 +222,7 @@ public class SecurityConfig {
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.getWriter().write("""
-                {"message":"Forbidden"}
+                {"message":"Acesso negado."}
                 """);
         };
     }

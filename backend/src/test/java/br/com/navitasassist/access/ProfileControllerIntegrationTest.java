@@ -184,13 +184,13 @@ class ProfileControllerIntegrationTest {
     void rejectsBlankOrLongName() throws Exception {
         mvc.perform(post("/api/profiles").with(asProfile("admin", "ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content(body("   ")))
-            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Validation failed"));
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Dados inválidos"));
         mvc.perform(post("/api/profiles").with(asProfile("admin", "ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content(body(PREFIX + "x".repeat(61 - PREFIX.length()))))
-            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Validation failed"));
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Dados inválidos"));
         mvc.perform(post("/api/profiles").with(asProfile("admin", "ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"" + PREFIX + "sem lista\"}"))
-            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Validation failed"));
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Dados inválidos"));
     }
 
     @Test

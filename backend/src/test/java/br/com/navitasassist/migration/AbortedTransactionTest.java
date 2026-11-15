@@ -71,7 +71,7 @@ class AbortedTransactionTest {
             () -> users.create(new UserAccountRequest("race.one", "Corrida", "password123", profileId, Set.of(), true, "Race@Example.invalid"), "admin"),
             () -> users.create(new UserAccountRequest("race.two", "Corrida", "password123", profileId, Set.of(), true, "race@example.INVALID"), "admin"));
 
-        assertOneSuccessAndOneBusinessError(outcomes, "Email already registered.");
+        assertOneSuccessAndOneBusinessError(outcomes, "E-mail já cadastrado.");
         assertThat(users.create(new UserAccountRequest("race.three", "Corrida", "password123", profileId, Set.of(), true, "race.three@example.invalid"), "admin").username())
             .isEqualTo("race.three");
     }

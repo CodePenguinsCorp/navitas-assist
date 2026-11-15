@@ -61,7 +61,7 @@ class HttpInputValidationIntegrationTest {
     void malformedBodyReturnsBadRequestWithoutLeakingInput(HttpMethod method, String path, String body) throws Exception {
         ResultActions result = mockMvc.perform(request(method, path).with(asProfile("admin", "ADMIN")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content(body));
-        assertBadRequest(result, "Malformed request body").andExpect(jsonPath("$.details").isEmpty());
+        assertBadRequest(result, "Corpo da requisição malformado.").andExpect(jsonPath("$.details").isEmpty());
     }
 
     @ParameterizedTest
@@ -71,8 +71,8 @@ class HttpInputValidationIntegrationTest {
     })
     void malformedIdReturnsBadRequest(String path) throws Exception {
         ResultActions result = mockMvc.perform(get(path).with(asProfile("admin", "ADMIN")));
-        assertBadRequest(result, "Invalid request parameter")
-            .andExpect(jsonPath("$.details[0]").value("id: invalid value"))
+        assertBadRequest(result, "Parâmetro da requisição inválido.")
+            .andExpect(jsonPath("$.details[0]").value("id: valor inválido"))
             .andExpect(content().string(not(containsString("9223372036854775808"))));
     }
 
@@ -80,7 +80,7 @@ class HttpInputValidationIntegrationTest {
     void invalidStatusFilterReturnsBadRequest() throws Exception {
         ResultActions result = mockMvc.perform(get("/api/rmas").param("status", "sensitive-input")
             .with(asProfile("viewer", "VIEWER")));
-        assertBadRequest(result, "Invalid request parameter").andExpect(jsonPath("$.details[0]").value("status: invalid value"));
+        assertBadRequest(result, "Parâmetro da requisição inválido.").andExpect(jsonPath("$.details[0]").value("status: valor inválido"));
     }
 
     @Test
@@ -113,7 +113,7 @@ class HttpInputValidationIntegrationTest {
             .andExpect(status().isNotFound()).andExpect(jsonPath("$.status").value(404));
         mockMvc.perform(post("/api/products").with(asProfile("admin", "ADMIN")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content("{}"))
-            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Validation failed"));
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Dados inválidos"));
     }
 
     @Test

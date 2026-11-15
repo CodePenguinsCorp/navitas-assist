@@ -99,11 +99,11 @@ class ProtocolControllerIntegrationTest {
         Map<String, Object> invalid = measurementItem("Tensão", true, null, 2, null, null);
         createTemplate(templateJson("Sem unidade", product.getId(), null, List.of(invalid)))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Measurement items require a unit and a number of decimal places: Tensão"));
+            .andExpect(jsonPath("$.message").value("Itens de medição exigem unidade e número de casas decimais: Tensão"));
 
         createTemplate(templateJson("Sem escopo", null, " ", List.of(checkItem("Inspeção", true))))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Inform a product or a category for the protocol."));
+            .andExpect(jsonPath("$.message").value("Informe um produto ou uma categoria para o protocolo."));
 
         long templateId = templateId(createTemplate(templateJson("Bancada PWM", product.getId(), null,
             List.of(measurementItem("Tensão de saída", true, "V", 2, "11.50", "12.50")))));
@@ -188,17 +188,17 @@ class ProtocolControllerIntegrationTest {
 
         complete(executionId)
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Required items are pending: Tensão de saída, Foto da placa, Observação"));
+            .andExpect(jsonPath("$.message").value("Há itens obrigatórios pendentes: Tensão de saída, Foto da placa, Observação"));
 
         result(executionId, voltageId, "PASSED", "12.505", null, null, null).andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Measurement must use at most 2 decimal places: Tensão de saída"));
+            .andExpect(jsonPath("$.message").value("A medição deve ter no máximo 2 casas decimais: Tensão de saída"));
         result(executionId, voltageId, "PASSED", "13.00", null, null, null).andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Measurement outside the expected range cannot pass: Tensão de saída"));
+            .andExpect(jsonPath("$.message").value("Medição fora da faixa esperada não pode ser aprovada: Tensão de saída"));
         result(executionId, voltageId, "PASSED", null, null, null, null).andExpect(status().isBadRequest());
         result(executionId, evidenceId, "PASSED", null, null, null, null).andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Evidence is required: Foto da placa"));
+            .andExpect(jsonPath("$.message").value("Informe a evidência: Foto da placa"));
         result(executionId, textId, "PASSED", null, " ", null, null).andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Text result is required: Observação"));
+            .andExpect(jsonPath("$.message").value("Informe o resultado em texto: Observação"));
 
         result(executionId, voltageId, "PASSED", "12.5", null, null, null)
             .andExpect(status().isCreated())
@@ -218,7 +218,7 @@ class ProtocolControllerIntegrationTest {
             .andExpect(jsonPath("$.completedBy").value("tech"));
 
         result(executionId, voltageId, "PASSED", "12.00", null, null, "Nova medição").andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Finished protocol executions cannot receive new results. Start a new execution."));
+            .andExpect(jsonPath("$.message").value("Execuções de protocolo concluídas não aceitam novos resultados. Inicie uma nova execução."));
     }
 
     @Test
@@ -230,11 +230,11 @@ class ProtocolControllerIntegrationTest {
         long itemId = itemId(execution, 0);
 
         result(executionId, itemId, "FAILED", null, null, null, null).andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Failed or not applicable items require a justification."));
+            .andExpect(jsonPath("$.message").value("Itens reprovados ou não aplicáveis exigem uma justificativa."));
         result(executionId, itemId, "FAILED", null, null, null, "Não ligou na primeira tentativa").andExpect(status().isCreated())
             .andExpect(jsonPath("$.failedItems").value(1));
         result(executionId, itemId, "PASSED", null, null, null, null).andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Repeating an item requires a justification."));
+            .andExpect(jsonPath("$.message").value("Repetir um item exige uma justificativa."));
         result(executionId, itemId, "PASSED", null, null, null, "Fusível substituído")
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.items[0].latest.attempt").value(2))
@@ -311,7 +311,7 @@ class ProtocolControllerIntegrationTest {
 
         result(execution.get("id").asLong(), itemId(execution, 0), "PASSED", "12345678901234.00", null, null, null)
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Validation failed"));
+            .andExpect(jsonPath("$.message").value("Dados inválidos"));
     }
 
     private ResultActions createTemplate(String json) throws Exception {

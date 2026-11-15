@@ -55,14 +55,14 @@ class DuplicateCaseMessageIntegrationTest {
     void productSkuDifferingOnlyByCaseIsRejected() {
         products.create(new ProductRequest("CASE-SKU-1", "Produto", null, null, null, 12, null));
         assertThatThrownBy(() -> products.create(new ProductRequest("case-sku-1", "Outro", null, null, null, 12, null)))
-            .isInstanceOf(BusinessException.class).hasMessage("SKU already registered: case-sku-1");
+            .isInstanceOf(BusinessException.class).hasMessage("SKU já cadastrado: case-sku-1");
     }
 
     @Test
     void partCodeDifferingOnlyByCaseIsRejected() {
         parts.create(new PartRequest("CASE-PART-1", "Peça", "un", null, BigDecimal.ZERO, BigDecimal.ONE, true));
         assertThatThrownBy(() -> parts.create(new PartRequest("case-part-1", "Peça", "un", null, BigDecimal.ZERO, BigDecimal.ONE, true)))
-            .isInstanceOf(BusinessException.class).hasMessage("Part code already registered: case-part-1");
+            .isInstanceOf(BusinessException.class).hasMessage("Código de peça já cadastrado: case-part-1");
     }
 
     @Test
@@ -78,14 +78,14 @@ class DuplicateCaseMessageIntegrationTest {
         Long profileId = profileRepository.findByLegacyCode("VIEWER").orElseThrow().getId();
         users.create(new UserAccountRequest("Case.User", "Usuário", "password123", profileId, Set.of(), true, "Case.User@Example.invalid"), "admin");
         assertThatThrownBy(() -> users.create(new UserAccountRequest("case.user", "Outro", "password123", profileId, Set.of(), true, null), "admin"))
-            .isInstanceOf(BusinessException.class).hasMessage("Username already registered: case.user");
+            .isInstanceOf(BusinessException.class).hasMessage("Nome de usuário já cadastrado: case.user");
         assertThatThrownBy(() -> users.create(new UserAccountRequest("case.other", "Outro", "password123", profileId, Set.of(), true, "CASE.USER@example.INVALID"), "admin"))
-            .isInstanceOf(BusinessException.class).hasMessage("Email already registered.");
+            .isInstanceOf(BusinessException.class).hasMessage("E-mail já cadastrado.");
     }
 
     /**
      * O caminho da corrida (sem a pré-checagem do serviço) depende do nome do índice em getConstraintName(), que o
-     * UserAccountService usa para traduzir a violação em "Email already registered.".
+     * UserAccountService usa para traduzir a violação em "E-mail já cadastrado.".
      */
     @Test
     void emailIndexNameReachesHibernateConstraintViolation() {
