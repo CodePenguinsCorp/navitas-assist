@@ -27,8 +27,10 @@ public class RmaReportCsvService {
 
     private final RmaReportService rmaReportService;
     private final RmaRecordRepository rmaRecordRepository;
+    private final ExportStatementTimeout exportTimeout;
 
     public CsvFile rmas(RmaReportRequest filters) {
+        exportTimeout.extend();
         Period period = rmaReportService.period(filters);
         rmaReportService.ensureWithinLimit(filters, period);
         List<RmaRecord> records = rmaReportService.loadPeriod(filters, period);
@@ -51,6 +53,7 @@ public class RmaReportCsvService {
     }
 
     public CsvFile summary(RmaReportRequest filters) {
+        exportTimeout.extend();
         RmaReportSummaryResponse summary = rmaReportService.summary(filters);
         CsvWriter csv = new CsvWriter().row("Seção", "Item", "Quantidade", "Base", "Percentual", "Tempo médio (h)", "Maior tempo (h)");
         csv.row("Total", "Ordens de serviço", CsvWriter.number(summary.totalRmas()), null, null, null, null);

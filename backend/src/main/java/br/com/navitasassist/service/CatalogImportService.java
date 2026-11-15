@@ -26,6 +26,7 @@ public class CatalogImportService {
     private final ClientService clientService;
     private final ProductService productService;
     private final Validator validator;
+    private final ExportStatementTimeout exportTimeout;
     private static final int MAX_BYTES = 2 * 1024 * 1024;
     private static final List<String> CLIENT_HEADERS = List.of("razao_social", "nome_fantasia", "documento", "email", "telefone", "endereco", "observacoes");
     private static final List<String> CLIENT_FIELDS = List.of("legalName", "tradeName", "documentNumber", "email", "phone", "address", "notes");
@@ -34,6 +35,7 @@ public class CatalogImportService {
 
     @Transactional(readOnly = true)
     public ImportPreviewResponse preview(String resource, MultipartFile file) {
+        exportTimeout.extend();
         boolean isClient = isClient(resource);
         CsvImportParser.ParsedCsv parsed;
         try {

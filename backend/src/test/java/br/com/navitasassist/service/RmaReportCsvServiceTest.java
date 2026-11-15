@@ -20,7 +20,7 @@ class RmaReportCsvServiceTest {
     private static final String LIMIT_MESSAGE = "Reduza o período: o relatório passa de 5.000 ordens de serviço.";
     private final RmaRecordRepository repository = mock(RmaRecordRepository.class);
     private final RmaReportService reports = new RmaReportService(repository, mock(RmaStageTimeService.class));
-    private final RmaReportCsvService service = new RmaReportCsvService(reports, repository);
+    private final RmaReportCsvService service = new RmaReportCsvService(reports, repository, mock(ExportStatementTimeout.class));
     private final RmaReportRequest year = new RmaReportRequest(LocalDate.parse("2026-01-01"), LocalDate.parse("2026-12-31"), null, null, null, null);
 
     private void aboveTheLimit() {

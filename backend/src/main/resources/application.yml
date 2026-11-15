@@ -50,6 +50,9 @@ server:
         same-site: strict
 
 navitas:
+  db:
+    # Limite maior só para exportações CSV, laudo PDF e importação CSV (SET LOCAL na transação delas); abaixo dos 120 s do frontend.
+    export-statement-timeout: ${DB_EXPORT_STATEMENT_TIMEOUT:110s}
   deadline:
     warning-days: ${DEADLINE_WARNING_DAYS:7}
   notifications:

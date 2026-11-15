@@ -61,8 +61,10 @@ public class RmaReportPdfService {
     private final RmaService rmaService;
     private final PartStockService partStockService;
     private final RmaRepairService repairService;
+    private final ExportStatementTimeout exportTimeout;
 
     public PdfFile laudo(Long rmaId) {
+        exportTimeout.extend();
         RmaDetailResponse rma = rmaService.getById(rmaId);
         List<ReplacedComponent> components = new ArrayList<>(partStockService.getRmaParts(rmaId).replacedComponents().stream()
             .map(reservation -> new ReplacedComponent(reservation.partCode(), reservation.partName(), reservation.quantity(), reservation.unit(),
