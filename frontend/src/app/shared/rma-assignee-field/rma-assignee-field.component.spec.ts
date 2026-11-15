@@ -4,6 +4,7 @@ import { AssignableUserResponse, RmaResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
 import { buildRma } from '../../testing/rma-fixtures';
+import { toastMessages, toastTones } from '../../testing/toast';
 import { RmaAssigneeFieldComponent, assigneeSelectOptions } from './rma-assignee-field.component';
 
 describe('RmaAssigneeFieldComponent', () => {
@@ -75,14 +76,17 @@ describe('RmaAssigneeFieldComponent', () => {
     expect(calls).toEqual([[4, 9]]);
     expect(saved.map((rma) => rma.assigneeId)).toEqual([9]);
     expect(busy).toEqual([true, false]);
-    expect(text(host().querySelector('[role="status"]'))).toBe('Responsável alterado para Beatriz Souza');
+    expect(toastMessages()).toEqual(['Responsável alterado para Beatriz Souza.']);
+    expect(toastTones()).toEqual(['success']);
+    expect(host().querySelector('[role="status"]')).toBeNull();
   });
 
   it('can leave the OS without an assignee', () => {
     mount();
     choose('Sem responsável');
     expect(calls).toEqual([[4, null]]);
-    expect(text(host().querySelector('[role="status"]'))).toBe('OS sem responsável');
+    expect(toastMessages()).toEqual(['OS sem responsável.']);
+    expect(host().querySelector('[role="status"]')).toBeNull();
   });
 
   it('does nothing when the current assignee is chosen again', () => {

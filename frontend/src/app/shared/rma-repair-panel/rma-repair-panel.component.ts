@@ -9,6 +9,7 @@ import { CLOSED_RMA_STATUSES } from '../../core/mock-data';
 import { InterventionResponse, InterventionType, RmaRepairResponse, RmaStatus } from '../../core/models';
 import { PermissionService } from '../../core/services/permission.service';
 import { RmaRepairService } from '../../core/services/rma-repair.service';
+import { ToastService } from '../../core/services/toast.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { formatDateOnly, todayInputValue } from '../../core/utils/date';
 import { CustomSelectComponent } from '../form-controls/custom-select/custom-select.component';
@@ -42,12 +43,12 @@ export class RmaRepairPanelComponent {
   private readonly permissions = inject(PermissionService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly toasts = inject(ToastService);
   private request?: Subscription;
   protected readonly repair = signal<RmaRepairResponse | null>(null);
   protected readonly loading = signal(false);
   protected readonly saving = signal(false);
   protected readonly error = signal('');
-  protected readonly success = signal('');
   protected readonly canWrite = computed(() => this.permissions.hasPermission('rma.diagnosticar') && !CLOSED_RMA_STATUSES.includes(this.rmaStatus()));
   protected readonly totalHours = computed(() => this.repair()?.totalServiceHours ?? 0);
   protected readonly labels = INTERVENTION_LABELS;
@@ -71,7 +72,7 @@ export class RmaRepairPanelComponent {
   constructor() {
     effect(() => {
       const id = this.rmaId();
-      untracked(() => { this.form.reset(); this.formOpen.set(false); this.expanded.set(new Set()); this.editing.set(null); this.voiding.set(null); this.voidReason.reset(); this.success.set(''); this.repair.set(null); this.load(id); });
+      untracked(() => { this.form.reset(); this.formOpen.set(false); this.expanded.set(new Set()); this.editing.set(null); this.voiding.set(null); this.voidReason.reset(); this.repair.set(null); this.load(id); });
     });
   }
 
@@ -88,11 +89,11 @@ export class RmaRepairPanelComponent {
     if (!this.canWrite() || this.saving()) return;
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     const id = this.rmaId(); const value = this.form.getRawValue();
-    this.saving.set(true); this.error.set(''); this.success.set('');
+    this.saving.set(true); this.error.set('');
     const payload = { ...value, hours: value.hours as number, description: value.description.trim() };
     const editing = this.editing();
     (editing ? this.service.updateIntervention(id, editing.id, payload) : this.service.addIntervention(id, payload)).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.saving.set(false))).subscribe({
-      next: () => { if (id !== this.rmaId()) return; this.closeForm(false); this.success.set('Intervenção salva.'); this.load(id); this.changed.emit(); },
+      next: () => { this.toasts.show({ message: 'Intervenção salva.', tone: 'success' }); if (id !== this.rmaId()) return; this.closeForm(false); this.load(id); this.changed.emit(); },
       error: error => { if (id === this.rmaId()) this.error.set(extractHttpErrorMessage(error, 'Não foi possível registrar a intervenção.')); }
     });
   }
@@ -137,7 +138,7 @@ export class RmaRepairPanelComponent {
     if (this.voidReason.invalid) { this.voidReason.markAsTouched(); return; }
     const id = this.rmaId(); this.saving.set(true); this.error.set('');
     this.service.voidIntervention(id, item.id, this.voidReason.value.trim()).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.saving.set(false))).subscribe({
-      next: () => { if (id !== this.rmaId()) return; this.voiding.set(null); this.load(id); this.changed.emit(); },
+      next: () => { this.toasts.show({ message: 'Intervenção anulada.', tone: 'success' }); if (id !== this.rmaId()) return; this.voiding.set(null); this.load(id); this.changed.emit(); },
       error: error => { if (id === this.rmaId()) this.error.set(extractHttpErrorMessage(error, 'Não foi possível anular a intervenção.')); }
     });
   }

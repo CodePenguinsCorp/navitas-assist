@@ -5,6 +5,7 @@ import { PartReservationResponse, PartResponse, RmaPartsResponse, RmaStatus } fr
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { RmaRepairService } from '../../core/services/rma-repair.service';
 import { PartService } from '../../core/services/part.service';
+import { toastMessages } from '../../testing/toast';
 import { RmaPartsPanelComponent } from './rma-parts-panel.component';
 
 const reservation = (id: number, status: PartReservationResponse['status'], partName = 'Capacitor', rmaId = 7): PartReservationResponse => ({
@@ -215,6 +216,7 @@ describe('RmaPartsPanelComponent loading', () => {
     write$.next(reservation(9, 'ACTIVE')); write$.complete(); render();
     expect(service.getRmaParts.mock.calls.map(([id]) => id)).toEqual([7, 8]);
     expect(text()).not.toContain('reservada para a OS');
+    expect(toastMessages()).toEqual(['Capacitor reservada para a OS.']);
     expect(text()).toContain('Peça de B');
   });
 

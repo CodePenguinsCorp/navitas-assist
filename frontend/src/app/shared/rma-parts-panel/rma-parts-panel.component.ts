@@ -7,6 +7,7 @@ import { Subscription, finalize } from 'rxjs';
 import { CLOSED_RMA_STATUSES } from '../../core/mock-data';
 import { ExternalComponentResponse, PartConsumptionRequest, PartMovementResponse, PartMovementType, PartReservationResponse, PartOptionResponse, RmaPartsResponse, RmaStatus } from '../../core/models';
 import { RmaRepairService } from '../../core/services/rma-repair.service';
+import { ToastService } from '../../core/services/toast.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { PartReservationAction, PartService } from '../../core/services/part.service';
 import { extractHttpErrorMessage, normalizeOptionalText } from '../../core/utils/catalog-ui';
@@ -35,6 +36,7 @@ export class RmaPartsPanelComponent {
   private readonly partService = inject(PartService);
   private readonly permissions = inject(PermissionService);
   private readonly repairService = inject(RmaRepairService);
+  private readonly toasts = inject(ToastService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   protected readonly expandedKeys = signal<ReadonlySet<string>>(new Set());
@@ -63,7 +65,6 @@ export class RmaPartsPanelComponent {
   protected readonly submitting = signal(false);
   protected readonly busyReservationId = signal<number | null>(null);
   protected readonly errorMessage = signal('');
-  protected readonly successMessage = signal('');
   protected readonly parts = signal<RmaPartsResponse | null>(null);
   protected readonly catalog = signal<PartOptionResponse[]>([]);
 
@@ -206,10 +207,10 @@ export class RmaPartsPanelComponent {
       finalize(() => this.submitting.set(false))
     ).subscribe({
       next: (reservation) => {
+        this.toasts.show(reservation.status === 'PENDING'
+          ? { message: `Saldo insuficiente: ${reservation.partName} ficou pendente de reposição.`, tone: 'info', durationMs: 8000 }
+          : { message: `${reservation.partName} reservada para a OS.`, tone: 'success' });
         if (this.rmaId() !== rmaId) return;
-        this.successMessage.set(reservation.status === 'PENDING'
-          ? `Saldo insuficiente: ${reservation.partName} ficou pendente de reposição.`
-          : `${reservation.partName} reservada para a OS.`);
         this.closeReserve(true);
         this.load(rmaId);
       },
@@ -241,7 +242,7 @@ export class RmaPartsPanelComponent {
     const editing = this.editingExternal();
     (editing ? this.repairService.updateExternalComponent(id, editing.id, payload) : this.repairService.addExternalComponent(id, payload))
       .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.externalSaving.set(false))).subscribe({
-        next: () => { if (id !== this.rmaId()) return; this.closeExternal(false); this.successMessage.set('Componente salvo.'); this.loadExternal(id); this.changed.emit(); },
+        next: () => { this.toasts.show({ message: 'Componente salvo.', tone: 'success' }); if (id !== this.rmaId()) return; this.closeExternal(false); this.loadExternal(id); this.changed.emit(); },
         error: error => { if (id === this.rmaId()) this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível registrar o componente.')); }
       });
   }
@@ -307,7 +308,7 @@ export class RmaPartsPanelComponent {
     if (this.voidReason.invalid) { this.voidReason.markAsTouched(); return; }
     const id = this.rmaId(); this.externalSaving.set(true); this.clearMessages();
     this.repairService.voidExternalComponent(id, item.id, this.voidReason.value.trim()).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.externalSaving.set(false))).subscribe({
-      next: () => { if (id !== this.rmaId()) return; this.voidingExternal.set(null); this.loadExternal(id); this.changed.emit(); },
+      next: () => { this.toasts.show({ message: 'Componente anulado.', tone: 'success' }); if (id !== this.rmaId()) return; this.voidingExternal.set(null); this.loadExternal(id); this.changed.emit(); },
       error: error => { if (id === this.rmaId()) this.errorMessage.set(extractHttpErrorMessage(error, 'Não foi possível anular o componente.')); }
     });
   }
@@ -335,10 +336,10 @@ export class RmaPartsPanelComponent {
       finalize(() => this.busyReservationId.set(null))
     ).subscribe({
       next: () => {
+        this.toasts.show({ message: ACTION_MESSAGES[action], tone: 'success' });
         if (this.rmaId() !== rmaId) return;
         this.consuming.set(null);
         if (action === 'consume') this.changed.emit();
-        this.successMessage.set(ACTION_MESSAGES[action]);
         this.load(rmaId);
       },
       error: (error) => {
@@ -419,6 +420,5 @@ export class RmaPartsPanelComponent {
 
   private clearMessages(): void {
     this.errorMessage.set('');
-    this.successMessage.set('');
   }
 }

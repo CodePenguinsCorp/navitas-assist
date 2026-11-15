@@ -4,6 +4,7 @@ import { finalize } from 'rxjs';
 import { AssignableUserResponse, RmaResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
+import { ToastService } from '../../core/services/toast.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { initialsOf, ownerLabel } from '../../core/utils/rma-ui';
 import { CustomSelectComponent, CustomSelectOption } from '../form-controls/custom-select/custom-select.component';
@@ -42,12 +43,10 @@ export function assigneeSelectOptions(
         <span [appTip]="owner(rma())">{{ owner(rma()) }}</span>
       </span>
     }
-    @if (message()) { <p class="rma-assignee-field__feedback" role="status">{{ message() }}</p> }
     @if (error()) { <p class="field-error" role="alert">{{ error() }}</p> }
   `,
   styles: [`
     :host { display: block; min-width: 0; overflow-wrap: anywhere; }
-    .rma-assignee-field__feedback { margin: var(--space-1) 0 0; color: var(--muted); font-size: 0.82rem; }
     .field-error { margin: var(--space-1) 0 0; }
   `]
 })
@@ -62,12 +61,12 @@ export class RmaAssigneeFieldComponent {
 
   private readonly rmaService = inject(RmaService);
   private readonly catalogService = inject(CatalogService);
+  private readonly toasts = inject(ToastService);
   private contextRmaId: number | null = null;
   private usersRequested = false;
   protected readonly owner = ownerLabel;
   protected readonly initials = initialsOf;
   protected readonly busy = signal(false);
-  protected readonly message = signal('');
   protected readonly error = signal('');
   private readonly users = signal<readonly AssignableUserResponse[]>([]);
   protected readonly options = computed(() => assigneeSelectOptions(this.rma(), this.users()));
@@ -77,7 +76,6 @@ export class RmaAssigneeFieldComponent {
       const id = this.rma().id;
       if (id !== this.contextRmaId) {
         this.contextRmaId = id;
-        this.message.set('');
         this.error.set('');
       }
       // The eligible users come once, from the lean options endpoint, and only for who can assign.
@@ -100,13 +98,12 @@ export class RmaAssigneeFieldComponent {
     if (!this.canEdit() || this.disabled() || this.busy() || assigneeId === target.assigneeId) return;
     this.busy.set(true);
     this.busyChange.emit(true);
-    this.message.set('');
     this.error.set('');
     this.rmaService.updateAssignee(target.id, { assigneeId })
       .pipe(finalize(() => { this.busy.set(false); this.busyChange.emit(false); }))
       .subscribe({
         next: (updated) => {
-          this.message.set(updated.assigneeId ? `Responsável alterado para ${ownerLabel(updated)}` : 'OS sem responsável');
+          this.toasts.show({ message: updated.assigneeId ? `Responsável alterado para ${ownerLabel(updated)}.` : 'OS sem responsável.', tone: 'success' });
           this.saved.emit(updated);
         },
         error: (error) => this.error.set(extractHttpErrorMessage(error, 'Não foi possível trocar o responsável da OS.'))

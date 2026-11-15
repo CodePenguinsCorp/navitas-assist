@@ -3,6 +3,7 @@ import { Observable, Subject, of, throwError } from 'rxjs';
 import { RmaPriority, RmaResponse } from '../../core/models';
 import { RmaService } from '../../core/services/rma.service';
 import { buildRma } from '../../testing/rma-fixtures';
+import { toastMessages, toastTones } from '../../testing/toast';
 import { RmaPriorityFieldComponent } from './rma-priority-field.component';
 
 describe('RmaPriorityFieldComponent', () => {
@@ -82,7 +83,9 @@ describe('RmaPriorityFieldComponent', () => {
     expect(calls).toEqual([[4, 'HIGH']]);
     expect(saved.map((rma) => rma.priority)).toEqual(['HIGH']);
     expect(busy).toEqual([true, false]);
-    expect(text(host().querySelector('[role="status"]'))).toBe('Prioridade alterada para Alta');
+    expect(toastMessages()).toEqual(['Prioridade alterada para Alta.']);
+    expect(toastTones()).toEqual(['success']);
+    expect(host().querySelector('[role="status"]')).toBeNull();
     expect(host().querySelector('[role="alert"]')).toBeNull();
     expect(document.querySelector('.modal-overlay, [role="dialog"]')).toBeNull();
   });
@@ -92,7 +95,7 @@ describe('RmaPriorityFieldComponent', () => {
     choose('Média');
     expect(calls).toEqual([]);
     expect(saved).toEqual([]);
-    expect(host().querySelector('[role="status"]')).toBeNull();
+    expect(toastMessages()).toEqual([]);
   });
 
   it('keeps the selector disabled while saving', () => {
@@ -114,7 +117,7 @@ describe('RmaPriorityFieldComponent', () => {
     expect(text(host().querySelector('[role="alert"]'))).toBe('Sem permissão para alterar.');
     expect(saved).toEqual([]);
     expect(trigger()!.getAttribute('data-priority')).toBe('MEDIUM');
-    expect(host().querySelector('[role="status"]')).toBeNull();
+    expect(toastMessages()).toEqual([]);
   });
 
   it('falls back to a generic message when the API gives none', () => {

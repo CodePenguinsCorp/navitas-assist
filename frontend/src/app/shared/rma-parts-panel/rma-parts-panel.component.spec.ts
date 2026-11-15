@@ -6,6 +6,7 @@ import { PartService } from '../../core/services/part.service';
 import { RmaRepairService } from '../../core/services/rma-repair.service';
 import { RmaPartsPanelComponent } from './rma-parts-panel.component';
 import { expectInlineForm } from '../../testing/inline-form';
+import { toastMessages, toastTones } from '../../testing/toast';
 
 const reservation = (id: number, status: PartReservationResponse['status']): PartReservationResponse => ({
   id, rmaId: 7, rmaCode: 'OS-2026-000007', partId: 4, partCode: 'PCA-1', partName: 'Capacitor', unit: 'un',
@@ -87,16 +88,20 @@ describe('RmaPartsPanelComponent', () => {
     const cancel = [...fixture.nativeElement.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent?.trim() === 'Cancelar reserva') as HTMLButtonElement;
     cancel.click();
     expect(partService['updateReservation']).toHaveBeenCalledWith(7, 1, 'cancel');
+    expect(toastMessages()).toEqual(['Reserva cancelada e disponibilidade devolvida.']);
+    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
   });
 
   it('reports pending reservations when stock is insufficient', async () => {
     await setUp('TECHNICIAN');
-    const component = fixture.componentInstance as unknown as { reserveForm: { setValue(value: unknown): void }; reserve(): void; successMessage(): string };
+    const component = fixture.componentInstance as unknown as { reserveForm: { setValue(value: unknown): void }; reserve(): void };
     component.reserveForm.setValue({ partId: 4, quantity: 5, note: '  ' });
     component.reserve();
 
     expect(partService['reserve']).toHaveBeenCalledWith(7, { partId: 4, quantity: 5, note: null });
-    expect(component.successMessage()).toContain('pendente de reposição');
+    expect(toastMessages()[0]).toContain('pendente de reposição');
+    expect(toastTones()).toEqual(['info']);
+    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
   });
 
   it.each([[1.0001, false], [1000000000, false], [0.001, true], [1.125, true], [999999999.999, true]])('validates the reserved quantity %s against the contract (accepted=%s)', async (quantity, accepted) => {
@@ -129,6 +134,7 @@ describe('RmaPartsPanelComponent', () => {
     component.consumptionForm.setValue({ replacementReason: '  Capacitor em curto  ', componentBatch: ' L24 ' });
     component.confirmConsumption();
     expect(partService['updateReservation']).toHaveBeenCalledWith(7, 1, 'consume', { replacementReason: 'Capacitor em curto', componentBatch: 'L24' });
+    expect(toastMessages()).toEqual(['Aplicação registrada.']);
   });
 
   it('uses the inline form pattern for reserving, applying, adding externals and voiding', async () => {
@@ -156,6 +162,9 @@ describe('RmaPartsPanelComponent', () => {
     component.externalForm.setValue({ code: ' ', description: ' Conector ', quantity: 1.125, unit: 'un', componentBatch: ' L1 ', replacementReason: ' Oxidação ' });
     component.saveExternal();
     expect(service.addExternalComponent).toHaveBeenCalledWith(7, { code: null, description: 'Conector', quantity: 1.125, unit: 'un', componentBatch: 'L1', replacementReason: 'Oxidação' });
+    expect(toastMessages()).toEqual(['Componente salvo.']);
+    expect(toastTones()).toEqual(['success']);
+    expect(fixture.nativeElement.querySelector('[role="status"], .muted-inline')).toBeNull();
   });
 
   it('cancels inline consumption without writing and lists external and stock components together', async () => {

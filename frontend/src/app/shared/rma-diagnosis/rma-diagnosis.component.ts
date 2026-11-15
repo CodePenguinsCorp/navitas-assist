@@ -7,6 +7,7 @@ import { FailureCause, FailureType, RmaResponse } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { RmaService } from '../../core/services/rma.service';
+import { ToastService } from '../../core/services/toast.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { todayInputValue } from '../../core/utils/date';
 import { diagnosisFacts, NO_DIAGNOSIS_LABEL } from '../../core/utils/rma-detail';
@@ -40,6 +41,7 @@ export class RmaDiagnosisComponent {
   @Output() readonly saved = new EventEmitter<RmaResponse>();
   @Output() readonly busyChange = new EventEmitter<boolean>();
   private readonly service = inject(RmaService);
+  private readonly toasts = inject(ToastService);
   private readonly permissions = inject(PermissionService);
   private readonly builder = inject(FormBuilder);
   private readonly injector = inject(Injector);
@@ -49,7 +51,6 @@ export class RmaDiagnosisComponent {
   protected readonly diagnosisSubmitting = signal(false);
   protected readonly diagnosisErrorMessage = signal('');
   protected readonly diagnosisSubmitAttempted = signal(false);
-  protected readonly message = signal('');
   protected readonly diagnosisFacts = diagnosisFacts;
   protected readonly noDiagnosisLabel = NO_DIAGNOSIS_LABEL;
   protected readonly failureTypeSelectOptions = [{ value: '', label: 'Não classificado' }, ...FAILURE_TYPE_OPTIONS.map(value => ({ value, label: FAILURE_TYPE_LABELS[value] }))];
@@ -67,7 +68,7 @@ export class RmaDiagnosisComponent {
     let id: number | null = null;
     effect(() => {
       const next = this.rma().id;
-      if (next !== id || !this.canEdit()) { this.editing.set(false); this.message.set(''); }
+      if (next !== id || !this.canEdit()) this.editing.set(false);
       id = next;
     });
   }
@@ -83,7 +84,7 @@ export class RmaDiagnosisComponent {
       foundFailure: diagnosis?.foundFailure ?? '', failureType: diagnosis?.failureType ?? '', probableCause: diagnosis?.probableCause ?? '',
       notes: diagnosis?.notes ?? '', diagnosedAt: diagnosis?.diagnosedAt ?? todayInputValue(), technicianName: diagnosis?.technicianName ?? user?.name ?? user?.username ?? 'Usuário'
     });
-    this.diagnosisErrorMessage.set(''); this.message.set(''); this.diagnosisSubmitAttempted.set(false); this.editing.set(true);
+    this.diagnosisErrorMessage.set(''); this.diagnosisSubmitAttempted.set(false); this.editing.set(true);
     this.section()?.setOpen(true);
     this.focus('[formControlName="foundFailure"]');
   }
@@ -115,7 +116,7 @@ export class RmaDiagnosisComponent {
       // The PUT answers with the whole updated OS: no second read.
       finalize(() => { this.diagnosisSubmitting.set(false); this.diagnosisForm.enable(); this.busyChange.emit(false); })
     ).subscribe({
-      next: updated => { this.editing.set(false); this.saved.emit(updated); this.focus('.diagnosis-trigger'); },
+      next: updated => { this.editing.set(false); this.toasts.show({ message: 'Diagnóstico salvo.', tone: 'success' }); this.saved.emit(updated); this.focus('.diagnosis-trigger'); },
       error: error => this.diagnosisErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível salvar o diagnóstico agora.'))
     });
   }

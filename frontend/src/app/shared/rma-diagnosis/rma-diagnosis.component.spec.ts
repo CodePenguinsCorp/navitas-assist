@@ -8,6 +8,7 @@ import { providePermissions } from '../../testing/permission-fixtures';
 import { buildRma } from '../../testing/rma-fixtures';
 import { RmaDiagnosisComponent } from './rma-diagnosis.component';
 import { expectInlineForm } from '../../testing/inline-form';
+import { toastMessages } from '../../testing/toast';
 
 const diagnosis: DiagnosisResponse = {
   foundFailure: 'Falha na fonte', failureType: 'POWER_SUPPLY', probableCause: 'COMPONENT', notes: 'Trocar capacitor',
@@ -104,6 +105,8 @@ describe('Diagnóstico inline', () => {
     expect(host().querySelector('form')).toBeNull();
     expect(host().textContent).toContain('Falha na fonte');
     expect(button('Editar')).toBeDefined();
+    expect(toastMessages()).toEqual(['Diagnóstico salvo.']);
+    expect(host().querySelector('[role="status"]')).toBeNull();
   });
 
   it('mostra a falha inline e preserva o formulário', () => {
@@ -111,6 +114,7 @@ describe('Diagnóstico inline', () => {
     edit(); fill('foundFailure', 'Falha preservada'); submit();
     expect(host().querySelector('[role="alert"]')?.textContent).toContain('Diagnóstico não salvo.');
     expect(host().querySelector<HTMLTextAreaElement>('[formControlName="foundFailure"]')?.value).toBe('Falha preservada');
+    expect(toastMessages()).toEqual([]);
   });
 
   it('consome Escape para cancelar apenas a edição', () => {

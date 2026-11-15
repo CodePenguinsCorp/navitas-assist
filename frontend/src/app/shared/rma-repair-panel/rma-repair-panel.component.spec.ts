@@ -5,6 +5,7 @@ import { RmaRepairService } from '../../core/services/rma-repair.service';
 import { providePermissions } from '../../testing/permission-fixtures';
 import { RmaRepairPanelComponent } from './rma-repair-panel.component';
 import { expectInlineForm } from '../../testing/inline-form';
+import { toastMessages, toastTones } from '../../testing/toast';
 
 describe('RmaRepairPanelComponent', () => {
   afterEach(() => localStorage.clear());
@@ -37,11 +38,14 @@ describe('RmaRepairPanelComponent', () => {
     expect(fixture.nativeElement.querySelector('form')).toBeNull();
   });
   it('requires valid description, date and hours and posts a trimmed intervention', async () => {
-    const { component, service } = await setup();
+    const { component, service, fixture } = await setup();
     component.save(); expect(service.addIntervention).not.toHaveBeenCalled();
     component.form.setValue({ type: 'CLEANING', description: ' Limpeza ', performedOn: '2026-11-12', hours: 0.125 });
     component.save();
     expect(service.addIntervention).toHaveBeenCalledWith(7, { type: 'CLEANING', description: 'Limpeza', performedOn: '2026-11-12', hours: 0.125 });
+    expect(toastMessages()).toEqual(['Intervenção salva.']);
+    expect(toastTones()).toEqual(['success']);
+    expect(fixture.nativeElement.querySelector('[role="status"], .muted-inline')).toBeNull();
   });
   it('blocks future dates, excessive precision and writes after closure', async () => {
     const { component, service } = await setup();
@@ -67,6 +71,7 @@ describe('RmaRepairPanelComponent', () => {
     component.confirmVoid(); expect(service.voidIntervention).not.toHaveBeenCalled();
     component.voidReason.setValue(' Duplicado '); component.confirmVoid();
     expect(service.voidIntervention).toHaveBeenCalledWith(7, 1, 'Duplicado');
+    expect(toastMessages()).toEqual(['Intervenção salva.', 'Intervenção anulada.']);
   });
 
   describe('compact layout', () => {

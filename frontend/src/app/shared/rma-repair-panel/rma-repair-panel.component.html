@@ -5,7 +5,6 @@
     <button sectionActions type="button" class="link-button repair-trigger" [attr.aria-expanded]="formOpen() && !editing()" aria-controls="repair-form" (click)="toggleForm()">Registrar</button>
   }
   @if (error()) { <p class="field-error" role="alert">{{ error() }}</p><button type="button" class="button-secondary button-secondary--small" (click)="load()" [disabled]="loading()">Tentar novamente</button> }
-  @if (success()) { <p class="muted-inline" role="status">{{ success() }}</p> }
   @if (loading()) { <div aria-busy="true"></div> }
   @if (formOpen() && !editing() && canWrite()) { <ng-container [ngTemplateOutlet]="interventionForm" /> }
   @if (repair(); as data) {

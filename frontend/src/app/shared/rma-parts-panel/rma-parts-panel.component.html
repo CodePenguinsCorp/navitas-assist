@@ -24,9 +24,6 @@
     @if (errorMessage()) {
       <p class="field-error" role="alert">{{ errorMessage() }}</p>
     }
-    @if (successMessage()) {
-      <p class="muted-inline" role="status">{{ successMessage() }}</p>
-    }
 
     @if (canCreateReservation() && reserveOpen()) {
       <form id="reserve-form" class="inline-form" [formGroup]="reserveForm" (ngSubmit)="reserve()" (keydown.escape)="$event.stopPropagation(); closeReserve(true)" novalidate>
