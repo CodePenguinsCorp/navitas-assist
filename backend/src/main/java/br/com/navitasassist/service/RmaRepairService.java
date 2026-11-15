@@ -43,7 +43,7 @@ public class RmaRepairService {
         component.setAppliedAt(Instant.now());
         component.setAppliedBy(currentUsername());
         externalComponents.saveAndFlush(component);
-        RmaRepairHistory.record(rma, "EXTERNAL_COMPONENT", component.getId(), "CREATE", "Componente fora do estoque: " + component.getDescription() + " · " + component.getQuantity() + " " + component.getUnit() + " · " + component.getReplacementReason() + batch(component.getComponentBatch()), currentUsername());
+        RmaRepairHistory.record(rma, "EXTERNAL_COMPONENT", component.getId(), "CREATE", RepairHistorySummary.component("Componente fora do estoque", component.getDescription(), component.getQuantity(), component.getUnit(), component.getReplacementReason(), component.getComponentBatch()), currentUsername());
         return ExternalComponentResponse.from(component);
     }
 
@@ -53,7 +53,7 @@ public class RmaRepairService {
         fillIntervention(intervention, request);
         intervention.setTechnicianName(currentUsername());
         interventions.saveAndFlush(intervention);
-        RmaRepairHistory.record(intervention.getRma(), "INTERVENTION", intervention.getId(), "CREATE", "Intervenção registrada: " + intervention.getDescription() + " · " + intervention.getHours() + " h", currentUsername());
+        RmaRepairHistory.record(intervention.getRma(), "INTERVENTION", intervention.getId(), "CREATE", RepairHistorySummary.intervention("Intervenção registrada", intervention.getDescription(), intervention.getHours()), currentUsername());
         return InterventionResponse.from(intervention);
     }
 
@@ -64,7 +64,7 @@ public class RmaRepairService {
         requireActive(component.getVoidedAt());
         fillExternal(component, request);
         component.setEditedBy(currentUsername()); component.setEditedAt(Instant.now());
-        RmaRepairHistory.record(rma, "EXTERNAL_COMPONENT", id, "UPDATE", "Componente editado: " + component.getDescription() + " · " + component.getQuantity() + " " + component.getUnit() + " · " + component.getReplacementReason() + batch(component.getComponentBatch()), currentUsername());
+        RmaRepairHistory.record(rma, "EXTERNAL_COMPONENT", id, "UPDATE", RepairHistorySummary.component("Componente editado", component.getDescription(), component.getQuantity(), component.getUnit(), component.getReplacementReason(), component.getComponentBatch()), currentUsername());
         return ExternalComponentResponse.from(component);
     }
 
@@ -75,7 +75,7 @@ public class RmaRepairService {
         requireActive(item.getVoidedAt());
         fillIntervention(item, request);
         item.setEditedBy(currentUsername()); item.setEditedAt(Instant.now());
-        RmaRepairHistory.record(rma, "INTERVENTION", id, "UPDATE", "Intervenção editada: " + item.getDescription() + " · " + item.getHours() + " h", currentUsername());
+        RmaRepairHistory.record(rma, "INTERVENTION", id, "UPDATE", RepairHistorySummary.intervention("Intervenção editada", item.getDescription(), item.getHours()), currentUsername());
         return InterventionResponse.from(item);
     }
 
@@ -85,7 +85,7 @@ public class RmaRepairService {
             .orElseThrow(() -> new ResourceNotFoundException("Componente não encontrado nesta OS."));
         requireActive(item.getVoidedAt());
         item.setVoidedBy(currentUsername()); item.setVoidedAt(Instant.now()); item.setVoidReason(request.reason().trim());
-        RmaRepairHistory.record(rma, "EXTERNAL_COMPONENT", id, "VOID", "Componente anulado: " + item.getDescription() + " · Motivo: " + item.getVoidReason(), currentUsername());
+        RmaRepairHistory.record(rma, "EXTERNAL_COMPONENT", id, "VOID", RepairHistorySummary.voided("Componente anulado", item.getDescription(), item.getVoidReason()), currentUsername());
         audit.record("REPAIR_VOID", "EXTERNAL_COMPONENT", id, rma.getCode(), "Reparo anulado. Consulte o histórico de reparo da OS #" + rmaId + ", registro #EXTERNAL_COMPONENT:" + id + ".");
         return ExternalComponentResponse.from(item);
     }
@@ -96,8 +96,7 @@ public class RmaRepairService {
             .orElseThrow(() -> new ResourceNotFoundException("Intervenção não encontrada nesta OS."));
         requireActive(item.getVoidedAt());
         item.setVoidedBy(currentUsername()); item.setVoidedAt(Instant.now()); item.setVoidReason(request.reason().trim());
-        String description = item.getDescription().length() > 120 ? item.getDescription().substring(0, 120) + "…" : item.getDescription();
-        RmaRepairHistory.record(rma, "INTERVENTION", id, "VOID", "Intervenção anulada: " + description + " · Motivo: " + item.getVoidReason(), currentUsername());
+        RmaRepairHistory.record(rma, "INTERVENTION", id, "VOID", RepairHistorySummary.voided("Intervenção anulada", item.getDescription(), item.getVoidReason()), currentUsername());
         audit.record("REPAIR_VOID", "INTERVENTION", id, rma.getCode(), "Reparo anulado. Consulte o histórico de reparo da OS #" + rmaId + ", registro #INTERVENTION:" + id + ".");
         return InterventionResponse.from(item);
     }
@@ -117,7 +116,6 @@ public class RmaRepairService {
     private void requireActive(Instant voidedAt) {
         if (voidedAt != null) throw new BusinessException("Não é permitido alterar um registro anulado.");
     }
-    private String batch(String value) { return value == null ? "" : " · Lote: " + value; }
 
     private void requireRma(Long rmaId) {
         if (!rmas.existsById(rmaId)) throw new ResourceNotFoundException("OS não encontrada: " + rmaId);

@@ -97,7 +97,7 @@ class PartInventoryIntegrationTest {
         mockMvc.perform(get("/api/rmas/{id}", rma.getId()).with(VIEWER))
             .andExpect(status().isOk()).andExpect(jsonPath("$.repairHistory", hasSize(1)))
             .andExpect(jsonPath("$.repairHistory[0].entityType").value("STOCK_COMPONENT"))
-            .andExpect(jsonPath("$.repairHistory[0].summary").value(org.hamcrest.Matchers.containsString("L123")));
+            .andExpect(jsonPath("$.repairHistory[0].summary").value("Peça aplicada: Peça PCA-REPLACED (código: PCA-REPLACED), 1 un. Motivo da troca: Curto. Lote: L123."));
 
     }
 

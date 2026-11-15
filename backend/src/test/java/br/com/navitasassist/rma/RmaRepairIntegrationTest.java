@@ -64,6 +64,8 @@ class RmaRepairIntegrationTest {
             .andExpect(jsonPath("$.unit").value("un")).andExpect(jsonPath("$.appliedBy").value("repair-tech"))
             .andExpect(jsonPath("$.appliedAt").isNotEmpty()).andExpect(jsonPath("$.replacementReason").value("Curto"));
         assertEquals(count, parts.count());
+        assertEquals("Componente fora do estoque: Resistor, 1,125 un. Motivo da troca: Curto. Lote: A1.",
+            rma.getRepairHistory().get(0).getSummary());
         assertEquals(0, parts.findById(part.getId()).orElseThrow().getOnHand().signum());
         write("external-components", Map.of("code", " catalog ", "description", "X", "quantity", "1", "replacementReason", "Falha"))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Código já cadastrado no estoque. Use a reserva de peças."));
@@ -129,7 +131,10 @@ class RmaRepairIntegrationTest {
         assertEquals(1, jdbc.queryForObject("select count(*) from audit_events where action = 'REPAIR_VOID' and entity_type = 'INTERVENTION' and entity_id = ?", Integer.class, id));
         mvc.perform(get("/api/rmas/" + rma.getId()).with(asProfile("viewer", "VIEWER"))).andExpect(status().isOk())
             .andExpect(jsonPath("$.repairHistory", hasSize(3))).andExpect(jsonPath("$.repairHistory[0].changedBy").isNotEmpty())
-            .andExpect(jsonPath("$.repairHistory[0].id").isNumber()).andExpect(jsonPath("$.repairHistory[0].action").value("VOID"));
+            .andExpect(jsonPath("$.repairHistory[0].id").isNumber()).andExpect(jsonPath("$.repairHistory[0].action").value("VOID"))
+            .andExpect(jsonPath("$.repairHistory[0].summary").value("Intervenção anulada: Limpeza da placa. Motivo: Duplicado."))
+            .andExpect(jsonPath("$.repairHistory[1].summary").value("Intervenção editada: Limpeza da placa (2,5 h)."))
+            .andExpect(jsonPath("$.repairHistory[2].summary").value("Intervenção registrada: Limpeza da placa (1 h)."));
     }
 
     @Test
@@ -150,6 +155,11 @@ class RmaRepairIntegrationTest {
         write("external-components/" + id + "/void", Map.of("reason", "Erro")).andExpect(status().isBadRequest());
         rma.setStatus(RmaStatus.IN_REPAIR); rmas.saveAndFlush(rma);
         write("external-components/" + id + "/void", Map.of("reason", "Erro")).andExpect(status().isOk());
+        entityManager.flush();
+        entityManager.clear();
+        mvc.perform(get("/api/rmas/" + rma.getId()).with(asProfile("viewer", "VIEWER"))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.repairHistory[0].summary").value("Componente anulado: Capacitor. Motivo: Erro."))
+            .andExpect(jsonPath("$.repairHistory[1].summary").value("Componente editado: Capacitor, 1 un. Motivo da troca: Falha."));
         assertEquals(1, jdbc.queryForObject("select count(*) from audit_events where action = 'REPAIR_VOID' and entity_type = 'EXTERNAL_COMPONENT' and entity_id = ?", Integer.class, id));
     }
 

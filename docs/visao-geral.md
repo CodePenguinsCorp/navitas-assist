@@ -83,6 +83,10 @@ O Kanban usa `GET /api/rmas/board/column` (20 cartões por coluna) e `/api/rmas/
 
 Nenhuma tela fica carregando para sempre. O frontend interrompe qualquer chamada à API que passe de 45 s e mostra "A operação demorou mais do que o esperado e foi interrompida. Verifique a conexão e tente novamente."; nas escritas o texto acrescenta "Confira se a alteração foi salva antes de repetir.", porque o servidor pode ter concluído a operação, e nenhuma escrita é repetida sozinha. O banco cancela cada consulta que passe de 50 s (`DB_STATEMENT_TIMEOUT`) e a API responde `503` com mensagem em português; o Flyway não herda esse limite. Nos fluxos pesados abaixo o banco aceita até 110 s por consulta (`DB_EXPORT_STATEMENT_TIMEOUT`, aplicado com `SET LOCAL` só dentro da transação deles), para o `503` não vir antes do limite do frontend. Têm limite de 120 s no frontend as exportações CSV (`/api/reports/rmas/export.csv`, `/api/reports/rmas/summary/export.csv`), o laudo em PDF (`/api/rmas/{id}/report.pdf`) e a prévia e a confirmação da importação CSV (`/api/{clients|products}/imports/preview` e `/confirm`). O contador de notificações (`/api/notifications/summary`) e as chamadas de `/api/auth/` ficam fora do limite do frontend.
 
+## Histórico de reparo
+
+O histórico de reparo identifica componentes criados, editados e anulados, peças aplicadas do estoque e intervenções registradas, editadas e anuladas. Novos resumos usam frases curtas, quantidade com unidade, `Motivo da troca:`, `Lote:` quando preenchido e horas com vírgula decimal, como `Intervenção registrada: Limpeza (1,5 h).`. Anulações mantêm `Motivo:`; a tela usa esse marcador para associar o motivo ao registro original. Textos já gravados são preservados e continuam aceitos pela tela.
+
 ## Glossário
 
 OS significa Ordem de Serviço. RMA é o nome interno mantido em identificadores de código, rotas, tabelas e permissões (`rma`/`Rma`). A interface e os textos usam Ordem de Serviço ou OS; o código sequencial segue `OS-AAAA-NNNNNN`.
