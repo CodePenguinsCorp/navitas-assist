@@ -310,7 +310,7 @@ Inventário da migração (tela, texto, destino):
 
 ## 5. Checklist de revisão de tela nova
 
-Marque cada item antes de abrir o pedido de revisão.
+Antes do checklist, leia a [anatomia de tela](anatomia-de-tela.md): ela define o esqueleto fixo de cada tipo de tela, os blocos obrigatórios, a regra de modais e a trava automática. Cite o tipo de tela na entrega. Marque cada item abaixo antes de abrir o pedido de revisão.
 
 **Estrutura**
 
