@@ -1,3 +1,4 @@
+import { ToastService } from '../../core/services/toast.service';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { SuggestInputComponent } from '../../shared/form-controls/suggest-input/suggest-input.component';
 import { Component, DestroyRef, ElementRef, Injector, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
@@ -122,6 +123,7 @@ const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
 })
 export class ProtocolsComponent {
   private readonly formBuilder = inject(FormBuilder);
+  private readonly toasts = inject(ToastService);
   private readonly protocolService = inject(ProtocolService);
   private readonly permissions = inject(PermissionService);
   private readonly catalogService = inject(CatalogService);
@@ -140,7 +142,6 @@ export class ProtocolsComponent {
   protected readonly submitting = signal(false);
   protected readonly errorMessage = signal('');
   protected readonly modalErrorMessage = signal('');
-  protected readonly successMessage = signal('');
   protected readonly searchTerm = signal('');
   protected readonly modalOpen = signal(false);
   /** Last list query failed; independent of form messages. */
@@ -266,7 +267,7 @@ export class ProtocolsComponent {
       finalize(() => this.deletingTemplateId.set(null))
     ).subscribe({
       next: () => {
-        this.successMessage.set(`Protocolo ${template.name} excluído com sucesso.`);
+        this.toasts.show({ message: `Protocolo ${template.name} excluído.`, tone: 'success' });
         this.resetDeleteModal();
         this.loadTemplates();
       },
@@ -376,7 +377,7 @@ export class ProtocolsComponent {
     this.clearMessages();
     request$.pipe(finalize(() => this.submitting.set(false))).subscribe({
       next: (template) => {
-        this.successMessage.set(current ? `Protocolo ${template.name} publicado na versão ${template.currentVersion}.` : `Protocolo ${template.name} cadastrado.`);
+        this.toasts.show({ message: current ? `Protocolo ${template.name} publicado na versão ${template.currentVersion}.` : `Protocolo ${template.name} cadastrado.`, tone: 'success' });
         // submitting is still true here (finalize runs after next), so skip the guard.
         this.resetModal();
         this.loadTemplates();
@@ -449,7 +450,6 @@ export class ProtocolsComponent {
     this.errorMessage.set('');
     this.modalErrorMessage.set('');
     this.deleteModalErrorMessage.set('');
-    this.successMessage.set('');
   }
 }
 

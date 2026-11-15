@@ -14,6 +14,7 @@ import { provideRouter } from '@angular/router';
 import { App } from '../../app';
 import { mountUnderRoot, simulateNativeModality } from '../../testing/native-dialog';
 import { ProtocolsComponent } from './protocols.component';
+import { toastMessages } from '../../testing/toast';
 
 interface ProtocolsHarness {
   openCreateModal(): void;
@@ -232,7 +233,8 @@ describe('ProtocolsComponent', () => {
       expect(deleteTemplate).toHaveBeenCalledWith(1);
       expect(listTemplates).toHaveBeenCalledTimes(1);
       expect(element().querySelector('[role="alertdialog"]')).toBeNull();
-      expect(text()).toContain('Protocolo Diagnóstico Alfa excluído com sucesso.');
+      expect(toastMessages()).toEqual(['Protocolo Diagnóstico Alfa excluído.']);
+      expect(element().querySelector('[role="status"]')).toBeNull();
     });
 
     it('shows the loading state while deleting and keeps the dialog on a 409 with the backend message', async () => {
@@ -402,12 +404,10 @@ describe('ProtocolsComponent', () => {
       expect(count()).toBe('2 protocolos');
     });
 
-    it('announces the success banner as status', async () => {
+    it('não mantém aviso de sucesso fixo na página', async () => {
       await setup();
-      (fixture.componentInstance as unknown as { successMessage: { set(value: string): void } }).successMessage.set('Protocolo X cadastrado.');
-      fixture.detectChanges();
-
-      expect(element().querySelector('.alert-banner--success')?.getAttribute('role')).toBe('status');
+      expect(element().querySelector('.alert-banner--success')).toBeNull();
+      expect(toastMessages()).toEqual([]);
     });
   });
 
@@ -564,7 +564,8 @@ describe('ProtocolsComponent', () => {
       fixture.detectChanges();
 
       expect(dialog()).toBeNull();
-      expect(element().querySelector('[role="status"]')?.textContent).toContain('Protocolo Novo checklist cadastrado.');
+      expect(toastMessages()).toEqual(['Protocolo Novo checklist cadastrado.']);
+      expect(element().querySelector('[role="status"]')).toBeNull();
       expect(listTemplates).toHaveBeenCalledTimes(2);
     });
 
@@ -587,7 +588,7 @@ describe('ProtocolsComponent', () => {
       fixture.detectChanges();
 
       expect(dialog()).toBeNull();
-      expect(element().querySelector('[role="status"]')?.textContent).toContain('Protocolo Diagnóstico Alfa publicado na versão 2.');
+      expect(toastMessages()).toEqual(['Protocolo Diagnóstico Alfa publicado na versão 2.']);
       expect(listTemplates).toHaveBeenCalledTimes(2);
     });
 

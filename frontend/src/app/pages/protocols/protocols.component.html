@@ -14,12 +14,6 @@
     </label>
   </section>
 
-  @if (successMessage()) {
-    <article class="panel alert-banner alert-banner--success" role="status">
-      <strong>{{ successMessage() }}</strong>
-    </article>
-  }
-
   <article class="table-card table-card--list panel">
     @if (loadFailed()) {
       <section class="empty-state" role="alert">
