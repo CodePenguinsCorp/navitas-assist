@@ -69,12 +69,15 @@ interface RecentRmaRow {
 
     .dashboard-summary {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: var(--space-3);
       margin: 0;
       padding: 0;
       list-style: none;
     }
+
+    @media (max-width: 900px) { .dashboard-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 480px) { .dashboard-summary { grid-template-columns: minmax(0, 1fr); } }
 
     /* Each indicator carries its own tone: a solid icon block and a wash of the same color. */
     .dashboard-summary__item {
