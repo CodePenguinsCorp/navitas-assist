@@ -11,7 +11,6 @@ import {
   RmaBoardCardResponse,
   RmaItemResponse,
   RmaItemSummaryResponse,
-  RmaListItemResponse,
   RmaPriority,
   RmaResponse,
   RmaStatus,
@@ -120,28 +119,11 @@ export function compareRmasForBoard(left: Pick<RmaResponse, 'priority' | 'update
   return compareDateStrings(right.updatedAt, left.updatedAt);
 }
 
-export function compareRmasForQueue(left: Pick<RmaResponse, 'priority' | 'entryDate'>, right: Pick<RmaResponse, 'priority' | 'entryDate'>): number {
-  const priorityDiff = priorityWeight(right.priority) - priorityWeight(left.priority);
-  if (priorityDiff !== 0) {
-    return priorityDiff;
-  }
-
-  return compareDateStrings(left.entryDate, right.entryDate);
-}
-
 /** Projeção explícita do detalhe devolvido por uma escrita no item resumido das coleções. */
 export function toItemSummary(item: RmaItemResponse): RmaItemSummaryResponse {
   return {
     id: item.id, productName: item.productName, productSku: item.productSku,
     batchNumber: item.batchNumber, serialNumber: item.serialNumber, warrantyStatus: item.warrantyStatus
-  };
-}
-
-/** Linha da lista a partir do detalhe, com os mesmos campos de `GET /api/rmas`. */
-export function toListItem(rma: RmaResponse): RmaListItemResponse {
-  return {
-    id: rma.id, code: rma.code, clientName: rma.clientName, items: rma.items.map(toItemSummary),
-    status: rma.status, priority: rma.priority, entryDate: rma.entryDate
   };
 }
 

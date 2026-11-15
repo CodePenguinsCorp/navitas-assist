@@ -2,7 +2,6 @@ import { RmaResponse, WarrantyStatus } from '../models';
 import { buildRma, buildRmaItem } from '../../testing/rma-fixtures';
 import { formatDateTime as formatCatalogDateTime } from './catalog-ui';
 import {
-  compareRmasForQueue,
   formatDateTime as formatRmaDateTime,
   itemCountLabel,
   normalizeText,
@@ -29,12 +28,6 @@ describe('OS UI utilities', () => {
     expect(rmaItemTrackableLabel({ serialNumber: null, batchNumber: null })).toBe(
       'Item sem identifica\u00e7\u00e3o',
     );
-  });
-
-  it('orders the queue by priority before entry date', () => {
-    const low = { priority: 'LOW', entryDate: '2026-01-01' } as RmaResponse;
-    const high = { priority: 'HIGH', entryDate: '2026-10-01' } as RmaResponse;
-    expect(compareRmasForQueue(high, low)).toBeLessThan(0);
   });
 
   it('formats item counts', () => {

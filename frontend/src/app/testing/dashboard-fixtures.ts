@@ -1,7 +1,12 @@
 import { CLOSED_RMA_STATUSES } from '../core/mock-data';
 import { RmaDashboardResponse, RmaResponse, RmaStatus, WarrantyStatus } from '../core/models';
-import { compareRmasForQueue } from '../core/utils/rma-ui';
 import { businessToday, deadlineStatus } from '../core/utils/rma-deadline';
+
+/** Ordem da fila do servidor: prioridade (alta primeiro) e, em empate, a entrada mais antiga. */
+const PRIORITY_WEIGHT: Record<RmaResponse['priority'], number> = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+function compareForQueue(left: RmaResponse, right: RmaResponse): number {
+  return PRIORITY_WEIGHT[right.priority] - PRIORITY_WEIGHT[left.priority] || left.entryDate.localeCompare(right.entryDate);
+}
 
 /**
  * Monta a resposta de `GET /api/rmas/dashboard` a partir de OS completas, com os mesmos universos do servidor
@@ -22,7 +27,7 @@ export function dashboardFromBoard(board: readonly RmaResponse[], today = busine
     items: items.length,
     itemsInWarranty: items.filter((item) => item.warrantyStatus === WarrantyStatus.IN_WARRANTY).length,
     itemsPendingWarranty: items.filter((item) => item.warrantyStatus === WarrantyStatus.PENDING).length,
-    queue: [...open].sort(compareRmasForQueue).slice(0, 5).map((rma) => ({
+    queue: [...open].sort(compareForQueue).slice(0, 5).map((rma) => ({
       id: rma.id, code: rma.code, clientName: rma.clientName, entryDate: rma.entryDate, status: rma.status, priority: rma.priority
     })),
     recent: [...board].sort((left, right) => time(right.updatedAt) - time(left.updatedAt)).slice(0, 4).map((rma) => ({
