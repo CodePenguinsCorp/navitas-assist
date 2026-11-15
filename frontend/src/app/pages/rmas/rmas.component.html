@@ -309,18 +309,24 @@
               <app-rma-history-list #historyList="rmaHistoryList" [rma]="rma">
               @let history = historyList.entries();
               @if (history.length > 0) {
-                <ol class="record-list">
+                <ol class="record-rows" aria-label="Histórico da OS">
                   @for (entry of history; track $index) {
-                    <li class="record-card">
-                      <div class="record-card__title">
-                        <strong>@if (entry.kind === 'status') { <app-rma-status-transition [status]="entry.status" [previous]="entry.previous" [initial]="entry.initial" /> } @else { {{ historyEntryTitle(entry) }} }@if (entry.kind === 'repair' && entry.voided) { {{ ' ' }}<span class="mini-chip tone-chip tone-danger">Anulada</span> }</strong>
-                        <time>{{ dateTimeLabel(entry.at) }}</time>
+                    <li class="record-row" [class]="historyTone(entry)">
+                      <span class="icon-tile icon-tile--sm"><app-icon [name]="historyIcon(entry)" [size]="18" /></span>
+                      <div class="record-row__main">
+                        <div class="record-row__head">
+                          <strong class="record-row__title">@if (entry.kind === 'status') { <app-rma-status-transition [status]="entry.status" [previous]="entry.previous" [initial]="entry.initial" /> } @else { {{ historyEntryTitle(entry) }} }</strong>
+                          @if (entry.kind === 'repair' && entry.voided) { <span class="mini-chip tone-chip tone-danger">Anulada</span> }
+                        </div>
+                        @if (entry.kind === 'status') {
+                          <app-rma-status-field [rma]="rma" [event]="entry.event" [showSelector]="false" [disabled]="writeBusy()" (saved)="detailRmaSaved($event)" (busyChange)="setWriterBusy('status', $event)" />
+                        } @else if (entry.kind === 'warranty' && entry.reason) { <p class="record-row__meta"><span>Motivo:</span> {{ entry.reason }}</p> }
+                        @if (entry.kind === 'repair' && entry.voidReason) { <p class="record-row__meta"><span>Motivo:</span> {{ entry.voidReason }}</p> }
+                        <dl class="record-stats record-stats--compact">
+                          <div><dt>Data</dt><dd><time>{{ dateTimeLabel(entry.at) }}</time></dd></div>
+                          <div><dt>Alterado por</dt><dd>{{ entry.by }}</dd></div>
+                        </dl>
                       </div>
-                      @if (entry.kind === 'status') {
-                        <app-rma-status-field [rma]="rma" [event]="entry.event" [showSelector]="false" [disabled]="writeBusy()" (saved)="detailRmaSaved($event)" (busyChange)="setWriterBusy('status', $event)" />
-                      } @else if (entry.kind === 'warranty' && entry.reason) { <blockquote class="rma-details__note">{{ entry.reason }}</blockquote> }
-                      @if (entry.kind === 'repair' && entry.voidReason) { <small class="muted-inline">{{ entry.voidReason }}</small> }
-                      <dl class="meta-list"><div><dt>Alterado por</dt><dd>{{ entry.by }}</dd></div></dl>
                     </li>
                   }
                 </ol>

@@ -1,10 +1,12 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { RmaResponse } from '../../core/models';
+import { IconComponent } from '../icon/icon.component';
 import { ClockService } from '../../core/services/clock.service';
 import { blockDateTime, blockDuration } from '../../core/utils/rma-block';
 
 @Component({
   selector: 'app-rma-block-history',
+  imports: [IconComponent],
   template: `
     <section class="summary-block block-history" [class.block-history--previous]="previousOnly()" [attr.aria-label]="previousOnly() ? 'Impedimentos anteriores' : 'Impedimentos da OS'">
       @if (!previousOnly()) {
@@ -21,26 +23,29 @@ import { blockDateTime, blockDuration } from '../../core/utils/rma-block';
       @if (history().length === 0) {
         <p class="block-history__state">Nenhum impedimento registrado.</p>
       } @else {
-        <ol class="record-list">
+        <ol class="record-rows" aria-label="Histórico de impedimentos">
           @for (block of history(); track block.id) {
-            <li class="record-card">
-              <div class="record-card__title">
-                <span class="mini-chip" [class.priority-high]="!block.resolvedAt" [class.warranty-ok]="!!block.resolvedAt">{{ block.resolvedAt ? 'Resolvido' : 'Bloqueado' }}</span>
-              </div>
-              <dl class="meta-list">
-                <div class="block-history__wide"><dt>Motivo</dt><dd>{{ block.reason }}</dd></div>
-                <div><dt>Categoria</dt><dd>{{ block.category || 'Sem categoria' }}</dd></div>
-                <div><dt>Início</dt><dd><time [attr.datetime]="block.blockedAt">{{ dateTime(block.blockedAt) }}</time></dd></div>
-                <div><dt>Bloqueado por</dt><dd>{{ block.blockedBy }}</dd></div>
-                <div><dt>Duração</dt><dd>{{ duration(block, clock.now()) }}</dd></div>
-                @if (block.resolvedAt) {
-                  <div><dt>Resolvido em</dt><dd><time [attr.datetime]="block.resolvedAt">{{ dateTime(block.resolvedAt) }}</time></dd></div>
-                  <div><dt>Resolvido por</dt><dd>{{ block.resolvedBy }}</dd></div>
-                  @if (block.resolutionNote) {
-                    <div class="block-history__wide"><dt>Nota de resolução</dt><dd>{{ block.resolutionNote }}</dd></div>
+            <li class="record-row" [class]="block.resolvedAt ? 'tone-success' : 'tone-warning'">
+              <span class="icon-tile icon-tile--sm"><app-icon name="lock" [size]="18" /></span>
+              <div class="record-row__main">
+                <div class="record-row__head">
+                  <strong class="record-row__title">{{ block.reason }}</strong>
+                  <span class="mini-chip tone-chip">{{ block.resolvedAt ? 'Resolvido' : 'Ativo' }}</span>
+                </div>
+                <dl class="record-stats record-stats--compact block-history__stats">
+                  @if (block.category) { <div><dt>Categoria</dt><dd>{{ block.category }}</dd></div> }
+                  <div><dt>Início</dt><dd><time [attr.datetime]="block.blockedAt">{{ dateTime(block.blockedAt) }}</time></dd></div>
+                  <div><dt>Bloqueado por</dt><dd>{{ block.blockedBy }}</dd></div>
+                  <div><dt>Duração</dt><dd>{{ duration(block, clock.now()) }}</dd></div>
+                  @if (block.resolvedAt) {
+                    <div><dt>Resolvido em</dt><dd><time [attr.datetime]="block.resolvedAt">{{ dateTime(block.resolvedAt) }}</time></dd></div>
+                    <div><dt>Resolvido por</dt><dd>{{ block.resolvedBy }}</dd></div>
                   }
+                </dl>
+                @if (block.resolvedAt && block.resolutionNote) {
+                  <p class="block-history__note"><span class="block-history__note-label">Nota de resolução:</span> {{ block.resolutionNote }}</p>
                 }
-              </dl>
+              </div>
             </li>
           }
         </ol>
@@ -53,7 +58,10 @@ import { blockDateTime, blockDuration } from '../../core/utils/rma-block';
     .block-history p { margin: 0; }
     .block-history__current { display: grid; gap: 0.2rem; padding: 0.7rem 0.85rem; border-radius: var(--radius-sm); background: var(--danger-bg); color: var(--danger-text); }
     .block-history__state { color: var(--text); }
-    .block-history__wide { grid-column: 1 / -1; }
+    .block-history__stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .block-history__note { color: var(--text); font-size: var(--font-size-sm); white-space: pre-wrap; }
+    .block-history__note-label { color: var(--muted); }
+    @media (max-width: 720px) { .block-history__stats { grid-template-columns: minmax(0, 1fr); } }
   `]
 })
 export class RmaBlockHistoryComponent {

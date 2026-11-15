@@ -4,13 +4,22 @@
   }
 <div class="blocks-section" tabindex="-1">
   @if (current().currentBlock; as block) {
-    <div class="blocks-section__current">
-      <div class="blocks-section__current-head">
-        <strong>{{ blockedLabel(block, clock.now()) }}</strong>
-        @if (block.category) { <span class="mini-chip">{{ block.category }}</span> }
+    <div class="record-rows">
+      <div class="record-row blocks-section__current tone-warning">
+        <span class="icon-tile icon-tile--sm"><app-icon name="lock" [size]="18" /></span>
+        <div class="record-row__main">
+          <div class="record-row__head">
+            <strong class="record-row__title blocks-section__reason">{{ block.reason }}</strong>
+            <span class="mini-chip tone-chip">Ativo</span>
+          </div>
+          <dl class="record-stats record-stats--compact blocks-section__stats">
+            @if (block.category) { <div><dt>Categoria</dt><dd>{{ block.category }}</dd></div> }
+            <div><dt>Início</dt><dd><time [attr.datetime]="block.blockedAt">{{ dateTime(block.blockedAt) }}</time></dd></div>
+            <div><dt>Bloqueado por</dt><dd>{{ block.blockedBy }}</dd></div>
+            <div><dt>Duração</dt><dd>{{ duration(block, clock.now()) }}</dd></div>
+          </dl>
+        </div>
       </div>
-      <p class="blocks-section__reason">{{ block.reason }}</p>
-      <p class="blocks-section__meta">Sinalizado por {{ block.blockedBy }}</p>
     </div>
   } @else {
     <p class="blocks-section__empty repair-empty">Sem impedimento</p>

@@ -221,13 +221,13 @@ describe('RmasComponent detail with the shared information contract', () => {
       ...fullRma.statusHistory[0], id: i + 1, changedAt: `2026-11-14T10:${String(i).padStart(2, '0')}:00Z`
     })) };
     open(rma); selectTab('Hist\u00f3rico');
-    expect(tabPanel().querySelectorAll('ol.record-list > li')).toHaveLength(5);
+    expect(tabPanel().querySelectorAll('ol.record-rows > li')).toHaveLength(5);
     const more = [...tabPanel().querySelectorAll('button')].find(b => b.textContent?.trim() === 'Ver mais (7 restantes)')!;
     more.click(); render();
-    expect(tabPanel().querySelectorAll('ol.record-list > li')).toHaveLength(12);
+    expect(tabPanel().querySelectorAll('ol.record-rows > li')).toHaveLength(12);
     expect(tabPanel().textContent).not.toContain('Ver mais');
     open({ ...rma, id: 999 }); selectTab('Hist\u00f3rico');
-    expect(tabPanel().querySelectorAll('ol.record-list > li')).toHaveLength(5);
+    expect(tabPanel().querySelectorAll('ol.record-rows > li')).toHaveLength(5);
   });
 
   it('renders the shared interventions panel in diagnosis without legacy repair summaries', async () => {
@@ -435,12 +435,12 @@ describe('RmasComponent detail with the shared information contract', () => {
     open();
     selectTab('Histórico');
 
-    const entries = [...tabPanel().querySelectorAll<HTMLElement>('ol.record-list > li')];
+    const entries = [...tabPanel().querySelectorAll<HTMLElement>('ol.record-rows > li')];
     expect(entries).toHaveLength(2);
-    expect(entries[0].querySelector('.record-card__title strong .sr-only')?.textContent?.trim()).toBe('Status inicial: Triagem');
-    expect(entries[0].querySelectorAll('.record-card__title .status-chip')).toHaveLength(1);
+    expect(entries[0].querySelector('.record-row__head strong .sr-only')?.textContent?.trim()).toBe('Status inicial: Triagem');
+    expect(entries[0].querySelectorAll('.record-row__head .status-chip')).toHaveLength(1);
     expect(entries[0].querySelector('blockquote')?.textContent?.trim()).toBe('Prioridade alterada para Alta');
-    expect(entries[1].querySelector('.record-card__title strong')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Sem responsável → Ana');
+    expect(entries[1].querySelector('.record-row__head strong')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Sem responsável → Ana');
     expect(entries[1].textContent).toContain('bia');
     expect(tabPanel().textContent).not.toContain('Moveu para');
   });
@@ -530,8 +530,8 @@ describe('RmasComponent detail with the shared information contract', () => {
     const { open, selectTab, tabPanel } = await setup();
     open({ ...fullRma, dueDateHistory: [{ previousDueDate: '2026-11-20', newDueDate: '2026-11-25', changedBy: 'carla', changedAt: '2026-10-20T11:30:00Z' }] });
     selectTab('Histórico');
-    const entries = [...tabPanel().querySelectorAll<HTMLElement>('ol.record-list > li')];
-    expect(entries[0].querySelector('.record-card__title strong')?.textContent?.trim()).toBe('Data limite 20/11/2026 → 25/11/2026');
+    const entries = [...tabPanel().querySelectorAll<HTMLElement>('ol.record-rows > li')];
+    expect(entries[0].querySelector('.record-row__head strong')?.textContent?.trim()).toBe('Data limite 20/11/2026 → 25/11/2026');
     expect(entries[0].textContent).toContain('carla');
   });
 
@@ -776,7 +776,7 @@ describe('garantia no detalhe da lista', () => {
     const { open, selectTab, tabPanel } = await setup();
     open({ ...fullRma, warrantyHistory: [{ itemId: 1, previousOverride: null, newOverride: WarrantyStatus.OUT_OF_WARRANTY,
       reason: 'Mau uso', changedBy: 'carla', changedAt: '2026-11-13T12:00:00Z' }] });
-    selectTab('Histórico'); const history = tabPanel().querySelector('.record-card')!;
+    selectTab('Histórico'); const history = tabPanel().querySelector('.record-row')!;
     expect(history.textContent).toContain('Garantia de Produto A (SKU-A): Automático → Fora de garantia');
     expect(history.textContent).toContain('Mau uso'); expect(history.textContent).toContain('carla');
   });

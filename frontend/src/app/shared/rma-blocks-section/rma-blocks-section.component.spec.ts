@@ -197,7 +197,9 @@ describe('RmaBlocksSectionComponent', () => {
   it('shows the current block in a warning card with reason, category, author and duration', () => {
     mount(blocked());
     const card = host().querySelector('.blocks-section__current')!;
-    expect(text(card.querySelector('strong'))).toBe('Impedida há 2 h');
+    expect(text(card.querySelector('.record-row__title'))).toBe('Peça pendente');
+    expect(text(card.querySelector('.mini-chip'))).toBe('Ativo');
+    expect(text(card.querySelector('dl.record-stats'))).toMatch(/Duração\s*2 h/);
     expect(text(card)).toContain('Peça pendente');
     expect(text(card)).toContain('Peças');
     expect(text(card)).toContain('tech');

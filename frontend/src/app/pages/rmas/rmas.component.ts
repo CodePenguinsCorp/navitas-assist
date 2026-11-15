@@ -6,7 +6,7 @@ import { RmaWarrantyFieldComponent } from '../../shared/rma-warranty-field/rma-w
 import { RmaDiagnosisComponent } from '../../shared/rma-diagnosis/rma-diagnosis.component';
 import { RmaStatusFieldComponent } from '../../shared/rma-status-field/rma-status-field.component';
 import { RmaStatusTransitionComponent } from '../../shared/rma-status-transition/rma-status-transition.component';
-import { IconComponent } from '../../shared/icon/icon.component';
+import { IconComponent, IconName } from '../../shared/icon/icon.component';
 import { NgComponentOutlet } from '@angular/common';
 import { Component, ElementRef, Injector, Type, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -41,6 +41,7 @@ import { ClockService } from '../../core/services/clock.service';
 import {
   blockedLabel,
   historyEntryTitle,
+  RmaHistoryEntry,
   invoiceFact,
   purchaseFact,
   receiptFacts,
@@ -184,11 +185,6 @@ export interface RmaListFilters {
       margin: 0;
       color: var(--muted);
       font-weight: 500;
-    }
-
-    .rma-details__note {
-      margin: 0;
-      color: var(--muted);
     }
 
     .rma-details__header-actions {
@@ -535,6 +531,14 @@ export class RmasComponent {
   protected readonly repairFacts = repairFacts;
   protected readonly rmaHistory = rmaHistory;
   protected readonly historyEntryTitle = historyEntryTitle;
+
+  protected historyIcon(entry: RmaHistoryEntry): IconName {
+    return ({ status: 'flag', repair: 'wrench', assignee: 'users', dueDate: 'calendar', warranty: 'shield' } as const)[entry.kind];
+  }
+
+  protected historyTone(entry: RmaHistoryEntry): string {
+    return ({ status: 'tone-sky', repair: 'tone-slate', assignee: 'tone-violet', dueDate: 'tone-warning', warranty: 'tone-success' } as const)[entry.kind];
+  }
 
   protected get todayDate(): string {
     return todayInputValue();

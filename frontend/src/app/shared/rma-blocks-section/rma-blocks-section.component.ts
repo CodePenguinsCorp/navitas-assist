@@ -8,7 +8,8 @@ import { ClockService } from '../../core/services/clock.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
-import { blockedLabel } from '../../core/utils/rma-detail';
+import { blockDateTime, blockDuration } from '../../core/utils/rma-block';
+import { IconComponent } from '../icon/icon.component';
 import { RmaBlockHistoryComponent } from '../rma-block-history/rma-block-history.component';
 
 type BlocksMode = 'idle' | 'block' | 'resolve';
@@ -19,7 +20,7 @@ type BlocksMode = 'idle' | 'block' | 'resolve';
  */
 @Component({
   selector: 'app-rma-blocks-section',
-  imports: [CollapsibleSectionComponent, ReactiveFormsModule, RmaBlockHistoryComponent],
+  imports: [CollapsibleSectionComponent, IconComponent, ReactiveFormsModule, RmaBlockHistoryComponent],
   templateUrl: './rma-blocks-section.component.html',
   styleUrl: './rma-blocks-section.component.css'
 })
@@ -40,7 +41,8 @@ export class RmaBlocksSectionComponent {
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly clock = inject(ClockService);
-  protected readonly blockedLabel = blockedLabel;
+  protected readonly duration = blockDuration;
+  protected readonly dateTime = blockDateTime;
 
   /** Follows the host input and shows the saved RMA right away. */
   protected readonly current = linkedSignal(() => this.rma());

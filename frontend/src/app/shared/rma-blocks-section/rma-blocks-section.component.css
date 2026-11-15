@@ -3,17 +3,10 @@
 .blocks-section:focus { outline: none; }
 .blocks-section p { margin: 0; }
 
-/* Current block: warning tone, the reason in full and the inline Resolver action. */
-.blocks-section__current {
-  display: grid;
-  gap: var(--space-1);
-  color: var(--text);
-  min-width: 0;
-}
-.blocks-section__current-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-.blocks-section__current-head strong { color: var(--warning-text); }
-.blocks-section__reason { line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
-.blocks-section__meta { color: var(--muted); font-size: var(--font-size-sm); }
+/* Bloqueio ativo: .record-row com tom de aviso; motivo completo, quebrando linhas. */
+.blocks-section__reason { white-space: pre-wrap; overflow-wrap: anywhere; }
+.blocks-section__stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 720px) { .blocks-section__stats { grid-template-columns: minmax(0, 1fr); } }
 
 .blocks-section__empty { color: var(--muted); }
 .blocks-section__action, .blocks-section__history-toggle { min-height: var(--control-height-xs); justify-self: start; }

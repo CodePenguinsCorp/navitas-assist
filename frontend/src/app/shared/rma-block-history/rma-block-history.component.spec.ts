@@ -24,9 +24,9 @@ describe('RmaBlockHistoryComponent', () => {
   }
 
   const text = (element: Element | null | undefined) => (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
-  const episodes = () => [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('ol.record-list > li')];
+  const episodes = () => [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('ol.record-rows > li.record-row')];
   const facts = (episode: HTMLElement) => new Map(
-    [...episode.querySelectorAll('dl > div')].map((pair) => [text(pair.querySelector('dt')), pair.querySelector('dd')!] as const)
+    [...episode.querySelectorAll('dl.record-stats > div')].map((pair) => [text(pair.querySelector('dt')), pair.querySelector('dd')!] as const)
   );
 
   // Vermelho: o início aparece como <time> solto, sem rótulo, e a nota de resolução não é identificada.
@@ -35,24 +35,27 @@ describe('RmaBlockHistoryComponent', () => {
     const [active, resolved] = episodes();
 
     const activeFacts = facts(active);
-    expect([...activeFacts.keys()]).toEqual(['Motivo', 'Categoria', 'Início', 'Bloqueado por', 'Duração']);
-    expect(text(activeFacts.get('Motivo'))).toBe('Aguardando peça');
+    expect([...activeFacts.keys()]).toEqual(['Categoria', 'Início', 'Bloqueado por', 'Duração']);
+    expect(text(active.querySelector('.record-row__title'))).toBe('Aguardando peça');
     expect(text(activeFacts.get('Categoria'))).toBe('Peças');
     expect(text(activeFacts.get('Bloqueado por'))).toBe('tech');
     expect(text(activeFacts.get('Duração'))).toBe('2 h');
     const start = activeFacts.get('Início')!.querySelector('time');
     expect(start?.getAttribute('datetime')).toBe('2026-10-20T10:00:00Z');
     expect(text(start)).toBe('20/10/2026, 07:00');
-    expect(text(active.querySelector('.mini-chip'))).toBe('Bloqueado');
+    expect(text(active.querySelector('.mini-chip'))).toBe('Ativo');
+    expect(active.classList).toContain('tone-warning');
 
     const resolvedFacts = facts(resolved);
-    expect([...resolvedFacts.keys()]).toEqual(['Motivo', 'Categoria', 'Início', 'Bloqueado por', 'Duração', 'Resolvido em', 'Resolvido por', 'Nota de resolução']);
-    expect(text(resolvedFacts.get('Categoria'))).toBe('Sem categoria');
+    expect([...resolvedFacts.keys()]).toEqual(['Início', 'Bloqueado por', 'Duração', 'Resolvido em', 'Resolvido por']);
+    expect(resolvedFacts.has('Categoria')).toBe(false);
     expect(text(resolvedFacts.get('Duração'))).toBe('1 h');
     expect(resolvedFacts.get('Resolvido em')!.querySelector('time')?.getAttribute('datetime')).toBe('2026-10-19T09:00:00Z');
     expect(text(resolvedFacts.get('Resolvido em'))).toBe('19/10/2026, 06:00');
     expect(text(resolvedFacts.get('Resolvido por'))).toBe('desk');
-    expect(text(resolvedFacts.get('Nota de resolução'))).toBe('Peça recebida');
+    expect(text(resolved.querySelector('.block-history__note'))).toBe('Nota de resolução: Peça recebida');
+    expect(resolved.classList).toContain('tone-success');
+    expect(resolved.querySelector('dt')?.textContent).not.toBe(resolved.querySelector('dt')?.textContent?.toUpperCase());
     expect(text(resolved.querySelector('.mini-chip'))).toBe('Resolvido');
   });
 
@@ -77,7 +80,7 @@ describe('RmaBlockHistoryComponent', () => {
     const tie = { ...RESOLVED, id: 7, reason: 'Mesmo início, id maior' };
     const history = [older, RESOLVED, ACTIVE, tie];
     render({ ...RMA, currentBlock: ACTIVE, blockHistory: history });
-    expect(episodes().map((episode) => text(facts(episode).get('Motivo') ?? episode.querySelector('p')))).toEqual(['Aguardando peça', 'Mesmo início, id maior', 'Falha no fornecedor', 'Mais antigo']);
+    expect(episodes().map((episode) => text(episode.querySelector('.record-row__title')))).toEqual(['Aguardando peça', 'Mesmo início, id maior', 'Falha no fornecedor', 'Mais antigo']);
     expect(history.map((block) => block.id)).toEqual([3, 5, 9, 7]);
   });
 

@@ -458,7 +458,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     const card = section('Impedimentos')!;
     const current = card.querySelector('app-rma-blocks-section .blocks-section__current')!;
 
-    expect(current.querySelector('strong')?.textContent?.trim()).toBe('Impedida há 2 h');
+    expect(current.querySelector('dl.record-stats')?.textContent?.replace(/\s+/g, ' ')).toMatch(/Duração\s*2 h/);
     expect(current.textContent).toContain('Aguardando cliente');
     expect(buttonByText('Resolver')?.classList).toContain('link-button');
     expect(host.querySelector('.rma-detail__block')).toBeNull();
