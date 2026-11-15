@@ -32,7 +32,7 @@ Corrija a família, não o caso: ao mexer em um bloco, procure todos os usos del
 | `.empty-state` e `.icon-tile` | `styles.css` | Vazio, erro de carga. |
 | `.alert-banner--error` | `styles.css` | Erro de ação. |
 | `ToastService` e `app-toast-outlet` | `core/`, `shared/` | Sucesso. |
-| `.modal-overlay` e `.modal-panel--sm|--md|--lg` | `styles.css` | Modal (seção 5). |
+| `.modal-overlay` e `.modal-panel` (variantes `--narrow`, `--wide`, `--form-wide`) | `styles.css` | Modal (seção 5). |
 | `.inline-form`, `.field-group`, `fieldset.form-section` | `styles.css` | Formulários. |
 | `app-custom-select`, `app-date-picker`, `app-suggest-input` | `shared/form-controls` | Seletor, data, texto com sugestões. |
 | `app-donut-chart`, `app-bar-chart` | `shared/` | Gráficos. |
@@ -174,21 +174,11 @@ Toda página que não é item de menu usa a **seta de voltar** no cabeçalho, à
 
 ## 5. Regra de modais
 
-Três tamanhos, e só três. O modal **nunca** muda de tamanho conforme o conteúdo, nem ao alternar entre erro e sem erro, formulário aberto e fechado, ou ao navegar entre registros (Anterior e Próxima).
+Os modais **mantêm as larguras e classes que cada um já tinha** (`.modal-panel--narrow`, `--wide`, `--form-wide` e os tamanhos próprios de Usuários, Perfis e Peças, descritos em padroes-visuais.md seção 3.8). Uma tentativa de padronizar todos em três tamanhos fixos foi **revertida a pedido do dono** (quebrou o layout dos formulários). **Não** reintroduza larguras ou alturas fixas globais.
 
-| Classe | Largura | Altura mínima | Uso |
-| --- | --- | --- | --- |
-| `.modal-panel--sm` | 560 px | `min(18rem, 100dvh - 2.5rem)` | Confirmação, exclusão, visualização curta. |
-| `.modal-panel--md` | 760 px | `min(32rem, 100dvh - 2.5rem)` | Formulário de cadastro, notificação, histórico, movimentar estoque. |
-| `.modal-panel--lg` | 1080 px | `min(52rem, 100dvh - 2.5rem)` | Detalhe da OS e editores grandes (nova OS, protocolo). |
+Exceção pedida pelo dono: o **modal de detalhe de notificação** tem altura mínima fixa (`min-height` do componente), para não mudar de tamanho ao navegar entre notificações (Anterior e Próxima). Essa regra vale só para ele.
 
-Regras:
-
-- Estrutura em três faixas: cabeçalho fixo, **corpo com rolagem** (`.modal-body`, `flex: 1`, `overflow-y: auto`) e **rodapé fixo na base** (`.modal-footer` ou `.form-actions`). O painel é uma coluna flex com altura definida; a altura máxima é `100dvh - 2.5rem`.
-- Largura e altura vêm só da classe de tamanho. Nenhuma tela define `width`, `max-width`, `height` ou `padding` do painel.
-- Em tela estreita (até 720 px) o modal ocupa a largura toda e a altura disponível.
-- Todo modal declara exatamente uma classe de tamanho: `modal-panel modal-panel--md panel`.
-- Formulário e rodapé: o botão principal fica sempre à direita da base, na mesma posição em qualquer estado.
+Estrutura geral: cabeçalho, corpo com rolagem e rodapé com ações (`.form-actions`); o botão principal fica à direita da base. Modal de erro de leitura: use `app-error-dialog`.
 
 ## 6. Escala tipográfica de cartões de seção e linhas de registro
 
@@ -196,10 +186,10 @@ Uma escala curta, em três níveis legíveis sem ler as palavras. Vale para toda
 
 | Nível | Elemento | Token de fonte | Peso | Cor |
 | --- | --- | --- | --- | --- |
-| 1 | Título de seção (`.collapsible__title`, `.detail-card__title`), sem caixa alta | `--font-size-md` | semibold | `--brand-blue-deep` |
-| 1 | Número de resumo de cartão (`.record-stats dd`); o `.page-summary strong` segue em `--font-size-md` bold, por ser indicador em linha | `--font-size-lg` (no máximo `--font-size-xl`) | semibold | `--text` |
-| 2 | Título do registro (`.record-row__title`) | `--font-size-md` | semibold | `--text` |
-| 3 | Valores e texto secundário (`.record-fields dd`, `.record-row__desc`, `.record-row__meta`) | `--font-size-sm` | regular | `--text` |
+| 1 | Título de seção (`.collapsible__title`, `.detail-card__title`), em caixa alta | `--font-size-sm` | 800 | `--brand-blue-deep` |
+| 1 | Número de resumo de cartão (`.record-stats dd`) | `--font-size-xl` | bold | `--text` |
+| 2 | Título do registro (`.record-row__title`) | `--font-size-base` | bold (padrão do h4) | `--text` |
+| 3 | Valores e texto secundário (`.record-fields dd`, `.record-row__desc`) | `--font-size-md` | regular | `--text` |
 | 3 | Rótulos (`dt`, `.record-stats dt`, `.page-summary__item`) | `--font-size-sm` | regular | `--muted` (a mesma em todos) |
 | 3 | Chips (`.mini-chip`, `.tone-chip`, `.item-row__chip`) | `--font-size-xs` | semibold | do tom |
 
@@ -218,7 +208,7 @@ Proibido em CSS de página ou de componente:
 | Hexadecimal ou `rgb()` literal | Token de cor de `:root` |
 | `font-size` em `px` ou `rem` literal | `--font-size-*` |
 | Espaçamento fora dos tokens | `--space-*` |
-| Largura, altura ou padding de modal | Classe `.modal-panel--sm|--md|--lg` |
+| Largura, altura ou padding de modal fora das variantes existentes | Use a variante de `.modal-panel` mais próxima |
 | Nova classe que duplique um bloco existente | O bloco do inventário |
 
 Classes proibidas de definir localmente: `.metric`, `.metric-card`, `.stat-card`, `.status-card`, `.summary-card`, `.import-metric`, `.kpi`, `.indicator`, e qualquer seletor que redefina `.page-summary`, `.table-card`, `.pagination`, `.mini-chip`, `.status-chip`, `.modal-panel` fora de `styles.css`.
