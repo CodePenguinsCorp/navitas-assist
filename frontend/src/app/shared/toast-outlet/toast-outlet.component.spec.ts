@@ -12,6 +12,16 @@ describe('Exibição dos avisos', () => {
     service = TestBed.inject(ToastService);
     fixture = TestBed.createComponent(ToastOutletComponent);
   });
+  it('mantém o popover sem rolagem com no máximo três avisos', () => {
+    for (const message of ['Primeiro', 'Segundo', 'Terceiro', 'Quarto']) {
+      service.show({ message, tone: 'info' });
+    }
+    render();
+    expect(host().getAttribute('popover')).toBe('manual');
+    expect(getComputedStyle(host()).overflow).toBe('visible');
+    expect(host().querySelectorAll('section')).toHaveLength(3);
+    expect(host().textContent).not.toContain('Primeiro');
+  });
   it('fecha pelo X com nome acessível e não rouba o foco', () => {
     const previous = document.activeElement;
     service.show({ message: 'Salvo', tone: 'success' }); render();

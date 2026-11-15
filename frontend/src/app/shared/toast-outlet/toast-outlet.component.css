@@ -6,7 +6,7 @@
   width: min(560px, calc(100vw - 32px));
   max-width: calc(100% - 32px);
   max-height: calc(100dvh - 64px);
-  overflow: auto;
+  overflow: visible;
   margin: 0;
   padding: 0;
   border: 0;
