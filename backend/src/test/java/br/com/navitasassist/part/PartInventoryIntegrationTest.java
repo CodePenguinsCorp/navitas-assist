@@ -37,6 +37,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -165,7 +166,7 @@ class PartInventoryIntegrationTest {
     }
 
     @Test
-    void validatesMetadataAndMasksCostsForTechnician() throws Exception {
+    void validatesMetadataAndMasksCostsWithoutPartsView() throws Exception {
         long partId = createPart("PCA-META", "10.00", "0");
         movement(partId, "ENTRY", "2", null, ADMIN).andExpect(status().isCreated());
         String path = "/api/rmas/" + rma.getId() + "/parts/usages";
@@ -175,8 +176,13 @@ class PartInventoryIntegrationTest {
             .content(json(Map.of("partId", partId, "quantity", 1, "replacementReason", " Curto ", "componentBatch", " L1 ", "notes", " Teste "))))
             .andExpect(status().isCreated()).andExpect(jsonPath("$.replacementReason").value("Curto"))
             .andExpect(jsonPath("$.componentBatch").value("L1")).andExpect(jsonPath("$.notes").value("Teste"))
-            .andExpect(jsonPath("$.unitCost").doesNotExist()).andExpect(jsonPath("$.appliedBy").value("tech"));
-        mockMvc.perform(get("/api/rmas/{id}", rma.getId()).with(VIEWER)).andExpect(jsonPath("$.repairHistory[0].summary")
+            .andExpect(jsonPath("$.unitCost").value(10.0)).andExpect(jsonPath("$.appliedBy").value("tech"));
+        // Quem usa peças mas não tem pecas.ver não recebe custos, nem na escrita.
+        RequestPostProcessor withoutCosts = user("masked").authorities(new SimpleGrantedAuthority("pecas.usar"), new SimpleGrantedAuthority("rma.ver"));
+        mockMvc.perform(post(path).with(withoutCosts).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+            .content(json(Map.of("partId", partId, "quantity", 1, "replacementReason", "Sem custo"))))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.unitCost").doesNotExist()).andExpect(jsonPath("$.totalCost").doesNotExist());
+        mockMvc.perform(get("/api/rmas/{id}", rma.getId()).with(VIEWER)).andExpect(jsonPath("$.repairHistory[1].summary")
             .value("Peça usada: Peça PCA-META (código: PCA-META), 1 un. Motivo da troca: Curto. Lote: L1."));
     }
 

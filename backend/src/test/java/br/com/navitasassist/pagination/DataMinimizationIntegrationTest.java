@@ -57,7 +57,7 @@ class DataMinimizationIntegrationTest {
             .andExpect(jsonPath("$[0].sku").exists());
         mvc.perform(get("/api/parts/options").with(READER))
             .andExpect(status().isOk()).andExpect(jsonPath("$[0]", aMapWithSize(6)))
-            .andExpect(jsonPath("$[0].available").exists());
+            .andExpect(jsonPath("$[0].onHand").exists());
     }
     @Test
     void listsOmitTimestampsNoScreenReads() throws Exception {

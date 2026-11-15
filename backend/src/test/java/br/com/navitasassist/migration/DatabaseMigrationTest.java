@@ -195,7 +195,7 @@ class DatabaseMigrationTest {
                 code, client_id, product_id, purchase_date_unknown, entry_date, received_by,
                 reported_failure, priority, status, created_at, updated_at
             ) VALUES (
-                'OS-25', ?, TRUE, DATE '2026-10-19', 'Técnico', 'Falha',
+                'OS-25', ?, ?, TRUE, DATE '2026-10-19', 'Técnico', 'Falha',
                 'HIGH', 'RECEIVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             )
             """, Statement.RETURN_GENERATED_KEYS)) {
