@@ -91,12 +91,12 @@ describe('NotificationsComponent inbox loading', () => {
 
   it('agrupa por dia e recalcula os rótulos na virada pelo ClockService', async () => {
     await setup({ list: [of([
-      { ...NOTIFICATION, createdAt: new Date(2026, 9, 24, 10).toISOString() },
-      { ...OLD, createdAt: new Date(2026, 9, 23, 10).toISOString() }
+      { ...NOTIFICATION, createdAt: '2026-10-24T13:00:00Z' },
+      { ...OLD, createdAt: '2026-10-23T13:00:00Z' }
     ])] });
-    clock.set(new Date(2026, 9, 24, 23, 59).getTime()); render();
+    clock.set(Date.parse('2026-10-25T02:59:00Z')); render();
     expect(text()).toContain('Hoje'); expect(text()).toContain('Ontem');
-    clock.set(new Date(2026, 9, 25, 0, 1).getTime()); render();
+    clock.set(Date.parse('2026-10-25T03:01:00Z')); render();
     expect(root().querySelectorAll('.notification-day')[0].textContent).toBe('Ontem');
     expect(root().querySelectorAll('.notification-day')[1].textContent).toBe('23/10/2026');
   });

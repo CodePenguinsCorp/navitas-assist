@@ -89,7 +89,7 @@ describe('LoginComponent pending submissions', () => {
     expect(router.url).toBe(destination);
     expect(navigations).toEqual([destination]);
     expect(TestBed.inject(AuthService).currentUser()).toEqual({
-      username: 'operator', name: 'Operador', profileName: 'Atendimento', permissions: ['rma.ver']
+      username: 'operator', name: 'Operador', email: null, profileName: 'Atendimento', permissions: ['rma.ver']
     });
     expect(TestBed.inject(AuthService).isAuthenticated()).toBe(true);
     expect(button().disabled).toBe(false);

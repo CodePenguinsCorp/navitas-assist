@@ -36,6 +36,7 @@ describe('AuthService', () => {
     const expected = {
       username: 'operator',
       name: 'Operador',
+      email: null,
       profileName: 'Administrador',
       permissions: ADMIN_PERMISSIONS,
     };
@@ -81,7 +82,7 @@ describe('AuthService permissions session', () => {
     }));
 
     expect(service.currentUser()).toEqual({
-      username: 'admin', name: 'Administrador', profileName: 'Suporte', permissions: ['rma.ver', 'pecas.ver'],
+      username: 'admin', name: 'Administrador', email: null, profileName: 'Suporte', permissions: ['rma.ver', 'pecas.ver'],
     });
   });
 
@@ -95,7 +96,7 @@ describe('AuthService permissions session', () => {
     expect(request.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
     request.flush(authUser({ profileName: 'Técnico', permissions: ['rma.ver', 'rma.status'] }));
 
-    const expected = { username: 'admin', name: 'Administrador', profileName: 'Técnico', permissions: ['rma.ver', 'rma.status'] };
+    const expected = { username: 'admin', name: 'Administrador', email: null, profileName: 'Técnico', permissions: ['rma.ver', 'rma.status'] };
     await expect(first).resolves.toEqual(expected);
     await expect(second).resolves.toEqual(expected);
     expect(service.currentUser()).toEqual(expected);
@@ -167,7 +168,7 @@ describe('AuthService logout confirmation', () => {
 
   function expectOriginalSession(): void {
     expect(service.currentUser()).toEqual({
-      username: 'admin', name: 'Administrador', profileName: 'Administrador', permissions: ADMIN_PERMISSIONS,
+      username: 'admin', name: 'Administrador', email: null, profileName: 'Administrador', permissions: ADMIN_PERMISSIONS,
     });
     expect(service.isAuthenticated()).toBe(true);
     expect(TestBed.inject(PermissionService).hasPermission('usuarios.gerir')).toBe(true);
