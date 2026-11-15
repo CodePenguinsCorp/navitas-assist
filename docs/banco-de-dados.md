@@ -74,3 +74,9 @@ Nada no código cita um provedor; tudo entra por variável de ambiente ([configu
 ## Índices de consulta
 
 A baseline já traz os índices compostos usados por filtros e ordenação: `rmas(entry_date, id)` e `rmas(status, entry_date)` para a lista e o dashboard das ordens de serviço, e `notifications(recipient_id, created_at)` para a central de notificações. `kanban_views` não tem índice simples em `owner_id`: o índice único `(owner_id, lower(name))` começa pela mesma coluna e atende a FK. `PerformanceIndexMigrationTest` confere esses índices.
+
+## Ordem manual do Kanban
+
+| Versão | Arquivo | Alteração |
+| --- | --- | --- |
+| V2 | `V2__rma_board_position.sql` | Adiciona `rmas.board_position BIGINT NULL` e índice `(status, board_position)`; dados existentes permanecem automáticos. |

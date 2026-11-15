@@ -73,6 +73,7 @@ public class RmaService {
     private final RmaRecordRepository rmaRecordRepository;
     private final RmaCodeGenerationLockRepository rmaCodeGenerationLockRepository;
     private final RmaBoardRepository rmaBoardRepository;
+    private final RmaBoardLockService rmaBoardLockService;
     private final RmaStageTimeService rmaStageTimeService;
     private final RmaDeadlineService rmaDeadlineService;
     private final ClientService clientService;
@@ -89,6 +90,10 @@ public class RmaService {
     @Transactional(readOnly = true)
     public List<RmaBoardCardResponse> search(String query, RmaStatus status) {
         List<RmaRecord> records = rmaRecordRepository.search(trimToNull(query), status);
+        return boardCards(records);
+    }
+
+    List<RmaBoardCardResponse> boardCards(List<RmaRecord> records) {
         if (records.isEmpty()) return List.of();
         rmaRecordRepository.fetchItemsWithProducts(records);
         List<Long> ids = records.stream().map(RmaRecord::getId).toList();
@@ -231,6 +236,7 @@ public class RmaService {
     }
 
     public RmaDetailResponse updateStatus(Long id, RmaStatusUpdateRequest request) {
+        rmaBoardLockService.lock(id, request.status());
         return applyStatusChange(getEntityForUpdate(id), request);
     }
 
@@ -284,6 +290,7 @@ public class RmaService {
         if (changed) {
             protocolExecutionService.assertTransitionAllowed(rma, request.status());
             rma.setStatus(request.status());
+            rma.setBoardPosition(null);
         }
         if (changed || trimToNull(request.note()) != null) {
             addStatusHistory(rma, request.status(), request.note());

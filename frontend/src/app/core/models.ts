@@ -236,6 +236,44 @@ export interface RmaAssigneeUpdateRequest {
   assigneeId: number | null;
 }
 
+export interface RmaBoardPageResponse {
+  cards: RmaBoardCardResponse[];
+  total: number;
+  hasMore: boolean;
+  page: number;
+  size: number;
+}
+
+export interface RmaBoardCountsResponse {
+  statusCounts: Record<RmaStatus, number>;
+  total: number;
+  highPriority: number;
+  active: number;
+  closed: number;
+  waitingPart: number;
+}
+
+export interface RmaBoardPositionRequest {
+  status: RmaStatus;
+  afterId?: number | null;
+  beforeId?: number | null;
+}
+
+export interface RmaBoardFilters {
+  query?: string | null;
+  status?: RmaStatus | null;
+  priority?: RmaPriority | null;
+  warranty?: WarrantyStatus | null;
+  blocked?: boolean | null;
+  deadline?: 'OVERDUE' | 'DUE_SOON' | 'ON_TRACK' | 'NO_DUE_DATE' | null;
+  assigneeId?: number | null;
+  unassignedOnly?: boolean;
+  entryFrom?: string | null;
+  entryTo?: string | null;
+  updatedFrom?: string | null;
+  updatedTo?: string | null;
+}
+
 export interface KanbanViewFilters {
   blocked?: boolean | null;
   query: string | null;

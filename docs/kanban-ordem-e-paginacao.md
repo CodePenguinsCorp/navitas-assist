@@ -1,6 +1,6 @@
 # Kanban: ordem manual e paginação por coluna
 
-Projeto proposto em 15/11/2026, pendente de aprovação. Este documento descreve o contrato a implementar; os endpoints atuais continuam vigentes.
+Projeto aprovado pelo dono em 15/11/2026. Este documento descreve o contrato a implementar; os endpoints atuais continuam vigentes.
 
 ## Análise rápida
 
@@ -47,3 +47,13 @@ Ações de status, responsável e prioridade aplicam a resposta localmente e aju
 3. Documentação final em `api.md`, `kanban-payload.md`, `visao-geral.md`, `acesso-e-permissoes.md`, `banco-de-dados.md` e índice. Remover deste documento o estado de proposta somente após implementar e verificar. Commit separado.
 
 Verificação final: `mvn -B -ntp -f backend/pom.xml verify`; suíte completa do frontend com `TZ=UTC` e o runner informado; `npm --prefix frontend run build`, sem avisos. Apenas um Maven por vez; PostgreSQL via Testcontainers. Sem Docker direto, alterações nas portas reservadas, push ou reescrita de commits. A conferência no navegador fica fora desta prova e será declarada como não realizada.
+
+## Registro de execução
+
+- Entrega em dois commits, conforme orientação final do dono: documentação de backend na etapa 1 e documentação final na etapa 2.
+- Manter `/board` compatível preserva a entrega independente das duas etapas; a página passará a usar apenas páginas e contagens.
+- Consultas JDBC parametrizadas compartilham o predicado de páginas e agregações; montagem de cartões usa os carregamentos em lote existentes.
+- Locks usam um namespace fixo e hash PostgreSQL do nome do status, em ordem lexical, sem depender da ordem do enum.
+- A renumeração excepcional pode fixar toda a coluna; inserções normais fixam somente o prefixo automático necessário.
+- Trabalho realizado na branch local `feat/kanban-ordem-paginacao`, no repositório solicitado.
+- Etapa 1 verificada com `mvn -B -ntp -f backend/pom.xml verify`: 1.189 testes, nenhuma falha, erro ou teste ignorado; JAR gerado. PostgreSQL isolado via Testcontainers, incluindo migração, equivalência de schema e duas threads reais.

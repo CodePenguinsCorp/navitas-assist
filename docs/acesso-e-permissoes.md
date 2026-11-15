@@ -117,3 +117,7 @@ O registro de sessões fica em memória por instância, como as sessões HTTP; a
 ### Contratos dos seletores
 
 Os seletores de clientes e produtos usam `/api/clients/options` e `/api/products/options`, com identificação e nome (e SKU do produto). O painel de peças da Ordem de Serviço (OS) usa `/api/parts/options`, sem dados de custo, localização ou estoque interno. A tela de OS só carrega os seletores de cliente e produto com `rma.abrir`; as telas de Clientes e Produtos não leem a lista para quem só tem `cadastros.importar`.
+
+## Ordem e páginas do Kanban
+
+`GET /api/rmas/board/column` e `GET /api/rmas/board/counts` exigem `rma.ver`. `PUT /api/rmas/{id}/board-position` exige `rma.status` e CSRF, tanto dentro da coluna quanto entre colunas. Mouse e teclado seguem a mesma permissão. Não há permissão nova nem concessão adicional aos perfis.
