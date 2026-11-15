@@ -17,7 +17,7 @@ A API autoriza por **permissão**, não por perfil. Um **perfil** é um nome mai
 - Perfis são geridos na tela **Perfis** (`perfis.gerir`); perfil e extras de cada usuário, na tela **Usuários** (`usuarios.gerir`).
 - Não há coluna de role em `user_accounts`: o acesso vem só de `profile_id` e das extras (tabelas `access_profiles`, `access_profile_permissions`, `user_account_extra_permissions`; os perfis destinatários das regras de notificação ficam em `notification_rule_recipient_profiles`).
 - Os 4 perfis prontos são criados pela baseline e **não podem ser excluídos**; um perfil com usuários também não.
-- Requisições sem autenticação recebem `401`; autenticadas sem permissão, `403`. Rotas de API não classificadas exigem `usuarios.gerir` **e** `perfis.gerir`.
+- Requisições sem autenticação recebem `401`; autenticadas sem permissão, `403`. Rotas de API não classificadas exigem `usuarios.gerir` **e** `perfis.gerir`; as não mapeadas sob `/api/protocols/**` são negadas a todos, inclusive ao administrador.
 
 ### Regras anti-escalada
 
@@ -44,7 +44,7 @@ A = Administrador (`ADMIN`), S = Atendimento (`SERVICE_DESK`), T = Técnico (`TE
 | `pecas.ver` | Peças | Consultar peças e estoque | ✓ | ✓ | ✓ | ✓ |
 | `pecas.movimentar` | Peças | Cadastrar peças e movimentar estoque | ✓ | ✓ | | |
 | `pecas.reservar` | Peças | Reservar e aplicar peças nas Ordens de serviço | ✓ | | ✓ | |
-| `protocolos.ver` | Protocolos técnicos | Consultar protocolos e execuções | ✓ | ✓ | ✓ | ✓ |
+| `protocolos.ver` | Protocolos técnicos | Consultar modelos de protocolo | ✓ | ✓ | ✓ | ✓ |
 | `protocolos.executar` | Protocolos técnicos | Executar protocolos nas Ordens de serviço | ✓ | | ✓ | |
 | `protocolos.catalogo` | Protocolos técnicos | Gerenciar modelos de protocolo | ✓ | | | |
 | `relatorios.ver` | Relatórios | Ver relatórios | ✓ | | ✓ | ✓ |
