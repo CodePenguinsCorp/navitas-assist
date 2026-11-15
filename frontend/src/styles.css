@@ -3353,7 +3353,13 @@ app-custom-select:has(> .custom-select--priority) {
   background: rgba(255, 255, 255, 0.98);
   box-shadow: 0 18px 40px rgba(18, 51, 83, 0.14);
   scrollbar-width: thin;
+  scrollbar-color: #b9cde0 transparent;
 }
+
+/* Same bar as the select menu: rounded thumb, no arrow buttons. */
+.suggest-input__menu::-webkit-scrollbar { width: 8px; }
+.suggest-input__menu::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 999px; background: #b9cde0 padding-box; }
+.suggest-input__menu::-webkit-scrollbar-button { display: none; }
 
 .suggest-input__option {
   display: flex;
