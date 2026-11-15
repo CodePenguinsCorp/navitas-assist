@@ -1,3 +1,4 @@
+import { TipDirective } from '../tip/tip.directive';
 import { viewChildren, Component, ElementRef, EventEmitter, Injector, Output, DestroyRef, afterNextRender, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -24,7 +25,7 @@ const ACTION_MESSAGES: Record<PartReservationAction, string> = {
 
 @Component({
   selector: 'app-rma-parts-panel',
-  imports: [NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, IconComponent, CollapsibleSectionComponent],
+  imports: [TipDirective, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, IconComponent, CollapsibleSectionComponent],
   templateUrl: './rma-parts-panel.component.html',
   styles: [`
     :host {

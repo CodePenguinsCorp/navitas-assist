@@ -1,3 +1,4 @@
+import { TipDirective } from '../tip/tip.directive';
 import { CollapsibleSectionComponent } from '../collapsible-section/collapsible-section.component';
 import { viewChild, Component, computed, inject, input } from '@angular/core';
 import { CLOSED_RMA_STATUSES } from '../../core/mock-data';
@@ -24,7 +25,7 @@ const MIN_SHARE = 0.05;
 /** "Tempo por etapa": one proportional bar with the total on the right; hovering a segment names its stage and time. */
 @Component({
   selector: 'app-rma-stage-times',
-  imports: [CollapsibleSectionComponent],
+  imports: [TipDirective, CollapsibleSectionComponent],
   templateUrl: './rma-stage-times.component.html',
   styleUrl: './rma-stage-times.component.css'
 })

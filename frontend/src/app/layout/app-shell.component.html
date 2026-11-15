@@ -8,7 +8,7 @@
         aria-controls="shell-sidebar"
         [attr.aria-expanded]="expanded()"
         [attr.aria-label]="expanded() ? 'Recolher menu' : 'Expandir menu'"
-        [appNavTip]="expanded() ? 'Recolher menu' : 'Expandir menu'"
+        tipPosition="right" [appTip]="expanded() ? 'Recolher menu' : 'Expandir menu'"
         (click)="toggleSidebar()"
       >
         <app-icon name="chevron" [size]="18" />
@@ -34,7 +34,7 @@
                 routerLinkActive="is-active"
                 class="nav-item"
                 ariaCurrentWhenActive="page"
-                [appNavTip]="expanded() ? null : item.label"
+                tipPosition="right" [appTip]="expanded() ? null : item.label"
                 [attr.aria-label]="expanded() ? null : item.label"
                 (click)="closeOverlay()"
               >
@@ -53,7 +53,7 @@
         <strong>{{ currentUser()?.name }}</strong>
         <span>{{ currentProfileName() }}</span>
       </div>
-      <button type="button" class="sidebar-user__logout" (click)="logout()" [disabled]="loggingOut()" [appNavTip]="loggingOut() ? 'Saindo...' : 'Sair'" [attr.aria-label]="loggingOut() ? 'Saindo...' : 'Sair'">
+      <button type="button" class="sidebar-user__logout" (click)="logout()" [disabled]="loggingOut()" tipPosition="right" [appTip]="loggingOut() ? 'Saindo...' : 'Sair'" [attr.aria-label]="loggingOut() ? 'Saindo...' : 'Sair'">
         <app-icon name="logout" />
         <span class="sr-only">{{ loggingOut() ? 'Saindo...' : 'Sair' }}</span>
       </button>

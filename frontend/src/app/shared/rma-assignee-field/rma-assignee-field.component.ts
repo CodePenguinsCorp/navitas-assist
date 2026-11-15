@@ -1,3 +1,4 @@
+import { TipDirective } from '../tip/tip.directive';
 import { Component, EventEmitter, Output, computed, effect, inject, input, signal } from '@angular/core';
 import { finalize } from 'rxjs';
 import { AssignableUserResponse, RmaResponse } from '../../core/models';
@@ -29,7 +30,7 @@ export function assigneeSelectOptions(
  */
 @Component({
   selector: 'app-rma-assignee-field',
-  imports: [CustomSelectComponent],
+  imports: [TipDirective, CustomSelectComponent],
   template: `
     @if (canEdit()) {
       <app-custom-select class="rma-assignee-field__picker" appearance="person" [actionMenu]="true"
@@ -38,7 +39,7 @@ export function assigneeSelectOptions(
     } @else {
       <span class="person" [class.is-empty]="!rma().assigneeId">
         <span class="avatar" [class.avatar--empty]="!rma().assigneeId" aria-hidden="true">{{ rma().assigneeId ? initials(rma().assigneeName) : '–' }}</span>
-        <span [title]="owner(rma())">{{ owner(rma()) }}</span>
+        <span [appTip]="owner(rma())">{{ owner(rma()) }}</span>
       </span>
     }
     @if (message()) { <p class="rma-assignee-field__feedback" role="status">{{ message() }}</p> }

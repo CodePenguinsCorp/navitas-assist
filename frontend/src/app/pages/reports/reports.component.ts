@@ -1,3 +1,4 @@
+import { TipDirective } from '../../shared/tip/tip.directive';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -31,7 +32,7 @@ const MAX_PERIOD_DAYS = 366;
 
 @Component({
   selector: 'app-reports',
-  imports: [NgTemplateOutlet, ReactiveFormsModule, BarChartComponent, CustomSelectComponent, DatePickerComponent, DonutChartComponent, IconComponent, PageHeaderComponent, PaginationComponent, RmaReportLinkComponent],
+  imports: [TipDirective, NgTemplateOutlet, ReactiveFormsModule, BarChartComponent, CustomSelectComponent, DatePickerComponent, DonutChartComponent, IconComponent, PageHeaderComponent, PaginationComponent, RmaReportLinkComponent],
   templateUrl: './reports.component.html',
   styleUrl: './reports.component.css'
 })

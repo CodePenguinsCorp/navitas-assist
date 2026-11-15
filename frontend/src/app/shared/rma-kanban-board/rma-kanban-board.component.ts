@@ -1,3 +1,4 @@
+import { TipDirective } from '../tip/tip.directive';
 import { Component, EventEmitter, Output, computed, inject, input } from '@angular/core';
 import { ClockService } from '../../core/services/clock.service';
 import { blockDuration } from '../../core/utils/rma-block';
@@ -24,7 +25,7 @@ interface RmaBoardColumn {
 
 @Component({
   selector: 'app-rma-kanban-board',
-  imports: [RmaDeadlineChipComponent],
+  imports: [TipDirective, RmaDeadlineChipComponent],
   templateUrl: './rma-kanban-board.component.html',
   styleUrl: './rma-kanban-board.component.css'
 })

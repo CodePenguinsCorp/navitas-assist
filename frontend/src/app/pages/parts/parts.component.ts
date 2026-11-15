@@ -1,3 +1,4 @@
+import { TipDirective } from '../../shared/tip/tip.directive';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { Component, DestroyRef, ElementRef, Injector, afterNextRender, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -46,7 +47,7 @@ const MOVEMENT_TYPE_OPTIONS: ReadonlyArray<CustomSelectOption<ManualPartMovement
 
 @Component({
   selector: 'app-parts',
-  imports: [IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PageHeaderComponent, ResultCountComponent, RowActionComponent],
+  imports: [TipDirective, IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PageHeaderComponent, ResultCountComponent, RowActionComponent],
   templateUrl: './parts.component.html',
   styles: [`
     :host {

@@ -144,7 +144,7 @@
           <div class="repair-line">
             <strong class="repair-line__title" [class.repair-voided]="!!component.voidedAt">@if (component.code) { {{ component.code }} · }{{ component.description }}</strong>
             <small class="repair-line__meta">{{ quantity(component.quantity, component.unit) }} · {{ component.source }}</small>
-            <button type="button" class="repair-line__desc" [class.is-expanded]="expandedKeys().has(component.key)" [attr.aria-expanded]="expandedKeys().has(component.key)" [title]="component.replacementReason || 'Motivo não registrado'" (click)="toggleExpanded(component.key)">{{ component.replacementReason || 'Motivo não registrado' }}</button>
+            <button type="button" class="repair-line__desc" [class.is-expanded]="expandedKeys().has(component.key)" [attr.aria-expanded]="expandedKeys().has(component.key)" [appTip]="component.replacementReason || 'Motivo não registrado'" (click)="toggleExpanded(component.key)">{{ component.replacementReason || 'Motivo não registrado' }}</button>
             @if (component.external && canCreateReservation() && !component.voidedAt) {
               <span class="repair-row-actions">
                 <button appRowAction icon="pencil" label="Editar" [target]="component.description" [disabled]="externalSaving()" (click)="editExternal(component)"></button>
@@ -180,7 +180,7 @@
           <span class="code-text movements__part">{{ movement.partCode }}</span>
           <span class="movements__qty">{{ quantity(movement.quantity) }}</span>
           <span class="movements__user">{{ movement.createdBy }}</span>
-          <span class="movements__note" [title]="movementNote(movement)">{{ movementNote(movement) }}</span>
+          <span class="movements__note" [appTip]="movementNote(movement)">{{ movementNote(movement) }}</span>
         </li>
       }
     </ul>

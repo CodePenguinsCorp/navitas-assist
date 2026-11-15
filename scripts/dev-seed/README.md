@@ -16,6 +16,8 @@ Para um ambiente remoto de testes, exige `SEED_ALLOW_REMOTE=1`, `SEED_BASE_URL` 
 
 Cria 3 clientes, 3 produtos, 3 peças com entradas de 20 unidades, 3 usuários, 7 RMAs em etapas e prioridades variadas, 2 impedimentos, 2 reservas e um modelo de protocolo com 3 execuções (uma concluída). Os nomes de clientes e produtos contêm `[DEMO]`; SKUs, códigos, lotes e séries usam `DEMO-`. A senha inicial das contas criadas é impressa ao final.
 
+Para testar listas, filtros, paginação e relatórios, defina `SEED_VOLUME=100` (ou outro número) antes de executar: além da carga base, cria essa quantidade de OS extras (série `DEMO-V-0001...`) em todas as etapas, prioridades, prazos e garantias variados, com responsáveis e alguns impedimentos, mais 20 clientes (`[DEMO] Cliente Volume ...`), 20 produtos (`DEMO-V001...`) e 2 técnicos extras (`demo.tecnico2`, `demo.tecnico3`). É idempotente: repetir não duplica.
+
 Pode repetir após falha: consulta todas as páginas e reutiliza nomes, SKUs, códigos e séries fixos; consulta também entradas, reservas e protocolos antes de criar. Execute uma instância por vez. Não redefine senhas nem desfaz alterações manuais em etapas já alcançadas, impedimentos resolvidos ou reservas canceladas. Se registros marcados forem editados ou removidos manualmente, a carga pode precisar de revisão. Não há transação global nem limpeza automática; remova os vínculos antes dos cadastros ao limpar.
 
 Contratos conferidos nos controllers, DTOs e services de `backend/src/main/java/br/com/navitasassist`. Não altera aplicação, SQL ou Flyway. Validação sem acessar o app:

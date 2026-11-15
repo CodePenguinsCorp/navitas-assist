@@ -100,12 +100,12 @@
                 <td>
                   <strong class="table-title">{{ product.name }}</strong>
                   @if (product.technicalNotes?.trim()) {
-                    <span class="table-subtitle product-preview" [attr.title]="product.technicalNotes">{{ product.technicalNotes }}</span>
+                    <span class="table-subtitle product-preview" [appTip]="product.technicalNotes">{{ product.technicalNotes }}</span>
                   }
                 </td>
                 <td>
                   @if (product.category?.trim()) {
-                    <span class="product-preview" [attr.title]="product.category">{{ product.category }}</span>
+                    <span class="product-preview" [appTip]="product.category">{{ product.category }}</span>
                   } @else {
                     <span aria-hidden="true">-</span><span class="sr-only">Categoria não informada</span>
                   }

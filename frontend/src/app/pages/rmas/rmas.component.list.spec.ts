@@ -739,6 +739,7 @@ describe('garantia efetiva na lista', () => {
     const { page } = await setup({ list: () => of(buildRmaPage([rma])) });
     const chip = page.querySelector('.warranty-tag')!;
     expect(chip.classList.contains('warranty-ok')).toBe(true);
-    expect(chip.getAttribute('title')).toContain('Em garantia');
+    chip!.dispatchEvent(new Event('mouseenter'));
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toContain('Em garantia');
   });
 });

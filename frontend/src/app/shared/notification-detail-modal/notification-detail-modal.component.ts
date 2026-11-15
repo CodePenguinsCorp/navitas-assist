@@ -1,3 +1,4 @@
+import { TipDirective } from '../tip/tip.directive';
 import { Component, computed, inject, input, output } from '@angular/core';
 import { NotificationResponse } from '../../core/models';
 import { ClockService } from '../../core/services/clock.service';
@@ -25,7 +26,7 @@ let nextId = 0;
  */
 @Component({
   selector: 'app-notification-detail-modal',
-  imports: [CustomSelectComponent, IconComponent, ModalFocusDirective],
+  imports: [TipDirective, CustomSelectComponent, IconComponent, ModalFocusDirective],
   templateUrl: './notification-detail-modal.component.html',
   styleUrl: './notification-detail-modal.component.css'
 })

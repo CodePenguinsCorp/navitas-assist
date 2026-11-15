@@ -1,3 +1,4 @@
+import { TipDirective } from '../tip/tip.directive';
 import { Component, ElementRef, EventEmitter, Injector, Output, afterNextRender, computed, effect, inject, input, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
@@ -14,7 +15,7 @@ type StatusTarget = Pick<RmaResponse, 'id' | 'status'> & { statusHistory?: RmaSt
 
 @Component({
   selector: 'app-rma-status-field',
-  imports: [CustomSelectComponent, ReactiveFormsModule],
+  imports: [TipDirective, CustomSelectComponent, ReactiveFormsModule],
   template: `
     @if (showSelector() && rma(); as item) {
       @if (allowed()) {
@@ -27,7 +28,7 @@ type StatusTarget = Pick<RmaResponse, 'id' | 'status'> & { statusHistory?: RmaSt
     }
     @if (event(); as entry) {
       @if (entry.note) { <blockquote class="history-note">{{ entry.note }}</blockquote> }
-      @if (entry.noteEditedAt) { <small class="muted-inline" [title]="editedTooltip(entry)">(editada)</small> }
+      @if (entry.noteEditedAt) { <small class="muted-inline" [appTip]="editedTooltip(entry)">(editada)</small> }
       @if (noteAllowed() && !editing()) {
         <button type="button" class="link-button status-note-trigger" [disabled]="busy() || disabled()" (click)="editNote()">{{ entry.note ? 'Editar observação' : 'Adicionar observação' }}</button>
       }

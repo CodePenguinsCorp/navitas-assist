@@ -8,7 +8,7 @@
   [attr.aria-expanded]="open()"
   [attr.aria-controls]="open() ? panelId : null"
   [attr.aria-label]="label()"
-  [attr.title]="unreadUnavailable() ? unreadUnavailableMessage : 'Notificações'"
+  [appTip]="unreadUnavailable() ? unreadUnavailableMessage : 'Notificações'"
   (click)="toggle()"
 >
   <app-icon name="bell" [size]="22" />
@@ -62,11 +62,11 @@
                       <span class="bell-item__dot" aria-hidden="true"></span>
                       <span class="mini-chip" [class]="severityClass(notification.severity)">{{ severityLabels[notification.severity] }}</span>
                     </span>
-                    <span class="bell-item__title">{{ headline }}</span>
-                    <span class="bell-item__summary">{{ notification.message }}</span>
+                    <span class="bell-item__title" [appTip]="headline">{{ headline }}</span>
+                    <span class="bell-item__summary" [appTip]="notification.message">{{ notification.message }}</span>
                   </button>
                   <div class="bell-item__side">
-                    <time class="bell-item__time" [attr.datetime]="notification.createdAt" [title]="dateTime(notification.createdAt)">{{ timeOf(notification.createdAt) }}</time>
+                    <time class="bell-item__time" [attr.datetime]="notification.createdAt" [appTip]="dateTime(notification.createdAt)">{{ timeOf(notification.createdAt) }}</time>
                   </div>
                 </li>
               }

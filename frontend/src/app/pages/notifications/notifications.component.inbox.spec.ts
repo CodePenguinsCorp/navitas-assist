@@ -251,7 +251,8 @@ describe('NotificationsComponent inbox loading', () => {
     expect(rows[0].textContent).toContain('Não lida:');
     expect(rows[1].querySelector('.mini-chip')!.textContent!.trim()).toBe('Crítico');
     expect(rows[0].querySelector('time')!.textContent!.trim()).toBe('09:00');
-    expect(rows[0].querySelector('time')!.getAttribute('title')).toBe('24/10/2026, 09:00');
+    rows[0].querySelector('time')!!.dispatchEvent(new Event('mouseenter'));
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe('24/10/2026, 09:00');
   });
 
   it('keeps the same columns in read and unread rows, with the time last', async () => {

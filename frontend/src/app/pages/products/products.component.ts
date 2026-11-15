@@ -1,3 +1,4 @@
+import { TipDirective } from '../../shared/tip/tip.directive';
 import { PermissionService } from '../../core/services/permission.service';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -44,7 +45,7 @@ const PRODUCT_LIMITS = {
 
 @Component({
   selector: 'app-products',
-  imports: [RouterLink, IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PaginationComponent, PageHeaderComponent, RowActionComponent, SuggestInputComponent],
+  imports: [TipDirective, RouterLink, IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PaginationComponent, PageHeaderComponent, RowActionComponent, SuggestInputComponent],
   templateUrl: './products.component.html',
   styles: [`
     :host {

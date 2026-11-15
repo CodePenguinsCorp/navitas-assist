@@ -1,3 +1,4 @@
+import { TipDirective } from '../../shared/tip/tip.directive';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { Component, DestroyRef, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -52,7 +53,7 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
 
 @Component({
   selector: 'app-notifications',
-  imports: [IconComponent, CustomSelectComponent, ModalFocusDirective, NotificationDetailModalComponent, PageHeaderComponent, ResultCountComponent, RowActionComponent, ReactiveFormsModule],
+  imports: [TipDirective, IconComponent, CustomSelectComponent, ModalFocusDirective, NotificationDetailModalComponent, PageHeaderComponent, ResultCountComponent, RowActionComponent, ReactiveFormsModule],
   templateUrl: './notifications.component.html',
   styleUrl: './notifications.component.css'
 })

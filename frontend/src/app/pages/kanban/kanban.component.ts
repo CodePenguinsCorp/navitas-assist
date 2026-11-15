@@ -1,3 +1,4 @@
+import { TipDirective } from '../../shared/tip/tip.directive';
 import { IconComponent, IconName } from '../../shared/icon/icon.component';
 import {
   Component,
@@ -117,7 +118,7 @@ const FILTER_LABELS: Record<AdvancedFilterKey, string> = {
 
 @Component({
   selector: 'app-kanban',
-  imports: [IconComponent, 
+  imports: [TipDirective, IconComponent, 
     ReactiveFormsModule,
     BoundedFilterPanelsDirective,
     CustomSelectComponent,

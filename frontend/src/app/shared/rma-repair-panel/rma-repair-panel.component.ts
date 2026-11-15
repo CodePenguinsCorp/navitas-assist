@@ -1,3 +1,4 @@
+import { TipDirective } from '../tip/tip.directive';
 import { NgTemplateOutlet } from '@angular/common';
 import { viewChildren, Component, ElementRef, viewChild, EventEmitter, Injector, Output, DestroyRef, afterNextRender, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -21,7 +22,7 @@ export const INTERVENTION_LABELS: Record<InterventionType, string> = {
 
 @Component({
   selector: 'app-rma-repair-panel',
-  imports: [NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, IconComponent, CollapsibleSectionComponent],
+  imports: [TipDirective, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, IconComponent, CollapsibleSectionComponent],
   templateUrl: './rma-repair-panel.component.html'
 })
 export class RmaRepairPanelComponent {

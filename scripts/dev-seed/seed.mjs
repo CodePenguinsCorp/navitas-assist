@@ -156,6 +156,7 @@ async function main() {
     let rma = rmas.find(r => r.items.some(item => item.serialNumber === serialNumber));
     const created = !rma;
     count('ordens de serviço', created);
+    if (rma && !rma.statusHistory) rma = await api(`/api/rmas/${rma.id}`);
     if (!rma) {
       rma = await api('/api/rmas', 'POST', {
         clientId: demoClients[i % 3].id,
@@ -203,9 +204,80 @@ async function main() {
     }
     console.log(`${rma.code}: ${rma.status} — ${serialNumber}`);
   }
+  const volume = Number.parseInt(process.env.SEED_VOLUME || '0', 10);
+  if (volume > 0) {
+    const technicians = [demoUsers[1]];
+    for (const [username, fullName] of [['demo.tecnico2', 'Bruno Ferreira [DEMO]'], ['demo.tecnico3', 'Letícia Moreira [DEMO]']]) {
+      technicians.push(await ensure('Usuários (volume)', '/api/users', users, 'username', {
+        username, fullName, password, profileId: profiles.find(p => p.name === 'Técnico').id, extraPermissions: [], active: true,
+      }));
+    }
+    await seedVolume({ volume, demoClients, demoProducts, demoParts, technicians, rmas, stages, date, failures });
+  }
   console.table(counts);
   console.log(`Usuários de demonstração: ${demoUsers.map(u => u.username).join(', ')}`);
   console.log(`Senha inicial dos usuários criados: ${password} (contas existentes não têm a senha alterada).`);
+}
+
+// Carga de volume (SEED_VOLUME=N): N OS extras com clientes e produtos extras, datas, etapas, prioridades,
+// prazos, responsáveis e impedimentos variados, para testar listas, filtros, paginação e relatórios.
+async function seedVolume({ volume, demoClients, demoProducts, demoParts, technicians, rmas, stages, date, failures }) {
+  const extraClients = [...demoClients];
+  const clientRows = await list('/api/clients');
+  const cities = ['São Paulo - SP', 'Rio de Janeiro - RJ', 'Porto Alegre - RS', 'Recife - PE', 'Goiânia - GO', 'Joinville - SC', 'Salvador - BA', 'Londrina - PR'];
+  const clientTotal = Math.max(5, Math.ceil(volume / 5));
+  for (let n = 1; n <= clientTotal; n++) {
+    const legalName = `[DEMO] Cliente Volume ${String(n).padStart(3, '0')} Ltda.`;
+    extraClients.push(await ensure('Clientes (volume)', '/api/clients', clientRows, 'legalName', {
+      legalName, tradeName: `[DEMO] Volume ${String(n).padStart(3, '0')}`, email: `volume${n}@example.com`,
+      phone: `(11) 4000-${String(1000 + n).slice(-4)}`, address: `Av. Central, ${100 + n}, ${cities[n % cities.length]}`,
+      notes: 'Empresa fictícia para teste de volume.',
+    }));
+  }
+  const extraProducts = [...demoProducts];
+  const productRows = await list('/api/products');
+  const categories = ['Automação', 'Energia', 'Redes', 'Sensores', 'Fontes'];
+  const productTotal = Math.max(5, Math.ceil(volume / 5));
+  for (let n = 1; n <= productTotal; n++) {
+    extraProducts.push(await ensure('Produtos (volume)', '/api/products', productRows, 'sku', {
+      sku: `DEMO-V${String(n).padStart(3, '0')}`, name: `[DEMO] Equipamento Volume ${String(n).padStart(3, '0')}`,
+      category: categories[n % categories.length], hardwareVersion: `Rev. ${'ABCD'[n % 4]}`, firmwareVersion: `3.${n % 10}.0`,
+      defaultWarrantyMonths: [6, 12, 18, 24][n % 4], technicalNotes: 'Equipamento fictício para teste de volume.',
+    }));
+  }
+  const priorities = ['LOW', 'MEDIUM', 'HIGH'];
+  for (let i = 0; i < volume; i++) {
+    const serialNumber = `DEMO-V-${String(i + 1).padStart(4, '0')}`;
+    let rma = rmas.find(r => r.items.some(item => item.serialNumber === serialNumber));
+    const created = !rma;
+    count('OS (volume)', created);
+    const target = stages[(i * 3 + Math.floor(i / 7)) % stages.length];
+    const entryAgo = (i * 7) % 100;
+    if (!rma) {
+      rma = await api('/api/rmas', 'POST', {
+        clientId: extraClients[i % extraClients.length].id,
+        items: [{ productId: extraProducts[(i * 2) % extraProducts.length].id, serialNumber, batchNumber: `DEMO-V-LT-${i % 9 + 1}`, manufacturedAt: date(900) }],
+        purchaseDate: date(entryAgo + 20 + (i * 37) % 700), purchaseDateUnknown: false, entryDate: date(entryAgo),
+        invoiceNumber: `DEMO-NFV-${2000 + i}`, reportedFailure: `[DEMO] ${failures[i % 3]} (caso ${i + 1})`,
+        receivedAccessories: i % 3 === 0 ? 'Fonte e cabo de alimentação.' : 'Sem acessórios.',
+        physicalCondition: i % 4 === 0 ? 'Gabinete com marcas de queda.' : 'Gabinete íntegro.', priority: priorities[i % 3],
+      });
+      rmas.push(rma);
+    }
+    const path = `/api/rmas/${rma.id}`;
+    if (created) {
+      for (const status of stages.slice(stages.indexOf(rma.status) + 1, stages.indexOf(target) + 1)) {
+        rma = await api(`${path}/status`, 'PATCH', { status, note: '[DEMO] Evolução (volume).' });
+      }
+      if (i % 5 !== 4) rma = await api(path, 'PUT', { dueDate: date(entryAgo - (5 + (i * 11) % 45)) });
+      if (i % 3 !== 0 && stages.indexOf(target) >= 2) await api(`${path}/assignee`, 'PATCH', { assigneeId: technicians[i % technicians.length].id });
+      if (i % 11 === 5 && !['COMPLETED'].includes(rma.status)) {
+        await api(`${path}/blocks`, 'POST', { reason: '[DEMO] Aguardando retorno do cliente (volume).', category: 'Aprovação do cliente' });
+        count('Impedimentos (volume)', true);
+      }
+    }
+    if ((i + 1) % 20 === 0) console.log(`  volume: ${i + 1}/${volume} OS`);
+  }
 }
 
 main().catch(error => {

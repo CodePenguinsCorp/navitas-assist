@@ -1,3 +1,4 @@
+import { TipDirective } from '../tip/tip.directive';
 import { Component, DestroyRef, ElementRef, Injector, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationStart, Router, RouterLink } from '@angular/router';
@@ -34,7 +35,7 @@ let nextPanelId = 0;
  */
 @Component({
   selector: 'app-notification-bell',
-  imports: [IconComponent, NotificationDetailModalComponent, RouterLink],
+  imports: [TipDirective, IconComponent, NotificationDetailModalComponent, RouterLink],
   templateUrl: './notification-bell.component.html',
   styleUrl: './notification-bell.component.css',
   host: {

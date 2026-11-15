@@ -20,7 +20,7 @@
         <span><strong>{{ data.totalItems }}</strong> {{ data.totalItems === 1 ? 'item' : 'itens' }}</span>
       </li>
       @if (tab() === 'recurrence') {
-        <li class="page-summary__item" [class.tone-warning]="data.recurrence.returnedItems > 0" title="Itens com número de série que voltaram em outra OS">
+        <li class="page-summary__item" [class.tone-warning]="data.recurrence.returnedItems > 0" appTip="Itens com número de série que voltaram em outra OS">
           <app-icon name="history" [size]="16" />
           <span>Retornaram</span>
           <strong>{{ data.recurrence.returnedItems }} de {{ data.recurrence.itemsWithSerial }}</strong>

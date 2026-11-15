@@ -142,3 +142,9 @@ As seções acima foram escritas antes destas entregas. Onde citam SLA por etapa
 - Arquivo com coluna repetida ou desconhecida, vazio, acima de 2 MiB, de tipo errado ou com mais de 2.000 registros: mensagem em português e nada gravado.
 - Confirmar: só as linhas válidas são criadas; SKU e documento já cadastrados são ignorados. Clique duplo em "Confirmar" não cria duplicados. Sem linhas válidas, a confirmação é recusada.
 - Conferir que a lista de clientes ou produtos reflete os novos cadastros e que o resumo final pode diferir da prévia se outro usuário cadastrou nesse intervalo.
+
+### Dicas padronizadas
+
+- Conferir dicas escuras na barra lateral, listas, indicadores e textos truncados: texto completo em hover e foco, sem corte pela viewport.
+- Clicar, sair do item ou pressionar Esc fecha a dica. O nome acessível permanece no controle.
+- Conferência visual em navegador: pendente.

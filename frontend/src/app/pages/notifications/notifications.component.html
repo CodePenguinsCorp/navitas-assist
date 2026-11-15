@@ -118,10 +118,10 @@
                           @if (isSnoozed(notification)) {
                             <span class="notification-snoozed"><app-icon name="clock" [size]="13" />Adiada até {{ dateTime(notification.snoozedUntil) }}</span>
                           }
-                          <span class="notification-message" [attr.title]="notification.message">{{ notification.message }}</span>
+                          <span class="notification-message" [appTip]="notification.message">{{ notification.message }}</span>
                         </p>
                       </div>
-                      <time class="notification-time" [attr.datetime]="notification.createdAt" [title]="dateTime(notification.createdAt)">{{ timeOf(notification.createdAt) }}</time>
+                      <time class="notification-time" [attr.datetime]="notification.createdAt" [appTip]="dateTime(notification.createdAt)">{{ timeOf(notification.createdAt) }}</time>
                     </li>
                   }
                 </ul>
@@ -182,7 +182,7 @@
                             [attr.aria-label]="'Receber ' + eventLabels[preference.eventType]"
                             (click)="$event.preventDefault(); toggleMute(preference)"
                           />
-                          <span class="state-dot" [class.is-on]="preferenceState(preference) === 'receiving'" [attr.title]="preference.enabled ? null : 'Regra desligada pelo administrador; sua escolha vale quando ela for ligada.'">{{ preferenceStateLabel(preference) }}</span>
+                          <span class="state-dot" [class.is-on]="preferenceState(preference) === 'receiving'" [appTip]="preference.enabled ? null : 'Regra desligada pelo administrador; sua escolha vale quando ela for ligada.'">{{ preferenceStateLabel(preference) }}</span>
                         </label>
                       } @else {
                         <span class="state-dot" [class.is-on]="preferenceState(preference) === 'mandatory'">{{ preferenceStateLabel(preference) }}</span>
@@ -267,7 +267,7 @@
             @if (!status.enabled) { <span class="mini-chip mini-chip--muted">Desligado</span> }
             @else if (status.provider === 'fake') { <span class="mini-chip mini-chip--muted">Simulado</span> }
             @else if (status.sentToday != null) {
-              <span class="mini-chip email-usage" [class.email-usage--limit]="status.limitReached" [title]="monthlyUsage(status)">Enviados hoje {{ status.sentToday }}{{ status.dailyLimit ? '/' + status.dailyLimit : '' }}</span>
+              <span class="mini-chip email-usage" [class.email-usage--limit]="status.limitReached" [appTip]="monthlyUsage(status)">Enviados hoje {{ status.sentToday }}{{ status.dailyLimit ? '/' + status.dailyLimit : '' }}</span>
               @if (status.limitReached) { <span class="field-hint email-usage-note" role="status">Limite atingido: os envios retomam no próximo período</span> }
             }
           }

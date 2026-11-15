@@ -132,14 +132,14 @@
                 <td>
                   <div class="rma-item-warranties">
                     @for (item of rma.items; track item.id ?? $index) {
-                      <span class="warranty-tag" [class]="'warranty-tag ' + warrantyClass(item.warrantyStatus)" [title]="item.productName + ' · ' + warrantyLabel(item.warrantyStatus)">
+                      <span class="warranty-tag" [class]="'warranty-tag ' + warrantyClass(item.warrantyStatus)" [appTip]="item.productName + ' · ' + warrantyLabel(item.warrantyStatus)">
                         <app-icon name="shield" [size]="14" />{{ item.productSku }}<span class="sr-only"> · {{ warrantyLabel(item.warrantyStatus) }}</span>
                       </span>
                     }
                   </div>
                 </td>
                 <td>{{ dateLabel(rma.entryDate) }}</td>
-                <td class="table-actions-col"><span class="open-hint" title="Abrir"><app-icon name="chevron" /><span class="sr-only">Abrir</span></span></td>
+                <td class="table-actions-col"><span class="open-hint" appTip="Abrir"><app-icon name="chevron" /><span class="sr-only">Abrir</span></span></td>
               </tr>
             }
           </tbody>

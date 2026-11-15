@@ -148,7 +148,8 @@ describe('AppShellComponent unread summary', () => {
 
     refresh('fail');
     expect(bell().getAttribute('aria-label')).toBe('Notificações: Contagem de não lidas indisponível');
-    expect(bell().getAttribute('title')).toBe('Contagem de não lidas indisponível');
+    bell()!.dispatchEvent(new Event('mouseenter'));
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe('Contagem de não lidas indisponível');
     expect(badge()).toBeNull();
     expect(bell().classList.contains('has-unread')).toBe(false);
 
@@ -335,9 +336,9 @@ describe('AppShellComponent collapsible sidebar', () => {
     expect(first.getAttribute('title')).toBeNull();
     expect(first.getAttribute('aria-label')).toBe('Dashboard');
     first.dispatchEvent(new Event('mouseenter'));
-    expect(document.body.querySelector('.nav-tip.row-action__tip')?.textContent).toBe('Dashboard');
+    expect(document.body.querySelector('.app-tip.row-action__tip')?.textContent).toBe('Dashboard');
     first.dispatchEvent(new Event('mouseleave'));
-    expect(document.body.querySelector('.nav-tip')).toBeNull();
+    expect(document.body.querySelector('.app-tip')).toBeNull();
     expect(page.querySelector('.sidebar-user__logout')).not.toBeNull();
     expect(page.querySelector('.brand-lockup__logo')).toBeNull();
     expect(page.querySelector('.brand-lockup__monogram')?.textContent?.trim()).toBe('N');

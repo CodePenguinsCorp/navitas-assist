@@ -12,7 +12,7 @@
         </span>
       </li>
       @for (stat of heroStats(); track stat.label) {
-        <li [class]="'page-summary__item ' + stat.tone" [title]="stat.detail">
+        <li [class]="'page-summary__item ' + stat.tone" [appTip]="stat.detail">
           <app-icon [name]="stat.icon" [size]="16" />
           <span>{{ stat.label }}</span>
           <strong>{{ stat.value }}</strong>
