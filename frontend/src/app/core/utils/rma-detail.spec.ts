@@ -247,6 +247,16 @@ describe('histórico de garantia', () => {
 });
 
 describe('repair timeline', () => {
+  it('preserva as frases rotuladas e extrai o motivo da anulação no formato atual', () => {
+    const history = rmaHistory({ statusHistory: [], assignmentHistory: [], repairHistory: [
+      { id: 1, entityType: 'INTERVENTION', entityId: 8, action: 'CREATE', changedBy: 'ana', changedAt: '2026-11-12T10:00:00Z', summary: 'Intervenção registrada: Limpeza (1,5 h).' },
+      { id: 2, entityType: 'INTERVENTION', entityId: 8, action: 'VOID', changedBy: 'bia', changedAt: '2026-11-13T10:00:00Z', summary: 'Intervenção anulada: Limpeza. Motivo: registro duplicado.' }
+    ] } as any);
+    expect(history).toHaveLength(1);
+    expect(historyEntryTitle(history[0])).toBe('Intervenção registrada: Limpeza (1,5 h).');
+    expect(history[0]).toMatchObject({ voided: true, voidReason: 'registro duplicado.' });
+  });
+
   it('shows each voided intervention once, with the reason apart and the decimal comma', () => {
     const history = rmaHistory({ statusHistory: [], assignmentHistory: [], repairHistory: [
       { id: 1, entityType: 'INTERVENTION', entityId: 8, action: 'CREATE', changedBy: 'ana', changedAt: '2026-11-12T10:00:00Z', summary: 'Intervenção registrada: teste · 0.017 h' },
