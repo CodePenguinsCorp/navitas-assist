@@ -10,7 +10,7 @@ let nextId = 0;
   imports: [IconComponent, ModalFocusDirective],
   template: `
     <div class="modal-overlay" (click)="closed.emit()">
-      <section class="modal-panel modal-panel--sm panel" role="alertdialog" aria-modal="true"
+      <section class="modal-panel modal-panel--narrow panel" role="alertdialog" aria-modal="true"
         [attr.aria-labelledby]="titleId" [attr.aria-describedby]="messageId" appModalFocus modalInitialFocus=".button-primary"
         [modalFallbackFocus]="fallbackFocus()" (modalCloseRequested)="closed.emit()" (click)="$event.stopPropagation()">
         <header class="modal-header">
