@@ -25,5 +25,5 @@
 .bell-item__summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; color: var(--muted); font-size: var(--font-size-sm); }
 .bell-item__time, .bell-item__chevron { color: var(--muted); font-size: var(--font-size-xs);  }
 .bell-item__time { flex: none; white-space: nowrap; }
-.bell-item__head { display: flex; justify-content: flex-start; margin-top: var(--space-1); }
+.bell-item__head { display: flex; justify-content: flex-start; }
 @media (max-width: 720px) { .bell-panel { right: auto; left: 0; width: calc(100vw - 64px - 2rem); } }
