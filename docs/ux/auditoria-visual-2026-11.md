@@ -4,6 +4,53 @@ Auditoria completa da aparência do frontend, pedida pelo dono do produto depois
 
 Este documento só audita e propõe. Nenhum código nem estilo foi alterado. O catálogo de padrões que resulta dele está em [padroes-visuais.md](padroes-visuais.md); a correção em massa só começa depois que o dono validar as decisões da [seção 9](#9-decisões-que-o-dono-precisa-tomar).
 
+## Revisão de 15/11/2026 (leia antes do resto)
+
+A auditoria acima foi escrita antes de várias entregas e de decisões do dono. Esta revisão confere cada item contra o código de 15/11 e **substitui o plano da seção 8**. Onde houver conflito, vale esta seção.
+
+### O que já foi resolvido (fechar)
+
+| Item | Situação |
+| --- | --- |
+| V-12 | CSS morto removido na limpeza de 15/11 (`2026-11-15-limpeza-css.md`); sobras mínimas, checar na fase final |
+| V-15 | `alert-banner--success` e `success-card` saíram: sucesso agora é aviso flutuante (toast) |
+| V-21 | Sino e modal de notificação refeitos (cartões clicáveis, severidade, rodapé único) |
+| V-28 | Textos explicativos removidos nas telas apontadas |
+| V-32 | `modal-close` sem SVG copiado |
+| V-09 (parte) | `--space-7` definido |
+| V-18 | Dashboard decidido: só título e número, 4 por linha; as demais telas mantêm `page-summary` |
+| V-13 (parte) | Kanban já tem esqueleto na rolagem infinita |
+| 3.4 e 3.7 (Peças, Reparo, Movimentos) | Padrão `.record-row` aprovado e aplicado |
+
+### O que não faz sentido hoje (descartar)
+
+| Item | Motivo |
+| --- | --- |
+| V-01 (sem caixa dentro de caixa) e decisão 1 | Vai contra o que o dono pede: ele cobra caixas e subcaixas para separar informação. Vale o contrário: seções em caixa própria, subgrupos em fundo tonal |
+| V-19 (unificar os dois detalhes da OS) | Esforço alto e risco alto; o dono acabou de ajustar os dois e não reclamou da diferença. Só manter os componentes compartilhados |
+| V-29 (abas e fundo do detalhe) | Sem queixa; custo sem ganho visível |
+| V-20 (barra de filtros única) | Esforço médio e alto risco nas listas; sem queixa. Só corrigir os 44 px do seletor do Kanban |
+| V-08, V-14, V-10, V-23 (higiene de tokens, lint) | Dívida invisível para o usuário (4 a 5 dias). Fazer só se sobrar tempo, depois da revisão mobile |
+| V-30 (trocar o cabeçalho de caixa) | O dono não pediu; manter a faixa atual e apenas documentar |
+| V-05, V-33, V-34 | Detalhes sem efeito visível |
+
+### O que continua valendo (fazer, em ordem)
+
+| Fase | Itens | O que muda para o usuário |
+| --- | --- | --- |
+| A. Rápidos e visíveis | V-02 asterisco de obrigatório em todo formulário (hoje 22 de 112 campos) e remover "(obrigatório)" escrito; V-07 números à direita nas tabelas (Peças); V-26 Ativo/Inativo igual em todas as telas; V-06 fim do botão "small" (4 usos); V-22 conferir peso do botão (semibold) | Formulários coerentes, tabelas legíveis |
+| B. Consistência de componentes | V-04 família de chips (duas alturas, nomes por significado, mínimo de 12 px); V-16 erro de ação em `alert-banner` em OS e Kanban; V-17 painéis do Dashboard e da Importação com o mesmo cabeçalho; V-27 sinal de linha e hover da tabela; V-25 e V-24 links e botões locais | Chips e avisos iguais em todo o app |
+| C. Estados | V-13 esqueleto de lista nas telas de cadastro (hoje 47 regiões vazias) | Sem tela em branco ao carregar |
+| D. Modais | V-11 larguras e cabeçalho; V-03 conferir moldura dupla no navegador | Modais previsíveis |
+
+A revisão de mobile entra em paralelo e tem prioridade sobre as fases C e D.
+
+### Decisões da seção 9 que se resolvem sozinhas
+
+1 e 2: descartadas (acima). 3: manter o que existe. 4: sim, asterisco global. 5: manter como está. 6: sim, 40 px e semibold. 7: sim, duas alturas e Ativo/Inativo igual. 8: adiada. 9: sim, esqueleto. 10: já feito (cartões com chevron). 11: já decidido. 12: três larguras. 13: já feito. 14: sim.
+
+**Resta o dono confirmar apenas:** a lista "descartar" e a ordem das fases A a D.
+
 ## 1. Escopo e método
 
 - **Código lido:** `frontend/src/styles.css` (3.784 linhas), todas as páginas em `frontend/src/app/pages/*` (audit, catalog-import, clients, dashboard, kanban, login, notifications, parts, products, profiles, protocols, reports, rmas, users), os componentes compartilhados em `frontend/src/app/shared/*` e os blocos `styles: []` dos componentes.
