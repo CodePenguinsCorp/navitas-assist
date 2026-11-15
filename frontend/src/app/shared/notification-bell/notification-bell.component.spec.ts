@@ -18,7 +18,7 @@ const SP_OFFSET = 3;
 const NOW = Date.UTC(2026, 9, 24, 15 + SP_OFFSET, 0);
 const at = (day: number, hour: number) => new Date(Date.UTC(2026, 9, day, hour + SP_OFFSET)).toISOString();
 const NOTIFICATION: NotificationResponse = {
-  id: 5, eventType: 'RMA_ASSIGNED', severity: 'CRITICAL', title: 'OS-2026-000007 atribuída', message: 'Cliente · Produto',
+  id: 5, eventType: 'RMA_ASSIGNED', severity: 'CRITICAL', title: 'OS-2026-000007 atribuída', message: 'Cliente - Produto',
   rmaId: 7, rmaCode: 'OS-2026-000007', actionPath: '/rmas?rma=7', createdAt: at(24, 10), readAt: null, snoozedUntil: null, read: false
 };
 const READ: NotificationResponse = { ...NOTIFICATION, id: 6, severity: 'INFO', title: 'Peça pendente', createdAt: at(24, 9), read: true, readAt: at(24, 10) };
@@ -128,7 +128,7 @@ describe('NotificationBellComponent', () => {
     expect(document.activeElement).toBe(panel());
     expect(Array.from(host().querySelectorAll('.bell-day')).map((day) => day.textContent?.trim())).toEqual(['Hoje']);
     expect(items().map((item) => item.querySelector('.bell-item__title')?.textContent?.trim()))
-      .toEqual([NOTIFICATION.title, 'Peça pendente · OS-2026-000007']);
+      .toEqual([NOTIFICATION.title, 'Peça pendente - OS-2026-000007']);
     expect(items()[0].querySelector('.bell-item__head .mini-chip')?.textContent?.trim()).toBe('Crítico');
     expect(host().querySelector('.bell-item time')?.textContent?.trim()).toBe('10:00');
     expect(host().querySelectorAll('.bell-item.is-unread').length).toBe(1);
@@ -215,7 +215,7 @@ describe('NotificationBellComponent', () => {
       { ...NOTIFICATION, id: 9, title: 'Impedimento na OS OS-2026-000004', rmaCode: 'OS-2026-000004', createdAt: at(24, 9) }
     ]);
     expect(items().map((item) => item.querySelector('.bell-item__title')!.textContent!.trim()))
-      .toEqual(['Nova OS · OS-2026-000007', 'Impedimento · OS-2026-000004']);
+      .toEqual(['Nova OS - OS-2026-000007', 'Impedimento - OS-2026-000004']);
     expect(items()[0].textContent).toContain('Não lida:');
   });
 
@@ -223,7 +223,7 @@ describe('NotificationBellComponent', () => {
     await openWith([NOTIFICATION]);
     const main = items()[0];
     expect(main.querySelector('.bell-item__icon app-icon')).not.toBeNull();
-    expect(main.querySelector('.bell-item__summary')!.textContent!.trim()).toBe('Cliente · Produto');
+    expect(main.querySelector('.bell-item__summary')!.textContent!.trim()).toBe('Cliente - Produto');
     expect(main.querySelector('time')!.textContent!.trim()).toBe('10:00');
     expect(main.querySelector('.bell-item__chevron')).not.toBeNull();
   });

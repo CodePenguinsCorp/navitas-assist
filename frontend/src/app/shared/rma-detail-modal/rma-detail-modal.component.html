@@ -44,7 +44,7 @@
           @if (rma().dueDate) { <app-rma-deadline-chip [rma]="rma()" mode="detail" /> }
           @if (rma().currentBlock; as block) {
             <button type="button" class="detail-block-flag" aria-controls="rma-detail-blocks" (click)="showBlocks(blocksSection)">
-              <app-icon name="lock" [size]="16" />{{ blockedLabel(block, clock.now()) }}<span class="sr-only"> · ver impedimento</span>
+              <app-icon name="lock" [size]="16" />{{ blockedLabel(block, clock.now()) }}<span class="sr-only"> - ver impedimento</span>
             </button>
           }
         </div>
@@ -198,7 +198,7 @@
             <div><dt>{{ invoice.label }}</dt><dd>{{ invoice.value }}</dd></div>
             @let purchase = purchaseFact(rma());
             <div><dt>{{ purchase.label }}</dt><dd>{{ purchase.value }}</dd></div>
-            @if (rma().trackingCode) { <div><dt>Rastreio</dt><dd>{{ rma().carrier }} · {{ rma().trackingCode }}</dd></div> }
+            @if (rma().trackingCode) { <div><dt>Rastreio</dt><dd>{{ rma().carrier }} - {{ rma().trackingCode }}</dd></div> }
           </dl>
         </section>
         <section class="rma-detail__info rma-detail__info--dates detail-card">

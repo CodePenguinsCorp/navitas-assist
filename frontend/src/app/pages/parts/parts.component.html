@@ -243,15 +243,16 @@
               <small class="field-error">Informe a unidade.</small>
             }
           </label>
+          @if (unitChangeWarning()) { <p class="field-hint field-group--full" role="status">Esta peça possui saldo fracionado. A nova unidade exige quantidades inteiras nas próximas operações.</p> }
           <label class="field-group">
             <span>Localização</span>
             <input type="text" formControlName="location" [attr.maxlength]="limits.location" placeholder="Prateleira, gaveta..." />
           </label>
           <label class="field-group field-group--required">
             <span>Saldo mínimo</span>
-            <input type="number" min="0" max="999999999.999" step="any" formControlName="minimumStock" />
+            <input type="number" min="0" max="999999999.999" [step]="allowsFraction(form.controls.unit.value) ? 'any' : '1'" [attr.inputmode]="allowsFraction(form.controls.unit.value) ? 'decimal' : 'numeric'" formControlName="minimumStock" />
             @if (hasError('minimumStock')) {
-              <small class="field-error">Informe um saldo mínimo de 0 a 999.999.999,999, com até 3 casas decimais.</small>
+              <small class="field-error">{{ form.controls.minimumStock.errors?.['quantity'] || 'Informe um saldo mínimo de 0 a 999.999.999,999, com até 3 casas decimais.' }}</small>
             }
           </label>
           <label class="field-group field-group--required">
@@ -324,7 +325,7 @@
           </label>
           <label class="field-group field-group--required">
             <span>Quantidade ({{ part.unit }}) {{ movementForm.controls.type.value === 'ADJUSTMENT' ? '(negativa reduz o saldo)' : '' }}</span>
-            <input type="number" step="any" formControlName="quantity" [attr.aria-describedby]="movementFieldErrors().quantity ? 'movement-quantity-error' : null" />
+            <input type="number" [step]="allowsFraction(part.unit) ? 'any' : '1'" [attr.inputmode]="allowsFraction(part.unit) ? 'decimal' : 'numeric'" formControlName="quantity" [attr.aria-describedby]="movementFieldErrors().quantity ? 'movement-quantity-error' : null" />
             @if (movementFieldErrors().quantity) {
               <small id="movement-quantity-error" class="field-error" role="alert">{{ movementFieldErrors().quantity }}</small>
             }

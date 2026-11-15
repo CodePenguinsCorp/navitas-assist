@@ -212,7 +212,7 @@ export class RmaProtocolsComponent {
 
   protected summaryLabel(execution: ProtocolExecutionResponse): string {
     const registered = `${execution.completedItems}/${execution.totalItems} registrados`;
-    return execution.requiredItems === 0 ? `Sem obrigatórios · ${registered}` : `${this.satisfiedRequiredItems(execution)}/${execution.requiredItems} obrigatórios · ${registered}`;
+    return execution.requiredItems === 0 ? `Sem obrigatórios - ${registered}` : `${this.satisfiedRequiredItems(execution)}/${execution.requiredItems} obrigatórios - ${registered}`;
   }
 
   protected executionClass(execution: ProtocolExecutionResponse): string {
@@ -278,8 +278,8 @@ export class RmaProtocolsComponent {
       return '';
     }
     const value = this.resultValue(latest);
-    const attempts = item.attempts.length > 1 ? ` · tentativa ${latest.attempt}` : '';
-    return `${value ? value + ' · ' : ''}${latest.executedBy} em ${formatBusinessDateTime(latest.completedAt)}${attempts}`;
+    const attempts = item.attempts.length > 1 ? ` - tentativa ${latest.attempt}` : '';
+    return `${value ? value + ' - ' : ''}${latest.executedBy} em ${formatBusinessDateTime(latest.completedAt)}${attempts}`;
   }
 
   private replaceExecution(execution: ProtocolExecutionResponse): void {

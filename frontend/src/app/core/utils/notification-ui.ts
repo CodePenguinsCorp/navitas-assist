@@ -74,9 +74,9 @@ export function formatNotificationDateTime(value: string | null): string {
 export function notificationHeadline(notification: Pick<NotificationResponse, 'title' | 'rmaCode'>): string {
   const { title, rmaCode: code } = notification;
   if (!code) return title;
-  if (!title.includes(code)) return `${title} · ${code}`;
+  if (!title.includes(code)) return `${title} - ${code}`;
   const short = title.replace(` na OS ${code}`, '').replace(`OS ${code}`, 'OS');
-  return short.includes(code) ? title : `${short.replace(/\s+/g, ' ').trim()} · ${code}`;
+  return short.includes(code) ? title : `${short.replace(/\s+/g, ' ').trim()} - ${code}`;
 }
 
 /** Relative age such as "há 5 min"; instants slightly in the future read as "agora". */

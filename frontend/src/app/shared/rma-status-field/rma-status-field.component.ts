@@ -178,7 +178,7 @@ export class RmaStatusFieldComponent {
     });
   }
   protected editedTooltip(entry: RmaStatusHistoryResponse): string {
-    return `${entry.noteEditedBy ?? ''} · ${formatBusinessDateTime(entry.noteEditedAt ?? '')}`;
+    return `${entry.noteEditedBy ?? ''} - ${formatBusinessDateTime(entry.noteEditedAt ?? '')}`;
   }
   private focus(selector: string): void {
     afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>(selector)?.focus(), { injector: this.injector });

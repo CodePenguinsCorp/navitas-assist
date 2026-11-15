@@ -10,7 +10,7 @@
     <h2><span class="import-step">2.</span> Arquivo</h2>
     <div class="import-upload field-group">
       <label for="import-file">Arquivo CSV</label>
-      <p id="import-file-hint" class="import-hint">UTF-8 · até 2 MiB · 2.000 registros</p>
+      <p id="import-file-hint" class="import-hint">UTF-8, até 2 MiB, 2.000 registros</p>
       <div class="import-upload__row">
         <div class="import-file">
           <input id="import-file" type="file" accept=".csv,text/csv" aria-describedby="import-file-hint" (change)="selectFile($event)" [disabled]="busy()" />
@@ -33,7 +33,7 @@
           <button type="button" class="import-metric" [attr.data-tone]="tones[metric.status]" [attr.aria-pressed]="filter() === metric.status" (click)="changeFilter(metric.status)"><strong>{{ result[metric.field] }}</strong> {{ result[metric.field] === 1 ? metric.label : metric.label + 's' }}</button>
         }
       </div>
-      <p class="import-hint import-file-info"><app-icon name="file" [size]="18" />{{ result.fileName }} · {{ counted(result.totalRows, 'linha') }} · {{ counted(result.blankRows, 'linha em branco ignorada', 'linhas em branco ignoradas') }}</p>
+      <p class="import-hint import-file-info"><app-icon name="file" [size]="18" />{{ result.fileName }} - {{ counted(result.totalRows, 'linha') }} - {{ counted(result.blankRows, 'linha em branco ignorada', 'linhas em branco ignoradas') }}</p>
       <button type="button" class="button-secondary import-all" [attr.aria-pressed]="filter() === 'all'" (click)="changeFilter('all')">Todas</button>
       <p class="sr-only" aria-live="polite" aria-atomic="true">{{ filterLabel() }}: {{ counted(filteredRows().length, 'linha') }}</p>
       <div class="table-wrap import-table">

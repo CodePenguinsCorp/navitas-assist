@@ -51,6 +51,17 @@ describe('PartsComponent stock movement', () => {
     fixture.detectChanges(); component.openMovementModal(PART); render();
   }
 
+  it.each(['ENTRY', 'EXIT', 'ADJUSTMENT'] as const)('recusa fração contável em %s e mantém ajuste inteiro negativo', async type => {
+    await setup();
+    component.openMovementModal({ ...PART, unit: 'UN' });
+    values(type, type === 'ADJUSTMENT' ? -1.5 : 1.5, 'Contagem'); submit();
+    expect(service['registerMovement']).not.toHaveBeenCalled();
+    expect(text()).toContain('Informe um número inteiro.');
+    expect(panel()!.querySelector('[formControlName="quantity"]')?.getAttribute('step')).toBe('1');
+    values(type, type === 'ADJUSTMENT' ? -2 : 2, 'Contagem'); submit();
+    expect(service['registerMovement']).toHaveBeenCalledTimes(1);
+  });
+
   // Vermelho: o diálogo não tem seção Movimento nem os três saldos identificados.
   it('groups the movement with part context and quantity unit', async () => {
     await setup();

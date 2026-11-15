@@ -1,3 +1,4 @@
+import { allowsFraction, quantityError, quantityValidator } from '../../core/utils/quantity-rules';
 import { IconComponent } from '../icon/icon.component';
 import { TipDirective } from '../tip/tip.directive';
 import { viewChildren, Component, ElementRef, EventEmitter, Injector, Output, DestroyRef, afterNextRender, computed, effect, inject, input, signal, untracked } from '@angular/core';
@@ -152,7 +153,16 @@ export class RmaPartsPanelComponent {
     note: this.formBuilder.nonNullable.control('', Validators.maxLength(255))
   });
 
+  protected readonly allowsFraction = allowsFraction;
+  protected readonly quantityError = quantityError;
+
   constructor() {
+    const reserveQuantity = this.reserveForm.controls.quantity;
+    reserveQuantity.addValidators(quantityValidator(() => this.selectedPart()?.unit));
+    this.reserveForm.controls.partId.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => reserveQuantity.updateValueAndValidity());
+    const externalQuantity = this.externalForm.controls.quantity;
+    externalQuantity.addValidators(quantityValidator(() => this.externalForm.controls.unit.value));
+    this.externalForm.controls.unit.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => externalQuantity.updateValueAndValidity());
     effect(() => {
       const rmaId = this.rmaId();
       untracked(() => {
@@ -237,6 +247,8 @@ export class RmaPartsPanelComponent {
 
   protected startConsumption(reservation: PartReservationResponse): void {
     if (!this.canCreateReservation()) return;
+    const error = quantityError(reservation.quantity, reservation.unit);
+    if (error) { this.errorMessage.set(error); return; }
     this.cancelling.set(null);
     this.consuming.set(reservation); this.consumptionForm.reset();
   }
@@ -342,6 +354,8 @@ export class RmaPartsPanelComponent {
       return;
     }
 
+    const error = action === 'cancel' ? null : quantityError(reservation.quantity, reservation.unit);
+    if (error) { this.errorMessage.set(error); return; }
     const rmaId = this.rmaId();
     this.busyReservationId.set(reservation.id);
     this.clearMessages();

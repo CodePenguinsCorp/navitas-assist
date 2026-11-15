@@ -46,7 +46,7 @@ export class RmaStageTimesComponent {
       const value = closing
         ? `Encerrada em ${formatDateTime(period.enteredAt).replace(", ", " ")}`
         : `${formatDuration(seconds)}${current ? ' (atual)' : ''}`;
-      return { key: `${period.status}-${period.enteredAt}-${index}`, status: period.status, text: `${label} · ${value}`, label, value, seconds, closing };
+      return { key: `${period.status}-${period.enteredAt}-${index}`, status: period.status, text: `${label} - ${value}`, label, value, seconds, closing };
     });
     const total = rows.reduce((sum, row) => sum + row.seconds, 0);
     return rows.map((row) => ({

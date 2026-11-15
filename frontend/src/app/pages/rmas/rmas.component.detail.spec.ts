@@ -254,7 +254,7 @@ describe('RmasComponent detail with the shared information contract', () => {
     expect(Object.fromEntries(pairs(summary)).Prioridade).toContain('Média');
 
     const flag = actions.querySelector<HTMLButtonElement>('button.detail-block-flag')!;
-    expect(flag.textContent?.replace(/\s+/g, ' ').trim()).toBe('Impedida há 2 h · ver impedimento');
+    expect(flag.textContent?.replace(/\s+/g, ' ').trim()).toBe('Impedida há 2 h - ver impedimento');
     expect(flag.querySelector('app-icon')).not.toBeNull();
     expect(flag.getAttribute('aria-controls')).toBe('rma-detail-panel');
     expect(detail().querySelector('.mini-chip.priority-high')).toBeNull();
@@ -523,7 +523,7 @@ describe('RmasComponent detail with the shared information contract', () => {
     });
     selectTab('Histórico');
     const lines = [...tabPanel().querySelectorAll('app-rma-stage-times ol.sr-only li')].map((item) => item.textContent?.trim());
-    expect(lines).toEqual(['Recebida · 2 h', 'Triagem · 2 h (atual)']);
+    expect(lines).toEqual(['Recebida - 2 h', 'Triagem - 2 h (atual)']);
   });
 
   it('shows due date changes with previous value and author', async () => {

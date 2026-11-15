@@ -35,6 +35,6 @@ describe('ProtocolsComponent product options', () => {
     expect(text()).not.toContain('Falha nos produtos.');
     expect(retry()).toBeUndefined();
     const options = (fixture.componentInstance as unknown as { productOptions(): { value: number | null; label: string }[] }).productOptions();
-    expect(options.map((option) => option.label)).toContain('SKU-5 · Controlador');
+    expect(options.map((option) => option.label)).toContain('SKU-5 - Controlador');
   });
 });

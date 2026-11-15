@@ -25,7 +25,7 @@ describe('OS UI utilities', () => {
 
   it('renders available tracking identifiers', () => {
     expect(rmaItemTrackableLabel({ serialNumber: 'SER-1', batchNumber: 'LOT-1' })).toBe(
-      'Série SER-1 · Lote LOT-1',
+      'Série SER-1, Lote LOT-1',
     );
     expect(rmaItemTrackableLabel({ serialNumber: null, batchNumber: null })).toBe(
       'Item sem identifica\u00e7\u00e3o',
@@ -47,7 +47,7 @@ describe('OS UI utilities', () => {
       ],
     });
     expect(productSummary(rma)).toBe('Produto A + 1 item(ns)');
-    expect(trackableLabel(rma)).toBe('Série S1 · Lote L1 + 1 item(ns)');
+    expect(trackableLabel(rma)).toBe('Série S1, Lote L1 + 1 item(ns)');
   });
 });
 

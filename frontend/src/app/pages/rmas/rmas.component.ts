@@ -562,7 +562,7 @@ export class RmasComponent {
     { value: 0, label: 'Selecione' },
     ...this.productsSignal().map((product) => ({
       value: product.id,
-      label: `${product.sku} · ${product.name}`
+      label: `${product.sku} - ${product.name}`
     }))
   ]);
 

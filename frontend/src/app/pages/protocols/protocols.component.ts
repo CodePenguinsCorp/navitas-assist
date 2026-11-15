@@ -197,7 +197,7 @@ export class ProtocolsComponent {
     this.productOptionsLoading.set(true);
     this.productOptionsError.set('');
     this.catalogService.listProductOptions().pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.productOptionsLoading.set(false))).subscribe({
-      next: (products) => this.productOptionsSignal.set([{ value: null, label: 'Por categoria' }, ...products.map((product) => ({ value: product.id, label: `${product.sku} · ${product.name}` }))]),
+      next: (products) => this.productOptionsSignal.set([{ value: null, label: 'Por categoria' }, ...products.map((product) => ({ value: product.id, label: `${product.sku} - ${product.name}` }))]),
       error: (error) => this.productOptionsError.set(extractHttpErrorMessage(error, 'Não foi possível carregar os produtos.'))
     });
   }

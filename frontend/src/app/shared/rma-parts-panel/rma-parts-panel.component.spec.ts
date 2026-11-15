@@ -43,6 +43,44 @@ describe('RmaPartsPanelComponent', () => {
     expect(items[0].querySelector('.record-row__meta')).toBeNull();
   });
 
+  it('bloqueia frações contáveis na reserva e revalida ao trocar a peça', async () => {
+    await setUp('TECHNICIAN');
+    const c = fixture.componentInstance as any;
+    c.catalog.set([{ id: 4, code: 'P1', name: 'Peça', unit: 'UN', active: true, available: 10 }, { id: 5, code: 'M1', name: 'Medida', unit: 'kg', active: true, available: 10 }]);
+    c.reserveForm.patchValue({ partId: 4, quantity: 3.5 });
+    c.reserve(); fixture.detectChanges();
+    expect(partService['reserve']).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('#reserve-quantity-error')?.textContent).toContain('Informe um número inteiro.');
+    expect(fixture.nativeElement.querySelector('#reserve-form input[type="number"]')?.getAttribute('step')).toBe('1');
+    c.reserveForm.controls.partId.setValue(5); fixture.detectChanges();
+    expect(c.reserveForm.controls.quantity.valid).toBe(true);
+    expect(fixture.nativeElement.querySelector('#reserve-form input[type="number"]')?.getAttribute('step')).toBe('any');
+  });
+
+  it('revalida componente externo quando muda a unidade e impede envio inválido', async () => {
+    await setUp('TECHNICIAN');
+    const c = fixture.componentInstance as any;
+    c.toggleExternal();
+    c.externalForm.patchValue({ description: 'Componente', quantity: 1.222, unit: 'un', replacementReason: 'Troca' });
+    c.saveExternal(); fixture.detectChanges();
+    expect(c.externalForm.controls.quantity.invalid).toBe(true);
+    expect(fixture.nativeElement.querySelector('#external-form')?.textContent).toContain('Informe um número inteiro.');
+    c.externalForm.controls.unit.setValue('m³'); fixture.detectChanges();
+    expect(c.externalForm.controls.quantity.valid).toBe(true);
+  });
+
+  it('exibe legado fracionado, bloqueia aplicação e efetivação e permite cancelar', async () => {
+    await setUp('TECHNICIAN');
+    const c = fixture.componentInstance as any;
+    const legacy = { ...reservation(1, 'ACTIVE'), quantity: 1.222 };
+    c.parts.set({ ...RMA_PARTS, reservations: [legacy] }); fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('1,222 un');
+    c.runAction(legacy, 'consume'); c.runAction({ ...legacy, status: 'PENDING' }, 'allocate');
+    expect(partService['updateReservation']).not.toHaveBeenCalled();
+    c.runAction(legacy, 'cancel');
+    expect(partService['updateReservation']).toHaveBeenCalledWith(7, 1, 'cancel');
+  });
+
   async function setUp(role: LegacyProfileCode, status: 'IN_REPAIR' | 'COMPLETED' = 'IN_REPAIR'): Promise<void> {
     partService = {
       getRmaParts: vi.fn(() => of(RMA_PARTS)),
@@ -141,6 +179,7 @@ describe('RmaPartsPanelComponent', () => {
   it.each([[1.0001, false], [1000000000, false], [0.001, true], [1.125, true], [999999999.999, true]])('validates the reserved quantity %s against the contract (accepted=%s)', async (quantity, accepted) => {
     await setUp('TECHNICIAN');
     const component = fixture.componentInstance as unknown as { reserveForm: { setValue(value: unknown): void }; reserve(): void };
+    (fixture.componentInstance as any).catalog.set([{ id: 4, unit: 'm', active: true }]);
     component.reserveForm.setValue({ partId: 4, quantity, note: '' });
     component.reserve();
     expect(vi.mocked(partService['reserve']).mock.calls.length).toBe(accepted ? 1 : 0);
@@ -193,9 +232,9 @@ describe('RmaPartsPanelComponent', () => {
     await setUp('TECHNICIAN');
     const component = fixture.componentInstance as any;
     const service = TestBed.inject(RmaRepairService);
-    component.externalForm.setValue({ code: ' ', description: ' Conector ', quantity: 1.125, unit: 'un', componentBatch: ' L1 ', replacementReason: ' Oxidação ' });
+    component.externalForm.setValue({ code: ' ', description: ' Conector ', quantity: 1.125, unit: 'm', componentBatch: ' L1 ', replacementReason: ' Oxidação ' });
     component.saveExternal();
-    expect(service.addExternalComponent).toHaveBeenCalledWith(7, { code: null, description: 'Conector', quantity: 1.125, unit: 'un', componentBatch: 'L1', replacementReason: 'Oxidação' });
+    expect(service.addExternalComponent).toHaveBeenCalledWith(7, { code: null, description: 'Conector', quantity: 1.125, unit: 'm', componentBatch: 'L1', replacementReason: 'Oxidação' });
     expect(toastMessages()).toEqual(['Componente salvo.']);
     expect(toastTones()).toEqual(['success']);
     expect(fixture.nativeElement.querySelector('[role="status"], .muted-inline')).toBeNull();

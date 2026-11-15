@@ -56,6 +56,19 @@ describe('PartsComponent part form', () => {
     component.form.setValue(VALUES); render();
   }
 
+  it('recusa mínimo fracionado contável, aceita medida e avisa saldo legado sem bloquear', async () => {
+    await setup('update');
+    component.openEditModal({ ...PART, unit: 'kg', onHand: 1.5, minimumStock: 0 });
+    component.form.patchValue({ unit: 'UN', minimumStock: 1.5 });
+    submit();
+    expect(service['update']).not.toHaveBeenCalled();
+    expect(panel()!.textContent).toContain('Informe um número inteiro.');
+    expect(panel()!.textContent).toContain('saldo fracionado');
+    component.form.controls['minimumStock'].setValue(0);
+    submit();
+    expect(service['update']).toHaveBeenCalled();
+  });
+
   it.each(['create', 'update'] as Mode[])('uses the compact form and required labels for %s', async (mode) => {
     await setup(mode);
     expect(panel()!.querySelector('form.inline-form')).not.toBeNull();

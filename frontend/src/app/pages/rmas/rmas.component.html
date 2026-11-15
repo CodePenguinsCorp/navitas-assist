@@ -126,8 +126,8 @@
                 <td>
                   <div class="rma-item-warranties">
                     @for (item of rma.items; track item.id ?? $index) {
-                      <span class="warranty-tag" [class]="'warranty-tag ' + warrantyClass(item.warrantyStatus)" [appTip]="item.productName + ' · ' + warrantyLabel(item.warrantyStatus)">
-                        <app-icon name="shield" [size]="14" />{{ item.productSku }}<span class="sr-only"> · {{ warrantyLabel(item.warrantyStatus) }}</span>
+                      <span class="warranty-tag" [class]="'warranty-tag ' + warrantyClass(item.warrantyStatus)" [appTip]="item.productName + ' - ' + warrantyLabel(item.warrantyStatus)">
+                        <app-icon name="shield" [size]="14" />{{ item.productSku }}<span class="sr-only"> - {{ warrantyLabel(item.warrantyStatus) }}</span>
                       </span>
                     }
                   </div>
@@ -194,7 +194,7 @@
           @if (rma.dueDate) { <app-rma-deadline-chip [rma]="rma" mode="detail" /> }
           @if (rma.currentBlock; as block) {
             <button type="button" class="detail-block-flag" aria-controls="rma-detail-panel" [disabled]="writeBusy()" (click)="detailTab.set('blocks')">
-              <app-icon name="lock" [size]="16" />{{ blockedLabel(block, clock.now()) }}<span class="sr-only"> · ver impedimento</span>
+              <app-icon name="lock" [size]="16" />{{ blockedLabel(block, clock.now()) }}<span class="sr-only"> - ver impedimento</span>
             </button>
           }
         </div>

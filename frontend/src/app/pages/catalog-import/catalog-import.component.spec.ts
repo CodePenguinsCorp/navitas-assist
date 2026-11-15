@@ -125,7 +125,7 @@ describe('CatalogImportComponent', () => {
     expect(root.textContent).toContain('0 linhas em branco ignoradas');
     expect(root.textContent).toContain('Importar 1 linha válida');
     metrics[0].click(); fixture.detectChanges();
-    expect(root.querySelector('tbody .table-title')?.textContent).toBe(kind === 'clients' ? 'Cliente' : 'P01 · Produto');
+    expect(root.querySelector('tbody .table-title')?.textContent).toBe(kind === 'clients' ? 'Cliente' : 'P01 - Produto');
     expect(root.querySelectorAll('tbody tr').length).toBe(1);
     metrics[2].click(); fixture.detectChanges();
     expect(root.querySelector('tbody .mini-chip')?.textContent).toBe('duplicada');
@@ -141,7 +141,7 @@ describe('CatalogImportComponent', () => {
     expect(metrics[0].textContent).toContain('12 válidas');
     expect(metrics[1].textContent).toContain('0 inválidas');
     expect(metrics[2].textContent).toContain('0 duplicadas');
-    expect(root.querySelector('.import-file-info')?.textContent).toContain('1 linha · 1 linha em branco ignorada');
+    expect(root.querySelector('.import-file-info')?.textContent).toContain('1 linha - 1 linha em branco ignorada');
     expect(root.textContent).toContain('Importar 12 linhas válidas');
     expect(root.querySelector('section[aria-label="Prévia"] footer')).not.toBeNull();
   });

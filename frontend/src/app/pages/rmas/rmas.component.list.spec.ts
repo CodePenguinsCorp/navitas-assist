@@ -728,7 +728,7 @@ describe('RmasComponent list composition', () => {
     const tag = page.querySelector('tbody .warranty-tag')!;
 
     expect(tag.textContent).toContain('SKU-9');
-    expect(tag.querySelector('.sr-only')?.textContent?.trim()).toBe('· Em garantia');
+    expect(tag.querySelector('.sr-only')?.textContent?.trim()).toBe('- Em garantia');
   });
 
   it.each([

@@ -31,7 +31,7 @@
   @if (item().warrantyOverride; as override) {
     <span class="warranty-field__manual" tabindex="0" [attr.aria-describedby]="tooltipId">
       Ajustada manualmente
-      <span class="warranty-field__tooltip" role="tooltip" [id]="tooltipId">{{ override.reason }} · {{ override.changedBy }} · {{ dateTimeLabel(override.changedAt) }}</span>
+      <span class="warranty-field__tooltip" role="tooltip" [id]="tooltipId">{{ override.reason }} - {{ override.changedBy }} - {{ dateTimeLabel(override.changedAt) }}</span>
     </span>
     @if (item().calculatedWarrantyStatus !== item().warrantyStatus) {
       <small class="warranty-field__automatic">Automático: {{ warrantyLabel(item().calculatedWarrantyStatus) }}</small>

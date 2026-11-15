@@ -73,7 +73,7 @@ describe('RmaProtocolsComponent loading', () => {
     await setup({ executions: of(previous) });
     service.listExecutions.mockReturnValue(throwError(() => new Error()));
     fixture.componentRef.setInput('rmaId', 5); render(); expectFailure();
-    expect(text()).not.toContain('Bancada PWM · v3');
+    expect(text()).not.toContain('Bancada PWM - v3');
   });
 
   // Vermelho: não existe retry que preserve a falha durante a nova leitura do RMA atual.
@@ -86,7 +86,7 @@ describe('RmaProtocolsComponent loading', () => {
     button('Tentar novamente')!.click(); render();
     expect(button('Tentar novamente')?.disabled).toBe(true);
     expect(text()).toContain('Não foi possível carregar os protocolos da OS.');
-    expect(text()).not.toContain('Bancada PWM · v3');
+    expect(text()).not.toContain('Bancada PWM - v3');
     retry.next([{ ...EXECUTION, rmaId: 5, templateName: 'Protocolo de B' }]); retry.complete(); render();
     expect(text()).toContain('Protocolo de B'); expect(text()).not.toContain('Não foi possível carregar os protocolos da OS.');
     expect(service.listExecutions).toHaveBeenLastCalledWith(5);
@@ -114,7 +114,7 @@ describe('RmaProtocolsComponent loading', () => {
     button('Executar protocolo')!.click(); render();
     templates.error(new Error()); render();
     expect(fixture.nativeElement.querySelector('.protocol-launch')?.textContent).toContain('Não foi possível carregar as opções de protocolos.');
-    expect(text()).toContain('Bancada PWM · v3'); expect(text()).not.toContain('Nenhum protocolo ativo disponível.');
+    expect(text()).toContain('Bancada PWM - v3'); expect(text()).not.toContain('Nenhum protocolo ativo disponível.');
     service.listTemplates.mockReturnValue(of([TEMPLATE]));
     button('Tentar novamente')!.click(); render();
     expect(text()).not.toContain('Não foi possível carregar as opções de protocolos.');
@@ -136,10 +136,10 @@ describe('RmaProtocolsComponent loading', () => {
     first.next([EXECUTION]); render(); component().openResult(EXECUTION, EXECUTION.items[0]); component().selectTemplate(2); render();
     const second = new Subject<ProtocolExecutionResponse[]>(); service.listExecutions.mockReturnValue(second);
     fixture.componentRef.setInput('rmaId', 5); render();
-    expect(text()).not.toContain('Bancada PWM · v3'); expect(fixture.nativeElement.querySelector('form')).toBeNull();
+    expect(text()).not.toContain('Bancada PWM - v3'); expect(fixture.nativeElement.querySelector('form')).toBeNull();
     second.next([{ ...EXECUTION, rmaId: 5, templateName: 'Protocolo de B', versionNumber: 7 }]); second.complete(); render();
     first.next([EXECUTION]); first.complete(); render();
-    expect(text()).toContain('Protocolo de B · v7'); expect(text()).not.toContain('Bancada PWM · v3');
+    expect(text()).toContain('Protocolo de B - v7'); expect(text()).not.toContain('Bancada PWM - v3');
     expect(first.observed).toBe(false);
     component().startExecution(); expect(service.startExecution).not.toHaveBeenCalled();
   });
@@ -177,16 +177,16 @@ describe('RmaProtocolsComponent loading', () => {
 
   it.each(['ADMIN', 'TECHNICIAN', 'SERVICE_DESK', 'VIEWER'] as LegacyProfileCode[])('preserves catalog permission for %s', async (role) => {
     await setup({ role }); expect(service.listTemplates).toHaveBeenCalledTimes(['ADMIN', 'TECHNICIAN'].includes(role) ? 1 : 0);
-    expect(text()).toContain('Bancada PWM · v3');
+    expect(text()).toContain('Bancada PWM - v3');
   });
 
   it('preserves active options, pinned versions, the start payload and write errors', async () => {
     await setup({ templates: of([TEMPLATE, { ...TEMPLATE, id: 3, active: false }]) });
     component().selectTemplate(2); service.startExecution.mockReturnValue(throwError(() => ({ error: { message: 'Produto não aplicável.' } })));
     component().startExecution(); render();
-    expect(service.startExecution).toHaveBeenCalledWith(4, 2); expect(text()).toContain('Produto não aplicável.'); expect(text()).toContain('Bancada PWM · v3');
+    expect(service.startExecution).toHaveBeenCalledWith(4, 2); expect(text()).toContain('Produto não aplicável.'); expect(text()).toContain('Bancada PWM - v3');
     service.complete.mockReturnValue(throwError(() => ({ error: { message: 'Obrigatórios sem registro.' } })));
-    component().completeExecution(EXECUTION); render(); expect(text()).toContain('Obrigatórios sem registro.'); expect(text()).toContain('Bancada PWM · v3');
+    component().completeExecution(EXECUTION); render(); expect(text()).toContain('Obrigatórios sem registro.'); expect(text()).toContain('Bancada PWM - v3');
   });
 
   it('shows legitimate empty executions only after a successful reading', async () => {

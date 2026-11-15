@@ -1,3 +1,4 @@
+import { allowsFraction, quantityError, quantityValidator } from '../../core/utils/quantity-rules';
 import { ToastService } from '../../core/services/toast.service';
 import { TipDirective } from '../../shared/tip/tip.directive';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -171,7 +172,19 @@ export class PartsComponent {
 
   protected readonly reversalReason = this.formBuilder.nonNullable.control('', [Validators.required, Validators.maxLength(PART_LIMITS.reason)]);
 
+  protected readonly allowsFraction = allowsFraction;
+  protected readonly quantityError = quantityError;
+
+  protected unitChangeWarning(): boolean {
+    const current = this.editingPart();
+    return !!current && current.unit !== this.form.controls.unit.value.trim() && !allowsFraction(this.form.controls.unit.value)
+      && [current.onHand, current.reserved, current.available].some(value => !Number.isInteger(value));
+  }
+
   constructor() {
+    const minimum = this.form.controls.minimumStock;
+    minimum.addValidators(quantityValidator(() => this.form.controls.unit.value, true, value => this.editingPart()?.minimumStock === value));
+    this.form.controls.unit.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => minimum.updateValueAndValidity());
     this.load();
   }
 
@@ -275,8 +288,9 @@ export class PartsComponent {
       this.movementFieldErrors.set({ quantity: 'Entradas e saídas usam quantidade positiva.', reason: '' });
       return;
     }
-    if (!/^\d+(\.\d{1,3})?$/.test(String(Math.abs(raw.quantity))) || Math.abs(raw.quantity) > 999999999.999) {
-      this.movementFieldErrors.set({ quantity: 'Use até 3 casas decimais e no máximo 999.999.999,999.', reason: '' });
+    const quantityMessage = quantityError(Math.abs(raw.quantity), part.unit);
+    if (quantityMessage) {
+      this.movementFieldErrors.set({ quantity: quantityMessage, reason: '' });
       return;
     }
     if (raw.type === 'ADJUSTMENT' && !reason) {

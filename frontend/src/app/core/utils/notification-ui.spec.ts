@@ -68,11 +68,11 @@ describe('Notification UI utilities', () => {
 
   it('builds a short headline that names the OS code once', () => {
     const code = 'OS-2026-000004';
-    expect(notificationHeadline({ title: `Impedimento na OS ${code}`, rmaCode: code })).toBe(`Impedimento · ${code}`);
-    expect(notificationHeadline({ title: `Nova OS ${code}`, rmaCode: code })).toBe(`Nova OS · ${code}`);
-    expect(notificationHeadline({ title: `OS ${code} atribuída a Ana`, rmaCode: code })).toBe(`OS atribuída a Ana · ${code}`);
+    expect(notificationHeadline({ title: `Impedimento na OS ${code}`, rmaCode: code })).toBe(`Impedimento - ${code}`);
+    expect(notificationHeadline({ title: `Nova OS ${code}`, rmaCode: code })).toBe(`Nova OS - ${code}`);
+    expect(notificationHeadline({ title: `OS ${code} atribuída a Ana`, rmaCode: code })).toBe(`OS atribuída a Ana - ${code}`);
     expect(notificationHeadline({ title: `${code} atribuída`, rmaCode: code })).toBe(`${code} atribuída`);
-    expect(notificationHeadline({ title: 'Peça pendente', rmaCode: code })).toBe(`Peça pendente · ${code}`);
+    expect(notificationHeadline({ title: 'Peça pendente', rmaCode: code })).toBe(`Peça pendente - ${code}`);
     expect(notificationHeadline({ title: 'Aviso geral', rmaCode: null })).toBe('Aviso geral');
   });
 

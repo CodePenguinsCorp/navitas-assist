@@ -104,7 +104,7 @@ export class CatalogImportComponent {
   protected changeFilter(value: CatalogImportStatus | 'all'): void { this.filter.set(value); this.page.set(0); }
   protected changeSize(value: number): void { this.size.set(value); this.page.set(0); }
   protected identification(row: CatalogImportRow): string {
-    return this.kind === 'clients' ? String(row.values['legalName'] ?? 'Sem razão social') : [row.values['sku'], row.values['name']].filter(Boolean).join(' · ') || 'Sem identificação';
+    return this.kind === 'clients' ? String(row.values['legalName'] ?? 'Sem razão social') : [row.values['sku'], row.values['name']].filter(Boolean).join(' - ') || 'Sem identificação';
   }
   protected fieldLabel(field: string): string {
     const labels: Record<string, string> = {

@@ -227,7 +227,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
   });
 
   it('shows warranty term and expiry for each product', async () => {
-    // Hoje cada item mostra só "SKU · Série · Lote" e o estado, sem prazo nem vencimento.
+    // Hoje cada item mostra só "SKU - Série - Lote" e o estado, sem prazo nem vencimento.
     const { section } = await setup();
     expect(section('Produtos')).not.toBeNull();
     const items = [...section('Produtos')!.querySelectorAll('.rma-detail__items > li')];
@@ -312,13 +312,13 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
 
   it('shows a voided intervention once, without strike-through, with the Anulada chip and the reason', async () => {
     const { section } = await setup({ rma: { ...fullRma, repairHistory: [
-      { id: 1, entityType: 'INTERVENTION', entityId: 8, action: 'CREATE', changedBy: 'ana', changedAt: '2026-11-12T10:00:00Z', summary: 'Intervenção registrada: teste · 0.017 h' },
-      { id: 2, entityType: 'INTERVENTION', entityId: 8, action: 'VOID', changedBy: 'bia', changedAt: '2026-11-13T10:00:00Z', summary: 'Intervenção anulada: teste · Motivo: teste' }
+      { id: 1, entityType: 'INTERVENTION', entityId: 8, action: 'CREATE', changedBy: 'ana', changedAt: '2026-11-12T10:00:00Z', summary: 'Intervenção registrada: teste - 0.017 h' },
+      { id: 2, entityType: 'INTERVENTION', entityId: 8, action: 'VOID', changedBy: 'bia', changedAt: '2026-11-13T10:00:00Z', summary: 'Intervenção anulada: teste - Motivo: teste' }
     ] } });
     const history = section('Histórico')!;
     const entries = [...history.querySelectorAll('li.rma-detail__event')].filter((event) => event.textContent?.includes('Intervenção'));
     expect(entries).toHaveLength(1);
-    expect(entries[0].querySelector('p')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Intervenção registrada: teste · 0,017 h Anulada');
+    expect(entries[0].querySelector('p')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Intervenção registrada: teste - 0,017 h Anulada');
     expect(entries[0].querySelector('.mini-chip')?.textContent?.trim()).toBe('Anulada');
     expect(entries[0].querySelector('small.muted-inline')?.textContent?.trim()).toBe('teste');
     expect(history.querySelector('.repair-voided')).toBeNull();
@@ -575,7 +575,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
       }
     });
     const items = [...host.querySelectorAll('.rma-detail__side app-rma-stage-times ol.sr-only li')].map((item) => item.textContent?.trim());
-    expect(items).toEqual(['Recebida · 2 h', 'Triagem · 2 h (atual)']);
+    expect(items).toEqual(['Recebida - 2 h', 'Triagem - 2 h (atual)']);
   });
 
   it('shows due date changes with previous value and author', async () => {

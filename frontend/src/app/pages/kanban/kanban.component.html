@@ -313,7 +313,7 @@
           @if (detailCard(); as card) {
             <h3 class="code-text">{{ card.code }}</h3>
             <p>{{ card.clientName }}</p>
-            <p>{{ productSummary(card) }} · {{ statusText(card.status) }}</p>
+            <p>{{ productSummary(card) }} - {{ statusText(card.status) }}</p>
           }
         </div>
       }

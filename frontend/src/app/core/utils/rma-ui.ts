@@ -75,7 +75,7 @@ export function trackableLabel(rma: { items: ReadonlyArray<Pick<RmaItemSummaryRe
 
 export function rmaItemTrackableLabel(item: Pick<RmaItemResponse, 'serialNumber' | 'batchNumber'>): string {
   if (item.serialNumber && item.batchNumber) {
-    return `Série ${item.serialNumber} · Lote ${item.batchNumber}`;
+    return `Série ${item.serialNumber}, Lote ${item.batchNumber}`;
   }
 
   if (item.serialNumber) {

@@ -24,7 +24,7 @@
     @let execution = view.execution;
     <section class="protocol-execution" [attr.aria-label]="execution.templateName + ' v' + execution.versionNumber">
       <header class="protocol-head">
-        <strong class="protocol-head__name">{{ execution.templateName }} · v{{ execution.versionNumber }}</strong>
+        <strong class="protocol-head__name">{{ execution.templateName }} - v{{ execution.versionNumber }}</strong>
         <span [class]="executionClass(execution)">{{ statusLabel(execution) }}</span>
         @if (canExecute() && execution.status === 'IN_PROGRESS') {
           <button type="button" class="button-secondary protocol-head__action" (click)="completeExecution(execution)" [disabled]="submitting()">Concluir protocolo</button>
@@ -72,7 +72,7 @@
                     <ol class="protocol-attempts" aria-label="Histórico de resultados">
                       @for (attempt of item.attempts; track attempt.id) {
                         <li>
-                          <span>Tentativa {{ attempt.attempt }} · {{ outcomeLabels[attempt.outcome] }}{{ resultValue(attempt) ? ' · ' + resultValue(attempt) : '' }} · {{ attempt.executedBy }} · <time [attr.datetime]="attempt.completedAt">{{ dateTime(attempt.completedAt) }}</time></span>
+                          <span>Tentativa {{ attempt.attempt }} - {{ outcomeLabels[attempt.outcome] }}{{ resultValue(attempt) ? ' - ' + resultValue(attempt) : '' }} - {{ attempt.executedBy }} - <time [attr.datetime]="attempt.completedAt">{{ dateTime(attempt.completedAt) }}</time></span>
                           @if (attempt.evidence) { <span class="protocol-attempts__note">Evidência: {{ attempt.evidence }}</span> }
                           @if (attempt.justification) { <span class="protocol-attempts__note">Justificativa: {{ attempt.justification }}</span> }
                         </li>

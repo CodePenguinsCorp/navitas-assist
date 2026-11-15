@@ -119,7 +119,7 @@ describe('RmaProtocolsComponent result entry', () => {
     await setup(role);
     const writable = ['ADMIN', 'TECHNICIAN'].includes(role);
     const actions = Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button')).filter((b) => /Registrar|Repetir|Concluir|Iniciar/.test(b.textContent ?? ''));
-    expect(actions.length > 0).toBe(writable); expect(fixture.nativeElement.textContent).toContain('Bancada PWM · v3');
+    expect(actions.length > 0).toBe(writable); expect(fixture.nativeElement.textContent).toContain('Bancada PWM - v3');
   });
 
   it.each([

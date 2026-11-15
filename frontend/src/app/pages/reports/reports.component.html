@@ -149,7 +149,7 @@
                       <td>{{ row.clientName }}</td>
                       <td>
                         <span class="table-title">{{ productLabel(row) }}</span>
-                        <span class="table-subtitle">Série {{ row.serialNumber || '—' }} · Lote {{ row.batchNumber || '—' }}</span>
+                        <span class="table-subtitle">Série {{ row.serialNumber || '—' }}, Lote {{ row.batchNumber || '—' }}</span>
                       </td>
                       <td><span class="status-chip" [attr.data-status]="row.status">{{ statusLabels[row.status] }}</span></td>
                       <td>{{ warrantyLabel(row) }}</td><td>{{ row.failureType ? failureLabels[row.failureType] : '—' }}</td>
