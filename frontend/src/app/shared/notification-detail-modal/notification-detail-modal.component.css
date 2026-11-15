@@ -36,4 +36,5 @@
 }
 
 .notification-detail__fields > .notification-detail__reason { grid-column: 1 / -1; }
-.notification-detail__reason dd { white-space: pre-wrap; font-weight: var(--font-weight-semibold); }
+.notification-detail__reason dd { font-weight: var(--font-weight-semibold); }
+.notification-detail__reason dd > span { display: block; white-space: pre-wrap; }

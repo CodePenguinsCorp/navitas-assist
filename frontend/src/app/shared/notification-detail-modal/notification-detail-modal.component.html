@@ -33,7 +33,7 @@
                 } @else if (field.label === 'Registrado por' || field.label === 'Aberta por' || field.label === 'Atribuída por' || field.label === 'Responsável') {
                   <span class="notification-detail__person"><span class="avatar" aria-hidden="true">{{ initialsOf(field.value) }}</span><span>{{ field.value }}</span></span>
                 } @else {
-                  {{ field.value }}
+                  <span>{{ field.value }}</span>
                 }
               </dd>
             </div>

@@ -16,8 +16,9 @@ export function notificationDetailContent({ message, eventType, title, rmaCode }
     if (match && match[1].trim() && match[2].trim() && match[3].trim()) {
       return { fields: [
         { label: 'Cliente', value: match[1] }, { label: 'Equipamento', value: match[2] },
-        { label: 'Etapa', value: match[3] }, { label, value: JSON.parse(match[4]) as string },
-        ...(match[5] ? [{ label: 'Registrado por', value: JSON.parse(match[5]) as string }] : [])
+        { label: 'Etapa', value: match[3] },
+        ...(match[5] ? [{ label: 'Registrado por', value: JSON.parse(match[5]) as string }] : []),
+        { label, value: JSON.parse(match[4]) as string }
       ], message: '' };
     }
     return { fields: [{ label, value: message }], message: '' };
