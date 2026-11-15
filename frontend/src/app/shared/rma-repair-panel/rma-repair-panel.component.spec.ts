@@ -191,7 +191,8 @@ describe('RmaRepairPanelComponent', () => {
       const empty = await setupEmpty();
       expect(empty.nativeElement.querySelector('.repair-total')).toBeNull();
       expect(empty.nativeElement.textContent).not.toContain('Total de horas');
-      expect(empty.nativeElement.querySelector('.repair-empty').textContent.trim()).toBe('Nenhum reparo registrado');
+      expect(empty.nativeElement.querySelector('.record-empty').textContent.trim()).toBe('Nenhum reparo registrado');
+    expect(empty.nativeElement.querySelector('.record-empty .icon-tile.tone-slate app-icon')?.getAttribute('name')).toBe('wrench');
       // A ação continua só no cabeçalho da seção: o estado vazio mostra apenas o ícone e o texto.
       expect(empty.nativeElement.querySelector('.record-empty button')).toBeNull();
       expect(Array.from(empty.nativeElement.querySelectorAll('button')).filter((button: any) => button.textContent.trim() === 'Registrar')).toHaveLength(1);

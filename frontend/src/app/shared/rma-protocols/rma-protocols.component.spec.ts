@@ -79,6 +79,7 @@ describe('RmaProtocolsComponent', () => {
     await setup('TECHNICIAN', []);
     const host = fixture.nativeElement as HTMLElement;
     expect(host.textContent).toContain('Nenhum protocolo executado nesta OS.');
+    expect(host.querySelector('.record-empty .icon-tile.tone-slate app-icon')?.getAttribute('name')).toBe('checklist');
     host.querySelector<HTMLButtonElement>('.collapsible__actions button')!.click(); fixture.detectChanges();
     expect(host.textContent).not.toContain('Nenhum protocolo executado nesta OS.');
     expect(host.querySelector('.protocol-launch.inline-form')).not.toBeNull();

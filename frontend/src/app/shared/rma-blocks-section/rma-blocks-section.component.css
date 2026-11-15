@@ -8,7 +8,6 @@
 .blocks-section__stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 720px) { .blocks-section__stats { grid-template-columns: minmax(0, 1fr); } }
 
-.blocks-section__empty { color: var(--muted); }
 .blocks-section__action, .blocks-section__history-toggle { min-height: var(--control-height-xs); justify-self: start; }
 
 .blocks-section__error { margin: 0; }

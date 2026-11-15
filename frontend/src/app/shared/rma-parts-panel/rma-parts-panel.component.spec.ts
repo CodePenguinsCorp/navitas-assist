@@ -96,6 +96,8 @@ describe('RmaPartsPanelComponent - uso de peças', () => {
 
   it('mantém o vazio sem ação duplicada e oculta o vazio quando o formulário abre', async () => {
     await setUp(); component().parts.set(response([])); render(); expect(text()).toContain('Nenhuma peça usada');
+    expect([...root().querySelectorAll('.record-empty .icon-tile.tone-slate app-icon')].map(icon => icon.getAttribute('name'))).toEqual(['chip', 'wrench']);
+    expect(root().querySelector('.record-empty button')).toBeNull();
     root().querySelector<HTMLButtonElement>('#usage-trigger')!.click(); render(); expect(text()).not.toContain('Nenhuma peça usada');
     expect(Array.from(root().querySelectorAll('button')).filter(b => b.textContent?.trim() === 'Usar peça')).toHaveLength(2);
   });

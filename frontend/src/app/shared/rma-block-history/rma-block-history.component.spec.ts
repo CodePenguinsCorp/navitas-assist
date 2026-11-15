@@ -94,7 +94,8 @@ describe('RmaBlockHistoryComponent', () => {
   it('preserves distinct states for no current block and no history', () => {
     const element = render(RMA);
     expect(text(element)).toContain('Sem bloqueio atual.');
-    expect(text(element)).toContain('Nenhum impedimento registrado.');
+    expect(text(element.querySelector('.record-empty:last-of-type'))).toBe('Nenhum impedimento registrado.');
+    expect(element.querySelector('.record-empty .icon-tile.tone-slate app-icon')).not.toBeNull();
     expect(element.querySelector('ol')).toBeNull();
 
     render({ ...RMA, blockHistory: [RESOLVED] });

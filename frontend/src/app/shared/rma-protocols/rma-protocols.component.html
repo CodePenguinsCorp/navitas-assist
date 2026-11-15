@@ -17,7 +17,7 @@
   } @else if (loading() || !hasLoaded()) {
     <div class="rma-detail-copy" aria-busy="true"></div>
   } @else if (executions().length === 0 && !(canExecute() && launchOpen())) {
-    <p class="repair-empty">Nenhum protocolo executado nesta OS.</p>
+    <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="checklist" /></span><p>Nenhum protocolo executado nesta OS.</p></div>
   }
 
   @for (view of views(); track view.execution.id) {
@@ -139,7 +139,7 @@
       } @else if (templatesLoading()) {
         <div aria-busy="true"></div>
       } @else if (templateOptions().length === 0) {
-        <p>Nenhum protocolo ativo disponível.</p>
+        <div class="record-empty field-group--full"><span class="icon-tile tone-slate"><app-icon name="checklist" /></span><p>Nenhum protocolo ativo disponível.</p></div>
       } @else {
         <div class="field-group field-group--full field-group--required">
           <span id="protocol-launch-label">Protocolo</span>

@@ -101,7 +101,7 @@ describe('RmaBlocksSectionComponent', () => {
 
   it('shows Sem impedimento with a quiet Sinalizar impedimento action and no form until asked', () => {
     mount();
-    expect(text(host().querySelector('.blocks-section__empty'))).toBe('Sem impedimento');
+    expect(text(host().querySelector('.record-empty'))).toBe('Sem impedimento');
     const flag = control('Sinalizar impedimento')!;
     expect(flag.classList).toContain('link-button');
     expect(flag.className).not.toContain('button-secondary');
@@ -113,10 +113,10 @@ describe('RmaBlocksSectionComponent', () => {
     mount();
     control('Sinalizar impedimento')!.click();
     render();
-    expect(host().querySelector('.blocks-section__empty')).toBeNull();
+    expect(host().querySelector('.record-empty')).toBeNull();
     control('Cancelar')!.click();
     render();
-    expect(text(host().querySelector('.blocks-section__empty'))).toBe('Sem impedimento');
+    expect(text(host().querySelector('.record-empty'))).toBe('Sem impedimento');
   });
 
   it('uses the inline form pattern for blocking and resolving', () => {
@@ -232,7 +232,7 @@ describe('RmaBlocksSectionComponent', () => {
     expect(text(card)).toContain('Peça pendente');
     expect(text(card)).toContain('Peças');
     expect(text(card)).toContain('tech');
-    expect(host().querySelector('.blocks-section__empty')).toBeNull();
+    expect(host().querySelector('.record-empty')).toBeNull();
     expect(control('Sinalizar impedimento')).toBeUndefined();
   });
 
@@ -255,7 +255,7 @@ describe('RmaBlocksSectionComponent', () => {
     request.flush({ ...RMA, blockHistory: [{ ...BLOCK, resolvedBy: 'desk', resolvedAt: '2026-10-20T11:30:00Z', resolutionNote: 'Peça recebida' }] });
     render();
     expect(updated[0].currentBlock).toBeNull();
-    expect(text(host().querySelector('.blocks-section__empty'))).toBe('Sem impedimento');
+    expect(text(host().querySelector('.record-empty'))).toBe('Sem impedimento');
   });
 
   it.each([

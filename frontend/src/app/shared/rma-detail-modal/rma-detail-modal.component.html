@@ -55,7 +55,7 @@
 
         <section class="rma-detail__section rma-detail__section--failure detail-card">
           <app-collapsible-section [title]="sectionLabel('failure')" icon="alert" [open]="!!rma().reportedFailure" storageKey="rma.failure">
-            <p class="rma-detail__callout">{{ rma().reportedFailure }}</p>
+            @if (rma().reportedFailure) { <p class="rma-detail__callout">{{ rma().reportedFailure }}</p> } @else { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="alert" /></span><p>Nenhuma falha relatada.</p></div> }
           </app-collapsible-section>
         </section>
 
@@ -76,7 +76,7 @@
                   }
                 </dl>
               </li>
-            } @empty { <li class="repair-empty">Nenhum produto registrado.</li> }
+            } @empty { <li class="record-empty"><span class="icon-tile tone-slate"><app-icon name="box" /></span><p>Nenhum produto registrado.</p></li> }
           </ul>
           </app-collapsible-section>
         </section>
@@ -119,7 +119,7 @@
           <app-collapsible-section [title]="sectionLabel('history')" icon="history" [count]="activity().length" [open]="activity().length > 0" storageKey="rma.history">
             <app-rma-history-list #historyList="rmaHistoryList" [rma]="rma()">
             @if (activity().length === 0) {
-              <p class="repair-empty">Nenhuma atividade registrada.</p>
+              <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="history" /></span><p>Nenhuma alteração registrada.</p></div>
             }
             <ol class="rma-detail__timeline">
               @for (entry of historyList.entries(); track $index) {

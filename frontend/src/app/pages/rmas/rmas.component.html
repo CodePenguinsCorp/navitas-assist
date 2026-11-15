@@ -229,7 +229,7 @@
             @case ('products') {
               <section class="rma-details__section">
                 <app-collapsible-section title="Falha relatada" icon="alert" [open]="!!rma.reportedFailure" storageKey="rma.failure">
-                <p class="rma-detail-copy">{{ rma.reportedFailure }}</p>
+                @if (rma.reportedFailure) { <p class="rma-detail-copy">{{ rma.reportedFailure }}</p> } @else { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="alert" /></span><p>Nenhuma falha relatada.</p></div> }
                 </app-collapsible-section>
               </section>
               <section class="rma-details__section">
@@ -252,7 +252,7 @@
                         }
                       </dl>
                     </article>
-                  } @empty { <p class="repair-empty">Nenhum produto registrado.</p> }
+                  } @empty { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="box" /></span><p>Nenhum produto registrado.</p></div> }
                 </div>
                 </app-collapsible-section>
               </section>
@@ -329,7 +329,7 @@
                   }
                 </ol>
               } @else {
-                <p class="repair-empty">Nenhuma alteração registrada.</p>
+                <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="history" /></span><p>Nenhuma alteração registrada.</p></div>
               }
               </app-rma-history-list>
               </app-collapsible-section>

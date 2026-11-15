@@ -278,7 +278,8 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     const empty = await setup({ rma: { ...fullRma, diagnosis: null } });
     const block = empty.section('Diagnóstico');
     expect(block).not.toBeNull();
-    expect(block!.querySelector('.repair-empty')?.textContent?.trim()).toBe('Sem diagnóstico registrado.');
+    expect(block!.querySelector('.record-empty')?.textContent?.trim()).toBe('Sem diagnóstico registrado.');
+    expect(block!.querySelector('.record-empty .icon-tile.tone-slate app-icon')?.getAttribute('name')).toBe('clipboard');
     expect(block!.querySelector('button.link-button')?.textContent?.trim()).toBe('Registrar diagnóstico');
   });
 
@@ -480,7 +481,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     const { host, section } = await setup({ rma: { ...fullRma, currentBlock: null } });
     expect(host.querySelector('.detail-block-flag')).toBeNull();
     const card = section('Impedimentos')!;
-    expect(card.querySelector('.blocks-section__empty')?.textContent?.trim()).toBe('Sem impedimento');
+    expect(card.querySelector('.record-empty')?.textContent?.trim()).toBe('Sem impedimento');
     expect([...card.querySelectorAll('button')].some((button) => button.textContent?.trim() === 'Sinalizar impedimento')).toBe(true);
   });
 
@@ -498,7 +499,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
 
     expect(updated).toHaveLength(1);
     expect(updated[0].currentBlock).toBeNull();
-    expect(section('Impedimentos')!.querySelector('.blocks-section__empty')?.textContent?.trim()).toBe('Sem impedimento');
+    expect(section('Impedimentos')!.querySelector('.record-empty')?.textContent?.trim()).toBe('Sem impedimento');
   });
 
   it('disables the inline impediment actions while the detail is busy', async () => {

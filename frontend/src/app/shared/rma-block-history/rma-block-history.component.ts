@@ -17,11 +17,11 @@ import { blockDateTime, blockDuration } from '../../core/utils/rma-block';
             <p>{{ block.reason }}</p>
           </div>
         } @else {
-          <p class="block-history__state">Sem bloqueio atual.</p>
+          <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="lock" /></span><p>Sem bloqueio atual.</p></div>
         }
       }
       @if (history().length === 0) {
-        <p class="block-history__state">Nenhum impedimento registrado.</p>
+        <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="lock" /></span><p>Nenhum impedimento registrado.</p></div>
       } @else {
         <ol class="record-rows" aria-label="Histórico de impedimentos">
           @for (block of history(); track block.id) {
@@ -57,7 +57,6 @@ import { blockDateTime, blockDuration } from '../../core/utils/rma-block';
     .block-history h3 { margin: 0; font-size: 1rem; }
     .block-history p { margin: 0; }
     .block-history__current { display: grid; gap: 0.2rem; padding: 0.7rem 0.85rem; border-radius: var(--radius-sm); background: var(--danger-bg); color: var(--danger-text); }
-    .block-history__state { color: var(--text); }
     .block-history__stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .block-history__note { color: var(--text); font-size: var(--font-size-sm); white-space: pre-wrap; }
     .block-history__note-label { color: var(--muted); }

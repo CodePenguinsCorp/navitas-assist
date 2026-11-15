@@ -34,7 +34,7 @@
             @if (catalogLoading()) { <div aria-busy="true"></div> }
           </div>
         } @else if (catalogHasLoaded() && partOptions().length === 0) {
-          <p class="repair-empty field-group--full">Nenhuma peça ativa</p>
+          <div class="record-empty field-group--full"><span class="icon-tile tone-slate"><app-icon name="chip" /></span><p>Nenhuma peça ativa</p></div>
         }
         <label class="field-group field-group--required">
           <span>Peça</span>
@@ -76,7 +76,7 @@
     }
 
     @if (usages().length === 0) {
-      @if (!usageOpen()) { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="box" /></span><h3 class="repair-empty">Nenhuma peça usada</h3></div> }
+      @if (!usageOpen()) { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="chip" /></span><p>Nenhuma peça usada</p></div> }
     } @else {
       <div class="record-rows" aria-label="Peças usadas">
         @for (usage of usages(); track usage.id) {
@@ -179,7 +179,7 @@
           }
           @if (component.external && editingExternal()?.id === component.id && canCreateUsage()) { <ng-container [ngTemplateOutlet]="externalEditor" /> }
         </div>
-      } @empty { @if (!externalOpen()) { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="chip" /></span><h3 class="repair-empty">Nenhum componente trocado</h3></div> } }
+      } @empty { @if (!externalOpen()) { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="wrench" /></span><p>Nenhum componente trocado</p></div> } }
       </div>
   </app-collapsible-section>
 </section>

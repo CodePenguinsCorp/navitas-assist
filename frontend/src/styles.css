@@ -3402,7 +3402,6 @@ app-custom-select:has(> .custom-select--priority) {
 .history-note { margin: var(--space-1) 0 0; padding: var(--space-1) var(--space-3); border-left: 3px solid var(--line); color: var(--muted); font-size: var(--font-size-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
 .collapsible__actions .link-button { display: inline-flex; align-items: center; gap: var(--space-1); white-space: nowrap; }
 .repair-total { color: var(--muted); font-size: var(--font-size-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.repair-empty { margin: 0; padding: var(--space-2) 0; color: var(--muted); font-size: var(--font-size-sm); }
 /* Barra do quadro no mesmo padrão dos modais, fora do orçamento de CSS do componente. */
 app-rma-kanban-board .board-shell::-webkit-scrollbar { width: 12px; height: 12px; }
 app-rma-kanban-board .board-shell::-webkit-scrollbar-track { border-radius: 999px; background: rgba(205, 220, 235, 0.65); }
@@ -3450,11 +3449,10 @@ app-rma-kanban-board .board-shell::-webkit-scrollbar-button, app-rma-kanban-boar
 .record-fields dt { color: var(--muted); font-size: var(--font-size-sm); }
 .record-fields dd { margin: 0; font-size: var(--font-size-md); overflow-wrap: anywhere; }
 @container (max-width: 36rem) { .record-fields, .record-fields--reason { grid-template-columns: minmax(0, 1fr); } }
-/* Vazio com ícone, frase curta e a ação ao lado. */
+/* Vazio de seção com ícone e frase curta; ação apenas no cabeçalho. */
 .record-empty { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-3) 0; }
 .record-empty > .icon-tile { --tone: var(--tone-slate); }
-.record-empty > .repair-empty { padding: 0; font-size: var(--font-size-md); }
-.record-empty > button { margin-left: auto; }
+.record-empty > p { margin: 0; padding: 0; color: var(--muted); font-size: var(--font-size-md); font-weight: var(--font-weight-regular); }
 @media (max-width: 480px) { .record-row { grid-template-columns: auto minmax(0, 1fr); } .record-row__actions { grid-column: 2; justify-self: end; } }
 /* Inline forms of the OS detail (diagnosis, blocks, repair, parts, warranty, status note): one pattern.
    Visible semibold labels, "*" on required fields, 6rem textareas, Cancelar + primary on the right. */

@@ -22,7 +22,7 @@
       </div>
     </div>
   } @else if (mode() === 'idle') {
-    <p class="blocks-section__empty repair-empty">Sem impedimento</p>
+    <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="lock" /></span><p>Sem impedimento</p></div>
   }
 
   @if (mode() === 'resolve' && current().currentBlock) {

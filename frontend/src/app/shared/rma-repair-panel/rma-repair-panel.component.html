@@ -50,7 +50,7 @@
         }
         @if (editing()?.id === item.id && canWrite()) { <ng-container [ngTemplateOutlet]="interventionForm" /> }
       </div>
-    } @empty { @if (!formOpen()) { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="wrench" /></span><p class="repair-empty">Nenhum reparo registrado</p></div> } }
+    } @empty { @if (!formOpen()) { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="wrench" /></span><p>Nenhum reparo registrado</p></div> } }
     </div>
   }
   <ng-template #interventionForm>

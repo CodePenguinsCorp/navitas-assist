@@ -451,7 +451,7 @@ describe('RmasComponent detail with the shared information contract', () => {
     open({ ...fullRma, statusHistory: [], assignmentHistory: [] });
     selectTab('Histórico');
 
-    expect(tabPanel().querySelector('.repair-empty')?.textContent?.trim()).toBe('Nenhuma alteração registrada.');
+    expect(tabPanel().querySelector('.record-empty')?.textContent?.trim()).toBe('Nenhuma alteração registrada.');
     expect(tabPanel().querySelector('ol.record-list')).toBeNull();
   });
 
@@ -664,7 +664,7 @@ describe('RmasComponent detail with the shared information contract', () => {
     render();
 
     expect(rmaService.resolveBlock).toHaveBeenCalledWith(5, 3, { resolutionNote: 'Cliente respondeu' });
-    expect(tabPanel().querySelector('.blocks-section__empty')?.textContent?.trim()).toBe('Sem impedimento');
+    expect(tabPanel().querySelector('.record-empty')?.textContent?.trim()).toBe('Sem impedimento');
     expect(detail().querySelector('.detail-actions .detail-block-flag')).toBeNull();
     expect(rmaService.list.mock.calls.length).toBeGreaterThan(listCalls);
   });
