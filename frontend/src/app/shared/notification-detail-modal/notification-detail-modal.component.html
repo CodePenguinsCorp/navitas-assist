@@ -21,6 +21,8 @@
         <p class="notification-detail__message">{{ content().message }}</p>
       }
       @if (content().fields.length) {
+        <fieldset class="form-section notification-detail__section">
+        <legend>Detalhes</legend>
         <dl class="notification-detail__fields" aria-label="Detalhes da notificação">
           @for (field of content().fields; track field.label) {
             <div [class.notification-detail__primary]="field.label === 'Cliente' || field.label === 'Equipamento'" [class.notification-detail__reason]="reasonLabels.includes(field.label)">
@@ -39,6 +41,7 @@
             </div>
           }
         </dl>
+        </fieldset>
       }
       <div class="notification-detail__meta" aria-label="Quando">
         <strong>{{ ago() }}</strong>
