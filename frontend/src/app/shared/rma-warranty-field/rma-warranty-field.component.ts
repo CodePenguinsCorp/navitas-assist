@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, Injector, Output, afterNextRender, computed, inject, input, signal } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Injector, Output, afterNextRender, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { RmaItemResponse, RmaResponse, WarrantyOverrideStatus, WarrantyStatus } from '../../core/models';
@@ -34,6 +34,11 @@ export class RmaWarrantyFieldComponent {
     reason: new FormControl('', { nonNullable: true })
   });
   protected readonly selected = signal<WarrantyOverrideStatus | null>(null);
+  /** Permission revoked or OS closed while editing: close without saving (a temporary hold by the host keeps it open). */
+  private readonly closeWhenNotEditable = effect(() => {
+    const editable = this.canEdit() && !CLOSED_RMA_STATUSES.includes(this.rma().status) && this.item().id !== null;
+    if (!editable && untracked(() => this.editing() && !this.busy())) this.close();
+  });
   protected readonly options: CustomSelectOption<WarrantyOverrideStatus | null>[] = [
     { value: null, label: 'Automático' },
     { value: WarrantyStatus.IN_WARRANTY, label: 'Em garantia' },

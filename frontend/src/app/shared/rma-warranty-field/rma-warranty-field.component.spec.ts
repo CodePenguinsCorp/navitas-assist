@@ -51,6 +51,25 @@ describe('RmaWarrantyFieldComponent', () => {
   }
   function submit() { host().querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true })); render(); }
 
+  it('fecha o editor sem salvar quando a permissão é revogada ou a OS é encerrada durante a edição', () => {
+    mount(); edit();
+    expect(host().querySelector('form')).not.toBeNull();
+    fixture.componentRef.setInput('canEdit', false); render();
+    expect(host().querySelector('form')).toBeNull();
+    expect(calls).toEqual([]);
+    fixture.componentRef.setInput('canEdit', true); render(); edit();
+    expect(host().querySelector('form')).not.toBeNull();
+    fixture.componentRef.setInput('rma', { ...rma, status: 'COMPLETED' }); render();
+    expect(host().querySelector('form')).toBeNull();
+    expect(calls).toEqual([]);
+  });
+
+  it('mantém o editor aberto quando o pai só bloqueia temporariamente', () => {
+    mount(); edit();
+    fixture.componentRef.setInput('disabled', true); render();
+    expect(host().querySelector('form')).not.toBeNull();
+  });
+
   it('mostra a efetiva, o marcador com dica acessível e a automática divergente', () => {
     mount();
     expect(trigger()!.textContent).toContain('Em garantia');

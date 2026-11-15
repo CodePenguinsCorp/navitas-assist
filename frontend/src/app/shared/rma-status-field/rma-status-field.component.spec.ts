@@ -1,4 +1,6 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Permission } from '../../core/permissions';
 import { Subject, of, throwError } from 'rxjs';
 import { RmaResponse, RmaStatusUpdateRequest } from '../../core/models';
 import { RmaService } from '../../core/services/rma.service';
@@ -12,6 +14,7 @@ describe('Status inline da OS', () => {
   let request: ReturnType<RmaService['updateStatus']>;
   let calls: RmaStatusUpdateRequest[];
   let notes: Array<{ id: number; eventId: number; note: string }> ;
+  const permissions = signal<readonly Permission[]>(['rma.status']);
   const original = buildRma();
   const moved = buildRma({ status: 'TRIAGE', statusHistory: [{ id: 7, status: 'TRIAGE', changedBy: 'tester', changedAt: '2026-11-13T10:00:00Z', note: null }] });
   const host = () => fixture.nativeElement as HTMLElement;
@@ -20,11 +23,11 @@ describe('Status inline da OS', () => {
   const pick = () => { fixture.componentInstance.move('TRIAGE'); render(); };
 
   beforeEach(async () => {
-    calls = []; notes = [];
+    calls = []; notes = []; permissions.set(['rma.status']);
     request = of(moved);
     await TestBed.configureTestingModule({
       imports: [RmaStatusFieldComponent],
-      providers: [providePermissions(['rma.status']), { provide: RmaService, useValue: {
+      providers: [providePermissions(permissions), { provide: RmaService, useValue: {
         updateStatusNote: (id: number, eventId: number, note: string) => { notes.push({ id, eventId, note }); return of(moved); },
         updateStatus: (_id: number, payload: RmaStatusUpdateRequest) => { calls.push(payload); return request; }
       } }]
@@ -69,6 +72,15 @@ describe('Status inline da OS', () => {
     expect(fixture.componentInstance.rma()?.status).toBe('TRIAGE');
     expect(host().textContent).toContain('Transição bloqueada.');
     expect(button('Desfazer')).toBeDefined();
+  });
+
+  it('fecha o editor da observação sem salvar quando a permissão é revogada', () => {
+    permissions.set(['rma.status']);
+    pick(); button('Adicionar observação').click(); render();
+    expect(host().querySelector('textarea')).not.toBeNull();
+    permissions.set([]); render();
+    expect(host().querySelector('textarea')).toBeNull();
+    expect(notes).toEqual([]);
   });
 
   it('usa o padrão de formulário inline na observação, sem campo obrigatório', () => {

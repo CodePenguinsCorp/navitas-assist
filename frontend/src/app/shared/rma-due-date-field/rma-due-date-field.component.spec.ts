@@ -68,6 +68,13 @@ describe('RmaDueDateFieldComponent', () => {
     expect(text(host())).toContain('20/11/2026');
   });
 
+  it.each([['canEdit', false], ['disabled', true]] as const)('does not save a date picked after %s changed to %s', (input, value) => {
+    mount();
+    fixture.componentRef.setInput(input, value); render();
+    (fixture.componentInstance as unknown as { pick(value: string): void }).pick('2026-12-31');
+    expect(calls).toEqual([]);
+  });
+
   it('keeps the picker inactive while the host is busy', () => {
     mount({ disabled: true });
     expect(trigger()!.disabled).toBe(true);

@@ -1,5 +1,5 @@
 import { TipDirective } from '../tip/tip.directive';
-import { Component, ElementRef, EventEmitter, Injector, Output, afterNextRender, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Injector, Output, afterNextRender, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { CLOSED_RMA_STATUSES, RMA_STATUS_FLOW } from '../../core/mock-data';
@@ -97,6 +97,8 @@ export class RmaStatusFieldComponent {
         this.previous.set(null); this.message.set(''); this.error.set(''); this.editing.set(false);
       }
     });
+    // Permission revoked (or the OS closed) while the note is open: close it without saving.
+    effect(() => { if (!this.noteAllowed() && !untracked(() => this.busy())) this.editing.set(false); });
   }
 
   protected choose(status: unknown): void { this.move(status as RmaStatus); }
