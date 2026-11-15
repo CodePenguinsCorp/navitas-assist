@@ -456,6 +456,7 @@ class NotificationIntegrationTest {
 
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "PART_PENDING", "TEST_FAILED"})
+    @org.springframework.security.test.context.support.WithMockUser(username = "nav40-desk")
     void realProducersNotifyDefaultRecipientsAndDeduplicate(NotificationEventType type) {
         RmaDetailResponse rma = assignedRma();
         produce(type, rma.id());
@@ -475,6 +476,10 @@ class NotificationIntegrationTest {
                 case TEST_FAILED -> "Tensão reprovado";
                 default -> throw new IllegalArgumentException();
             }));
+            assertTrue(n.getMessage().startsWith("Cliente notificações · "));
+            assertTrue(n.getMessage().contains(" · etapa "));
+            assertTrue(n.getMessage().endsWith(". Registrado por \"nav40-desk\"."));
+            assertTrue(n.getMessage().length() <= 500);
             assertEquals("/rmas?rma=" + rma.id(), n.getActionPath());
         });
         notificationProcessor.process(new RmaNotificationEvent(type, event.getEventKey(), rma.id(), event.getOccurredAt()));

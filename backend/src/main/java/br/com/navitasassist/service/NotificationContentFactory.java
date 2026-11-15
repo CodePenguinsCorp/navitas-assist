@@ -36,15 +36,29 @@ public class NotificationContentFactory {
         return switch (event.type()) {
             case RMA_CREATED -> new Content("Nova OS " + rma.getCode(), context + " · prioridade " + PRIORITY_LABELS.get(rma.getPriority()) + ". Aberta por " + event.actor() + ".", actionPath(rma));
             case RMA_ASSIGNED -> new Content("OS " + rma.getCode() + " atribuída a " + assignee, context + " · etapa " + stage + ". Atribuída por " + event.actor() + ".", actionPath(rma));
-            case RMA_BLOCKED -> new Content("Impedimento na OS " + rma.getCode(), detail(event, "Impedimento aberto."), actionPath(rma));
-            case PART_PENDING -> new Content("Peça pendente na OS " + rma.getCode(), detail(event, "Reserva pendente por falta de saldo."), actionPath(rma));
-            case TEST_FAILED -> new Content("Teste reprovado na OS " + rma.getCode(), detail(event, "Item de protocolo reprovado."), actionPath(rma));
+            case RMA_BLOCKED -> new Content("Impedimento na OS " + rma.getCode(), operationalMessage(event, context, stage, "Motivo do impedimento", "Impedimento aberto."), actionPath(rma));
+            case PART_PENDING -> new Content("Peça pendente na OS " + rma.getCode(), operationalMessage(event, context, stage, "Pendência da peça", "Reserva pendente por falta de saldo."), actionPath(rma));
+            case TEST_FAILED -> new Content("Teste reprovado na OS " + rma.getCode(), operationalMessage(event, context, stage, "Item reprovado", "Item de protocolo reprovado."), actionPath(rma));
         };
     }
 
-    private String detail(RmaNotificationEvent event, String fallback) {
-        String detail = event.detail() == null || event.detail().isBlank() ? fallback : event.detail().trim();
-        return detail.substring(0, Math.min(detail.length(), 500));
+    private String operationalMessage(RmaNotificationEvent event, String context, String stage, String label, String fallback) {
+        String prefix = context + " · etapa " + stage + ". " + label + ": ";
+        String suffix = event.actor() == null || event.actor().isBlank()
+            ? "." : ". Registrado por " + quote(event.actor()) + ".";
+        String reason = event.detail() == null || event.detail().isBlank() ? fallback : event.detail().trim();
+        int end = reason.length();
+        while (prefix.length() + quote(reason.substring(0, end)).length() + suffix.length() > 500 && end > 0) {
+            end = reason.offsetByCodePoints(end, -1);
+        }
+        if (prefix.length() + 2 + suffix.length() > 500) {
+            throw new IllegalArgumentException("Contexto da notificação excede 500 caracteres.");
+        }
+        return prefix + quote(reason.substring(0, end)) + suffix;
+    }
+
+    private String quote(String value) {
+        return "\"" + new String(com.fasterxml.jackson.core.io.JsonStringEncoder.getInstance().quoteAsString(value)) + "\"";
     }
 
     private String actionPath(RmaRecord rma) {
