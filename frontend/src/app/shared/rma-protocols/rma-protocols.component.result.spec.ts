@@ -143,4 +143,40 @@ describe('RmaProtocolsComponent result entry', () => {
       component().resultForm.controls[name].setValue('x'.repeat(limit + 1)); expect(component().resultForm.controls[name].hasError('maxlength')).toBe(true);
     }
   });
+
+  describe('local validation before saving', () => {
+    const fill = (value: Record<string, string>) => { component().resultForm.patchValue(value); };
+    const alertText = () => form()?.querySelector('[role="alert"]')?.textContent ?? '';
+    const blocked = (message: string) => { component().saveResult(); render(); expect(service.recordResult).not.toHaveBeenCalled(); expect(form()).not.toBeNull(); expect(alertText()).toContain(message); };
+
+    it('blocks a passed required item without evidence', async () => {
+      await setup(); open(); fill({ measuredValue: '12', evidence: '' }); blocked('Informe a evidência');
+    });
+    it('blocks a repeated result without justification', async () => {
+      const repeated = { ...ITEM, latest: RESULT, attempts: [RESULT] }; await setup('ADMIN', repeated); open(repeated);
+      fill({ measuredValue: '12', evidence: 'Foto' }); blocked('justificativa');
+    });
+    it.each(['FAILED', 'NOT_APPLICABLE'] as ProtocolItemOutcome[])('blocks %s without justification', async (outcome) => {
+      await setup(); open(); fill({ outcome, measuredValue: '12' }); blocked('justificativa');
+    });
+    it('blocks a missing measurement, invalid text and excess precision', async () => {
+      await setup(); open(); fill({ evidence: 'Foto', measuredValue: '' }); blocked('Informe o valor da medição');
+      fill({ measuredValue: 'abc' }); blocked('número');
+      fill({ measuredValue: '12,555' }); blocked('no máximo 2 casas');
+    });
+    it('blocks a passed measurement outside the range but allows FAILED outside it', async () => {
+      await setup(); open(); fill({ evidence: 'Foto', measuredValue: '13' }); blocked('fora da faixa');
+      fill({ outcome: 'FAILED', justification: 'Fora do padrão' });
+      component().saveResult(); expect(service.recordResult).toHaveBeenCalledTimes(1);
+    });
+    it('does not require a measurement for NOT_APPLICABLE and requires text for TEXT items', async () => {
+      await setup(); open(); fill({ outcome: 'NOT_APPLICABLE', justification: 'Não se aplica', measuredValue: '' });
+      component().saveResult(); expect(service.recordResult).toHaveBeenCalledTimes(1);
+      const text = { ...ITEM, item: { ...ITEM.item, type: 'TEXT' as ProtocolItemType, evidenceRequired: false } };
+      service.recordResult.mockClear(); component().openResult(EXECUTION, text); render(); fill({ textValue: ' ' }); blocked('Informe o resultado em texto');
+    });
+    it('blocks when a text field exceeds its limit', async () => {
+      await setup(); open(); fill({ measuredValue: '12', evidence: 'x'.repeat(501) }); component().saveResult(); expect(service.recordResult).not.toHaveBeenCalled();
+    });
+  });
 });

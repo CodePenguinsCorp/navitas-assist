@@ -146,6 +146,11 @@ export class RmaProtocolsComponent {
     }
 
     const raw = this.resultForm.getRawValue();
+    const validationError = this.resultForm.invalid ? 'Revise os campos com texto acima do limite permitido.' : this.validateResult(editing.item, raw);
+    if (validationError) {
+      this.resultErrorMessage.set(validationError);
+      return;
+    }
     const rmaId = this.rmaId();
     this.submitting.set(true);
     this.resultErrorMessage.set('');
@@ -164,6 +169,29 @@ export class RmaProtocolsComponent {
       },
       error: (error) => { if (this.rmaId() === rmaId) this.resultErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível registrar o resultado.')); }
     });
+  }
+
+  private validateResult(entry: ProtocolExecutionItemResponse, raw: { outcome: ProtocolItemOutcome; measuredValue: string; textValue: string; evidence: string; justification: string }): string | null {
+    const { item } = entry;
+    if (this.requiresJustification() && !normalizeOptionalText(raw.justification)) {
+      return raw.outcome === 'PASSED' ? 'Informe uma justificativa para repetir o item.' : 'Informe uma justificativa para itens reprovados ou não aplicáveis.';
+    }
+    const measured = normalizeDecimal(raw.measuredValue);
+    if (item.type === 'MEASUREMENT' && (raw.outcome !== 'NOT_APPLICABLE' || measured !== null)) {
+      if (measured === null) return `Informe o valor da medição: ${item.title}.`;
+      const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(measured);
+      if (!match) return 'A medição deve ser um número, por exemplo 12,5.';
+      const fraction = (match[3] ?? '').replace(/0+$/, '');
+      const places = item.decimalPlaces ?? 6;
+      if (match[2].replace(/^0+(?=\d)/, '').length > 13 || fraction.length > 6) return 'A medição excede o tamanho permitido (13 inteiros e 6 casas decimais).';
+      if (fraction.length > places) return `A medição deve ter no máximo ${places} casa${places === 1 ? '' : 's'} decimal${places === 1 ? '' : 'is'}: ${item.title}.`;
+      const value = Number(measured);
+      const outOfRange = (item.minValue !== null && value < item.minValue) || (item.maxValue !== null && value > item.maxValue);
+      if (outOfRange && raw.outcome === 'PASSED') return `Medição fora da faixa esperada não pode ser aprovada: ${item.title}.`;
+    }
+    if (item.type === 'TEXT' && raw.outcome !== 'NOT_APPLICABLE' && !normalizeOptionalText(raw.textValue)) return `Informe o resultado em texto: ${item.title}.`;
+    if (this.requiresEvidence() && !normalizeOptionalText(raw.evidence)) return `Informe a evidência: ${item.title}.`;
+    return null;
   }
 
   protected completeExecution(execution: ProtocolExecutionResponse): void {
