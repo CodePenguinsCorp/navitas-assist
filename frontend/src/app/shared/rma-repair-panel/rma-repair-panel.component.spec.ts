@@ -4,6 +4,7 @@ import { of } from 'rxjs';
 import { RmaRepairService } from '../../core/services/rma-repair.service';
 import { providePermissions } from '../../testing/permission-fixtures';
 import { RmaRepairPanelComponent } from './rma-repair-panel.component';
+import { expectInlineForm } from '../../testing/inline-form';
 
 describe('RmaRepairPanelComponent', () => {
   afterEach(() => localStorage.clear());
@@ -83,6 +84,16 @@ describe('RmaRepairPanelComponent', () => {
       expect(trigger(root).getAttribute('aria-expanded')).toBe('true');
       open(fixture);
       expect(root.querySelector('form')).toBeNull();
+    });
+
+    it('uses the inline form pattern for the intervention form and the void reason', async () => {
+      const { fixture, component } = await setup();
+      const root: HTMLElement = fixture.nativeElement;
+      open(fixture);
+      expectInlineForm(root.querySelector('form'), ['Tipo', 'Data', 'Horas', 'Descrição'], 'Registrar');
+      open(fixture);
+      component.startVoid({ id: 1, type: 'CLEANING', description: 'Placa limpa', performedOn: '2026-11-12', hours: 1.125, technicianName: 'ana' }); fixture.detectChanges();
+      expectInlineForm(root.querySelector('.repair-entry .inline-form'), ['Motivo da anulação'], 'Anular');
     });
 
     it('collapses with Cancelar and Escape, returning focus to the trigger', async () => {

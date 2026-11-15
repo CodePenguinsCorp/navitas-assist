@@ -1,21 +1,21 @@
 @if (editing()) {
-  <form class="warranty-field__form" [formGroup]="form" (ngSubmit)="save()" (keydown.escape)="cancel($event)">
-    <app-custom-select formControlName="override" [options]="options" ariaLabel="Garantia" [disabled]="locked() || busy()" (valueChange)="selectOverride()" />
+  <form class="inline-form" [formGroup]="form" (ngSubmit)="save()" (keydown.escape)="cancel($event)">
+    <app-custom-select class="field-group--full" formControlName="override" [options]="options" ariaLabel="Garantia" [disabled]="locked() || busy()" (valueChange)="selectOverride()" />
     @if (selected()) {
-      <div class="warranty-field__reasons" aria-label="Atalhos de motivo">
+      <div class="warranty-field__reasons field-group--full" aria-label="Atalhos de motivo">
         @for (reason of reasons; track reason) {
           <button type="button" class="warranty-field__reason" [disabled]="busy() || locked()" (click)="chooseReason(reason)">{{ reason }}</button>
         }
       </div>
-      <label class="field-group">
+      <label class="field-group field-group--full field-group--required">
         <span>Motivo</span>
         <textarea formControlName="reason" aria-label="Motivo do ajuste de garantia" rows="2" maxlength="255" [readOnly]="locked()" [attr.aria-invalid]="invalid() ? 'true' : null" [attr.aria-describedby]="invalid() ? errorId : null" (input)="invalid.set(false)"></textarea>
       </label>
-      @if (invalid()) { <small class="field-error" [id]="errorId" role="alert">Informe um motivo de até 255 caracteres.</small> }
+      @if (invalid()) { <small class="field-error field-group--full" [id]="errorId" role="alert">Informe um motivo de até 255 caracteres.</small> }
     }
-    @if (error(); as message) { <p class="field-error" role="alert">{{ message }}</p> }
-    <div class="form-actions warranty-field__actions">
-      <button type="button" class="button-secondary button-secondary--small" [disabled]="busy()" (click)="cancel()">Cancelar</button>
+    @if (error(); as message) { <p class="field-error field-group--full" role="alert">{{ message }}</p> }
+    <div class="form-actions inline-form__actions">
+      <button type="button" class="button-secondary" [disabled]="busy()" (click)="cancel()">Cancelar</button>
       <button type="submit" class="button-primary" [disabled]="busy() || locked() || !canEdit()">{{ busy() ? 'Salvando...' : 'Salvar' }}</button>
     </div>
   </form>

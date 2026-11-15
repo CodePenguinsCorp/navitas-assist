@@ -117,7 +117,7 @@ export class RmaRepairPanelComponent {
   }
 
   private focusFirstField(): void {
-    afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>('.repair-form .custom-select__trigger, .repair-form input, .repair-form textarea')?.focus(), { injector: this.injector });
+    afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>('.inline-form .custom-select__trigger, .inline-form input, .inline-form textarea')?.focus(), { injector: this.injector });
   }
 
   protected startVoid(item: InterventionResponse): void {

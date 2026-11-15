@@ -5,6 +5,7 @@ import { RmaService } from '../../core/services/rma.service';
 import { providePermissions } from '../../testing/permission-fixtures';
 import { buildRma } from '../../testing/rma-fixtures';
 import { RmaStatusFieldComponent } from './rma-status-field.component';
+import { expectInlineForm } from '../../testing/inline-form';
 
 describe('Status inline da OS', () => {
   let fixture: ComponentFixture<RmaStatusFieldComponent>;
@@ -70,6 +71,11 @@ describe('Status inline da OS', () => {
     expect(button('Desfazer')).toBeDefined();
   });
 
+  it('usa o padrão de formulário inline na observação, sem campo obrigatório', () => {
+    pick(); button('Adicionar observação').click(); render();
+    expectInlineForm(host().querySelector('.inline-form'), [], 'Salvar');
+  });
+
   it('salva a observação no evento recém-criado sem reservar para outra mudança', () => {
     pick(); button('Adicionar observação').click(); render();
     const textarea = host().querySelector('textarea')!;
@@ -82,10 +88,10 @@ describe('Status inline da OS', () => {
 
   it('edita a observação no campo padrão, com Cancelar e Salvar juntos no fim', () => {
     pick(); button('Adicionar observação').click(); render();
-    const field = host().querySelector('.status-note label.field-group')!;
+    const field = host().querySelector('.inline-form label.field-group')!;
     expect(field.querySelector('span')?.textContent?.trim()).toBe('Observação');
     expect(field.querySelector('textarea')).toBe(document.activeElement);
-    const actions = [...host().querySelectorAll('.status-note__actions button')].map(b => b.textContent?.trim());
+    const actions = [...host().querySelectorAll('.inline-form__actions button')].map(b => b.textContent?.trim());
     expect(actions).toEqual(['Cancelar', 'Salvar']);
   });
 

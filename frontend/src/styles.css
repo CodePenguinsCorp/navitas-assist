@@ -3698,13 +3698,19 @@ app-custom-select:has(> .custom-select--priority) {
 .repair-note { padding-left: var(--space-1); }
 .repair-row-actions { display: flex; align-items: center; gap: var(--space-1); margin-left: auto; }
 .repair-voided { text-decoration: line-through; color: var(--muted); }
-.repair-inline { display: grid; gap: var(--space-2); min-width: 0; }
-.repair-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: var(--space-3); margin: var(--space-2) 0 var(--space-3); }
-.repair-form .field-group { gap: var(--space-1); min-width: 0; }
-.repair-form .field-group--full, .repair-form .form-actions--full { grid-column: 1 / -1; }
-.repair-form textarea { min-height: 6rem; max-height: 6rem; resize: none; overflow-y: auto; }
-.repair-inline textarea, .repair-form input, .repair-form textarea { box-sizing: border-box; max-width: 100%; min-width: 0; }
-.form-actions.repair-actions { flex-direction: row; align-items: center; justify-content: space-between; }
+/* Inline forms of the OS detail (diagnosis, blocks, repair, parts, warranty, status note): one pattern.
+   Visible semibold labels, "*" on required fields, 6rem textareas, Cancelar + primary on the right. */
+.inline-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); margin: var(--space-2) 0 var(--space-3); min-width: 0; }
+.inline-form .field-group { gap: var(--space-1); min-width: 0; align-content: start; grid-template-rows: none; }
+.inline-form .field-group--full, .inline-form__actions { grid-column: 1 / -1; }
+.inline-form .field-group > :is(label, span) { color: var(--text); font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); }
+.inline-form .field-group--required > :is(label, span)::after { content: " *"; color: var(--danger-text); }
+.inline-form .field-group > .field-error { min-height: 0; }
+.inline-form :is(input, textarea) { box-sizing: border-box; max-width: 100%; min-width: 0; }
+.inline-form textarea { height: 6rem; min-height: 6rem; max-height: 6rem; padding: var(--space-2) var(--control-padding-x); line-height: var(--line-height-body); resize: none; overflow-y: auto; }
+.inline-form__actions { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; justify-content: flex-end; gap: var(--space-2); }
+.inline-form__actions > button { min-height: var(--control-height); padding-inline: var(--space-4); font-size: var(--font-size-md); }
+@media (max-width: 600px) { .inline-form { grid-template-columns: minmax(0, 1fr); } }
 
 /* Movimentos de peças: cabeçalho com chevron e linhas em colunas alinhadas. */
 /* Same gap as the cards of the Kanban detail column. */

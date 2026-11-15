@@ -4,6 +4,7 @@ import { RmaResponse, WarrantyStatus } from '../../core/models';
 import { RmaService } from '../../core/services/rma.service';
 import { buildRma, buildRmaItem } from '../../testing/rma-fixtures';
 import { RmaWarrantyFieldComponent } from './rma-warranty-field.component';
+import { expectInlineForm } from '../../testing/inline-form';
 
 const item = buildRmaItem({ id: 9, warrantyStatus: WarrantyStatus.IN_WARRANTY, calculatedWarrantyStatus: WarrantyStatus.OUT_OF_WARRANTY,
   warrantyOverride: { status: WarrantyStatus.IN_WARRANTY, reason: 'Cortesia', changedBy: 'ana', changedAt: '2026-11-13T12:00:00Z' } });
@@ -35,6 +36,11 @@ describe('RmaWarrantyFieldComponent', () => {
     render();
   }
   function edit() { trigger()!.click(); render(); }
+  it('uses the inline form pattern with the reason marked as required', () => {
+    mount(); edit();
+    choose('Fora');
+    expectInlineForm(host().querySelector('form'), ['Motivo'], 'Salvar');
+  });
   function choose(label: string) {
     host().querySelector<HTMLButtonElement>('.custom-select__trigger')!.click(); render();
     [...host().querySelectorAll<HTMLButtonElement>('[role="option"]')].find((b) => b.textContent?.includes(label))!.click(); render();
@@ -85,7 +91,7 @@ describe('RmaWarrantyFieldComponent', () => {
     mount(); edit();
     expect(host().querySelector('app-custom-select')).not.toBeNull();
     expect(host().querySelector('textarea')!.value).toBe('Cortesia');
-    expect([...host().querySelectorAll('.warranty-field__actions button')].map((b) => b.textContent?.trim())).toEqual(['Cancelar', 'Salvar']);
+    expect([...host().querySelectorAll('.inline-form__actions button')].map((b) => b.textContent?.trim())).toEqual(['Cancelar', 'Salvar']);
   });
   it('exige motivo não vazio e limita a 255 caracteres', () => {
     mount(); edit(); reason('   '); submit(); expect(calls).toEqual([]);

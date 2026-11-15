@@ -29,7 +29,7 @@
     }
 
     @if (canCreateReservation() && reserveOpen()) {
-      <form id="reserve-form" class="repair-form" [formGroup]="reserveForm" (ngSubmit)="reserve()" (keydown.escape)="$event.stopPropagation(); closeReserve(true)" novalidate>
+      <form id="reserve-form" class="inline-form" [formGroup]="reserveForm" (ngSubmit)="reserve()" (keydown.escape)="$event.stopPropagation(); closeReserve(true)" novalidate>
         @if (catalogLoadFailed()) {
           <div class="alert-banner alert-banner--error parts-load-error field-group--full" role="alert">
             <strong>{{ catalogLoadErrorMessage() }}</strong>
@@ -39,7 +39,7 @@
         } @else if (catalogHasLoaded() && partOptions().length === 0) {
           <p class="repair-empty field-group--full">Nenhuma peça ativa disponível</p>
         }
-        <label class="field-group">
+        <label class="field-group field-group--required">
           <span>Peça</span>
           <app-custom-select ariaLabel="Peça para reservar" [placeholder]="catalogHasLoaded() ? 'Selecione a peça' : 'Carregando opções...'" [options]="partOptions()" formControlName="partId"
             [ariaInvalid]="hasError(reserveForm.controls.partId)" [ariaDescribedBy]="hasError(reserveForm.controls.partId) ? 'reserve-part-error' : null" />
@@ -47,7 +47,7 @@
             <small id="reserve-part-error" class="field-error" role="alert">Selecione a peça.</small>
           }
         </label>
-        <label class="field-group">
+        <label class="field-group field-group--required">
           <span>Quantidade @if (selectedPart(); as part) { ({{ part.unit }}) }</span>
           <input type="number" min="0.001" step="any" formControlName="quantity"
             [attr.aria-invalid]="hasError(reserveForm.controls.quantity) ? 'true' : null" [attr.aria-describedby]="hasError(reserveForm.controls.quantity) ? 'reserve-quantity-error' : null" />
@@ -63,7 +63,7 @@
             <small id="reserve-note-error" class="field-error" role="alert">Use até 255 caracteres.</small>
           }
         </label>
-        <div class="form-actions form-actions--full repair-actions">
+        <div class="form-actions inline-form__actions">
           <button type="button" class="button-secondary" [disabled]="submitting()" (click)="closeReserve(true)">Cancelar</button>
           <button type="submit" class="button-primary" [disabled]="submitting() || !catalogHasLoaded() || catalogLoadFailed()">{{ submitting() ? 'Reservando...' : 'Reservar' }}</button>
         </div>
@@ -116,13 +116,13 @@
 
     @if (consuming(); as reservation) {
       @if (canCreateReservation()) {
-        <form class="repair-form" [formGroup]="consumptionForm" (ngSubmit)="confirmConsumption()" (keydown.escape)="$event.stopPropagation(); consuming.set(null)" novalidate>
+        <form class="inline-form" [formGroup]="consumptionForm" (ngSubmit)="confirmConsumption()" (keydown.escape)="$event.stopPropagation(); consuming.set(null)" novalidate>
           <strong class="field-group--full">Aplicar {{ reservation.partCode }} · {{ reservation.partName }}</strong>
-          <label class="field-group field-group--full"><span>Motivo da troca</span><textarea rows="2" maxlength="1000" formControlName="replacementReason" [attr.aria-invalid]="hasError(consumptionForm.controls.replacementReason) ? 'true' : null"></textarea>
+          <label class="field-group field-group--full field-group--required"><span>Motivo da troca</span><textarea rows="4" maxlength="1000" formControlName="replacementReason" [attr.aria-invalid]="hasError(consumptionForm.controls.replacementReason) ? 'true' : null"></textarea>
             @if (hasError(consumptionForm.controls.replacementReason)) { <small class="field-error" role="alert">Informe o motivo da troca</small> }
           </label>
-          <label class="field-group"><span>Lote do componente (opcional)</span><input maxlength="120" formControlName="componentBatch" /></label>
-          <div class="form-actions form-actions--full repair-actions"><button type="button" class="button-secondary" [disabled]="busyReservationId() !== null" (click)="consuming.set(null)">Cancelar</button><button type="submit" class="button-primary" [disabled]="busyReservationId() !== null">Confirmar</button></div>
+          <label class="field-group"><span>Lote do componente</span><input maxlength="120" formControlName="componentBatch" /></label>
+          <div class="form-actions inline-form__actions"><button type="button" class="button-secondary" [disabled]="busyReservationId() !== null" (click)="consuming.set(null)">Cancelar</button><button type="submit" class="button-primary" [disabled]="busyReservationId() !== null">Confirmar</button></div>
         </form>
       }
     }
@@ -157,10 +157,10 @@
           }
           @if (component.voidedAt) { <small class="repair-note">Anulado: {{ component.voidReason }} · {{ component.voidedBy }}</small> }
           @if (component.external && voidingExternal()?.id === component.id && canCreateReservation()) {
-            <div class="repair-inline">
-              <label class="field-group"><span>Motivo da anulação</span><textarea [formControl]="voidReason" rows="2" maxlength="1000"></textarea></label>
-              @if (voidReason.invalid && voidReason.touched) { <p class="field-error" role="alert">Informe um motivo de até 1000 caracteres.</p> }
-              <div class="form-actions repair-actions"><button type="button" class="button-secondary" [disabled]="externalSaving()" (click)="voidingExternal.set(null)">Cancelar</button><button type="button" class="button-primary" [disabled]="externalSaving()" (click)="confirmVoidExternal()">Anular</button></div>
+            <div class="inline-form">
+              <label class="field-group field-group--full field-group--required"><span>Motivo da anulação</span><textarea [formControl]="voidReason" rows="4" maxlength="1000"></textarea></label>
+              @if (voidReason.invalid && voidReason.touched) { <p class="field-error field-group--full" role="alert">Informe um motivo de até 1000 caracteres.</p> }
+              <div class="form-actions inline-form__actions"><button type="button" class="button-secondary" [disabled]="externalSaving()" (click)="voidingExternal.set(null)">Cancelar</button><button type="button" class="button-primary" [disabled]="externalSaving()" (click)="confirmVoidExternal()">Anular</button></div>
             </div>
           }
           @if (component.external && editingExternal()?.id === component.id && canCreateReservation()) { <ng-container [ngTemplateOutlet]="externalEditor" /> }
@@ -191,19 +191,19 @@
 </div>
 
 <ng-template #externalEditor>
-  <form id="external-form" class="repair-form" [formGroup]="externalForm" (ngSubmit)="saveExternal()" (keydown.escape)="$event.stopPropagation(); closeExternal(true)" novalidate>
-    <label class="field-group"><span>Código (opcional)</span><input maxlength="60" formControlName="code" /></label>
-    <label class="field-group"><span>Descrição</span><input maxlength="120" formControlName="description" [attr.aria-invalid]="hasError(externalForm.controls.description) ? 'true' : null" />
+  <form id="external-form" class="inline-form" [formGroup]="externalForm" (ngSubmit)="saveExternal()" (keydown.escape)="$event.stopPropagation(); closeExternal(true)" novalidate>
+    <label class="field-group"><span>Código</span><input maxlength="60" formControlName="code" /></label>
+    <label class="field-group field-group--required"><span>Descrição</span><input maxlength="120" formControlName="description" [attr.aria-invalid]="hasError(externalForm.controls.description) ? 'true' : null" />
       @if (hasError(externalForm.controls.description)) { <small class="field-error" role="alert">Informe a descrição</small> }
     </label>
-    <label class="field-group"><span>Quantidade</span><input type="number" min="0.001" max="999999999.999" step="0.001" placeholder="1" formControlName="quantity" [attr.aria-invalid]="hasError(externalForm.controls.quantity) ? 'true' : null" />
+    <label class="field-group field-group--required"><span>Quantidade</span><input type="number" min="0.001" max="999999999.999" step="0.001" placeholder="1" formControlName="quantity" [attr.aria-invalid]="hasError(externalForm.controls.quantity) ? 'true' : null" />
       @if (hasError(externalForm.controls.quantity)) { <small class="field-error" role="alert">Informe a quantidade (maior que 0, até 3 casas)</small> }
     </label>
     <label class="field-group"><span>Unidade</span><input maxlength="20" formControlName="unit" /></label>
-    <label class="field-group"><span>Lote (opcional)</span><input maxlength="120" formControlName="componentBatch" /></label>
-    <label class="field-group field-group--full"><span>Motivo da troca</span><textarea rows="2" maxlength="1000" formControlName="replacementReason" [attr.aria-invalid]="hasError(externalForm.controls.replacementReason) ? 'true' : null"></textarea>
+    <label class="field-group"><span>Lote</span><input maxlength="120" formControlName="componentBatch" /></label>
+    <label class="field-group field-group--full field-group--required"><span>Motivo da troca</span><textarea rows="4" maxlength="1000" formControlName="replacementReason" [attr.aria-invalid]="hasError(externalForm.controls.replacementReason) ? 'true' : null"></textarea>
       @if (hasError(externalForm.controls.replacementReason)) { <small class="field-error" role="alert">Informe o motivo da troca</small> }
     </label>
-    <div class="form-actions form-actions--full repair-actions"><button type="button" class="button-secondary" [disabled]="externalSaving()" (click)="closeExternal(true)">Cancelar</button><button type="submit" class="button-primary" [disabled]="externalSaving()">{{ editingExternal() ? 'Salvar' : 'Registrar' }}</button></div>
+    <div class="form-actions inline-form__actions"><button type="button" class="button-secondary" [disabled]="externalSaving()" (click)="closeExternal(true)">Cancelar</button><button type="submit" class="button-primary" [disabled]="externalSaving()">{{ editingExternal() ? 'Salvar' : 'Registrar' }}</button></div>
   </form>
 </ng-template>

@@ -7,6 +7,7 @@ import { RmaService } from '../../core/services/rma.service';
 import { providePermissions } from '../../testing/permission-fixtures';
 import { buildRma } from '../../testing/rma-fixtures';
 import { RmaDiagnosisComponent } from './rma-diagnosis.component';
+import { expectInlineForm } from '../../testing/inline-form';
 
 const diagnosis: DiagnosisResponse = {
   foundFailure: 'Falha na fonte', failureType: 'POWER_SUPPLY', probableCause: 'COMPONENT', notes: 'Trocar capacitor',
@@ -55,6 +56,12 @@ describe('Diagnóstico inline', () => {
     // Date and technician are filled in automatically: no fields for them.
     expect(host().querySelector('[formControlName="technicianName"]')).toBeNull();
     expect(host().querySelector('[formControlName="diagnosedAt"]')).toBeNull();
+  });
+
+  it('usa o padrão de formulário inline com rótulos visíveis e obrigatório sinalizado', () => {
+    edit();
+    expectInlineForm(host().querySelector('form'), ['Falha encontrada'], 'Salvar diagnóstico');
+    expect([...host().querySelectorAll('form .field-group > label')].map(l => l.textContent?.trim())).toEqual(['Falha encontrada', 'Tipo de falha', 'Causa provável', 'Notas']);
   });
 
   it('valida obrigatórios e limites sem chamar a API', () => {

@@ -5,6 +5,7 @@ import { LegacyProfileCode, profilePermissions, providePermissions } from '../..
 import { PartService } from '../../core/services/part.service';
 import { RmaRepairService } from '../../core/services/rma-repair.service';
 import { RmaPartsPanelComponent } from './rma-parts-panel.component';
+import { expectInlineForm } from '../../testing/inline-form';
 
 const reservation = (id: number, status: PartReservationResponse['status']): PartReservationResponse => ({
   id, rmaId: 7, rmaCode: 'OS-2026-000007', partId: 4, partCode: 'PCA-1', partName: 'Capacitor', unit: 'un',
@@ -109,6 +110,19 @@ describe('RmaPartsPanelComponent', () => {
     expect(partService['updateReservation']).toHaveBeenCalledWith(7, 1, 'consume', { replacementReason: 'Capacitor em curto', componentBatch: 'L24' });
   });
 
+  it('uses the inline form pattern for reserving, applying, adding externals and voiding', async () => {
+    await setUp('TECHNICIAN');
+    const root: HTMLElement = fixture.nativeElement;
+    expectInlineForm(root.querySelector('#reserve-form'), ['Peça', 'Quantidade'], 'Reservar');
+    const component = fixture.componentInstance as any;
+    const consume = [...root.querySelectorAll('button')].find((button: any) => button.textContent.trim() === 'Aplicar') as HTMLButtonElement;
+    consume.click(); fixture.detectChanges();
+    expectInlineForm(root.querySelector('form:not(#reserve-form)'), ['Motivo da troca'], 'Confirmar');
+    component.consuming.set(null);
+    root.querySelector<HTMLButtonElement>('#external-trigger')!.click(); fixture.detectChanges();
+    expectInlineForm(root.querySelector('#external-form'), ['Descrição', 'Quantidade', 'Motivo da troca'], 'Registrar');
+  });
+
   it('shows a missing reason for historic consumption', async () => {
     await setUp('VIEWER');
     expect(fixture.nativeElement.textContent).toContain('Motivo não registrado');
@@ -133,7 +147,7 @@ describe('RmaPartsPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Fora do estoque');
     expect(fixture.nativeElement.textContent).toContain('Motivo não registrado');
     component.startConsumption(reservation(1, 'ACTIVE')); fixture.detectChanges();
-    const buttons = Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('form:has([formControlName="replacementReason"]) .repair-actions button'));
+    const buttons = Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('form:has([formControlName="replacementReason"]) .inline-form__actions button'));
     expect(buttons.map(b => b.textContent?.trim())).toEqual(['Cancelar', 'Confirmar']);
     buttons[0].click(); fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[formControlName="replacementReason"]')).toBeNull();

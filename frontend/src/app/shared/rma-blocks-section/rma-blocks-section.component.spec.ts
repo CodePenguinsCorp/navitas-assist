@@ -7,6 +7,7 @@ import { Permission } from '../../core/permissions';
 import { ClockService } from '../../core/services/clock.service';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { RmaBlocksSectionComponent } from './rma-blocks-section.component';
+import { expectInlineForm } from '../../testing/inline-form';
 
 const NOW = Date.parse('2026-10-20T12:00:00Z');
 
@@ -102,6 +103,21 @@ describe('RmaBlocksSectionComponent', () => {
     expect(flag.className).not.toContain('button-secondary');
     expect(form()).toBeNull();
     expect(host().querySelector('dialog')).toBeNull();
+  });
+
+  it('uses the inline form pattern for blocking and resolving', () => {
+    mount();
+    control('Sinalizar impedimento')!.click();
+    render();
+    expectInlineForm(form(), ['Motivo'], 'Bloquear');
+    expect([...form()!.querySelectorAll('.field-group > label')].map(text)).toEqual(['Motivo', 'Categoria']);
+  });
+
+  it('uses the same pattern for the resolution note', () => {
+    mount(blocked());
+    control('Resolver')!.click();
+    render();
+    expectInlineForm(form(), ['Nota de resolução'], 'Desbloquear');
   });
 
   it('expands reason and category inline, focuses the reason and blocks with trimmed values', () => {

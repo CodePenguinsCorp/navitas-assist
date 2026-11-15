@@ -18,6 +18,4 @@
 .blocks-section__empty { color: var(--muted); }
 .blocks-section__action, .blocks-section__history-toggle { min-height: var(--control-height-xs); justify-self: start; }
 
-.blocks-section__form { display: grid; gap: var(--space-3); min-width: 0; }
-.blocks-section__actions { justify-content: flex-end; }
 .blocks-section__error { margin: 0; }

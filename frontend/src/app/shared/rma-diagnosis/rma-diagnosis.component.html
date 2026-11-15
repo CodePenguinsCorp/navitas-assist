@@ -21,12 +21,9 @@
 <ng-template #content>
 @if (editing() && canEdit()) {
   @if (diagnosisErrorMessage()) { <p class="field-error" role="alert">{{ diagnosisErrorMessage() }}</p> }
-      <form [formGroup]="diagnosisForm" (ngSubmit)="saveDiagnosis()" class="form-grid" (keydown.escape)="cancelOnEscape($event)">
-        <fieldset class="diagnosis-fields">
-          <legend>Falha encontrada</legend>
-
-          <div class="field-group field-group--full">
-            <label [for]="fieldId('foundFailure')" class="sr-only">Falha encontrada</label>
+      <form [formGroup]="diagnosisForm" (ngSubmit)="saveDiagnosis()" class="inline-form" (keydown.escape)="cancelOnEscape($event)">
+          <div class="field-group field-group--full field-group--required">
+            <label [for]="fieldId('foundFailure')">Falha encontrada</label>
             <textarea [id]="fieldId('foundFailure')" formControlName="foundFailure" rows="4"
               [attr.aria-invalid]="showDiagnosisError(diagnosisForm.controls.foundFailure) || null"
               [attr.aria-describedby]="showDiagnosisError(diagnosisForm.controls.foundFailure) ? fieldId('foundFailure-error') : null"></textarea>
@@ -52,13 +49,8 @@
               [options]="failureCauseSelectOptions"
             />
           </div>
-        </fieldset>
-
-        <fieldset class="diagnosis-fields">
-          <legend>Notas</legend>
-
           <div class="field-group field-group--full">
-            <label [for]="fieldId('notes')" class="sr-only">Notas</label>
+            <label [for]="fieldId('notes')">Notas</label>
             <textarea [id]="fieldId('notes')" formControlName="notes" rows="4" maxlength="2000"
               [attr.aria-invalid]="showDiagnosisError(diagnosisForm.controls.notes) || null"
               [attr.aria-describedby]="showDiagnosisError(diagnosisForm.controls.notes) ? fieldId('notes-error') : null"></textarea>
@@ -66,9 +58,7 @@
               <small class="field-error" [id]="fieldId('notes-error')">Use até 2000 caracteres.</small>
             }
           </div>
-        </fieldset>
-
-        <div class="form-actions form-actions--full">
+        <div class="form-actions inline-form__actions">
           <button type="button" class="button-secondary" (click)="cancel()" [disabled]="diagnosisSubmitting()">Cancelar</button>
           <button type="submit" class="button-primary" [disabled]="diagnosisSubmitting()">
             {{ diagnosisSubmitting() ? 'Salvando...' : 'Salvar diagnóstico' }}
