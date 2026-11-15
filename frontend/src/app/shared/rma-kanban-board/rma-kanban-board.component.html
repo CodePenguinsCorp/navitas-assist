@@ -10,7 +10,7 @@
         [class.is-drop-target]="isDropTarget(column.status)"
         [attr.data-status]="column.status"
         (dragover)="dragOver($event, column.status)"
-        (dragleave)="columnDragLeave.emit(column.status)"
+        (dragleave)="dragLeave($event, column.status)"
         (drop)="columnDrop.emit({ event: $event, status: column.status, beforeId: insertionBefore() })"
       >
         <header class="board-column__header">

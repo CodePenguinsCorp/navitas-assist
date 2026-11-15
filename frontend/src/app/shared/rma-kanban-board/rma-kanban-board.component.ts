@@ -91,6 +91,14 @@ export class RmaKanbanBoardComponent {
     this.cardReorder.emit({ rma, direction: event.key === 'ArrowUp' ? -1 : 1 });
   }
 
+  /** dragleave also fires when the pointer crosses a child element; only leave when it really exits the column. */
+  protected dragLeave(event: DragEvent, status: RmaStatus): void {
+    const column = event.currentTarget as HTMLElement;
+    if (event.relatedTarget instanceof Node && column.contains(event.relatedTarget)) return;
+    this.insertionBefore.set(null);
+    this.columnDragLeave.emit(status);
+  }
+
   protected dragOver(event: DragEvent, status: RmaStatus): void {
     if (!this.canUpdateStatus() || this.draggedRmaId() === null || this.boardUpdatingId() !== null) return;
     const column = event.currentTarget as HTMLElement;

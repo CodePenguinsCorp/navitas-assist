@@ -55,7 +55,6 @@
   background: var(--lane-drop-bg);
   border-color: var(--brand-sky);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-sky) 24%, transparent);
-  transform: translateY(-2px);
 }
 
 .board-column__header {
@@ -79,7 +78,9 @@
   padding: 4px;
   align-content: start;
 }
-.board-insertion { block-size: 3px; background: var(--brand-sky); }
+/* Zero-height marker: the negative margin cancels the grid gaps it adds, so cards never shift while dragging. */
+.board-insertion { position: relative; block-size: 0; margin-block: calc(var(--space-4) / -2); pointer-events: none; }
+.board-insertion::before { content: ''; position: absolute; inset: -2px 0 auto; block-size: 3px; border-radius: 2px; background: var(--brand-sky); }
 .board-skeleton { min-block-size: 180px; background: var(--line); border-radius: 14px; }
 .board-more-error { margin: 0; color: var(--danger-text); }
 
@@ -116,8 +117,7 @@
 }
 
 .board-card.is-dragging {
-  opacity: 0.55;
-  transform: rotate(1deg) scale(0.99);
+  opacity: 0.45;
 }
 
 .board-card.is-updating {
