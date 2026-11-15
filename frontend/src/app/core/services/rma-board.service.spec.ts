@@ -14,7 +14,7 @@ describe('Transporte do Kanban paginado', () => {
   });
   afterEach(() => http.verify());
 
-  it('envia os filtros e exclui o loading global somente nas páginas incrementais', () => {
+  it('envia os filtros e exclui o loading global em todas as páginas do quadro', () => {
     const api = service as any;
     for (const page of [0, 1]) {
       api.listBoardColumn({ status: 'TRIAGE', query: ' Série ', warranty: 'IN_WARRANTY', blocked: false,
@@ -30,7 +30,7 @@ describe('Transporte do Kanban paginado', () => {
       expect(request.request.params.get('updatedTo')).toBe('2026-11-15');
       expect(request.request.params.get('page')).toBe(String(page));
       expect(request.request.params.get('size')).toBe('20');
-      expect(request.request.context.get(SKIP_GLOBAL_LOADING)).toBe(page > 0);
+      expect(request.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
       request.flush({ cards: [], total: 0, hasMore: false, page, size: 20 });
     }
   });
@@ -40,11 +40,12 @@ describe('Transporte do Kanban paginado', () => {
     api.getBoardCounts({ query: 'abc', unassignedOnly: true }).subscribe();
     const counts = http.expectOne(r => r.url === '/api/rmas/board/counts');
     expect(counts.request.params.get('unassignedOnly')).toBe('true');
-    expect(counts.request.context.get(SKIP_GLOBAL_LOADING)).toBe(false);
+    expect(counts.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
     counts.flush({});
     const payload = { status: 'TRIAGE', afterId: 1, beforeId: 3 };
     api.updateBoardPosition(2, payload).subscribe();
     const write = http.expectOne('/api/rmas/2/board-position');
+    expect(write.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
     expect(write.request.method).toBe('PUT');
     expect(write.request.body).toEqual(payload);
     write.flush({ id: 2 });

@@ -5,6 +5,7 @@ import { RMA_STATUS_FLOW } from '../../core/mock-data';
 import { RmaBoardCardResponse, RmaBoardPageResponse, RmaStatus } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
+import { ToastService } from '../../core/services/toast.service';
 import { RmaService } from '../../core/services/rma.service';
 import { buildRma } from '../../testing/rma-fixtures';
 import { providePermissions, profilePermissions } from '../../testing/permission-fixtures';
@@ -92,6 +93,27 @@ describe('Kanban paginado no servidor', () => {
     page.source.next({ cards: [second, { ...first, id: 3 }], total: 45, hasMore: false, page: 1, size: 20 });
     page.source.complete();
     expect(component.filteredRmas().map((c: RmaBoardCardResponse) => c.id)).toEqual([1, 2, 3]);
+  });
+
+  it('reconcilia o movimento sem esqueletos, vazio ou avisos duplicados', () => {
+    respond([first]);
+    const toasts = TestBed.inject(ToastService);
+    const notice = vi.spyOn(toasts, 'show');
+    api.updateBoardPosition.mockReturnValue(of({ ...first, status: 'TRIAGE' }));
+    component.reorderCard(first, 'TRIAGE', null);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const source = host.querySelector('[data-status="RECEIVED"]')!;
+    expect(host.querySelectorAll('.board-skeleton').length).toBe(0);
+    expect(source.textContent).not.toContain('Nenhum item');
+    expect(host.querySelector('[data-status="TRIAGE"] [data-rma-id="1"]')).not.toBeNull();
+    expect(host.querySelector('.board-column__stack')?.classList.contains('app-scroll')).toBe(false);
+    expect(notice).toHaveBeenCalledTimes(1);
+    respond([{ ...first, status: 'TRIAGE' }]);
+    expect(source.textContent).toContain('Nenhum item');
+    expect(notice).toHaveBeenCalledTimes(1);
+    expect(notice.mock.calls[0][0].message).toBe('Movido para Triagem');
+    expect(toasts.toasts().length).toBe(1);
   });
 
   it('reverte a ordem otimista e anuncia falha ao gravar', () => {

@@ -36,16 +36,16 @@ export class RmaService {
 
   listBoardColumn(filters: RmaBoardFilters, page = 0, size = 20): Observable<RmaBoardPageResponse> {
     const params = boardParams(filters).set('page', page).set('size', size);
-    const context = new HttpContext().set(SKIP_GLOBAL_LOADING, page > 0);
+    const context = new HttpContext().set(SKIP_GLOBAL_LOADING, true);
     return this.http.get<RmaBoardPageResponse>('/api/rmas/board/column', { params, context });
   }
 
   getBoardCounts(filters: RmaBoardFilters = {}): Observable<RmaBoardCountsResponse> {
-    return this.http.get<RmaBoardCountsResponse>('/api/rmas/board/counts', { params: boardParams(filters) });
+    return this.http.get<RmaBoardCountsResponse>('/api/rmas/board/counts', { params: boardParams(filters), context: new HttpContext().set(SKIP_GLOBAL_LOADING, true) });
   }
 
   updateBoardPosition(id: number, payload: RmaBoardPositionRequest): Observable<RmaBoardCardResponse> {
-    return this.http.put<RmaBoardCardResponse>(`/api/rmas/${id}/board-position`, payload);
+    return this.http.put<RmaBoardCardResponse>(`/api/rmas/${id}/board-position`, payload, { context: new HttpContext().set(SKIP_GLOBAL_LOADING, true) });
   }
 
   list(filters: RmaFilters = {}): Observable<PageResponse<RmaListItemResponse>> {
