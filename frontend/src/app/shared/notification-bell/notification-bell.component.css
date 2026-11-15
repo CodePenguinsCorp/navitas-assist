@@ -19,9 +19,11 @@
 .bell-item__content { display: grid; gap: var(--space-1); min-width: 0; }
 .bell-item__head { display: flex; align-items: center; gap: var(--space-2); }
 .bell-item__head .mini-chip { font-size: var(--font-size-xs); }
-.bell-item__dot { flex: none; width: 7px; height: 7px; border-radius: 50%; }
-.is-unread .bell-item__dot { background: var(--brand-blue); }
-.bell-item__title { font-size: var(--font-size-control); font-weight: var(--font-weight-bold); overflow-wrap: anywhere; }
+.bell-item__top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+.bell-item__dot { display: inline-block; width: 7px; height: 7px; margin-right: var(--space-2); border-radius: 50%; background: var(--brand-blue); vertical-align: middle; }
+.bell-item__title { font-size: var(--font-size-control); font-weight: var(--font-weight-bold); overflow-wrap: anywhere;  min-width: 0; flex: 1; }
 .bell-item__summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; color: var(--muted); font-size: var(--font-size-sm); }
-.bell-item__time, .bell-item__chevron { color: var(--muted); font-size: var(--font-size-xs); }
+.bell-item__time, .bell-item__chevron { color: var(--muted); font-size: var(--font-size-xs);  }
+.bell-item__time { flex: none; white-space: nowrap; }
+.bell-item__head { display: flex; justify-content: flex-start; margin-top: var(--space-1); }
 @media (max-width: 720px) { .bell-panel { right: auto; left: 0; width: calc(100vw - 64px - 2rem); } }

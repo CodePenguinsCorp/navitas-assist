@@ -62,13 +62,12 @@
                       <app-icon [name]="notification.severity === 'INFO' ? 'bell' : 'alert'" [size]="18" />
                     </span>
                     <span class="bell-item__content">
-                      <span class="bell-item__head">
-                        <span class="bell-item__dot" aria-hidden="true"></span>
-                        <span class="mini-chip" [class]="severityClass(notification.severity)">{{ severityLabels[notification.severity] }}</span>
+                      <span class="bell-item__top">
+                        <span class="bell-item__title">@if (!notification.read) { <span class="bell-item__dot" aria-hidden="true"></span> }{{ headline }}</span>
+                        <time class="bell-item__time" [attr.datetime]="notification.createdAt" [appTip]="dateTime(notification.createdAt)">{{ timeOf(notification.createdAt) }}</time>
                       </span>
-                      <span class="bell-item__title">{{ headline }}</span>
                       <span class="bell-item__summary">{{ notification.message }}</span>
-                      <span class="bell-item__side"><time class="bell-item__time" [attr.datetime]="notification.createdAt" [appTip]="dateTime(notification.createdAt)">{{ timeOf(notification.createdAt) }}</time></span>
+                      <span class="bell-item__head"><span class="mini-chip" [class]="severityClass(notification.severity)">{{ severityLabels[notification.severity] }}</span></span>
                     </span>
                     <app-icon class="bell-item__chevron" name="chevron" [size]="16" />
                   </button>

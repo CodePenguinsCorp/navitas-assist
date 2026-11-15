@@ -193,7 +193,7 @@ describe('NotificationBellComponent', () => {
     expect(rows.map((row) => row.querySelector('time')!.getAttribute('datetime')))
       .toEqual([NOTIFICATION.createdAt, READ.createdAt]);
     expect(rows.map((row) => row.classList.contains('is-unread'))).toEqual([true, false]);
-    expect(rows.every((row) => row.querySelector('.bell-item__side time'))).toBe(true);
+    expect(rows.every((row) => row.querySelector('.bell-item__top time'))).toBe(true);
   });
 
   it('reloads with only unread items when the switch is turned on', async () => {
