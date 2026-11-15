@@ -14,6 +14,7 @@ const EXECUTION: ProtocolExecutionResponse = {
     unit: null, decimalPlaces: null, minValue: null, maxValue: null, expectedResult: null, evidenceRequired: false }, latest: null, attempts: [] }]
 };
 const TEMPLATE: ProtocolTemplateResponse = {
+  inUse: false,
   id: 2, name: 'Bancada PWM', currentVersion: 4, productId: null, productName: null, category: 'Placas', active: true,
   blockedStatuses: [], items: [], updatedAt: '2026-10-20T12:00:00Z'
 };
