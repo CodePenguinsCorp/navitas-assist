@@ -128,6 +128,8 @@ painel 3. Prévia           texto do arquivo
                            rodapé .table-card__footer: app-pagination e, abaixo, .form-actions--end com Importar à direita
 ```
 
+Na prévia, clicar em uma métrica filtra as linhas; clicar novamente na métrica ativa limpa o filtro, sem botão "Limpar filtro".
+
 Não há "Cancelar" de página: sair é a seta de voltar do cabeçalho, e trocar o arquivo é escolher outro no passo 2. O rodapé fica só com a ação primária. É a tela-modelo para qualquer fluxo "enviar, conferir, confirmar".
 
 ### 3.9 Relatórios

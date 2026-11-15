@@ -132,14 +132,14 @@ describe('CatalogImportComponent', () => {
     expect(metrics[1].getAttribute('aria-pressed')).toBe('true');
     expect(root.querySelectorAll('tbody tr').length).toBe(1);
     expect(root.querySelector('tbody')?.textContent).toContain('Obrigatório');
-    expect(root.querySelector('.import-clear')?.textContent).toBe('Limpar filtro');
+    expect([...root.querySelectorAll('button, a')].some(control => control.textContent?.trim() === 'Limpar filtro')).toBe(false);
+    expect(root.querySelectorAll('.page-summary button').length).toBe(3);
     metrics[1].click(); fixture.detectChanges();
     expect(metrics[1].getAttribute('aria-pressed')).toBe('false');
     expect(root.querySelectorAll('tbody tr').length).toBe(3);
-    expect(root.querySelector('.import-clear')).toBeNull();
     expect([...root.querySelectorAll('button')].some(b => b.textContent?.trim() === 'Todas')).toBe(false);
     metrics[0].click(); fixture.detectChanges();
-    root.querySelector<HTMLButtonElement>('.import-clear')!.click(); fixture.detectChanges();
+    metrics[0].click(); fixture.detectChanges();
     expect(metrics[0].getAttribute('aria-pressed')).toBe('false');
     expect(root.querySelectorAll('tbody tr').length).toBe(3);
     page.preview.set({ ...page.preview(), rows: [], validRows: 12, invalidRows: 0, duplicateRows: 0, totalRows: 1, blankRows: 1 });

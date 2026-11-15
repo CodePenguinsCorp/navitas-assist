@@ -32,7 +32,6 @@
         @for (metric of metrics; track metric.status) {
           <li><button type="button" [class]="'page-summary__item tone-' + tones[metric.status]" [attr.aria-pressed]="filter() === metric.status" (click)="toggleFilter(metric.status)"><strong>{{ result[metric.field] }}</strong> {{ result[metric.field] === 1 ? metric.label : metric.label + 's' }}</button></li>
         }
-        @if (filter() !== 'all') { <li><button type="button" class="link-button page-summary__clear import-clear" (click)="changeFilter('all')">Limpar filtro</button></li> }
       </ul>
       <p class="sr-only" aria-live="polite" aria-atomic="true">{{ filterLabel() }}: {{ counted(filteredRows().length, 'linha') }}</p>
       <div class="table-wrap table-card--stack import-table">
