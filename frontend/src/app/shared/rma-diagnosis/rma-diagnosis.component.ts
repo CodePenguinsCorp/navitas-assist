@@ -1,7 +1,7 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, ElementRef, EventEmitter, Injector, Output, afterNextRender, computed, effect, inject, input, signal, viewChild } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { catchError, finalize, of, switchMap } from 'rxjs';
+import { finalize } from 'rxjs';
 import { CLOSED_RMA_STATUSES, FAILURE_CAUSE_LABELS, FAILURE_CAUSE_OPTIONS, FAILURE_TYPE_LABELS, FAILURE_TYPE_OPTIONS } from '../../core/mock-data';
 import { FailureCause, FailureType, RmaResponse } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
@@ -112,10 +112,7 @@ export class RmaDiagnosisComponent {
       foundFailure: raw.foundFailure.trim(), failureType: raw.failureType || null, probableCause: raw.probableCause || null,
       notes: normalizeText(raw.notes), diagnosedAt: raw.diagnosedAt, technicianName: raw.technicianName.trim()
     }).pipe(
-      switchMap(updated => this.service.getById(id).pipe(catchError(() => {
-        this.message.set('Diagnóstico salvo. Não foi possível recarregar a OS; atualize o detalhe.');
-        return of(updated);
-      }))),
+      // The PUT answers with the whole updated OS: no second read.
       finalize(() => { this.diagnosisSubmitting.set(false); this.diagnosisForm.enable(); this.busyChange.emit(false); })
     ).subscribe({
       next: updated => { this.editing.set(false); this.saved.emit(updated); this.focus('.diagnosis-trigger'); },

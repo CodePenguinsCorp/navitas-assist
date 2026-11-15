@@ -93,10 +93,14 @@ describe('Diagnóstico inline', () => {
     expect(calls).toHaveLength(0);
   });
 
-  it('salva o mesmo contrato, recarrega a OS e mantém o detalhe aberto', () => {
+  it('salva o mesmo contrato e usa a resposta do próprio PUT, sem reler a OS', () => {
+    const emitted: RmaResponse[] = [];
+    fixture.componentInstance.saved.subscribe(rma => emitted.push(rma));
     edit(); fill('foundFailure', '  Falha na fonte  '); fill('notes', '   '); submit();
     expect(calls).toEqual([expect.objectContaining({ foundFailure: 'Falha na fonte', technicianName: 'Ana', notes: null, failureType: null, probableCause: null })]);
-    expect(reads).toBe(1);
+    expect(reads).toBe(0);
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0].diagnosis).toEqual(diagnosis);
     expect(host().querySelector('form')).toBeNull();
     expect(host().textContent).toContain('Falha na fonte');
     expect(button('Editar')).toBeDefined();

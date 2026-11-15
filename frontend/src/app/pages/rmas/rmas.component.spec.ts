@@ -295,7 +295,7 @@ describe('RmasComponent pending editor lifecycle', () => {
       : { ...createdRma, diagnosis: { id: 1, ...request.request.body,
         createdAt: createdRma.createdAt, updatedAt: createdRma.updatedAt } };
     request.flush(saved);
-    if (mode === 'diagnosis') { detailBody = saved; http.expectOne('/api/rmas/1').flush(saved); }
+    if (mode === 'diagnosis') detailBody = saved;
     const reloaded = mode === 'create' ? [createdRma, saved] : [saved];
     http.expectOne(r => r.method === 'GET' && r.url.split('?')[0] === '/api/rmas').flush({ content: reloaded, page: 0, size: 20, totalElements: reloaded.length, totalPages: 1 });
     http.expectOne('/api/rmas/summary').flush({ total: reloaded.length, ongoing: reloaded.length, highPriority: 0 });
