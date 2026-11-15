@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { IconComponent } from '../icon/icon.component';
 import { NotificationResponse } from '../../core/models';
 import { ClockService } from '../../core/services/clock.service';
 import { NotificationDetailModalComponent } from './notification-detail-modal.component';
@@ -31,7 +33,12 @@ describe('NotificationDetailModalComponent', () => {
     await setup({ ...NOTIFICATION, eventType: 'RMA_CREATED', severity: 'INFO', message: '[DEMO] Vale Verde · [DEMO] Switch · prioridade alta. Aberta por admin.' });
     expect(root().querySelector('dl[aria-label="Detalhes da notificação"]')).not.toBeNull();
     expect(root().querySelector('.notification-detail__summary')).toBeNull();
-    expect(root().querySelector('.notification-detail__message')!.textContent).toBe('Ordem de serviço aberta por admin.');
+    expect(root().querySelector('.notification-detail__message')).toBeNull();
+    expect(root().querySelectorAll('.notification-detail__primary')).toHaveLength(2);
+    expect(root().querySelector('.priority-tag[data-priority="HIGH"] .priority-bars')!.children).toHaveLength(3);
+    expect(root().querySelector('.avatar')!.getAttribute('aria-hidden')).toBe('true');
+    expect(root().querySelector('.notification-detail__toolbar nav')).not.toBeNull();
+    expect(root().querySelector('.notification-detail__toolbar .button-primary')).not.toBeNull();
     expect(root().querySelector('header .notification-detail__meta')).not.toBeNull();
     expect(root().querySelectorAll('footer .button-primary')).toHaveLength(1);
     const dialog = root().querySelector('[role="dialog"]')!;
@@ -41,10 +48,37 @@ describe('NotificationDetailModalComponent', () => {
     expect(root().querySelectorAll('button[aria-label="Fechar"]').length).toBe(1);
     expect(button('Fechar')).toBeUndefined();
     expect(Array.from(root().querySelectorAll('dt')).map(el => el.textContent!.trim())).toEqual(['Cliente', 'Equipamento', 'Prioridade', 'Aberta por']);
-    expect(Array.from(root().querySelectorAll('dd')).map(el => el.textContent!.trim())).toEqual(['[DEMO] Vale Verde', '[DEMO] Switch', 'alta', 'admin']);
+    expect(Array.from(root().querySelectorAll('dd')).map(el => el.textContent!.trim())).toEqual(['[DEMO] Vale Verde', '[DEMO] Switch', 'alta', 'Aadmin']);
     expect(text().split('OS-2026-000007').length - 1).toBe(1);
     expect(root().querySelector('.notification-detail__meta time')!.textContent).toBe('24/10/2026, 11:30');
-    expect(root().querySelector('.notification-detail__read')!.textContent!.trim()).toBe('Não lida');
+    expect(root().querySelector('[aria-label="Não lida"]')).not.toBeNull();
+  });
+
+
+  it.each([
+    ['RMA_CREATED', 'Nova OS', 'clipboard'], ['RMA_ASSIGNED', 'Nova atribuição', 'users'],
+    ['RMA_BLOCKED', 'Impedimento', 'lock'], ['PART_PENDING', 'Peça pendente', 'box'],
+    ['TEST_FAILED', 'Falha de teste', 'alert']
+  ] as const)('apresenta %s sem depender dos campos de OS', async (eventType, title, icon) => {
+    await setup({ ...NOTIFICATION, eventType, title: '', rmaId: null, rmaCode: null, actionPath: null,
+      message: 'Contexto específico preservado', severity: 'CRITICAL' });
+    expect(root().querySelector('h3')!.textContent).toBe(title);
+    expect(fixture.debugElement.query(By.directive(IconComponent)).componentInstance.name()).toBe(icon);
+    expect(root().querySelector('.notification-detail__severity')!.textContent).toBe('Crítico');
+    expect(text()).toContain('Contexto específico preservado');
+    expect(root().querySelector('dl')).toBeNull();
+    expect(button('Abrir OS')).toBeUndefined();
+  });
+
+  it('preserva a etapa e as pessoas da atribuição sem repetir a mensagem', async () => {
+    await setup({ ...NOTIFICATION, eventType: 'RMA_ASSIGNED', severity: 'INFO',
+      title: 'OS OS-2026-000007 atribuída a Maria Silva',
+      message: 'Cliente · Equipamento · etapa Diagnóstico. Atribuída por João.' });
+    expect(root().querySelector('.notification-detail__message')).toBeNull();
+    expect(text()).toContain('Diagnóstico');
+    expect(text()).toContain('Maria Silva');
+    expect(root().querySelectorAll('.avatar')).toHaveLength(2);
+    expect(root().querySelector('[data-status]')).toBeNull();
   });
 
   it('keeps an impediment reason intact without extra headings', async () => {
@@ -59,7 +93,7 @@ describe('NotificationDetailModalComponent', () => {
     await setup({ ...NOTIFICATION, read: true, readAt: '2026-10-24T14:40:00Z', snoozedUntil: '2026-10-24T18:00:00Z' });
     const meta = () => root().querySelector('.notification-detail__meta')!.textContent!.replace(/[\s ]+/g, ' ').trim();
     expect(root().querySelector('.notification-detail__meta time')!.textContent).toBe('24/10/2026, 11:30');
-    expect(root().querySelector('.notification-detail__read')!.textContent!.trim()).toBe('Lida');
+    expect(root().querySelector('[aria-label="Não lida"]')).toBeNull();
     expect(meta()).toContain('há 30 min');
     expect(meta()).toContain('Adiada até 24/10/2026, 15:00');
 
@@ -71,7 +105,7 @@ describe('NotificationDetailModalComponent', () => {
   it('preserva valores longos e mantém as ações no rodapé', async () => {
     const client = 'Cliente com nome extenso '.repeat(12);
     await setup({ ...NOTIFICATION, eventType: 'RMA_CREATED', message: `${client} · Equipamento · prioridade alta. Aberta por Maria.` });
-    expect(root().querySelector('dd')!.textContent).toBe(client);
+    expect(root().querySelector('dd')!.textContent!.trim()).toBe(client.trim());
     expect(root().querySelectorAll('dl > div')).toHaveLength(4);
     expect(root().querySelectorAll('h4')).toHaveLength(0);
     expect(root().querySelector('header .mini-chip')!.textContent).toBe(NOTIFICATION.rmaCode);

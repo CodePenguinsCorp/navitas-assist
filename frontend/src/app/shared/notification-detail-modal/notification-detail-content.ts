@@ -24,7 +24,5 @@ export function notificationDetailContent({ message, eventType, title, rmaCode }
     const assignee = prefix && title.startsWith(prefix) ? title.slice(prefix.length) : '';
     fields.push(assignee.trim() ? { label: 'Responsável', value: assignee } : { label: 'Atribuição', value: title });
   }
-  return { fields, message: recognized
-    ? eventType === 'RMA_CREATED' ? `Ordem de serviço aberta por ${detail[2]}.` : `Ordem de serviço atribuída por ${detail[2]}.`
-    : message };
+  return { fields, message: recognized ? '' : message };
 }

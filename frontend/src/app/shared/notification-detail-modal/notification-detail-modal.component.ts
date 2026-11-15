@@ -1,5 +1,6 @@
 import { Component, computed, inject, input, output } from '@angular/core';
-import { NotificationResponse } from '../../core/models';
+import { NotificationEventType, NotificationResponse } from '../../core/models';
+import { initialsOf } from '../../core/utils/rma-ui';
 import { ClockService } from '../../core/services/clock.service';
 import {
   NOTIFICATION_EVENT_LABELS,
@@ -13,7 +14,7 @@ import {
   severityClass
 } from '../../core/utils/notification-ui';
 import { CustomSelectComponent } from '../form-controls/custom-select/custom-select.component';
-import { IconComponent } from '../icon/icon.component';
+import { IconComponent, IconName } from '../icon/icon.component';
 import { ModalFocusDirective } from '../modal-focus/modal-focus.directive';
 import { notificationDetailContent } from './notification-detail-content';
 
@@ -55,6 +56,11 @@ export class NotificationDetailModalComponent {
   protected readonly snoozeOptions = SNOOZE_OPTIONS;
   protected readonly severityClass = severityClass;
   protected readonly dateTime = formatNotificationDateTime;
+  protected readonly initialsOf = initialsOf;
+  protected readonly eventIcons: Record<NotificationEventType, IconName> = {
+    RMA_CREATED: 'clipboard', RMA_ASSIGNED: 'users', RMA_BLOCKED: 'lock', PART_PENDING: 'box', TEST_FAILED: 'alert'
+  };
+  protected readonly priorities: Record<string, string> = { alta: 'HIGH', média: 'MEDIUM', baixa: 'LOW' };
 
   protected readonly headline = computed(() => this.notification().eventType === 'RMA_BLOCKED' ? 'Impedimento' : this.eventLabels[this.notification().eventType]);
   protected readonly content = computed(() => notificationDetailContent(this.notification()));

@@ -146,7 +146,7 @@ describe('NotificationBellComponent', () => {
     http.expectOne({ method: 'POST', url: '/api/notifications/5/read' }).flush({ ...NOTIFICATION, read: true });
     flushSummary(0);
     await render();
-    expect(dialogText()).toContain('Lida');
+    expect(dialog()!.querySelector('[aria-label="Não lida"]')).toBeNull();
   });
 
   it('never opens the global loading while the panel loads or acts', async () => {
@@ -257,11 +257,11 @@ describe('NotificationBellComponent', () => {
       expect(dialogText()).toContain('Nova atribuição');
       expect(dialog()!.querySelector('.notification-detail__meta')!.textContent).toContain('24/10/2026, 10:00');
       expect(dialogText()).toContain('há 5 h');
-      expect(dialogText()).toContain('Não lida');
+      expect(dialog()!.querySelector('[aria-label="Não lida"]')).not.toBeNull();
       expect(dialog()!.querySelector('.notification-detail__message')!.textContent).toBe('Linha 1\nLinha 2');
       expect(loading.pendingCount()).toBe(0);
       await settleRead();
-      expect(dialogText()).toContain('Lida');
+      expect(dialog()!.querySelector('[aria-label="Não lida"]')).toBeNull();
       expect(dialogButton('Marcar como lida')).toBeUndefined();
       expect(navigate).not.toHaveBeenCalled();
     });

@@ -6,15 +6,16 @@
     <header class="modal-header">
       <span class="notification-detail__seal" [class]="severityClass(notification().severity)"
         role="img" [attr.aria-label]="severityLabels[notification().severity]">
-        <app-icon [name]="notification().severity === 'INFO' ? 'bell' : 'alert'" [size]="18" />
+        <app-icon [name]="eventIcons[notification().eventType]" [size]="24" />
       </span>
       <div class="notification-detail__heading">
         <h3 class="notification-detail__title" [id]="titleId" tabindex="-1">{{ headline() }}</h3>
         @if (notification().rmaCode; as code) { <span class="mini-chip notification-detail__code">{{ code }}</span> }
+        <span class="mini-chip notification-detail__severity" [class]="severityClass(notification().severity)">{{ severityLabels[notification().severity] }}</span>
         <div class="notification-detail__meta" aria-label="Metadados">
+          <strong>{{ ago() }}</strong>
           <time [attr.datetime]="notification().createdAt">{{ dateTime(notification().createdAt) }}</time>
-          <span>· {{ ago() }}</span>
-          <span class="notification-detail__read">{{ notification().read ? 'Lida' : 'Não lida' }}</span>
+          @if (!notification().read) { <span class="notification-detail__unread" role="img" aria-label="Não lida"></span> }
           @if (snoozedUntil(); as until) {
             <span class="notification-detail__snoozed"><app-icon name="clock" [size]="14" />Adiada até {{ dateTime(until) }}</span>
           }
@@ -30,7 +31,18 @@
       @if (content().fields.length) {
         <dl class="notification-detail__fields" aria-label="Detalhes da notificação">
           @for (field of content().fields; track field.label) {
-            <div><dt>{{ field.label }}</dt><dd>{{ field.value }}</dd></div>
+            <div [class.notification-detail__primary]="field.label === 'Cliente' || field.label === 'Equipamento'">
+              <dt>{{ field.label }}</dt>
+              <dd>
+                @if (field.label === 'Prioridade') {
+                  <span class="priority-tag" [attr.data-priority]="priorities[field.value]"><span class="priority-bars" [attr.data-priority]="priorities[field.value]" aria-hidden="true"><i></i><i></i><i></i></span>{{ field.value }}</span>
+                } @else if (field.label === 'Aberta por' || field.label === 'Atribuída por' || field.label === 'Responsável') {
+                  <span class="notification-detail__person"><span class="avatar" aria-hidden="true">{{ initialsOf(field.value) }}</span><span>{{ field.value }}</span></span>
+                } @else {
+                  {{ field.value }}
+                }
+              </dd>
+            </div>
           }
         </dl>
       }
@@ -44,20 +56,22 @@
         }
       }
       @if (busy()) { <p class="notification-detail__pending" role="status">Salvando…</p> }
-      <nav class="notification-detail__nav" aria-label="Navegar pelas notificações">
-        <button type="button" class="button-secondary notification-detail__ghost notification-detail__prev" aria-label="Notificação anterior"
-          aria-keyshortcuts="ArrowLeft" [disabled]="!hasPrevious() || busy()" (click)="previous.emit()"><app-icon name="chevron" [size]="16" />Anterior</button>
-        @if (position() !== null && total() !== null) { <span aria-live="polite">{{ position() }} de {{ total() }}</span> }
-        <button type="button" class="button-secondary notification-detail__ghost" aria-label="Próxima notificação"
-          aria-keyshortcuts="ArrowRight" [disabled]="!hasNext() || busy()" (click)="next.emit()">Próxima<app-icon name="chevron" [size]="16" /></button>
-      </nav>
-      <div class="notification-detail__actions">
-        <div class="notification-detail__secondary">
-          @if (canSnooze()) {
-            <app-custom-select size="compact" appearance="person" [actionMenu]="true" [ariaLabel]="'Adiar ' + headline()" placeholder="Adiar" [options]="snoozeOptions" [disabled]="busy()" (valueChange)="snooze($any($event))" />
-          }
+      <div class="notification-detail__toolbar">
+        <nav class="notification-detail__nav" aria-label="Navegar pelas notificações">
+          <button type="button" class="button-secondary notification-detail__ghost notification-detail__prev" aria-label="Notificação anterior"
+            aria-keyshortcuts="ArrowLeft" [disabled]="!hasPrevious() || busy()" (click)="previous.emit()"><app-icon name="chevron" [size]="16" /></button>
+          @if (position() !== null && total() !== null) { <span aria-live="polite">{{ position() }} de {{ total() }}</span> }
+          <button type="button" class="button-secondary notification-detail__ghost" aria-label="Próxima notificação"
+            aria-keyshortcuts="ArrowRight" [disabled]="!hasNext() || busy()" (click)="next.emit()"><app-icon name="chevron" [size]="16" /></button>
+        </nav>
+        <div class="notification-detail__actions">
+          <div class="notification-detail__secondary">
+            @if (canSnooze()) {
+              <app-custom-select size="compact" appearance="person" [actionMenu]="true" [ariaLabel]="'Adiar ' + headline()" placeholder="Adiar" [options]="snoozeOptions" [disabled]="busy()" (valueChange)="snooze($any($event))" />
+            }
+          </div>
+          @if (canOpen()) { <button type="button" class="button-primary" aria-label="Abrir OS" (click)="openAction.emit()"><span class="notification-detail__open-label">Abrir OS</span><app-icon name="external" [size]="16" /></button> }
         </div>
-        @if (canOpen()) { <button type="button" class="button-primary" (click)="openAction.emit()">Abrir OS<app-icon name="external" [size]="16" /></button> }
       </div>
     </footer>
   </section>

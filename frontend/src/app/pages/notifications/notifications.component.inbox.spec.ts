@@ -358,7 +358,7 @@ describe('NotificationsComponent inbox loading', () => {
         expect(dialog()!.querySelector('.notification-detail__message')!.textContent).toBe('Primeira linha\nSegunda linha <b>não é HTML</b>');
         expect(dialog()!.querySelector('.notification-detail__message b')).toBeNull();
         expect(service['markRead']).toHaveBeenCalledWith(5, { silent: true });
-        expect(dialogText()).toContain('Lida');
+        expect(dialog()!.querySelector('[aria-label="Não lida"]')).toBeNull();
         expect(dialogButton('Marcar como lida')).toBeUndefined();
         expect(navigate).not.toHaveBeenCalled();
       });
@@ -410,7 +410,7 @@ describe('NotificationsComponent inbox loading', () => {
         await setup({ markRead: failure() as never });
         titleButton().click();
         render();
-        expect(dialogText()).toContain('Não lida');
+        expect(dialog()!.querySelector('[aria-label="Não lida"]')).not.toBeNull();
         expect(dialogText()).toContain('Não foi possível concluir a ação agora.');
         expect(dialogButton('Marcar como lida')).toBeUndefined();
         expect(dialogButton('Tentar novamente')).toBeDefined();

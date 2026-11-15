@@ -23,3 +23,17 @@ Cartões foram descartados por repetirem a causa da reprovação; parágrafo ún
 
 ## Execução e verificação
 Primeiro atualizar specs e observar falha de estrutura; depois trocar template/CSS e a frase dos formatos reconhecidos. Preservar os outputs, regras e diretiva de foco. Rodar suíte completa com TZ=UTC e build sem avisos. Não haverá conferência em navegador; dimensões, aparência real e retorno de foco no navegador continuam sujeitos a conferência manual.
+
+## Terceira rodada
+
+Crítica: mensagem redundante, campos sem hierarquia, sino sem significado, leitura solta e rodapé em dois andares. O desenho passa a ter largura máxima de 560 px, padding igual nos quatro lados, ícone de evento em círculo tonal de 48 px, chip de severidade e tempo relativo forte com data absoluta discreta. Apenas não lidas recebem ponto com nome acessível.
+
+Cliente e equipamento ocupam linhas próprias com valores maiores e semibold; prioridade usa `priority-tag` e as três barras do Kanban; autor e responsável usam o avatar e as iniciais compartilhados. Não há cartões internos nem divisórias entre campos. Mensagens dos formatos exatos de criação e atribuição desaparecem porque seus dados já estão nos campos; mensagens ambíguas ou livres continuam integrais. Valores e código podem quebrar linha sem truncamento.
+
+Um único rodapé agrupa setas e contador à esquerda, Adiar quando permitido e Abrir OS à direita. Em até 480 px, Abrir OS fica em ícone, preservando o nome acessível e os controles de 40 px. Mantidos outputs, atalhos, `aria-labelledby` e `appModalFocus`, incluindo fechamento por Esc e retorno de foco.
+
+Tipos conferidos em `NotificationEventType` no backend e `core/utils/notification-ui.ts`: `RMA_CREATED` (Nova OS, clipboard), `RMA_ASSIGNED` (Nova atribuição, users), `RMA_BLOCKED` (Impedimento, lock), `PART_PENDING` (Peça pendente, box) e `TEST_FAILED` (Falha de teste, alert). Specs geram as cinco variações sem campos de OS, além de criação estruturada, atribuição com etapa e pessoas, texto livre, valores longos, leitura, navegação e ações. A severidade vem do payload, independentemente do tipo.
+
+O contrato `NotificationResponse` não oferece status atual da OS. Não foi criado status presumido nem chamada adicional; a etapa da atribuição continua sendo contexto do evento, sem chip de status atual. A validação de aparência, encaixe em 320 px, contraste calculado e foco em navegador permanece pendente, pois esta rodada não usa navegador.
+
+Verificação: build no workspace e em cópia isolada do HEAD com esta entrega, ambos sem avisos. Suíte completa com TZ=UTC e runner indicado também executada: o workspace sofreu erros de compilação em alterações concorrentes do Kanban e de Usuários. Na cópia isolada completa, 1.845 testes passaram e dois falharam, em 128 arquivos: `rmas.component.detail.spec.ts` (salvar prioridade) e `rma-detail-modal.component.spec.ts` (alterar prioridade), ambos esperando a confirmação inline removida no HEAD. Os 98 testes do modal, sino e caixa de entrada passaram, incluindo Esc e retorno de foco no ambiente de teste. Houve mensagens `socket hang up` na suíte; não se declara validação geral sem erros. CSS local: 3.718 bytes, sem `!important`.
