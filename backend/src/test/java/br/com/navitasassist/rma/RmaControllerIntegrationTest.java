@@ -625,7 +625,7 @@ class RmaControllerIntegrationTest {
                 .with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"priority\":\"HIGH\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.priority").value("HIGH"))
-            .andExpect(jsonPath("$.statusHistory[0].note").value("Priority changed from MEDIUM to HIGH"));
+            .andExpect(jsonPath("$.statusHistory[0].note").value("Prioridade alterada de MEDIUM para HIGH"));
     }
 
     @Test

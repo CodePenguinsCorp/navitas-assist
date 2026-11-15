@@ -188,7 +188,7 @@ class RmaReportIntegrationTest {
 
         mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2025-01-01").param("entryTo", "2026-01-02").with(asProfile("a", "ADMIN")))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("O período do relatório deve ter no máximo 366 days."));
+            .andExpect(jsonPath("$.message").value("O período do relatório deve ter no máximo 366 dias."));
         mockMvc.perform(get("/api/reports/rmas").param("entryFrom", "2025-01-01").param("entryTo", "2026-01-01").with(asProfile("a", "ADMIN")))
             .andExpect(status().isOk());
     }

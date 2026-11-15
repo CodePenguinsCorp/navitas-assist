@@ -89,8 +89,8 @@ public class KanbanViewService {
         if (filters.deadline() == RmaDeadlineStatus.CLOSED) {
             throw new BusinessException("O filtro de prazo deve ser OVERDUE, DUE_SOON, ON_TRACK ou NO_DUE_DATE.");
         }
-        validateRange(filters.entryFrom(), filters.entryTo(), "entry");
-        validateRange(filters.updatedFrom(), filters.updatedTo(), "updated");
+        validateRange(filters.entryFrom(), filters.entryTo(), "entrada");
+        validateRange(filters.updatedFrom(), filters.updatedTo(), "atualização");
     }
 
     private void validateRange(LocalDate from, LocalDate to, String field) {

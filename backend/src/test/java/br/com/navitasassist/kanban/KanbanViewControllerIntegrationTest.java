@@ -200,7 +200,7 @@ class KanbanViewControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(viewJson("Datas", false, invalidRange)))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("The entry start date cannot be after the end date."));
+            .andExpect(jsonPath("$.message").value("A data inicial de entrada não pode ser posterior à data final."));
     }
 
     @Test
