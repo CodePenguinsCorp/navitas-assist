@@ -337,9 +337,9 @@ async function seedVolume({ users, volume, demoClients, demoProducts, demoParts,
         for (let k = 0; k < 1 + (i % 3); k++) {
           await api(`${path}/repair/interventions`, 'POST', {
             type: ['RESOLDERING', 'CLEANING', 'REPROGRAMMING', 'FIRMWARE_UPDATE', 'HARNESS_REPLACEMENT', 'OTHER'][(i + k) % 6],
-            description: `[DEMO] Intervenção ${k + 1} do caso ${i + 1}.`, performedOn: date(Math.max(0, entryAgo - 1 - k)), hours: [0.5, 1, 1.5, 2.25, 3][(i + k) % 5],
+            description: `[DEMO] Reparo ${k + 1} do caso ${i + 1}.`, performedOn: date(Math.max(0, entryAgo - 1 - k)), hours: [0.5, 1, 1.5, 2.25, 3][(i + k) % 5],
           });
-          count('Intervenções (volume)', true);
+          count('Reparos (volume)', true);
         }
         if (i % 4 === 0) {
           await api(`${path}/repair/external-components`, 'POST', {
