@@ -95,7 +95,7 @@ describe('PartsComponent part form', () => {
     request.next(PART); request.complete(); render();
     expect(panel()).toBeNull();
     for (const method of ['list', 'listReplenishment', 'listPending']) expect(service[method]).toHaveBeenCalledTimes(2);
-    expect(toastMessages()).toEqual([mode === 'create' ? 'Peça Capacitor cadastrada.' : 'Peça Capacitor atualizada.']);
+    expect(toastMessages()).toEqual([mode === 'create' ? 'Peça cadastrada.' : 'Peça atualizada.']);
     expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
   });
 

@@ -107,7 +107,7 @@ describe('PartsComponent movement history', () => {
     expect(button('Cancelar', confirmation()!)!.disabled).toBe(false);
     service['reverseMovement'].mockReturnValue(of(REVERSAL)); button('Confirmar reversão', confirmation()!)!.click(); render();
     expect(service['reverseMovement']).toHaveBeenCalledTimes(2); expect(confirmation()).toBeNull();
-    expect(panel()).not.toBeNull(); expect(toastMessages()).toEqual(['Movimento 9 revertido.']); expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
+    expect(panel()).not.toBeNull(); expect(toastMessages()).toEqual(['Movimento revertido.']); expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
   });
 
   // Vermelho: falha inicial ou após reabertura aparece como vazio, sem retry.

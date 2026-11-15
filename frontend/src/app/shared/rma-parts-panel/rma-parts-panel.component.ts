@@ -21,8 +21,8 @@ import { CustomSelectComponent, CustomSelectOption } from '../form-controls/cust
 
 const ACTION_MESSAGES: Record<PartReservationAction, string> = {
   allocate: 'Reserva efetivada.',
-  consume: 'Aplicação registrada.',
-  cancel: 'Reserva cancelada e disponibilidade devolvida.'
+  consume: 'Peça aplicada.',
+  cancel: 'Reserva cancelada.'
 };
 
 @Component({
@@ -204,8 +204,8 @@ export class RmaPartsPanelComponent {
     ).subscribe({
       next: (reservation) => {
         this.toasts.show(reservation.status === 'PENDING'
-          ? { message: `Saldo insuficiente: ${reservation.partName} ficou pendente de reposição.`, tone: 'info', durationMs: 8000 }
-          : { message: `${reservation.partName} reservada para a OS.`, tone: 'success' });
+          ? { message: 'Reserva pendente de reposição.', tone: 'info', durationMs: 8000 }
+          : { message: 'Peça reservada.', tone: 'success' });
         if (this.rmaId() !== rmaId) return;
         this.closeReserve(true);
         this.load(rmaId);

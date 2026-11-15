@@ -136,7 +136,7 @@ describe('RmaPartsPanelComponent', () => {
     expect(fixture.nativeElement.querySelector('.record-row .inline-form')).toBeNull();
     dialog.querySelector('.button-primary--danger')!.click();
     expect(partService['updateReservation']).toHaveBeenCalledWith(7, 1, 'cancel');
-    expect(toastMessages()).toEqual(['Reserva cancelada e disponibilidade devolvida.']);
+    expect(toastMessages()).toEqual(['Reserva cancelada.']);
     expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
   });
 
@@ -178,7 +178,7 @@ describe('RmaPartsPanelComponent', () => {
     component.reserve();
 
     expect(partService['reserve']).toHaveBeenCalledWith(7, { partId: 4, quantity: 5, note: null });
-    expect(toastMessages()[0]).toContain('pendente de reposição');
+    expect(toastMessages()[0]).toBe('Reserva pendente de reposição.');
     expect(toastTones()).toEqual(['info']);
     expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
   });
@@ -214,7 +214,7 @@ describe('RmaPartsPanelComponent', () => {
     component.consumptionForm.setValue({ replacementReason: '  Capacitor em curto  ', componentBatch: ' L24 ' });
     component.confirmConsumption();
     expect(partService['updateReservation']).toHaveBeenCalledWith(7, 1, 'consume', { replacementReason: 'Capacitor em curto', componentBatch: 'L24' });
-    expect(toastMessages()).toEqual(['Aplicação registrada.']);
+    expect(toastMessages()).toEqual(['Peça aplicada.']);
   });
 
   it('uses the inline form pattern for reserving, applying, adding externals and voiding', async () => {

@@ -277,10 +277,6 @@ Inventário da migração (tela, texto, destino):
 | --- | --- | --- |
 | `shared/rma-repair-panel` | Intervenção salva. | Aviso, sucesso |
 | `shared/rma-repair-panel` | Intervenção anulada. (novo) | Aviso, sucesso |
-| `shared/rma-parts-panel` | `<peça>` reservada para a OS. | Aviso, sucesso |
-| `shared/rma-parts-panel` | Saldo insuficiente: `<peça>` ficou pendente de reposição. | Aviso, informação, 8 s |
-| `shared/rma-parts-panel` | Reserva efetivada. / Aplicação registrada. / Reserva cancelada e disponibilidade devolvida. | Aviso, sucesso |
-| `shared/rma-parts-panel` | Componente salvo. / Componente anulado. (novo) | Aviso, sucesso |
 | `shared/rma-diagnosis` | Diagnóstico salvo. (a variável `message` nunca era preenchida; o aviso passou a existir) | Aviso, sucesso |
 | `shared/rma-priority-field` | Prioridade alterada para `<nível>`. | Aviso, sucesso |
 | `shared/rma-assignee-field` | Responsável alterado para `<nome>`. / OS sem responsável. | Aviso, sucesso |
@@ -291,7 +287,8 @@ Inventário da migração (tela, texto, destino):
 | `pages/profiles` | Perfil `<nome>` cadastrado, atualizado ou excluído. | Aviso, sucesso |
 | `pages/users` | Usuário `<nome>` cadastrado, atualizado ou excluído. | Aviso, sucesso |
 | `pages/protocols` | Protocolo `<nome>` cadastrado, publicado na versão N ou excluído. | Aviso, sucesso |
-| `pages/parts` | Peça cadastrada ou atualizada. `<Tipo>` registrada para `<peça>`. Movimento N revertido. | Aviso, sucesso |
+| `pages/parts` | Peça cadastrada. / Peça atualizada. / Movimento registrado. / Movimento revertido. | Aviso, sucesso |
+| `shared/rma-parts-panel` | Peça reservada. / Reserva pendente de reposição (informativo, 8 s). / Reserva efetivada. / Peça aplicada. / Reserva cancelada. / Componente salvo. / Componente anulado. | Aviso, sucesso |
 | `pages/notifications` | Todas marcadas como lidas. Notificação adiada (até data). `<Evento>` silenciado ou reativado. Regra atualizada. | Aviso, sucesso |
 | `pages/notifications` | Teste enviado. / Simulação registrada. / Reenvio agendado. | Aviso, sucesso |
 | `pages/notifications` | Limite atingido: os envios retomam no próximo período | Fica inline (estado do canal) |

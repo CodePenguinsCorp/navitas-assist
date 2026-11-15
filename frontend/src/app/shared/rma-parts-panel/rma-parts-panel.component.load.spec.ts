@@ -218,8 +218,8 @@ describe('RmaPartsPanelComponent loading', () => {
     fixture.componentRef.setInput('rmaId', 8); render();
     write$.next(reservation(9, 'ACTIVE')); write$.complete(); render();
     expect(service.getRmaParts.mock.calls.map(([id]) => id)).toEqual([7, 8]);
-    expect(text()).not.toContain('reservada para a OS');
-    expect(toastMessages()).toEqual(['Capacitor reservada para a OS.']);
+    expect(text()).not.toContain('Peça reservada');
+    expect(toastMessages()).toEqual(['Peça reservada.']);
     expect(text()).toContain('Peça de B');
   });
 

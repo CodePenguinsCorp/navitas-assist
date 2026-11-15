@@ -252,7 +252,7 @@ export class PartsComponent {
     const current = this.editingPart();
     const request$: Observable<PartResponse> = current ? this.partService.update(current.id, payload) : this.partService.create(payload);
 
-    this.submit(request$, (part) => current ? `Peça ${part.name} atualizada.` : `Peça ${part.name} cadastrada.`);
+    this.submit(request$, () => current ? 'Peça atualizada.' : 'Peça cadastrada.');
   }
 
   protected openMovementModal(part: PartResponse): void {
@@ -302,7 +302,7 @@ export class PartsComponent {
       return;
     }
 
-    this.submit(this.partService.registerMovement(part.id, { type: raw.type, quantity: raw.quantity, reason }), (movement) => `${PART_MOVEMENT_LABELS[movement.type]} registrada para ${movement.partName}.`);
+    this.submit(this.partService.registerMovement(part.id, { type: raw.type, quantity: raw.quantity, reason }), () => 'Movimento registrado.');
   }
 
   protected openHistory(part: PartResponse): void {
@@ -360,7 +360,7 @@ export class PartsComponent {
       next: () => {
         this.reversingMovementId.set(null);
         this.reversalReason.reset('');
-        this.toasts.show({ message: `Movimento ${movement.id} revertido.`, tone: 'success' });
+        this.toasts.show({ message: 'Movimento revertido.', tone: 'success' });
         this.loadHistory(movement.partId);
         this.load();
       },
