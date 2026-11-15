@@ -207,12 +207,17 @@ async function main() {
   const volume = Number.parseInt(process.env.SEED_VOLUME || '0', 10);
   if (volume > 0) {
     const technicians = [demoUsers[1]];
-    for (const [username, fullName] of [['demo.tecnico2', 'Bruno Ferreira [DEMO]'], ['demo.tecnico3', 'Letícia Moreira [DEMO]']]) {
-      technicians.push(await ensure('Usuários (volume)', '/api/users', users, 'username', {
-        username, fullName, password, profileId: profiles.find(p => p.name === 'Técnico').id, extraPermissions: [], active: true,
-      }));
+    const roles = ['Técnico', 'Atendimento', 'Consulta'];
+    const names = ['Bruno Ferreira', 'Letícia Moreira', 'Diego Martins', 'Fernanda Lima', 'Gustavo Rocha', 'Helena Duarte', 'Igor Nogueira', 'Júlia Campos', 'Kléber Alves', 'Larissa Pinto', 'Marcos Teixeira', 'Natália Ribeiro'];
+    for (let n = 0; n < names.length; n++) {
+      const role = roles[n % roles.length];
+      const user = await ensure('Usuários (volume)', '/api/users', users, 'username', {
+        username: `demo.v${String(n + 1).padStart(2, '0')}`, fullName: `${names[n]} [DEMO]`, password,
+        profileId: profiles.find(p => p.name === role).id, extraPermissions: [], active: true,
+      });
+      if (role === 'Técnico') technicians.push(user);
     }
-    await seedVolume({ volume, demoClients, demoProducts, demoParts, technicians, rmas, stages, date, failures });
+    await seedVolume({ users, volume, demoClients, demoProducts, demoParts, technicians, rmas, stages, date, failures });
   }
   console.table(counts);
   console.log(`Usuários de demonstração: ${demoUsers.map(u => u.username).join(', ')}`);
@@ -221,11 +226,11 @@ async function main() {
 
 // Carga de volume (SEED_VOLUME=N): N OS extras com clientes e produtos extras, datas, etapas, prioridades,
 // prazos, responsáveis e impedimentos variados, para testar listas, filtros, paginação e relatórios.
-async function seedVolume({ volume, demoClients, demoProducts, demoParts, technicians, rmas, stages, date, failures }) {
+async function seedVolume({ users, volume, demoClients, demoProducts, demoParts, technicians, rmas, stages, date, failures }) {
   const extraClients = [...demoClients];
   const clientRows = await list('/api/clients');
   const cities = ['São Paulo - SP', 'Rio de Janeiro - RJ', 'Porto Alegre - RS', 'Recife - PE', 'Goiânia - GO', 'Joinville - SC', 'Salvador - BA', 'Londrina - PR'];
-  const clientTotal = Math.max(5, Math.ceil(volume / 5));
+  const clientTotal = Math.max(8, Math.ceil(volume / 2));
   for (let n = 1; n <= clientTotal; n++) {
     const legalName = `[DEMO] Cliente Volume ${String(n).padStart(3, '0')} Ltda.`;
     extraClients.push(await ensure('Clientes (volume)', '/api/clients', clientRows, 'legalName', {
@@ -237,12 +242,42 @@ async function seedVolume({ volume, demoClients, demoProducts, demoParts, techni
   const extraProducts = [...demoProducts];
   const productRows = await list('/api/products');
   const categories = ['Automação', 'Energia', 'Redes', 'Sensores', 'Fontes'];
-  const productTotal = Math.max(5, Math.ceil(volume / 5));
+  const productTotal = Math.max(8, Math.ceil(volume / 2));
   for (let n = 1; n <= productTotal; n++) {
     extraProducts.push(await ensure('Produtos (volume)', '/api/products', productRows, 'sku', {
       sku: `DEMO-V${String(n).padStart(3, '0')}`, name: `[DEMO] Equipamento Volume ${String(n).padStart(3, '0')}`,
       category: categories[n % categories.length], hardwareVersion: `Rev. ${'ABCD'[n % 4]}`, firmwareVersion: `3.${n % 10}.0`,
       defaultWarrantyMonths: [6, 12, 18, 24][n % 4], technicalNotes: 'Equipamento fictício para teste de volume.',
+    }));
+  }
+  const volumeParts = [...demoParts];
+  const partRows = await api('/api/parts');
+  const partKinds = ['Capacitor', 'Resistor', 'Ventoinha', 'Conector', 'Fusível', 'Relé', 'Display', 'Sensor', 'Cabo', 'Chicote'];
+  const partTotal = Math.max(15, Math.ceil(volume / 2));
+  for (let n = 1; n <= partTotal; n++) {
+    const code = `DEMO-VP${String(n).padStart(3, '0')}`;
+    const part = await ensure('Peças (volume)', '/api/parts', partRows, 'code', {
+      code, name: `[DEMO] ${partKinds[n % partKinds.length]} modelo ${n}`, unit: n % 7 === 0 ? 'M' : 'UN',
+      location: `Estoque DEMO / ${'ABCD'[n % 4]}${1 + (n % 9)}`, minimumStock: 5 + (n % 4) * 5, unitCost: Number((2 + (n * 3.37) % 90).toFixed(2)), active: n % 13 !== 0,
+    });
+    volumeParts.push(part);
+    const reason = `[DEMO] Estoque inicial ${code}`;
+    if (!(await api(`/api/parts/${part.id}/movements`)).some(m => m.reason === reason)) {
+      await api(`/api/parts/${part.id}/movements`, 'POST', { type: 'ENTRY', quantity: n % 5 === 0 ? 3 : 10 + (n % 6) * 10, reason });
+      count('Movimentos de estoque (volume)', true);
+    }
+  }
+  const templates = await api('/api/protocols/templates');
+  const volumeTemplates = [];
+  for (let n = 1; n <= 8; n++) {
+    volumeTemplates.push(await ensure('Modelos de protocolo (volume)', '/api/protocols/templates', templates, 'name', {
+      name: `[DEMO] Protocolo de ${['bancada', 'burn-in', 'calibração', 'segurança elétrica', 'comunicação', 'firmware', 'inspeção visual', 'teste final'][n - 1]}`,
+      productId: extraProducts[n % extraProducts.length].id, active: n !== 8, blockedStatuses: [],
+      items: [
+        { stepName: 'Preparação', title: `Conferir identificação do equipamento (${n})`, type: 'CHECK', required: true, evidenceRequired: false },
+        { stepName: 'Medições', title: `Medir tensão de saída (${n})`, type: 'MEASUREMENT', required: n % 2 === 0, unit: 'V', decimalPlaces: 2, minValue: 11, maxValue: 13, evidenceRequired: false },
+        { stepName: 'Fechamento', title: `Registrar observações finais (${n})`, type: 'CHECK', required: false, evidenceRequired: false },
+      ],
     }));
   }
   const priorities = ['LOW', 'MEDIUM', 'HIGH'];
@@ -274,6 +309,44 @@ async function seedVolume({ volume, demoClients, demoProducts, demoParts, techni
       if (i % 11 === 5 && !['COMPLETED'].includes(rma.status)) {
         await api(`${path}/blocks`, 'POST', { reason: '[DEMO] Aguardando retorno do cliente (volume).', category: 'Aprovação do cliente' });
         count('Impedimentos (volume)', true);
+      }
+      const stageIdx = stages.indexOf(target);
+      if (stageIdx >= 2) {
+        await api(`${path}/diagnosis`, 'PUT', {
+          foundFailure: `[DEMO] ${['Capacitor de saída estufado.', 'Trilha rompida próxima ao conector.', 'Firmware corrompido após queda de energia.', 'Sensor fora de calibração.', 'Fonte com ripple elevado.'][i % 5]}`,
+          failureType: ['POWER_SUPPLY', 'PWM', 'SENSOR', 'COMMUNICATION', 'DISPLAY', 'FIRMWARE', 'MECHANICAL', 'OTHER'][i % 8],
+          probableCause: ['COMPONENT', 'SOLDER', 'HUMIDITY', 'OVERLOAD', 'ESD', 'INCORRECT_USAGE', 'OTHER'][i % 7],
+          notes: i % 2 === 0 ? 'Necessária troca de componente.' : null, diagnosedAt: date(Math.max(0, entryAgo - 1)),
+          technicianName: technicians[i % technicians.length].fullName,
+        });
+        count('Diagnósticos (volume)', true);
+      }
+      if (stageIdx >= 4 && stageIdx < 6) {
+        for (let k = 0; k < 1 + (i % 3); k++) {
+          await api(`${path}/repair/interventions`, 'POST', {
+            type: ['RESOLDERING', 'CLEANING', 'REPROGRAMMING', 'FIRMWARE_UPDATE', 'HARNESS_REPLACEMENT', 'OTHER'][(i + k) % 6],
+            description: `[DEMO] Intervenção ${k + 1} do caso ${i + 1}.`, performedOn: date(Math.max(0, entryAgo - 1 - k)), hours: [0.5, 1, 1.5, 2.25, 3][(i + k) % 5],
+          });
+          count('Intervenções (volume)', true);
+        }
+        if (i % 4 === 0) {
+          await api(`${path}/repair/external-components`, 'POST', {
+            code: `EXT-${i + 1}`, description: `[DEMO] Componente externo ${i + 1}`, quantity: 1 + (i % 3), unit: 'un', replacementReason: 'Componente danificado, sem item no estoque.',
+          });
+          count('Componentes externos (volume)', true);
+        }
+      }
+      if ([3, 4].includes(stageIdx) && i % 2 === 0) {
+        try {
+          await api(`${path}/parts`, 'POST', { partId: volumeParts[(i % (volumeParts.length - 1)) + 1].id, quantity: 1 + (i % 2), note: `[DEMO] Reserva volume ${serialNumber}` });
+          count('Reservas (volume)', true);
+        } catch (error) { count('Reservas (volume)', false); }
+      }
+      if (i % 4 === 1) {
+        try {
+          await api(`/api/protocols/rmas/${rma.id}/executions`, 'POST', { templateId: volumeTemplates[i % 7].id });
+          count('Execuções de protocolo (volume)', true);
+        } catch (error) { count('Execuções de protocolo (volume)', false); }
       }
     }
     if ((i + 1) % 20 === 0) console.log(`  volume: ${i + 1}/${volume} OS`);
