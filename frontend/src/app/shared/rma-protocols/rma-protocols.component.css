@@ -1,23 +1,19 @@
 :host { display: block; min-width: 0; }
 
-/* One header line: name and version, state chip, compact action on the right. */
 .protocol-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
 .protocol-head__name { flex: 0 1 auto; min-width: 0; font-size: var(--font-size-md); }
 .protocol-head__action { margin-left: auto; white-space: nowrap; min-height: var(--control-height-xs); padding: 0 var(--space-3); font-size: var(--font-size-sm); }
 
-.protocol-progress-row { padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); color: var(--muted); font-size: var(--font-size-sm); }
+.protocol-progress-row { padding-bottom: var(--space-2); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); color: var(--muted); font-size: var(--font-size-sm); }
 .protocol-progress { flex: 1 1 96px; max-width: 220px; height: 6px; border-radius: var(--radius-pill); background: var(--line); overflow: hidden; }
 .protocol-progress span { display: block; height: 100%; background: var(--brand-blue-deep); }
 .protocol-progress-row__text { color: var(--text); font-variant-numeric: tabular-nums; }
-.protocol-progress-row__meta { margin-left: auto; font-size: var(--font-size-xs); }
 
 .protocol-group { margin: var(--space-2) 0 0; color: var(--muted); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); letter-spacing: 0.05em; text-transform: uppercase; }
-.protocol-list + .protocol-group { margin-top: var(--space-4); }
-.protocol-list { display: grid; margin: 0; padding: 0; list-style: none; }
+.protocol-list { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
 
-/* Compact row: number, title and range, outcome chip, action, chevron. */
-.protocol-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); padding: var(--space-2) 0; border-top: 1px solid var(--line); min-width: 0; }
-.protocol-list > .protocol-row:first-child { border-top: 0; }
+.protocol-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); min-width: 0; }
+
 .protocol-row__number { display: inline-grid; place-items: center; flex-shrink: 0; min-width: 20px; height: 20px; border-radius: var(--radius-pill); background: var(--surface-alt); color: var(--muted); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); }
 .protocol-row__main { flex: 1 1 12rem; min-width: 0; }
 .protocol-row__title { font-size: var(--font-size-sm); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
@@ -39,13 +35,14 @@
 
 .protocol-details,
 .protocol-form { flex: 1 0 100%; min-width: 0; }
-.protocol-details { display: grid; gap: var(--space-1); padding-left: 28px; color: var(--text); font-size: var(--font-size-sm); }
+.protocol-details { display: grid; gap: var(--space-1); color: var(--text); font-size: var(--font-size-sm); }
 .protocol-details p { margin: 0; white-space: pre-wrap; }
 .protocol-attempts { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: var(--font-size-xs); }
 .protocol-attempts__note { display: block; }
 
 .protocol-form { display: grid; gap: var(--space-2); }
 .protocol-form fieldset { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: var(--space-2) var(--space-3); min-inline-size: 0; margin: 0; padding: 0; border: 0; }
-.protocol-form small { font-size: var(--font-size-xs); }
 .protocol-form .field-group { gap: var(--space-1); }
-.protocol-form .field-group > span { font-size: var(--font-size-sm); }
+
+.protocol-execution { padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-alt); box-shadow: var(--shadow); }
+.protocol-group-card { display: grid; gap: var(--space-2); min-width: 0; padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); }

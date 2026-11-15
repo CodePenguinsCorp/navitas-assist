@@ -52,6 +52,14 @@ describe('RmaProtocolsComponent', () => {
     fixture.detectChanges();
   }
 
+  it('agrupa os itens em uma regi?o identificada dentro da execução', async () => {
+    await setup('TECHNICIAN');
+    const group = fixture.nativeElement.querySelector('.protocol-execution section[aria-label="Medições"]');
+    expect(group).not.toBeNull();
+    expect(group.querySelector('.protocol-row').textContent).toContain('Registrar resultado');
+    expect(group.querySelector('.protocol-row').textContent).toContain('Obrigatório');
+  });
+
   it('folds an empty protocol section and unfolds the launcher from its header action', async () => {
     await setup('TECHNICIAN', []);
     const host = fixture.nativeElement as HTMLElement;

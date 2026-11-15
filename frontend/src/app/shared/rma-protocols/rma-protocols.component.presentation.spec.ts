@@ -61,14 +61,14 @@ describe('RmaProtocolsComponent checklist', () => {
     expect(text()).toContain('Sem obrigatórios · 2/3 registrados'); expect(fixture.nativeElement.querySelector('.protocol-progress')).toBeNull();
   });
 
-  it('groups items by step only when there is more than one step', async () => {
+  it('identifica os grupos também quando existe uma única etapa', async () => {
     await setup();
     const groups = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.protocol-group')).map((e) => e.textContent?.trim());
     expect(groups).toEqual(['Medições', 'Inspeção']);
     expect(fixture.nativeElement.querySelectorAll('.protocol-row')).toHaveLength(3);
     TestBed.resetTestingModule();
     await setup({ ...EXECUTION, items: [MEASUREMENT] });
-    expect(fixture.nativeElement.querySelector('.protocol-group')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.protocol-group')?.textContent?.trim()).toBe('Medições');
   });
 
   it('marks required items with a chip and optional ones as plain muted text', async () => {

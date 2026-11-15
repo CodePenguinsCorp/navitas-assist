@@ -39,7 +39,8 @@
       </div>
 
       @for (group of view.groups; track group.key) {
-        @if (view.groups.length > 1) {
+        <section class="protocol-group-card" [attr.aria-label]="group.step">
+        @if (group.step) {
           <h5 class="protocol-group">{{ group.step }}</h5>
         }
         <ul class="protocol-list">
@@ -124,6 +125,7 @@
             </li>
           }
         </ul>
+        </section>
       }
     </section>
   }
