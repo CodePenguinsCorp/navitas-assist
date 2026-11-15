@@ -80,4 +80,5 @@ A baseline já traz os índices compostos usados por filtros e ordenação: `rma
 | Versão | Arquivo | Alteração |
 | --- | --- | --- |
 | V2 | `V2__rma_board_position.sql` | Adiciona `rmas.board_position BIGINT NULL` e índice `(status, board_position)`; dados existentes permanecem automáticos. |
+| V4 | `V4__intervencao_tipo_texto_livre_e_horas_opcionais.sql` | `rma_interventions.type` passa a `VARCHAR(80)` (texto livre), sem o `CHECK` `ck_interventions_type`; os códigos antigos viram os textos em português (`RESOLDERING` vira "Ressolda", `OTHER` vira "Outro" etc.). `hours` deixa de ser `NOT NULL` (o `CHECK` `hours > 0` continua valendo quando informada). |
 | V3 | `V3__diagnostico_tipo_e_causa_texto_livre.sql` | `diagnoses.failure_type` e `probable_cause` passam a `VARCHAR(80)` (texto livre), sem as restrições `CHECK`; os códigos antigos viram os textos em português (por exemplo `POWER_SUPPLY` vira "Fonte de alimentação"). |

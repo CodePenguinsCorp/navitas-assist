@@ -54,10 +54,14 @@ Convenções:
 | `POST /api/rmas/{id}/parts/{reservationId}/allocate` | `pecas.reservar` | Aloca a reserva. |
 | `POST /api/rmas/{id}/parts/{reservationId}/consume` | `pecas.reservar` | Aplica a reserva (ação `consume`) (motivo e lote). |
 | `POST /api/rmas/{id}/parts/{reservationId}/cancel` | `pecas.reservar` | Cancela a reserva. |
-| `GET /api/rmas/{id}/repair` | `rma.ver` | Intervenções e `totalServiceHours`. |
+| `GET /api/rmas/{id}/repair` | `rma.ver` | Intervenções e `totalServiceHours` (soma só as intervenções ativas que informaram horas; `hours` ausente vem nulo). |
+| `GET /api/suggestions/intervention-types` | `rma.ver` | Tipos de intervenção já usados: lista de textos, sem vazios nem repetidos por maiúsculas ou acentos, em ordem alfabética. As sugestões iniciais (Ressolda, Limpeza, Regravação, Atualização de firmware, Troca de chicote, Outro) ficam na interface. |
+| `GET /api/suggestions/block-categories` | `rma.ver` | Categorias de impedimento já usadas, no mesmo formato. |
+| `GET /api/suggestions/part-units` | `pecas.ver`, `pecas.reservar` ou `pecas.movimentar` | Unidades já usadas em peças e em componentes externos trocados, no mesmo formato (iniciais na interface: UN, PC, PAR, KIT, CX, KG, G, M, CM, MM, L, ML). |
+| `GET /api/suggestions/part-locations` | `pecas.ver` ou `pecas.movimentar` | Localizações de estoque já usadas nas peças, no mesmo formato. |
 | `GET /api/rmas/{id}/repair/external-components` | `rma.ver` | Componentes externos. |
 | `POST /api/rmas/{id}/repair/external-components` | `pecas.reservar` | Adiciona componente externo. |
-| `POST /api/rmas/{id}/repair/interventions` | `rma.diagnosticar` | Registra intervenção. |
+| `POST /api/rmas/{id}/repair/interventions` | `rma.diagnosticar` | Registra intervenção: `type` é texto livre obrigatório de até 80 caracteres (aparado), `hours` é opcional (positivas, até 3 casas). |
 | `PUT /api/rmas/{rmaId}/repair/interventions/{id}` | `rma.diagnosticar` | Edita intervenção ativa em OS aberta. |
 | `POST /api/rmas/{rmaId}/repair/interventions/{id}/void` | `rma.diagnosticar` | Anula intervenção com `{ reason }` obrigatório (até 1000). |
 | `PUT /api/rmas/{rmaId}/repair/external-components/{id}` | `pecas.reservar` | Edita componente externo ativo em OS aberta. |
