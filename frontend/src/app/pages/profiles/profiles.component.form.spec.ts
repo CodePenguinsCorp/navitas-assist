@@ -10,6 +10,7 @@ import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { mountUnderRoot, simulateNativeModality } from '../../testing/native-dialog';
 import { PERMISSION_CATALOG, buildProfile, buildProfilePage } from '../../testing/profile-fixtures';
 import { ProfilesComponent } from './profiles.component';
+import { toastMessages } from '../../testing/toast';
 
 interface ProfilesHarness {
   openCreateModal(): void;
@@ -122,7 +123,8 @@ describe('ProfilesComponent form', () => {
     submit();
     expect(service.create).toHaveBeenCalledWith({ name: 'Supervisor', permissions: ['rma.ver', 'relatorios.ver'] });
     expect(dialog()).toBeNull();
-    expect(element.querySelector('.alert-banner--success')?.textContent).toContain('Perfil Supervisor cadastrado com sucesso.');
+    expect(toastMessages()).toEqual(['Perfil Supervisor cadastrado.']);
+    expect(element.querySelector('.alert-banner--success, [role="status"]')).toBeNull();
     expect(service.list).toHaveBeenCalledTimes(1);
     expect(service.invalidateOptions).toHaveBeenCalled();
   });
@@ -140,7 +142,7 @@ describe('ProfilesComponent form', () => {
     submit();
     expect(service.update).toHaveBeenCalledWith(3, { name: 'Técnico', permissions: ['rma.ver', 'rma.diagnosticar', 'pecas.ver'] });
     expect(refreshSession).toHaveBeenCalledOnce();
-    expect(element.querySelector('.alert-banner--success')?.textContent).toContain('Perfil Técnico atualizado com sucesso.');
+    expect(toastMessages()).toEqual(['Perfil Técnico atualizado.']);
   });
 
   it('duplicates as "Cópia de X" with same permissions', async () => {
@@ -212,7 +214,8 @@ describe('ProfilesComponent form', () => {
     fixture.detectChanges();
     expect(service.delete).toHaveBeenCalledWith(5);
     expect(alertDialog()).toBeNull();
-    expect(element.querySelector('.alert-banner--success')?.textContent).toContain('Perfil Supervisor excluído com sucesso.');
+    expect(toastMessages()).toEqual(['Perfil Supervisor excluído.']);
+    expect(element.querySelector('.alert-banner--success, [role="status"]')).toBeNull();
     expect(service.list).toHaveBeenCalledTimes(1);
     expect(service.invalidateOptions).toHaveBeenCalled();
   });
@@ -224,7 +227,7 @@ describe('ProfilesComponent form', () => {
     Array.from(alertDialog()!.querySelectorAll('button')).find((button) => button.textContent?.trim() === 'Excluir perfil')!.click();
     fixture.detectChanges();
     expect(alertDialog()!.querySelector('.modal-feedback[role="alert"]')?.textContent?.trim()).toBe('Perfil migrado não pode ser excluído.');
-    expect(element.querySelector('.alert-banner--success')).toBeNull();
+    expect(toastMessages()).toEqual([]);
   });
 
   it('disables submit when catalog fails', async () => {

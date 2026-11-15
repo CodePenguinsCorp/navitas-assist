@@ -1,3 +1,4 @@
+import { ToastService } from '../../core/services/toast.service';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
@@ -41,6 +42,7 @@ const trimmedRequired = (control: AbstractControl<string>): ValidationErrors | n
 })
 export class ProfilesComponent {
   private readonly formBuilder = inject(FormBuilder);
+  private readonly toasts = inject(ToastService);
   private readonly profileService = inject(ProfileService);
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
@@ -50,7 +52,6 @@ export class ProfilesComponent {
   protected readonly searchTerm = signal('');
   protected readonly loadFailed = signal(false);
   protected readonly errorMessage = signal('');
-  protected readonly successMessage = signal('');
   protected readonly modalErrorMessage = signal('');
   protected readonly nameServerError = signal('');
   protected readonly deleteModalErrorMessage = signal('');
@@ -177,10 +178,9 @@ export class ProfilesComponent {
     this.submitting.set(true);
     this.modalErrorMessage.set('');
     this.nameServerError.set('');
-    this.successMessage.set('');
     request$.pipe(finalize(() => this.submitting.set(false))).subscribe({
       next: (profile) => {
-        this.successMessage.set(`Perfil ${profile.name} ${editing ? 'atualizado' : 'cadastrado'} com sucesso.`);
+        this.toasts.show({ message: `Perfil ${profile.name} ${editing ? 'atualizado' : 'cadastrado'}.`, tone: 'success' });
         this.activeModal.set(null);
         this.afterChange();
         // As permissões do próprio usuário podem ter mudado com o perfil.
@@ -207,7 +207,6 @@ export class ProfilesComponent {
     }
     this.deletingProfileSignal.set(profile);
     this.deleteModalErrorMessage.set('');
-    this.successMessage.set('');
   }
 
   protected closeDeleteModal(): void {
@@ -227,7 +226,7 @@ export class ProfilesComponent {
     this.deleteModalErrorMessage.set('');
     this.profileService.delete(profile.id).pipe(finalize(() => this.deletingProfileId.set(null))).subscribe({
       next: () => {
-        this.successMessage.set(`Perfil ${profile.name} excluído com sucesso.`);
+        this.toasts.show({ message: `Perfil ${profile.name} excluído.`, tone: 'success' });
         this.deletingProfileSignal.set(null);
         this.afterChange();
       },
@@ -250,7 +249,6 @@ export class ProfilesComponent {
     this.submitAttempted.set(false);
     this.modalErrorMessage.set('');
     this.nameServerError.set('');
-    this.successMessage.set('');
     this.activeModal.set(mode);
     this.loadCatalog();
   }
