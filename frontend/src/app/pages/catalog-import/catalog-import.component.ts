@@ -5,13 +5,14 @@ import { finalize } from 'rxjs';
 import { CatalogImportKind, CatalogImportPreview, CatalogImportRow, CatalogImportStatus } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
+import { IconComponent } from '../../shared/icon/icon.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { CustomSelectComponent } from '../../shared/form-controls/custom-select/custom-select.component';
 
 @Component({
   selector: 'app-catalog-import',
-  imports: [PageHeaderComponent, PaginationComponent, CustomSelectComponent],
+  imports: [IconComponent, PageHeaderComponent, PaginationComponent, CustomSelectComponent],
   templateUrl: './catalog-import.component.html',
   styleUrl: './catalog-import.component.css'
 })

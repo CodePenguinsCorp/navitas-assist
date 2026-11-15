@@ -1,36 +1,44 @@
 <section class="page-surface import-page">
   <app-page-header [heading]="'Importar ' + label + ' por CSV'" />
-  <section class="panel import-card" aria-label="Modelo">
-    <h2>1. Modelo</h2>
-    <p>Preencha o modelo e substitua ou apague a linha de exemplo. Somente linhas válidas serão cadastradas.</p>
-    <button type="button" class="button-secondary" (click)="downloadTemplate()" [disabled]="busy()">Baixar modelo CSV</button>
+  <section class="panel table-card import-card" aria-label="Modelo">
+    <h2><span class="import-step">1.</span> Modelo</h2>
+    <p class="import-instruction">Preencha o modelo e substitua ou apague a linha de exemplo.</p>
+    <p class="import-hint">Somente linhas válidas serão cadastradas.</p>
+    <button type="button" class="button-secondary" (click)="downloadTemplate()" [disabled]="busy()"><app-icon name="download" [size]="18" />Baixar modelo CSV</button>
   </section>
-  <section class="panel import-card" aria-label="Arquivo">
-    <h2>2. Arquivo</h2>
-  <div class="import-upload field-group">
-    <label for="import-file"><span>Arquivo CSV</span></label>
-    <small>UTF-8 · até 2 MiB · 2.000 registros</small>
-    <div class="import-upload__row">
-      <input id="import-file" type="file" accept=".csv,text/csv" (change)="selectFile($event)" [disabled]="busy()" />
-      <button type="button" class="button-secondary" (click)="generatePreview()" [disabled]="!file() || busy()">Gerar prévia</button>
+  <section class="panel table-card import-card" aria-label="Arquivo">
+    <h2><span class="import-step">2.</span> Arquivo</h2>
+    <div class="import-upload field-group">
+      <label for="import-file">Arquivo CSV</label>
+      <p id="import-file-hint" class="import-hint">UTF-8 · até 2 MiB · 2.000 registros</p>
+      <div class="import-upload__row">
+        <div class="import-file">
+          <input id="import-file" type="file" accept=".csv,text/csv" aria-describedby="import-file-hint" (change)="selectFile($event)" [disabled]="busy()" />
+          <label for="import-file" class="import-dropzone">
+            <app-icon name="inbox" [size]="24" />
+            <strong>{{ file()?.name ?? 'Selecione um arquivo CSV' }}</strong>
+            <span>{{ file() ? 'Clique para trocar o arquivo' : 'Clique para escolher o arquivo' }}</span>
+          </label>
+        </div>
+        <button type="button" class="button-primary" (click)="generatePreview()" [disabled]="!file() || busy()">Gerar prévia</button>
+      </div>
     </div>
-  </div>
   @if (error()) { <div class="alert-banner alert-banner--error" role="alert">{{ error() }}</div> }
   </section>
   @if (preview(); as result) {
-    <section class="panel import-card" aria-label="Prévia">
-    <h2>3. Prévia</h2>
+    <section class="panel table-card import-card" aria-label="Prévia">
+    <h2><span class="import-step">3.</span> Prévia</h2>
     <div class="import-summary" role="status">
       <span><strong>{{ result.validRows }}</strong> Válidas</span><span><strong>{{ result.invalidRows }}</strong> Inválidas</span><span><strong>{{ result.duplicateRows }}</strong> Duplicadas</span>
     </div>
-    <p>{{ result.fileName }} · {{ result.totalRows }} linhas · {{ result.blankRows }} linhas em branco ignoradas</p>
+    <p class="import-hint">{{ result.fileName }} · {{ result.totalRows }} linhas · {{ result.blankRows }} linhas em branco ignoradas</p>
     <label class="field-group import-filter"><span>Situação</span><app-custom-select ariaLabel="Filtrar situação" [options]="options" [value]="filter()" (valueChange)="changeFilter($any($event))" /></label>
-    <div class="import-table">
+    <div class="table-wrap import-table">
       <table>
         <thead><tr><th>Linha</th><th>Identificação</th><th>Situação</th><th>Motivos e avisos</th></tr></thead>
         <tbody>
           @for (row of visibleRows(); track row.lineNumber) {
-            <tr><td data-label="Linha">{{ row.lineNumber }}</td><td data-label="Identificação">{{ identification(row) }}</td><td data-label="Situação">{{ statuses[row.status] }}</td><td data-label="Motivos e avisos">
+            <tr><td data-label="Linha">{{ row.lineNumber }}</td><td data-label="Identificação"><strong class="table-title">{{ identification(row) }}</strong></td><td data-label="Situação">{{ statuses[row.status] }}</td><td data-label="Motivos e avisos">
               @for (issue of row.reasons; track $index) { <p>{{ fieldLabel(issue.field) }}: {{ issue.message }}</p> }
               @for (warning of row.warnings; track $index) { <p>Aviso: {{ fieldLabel(warning.field) }}: {{ warning.message }}</p> }
               @if (!row.reasons.length && !row.warnings.length) { <span>Sem observações</span> }
@@ -42,5 +50,5 @@
     <app-pagination singular="linha" plural="linhas" [page]="page()" [size]="size()" [totalElements]="filteredRows().length" [totalPages]="totalPages()" [shown]="visibleRows().length" [loading]="busy()" (pageChange)="page.set($event)" (sizeChange)="changeSize($event)" />
     </section>
   }
-  <footer class="import-actions"><button type="button" class="button-secondary" (click)="cancel()" [disabled]="busy()">Cancelar</button><button type="button" class="button-primary" (click)="confirm()" [disabled]="!preview()?.validRows || busy()">Importar {{ preview()?.validRows ?? 0 }} linhas válidas</button></footer>
+  <footer class="form-actions import-actions"><button type="button" class="button-secondary" (click)="cancel()" [disabled]="busy()">Cancelar</button><button type="button" class="button-primary" (click)="confirm()" [disabled]="!preview()?.validRows || busy()">Importar {{ preview()?.validRows ?? 0 }} linhas válidas</button></footer>
 </section>

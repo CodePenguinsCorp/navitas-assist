@@ -30,6 +30,17 @@ describe('CatalogImportComponent', () => {
     expect(fixture.nativeElement.querySelector('section[aria-label="Arquivo"] [role="alert"]').textContent).toContain('Salve o arquivo como CSV UTF-8');
   });
 
+  it('associa a dica de formato ao arquivo e mostra o nome selecionado', () => {
+    const { fixture, page } = setup();
+    const input = fixture.nativeElement.querySelector('input[type="file"]');
+    expect(input.getAttribute('aria-describedby')).toBe('import-file-hint');
+    expect(fixture.nativeElement.querySelector('#import-file-hint').textContent).toContain('2.000 registros');
+    expect(fixture.nativeElement.textContent).toContain('Selecione um arquivo CSV');
+    page.selectFile({ target: { files: [new File(['dados'], 'clientes.csv')] } });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('label[for="import-file"].import-dropzone').textContent).toContain('clientes.csv');
+  });
+
   it('confirma o mesmo File da prévia uma única vez e volta à lista com resumo', () => {
     const { page, service, router, confirmation } = setup();
     const file = new File(['dados'], 'dados.csv');
