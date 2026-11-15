@@ -120,6 +120,20 @@ describe('RmaBlocksSectionComponent', () => {
     expectInlineForm(form(), ['Nota de resolução'], 'Desbloquear');
   });
 
+  it('reports busy while the block request is in flight so the host holds its other writers', () => {
+    const states: boolean[] = [];
+    mount();
+    fixture.componentInstance.busyChange.subscribe((busy) => states.push(busy));
+    control('Sinalizar impedimento')!.click();
+    render();
+    setField('reason', 'Aguardando peça');
+    submit();
+    expect(states).toEqual([true]);
+    http.expectOne('/api/rmas/1/blocks').flush(blocked());
+    render();
+    expect(states).toEqual([true, false]);
+  });
+
   it('expands reason and category inline, focuses the reason and blocks with trimmed values', () => {
     const updated: RmaResponse[] = [];
     mount();

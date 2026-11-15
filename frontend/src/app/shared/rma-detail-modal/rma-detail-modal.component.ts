@@ -8,6 +8,7 @@ import { RmaWarrantyFieldComponent } from '../rma-warranty-field/rma-warranty-fi
 import { RmaDiagnosisComponent } from '../rma-diagnosis/rma-diagnosis.component';
 import { Component, EventEmitter, Injector, Output, afterNextRender, computed, inject, input, signal, viewChild, viewChildren } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { AssignableUserResponse, RmaResponse } from '../../core/models';
 import { ClockService } from '../../core/services/clock.service';
 import {
@@ -53,13 +54,25 @@ import {
 export class RmaDetailModalComponent {
   private readonly rmaService = inject(RmaService);
   protected readonly repairError = signal('');
+  private refreshRequest?: Subscription;
   protected refreshRepair(): void {
     const id = this.rma().id;
     this.repairError.set('');
-    this.rmaService.getById(id).subscribe({
-      next: updated => { if (this.rma().id === id) this.rmaUpdated.emit(updated); },
+    this.refreshRequest?.unsubscribe();
+    this.refreshRequest = this.rmaService.getById(id).subscribe({
+      next: updated => this.applyUpdate(updated),
       error: error => this.repairError.set(extractHttpErrorMessage(error, 'Não foi possível atualizar o histórico.'))
     });
+  }
+
+  /**
+   * An OS saved or re-read inside the detail. A response of another OS never replaces this one, and a re-read still
+   * in flight is dropped: it may carry a snapshot older than this response.
+   */
+  protected applyUpdate(updated: RmaResponse): void {
+    if (updated.id !== this.rma().id) return;
+    this.refreshRequest?.unsubscribe();
+    this.rmaUpdated.emit(updated);
   }
   readonly rma = input.required<RmaResponse>();
   readonly canUpdateStatus = input(false);
@@ -75,11 +88,21 @@ export class RmaDetailModalComponent {
   readonly fallbackFocus = input<HTMLElement | null>(null);
   @Output() readonly closed = new EventEmitter<void>();
   @Output() readonly busyChange = new EventEmitter<boolean>();
-  protected readonly dueDateBusy = signal(false);
-  protected readonly warrantyBusy = signal(false);
-  protected readonly statusBusy = signal(false);
-  protected readonly diagnosisBusy = signal(false);
-  protected readonly writePending = computed(() => this.disabled() || this.statusBusy() || this.diagnosisBusy() || this.warrantyBusy() || this.dueDateBusy());
+  /** Writers of the detail (status, priority, due date, warranty, diagnosis, impediments), each counted on its own. */
+  private readonly writers = signal<Readonly<Record<string, number>>>({});
+  protected readonly writeBusy = computed(() => Object.values(this.writers()).some((count) => count > 0));
+  protected readonly writePending = computed(() => this.disabled() || this.writeBusy());
+
+  protected setWriterBusy(key: string, busy: boolean): void {
+    const before = this.writeBusy();
+    this.writers.update((current) => ({ ...current, [key]: Math.max((current[key] ?? 0) + (busy ? 1 : -1), 0) }));
+    if (this.writeBusy() !== before) this.busyChange.emit(this.writeBusy());
+  }
+
+  /** True when the host or a writer other than `key` is busy (a writer never disables itself). */
+  protected busyExcept(key: string): boolean {
+    return this.disabled() || Object.entries(this.writers()).some(([name, count]) => name !== key && count > 0);
+  }
   /** A person (or null, unassigned) picked in the inline selector; the host saves it. */
   @Output() readonly assigneeChange = new EventEmitter<{ rma: RmaResponse; assigneeId: number | null }>();
   /** The OS returned by a save made inside the detail (impediments, due date). */

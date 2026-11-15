@@ -36,8 +36,8 @@
 
         <div class="detail-actions">
           @if (canUpdateStatus()) {
-            <app-rma-status-field [rma]="rma()" [disabled]="disabled() || diagnosisBusy() || warrantyBusy() || dueDateBusy()"
-              (saved)="rmaUpdated.emit($event)" (busyChange)="statusBusy.set($event); busyChange.emit($event)" />
+            <app-rma-status-field [rma]="rma()" [disabled]="busyExcept('status')"
+              (saved)="applyUpdate($event)" (busyChange)="setWriterBusy('status', $event)" />
           } @else {
             <span class="status-chip rma-detail__status" [attr.data-status]="rma().status">{{ statusLabel(rma().status) }}</span>
           }
@@ -60,7 +60,7 @@
         </section>
 
         <section #blocksSection id="rma-detail-blocks" class="rma-detail__section detail-card">
-          <app-rma-blocks-section [rma]="rma()" [disabled]="writePending()" (updated)="rmaUpdated.emit($event)" />
+          <app-rma-blocks-section [rma]="rma()" [disabled]="busyExcept('blocks')" (updated)="applyUpdate($event)" (busyChange)="setWriterBusy('blocks', $event)" />
         </section>
 
         <section class="rma-detail__section detail-card">
@@ -69,7 +69,7 @@
             @for (item of rma().items; track item.id ?? $index) {
               <li class="detail-tile">
                 <strong>{{ item.productName }}</strong>
-                <app-rma-warranty-field [rma]="rma()" [item]="item" [canEdit]="canEditDueDate()" [disabled]="writePending()" (saved)="rmaUpdated.emit($event)" (busyChange)="warrantyBusy.set($event); busyChange.emit($event)" />
+                <app-rma-warranty-field [rma]="rma()" [item]="item" [canEdit]="canEditDueDate()" [disabled]="busyExcept('warranty')" (saved)="applyUpdate($event)" (busyChange)="setWriterBusy('warranty', $event)" />
                 <dl>
                   @for (fact of rmaItemFacts(item); track fact.label) {
                     <div><dt>{{ fact.label }}</dt><dd>{{ fact.value }}</dd></div>
@@ -95,8 +95,8 @@
         }
 
         <section class="rma-detail__section detail-card">
-          <app-rma-diagnosis [collapsible]="true" [rma]="rma()" [disabled]="disabled() || statusBusy() || warrantyBusy() || dueDateBusy()" (saved)="rmaUpdated.emit($event)"
-            (busyChange)="diagnosisBusy.set($event); busyChange.emit($event)" />
+          <app-rma-diagnosis [collapsible]="true" [rma]="rma()" [disabled]="busyExcept('diagnosis')" (saved)="applyUpdate($event)"
+            (busyChange)="setWriterBusy('diagnosis', $event)" />
         </section>
 
         @defer { <app-rma-repair-panel (changed)="refreshRepair()" [rmaId]="rma().id" [rmaStatus]="rma().status" />
@@ -132,7 +132,7 @@
                     </div>
                     @if (entry.kind === 'status') {
                       <p>{{ entry.label }}</p>
-                      <app-rma-status-field [rma]="rma()" [event]="entry.event" [showSelector]="false" [disabled]="writePending()" (saved)="rmaUpdated.emit($event)" (busyChange)="statusBusy.set($event)" />
+                      <app-rma-status-field [rma]="rma()" [event]="entry.event" [showSelector]="false" [disabled]="writePending()" (saved)="applyUpdate($event)" (busyChange)="setWriterBusy('status', $event)" />
                     } @else if (entry.kind === 'assignee') {
                       <p>Responsável <span class="rma-detail__from">{{ entry.from }}</span> <span aria-hidden="true">→</span> <span class="mini-chip">{{ entry.to }}</span></p>
                     } @else {
@@ -176,11 +176,11 @@
                 </dd>
               }
             </div>
-            <div class="detail-control-row"><dt>Prioridade</dt><dd><app-rma-priority-field [rma]="rma()" [canEdit]="canEditDueDate()" [disabled]="writePending()" (saved)="rmaUpdated.emit($event)" (busyChange)="busyChange.emit($event)" /></dd></div>
+            <div class="detail-control-row"><dt>Prioridade</dt><dd><app-rma-priority-field [rma]="rma()" [canEdit]="canEditDueDate()" [disabled]="busyExcept('priority')" (saved)="applyUpdate($event)" (busyChange)="setWriterBusy('priority', $event)" /></dd></div>
             <div class="detail-control-row">
               <dt>Data limite</dt>
               <dd [class.is-empty]="!rma().dueDate">
-                <app-rma-due-date-field [rma]="rma()" [canEdit]="canEditDueDate()" [disabled]="writePending()" (saved)="rmaUpdated.emit($event)" (busyChange)="dueDateBusy.set($event); busyChange.emit($event)" />
+                <app-rma-due-date-field [rma]="rma()" [canEdit]="canEditDueDate()" [disabled]="busyExcept('dueDate')" (saved)="applyUpdate($event)" (busyChange)="setWriterBusy('dueDate', $event)" />
               </dd>
             </div>
           </dl>

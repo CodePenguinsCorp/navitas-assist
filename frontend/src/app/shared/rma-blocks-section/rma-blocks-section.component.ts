@@ -31,6 +31,8 @@ export class RmaBlocksSectionComponent {
   readonly disabled = input(false);
   /** The RMA returned by a block or resolve; the host refreshes its card or list. */
   @Output() readonly updated = new EventEmitter<RmaResponse>();
+  /** True while a block or resolve request is in flight, so the host can hold its other writers and closing. */
+  @Output() readonly busyChange = new EventEmitter<boolean>();
 
   private readonly service = inject(RmaService);
   private readonly permissions = inject(PermissionService);
@@ -98,9 +100,10 @@ export class RmaBlocksSectionComponent {
       ? this.service.resolveBlock(rma.id, rma.currentBlock!.id, { resolutionNote: this.resolveForm.getRawValue().resolutionNote.trim() })
       : this.service.block(rma.id, { reason: this.blockForm.getRawValue().reason.trim(), category: this.blockForm.getRawValue().category.trim() || null });
     this.busy.set(true);
+    this.busyChange.emit(true);
     this.error.set('');
     form.disable();
-    request.pipe(takeUntilDestroyed(this.destroyRef), finalize(() => { this.busy.set(false); form.enable(); })).subscribe({
+    request.pipe(takeUntilDestroyed(this.destroyRef), finalize(() => { this.busy.set(false); this.busyChange.emit(false); form.enable(); })).subscribe({
       next: (updated) => {
         this.current.set(updated);
         this.mode.set('idle');

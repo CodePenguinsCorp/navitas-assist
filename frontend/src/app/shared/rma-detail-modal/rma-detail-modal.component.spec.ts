@@ -13,7 +13,10 @@ import { RmaRepairService } from '../../core/services/rma-repair.service';
 import { PartService } from '../../core/services/part.service';
 import { ReportService } from '../../core/services/report.service';
 import { RmaService } from '../../core/services/rma.service';
-import { of } from 'rxjs';
+import { Observable, Subject, of } from 'rxjs';
+import { RmaAssigneeFieldComponent } from '../rma-assignee-field/rma-assignee-field.component';
+import { RmaDueDateFieldComponent } from '../rma-due-date-field/rma-due-date-field.component';
+import { RmaPriorityFieldComponent } from '../rma-priority-field/rma-priority-field.component';
 import { buildRma, buildRmaItem } from '../../testing/rma-fixtures';
 import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { RmaDetailModalComponent } from './rma-detail-modal.component';
@@ -66,7 +69,7 @@ const USERS = [
   { id: 9, username: 'bia', fullName: 'Beatriz Souza' }
 ];
 
-async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; canUpdateAssignee?: boolean; canEditDueDate?: boolean; disabled?: boolean } = {}) {
+async function setup(inputs: { getById?: (id: number) => Observable<RmaResponse>; rma?: RmaResponse; canUpdateStatus?: boolean; canUpdateAssignee?: boolean; canEditDueDate?: boolean; disabled?: boolean } = {}) {
   await TestBed.configureTestingModule({
     imports: [RmaDetailModalComponent],
     providers: [
@@ -79,6 +82,7 @@ async function setup(inputs: { rma?: RmaResponse; canUpdateStatus?: boolean; can
       { provide: PartService, useValue: { getRmaParts: () => of({ reservations: [], movements: [], reservedCost: 0, consumedCost: 0, pendingCount: 0 }), listOptions: () => of([]) } },
       { provide: ReportService, useValue: { downloadTechnicalReport: () => of() } },
       { provide: RmaService, useValue: {
+        getById: (id: number) => (inputs.getById ?? ((other: number) => of({ ...(inputs.rma ?? fullRma), id: other })))(id),
         updateStatus: (id: number, payload: { status: RmaResponse['status'] }) => of({ ...(inputs.rma ?? fullRma), id, status: payload.status }),
         updateDueDate: (id: number, dueDate: string | null) => of({ ...(inputs.rma ?? fullRma), id, dueDate }),
         updatePriority: (id: number, priority: RmaResponse['priority']) => of({ ...(inputs.rma ?? fullRma), id, priority }),
@@ -880,3 +884,47 @@ describe('RmaDetailModalComponent priority selector', () => {
      expect(row.querySelector<HTMLButtonElement>('dd button')!.disabled).toBe(true);
    }
  });
+
+describe('RmaDetailModalComponent write concurrency', () => {
+  interface Harness { requestClose(): void; refreshRepair(): void; applyUpdate(rma: RmaResponse): void; }
+
+  it('holds the other writers and closing while any writer is busy, counted per writer, and reports the aggregate', async () => {
+    const { fixture, component, host } = await setup({ canEditDueDate: true });
+    const closed = vi.fn(); component.closed.subscribe(closed);
+    const busy: boolean[] = []; component.busyChange.subscribe((value) => busy.push(value));
+    const writer = <T,>(type: new (...args: never[]) => T) => fixture.debugElement.query(By.directive(type)).componentInstance as { busyChange: { emit(value: boolean): void } };
+    const priority = writer(RmaPriorityFieldComponent); const dueDate = writer(RmaDueDateFieldComponent);
+    priority.busyChange.emit(true); dueDate.busyChange.emit(true); fixture.detectChanges();
+    expect(fixture.debugElement.query(By.directive(RmaDueDateFieldComponent)).componentInstance.disabled()).toBe(true);
+    expect(host.querySelector<HTMLButtonElement>('.modal-close')!.disabled).toBe(true);
+    priority.busyChange.emit(false); fixture.detectChanges();
+    (component as unknown as Harness).requestClose();
+    expect(closed).not.toHaveBeenCalled();
+    dueDate.busyChange.emit(false); fixture.detectChanges();
+    (component as unknown as Harness).requestClose();
+    expect(closed).toHaveBeenCalledTimes(1);
+    expect(busy).toEqual([true, false]);
+  });
+
+  it('ignores a saved response that belongs to another OS', async () => {
+    const { component } = await setup();
+    const updated = vi.fn(); component.rmaUpdated.subscribe(updated);
+    (component as unknown as Harness).applyUpdate({ ...fullRma, id: 99 });
+    expect(updated).not.toHaveBeenCalled();
+  });
+
+  it('does not let an older re-read overwrite a newer one, nor a newer write response', async () => {
+    const first = new Subject<RmaResponse>(); const second = new Subject<RmaResponse>(); const third = new Subject<RmaResponse>();
+    const queue = [first, second, third];
+    const { component } = await setup({ getById: () => queue.shift()! });
+    const updated: string[] = []; component.rmaUpdated.subscribe((rma) => updated.push(rma.updatedAt));
+    const harness = component as unknown as Harness;
+    harness.refreshRepair(); harness.refreshRepair();
+    second.next({ ...fullRma, updatedAt: 'B' }); first.next({ ...fullRma, updatedAt: 'A' });
+    expect(updated).toEqual(['B']);
+    harness.refreshRepair();
+    harness.applyUpdate({ ...fullRma, updatedAt: 'C' });
+    third.next({ ...fullRma, updatedAt: 'old' });
+    expect(updated).toEqual(['B', 'C']);
+  });
+});

@@ -11,7 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormArray, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { HttpContext } from '@angular/common/http';
-import { Subject, Subscription, catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
+import { Subject, Subscription, catchError, distinctUntilChanged, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 import { SKIP_GLOBAL_LOADING } from '../../core/interceptors/loading.interceptor';
 import {
   RMA_PRIORITY_LABELS,
@@ -393,8 +393,6 @@ export class RmasComponent {
    */
   protected readonly retroactiveOpen = signal(false);
   protected readonly dateErrors = signal<CreateDateErrors>({ manufacturedAt: [], purchaseDate: '', entryDate: '', dueDate: '' });
-  protected readonly diagnosisBusy = signal(false);
-
   protected readonly pageError = signal('');
   protected readonly pageMessage = signal('');
   protected readonly activeModal = signal<ModalView | null>(null);
@@ -451,6 +449,8 @@ export class RmasComponent {
   private readonly detailRmaId = signal<number | null>(null);
   protected readonly detailError = signal('');
   private detailRequest?: Subscription;
+  private refreshRequest?: Subscription;
+  private pendingRequestedRma: number | null = null;
 
   protected readonly rmas = this.rmaList.items;
   protected readonly loading = this.rmaList.loading;
@@ -548,9 +548,12 @@ export class RmasComponent {
 
   protected readonly canOpenRma = computed(() => this.permissions.hasPermission('rma.abrir'));
 
-  protected readonly dueDateBusy = signal(false);
-  protected readonly warrantyBusy = signal(false);
-  protected readonly statusBusy = signal(false);
+  /**
+   * Writers of the open detail (status, assignee, priority, due date, warranty, diagnosis, impediments) report here, each
+   * counted on its own: while any is in flight the other writers, the tabs and closing wait.
+   */
+  private readonly writers = signal<Readonly<Record<string, number>>>({});
+  protected readonly writeBusy = computed(() => Object.values(this.writers()).some((count) => count > 0));
   protected readonly canUpdateStatus = computed(() => this.permissions.hasPermission('rma.status'));
 
   /** `rma.editar`: general data, including the due date. */
@@ -599,7 +602,8 @@ export class RmasComponent {
       takeUntilDestroyed()
     ).subscribe((summary) => this.summarySignal.set(summary));
     this.loadWorkspace();
-    this.openRequestedRma();
+    // The same page is reused when a notification link only changes ?rma=: follow every new value.
+    this.route.queryParamMap.pipe(map((params) => params.get('rma')), distinctUntilChanged(), takeUntilDestroyed()).subscribe((value) => this.openRequestedRma(value));
   }
 
   protected get createItems() {
@@ -696,6 +700,7 @@ export class RmasComponent {
 
   private loadDetail(id: number): void {
     this.detailRequest?.unsubscribe();
+    this.refreshRequest?.unsubscribe();
     this.detailRmaId.set(id);
     this.selectedRmaSignal.set(null);
     this.detailError.set('');
@@ -707,7 +712,7 @@ export class RmasComponent {
 
   /** Same tab contract as notifications: arrows wrap, Home/End jump to the ends; selection follows focus. */
   protected onDetailTabKeydown(event: KeyboardEvent): void {
-    if (this.statusBusy() || this.diagnosisBusy() || this.warrantyBusy() || this.dueDateBusy()) return;
+    if (this.writeBusy()) return;
     const ids = this.detailTabs.map((tab) => tab.id);
     const current = ids.indexOf(this.detailTab());
     let next: number;
@@ -729,7 +734,7 @@ export class RmasComponent {
   }
 
   protected closeModal(): void {
-    if (this.createSubmitting() || this.diagnosisBusy() || this.statusBusy() || this.warrantyBusy() || this.dueDateBusy()) return;
+    if (this.createSubmitting() || this.writeBusy()) return;
     this.resetModal();
   }
 
@@ -804,17 +809,36 @@ export class RmasComponent {
     });
   }
 
+  protected setWriterBusy(key: string, busy: boolean): void {
+    this.writers.update((current) => ({ ...current, [key]: Math.max((current[key] ?? 0) + (busy ? 1 : -1), 0) }));
+    if (!busy && !this.writeBusy() && this.pendingRequestedRma !== null) {
+      const id = this.pendingRequestedRma;
+      this.pendingRequestedRma = null;
+      this.openDetailById(id);
+    }
+  }
+
+  /** True when a writer other than `key` is in flight (a writer never disables itself). */
+  protected busyExcept(key: string): boolean {
+    return Object.entries(this.writers()).some(([name, count]) => name !== key && count > 0);
+  }
+
   /** A save made inside the detail (impediment, due date) refreshes the detail and the list. */
   protected refreshRepair(): void {
     const id = this.selectedRma()?.id;
     if (!id) return;
-    this.rmaService.getById(id).subscribe({
+    this.refreshRequest?.unsubscribe();
+    this.refreshRequest = this.rmaService.getById(id).subscribe({
       next: updated => { if (this.selectedRma()?.id === id) this.detailRmaSaved(updated); },
       error: error => this.pageError.set(extractHttpErrorMessage(error, 'Não foi possível atualizar o histórico.'))
     });
   }
 
   protected detailRmaSaved(updated: RmaResponse): void {
+    // A response of another OS (a late one, after the detail changed) never replaces the open detail.
+    if (this.selectedRma()?.id !== updated.id) return;
+    // A re-read started before this response may carry an older snapshot: drop it.
+    this.refreshRequest?.unsubscribe();
     this.selectedRmaSignal.set(updated);
     this.refreshRmas();
   }
@@ -831,9 +855,15 @@ export class RmasComponent {
   }
 
   /** Opens the OS referenced by an internal notification link (/rmas?rma=<id>). */
-  private openRequestedRma(): void {
-    const rmaId = Number(this.route.snapshot.queryParamMap.get('rma'));
-    if (!Number.isInteger(rmaId) || rmaId <= 0) {
+  private openRequestedRma(value: string | null): void {
+    const rmaId = Number(value);
+    if (value === null || !Number.isInteger(rmaId) || rmaId <= 0) {
+      return;
+    }
+
+    // Never swap the detail under a save in flight: open it as soon as the writers are done.
+    if (this.writeBusy()) {
+      this.pendingRequestedRma = rmaId;
       return;
     }
 
@@ -843,6 +873,7 @@ export class RmasComponent {
   private resetModal(): void {
     this.activeModal.set(null);
     this.detailRequest?.unsubscribe();
+    this.refreshRequest?.unsubscribe();
     this.detailError.set('');
   }
 

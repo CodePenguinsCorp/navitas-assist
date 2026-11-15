@@ -2,8 +2,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
-import { Observable, Subject, of, throwError } from 'rxjs';
+import { ActivatedRoute, ParamMap, convertToParamMap, provideRouter } from '@angular/router';
+import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
 import { PageResponse, RmaResponse, RmaSummaryResponse, UserSession, WarrantyStatus } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
@@ -22,6 +22,8 @@ interface SetupOptions {
   list?: ListFn;
   summary?: SummaryFn;
   requestedRma?: number;
+  /** Live query params of the page: lets a test navigate to another OS without destroying the component. */
+  liveQuery?: BehaviorSubject<ParamMap>;
 }
 
 interface ListHarness {
@@ -60,10 +62,11 @@ async function setup(options: SetupOptions = {}) {
     { provide: RmaService, useValue: rmaService },
     { provide: ProtocolService, useValue: { listExecutions: () => of([]), listTemplates: () => of([]) } }
   ];
-  if (options.requestedRma !== undefined) {
+  if (options.requestedRma !== undefined || options.liveQuery) {
+    const initial = convertToParamMap(options.requestedRma !== undefined ? { rma: String(options.requestedRma) } : {});
     providers.push({
       provide: ActivatedRoute,
-      useValue: { snapshot: { queryParamMap: convertToParamMap({ rma: String(options.requestedRma) }) } }
+      useValue: { snapshot: { queryParamMap: initial }, queryParamMap: options.liveQuery ?? new BehaviorSubject(initial) }
     });
   }
   await TestBed.configureTestingModule({ imports: [RmasComponent], providers: providers as never[] }).compileComponents();
@@ -500,6 +503,18 @@ describe('RmasComponent list state', () => {
       expect(page.querySelector('.rma-details')).not.toBeNull();
       const selected = page.querySelector('[role="tab"][aria-selected="true"]');
       expect(selected?.textContent?.trim()).toBe('Produtos');
+    });
+
+    it('opens another OS when only the rma query param changes while the page stays open', async () => {
+      const query = new BehaviorSubject(convertToParamMap({ rma: '4' }));
+      const { rmaService, render } = await setup({ liveQuery: query });
+      expect(rmaService.getById).toHaveBeenLastCalledWith(4, expect.anything());
+      query.next(convertToParamMap({ rma: '7' })); render();
+      expect(rmaService.getById).toHaveBeenLastCalledWith(7, expect.anything());
+      const calls = rmaService.getById.mock.calls.length;
+      for (const invalid of [{ rma: 'abc' }, { rma: '0' }, { rma: '-3' }, { rma: '1.5' }, {}]) query.next(convertToParamMap(invalid));
+      render();
+      expect(rmaService.getById).toHaveBeenCalledTimes(calls);
     });
   });
 });

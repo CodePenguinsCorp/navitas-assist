@@ -3,7 +3,10 @@ import { signal } from '@angular/core';
 import { ComponentFixture, DeferBlockState, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
+import { RmaAssigneeFieldComponent } from '../../shared/rma-assignee-field/rma-assignee-field.component';
+import { RmaDueDateFieldComponent } from '../../shared/rma-due-date-field/rma-due-date-field.component';
+import { RmaPriorityFieldComponent } from '../../shared/rma-priority-field/rma-priority-field.component';
 import { DiagnosisResponse, RmaResponse, UserSession, WarrantyStatus } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
@@ -121,6 +124,68 @@ async function setup(options: { role?: LegacyProfileCode } = {}) {
 
 // Waits for the lazy chunks the detail view starts, so none is pending at environment teardown.
 afterEach(settleRmaLazyChunks);
+
+interface ConcurrencyHarness {
+  closeModal(): void;
+  refreshRepair(): void;
+  detailRmaSaved(rma: RmaResponse): void;
+  selectedRma(): RmaResponse | null;
+}
+
+describe('RmasComponent detail write concurrency', () => {
+  it('blocks the siblings, the tabs and closing while any writer is busy, counted per writer', async () => {
+    const { fixture, open, render, detail, tab } = await setup(); open();
+    const writer = <T,>(type: new (...args: never[]) => T) => fixture.debugElement.query(By.directive(type)).componentInstance as { busyChange: { emit(value: boolean): void } };
+    const priority = writer(RmaPriorityFieldComponent); const assignee = writer(RmaAssigneeFieldComponent);
+    const component = fixture.componentInstance as unknown as ConcurrencyHarness;
+    priority.busyChange.emit(true); assignee.busyChange.emit(true); render();
+    expect(tab('Produtos').disabled).toBe(true);
+    expect(fixture.debugElement.query(By.directive(RmaDueDateFieldComponent)).componentInstance.disabled()).toBe(true);
+    priority.busyChange.emit(false); render();
+    expect(tab('Produtos').disabled).toBe(true);
+    component.closeModal(); render();
+    expect(detail()).not.toBeNull();
+    assignee.busyChange.emit(false); render();
+    expect(tab('Produtos').disabled).toBe(false);
+    component.closeModal(); render();
+    expect(fixture.nativeElement.querySelector('.rma-details')).toBeNull();
+  });
+
+  it('blocks closing while the due date is being saved', async () => {
+    const { fixture, open, render, detail } = await setup(); open();
+    fixture.debugElement.query(By.directive(RmaDueDateFieldComponent)).componentInstance.busyChange.emit(true); render();
+    (fixture.componentInstance as unknown as ConcurrencyHarness).closeModal(); render();
+    expect(detail()).not.toBeNull();
+  });
+
+  it('ignores a saved response that belongs to another OS', async () => {
+    const { fixture, open, render } = await setup(); open();
+    const component = fixture.componentInstance as unknown as ConcurrencyHarness;
+    component.detailRmaSaved({ ...fullRma, id: 99, code: 'OS-2026-000099' }); render();
+    expect(component.selectedRma()?.code).toBe('OS-2026-000005');
+  });
+
+  it('does not let an older history re-read overwrite a newer one', async () => {
+    const { fixture, open, rmaService } = await setup(); open();
+    const component = fixture.componentInstance as unknown as ConcurrencyHarness;
+    const first = new Subject<RmaResponse>(); const second = new Subject<RmaResponse>();
+    rmaService.getById.mockReturnValueOnce(first).mockReturnValueOnce(second);
+    component.refreshRepair(); component.refreshRepair();
+    second.next({ ...fullRma, updatedAt: '2026-11-14T12:00:00Z' }); first.next({ ...fullRma, updatedAt: '2026-11-14T10:00:00Z' });
+    expect(component.selectedRma()?.updatedAt).toBe('2026-11-14T12:00:00Z');
+  });
+
+  it('drops a pending re-read once a newer write response has been applied', async () => {
+    const { fixture, open, rmaService } = await setup(); open();
+    const component = fixture.componentInstance as unknown as ConcurrencyHarness;
+    const pending = new Subject<RmaResponse>();
+    rmaService.getById.mockReturnValueOnce(pending);
+    component.refreshRepair();
+    component.detailRmaSaved({ ...fullRma, updatedAt: '2026-11-14T12:00:00Z' });
+    pending.next({ ...fullRma, updatedAt: '2026-11-14T10:00:00Z' });
+    expect(component.selectedRma()?.updatedAt).toBe('2026-11-14T12:00:00Z');
+  });
+});
 
 describe('RmasComponent detail with the shared information contract', () => {
   it('opens products with content and folds empty products and diagnosis', async () => {
