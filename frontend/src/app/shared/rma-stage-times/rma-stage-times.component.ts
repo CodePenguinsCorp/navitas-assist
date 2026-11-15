@@ -17,10 +17,8 @@ interface StageRow {
   value: string;
   /** Share of the bar; the closing stage of a closed RMA takes no space. */
   weight: number;
+  seconds: number;
 }
-
-/** Share below which a stage would be invisible on the bar; it still gets a thin, hoverable segment. */
-const MIN_SHARE = 0.05;
 
 /** "Tempo por etapa": one proportional bar with the total on the right; hovering a segment names its stage and time. */
 @Component({
@@ -38,24 +36,34 @@ export class RmaStageTimesComponent {
     const periods = this.rma().stagePeriods;
     const closed = CLOSED_RMA_STATUSES.includes(this.rma().status);
     const now = this.clock.now();
-    const rows = periods.map((period, index) => {
+    // Map preserves the first passage order already used by the detail.
+    const stages = new Map<RmaResponse['status'], { seconds: number; current: boolean; closing: boolean; enteredAt: string }>();
+    periods.forEach((period, index) => {
       const current = index === periods.length - 1;
-      const label = statusLabel(period.status);
       const closing = current && closed;
-      const seconds = closing ? 0 : stageElapsedSeconds(period, now);
-      const value = closing
-        ? `Encerrada em ${formatDateTime(period.enteredAt).replace(", ", " ")}`
-        : `${formatDuration(seconds)}${current ? ' (atual)' : ''}`;
-      return { key: `${period.status}-${period.enteredAt}-${index}`, status: period.status, text: `${label} - ${value}`, label, value, seconds, closing };
+      const previous = stages.get(period.status);
+      stages.set(period.status, {
+        seconds: (previous?.seconds ?? 0) + (closing ? 0 : stageElapsedSeconds(period, now)),
+        current,
+        closing,
+        enteredAt: period.enteredAt
+      });
     });
-    const total = rows.reduce((sum, row) => sum + row.seconds, 0);
+    const rows = [...stages].map(([status, stage]) => {
+      const label = statusLabel(status);
+      const value = stage.closing
+        ? `Encerrada em ${formatDateTime(stage.enteredAt).replace(", ", " ")}`
+        : `${formatDuration(stage.seconds)}${stage.current ? ' (atual)' : ''}`;
+      return { key: status, status, text: `${label} - ${value}`, label, value, seconds: stage.seconds, closing: stage.closing };
+    });
     return rows.map((row) => ({
       key: row.key,
       status: row.status,
       text: row.text,
       label: row.label,
       value: row.value,
-      weight: row.closing ? 0 : Math.max(row.seconds, total * MIN_SHARE, 1)
+      seconds: row.seconds,
+      weight: row.closing ? 0 : Math.max(row.seconds, 1)
     }));
   });
 
@@ -63,14 +71,8 @@ export class RmaStageTimesComponent {
   protected readonly segments = computed(() => this.rows().filter((row) => row.weight > 0));
 
   /** Total time spent in stages, shown next to the title. */
-  protected readonly totalLabel = computed(() => {
-    const now = this.clock.now();
-    const closed = CLOSED_RMA_STATUSES.includes(this.rma().status);
-    const periods = this.rma().stagePeriods;
-    const seconds = periods.reduce((sum, period, index) =>
-      closed && index === periods.length - 1 ? sum : sum + stageElapsedSeconds(period, now), 0);
-    return formatDuration(seconds);
-  });
+  protected readonly totalLabel = computed(() =>
+    formatDuration(this.rows().reduce((sum, row) => sum + row.seconds, 0)));
 
   protected readonly closingRow = computed(() => this.rows().find((row) => row.weight === 0) ?? null);
 

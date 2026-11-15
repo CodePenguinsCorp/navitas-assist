@@ -36,6 +36,22 @@ describe('RmaStageTimesComponent', () => {
     })).toEqual(['Recebida - 2 h', 'Triagem - 1 d', 'Diagnóstico - 1 d 23 h (atual)']);
   });
 
+  it('soma idas e voltas por etapa na ordem da primeira passagem', () => {
+    expect(lines({ status: 'RECEIVED', stagePeriods: [
+      { status: 'TRIAGE', enteredAt: '2026-11-13T08:00:00Z', leftAt: '2026-11-13T08:20:00Z', durationSeconds: 1200 },
+      { status: 'RECEIVED', enteredAt: '2026-11-13T08:20:00Z', leftAt: '2026-11-13T09:23:00Z', durationSeconds: 3780 },
+      { status: 'TRIAGE', enteredAt: '2026-11-13T09:23:00Z', leftAt: '2026-11-13T09:52:00Z', durationSeconds: 1740 },
+      { status: 'RECEIVED', enteredAt: '2026-11-13T09:52:00Z', leftAt: '2026-11-13T10:12:00Z', durationSeconds: 1200 },
+      { status: 'RECEIVED', enteredAt: '2026-11-13T11:20:00Z', leftAt: null, durationSeconds: 0 }
+    ] })).toEqual(['Triagem - 49 min', 'Recebida - 2 h 3 min (atual)']);
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelectorAll('.stage-times__list li')).toHaveLength(2);
+    const segments = [...element.querySelectorAll<HTMLElement>('.stage-times__segment')];
+    expect(segments.map(segment => segment.dataset['status'])).toEqual(['TRIAGE', 'RECEIVED']);
+    expect(segments.map(segment => Number(segment.style.flexGrow))).toEqual([2940, 7380]);
+    expect(element.querySelector('.stage-times__total')?.textContent?.trim()).toBe('2 h 52 min');
+  });
+
   it('shows Encerrada em on the last line of a closed OS', () => {
     const rendered = lines({
       status: 'COMPLETED',

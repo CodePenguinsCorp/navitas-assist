@@ -518,12 +518,14 @@ describe('RmasComponent detail with the shared information contract', () => {
       ...fullRma,
       stagePeriods: [
         { status: 'RECEIVED', enteredAt: '2026-10-20T08:00:00Z', leftAt: '2026-10-20T10:00:00Z', durationSeconds: 7200 },
-        { status: 'TRIAGE', enteredAt: '2026-10-20T10:00:00Z', leftAt: null, durationSeconds: 0 }
+        { status: 'TRIAGE', enteredAt: '2026-10-20T10:00:00Z', leftAt: '2026-10-20T10:30:00Z', durationSeconds: 1800 },
+        { status: 'RECEIVED', enteredAt: '2026-10-20T10:30:00Z', leftAt: '2026-10-20T11:00:00Z', durationSeconds: 1800 },
+        { status: 'TRIAGE', enteredAt: '2026-10-20T11:00:00Z', leftAt: null, durationSeconds: 0 }
       ]
     });
     selectTab('Histórico');
     const lines = [...tabPanel().querySelectorAll('app-rma-stage-times ol.sr-only li')].map((item) => item.textContent?.trim());
-    expect(lines).toEqual(['Recebida - 2 h', 'Triagem - 2 h (atual)']);
+    expect(lines).toEqual(['Recebida - 2 h 30 min', 'Triagem - 1 h 30 min (atual)']);
   });
 
   it('shows due date changes with previous value and author', async () => {

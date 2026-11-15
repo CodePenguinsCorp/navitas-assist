@@ -151,6 +151,8 @@ As seções acima foram escritas antes destas entregas. Onde citam SLA por etapa
 
 ### Tempo por etapa
 
+- No detalhe da lista e do Kanban, cada etapa aparece uma vez, na ordem da primeira passagem, preservando a sequência do atendimento. Idas e voltas somam os períodos da etapa, inclusive o período em andamento com "(atual)". A barra tem um segmento por etapa, proporcional ao total acumulado; o cabeçalho soma todas as etapas. OS encerrada mantém "Encerrada em ..." na última linha. O card "nesta etapa" e o resumo do dashboard continuam considerando somente a etapa atual.
+
 - Nos dois detalhes da OS, conferir cabeçalho sem ícone, seta ou sublinhado, inclusive em hover: título e total à direita. Conteúdo sempre aberto e cursor comum.
 
 ### Seletores de informações
