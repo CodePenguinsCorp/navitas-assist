@@ -1,4 +1,4 @@
-# NAV-8 — Campos de clientes — Implementation Plan
+# NAV-8 - Campos de clientes - Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan inline, task-by-task. Steps use checkbox syntax for tracking. Do not dispatch subagents for these dependent changes.
 
@@ -28,7 +28,7 @@
 - Payload Angular de edição: sem propriedade obsoleta ou controle invisível de contato.
 - Banco vazio e atualização da base: schema sem coluna removida; testes e UI não regridem após eventual integração da NAV-28.
 
-## Task 1 — Contrato e persistência
+## Task 1 - Contrato e persistência
 
 **Files:** `backend/src/main/java/br/com/navitasassist/client/{Client.java,ClientRequest.java,ClientResponse.java}`, `backend/src/main/java/br/com/navitasassist/service/ClientService.java`, `backend/src/main/resources/db/migration/V1__create_schema.sql`.
 
@@ -43,7 +43,7 @@
 - [ ] Remover atributo, componente dos records, acessores e atribuição do serviço; retirar somente a coluna de contato de V1. Não alterar a política Jackson ou as regras de segurança.
 - [ ] Repetir os testes focados; exigir saída 0 e ausência de falhas. Usar Maven 3.9.9/Java 17 via Docker se não houver Maven local, conforme o fluxo já utilizado no projeto.
 
-## Task 2 — Interface e contrato TypeScript
+## Task 2 - Interface e contrato TypeScript
 
 **Files:** `frontend/src/app/core/models.ts`, `frontend/src/app/pages/clients/clients.component.{ts,html,spec.ts}`, `frontend/src/app/core/services/catalog.service.spec.ts`.
 
@@ -56,7 +56,7 @@
 - [ ] Remover contato dos tipos, fixtures, união de controles, formulário, reset, carregamento de edição, busca e montagem do payload. Ajustar indicador, coluna e labels conforme a spec. Reaproveitar as validações existentes, sem criar helpers ou controles novos.
 - [ ] Atualizar o fixture de transporte de clientes e acrescentar a verificação de PUT, mantendo os caminhos POST/PUT existentes. Repetir a suíte Angular e exigir saída 0.
 
-## Task 3 — Validação e entrega
+## Task 3 - Validação e entrega
 
 - [ ] Atualizar a base remota e revisar qualquer integração nova da NAV-28. Se houver conflito, preservar paginação/filtros e aplicar somente a remoção do contato; repetir os testes afetados após a resolução.
 - [ ] Executar `mvn -B -ntp verify` em `backend`, com perfil de testes/H2, e confirmar suíte completa e JAR aprovados.

@@ -1,4 +1,4 @@
-# Etapa 1 — Fundação visual comum: recorte e critérios de aceite
+# Etapa 1 - Fundação visual comum: recorte e critérios de aceite
 
 7 de novembro de 2026. Proposta para revisão; nada foi implementado. Referências: [estudo global](2026-11-06-estudo-ui-ux.md) e [plano da fase 1](2026-11-07-plano-fase-1-fundacao.md), já entregue.
 

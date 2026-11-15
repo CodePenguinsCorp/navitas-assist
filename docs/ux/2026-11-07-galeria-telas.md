@@ -1,4 +1,4 @@
-# Navitas Assist — galeria global de UI e UX
+# Navitas Assist - galeria global de UI e UX
 
 7 de novembro de 2026. Propostas com dados fictícios, sem alteração das telas em produção. A fundamentação, as evidências e as decisões estão no [estudo global](2026-11-06-estudo-ui-ux.md).
 

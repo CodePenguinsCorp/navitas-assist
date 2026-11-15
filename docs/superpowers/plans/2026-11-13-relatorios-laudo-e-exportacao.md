@@ -1,4 +1,4 @@
-# Relatórios, laudo em PDF e exportação CSV — plano
+# Relatórios, laudo em PDF e exportação CSV - plano
 
 **Spec:** `docs/superpowers/specs/2026-11-13-relatorios-laudo-e-exportacao-design.md`
 

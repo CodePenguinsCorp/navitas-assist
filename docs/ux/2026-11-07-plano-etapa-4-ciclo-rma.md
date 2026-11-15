@@ -1,4 +1,4 @@
-# Etapa 4 — Ciclo da OS (lista, histórico, abertura, diagnóstico e os dois detalhes) Implementation Plan
+# Etapa 4 - Ciclo da OS (lista, histórico, abertura, diagnóstico e os dois detalhes) Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -93,7 +93,7 @@
 | Prioridade | `.priority-tag` com barras (`:202`) | `.mini-chip` com `priorityChipClass` (`:140`), sem as barras da decisão 4 |
 | SLA | ausente | `app-rma-sla-badge` (`:141`) |
 | Impedimento ativo | etiqueta "Bloqueado" sem duração (`:203-205`) | "Bloqueado há X" + motivo (`:25-27`) |
-| Nota fiscal | "Não informada" (`:220`) | "—" (`:150`) |
+| Nota fiscal | "Não informada" (`:220`) | "-" (`:150`) |
 | Compra | "Compra": "Desconhecida" quando marcada (`:222`) | "Data da compra": "Não informada" quando marcada como desconhecida (`:151`), o que confunde "desconhecida" com "não preenchida" |
 | Datas do registro | só "Atualizado" (`:224`) | "Criado em" e "Atualizado em" (`:155-160`) |
 | Recebido por / rastreio | ausentes (o spec `rmas.component.spec.ts:136-145` garante que "Recebido por" não aparece) | presentes (`:149,152`) |
@@ -104,7 +104,7 @@
 | Item sem identificação | "Não informada"/"Não informado" por campo (`:254-255`) | "Item sem identificação" (`rma-ui.ts:88`) |
 | Recebimento (acessórios, condição física) | **ausente** | bloco "Recebimento" (`:55-66`) |
 | Diagnóstico | só Falha encontrada, Tipo, Causa provável (`:269-273`); sem data, técnico e notas | Falha encontrada, Tipo, Causa provável, Técnico, "Observações" (`:68-82`); sem data; bloco some quando não há diagnóstico |
-| Falha encontrada vazia | texto vazio | "—" (`:75`) |
+| Falha encontrada vazia | texto vazio | "-" (`:75`) |
 | Reparo, peças trocadas, testes | **ausentes** (o dado registrado na abertura não aparece) | bloco "Reparo" com "Resumo do reparo", "Peças substituídas", "Testes" (`:84-96`), rótulos diferentes dos da abertura ("Reparo", "Peças trocadas", "Testes", `rmas.component.html:464-474`) |
 | Peças | aba com `app-rma-parts-panel` (`:284-290`) | ausente, sem caminho para chegar |
 | Protocolos | aba com `RmaProtocolsComponent` carregado sob demanda (`:291-297`) | ausente, sem caminho para chegar |
@@ -125,7 +125,7 @@
 | `rmas.component.spec.ts` | `:252` | `.modal-overlay .form-actions--full .button-secondary` é Cancelar | Manter `form-actions form-actions--full` com Cancelar como primeiro `.button-secondary`; "Adicionar produto" e "Limpar" não podem ficar dentro desse rodapé |
 | `rmas.component.spec.ts` | `:314,347` | `.status-card h3` com a mensagem de erro | Trocar por um auxiliar `editorFeedback(mode)`: para `create` (Tarefa 2a) e depois para `diagnosis` (Tarefa 3), `[role="dialog"] [role="alert"]` |
 | `rmas.component.spec.ts` | `:220-247` | `[formControlName="..."]` dentro de `.modal-overlay`; opção "SKU-2 · Produto" | Continua válido: nomes de controle e rótulo das opções não mudam |
-| `rmas.component.spec.ts` | `:202,276` | `expectOne('/api/rmas/summary')` uma vez por carga | Continua válido: o contrato do resumo mantém uma requisição por carga; com `switchMap`, uma requisição ainda pendente pode aparecer como `cancelled` — nenhum desses testes deixa duas pendentes |
+| `rmas.component.spec.ts` | `:202,276` | `expectOne('/api/rmas/summary')` uma vez por carga | Continua válido: o contrato do resumo mantém uma requisição por carga; com `switchMap`, uma requisição ainda pendente pode aparecer como `cancelled` - nenhum desses testes deixa duas pendentes |
 | `kanban.component.spec.ts` | `:227-285` | abrir/fechar o modal, Escape coberto, "Alterar status", "responsável", "Ver impedimentos" | **Não alterar** os testes; só acrescentar `provideRouter([])` aos `providers` (`:26-65`) na Tarefa 4C, porque o modal passa a ter `routerLink`. O mock de perfil autoriza tudo (`:29`); a matriz por perfil vai para spec novo |
 | `rma-ui.spec.ts` | todo | rótulos existentes | Manter; acrescentar `itemCountLabel` e a preservação de `productSummary`/`trackableLabel` com vários itens (Tarefa 1a) |
 
@@ -193,7 +193,7 @@ Precedência no corpo da tabela:
 
 ---
 
-### Task 1a: Lista — estado, filtro confirmado e resumo coerente
+### Task 1a: Lista - estado, filtro confirmado e resumo coerente
 
 **Files:**
 - Modify: `frontend/src/app/pages/rmas/rmas.component.html` (`:2-29`: cabeçalho e cartões, trocados pelo cabeçalho compartilhado e pela linha de indicadores)
@@ -212,19 +212,19 @@ Precedência no corpo da tabela:
 
 - [ ] **Step 1: Escrever os testes.**
   *Comportamento novo (devem falhar antes; asserção que reprova hoje entre parênteses)*, em `rmas.component.list.spec.ts`, com serviços falsos como em `rmas.component.spec.ts:20-46` e `hasAnyRole: (roles) => roles.includes(role)`:
-  - `shows the count next to the title and no statistics cards` (`.page-heading__count` "45 ordens de serviço" — hoje não existe; e `.stat-card` ausente — hoje há três).
-  - `uses the singular for one OS` ("1 OS" no cabeçalho — hoje ausente).
-  - `shows indicators scoped to the whole result` (`.rma-summary` com "No resultado", "30" e "7" — hoje ausente; e o texto da página **não** contém "nesta página" — hoje contém).
-  - `shows no count and no indicator values before the first responses` (`list` e `getSummary` como `Subject` não emitidos: sem `.page-heading__count` e o texto da página não contém "0 ordens de serviço" nem "Prioridade alta" acompanhado de "0" — hoje os cartões mostram "0"; só então emitir e ver "45 ordens de serviço" e os valores).
-  - `hides stale indicators when a later summary fails` (sucesso com 30/7; "Buscar" com outro texto; `getSummary` em erro; lista do novo filtro responde: o texto da página não contém "30" nem "7" — hoje o último resumo fica na tela — e não há `[role="alert"]` com "resumo").
-  - `never shows the summary of filter A next to the list of filter B` (A confirmado e respondido; "Buscar" B; lista B responde antes do resumo B: sem `.rma-summary` e sem os valores de A; resumo B responde: valores de B — hoje os valores de A ficam até o resumo B).
-  - `discards a late summary of filter A after B was requested` (resumos como `Subject` por chamada: B responde, depois A responde: a tela mantém os valores de B — hoje A sobrescreve B; e a assinatura de A foi encerrada: `observed` do `Subject` de A é `false`).
-  - `ignores a late error of filter A after B succeeded` (B responde; o `Subject` de A emite erro: os valores de B continuam — hoje um erro tardio grava `pageError`).
-  - `hides the count after Buscar until the new list responds` (com A exibido, "Buscar" B com lista pendente: sem `.page-heading__count` — hoje a contagem antiga ficaria até a resposta).
-  - `keeps the confirmed text filter when paging and changing size` (digitar "abc" sem enviar; `goToPage(1)` e `changePageSize(50)`: chamadas com `query: undefined` — hoje vão com `'abc'`).
-  - `keeps the confirmed status when paging` (trocar o status no formulário para `TRIAGE` sem enviar; `goToPage(1)`: `status: undefined` — hoje vai `'TRIAGE'`).
-  - `refreshes with the confirmed filter after saving a diagnosis` (confirmar `query: 'x'`; digitar "y" sem enviar; salvar diagnóstico com sucesso: a recarga de `list` e de `getSummary` vai com `query: 'x'` — hoje vai `'y'`).
-  - Em `rma-ui.spec.ts`: `formats item counts` (`itemCountLabel(1)` "1 item", `(2)` "2 itens", `(0)` "0 itens" — hoje a função não existe: vermelho de compilação, relatar à parte).
+  - `shows the count next to the title and no statistics cards` (`.page-heading__count` "45 ordens de serviço" - hoje não existe; e `.stat-card` ausente - hoje há três).
+  - `uses the singular for one OS` ("1 OS" no cabeçalho - hoje ausente).
+  - `shows indicators scoped to the whole result` (`.rma-summary` com "No resultado", "30" e "7" - hoje ausente; e o texto da página **não** contém "nesta página" - hoje contém).
+  - `shows no count and no indicator values before the first responses` (`list` e `getSummary` como `Subject` não emitidos: sem `.page-heading__count` e o texto da página não contém "0 ordens de serviço" nem "Prioridade alta" acompanhado de "0" - hoje os cartões mostram "0"; só então emitir e ver "45 ordens de serviço" e os valores).
+  - `hides stale indicators when a later summary fails` (sucesso com 30/7; "Buscar" com outro texto; `getSummary` em erro; lista do novo filtro responde: o texto da página não contém "30" nem "7" - hoje o último resumo fica na tela - e não há `[role="alert"]` com "resumo").
+  - `never shows the summary of filter A next to the list of filter B` (A confirmado e respondido; "Buscar" B; lista B responde antes do resumo B: sem `.rma-summary` e sem os valores de A; resumo B responde: valores de B - hoje os valores de A ficam até o resumo B).
+  - `discards a late summary of filter A after B was requested` (resumos como `Subject` por chamada: B responde, depois A responde: a tela mantém os valores de B - hoje A sobrescreve B; e a assinatura de A foi encerrada: `observed` do `Subject` de A é `false`).
+  - `ignores a late error of filter A after B succeeded` (B responde; o `Subject` de A emite erro: os valores de B continuam - hoje um erro tardio grava `pageError`).
+  - `hides the count after Buscar until the new list responds` (com A exibido, "Buscar" B com lista pendente: sem `.page-heading__count` - hoje a contagem antiga ficaria até a resposta).
+  - `keeps the confirmed text filter when paging and changing size` (digitar "abc" sem enviar; `goToPage(1)` e `changePageSize(50)`: chamadas com `query: undefined` - hoje vão com `'abc'`).
+  - `keeps the confirmed status when paging` (trocar o status no formulário para `TRIAGE` sem enviar; `goToPage(1)`: `status: undefined` - hoje vai `'TRIAGE'`).
+  - `refreshes with the confirmed filter after saving a diagnosis` (confirmar `query: 'x'`; digitar "y" sem enviar; salvar diagnóstico com sucesso: a recarga de `list` e de `getSummary` vai com `query: 'x'` - hoje vai `'y'`).
+  - Em `rma-ui.spec.ts`: `formats item counts` (`itemCountLabel(1)` "1 item", `(2)` "2 itens", `(0)` "0 itens" - hoje a função não existe: vermelho de compilação, relatar à parte).
   - Ajustar `rmas.component.spec.ts:74-82` conforme "Specs existentes afetados".
   *Preservação (passam antes e depois):* `sends query and status on Buscar and resets to page 0` (parâmetros de `list` e `getSummary` iguais aos de hoje); `clears to one list request on page 0 and one summary request` (com o formulário preenchido e enviado, "Limpar" → `list` uma vez `{ page: 0, size: 20, query: undefined, status: undefined }` e `getSummary` uma vez `{ query: undefined, status: undefined }`); `falls back to the last page when the current one empties` (recuo de `PagedList`); `opens the OS requested by a notification link on the Produtos tab` (`ActivatedRoute` com `?rma=1` → `getById(1)`, detalhe aberto e aba "Produtos" com `aria-selected="true"`); em `rma-ui.spec.ts`, `keeps productSummary and trackableLabel for several items` ("Produto A + 1 item(ns)" e "Série S1 · Lote L1 + 1 item(ns)").
 - [ ] **Step 2: Rodar e ver falhar.** `npm --prefix frontend test -- --watch=false --runner-config 'C:\Users\joseh\AppData\Local\Temp\vitest-runner.config.mjs'`. Esperado: se o import de `itemCountLabel` abortar a compilação, relatar isso e não afirmar nada sobre os demais; se compilar (por exemplo, com o teste de `itemCountLabel` executado depois), FAIL nos de comportamento novo e no ajustado, PASS nos de preservação.
@@ -232,7 +232,7 @@ Precedência no corpo da tabela:
 - [ ] **Step 4: Rodar e ver passar.** Mesmo comando. Esperado: PASS na suíte inteira, inclusive o ciclo dos editores em `rmas.component.spec.ts:173-359`.
 - [ ] **Step 5: Commit.** `git add` dos arquivos de **Files**; mensagem: `feat(rmas): filtro confirmado, contagem no título e indicadores coerentes com o resultado (NAV-98)`.
 
-### Task 1b: Lista — composição: barra comum, estados e tabela
+### Task 1b: Lista - composição: barra comum, estados e tabela
 
 **Files:**
 - Modify: `frontend/src/app/pages/rmas/rmas.component.html` (`:31-69` banners e painel de filtros; `:110-188` tabela e estados)
@@ -250,13 +250,13 @@ Precedência no corpo da tabela:
 
 - [ ] **Step 1: Escrever os testes.**
   *Comportamento novo:*
-  - `uses the shared toolbar with Limpar before Buscar` (`.catalog-toolbar--filters` contém busca e status; "Limpar" precede "Buscar" — hoje "Buscar" vem antes; sem "registro(s)" na barra — hoje há).
-  - `shows the failure state on an initial load error` (`list` em erro antes de criar: `[role="alert"]` com "Não foi possível carregar as ordens de serviço." e "Tentar novamente" — hoje o banner não tem `role` e o texto é outro; e **não** contém "Nenhuma OS encontrada" — hoje contém; sem `app-pagination`).
-  - `replaces the table when a reload fails after a success with records` e `... after an empty success` (falha em `goToPage(1)`: o alerta acima aparece e o `tbody` some — hoje a tabela anterior fica).
-  - `recovers with Tentar novamente using the confirmed filter and page` (filtro confirmado e página 1; falha; restaurar; clicar: última chamada com o mesmo filtro e página e `getSummary` chamado de novo — hoje não existe o botão).
-  - `distinguishes an empty registry from a search without results` (sem filtro e vazio: "Nenhuma OS registrada" — hoje "Nenhuma OS encontrada."; com filtro confirmado e vazio: "Nenhuma OS encontrada", "Ajuste a busca ou o status." e "Limpar busca e filtros" — hoje ausente; clicar gera **uma** chamada de `list` na página 0 sem filtros e uma de `getSummary`).
-  - `keeps the table while reloading a page` (com resultado exibido, `goToPage(1)` pendente: `tbody` continua — hoje aparece "Carregando ordens de serviço..." se a página atual estiver vazia; usar resultado vazio filtrado para reprovar).
-  - `keeps OS codes on one line and counts products with singular and plural` ("1 item", "2 itens" — hoje "1 item(ns)").
+  - `uses the shared toolbar with Limpar before Buscar` (`.catalog-toolbar--filters` contém busca e status; "Limpar" precede "Buscar" - hoje "Buscar" vem antes; sem "registro(s)" na barra - hoje há).
+  - `shows the failure state on an initial load error` (`list` em erro antes de criar: `[role="alert"]` com "Não foi possível carregar as ordens de serviço." e "Tentar novamente" - hoje o banner não tem `role` e o texto é outro; e **não** contém "Nenhuma OS encontrada" - hoje contém; sem `app-pagination`).
+  - `replaces the table when a reload fails after a success with records` e `... after an empty success` (falha em `goToPage(1)`: o alerta acima aparece e o `tbody` some - hoje a tabela anterior fica).
+  - `recovers with Tentar novamente using the confirmed filter and page` (filtro confirmado e página 1; falha; restaurar; clicar: última chamada com o mesmo filtro e página e `getSummary` chamado de novo - hoje não existe o botão).
+  - `distinguishes an empty registry from a search without results` (sem filtro e vazio: "Nenhuma OS registrada" - hoje "Nenhuma OS encontrada."; com filtro confirmado e vazio: "Nenhuma OS encontrada", "Ajuste a busca ou o status." e "Limpar busca e filtros" - hoje ausente; clicar gera **uma** chamada de `list` na página 0 sem filtros e uma de `getSummary`).
+  - `keeps the table while reloading a page` (com resultado exibido, `goToPage(1)` pendente: `tbody` continua - hoje aparece "Carregando ordens de serviço..." se a página atual estiver vazia; usar resultado vazio filtrado para reprovar).
+  - `keeps OS codes on one line and counts products with singular and plural` ("1 item", "2 itens" - hoje "1 item(ns)").
   *Preservação:* `opens the detail by click, Enter and Space on a row`; `changes page and page size through the pagination` (com o filtro confirmado); `keeps warranty per product with an accessible status` (SKU e `.sr-only` "· Em garantia"); `shows Nova OS only for ADMIN and SERVICE_DESK` (quatro perfis, no cabeçalho e no estado vazio).
 - [ ] **Step 2: Rodar e ver falhar.** Esperado: FAIL nos de comportamento novo; PASS nos de preservação.
 - [ ] **Step 3: Implementar** conforme **Interfaces**.
@@ -277,18 +277,18 @@ Precedência no corpo da tabela:
 
 - [ ] **Step 1: Escrever os testes.**
   *Comportamento novo:*
-  - `labels the history panel and its fields` ("Histórico por lote ou série" e "Série" — hoje "Histórico" e "Serial").
-  - `reports results with the right plural` (1, 2 e 0 resultados → "1 OS encontrada", "2 ordens de serviço encontradas", "Nenhuma OS encontrada para este lote ou série." — hoje "1 registro(s) encontrados." e "Nenhum histórico encontrado.").
-  - `announces a history error` (`[role="alert"]` dentro de `.rma-history` — hoje sem `role`).
-  - `asks for a batch or serial on an empty submit` ("Informe o lote ou a série." — hoje nenhum texto).
-  - `shows progress while consulting` (com `Subject` pendente, botão "Consultando..." desabilitado — hoje o texto continua "Consultar").
+  - `labels the history panel and its fields` ("Histórico por lote ou série" e "Série" - hoje "Histórico" e "Serial").
+  - `reports results with the right plural` (1, 2 e 0 resultados → "1 OS encontrada", "2 ordens de serviço encontradas", "Nenhuma OS encontrada para este lote ou série." - hoje "1 registro(s) encontrados." e "Nenhum histórico encontrado.").
+  - `announces a history error` (`[role="alert"]` dentro de `.rma-history` - hoje sem `role`).
+  - `asks for a batch or serial on an empty submit` ("Informe o lote ou a série." - hoje nenhum texto).
+  - `shows progress while consulting` (com `Subject` pendente, botão "Consultando..." desabilitado - hoje o texto continua "Consultar").
   *Preservação:* `sends normalized parameters for batch, serial and both` (`'  L1  '` → `{ batchNumber: 'L1', serialNumber: undefined }`; série só; ambos); `does not call the service for blank input and clears previous results` (resultados exibidos, depois envio só com espaços: `history` não chamado e lista vazia); `opens the selected result in the detail` (clicar no segundo resultado abre o detalhe com o código **dele**).
 - [ ] **Step 2: Rodar e ver falhar.** Esperado: FAIL nos de comportamento novo; PASS nos de preservação.
 - [ ] **Step 3: Implementar.**
 - [ ] **Step 4: Rodar e ver passar.** Esperado: PASS na suíte inteira.
 - [ ] **Step 5: Commit.** `git add` dos arquivos de **Files**; mensagem: `feat(rmas): histórico por lote ou série identificado e com retorno claro (NAV-98)`.
 
-### Task 2a: Abertura — mensagens e validação no diálogo
+### Task 2a: Abertura - mensagens e validação no diálogo
 
 **Files:**
 - Modify: `frontend/src/app/pages/rmas/rmas.component.html` (`:325-337` cabeçalho do diálogo; mensagens junto dos campos atuais em `:339-476`)
@@ -298,9 +298,9 @@ Precedência no corpo da tabela:
 
 **Interfaces:**
 - Produces em `rmas.component.ts`:
-  - `protected readonly createErrorMessage = signal('')` — recebe as três mensagens hoje gravadas em `pageError` por `createRma` (`:630,639,681`); limpo em `openCreateModal()` e no início de cada envio. A mensagem de permissão (`:532,624-626`) continua em `pageError`.
-  - `protected readonly createSubmitAttempted = signal(false)` — `true` em envio inválido; `false` ao abrir e após sucesso.
-  - `protected showCreateError(control: AbstractControl): boolean` — `control.invalid && (control.touched || this.createSubmitAttempted())`.
+  - `protected readonly createErrorMessage = signal('')` - recebe as três mensagens hoje gravadas em `pageError` por `createRma` (`:630,639,681`); limpo em `openCreateModal()` e no início de cada envio. A mensagem de permissão (`:532,624-626`) continua em `pageError`.
+  - `protected readonly createSubmitAttempted = signal(false)` - `true` em envio inválido; `false` ao abrir e após sucesso.
+  - `protected showCreateError(control: AbstractControl): boolean` - `control.invalid && (control.touched || this.createSubmitAttempted())`.
   Mensagens (só para validadores existentes):
 
   | Controle | Erro | Mensagem |
@@ -317,20 +317,20 @@ Precedência no corpo da tabela:
 
 - [ ] **Step 1: Escrever os testes.**
   *Comportamento novo*, em `rmas.component.create.spec.ts`:
-  - `marks the creation dialog for assistive technology` (`role="dialog"`, `aria-modal="true"`, `aria-labelledby` → "Nova OS" — hoje ausentes; sem "Preencha os dados do atendimento" — hoje presente).
-  - `shows required-field errors and the banner inside the dialog after an invalid submit` ("Selecione o cliente.", "Selecione o produto.", "Descreva a falha relatada." e `[role="dialog"] [role="alert"]` "Preencha os campos obrigatórios." — hoje a mensagem vai para `.status-card` fora do diálogo; `create` não chamado).
-  - `shows length errors for batch and serial` (61 caracteres por `setValue`: "Use até 60 caracteres." — hoje sem mensagem).
-  - `shows date errors with the banner inside the dialog` ("Corrija as datas indicadas no formulário." dentro do diálogo — hoje fora).
+  - `marks the creation dialog for assistive technology` (`role="dialog"`, `aria-modal="true"`, `aria-labelledby` → "Nova OS" - hoje ausentes; sem "Preencha os dados do atendimento" - hoje presente).
+  - `shows required-field errors and the banner inside the dialog after an invalid submit` ("Selecione o cliente.", "Selecione o produto.", "Descreva a falha relatada." e `[role="dialog"] [role="alert"]` "Preencha os campos obrigatórios." - hoje a mensagem vai para `.status-card` fora do diálogo; `create` não chamado).
+  - `shows length errors for batch and serial` (61 caracteres por `setValue`: "Use até 60 caracteres." - hoje sem mensagem).
+  - `shows date errors with the banner inside the dialog` ("Corrija as datas indicadas no formulário." dentro do diálogo - hoje fora).
   - `shows the save error inside the dialog and keeps the values` (`create` em `throwError`).
-  - `clears the dialog message on reopen, on a corrected resubmit and on a new pending attempt` (mensagem visível → fechar e reabrir: sem alerta; inválido → corrigir e reenviar com `Subject` pendente: sem alerta durante o envio; falha → nova tentativa pendente: sem alerta — hoje a mensagem fica em `pageError`).
+  - `clears the dialog message on reopen, on a corrected resubmit and on a new pending attempt` (mensagem visível → fechar e reabrir: sem alerta; inválido → corrigir e reenviar com `Subject` pendente: sem alerta durante o envio; falha → nova tentativa pendente: sem alerta - hoje a mensagem fica em `pageError`).
   - Em `rmas.component.spec.ts`, criar `editorFeedback(mode)`: `create` lê `[role="dialog"] [role="alert"]`; `diagnosis` continua em `.status-card h3` até a Tarefa 3; usar em `:314,347`.
-  *Preservação:* `denies createRma to TECHNICIAN and VIEWER without calling the service` (chamada direta com formulário válido: `create` não chamado e `pageError` "Seu perfil não pode abrir novas ordens de serviço."; para `ADMIN` e `SERVICE_DESK`, chamado); `keeps required and length rules for every field` (`clientId` 0, `entryDate` '', `reportedFailure` '' e `priority` '' inválidos — prioridade só por `required`; `invoiceNumber`, `purchaseDate`, `receivedAccessories`, `physicalCondition`, `repairSummary`, `replacedPartsSummary`, `testSummary` vazios válidos; limites por `setValue`: `reportedFailure` 1001, `receivedAccessories`/`physicalCondition` 501, `repairSummary`/`replacedPartsSummary` 601, `testSummary` 801, lote/série 61 → `maxlength`); os testes existentes `:51-134`; o ciclo pendente `:290-350` no modo `create`.
+  *Preservação:* `denies createRma to TECHNICIAN and VIEWER without calling the service` (chamada direta com formulário válido: `create` não chamado e `pageError` "Seu perfil não pode abrir novas ordens de serviço."; para `ADMIN` e `SERVICE_DESK`, chamado); `keeps required and length rules for every field` (`clientId` 0, `entryDate` '', `reportedFailure` '' e `priority` '' inválidos - prioridade só por `required`; `invoiceNumber`, `purchaseDate`, `receivedAccessories`, `physicalCondition`, `repairSummary`, `replacedPartsSummary`, `testSummary` vazios válidos; limites por `setValue`: `reportedFailure` 1001, `receivedAccessories`/`physicalCondition` 501, `repairSummary`/`replacedPartsSummary` 601, `testSummary` 801, lote/série 61 → `maxlength`); os testes existentes `:51-134`; o ciclo pendente `:290-350` no modo `create`.
 - [ ] **Step 2: Rodar e ver falhar.** Esperado: FAIL nos de comportamento novo e nos dois testes de `:314,347` em modo `create`; PASS nos de preservação.
 - [ ] **Step 3: Implementar.** Não alterar `createForm`, `createRmaItemForm`, `validateCreateDates`, `resetCreateForm` nem o payload.
 - [ ] **Step 4: Rodar e ver passar.** Esperado: PASS na suíte inteira.
 - [ ] **Step 5: Commit.** `git add` dos arquivos de **Files**; mensagem: `feat(rmas): mensagens da abertura por campo e dentro do diálogo (NAV-98)`.
 
-### Task 2b: Abertura — seções por momento do atendimento
+### Task 2b: Abertura - seções por momento do atendimento
 
 **Files:**
 - Modify: `frontend/src/app/pages/rmas/rmas.component.html` (`:338-484`)
@@ -350,12 +350,12 @@ Precedência no corpo da tabela:
 
 - [ ] **Step 1: Escrever os testes.**
   *Comportamento novo:*
-  - `groups the form into Atendimento, Produtos e identificação, Recebimento and Atendimento já realizado` (ordem das `legend`/`summary` — hoje não há `fieldset`; cada `formControlName` na seção prevista e uma única vez).
-  - `keeps Atendimento já realizado collapsed by default` (`details.open === false` — hoje não há `details`; abrir mostra os três campos).
+  - `groups the form into Atendimento, Produtos e identificação, Recebimento and Atendimento já realizado` (ordem das `legend`/`summary` - hoje não há `fieldset`; cada `formControlName` na seção prevista e uma única vez).
+  - `keeps Atendimento já realizado collapsed by default` (`details.open === false` - hoje não há `details`; abrir mostra os três campos).
   - `opens the retroactive group, shows the message and focuses an invalid field` (grupo fechado; `repairSummary.setValue` com 601 caracteres e o resto válido; enviar: `details.open` verdadeiro, "Use até 600 caracteres." visível e `document.activeElement` é o `textarea` de `repairSummary`; `create` não chamado).
-  - `ties Compra desconhecida to the purchase field` (checkbox dentro do mesmo `[role="group"]` que o seletor de data, rotulado "Data da compra" — hoje são itens separados; marcar desabilita o seletor e mostra "Sem data da compra, a garantia fica pendente.").
-  - `removes a product row with an accessible icon button` (com um item, sem botão de remoção; "Adicionar produto" → `[role="group"]` "Produto 1"/"Produto 2"; `button[aria-label="Remover produto 2"]` sem texto visível — hoje "Remover" com texto; clicar volta a um item).
-  - `shows one identification hint and the Série label` (sem placeholder "Informe lote ou serial" — hoje presente; rótulos "Lote" e "Série").
+  - `ties Compra desconhecida to the purchase field` (checkbox dentro do mesmo `[role="group"]` que o seletor de data, rotulado "Data da compra" - hoje são itens separados; marcar desabilita o seletor e mostra "Sem data da compra, a garantia fica pendente.").
+  - `removes a product row with an accessible icon button` (com um item, sem botão de remoção; "Adicionar produto" → `[role="group"]` "Produto 1"/"Produto 2"; `button[aria-label="Remover produto 2"]` sem texto visível - hoje "Remover" com texto; clicar volta a um item).
+  - `shows one identification hint and the Série label` (sem placeholder "Informe lote ou serial" - hoje presente; rótulos "Lote" e "Série").
   *Preservação:*
   - `sends the full payload with a known purchase and the retroactive group closed` (todos os campos, dois itens, compra conhecida, reparo/peças/testes preenchidos com espaços nas bordas e o grupo **fechado**; envio pelo evento `submit` do formulário: `create` recebe exatamente o objeto de `:643-662`, com `normalizeText`).
   - `sends purchaseDate null when the purchase is unknown` (caso separado: `purchaseDateUnknown` marcado → `purchaseDate: null`, `purchaseDateUnknown: true`).
@@ -396,13 +396,13 @@ Precedência no corpo da tabela:
 
 - [ ] **Step 1: Escrever os testes.**
   *Comportamento novo*, em `rmas.component.diagnosis.spec.ts`:
-  - `groups the diagnosis into Falha encontrada, Registro and Notas` (`legend` nessa ordem e controles em cada uma — hoje sem `fieldset`; rótulo "Data do diagnóstico" — hoje "Data"; `role="dialog"`, `aria-modal`, `aria-labelledby` — hoje ausentes).
-  - `shows the reported failure as read-only context` (texto da falha relatada dentro do diálogo e fora de `[formControlName]` — hoje ausente).
-  - `shows field errors and the banner inside the dialog after an invalid submit` ("Descreva a falha encontrada.", "Informe o técnico." e `[role="dialog"] [role="alert"]` "Preencha os campos obrigatórios do diagnóstico." — hoje em `.status-card` fora; `upsertDiagnosis` não chamado).
-  - `shows length errors for found failure and technician` (2001 e 121 caracteres — hoje sem mensagem).
+  - `groups the diagnosis into Falha encontrada, Registro and Notas` (`legend` nessa ordem e controles em cada uma - hoje sem `fieldset`; rótulo "Data do diagnóstico" - hoje "Data"; `role="dialog"`, `aria-modal`, `aria-labelledby` - hoje ausentes).
+  - `shows the reported failure as read-only context` (texto da falha relatada dentro do diálogo e fora de `[formControlName]` - hoje ausente).
+  - `shows field errors and the banner inside the dialog after an invalid submit` ("Descreva a falha encontrada.", "Informe o técnico." e `[role="dialog"] [role="alert"]` "Preencha os campos obrigatórios do diagnóstico." - hoje em `.status-card` fora; `upsertDiagnosis` não chamado).
+  - `shows length errors for found failure and technician` (2001 e 121 caracteres - hoje sem mensagem).
   - `shows the save error inside the dialog and keeps the values`.
   - `clears the dialog message on reopen, on a corrected resubmit and on a new pending attempt`.
-  - `labels the header action by diagnosis state` ("Registrar diagnóstico" e "Editar diagnóstico" — hoje "Diagnóstico").
+  - `labels the header action by diagnosis state` ("Registrar diagnóstico" e "Editar diagnóstico" - hoje "Diagnóstico").
   - Em `rmas.component.spec.ts`, `editorFeedback('diagnosis')` passa a ler `[role="dialog"] [role="alert"]`.
   *Preservação:* `sends the same diagnosis payload` (`failureType`/`probableCause` vazios → `null`; `notes` vazio → `null`; `trim` em falha e técnico; `diagnosedAt` como digitado); `primes the form from the existing diagnosis and defaults the technician to the operator`; `gives the diagnosis action only to ADMIN and TECHNICIAN` (quatro perfis: botão do cabeçalho e CTA "Registrar diagnóstico" da aba ausentes para `SERVICE_DESK` e `VIEWER`; para eles `openDiagnosisModal()` mantém o diálogo fechado e grava "Seu perfil não pode registrar diagnóstico técnico."); `denies saveDiagnosis to SERVICE_DESK and VIEWER without calling the service` (chamada direta com OS selecionada e formulário válido: `upsertDiagnosis` não chamado; para `ADMIN` e `TECHNICIAN`, chamado); `shows Cancelar before Salvar diagnóstico`; o ciclo pendente `:290-350` no modo `diagnosis`.
 - [ ] **Step 2: Rodar e ver falhar.** Esperado: FAIL nos de comportamento novo e nos dois testes de `:314,347` em modo `diagnosis`; PASS nos de preservação.
@@ -449,7 +449,7 @@ Precedência no corpo da tabela:
   ```
   `[campo]` = só quando preenchido (texto com `trim()` não vazio). Texto livre é devolvido sem truncar.
 
-- [ ] **Step 1: Escrever os testes (todos de comportamento novo; hoje o módulo não existe, então o vermelho é de import — relatar à parte)** em `rma-detail.spec.ts`: `lists the nine sections in contract order`; `formats warranty term in singular and plural`; `shows the expiry date or Sem data da compra`; `distinguishes unknown purchase from missing purchase` ("Desconhecida" × "Não informada" × "20/10/2026"); `labels invoice and identification gaps` ("Não informada" para nota e série, "Não informado" para lote, `empty: true`); `includes manufacture only when present`; `returns receipt and repair facts only when filled, with the creation labels` ("Reparo", "Peças trocadas", "Testes"); `returns six diagnosis facts with date and technician, notes only when present`; `labels every status record as Status registrado without inferring a transition` (dois registros seguidos com o mesmo status → duas entradas "Status registrado: Triagem", nenhuma com "Moveu" ou com origem); `keeps a note recorded without a status change` (registro com o status atual e nota → entrada com a nota); `orders by instant, newest first, and keeps input order on ties` (status e responsável no mesmo instante → status primeiro, depois responsável); `does not mutate the input arrays` (cópias congeladas com `Object.freeze` e comparação com o original); `uses Sem responsável for empty assignee ends`; `formats the active block duration` (com `now` fixo).
+- [ ] **Step 1: Escrever os testes (todos de comportamento novo; hoje o módulo não existe, então o vermelho é de import - relatar à parte)** em `rma-detail.spec.ts`: `lists the nine sections in contract order`; `formats warranty term in singular and plural`; `shows the expiry date or Sem data da compra`; `distinguishes unknown purchase from missing purchase` ("Desconhecida" × "Não informada" × "20/10/2026"); `labels invoice and identification gaps` ("Não informada" para nota e série, "Não informado" para lote, `empty: true`); `includes manufacture only when present`; `returns receipt and repair facts only when filled, with the creation labels` ("Reparo", "Peças trocadas", "Testes"); `returns six diagnosis facts with date and technician, notes only when present`; `labels every status record as Status registrado without inferring a transition` (dois registros seguidos com o mesmo status → duas entradas "Status registrado: Triagem", nenhuma com "Moveu" ou com origem); `keeps a note recorded without a status change` (registro com o status atual e nota → entrada com a nota); `orders by instant, newest first, and keeps input order on ties` (status e responsável no mesmo instante → status primeiro, depois responsável); `does not mutate the input arrays` (cópias congeladas com `Object.freeze` e comparação com o original); `uses Sem responsável for empty assignee ends`; `formats the active block duration` (com `now` fixo).
 - [ ] **Step 2: Rodar e ver falhar.** Esperado: erro de resolução de `./rma-detail` (vermelho de compilação; não afirmar nada sobre os demais testes).
 - [ ] **Step 3: Implementar** as funções. Nenhum componente muda nesta tarefa.
 - [ ] **Step 4: Rodar e ver passar.** Esperado: PASS na suíte inteira.
@@ -468,11 +468,11 @@ Precedência no corpo da tabela:
 
 - [ ] **Step 1: Escrever os testes.**
   *Comportamento novo*, em `rmas.component.detail.spec.ts` (`SlaClockService` falso com `now` fixo, como `kanban.component.spec.ts:21,27`):
-  - `shows product as title, client below and the same status, priority and block formats` (`h3` com o produto — hoje o cliente; "Bloqueado há 2h 0min" — hoje só "Bloqueado").
-  - `lists the summary facts in contract order with SLA` (rótulos Produtos, Entrada, Nota fiscal, Compra, Responsável, SLA, Atualizado em — hoje sem SLA e com "Atualizado"; `app-rma-sla-badge` presente; compra desconhecida "Desconhecida"; compra vazia não marcada "Não informada").
-  - `shows warranty term, expiry and Recebimento in the Produtos tab` ("1 mês" — hoje "1 meses"; "Sem data da compra" — hoje "Informe a compra"; seção "Recebimento" com acessórios e condição quando existem — hoje ausente; ausente quando não).
-  - `shows the six diagnosis facts and Reparo e testes in the Diagnóstico tab` (Data do diagnóstico, Técnico, Notas — hoje ausentes; "Reparo", "Peças trocadas", "Testes" com os valores registrados — hoje ausentes).
-  - `shows status records and assignee changes in the Histórico tab, newest first` (a entrada de status "Status registrado: Triagem" com a nota — hoje só há trocas de responsável; a entrada de responsável com origem nula, consultada **por ela mesma**, mostra "Sem responsável → Ana").
+  - `shows product as title, client below and the same status, priority and block formats` (`h3` com o produto - hoje o cliente; "Bloqueado há 2h 0min" - hoje só "Bloqueado").
+  - `lists the summary facts in contract order with SLA` (rótulos Produtos, Entrada, Nota fiscal, Compra, Responsável, SLA, Atualizado em - hoje sem SLA e com "Atualizado"; `app-rma-sla-badge` presente; compra desconhecida "Desconhecida"; compra vazia não marcada "Não informada").
+  - `shows warranty term, expiry and Recebimento in the Produtos tab` ("1 mês" - hoje "1 meses"; "Sem data da compra" - hoje "Informe a compra"; seção "Recebimento" com acessórios e condição quando existem - hoje ausente; ausente quando não).
+  - `shows the six diagnosis facts and Reparo e testes in the Diagnóstico tab` (Data do diagnóstico, Técnico, Notas - hoje ausentes; "Reparo", "Peças trocadas", "Testes" com os valores registrados - hoje ausentes).
+  - `shows status records and assignee changes in the Histórico tab, newest first` (a entrada de status "Status registrado: Triagem" com a nota - hoje só há trocas de responsável; a entrada de responsável com origem nula, consultada **por ela mesma**, mostra "Sem responsável → Ana").
   *Preservação:* `keeps the six tabs in order with tab semantics` (Produtos, Diagnóstico, Peças, Protocolos, Impedimentos, Histórico; `aria-selected`, `aria-controls`; abre sempre em Produtos); `renders parts, protocols and impediments panels in their tabs` (`app-rma-parts-panel` com `rmaId`/`rmaStatus`; protocolos carregados sob demanda; `app-rma-block-history`); `keeps the diagnosis CTA only for ADMIN and TECHNICIAN`; `rmas.component.spec.ts:136-145` (sem "Recebido por") sem alteração.
 - [ ] **Step 2: Rodar e ver falhar.** Esperado: FAIL nos de comportamento novo; PASS nos de preservação.
 - [ ] **Step 3: Implementar.** Não alterar `detailTabs`, `openDetailsModal`, o `@defer` de peças nem o carregamento de protocolos.
@@ -497,14 +497,14 @@ Precedência no corpo da tabela:
 
 - [ ] **Step 1: Escrever os testes.**
   *Comportamento novo*, em `rma-detail-modal.component.spec.ts` (`TestBed` com o componente, `provideRouter([{ path: 'rmas', component: StubComponent }])`, `SlaClockService` falso):
-  - `shows the blocks in contract order with the shared names` (títulos `.rma-detail__heading` na ordem Falha relatada, Produtos, Recebimento, Diagnóstico, Reparo e testes, Histórico — hoje "Itens", "Reparo", "Atividade").
-  - `shows warranty term and expiry for each product` ("12 meses" e vencimento ou "Sem data da compra" — hoje ausentes; Série e Lote separados).
-  - `shows diagnosis date and Notas, and an empty diagnosis state` ("Data do diagnóstico" e "Notas" — hoje ausente e "Observações"; sem diagnóstico, "Sem diagnóstico registrado." — hoje o bloco some).
-  - `uses the creation labels for retroactive repair records` ("Peças trocadas" — hoje "Peças substituídas"; sem "Resumo do reparo").
-  - `labels status records without inferring a move` (registro de status repetido e registro de prioridade com nota: "Status registrado: Triagem" com a nota — hoje "Moveu para").
-  - `uses Sem responsável in assignee history` (consultar o `li.rma-detail__event.is-assignee` com origem nula: contém "Sem responsável" e não "ninguém" — a lateral já mostra "Sem responsável", por isso a consulta é no evento).
-  - `formats status, priority, invoice and purchase like the list` (`.status-chip[data-status]` e `.priority-tag[data-priority]` — hoje `span.rma-detail__status` e `.mini-chip`; "Não informada" na nota vazia — hoje "—"; "Desconhecida" na compra desconhecida — hoje "Não informada").
-  - `navigates to the OS in the list` (clicar em "Abrir OS na lista" e `await fixture.whenStable()`: `Router.url` é `/rmas?rma=<id>` — hoje o link não existe).
+  - `shows the blocks in contract order with the shared names` (títulos `.rma-detail__heading` na ordem Falha relatada, Produtos, Recebimento, Diagnóstico, Reparo e testes, Histórico - hoje "Itens", "Reparo", "Atividade").
+  - `shows warranty term and expiry for each product` ("12 meses" e vencimento ou "Sem data da compra" - hoje ausentes; Série e Lote separados).
+  - `shows diagnosis date and Notas, and an empty diagnosis state` ("Data do diagnóstico" e "Notas" - hoje ausente e "Observações"; sem diagnóstico, "Sem diagnóstico registrado." - hoje o bloco some).
+  - `uses the creation labels for retroactive repair records` ("Peças trocadas" - hoje "Peças substituídas"; sem "Resumo do reparo").
+  - `labels status records without inferring a move` (registro de status repetido e registro de prioridade com nota: "Status registrado: Triagem" com a nota - hoje "Moveu para").
+  - `uses Sem responsável in assignee history` (consultar o `li.rma-detail__event.is-assignee` com origem nula: contém "Sem responsável" e não "ninguém" - a lateral já mostra "Sem responsável", por isso a consulta é no evento).
+  - `formats status, priority, invoice and purchase like the list` (`.status-chip[data-status]` e `.priority-tag[data-priority]` - hoje `span.rma-detail__status` e `.mini-chip`; "Não informada" na nota vazia - hoje "-"; "Desconhecida" na compra desconhecida - hoje "Não informada").
+  - `navigates to the OS in the list` (clicar em "Abrir OS na lista" e `await fixture.whenStable()`: `Router.url` é `/rmas?rma=<id>` - hoje o link não existe).
   - `keeps the list link inactive while disabled` (com `disabled` verdadeiro: "Abrir OS na lista" é `button[disabled]` e não há `a[href]`; clicar não muda a URL).
   *Preservação:* `has no tabs` (sem `[role="tablist"]`); `shows status and assignee actions only when allowed and always Ver impedimentos`; `disables business actions while disabled` (Alterar status, Trocar/Atribuir, Ver impedimentos com `disabled`; fechar continua habilitado); `emits closed, statusChange, assigneeChange and blockInspect`; `shows the active block and the SLA badge`; `focuses the panel on open`.
   *Preservação*, em `kanban.component.profiles.spec.ts` (montagem do `KanbanComponent` como `kanban.component.spec.ts:20-69`, com `provideRouter([])` e `hasAnyRole: (roles) => roles.includes(role)`, parametrizada pelos quatro perfis): `passes status and assignee permissions to the detail modal` (abrir o detalhe e ler os inputs do `RmaDetailModalComponent` via `By.directive`: `ADMIN` true/true, `SERVICE_DESK` true/true, `TECHNICIAN` true/false, `VIEWER` false/false; os botões correspondentes presentes ou ausentes; "Ver impedimentos" para todos).
@@ -531,7 +531,7 @@ Precedência no corpo da tabela:
   Select-String -Path frontend/src/app/pages/rmas/rmas.component.html -Pattern 'formControlName="(clientId|priority|invoiceNumber|purchaseDate|purchaseDateUnknown|entryDate|reportedFailure|receivedAccessories|physicalCondition|repairSummary|replacedPartsSummary|testSummary|productId|batchNumber|serialNumber|manufacturedAt|foundFailure|failureType|probableCause|diagnosedAt|technicianName|notes)"' | Measure-Object
   git diff --stat main -- frontend/src/app/app.routes.ts frontend/src/app/core/services/rma.service.ts frontend/src/app/core/utils/paged-list.ts backend
   ```
-  Esperado: 24 linhas — 12 controles da abertura, 4 do item, 6 do diagnóstico e mais 2 porque `batchNumber`/`serialNumber` também nomeiam os campos do histórico (`historyForm`) — e nenhuma saída no `git diff`.
+  Esperado: 24 linhas - 12 controles da abertura, 4 do item, 6 do diagnóstico e mais 2 porque `batchNumber`/`serialNumber` também nomeiam os campos do histórico (`historyForm`) - e nenhuma saída no `git diff`.
 - [ ] **Step 3: Relatar** que a verificação foi por testes e build, que a conferência autenticada não foi possível, e entregar o roteiro abaixo ao usuário.
 - [ ] **Step 4: Depois da conferência do usuário,** marcar a etapa 4 como entregue no roteiro das etapas (com os commits) e atualizar o roteiro de conferência manual.
 
@@ -572,7 +572,7 @@ A revisão (veredito "aprovar com ajustes") levantou oito pontos. Todos foram co
 7. **Cobertura do Review Focus.** Acrescentados: chamadas diretas negadas a `createRma()` (2a) e `saveDiagnosis()` (3); matriz do Kanban pelo componente pai (`kanban.component.profiles.spec.ts`, 4C; mapeamento em `kanban.component.ts:240-245`, mock atual em `kanban.component.spec.ts:29`); parâmetros normalizados, entrada em branco e abertura do resultado no histórico (1c); limpeza das mensagens ao reabrir, reenviar e nova tentativa (2a, 3); cenários concorrentes e ausência de contagem antes da primeira resposta (1a); preservação de `productSummary`/`trackableLabel` com vários itens (1a).
 8. **Dependências, granularidade e evidências.** 4A depende da 1a; Tarefa 1 dividida em 1a/1b/1c e Tarefa 2 em 2a/2b; corrigidas as evidências dos zeros ("antes da primeira resposta ou após falha inicial; uma falha posterior mantém o último resumo") e de "Causa provável", que já existe no Kanban (`rma-detail-modal.component.html:77`).
 
-**Ressalvas (sem discordância de mérito):** no ponto 4, a "integração de navegação" fica em dois testes complementares — o modal prova a navegação até `/rmas?rma=<id>` com rota de teste, e a 1a prova que essa URL abre o detalhe na aba Produtos —, e não num teste ponta a ponta entre as duas páginas, que exigiria montar o roteador completo da aplicação. No ponto 3, um controle retroativo inválido é praticamente inalcançável pela interface (os `textarea` têm `maxlength`); a recuperação é implementada e testada por `setValue`, como rede de proteção.
+**Ressalvas (sem discordância de mérito):** no ponto 4, a "integração de navegação" fica em dois testes complementares - o modal prova a navegação até `/rmas?rma=<id>` com rota de teste, e a 1a prova que essa URL abre o detalhe na aba Produtos -, e não num teste ponta a ponta entre as duas páginas, que exigiria montar o roteador completo da aplicação. No ponto 3, um controle retroativo inválido é praticamente inalcançável pela interface (os `textarea` têm `maxlength`); a recuperação é implementada e testada por `setValue`, como rede de proteção.
 
 **Decisões próprias e destino após a revisão:**
 

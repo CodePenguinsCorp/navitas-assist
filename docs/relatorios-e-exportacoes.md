@@ -32,8 +32,8 @@ Formato dos arquivos exportados: UTF-8 **com BOM**, separador `;`, fim de linha 
 
 - **Peças trocadas**: resumo em texto (se houver) e tabela com código, descrição, quantidade com unidade, lote e motivo das reservas consumidas e dos componentes externos não anulados; os externos levam "Fora do estoque" sob a descrição. Sem nada: "Sem peças trocadas".
 - **Intervenções**: tabela das não anuladas (data, técnico, tipo em português, descrição, duração em horas) e "Total de horas" ao final. Sem nenhuma: "Sem intervenções registradas".
-- **Campos ausentes**: seções sem dado (Equipamento recebido, Ações executadas) e campos sem valor dentro de um bloco são omitidos; célula de tabela sem valor mostra "—".
-- **Fechamento**: duas linhas de assinatura, "Técnico responsável" (com o nome do técnico do diagnóstico ou, sem ele, da primeira intervenção) e "Cliente — ciência". Todas as páginas têm rodapé com o código da OS, a data e hora de emissão e "Página X de Y".
+- **Campos ausentes**: seções sem dado (Equipamento recebido, Ações executadas) e campos sem valor dentro de um bloco são omitidos; célula de tabela sem valor mostra "-".
+- **Fechamento**: duas linhas de assinatura, "Técnico responsável" (com o nome do técnico do diagnóstico ou, sem ele, da primeira intervenção) e "Cliente - ciência". Todas as páginas têm rodapé com o código da OS, a data e hora de emissão e "Página X de Y".
 
 Usa OpenPDF com a fonte Helvetica padrão (Cp1252, cobre os acentos), sem baixar nada em tempo de execução; texto longo quebra dentro da célula. O arquivo se chama `laudo-<código>.pdf`, com o código reduzido a letras, números, `_` e `-`.
 

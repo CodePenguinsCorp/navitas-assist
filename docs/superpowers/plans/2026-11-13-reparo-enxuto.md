@@ -1,4 +1,4 @@
-# Reparo enxuto — plano de execução
+# Reparo enxuto - plano de execução
 
 Fonte de requisitos: solicitação enxuta do usuário, com precedência sobre o desenho anterior.
 

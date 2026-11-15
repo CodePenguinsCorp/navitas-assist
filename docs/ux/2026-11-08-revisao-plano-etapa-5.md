@@ -1,4 +1,4 @@
-# Revisão do plano da etapa 5 — Operações especializadas
+# Revisão do plano da etapa 5 - Operações especializadas
 
 **Plano revisado:** `docs/ux/2026-11-07-plano-etapa-5-operacoes.md` (525 linhas, tarefas 1–11 com 6a/6b e 7a/7b).
 **Base conferida:** `main` em `f889f70`, leitura de `frontend/src/app` (peças, painéis da OS, protocolos, cabeçalho, ação de linha, `styles.css`, `core/*`), backend citado pelo plano, estudo de UI/UX e planos das etapas 3 e 4.
@@ -63,7 +63,7 @@
 
 **M8. Decisões em aberto na 6a.**
 - Substituir o trecho "Após falha principal ocultar operações…" (`:249`) por: "Com `loadFailed()`, ocultar resumo, lista, ações por reserva **e** o formulário de nova reserva, até uma recarga com sucesso."
-- A regra "Callbacks de escrita conferem o id capturado" (`:236`) precisa de teste. Acrescentar: `ignores a write result after switching OS` — com `reserve` pendente na OS 7, trocar para o 8 e só então emitir o sucesso; `getRmaParts` não é chamado de novo com 7 e o painel do 8 não mostra a mensagem de sucesso.
+- A regra "Callbacks de escrita conferem o id capturado" (`:236`) precisa de teste. Acrescentar: `ignores a write result after switching OS` - com `reserve` pendente na OS 7, trocar para o 8 e só então emitir o sucesso; `getRmaParts` não é chamado de novo com 7 e o painel do 8 não mostra a mensagem de sucesso.
 
 **M9. Efeito dos protocolos (Task 8).** O `effect` atual não usa `untracked` (`rma-protocols.component.ts:137`). Em `:332`, substituir "usando `untracked` se…" por: "Obrigatório: `effect(() => { const id = this.rmaId(); untracked(() => this.loadExecutions(id)); })`, como em `rma-parts-panel.component.ts:156-159`."
 

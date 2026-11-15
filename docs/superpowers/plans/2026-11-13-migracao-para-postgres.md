@@ -1,4 +1,4 @@
-# Migração para PostgreSQL — plano de execução
+# Migração para PostgreSQL - plano de execução
 
 Fonte de requisitos: decisão do dono do produto (13 nov 2026): PostgreSQL passa a ser o único banco, em todos os ambientes (local, CI, testes automatizados, ambiente de testes remoto e futuro). Esta é a **última etapa do projeto**: assume o ambiente de testes (Vercel/Render) e a validação do dono já concluídos, e a branch `main` estável. **Executado em 14 nov 2026** (ver "Execução" no fim); os itens marcados foram feitos e verificados, os desmarcados dependem do ambiente remoto ou do CI real.
 
@@ -104,9 +104,9 @@ Decisão:
 
 - [x] Passo 1 (vermelho): rodar `mvn -q dependency:tree -Dincludes=org.flywaydb,org.postgresql,org.testcontainers` e registrar as versões; confirmar que `flyway-core` é 9.22.x e que o BOM gerencia `org.postgresql:postgresql` e `org.testcontainers`.
 - [x] Passo 2: em `pom.xml`, trocar `mysql-connector-j` (linhas 40-43) por `org.postgresql:postgresql` (runtime); remover `flyway-mysql` (57-60); trocar `h2` (72-76) por `spring-boot-testcontainers`, `org.testcontainers:postgresql`, `org.testcontainers:junit-jupiter` (test). Não adicionar `flyway-database-postgresql` (D6).
-- [x] Passo 3: `application.yml` — remover `driver-class-name` (linha 10); acrescentar `hikari` (D6), `spring.flyway.url/user/password` com `${MIGRATION_DB_URL:${DB_URL}}` etc., e `hibernate.jdbc.time_zone: UTC`.
-- [x] Passo 4: `application-local.yml` — padrão `jdbc:postgresql://127.0.0.1:5432/navitas_assist` e usuário/senha locais; remover `ddl-auto: update` (herda `validate`); manter `show-sql`.
-- [x] Passo 5: `application-test.yml` — remover URL e driver do H2 e a propriedade `preferred_instant_jdbc_type`; a URL vem do inicializador (Tarefa 4).
+- [x] Passo 3: `application.yml` - remover `driver-class-name` (linha 10); acrescentar `hikari` (D6), `spring.flyway.url/user/password` com `${MIGRATION_DB_URL:${DB_URL}}` etc., e `hibernate.jdbc.time_zone: UTC`.
+- [x] Passo 4: `application-local.yml` - padrão `jdbc:postgresql://127.0.0.1:5432/navitas_assist` e usuário/senha locais; remover `ddl-auto: update` (herda `validate`); manter `show-sql`.
+- [x] Passo 5: `application-test.yml` - remover URL e driver do H2 e a propriedade `preferred_instant_jdbc_type`; a URL vem do inicializador (Tarefa 4).
 - [x] Verificação: `mvn -q -DskipTests compile` passa (o contexto só sobe depois das Tarefas 2 e 4).
 
 ## Tarefa 2. Baseline PostgreSQL consolidada

@@ -88,7 +88,7 @@ frontend/src/app/shared/loading-overlay/loading-overlay.component.spec.ts
 docs/superpowers/plans/2026-11-09-global-loading.md
 ```
 
-## Task 0b — verification (2026-11-09)
+## Task 0b - verification (2026-11-09)
 
 Executed only Task 0b of `docs/ux/2026-11-09-plano-etapa-7-conferencia-global.md`, after reading its execution contract and Task 0a. Task 0c and reports were not changed. This section supersedes the initial local-loading-copy requirement while retaining the historical execution record above.
 

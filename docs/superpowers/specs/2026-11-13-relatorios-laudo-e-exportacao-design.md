@@ -1,4 +1,4 @@
-# Relatórios enxutos, laudo em PDF e exportação CSV — design
+# Relatórios enxutos, laudo em PDF e exportação CSV - design
 
 Data: 13 nov 2026. Substitui as abas da NAV-27 (laudo em tela, tempo por etapa por OS, garantia por produto e devoluções).
 

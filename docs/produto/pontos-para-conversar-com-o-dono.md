@@ -14,11 +14,11 @@ No cadastro ou no detalhe da OS, um botão "Imprimir Etiqueta" geraria um PDF fo
 
 ### Opções, Prós e Contras
 * **Conteúdo do QR Code**:
-  * *Opção A: Link direto da web (`/rmas?rma=ID`)* — Pró: lendo com a câmera do celular, abre diretamente a tela da OS. Contra: exige que o dispositivo esteja na rede da empresa e com usuário autenticado.
-  * *Opção B: Apenas o código da OS e serial em texto* — Pró: universal, compatível com qualquer leitor óptico USB de bancada (bipador). Contra: não abre página web automaticamente no smartphone.
+  * *Opção A: Link direto da web (`/rmas?rma=ID`)* - Pró: lendo com a câmera do celular, abre diretamente a tela da OS. Contra: exige que o dispositivo esteja na rede da empresa e com usuário autenticado.
+  * *Opção B: Apenas o código da OS e serial em texto* - Pró: universal, compatível com qualquer leitor óptico USB de bancada (bipador). Contra: não abre página web automaticamente no smartphone.
 * **Formato de impressão**:
-  * *Opção A: Etiqueta térmica individual (ex.: 50x30 mm)* — Pró: padrão industrial para impressoras térmicas (Zebra, Argox); imprime uma a uma sob demanda. Contra: exige impressora térmica na bancada.
-  * *Opção B: Folha A4 com grade de etiquetas (ex.: Pimaco)* — Pró: funciona em qualquer impressora comum. Contra: desperdício de folha se a entrada for unitária; alinhamento de margens complexo.
+  * *Opção A: Etiqueta térmica individual (ex.: 50x30 mm)* - Pró: padrão industrial para impressoras térmicas (Zebra, Argox); imprime uma a uma sob demanda. Contra: exige impressora térmica na bancada.
+  * *Opção B: Folha A4 com grade de etiquetas (ex.: Pimaco)* - Pró: funciona em qualquer impressora comum. Contra: desperdício de folha se a entrada for unitária; alinhamento de margens complexo.
 * **Leitura no chão de fábrica**: celular com câmera (flexível, mas exige celular conectado) vs. bipador USB no computador da bancada (mais rápido e ergonômico para o técnico).
 * **Necessidade real**: Vale avaliar se a etiqueta física é indispensável neste momento ou se a ordem de serviço impressa/identificação visual atual já supre a rotina operacional.
 
@@ -53,9 +53,9 @@ Ao registrar peças aplicadas e horas gastas pelos técnicos, o sistema aplicari
 
 ### Opções, Prós e Contras
 * **Cálculo da hora técnica**:
-  * *Taxa horária global única* (ex.: R$ 80/h para toda a assistência) — Pró: configuração simples, manutenção zero. Contra: não reflete especialidades diferentes.
-  * *Taxa por tipo de intervenção* (ex.: diagnóstico R$ 90/h, limpeza R$ 50/h) — Pró: mais preciso. Contra: exige tabela de preços de serviços.
-  * *Taxa por técnico* — Não recomendado: complexidade contábil e risco de exposição salarial.
+  * *Taxa horária global única* (ex.: R$ 80/h para toda a assistência) - Pró: configuração simples, manutenção zero. Contra: não reflete especialidades diferentes.
+  * *Taxa por tipo de intervenção* (ex.: diagnóstico R$ 90/h, limpeza R$ 50/h) - Pró: mais preciso. Contra: exige tabela de preços de serviços.
+  * *Taxa por técnico* - Não recomendado: complexidade contábil e risco de exposição salarial.
 * **Peças fora do estoque (sem cadastro prévio)**: atualmente são registradas em `RmaExternalComponent` sem campo de valor. Opções: incluir campo opcional de custo na inclusão vs. considerar custo R$ 0,00 vs. exigir que toda peça venha do estoque cadastrado.
 * **Garantia**: ordens de serviço dentro da garantia representam **custo interno para a Navitas** (prejuízo/cobertura) e não são cobrados do cliente. Já atendimentos fora de garantia podem ser faturados.
 * **Riscos Contábeis e Variação de Preços**: o sistema usa o custo cadastrado na peça no momento do consumo. Mudanças futuras no cadastro de peças não afetam ordens de serviço passados, mas o sistema não gerencia custo médio ponderado nem lotes contábeis (FIFO).

@@ -11,7 +11,7 @@ Estado de referência: suíte com 78 arquivos e mais de 1150 testes passando; bu
 - Atualização das notificações (a cada 60 s) NÃO dispara o pop-up.
 - Painel de impedimentos: mostra só um spinner enquanto lê, sem ficar escondido atrás do pop-up.
 
-## 2. Diálogos (foco e teclado) — pendência F1
+## 2. Diálogos (foco e teclado) - pendência F1
 Em cada diálogo (clientes, produtos, usuários, protocolos, nova OS, diagnóstico, detalhe da OS, ações em lote, salvar/renomear visualização, mudança de status, lote, impedimentos, peças, movimento, histórico, editor de regra):
 - Abrir leva o foco ao campo certo (Razão social, SKU, Nome, Nome do protocolo, Cancelar nas exclusões etc.).
 - Tab e Shift+Tab ficam dentro do diálogo; o fundo não recebe clique nem foco.
@@ -68,7 +68,7 @@ Em cada diálogo (clientes, produtos, usuários, protocolos, nova OS, diagnósti
 - TECHNICIAN: diagnóstico, protocolos, peças aplicadas, status, impedimentos; relatórios. Sem abrir OS, sem editar cadastros, sem trocar responsável.
 - VIEWER: leitura e relatórios; altera só as próprias preferências de notificação.
 
-## 12. Permissões e perfis (etapa 8A) — validar com ADMIN e um usuário de cada perfil
+## 12. Permissões e perfis (etapa 8A) - validar com ADMIN e um usuário de cada perfil
 - **Menu "Perfis"** (só com `perfis.gerir`): lista Administrador, Atendimento, Técnico e Consulta; colunas Nome, Permissões ("n de 20"), Usuários, Atualizado, Ações; total na paginação ("4 perfis").
 - **Criar / editar / duplicar / excluir** um perfil: permissões em um grupo por módulo com "x de y"; Duplicar vem como "Cópia de X"; nome repetido avisa junto do campo; perfil com usuários não pode ser excluído (mostra o motivo); perfil migrado não pode ser excluído.
 - **Usuários**: seletor de perfil obrigatório; coluna Perfil com "+1 extra"; seção "Permissões extras" (as do perfil aparecem marcadas e desabilitadas com "Incluída no perfil"; trocar de perfil e voltar mantém a extra marcada); filtro por perfil.

@@ -1,4 +1,4 @@
-# Navitas Assist — estudo global de UI e UX
+# Navitas Assist - estudo global de UI e UX
 
 Iniciado em 6 de novembro de 2026. Ampliado em 7 de novembro de 2026 para todas as telas e fluxos do projeto. Status: proposta para discussão, sem alteração das telas de produção.
 
@@ -152,7 +152,7 @@ Na OS, peças reservadas, pendentes e aplicadas têm estados e ações distintos
 
 ### Clientes
 
-Aplicar a composição comum de cadastro. Nome principal e nome fantasia só quando existente; contatos em posições previsíveis, com ícones auxiliares e valores visíveis. Ausências em células curtas podem usar “—” com contexto acessível, evitando repetir “Não informado” em todos os campos. Criar/editar com seções Identificação, Contato e Observações; exclusão com identificação clara do cliente e erro de vínculo apresentado no diálogo.
+Aplicar a composição comum de cadastro. Nome principal e nome fantasia só quando existente; contatos em posições previsíveis, com ícones auxiliares e valores visíveis. Ausências em células curtas podem usar “-” com contexto acessível, evitando repetir “Não informado” em todos os campos. Criar/editar com seções Identificação, Contato e Observações; exclusão com identificação clara do cliente e erro de vínculo apresentado no diálogo.
 
 ### Produtos
 

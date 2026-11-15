@@ -1,4 +1,4 @@
-# NAV-8 — Campos de clientes
+# NAV-8 - Campos de clientes
 
 ## Objetivo e definições confirmadas
 

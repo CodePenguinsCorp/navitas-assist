@@ -1,4 +1,4 @@
-# Etapa 7 — Conferência global: plano de implementação (NAV-98)
+# Etapa 7 - Conferência global: plano de implementação (NAV-98)
 
 **Não entram:** mudanças de permissões, envio/configuração de e-mails, relatórios (serão refeitos depois), backend, infraestrutura, dependências novas ou redesenho das telas. Preservar os acessos e contratos existentes; testes de preservação de perfil não autorizam mudar permissões.
 
@@ -10,7 +10,7 @@
 
 **Referências lidas:** [estudo global](2026-11-06-estudo-ui-ux.md), [roteiro manual](2026-11-07-roteiro-conferencia-manual.md), [etapa 5](2026-11-07-plano-etapa-5-operacoes.md), [revisão da etapa 5](2026-11-08-revisao-plano-etapa-5.md) e [etapa 6](2026-11-08-plano-etapa-6-comunicacao-analise.md), além do [plano de carregamento global](../superpowers/plans/2026-11-09-global-loading.md). Base: arquivos locais em 9/11/2026, sem consultar Git. Âncoras devem ser reconferidas ao executar; os planos anteriores descrevem estados já superados pelo código atual.
 
-## Inventário real de diálogos — F1
+## Inventário real de diálogos - F1
 
 Busca em todos os templates de `frontend/src/app`, incluindo `alertdialog`, overlays sem papel e `<dialog>`; specs não entram na contagem. Caminhos desta seção relativos a `frontend/src/app/`.
 
@@ -37,7 +37,7 @@ $templates | Select-String -Pattern 'role="dialog"','aria-modal','role="alertdia
 
 **Correção do diagnóstico antigo:** o detalhe do Kanban já captura `previousFocus`, usa `afterNextRender`, `trapFocus` e Escape (`rma-detail-modal.component.ts:109-132`). Falta coordenar a pilha, zero focáveis, alvos removidos e fundo. Impedimentos já tem modalização nativa (`rma-block-panel.component.ts:39`, `showModal()`): o painel está dentro de `#content`, que fica inerte na carga global, e o bloqueador global (também nativo, aberto depois) o cobre na camada superior. **Decisão anterior à execução:** manter o nativo, marcar as leituras do painel com `SKIP_GLOBAL_LOADING` e manter indicador local sem texto solto nem `role="status"`; implementar/conferir essa exceção na 0a antes da limpeza da 0b, preservá-la na 3b e validar no navegador. Não instalar um segundo trap nele. Login e dashboard não têm diálogos próprios.
 
-## Conferência entre telas — diferenças comprovadas
+## Conferência entre telas - diferenças comprovadas
 
 Caminhos relativos a `frontend/src/app/`; CSS global = `frontend/src/styles.css`. “Preservar” significa conferir o que já existe, sem reapresentar como entrega nova.
 
@@ -64,17 +64,17 @@ Caminhos relativos a `frontend/src/app/`; CSS global = `frontend/src/styles.css`
 | --- | --- |
 | F1 | **Entra, tarefas 1, 2, 3a, 3b e 4, após 0a–0c.** Dívida de interação compartilhada, com teste de pilha e navegador. |
 | Visualização ativa após remover chip | **Entra, 5.** Não pode indicar filtros salvos diferentes dos aplicados. Corrigir também edição manual. |
-| N1 — limite/paginação de notificações | **Fora.** Exige produto/API; manter aviso do limite de 100. |
-| N2 — desfazer silenciamento de obrigatório | **Fora.** Comportamento novo de preferência; preservar precedência atual. |
-| N3 — disponibilidade do resumo não lido | **Entra, 7, após integrar o carregamento global.** Pequeno estado de leitura compartilhado; evita apresentar número antigo como atual no sino e na aba, sem endpoint novo. |
-| N4 — regra sem destinatários | **Entra, 7.** Somente aviso factual no texto do resumo/editor; sem validação, bloqueio de salvamento ou alteração de destinatários, canais, envio ou falhas de entrega. |
-| D1 — remover Últimas Ordens de serviço | **Fora.** Retira informação; não há evidência de uso para decidir a remoção. |
-| D2 — indicadores no servidor | **Fora.** Exige backend e definição de recorte. |
-| D3 — instante/Atualizar dashboard | **Fora.** Nova ação e ciclo de recarga, desnecessários para uniformizar a apresentação existente. |
-| D4 — garantia média/administradores/valor em estoque | **Fora.** Não criar indicadores. O valor já preservado em Peças não será duplicado nem movido. |
-| R1 — filtros alterados / R2 — exportação | **Fora, ambos.** Relatórios serão refeitos; não revisar seus templates, specs ou fluxos nesta etapa. |
+| N1 - limite/paginação de notificações | **Fora.** Exige produto/API; manter aviso do limite de 100. |
+| N2 - desfazer silenciamento de obrigatório | **Fora.** Comportamento novo de preferência; preservar precedência atual. |
+| N3 - disponibilidade do resumo não lido | **Entra, 7, após integrar o carregamento global.** Pequeno estado de leitura compartilhado; evita apresentar número antigo como atual no sino e na aba, sem endpoint novo. |
+| N4 - regra sem destinatários | **Entra, 7.** Somente aviso factual no texto do resumo/editor; sem validação, bloqueio de salvamento ou alteração de destinatários, canais, envio ou falhas de entrega. |
+| D1 - remover Últimas Ordens de serviço | **Fora.** Retira informação; não há evidência de uso para decidir a remoção. |
+| D2 - indicadores no servidor | **Fora.** Exige backend e definição de recorte. |
+| D3 - instante/Atualizar dashboard | **Fora.** Nova ação e ciclo de recarga, desnecessários para uniformizar a apresentação existente. |
+| D4 - garantia média/administradores/valor em estoque | **Fora.** Não criar indicadores. O valor já preservado em Peças não será duplicado nem movido. |
+| R1 - filtros alterados / R2 - exportação | **Fora, ambos.** Relatórios serão refeitos; não revisar seus templates, specs ou fluxos nesta etapa. |
 
-## Logo — pendência bloqueada por decisão do usuário
+## Logo - pendência bloqueada por decisão do usuário
 
 O pedido de logo em SVG permanece **bloqueado pela decisão do usuário** sobre símbolo, versões clara/escura e opções com/sem nome. Preservar a marca atual até essa decisão; não é dependência para executar as demais tarefas.
 
@@ -90,7 +90,7 @@ O pedido de logo em SVG permanece **bloqueado pela decisão do usuário** sobre 
 - Conferência visual futura: 1440 px, 320 px e zoom 200%, teclado e perfis reais, respeitando o acesso atual. Happy DOM não prova geometria, comportamento nativo de `<dialog>` ou bloqueio real do fundo.
 - Foco da revisão: overlay global acessível com diálogo aberto, fechamento durante carga e dono único do retorno; select aberto no trap; diálogo filho sobre pai; fechamento durante escrita; gatilho removido após recarga; respostas fora de ordem; alvo de 40 px sem cortar calendário/popover em 320 px. Os testes abaixo atribuem dono a cada caso.
 
-### Tarefa 0a — Integrar e conferir o carregamento global obrigatório
+### Tarefa 0a - Integrar e conferir o carregamento global obrigatório
 
 **Base:** [plano de carregamento global](../superpowers/plans/2026-11-09-global-loading.md). Reutilizar a implementação existente e fechar sua integração antes da 0b e da Tarefa 1, sem duplicar serviço/interceptor/overlay.
 
@@ -106,7 +106,7 @@ O pedido de logo em SVG permanece **bloqueado pela decisão do usuário** sobre 
 
 **Aceite:** base global integrada e decisão de impedimentos implementada/conferida antes de continuar. **Commit previsto, se houver ajustes:** `fix(carregamento): integrar base global e leitura local de impedimentos (NAV-98)`.
 
-### Tarefa 0b — Remover textos soltos de carregamento
+### Tarefa 0b - Remover textos soltos de carregamento
 
 **Depende:** 0a, inclusive a exceção de impedimentos. Relatórios ficam fora.
 
@@ -125,7 +125,7 @@ O pedido de logo em SVG permanece **bloqueado pela decisão do usuário** sobre 
 
 **Aceite:** páginas abrangidas sem textos soltos de carga nem flash de vazio; um status global e exceção local explícita. **Commit:** `fix(ui): concentrar mensagens de carga no overlay global (NAV-98)`.
 
-### Tarefa 0c — Unificar totais paginados e indicadores de ordens de serviço
+### Tarefa 0c - Unificar totais paginados e indicadores de ordens de serviço
 
 **Modificar:** `frontend/src/app/pages/clients/clients.component.html:151`, `frontend/src/app/pages/products/products.component.html:159`, `frontend/src/app/pages/users/users.component.html:139`, `frontend/src/app/pages/rmas/rmas.component.html:27-29,140`, `frontend/src/app/pages/rmas/rmas.component.ts:137-145`, `frontend/src/styles.css`; `frontend/src/app/shared/pagination/pagination.component.ts:11`; `frontend/src/app/pages/clients/clients.component.spec.ts:201`, `frontend/src/app/pages/products/products.component.spec.ts`, `frontend/src/app/pages/users/users.component.spec.ts:144`, `frontend/src/app/pages/rmas/rmas.component.list.spec.ts`. **Criar:** `frontend/src/app/shared/pagination/pagination.component.spec.ts`.
 
@@ -139,7 +139,7 @@ O pedido de logo em SVG permanece **bloqueado pela decisão do usuário** sobre 
 
 **Aceite:** total único na paginação, indicadores de ordens de serviço em linha própria e plurais por entidade. **Commit:** `fix(listas): unificar totais e reposicionar indicadores de rmas (NAV-98)`.
 
-### Tarefa 1 — Uma diretiva para foco e pilha modal
+### Tarefa 1 - Uma diretiva para foco e pilha modal
 
 **Depende:** carregamento global integrado (0a), limpeza de carga (0b) e totais/indicadores (0c).
 
@@ -158,7 +158,7 @@ O pedido de logo em SVG permanece **bloqueado pela decisão do usuário** sobre 
 
 **Aceite:** um único dono da coordenação modal, com teardown completo e sem dependência nova. **Commit:** `fix(acessibilidade): compartilhar foco e pilha dos dialogos (NAV-98)`.
 
-### Tarefa 2 — Migrar os sete diálogos dos cadastros
+### Tarefa 2 - Migrar os sete diálogos dos cadastros
 
 **Modificar:**
 - `frontend/src/app/pages/clients/clients.component.ts`, `frontend/src/app/pages/clients/clients.component.html`, `frontend/src/app/pages/clients/clients.component.spec.ts`, `frontend/src/app/pages/clients/clients.component.pending.spec.ts`.
@@ -174,7 +174,7 @@ O pedido de logo em SVG permanece **bloqueado pela decisão do usuário** sobre 
 
 **Aceite:** sete estruturas migradas, sem alteração de regras. **Commit:** `fix(cadastros): integrar foco dos formularios e exclusoes (NAV-98)`.
 
-### Tarefa 3a — Coordenar os três diálogos de ordens de serviço
+### Tarefa 3a - Coordenar os três diálogos de ordens de serviço
 
 **Modificar:** `frontend/src/app/pages/rmas/rmas.component.ts`, `frontend/src/app/pages/rmas/rmas.component.html`, `frontend/src/app/pages/rmas/rmas.component.spec.ts` (helpers `.modal-overlay` em `:222-363`), `frontend/src/app/pages/rmas/rmas.component.detail.spec.ts`, `frontend/src/app/pages/rmas/rmas.component.create.spec.ts`, `frontend/src/app/pages/rmas/rmas.component.diagnosis.spec.ts`.
 
@@ -186,7 +186,7 @@ O pedido de logo em SVG permanece **bloqueado pela decisão do usuário** sobre 
 
 **Aceite:** três estruturas da lista integradas, sem perda de dados nem regressão nos helpers. **Commit:** `fix(rmas): integrar foco de detalhe abertura e diagnostico (NAV-98)`.
 
-### Tarefa 3b — Coordenar Kanban, detalhe, lote e impedimentos
+### Tarefa 3b - Coordenar Kanban, detalhe, lote e impedimentos
 
 **Depende:** 3a e decisão de impedimentos implementada na 0a, com limpeza na 0b.
 
@@ -205,7 +205,7 @@ O pedido de logo em SVG permanece **bloqueado pela decisão do usuário** sobre 
 
 **Aceite:** oito estruturas cobertas por 3a+3b; somente o topo reage, sem fechamento duplo, status global inerte ou perda de dados. **Commit:** `fix(kanban): coordenar foco de detalhe lote e impedimentos (NAV-98)`.
 
-### Tarefa 4 — Migrar peças e editor de regra
+### Tarefa 4 - Migrar peças e editor de regra
 
 **Modificar:** `frontend/src/app/pages/parts/parts.component.ts`, `frontend/src/app/pages/parts/parts.component.html`, `frontend/src/app/pages/parts/parts.component.form.spec.ts`, `frontend/src/app/pages/parts/parts.component.movement.spec.ts`, `frontend/src/app/pages/parts/parts.component.history.spec.ts`; `frontend/src/app/pages/notifications/notifications.component.ts`, `frontend/src/app/pages/notifications/notifications.component.html`, `frontend/src/app/pages/notifications/notifications.component.rules.spec.ts`.
 
@@ -217,7 +217,7 @@ O pedido de logo em SVG permanece **bloqueado pela decisão do usuário** sobre 
 
 **Aceite:** inventário inteiro coberto: 18 overlays com coordenação e 1 nativo integrado. **Commit:** `fix(operacoes): integrar foco de pecas e regras (NAV-98)`.
 
-### Tarefa 5 — Fechar estado, contagem e filtros do Kanban
+### Tarefa 5 - Fechar estado, contagem e filtros do Kanban
 
 **Modificar:** `frontend/src/app/pages/kanban/kanban.component.ts`, `frontend/src/app/pages/kanban/kanban.component.html`, `frontend/src/app/pages/kanban/kanban.component.css`, `frontend/src/app/pages/kanban/kanban.component.spec.ts`. **Criar:** `frontend/src/app/pages/kanban/kanban.component.states.spec.ts`.
 
@@ -230,7 +230,7 @@ O pedido de logo em SVG permanece **bloqueado pela decisão do usuário** sobre 
 
 **Aceite:** visualização marcada corresponde aos filtros; leitura não se confunde com falha de ação; total ocupa o primeiro indicador, com singular/filtro/carga/falha conforme o pedido revisado. **Commit:** `fix(kanban): alinhar filtros contagem e estados de leitura (NAV-98)`.
 
-### Tarefa 6a — Uniformizar alvos, tokens, cores e espaçamento
+### Tarefa 6a - Uniformizar alvos, tokens, cores e espaçamento
 
 **Modificar:** `frontend/src/styles.css`; `frontend/src/app/pages/login/login.component.css`, `frontend/src/app/pages/kanban/kanban.component.css`, `frontend/src/app/pages/rmas/rmas.component.ts`, `frontend/src/app/pages/users/users.component.ts`, `frontend/src/app/pages/dashboard/dashboard.component.ts`, `frontend/src/app/pages/notifications/notifications.component.ts`; `frontend/src/app/shared/form-controls/custom-select/custom-select.component.css`, `frontend/src/app/shared/rma-kanban-board/rma-kanban-board.component.css`, `frontend/src/app/shared/rma-detail-modal/rma-detail-modal.component.css`, `frontend/src/app/shared/rma-sla-badge/rma-sla-badge.component.css`, `frontend/src/app/shared/rma-block-panel/rma-block-panel.component.ts`.
 
@@ -243,7 +243,7 @@ O pedido de logo em SVG permanece **bloqueado pela decisão do usuário** sobre 
 
 **Aceite:** alvos/tokens/espaçamento conferidos nas dez telas, sem tom arbitrário novo e com exceções intencionais de acesso/indicadores documentadas. **Commit:** `style(ui): uniformizar alvos cores e espacamentos (NAV-98)`.
 
-### Tarefa 6b — Posicionar o calendário e ampliar seus alvos
+### Tarefa 6b - Posicionar o calendário e ampliar seus alvos
 
 **Modificar:** `frontend/src/app/shared/form-controls/date-picker/date-picker.component.css`, `frontend/src/app/shared/form-controls/date-picker/date-picker.component.ts`, `frontend/src/app/shared/form-controls/date-picker/date-picker.component.html`, `frontend/src/app/shared/form-controls/date-picker/date-picker.component.spec.ts`.
 
@@ -256,7 +256,7 @@ O pedido de logo em SVG permanece **bloqueado pela decisão do usuário** sobre 
 
 **Aceite:** calendário posicionado dentro das margens com alvos de 40 px, sem escapar do contexto do diálogo. **Commit:** `fix(calendario): posicionar painel e ampliar alvos de toque (NAV-98)`.
 
-### Tarefa 6c — Alinhar abas e plurais de lote
+### Tarefa 6c - Alinhar abas e plurais de lote
 
 **Modificar:** `frontend/src/app/pages/rmas/rmas.component.ts`, `frontend/src/app/pages/rmas/rmas.component.html`, `frontend/src/app/pages/rmas/rmas.component.detail.spec.ts`; `frontend/src/app/shared/kanban-bulk-actions/kanban-bulk-actions.component.html`, `frontend/src/app/shared/kanban-bulk-actions/kanban-bulk-actions.component.ts`, `frontend/src/app/shared/kanban-bulk-actions/kanban-bulk-actions.component.spec.ts`.
 
@@ -269,7 +269,7 @@ O pedido de logo em SVG permanece **bloqueado pela decisão do usuário** sobre 
 
 **Aceite:** abas acessíveis pelo mesmo contrato existente e plurais reais no lote. **Commit:** `fix(ui): alinhar teclado das abas e plurais de lote (NAV-98)`.
 
-### Tarefa 7 — Encerrar N3 e N4
+### Tarefa 7 - Encerrar N3 e N4
 
 **Depende:** carregamento global da 0a integrado; não executar esta tarefa antes dele. **Escopo de N4:** somente texto do resumo/editor; não alterar destinatários, canais, envio nem falhas de entrega. E-mails continuam fora de escopo.
 
@@ -284,7 +284,7 @@ O pedido de logo em SVG permanece **bloqueado pela decisão do usuário** sobre 
 
 **Aceite:** ausência de resumo não significa zero; N4 explica consequência sem bloquear regra. **Commit:** `fix(notificacoes): explicitar resumo indisponivel e regra sem destinatarios (NAV-98)`.
 
-### Tarefa 8a — Carregar rotas sob demanda
+### Tarefa 8a - Carregar rotas sob demanda
 
 **Modificar:** `frontend/src/app/app.routes.ts`. **Criar:** `frontend/src/app/app.routes.spec.ts`. Primeiro dos **dois commits separados** da antiga Tarefa 8; a consolidação de CSS fica na 8b.
 
@@ -299,7 +299,7 @@ O pedido de logo em SVG permanece **bloqueado pela decisão do usuário** sobre 
 
 **Aceite:** build com código 0 e bundle inicial menor; buscar ≤510 kB sem elevar limites, registrar valor/excedente real e manter dívida explícita se persistir warning. **Commit:** `perf(frontend): carregar paginas sob demanda (NAV-98)`.
 
-### Tarefa 8b — Consolidar CSS dos detalhes
+### Tarefa 8b - Consolidar CSS dos detalhes
 
 **Depende:** 8a e sua medição registrada. Segundo commit da antiga Tarefa 8.
 
@@ -315,13 +315,13 @@ O pedido de logo em SVG permanece **bloqueado pela decisão do usuário** sobre 
 
 **Aceite:** build com código 0, CSS dos dois componentes não cresce e redução de 8a é preservada; buscar ≤4 kB por componente e registrar valores reais. Se a redução limitada de 8a/8b não atingir os warnings, manter a dívida com tamanho/excedente e proposta posterior; não declarar orçamento resolvido nem ampliar limites. **Commit:** `perf(frontend): consolidar css compartilhado dos detalhes (NAV-98)`.
 
-### Tarefa 9 — Conferência autenticada e fechamento documental
+### Tarefa 9 - Conferência autenticada e fechamento documental
 
 **Modificar na execução futura:** `docs/ux/2026-11-07-roteiro-conferencia-manual.md`. **Incluir no commit documental:** os arquivos de `docs/ux/` discriminados abaixo, inclusive este plano, preservando conteúdo histórico.
 
 - [ ] Rodar a regressão inteira no frontend: `npm --prefix frontend test -- --watch=false --runner-config 'C:\Users\joseh\AppData\Local\Temp\vitest-runner.config.mjs'`; depois `npm --prefix frontend run build -- --stats-json`. **Backend:** nenhum teste a escrever/comando obrigatório, pois seus arquivos/contratos não mudam. Relatórios não recebem testes novos nem revisão; a suíte global apenas conserva a regressão existente.
 - [ ] Atualizar o roteiro, preservando etapas 1–3 e corrigindo o que ficou obsoleto: total no título, aviso antigo de 604 kB, F1 e chip não podem continuar descritos como estado atual se resolvidos. Acrescentar passos reproduzíveis de **etapa 4** (lista/histórico, abertura com vários produtos/compra desconhecida, diagnóstico e dois detalhes), **5** (estoque/reposição, movimento, original+estorno, reservas, impedimentos, versão/execução), **6** (dashboard, caixa/preferências/regras/falhas; relatórios explicitamente adiados) e **7** (carregamento global e exceção local de impedimentos, ausência de textos soltos/flash de vazio, totais/indicadores revisados, os 19 diálogos, teclado, pilha, fundo, retorno, N3/N4 e recuperação de falhas). N4 altera somente o texto do resumo/editor; destinatários, canais, envio e falhas de entrega não recebem mudanças.
-- [ ] Acrescentar bloco **“Ajustes visuais de 9/11 — preservação”**: títulos destacados; **paginação como único total no rodapé** de Clientes/Produtos/Usuários/ordens de serviço, com rótulos por entidade; `app-result-count` preservado só onde não há paginação (Protocolos/Peças); total do Kanban como primeiro indicador de `heroStats`/`.kanban-summary`, sem contagem no título ou `app-result-count`; ordens de serviço com linha de indicadores logo abaixo de `app-page-header`, fora dos filtros, no mesmo visual global; singular/filtro e ocultação antes do primeiro sucesso/após falha; botões preenchidos por tom e estados; cards do Kanban com contraste/cliente/prioridade/avatar/exceções de SLA e sem falha/SLA saudável; detalhe com seletores de status e responsável, responsável atual inelegível identificado, seleção igual sem envio, falha local e confirmação de status. Não converter o detalhe da lista para o layout do Kanban.
+- [ ] Acrescentar bloco **“Ajustes visuais de 9/11 - preservação”**: títulos destacados; **paginação como único total no rodapé** de Clientes/Produtos/Usuários/ordens de serviço, com rótulos por entidade; `app-result-count` preservado só onde não há paginação (Protocolos/Peças); total do Kanban como primeiro indicador de `heroStats`/`.kanban-summary`, sem contagem no título ou `app-result-count`; ordens de serviço com linha de indicadores logo abaixo de `app-page-header`, fora dos filtros, no mesmo visual global; singular/filtro e ocultação antes do primeiro sucesso/após falha; botões preenchidos por tom e estados; cards do Kanban com contraste/cliente/prioridade/avatar/exceções de SLA e sem falha/SLA saudável; detalhe com seletores de status e responsável, responsável atual inelegível identificado, seleção igual sem envio, falha local e confirmação de status. Não converter o detalhe da lista para o layout do Kanban.
 - [ ] Executar no navegador com backend disponível e login do próprio usuário: 1440/320 px, 200%, Tab/Shift+Tab/Escape/Enter; abrir cada estrutura da tabela. Testar filho sobre pai, popover antes do modal e select aberto com Tab sem incluir opções no ciclo; salvar pendente preserva bloqueio de fundo/Fechar e ignora Escape; falha e sucesso com acionador removido usam fallback. Com diálogo aberto e overlay global visível, status acessível sem `inert`/`aria-hidden`, Escape ignorado e fechamento por sucesso devolve foco só depois que o overlay sai, com dono único. Conferir leituras/retry de impedimentos na camada superior com `SKIP_GLOBAL_LOADING` e indicador local, sem status concorrente; carga sem texto solto/flash de vazio, retry com rótulo fixo, totais/indicadores revisados, calendário de 40 px e alvos sem sobreposição. O overlay global não conta entre os 19 diálogos. Perfis ADMIN/SERVICE_DESK/TECHNICIAN/VIEWER conforme acesso já existente. Registrar resultado/data/perfil por cenário; sem acesso, marcar **pendente**, nunca aprovado por Vitest.
 - [ ] **Decisão sobre documentos:** versionar `docs/ux/` como registro compartilhado da NAV-98. Arquivos exatos: `docs/ux/2026-11-06-estudo-ui-ux.md`, `docs/ux/2026-11-07-etapa-1-fundacao-visual.md`, `docs/ux/2026-11-07-galeria-telas.md`, `docs/ux/2026-11-07-plano-etapa-2-kanban.md`, `docs/ux/2026-11-07-plano-etapa-3-cadastros.md`, `docs/ux/2026-11-07-plano-etapa-4-ciclo-rma.md`, `docs/ux/2026-11-07-plano-etapa-5-operacoes.md`, `docs/ux/2026-11-07-plano-fase-1-fundacao.md`, `docs/ux/2026-11-07-roteiro-conferencia-manual.md`, `docs/ux/2026-11-08-plano-etapa-6-comunicacao-analise.md`, `docs/ux/2026-11-08-revisao-plano-etapa-5.md`, `docs/ux/2026-11-09-plano-etapa-7-conferencia-global.md`, `docs/ux/visuals/navitas-componentes.html`, `docs/ux/visuals/navitas-operacao.html`, `docs/ux/visuals/navitas-projeto-completo.html`. Incluir somente versões revisadas, sem alterar os planos históricos para fingir que são o código atual. Conferir links; capturas em `output/` são evidência local e links ausentes devem ser identificados como tal no roteiro.
 - [ ] **Decisão sobre `.claude/launch.json`: não commitar.** O arquivo contém apenas lançamento local do frontend na porta 4300; `frontend/package.json` já oferece o comando. Não apagar o arquivo, alterar `.gitignore`, nem incluir `.claude/`, `.playwright-cli/`, `output/`, stats ou artefatos de build no commit. Esta decisão é documental, não autorização para executar Git agora.

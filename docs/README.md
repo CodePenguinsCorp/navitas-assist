@@ -46,3 +46,6 @@
 
 - [ux/](ux/): estudo de UI/UX (NAV-98), planos por etapa e o [roteiro de conferência manual](ux/2026-11-07-roteiro-conferencia-manual.md), usado para validar as telas em um navegador com backend real. `ux/visuals/` guarda páginas HTML de apoio.
 - [superpowers/specs/](superpowers/specs/) e [superpowers/plans/](superpowers/plans/): especificações de projeto e planos de implementação. São histórico de planejamento; em caso de divergência, vale o código e os documentos acima.
+
+- [Affordance de notificações](ux/2026-11-14-affordance-notificacoes.md): diagnóstico visual e referências.
+- [Arquivos de teste da importação](ux/2026-11-14-arquivos-teste-importacao.md): localização, casos e contagens esperadas.

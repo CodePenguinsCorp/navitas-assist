@@ -1,4 +1,4 @@
-﻿# E-mails e notificações — Plano de implementação
+﻿# E-mails e notificações - Plano de implementação
 
 > **Para agentes:** usar `superpowers:executing-plans` na futura execução, tarefa por tarefa. Os passos usam checkboxes. Este pedido autoriza somente escrever os dois documentos; não executar este plano agora.
 
@@ -8,7 +8,7 @@
 
 **Stack:** Java 17, Spring Boot 3.2, MySQL/Flyway, JPA, java.net.http/Jackson; Angular 21, Vitest/happy-dom; H2 nos testes existentes e MySQL para prova de migração/collation.
 
-**Spec:** [Projeto B — desenho](../specs/2026-11-13-emails-e-notificacoes-design.md). Ler ambos antes de executar. Referência de formato consultada: `2026-10-25-nav-8-campos-clientes.md`.
+**Spec:** [Projeto B - desenho](../specs/2026-11-13-emails-e-notificacoes-design.md). Ler ambos antes de executar. Referência de formato consultada: `2026-10-25-nav-8-campos-clientes.md`.
 
 ## Restrições globais
 
@@ -42,7 +42,7 @@ Caminhos Java abaixo usam `backend/src/main/java/br/com/navitasassist/`; testes 
 - Angular: `frontend/src/app/core/{models.ts,utils/notification-ui.ts,services/notification.service.ts}`, telas existentes `pages/users/` e `pages/notifications/`, seus specs e testes de transporte.
 - Operação: `backend/src/main/resources/application.yml`, `backend/pom.xml`, `.env.example`, `.env.prod.example`, `compose.yaml`, `compose.prod.yaml`, `README.md`.
 
-## Tarefa 1 — Schema incremental e invariantes da fila
+## Tarefa 1 - Schema incremental e invariantes da fila
 
 **Arquivos:** entidades/repositórios de persistência do mapa; nova `repository/NotificationEmailPreferenceRepository.java`; próxima migração livre `V<livre>__notification_email_delivery.sql` (placeholder documental, escolher número na execução).
 
@@ -57,7 +57,7 @@ Caminhos Java abaixo usam `backend/src/main/java/br/com/navitasassist/`; testes 
 - [ ] Repetir comando até GREEN. Aplicar V1+V2+nova migração em schema MySQL descartável, sem tocar volumes existentes, e verificar inserções null/caixa, upgrade e `flyway validate`; registrar versão exata e resultado. H2 verde sozinho não conclui esta prova.
 - [ ] Revisar diff e registrar commit `feat(notificacoes): preparar persistencia de emails` na execução.
 
-## Tarefa 2 — E-mail no CRUD de usuários
+## Tarefa 2 - E-mail no CRUD de usuários
 
 **Arquivos:** arquivos de usuário do mapa; `user/UserControllerIntegrationTest.java` e `user/UserAdminSafetyIntegrationTest.java`.
 
@@ -69,7 +69,7 @@ Caminhos Java abaixo usam `backend/src/main/java/br/com/navitasassist/`; testes 
 - [ ] Repetir testes até GREEN; confirmar senha opcional na edição, anti-escalada, último administrador e revogação de sessão continuam conforme regras atuais. Mudança apenas de email não revoga sessão.
 - [ ] Registrar commit `feat(usuarios): cadastrar email opcional`.
 
-## Tarefa 3 — Contrato dos provedores e configuração segura
+## Tarefa 3 - Contrato dos provedores e configuração segura
 
 **Arquivos:** novos arquivos `notification/email/` e configuração do mapa; `application.yml`; novos testes `notification/{FakeEmailProviderTest,ResendEmailProviderTest,NotificationEmailPropertiesTest}.java`.
 
@@ -82,7 +82,7 @@ Caminhos Java abaixo usam `backend/src/main/java/br/com/navitasassist/`; testes 
 - [ ] Rodar novamente até GREEN; servidor local é a única conexão dos testes; confirmar captura limitada e nenhuma impressão de token/resposta bruta.
 - [ ] Registrar commit `feat(notificacoes): adicionar provedores fake e resend`.
 
-## Tarefa 4 — Modelos e distribuição por canal
+## Tarefa 4 - Modelos e distribuição por canal
 
 **Arquivos:** `service/{NotificationEmailContentFactory,NotificationDispatcher,NotificationProcessor,NotificationVisibilityPolicy}.java`, DTOs de regras/preferências e seus serviços; novos `notification/NotificationEmailContentFactoryTest.java`, ampliar `notification/NotificationIntegrationTest.java` e `notification/NotificationEmailIntegrationTest.java`.
 
@@ -95,7 +95,7 @@ Caminhos Java abaixo usam `backend/src/main/java/br/com/navitasassist/`; testes 
 - [ ] Implementar escolhas de canal e template mínimo da spec; preservar seleção por perfil, deduplicação, política de visibilidade e AFTER_COMMIT. Adaptar captura de erros sanitizados; jamais propagar falha para o negócio.
 - [ ] Repetir até GREEN e provar que falha de agendamento/email deixa OS confirmado e notificação app disponível. Registrar commit `feat(notificacoes): distribuir por canal e renderizar emails`.
 
-## Tarefa 5 — Worker persistente, recuo e recuperação
+## Tarefa 5 - Worker persistente, recuo e recuperação
 
 **Arquivos:** `service/{NotificationEmailService,NotificationEmailWorker,NotificationEmailQueue}.java`, `repository/NotificationRepository.java`, configuração de agendamento/executor; novos `notification/{NotificationEmailWorkerTest,NotificationEmailConcurrencyIntegrationTest}.java`.
 
@@ -108,7 +108,7 @@ Caminhos Java abaixo usam `backend/src/main/java/br/com/navitasassist/`; testes 
 - [ ] Implementar claims somente com vaga de execução imediata, lease 60 s e token, poll 5 s/lote máximo 50 e recuos da spec, executor limitado; rede fora da transação. Persistir estado e hash antes do envio, manter chave estável notificationId/generation; conclusão condicionada. Aplicar logs/códigos seguros e contadores sem PII na infraestrutura disponível.
 - [ ] Repetir até GREEN e provar concorrência em MySQL para a atualização condicional; confirmar que falha ao persistir resultado pode ser recuperada e não altera OS. Registrar commit `feat(notificacoes): processar fila com tentativas e lease`.
 
-## Tarefa 6 — Consulta e ações pessoais consistentes
+## Tarefa 6 - Consulta e ações pessoais consistentes
 
 **Arquivos:** `controller/NotificationController.java`, `service/NotificationService.java`, `repository/NotificationRepository.java`, DTOs de preferência; ampliar `notification/NotificationIntegrationTest.java`.
 
@@ -120,7 +120,7 @@ Caminhos Java abaixo usam `backend/src/main/java/br/com/navitasassist/`; testes 
 - [ ] Alterar query/serviço preservando contrato do array e summary global. Não filtrar severidade/evento somente no navegador e não contar email-only no badge.
 - [ ] Repetir até GREEN. Registrar commit `feat(notificacoes): filtrar caixa e preservar isolamento por canal`.
 
-## Tarefa 7 — Administração de falhas, reenvio e teste para si
+## Tarefa 7 - Administração de falhas, reenvio e teste para si
 
 **Arquivos:** `controller/NotificationRuleController.java`, `service/{NotificationRuleService,NotificationEmailQueue}.java`, DTOs de ação/status/falhas; `config/SecurityConfig.java` para confirmar matchers; ampliar `access/PermissionEquivalenceIntegrationTest.java`; novo `notification/NotificationEmailAdminIntegrationTest.java`.
 
@@ -133,7 +133,7 @@ Caminhos Java abaixo usam `backend/src/main/java/br/com/navitasassist/`; testes 
 - [ ] Implementar endpoints/DTOs e transições condicionais; usar notificacoes.regras existente. Manter Permission.java/core/permissions.ts/seeds sem novo código de permissão; se a implementação exigir nova permissão, revisar desenho antes e atualizar todos esses pontos junto ao README.
 - [ ] Repetir até GREEN e registrar commit `feat(notificacoes): administrar falhas e testar envio`.
 
-## Tarefa 8 — Contratos Angular e campo de e-mail em Usuários
+## Tarefa 8 - Contratos Angular e campo de e-mail em Usuários
 
 **Arquivos:** `frontend/src/app/core/models.ts`, `frontend/src/app/core/services/notification.service.{ts,spec.ts}`, `frontend/src/app/pages/users/users.component.{ts,html,spec.ts}`, testes de transporte existentes de usuários/autenticação e fixtures afetadas.
 
@@ -141,10 +141,10 @@ Caminhos Java abaixo usam `backend/src/main/java/br/com/navitasassist/`; testes 
 
 - [ ] Adicionar testes HttpTestingController das URLs/verbos/parâmetros/DTOs, sem destinatário em teste/retry; email nos contratos de usuário/me e null na limpeza. Cobrir email opcional, inválido, 254/255 e erro de duplicidade do servidor no formulário.
 - [ ] Executar em `frontend`: `npm.cmd test -- --watch=false`; confirmar RED das novas expectativas.
-- [ ] Acrescentar campo opcional tipo email no modal de Usuários, validação correspondente ao backend, reset/edição/payload e coluna curta com fallback “—”. Preservar senha, perfis, paginação e estados pendentes existentes; não adicionar painel novo.
+- [ ] Acrescentar campo opcional tipo email no modal de Usuários, validação correspondente ao backend, reset/edição/payload e coluna curta com fallback “-”. Preservar senha, perfis, paginação e estados pendentes existentes; não adicionar painel novo.
 - [ ] Atualizar serviço/tipos/fixtures, sem expor email em tipos de opções de atribuíveis. Repetir suíte até GREEN. Registrar commit `feat(usuarios): editar email e alinhar contratos de notificacoes`.
 
-## Tarefa 9 — Caixa de entrada e preferências
+## Tarefa 9 - Caixa de entrada e preferências
 
 **Arquivos:** `frontend/src/app/pages/notifications/notifications.component.{ts,html}`, `notifications.component.inbox.spec.ts`, `notifications.component.preferences.spec.ts`, `frontend/src/app/core/utils/notification-ui.ts` e respectivos specs.
 
@@ -156,7 +156,7 @@ Caminhos Java abaixo usam `backend/src/main/java/br/com/navitasassist/`; testes 
 - [ ] Ajustar tela existente: app-page-header, barra compacta com app-custom-select, grupos com separadores e ações rápidas. Usar componentes/estilos/tokens atuais, sem caixas dentro de caixas nem textos longos. Preservar ClockService, navegação interna segura e estados de resumo desconhecido.
 - [ ] Repetir suíte até GREEN; conferir foco/teclado e layout móvel em inspeção visual na execução, sem criar artefatos permanentes desnecessários. Registrar commit `feat(notificacoes): organizar caixa e preferencias por canal`.
 
-## Tarefa 10 — Regras e painel administrativo
+## Tarefa 10 - Regras e painel administrativo
 
 **Arquivos:** `frontend/src/app/pages/notifications/notifications.component.{ts,html}`, `notifications.component.rules.spec.ts`, `notifications.component.spec.ts` e novos specs de falhas se necessário.
 
@@ -169,7 +169,7 @@ Caminhos Java abaixo usam `backend/src/main/java/br/com/navitasassist/`; testes 
 - [ ] Atualizar tabela/modal atuais; painel de falhas compacto na mesma aba com seção irmã de EVENT sem retry e botão de teste para si. Loading por linha e feedback curto, sem polling global novo ou explicação de infraestrutura ao usuário.
 - [ ] Repetir até GREEN, inspecionar desktop/móvel e registrar commit `feat(notificacoes): aprimorar regras e painel de falhas`.
 
-## Tarefa 11 — Configuração operacional, regressão e revisão final
+## Tarefa 11 - Configuração operacional, regressão e revisão final
 
 **Arquivos:** arquivos de operação do mapa; atualizar `notification/NotificationEmailIntegrationTest.java`, substituir `notification/NotificationSmtpTimeoutIntegrationTest.java` por cobertura HTTP já criada e remover somente suporte SMTP sem aplicador; README com configuração, padrões, preferências, status, limitações e procedimentos de reenvio/teste.
 

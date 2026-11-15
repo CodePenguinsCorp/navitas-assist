@@ -1,4 +1,4 @@
-# Etapa 6 — Comunicação e análise: plano de implementação
+# Etapa 6 - Comunicação e análise: plano de implementação
 
 > **Para quem executa:** use superpowers:executing-plans ou superpowers:subagent-driven-development e siga as tarefas na ordem. Os passos usam caixas (`- [ ]`). **A implementação e um commit por tarefa ou subtarefa estão autorizados**, dentro das restrições globais abaixo.
 
@@ -186,7 +186,7 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
 
 ---
 
-### Task 1a: Dashboard — carga, falha e nova tentativa
+### Task 1a: Dashboard - carga, falha e nova tentativa
 
 **Files:**
 - Modify: `frontend/src/app/pages/dashboard/dashboard.component.ts` (sinais `:69-75`, `loadDashboard :184-210`).
@@ -212,7 +212,7 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
 - [ ] **Step 4: Repetir o comando.** Esperado: todos PASS.
 - [ ] **Step 5: Commit.** `git add` dos três **Files**. `git commit -m "fix(dashboard): distinguir carga, falha e vazio com nova tentativa (NAV-98)"`.
 
-### Task 1b: Dashboard — composição, indicadores com escopo e navegação
+### Task 1b: Dashboard - composição, indicadores com escopo e navegação
 
 **Files:**
 - Modify: `frontend/src/app/pages/dashboard/dashboard.component.ts` (`metrics :77-129`, `queue :131-144`, `auditEvents :146-164`, `recentRmas :166-178`, funções `:213-259`, imports).
@@ -251,7 +251,7 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
 - [ ] **Step 4: Repetir o comando.** Esperado: todos PASS.
 - [ ] **Step 5: Commit.** `git add` dos quatro **Files**. `git commit -m "feat(dashboard): indicadores com escopo, fila em andamento e navegacao à OS (NAV-98)"`.
 
-### Task 2a: Caixa de entrada — carga, falha, cancelamento e vazios
+### Task 2a: Caixa de entrada - carga, falha, cancelamento e vazios
 
 **Files:**
 - Modify: `frontend/src/app/pages/notifications/notifications.component.ts` (sinais `:161-171`, toggles `:210-218`, `loadInbox :288-297`, `clearMessages :343-346`).
@@ -284,7 +284,7 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
 - [ ] **Step 4: Repetir o comando.** Esperado: todos PASS.
 - [ ] **Step 5: Commit.** `git add` dos três **Files**. `git commit -m "fix(notificacoes): estados e cancelamento da caixa de entrada (NAV-98)"`.
 
-### Task 2b: Caixa de entrada — cabeçalho, abas, título acionável e adiamento
+### Task 2b: Caixa de entrada - cabeçalho, abas, título acionável e adiamento
 
 **Files:**
 - Modify: `frontend/src/app/pages/notifications/notifications.component.ts` (`selectTab :198-208`, `open :220-228`, `markAllRead :237-242`, `snooze :244-254`, estilos inline `:35-154`).
@@ -348,7 +348,7 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
 - [ ] **Step 4: Repetir o comando.** Esperado: todos PASS.
 - [ ] **Step 5: Commit.** `git add` dos três **Files**. `git commit -m "feat(notificacoes): preferencias com quatro situacoes e estados de carga (NAV-98)"`.
 
-### Task 4a: Regras — carga e resumo administrativo
+### Task 4a: Regras - carga e resumo administrativo
 
 **Files:**
 - Modify: `frontend/src/app/pages/notifications/notifications.component.ts` (`loadRules :309-316`, helper de resumo, import de `RowActionComponent`).
@@ -387,7 +387,7 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
 - [ ] **Step 4: Repetir o comando.** Esperado: todos PASS.
 - [ ] **Step 5: Commit.** `git add` dos três **Files**. `git commit -m "feat(notificacoes): regras com estados de carga e resumo por evento (NAV-98)"`.
 
-### Task 4b: Regras — formulário focado e salvamento
+### Task 4b: Regras - formulário focado e salvamento
 
 **Files:**
 - Modify: `frontend/src/app/pages/notifications/notifications.component.ts` (`updateRule/toggleRole/updateSeverity :262-286`, novos métodos de edição, import de `ReactiveFormsModule`).
@@ -444,7 +444,7 @@ Os caminhos são relativos a `frontend/src/app/`. Cada linha aponta uma tarefa o
   - `retries only the failures`: o clique no botão leva a `listFailures` 2 vezes e `listRules` 1 vez. **Reprova hoje:** não há botão.
   - `identifies the origin and the limit`: na coluna `Origem`, `EVENT` → `Processamento do evento` e `EMAIL` → `Envio de e-mail`. A seção contém `'Até 50 falhas de eventos e até 50 falhas de envio de e-mail, da mais recente para a mais antiga.'`. **Reprova hoje:** `html:174` e nenhum texto de limite.
 
-  **Preservação:** o texto completo de `error` no DOM; a ordem do servidor (`NotificationRuleService.java:63`); `rmaCode` e destinatário ausentes como `—`; o rótulo do evento; só ADMIN pede falhas. Tudo já passa hoje.
+  **Preservação:** o texto completo de `error` no DOM; a ordem do servidor (`NotificationRuleService.java:63`); `rmaCode` e destinatário ausentes como `-`; o rótulo do evento; só ADMIN pede falhas. Tudo já passa hoje.
 - [ ] **Step 2: Rodar e ver falhar.** Esperado: FAIL nas asserções marcadas.
 - [ ] **Step 3: Implementar** `<section aria-labelledby="notification-failures-title">` com `h2` “Falhas de processamento” e o texto do limite. A precedência é falha → carga → vazio → tabela em `.table-wrap`. A célula de erro usa `white-space: pre-wrap; overflow-wrap: anywhere` em CSS local, sem truncar.
 - [ ] **Step 4: Repetir o comando.** Esperado: todos PASS.
@@ -667,17 +667,17 @@ São propostas do autor do plano, já ajustadas pela revisão. Não são acordos
 
 ## Fora de escopo e backlog justificado
 
-- **D1 — Últimas ordens de serviço no dashboard.** O estudo (`:127`) desaconselha uma segunda lista de ordens de serviço se ela não orienta ação diferente. Remover é retirar informação existente e precisa de decisão do usuário.
-- **D2 — Indicadores do dashboard no servidor.** Hoje `listBoard()` traz todas as ordens de serviço de todo o período só para contar e ordenar. Um endpoint de resumo, com período e escopo definidos, tiraria o cálculo do cliente. Exige backend.
-- **D3 — Instante e atualização manual do dashboard.** Mostrar “Atualizado às …” e um botão Atualizar é comportamento novo.
-- **D4 — Candidatos herdados das etapas anteriores.** Garantia média dos produtos e número de administradores (`plano-etapa-3:78-79`), e a eventual migração do valor em estoque (`revisao-plano-etapa-5:105`). Eram candidatos ao dashboard da etapa 6, não obrigações. Não entram agora, porque exigiriam novos indicadores ou cálculo no servidor e decisão do usuário.
-- **N1 — Paginação ou mudança do limite de 100 notificações** (`NotificationService.java:38`). A tela só informa o limite.
-- **N2 — Desfazer silenciamento de alerta que virou obrigatório.** O servidor permite, mas a utilidade depende de a regra voltar a ser silenciável.
-- **N3 — Disponibilidade do resumo de não lidas.** `refreshSummary()` absorve o erro e conserva o último valor (`notification.service.ts:34-38`). Distinguir “resumo indisponível” exigiria mudar o serviço.
-- **N4 — Aviso explicativo para regra sem destinatário** (“não é entregue a ninguém”). Fica para decisão posterior, sem validação nova.
-- **R1 — Aviso de filtros alterados e não consultados nos relatórios.** O resumo aplicado já resolve a ambiguidade principal.
-- **R2 — Exportação dos relatórios.** Continua indisponível no produto. Nenhum botão.
-- **F1 — Coordenação de foco nos diálogos** (herdada da etapa 5). O diálogo de regras segue o padrão atual de `aria-modal` sem confinamento. A pendência continua aberta.
+- **D1 - Últimas ordens de serviço no dashboard.** O estudo (`:127`) desaconselha uma segunda lista de ordens de serviço se ela não orienta ação diferente. Remover é retirar informação existente e precisa de decisão do usuário.
+- **D2 - Indicadores do dashboard no servidor.** Hoje `listBoard()` traz todas as ordens de serviço de todo o período só para contar e ordenar. Um endpoint de resumo, com período e escopo definidos, tiraria o cálculo do cliente. Exige backend.
+- **D3 - Instante e atualização manual do dashboard.** Mostrar “Atualizado às …” e um botão Atualizar é comportamento novo.
+- **D4 - Candidatos herdados das etapas anteriores.** Garantia média dos produtos e número de administradores (`plano-etapa-3:78-79`), e a eventual migração do valor em estoque (`revisao-plano-etapa-5:105`). Eram candidatos ao dashboard da etapa 6, não obrigações. Não entram agora, porque exigiriam novos indicadores ou cálculo no servidor e decisão do usuário.
+- **N1 - Paginação ou mudança do limite de 100 notificações** (`NotificationService.java:38`). A tela só informa o limite.
+- **N2 - Desfazer silenciamento de alerta que virou obrigatório.** O servidor permite, mas a utilidade depende de a regra voltar a ser silenciável.
+- **N3 - Disponibilidade do resumo de não lidas.** `refreshSummary()` absorve o erro e conserva o último valor (`notification.service.ts:34-38`). Distinguir “resumo indisponível” exigiria mudar o serviço.
+- **N4 - Aviso explicativo para regra sem destinatário** (“não é entregue a ninguém”). Fica para decisão posterior, sem validação nova.
+- **R1 - Aviso de filtros alterados e não consultados nos relatórios.** O resumo aplicado já resolve a ambiguidade principal.
+- **R2 - Exportação dos relatórios.** Continua indisponível no produto. Nenhum botão.
+- **F1 - Coordenação de foco nos diálogos** (herdada da etapa 5). O diálogo de regras segue o padrão atual de `aria-modal` sem confinamento. A pendência continua aberta.
 - O shell e o sino de notificações, outras telas, `core`, `shared`, rotas, CSS global e backend.
 
 ## Autorrevisão do plano

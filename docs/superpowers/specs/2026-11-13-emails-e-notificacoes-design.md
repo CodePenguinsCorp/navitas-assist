@@ -1,4 +1,4 @@
-﻿# Etapa 8 — Projeto B: e-mails e notificações
+﻿# Etapa 8 - Projeto B: e-mails e notificações
 
 ## Objetivo e limites
 
@@ -66,7 +66,7 @@ O registro persistente garante recuperação **depois** da distribuição; o int
 
 ## Modelos e segurança
 
-Assunto `[Navitas Assist] {rótulo do evento} — {código da OS}`, máximo 160 caracteres, sem nome de cliente. Corpo em português, HTML simples e texto: evento, código, data/hora e “Abrir OS”; link `APP_BASE_URL` + `/rmas?rma={id}` conforme `NotificationContentFactory`. Não copiar automaticamente o message atual, que inclui cliente/produto/ator. Teste: assunto `[Navitas Assist] E-mail de teste`, texto “Este é um e-mail de teste do Navitas Assist.” e link “Abrir Navitas Assist”, sem OS fictício.
+Assunto `[Navitas Assist] {rótulo do evento} - {código da OS}`, máximo 160 caracteres, sem nome de cliente. Corpo em português, HTML simples e texto: evento, código, data/hora e “Abrir OS”; link `APP_BASE_URL` + `/rmas?rma={id}` conforme `NotificationContentFactory`. Não copiar automaticamente o message atual, que inclui cliente/produto/ator. Teste: assunto `[Navitas Assist] E-mail de teste`, texto “Este é um e-mail de teste do Navitas Assist.” e link “Abrir Navitas Assist”, sem OS fictício.
 
 Escape de todos os valores HTML e atributos; proibir CR/LF no assunto/endereço/remetente, rejeitar múltiplos destinatários, nunca aceitar HTML ou URL enviada pelo navegador. Limitar mensagem renderizada (texto + HTML em UTF-8) a 64 KiB, falhando com código CONTENT_TOO_LARGE sem chamada externa. Renderizar no worker após a persistência da notificação: falha de renderização, CRLF ou tamanho marca somente a entrega como FAILED, sem remover/falhar a notificação app nem a transação de distribuição. Usar dados estáveis da ocorrência e a data persistida, nunca horário corrente na renderização de retries, para manter o hash do payload. URL base absoluta, sem userinfo/query/fragmento, HTTPS para Resend; permitir HTTP local com fake. Caminho da OS é construído pelo servidor, sem redirecionamento externo. Link requer sessão e as permissões normais da OS; não contém token de acesso.
 
@@ -113,7 +113,7 @@ Preservar rota e abas atuais. `app-page-header` com título “Notificações”
 
 Preferências: uma linha por evento, controles “Silenciar” e “E-mail”, respeitando userMutable; estado curto “Sem e-mail cadastrado”, “Desligado” ou “Obrigatório” conforme precedência, sem prometer entrega. Falta de endereço não remove a preferência salva. Regras: tabela Evento, Ativa, App, E-mail, Destinatários, Severidade; edição no modal existente com perfis, responsável e mutabilidade. Não duplicar editor/tela. Mostrar indisponibilidade dos tipos não suportados.
 
-No painel administrativo da aba Regras: seção “Falhas de e-mail” com linhas compactas de data, OS, usuário, tentativas, erro e “Reenviar”; preservar falhas de processamento em seção irmã compacta, sem ação. Cabeçalho com “Enviar e-mail de teste” para si e selo “Desligado”/“Simulado” quando aplicável. Feedback “Teste agendado” ou “Simulação agendada”, nunca “Entregue”. Atualização manual após ação; sem novo polling global. Erro inline curto, loading por linha, prevenção de clique duplo, foco/teclado e layout móvel mantidos. Usuários: campo E-mail opcional no modal atual e coluna compacta com “—” para ausência, sem novo painel explicativo.
+No painel administrativo da aba Regras: seção “Falhas de e-mail” com linhas compactas de data, OS, usuário, tentativas, erro e “Reenviar”; preservar falhas de processamento em seção irmã compacta, sem ação. Cabeçalho com “Enviar e-mail de teste” para si e selo “Desligado”/“Simulado” quando aplicável. Feedback “Teste agendado” ou “Simulação agendada”, nunca “Entregue”. Atualização manual após ação; sem novo polling global. Erro inline curto, loading por linha, prevenção de clique duplo, foco/teclado e layout móvel mantidos. Usuários: campo E-mail opcional no modal atual e coluna compacta com “-” para ausência, sem novo painel explicativo.
 
 ## Testes e critérios de aceite
 

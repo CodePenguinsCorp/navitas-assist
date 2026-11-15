@@ -1,4 +1,4 @@
-# Componentes trocados e intervenções — desenho
+# Componentes trocados e intervenções - desenho
 
 **Objetivo:** atender ao §3.4 informado do PDF do cliente com componentes trocados, retrabalho e tempo efetivo de serviço estruturados, reutilizáveis pelo futuro laudo (projeto C). O PDF não foi disponibilizado nesta tarefa; o requisito considerado é o trecho fornecido pelo solicitante.
 

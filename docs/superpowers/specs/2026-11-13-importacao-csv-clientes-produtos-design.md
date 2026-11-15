@@ -1,4 +1,4 @@
-# Importação CSV de clientes e produtos — desenho
+# Importação CSV de clientes e produtos - desenho
 
 **Estado:** proposta para implementação posterior; somente este documento é entregue nesta tarefa.
 **Objetivo:** atender ao item §9 do PDF do cliente conforme o contexto fornecido: importar clientes e produtos exclusivamente por CSV, com prévia e confirmação. O PDF não foi disponibilizado para conferência direta.
@@ -142,7 +142,7 @@ Verificação futura: `mvn -B -ntp -f backend/pom.xml verify`; em sequência, `n
 **Tecnologias:** Java 17/Spring Boot, Bean Validation, JPA/Flyway, parser CSV, Angular/TypeScript, JUnit/MockMvc e Vitest.
 **Restrição global:** tarefas abaixo são roteiro; não executadas nesta entrega. Sincronizar com o trabalho de prazo antes de editar arquivos compartilhados; não copiar mudanças desse projeto nem fixar número de migration antecipadamente.
 
-### Tarefa 1 — Backend: contrato CSV e prévia
+### Tarefa 1 - Backend: contrato CSV e prévia
 
 **Arquivos:** criar `catalogimport/*`, `service/CatalogImportService.java` e parser; controllers de importação em `controller/`; dependência em `backend/pom.xml`, limites multipart em configuração. Caminhos Java relativos à base informada acima.
 **Testes:** novos testes de parser/classificação e integração de importação em `backend/src/test/java/br/com/navitasassist/catalogimport/`.
@@ -152,7 +152,7 @@ Verificação futura: `mvn -B -ntp -f backend/pom.xml verify`; em sequência, `n
 - [ ] Implementar parser, mapeamento para requests, consultas de chaves em lote e respostas em português; evitar consulta por linha e leitura de entidades completas desnecessárias.
 - [ ] Implementar modelos e prévia com cotas/TTL/dono; repetir testes focados até verde.
 
-### Tarefa 2 — Backend: confirmação, segurança e permissão
+### Tarefa 2 - Backend: confirmação, segurança e permissão
 
 **Arquivos:** serviços/controllers novos, `config/SecurityConfig.java`, `access/Permission.java`, repositories necessários, próxima migration disponível; testes de acesso/catálogo e `PermissionEquivalenceIntegrationTest`.
 **Interfaces:** POST de confirmação, nova authority e seed/grant do Administrador.
@@ -161,7 +161,7 @@ Verificação futura: `mvn -B -ntp -f backend/pom.xml verify`; em sequência, `n
 - [ ] Implementar transação, flush, ciclo de vida do lote e proteção CSRF; classificar erros sem vazar dados.
 - [ ] Adicionar catálogo/grant incremental coordenado com prazo e ampliar matriz literal de endpoints, testes de seeds e concessão; repetir testes e `mvn verify`.
 
-### Tarefa 3 — Frontend: transporte e acesso
+### Tarefa 3 - Frontend: transporte e acesso
 
 **Arquivos:** `frontend/src/app/core/{models.ts,permissions.ts}`, `core/services/catalog.service.{ts,spec.ts}`, `app.routes.{ts,spec.ts}`, navegação/fixtures e testes de permissão existentes.
 **Interfaces:** DTOs espelhados, `FormData`, `Blob`, rotas de importação e permissão própria.
@@ -170,7 +170,7 @@ Verificação futura: `mvn -B -ntp -f backend/pom.xml verify`; em sequência, `n
 - [ ] Acrescentar contratos/métodos, catálogo e acesso de navegação; manter espelho/ordem do enum e teste que lê os seeds SQL compatíveis com o grant incremental.
 - [ ] Repetir testes focados sem tocar nos contratos de prazo.
 
-### Tarefa 4 — Frontend: tela, documentação e validação
+### Tarefa 4 - Frontend: tela, documentação e validação
 
 **Arquivos:** criar `frontend/src/app/pages/catalog-import/`; alterar somente pontos de entrada em `pages/clients/` e `pages/products/`; atualizar README na implementação.
 **Testes:** specs da nova tela, das entradas e regressões de catálogo existentes.

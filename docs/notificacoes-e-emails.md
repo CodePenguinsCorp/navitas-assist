@@ -23,6 +23,8 @@ Os alertas `SLA_*` foram removidos; a data limite não gera notificação ([praz
 
 ## Notificações no app
 
+- O sino mostra até 20 itens elegíveis do retorno da API: não lidos ou criados hoje em `America/Sao_Paulo`. Lidas de dias anteriores ficam disponíveis em **Ver todas**, na página Notificações. O filtro é local e não altera o contrato do backend.
+
 - `GET /api/notifications` devolve um array de até 100 itens e aceita `unreadOnly`, `includeSnoozed`, `eventType` e `severity`. Caixa, resumo e ações pessoais ignoram linhas exclusivas de e-mail. `read-all` alcança todas as visíveis do usuário, inclusive adiadas e além das 100 linhas.
 - O sino e a caixa de entrada atualizam a cada 60 segundos, sem disparar o pop-up de carregamento.
 - A linha da caixa mostra resumo, severidade, adiamento ativo e hora. Abrir o detalhe marca como lida; em caso de falha, o modal mostra o erro e **Tentar novamente**. A leitura em lote permanece na página e no sino.

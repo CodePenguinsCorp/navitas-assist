@@ -1,4 +1,4 @@
-# Projeto B — simplificações obrigatórias (têm precedência sobre a spec e o plano)
+# Projeto B - simplificações obrigatórias (têm precedência sobre a spec e o plano)
 
 Decisão do dono do produto (13 nov 2026): a spec `2026-11-13-emails-e-notificacoes-design.md` e o plano `2026-11-13-emails-e-notificacoes.md` descrevem robustez além do necessário para esta fase (uma única instância, sem produção ainda). Implementar a versão enxuta abaixo; tudo que a spec traz e não está aqui como "mantém" fica fora.
 
@@ -7,7 +7,7 @@ Decisão do dono do produto (13 nov 2026): a spec `2026-11-13-emails-e-notificac
 - `user_accounts.email` (nulo, único sem diferenciar caixa, validação simples, sem CR/LF), nos requests/respostas de usuário e na tela de Usuários.
 - E-mail por evento e por usuário (sem To/CC/BCC), só usuários internos, conforme as regras por perfil que já existem; `emailEnabled` por regra (já existente) e a nova `appEnabled`; padrões da tabela da spec (e-mail desligado nas regras existentes).
 - Fila persistente reaproveitando as colunas de status da notificação: `PENDING/SENT/FAILED/NOT_REQUESTED`, `email_attempts`, `email_next_attempt_at`, `email_error` sanitizado; worker agendado simples (uma instância): pega as vencidas em ordem, envia, marca. Até 5 tentativas com recuo 1 min, 5 min, 30 min, 2 h; 4xx permanente falha na hora; 429/5xx/rede repetem.
-- Modelo de e-mail em português (HTML simples + texto, tudo escapado, sem nome de cliente, link `APP_BASE_URL/rmas?rma={id}`), assunto `[Navitas Assist] {evento} — {código}`.
+- Modelo de e-mail em português (HTML simples + texto, tudo escapado, sem nome de cliente, link `APP_BASE_URL/rmas?rma={id}`), assunto `[Navitas Assist] {evento} - {código}`.
 - Falha de e-mail nunca desfaz a OS nem a notificação do app. Sem PII/segredos em logs.
 - Tela: filtros por evento/severidade e agrupamento por dia na caixa de entrada; "marcar todas como lidas"; preferência de silenciar por evento; regras com colunas App/E-mail; seção "Falhas de e-mail" com "Reenviar" (só FAILED) e botão "Enviar e-mail de teste" para si, com selo "Desligado/Simulado".
 - Sem permissão nova (usa `notificacoes.regras`). Sem SLA/prazo.

@@ -1,4 +1,4 @@
-# Etapa 2 — Piloto do Kanban Implementation Plan
+# Etapa 2 - Piloto do Kanban Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -67,7 +67,7 @@
 
 - [ ] **Step 1: Escrever os testes que falham.** `shows search, SLA and assignee as quick filters and hides the other eight controls until Filtros is opened` (cinco controles de formulário visíveis fora do painel; os outros oito dentro de um contêiner `hidden` ou ausente até clicar em "Filtros"); `shows an active advanced filter as a removable chip while the panel is closed` (definir `priority` pelo `filtersForm`, painel fechado: existe chip "Prioridade: Alta" e os cards filtrados diminuem); `removes only the clicked chip` (dois filtros ativos, remover um, o outro permanece e `activeFilterCount()` cai de 2 para 1); `keeps saved views usable in a single row` (o seletor de visualização e "Salvar atual" existem; "Renomear", "Tornar padrão" e "Excluir" só com visualização ativa).
 - [ ] **Step 2: Rodar e ver falhar.** Esperado: os quatro testes FAIL; os testes de filtro e de visualização já existentes passam.
-- [ ] **Step 3: Implementar.** Linha única com: busca (`kanbanSearch`), SLA, Responsável, botão "Filtros" com contagem dos avançados ativos (`aria-expanded`, `aria-controls`) e "Limpar filtros". Abaixo, a linha das visualizações compactada: sem o texto "Salve e reaplique...", seletor mais "Salvar atual" e os botões condicionais atuais. Painel avançado com Prioridade, Status, Impedimentos, Garantia e as quatro datas, aberto por `advancedFiltersOpen`. Chips abaixo da barra, cada um com botão de remover e `aria-label` "Remover filtro ...". **Os controles do painel continuam no mesmo `formGroup`**, apenas `[hidden]` ou dentro de `@if` — não recriar o formulário.
+- [ ] **Step 3: Implementar.** Linha única com: busca (`kanbanSearch`), SLA, Responsável, botão "Filtros" com contagem dos avançados ativos (`aria-expanded`, `aria-controls`) e "Limpar filtros". Abaixo, a linha das visualizações compactada: sem o texto "Salve e reaplique...", seletor mais "Salvar atual" e os botões condicionais atuais. Painel avançado com Prioridade, Status, Impedimentos, Garantia e as quatro datas, aberto por `advancedFiltersOpen`. Chips abaixo da barra, cada um com botão de remover e `aria-label` "Remover filtro ...". **Os controles do painel continuam no mesmo `formGroup`**, apenas `[hidden]` ou dentro de `@if` - não recriar o formulário.
 - [ ] **Step 4: Rodar e ver passar.** `npm --prefix frontend test -- --watch=false`. Esperado: PASS, incluindo os testes antigos de combinação, persistência e visualizações.
 - [ ] **Step 5: Commit.** `git add` dos arquivos de **Files`; mensagem: `feat(kanban): filtros recorrentes, painel avançado e chips ativos (NAV-98)`.
 

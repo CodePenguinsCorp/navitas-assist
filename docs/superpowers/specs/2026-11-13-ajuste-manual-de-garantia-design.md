@@ -1,4 +1,4 @@
-# Ajuste manual de garantia — desenho
+# Ajuste manual de garantia - desenho
 
 **Origem:** PDF do cliente §3.2 ("regra automática + override"): calcular a garantia automaticamente e permitir marcar manualmente, com motivo ("Sem NF", "Cortesia", "Mau uso", "Cliente estratégico"), registrando status, justificativa, usuário e data.
 
