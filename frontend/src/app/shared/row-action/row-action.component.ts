@@ -1,4 +1,5 @@
 import { Component, DestroyRef, ElementRef, WritableSignal, computed, inject, input, signal } from '@angular/core';
+import { focusedByKeyboardNavigation } from '../tip/keyboard-navigation';
 import { IconComponent, IconName } from '../icon/icon.component';
 
 /** Visual distance between button and tooltip; the tooltip's ::before bridges it for the pointer. */
@@ -122,7 +123,7 @@ export class RowActionComponent {
   }
 
   private isKeyboardFocus(): boolean {
-    try { return this.hostElement.nativeElement.matches(':focus-visible'); } catch { return true; }
+    try { return focusedByKeyboardNavigation(this.hostElement.nativeElement); } catch { return true; }
   }
 
   protected close(): void {

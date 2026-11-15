@@ -124,6 +124,17 @@ describe('RowActionComponent', () => {
     return tip(button).classList.contains('is-open');
   };
 
+  it('does not open when focus is handed back by code after a dialog closes with Escape or Enter', () => {
+    const edit = buttons()[0];
+    vi.spyOn(edit, 'matches').mockImplementation((selector: string) => selector === ':focus-visible');
+    for (const key of ['Escape', 'Enter']) {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+      edit.dispatchEvent(new FocusEvent('focus'));
+      fixture.detectChanges();
+      expect(tip(edit).classList).not.toContain('is-open');
+    }
+  });
+
   it('opens on focus above the button using the measured height, inside the viewport', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 320 });
     setViewportHeight(800);
@@ -132,6 +143,7 @@ describe('RowActionComponent', () => {
     placeButton(edit, 200, 270);
     sizeTip(edit, 400, 30);
 
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })); // keyboard navigation, not focus handed back by code
     edit.dispatchEvent(new FocusEvent('focus'));
     fixture.detectChanges();
 
@@ -205,6 +217,7 @@ describe('RowActionComponent', () => {
 
   it('dismisses a focus-opened tooltip with Escape and keeps the focus', () => {
     const edit = buttons()[0];
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })); // keyboard navigation, not focus handed back by code
     edit.focus();
     expect(isOpen(edit)).toBe(true);
 
@@ -280,6 +293,7 @@ describe('RowActionComponent', () => {
     edit.dispatchEvent(new MouseEvent('mouseleave'));
     expect(isOpen(edit)).toBe(false);
 
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })); // keyboard navigation, not focus handed back by code
     edit.dispatchEvent(new FocusEvent('focus'));
     edit.dispatchEvent(new FocusEvent('blur'));
     expect(isOpen(edit)).toBe(false);

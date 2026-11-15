@@ -1,4 +1,5 @@
 import { DestroyRef, Directive, ElementRef, inject, input } from '@angular/core';
+import { focusedByKeyboardNavigation } from './keyboard-navigation';
 
 let nextId = 0;
 const GAP = 8;
@@ -70,7 +71,7 @@ export class TipDirective {
   private hoverOrKeyboardFocus(): boolean {
     const element = this.host.nativeElement;
     if (element.matches(':hover')) return true;
-    try { return !element.matches(':focus') || element.matches(':focus-visible'); } catch { return true; }
+    try { return !element.matches(':focus') || focusedByKeyboardNavigation(element); } catch { return true; }
   }
 
   private repeatsVisibleText(element: HTMLElement, text: string): boolean {
