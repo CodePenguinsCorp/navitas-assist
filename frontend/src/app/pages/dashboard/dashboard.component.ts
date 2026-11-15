@@ -191,11 +191,11 @@ export class DashboardComponent {
     const warrantyRate = items === 0 ? 0 : Math.round((dashboard.itemsInWarranty / items) * 100);
 
     return [
-      { label: 'Em andamento', value: String(this.activeCount()), icon: 'clipboard', tone: 'brand' },
-      { label: 'Atrasadas', value: String(dashboard.overdue), icon: 'clock', tone: 'danger' },
-      { label: 'Perto do limite', value: String(dashboard.dueSoon), icon: 'calendar', tone: 'warning' },
-      { label: 'Fila inicial', value: String(initialQueue), icon: 'inbox', tone: 'sky' },
-      { label: 'Em garantia', value: `${warrantyRate}%`, icon: 'shield', tone: 'success' },
+      { label: 'OS em andamento', value: String(this.activeCount()), icon: 'clipboard', tone: 'brand' },
+      { label: 'OS atrasadas', value: String(dashboard.overdue), icon: 'clock', tone: 'danger' },
+      { label: 'OS perto do prazo', value: String(dashboard.dueSoon), icon: 'calendar', tone: 'warning' },
+      { label: 'OS na fila inicial', value: String(initialQueue), icon: 'inbox', tone: 'sky' },
+      { label: 'OS em garantia', value: `${warrantyRate}%`, icon: 'shield', tone: 'success' },
       { label: 'Clientes', value: String(this.clientTotalSignal()), icon: 'building', tone: 'violet' },
       { label: 'Produtos', value: String(this.productTotalSignal()), icon: 'box', tone: 'violet' },
       ...(this.isAdmin() ? [{ label: 'Usuários', value: String(this.userTotalSignal()), icon: 'users' as IconName, tone: 'violet' as const }] : [])

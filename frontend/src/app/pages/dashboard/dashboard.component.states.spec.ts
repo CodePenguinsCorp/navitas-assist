@@ -196,12 +196,12 @@ describe('DashboardComponent load states', () => {
         users: of({ ...USERS, total: 2 })
       });
       const value = (label: string) => normalized(indicator(label)?.querySelector('.dashboard-summary__value'));
-      expect(value('Em andamento')).toBe('1');
-      expect(value('Em garantia')).toBe('50%');
+      expect(value('OS em andamento')).toBe('1');
+      expect(value('OS em garantia')).toBe('50%');
       expect(value('Clientes')).toBe('3');
       expect(value('Produtos')).toBe('4');
       expect(value('Usuários')).toBe('2');
-      expect(normalized(indicator('Em andamento'))).not.toContain('registradas');
+      expect(normalized(indicator('OS em andamento'))).not.toContain('registradas');
       expect(root().querySelector('.meter')).toBeNull();
     });
 
@@ -218,12 +218,12 @@ describe('DashboardComponent load states', () => {
         deadline: { status: 'ON_TRACK', dueSoonFrom: shift(days - 7) }
       });
       await setup({ board: of([due(1, -3), due(2, -1), due(3, 2), due(4, 30), due(5, -9, 'COMPLETED'), rmaFactory({ id: 6 })]) });
-      const card = indicator('Atrasadas')!;
+      const card = indicator('OS atrasadas')!;
       expect(normalized(card.querySelector('.dashboard-summary__value'))).toBe('2');
-      expect(normalized(indicator('Perto do limite')?.querySelector('.dashboard-summary__value'))).toBe('1');
+      expect(normalized(indicator('OS perto do prazo')?.querySelector('.dashboard-summary__value'))).toBe('1');
       expect(card.getAttribute('data-tone')).toBe('danger');
       const labels = Array.from(root().querySelectorAll('ul[aria-label="Indicadores do dashboard"] > li .dashboard-summary__label')).map((item) => item.textContent?.trim());
-      expect(labels[1]).toBe('Atrasadas');
+      expect(labels[1]).toBe('OS atrasadas');
     });
 
     it('gives each indicator its tone and keeps the order', async () => {
@@ -234,7 +234,7 @@ describe('DashboardComponent load states', () => {
 
     it('keeps the initial queue indicator and omits users for non-admin profiles', async () => {
       await setup({ role: 'TECHNICIAN', board: of([rmaFactory({ id: 1, priority: 'HIGH' }), rmaFactory({ id: 2, status: 'TRIAGE' })]) });
-      expect(normalized(indicator('Fila inicial')?.querySelector('.dashboard-summary__value'))).toBe('2');
+      expect(normalized(indicator('OS na fila inicial')?.querySelector('.dashboard-summary__value'))).toBe('2');
       expect(indicator('Clientes')).toBeDefined();
       expect(indicator('Usuários')).toBeUndefined();
     });
