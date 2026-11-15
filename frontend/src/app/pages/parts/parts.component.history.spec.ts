@@ -7,6 +7,7 @@ import { LegacyProfileCode, profilePermissions, providePermissions } from '../..
 import { LoadingService } from '../../core/services/loading.service';
 import { PartService } from '../../core/services/part.service';
 import { PartsComponent } from './parts.component';
+import { toastMessages } from '../../testing/toast';
 
 const PART: PartResponse = {
   id: 4, code: 'PCA-1', name: 'Capacitor', unit: 'm', location: 'A1', minimumStock: 8, unitCost: 10,
@@ -106,7 +107,7 @@ describe('PartsComponent movement history', () => {
     expect(button('Cancelar', confirmation()!)!.disabled).toBe(false);
     service['reverseMovement'].mockReturnValue(of(REVERSAL)); button('Confirmar estorno', confirmation()!)!.click(); render();
     expect(service['reverseMovement']).toHaveBeenCalledTimes(2); expect(confirmation()).toBeNull();
-    expect(panel()).not.toBeNull(); expect(fixture.nativeElement.querySelector('[role="status"]')?.textContent).toContain('Movimento 9 estornado.');
+    expect(panel()).not.toBeNull(); expect(toastMessages()).toEqual(['Movimento 9 estornado.']); expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
   });
 
   // Vermelho: falha inicial ou após reabertura aparece como vazio, sem retry.

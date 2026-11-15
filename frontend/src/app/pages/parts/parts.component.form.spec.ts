@@ -11,6 +11,7 @@ import { PartService } from '../../core/services/part.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { mountUnderRoot, simulateNativeModality } from '../../testing/native-dialog';
 import { PartsComponent } from './parts.component';
+import { toastMessages } from '../../testing/toast';
 
 const PART: PartResponse = {
   id: 4, code: 'PCA-1', name: 'Capacitor', unit: 'm', location: 'A1', minimumStock: 8, unitCost: 10,
@@ -80,7 +81,8 @@ describe('PartsComponent part form', () => {
     request.next(PART); request.complete(); render();
     expect(panel()).toBeNull();
     for (const method of ['list', 'listReplenishment', 'listPending']) expect(service[method]).toHaveBeenCalledTimes(2);
-    expect(fixture.nativeElement.querySelector('[role="status"]')?.textContent).toContain('sucesso');
+    expect(toastMessages()).toEqual([mode === 'create' ? 'Peça Capacitor cadastrada.' : 'Peça Capacitor atualizada.']);
+    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
   });
 
   // Vermelho: a chamada direta a savePart repete create/update antes da resposta.

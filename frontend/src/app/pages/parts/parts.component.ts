@@ -1,3 +1,4 @@
+import { ToastService } from '../../core/services/toast.service';
 import { TipDirective } from '../../shared/tip/tip.directive';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { Component, DestroyRef, ElementRef, Injector, afterNextRender, computed, inject, signal } from '@angular/core';
@@ -121,6 +122,7 @@ export class PartsComponent {
   }
 
   private readonly formBuilder = inject(FormBuilder);
+  private readonly toasts = inject(ToastService);
   private readonly partService = inject(PartService);
   private readonly permissions = inject(PermissionService);
   private readonly destroyRef = inject(DestroyRef);
@@ -136,7 +138,6 @@ export class PartsComponent {
   protected readonly submitting = signal(false);
   protected readonly modalErrorMessage = signal('');
   protected readonly movementFieldErrors = signal({ quantity: '', reason: '' });
-  protected readonly successMessage = signal('');
   protected readonly searchTerm = signal('');
   protected readonly activeTab = signal<PartsTab>('stock');
   protected readonly limits = PART_LIMITS;
@@ -258,7 +259,7 @@ export class PartsComponent {
     const current = this.editingPart();
     const request$: Observable<PartResponse> = current ? this.partService.update(current.id, payload) : this.partService.create(payload);
 
-    this.submit(request$, (part) => current ? `Peça ${part.name} atualizada com sucesso.` : `Peça ${part.name} cadastrada com sucesso.`);
+    this.submit(request$, (part) => current ? `Peça ${part.name} atualizada.` : `Peça ${part.name} cadastrada.`);
   }
 
   protected openMovementModal(part: PartResponse): void {
@@ -365,7 +366,7 @@ export class PartsComponent {
       next: () => {
         this.reversingMovementId.set(null);
         this.reversalReason.reset('');
-        this.successMessage.set(`Movimento ${movement.id} estornado.`);
+        this.toasts.show({ message: `Movimento ${movement.id} estornado.`, tone: 'success' });
         this.loadHistory(movement.partId);
         this.load();
       },
@@ -386,7 +387,7 @@ export class PartsComponent {
       finalize(() => this.submitting.set(false))
     ).subscribe({
       next: (result) => {
-        this.successMessage.set(message(result));
+        this.toasts.show({ message: message(result), tone: 'success' });
         this.resetModals();
         this.load();
       },
@@ -448,7 +449,6 @@ export class PartsComponent {
 
   private clearMessages(): void {
     this.modalErrorMessage.set('');
-    this.successMessage.set('');
   }
 
   private resetModals(): void {

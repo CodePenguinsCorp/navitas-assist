@@ -34,12 +34,6 @@
     </button>
   </div>
 
-  @if (successMessage()) {
-    <article class="panel alert-banner alert-banner--success" role="status">
-      <strong>{{ successMessage() }}</strong>
-    </article>
-  }
-
   @if (activeTab() === 'stock') {
     <section class="panel catalog-toolbar catalog-toolbar--filters">
       <label class="search-field">
