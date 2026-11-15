@@ -21,6 +21,7 @@ export class CatalogImportComponent {
   private readonly destroyRef = inject(DestroyRef);
   protected readonly kind = inject(ActivatedRoute).snapshot.data['catalogKind'] as CatalogImportKind;
   protected readonly origin = this.kind === 'clients' ? '/clientes' : '/produtos';
+  protected readonly backLabel = `Voltar para ${this.kind === 'clients' ? 'Clientes' : 'Produtos'}`;
   protected readonly label = this.kind === 'clients' ? 'clientes' : 'produtos';
   protected readonly file = signal<File | null>(null);
   protected readonly preview = signal<CatalogImportPreview | null>(null);
@@ -101,7 +102,6 @@ export class CatalogImportComponent {
     });
   }
 
-  protected cancel(): void { if (!this.busy()) void this.router.navigate([this.origin]); }
   protected toggleFilter(value: CatalogImportStatus): void { this.changeFilter(this.filter() === value ? 'all' : value); }
   protected changeFilter(value: CatalogImportStatus | 'all'): void { this.filter.set(value); this.page.set(0); }
   protected changeSize(value: number): void { this.size.set(value); this.page.set(0); }

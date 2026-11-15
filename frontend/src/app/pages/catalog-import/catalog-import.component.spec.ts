@@ -115,7 +115,7 @@ describe('CatalogImportComponent', () => {
     page.selectFile({ target: { files: [new File(['a'], 'a.csv')] } });
     page.generatePreview(); fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
-    const metrics = root.querySelectorAll<HTMLButtonElement>('.import-summary button');
+    const metrics = root.querySelectorAll<HTMLButtonElement>('.page-summary button');
     expect(metrics.length).toBe(3);
     expect(metrics[0].textContent).toContain('1 válida');
     expect(root.querySelector('caption')?.textContent).toContain('Prévia');
@@ -152,6 +152,8 @@ describe('CatalogImportComponent', () => {
     expect(root.querySelector('.import-file-info')?.textContent).toContain('1 linha, 1 linha em branco ignorada');
     expect(root.textContent).toContain('Importar 12 linhas válidas');
     expect(root.querySelector('section[aria-label="Prévia"] footer')).not.toBeNull();
+    expect(root.querySelector('a.page-heading__back')?.getAttribute('aria-label')).toBe(kind === 'clients' ? 'Voltar para Clientes' : 'Voltar para Produtos');
+    expect([...root.querySelectorAll('button')].some(b => b.textContent?.trim() === 'Cancelar')).toBe(false);
   });
 
   it.each([['clients', 0], ['clients', 1], ['clients', 12], ['products', 0], ['products', 1], ['products', 12]] as const)('flexiona o resultado de %s com %s registros', (kind, count) => {

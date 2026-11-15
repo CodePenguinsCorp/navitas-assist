@@ -1,5 +1,5 @@
 <section class="page-surface import-page">
-  <app-page-header [heading]="'Importar ' + label + ' por CSV'" />
+  <app-page-header [heading]="'Importar ' + label + ' por CSV'" [backLink]="origin" [backLabel]="backLabel" />
   <section class="panel table-card import-card" aria-label="Modelo">
     <h2><span class="import-step">1.</span> Modelo</h2>
     <p class="import-instruction">Preencha o modelo e substitua ou apague a linha de exemplo.</p>
@@ -28,38 +28,37 @@
   @if (preview(); as result) {
     <section class="panel table-card import-card" aria-label="Prévia">
       <h2><span class="import-step">3.</span> Prévia</h2>
-      <p class="import-hint import-file-info">{{ result.fileName }}, {{ counted(result.totalRows, 'linha') }}, {{ counted(result.blankRows, 'linha em branco ignorada', 'linhas em branco ignoradas') }}</p>
-      <div class="import-summary" role="group" aria-label="Filtrar situação">
+      <p class="import-file-info">{{ result.fileName }}, {{ counted(result.totalRows, 'linha') }}, {{ counted(result.blankRows, 'linha em branco ignorada', 'linhas em branco ignoradas') }}</p>
+      <ul class="page-summary" aria-label="Filtrar situação">
         @for (metric of metrics; track metric.status) {
-          <button type="button" class="import-metric" [attr.data-tone]="tones[metric.status]" [attr.aria-pressed]="filter() === metric.status" (click)="toggleFilter(metric.status)"><strong>{{ result[metric.field] }}</strong> {{ result[metric.field] === 1 ? metric.label : metric.label + 's' }}</button>
+          <li><button type="button" [class]="'page-summary__item tone-' + tones[metric.status]" [attr.aria-pressed]="filter() === metric.status" (click)="toggleFilter(metric.status)"><strong>{{ result[metric.field] }}</strong> {{ result[metric.field] === 1 ? metric.label : metric.label + 's' }}</button></li>
         }
-        @if (filter() !== 'all') { <button type="button" class="link-button import-clear" (click)="changeFilter('all')">Limpar filtro</button> }
-      </div>
+        @if (filter() !== 'all') { <li><button type="button" class="link-button page-summary__clear import-clear" (click)="changeFilter('all')">Limpar filtro</button></li> }
+      </ul>
       <p class="sr-only" aria-live="polite" aria-atomic="true">{{ filterLabel() }}: {{ counted(filteredRows().length, 'linha') }}</p>
-      <div class="table-wrap import-table">
+      <div class="table-wrap table-card--stack import-table">
         <table>
           <caption class="sr-only">Prévia da importação de {{ label }}</caption>
           <colgroup><col class="import-col-line" /><col class="import-col-name" /><col class="import-col-status" /><col /></colgroup>
           <thead><tr><th>Linha</th><th>Identificação</th><th>Situação</th><th>Motivos e avisos</th></tr></thead>
           <tbody>
             @for (row of visibleRows(); track row.lineNumber) {
-              <tr><td data-label="Linha">{{ row.lineNumber }}</td><td data-label="Identificação"><strong class="table-title">{{ identification(row) }}</strong></td><td data-label="Situação"><span class="mini-chip" [attr.data-tone]="tones[row.status]">{{ statuses[row.status] }}</span></td><td data-label="Motivos e avisos">
+              <tr><td data-label="Linha" class="num">{{ row.lineNumber }}</td><td data-label="Identificação"><strong class="table-title">{{ identification(row) }}</strong></td><td data-label="Situação"><span [class]="'mini-chip tone-chip tone-' + tones[row.status]">{{ statuses[row.status] }}</span></td><td data-label="Motivos e avisos">
                 @if (row.reasons.length || row.warnings.length) {
                   <ul class="import-issues">
                     @for (issue of row.reasons; track $index) { <li>{{ fieldLabel(issue.field) }}: {{ issue.message }}</li> }
                     @for (warning of row.warnings; track $index) { <li>Aviso: {{ fieldLabel(warning.field) }}: {{ warning.message }}</li> }
                   </ul>
-                } @else { <span class="import-hint">-</span> }
+                } @else { <span class="table-subtitle">-</span> }
               </td></tr>
             } @empty { <tr><td colspan="4" class="empty-state">Nenhuma linha nesta situação.</td></tr> }
           </tbody>
         </table>
       </div>
-      <app-pagination singular="linha" plural="linhas" [page]="page()" [size]="size()" [totalElements]="filteredRows().length" [totalPages]="totalPages()" [shown]="visibleRows().length" [loading]="busy()" (pageChange)="page.set($event)" (sizeChange)="changeSize($event)" />
-      <footer class="form-actions import-actions"><button type="button" class="button-secondary" (click)="cancel()" [disabled]="busy()">Cancelar</button><button type="button" class="button-primary" (click)="confirm()" [disabled]="!preview()?.validRows || busy()">Importar {{ counted(result.validRows, 'linha válida', 'linhas válidas') }}</button></footer>
+      <div class="table-card__footer">
+        <app-pagination singular="linha" plural="linhas" [page]="page()" [size]="size()" [totalElements]="filteredRows().length" [totalPages]="totalPages()" [shown]="visibleRows().length" [loading]="busy()" (pageChange)="page.set($event)" (sizeChange)="changeSize($event)" />
+        <footer class="form-actions form-actions--end"><button type="button" class="button-primary" (click)="confirm()" [disabled]="!preview()?.validRows || busy()">Importar {{ counted(result.validRows, 'linha válida', 'linhas válidas') }}</button></footer>
+      </div>
     </section>
-  } @else {
-    <footer class="form-actions import-actions"><button type="button" class="button-secondary" (click)="cancel()" [disabled]="busy()">Cancelar</button></footer>
   }
-
 </section>
