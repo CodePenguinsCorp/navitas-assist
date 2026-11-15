@@ -6,6 +6,22 @@ export function notificationDetailContent({ message, eventType, title, rmaCode }
   fields: Array<{ label: string; value: string }>;
   message: string;
 } {
+  const labels: Partial<Record<NotificationResponse['eventType'], string>> = {
+    RMA_BLOCKED: 'Motivo do impedimento', PART_PENDING: 'Pendência da peça', TEST_FAILED: 'Item reprovado'
+  };
+  const label = labels[eventType];
+  if (label) {
+    const quoted = String.raw`"(?:[^"\\\x00-\x1f]|\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4}))*"`;
+    const match = new RegExp(String.raw`^([^·]+) · ([^·]+) · etapa ([^.]+)\. ${label}: (${quoted})\.(?: Registrado por (${quoted})\.)?$`, 'u').exec(message);
+    if (match && match[1].trim() && match[2].trim() && match[3].trim()) {
+      return { fields: [
+        { label: 'Cliente', value: match[1] }, { label: 'Equipamento', value: match[2] },
+        { label: 'Etapa', value: match[3] }, { label, value: JSON.parse(match[4]) as string },
+        ...(match[5] ? [{ label: 'Registrado por', value: JSON.parse(match[5]) as string }] : [])
+      ], message: '' };
+    }
+    return { fields: [{ label, value: message }], message: '' };
+  }
   const parts = message.split(' · ');
   const detail = eventType === 'RMA_CREATED'
     ? /^prioridade (alta|média|baixa)\. Aberta por ((?:(?!\. ).)+)\.$/u.exec(parts[2] ?? '')

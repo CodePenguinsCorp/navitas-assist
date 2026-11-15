@@ -34,3 +34,6 @@
   .notification-detail__actions .button-primary { padding-inline: var(--space-3); }
   .notification-detail__open-label { display: none; }
 }
+
+.notification-detail__fields > .notification-detail__reason { grid-column: 1 / -1; }
+.notification-detail__reason dd { white-space: pre-wrap; font-weight: var(--font-weight-semibold); }

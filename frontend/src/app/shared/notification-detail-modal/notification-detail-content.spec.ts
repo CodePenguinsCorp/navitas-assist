@@ -28,7 +28,7 @@ describe('notificationDetailContent', () => {
 
   it('does not infer client and equipment from a free form impediment reason', () => {
     const message = 'Peça · sem estoque · prioridade alta. Aberta por admin.';
-    expect(notificationDetailContent({ eventType: 'RMA_BLOCKED', message })).toEqual({ fields: [], message });
+    expect(notificationDetailContent({ eventType: 'RMA_BLOCKED', message })).toEqual({ fields: [{ label: 'Motivo do impedimento', value: message }], message: '' });
   });
 
   it('preserves the assignment recipient, which only exists in the title', () => {
@@ -41,5 +41,25 @@ describe('notificationDetailContent', () => {
     expect(notificationDetailContent({ eventType: 'RMA_ASSIGNED', message: 'Mensagem integral',
       title: 'Atribuição transferida para a equipe', rmaCode: 'OS-2026-000007' } as NotificationResponse).fields)
       .toContainEqual({ label: 'Atribuição', value: 'Atribuição transferida para a equipe' });
+  });
+});
+
+describe('contexto operacional', () => {
+  it.each([
+    ['RMA_BLOCKED', 'Motivo do impedimento'], ['PART_PENDING', 'Pendência da peça'], ['TEST_FAILED', 'Item reprovado']
+  ] as const)('reconhece %s e preserva o formato antigo', (eventType, label) => {
+    const reason = 'Peça. Sem saldo · lote "2"\nOutra linha';
+    for (const actor of ['', '. Registrado por "Maria Silva"']) {
+      const result = notificationDetailContent({ eventType, message: `Cliente · Switch · etapa Diagnóstico. ${label}: ${JSON.stringify(reason)}${actor}.` });
+      expect(result.message).toBe('');
+      expect(result.fields).toEqual([
+        { label: 'Cliente', value: 'Cliente' }, { label: 'Equipamento', value: 'Switch' },
+        { label: 'Etapa', value: 'Diagnóstico' }, { label, value: reason },
+        ...(actor ? [{ label: 'Registrado por', value: 'Maria Silva' }] : [])
+      ]);
+    }
+    for (const message of [reason, `Cliente · Switch · etapa Diagnóstico. ${label}: "escape inválido\\q".`]) {
+      expect(notificationDetailContent({ eventType, message })).toEqual({ fields: [{ label, value: message }], message: '' });
+    }
   });
 });

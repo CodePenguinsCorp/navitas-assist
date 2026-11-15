@@ -1,5 +1,6 @@
 import { Component, computed, inject, input, output } from '@angular/core';
 import { NotificationEventType, NotificationResponse } from '../../core/models';
+import { RMA_STATUS_LABELS } from '../../core/mock-data';
 import { initialsOf } from '../../core/utils/rma-ui';
 import { ClockService } from '../../core/services/clock.service';
 import {
@@ -60,6 +61,8 @@ export class NotificationDetailModalComponent {
   protected readonly eventIcons: Record<NotificationEventType, IconName> = {
     RMA_CREATED: 'clipboard', RMA_ASSIGNED: 'users', RMA_BLOCKED: 'lock', PART_PENDING: 'box', TEST_FAILED: 'alert'
   };
+  protected readonly stages: Record<string, string> = Object.fromEntries(Object.entries(RMA_STATUS_LABELS).map(([code, label]) => [label, code]));
+  protected readonly reasonLabels = ['Motivo do impedimento', 'Pendência da peça', 'Item reprovado'];
   protected readonly priorities: Record<string, string> = { alta: 'HIGH', média: 'MEDIUM', baixa: 'LOW' };
 
   protected readonly headline = computed(() => this.notification().eventType === 'RMA_BLOCKED' ? 'Impedimento' : this.eventLabels[this.notification().eventType]);

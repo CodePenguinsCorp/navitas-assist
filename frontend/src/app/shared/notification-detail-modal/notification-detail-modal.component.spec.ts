@@ -29,6 +29,23 @@ describe('NotificationDetailModalComponent', () => {
 
   afterEach(() => { document.body.style.overflow = ''; });
 
+  it.each([
+    ['RMA_BLOCKED', 'Motivo do impedimento'], ['PART_PENDING', 'Pendência da peça'], ['TEST_FAILED', 'Item reprovado']
+  ] as const)('exibe contexto e motivo antigo de %s', async (eventType, label) => {
+    const reason = 'Sem saldo. Lote · 2\nOutra linha';
+    await setup({ ...NOTIFICATION, eventType, message: `Cliente · Switch · etapa Diagnóstico. ${label}: ${JSON.stringify(reason)}. Registrado por "Maria Silva".` });
+    expect(root().querySelector('.status-chip')!.getAttribute('data-status')).toBe('IN_DIAGNOSIS');
+    expect(root().querySelector('.notification-detail__reason dd')!.textContent!.trim()).toBe(reason);
+    expect(root().querySelector('.avatar')!.textContent).toBe('MS');
+    expect(root().querySelectorAll('footer')).toHaveLength(1);
+    expect(root().querySelector('.notification-detail__body')!.lastElementChild!.className).toBe('notification-detail__meta');
+    fixture.componentRef.setInput('notification', { ...NOTIFICATION, eventType, message: reason });
+    fixture.detectChanges();
+    expect(root().querySelector('dt')!.textContent).toBe(label);
+    expect(root().querySelector('.notification-detail__reason dd')!.textContent!.trim()).toBe(reason);
+    expect(root().querySelector('.notification-detail__message')).toBeNull();
+  });
+
   it('shows a human title, a separate OS code, structured fields and a single close control', async () => {
     await setup({ ...NOTIFICATION, eventType: 'RMA_CREATED', severity: 'INFO', message: '[DEMO] Vale Verde · [DEMO] Switch · prioridade alta. Aberta por admin.' });
     expect(root().querySelector('dl[aria-label="Detalhes da notificação"]')).not.toBeNull();
@@ -66,7 +83,7 @@ describe('NotificationDetailModalComponent', () => {
     expect(fixture.debugElement.query(By.directive(IconComponent)).componentInstance.name()).toBe(icon);
     expect(root().querySelector('.notification-detail__severity')!.textContent).toBe('Crítico');
     expect(text()).toContain('Contexto específico preservado');
-    expect(root().querySelector('dl')).toBeNull();
+    expect(root().querySelector('dl') === null).toBe(eventType === 'RMA_CREATED' || eventType === 'RMA_ASSIGNED');
     expect(button('Abrir OS')).toBeUndefined();
   });
 
@@ -85,7 +102,7 @@ describe('NotificationDetailModalComponent', () => {
     await setup({ ...NOTIFICATION, message: 'Aguardando peça · detalhe <b>literal</b>\nOutra linha' });
     expect(root().querySelector('h3')!.textContent!.trim()).toBe('Impedimento');
     expect(root().querySelector('.notification-detail__summary')).toBeNull();
-    expect(root().querySelector('.notification-detail__message')!.textContent).toBe('Aguardando peça · detalhe <b>literal</b>\nOutra linha');
+    expect(root().querySelector('.notification-detail__reason dd')!.textContent!.trim()).toBe('Aguardando peça · detalhe <b>literal</b>\nOutra linha');
     expect(root().querySelector('b')).toBeNull();
   });
 

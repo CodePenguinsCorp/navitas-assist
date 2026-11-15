@@ -71,3 +71,15 @@ O plano do provedor (por exemplo, o Resend gratuito: cerca de 100 por dia e 3.00
 ## Consulta da fila vazia (P10)
 
 O worker consulta primeiro os IDs com envio vencido (`due()`). Se a fila estiver vazia, retorna sem consultar o consumo das cotas diárias e mensais. Com itens pendentes, preserva a verificação das cotas antes de preparar cada envio.
+
+## Contexto das notificações operacionais
+
+`RMA_BLOCKED`, `PART_PENDING` e `TEST_FAILED` usam o formato:
+
+`Cliente · Equipamento · etapa Diagnóstico. Motivo do impedimento: "Aguardando peça. Sem saldo · lote 2". Registrado por "admin".`
+
+O rótulo é `Motivo do impedimento`, `Pendência da peça` ou `Item reprovado`, conforme o tipo. Motivo e autor são strings JSON, com escapes de aspas, barras e quebras de linha. Autor ausente omite a frase `Registrado por`. Detalhe vazio usa o texto padrão do evento.
+
+A mensagem tem até 500 caracteres, incluindo escapes e autoria. Somente o motivo pode ser reduzido, preservando caracteres suplementares. Se o contexto e a autoria sozinhos excederem o teto, o processamento registra falha em vez de cortar o cabeçalho. A razão social permite espaços e hifens além do limite de caracteres significativos, portanto seu comprimento total não tem teto fixo.
+
+O modal reconhece somente o formato exato. Mensagens antigas ou ambíguas aparecem integralmente no campo de motivo específico do tipo. Etapa representa o momento do evento. Não há estado atual nem duração do impedimento no contrato da notificação. O conteúdo de e-mail permanece sem dados do cliente e não reutiliza essa mensagem.

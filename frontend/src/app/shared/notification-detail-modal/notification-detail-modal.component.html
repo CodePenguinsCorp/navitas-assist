@@ -23,12 +23,14 @@
       @if (content().fields.length) {
         <dl class="notification-detail__fields" aria-label="Detalhes da notificação">
           @for (field of content().fields; track field.label) {
-            <div [class.notification-detail__primary]="field.label === 'Cliente' || field.label === 'Equipamento'">
+            <div [class.notification-detail__primary]="field.label === 'Cliente' || field.label === 'Equipamento'" [class.notification-detail__reason]="reasonLabels.includes(field.label)">
               <dt>{{ field.label }}</dt>
               <dd>
                 @if (field.label === 'Prioridade') {
                   <span class="priority-tag" [attr.data-priority]="priorities[field.value]"><span class="priority-bars" [attr.data-priority]="priorities[field.value]" aria-hidden="true"><i></i><i></i><i></i></span>{{ field.value }}</span>
-                } @else if (field.label === 'Aberta por' || field.label === 'Atribuída por' || field.label === 'Responsável') {
+                } @else if (field.label === 'Etapa' && stages[field.value] && notification().eventType !== 'RMA_ASSIGNED') {
+                  <span class="status-chip" [attr.data-status]="stages[field.value]">{{ field.value }}</span>
+                } @else if (field.label === 'Registrado por' || field.label === 'Aberta por' || field.label === 'Atribuída por' || field.label === 'Responsável') {
                   <span class="notification-detail__person"><span class="avatar" aria-hidden="true">{{ initialsOf(field.value) }}</span><span>{{ field.value }}</span></span>
                 } @else {
                   {{ field.value }}
