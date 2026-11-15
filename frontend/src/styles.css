@@ -2375,9 +2375,9 @@ fieldset.form-section {
 }
 
 .icon-button--danger {
-  --_bg: transparent;
+  --_bg: var(--btn-icon-danger-bg);
   --_bg-hover: var(--btn-icon-danger-bg-hover);
-  --_border: transparent;
+  --_border: var(--danger-line);
   --_border-hover: var(--btn-danger-border);
   --_text: var(--btn-danger-text);
   --_text-hover: var(--btn-danger-text-hover);
