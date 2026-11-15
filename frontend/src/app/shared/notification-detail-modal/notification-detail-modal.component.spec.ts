@@ -39,7 +39,7 @@ describe('NotificationDetailModalComponent', () => {
     expect(root().querySelector('.avatar')!.getAttribute('aria-hidden')).toBe('true');
     expect(root().querySelector('.notification-detail__toolbar nav')).not.toBeNull();
     expect(root().querySelector('.notification-detail__toolbar .button-primary')).not.toBeNull();
-    expect(root().querySelector('header .notification-detail__meta')).not.toBeNull();
+    expect(root().querySelector('.notification-detail__body .notification-detail__meta')).not.toBeNull();
     expect(root().querySelectorAll('footer .button-primary')).toHaveLength(1);
     const dialog = root().querySelector('[role="dialog"]')!;
     const title = root().querySelector('h3')!;

@@ -12,14 +12,6 @@
         <h3 class="notification-detail__title" [id]="titleId" tabindex="-1">{{ headline() }}</h3>
         @if (notification().rmaCode; as code) { <span class="mini-chip notification-detail__code">{{ code }}</span> }
         <span class="mini-chip notification-detail__severity" [class]="severityClass(notification().severity)">{{ severityLabels[notification().severity] }}</span>
-        <div class="notification-detail__meta" aria-label="Metadados">
-          <strong>{{ ago() }}</strong>
-          <time [attr.datetime]="notification().createdAt">{{ dateTime(notification().createdAt) }}</time>
-          @if (!notification().read) { <span class="notification-detail__unread" role="img" aria-label="Não lida"></span> }
-          @if (snoozedUntil(); as until) {
-            <span class="notification-detail__snoozed"><app-icon name="clock" [size]="14" />Adiada até {{ dateTime(until) }}</span>
-          }
-        </div>
       </div>
       <button type="button" class="modal-close" aria-label="Fechar" (click)="closed.emit()"><app-icon name="close" [size]="20" /></button>
     </header>
@@ -46,6 +38,14 @@
           }
         </dl>
       }
+      <div class="notification-detail__meta" aria-label="Quando">
+        <strong>{{ ago() }}</strong>
+        <time [attr.datetime]="notification().createdAt">{{ dateTime(notification().createdAt) }}</time>
+        @if (!notification().read) { <span class="notification-detail__unread" role="img" aria-label="Não lida"></span> }
+        @if (snoozedUntil(); as until) {
+          <span class="notification-detail__snoozed"><app-icon name="clock" [size]="14" />Adiada até {{ dateTime(until) }}</span>
+        }
+      </div>
     </div>
 
     <footer class="notification-detail__footer">
