@@ -3105,9 +3105,10 @@ app-custom-select:has(> .custom-select--priority) {
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--line);
   color: var(--brand-blue-deep);
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-tight);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .detail-card__title svg {
@@ -3379,7 +3380,7 @@ app-custom-select:has(> .custom-select--priority) {
 }
 
 
-/* Intervenções e componentes trocados (detalhe do RMA): cabeçalho com ação à direita, linhas compactas, formulário recolhido. */
+/* Reparos e componentes trocados (detalhe do RMA): cabeçalho com ação à direita, linhas compactas, formulário recolhido. */
 .repair-panel { display: block; }
 /* Cards of these panels keep the same inner padding as the other detail cards (Kanban detail). */
 .repair-panel.detail-card, .parts-panel > .detail-card { padding: 1.1rem 1.25rem 1.25rem; }
@@ -3408,7 +3409,7 @@ app-rma-kanban-board .board-shell::-webkit-scrollbar-track { border-radius: 999p
 app-rma-kanban-board .board-shell::-webkit-scrollbar-thumb { border-radius: 999px; background: linear-gradient(90deg, #1c76bb 0%, #2ea8d4 100%); }
 app-rma-kanban-board .board-shell::-webkit-scrollbar-thumb:hover { background: linear-gradient(90deg, #165f98 0%, #238cb4 100%); }
 app-rma-kanban-board .board-shell::-webkit-scrollbar-button, app-rma-kanban-board .board-shell::-webkit-scrollbar-corner { display: none; width: 0; height: 0; }
-/* Linha de registro (reservas, componentes, intervenções e movimentos): título e chips no topo,
+/* Linha de registro (reservas, componentes, reparos e movimentos): título e chips no topo,
    pares rótulo e valor em colunas e ações à direita. Divisória sutil, sem caixa. */
 /* Cartão de registro: borda 1px mais clara que a do painel que o contém, raio do token, sem sombra; a barra de acento do tom fica por dentro. */
 :root { --record-line: color-mix(in srgb, var(--line) 65%, var(--surface)); --scrollbar-thumb-menu: #b9cde0; }
