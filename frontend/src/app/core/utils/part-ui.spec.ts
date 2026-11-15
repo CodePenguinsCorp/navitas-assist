@@ -1,5 +1,5 @@
 import { formatBusinessDateTime } from './date';
-import { canReverseMovement, formatCurrency, formatQuantity, formatSignedQuantity, movementChanges, movementTypeTone, reservationStatusClass } from './part-ui';
+import { canReverseMovement, formatCurrency, formatQuantity, formatSignedQuantity, movementChanges, movementTypeTone, movementTypeIcon, PART_MOVEMENT_LABELS, PART_RESERVATION_STATUS_LABELS, reservationStatusClass } from './part-ui';
 
 describe('Part UI utilities', () => {
   it('formats quantities, signed changes and BRL currency in pt-BR', () => {
@@ -45,5 +45,20 @@ describe('Part UI utilities', () => {
   it('formats timestamps in America/Sao_Paulo regardless of the browser zone', () => {
     expect(formatBusinessDateTime('2026-10-24T02:30:00Z')).toBe('23/10/2026, 23:30');
     expect(formatBusinessDateTime(null)).toBe('Não informado');
+  });
+});
+
+describe('Apresentação dos movimentos de peças', () => {
+  it.each([
+    ['ENTRY', 'plus'], ['EXIT', 'logout'], ['ADJUSTMENT', 'move'],
+    ['RESERVATION', 'box'], ['RESERVATION_CANCEL', 'close'],
+    ['CONSUMPTION', 'wrench'], ['REVERSAL', 'undo']
+  ] as const)('identifica o tipo %s com o ícone %s', (type, icon) => {
+    expect(movementTypeIcon(type)).toBe(icon);
+  });
+
+  it('usa reversão também nos rótulos compartilhados com a OS', () => {
+    expect(PART_MOVEMENT_LABELS.REVERSAL).toBe('Reversão');
+    expect(PART_RESERVATION_STATUS_LABELS.REVERSED).toBe('Revertida');
   });
 });

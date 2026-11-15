@@ -300,7 +300,7 @@ class PartInventoryIntegrationTest {
 
         reverse(consumptionId, "De novo", ADMIN)
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("O movimento já foi estornado: " + consumptionId));
+            .andExpect(jsonPath("$.message").value("O movimento já foi revertido: " + consumptionId));
 
         mockMvc.perform(get("/api/parts").param("query", "PCA-REV").with(VIEWER)).andExpect(jsonPath("$[0].onHand").value(5));
 

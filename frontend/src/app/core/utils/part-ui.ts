@@ -1,3 +1,4 @@
+import { IconName } from '../../shared/icon/icon.component';
 import { ManualPartMovementType, PartMovementResponse, PartMovementType, PartReservationStatus } from '../models';
 
 export const PART_MOVEMENT_LABELS: Record<PartMovementType, string> = {
@@ -7,7 +8,7 @@ export const PART_MOVEMENT_LABELS: Record<PartMovementType, string> = {
   RESERVATION: 'Reserva',
   RESERVATION_CANCEL: 'Cancelamento de reserva',
   CONSUMPTION: 'Aplicação',
-  REVERSAL: 'Estorno'
+  REVERSAL: 'Reversão'
 };
 
 export const MANUAL_MOVEMENT_TYPES: ManualPartMovementType[] = ['ENTRY', 'EXIT', 'ADJUSTMENT'];
@@ -17,7 +18,7 @@ export const PART_RESERVATION_STATUS_LABELS: Record<PartReservationStatus, strin
   ACTIVE: 'Reservada',
   CONSUMED: 'Aplicada',
   CANCELLED: 'Cancelada',
-  REVERSED: 'Estornada'
+  REVERSED: 'Revertida'
 };
 
 const REVERSIBLE_MOVEMENT_TYPES: PartMovementType[] = ['ENTRY', 'EXIT', 'ADJUSTMENT', 'CONSUMPTION'];
@@ -78,4 +79,16 @@ export function formatSignedQuantity(value: number): string {
 
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+}
+
+export function movementTypeIcon(type: PartMovementType): IconName {
+  switch (type) {
+    case 'ENTRY': return 'plus';
+    case 'EXIT': return 'logout';
+    case 'ADJUSTMENT': return 'move';
+    case 'RESERVATION': return 'box';
+    case 'RESERVATION_CANCEL': return 'close';
+    case 'CONSUMPTION': return 'wrench';
+    case 'REVERSAL': return 'undo';
+  }
 }

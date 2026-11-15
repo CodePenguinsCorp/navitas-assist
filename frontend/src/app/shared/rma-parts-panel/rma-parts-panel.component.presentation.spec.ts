@@ -222,7 +222,7 @@ describe('RmaPartsPanelComponent presentation', () => {
     expect(normalize(row.querySelector('.record-row__chips .mini-chip')!.textContent)).toBe('Aplicação');
     expect(normalize(row.querySelector('.record-row__code')!.textContent)).toBe('PCA-1');
     expect(normalize(row.querySelector('.record-row__meta')!.textContent)).toContain('tech');
-    expect(normalize(row.textContent)).toContain('Estornado');
+    expect(normalize(row.textContent)).toContain('Revertida');
     expect(normalize(row.textContent)).toContain('Troca da placa');
     expect(root().querySelector('details')).toBeNull();
     toggle.click(); render();

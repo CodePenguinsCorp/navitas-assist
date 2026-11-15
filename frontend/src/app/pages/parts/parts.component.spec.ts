@@ -92,7 +92,7 @@ describe('PartsComponent', () => {
     component.openHistory(PART);
     component.startReversal(CONSUMPTION);
     component.confirmReversal(CONSUMPTION);
-    expect(component.modalErrorMessage()).toBe('Informe o motivo do estorno.');
+    expect(component.modalErrorMessage()).toBe('Informe o motivo da reversão.');
 
     component.reversalReason.setValue('Peça não utilizada');
     component.confirmReversal(CONSUMPTION);

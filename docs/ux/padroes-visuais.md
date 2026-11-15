@@ -254,6 +254,8 @@ Regras: título curto no cabeçalho, sem subtítulo explicativo; erro no topo do
   - Reservas usam `.record-stats--compact` dentro da área principal: Quantidade, Disponível, Custo (com permissão) e Local (quando informado), rótulo muted e valor semibold moderado, sem fundo. Resumos das seções continuam no mesmo tamanho e peso de Intervenções. Observações só aparecem quando preenchidas, como linha secundária com `Observação:`; componentes identificam `Motivo da troca:` e metadados de lote, data e autor ficam juntos.
   - Vazio: `.record-empty` com tile, frase curta e botão da ação principal ao lado. O contador de registros vai em chip no cabeçalho da seção (`[count]`, oculto quando zero).
   - Movimentos usam linhas e não tabela: poucos registros por OS e cada um tem dados de tipos diferentes (peça, tipo, quantidade, saldo, motivo), que ficam melhor empilhados com rótulo do que em seis colunas estreitas.
+- Histórico da página Peças: `.record-row` com tile por tipo, título "Entrada de 30 UN", chip de tipo e "Revertida" quando aplicável, data e autor juntos, saldos antes/depois em `.record-stats--compact` e linha secundária "Motivo:". A ação usa `appRowAction` com rótulo "Reverter" e confirmação inline.
+- Modais da página Peças: `.inline-form`, obrigatórios com asterisco, textarea de motivo com altura padrão e ações à direita no rodapé. Movimentar estoque abre com nome, código e três métricas compactas; impacto estimado tem uma linha por saldo, valores "10 UN para 11 UN" e destaque do disponível.
 - Notificações: ver [affordance das notificações](2026-11-14-affordance-notificacoes.md); item inteiro é um botão com ponto de não lida e chevron.
 
 ### 3.12 Filtros
@@ -288,7 +290,7 @@ Inventário da migração (tela, texto, destino):
 | `pages/profiles` | Perfil `<nome>` cadastrado, atualizado ou excluído. | Aviso, sucesso |
 | `pages/users` | Usuário `<nome>` cadastrado, atualizado ou excluído. | Aviso, sucesso |
 | `pages/protocols` | Protocolo `<nome>` cadastrado, publicado na versão N ou excluído. | Aviso, sucesso |
-| `pages/parts` | Peça cadastrada ou atualizada. `<Tipo>` registrada para `<peça>`. Movimento N estornado. | Aviso, sucesso |
+| `pages/parts` | Peça cadastrada ou atualizada. `<Tipo>` registrada para `<peça>`. Movimento N revertido. | Aviso, sucesso |
 | `pages/notifications` | Todas marcadas como lidas. Notificação adiada (até data). `<Evento>` silenciado ou reativado. Regra atualizada. | Aviso, sucesso |
 | `pages/notifications` | Teste enviado. / Simulação registrada. / Reenvio agendado. | Aviso, sucesso |
 | `pages/notifications` | Limite atingido: os envios retomam no próximo período | Fica inline (estado do canal) |

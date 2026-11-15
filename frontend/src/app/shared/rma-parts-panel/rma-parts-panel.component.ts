@@ -303,7 +303,7 @@ export class RmaPartsPanelComponent {
   }
 
   protected movementNote(movement: PartMovementResponse): string {
-    return [movement.reversed ? 'estornado' : '', movement.reason ?? ''].filter(Boolean).join(' · ');
+    return [movement.reversed ? 'revertido' : '', movement.reason ?? ''].filter(Boolean).join(' · ');
   }
 
   private focusFirstExternalField(): void {

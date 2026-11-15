@@ -210,7 +210,7 @@
             </div>
             <div class="record-row__chips">
               <span class="mini-chip tone-chip">{{ movementChip(movement.type) }}</span>
-              @if (movement.reversed) { <span class="mini-chip mini-chip--muted">Estornado</span> }
+              @if (movement.reversed) { <span class="mini-chip mini-chip--muted">Revertida</span> }
               <span class="record-row__value" [class.record-row__value--in]="movement.onHandChange > 0" [class.record-row__value--out]="movement.onHandChange < 0">{{ signedQuantity(movementDelta(movement)) }}@if (unitOf(movement.partId); as unit) { {{ unit }} }</span>
             </div>
             <small class="record-row__meta"><time>{{ dateTime(movement.createdAt) }}</time> · {{ movement.createdBy }} · Saldo: {{ quantity(movement.onHandAfter, unitOf(movement.partId)) }}@if (movement.reservedChange !== 0) { · Reservado: {{ quantity(movement.reservedAfter, unitOf(movement.partId)) }} }</small>

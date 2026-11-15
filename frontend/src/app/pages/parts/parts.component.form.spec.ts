@@ -56,13 +56,14 @@ describe('PartsComponent part form', () => {
     component.form.setValue(VALUES); render();
   }
 
-  // Vermelho: os controles estão em uma grade plana, sem os dois grupos identificados.
-  it('groups identification and stock policy', async () => {
-    await setup();
-    const sections = panel()!.querySelectorAll('fieldset.form-section');
-    expect(Array.from(sections).map((section) => section.querySelector('legend')?.textContent?.trim())).toEqual(['Identificação', 'Estoque e custo']);
-    expect(Array.from(sections[0].querySelectorAll('[formControlName]')).map((input) => input.getAttribute('formControlName'))).toEqual(['code', 'name', 'unit', 'location']);
-    expect(Array.from(sections[1].querySelectorAll('[formControlName]')).map((input) => input.getAttribute('formControlName'))).toEqual(['minimumStock', 'unitCost', 'active']);
+  it.each(['create', 'update'] as Mode[])('uses the compact form and required labels for %s', async (mode) => {
+    await setup(mode);
+    expect(panel()!.querySelector('form.inline-form')).not.toBeNull();
+    expect(panel()!.querySelector('fieldset')).toBeNull();
+    for (const control of ['code', 'name', 'unit', 'minimumStock', 'unitCost']) {
+      expect(panel()!.querySelector(`[formControlName="${control}"]`)!.closest('label')!.classList).toContain('field-group--required');
+    }
+    expect(panel()!.querySelector('.inline-form__actions')).not.toBeNull();
   });
 
   // Vermelho: Fechar e overlay descartam o cadastro mesmo com uma escrita pendente.
@@ -157,7 +158,6 @@ describe('PartsComponent part form', () => {
   it('preserves the absence of balance controls and the action order', async () => {
     await setup();
     expect(Object.keys(component.form.controls)).toEqual(['code', 'name', 'unit', 'location', 'minimumStock', 'unitCost', 'active']);
-    expect(panel()!.textContent).toContain('O saldo é alterado somente por movimentos de estoque.');
     expectCancelBeforePrimary(panel()!);
   });
 

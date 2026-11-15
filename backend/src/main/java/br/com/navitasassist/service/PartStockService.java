@@ -103,10 +103,10 @@ public class PartStockService {
             throw new BusinessException("Movimentos de reserva são corrigidos cancelando a reserva.");
         }
         if (original.getType() == PartMovementType.REVERSAL) {
-            throw new BusinessException("Estornos não podem ser estornados.");
+            throw new BusinessException("Reversões não podem ser revertidas.");
         }
         if (partMovementRepository.existsByReversedMovement_Id(movementId)) {
-            throw new BusinessException("O movimento já foi estornado: " + movementId);
+            throw new BusinessException("O movimento já foi revertido: " + movementId);
         }
 
         // A reversed consumption returns the quantity to free stock; the reservation is closed as REVERSED.
@@ -121,7 +121,7 @@ public class PartStockService {
             return PartMovementResponse.from(movement, false);
         } catch (DataIntegrityViolationException exception) {
             // uk_part_movements_reversed guards concurrent reversals the snapshot read above could not see.
-            throw new BusinessException("O movimento já foi estornado: " + movementId);
+            throw new BusinessException("O movimento já foi revertido: " + movementId);
         }
     }
 
