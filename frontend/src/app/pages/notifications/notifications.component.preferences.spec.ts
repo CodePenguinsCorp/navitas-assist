@@ -9,6 +9,7 @@ import { LegacyProfileCode, profilePermissions, providePermissions } from '../..
 import { NotificationService } from '../../core/services/notification.service';
 import { ProfileService } from '../../core/services/profile.service';
 import { NotificationsComponent } from './notifications.component';
+import { toastMessages, toastTones } from '../../testing/toast';
 
 const PREFERENCES: NotificationPreferenceResponse[] = [
   { eventType: 'RMA_CREATED', severity: 'INFO', enabled: true, userMutable: true, muted: false },
@@ -124,12 +125,13 @@ describe('NotificationsComponent preferences', () => {
   });
 
   // Vermelho: não há mensagem de status depois de silenciar.
-  it('confirms the change in a status message', async () => {
+  it('confirms the change in a floating notice', async () => {
     await setup();
     openPreferences();
     component.toggleMute(PREFERENCES[0]);
     render();
-    expect(root().querySelector('[role="status"].alert-banner')?.textContent).toContain('Nova OS silenciado.');
+    expect(toastMessages()).toEqual(['Nova OS silenciado.']);
+    expect(root().querySelector('[role="status"].alert-banner')).toBeNull();
   });
 
   // Vermelho: a tabela aparece durante a carga e mantém as linhas antigas depois da falha.

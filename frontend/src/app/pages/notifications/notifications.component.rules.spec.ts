@@ -13,6 +13,7 @@ import { NotificationEmailStatusResponse, ProfileOption } from '../../core/model
 import { ProfileService } from '../../core/services/profile.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { NotificationsComponent } from './notifications.component';
+import { toastMessages, toastTones } from '../../testing/toast';
 
 // Opções de `GET /api/profiles/options`, ordenadas por nome como na API.
 const PROFILES: ProfileOption[] = [
@@ -116,8 +117,17 @@ describe('NotificationsComponent rules', () => {
     await setup(); openRules();
     button('Enviar e-mail de teste')!.click(); render();
     expect(service['testEmail']).toHaveBeenCalledTimes(1);
-    expect(text()).toContain('Simulação registrada');
+    expect(toastMessages()).toEqual(['Simulação registrada.']);
+    expect(text()).not.toContain('Simulação registrada');
     expect(text()).not.toContain('Entregue');
+  });
+
+  it('avisa o reenvio agendado em aviso flutuante', async () => {
+    const email: NotificationFailureResponse = { source: 'EMAIL', eventKey: 'e', eventType: 'RMA_CREATED', rmaCode: 'OS-1', recipient: 'admin', error: 'Falha', occurredAt: RULE.updatedAt, notificationId: 42, status: 'FAILED', retryAllowed: true, attempts: 5 };
+    await setup({ failures: [of([email]), of([email])] }); openRules();
+    button('Reenviar')!.click(); render();
+    expect(toastMessages()).toEqual(['Reenvio agendado.']);
+    expect(text()).not.toContain('Reenvio agendado');
   });
 
   it.each([400, 409])('mostra erro inline de reenvio %s e permite nova tentativa', async (status) => {
@@ -140,7 +150,7 @@ describe('NotificationsComponent rules', () => {
     permissions.set(profilePermissions('TECHNICIAN')); render();
     pending.next({ status: 'simulado', provider: 'fake' }); pending.complete(); render();
     expect(root().querySelector('.email-failures-section')).toBeNull();
-    expect(text()).not.toContain('Simulação registrada');
+    expect(toastMessages()).toEqual([]);
   });
 
   const REAL = { enabled: true, provider: 'smtp', sentToday: 12, dailyLimit: 100, sentThisMonth: 340, monthlyLimit: 3000, limitReached: false };
@@ -178,7 +188,7 @@ describe('NotificationsComponent rules', () => {
     service['testEmail'].mockReturnValue(throwError(() => new HttpErrorResponse({ status, error: { message: 'Teste recusado' } })));
     button('Enviar e-mail de teste')!.click(); render();
     expect(text()).toContain('Teste recusado');
-    expect(text()).not.toContain('Teste enviado');
+    expect(toastMessages()).toEqual([]);
     expect(button('Enviar e-mail de teste')!.disabled).toBe(false);
   });
 
@@ -355,7 +365,8 @@ describe('NotificationsComponent rules', () => {
         'Destinatários': 'Administrador, Atendimento + responsável pela OS',
         'Atualização': '24/10/2026, 13:00 por root'
       });
-      expect(text()).toContain('Regra "Bloqueio" atualizada.');
+      expect(toastMessages()).toEqual(['Regra "Bloqueio" atualizada.']);
+      expect(root().querySelector('[role="status"].alert-banner')).toBeNull();
     });
 
     // Vermelho: o resumo e o editor não explicam que a regra sem destinatários não entrega a ninguém.

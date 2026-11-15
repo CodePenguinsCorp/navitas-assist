@@ -24,11 +24,6 @@
       <strong>{{ errorMessage() }}</strong>
     </article>
   }
-  @if (successMessage()) {
-    <article class="panel alert-banner alert-banner--success" role="status">
-      <strong>{{ successMessage() }}</strong>
-    </article>
-  }
 
   @if (selected(); as detail) {
     <app-notification-detail-modal
@@ -280,7 +275,6 @@
         </div>
         @if (emailStatusError()) { <p class="field-error" role="alert">{{ emailStatusError() }}</p> }
         @if (emailError()) { <p class="field-error" role="alert">{{ emailError() }}</p> }
-        @if (emailFeedback()) { <p class="field-hint" role="status">{{ emailFeedback() }}</p> }
         @if (failuresLoading()) { <div aria-busy="true"></div> }
         @else if (!failuresLoadFailed() && emailFailures().length === 0) { <p class="section-empty">Nenhuma falha de e-mail.</p> }
         @else if (!failuresLoadFailed()) {

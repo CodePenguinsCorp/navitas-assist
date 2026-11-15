@@ -12,6 +12,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { ProfileService } from '../../core/services/profile.service';
 import { ClockService } from '../../core/services/clock.service';
 import { NotificationsComponent } from './notifications.component';
+import { toastMessages, toastTones } from '../../testing/toast';
 
 const NOTIFICATION: NotificationResponse = {
   id: 5, eventType: 'RMA_ASSIGNED', severity: 'INFO', title: 'OS OS-2026-000007 atribuída a Técnico', message: 'Cliente · Produto',
@@ -466,7 +467,9 @@ describe('NotificationsComponent inbox loading', () => {
       await setup({ snooze: of({ ...BLOCKED, snoozedUntil: '2026-10-24T16:00:00Z' }) });
       component.snooze(BLOCKED, '240');
       render();
-      expect(root().querySelector('[role="status"].alert-banner')!.textContent!.replace(/[\s ]+/g, ' ').trim()).toBe('Notificação adiada até 24/10/2026, 13:00.');
+      expect(toastMessages()).toEqual(['Notificação adiada até 24/10/2026, 13:00.']);
+      expect(toastTones()).toEqual(['success']);
+      expect(root().querySelector('[role="status"].alert-banner')).toBeNull();
       expect(service['list']).toHaveBeenCalledTimes(2);
     });
 
@@ -475,7 +478,8 @@ describe('NotificationsComponent inbox loading', () => {
       await setup();
       component.markAllRead();
       render();
-      expect(text()).toContain('Todas as notificações, inclusive as adiadas, foram marcadas como lidas.');
+      expect(toastMessages()).toEqual(['Todas as notificações, inclusive as adiadas, foram marcadas como lidas.']);
+      expect(text()).not.toContain('foram marcadas como lidas');
     });
 
     // Vermelho: o rótulo é "(2)" e não há tabpanel ligado à aba.

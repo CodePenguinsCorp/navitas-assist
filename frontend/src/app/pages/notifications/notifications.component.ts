@@ -1,3 +1,4 @@
+import { ToastService } from '../../core/services/toast.service';
 import { TipDirective } from '../../shared/tip/tip.directive';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { Component, DestroyRef, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
@@ -59,6 +60,7 @@ const PREFERENCE_STATE_LABELS: Record<PreferenceState, string> = {
 })
 export class NotificationsComponent {
   private readonly notificationService = inject(NotificationService);
+  private readonly toasts = inject(ToastService);
   private readonly permissions = inject(PermissionService);
   protected readonly auth = inject(AuthService);
   private readonly profileService = inject(ProfileService);
@@ -93,7 +95,6 @@ export class NotificationsComponent {
   protected readonly failuresLoadErrorMessage = signal('');
   protected readonly busy = signal(false);
   protected readonly errorMessage = signal('');
-  protected readonly successMessage = signal('');
   protected readonly unreadOnly = signal(false);
   protected readonly includeSnoozed = signal(false);
   protected readonly eventFilter = signal<NotificationEventType | ''>('');
@@ -120,7 +121,6 @@ export class NotificationsComponent {
   protected readonly emailStatusLoading = signal(false);
   protected readonly emailStatusError = signal('');
   protected readonly emailTestBusy = signal(false);
-  protected readonly emailFeedback = signal('');
   protected readonly emailError = signal('');
   protected readonly retryingEmails = signal<ReadonlySet<number>>(new Set());
   protected readonly retryErrors = signal<Record<number, string>>({});
@@ -170,7 +170,7 @@ export class NotificationsComponent {
         this.adminEpoch++;
         this.rulesRequest?.unsubscribe(); this.failuresRequest?.unsubscribe();
         this.rules.set([]); this.failures.set([]); this.emailStatus.set(null);
-        this.editingRule.set(null); this.emailError.set(''); this.emailFeedback.set('');
+        this.editingRule.set(null); this.emailError.set('');
         this.retryErrors.set({});
         if (this.activeTab() === 'rules') this.selectTab('inbox');
       });
@@ -298,7 +298,7 @@ export class NotificationsComponent {
   protected markAllRead(): void {
     if (this.busy()) return;
     this.run(this.notificationService.markAllRead(), () => {
-      this.successMessage.set('Todas as notificações, inclusive as adiadas, foram marcadas como lidas.');
+      this.toasts.show({ message: 'Todas as notificações, inclusive as adiadas, foram marcadas como lidas.', tone: 'success' });
       this.loadInbox();
     });
   }
@@ -311,7 +311,7 @@ export class NotificationsComponent {
 
     this.run(this.notificationService.snooze(notification.id, value), (updated) => {
       this.closeDetail();
-      this.successMessage.set(updated.snoozedUntil ? `Notificação adiada até ${formatNotificationDateTime(updated.snoozedUntil)}.` : 'Notificação adiada.');
+      this.toasts.show({ message: updated.snoozedUntil ? `Notificação adiada até ${formatNotificationDateTime(updated.snoozedUntil)}.` : 'Notificação adiada.', tone: 'success' });
       this.loadInbox();
     });
   }
@@ -338,7 +338,7 @@ export class NotificationsComponent {
     if (!preference.userMutable || this.busy()) return;
     this.run(this.notificationService.updatePreference(preference.eventType, !preference.muted), (updated) => {
       this.preferences.update((items) => items.map((item) => item.eventType === updated.eventType ? updated : item));
-      this.successMessage.set(`${NOTIFICATION_EVENT_LABELS[updated.eventType]} ${updated.muted ? 'silenciado' : 'reativado'}.`);
+      this.toasts.show({ message: `${NOTIFICATION_EVENT_LABELS[updated.eventType]} ${updated.muted ? 'silenciado' : 'reativado'}.`, tone: 'success' });
     });
   }
 
@@ -367,10 +367,10 @@ export class NotificationsComponent {
   protected sendTestEmail(): void {
     if (!this.canManageRules() || this.emailTestBusy() || !this.emailStatus()?.enabled) return;
     const epoch = this.adminEpoch;
-    this.emailTestBusy.set(true); this.emailError.set(''); this.emailFeedback.set('');
+    this.emailTestBusy.set(true); this.emailError.set('');
     this.notificationService.testEmail().pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.emailTestBusy.set(false))).subscribe({
       next: result => {
-        if (this.canManageRules() && epoch === this.adminEpoch) this.emailFeedback.set(result.status === 'simulado' ? 'Simulação registrada' : 'Teste enviado');
+        if (this.canManageRules() && epoch === this.adminEpoch) this.toasts.show({ message: result.status === 'simulado' ? 'Simulação registrada.' : 'Teste enviado.', tone: 'success' });
       },
       error: error => { if (this.canManageRules() && epoch === this.adminEpoch) this.emailError.set(extractHttpErrorMessage(error, 'Não foi possível enviar o teste.')); }
     });
@@ -385,14 +385,14 @@ export class NotificationsComponent {
     if (id == null || !this.canRetryEmail(failure) || this.retryingEmails().has(id)) return;
     const epoch = this.adminEpoch;
     this.retryingEmails.update(ids => new Set([...ids, id]));
-    this.emailError.set(''); this.emailFeedback.set('');
+    this.emailError.set('');
     this.retryErrors.update(errors => ({ ...errors, [id]: '' }));
     this.notificationService.retryEmail(id).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => {
       this.retryingEmails.update(ids => { const next = new Set(ids); next.delete(id); return next; });
     })).subscribe({
       next: () => {
         if (!this.canManageRules() || epoch !== this.adminEpoch) return;
-        this.emailFeedback.set('Reenvio agendado'); this.loadFailures();
+        this.toasts.show({ message: 'Reenvio agendado.', tone: 'success' }); this.loadFailures();
       },
       error: error => {
         if (!this.canManageRules() || epoch !== this.adminEpoch) return;
@@ -493,7 +493,7 @@ export class NotificationsComponent {
       next: (updated) => {
         if (!this.canManageRules() || epoch !== this.adminEpoch) return;
         this.rules.update((items) => items.map((item) => item.eventType === updated.eventType ? updated : item));
-        this.successMessage.set(`Regra "${NOTIFICATION_EVENT_LABELS[updated.eventType]}" atualizada.`);
+        this.toasts.show({ message: `Regra "${NOTIFICATION_EVENT_LABELS[updated.eventType]}" atualizada.`, tone: 'success' });
         this.resetRuleEditor();
       },
       error: (error) => {
@@ -653,6 +653,5 @@ export class NotificationsComponent {
   /** Clears action feedback only; load failures keep their own signals. */
   private clearMessages(): void {
     this.errorMessage.set('');
-    this.successMessage.set('');
   }
 }
