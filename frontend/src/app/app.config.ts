@@ -4,11 +4,12 @@ import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { authErrorInterceptor } from './core/interceptors/auth-error.interceptor';
 import { loadingInterceptor } from './core/interceptors/loading.interceptor';
+import { requestTimeoutInterceptor } from './core/interceptors/request-timeout.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideHttpClient(withFetch(), withInterceptors([loadingInterceptor, authErrorInterceptor]))
+    provideHttpClient(withFetch(), withInterceptors([loadingInterceptor, requestTimeoutInterceptor, authErrorInterceptor]))
   ]
 };
