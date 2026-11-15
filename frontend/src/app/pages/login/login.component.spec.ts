@@ -140,7 +140,7 @@ describe('Login expired session notice', () => {
   it('shows expired notice', async () => {
     const page = await render({ redirectTo: '/rmas', reason: 'expired' });
 
-    const notice = page.querySelector('.alert-banner[role="status"]');
+    const notice = page.querySelector('.login-feedback[role="status"]');
     expect(notice?.textContent?.trim()).toBe('Sua sessão expirou. Entre novamente.');
     expect(page.querySelector('[role="alert"]')).toBeNull();
   });
@@ -148,7 +148,7 @@ describe('Login expired session notice', () => {
   it('does not show the notice on a regular visit', async () => {
     const page = await render({ redirectTo: '/rmas' });
 
-    expect(page.querySelector('.alert-banner')).toBeNull();
+    expect(page.querySelector('.login-feedback')).toBeNull();
     expect(page.textContent).not.toContain('Sua sessão expirou');
   });
 });
