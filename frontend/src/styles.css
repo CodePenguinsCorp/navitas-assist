@@ -1345,24 +1345,9 @@ fieldset.form-section {
   backdrop-filter: blur(6px);
 }
 
-/* Três tamanhos fixos (anatomia de tela, seção 5): largura e altura vêm só da classe de tamanho, nunca do conteúdo. */
-:root {
-  --modal-w-sm: 560px;
-  --modal-w-md: 760px;
-  --modal-w-lg: 1080px;
-  --modal-h-sm: 18rem;
-  --modal-h-md: 36rem;
-  --modal-h-lg: 52rem;
-}
-
 .modal-panel {
-  --modal-w: var(--modal-w-md);
-  --modal-h: var(--modal-h-md);
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  width: min(100%, var(--modal-w));
-  height: min(var(--modal-h), calc(100dvh - 2.5rem));
+  width: min(100%, 920px);
+  max-height: calc(100vh - 2.5rem);
   padding: 1.1rem 0.8rem 1.1rem 1.1rem;
   overflow-x: hidden;
   overflow-y: auto;
@@ -1415,21 +1400,17 @@ fieldset.form-section {
   min-height: 1.1rem;
 }
 
-.modal-panel > * { flex-shrink: 0; }
-.modal-panel--sm { --modal-w: var(--modal-w-sm); --modal-h: var(--modal-h-sm); }
-.modal-panel--md { --modal-w: var(--modal-w-md); --modal-h: var(--modal-h-md); }
-.modal-panel--lg { --modal-w: var(--modal-w-lg); --modal-h: var(--modal-h-lg); }
+.modal-panel--narrow {
+  width: min(100%, 560px);
+}
 
-/* Rodapé do modal (.modal-footer junto de .form-actions): na base quando é filho direto do painel; dentro de
-   um formulário, fixo na base da área visível enquanto o corpo rola. */
-.modal-panel > .modal-footer { margin-top: auto; padding-top: var(--space-3); }
-.modal-panel form .modal-footer {
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
-  padding-block: var(--space-3);
-  border-top: 1px solid var(--line);
-  background: var(--surface);
+.modal-panel--form-wide {
+  width: min(100%, 1080px);
+}
+
+.modal-panel--wide {
+  width: min(100%, 1080px);
+  height: min(calc(100vh - 2.5rem), 820px);
 }
 
 .rma-detail-copy {
@@ -2198,7 +2179,7 @@ fieldset.form-section {
 
   .modal-panel {
     width: 100%;
-    height: calc(100dvh - 1.5rem);
+    max-height: calc(100vh - 1.5rem);
   }
 }
 

@@ -165,7 +165,7 @@
 @if (activeModal()) {
   <div class="modal-overlay" (click)="closeModal()">
     <section
-      class="modal-panel modal-panel--md panel"
+      class="modal-panel panel"
       role="dialog"
       aria-modal="true"
       aria-labelledby="product-form-title"
@@ -272,7 +272,7 @@
           </label>
         </fieldset>
 
-        <div class="modal-footer form-actions form-actions--full">
+        <div class="form-actions form-actions--full">
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="submitting()">
             Cancelar
           </button>
@@ -288,7 +288,7 @@
 @if (deletingProduct(); as product) {
   <div class="modal-overlay" (click)="closeDeleteModal()">
     <section
-      class="modal-panel modal-panel--sm panel"
+      class="modal-panel modal-panel--narrow panel"
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="delete-product-title"
@@ -336,7 +336,7 @@
         </div>
       </div>
 
-      <div class="modal-footer form-actions">
+      <div class="form-actions">
         <button
           type="button"
           class="button-secondary"

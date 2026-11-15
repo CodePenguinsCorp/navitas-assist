@@ -109,7 +109,7 @@
 @if (deletingTemplate(); as template) {
   <div class="modal-overlay" (click)="closeDeleteModal()">
     <section
-      class="modal-panel modal-panel--sm panel"
+      class="modal-panel modal-panel--narrow panel"
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="delete-protocol-title"
@@ -157,7 +157,7 @@
         </div>
       </div>
 
-      <div class="modal-footer form-actions">
+      <div class="form-actions">
         <button
           type="button"
           class="button-secondary"
@@ -182,7 +182,7 @@
 @if (modalOpen()) {
   <div class="modal-overlay" (click)="closeModal()">
     <section
-      class="modal-panel modal-panel--lg panel"
+      class="modal-panel modal-panel--form-wide panel"
       role="dialog"
       aria-modal="true"
       aria-labelledby="protocol-form-title"
@@ -369,7 +369,7 @@
           </div>
         </fieldset>
 
-        <div class="modal-footer form-actions form-actions--full">
+        <div class="form-actions form-actions--full">
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="submitting()">Cancelar</button>
           <button type="submit" class="button-primary" [disabled]="submitting()">{{ submitting() ? 'Salvando...' : editingTemplate() ? 'Publicar nova versão' : 'Cadastrar protocolo' }}</button>
         </div>

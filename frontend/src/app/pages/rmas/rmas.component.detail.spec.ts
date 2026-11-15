@@ -495,7 +495,7 @@ describe('RmasComponent detail with the shared information contract', () => {
     expect([...deadline.querySelectorAll('button')].some((button) => button.textContent?.trim() === 'Alterar')).toBe(false);
     deadline.querySelector<HTMLButtonElement>('button.date-picker__trigger')!.click();
     view.render();
-    expect(view.page.querySelector('app-rma-due-date-dialog, .modal-panel--sm')).toBeNull();
+    expect(view.page.querySelector('app-rma-due-date-dialog, .modal-panel--narrow')).toBeNull();
     [...deadline.querySelectorAll<HTMLButtonElement>('button.date-picker__day:not(.is-outside)')].find((day) => day.textContent?.trim() === '30')!.click();
     view.render();
     expect(updateDueDate).toHaveBeenCalledWith(5, '2026-10-30');
@@ -816,7 +816,7 @@ describe('RmasComponent detail priority selector', () => {
     expect(toastMessages()).toEqual(['Prioridade alterada para Alta.']);
     expect(field.querySelector('[role="status"]')).toBeNull();
     expect(view.rmaService.list.mock.calls.length).toBeGreaterThan(listCalls);
-    expect(view.page.querySelector('.modal-panel--sm')).toBeNull();
+    expect(view.page.querySelector('.modal-panel--narrow')).toBeNull();
   });
 });
 

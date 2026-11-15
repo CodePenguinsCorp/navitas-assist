@@ -173,19 +173,18 @@ Toda página que não é item de menu usa a **seta de voltar** no cabeçalho, à
 
 Três tamanhos, e só três. O modal **nunca** muda de tamanho conforme o conteúdo, nem ao alternar entre erro e sem erro, formulário aberto e fechado, ou ao navegar entre registros (Anterior e Próxima).
 
-| Classe | Largura | Altura fixa | Uso |
+| Classe | Largura | Altura mínima | Uso |
 | --- | --- | --- | --- |
-| `.modal-panel--sm` | 560 px | `min(18rem, 100dvh - 2.5rem)` (288 px) | Confirmação, exclusão, visualização curta. |
-| `.modal-panel--md` | 760 px | `min(36rem, 100dvh - 2.5rem)` (576 px) | Formulário de cadastro, notificação, histórico, movimentar estoque. |
-| `.modal-panel--lg` | 1080 px | `min(52rem, 100dvh - 2.5rem)` (832 px) | Detalhe da OS e editores grandes (nova OS, protocolo). |
+| `.modal-panel--sm` | 560 px | `min(18rem, 100dvh - 2.5rem)` | Confirmação, exclusão, visualização curta. |
+| `.modal-panel--md` | 760 px | `min(32rem, 100dvh - 2.5rem)` | Formulário de cadastro, notificação, histórico, movimentar estoque. |
+| `.modal-panel--lg` | 1080 px | `min(52rem, 100dvh - 2.5rem)` | Detalhe da OS e editores grandes (nova OS, protocolo). |
 
 Regras:
 
-- A altura é **fixa** (não só mínima): o painel tem `height`, nunca cresce com o conteúdo, e rola por dentro quando o conteúdo é maior. Os tokens são `--modal-w-*` e `--modal-h-*` em `:root`.
-- Estrutura em três faixas: cabeçalho, corpo e **rodapé** com a classe `.modal-footer` (junto de `.form-actions`). Filho direto do painel, o rodapé vai para a base (`margin-top: auto`); dentro de um `form`, ele fica `sticky` na base da área visível enquanto o corpo rola. Limite conhecido: num formulário curto dentro do `form`, o rodapé acompanha o fim do conteúdo até ele passar da altura.
+- Estrutura em três faixas: cabeçalho fixo, **corpo com rolagem** (`.modal-body`, `flex: 1`, `overflow-y: auto`) e **rodapé fixo na base** (`.modal-footer` ou `.form-actions`). O painel é uma coluna flex com altura definida; a altura máxima é `100dvh - 2.5rem`.
 - Largura e altura vêm só da classe de tamanho. Nenhuma tela define `width`, `max-width`, `height` ou `padding` do painel.
 - Em tela estreita (até 720 px) o modal ocupa a largura toda e a altura disponível.
-- Todo modal declara exatamente uma classe de tamanho: `modal-panel modal-panel--md panel`. As antigas `--narrow`, `--wide` e `--form-wide` foram removidas.
+- Todo modal declara exatamente uma classe de tamanho: `modal-panel modal-panel--md panel`.
 - Formulário e rodapé: o botão principal fica sempre à direita da base, na mesma posição em qualquer estado.
 
 ## 6. Escala tipográfica de cartões de seção e linhas de registro

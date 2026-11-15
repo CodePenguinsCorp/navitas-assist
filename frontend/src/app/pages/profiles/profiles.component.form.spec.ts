@@ -206,7 +206,7 @@ describe('ProfilesComponent form', () => {
     await mount();
     open(() => component.openDeleteModal(SUPERVISOR));
     expect(alertDialog()!.querySelector('h3')?.textContent?.trim()).toBe('Excluir perfil');
-    expect(alertDialog()!.classList).toContain('modal-panel--sm');
+    expect(alertDialog()!.classList).toContain('modal-panel--narrow');
     expect(alertDialog()!.textContent).toContain('Supervisor');
     expectCancelBeforePrimary(alertDialog()!);
     service.list.mockClear();

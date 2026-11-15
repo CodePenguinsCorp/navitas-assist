@@ -45,6 +45,10 @@ const passwordByteLengthValidator: ValidatorFn = control =>
   styles: [`
     :host { display: block; }
 
+    .user-form-modal {
+      width: min(100%, 780px);
+    }
+
     .user-form-modal .modal-header {
       padding-bottom: var(--space-4);
       border-bottom: 1px solid var(--line);

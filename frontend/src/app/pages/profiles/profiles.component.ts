@@ -35,6 +35,8 @@ const trimmedRequired = (control: AbstractControl<string>): ValidationErrors | n
   styles: [`
     :host { display: block; }
 
+    .profile-form-modal { width: min(100%, 860px); }
+
     .catalog-pending { min-height: 4rem; grid-column: 1 / -1; }
   `]
 })

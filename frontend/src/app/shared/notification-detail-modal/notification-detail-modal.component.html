@@ -1,5 +1,5 @@
 <div class="modal-overlay" (click)="closed.emit()">
-  <section class="modal-panel modal-panel--md panel notification-detail" role="dialog" aria-modal="true"
+  <section class="modal-panel panel notification-detail" role="dialog" aria-modal="true"
     [attr.aria-labelledby]="titleId" appModalFocus modalInitialFocus=".notification-detail__title"
     [modalFallbackFocus]="fallbackFocus()" (modalCloseRequested)="closed.emit()"
     (click)="$event.stopPropagation()" (keydown)="onKeydown($event)">
@@ -50,7 +50,7 @@
       </div>
     </div>
 
-    <footer class="modal-footer notification-detail__footer">
+    <footer class="notification-detail__footer">
       @if (error()) {
         <p class="field-error" role="alert">{{ error() }}</p>
         @if (!notification().read) {
