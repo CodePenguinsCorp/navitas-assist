@@ -1727,9 +1727,9 @@ fieldset.field-group > span {
 }
 
 .status-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: var(--space-2) var(--space-4);
 }
 
 .modal-feedback {
@@ -3544,4 +3544,4 @@ button.page-summary__item:focus-visible { outline: none; box-shadow: var(--focus
 
 /* Sub-página: seta de voltar de 40 px antes do título (no lugar de um Cancelar de página). */
 .page-heading__title:has(.page-heading__back) { align-items: center; flex-wrap: nowrap; }
-.page-heading__back { flex-shrink: 0; text-decoration: none; }
+.page-heading__back { flex-shrink: 0; text-decoration: none; --_bg: transparent; --_border: transparent; --_bg-hover: var(--brand-tint); --_border-hover: transparent; }
