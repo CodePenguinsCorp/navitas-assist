@@ -525,6 +525,23 @@ describe('ProductsComponent pending save lifecycle', () => {
 
   afterEach(() => http.verify());
 
+  it.each(['1.5', '2147483648', '0', ''])('does not send default warranty months %s', (months) => {
+    openEditor('create'); enterFields('create');
+    const input = page.querySelector<HTMLInputElement>('[formControlName="defaultWarrantyMonths"]')!;
+    input.value = months; input.dispatchEvent(new Event('input', { bubbles: true }));
+    page.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); fixture.detectChanges();
+    http.expectNone({ method: 'POST', url: '/api/products' });
+  });
+
+  it('sends integer default warranty months', () => {
+    openEditor('create'); enterFields('create');
+    const input = page.querySelector<HTMLInputElement>('[formControlName="defaultWarrantyMonths"]')!;
+    input.value = '24'; input.dispatchEvent(new Event('input', { bubbles: true }));
+    const request = submitSave('create');
+    expect(request.request.body.defaultWarrantyMonths).toBe(24);
+    succeed(request, 'create');
+  });
+
   function openEditor(mode: 'create' | 'edit'): void {
     page.querySelector<HTMLButtonElement>(
       mode === 'create' ? '.page-heading button' : '.row-actions button'

@@ -263,9 +263,9 @@
 
           <label class="field-group">
             <span>Garantia padrão (meses)</span>
-            <input type="number" min="1" formControlName="defaultWarrantyMonths" />
+            <input type="number" min="1" max="2147483647" step="1" formControlName="defaultWarrantyMonths" />
             @if (hasError('defaultWarrantyMonths')) {
-              <small class="field-error">Informe uma garantia válida.</small>
+              <small class="field-error">Informe a garantia em meses inteiros, de 1 a 2.147.483.647.</small>
             }
           </label>
 

@@ -142,7 +142,7 @@ export class ProductsComponent {
     category: ['', [Validators.maxLength(PRODUCT_LIMITS.category)]],
     hardwareVersion: ['', [Validators.maxLength(PRODUCT_LIMITS.hardwareVersion)]],
     firmwareVersion: ['', [Validators.maxLength(PRODUCT_LIMITS.firmwareVersion)]],
-    defaultWarrantyMonths: [12, [Validators.required, Validators.min(1)]],
+    defaultWarrantyMonths: [12, [Validators.required, Validators.min(1), Validators.max(2147483647), Validators.pattern(/^\d+$/)]],
     technicalNotes: ['', [Validators.maxLength(PRODUCT_LIMITS.technicalNotes)]]
   });
 
