@@ -70,7 +70,7 @@ public class RmaReportCsvService {
             percent(recurrence.returnedItems(), recurrence.itemsWithSerial()), null, null);
         rates(csv, "Recorrência por modelo", recurrence.byProduct());
         rates(csv, "Recorrência por lote", recurrence.byBatch());
-        recurrence.serials().forEach(serial -> csv.row("Série que retornou", serial.serialNumber() + " · " + serial.productName() + " ("
+        recurrence.serials().forEach(serial -> csv.row("Série que retornou", serial.serialNumber() + " - " + serial.productName() + " ("
             + serial.productSku() + ")", CsvWriter.number(serial.rmaCount()), null, null, null, null));
         summary.stages().forEach(stage -> csv.row("Tempo na etapa atual", stage.label(), CsvWriter.number(stage.count()), null, null,
             CsvWriter.decimal(stage.averageSeconds() / 3600.0), CsvWriter.decimal(stage.maximumSeconds() / 3600.0)));

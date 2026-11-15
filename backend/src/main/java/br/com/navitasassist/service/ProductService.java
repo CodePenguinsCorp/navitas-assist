@@ -72,7 +72,7 @@ public class ProductService {
         Product product = new Product();
         apply(product, request);
         productRepository.save(product);
-        audit.record("CREATE", "PRODUCT", product.getId(), product.getSku() + " · " + product.getName(), "Registro criado.");
+        audit.record("CREATE", "PRODUCT", product.getId(), product.getSku() + " - " + product.getName(), "Registro criado.");
         return ProductResponse.from(product);
     }
 
@@ -83,7 +83,7 @@ public class ProductService {
         var before = ProductResponse.from(product);
         apply(product, request);
         productRepository.save(product);
-        audit.record("UPDATE", "PRODUCT", product.getId(), product.getSku() + " · " + product.getName(), AuditService.changedFields(before, ProductResponse.from(product)));
+        audit.record("UPDATE", "PRODUCT", product.getId(), product.getSku() + " - " + product.getName(), AuditService.changedFields(before, ProductResponse.from(product)));
         return ProductResponse.from(product);
     }
 
@@ -95,7 +95,7 @@ public class ProductService {
         }
 
         productRepository.delete(product);
-        audit.record("DELETE", "PRODUCT", id, product.getSku() + " · " + product.getName(), "Registro excluído.");
+        audit.record("DELETE", "PRODUCT", id, product.getSku() + " - " + product.getName(), "Registro excluído.");
     }
 
     @Transactional(readOnly = true)

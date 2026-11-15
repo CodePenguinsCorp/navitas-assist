@@ -174,7 +174,7 @@ public class PartStockService {
         } else {
             eventPublisher.publishEvent(new RmaNotificationEvent(NotificationEventType.PART_PENDING,
                 "PART_PENDING:" + reservation.getId(), rma.getId(), Instant.now(), currentUsername(),
-                "Peça " + part.getCode() + " · " + reservation.getQuantity().toPlainString() + " " + part.getUnit() + " sem saldo disponível."));
+                "Peça " + part.getCode() + ", " + reservation.getQuantity().toPlainString() + " " + part.getUnit() + " sem saldo disponível."));
         }
         return toReservationResponse(reservation);
     }

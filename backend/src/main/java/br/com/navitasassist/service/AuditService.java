@@ -106,6 +106,6 @@ public class AuditService {
                     && !Objects.equals(component.getAccessor().invoke(before), component.getAccessor().invoke(after))) fields.add(component.getName());
             }
         } catch (ReflectiveOperationException error) { throw new IllegalStateException(error); }
-        return "Campos alterados: " + String.join(", ", fields) + ".";
+        return fields.isEmpty() ? "Salvo sem alterações." : "Campos alterados: " + String.join(", ", fields) + ".";
     }
 }

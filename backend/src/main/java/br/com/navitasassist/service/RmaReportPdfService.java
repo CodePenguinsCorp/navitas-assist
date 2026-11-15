@@ -143,7 +143,7 @@ public class RmaReportPdfService {
             report.replacedComponents().forEach(part -> cells(parts, part.code(),
                 part.description() + ("Externo".equals(part.source()) ? "\nExterno" : ""),
                 quantity(part.quantity()) + (part.unit() == null ? "" : " " + part.unit()), part.componentBatch(),
-                dash(part.replacementReason()) + (part.appliedAt() == null ? "" : "\n" + INSTANT.format(part.appliedAt()) + " · " + dash(part.appliedBy()))));
+                dash(part.replacementReason()) + (part.appliedAt() == null ? "" : "\n" + INSTANT.format(part.appliedAt()) + " - " + dash(part.appliedBy()))));
             document.add(parts);
         }
 

@@ -246,7 +246,7 @@ public class RmaReportService {
     }
 
     private static String batchLabel(ReportItem item) {
-        return item.view().batchNumber() + " · " + productLabel(item.product());
+        return item.view().batchNumber() + " - " + productLabel(item.product());
     }
 
     /** Same normalization as {@link RmaRecordRepository#findRecurrentSerials}: trim + upper (Locale.ROOT). */
