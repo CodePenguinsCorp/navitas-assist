@@ -253,7 +253,7 @@ describe('ModalFocusDirective', () => {
       outside.remove();
     });
 
-    it('leaves Tab inside an open select to the select and never cycles into its options', () => {
+    it('moves on from an open select with a single Tab, closing it and never cycling into its options', () => {
       openParent();
       const trigger = el<HTMLButtonElement>('.select .custom-select__trigger');
       trigger.focus();
@@ -261,11 +261,8 @@ describe('ModalFocusDirective', () => {
       render();
       const option = document.activeElement as HTMLElement;
       expect(option.getAttribute('role')).toBe('option');
-      const tab = press('Tab');
-      expect(tab.defaultPrevented).toBe(true);
-      expect(document.activeElement).toBe(trigger);
-      expect(page.querySelector('.select .custom-select__menu')).toBeNull();
       press('Tab');
+      expect(page.querySelector('.select .custom-select__menu')).toBeNull();
       expect(document.activeElement).toBe(el('.child-trigger'));
     });
   });

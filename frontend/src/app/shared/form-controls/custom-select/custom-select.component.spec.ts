@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { ModalFocusDirective } from '../../modal-focus/modal-focus.directive';
 import { CustomSelectComponent } from './custom-select.component';
 
 const OPTIONS = [
@@ -205,5 +206,128 @@ describe('CustomSelectComponent dismissal', () => {
     open('second');
     expect(menu('first')).toBeNull();
     expect(menu('second')).not.toBeNull();
+  });
+});
+
+@Component({
+  imports: [CustomSelectComponent, ModalFocusDirective],
+  template: `
+    <button type="button" class="before">Antes</button>
+    <app-custom-select class="only" [options]="options" ariaLabel="Único" />
+    <button type="button" class="after">Depois</button>
+    @if (inModal()) {
+      <section class="dialog" role="dialog" aria-modal="true" appModalFocus>
+        <button type="button" class="m-before">Antes</button>
+        <app-custom-select class="modal-select" [options]="options" ariaLabel="No modal" />
+        <button type="button" class="m-after">Depois</button>
+      </section>
+    }
+  `
+})
+class TabHost {
+  readonly options = OPTIONS;
+  readonly inModal = signal(false);
+}
+
+describe('CustomSelectComponent Tab from an open list', () => {
+  let fixture: ComponentFixture<TabHost>;
+  let page: HTMLElement;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [TabHost] }).compileComponents();
+    fixture = TestBed.createComponent(TabHost);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    page = fixture.nativeElement as HTMLElement;
+  });
+
+  afterEach(() => fixture.nativeElement.remove());
+
+  function openAndFocusOption(scope: string): void {
+    page.querySelector<HTMLButtonElement>(`${scope} .custom-select__trigger`)!.click();
+    fixture.detectChanges();
+    page.querySelector<HTMLButtonElement>(`${scope} .custom-select__option`)!.focus();
+  }
+
+  function pressTab(shiftKey: boolean): KeyboardEvent {
+    const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true });
+    document.activeElement!.dispatchEvent(event);
+    fixture.detectChanges();
+    return event;
+  }
+
+  it('closes the list and leaves the focus on the trigger for the browser to move on, without consuming the key', () => {
+    openAndFocusOption('.only');
+    const event = pressTab(false);
+    expect(page.querySelector('.custom-select__menu')).toBeNull();
+    expect(document.activeElement).toBe(page.querySelector('.only .custom-select__trigger'));
+    // Not consumed: the browser's own Tab (and Shift+Tab) continues from the trigger, in one key press.
+    expect(event.defaultPrevented).toBe(false);
+    openAndFocusOption('.only');
+    expect(pressTab(true).defaultPrevented).toBe(false);
+  });
+
+  it('moves to the next control in one Tab inside a modal, and to the previous one with Shift+Tab', () => {
+    fixture.componentInstance.inModal.set(true);
+    fixture.detectChanges();
+    openAndFocusOption('.modal-select');
+    pressTab(false);
+    expect(document.activeElement).toBe(page.querySelector('.m-after'));
+
+    openAndFocusOption('.modal-select');
+    pressTab(true);
+    expect(document.activeElement).toBe(page.querySelector('.m-before'));
+  });
+});
+
+describe('CustomSelectComponent menu inside the viewport', () => {
+  let fixture: ComponentFixture<TwoSelectsHost>;
+  let page: HTMLElement;
+  let trigger: HTMLButtonElement;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [TwoSelectsHost] }).compileComponents();
+    fixture = TestBed.createComponent(TwoSelectsHost);
+    fixture.detectChanges();
+    page = fixture.nativeElement as HTMLElement;
+    trigger = page.querySelector<HTMLButtonElement>('.first .custom-select__trigger')!;
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(320);
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600);
+  });
+
+  afterEach(() => vi.restoreAllMocks());
+
+  function open(rect: DOMRect): HTMLElement {
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(rect);
+    trigger.click();
+    fixture.detectChanges();
+    return page.querySelector<HTMLElement>('.first .custom-select__menu')!;
+  }
+
+  it('keeps a narrow trigger near the right edge inside the 8 px margin', () => {
+    const menu = open(new DOMRect(220, 100, 70, 34));
+    const left = Number.parseFloat(menu.style.left);
+    const width = Number.parseFloat(menu.style.width);
+    expect(left).toBeGreaterThanOrEqual(8);
+    expect(left + width).toBeLessThanOrEqual(312);
+  });
+
+  it('keeps a trigger past the left edge inside the margin', () => {
+    const menu = open(new DOMRect(-30, 100, 70, 34));
+    expect(Number.parseFloat(menu.style.left)).toBe(8);
+  });
+
+  it('never exceeds the viewport width minus both margins', () => {
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(130);
+    const menu = open(new DOMRect(10, 100, 100, 34));
+    expect(Number.parseFloat(menu.style.width)).toBeLessThanOrEqual(114);
+    expect(Number.parseFloat(menu.style.left)).toBeGreaterThanOrEqual(8);
+  });
+
+  it('limits the height to the space left on the chosen side, even when it is short', () => {
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(160);
+    const menu = open(new DOMRect(20, 60, 100, 34));
+    // 160 - 94 - 6 - 8 = 52 below; 60 - 6 - 8 = 46 above: below wins.
+    expect(Number.parseFloat(menu.style.maxHeight)).toBe(52);
   });
 });

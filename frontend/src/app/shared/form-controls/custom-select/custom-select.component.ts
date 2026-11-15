@@ -146,8 +146,8 @@ export class CustomSelectComponent implements ControlValueAccessor {
     else if (event.key === 'Home') target = items[0];
     else if (event.key === 'End') target = items[items.length - 1];
     else if (event.key === 'Tab') {
-      event.preventDefault();
-      event.stopPropagation();
+      // Focus returns to the trigger synchronously and the key is not consumed: the browser (or the modal cycle)
+      // then moves on from the trigger, so a single Tab or Shift+Tab leaves the control.
       this.close();
       this.focusTrigger();
       return;
@@ -188,14 +188,17 @@ export class CustomSelectComponent implements ControlValueAccessor {
     if (!trigger) return;
     const rect = trigger.getBoundingClientRect();
     const gap = 6;
-    const below = window.innerHeight - rect.bottom - gap - 8;
-    const above = rect.top - gap - 8;
+    const margin = 8;
+    const below = window.innerHeight - rect.bottom - gap - margin;
+    const above = rect.top - gap - margin;
     const openAbove = below < 200 && above > below;
-    const maxHeight = Math.max(120, Math.min(280, openAbove ? above : below));
+    // Inside the viewport margins on every side; the list scrolls internally when its side is short.
+    const maxHeight = Math.max(0, Math.min(280, openAbove ? above : below));
+    const width = Math.min(Math.max(rect.width, 140), window.innerWidth - 2 * margin);
     this.menuPosition.set({
       top: openAbove ? rect.top - gap : rect.bottom + gap,
-      left: rect.left,
-      width: Math.max(rect.width, 140),
+      left: Math.max(margin, Math.min(rect.left, window.innerWidth - margin - width)),
+      width,
       maxHeight,
       above: openAbove
     });
