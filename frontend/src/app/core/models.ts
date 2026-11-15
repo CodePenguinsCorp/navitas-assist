@@ -465,12 +465,6 @@ export interface RmaItemSummaryResponse {
   warrantyStatus: WarrantyStatus;
 }
 
-/** Impedimento ativo resumido no card do Kanban. */
-export interface RmaBlockSummaryResponse {
-  reason: string;
-  blockedAt: string;
-}
-
 /** Linha da lista paginada de OS (`GET /api/rmas`). */
 export interface RmaListItemResponse {
   id: number;
@@ -482,22 +476,33 @@ export interface RmaListItemResponse {
   entryDate: string;
 }
 
-/** Card do Kanban (`GET /api/rmas/board`): o que o card, os filtros e a busca usam, sem históricos nem textos livres. */
+/**
+ * Card do Kanban (`GET /api/rmas/board`): só o que o card exibe e o que os filtros e a busca do quadro usam.
+ * Itens completos, períodos por etapa e impedimento vêm do detalhe (`GET /api/rmas/{id}`), lido ao abrir o card.
+ * `searchText` reúne SKU, lote e série de todos os itens e o nome dos itens além do primeiro, para a busca local.
+ * `updatedAt` e `currentStageEnteredAt` vêm sem fração de segundo.
+ */
 export interface RmaBoardCardResponse {
   id: number;
   code: string;
   clientName: string;
-  items: RmaItemSummaryResponse[];
+  productName: string;
+  /** Itens além do primeiro; ausente quando a OS tem um só. */
+  additionalItems?: number;
+  searchText: string;
+  /** Garantias efetivas distintas, uma letra cada: P pendente, I em garantia, O fora de garantia. */
+  warranty: string;
   status: RmaStatus;
   priority: RmaPriority;
   entryDate: string;
   dueDate: string | null;
-  deadline: RmaDeadlineResponse;
+  dueSoonFrom: string | null;
   updatedAt: string;
   assigneeId: number | null;
   assigneeName: string | null;
-  currentBlock: RmaBlockSummaryResponse | null;
-  stagePeriods: RmaStagePeriodResponse[];
+  /** Início do impedimento aberto; ausente sem impedimento. */
+  blockedAt?: string;
+  currentStageEnteredAt: string;
 }
 
 export type NotificationEventType =

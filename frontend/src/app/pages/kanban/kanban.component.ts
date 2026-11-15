@@ -12,7 +12,6 @@ import {
   viewChild,
   viewChildren,
 } from '@angular/core';
-import { HttpContext } from '@angular/common/http';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription, finalize, forkJoin, map } from 'rxjs';
@@ -43,8 +42,7 @@ import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { RmaService } from '../../core/services/rma.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { businessDateInputValue } from '../../core/utils/date';
-import { formatDate, normalizeText, toBoardCard } from '../../core/utils/rma-ui';
-import { SKIP_GLOBAL_LOADING } from '../../core/interceptors/loading.interceptor';
+import { boardProductSummary, formatDate, normalizeText, statusLabel, toBoardCard, warrantyCode } from '../../core/utils/rma-ui';
 import {
   CustomSelectComponent,
   CustomSelectOption,
@@ -173,6 +171,10 @@ export class KanbanComponent {
     return detail && detail.id === this.detailRmaId() ? detail : null;
   });
   protected readonly detailError = signal('');
+  /** What the card already has, shown in the detail while the full read is in flight. */
+  protected readonly detailCard = computed(() => this.rmasSignal().find((rma) => rma.id === this.detailRmaId()) ?? null);
+  protected readonly productSummary = boardProductSummary;
+  protected readonly statusText = statusLabel;
   private readonly statusFeedbackRmaId = signal<number | null>(null);
   protected readonly statusFeedbackRma = computed(() => this.rmasSignal().find(rma => rma.id === this.statusFeedbackRmaId()) ?? null);
   private readonly assignableUsersSignal = signal<AssignableUserResponse[]>([]);
@@ -349,12 +351,12 @@ export class KanbanComponent {
     this.assignmentError.set('');
   }
 
-  /** Only the latest detail read counts; it skips the global loading because the modal shows its own state. */
+  /** Only the latest detail read counts. Opening a card uses the global loading; the column pages of the infinite scroll (next step) must pass SKIP_GLOBAL_LOADING. */
   private loadDetail(id: number): void {
     this.detailRequest?.unsubscribe();
     this.detailSignal.set(null);
     this.detailError.set('');
-    this.detailRequest = this.rmaService.getById(id, new HttpContext().set(SKIP_GLOBAL_LOADING, true))
+    this.detailRequest = this.rmaService.getById(id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (detail) => { if (this.detailRmaId() === id) this.detailSignal.set(detail); },
@@ -769,7 +771,7 @@ function filterKanbanRmas(rmas: RmaBoardCardResponse[], filters: KanbanFilterVal
     const matchesStatus = filters.status === 'all' || rma.status === filters.status;
     const matchesWarranty =
       filters.warranty === 'all' ||
-      rma.items.some((item) => item.warrantyStatus === filters.warranty);
+      rma.warranty.includes(warrantyCode(filters.warranty));
     const matchesAssignee =
       filters.assignee === 'all' ||
       (filters.assignee === 'unassigned'
@@ -781,7 +783,7 @@ function filterKanbanRmas(rmas: RmaBoardCardResponse[], filters: KanbanFilterVal
       isWithinRange(businessDateInputValue(new Date(rma.updatedAt)), filters.updatedFrom, filters.updatedTo);
 
     return (
-      (filters.blocked === 'all' || Boolean(rma.currentBlock) === (filters.blocked === 'blocked')) &&
+      (filters.blocked === 'all' || Boolean(rma.blockedAt) === (filters.blocked === 'blocked')) &&
       (filters.deadline === 'all' || deadlineStatus(rma, today) === filters.deadline) &&
       matchesQuery &&
       matchesPriority &&
@@ -794,21 +796,9 @@ function filterKanbanRmas(rmas: RmaBoardCardResponse[], filters: KanbanFilterVal
   });
 }
 
+/** Code, client, first product and `searchText` (SKU, batch and serial of every item, names of the others). */
 function rmaSearchText(rma: RmaBoardCardResponse): string {
-  const itemValues = rma.items.flatMap((item) => [
-    item.productName,
-    item.productSku,
-    item.batchNumber,
-    item.serialNumber,
-  ]);
-
-  return normalizeSearch(
-    [
-      rma.code,
-      rma.clientName,
-      ...itemValues,
-    ].join(' '),
-  );
+  return normalizeSearch([rma.code, rma.clientName, rma.productName, rma.searchText].join(' '));
 }
 
 function normalizeSearch(value: string): string {

@@ -127,15 +127,46 @@ export function toItemSummary(item: RmaItemResponse): RmaItemSummaryResponse {
   };
 }
 
+/** "Produto A" ou "Produto A + 2 item(ns)" a partir do resumo do card, sem a lista de itens. */
+export function boardProductSummary(card: Pick<RmaBoardCardResponse, 'productName' | 'additionalItems'>): string {
+  const additionalItems = card.additionalItems ?? 0;
+  return additionalItems > 0 ? `${card.productName} + ${additionalItems} item(ns)` : card.productName;
+}
+
+const WARRANTY_CODES: Record<WarrantyStatus, string> = {
+  [WarrantyStatus.PENDING]: 'P',
+  [WarrantyStatus.IN_WARRANTY]: 'I',
+  [WarrantyStatus.OUT_OF_WARRANTY]: 'O'
+};
+
+/** Letra de garantia do card do Kanban (`warranty`), a mesma do servidor. */
+export function warrantyCode(status: WarrantyStatus): string {
+  return WARRANTY_CODES[status];
+}
+
+/** Texto da busca local do Kanban: SKU, lote e série de todos os itens e o nome dos itens além do primeiro (como no servidor). */
+function boardSearchText(items: ReadonlyArray<RmaItemSummaryResponse>): string {
+  return items
+    .flatMap((item, index) => (index === 0 ? [] : [item.productName]).concat(item.productSku, item.batchNumber ?? '', item.serialNumber ?? ''))
+    .filter((value) => value.trim() !== '')
+    .join(' ');
+}
+
 /** Card do Kanban a partir do detalhe, com os mesmos campos de `GET /api/rmas/board`. */
 export function toBoardCard(rma: RmaResponse): RmaBoardCardResponse {
-  return {
-    id: rma.id, code: rma.code, clientName: rma.clientName, items: rma.items.map(toItemSummary),
+  const items = rma.items.map(toItemSummary);
+  const periods = rma.stagePeriods;
+  const card: RmaBoardCardResponse = {
+    id: rma.id, code: rma.code, clientName: rma.clientName,
+    productName: items[0]?.productName ?? '', searchText: boardSearchText(items),
+    warranty: [...new Set(items.map((item) => warrantyCode(item.warrantyStatus)))].join(''),
     status: rma.status, priority: rma.priority, entryDate: rma.entryDate, dueDate: rma.dueDate,
-    deadline: rma.deadline, updatedAt: rma.updatedAt, assigneeId: rma.assigneeId, assigneeName: rma.assigneeName,
-    currentBlock: rma.currentBlock ? { reason: rma.currentBlock.reason, blockedAt: rma.currentBlock.blockedAt } : null,
-    stagePeriods: rma.stagePeriods
+    dueSoonFrom: rma.deadline.dueSoonFrom, updatedAt: rma.updatedAt, assigneeId: rma.assigneeId, assigneeName: rma.assigneeName,
+    currentStageEnteredAt: periods[periods.length - 1]?.enteredAt ?? rma.updatedAt
   };
+  if (items.length > 1) card.additionalItems = items.length - 1;
+  if (rma.currentBlock) card.blockedAt = rma.currentBlock.blockedAt;
+  return card;
 }
 
 export function normalizeText(value: string): string | null {

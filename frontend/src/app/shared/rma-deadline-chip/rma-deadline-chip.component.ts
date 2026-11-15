@@ -1,7 +1,6 @@
 import { Component, computed, inject, input } from '@angular/core';
-import { RmaResponse } from '../../core/models';
 import { ClockService } from '../../core/services/clock.service';
-import { businessToday, deadlineCardLabel, deadlineDetailLabel, deadlineStatus } from '../../core/utils/rma-deadline';
+import { DeadlineSource, businessToday, deadlineCardLabel, deadlineDetailLabel, deadlineStatus } from '../../core/utils/rma-deadline';
 import { IconComponent } from '../icon/icon.component';
 
 /**
@@ -15,7 +14,7 @@ import { IconComponent } from '../icon/icon.component';
   styleUrl: './rma-deadline-chip.component.css'
 })
 export class RmaDeadlineChipComponent {
-  readonly rma = input.required<Pick<RmaResponse, 'status' | 'dueDate' | 'deadline'>>();
+  readonly rma = input.required<DeadlineSource>();
   readonly mode = input<'card' | 'detail'>('card');
   private readonly clock = inject(ClockService);
   private readonly today = computed(() => businessToday(this.clock.now()));

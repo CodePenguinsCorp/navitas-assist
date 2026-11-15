@@ -1,12 +1,20 @@
 import { CLOSED_RMA_STATUSES } from '../mock-data';
-import { RmaDeadlineStatus, RmaResponse } from '../models';
+import { RmaDeadlineResponse, RmaDeadlineStatus, RmaResponse } from '../models';
 import type { CustomSelectOption } from '../../shared/form-controls/custom-select/custom-select.component';
 import { businessDateInputValue } from './date';
 
 export type DeadlineStatus = RmaDeadlineStatus;
 export type DeadlineFilterValue = 'all' | Exclude<RmaDeadlineStatus, 'CLOSED'>;
 
-type DeadlineSource = Pick<RmaResponse, 'status' | 'dueDate' | 'deadline'>;
+/**
+ * Detalhe da OS (`deadline.dueSoonFrom`) ou card do Kanban (`dueSoonFrom` direto): o status do servidor nunca é lido,
+ * a situação sai da data limite e de `dueSoonFrom`. `dueSoonFrom` continua vindo do servidor porque a janela
+ * (`DEADLINE_WARNING_DAYS`) é configurável no backend.
+ */
+export type DeadlineSource = Pick<RmaResponse, 'status' | 'dueDate'> & {
+  deadline?: Pick<RmaDeadlineResponse, 'dueSoonFrom'> | null;
+  dueSoonFrom?: string | null;
+};
 
 export const DEADLINE_LABELS: Record<DeadlineStatus, string> = {
   OVERDUE: 'Atrasado',
@@ -44,7 +52,7 @@ export function deadlineStatus(rma: DeadlineSource, today: string): DeadlineStat
   if (CLOSED_RMA_STATUSES.includes(rma.status)) return 'CLOSED';
   if (!rma.dueDate) return 'NO_DUE_DATE';
   if (today > rma.dueDate) return 'OVERDUE';
-  const dueSoonFrom = rma.deadline?.dueSoonFrom ?? rma.dueDate;
+  const dueSoonFrom = rma.dueSoonFrom ?? rma.deadline?.dueSoonFrom ?? rma.dueDate;
   return today >= dueSoonFrom ? 'DUE_SOON' : 'ON_TRACK';
 }
 

@@ -10,7 +10,7 @@ import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { RmaService } from '../../core/services/rma.service';
-import { SKIP_GLOBAL_LOADING } from '../../core/interceptors/loading.interceptor';
+import { toBoardCard } from '../../core/utils/rma-ui';
 import { KanbanComponent } from './kanban.component';
 import { mountUnderRoot, simulateNativeModality } from '../../testing/native-dialog';
 import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
@@ -73,7 +73,7 @@ describe('KanbanComponent filters', () => {
         {
           provide: RmaService,
           useValue: {
-            listBoard: () => of(TEST_RMAS),
+            listBoard: () => of(TEST_RMAS.map(toBoardCard)),
             getById: (id: number) => of(TEST_RMAS.find((rma) => rma.id === id)),
             updateStatus: (id: number, payload: { status: RmaResponse['status'] }) => of({ ...TEST_RMAS.find(rma => rma.id === id)!, status: payload.status }),
             updateAssignee: (id: number, payload: { assigneeId: number | null }) => {
@@ -100,7 +100,7 @@ describe('KanbanComponent filters', () => {
       calculatedWarrantyStatus: WarrantyStatus.OUT_OF_WARRANTY, warrantyExpiresAt: '2020-01-01',
       warrantyOverride: { status: WarrantyStatus.IN_WARRANTY, reason: 'Cortesia', changedBy: 'ana', changedAt: '2026-11-13T12:00:00Z' } };
     try {
-      fixture.detectChanges();
+      reloadBoard();
       component.filtersForm.patchValue({ warranty: WarrantyStatus.IN_WARRANTY });
       fixture.detectChanges();
       expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
@@ -109,6 +109,12 @@ describe('KanbanComponent filters', () => {
       expect(component.filteredRmas().map((rma) => rma.id)).toEqual([2]);
     } finally { TEST_RMAS[0].items[0] = original; }
   });
+
+  /** Re-reads the board after a spec changed TEST_RMAS: cards are projected once per read, as in the server. */
+  function reloadBoard(): void {
+    (component as unknown as { retryLoad(): void }).retryLoad();
+    fixture.detectChanges();
+  }
 
   it('does not show the permanent drag instruction in the header', () => {
     fixture.detectChanges();
@@ -393,15 +399,13 @@ describe('KanbanComponent filters', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Novo responsável');
   });
 
-  it('reads the full detail on open, outside the global loading, and retries a failed read inside the modal', () => {
+  it('reads the full detail on open and retries a failed read inside the modal', () => {
     fixture.detectChanges();
     const service = TestBed.inject(RmaService);
     const reads = vi.spyOn(service, 'getById').mockReturnValueOnce(throwError(() => ({ error: { message: 'Falha de rede' } })));
     component.openDetail(TEST_RMAS[0]);
     fixture.detectChanges();
-    const [id, context] = reads.mock.calls[0];
-    expect(id).toBe(TEST_RMAS[0].id);
-    expect(context?.get(SKIP_GLOBAL_LOADING)).toBe(true);
+    expect(reads.mock.calls[0][0]).toBe(TEST_RMAS[0].id);
     const host = fixture.nativeElement as HTMLElement;
     expect(host.querySelector('app-rma-detail-modal')).toBeNull();
     expect(host.querySelector('[role="dialog"] [role="alert"]')?.textContent).toContain('Falha de rede');
@@ -409,6 +413,26 @@ describe('KanbanComponent filters', () => {
     fixture.detectChanges();
     expect(reads).toHaveBeenCalledTimes(2);
     expect(host.querySelector('app-rma-detail-modal')).not.toBeNull();
+  });
+
+  it('shows what the card already has while the full detail loads, then swaps to the modal', () => {
+    fixture.detectChanges();
+    const detail = new Subject<RmaResponse>();
+    vi.spyOn(TestBed.inject(RmaService), 'getById').mockReturnValueOnce(detail);
+    const card = toBoardCard(TEST_RMAS[0]);
+    component.openDetail(TEST_RMAS[0]);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const placeholder = host.querySelector('[role="dialog"]')!;
+    expect(placeholder.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(placeholder.textContent).toContain(card.code);
+    expect(placeholder.textContent).toContain(card.clientName);
+    expect(placeholder.textContent).toContain(card.productName);
+    expect(host.querySelector('app-rma-detail-modal')).toBeNull();
+    detail.next(TEST_RMAS[0]);
+    fixture.detectChanges();
+    expect(host.querySelector('app-rma-detail-modal')).not.toBeNull();
+    expect(host.querySelectorAll('[role="dialog"]')).toHaveLength(1);
   });
 
   it('replaces only the assigned card with the response instead of reloading the board', () => {
@@ -490,7 +514,8 @@ describe('KanbanComponent filters', () => {
   );
 
   it('combines blockage with existing filters, persists it and clears it', () => {
-    Object.assign(TEST_RMAS[0], { currentBlock: { id: 9, reason: 'Peça pendente' } });
+    Object.assign(TEST_RMAS[0], { currentBlock: { id: 9, reason: 'Peça pendente', blockedAt: '2026-10-20T10:00:00Z' } });
+    reloadBoard();
     component.filtersForm.patchValue({ blocked: 'blocked', priority: 'HIGH' });
     expect(component.filteredRmas().map((rma) => rma.id)).toEqual([1]);
     component.openCreateViewModal();
@@ -505,6 +530,7 @@ describe('KanbanComponent filters', () => {
     expect(component.filteredRmas()).toHaveLength(2);
     expect(component.filtersForm.getRawValue().blocked).toBe('all');
     Object.assign(TEST_RMAS[0], { currentBlock: null });
+    reloadBoard();
   });
 
   it('combines priority, status, warranty, assignee and business-date filters', () => {
@@ -541,9 +567,9 @@ describe('KanbanComponent filters', () => {
       ...TEST_RMAS[0], id, code: `NAV-00${id}`, status, dueDate,
       deadline: { status: 'ON_TRACK', dueSoonFrom: dueDate ? shiftDate(dueDate, -7) : null },
     });
-    (component as unknown as { rmasSignal: { set(value: RmaResponse[]): void } }).rmasSignal.set([
+    (component as unknown as { rmasSignal: { set(value: ReturnType<typeof toBoardCard>[]): void } }).rmasSignal.set([
       extra(11, '2026-10-19'), extra(12, '2026-10-22'), extra(13, '2026-12-01'), extra(14, null), extra(15, '2026-10-01', 'COMPLETED'),
-    ]);
+    ].map(toBoardCard));
     const ids = (deadline: 'all' | 'OVERDUE' | 'DUE_SOON' | 'ON_TRACK' | 'NO_DUE_DATE') => {
       component.filtersForm.patchValue({ deadline });
       return component.filteredRmas().map((rma) => rma.id);
@@ -811,7 +837,7 @@ describe('KanbanComponent dialog focus', () => {
         {
           provide: RmaService,
           useValue: {
-            listBoard: () => of(TEST_RMAS),
+            listBoard: () => of(TEST_RMAS.map(toBoardCard)),
             getById: (id: number) => of(TEST_RMAS.find((rma) => rma.id === id)),
             updateStatus: () => (statusSave = new Subject<RmaResponse>()),
             updateAssignee: () => (assigneeSave = new Subject<RmaResponse>()),
@@ -984,7 +1010,7 @@ describe('KanbanComponent dialog focus under the root blocker', () => {
         {
           provide: RmaService,
           useValue: {
-            listBoard: () => of(TEST_RMAS),
+            listBoard: () => of(TEST_RMAS.map(toBoardCard)),
             getById: (id: number) => of(TEST_RMAS.find((rma) => rma.id === id)),
             updateStatus: () => (statusSave = new Subject<RmaResponse>()),
           },
@@ -1083,7 +1109,7 @@ describe('KanbanComponent default view', () => {
         providePermissions(profilePermissions('ADMIN')),
         { provide: CatalogService, useValue: { listAssignableUsers: () => of([]) } },
         { provide: KanbanViewService, useValue: { list: () => views } },
-        { provide: RmaService, useValue: { listBoard: () => of(TEST_RMAS) } },
+        { provide: RmaService, useValue: { listBoard: () => of(TEST_RMAS.map(toBoardCard)) } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(KanbanComponent);

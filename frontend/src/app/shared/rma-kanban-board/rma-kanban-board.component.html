@@ -59,8 +59,8 @@
                   <p class="board-card__stage">{{ stage }}</p>
                 }
 
-                @if (item.currentBlock; as block) {
-                  <p class="board-card__block"><strong>Impedida há {{ blockedDuration(block, clock.now()) }}</strong></p>
+                @if (item.blockedAt; as blockedAt) {
+                  <p class="board-card__block"><strong>Impedida há {{ blockedDuration({ blockedAt }, clock.now()) }}</strong></p>
                 }
 
                 <footer class="board-card__footer">

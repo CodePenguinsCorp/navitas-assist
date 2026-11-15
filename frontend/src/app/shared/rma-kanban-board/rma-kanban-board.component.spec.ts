@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RmaBoardCardResponse, RmaResponse, WarrantyStatus } from '../../core/models';
 import { ClockService } from '../../core/services/clock.service';
+import { toBoardCard } from '../../core/utils/rma-ui';
 import { RmaKanbanBoardComponent } from './rma-kanban-board.component';
 
 describe('RmaKanbanBoardComponent card', () => {
@@ -18,7 +19,11 @@ describe('RmaKanbanBoardComponent card', () => {
   });
 
   function render(rmas: RmaResponse[], inputs: Record<string, unknown> = {}): HTMLElement {
-    fixture.componentRef.setInput('rmas', rmas);
+    return renderCards(rmas.map(toBoardCard), inputs);
+  }
+
+  function renderCards(cards: RmaBoardCardResponse[], inputs: Record<string, unknown> = {}): HTMLElement {
+    fixture.componentRef.setInput('rmas', cards);
     fixture.componentRef.setInput('showToolbar', false);
     for (const [name, value] of Object.entries(inputs)) {
       fixture.componentRef.setInput(name, value);
@@ -117,7 +122,7 @@ describe('RmaKanbanBoardComponent card', () => {
     const opened: RmaBoardCardResponse[] = [];
     fixture.componentInstance.cardSelect.subscribe((item) => opened.push(item));
     card(host, 'NAV-0100').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    expect(opened).toEqual([rma]);
+    expect(opened).toEqual([toBoardCard(rma)]);
   });
 
   it('keeps code, client, product, priority label, avatar and active block', () => {
@@ -143,6 +148,20 @@ describe('RmaKanbanBoardComponent card', () => {
     const avatar = element.querySelector('.board-card__avatar');
     expect(avatar?.getAttribute('aria-label')).toBe('Responsável: Técnico Responsável');
     expect(avatar?.textContent?.trim()).toBe('TR');
+    expect(element.querySelector('.board-card__block')?.textContent).toContain('Impedida há 2 h');
+  });
+
+  it('renders everything from the minimal board card: product summary, deadline, stage time and impediment', () => {
+    const minimal: RmaBoardCardResponse = {
+      id: 7, code: 'NAV-0007', clientName: 'Cliente Mínimo', productName: 'Produto A', additionalItems: 2, searchText: 'SKU-A',
+      warranty: 'P', status: 'IN_REPAIR', priority: 'MEDIUM', entryDate: '2026-10-10',
+      dueDate: '2026-10-19', dueSoonFrom: '2026-10-12', updatedAt: '2026-10-20T10:00:00Z', assigneeId: null, assigneeName: null,
+      blockedAt: '2026-10-20T10:00:00Z', currentStageEnteredAt: '2026-10-18T08:00:00Z',
+    };
+    const element = card(renderCards([minimal]), 'NAV-0007');
+    expect(element.querySelector('.board-card__title')?.textContent).toContain('Produto A + 2 item(ns)');
+    expect(element.querySelector('.deadline-chip')?.getAttribute('data-deadline')).toBe('OVERDUE');
+    expect(element.querySelector('.board-card__stage')?.textContent?.trim()).toBe('há 2 d 4 h nesta etapa');
     expect(element.querySelector('.board-card__block')?.textContent).toContain('Impedida há 2 h');
   });
 

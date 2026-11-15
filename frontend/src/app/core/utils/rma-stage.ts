@@ -1,5 +1,5 @@
 import { CLOSED_RMA_STATUSES } from '../mock-data';
-import { RmaResponse, RmaStagePeriodResponse } from '../models';
+import { RmaResponse, RmaStagePeriodResponse, RmaStatus } from '../models';
 import { formatDuration } from './duration';
 
 /** The backend always sends at least one period; the last one is the current stage. */
@@ -13,8 +13,9 @@ export function stageElapsedSeconds(period: RmaStagePeriodResponse, now: number)
   return Math.max(0, Math.floor((now - Date.parse(period.enteredAt)) / 1000));
 }
 
-export function stageTimeLabel(rma: Pick<RmaResponse, 'status' | 'stagePeriods'>, now: number): string | null {
+/** "há 2 d 4 h nesta etapa" a partir do instante em que a OS entrou na etapa atual (`currentStageEnteredAt` do card). */
+export function stageTimeLabel(rma: { status: RmaStatus; currentStageEnteredAt: string }, now: number): string | null {
   if (CLOSED_RMA_STATUSES.includes(rma.status)) return null;
-  const current = currentStagePeriod(rma);
-  return current ? `há ${formatDuration(stageElapsedSeconds(current, now))} nesta etapa` : null;
+  const seconds = Math.max(0, Math.floor((now - Date.parse(rma.currentStageEnteredAt)) / 1000));
+  return `há ${formatDuration(seconds)} nesta etapa`;
 }

@@ -11,6 +11,7 @@ import { RmaService } from '../../core/services/rma.service';
 import { ClockService } from '../../core/services/clock.service';
 import { RmaDetailModalComponent } from '../../shared/rma-detail-modal/rma-detail-modal.component';
 import { buildRma } from '../../testing/rma-fixtures';
+import { toBoardCard } from '../../core/utils/rma-ui';
 import { KanbanComponent } from './kanban.component';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
@@ -36,7 +37,7 @@ async function setupWith(permissions: readonly Permission[] | Signal<readonly Pe
         provide: KanbanViewService,
         useValue: { list: () => of([]), create: vi.fn(), update: vi.fn(), setDefault: () => of({}), delete: () => of(undefined) }
       },
-      { provide: RmaService, useValue: { listBoard: () => of([RMA]), getById: () => of(RMA), updatePriority: (id: number, priority: RmaResponse['priority']) => of({ ...RMA, id, priority }) } }
+      { provide: RmaService, useValue: { listBoard: () => of([toBoardCard(RMA)]), getById: () => of(RMA), updatePriority: (id: number, priority: RmaResponse['priority']) => of({ ...RMA, id, priority }) } }
     ]
   }).compileComponents();
   const fixture: ComponentFixture<KanbanComponent> = TestBed.createComponent(KanbanComponent);

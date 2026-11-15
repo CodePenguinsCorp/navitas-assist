@@ -13,7 +13,7 @@ import {
   ownerLabel,
   priorityChipClass,
   priorityLabel,
-  productSummary,
+  boardProductSummary,
   statusLabel
 } from '../../core/utils/rma-ui';
 
@@ -64,7 +64,7 @@ export class RmaKanbanBoardComponent {
 
   protected readonly priorityLabel = priorityLabel;
   protected readonly priorityClass = priorityChipClass;
-  protected readonly productSummary = productSummary;
+  protected readonly productSummary = boardProductSummary;
   protected readonly initials = initialsOf;
   protected readonly ownerLabel = ownerLabel;
   protected readonly dateLabel = formatDate;

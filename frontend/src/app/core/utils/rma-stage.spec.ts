@@ -10,12 +10,12 @@ function period(overrides: Partial<RmaStagePeriodResponse>): RmaStagePeriodRespo
 describe('rma stage time', () => {
   it('labels the time in the current stage', () => {
     const enteredAt = new Date(NOW - 187200 * 1000).toISOString();
-    expect(stageTimeLabel({ status: 'IN_REPAIR', stagePeriods: [period({ status: 'IN_REPAIR', enteredAt })] }, NOW))
+    expect(stageTimeLabel({ status: 'IN_REPAIR', currentStageEnteredAt: enteredAt }, NOW))
       .toBe('há 2 d 4 h nesta etapa');
   });
 
   it('has no stage label for closed ordens de serviço', () => {
-    expect(stageTimeLabel({ status: 'COMPLETED', stagePeriods: [period({ status: 'COMPLETED' })] }, NOW)).toBeNull();
+    expect(stageTimeLabel({ status: 'COMPLETED', currentStageEnteredAt: '2026-11-10T12:00:00Z' }, NOW)).toBeNull();
   });
 
   it('notes do not restart: the last period comes already merged from the backend', () => {
@@ -24,7 +24,12 @@ describe('rma stage time', () => {
       period({ status: 'TRIAGE', enteredAt: '2026-11-12T12:00:00Z' })
     ];
     expect(currentStagePeriod({ stagePeriods: periods }).status).toBe('TRIAGE');
-    expect(stageTimeLabel({ status: 'TRIAGE', stagePeriods: periods }, NOW)).toBe('há 1 d nesta etapa');
+    expect(stageTimeLabel({ status: 'TRIAGE', currentStageEnteredAt: currentStagePeriod({ stagePeriods: periods }).enteredAt }, NOW))
+      .toBe('há 1 d nesta etapa');
+  });
+
+  it('never shows a negative time when the clock is behind the server', () => {
+    expect(stageTimeLabel({ status: 'TRIAGE', currentStageEnteredAt: '2026-11-13T12:00:30Z' }, NOW)).toBe('há menos de 1 min nesta etapa');
   });
 
   it('counts the current period live and keeps finished periods fixed', () => {

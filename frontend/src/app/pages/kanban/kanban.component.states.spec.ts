@@ -4,12 +4,13 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
 import { provideRouter } from '@angular/router';
 import { Subject, of } from 'rxjs';
-import { AssignableUserResponse, RmaResponse } from '../../core/models';
+import { AssignableUserResponse, RmaBoardCardResponse, RmaResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import { KanbanViewService } from '../../core/services/kanban-view.service';
 import { RmaService } from '../../core/services/rma.service';
 import { ClockService } from '../../core/services/clock.service';
 import { buildRma } from '../../testing/rma-fixtures';
+import { toBoardCard } from '../../core/utils/rma-ui';
 import { KanbanComponent } from './kanban.component';
 import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
@@ -23,7 +24,7 @@ const SECOND = buildRma({ id: 2, code: 'OS-2026-000002', priority: 'LOW' });
 describe('KanbanComponent reading states and count', () => {
   let fixture: ComponentFixture<KanbanComponent>;
   let page: HTMLElement;
-  let boards: Subject<RmaResponse[]>[];
+  let boards: Subject<RmaBoardCardResponse[]>[];
   let users: Subject<AssignableUserResponse[]>[];
 
   beforeEach(async () => {
@@ -37,7 +38,7 @@ describe('KanbanComponent reading states and count', () => {
         providePermissions(profilePermissions('ADMIN')),
         { provide: CatalogService, useValue: { listAssignableUsers: () => { const source = new Subject<AssignableUserResponse[]>(); users.push(source); return source; } } },
         { provide: KanbanViewService, useValue: { list: () => of([]) } },
-        { provide: RmaService, useValue: { listBoard: () => { const source = new Subject<RmaResponse[]>(); boards.push(source); return source; } } }
+        { provide: RmaService, useValue: { listBoard: () => { const source = new Subject<RmaBoardCardResponse[]>(); boards.push(source); return source; } } }
       ]
     }).compileComponents();
     fixture = TestBed.createComponent(KanbanComponent);
@@ -50,7 +51,7 @@ describe('KanbanComponent reading states and count', () => {
   }
 
   function respond(index: number, rmas: RmaResponse[]): void {
-    boards[index].next(rmas);
+    boards[index].next(rmas.map(toBoardCard));
     boards[index].complete();
     users[index].next([]);
     users[index].complete();

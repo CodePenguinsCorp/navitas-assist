@@ -3,11 +3,13 @@ import { buildRma, buildRmaItem } from '../../testing/rma-fixtures';
 import { formatDateTime as formatCatalogDateTime } from './catalog-ui';
 import {
   formatDateTime as formatRmaDateTime,
+  boardProductSummary,
   itemCountLabel,
   normalizeText,
   ownerLabel,
   productSummary,
   rmaItemTrackableLabel,
+  toBoardCard,
   trackableLabel,
   warrantyLabel,
 } from './rma-ui';
@@ -46,6 +48,41 @@ describe('OS UI utilities', () => {
     });
     expect(productSummary(rma)).toBe('Produto A + 1 item(ns)');
     expect(trackableLabel(rma)).toBe('Série S1 · Lote L1 + 1 item(ns)');
+  });
+});
+
+describe('toBoardCard', () => {
+  it('keeps only what the card shows and filters, with the same shape as GET /api/rmas/board', () => {
+    const rma = buildRma({
+      id: 9, code: 'NAV-0009', clientName: 'Cliente', priority: 'HIGH', status: 'TRIAGE', dueDate: '2026-11-20',
+      deadline: { status: 'DUE_SOON', dueSoonFrom: '2026-11-13' },
+      assigneeId: 4, assigneeName: 'Ana', updatedAt: '2026-11-12T10:00:00Z',
+      items: [
+        buildRmaItem({ productName: 'Produto A', productSku: 'SKU-A', serialNumber: 'S1', batchNumber: 'L1', warrantyStatus: WarrantyStatus.IN_WARRANTY }),
+        buildRmaItem({ id: 2, productName: 'Produto B', productSku: 'SKU-B', serialNumber: null, batchNumber: null, warrantyStatus: WarrantyStatus.OUT_OF_WARRANTY }),
+      ],
+      stagePeriods: [
+        { status: 'RECEIVED', enteredAt: '2026-11-10T10:00:00Z', leftAt: '2026-11-12T09:00:00Z', durationSeconds: 100 },
+        { status: 'TRIAGE', enteredAt: '2026-11-12T09:00:00Z', leftAt: null, durationSeconds: 0 },
+      ],
+      currentBlock: { id: 1, reason: 'Peça', category: null, blockedBy: 'x', blockedAt: '2026-11-12T09:30:00Z', resolvedBy: null, resolvedAt: null, resolutionNote: null },
+    });
+    expect(toBoardCard(rma)).toEqual({
+      id: 9, code: 'NAV-0009', clientName: 'Cliente', productName: 'Produto A', additionalItems: 1,
+      searchText: 'SKU-A L1 S1 Produto B SKU-B', warranty: 'IO',
+      status: 'TRIAGE', priority: 'HIGH', entryDate: rma.entryDate, dueDate: '2026-11-20', dueSoonFrom: '2026-11-13',
+      updatedAt: '2026-11-12T10:00:00Z', assigneeId: 4, assigneeName: 'Ana', blockedAt: '2026-11-12T09:30:00Z',
+      currentStageEnteredAt: '2026-11-12T09:00:00Z',
+    });
+  });
+
+  it('has no impediment when none is open and summarizes the product by count', () => {
+    const card = toBoardCard(buildRma({ currentBlock: null }));
+    expect(card.blockedAt).toBeUndefined();
+    expect(card.additionalItems).toBeUndefined();
+    expect(Object.keys(card)).not.toContain('blockedAt');
+    expect(boardProductSummary({ productName: 'Produto A' })).toBe('Produto A');
+    expect(boardProductSummary({ productName: 'Produto A', additionalItems: 2 })).toBe('Produto A + 2 item(ns)');
   });
 });
 

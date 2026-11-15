@@ -51,6 +51,16 @@ describe('rma deadline', () => {
     expect(deadlineDetailLabel(rma('2026-11-01', 'RETURNED', 'CLOSED'), TODAY)).toBe('Encerrada');
   });
 
+  it('classifies the flat card shape from dueDate and dueSoonFrom, ignoring any server status', () => {
+    const card = (dueDate: string | null, dueSoonFrom: string | null, status: RmaStatus = 'IN_REPAIR') => ({ status, dueDate, dueSoonFrom });
+    expect(deadlineStatus(card('2026-11-21', '2026-11-14'), TODAY)).toBe('ON_TRACK');
+    expect(deadlineStatus(card('2026-11-20', '2026-11-13'), TODAY)).toBe('DUE_SOON');
+    expect(deadlineStatus(card('2026-11-12', '2026-11-05'), TODAY)).toBe('OVERDUE');
+    expect(deadlineStatus(card(null, null), TODAY)).toBe('NO_DUE_DATE');
+    expect(deadlineStatus(card('2026-11-01', '2026-10-25', 'RETURNED'), TODAY)).toBe('CLOSED');
+    expect(deadlineCardLabel(card('2026-11-14', '2026-11-07'), TODAY)).toBe('Vence em 1 dia');
+  });
+
   it('turns overdue at São Paulo midnight', () => {
     expect(businessToday(Date.parse('2026-11-14T02:59:59Z'))).toBe('2026-11-13');
     expect(businessToday(Date.parse('2026-11-14T03:00:00Z'))).toBe('2026-11-14');
