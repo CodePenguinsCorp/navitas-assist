@@ -7,6 +7,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable, Subject, Subscription, debounceTime, filter, finalize, of } from 'rxjs';
 import { ClientListItemResponse, ClientRequest, ClientResponse, ClientSummaryResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
+import { ToastService } from '../../core/services/toast.service';
 import {
   extractHttpErrorMessage,
   formatDateTime,
@@ -50,6 +51,7 @@ export class ClientsComponent {
 
   private readonly formBuilder = inject(FormBuilder);
   private readonly catalogService = inject(CatalogService);
+  private readonly toasts = inject(ToastService);
 
   private readonly destroyRef = inject(DestroyRef);
 
@@ -58,7 +60,6 @@ export class ClientsComponent {
   protected readonly errorMessage = signal('');
   protected readonly modalErrorMessage = signal('');
   protected readonly deleteModalErrorMessage = signal('');
-  protected readonly successMessage = signal<string>(history.state?.importSummary ?? '');
   protected readonly searchTerm = signal('');
   protected readonly documentFilter = signal<PresenceFilter>('all');
   protected readonly emailFilter = signal<PresenceFilter>('all');
@@ -122,6 +123,9 @@ export class ClientsComponent {
     ).subscribe(() => this.clientList.firstPage());
     this.loadClients();
     this.loadSummary();
+    // Resultado da importação CSV: chega pela navegação e vira aviso passageiro.
+    const importSummary: string | undefined = history.state?.importSummary;
+    if (importSummary) this.toasts.show({ message: importSummary, tone: 'success', durationMs: 10000 });
   }
 
   protected updateSearch(value: string): void {
@@ -263,11 +267,7 @@ export class ClientsComponent {
       finalize(() => this.submitting.set(false))
     ).subscribe({
       next: (client) => {
-        this.successMessage.set(
-          currentClient
-            ? `Cliente ${client.legalName} atualizado com sucesso.`
-            : `Cliente ${client.legalName} cadastrado com sucesso.`
-        );
+        this.toasts.show({ message: currentClient ? `Cliente ${client.legalName} atualizado.` : `Cliente ${client.legalName} cadastrado.`, tone: 'success' });
         this.resetModal();
         this.loadClients();
         this.loadSummary();
@@ -311,7 +311,7 @@ export class ClientsComponent {
       next: () => {
         this.loadClients();
         this.loadSummary();
-        this.successMessage.set(`Cliente ${client.legalName} excluído com sucesso.`);
+        this.toasts.show({ message: `Cliente ${client.legalName} excluído.`, tone: 'success' });
         this.resetDeleteModal();
       },
       error: (error) => {
@@ -348,7 +348,6 @@ export class ClientsComponent {
     this.errorMessage.set('');
     this.modalErrorMessage.set('');
     this.deleteModalErrorMessage.set('');
-    this.successMessage.set('');
   }
 
   private resetModal(): void {

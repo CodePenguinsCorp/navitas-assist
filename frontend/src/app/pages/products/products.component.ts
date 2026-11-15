@@ -8,6 +8,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable, Subject, debounceTime, filter, finalize, of } from 'rxjs';
 import { ProductRequest, ProductResponse, ProductSummaryResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
+import { ToastService } from '../../core/services/toast.service';
 import {
   extractHttpErrorMessage,
   formatDateTime,
@@ -84,6 +85,7 @@ export class ProductsComponent {
 
   private readonly formBuilder = inject(FormBuilder);
   private readonly catalogService = inject(CatalogService);
+  private readonly toasts = inject(ToastService);
 
   private readonly destroyRef = inject(DestroyRef);
 
@@ -92,7 +94,6 @@ export class ProductsComponent {
   protected readonly errorMessage = signal('');
   protected readonly modalErrorMessage = signal('');
   protected readonly deleteModalErrorMessage = signal('');
-  protected readonly successMessage = signal<string>(history.state?.importSummary ?? '');
   protected readonly searchTerm = signal('');
   protected readonly categoryFilter = signal('');
   protected readonly firmwareFilter = signal<PresenceFilter>('all');
@@ -154,6 +155,9 @@ export class ProductsComponent {
     ).subscribe(() => this.productList.firstPage());
     this.loadProducts();
     this.loadSummary();
+    // Resultado da importação CSV: chega pela navegação e vira aviso passageiro.
+    const importSummary: string | undefined = history.state?.importSummary;
+    if (importSummary) this.toasts.show({ message: importSummary, tone: 'success', durationMs: 10000 });
   }
 
   protected get hasActiveFilters(): boolean {
@@ -248,11 +252,7 @@ export class ProductsComponent {
       finalize(() => this.submitting.set(false))
     ).subscribe({
       next: (product) => {
-        this.successMessage.set(
-          currentProduct
-            ? `Produto ${product.name} atualizado com sucesso.`
-            : `Produto ${product.name} cadastrado com sucesso.`
-        );
+        this.toasts.show({ message: currentProduct ? `Produto ${product.name} atualizado.` : `Produto ${product.name} cadastrado.`, tone: 'success' });
         this.resetModal();
         this.loadProducts();
         this.loadSummary();
@@ -296,7 +296,7 @@ export class ProductsComponent {
       next: () => {
         this.loadProducts();
         this.loadSummary();
-        this.successMessage.set(`Produto ${product.name} excluído com sucesso.`);
+        this.toasts.show({ message: `Produto ${product.name} excluído.`, tone: 'success' });
         this.resetDeleteModal();
       },
       error: (error) => {
@@ -340,7 +340,6 @@ export class ProductsComponent {
     this.errorMessage.set('');
     this.modalErrorMessage.set('');
     this.deleteModalErrorMessage.set('');
-    this.successMessage.set('');
   }
 
   private syncCategoryFilter(): void {
