@@ -7,6 +7,9 @@ import { RmaResponse } from '../../core/models';
 import { ClockService } from '../../core/services/clock.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { RmaService } from '../../core/services/rma.service';
+import { SuggestionService } from '../../core/services/suggestion.service';
+import { lazySuggestions } from '../../core/utils/suggestions';
+import { SuggestInputComponent } from '../form-controls/suggest-input/suggest-input.component';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { blockDateTime, blockDuration } from '../../core/utils/rma-block';
 import { IconComponent } from '../icon/icon.component';
@@ -20,7 +23,7 @@ type BlocksMode = 'idle' | 'block' | 'resolve';
  */
 @Component({
   selector: 'app-rma-blocks-section',
-  imports: [CollapsibleSectionComponent, IconComponent, ReactiveFormsModule, RmaBlockHistoryComponent],
+  imports: [CollapsibleSectionComponent, IconComponent, ReactiveFormsModule, RmaBlockHistoryComponent, SuggestInputComponent],
   templateUrl: './rma-blocks-section.component.html',
   styleUrl: './rma-blocks-section.component.css'
 })
@@ -35,6 +38,9 @@ export class RmaBlocksSectionComponent {
   @Output() readonly busyChange = new EventEmitter<boolean>();
 
   private readonly service = inject(RmaService);
+  private readonly suggestionService = inject(SuggestionService);
+  /** Sem sugestões fixas: só as categorias de impedimento já usadas. */
+  protected readonly categorySuggestions = lazySuggestions([], () => this.suggestionService.blockCategories());
   private readonly permissions = inject(PermissionService);
   private readonly builder = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);

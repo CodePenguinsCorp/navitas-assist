@@ -84,3 +84,10 @@ export const NAV_GROUPS: NavGroup[] = [
     ]
   }
 ];
+
+export const INTERVENTION_TYPE_SUGGESTIONS: readonly string[] = [
+  'Ressolda', 'Limpeza', 'Regravação', 'Atualização de firmware', 'Troca de chicote', 'Outro'
+];
+export const INTERVENTION_TYPE_MAX_LENGTH = 80;
+
+export const PART_UNIT_SUGGESTIONS: readonly string[] = ['UN', 'PC', 'PAR', 'KIT', 'CX', 'KG', 'G', 'M', 'CM', 'MM', 'L', 'ML'];

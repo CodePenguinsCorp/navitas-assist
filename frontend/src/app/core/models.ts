@@ -737,13 +737,13 @@ export interface ExternalComponentResponse extends ExternalComponentRequest, Rep
   appliedBy: string;
 }
 
-export type InterventionType = 'RESOLDERING' | 'CLEANING' | 'REPROGRAMMING' | 'FIRMWARE_UPDATE' | 'HARNESS_REPLACEMENT' | 'OTHER';
-
 export interface InterventionRequest {
-  type: InterventionType;
+  /** Texto livre de até 80 caracteres, com sugestões. */
+  type: string;
   description: string;
   performedOn: string;
-  hours: number;
+  /** Opcional: some do registro quando não informada. */
+  hours: number | null;
 }
 
 export interface InterventionResponse extends InterventionRequest, RepairAudit {

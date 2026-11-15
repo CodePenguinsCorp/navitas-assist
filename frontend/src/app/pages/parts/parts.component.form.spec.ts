@@ -74,7 +74,7 @@ describe('PartsComponent part form', () => {
     expect(panel()!.querySelector('form.inline-form')).not.toBeNull();
     expect(panel()!.querySelector('fieldset')).toBeNull();
     for (const control of ['code', 'name', 'unit', 'minimumStock', 'unitCost']) {
-      expect(panel()!.querySelector(`[formControlName="${control}"]`)!.closest('label')!.classList).toContain('field-group--required');
+      expect(panel()!.querySelector(`[formControlName="${control}"]`)!.closest('.field-group')!.classList).toContain('field-group--required');
     }
     expect(panel()!.querySelector('.inline-form__actions')).not.toBeNull();
   });

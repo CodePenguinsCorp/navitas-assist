@@ -5,25 +5,23 @@ import { viewChildren, Component, ElementRef, viewChild, EventEmitter, Injector,
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription, finalize } from 'rxjs';
-import { CLOSED_RMA_STATUSES } from '../../core/mock-data';
-import { InterventionResponse, InterventionType, RmaRepairResponse, RmaStatus } from '../../core/models';
+import { CLOSED_RMA_STATUSES, INTERVENTION_TYPE_MAX_LENGTH, INTERVENTION_TYPE_SUGGESTIONS } from '../../core/mock-data';
+import { InterventionResponse, RmaRepairResponse, RmaStatus } from '../../core/models';
 import { PermissionService } from '../../core/services/permission.service';
 import { RmaRepairService } from '../../core/services/rma-repair.service';
+import { SuggestionService } from '../../core/services/suggestion.service';
 import { ToastService } from '../../core/services/toast.service';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { formatDateOnly, todayInputValue } from '../../core/utils/date';
-import { CustomSelectComponent } from '../form-controls/custom-select/custom-select.component';
+import { lazySuggestions } from '../../core/utils/suggestions';
+import { SuggestInputComponent } from '../form-controls/suggest-input/suggest-input.component';
 import { RowActionComponent } from '../row-action/row-action.component';
 import { CollapsibleSectionComponent } from '../collapsible-section/collapsible-section.component';
 import { DatePickerComponent } from '../form-controls/date-picker/date-picker.component';
 
-export const INTERVENTION_LABELS: Record<InterventionType, string> = {
-  RESOLDERING: 'Ressolda', CLEANING: 'Limpeza', REPROGRAMMING: 'Regravação', FIRMWARE_UPDATE: 'Atualização de firmware', HARNESS_REPLACEMENT: 'Troca de chicote', OTHER: 'Outra'
-};
-
 @Component({
   selector: 'app-rma-repair-panel',
-  imports: [IconComponent, TipDirective, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, CollapsibleSectionComponent],
+  imports: [IconComponent, TipDirective, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, SuggestInputComponent, DatePickerComponent, CollapsibleSectionComponent],
   templateUrl: './rma-repair-panel.component.html'
 })
 export class RmaRepairPanelComponent {
@@ -51,8 +49,9 @@ export class RmaRepairPanelComponent {
   protected readonly error = signal('');
   protected readonly canWrite = computed(() => this.permissions.hasPermission('rma.diagnosticar') && !CLOSED_RMA_STATUSES.includes(this.rmaStatus()));
   protected readonly totalHours = computed(() => this.repair()?.totalServiceHours ?? 0);
-  protected readonly labels = INTERVENTION_LABELS;
-  protected readonly options = Object.entries(INTERVENTION_LABELS).map(([value, label]) => ({ value, label }));
+  private readonly suggestionService = inject(SuggestionService);
+  protected readonly typeSuggestions = lazySuggestions(INTERVENTION_TYPE_SUGGESTIONS, () => this.suggestionService.interventionTypes());
+  protected readonly typeMaxLength = INTERVENTION_TYPE_MAX_LENGTH;
   protected readonly date = formatDateOnly;
   protected readonly today = todayInputValue;
   protected readonly hours = (value: number) => value.toLocaleString('pt-BR', { maximumFractionDigits: 3 });
@@ -60,13 +59,18 @@ export class RmaRepairPanelComponent {
     const active = (this.repair()?.interventions ?? []).filter((item) => !item.voidedAt);
     if (active.length === 0) return [];
     const last = active.reduce((max, item) => (item.performedOn > max ? item.performedOn : max), active[0].performedOn);
-    return [{ label: 'Horas de serviço', value: `${this.hours(this.totalHours())} h` }, { label: 'Registros', value: String(active.length) }, { label: 'Última intervenção', value: this.date(last) }];
+    const withHours = active.some((item) => item.hours != null);
+    return [
+      ...(withHours ? [{ label: 'Horas de serviço', value: `${this.hours(this.totalHours())} h` }] : []),
+      { label: 'Registros', value: String(active.length) },
+      { label: 'Última intervenção', value: this.date(last) }
+    ];
   });
   protected readonly form = this.fb.nonNullable.group({
-    type: this.fb.nonNullable.control<InterventionType>('RESOLDERING', Validators.required),
+    type: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(INTERVENTION_TYPE_MAX_LENGTH)]],
     description: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(1000)]],
     performedOn: [todayInputValue(), [Validators.required, (control: AbstractControl) => control.value > todayInputValue() ? { future: true } : null]],
-    hours: this.fb.control<number | null>(null, [Validators.required, Validators.min(0.001), Validators.max(999999.999), Validators.pattern(/^\d+(\.\d{1,3})?$/)])
+    hours: this.fb.control<number | null>(null, [Validators.min(0.001), Validators.max(999999.999), Validators.pattern(/^\d+(\.\d{1,3})?$/)])
   });
 
   constructor() {
@@ -90,7 +94,7 @@ export class RmaRepairPanelComponent {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     const id = this.rmaId(); const value = this.form.getRawValue();
     this.saving.set(true); this.error.set('');
-    const payload = { ...value, hours: value.hours as number, description: value.description.trim() };
+    const payload = { ...value, type: value.type.trim(), hours: value.hours ?? null, description: value.description.trim() };
     const editing = this.editing();
     (editing ? this.service.updateIntervention(id, editing.id, payload) : this.service.addIntervention(id, payload)).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.saving.set(false))).subscribe({
       next: () => { this.toasts.show({ message: 'Intervenção salva.', tone: 'success' }); if (id !== this.rmaId()) return; this.closeForm(false); this.load(id); this.changed.emit(); },
@@ -100,7 +104,7 @@ export class RmaRepairPanelComponent {
   protected edit(item: InterventionResponse): void {
     if (!this.canWrite() || this.saving() || item.voidedAt) return;
     this.voiding.set(null); this.editing.set(item);
-    this.form.reset({ type: item.type, description: item.description, performedOn: item.performedOn, hours: item.hours });
+    this.form.reset({ type: item.type, description: item.description, performedOn: item.performedOn, hours: item.hours ?? null });
     this.focusFirstField();
   }
 
@@ -124,7 +128,7 @@ export class RmaRepairPanelComponent {
   }
 
   private focusFirstField(): void {
-    afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>('.inline-form .custom-select__trigger, .inline-form input, .inline-form textarea')?.focus(), { injector: this.injector });
+    afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>('.inline-form input, .inline-form textarea')?.focus(), { injector: this.injector });
   }
 
   protected startVoid(item: InterventionResponse): void {

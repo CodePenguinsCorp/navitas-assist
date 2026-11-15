@@ -19,8 +19,8 @@
         <span class="icon-tile icon-tile--sm" aria-hidden="true"><app-icon name="wrench" /></span>
         <div class="record-row__main">
           <div class="record-row__head">
-            <strong class="record-row__title">{{ labels[item.type] }}</strong>
-            <span class="mini-chip tone-chip">{{ hours(item.hours) }} h</span>
+            <strong class="record-row__title">{{ item.type }}</strong>
+            @if (item.hours != null) { <span class="mini-chip tone-chip">{{ hours(item.hours) }} h</span> }
             @if (item.voidedAt) { <span class="mini-chip tone-chip tone-danger">Anulada</span> }
           </div>
           <button type="button" class="record-row__desc" [class.is-expanded]="expanded().has(item.id)" [attr.aria-expanded]="expanded().has(item.id)" [appTip]="item.description" (click)="toggleExpanded(item.id)">{{ item.description }}</button>
@@ -50,17 +50,21 @@
         }
         @if (editing()?.id === item.id && canWrite()) { <ng-container [ngTemplateOutlet]="interventionForm" /> }
       </div>
-    } @empty { @if (!formOpen()) { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="wrench" /></span><p class="repair-empty">Nenhuma intervenção registrada</p>@if (canWrite()) { <button type="button" class="button-secondary" (click)="toggleForm()">Registrar</button> }</div> } }
+    } @empty { @if (!formOpen()) { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="wrench" /></span><p class="repair-empty">Nenhuma intervenção registrada</p></div> } }
     </div>
   }
   <ng-template #interventionForm>
     <form id="repair-form" class="inline-form" [formGroup]="form" (ngSubmit)="save()" (keydown.escape)="$event.stopPropagation(); closeForm(true)" novalidate>
-      <label class="field-group field-group--required"><span>Tipo</span><app-custom-select ariaLabel="Tipo de intervenção" [options]="options" formControlName="type" /></label>
+      <div class="field-group field-group--required" (focusin)="typeSuggestions.load()">
+        <span id="repair-type-label">Tipo</span>
+        <app-suggest-input formControlName="type" labelledBy="repair-type-label" listLabel="Tipos de intervenção" placeholder="Digite ou escolha um tipo" [suggestions]="typeSuggestions.list()" [maxlength]="typeMaxLength" [invalid]="hasError(form.controls.type)" />
+        @if (hasError(form.controls.type)) { <small class="field-error" role="alert">Informe o tipo (até {{ typeMaxLength }} caracteres)</small> }
+      </div>
       <label class="field-group field-group--required"><span>Data</span><app-date-picker ariaLabel="Data da intervenção" [maxDate]="today()" formControlName="performedOn" [allowClear]="false" [ariaInvalid]="hasError(form.controls.performedOn)" />
         @if (hasError(form.controls.performedOn)) { <small class="field-error" role="alert">{{ form.controls.performedOn.errors?.['future'] ? 'A data não pode ser futura' : 'Informe a data' }}</small> }
       </label>
-      <label class="field-group field-group--required"><span>Horas</span><input type="number" min="0.001" max="999999.999" step="any" placeholder="0,0" inputmode="decimal" formControlName="hours" [attr.aria-invalid]="hasError(form.controls.hours) ? 'true' : null" />
-        @if (hasError(form.controls.hours)) { <small class="field-error" role="alert">Informe as horas (maior que 0, até 3 casas)</small> }
+      <label class="field-group"><span>Horas</span><input type="number" min="0.001" max="999999.999" step="any" placeholder="0,0" inputmode="decimal" formControlName="hours" [attr.aria-invalid]="hasError(form.controls.hours) ? 'true' : null" />
+        @if (hasError(form.controls.hours)) { <small class="field-error" role="alert">Informe horas maiores que 0, com até 3 casas</small> }
       </label>
       <label class="field-group field-group--full field-group--required"><span>Descrição</span><textarea rows="4" maxlength="1000" formControlName="description" [attr.aria-invalid]="hasError(form.controls.description) ? 'true' : null"></textarea>
         @if (hasError(form.controls.description)) { <small class="field-error" role="alert">Informe a descrição</small> }

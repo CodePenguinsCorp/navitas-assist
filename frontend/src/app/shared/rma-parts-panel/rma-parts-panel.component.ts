@@ -18,6 +18,10 @@ import { CollapsibleSectionComponent } from '../collapsible-section/collapsible-
 import { ModalFocusDirective } from '../modal-focus/modal-focus.directive';
 import { RowActionComponent } from '../row-action/row-action.component';
 import { CustomSelectComponent, CustomSelectOption } from '../form-controls/custom-select/custom-select.component';
+import { SuggestInputComponent } from '../form-controls/suggest-input/suggest-input.component';
+import { SuggestionService } from '../../core/services/suggestion.service';
+import { lazySuggestions } from '../../core/utils/suggestions';
+import { PART_UNIT_SUGGESTIONS } from '../../core/mock-data';
 
 const ACTION_MESSAGES: Record<PartReservationAction, string> = {
   allocate: 'Reserva efetivada.',
@@ -27,7 +31,7 @@ const ACTION_MESSAGES: Record<PartReservationAction, string> = {
 
 @Component({
   selector: 'app-rma-parts-panel',
-  imports: [IconComponent, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, CollapsibleSectionComponent, ModalFocusDirective],
+  imports: [IconComponent, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, CollapsibleSectionComponent, ModalFocusDirective, SuggestInputComponent],
   templateUrl: './rma-parts-panel.component.html',
   styleUrl: './rma-parts-panel.component.css'
 })
@@ -35,6 +39,8 @@ export class RmaPartsPanelComponent {
   readonly sections = viewChildren(CollapsibleSectionComponent);
   private readonly formBuilder = inject(FormBuilder);
   private readonly partService = inject(PartService);
+  private readonly suggestionService = inject(SuggestionService);
+  protected readonly unitSuggestions = lazySuggestions(PART_UNIT_SUGGESTIONS, () => this.suggestionService.partUnits());
   private readonly permissions = inject(PermissionService);
   private readonly repairService = inject(RmaRepairService);
   private readonly toasts = inject(ToastService);

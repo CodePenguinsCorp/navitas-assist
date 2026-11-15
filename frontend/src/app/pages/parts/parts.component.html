@@ -236,18 +236,18 @@
               <small class="field-error">Informe o nome da peça.</small>
             }
           </label>
-          <label class="field-group field-group--required">
-            <span>Unidade</span>
-            <input type="text" formControlName="unit" [attr.maxlength]="limits.unit" placeholder="un, m, kg" />
+          <div class="field-group field-group--required" (focusin)="unitSuggestions.load()">
+            <span id="part-unit-label">Unidade</span>
+            <app-suggest-input formControlName="unit" labelledBy="part-unit-label" listLabel="Unidades" placeholder="Digite ou escolha uma unidade" [suggestions]="unitSuggestions.list()" [maxlength]="limits.unit" [invalid]="hasError('unit')" />
             @if (hasError('unit')) {
               <small class="field-error">Informe a unidade.</small>
             }
-          </label>
+          </div>
           @if (unitChangeWarning()) { <p class="field-hint field-group--full" role="status">Esta peça possui saldo fracionado. A nova unidade exige quantidades inteiras nas próximas operações.</p> }
-          <label class="field-group">
-            <span>Localização</span>
-            <input type="text" formControlName="location" [attr.maxlength]="limits.location" placeholder="Prateleira, gaveta..." />
-          </label>
+          <div class="field-group" (focusin)="locationSuggestions.load()">
+            <span id="part-location-label">Localização</span>
+            <app-suggest-input formControlName="location" labelledBy="part-location-label" listLabel="Localizações já usadas" placeholder="Prateleira, gaveta..." [suggestions]="locationSuggestions.list()" [maxlength]="limits.location" />
+          </div>
           <label class="field-group field-group--required">
             <span>Saldo mínimo</span>
             <input type="number" min="0" max="999999999.999" [step]="allowsFraction(form.controls.unit.value) ? 'any' : '1'" [attr.inputmode]="allowsFraction(form.controls.unit.value) ? 'decimal' : 'numeric'" formControlName="minimumStock" />

@@ -30,7 +30,10 @@ describe('RmaBlocksSectionComponent', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.match('/api/suggestions/block-categories').forEach((request) => request.flush([]));
+    http.verify();
+  });
 
   function mount(rma: RmaResponse = RMA, disabled = false): HTMLElement {
     fixture = TestBed.createComponent(RmaBlocksSectionComponent);
@@ -51,7 +54,8 @@ describe('RmaBlocksSectionComponent', () => {
     [...host().querySelectorAll<HTMLButtonElement>('button')].find((button) => text(button) === label || text(button).startsWith(label));
   const form = () => host().querySelector<HTMLFormElement>('form');
   const setField = (name: string, value: string) => {
-    const input = form()!.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[formControlName="${name}"]`)!;
+    const field = form()!.querySelector<HTMLElement>(`[formControlName="${name}"]`)!;
+    const input = (field.tagName === 'APP-SUGGEST-INPUT' ? field.querySelector('input') : field) as HTMLInputElement | HTMLTextAreaElement;
     input.value = value;
     input.dispatchEvent(new Event('input'));
     render();
@@ -120,7 +124,7 @@ describe('RmaBlocksSectionComponent', () => {
     control('Sinalizar impedimento')!.click();
     render();
     expectInlineForm(form(), ['Motivo'], 'Bloquear');
-    expect([...form()!.querySelectorAll('.field-group > label')].map(text)).toEqual(['Motivo', 'Categoria']);
+    expect([...form()!.querySelectorAll('.field-group > :is(label, span)')].map(text)).toEqual(['Motivo', 'Categoria']);
   });
 
   it('uses the same pattern for the resolution note', () => {
@@ -167,6 +171,21 @@ describe('RmaBlocksSectionComponent', () => {
     expect(updated).toHaveLength(1);
     expect(form()).toBeNull();
     expect(text(host().querySelector('.blocks-section__current'))).toContain('Peça pendente');
+  });
+
+  it('suggests the categories already used, only after the category field gets focus', () => {
+    mount();
+    control('Sinalizar impedimento')!.click();
+    render();
+    expect(http.match('/api/suggestions/block-categories')).toHaveLength(0);
+    const input = form()!.querySelector<HTMLInputElement>('[formControlName="category"] input')!;
+    input.dispatchEvent(new Event('focusin', { bubbles: true }));
+    input.dispatchEvent(new Event('focus'));
+    render();
+    http.expectOne('/api/suggestions/block-categories').flush(['Aguardando cliente', 'Peça em falta']);
+    render();
+    const options = [...host().querySelectorAll('.suggest-input__option')].map(text);
+    expect(options).toEqual(['Aguardando cliente', 'Peça em falta']);
   });
 
   it('sends a null category when it is left blank', () => {
@@ -258,7 +277,7 @@ describe('RmaBlocksSectionComponent', () => {
     const group = input.closest('.field-group')!;
     expect(group.textContent).toContain(expected);
     const error = group.querySelector<HTMLElement>('[role="alert"]')!;
-    expect(input.getAttribute('aria-describedby')?.split(' ')).toContain(error.id);
+    if (field !== 'category') expect(input.getAttribute('aria-describedby')?.split(' ')).toContain(error.id);
     expect(input.getAttribute('aria-invalid')).toBe('true');
     expect(host().querySelector('p.field-error[role="alert"]')).toBeNull();
     http.expectNone((request) => request.method === 'POST' || request.method === 'PATCH');

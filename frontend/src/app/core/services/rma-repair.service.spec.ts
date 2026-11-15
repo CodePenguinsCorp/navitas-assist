@@ -18,7 +18,7 @@ describe('RmaRepairService', () => {
     expect(externalRequest.request.method).toBe('POST');
     expect(externalRequest.request.body).toEqual(external);
     externalRequest.flush({});
-    const intervention = { type: 'CLEANING' as const, description: 'Limpeza dos contatos', performedOn: '2026-11-12', hours: 0.5 };
+    const intervention = { type: 'Limpeza', description: 'Limpeza dos contatos', performedOn: '2026-11-12', hours: 0.5 };
     service.addIntervention(7, intervention).subscribe();
     const request = http.expectOne('/api/rmas/7/repair/interventions');
     expect(request.request.method).toBe('POST');

@@ -69,7 +69,7 @@
 
     @if (reservations().length === 0) {
       @if (!reserveOpen()) {
-        <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="box" /></span><h3 class="repair-empty">Nenhuma peça reservada</h3>@if (canCreateReservation()) { <button type="button" class="button-secondary" (click)="toggleReserve()">Reservar peça</button> }</div>
+        <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="box" /></span><h3 class="repair-empty">Nenhuma peça reservada</h3></div>
       }
     } @else {
       <div class="record-rows" aria-label="Reservas de peças">
@@ -207,7 +207,7 @@
           }
           @if (component.external && editingExternal()?.id === component.id && canCreateReservation()) { <ng-container [ngTemplateOutlet]="externalEditor" /> }
         </div>
-      } @empty { @if (!externalOpen()) { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="chip" /></span><h3 class="repair-empty">Nenhum componente trocado</h3>@if (canCreateReservation()) { <button type="button" class="button-secondary" (click)="toggleExternal()">Adicionar componente externo</button> }</div> } }
+      } @empty { @if (!externalOpen()) { <div class="record-empty"><span class="icon-tile tone-slate"><app-icon name="chip" /></span><h3 class="repair-empty">Nenhum componente trocado</h3></div> } }
       </div>
   </app-collapsible-section>
 </section>
@@ -224,7 +224,7 @@
     <label class="field-group field-group--required"><span>Quantidade</span><input type="number" min="0.001" max="999999999.999" [step]="allowsFraction(externalForm.controls.unit.value) ? 'any' : '1'" [attr.inputmode]="allowsFraction(externalForm.controls.unit.value) ? 'decimal' : 'numeric'" placeholder="1" formControlName="quantity" [attr.aria-invalid]="hasError(externalForm.controls.quantity) ? 'true' : null" />
       @if (hasError(externalForm.controls.quantity)) { <small class="field-error" role="alert">{{ externalForm.controls.quantity.errors?.['quantity'] || 'Informe a quantidade (maior que 0, até 3 casas)' }}</small> }
     </label>
-    <label class="field-group"><span>Unidade</span><input maxlength="20" formControlName="unit" /></label>
+    <div class="field-group" (focusin)="unitSuggestions.load()"><span id="external-unit-label">Unidade</span><app-suggest-input formControlName="unit" labelledBy="external-unit-label" listLabel="Unidades" placeholder="Digite ou escolha uma unidade" [suggestions]="unitSuggestions.list()" [maxlength]="20" /></div>
     <label class="field-group"><span>Lote</span><input maxlength="120" formControlName="componentBatch" /></label>
     <label class="field-group field-group--full field-group--required"><span>Motivo da troca</span><textarea rows="4" maxlength="1000" formControlName="replacementReason" [attr.aria-invalid]="hasError(externalForm.controls.replacementReason) ? 'true' : null"></textarea>
       @if (hasError(externalForm.controls.replacementReason)) { <small class="field-error" role="alert">Informe o motivo da troca</small> }

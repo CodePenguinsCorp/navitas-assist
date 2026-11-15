@@ -53,6 +53,14 @@ describe('RmaPartsPanelComponent compact sections', () => {
     expect(Array.from(root().querySelectorAll('.repair-empty')).map((e) => e.textContent?.trim())).toEqual(['Nenhuma peça reservada', 'Nenhum componente trocado']);
   });
 
+  it('keeps the actions only in the section headers: the empty states show just the icon and the text', async () => {
+    await setup();
+    expect(root().querySelector('.record-empty button')).toBeNull();
+    const labels = Array.from(root().querySelectorAll('button')).map((button) => button.textContent?.trim());
+    expect(labels.filter((label) => label === 'Reservar peça')).toHaveLength(1);
+    expect(labels.filter((label) => label === 'Adicionar componente externo')).toHaveLength(1);
+  });
+
   it('hides the empty state while a form is open and shows it again when closed', async () => {
     await setup();
     const empties = () => Array.from(root().querySelectorAll('.repair-empty')).map((e) => e.textContent?.trim());

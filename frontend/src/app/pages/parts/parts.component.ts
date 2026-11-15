@@ -16,6 +16,10 @@ import {
 } from '../../core/models';
 import { PermissionService } from '../../core/services/permission.service';
 import { PartService } from '../../core/services/part.service';
+import { SuggestionService } from '../../core/services/suggestion.service';
+import { lazySuggestions } from '../../core/utils/suggestions';
+import { PART_UNIT_SUGGESTIONS } from '../../core/mock-data';
+import { SuggestInputComponent } from '../../shared/form-controls/suggest-input/suggest-input.component';
 import { extractHttpErrorMessage, includesQuery, normalizeOptionalText } from '../../core/utils/catalog-ui';
 import { formatBusinessDateTime } from '../../core/utils/date';
 import {
@@ -48,7 +52,7 @@ const MOVEMENT_TYPE_OPTIONS: ReadonlyArray<CustomSelectOption<ManualPartMovement
 
 @Component({
   selector: 'app-parts',
-  imports: [TipDirective, IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PageHeaderComponent, ResultCountComponent, RowActionComponent],
+  imports: [TipDirective, IconComponent, ReactiveFormsModule, CustomSelectComponent, ModalFocusDirective, PageHeaderComponent, ResultCountComponent, RowActionComponent, SuggestInputComponent],
   templateUrl: './parts.component.html',
   styles: [`
     :host {
@@ -100,6 +104,9 @@ export class PartsComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly toasts = inject(ToastService);
   private readonly partService = inject(PartService);
+  private readonly suggestionService = inject(SuggestionService);
+  protected readonly unitSuggestions = lazySuggestions(PART_UNIT_SUGGESTIONS, () => this.suggestionService.partUnits());
+  protected readonly locationSuggestions = lazySuggestions([], () => this.suggestionService.partLocations());
   private readonly permissions = inject(PermissionService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
