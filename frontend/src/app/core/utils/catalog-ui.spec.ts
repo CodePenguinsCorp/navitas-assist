@@ -1,4 +1,4 @@
-import { extractHttpErrorMessage } from './catalog-ui';
+import { CONNECTION_ERROR_MESSAGE, extractHttpErrorMessage } from './catalog-ui';
 
 describe('extractHttpErrorMessage', () => {
   const fallback = 'Não foi possível salvar agora.';
@@ -45,5 +45,10 @@ describe('extractHttpErrorMessage', () => {
   it('preserves the exact API message without details', () => {
     const conflict = 'OS status changed. Refresh the item before trying again.';
     expect(extractHttpErrorMessage({ error: { message: conflict, details: [] } }, '')).toBe(conflict);
+  });
+
+  it('explains a request that never reached the server instead of the raw browser message', () => {
+    const offline = { status: 0, error: new TypeError('Failed to fetch') };
+    expect(extractHttpErrorMessage(offline, 'Falha.')).toBe(CONNECTION_ERROR_MESSAGE);
   });
 });

@@ -337,29 +337,8 @@
         </div>
       </article>
     </section>
-  } @else {
-    <section class="modal-overlay" (click)="closeModal()">
-      <article
-        class="panel modal-panel modal-panel--sm"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Detalhes da OS"
-        appModalFocus
-        [modalFallbackFocus]="listRegion"
-        (modalCloseRequested)="closeModal()"
-        (click)="$event.stopPropagation()"
-      >
-        @if (detailError()) {
-          <div class="alert-banner alert-banner--error" role="alert">
-            <strong>{{ detailError() }}</strong>
-            <button type="button" class="button-secondary" (click)="retryDetail()">Tentar novamente</button>
-            <button type="button" class="button-secondary" (click)="closeModal()">Fechar</button>
-          </div>
-        } @else {
-          <div aria-busy="true"></div>
-        }
-      </article>
-    </section>
+  } @else if (detailError()) {
+    <app-error-dialog [message]="detailError()" [fallbackFocus]="listRegion" (retry)="retryDetail()" (closed)="closeModal()" />
   }
 }
 

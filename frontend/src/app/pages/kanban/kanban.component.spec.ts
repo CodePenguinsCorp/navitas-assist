@@ -395,26 +395,21 @@ describe('KanbanComponent filters', () => {
     expect(reads.mock.calls[0][0]).toBe(TEST_RMAS[0].id);
     const host = fixture.nativeElement as HTMLElement;
     expect(host.querySelector('app-rma-detail-modal')).toBeNull();
-    expect(host.querySelector('[role="dialog"] [role="alert"]')?.textContent).toContain('Falha de rede');
-    [...host.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find((button) => button.textContent?.trim() === 'Tentar novamente')!.click();
+    expect(host.querySelector('[role="alertdialog"] .error-dialog__message')?.textContent).toContain('Falha de rede');
+    [...host.querySelectorAll<HTMLButtonElement>('[role="alertdialog"] button')].find((button) => button.textContent?.trim() === 'Tentar novamente')!.click();
     fixture.detectChanges();
     expect(reads).toHaveBeenCalledTimes(2);
     expect(host.querySelector('app-rma-detail-modal')).not.toBeNull();
   });
 
-  it('shows what the card already has while the full detail loads, then swaps to the modal', () => {
+  it('keeps only the global loading while the full detail loads, then opens the modal', () => {
     fixture.detectChanges();
     const detail = new Subject<RmaResponse>();
     vi.spyOn(TestBed.inject(RmaService), 'getById').mockReturnValueOnce(detail);
-    const card = toBoardCard(TEST_RMAS[0]);
     component.openDetail(TEST_RMAS[0]);
     fixture.detectChanges();
     const host = fixture.nativeElement as HTMLElement;
-    const placeholder = host.querySelector('[role="dialog"]')!;
-    expect(placeholder.querySelector('[aria-busy="true"]')).not.toBeNull();
-    expect(placeholder.textContent).toContain(card.code);
-    expect(placeholder.textContent).toContain(card.clientName);
-    expect(placeholder.textContent).toContain(card.productName);
+    expect(host.querySelector('[role="dialog"]')).toBeNull();
     expect(host.querySelector('app-rma-detail-modal')).toBeNull();
     detail.next(TEST_RMAS[0]);
     fixture.detectChanges();

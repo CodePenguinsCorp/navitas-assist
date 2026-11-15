@@ -78,7 +78,7 @@ describe('ProductsComponent HTTP error feedback', () => {
     { label: 'null body', body: null, feedback: 'Não foi possível salvar o produto agora.' },
     { label: 'valid API error', body: { message: 'Validation failed', details: ['sku: required'] },
       feedback: 'Validation failed: sku: required' },
-    { label: 'network failure', body: null, feedback: 'Não foi possível salvar o produto agora.' }
+    { label: 'network failure', body: null, feedback: 'Sem conexão com o servidor. Verifique a internet e tente novamente.' }
   ])('shows feedback and allows manual retry after $label', ({ label, body, feedback }) => {
     const request = submitSave();
     expect(page.querySelector<HTMLButtonElement>('form .button-primary')!.disabled).toBe(true);

@@ -290,35 +290,8 @@
     (assigneeChange)="assignFromDetail($event.rma, $event.assigneeId)"
     (rmaUpdated)="applyRmaUpdate($event)"
   />
-} @else if (detailRmaId() !== null) {
-  <section class="modal-overlay" (click)="closeDetail()">
-    <article
-      class="panel modal-panel modal-panel--sm"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Detalhes da OS"
-      appModalFocus
-      [modalFallbackFocus]="filtersToggle"
-      (modalCloseRequested)="closeDetail()"
-      (click)="$event.stopPropagation()"
-    >
-      @if (detailError()) {
-        <div class="alert-banner alert-banner--error" role="alert">
-          <strong>{{ detailError() }}</strong>
-          <button type="button" class="button-secondary" (click)="retryDetail()">Tentar novamente</button>
-          <button type="button" class="button-secondary" (click)="closeDetail()">Fechar</button>
-        </div>
-      } @else {
-        <div aria-busy="true">
-          @if (detailCard(); as card) {
-            <h3 class="code-text">{{ card.code }}</h3>
-            <p>{{ card.clientName }}</p>
-            <p>{{ productSummary(card) }} - {{ statusText(card.status) }}</p>
-          }
-        </div>
-      }
-    </article>
-  </section>
+} @else if (detailRmaId() !== null && detailError()) {
+  <app-error-dialog [message]="detailError()" [fallbackFocus]="filtersToggle" (retry)="retryDetail()" (closed)="closeDetail()" />
 }
 
 @if (viewModalMode(); as mode) {

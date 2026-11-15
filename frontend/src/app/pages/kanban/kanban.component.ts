@@ -54,6 +54,7 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
 import { RmaBoardColumnState, RmaKanbanBoardComponent } from '../../shared/rma-kanban-board/rma-kanban-board.component';
 import { ModalFocusDirective } from '../../shared/modal-focus/modal-focus.directive';
 import { ToastService } from '../../core/services/toast.service';
+import { ErrorDialogComponent } from '../../shared/error-dialog/error-dialog.component';
 import { RmaDetailModalComponent } from '../../shared/rma-detail-modal/rma-detail-modal.component';
 
 interface KanbanHeroStat {
@@ -117,7 +118,7 @@ const FILTER_LABELS: Record<AdvancedFilterKey, string> = {
 
 @Component({
   selector: 'app-kanban',
-  imports: [TipDirective, IconComponent, 
+  imports: [ErrorDialogComponent, TipDirective, IconComponent, 
     ReactiveFormsModule,
     BoundedFilterPanelsDirective,
     CustomSelectComponent,

@@ -13,8 +13,14 @@ export const PRESENCE_FILTER_OPTIONS: ReadonlyArray<{ value: PresenceFilter; lab
   { value: 'without', label: 'Sem' }
 ];
 
+/** Shown when the request never reached the server (offline, server down, DNS): the browser only says "Failed to fetch". */
+export const CONNECTION_ERROR_MESSAGE = 'Sem conexão com o servidor. Verifique a internet e tente novamente.';
+
 export function extractHttpErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === 'object' && error !== null) {
+    if ((error as { status?: unknown }).status === 0) {
+      return CONNECTION_ERROR_MESSAGE;
+    }
     const maybeHttpError = error as {
       error?: {
         message?: unknown;

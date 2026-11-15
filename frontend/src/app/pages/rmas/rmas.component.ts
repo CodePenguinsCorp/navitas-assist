@@ -1,4 +1,5 @@
 import { ToastService } from '../../core/services/toast.service';
+import { ErrorDialogComponent } from '../../shared/error-dialog/error-dialog.component';
 import { TipDirective } from '../../shared/tip/tip.directive';
 import { CollapsibleSectionComponent } from '../../shared/collapsible-section/collapsible-section.component';
 import { RmaHistoryListComponent } from '../../shared/rma-history-list/rma-history-list.component';
@@ -103,7 +104,7 @@ export interface RmaListFilters {
 
 @Component({
   selector: 'app-rmas',
-  imports: [TipDirective, CollapsibleSectionComponent, RmaHistoryListComponent, RmaWarrantyFieldComponent, RmaDiagnosisComponent, RmaStatusFieldComponent, RmaStatusTransitionComponent, IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, RmaRepairPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaAssigneeFieldComponent, RmaDeadlineChipComponent],
+  imports: [ErrorDialogComponent, TipDirective, CollapsibleSectionComponent, RmaHistoryListComponent, RmaWarrantyFieldComponent, RmaDiagnosisComponent, RmaStatusFieldComponent, RmaStatusTransitionComponent, IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, RmaRepairPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaAssigneeFieldComponent, RmaDeadlineChipComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {
