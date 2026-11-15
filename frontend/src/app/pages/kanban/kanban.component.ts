@@ -14,7 +14,8 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Subscription, finalize, forkJoin, map, of } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription, distinctUntilChanged, finalize, forkJoin, map, of } from 'rxjs';
 import {
   CLOSED_RMA_STATUSES,
   RMA_PRIORITY_LABELS,
@@ -140,6 +141,8 @@ export class KanbanComponent {
   private readonly rmaService = inject(RmaService);
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private loadRequest?: Subscription;
   private detailRequest?: Subscription;
   private incrementalRequests = new Subscription();
@@ -307,6 +310,8 @@ export class KanbanComponent {
   });
 
   constructor() {
+    // /kanban?rma=<id> (link from the list) opens that OS; the param is dropped when the detail closes.
+    this.route.queryParamMap.pipe(map((params) => params.get('rma')), distinctUntilChanged(), takeUntilDestroyed()).subscribe((value) => this.openRequestedRma(value));
     let previousQuery = this.filtersForm.getRawValue().query;
     this.destroyRef.onDestroy(() => { this.cancelReads(); clearTimeout(this.searchTimer); });
     this.filtersForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
@@ -354,7 +359,16 @@ export class KanbanComponent {
     if (id !== null) this.loadDetail(id);
   }
 
+  private openRequestedRma(value: string | null): void {
+    const id = Number(value);
+    if (value === null || !Number.isInteger(id) || id <= 0) return;
+    this.selectedRmaId.set(id);
+    this.detailRmaId.set(id);
+    this.loadDetail(id);
+  }
+
   protected closeDetail(): void {
+    if (this.route.snapshot.queryParamMap.has('rma')) void this.router.navigate([], { queryParams: { rma: null }, queryParamsHandling: 'merge', replaceUrl: true });
     this.detailRequest?.unsubscribe();
     this.detailRmaId.set(null);
     this.detailSignal.set(null);
@@ -643,6 +657,9 @@ export class KanbanComponent {
     if (!this.columnStates()[rma.status]?.cards.some(card => card.id === rma.id)) return;
     const target = this.columnStates()[status] ?? { cards: [], total: 0, hasMore: false, loadingMore: false, error: false, nextPage: 1, generation: this.queryGeneration };
     if (beforeId === rma.id) return;
+    const current = this.columnStates()[rma.status]!.cards;
+    // Dropping a card right where it already is (same column, same neighbour) is not a change: no request, no notice.
+    if (status === rma.status && beforeId === (current[current.findIndex(card => card.id === rma.id) + 1]?.id ?? null)) return;
     this.pauseColumnReads();
     const snapshot = this.columnStates();
     const source = snapshot[rma.status]!.cards;

@@ -12,7 +12,7 @@ import { NgComponentOutlet } from '@angular/common';
 import { Component, ElementRef, Injector, Type, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormArray, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpContext } from '@angular/common/http';
 import { Subject, Subscription, catchError, distinctUntilChanged, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 import { SKIP_GLOBAL_LOADING } from '../../core/interceptors/loading.interceptor';
@@ -104,7 +104,7 @@ export interface RmaListFilters {
 
 @Component({
   selector: 'app-rmas',
-  imports: [ErrorDialogComponent, TipDirective, CollapsibleSectionComponent, RmaHistoryListComponent, RmaWarrantyFieldComponent, RmaDiagnosisComponent, RmaStatusFieldComponent, RmaStatusTransitionComponent, IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, RmaRepairPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaAssigneeFieldComponent, RmaDeadlineChipComponent],
+  imports: [RouterLink, ErrorDialogComponent, TipDirective, CollapsibleSectionComponent, RmaHistoryListComponent, RmaWarrantyFieldComponent, RmaDiagnosisComponent, RmaStatusFieldComponent, RmaStatusTransitionComponent, IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, RmaRepairPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaAssigneeFieldComponent, RmaDeadlineChipComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {

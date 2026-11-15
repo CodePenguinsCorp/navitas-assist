@@ -28,7 +28,7 @@
   @if (preview(); as result) {
     <section class="panel table-card import-card" aria-label="Prévia">
       <h2><span class="import-step">3.</span> Prévia</h2>
-      <p class="import-file-info">{{ result.fileName }}, {{ counted(result.totalRows, 'linha') }}, {{ counted(result.blankRows, 'linha em branco ignorada', 'linhas em branco ignoradas') }}</p>
+      <p class="import-file-info">{{ result.fileName }}, {{ counted(result.totalRows, 'linha') }}@if (result.blankRows > 0) {, {{ counted(result.blankRows, 'em branco ignorada', 'em branco ignoradas') }}}</p>
       <ul class="page-summary" aria-label="Filtrar situação">
         @for (metric of metrics; track metric.status) {
           <li><button type="button" [class]="'page-summary__item tone-' + tones[metric.status]" [attr.aria-pressed]="filter() === metric.status" (click)="toggleFilter(metric.status)"><strong>{{ result[metric.field] }}</strong> {{ result[metric.field] === 1 ? metric.label : metric.label + 's' }}</button></li>

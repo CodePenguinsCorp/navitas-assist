@@ -173,6 +173,7 @@
         <header class="rma-details__header">
           <span class="rma-details__code code-text">{{ rma.code }}</span>
           <div class="rma-details__header-actions">
+            <a class="link-button rma-details__open-kanban" routerLink="/kanban" [queryParams]="{ rma: rma.id }">Abrir no Kanban <app-icon name="external" [size]="14" /></a>
             <app-rma-report-link [rmaId]="rma.id" [code]="rma.code" [disabled]="writeBusy()" />
             <button type="button" class="modal-close" (click)="closeModal()" aria-label="Fechar" [disabled]="writeBusy()">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>

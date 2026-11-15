@@ -106,6 +106,14 @@ describe('Kanban paginado no servidor', () => {
     expect(component.pageError()).toContain('Não foi possível mover.');
   });
 
+  it('soltar o cartão exatamente onde ele já estava não é alteração', () => {
+    respond();
+    component.reorderCard(first, 'RECEIVED', 2);
+    component.reorderCard(second, 'RECEIVED', null);
+    expect(api.updateBoardPosition).not.toHaveBeenCalled();
+    expect(component.filteredRmas().map((c: RmaBoardCardResponse) => c.id)).toEqual([1, 2]);
+  });
+
   it('cancela páginas de outras colunas antes do snapshot para não prendê-las na reversão', () => {
     respond([first, second, { ...first, id: 9, status: 'TRIAGE' }]);
     component.loadMore('TRIAGE');

@@ -122,7 +122,7 @@ describe('CatalogImportComponent', () => {
     expect(root.querySelectorAll('tbody .mini-chip').length).toBe(3);
     expect(root.querySelector('tbody tr:last-child td:last-child')?.textContent?.trim()).toBe('-');
     expect(root.querySelector('[aria-live="polite"][aria-atomic="true"]')?.textContent).toContain('3 linhas');
-    expect(root.textContent).toContain('0 linhas em branco ignoradas');
+    expect(root.querySelector('.import-file-info')?.textContent).not.toContain('em branco');
     expect(root.textContent).toContain('Importar 1 linha válida');
     metrics[0].click(); fixture.detectChanges();
     expect(root.querySelector('tbody .table-title')?.textContent).toBe(kind === 'clients' ? 'Cliente' : 'P01 - Produto');
@@ -149,7 +149,7 @@ describe('CatalogImportComponent', () => {
     expect(metrics[0].textContent).toContain('12 válidas');
     expect(metrics[1].textContent).toContain('0 inválidas');
     expect(metrics[2].textContent).toContain('0 duplicadas');
-    expect(root.querySelector('.import-file-info')?.textContent).toContain('1 linha, 1 linha em branco ignorada');
+    expect(root.querySelector('.import-file-info')?.textContent).toContain('1 linha, 1 em branco ignorada');
     expect(root.textContent).toContain('Importar 12 linhas válidas');
     expect(root.querySelector('section[aria-label="Prévia"] footer')).not.toBeNull();
     expect(root.querySelector('a.page-heading__back')?.getAttribute('aria-label')).toBe(kind === 'clients' ? 'Voltar para Clientes' : 'Voltar para Produtos');

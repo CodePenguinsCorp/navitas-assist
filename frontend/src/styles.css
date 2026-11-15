@@ -3540,3 +3540,4 @@ button.page-summary__item:focus-visible { outline: none; box-shadow: var(--focus
 /* Sub-página: seta de voltar de 40 px antes do título (no lugar de um Cancelar de página). */
 .page-heading__title:has(.page-heading__back) { align-items: center; flex-wrap: nowrap; }
 .page-heading__back { flex-shrink: 0; text-decoration: none; --_bg: transparent; --_border: transparent; --_bg-hover: var(--brand-tint); --_border-hover: transparent; }
+.rma-details__open-kanban, a.link-button.rma-details__open-kanban:hover { display: inline-flex; align-items: center; gap: var(--space-1); text-decoration: none; }

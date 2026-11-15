@@ -369,7 +369,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
 
   it('offers the PDF report as a quiet text link beside Abrir na lista', async () => {
     const { host } = await setup();
-    const link = host.querySelector<HTMLButtonElement>('.rma-detail__bar-key app-rma-report-link button')!;
+    const link = host.querySelector<HTMLButtonElement>('.rma-detail__bar-actions app-rma-report-link button')!;
 
     expect(link.textContent).toContain('Laudo (PDF)');
     expect(link.className).not.toContain('button-');
