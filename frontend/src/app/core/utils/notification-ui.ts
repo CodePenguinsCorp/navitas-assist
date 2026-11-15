@@ -1,4 +1,5 @@
 import { NotificationEventType, NotificationResponse, NotificationSeverity } from '../models';
+import { businessDateInputValue } from './date';
 
 const APP_TIME_ZONE = 'America/Sao_Paulo';
 
@@ -108,15 +109,15 @@ export function internalRoute(actionPath: string | null): { path: string; queryP
   return { path, queryParams: Object.fromEntries(new URLSearchParams(query).entries()) };
 }
 
-/** Groups rows by local calendar day, keeping the given order; today and yesterday get relative labels. */
+/** Groups rows by business calendar day (America/Sao_Paulo, like the time shown), keeping the given order; today and yesterday get relative labels. */
 export function groupNotificationsByDay<T extends { createdAt: string }>(items: readonly T[], now: number): Array<{ label: string; items: T[] }> {
-  const today = new Date(now); today.setHours(0, 0, 0, 0);
-  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+  const today = businessDateInputValue(new Date(now));
+  // Calendar arithmetic on the day key itself: a day is not always 24 h.
+  const yesterday = new Date(Date.parse(`${today}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
   const groups = new Map<string, { label: string; items: T[] }>();
   for (const item of items) {
-    const day = new Date(item.createdAt); day.setHours(0, 0, 0, 0);
-    const key = String(day.getTime());
-    const label = day.getTime() === today.getTime() ? 'Hoje' : day.getTime() === yesterday.getTime() ? 'Ontem' : day.toLocaleDateString('pt-BR');
+    const key = businessDateInputValue(new Date(item.createdAt));
+    const label = key === today ? 'Hoje' : key === yesterday ? 'Ontem' : key.split('-').reverse().join('/');
     if (!groups.has(key)) groups.set(key, { label, items: [] });
     groups.get(key)!.items.push(item);
   }

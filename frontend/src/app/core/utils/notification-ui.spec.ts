@@ -41,13 +41,29 @@ describe('Notification UI utilities', () => {
     expect(severityClass('INFO')).toBe('priority-low');
   });
 
-  it('groups notifications by local day in the given order, labelling today and yesterday', () => {
-    const at = (day: number, hour: number) => ({ createdAt: new Date(2026, 9, day, hour).toISOString() });
-    const items = [at(24, 10), at(24, 8), at(23, 22), at(20, 9)];
-    const groups = groupNotificationsByDay(items, new Date(2026, 9, 24, 23, 59).getTime());
+  // Business contract: the day is the America/Sao_Paulo calendar day (UTC-3), the same one the time shown beside each row uses,
+  // whatever the zone of the machine running the test.
+  it('groups notifications by business day in the given order, labelling today and yesterday', () => {
+    const at = (iso: string) => ({ createdAt: iso });
+    const items = [at('2026-10-24T13:00:00Z'), at('2026-10-24T11:00:00Z'), at('2026-10-24T01:00:00Z'), at('2026-10-20T12:00:00Z')];
+    const groups = groupNotificationsByDay(items, Date.parse('2026-10-25T02:59:00Z'));
     expect(groups.map((group) => group.label)).toEqual(['Hoje', 'Ontem', '20/10/2026']);
     expect(groups[0].items).toEqual([items[0], items[1]]);
+    expect(groups[1].items).toEqual([items[2]]);
     expect(groupNotificationsByDay([], Date.now())).toEqual([]);
+  });
+
+  it('puts 22h of the previous business day under Ontem even when it is already the next day in UTC', () => {
+    const groups = groupNotificationsByDay([{ createdAt: '2026-11-14T01:00:00Z' }], Date.parse('2026-11-14T04:00:00Z'));
+    expect(groups.map((group) => group.label)).toEqual(['Ontem']);
+  });
+
+  it('computes yesterday on the business calendar across month and year boundaries', () => {
+    const now = Date.parse('2027-01-01T12:00:00Z');
+    const groups = groupNotificationsByDay([{ createdAt: '2026-12-31T23:00:00Z' }, { createdAt: '2026-12-30T23:00:00Z' }], now);
+    expect(groups.map((group) => group.label)).toEqual(['Ontem', '30/12/2026']);
+    const march = groupNotificationsByDay([{ createdAt: '2026-02-28T15:00:00Z' }], Date.parse('2026-03-01T15:00:00Z'));
+    expect(march.map((group) => group.label)).toEqual(['Ontem']);
   });
 
   it('builds a short headline that names the OS code once', () => {
