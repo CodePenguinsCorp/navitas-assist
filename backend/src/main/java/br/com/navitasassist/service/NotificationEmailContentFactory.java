@@ -21,15 +21,15 @@ public class NotificationEmailContentFactory {
             case TEST_FAILED -> "Teste reprovado";
         };
         String code = notification.getRma().getCode();
-        String subject = "[Navitas Assist] " + event + " — " + code;
+        String subject = "[Navitas Assist] " + event + " · " + code;
         // Validate before truncation, so CR/LF cannot be hidden in the discarded suffix.
         if (subject.contains("\r") || subject.contains("\n")) throw new br.com.navitasassist.notification.email.EmailDeliveryException("INVALID_CONTENT", false);
         subject = subject.substring(0, Math.min(160, subject.length()));
         String link = baseUrl() + "/rmas?rma=" + notification.getRma().getId();
         String date = notification.getCreatedAt().toString();
         return new EmailMessage(properties.getEmail().getFrom(), recipientEmail, subject,
-            event + " — " + code + "\n" + date + "\nAbrir OS: " + link,
-            "<p>" + escape(event) + " — " + escape(code) + "</p><p>" + escape(date) + "</p><p><a href=\"" + escape(link) + "\">Abrir OS</a></p>");
+            event + " · " + code + "\n" + date + "\nAbrir OS: " + link,
+            "<p>" + escape(event) + " · " + escape(code) + "</p><p>" + escape(date) + "</p><p><a href=\"" + escape(link) + "\">Abrir OS</a></p>");
     }
 
     public EmailMessage test(String recipientEmail) {

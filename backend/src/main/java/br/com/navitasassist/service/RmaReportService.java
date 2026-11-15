@@ -51,7 +51,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class RmaReportService {
-    static final int DEFAULT_PERIOD_DAYS = 90;
+    static final int DEFAULT_PERIOD_DAYS = 30;
     static final int MAX_PERIOD_DAYS = 366;
     static final int TOP_LIMIT = 10;
     /** Most RMAs the summary and the CSV exports load for one period. */

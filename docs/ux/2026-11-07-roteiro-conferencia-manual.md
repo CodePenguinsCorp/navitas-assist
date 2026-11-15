@@ -122,7 +122,7 @@ As seções acima foram escritas antes destas entregas. Onde citam SLA por etapa
 - O laudo PDF lista componentes (motivo e lote), intervenções, técnico e horas, sem custos.
 
 ## 16. Relatórios, laudo e CSV (`relatorios.ver`)
-- Sem período, o relatório cobre os últimos 90 dias; período maior que 366 dias ou invertido é recusado. Filtros por status e cliente.
+- Sem período, o relatório cobre os últimos 30 dias; período maior que 366 dias ou invertido é recusado. Filtros por status e cliente.
 - Resumo: totais, status, garantia efetiva, meses, top 10 de falhas, recorrência e tempo médio/maior na etapa atual (sem encerrados). Lista paginada (20 por página; 10/20/50/100 se houver seletor), ordenada pela entrada mais recente.
 - "Laudo (PDF)" abre o PDF com acentos corretos no cabeçalho do detalhe, no modal, na tela ordens de serviço e na lista; o arquivo se chama `laudo-<código>.pdf`.
 - Exportar CSV (ordens de serviço e resumo): abre no Excel com acentos e colunas separadas por `;`; datas `dd/MM/aaaa`; um texto começando com `=` aparece com apóstrofo. Período com mais de 5.000 ordens de serviço é recusado com "Reduza o período".

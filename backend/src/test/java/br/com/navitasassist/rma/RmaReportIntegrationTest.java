@@ -175,12 +175,12 @@ class RmaReportIntegrationTest {
     void appliesTheDefaultPeriodAndRejectsPeriodsLongerThanOneYear() throws Exception {
         LocalDate today = LocalDate.now(ZoneId.of("America/Sao_Paulo"));
         saveRma("OS-RECENT", today.minusDays(10).toString(), RmaStatus.RECEIVED, client);
-        saveRma("OS-EDGE", today.minusDays(89).toString(), RmaStatus.RECEIVED, client);
-        saveRma("OS-OUTSIDE", today.minusDays(90).toString(), RmaStatus.RECEIVED, client);
+        saveRma("OS-EDGE", today.minusDays(29).toString(), RmaStatus.RECEIVED, client);
+        saveRma("OS-OUTSIDE", today.minusDays(30).toString(), RmaStatus.RECEIVED, client);
 
         mockMvc.perform(get("/api/reports/rmas").with(asProfile("a", "ADMIN")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.entryFrom").value(today.minusDays(89).toString()))
+            .andExpect(jsonPath("$.entryFrom").value(today.minusDays(29).toString()))
             .andExpect(jsonPath("$.entryTo").value(today.toString()))
             .andExpect(jsonPath("$.rmas.content", hasSize(2)))
             .andExpect(jsonPath("$.rmas.content[0].code").value("OS-RECENT"))

@@ -4,7 +4,7 @@
 
 A tela Relatórios exige `relatorios.ver` (Administrador, Técnico e Consulta). Sem sessão a API responde `401`; sem a permissão, `403`. Todas as rotas aceitam os mesmos filtros opcionais:
 
-- `entryFrom` e `entryTo` (`YYYY-MM-DD`, inclusivos, sobre a **data de entrada**). Sem período, valem os **últimos 90 dias** até hoje em `America/Sao_Paulo`; com uma só data, a outra é completada; o máximo é **366 dias**.
+- `entryFrom` e `entryTo` (`YYYY-MM-DD`, inclusivos, sobre a **data de entrada**). Sem período, valem os **últimos 30 dias** até hoje em `America/Sao_Paulo`; com uma só data, a outra é completada; o máximo é **366 dias**.
 - `status` e `clientId`.
 
 Parâmetros inválidos, intervalo invertido ou período maior que o máximo retornam `400`. Cada resposta traz o período aplicado e um `generatedAt` único.
