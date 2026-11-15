@@ -6,11 +6,14 @@
 .notification-detail__title:focus-visible { outline: none; border-radius: var(--radius-xs); box-shadow: var(--focus-ring); }
 .notification-detail__code { justify-self: start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .notification-detail__body { overflow-y: auto; min-height: 0; overscroll-behavior: contain; padding-right: var(--space-2); }
-.notification-detail__fields { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5) var(--space-6); margin: 0; }
+.notification-detail__fields { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); margin: 0; }
 .notification-detail dt, .notification-detail h4 { margin: 0 0 var(--space-2); color: var(--muted); font-size: var(--font-size-xs); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
 .notification-detail dd { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
 .notification-detail__message { margin: 0; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
-.notification-detail__meta { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-6); color: var(--muted); font-size: var(--font-size-sm); }
+.notification-detail__summary { padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-alt); }
+.notification-detail__fields > div { padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
+.notification-detail__copy { margin-top: var(--space-3); }
+.notification-detail__meta { padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-alt); display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); color: var(--muted); font-size: var(--font-size-sm); }
 .notification-detail__snoozed { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--warning-text); flex-basis: 100%; }
 .notification-detail__footer { flex-shrink: 0; margin-top: var(--space-5); padding-top: var(--space-3); border-top: 1px solid var(--line); }
 .notification-detail__nav { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); color: var(--muted); font-size: var(--font-size-sm); }

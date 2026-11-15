@@ -16,6 +16,8 @@
     </header>
 
     <div class="notification-detail__body app-scroll" [attr.aria-busy]="busy()">
+      <section class="notification-detail__summary" aria-label="Resumo">
+        <h4>Resumo</h4>
       @if (content().fields.length) {
         <dl class="notification-detail__fields">
           @for (field of content().fields; track field.label) {
@@ -29,7 +31,8 @@
           <p class="notification-detail__message">{{ content().message }}</p>
         </div>
       }
-      <div class="notification-detail__meta">
+      </section>
+      <div class="notification-detail__meta" aria-label="Metadados">
         <time [attr.datetime]="notification().createdAt">{{ dateTime(notification().createdAt) }}</time>
         <span>· {{ ago() }}</span>
         <span class="mini-chip" [class.priority-low]="!notification().read">{{ notification().read ? 'Lida' : 'Não lida' }}</span>

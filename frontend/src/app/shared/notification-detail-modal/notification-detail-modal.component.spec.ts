@@ -29,6 +29,7 @@ describe('NotificationDetailModalComponent', () => {
 
   it('shows a human title, a separate OS code, structured fields and a single close control', async () => {
     await setup({ ...NOTIFICATION, eventType: 'RMA_CREATED', severity: 'INFO', message: '[DEMO] Vale Verde · [DEMO] Switch · prioridade alta. Aberta por admin.' });
+    expect(root().querySelector('section[aria-label="Resumo"] dl')).not.toBeNull();
     const dialog = root().querySelector('[role="dialog"]')!;
     const title = root().querySelector('h3')!;
     expect(dialog.getAttribute('aria-labelledby')).toBe(title.id);
