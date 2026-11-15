@@ -1,7 +1,7 @@
 @if (mode() === 'extras') {
-  <div class="permission-picker__head" (click)="onHeadClick($event)">
+  <div class="permission-picker__head">
+    @if (grantedExtras().length) {
     <div class="permission-picker__granted">
-      @if (grantedExtras().length) {
         <ul class="permission-chips" aria-label="Permissões extras concedidas">
           @for (item of grantedExtras(); track item.code) {
             <li class="permission-chip removable-chip">
@@ -12,8 +12,8 @@
             </li>
           }
         </ul>
-      }
     </div>
+    }
     <button
       type="button"
       class="permission-picker__chevron"

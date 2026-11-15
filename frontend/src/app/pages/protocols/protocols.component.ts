@@ -53,10 +53,6 @@ const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
       min-width: 0;
     }
 
-    .protocol-items__head {
-      display: flex;
-      justify-content: flex-end;
-    }
 
     .protocol-items__add {
       justify-self: start;
@@ -218,12 +214,6 @@ export class ProtocolsComponent {
       if (!next.delete(item)) next.add(item);
       return next;
     });
-  }
-
-  /** Recolhe todos quando há algum aberto; senão, expande todos. */
-  protected toggleAllItems(): void {
-    if (this.submitting()) return;
-    this.expandedItems.set(this.expandedItems().size > 0 ? new Set() : new Set(this.items.controls));
   }
 
   protected typeLabel(item: FormGroup): string {

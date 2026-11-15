@@ -21,7 +21,7 @@ export const DONUT_RADIUS = 46;
 export const MIN_SLICE_ANGLE = 6;
 
 export function formatPercent(part: number, total: number): string {
-  return total ? `${(Math.round((part / total) * 1000) / 10).toFixed(1).replace('.', ',')}%` : '—';
+  return total ? `${(Math.round((part / total) * 1000) / 10).toFixed(1).replace('.', ',')}%` : '-';
 }
 
 function point(angle: number): string {
@@ -34,7 +34,7 @@ export function buildDonutArcs(slices: readonly DonutSliceInput[]): DonutArc[] {
   const values = slices.map((slice) => (Number.isFinite(slice.value) && slice.value > 0 ? slice.value : 0));
   const total = values.reduce((sum, value) => sum + value, 0);
   if (!total) {
-    return slices.map((slice) => ({ ...slice, value: 0, percent: 0, percentLabel: '—', startAngle: 0, endAngle: 0, full: false }));
+    return slices.map((slice) => ({ ...slice, value: 0, percent: 0, percentLabel: '-', startAngle: 0, endAngle: 0, full: false }));
   }
   const raw = values.map((value) => (value / total) * 360);
   const small = raw.map((angle) => angle > 0 && angle < MIN_SLICE_ANGLE);

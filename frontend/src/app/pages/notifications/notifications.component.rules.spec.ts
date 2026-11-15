@@ -723,8 +723,8 @@ describe('NotificationsComponent rules', () => {
         await setup({ failures: [of(FAILURES)] });
         openRules();
         expect(failuresColumn('Erro')).toEqual(['Linha 1\nLinha 2 com detalhe']);
-        expect(failuresColumn('OS').map((value) => normalize(value))).toEqual(['—']);
-        expect(failuresColumn('Destinatário').map((value) => normalize(value))).toEqual(['—']);
+        expect(failuresColumn('OS').map((value) => normalize(value))).toEqual(['-']);
+        expect(failuresColumn('Destinatário').map((value) => normalize(value))).toEqual(['-']);
         expect(failuresColumn('Alerta').map((value) => normalize(value))).toEqual(['Bloqueio']);
       });
 

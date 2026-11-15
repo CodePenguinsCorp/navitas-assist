@@ -1440,6 +1440,10 @@ a {
 
 /* Named group of fields inside a .form-grid; spans the grid and keeps its two columns. */
 /* Group card: tinted surface, the legend reads as its header with the brand accent. */
+fieldset.form-section.extra-permissions {
+  position: relative;
+}
+
 fieldset.form-section {
   min-inline-size: 0;
   margin: 0;

@@ -213,7 +213,7 @@
           <div><dt>{{ purchase.label }}</dt><dd [class.is-empty]="purchase.empty">{{ purchase.value }}</dd></div>
           <div><dt>Responsável</dt><dd><app-rma-assignee-field [rma]="rma" [canEdit]="canUpdateAssignee()" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy() || dueDateBusy()" (saved)="detailRmaSaved($event)" /></dd></div>
           <div><dt>Prioridade</dt><dd><app-rma-priority-field [rma]="rma" [canEdit]="canEditRma()" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy() || dueDateBusy()" (saved)="detailRmaSaved($event)" /></dd></div>
-          <div class="detail-summary__wide rma-details__deadline">
+          <div class="rma-details__deadline">
             <dt>Data limite</dt>
             <dd [class.is-empty]="!rma.dueDate">
               <app-rma-due-date-field [rma]="rma" [disabled]="statusBusy() || diagnosisBusy() || warrantyBusy() || dueDateBusy()" [canEdit]="canEditRma()" (saved)="detailRmaSaved($event)" (busyChange)="dueDateBusy.set($event)" />

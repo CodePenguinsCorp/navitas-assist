@@ -21,7 +21,7 @@
           @for (row of visibleRows(); track row.lineNumber) {
             <tr><td data-label="Linha">{{ row.lineNumber }}</td><td data-label="Identificação">{{ identification(row) }}</td><td data-label="Situação">{{ statuses[row.status] }}</td><td data-label="Motivos e avisos">
               @for (issue of row.reasons; track $index) { <p>{{ issue.field }}: {{ issue.message }}</p> }
-              @for (warning of row.warnings; track $index) { <p>Aviso — {{ warning.field }}: {{ warning.message }}</p> }
+              @for (warning of row.warnings; track $index) { <p>Aviso: {{ warning.field }}: {{ warning.message }}</p> }
               @if (!row.reasons.length && !row.warnings.length) { <span>Sem observações</span> }
             </td></tr>
           } @empty { <tr><td colspan="4">Nenhuma linha nesta situação.</td></tr> }

@@ -39,6 +39,6 @@ describe('formatPercent', () => {
   it('uses a decimal comma and a dash without base', () => {
     expect(formatPercent(1, 3)).toBe('33,3%');
     expect(formatPercent(7, 7)).toBe('100,0%');
-    expect(formatPercent(0, 0)).toBe('—');
+    expect(formatPercent(0, 0)).toBe('-');
   });
 });

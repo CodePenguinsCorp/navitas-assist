@@ -21,16 +21,18 @@ let nextPanelId = 0;
   selector: 'app-permission-picker',
   imports: [IconComponent],
   templateUrl: './permission-picker.component.html',
+  host: { '[class.is-extras]': "mode() === 'extras'" },
   styles: [`
     :host { display: grid; gap: var(--space-3); grid-column: 1 / -1; min-width: 0; }
     .permission-picker__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: var(--control-height); }
     .permission-picker__granted { display: grid; gap: var(--space-2); flex: 1 1 260px; min-width: 0; }
-    .permission-picker__chevron { display: inline-flex; align-items: center; justify-content: center; align-self: center; width: var(--control-height); height: var(--control-height); margin-inline-start: auto; padding: 0; border-radius: var(--radius-xs); background: transparent; color: var(--muted); }
+    /* Extras: the arrow sits in the box header (top right), so no empty row is left below the title. */
+    :host(.is-extras), :host(.is-extras) .permission-picker__head { display: contents; }
+    .permission-picker__chevron { position: absolute; top: var(--space-2); right: var(--space-3); z-index: 1; display: inline-flex; align-items: center; justify-content: center; width: var(--control-height-xs); height: var(--control-height-xs); padding: 0; border-radius: var(--radius-xs); background: transparent; color: var(--muted); }
     .permission-picker__chevron:hover { color: var(--brand-blue-deep); background: var(--brand-tint); }
     .permission-picker__chevron:focus-visible { outline: none; box-shadow: var(--focus-ring); }
     .permission-picker__chevron app-icon { display: inline-flex; transition: transform 160ms ease; }
     .permission-picker__chevron.is-open app-icon { transform: rotate(90deg); }
-    .permission-picker__head { cursor: pointer; }
     .permission-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
     .permission-picker__panel { display: grid; gap: var(--space-3); min-width: 0; }
     .permission-picker__panel[hidden] { display: none; }
@@ -114,12 +116,6 @@ export class PermissionPickerComponent {
       return;
     }
     this.update([code], checked);
-  }
-
-  /** Clicking the empty part of the box opens it like the arrow does; chips keep their own buttons. */
-  protected onHeadClick(event: Event): void {
-    const target = event.target as HTMLElement;
-    if (!target.closest('button, .permission-chip')) this.toggleExpanded();
   }
 
   protected toggleExpanded(): void {

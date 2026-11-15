@@ -18,7 +18,6 @@ import {
 } from '../../core/utils/notification-ui';
 import { NotificationDetailModalComponent } from '../notification-detail-modal/notification-detail-modal.component';
 import { IconComponent } from '../icon/icon.component';
-import { RowActionComponent } from '../row-action/row-action.component';
 import { popupDismiss } from '../popup-dismiss/popup-dismiss';
 
 const UNREAD_UNAVAILABLE = 'Contagem de não lidas indisponível';
@@ -35,7 +34,7 @@ let nextPanelId = 0;
  */
 @Component({
   selector: 'app-notification-bell',
-  imports: [IconComponent, NotificationDetailModalComponent, RowActionComponent, RouterLink],
+  imports: [IconComponent, NotificationDetailModalComponent, RouterLink],
   templateUrl: './notification-bell.component.html',
   styleUrl: './notification-bell.component.css',
   host: {

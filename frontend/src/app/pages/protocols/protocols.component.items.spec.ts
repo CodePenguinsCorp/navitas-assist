@@ -15,7 +15,7 @@ const TEMPLATE: ProtocolTemplateResponse = { id: 2, name: 'Bancada PWM', product
     { ...MEASUREMENT, id: 23, sortOrder: 3, stepName: 'Final', title: 'Observação', type: 'TEXT', unit: null, decimalPlaces: null, minValue: null, maxValue: null }]
 };
 type Harness = { form: FormGroup & { controls: FormGroup['controls'] & { items: FormArray<FormGroup> } }; openEditModal(template: ProtocolTemplateResponse): void;
-  openCreateModal(): void; closeModal(): void; addItem(): void; removeItem(index: number): void; saveTemplate(): void; toggleItem(item: FormGroup): void; toggleAllItems(): void };
+  openCreateModal(): void; closeModal(): void; addItem(): void; removeItem(index: number): void; saveTemplate(): void; toggleItem(item: FormGroup): void };
 
 describe('ProtocolsComponent focused items', () => {
   let fixture: ComponentFixture<ProtocolsComponent>;
@@ -89,17 +89,6 @@ describe('ProtocolsComponent focused items', () => {
     component().removeItem(1); await stable(); expect(document.activeElement).toBe(summaries()[0]); expect(expanded()).toEqual(['false']);
     component().removeItem(0); render(); expect(items().length).toBe(1);
     expect(panel().querySelector<HTMLButtonElement>('[aria-label="Remover item 1"]')?.getAttribute('aria-disabled')).toBe('true');
-  });
-
-  it('collapses and expands every item from the list header', async () => {
-    await setup();
-    button('Expandir todos').click(); render();
-    expect(expanded()).toEqual(['true', 'true', 'true']); expect(panel().querySelectorAll('.protocol-item-card')).toHaveLength(3);
-    button('Recolher todos').click(); render();
-    expect(expanded()).toEqual(['false', 'false', 'false']); expect(panel().querySelector('.protocol-item-card')).toBeNull();
-    open(1); expect(button('Recolher todos')).toBeDefined();
-    component().closeModal(); component().openCreateModal(); await stable();
-    expect(button('Expandir todos')).toBeUndefined(); expect(button('Recolher todos')).toBeUndefined();
   });
 
   const rows = () => Array.from<HTMLElement>(panel().querySelectorAll('.protocol-item-summary-row'));
@@ -187,10 +176,10 @@ describe('ProtocolsComponent focused items', () => {
   it('does not change selection or items while publication is pending and recovers on error', async () => {
     await setup(); open(0); const pending = new Subject<ProtocolTemplateResponse>(); updateTemplate.mockReturnValueOnce(pending);
     component().saveTemplate(); render();
-    expect(button('Adicionar item').disabled).toBe(true); expect(button('Recolher todos').disabled).toBe(true);
+    expect(button('Adicionar item').disabled).toBe(true);
     expect(summaries().every((b) => b.disabled)).toBe(true);
     expect(Array.from<HTMLButtonElement>(panel().querySelectorAll('[aria-label^="Remover item"]')).every((b) => b.disabled)).toBe(true);
-    component().toggleItem(items().at(2)); component().toggleAllItems(); component().addItem(); component().removeItem(0); render();
+    component().toggleItem(items().at(2)); component().addItem(); component().removeItem(0); render();
     expect(items().length).toBe(3); expect(expanded()).toEqual(['true', 'false', 'false']); expect(titleOf(0).value).toBe('Tensão');
     pending.error({ error: { message: 'Versão recusada.' } }); render();
     expect(titleOf(0).value).toBe('Tensão'); expect(summaries()[0].getAttribute('aria-expanded')).toBe('true'); expect(button('Adicionar item').disabled).toBe(false);

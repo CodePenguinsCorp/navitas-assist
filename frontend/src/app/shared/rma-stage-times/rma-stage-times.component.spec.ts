@@ -65,7 +65,7 @@ describe('RmaStageTimesComponent', () => {
     expect(element.querySelector('.stage-times__total')?.textContent?.trim()).toBe('3 d 2 h');
   });
 
-  it('opens stages with content and lets the header fold and unfold the list', () => {
+  it('opens stages with content and keeps the list always open without an arrow', () => {
     fixture.componentRef.setInput('rma', {
       status: 'IN_REPAIR',
       stagePeriods: [
@@ -76,8 +76,10 @@ describe('RmaStageTimesComponent', () => {
     });
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
-    const toggle = element.querySelector<HTMLButtonElement>('.collapsible__toggle')!;
-    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    // Always open: same header as the other sections, with no toggle and no arrow.
+    expect(element.querySelector('button.collapsible__toggle')).toBeNull();
+    expect(element.querySelector('.collapsible__chevron')).toBeNull();
+    expect(element.querySelector<HTMLElement>('.collapsible__body')!.hidden).toBe(false);
     const rows = [...element.querySelectorAll('.stage-times__list li')].map((item) => [
       item.getAttribute('data-status'),
       item.querySelector('.stage-times__name')?.textContent?.trim(),
@@ -88,10 +90,5 @@ describe('RmaStageTimesComponent', () => {
       ['TRIAGE', 'Triagem', '10 min'],
       ['IN_REPAIR', 'Reparo', '1 d 11 h (atual)']
     ]);
-    toggle.click();
-    fixture.detectChanges();
-    expect(element.querySelector<HTMLElement>('.collapsible__body')!.hidden).toBe(true);
-    toggle.click(); fixture.detectChanges();
-    expect(element.querySelector<HTMLElement>('.collapsible__body')!.hidden).toBe(false);
   });
 });

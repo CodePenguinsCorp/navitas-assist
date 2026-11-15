@@ -44,16 +44,19 @@ export class CollapsibleSectionComponent {
   readonly open = input(true);
   /** Remembers the choice in localStorage as `navitas.section.<key>`. */
   readonly storageKey = input<string | null>(null);
+  /** False for a section that is always open: same header, no toggle and no arrow. */
+  readonly collapsible = input(true);
 
   private readonly uid = `collapsible-section-${nextId++}`;
   protected readonly buttonId = `${this.uid}-button`;
   protected readonly bodyId = `${this.uid}-body`;
-  protected readonly expanded = linkedSignal(() => readChoice(this.storageKey()) ?? this.open());
+  protected readonly expanded = linkedSignal(() => !this.collapsible() || (readChoice(this.storageKey()) ?? this.open()));
   /** Current state, for hosts that fold several sections together. */
   readonly isOpen = this.expanded.asReadonly();
   protected readonly hasCount = computed(() => this.count() !== null && this.count() !== undefined);
 
   toggle(): void {
+    if (!this.collapsible()) return;
     this.setOpen(!this.expanded());
   }
 
@@ -64,6 +67,7 @@ export class CollapsibleSectionComponent {
   }
 
   setOpen(open: boolean): void {
+    if (!this.collapsible()) return;
     this.expanded.set(open);
     writeChoice(this.storageKey(), open);
   }

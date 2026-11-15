@@ -107,7 +107,7 @@
                   @if (product.category?.trim()) {
                     <span class="product-preview" [attr.title]="product.category">{{ product.category }}</span>
                   } @else {
-                    <span aria-hidden="true">—</span><span class="sr-only">Categoria não informada</span>
+                    <span aria-hidden="true">-</span><span class="sr-only">Categoria não informada</span>
                   }
                 </td>
                 <td>
@@ -119,7 +119,7 @@
                       <span class="product-version"><span class="table-subtitle">Firmware</span> {{ firmwareVersion }}</span>
                     }
                   } @else {
-                    <span aria-hidden="true">—</span><span class="sr-only">Versões não informadas</span>
+                    <span aria-hidden="true">-</span><span class="sr-only">Versões não informadas</span>
                   }
                 </td>
                 <td>{{ warrantyLabel(product.defaultWarrantyMonths) }}</td>

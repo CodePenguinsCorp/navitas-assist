@@ -203,7 +203,7 @@ describe('NotificationBellComponent', () => {
     expect(main.textContent).not.toContain('Nova atribuição');
 
     const side = row.querySelector('.bell-item__side')!;
-    expect(Array.from(side.children).map((child) => child.className)).toEqual(['bell-item__time', 'bell-item__action']);
+    expect(Array.from(side.children).map((child) => child.className)).toEqual(['bell-item__time']);
     expect(side.querySelector('time')!.textContent!.trim()).toBe('10:00');
   });
 

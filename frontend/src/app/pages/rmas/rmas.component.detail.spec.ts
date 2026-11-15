@@ -321,7 +321,7 @@ describe('RmasComponent detail with the shared information contract', () => {
     expect(detail().classList).toContain('detail-surface');
     expect(summary.classList).toContain('detail-card');
     expect(summary.classList).toContain('detail-summary');
-    expect(deadline.classList).toContain('detail-summary__wide');
+    expect(deadline.classList).toContain('rma-details__deadline');
     expect(detail().querySelector('[role="tablist"]')!.classList).toContain('tab-list--raised');
     expect(tabPanel().classList).toContain('detail-card');
     // With rma.responsavel the assignee is an inline selector among the facts, like the Kanban detail.

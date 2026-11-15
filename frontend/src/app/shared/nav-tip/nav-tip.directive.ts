@@ -5,7 +5,7 @@ const TIP_GAP = 10;
 
 /**
  * Same dark tooltip as the row actions (`.row-action__tip`), for items in the collapsed sidebar rail.
- * The tip sits in a fixed layer beside the item, so the rail's overflow never clips it. A null text shows nothing.
+ * The tip lives in the body, in a fixed layer beside the item, so no ancestor clips or covers it. A null text shows nothing.
  */
 @Directive({
   selector: '[appNavTip]',
@@ -41,7 +41,8 @@ export class NavTipDirective {
     tip.style.top = `${rect.top + rect.height / 2}px`;
     tip.style.transform = 'translateY(-50%)';
     tip.style.pointerEvents = 'none';
-    this.host.nativeElement.appendChild(tip);
+    // In the body, not in the item: the sidebar has its own stacking context and clipping, which hid or cut the tip.
+    document.body.appendChild(tip);
     this.tip = tip;
   }
 

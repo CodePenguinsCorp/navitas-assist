@@ -100,19 +100,19 @@
                   @if (client.phone?.trim()) {
                     <span class="table-title"><span class="sr-only">Telefone: </span>{{ client.phone }}</span>
                   } @else {
-                    <span class="table-title"><span aria-hidden="true">—</span><span class="sr-only">Telefone não informado</span></span>
+                    <span class="table-title"><span aria-hidden="true">-</span><span class="sr-only">Telefone não informado</span></span>
                   }
                   @if (client.email?.trim()) {
                     <span class="table-subtitle"><span class="sr-only">E-mail: </span>{{ client.email }}</span>
                   } @else {
-                    <span class="table-subtitle"><span aria-hidden="true">—</span><span class="sr-only">E-mail não informado</span></span>
+                    <span class="table-subtitle"><span aria-hidden="true">-</span><span class="sr-only">E-mail não informado</span></span>
                   }
                 </td>
                 <td>
                   @if (client.documentNumber?.trim()) {
                     {{ client.documentNumber }}
                   } @else {
-                    <span aria-hidden="true">—</span><span class="sr-only">CPF/CNPJ não informado</span>
+                    <span aria-hidden="true">-</span><span class="sr-only">CPF/CNPJ não informado</span>
                   }
                 </td>
                 <td>{{ updatedAtLabel(client) }}</td>

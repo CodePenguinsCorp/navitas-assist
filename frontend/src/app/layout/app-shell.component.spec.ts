@@ -335,9 +335,9 @@ describe('AppShellComponent collapsible sidebar', () => {
     expect(first.getAttribute('title')).toBeNull();
     expect(first.getAttribute('aria-label')).toBe('Dashboard');
     first.dispatchEvent(new Event('mouseenter'));
-    expect(first.querySelector('.nav-tip.row-action__tip')?.textContent).toBe('Dashboard');
+    expect(document.body.querySelector('.nav-tip.row-action__tip')?.textContent).toBe('Dashboard');
     first.dispatchEvent(new Event('mouseleave'));
-    expect(first.querySelector('.nav-tip')).toBeNull();
+    expect(document.body.querySelector('.nav-tip')).toBeNull();
     expect(page.querySelector('.sidebar-user__logout')).not.toBeNull();
     expect(page.querySelector('.brand-lockup__logo')).toBeNull();
     expect(page.querySelector('.brand-lockup__monogram')?.textContent?.trim()).toBe('N');

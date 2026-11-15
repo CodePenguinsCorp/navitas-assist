@@ -38,6 +38,7 @@ interface TipPosition {
     '(mouseleave)': 'onPointerLeave($event)',
     '(focus)': 'onFocus()',
     '(blur)': 'onBlur()',
+    '(click)': 'onClick()',
     '(window:resize)': 'close()'
   },
   template: `
@@ -104,6 +105,13 @@ export class RowActionComponent {
   protected onFocus(): void {
     this.focused = true;
     this.open();
+  }
+
+  /** The action ran: the tip is done. A click focuses the button, which would otherwise keep the tip open after the pointer leaves. */
+  protected onClick(): void {
+    this.focused = false;
+    this.hovered = false;
+    this.close();
   }
 
   protected onBlur(): void {

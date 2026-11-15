@@ -9,6 +9,8 @@
   margin: 0; padding: 0; border: 0; border-radius: var(--radius-sm); background: none;
   color: inherit; font: inherit; letter-spacing: inherit; text-align: left; text-transform: inherit; cursor: pointer;
 }
+.collapsible__toggle--static { cursor: default; }
+.collapsible__toggle--static:hover .collapsible__title { text-decoration: none; }
 .collapsible__toggle:hover .collapsible__title { text-decoration: underline; text-underline-offset: 3px; }
 .collapsible__toggle:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .collapsible__title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

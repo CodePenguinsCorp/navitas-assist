@@ -145,7 +145,7 @@ describe('RmaDetailModalComponent collapsible sections', () => {
     const { fixture, host, buttonByText } = await setup();
     const [block] = await fixture.getDeferBlocks();
     await block.render(DeferBlockState.Complete); fixture.detectChanges();
-    const headers = () => [...host.querySelectorAll<HTMLButtonElement>('.collapsible__toggle')];
+    const headers = () => [...host.querySelectorAll<HTMLButtonElement>('button.collapsible__toggle')];
     expect(host.querySelector('app-rma-protocols')).not.toBeNull();
     buttonByText('Expandir tudo')!.click(); fixture.detectChanges();
     expect(headers().every(header => header.getAttribute('aria-expanded') === 'true')).toBe(true);
@@ -335,7 +335,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
   });
 
   it('formats status, priority, invoice and purchase like the list', async () => {
-    // Hoje: span.rma-detail__status, prioridade em .mini-chip, nota "—" e compra desconhecida "Não informada".
+    // Hoje: span.rma-detail__status, prioridade em .mini-chip, nota "-" e compra desconhecida "Não informada".
     const { host, sidePairs } = await setup({ canUpdateStatus: false });
     const side = host.querySelector('.rma-detail__side')!;
 

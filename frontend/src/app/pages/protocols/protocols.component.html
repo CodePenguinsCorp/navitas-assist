@@ -170,9 +170,8 @@
           </label>
         </fieldset>
 
-        <fieldset class="form-section" aria-describedby="protocol-blocked-hint">
+        <fieldset class="form-section">
           <legend>Etapas bloqueadas</legend>
-          <p id="protocol-blocked-hint" class="form-section__hint">Bloquear mudança da OS para estas etapas enquanto houver obrigatórios pendentes</p>
           <div class="status-options field-group--full">
             @for (status of statusOptions; track status) {
               <label class="checkbox-field">
@@ -186,11 +185,6 @@
         <fieldset class="form-section">
           <legend>Itens</legend>
           <div class="field-group--full protocol-items" formArrayName="items">
-            @if (items.length > 1) {
-              <div class="protocol-items__head">
-                <button type="button" class="link-button" (click)="toggleAllItems()" [disabled]="submitting()">{{ expandedItems().size > 0 ? 'Recolher todos' : 'Expandir todos' }}</button>
-              </div>
-            }
             @for (item of items.controls; track item; let index = $index) {
               <div class="item-row" [class.is-selected]="isExpanded(item)">
               <div class="item-row__head protocol-item-summary-row">
