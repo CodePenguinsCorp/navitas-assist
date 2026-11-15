@@ -29,7 +29,7 @@ let nextPanelId = 0;
     .permission-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
     .permission-picker__panel { display: grid; gap: var(--space-3); min-width: 0; }
     .permission-picker__panel[hidden] { display: none; }
-    .permission-picker__total { justify-self: end; margin: 0; color: var(--muted); font-size: var(--font-size-md); font-variant-numeric: tabular-nums; }
+    .permission-picker__total { position: absolute; top: var(--space-3); right: var(--space-4); margin: 0; color: var(--muted); font-size: var(--font-size-md); font-variant-numeric: tabular-nums; }
     .permission-picker__grid {
       display: grid; gap: var(--space-3); align-items: start;
       grid-template-columns: minmax(0, 1fr);

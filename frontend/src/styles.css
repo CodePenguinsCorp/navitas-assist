@@ -545,7 +545,7 @@ a {
 
 .brand-lockup__logo {
   display: block;
-  width: min(100%, clamp(112px, 17vh, 168px));
+  width: min(100%, clamp(96px, 14vh, 168px));
   height: auto;
   margin-inline: auto;
   filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.18));
@@ -671,7 +671,7 @@ a {
   display: grid;
   flex: 1 1 auto;
   align-content: start;
-  gap: clamp(0.4rem, 1.5vh, 1rem);
+  gap: clamp(0.3rem, 1.1vh, 1rem);
   min-height: 0;
   overflow-x: hidden;
   /* Safety net for very short windows: the list scrolls, with no visible bar. */
@@ -705,7 +705,7 @@ a {
   align-items: center;
   gap: 0.7rem;
   color: rgba(226, 241, 255, 0.82);
-  padding: clamp(0.3rem, 1.05vh, 0.8rem) 1rem;
+  padding: clamp(0.2rem, 0.75vh, 0.8rem) 1rem;
   border: 1px solid transparent;
   border-radius: 14px;
   transition:
@@ -1440,7 +1440,7 @@ a {
 
 /* Named group of fields inside a .form-grid; spans the grid and keeps its two columns. */
 /* Group card: tinted surface, the legend reads as its header with the brand accent. */
-fieldset.form-section.extra-permissions {
+fieldset.form-section {
   position: relative;
 }
 
@@ -3692,7 +3692,8 @@ app-custom-select:has(> .custom-select--priority) {
 .collapsible__actions .link-button { display: inline-flex; align-items: center; gap: var(--space-1); white-space: nowrap; }
 .repair-total { color: var(--muted); font-size: var(--font-size-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .repair-empty { margin: 0; padding: var(--space-2) 0; color: var(--muted); font-size: var(--font-size-sm); }
-.repair-entry { display: grid; gap: var(--space-1); padding: var(--space-2) 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.repair-entry { display: grid; gap: var(--space-1); padding: var(--space-2) 0; overflow-wrap: anywhere; }
+.repair-entry + .repair-entry { border-top: 1px solid var(--line); }
 .repair-entry small { color: var(--muted); }
 .repair-line { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); min-width: 0; }
 .repair-line__title { white-space: nowrap; }

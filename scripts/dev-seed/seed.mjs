@@ -202,7 +202,7 @@ async function main() {
         await api(`/api/protocols/executions/${execution.id}/complete`, 'POST');
       }
     }
-    console.log(`${rma.code}: ${rma.status} — ${serialNumber}`);
+    console.log(`${rma.code}: ${rma.status} - ${serialNumber}`);
   }
   const volume = Number.parseInt(process.env.SEED_VOLUME || '0', 10);
   if (volume > 0) {
