@@ -17,6 +17,9 @@ spring:
       idle-timeout: 120000
       max-lifetime: 300000
       connection-timeout: 30000
+      # Limite por consulta no banco (um pouco acima dos 45 s do frontend). Vale só para o pool da aplicação: o Flyway
+      # abre a própria conexão (spring.flyway.url) e não herda o limite, então migrações longas seguem sem teto.
+      connection-init-sql: SET statement_timeout = '${DB_STATEMENT_TIMEOUT:50s}'
   jpa:
     open-in-view: false
     hibernate:

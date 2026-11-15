@@ -89,11 +89,44 @@ public class RestExceptionHandler {
         return buildResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Tipo de conteúdo não suportado.", List.of(), exception.getHeaders());
     }
 
+    @ExceptionHandler(org.springframework.dao.QueryTimeoutException.class)
+    public ResponseEntity<ApiError> handleSpringQueryTimeout(org.springframework.dao.QueryTimeoutException exception) {
+        return queryTimeout();
+    }
+
+    @ExceptionHandler(jakarta.persistence.QueryTimeoutException.class)
+    public ResponseEntity<ApiError> handleJpaQueryTimeout(jakarta.persistence.QueryTimeoutException exception) {
+        return queryTimeout();
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception exception) {
+        if (isStatementTimeout(exception)) {
+            return queryTimeout();
+        }
         String code = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase(java.util.Locale.ROOT);
         log.error("action=UNEXPECTED_ERROR occurrenceCode={}", code, exception);
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Erro inesperado. Informe o código " + code + " ao suporte.", List.of());
+    }
+
+    /** PostgreSQL cancels a statement over its limit with SQLSTATE 57014; the driver error may arrive wrapped. */
+    private static boolean isStatementTimeout(Throwable exception) {
+        int depth = 0;
+        for (Throwable current = exception; current != null && depth < 20; current = current.getCause(), depth++) {
+            if (current instanceof org.springframework.dao.QueryTimeoutException
+                || current instanceof jakarta.persistence.QueryTimeoutException
+                || current instanceof java.sql.SQLTimeoutException
+                || (current instanceof java.sql.SQLException sql && "57014".equals(sql.getSQLState()))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private ResponseEntity<ApiError> queryTimeout() {
+        log.warn("action=QUERY_TIMEOUT status=503");
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE,
+            "A consulta demorou mais do que o esperado e foi interrompida. Tente novamente ou use filtros mais específicos.", List.of());
     }
 
     private ResponseEntity<ApiError> buildResponse(HttpStatus status, String message, List<String> details) {
