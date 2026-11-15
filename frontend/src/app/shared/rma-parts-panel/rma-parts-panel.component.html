@@ -49,10 +49,10 @@
         </label>
         <label class="field-group field-group--required">
           <span>Quantidade @if (selectedPart(); as part) { ({{ part.unit }}) }</span>
-          <input type="number" min="0.001" step="any" formControlName="quantity"
+          <input type="number" min="0.001" max="999999999.999" step="0.001" formControlName="quantity"
             [attr.aria-invalid]="hasError(reserveForm.controls.quantity) ? 'true' : null" [attr.aria-describedby]="hasError(reserveForm.controls.quantity) ? 'reserve-quantity-error' : null" />
           @if (hasError(reserveForm.controls.quantity)) {
-            <small id="reserve-quantity-error" class="field-error" role="alert">Informe uma quantidade de pelo menos 0,001.</small>
+            <small id="reserve-quantity-error" class="field-error" role="alert">Informe uma quantidade de 0,001 a 999.999.999,999, com até 3 casas decimais.</small>
           }
         </label>
         <label class="field-group">

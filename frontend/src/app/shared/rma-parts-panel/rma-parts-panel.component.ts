@@ -245,7 +245,7 @@ export class RmaPartsPanelComponent {
 
   protected readonly reserveForm = this.formBuilder.group({
     partId: this.formBuilder.control<number | null>(null, Validators.required),
-    quantity: this.formBuilder.nonNullable.control(1, [Validators.required, Validators.min(0.001)]),
+    quantity: this.formBuilder.nonNullable.control(1, [Validators.required, Validators.min(0.001), Validators.max(999999999.999), Validators.pattern(/^\d+(\.\d{1,3})?$/)]),
     note: this.formBuilder.nonNullable.control('', Validators.maxLength(255))
   });
 

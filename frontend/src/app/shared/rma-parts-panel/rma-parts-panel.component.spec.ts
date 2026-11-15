@@ -86,6 +86,14 @@ describe('RmaPartsPanelComponent', () => {
     expect(component.successMessage()).toContain('pendente de reposição');
   });
 
+  it.each([[1.0001, false], [1000000000, false], [0.001, true], [1.125, true], [999999999.999, true]])('validates the reserved quantity %s against the contract (accepted=%s)', async (quantity, accepted) => {
+    await setUp('TECHNICIAN');
+    const component = fixture.componentInstance as unknown as { reserveForm: { setValue(value: unknown): void }; reserve(): void };
+    component.reserveForm.setValue({ partId: 4, quantity, note: '' });
+    component.reserve();
+    expect(vi.mocked(partService['reserve']).mock.calls.length).toBe(accepted ? 1 : 0);
+  });
+
   it('only allows cancelling reservations of closed ordens de serviço', async () => {
     await setUp('ADMIN', 'COMPLETED');
     const text: string = fixture.nativeElement.textContent;

@@ -130,7 +130,7 @@ describe('RmaPartsPanelComponent presentation', () => {
     component().reserveForm.setValue({ partId: null, quantity: 0, note: '' });
     submit();
     expect(normalize(field('partId').textContent)).toContain('Selecione a peça.');
-    expect(normalize(field('quantity').textContent)).toContain('Informe uma quantidade de pelo menos 0,001.');
+    expect(normalize(field('quantity').textContent)).toContain('Informe uma quantidade de 0,001 a 999.999.999,999, com até 3 casas decimais.');
     expect(text()).not.toContain('Selecione a peça e informe uma quantidade válida.');
     expect(service.reserve).not.toHaveBeenCalled();
 
