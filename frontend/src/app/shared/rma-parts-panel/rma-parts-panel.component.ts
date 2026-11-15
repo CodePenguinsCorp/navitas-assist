@@ -225,7 +225,7 @@ export class RmaPartsPanelComponent {
 
   protected startCancellation(reservation: PartReservationResponse): void {
     if (!this.canReserve() || this.busyReservationId() !== null) return;
-    this.cancelling.set(reservation); this.consuming.set(null);
+    this.clearMessages(); this.cancelling.set(reservation); this.consuming.set(null);
   }
 
   protected closeCancellation(): void {
