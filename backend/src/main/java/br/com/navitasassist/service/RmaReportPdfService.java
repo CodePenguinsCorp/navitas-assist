@@ -118,8 +118,8 @@ public class RmaReportPdfService {
             section(document, "Falha encontrada");
             document.add(text(diagnosis.foundFailure()));
             addIfPresent(document, fields(
-                "Tipo de falha", ReportLabels.failureType(diagnosis.failureType()),
-                "Causa provável", ReportLabels.failureCause(diagnosis.probableCause()),
+                "Tipo de falha", diagnosis.failureType(),
+                "Causa provável", diagnosis.probableCause(),
                 "Técnico", diagnosis.technicianName(), "Data do diagnóstico", date(diagnosis.diagnosedAt()),
                 "Notas", diagnosis.notes()));
         }

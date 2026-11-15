@@ -18,6 +18,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 import br.com.navitasassist.controller.BusinessException;
+import br.com.navitasassist.diagnosis.DiagnosisText;
 import br.com.navitasassist.pagination.PageParams;
 import br.com.navitasassist.pagination.PageResponse;
 import br.com.navitasassist.repository.RmaRecordRepository;
@@ -104,8 +105,7 @@ public class RmaReportService {
             top(items, item -> productKey(item.product()), item -> productLabel(item.product())),
             top(items.stream().filter(item -> hasText(item.view().batchNumber())).toList(), RmaReportService::batchKey, RmaReportService::batchLabel),
             top(items, item -> String.valueOf(item.rma().getClient().getId()), item -> item.rma().getClient().getLegalName()),
-            top(records.stream().filter(rma -> rma.getDiagnosis() != null && rma.getDiagnosis().getFailureType() != null).toList(),
-                rma -> rma.getDiagnosis().getFailureType().name(), rma -> ReportLabels.failureType(rma.getDiagnosis().getFailureType())),
+            topTexts(records.stream().map(rma -> rma.getDiagnosis() == null ? null : rma.getDiagnosis().getFailureType()).toList()),
             recurrence(items, period),
             stages(open, generatedAt));
     }
@@ -212,6 +212,33 @@ public class RmaReportService {
         }
         return counts.values().stream().sorted(Comparator.comparingLong(CountRow::count).reversed().thenComparing(CountRow::label))
             .limit(TOP_LIMIT).toList();
+    }
+
+    /**
+     * Free-text values grouped without regard to case, accents or surrounding spaces ("Display" and "display" count
+     * together); the label is the most frequent spelling, the first one seen on a tie.
+     */
+    static List<CountRow> topTexts(List<String> values) {
+        Map<String, Map<String, Long>> spellings = new LinkedHashMap<>();
+        for (String value : values) {
+            if (value == null || value.isBlank()) {
+                continue;
+            }
+            spellings.computeIfAbsent(DiagnosisText.normalize(value), ignored -> new LinkedHashMap<>()).merge(value.trim(), 1L, Long::sum);
+        }
+        return spellings.entrySet().stream().map(entry -> {
+            String label = null;
+            long best = 0;
+            long total = 0;
+            for (Map.Entry<String, Long> spelling : entry.getValue().entrySet()) {
+                total += spelling.getValue();
+                if (spelling.getValue() > best) {
+                    best = spelling.getValue();
+                    label = spelling.getKey();
+                }
+            }
+            return new CountRow(entry.getKey(), label, total);
+        }).sorted(Comparator.comparingLong(CountRow::count).reversed().thenComparing(CountRow::label)).limit(TOP_LIMIT).toList();
     }
 
     private static String batchKey(ReportItem item) {

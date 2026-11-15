@@ -106,7 +106,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/clients", "/api/clients/*", "/api/products", "/api/products/*").hasAuthority(Codes.CADASTROS_VER)
                 .requestMatchers(HttpMethod.GET, "/api/rmas/board/column", "/api/rmas/board/counts").hasAuthority(Codes.RMA_VER)
                 .requestMatchers(HttpMethod.PUT, "/api/rmas/*/board-position").hasAuthority(Codes.RMA_STATUS)
-                .requestMatchers(HttpMethod.GET, "/api/rmas/dashboard").hasAuthority(Codes.RMA_VER)
+                .requestMatchers(HttpMethod.GET, "/api/rmas/dashboard", "/api/rmas/diagnosis/suggestions").hasAuthority(Codes.RMA_VER)
                 .requestMatchers(HttpMethod.GET, "/api/rmas/*/report.pdf").hasAuthority(Codes.RMA_VER)
                 .requestMatchers(HttpMethod.GET, "/api/rmas/*/repair", "/api/rmas/*/repair/external-components").hasAuthority(Codes.RMA_VER)
                 .requestMatchers(HttpMethod.GET, "/api/rmas/**").hasAuthority(Codes.RMA_VER)

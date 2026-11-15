@@ -10,8 +10,6 @@ import br.com.navitasassist.access.AccessTestSupport;
 import br.com.navitasassist.repository.AccessProfileRepository;
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.diagnosis.Diagnosis;
-import br.com.navitasassist.diagnosis.FailureCause;
-import br.com.navitasassist.diagnosis.FailureType;
 import br.com.navitasassist.kanban.KanbanView;
 import br.com.navitasassist.product.Product;
 import br.com.navitasassist.rma.RmaDeadlineStatus;
@@ -156,18 +154,15 @@ class EnumPersistenceIntegrationTest {
     }
 
     @Test
-    void shouldStoreEveryFailureTypeAndCauseAsTheirNames() {
-        for (FailureType type : FailureType.values()) {
-            entityManager.find(Diagnosis.class, diagnosisId).setFailureType(type);
+    void shouldStoreFailureTypeAndCauseAsFreeText() {
+        for (String text : new String[] {"Fonte de alimentação", "Placa trincada"}) {
+            Diagnosis diagnosis = entityManager.find(Diagnosis.class, diagnosisId);
+            diagnosis.setFailureType(text);
+            diagnosis.setProbableCause(text);
             flushAndClear();
-            assertThat(entityManager.find(Diagnosis.class, diagnosisId).getFailureType()).isEqualTo(type);
-            assertThat(column("diagnoses", "failure_type", diagnosisId)).isEqualTo(type.name());
-        }
-        for (FailureCause cause : FailureCause.values()) {
-            entityManager.find(Diagnosis.class, diagnosisId).setProbableCause(cause);
-            flushAndClear();
-            assertThat(entityManager.find(Diagnosis.class, diagnosisId).getProbableCause()).isEqualTo(cause);
-            assertThat(column("diagnoses", "probable_cause", diagnosisId)).isEqualTo(cause.name());
+            assertThat(entityManager.find(Diagnosis.class, diagnosisId).getFailureType()).isEqualTo(text);
+            assertThat(column("diagnoses", "failure_type", diagnosisId)).isEqualTo(text);
+            assertThat(column("diagnoses", "probable_cause", diagnosisId)).isEqualTo(text);
         }
     }
 
@@ -179,8 +174,8 @@ class EnumPersistenceIntegrationTest {
         view.setWarranty(WarrantyStatus.PENDING);
         view.setDeadline(RmaDeadlineStatus.OVERDUE);
         Diagnosis diagnosis = entityManager.find(Diagnosis.class, diagnosisId);
-        diagnosis.setFailureType(FailureType.OTHER);
-        diagnosis.setProbableCause(FailureCause.OTHER);
+        diagnosis.setFailureType("Outro");
+        diagnosis.setProbableCause("Outro");
         flushAndClear();
 
         view = entityManager.find(KanbanView.class, viewId);

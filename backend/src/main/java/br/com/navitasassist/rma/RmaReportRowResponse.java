@@ -3,8 +3,6 @@ package br.com.navitasassist.rma;
 import java.time.LocalDate;
 import java.util.List;
 
-import br.com.navitasassist.diagnosis.FailureType;
-
 /** One RMA in the report list: the primary item plus the distinct effective warranty situations of all items. */
 public record RmaReportRowResponse(
     Long id,
@@ -18,7 +16,7 @@ public record RmaReportRowResponse(
     String batchNumber,
     int itemCount,
     List<WarrantyStatus> warrantyStatuses,
-    FailureType failureType
+    String failureType
 ) {
     public static RmaReportRowResponse from(RmaRecord rma) {
         List<RmaItemResponse> items = RmaReportItems.of(rma);

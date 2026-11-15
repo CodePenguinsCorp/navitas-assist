@@ -44,8 +44,8 @@ public class RmaReportCsvService {
                 ReportLabels.warranty(item.view().warrantyStatus()), item.view().warrantyOverride() == null ? "Não" : "Sim",
                 rma.getReportedFailure(),
                 diagnosis == null ? null : diagnosis.getFoundFailure(),
-                diagnosis == null ? null : ReportLabels.failureType(diagnosis.getFailureType()),
-                diagnosis == null ? null : ReportLabels.failureCause(diagnosis.getProbableCause()),
+                diagnosis == null ? null : diagnosis.getFailureType(),
+                diagnosis == null ? null : diagnosis.getProbableCause(),
                 rma.getAssignee() == null ? null : rma.getAssignee().getFullName(),
                 date(rma.getShippedAt()));
         }

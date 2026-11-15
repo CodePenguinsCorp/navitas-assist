@@ -13,7 +13,6 @@ import java.util.List;
 
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.diagnosis.Diagnosis;
-import br.com.navitasassist.diagnosis.FailureType;
 import br.com.navitasassist.product.Product;
 import br.com.navitasassist.repository.ClientRepository;
 import br.com.navitasassist.repository.ProductRepository;
@@ -74,7 +73,7 @@ class RmaReportCsvIntegrationTest {
         rma.replaceItems(List.of(first, second));
         Diagnosis diagnosis = new Diagnosis();
         diagnosis.setFoundFailure("Conector danificado");
-        diagnosis.setFailureType(FailureType.COMMUNICATION);
+        diagnosis.setFailureType("Comunicação");
         diagnosis.setDiagnosedAt(LocalDate.parse("2026-10-06"));
         diagnosis.setTechnicianName("Técnico");
         rma.setDiagnosis(diagnosis);

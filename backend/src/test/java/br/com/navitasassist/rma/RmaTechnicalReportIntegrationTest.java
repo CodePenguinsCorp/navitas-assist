@@ -14,8 +14,6 @@ import java.util.List;
 
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.diagnosis.Diagnosis;
-import br.com.navitasassist.diagnosis.FailureCause;
-import br.com.navitasassist.diagnosis.FailureType;
 import br.com.navitasassist.part.Part;
 import br.com.navitasassist.part.PartReservation;
 import br.com.navitasassist.part.PartReservationStatus;
@@ -84,8 +82,8 @@ class RmaTechnicalReportIntegrationTest {
         rma.replaceItems(List.of(item));
         Diagnosis diagnosis = new Diagnosis();
         diagnosis.setFoundFailure("Regulador queimado");
-        diagnosis.setFailureType(FailureType.POWER_SUPPLY);
-        diagnosis.setProbableCause(FailureCause.OVERLOAD);
+        diagnosis.setFailureType("Fonte de alimentação");
+        diagnosis.setProbableCause("Sobrecarga");
         diagnosis.setDiagnosedAt(LocalDate.parse("2026-10-06"));
         diagnosis.setTechnicianName("João Técnico");
         rma.setDiagnosis(diagnosis);

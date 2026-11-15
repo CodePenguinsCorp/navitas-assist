@@ -104,7 +104,7 @@ class RmaReportIntegrationTest {
         rma.replaceItems(List.of(covered, expired));
         Diagnosis diagnosis = new Diagnosis();
         diagnosis.setFoundFailure("Conector danificado");
-        diagnosis.setFailureType(br.com.navitasassist.diagnosis.FailureType.COMMUNICATION);
+        diagnosis.setFailureType("Comunicação");
         diagnosis.setDiagnosedAt(LocalDate.parse("2026-10-20"));
         diagnosis.setTechnicianName("Técnico responsável");
         rma.setDiagnosis(diagnosis);
@@ -121,7 +121,7 @@ class RmaReportIntegrationTest {
             .andExpect(jsonPath("$.rmas.content[0].warrantyStatuses", hasSize(2)))
             .andExpect(jsonPath("$.rmas.content[0].warrantyStatuses[0]").value("IN_WARRANTY"))
             .andExpect(jsonPath("$.rmas.content[0].warrantyStatuses[1]").value("OUT_OF_WARRANTY"))
-            .andExpect(jsonPath("$.rmas.content[0].failureType").value("COMMUNICATION"))
+            .andExpect(jsonPath("$.rmas.content[0].failureType").value("Comunicação"))
             .andExpect(jsonPath("$.rmas.content[0].statusHistory").doesNotExist())
             .andExpect(jsonPath("$.rmas.content[0].items").doesNotExist());
     }

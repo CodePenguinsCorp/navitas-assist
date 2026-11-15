@@ -332,8 +332,8 @@ public class RmaService {
         }
 
         diagnosis.setFoundFailure(trim(request.foundFailure()));
-        diagnosis.setFailureType(request.failureType());
-        diagnosis.setProbableCause(request.probableCause());
+        diagnosis.setFailureType(trimToNull(request.failureType()));
+        diagnosis.setProbableCause(trimToNull(request.probableCause()));
         diagnosis.setNotes(trim(request.notes()));
         diagnosis.setDiagnosedAt(request.diagnosedAt());
         diagnosis.setTechnicianName(trim(request.technicianName()));

@@ -3,6 +3,7 @@ package br.com.navitasassist.controller;
 import java.util.List;
 
 import br.com.navitasassist.diagnosis.DiagnosisRequest;
+import br.com.navitasassist.diagnosis.DiagnosisSuggestionsResponse;
 import br.com.navitasassist.pagination.PageResponse;
 import br.com.navitasassist.rma.CreateRmaRequest;
 import br.com.navitasassist.rma.RmaAssigneeUpdateRequest;
@@ -17,6 +18,7 @@ import br.com.navitasassist.rma.RmaStatus;
 import br.com.navitasassist.rma.RmaStatusUpdateRequest;
 import br.com.navitasassist.rma.RmaSummaryResponse;
 import br.com.navitasassist.rma.UpdateRmaRequest;
+import br.com.navitasassist.service.DiagnosisSuggestionService;
 import br.com.navitasassist.service.RmaDashboardService;
 import br.com.navitasassist.service.RmaService;
 import jakarta.validation.Valid;
@@ -40,6 +42,7 @@ public class RmaController {
 
     private final RmaService rmaService;
     private final RmaDashboardService rmaDashboardService;
+    private final DiagnosisSuggestionService diagnosisSuggestionService;
 
     @GetMapping
     public PageResponse<RmaListItemResponse> searchPage(
@@ -106,6 +109,11 @@ public class RmaController {
     @PatchMapping("/{id}/assignee")
     public RmaDetailResponse updateAssignee(@PathVariable Long id, @RequestBody RmaAssigneeUpdateRequest request) {
         return rmaService.updateAssignee(id, request);
+    }
+
+    @GetMapping("/diagnosis/suggestions")
+    public DiagnosisSuggestionsResponse diagnosisSuggestions() {
+        return diagnosisSuggestionService.suggestions();
     }
 
     @PutMapping("/{id}/diagnosis")

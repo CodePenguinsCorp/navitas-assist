@@ -14,7 +14,6 @@ import java.util.List;
 
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.diagnosis.Diagnosis;
-import br.com.navitasassist.diagnosis.FailureType;
 import br.com.navitasassist.product.Product;
 import br.com.navitasassist.repository.ClientRepository;
 import br.com.navitasassist.repository.ProductRepository;
@@ -96,10 +95,10 @@ class RmaReportSummaryIntegrationTest {
     @Test
     void ranksFailuresByProductBatchClientAndFailureType() throws Exception {
         RmaRecord first = rma("OS-1", "2026-10-01", RmaStatus.IN_DIAGNOSIS, alfa, item(controller, "S1", "L1"), item(controller, "S2", "L1"));
-        diagnose(first, FailureType.SENSOR);
+        diagnose(first, "Sensor");
         RmaRecord second = rma("OS-2", "2026-10-02", RmaStatus.IN_DIAGNOSIS, alfa, item(controller, "S3", "L2"));
-        diagnose(second, FailureType.SENSOR);
-        rma("OS-3", "2026-10-03", RmaStatus.IN_DIAGNOSIS, beta, item(sensor, "S4", "L1"));
+        diagnose(second, "sensor ");
+        diagnose(rma("OS-3", "2026-10-03", RmaStatus.IN_DIAGNOSIS, beta, item(sensor, "S4", "L1")), "sensor");
 
         mockMvc.perform(get("/api/reports/rmas/summary").param("entryFrom", "2026-10-01").param("entryTo", "2026-10-31")
                 .with(asProfile("admin", "ADMIN")))
@@ -113,9 +112,9 @@ class RmaReportSummaryIntegrationTest {
             .andExpect(jsonPath("$.topClients[0].label").value("Cliente Alfa"))
             .andExpect(jsonPath("$.topClients[0].count").value(3))
             .andExpect(jsonPath("$.topFailureTypes", hasSize(1)))
-            .andExpect(jsonPath("$.topFailureTypes[0].key").value("SENSOR"))
-            .andExpect(jsonPath("$.topFailureTypes[0].label").value("Sensor"))
-            .andExpect(jsonPath("$.topFailureTypes[0].count").value(2));
+            .andExpect(jsonPath("$.topFailureTypes[0].key").value("sensor"))
+            .andExpect(jsonPath("$.topFailureTypes[0].label").value("sensor"))
+            .andExpect(jsonPath("$.topFailureTypes[0].count").value(3));
     }
 
     @Test
@@ -245,7 +244,7 @@ class RmaReportSummaryIntegrationTest {
         return rmas.saveAndFlush(rma);
     }
 
-    private void diagnose(RmaRecord rma, FailureType type) {
+    private void diagnose(RmaRecord rma, String type) {
         Diagnosis diagnosis = new Diagnosis();
         diagnosis.setFoundFailure("Falha");
         diagnosis.setFailureType(type);

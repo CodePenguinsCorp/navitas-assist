@@ -4,8 +4,8 @@ import java.time.LocalDate;
 
 public record DiagnosisResponse(
     String foundFailure,
-    FailureType failureType,
-    FailureCause probableCause,
+    String failureType,
+    String probableCause,
     String notes,
     LocalDate diagnosedAt,
     String technicianName

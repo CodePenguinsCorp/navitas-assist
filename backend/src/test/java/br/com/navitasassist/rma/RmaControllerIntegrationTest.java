@@ -584,6 +584,45 @@ class RmaControllerIntegrationTest {
     }
 
     @Test
+    void diagnosisTypeAndCauseAreFreeTextTrimmedWithSuggestionsFromWhatWasUsed() throws Exception {
+        LocalDate today = LocalDate.now(BUSINESS_ZONE);
+        long first = createdId(postDueDateRma("DIAG-TXT-1", today, null));
+        long second = createdId(postDueDateRma("DIAG-TXT-2", today, null));
+        long third = createdId(postDueDateRma("DIAG-TXT-3", today, null));
+        putDiagnosis(first, "  Fonte de alimentação ", " Capacitor estufado ").andExpect(status().isOk())
+            .andExpect(jsonPath("$.diagnosis.failureType").value("Fonte de alimentação"))
+            .andExpect(jsonPath("$.diagnosis.probableCause").value("Capacitor estufado"));
+        putDiagnosis(second, "fonte de alimentacao", "   ").andExpect(status().isOk())
+            .andExpect(jsonPath("$.diagnosis.probableCause").doesNotExist());
+        putDiagnosis(third, "Display", "Capacitor estufado").andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/rmas/diagnosis/suggestions").with(asProfile("viewer", "VIEWER")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.failureTypes", hasSize(2)))
+            .andExpect(jsonPath("$.failureTypes[0]").value("Display"))
+            .andExpect(jsonPath("$.failureTypes[1]").value("Fonte de alimentação"))
+            .andExpect(jsonPath("$.probableCauses", hasSize(1)))
+            .andExpect(jsonPath("$.probableCauses[0]").value("Capacitor estufado"));
+    }
+
+    @Test
+    void diagnosisTypeAndCauseAcceptUpTo80CharactersOnly() throws Exception {
+        LocalDate today = LocalDate.now(BUSINESS_ZONE);
+        long id = createdId(postDueDateRma("DIAG-LEN", today, null));
+        putDiagnosis(id, "a".repeat(80), "b".repeat(80)).andExpect(status().isOk());
+        putDiagnosis(id, "a".repeat(81), null).andExpect(status().isBadRequest());
+        putDiagnosis(id, null, "b".repeat(81)).andExpect(status().isBadRequest());
+    }
+
+    private org.springframework.test.web.servlet.ResultActions putDiagnosis(long id, String type, String cause) throws Exception {
+        Map<String, Object> body = new java.util.HashMap<>(Map.of("foundFailure", "Falha", "diagnosedAt", LocalDate.now(BUSINESS_ZONE).toString(), "technicianName", "Tec"));
+        body.put("failureType", type);
+        body.put("probableCause", cause);
+        return mockMvc.perform(put("/api/rmas/{id}/diagnosis", id).with(asProfile("tech", "TECHNICIAN")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body)));
+    }
+
+    @Test
     void diagnosisResponseCarriesOnlyTheFieldsShown() throws Exception {
         LocalDate today = LocalDate.now(BUSINESS_ZONE);
         long id = createdId(postDueDateRma("DIAG-MIN", today, null));
