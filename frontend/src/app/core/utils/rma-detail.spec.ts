@@ -247,14 +247,24 @@ describe('histórico de garantia', () => {
 });
 
 describe('repair timeline', () => {
-  it('merges repair events and marks the voided entity while preserving audit', () => {
+  it('shows each voided intervention once, with the reason apart and the decimal comma', () => {
     const history = rmaHistory({ statusHistory: [], assignmentHistory: [], repairHistory: [
-      { id: 1, entityType: 'INTERVENTION', entityId: 8, action: 'CREATE', changedBy: 'ana', changedAt: '2026-11-12T10:00:00Z', summary: 'Limpeza' },
-      { id: 2, entityType: 'INTERVENTION', entityId: 8, action: 'VOID', changedBy: 'bia', changedAt: '2026-11-13T10:00:00Z', summary: 'Duplicado' }
+      { id: 1, entityType: 'INTERVENTION', entityId: 8, action: 'CREATE', changedBy: 'ana', changedAt: '2026-11-12T10:00:00Z', summary: 'Intervenção registrada: teste · 0.017 h' },
+      { id: 2, entityType: 'INTERVENTION', entityId: 8, action: 'VOID', changedBy: 'bia', changedAt: '2026-11-13T10:00:00Z', summary: 'Intervenção anulada: teste · Motivo: erro de digitação' },
+      { id: 3, entityType: 'INTERVENTION', entityId: 9, action: 'CREATE', changedBy: 'ana', changedAt: '2026-11-14T10:00:00Z', summary: 'Intervenção registrada: limpeza · 1.5 h' }
     ] } as any);
     expect(history).toHaveLength(2);
-    expect(historyEntryTitle(history[0])).toBe('Duplicado');
-    expect(history[1]).toMatchObject({ kind: 'repair', by: 'ana', voided: true });
+    expect(history.map(historyEntryTitle)).toEqual(['Intervenção registrada: limpeza · 1,5 h', 'Intervenção registrada: teste · 0,017 h']);
+    expect(history[1]).toMatchObject({ kind: 'repair', by: 'ana', voided: true, voidReason: 'erro de digitação' });
+    expect(history[0]).toMatchObject({ voided: false, voidReason: null });
+  });
+
+  it('keeps a void event whose creation is not in the history', () => {
+    const history = rmaHistory({ statusHistory: [], assignmentHistory: [], repairHistory: [
+      { id: 2, entityType: 'INTERVENTION', entityId: 8, action: 'VOID', changedBy: 'bia', changedAt: '2026-11-13T10:00:00Z', summary: 'Intervenção anulada: teste · Motivo: duplicada' }
+    ] } as any);
+    expect(history).toHaveLength(1);
+    expect(historyEntryTitle(history[0])).toBe('Intervenção anulada: teste · Motivo: duplicada');
   });
 
   describe('statusTransitions', () => {

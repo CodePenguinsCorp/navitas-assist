@@ -319,7 +319,7 @@
                   @for (entry of history; track $index) {
                     <li class="record-card">
                       <div class="record-card__title">
-                        <strong [class.repair-voided]="entry.kind === 'repair' && entry.voided">@if (entry.kind === 'status') { <app-rma-status-transition [status]="entry.status" [previous]="entry.previous" [initial]="entry.initial" /> } @else { {{ historyEntryTitle(entry) }} }</strong>
+                        <strong>@if (entry.kind === 'status') { <app-rma-status-transition [status]="entry.status" [previous]="entry.previous" [initial]="entry.initial" /> } @else { {{ historyEntryTitle(entry) }} }@if (entry.kind === 'repair' && entry.voided) { {{ ' ' }}<span class="mini-chip tone-chip tone-danger">Anulada</span> }</strong>
                         <time>{{ dateTimeLabel(entry.at) }}</time>
                       </div>
                       @if (entry.kind === 'status') {

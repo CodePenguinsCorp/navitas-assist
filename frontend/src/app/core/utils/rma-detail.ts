@@ -134,6 +134,17 @@ export function historyEntryTitle(entry: RmaHistoryEntry): string {
   }
 }
 
+/** The server writes hours with a dot ("0.017 h"); the screen uses the Brazilian decimal comma. */
+function decimalComma(summary: string): string {
+  return summary.replace(/(\d)\.(\d+)( h)$/, '$1,$2$3');
+}
+
+/** A void summary ends with "Motivo: <reason>"; without it the whole summary is the reason. */
+function voidReasonOf(summary: string): string {
+  const index = summary.indexOf('Motivo: ');
+  return index >= 0 ? summary.slice(index + 'Motivo: '.length) : summary;
+}
+
 export interface StatusTransition { previous: RmaStatus | null; initial: boolean }
 
 /**
@@ -166,12 +177,14 @@ function statusEntryLabel(status: RmaStatus, transition: StatusTransition): stri
  */
 export function rmaHistory(rma: Pick<RmaResponse, 'statusHistory' | 'assignmentHistory'> & Partial<Pick<RmaResponse, 'dueDateHistory' | 'warrantyHistory' | 'items' | 'repairHistory'>>): RmaHistoryEntry[] {
   const repairHistory = rma.repairHistory ?? [];
-  const voids = new Map(repairHistory.filter(event => event.action === 'VOID').map(event => [`${event.entityType}-${event.entityId}`, event.summary]));
+  const key = (event: { entityType: string; entityId: number }) => `${event.entityType}-${event.entityId}`;
+  const voids = new Map(repairHistory.filter(event => event.action === 'VOID').map(event => [key(event), voidReasonOf(event.summary)]));
+  const created = new Set(repairHistory.filter(event => event.action === 'CREATE').map(key));
   const transitions = statusTransitions(rma.statusHistory);
   const entries: RmaHistoryEntry[] = [
-    ...repairHistory.map((event): RmaHistoryEntry => ({
-      kind: 'repair', at: event.changedAt, by: event.changedBy, summary: event.summary,
-      voided: voids.has(`${event.entityType}-${event.entityId}`), voidReason: voids.get(`${event.entityType}-${event.entityId}`) ?? null
+    ...repairHistory.filter(event => event.action !== 'VOID' || !created.has(key(event))).map((event): RmaHistoryEntry => ({
+      kind: 'repair', at: event.changedAt, by: event.changedBy, summary: decimalComma(event.summary),
+      voided: event.action !== 'VOID' && voids.has(key(event)), voidReason: event.action !== 'VOID' ? voids.get(key(event)) ?? null : null
     })),
     ...rma.statusHistory.map((record): RmaHistoryEntry => {
       const transition = transitions.get(record)!;
