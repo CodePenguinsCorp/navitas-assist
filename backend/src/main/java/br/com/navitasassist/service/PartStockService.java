@@ -8,33 +8,28 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.part.Part;
 import br.com.navitasassist.part.QuantityRules;
-import br.com.navitasassist.part.PartConsumptionRequest;
 import br.com.navitasassist.part.PartMovement;
 import br.com.navitasassist.part.PartMovementRequest;
 import br.com.navitasassist.part.PartMovementResponse;
 import br.com.navitasassist.part.PartMovementType;
 import br.com.navitasassist.part.PartReplenishmentResponse;
-import br.com.navitasassist.part.PartReservation;
-import br.com.navitasassist.part.PartReservationRequest;
-import br.com.navitasassist.part.PartReservationResponse;
-import br.com.navitasassist.part.PartReservationStatus;
+import br.com.navitasassist.part.PartUsage;
+import br.com.navitasassist.part.PartUsageRequest;
+import br.com.navitasassist.part.PartUsageResponse;
+import br.com.navitasassist.part.PartUsageStatus;
 import br.com.navitasassist.part.PartReversalRequest;
 import br.com.navitasassist.part.RmaPartsResponse;
 import br.com.navitasassist.repository.PartMovementRepository;
 import br.com.navitasassist.repository.PartRepository;
-import br.com.navitasassist.repository.PartReservationRepository;
+import br.com.navitasassist.repository.PartUsageRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaStatus;
-import br.com.navitasassist.notification.NotificationEventType;
-import br.com.navitasassist.notification.RmaNotificationEvent;
-import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.Authentication;
@@ -44,7 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Stock balances live on the part row and change only here, always under a pessimistic lock on that row, and always
- * together with an immutable {@link PartMovement}. Lock order is RMA, then part, then reservation.
+ * together with an immutable {@link PartMovement}. Lock order is RMA, then part, then usage.
  */
 @Service
 @RequiredArgsConstructor
@@ -53,13 +48,12 @@ public class PartStockService {
 
     private static final Set<PartMovementType> MANUAL_TYPES = EnumSet.of(PartMovementType.ENTRY, PartMovementType.EXIT, PartMovementType.ADJUSTMENT);
     private static final Set<RmaStatus> CLOSED_RMA_STATUSES = EnumSet.of(RmaStatus.COMPLETED, RmaStatus.RETURNED, RmaStatus.IRREPARABLE);
-    private static final String CLOSED_RMA_RESERVATION_MESSAGE = "Não é permitido reservar ou aplicar peças em uma OS encerrada.";
 
     private final PartRepository partRepository;
     private final PartMovementRepository partMovementRepository;
-    private final PartReservationRepository partReservationRepository;
+    private final PartUsageRepository partUsageRepository;
     private final RmaRecordRepository rmaRecordRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final AuditService audit;
     private final RmaService rmaService;
 
     @Transactional(readOnly = true)
@@ -92,18 +86,21 @@ public class PartStockService {
 
         Part part = lockPart(partId);
         QuantityRules.validate(quantity.abs(), part.getUnit());
-        PartMovement movement = record(part, request.type(), onHandChange, BigDecimal.ZERO, part.getUnitCost(), null, null, null, reason);
+        PartMovement movement = record(part, request.type(), onHandChange, part.getUnitCost(), null, null, null, reason);
         return PartMovementResponse.from(movement, false);
     }
 
     public PartMovementResponse reverse(Long movementId, PartReversalRequest request) {
-        Long partId = partMovementRepository.findById(movementId).map(movement -> movement.getPart().getId()).orElseThrow(() -> new ResourceNotFoundException("Movimento não encontrado: " + movementId));
+        PartMovement snapshot = partMovementRepository.findById(movementId)
+            .orElseThrow(() -> new ResourceNotFoundException("Movimento não encontrado: " + movementId));
+        Long partId = snapshot.getPart().getId();
+        if (snapshot.getType() == PartMovementType.CONSUMPTION && snapshot.getRma() != null) {
+            lockOpenRma(snapshot.getRma().getId(), "Não é permitido desfazer o uso de peças em uma OS encerrada.");
+        }
+        if (trimToNull(request.reason()) == null) throw new BusinessException("Informe o motivo da reversão.");
         Part part = lockPart(partId);
         PartMovement original = partMovementRepository.findById(movementId).orElseThrow();
 
-        if (original.getType() == PartMovementType.RESERVATION || original.getType() == PartMovementType.RESERVATION_CANCEL) {
-            throw new BusinessException("Movimentos de reserva são corrigidos cancelando a reserva.");
-        }
         if (original.getType() == PartMovementType.REVERSAL) {
             throw new BusinessException("Reversões não podem ser revertidas.");
         }
@@ -111,15 +108,20 @@ public class PartStockService {
             throw new BusinessException("O movimento já foi revertido: " + movementId);
         }
 
-        // A reversed consumption returns the quantity to free stock; the reservation is closed as REVERSED.
-        PartReservation reservation = original.getReservation();
-        if (original.getType() == PartMovementType.CONSUMPTION && reservation != null) {
-            reservation = lockReservation(reservation.getId());
-            reservation.setStatus(PartReservationStatus.REVERSED);
+        // A reversed consumption returns the quantity to free stock; the usage is closed as REVERTED.
+        PartUsage usage = original.getUsage();
+        if (original.getType() == PartMovementType.CONSUMPTION && usage != null) {
+            usage = lockUsage(usage.getId());
+            usage.setStatus(PartUsageStatus.REVERTED);
         }
 
+        if (original.getType() == PartMovementType.CONSUMPTION && original.getRma() != null) {
+            br.com.navitasassist.rma.RmaRepairHistory.record(original.getRma(), "STOCK_COMPONENT", usage == null ? null : usage.getId(), "REVERT",
+                "Uso desfeito: " + part.getName() + " (código: " + part.getCode() + "). Motivo: " + request.reason().trim(), currentUsername());
+        }
         try {
-            PartMovement movement = record(part, PartMovementType.REVERSAL, original.getOnHandChange().negate(), BigDecimal.ZERO, original.getUnitCost(), original.getRma(), reservation, original, request.reason().trim());
+            PartMovement movement = record(part, PartMovementType.REVERSAL, original.getOnHandChange().negate(), original.getUnitCost(), original.getRma(), usage, original, request.reason().trim());
+            audit.record("PART_REVERT", "PART_MOVEMENT", movement.getId(), part.getCode(), "Movimento revertido. Motivo: " + request.reason().trim());
             return PartMovementResponse.from(movement, false);
         } catch (DataIntegrityViolationException exception) {
             // uk_part_movements_reversed guards concurrent reversals the snapshot read above could not see.
@@ -130,147 +132,86 @@ public class PartStockService {
     @Transactional(readOnly = true)
     public RmaPartsResponse getRmaParts(Long rmaId) {
         RmaRecord rma = rmaService.getEntityById(rmaId);
-        List<PartReservation> reservations = partReservationRepository.findByRma_IdOrderByIdAsc(rmaId);
-        List<PartReservationResponse> reservationResponses = reservations.stream().map(this::toReservationResponse).toList();
+        List<PartUsage> usages = partUsageRepository.findByRma_IdOrderByIdAsc(rmaId);
+        List<PartMovement> ledger = partMovementRepository.findByRma_IdOrderByIdDesc(rmaId);
+        Map<Long, BigDecimal> costs = new java.util.HashMap<>();
+        ledger.stream().filter(m -> m.getType() == PartMovementType.CONSUMPTION && m.getUsage() != null)
+            .forEach(m -> costs.putIfAbsent(m.getUsage().getId(), m.getUnitCost()));
+        List<PartUsageResponse> usageResponses = usages.stream().map(usage -> {
+            BigDecimal cost = costs.getOrDefault(usage.getId(), usage.getPart().getUnitCost());
+            return PartUsageResponse.from(usage, cost, usage.getQuantity().multiply(cost).setScale(2, RoundingMode.HALF_UP));
+        }).toList();
         Set<Long> reversedIds = new HashSet<>(partMovementRepository.findReversedMovementIdsByRmaId(rmaId));
-        List<PartMovementResponse> movements = partMovementRepository.findByRma_IdOrderByIdDesc(rmaId).stream().map(movement -> PartMovementResponse.from(movement, reversedIds.contains(movement.getId()))).toList();
+        List<PartMovementResponse> movements = ledger.stream().map(movement -> PartMovementResponse.from(movement, reversedIds.contains(movement.getId()))).toList();
 
-        return new RmaPartsResponse(
-            rma.getId(),
-            rma.getCode(),
-            reservationResponses,
-            movements,
-            sumCost(reservationResponses, PartReservationStatus.ACTIVE),
-            sumCost(reservationResponses, PartReservationStatus.CONSUMED),
-            reservationResponses.stream().filter(reservation -> reservation.status() == PartReservationStatus.CONSUMED).toList(),
-            reservationResponses.stream().filter(reservation -> reservation.status() == PartReservationStatus.PENDING).count()
-        );
+        List<PartUsageResponse> used = usageResponses.stream()
+            .filter(usage -> usage.status() == PartUsageStatus.USED).toList();
+        return new RmaPartsResponse(rma.getId(), rma.getCode(), usageResponses, movements,
+            used.stream().map(PartUsageResponse::totalCost).reduce(BigDecimal.ZERO.setScale(2), BigDecimal::add), used);
     }
 
-    /**
-     * Reserves stock for an RMA without consuming it. When the available balance cannot cover the quantity the request
-     * is kept as PENDING, which feeds the pending-parts list and the replenishment alert.
-     */
-    public PartReservationResponse reserve(Long rmaId, PartReservationRequest request) {
-        RmaRecord rma = lockOpenRma(rmaId, "Não é permitido reservar peças em uma OS encerrada.");
-
+    public PartUsageResponse use(Long rmaId, PartUsageRequest request) {
+        RmaRecord rma = lockOpenRma(rmaId, "Não é permitido usar peças em uma OS encerrada.");
         Part part = lockPart(request.partId());
-        if (!part.isActive()) {
-            throw new BusinessException("A peça está inativa: " + part.getCode());
-        }
-
+        if (!part.isActive()) throw new BusinessException("A peça está inativa: " + part.getCode() + ".");
         QuantityRules.validate(request.quantity(), part.getUnit());
-        PartReservation reservation = new PartReservation();
-        reservation.setPart(part);
-        reservation.setRma(rma);
-        reservation.setQuantity(request.quantity());
-        reservation.setNote(trimToNull(request.note()));
-        boolean available = part.getAvailable().compareTo(request.quantity()) >= 0;
-        reservation.setStatus(available ? PartReservationStatus.ACTIVE : PartReservationStatus.PENDING);
-        reservation = partReservationRepository.save(reservation);
-
-        if (available) {
-            record(part, PartMovementType.RESERVATION, BigDecimal.ZERO, request.quantity(), part.getUnitCost(), rma, reservation, null, reservation.getNote());
-        } else {
-            eventPublisher.publishEvent(new RmaNotificationEvent(NotificationEventType.PART_PENDING,
-                "PART_PENDING:" + reservation.getId(), rma.getId(), Instant.now(), currentUsername(),
-                "Peça " + part.getCode() + ", " + reservation.getQuantity().toPlainString() + " " + part.getUnit() + " sem saldo disponível."));
+        if (trimToNull(request.replacementReason()) == null) throw new BusinessException("Informe o motivo da troca.");
+        if (part.getOnHand().compareTo(request.quantity()) < 0) {
+            throw new br.com.navitasassist.controller.ConflictException("Estoque insuficiente para a peça " + part.getCode() + ". Em estoque: " + format(part.getOnHand()) + ".");
         }
-        return toReservationResponse(reservation);
+        PartUsage usage = new PartUsage();
+        usage.setPart(part); usage.setRma(rma); usage.setQuantity(request.quantity());
+        usage.setStatus(PartUsageStatus.USED);
+        usage.setReplacementReason(request.replacementReason().trim());
+        usage.setComponentBatch(trimToNull(request.componentBatch()));
+        usage.setNote(trimToNull(request.notes()));
+        usage.setAppliedAt(Instant.now()); usage.setAppliedBy(currentUsername());
+        usage = partUsageRepository.save(usage);
+        record(part, PartMovementType.CONSUMPTION, request.quantity().negate(),
+            part.getUnitCost(), rma, usage, null, usage.getNote());
+        br.com.navitasassist.rma.RmaRepairHistory.record(rma, "STOCK_COMPONENT", usage.getId(), "USE",
+            br.com.navitasassist.rma.RepairHistorySummary.component("Peça usada", part.getName() + " (código: " + part.getCode() + ")",
+                usage.getQuantity(), part.getUnit(), usage.getReplacementReason(), usage.getComponentBatch()), currentUsername());
+        audit.record("PART_USE", "PART_USAGE", usage.getId(), part.getCode(), "Peça usada na OS " + rma.getCode() + ".");
+        return toUsageResponse(usage);
     }
 
-    public PartReservationResponse allocate(Long rmaId, Long reservationId) {
-        Long partId = findReservationPartId(rmaId, reservationId);
-        lockOpenRma(rmaId, CLOSED_RMA_RESERVATION_MESSAGE);
-        Part part = lockPart(partId);
-        PartReservation reservation = lockReservation(reservationId);
-        requireStatus(reservation, "Somente reservas pendentes podem ser alocadas.", PartReservationStatus.PENDING);
-        if (!part.isActive()) {
-            throw new BusinessException("A peça está inativa: " + part.getCode());
-        }
-
-        QuantityRules.validate(reservation.getQuantity(), part.getUnit());
-        record(part, PartMovementType.RESERVATION, BigDecimal.ZERO, reservation.getQuantity(), part.getUnitCost(), reservation.getRma(), reservation, null, null);
-        reservation.setStatus(PartReservationStatus.ACTIVE);
-        return toReservationResponse(partReservationRepository.save(reservation));
-    }
-
-    public PartReservationResponse consume(Long rmaId, Long reservationId, PartConsumptionRequest request) {
-        Long partId = findReservationPartId(rmaId, reservationId);
-        lockOpenRma(rmaId, CLOSED_RMA_RESERVATION_MESSAGE);
-        Part part = lockPart(partId);
-        PartReservation reservation = lockReservation(reservationId);
-        requireStatus(reservation, "Somente reservas ativas podem ser aplicadas.", PartReservationStatus.ACTIVE);
-
-        QuantityRules.validate(reservation.getQuantity(), part.getUnit());
-        record(part, PartMovementType.CONSUMPTION, reservation.getQuantity().negate(), reservation.getQuantity().negate(), part.getUnitCost(), reservation.getRma(), reservation, null, null);
-        reservation.setStatus(PartReservationStatus.CONSUMED);
-        reservation.setReplacementReason(request.replacementReason().trim());
-        reservation.setComponentBatch(trimToNull(request.componentBatch()));
-        reservation.setAppliedAt(Instant.now());
-        reservation.setAppliedBy(currentUsername());
-        br.com.navitasassist.rma.RmaRepairHistory.record(reservation.getRma(), "STOCK_COMPONENT", reservation.getId(), "APPLY",
-            br.com.navitasassist.rma.RepairHistorySummary.component("Peça aplicada", part.getName() + " (código: " + part.getCode() + ")",
-                reservation.getQuantity(), part.getUnit(), reservation.getReplacementReason(), reservation.getComponentBatch()), currentUsername());
-        return toReservationResponse(partReservationRepository.save(reservation));
-    }
-
-    public PartReservationResponse cancel(Long rmaId, Long reservationId) {
-        Part part = lockPart(findReservationPartId(rmaId, reservationId));
-        PartReservation reservation = lockReservation(reservationId);
-        requireStatus(reservation, "Somente reservas ativas ou pendentes podem ser canceladas.", PartReservationStatus.ACTIVE, PartReservationStatus.PENDING);
-
-        if (reservation.getStatus() == PartReservationStatus.ACTIVE) {
-            record(part, PartMovementType.RESERVATION_CANCEL, BigDecimal.ZERO, reservation.getQuantity().negate(), part.getUnitCost(), reservation.getRma(), reservation, null, null);
-        }
-        reservation.setStatus(PartReservationStatus.CANCELLED);
-        return toReservationResponse(partReservationRepository.save(reservation));
-    }
-
-    @Transactional(readOnly = true)
-    public List<PartReservationResponse> listPending() {
-        return partReservationRepository.findByStatusOrderByIdAsc(PartReservationStatus.PENDING).stream().map(this::toReservationResponse).toList();
+    public PartUsageResponse undoUse(Long rmaId, Long usageId, PartReversalRequest request) {
+        findUsagePartId(rmaId, usageId);
+        lockOpenRma(rmaId, "Não é permitido desfazer o uso de peças em uma OS encerrada.");
+        PartMovement original = partMovementRepository.findFirstByUsage_IdAndTypeOrderByIdDesc(usageId, PartMovementType.CONSUMPTION)
+            .orElseThrow(() -> new ResourceNotFoundException("Uso de peça não encontrado: " + usageId + "."));
+        reverse(original.getId(), request);
+        return toUsageResponse(lockUsage(usageId));
     }
 
     @Transactional(readOnly = true)
     public List<PartReplenishmentResponse> listReplenishment() {
-        Map<Long, BigDecimal> pendingByPart = partReservationRepository.findByStatusOrderByIdAsc(PartReservationStatus.PENDING).stream()
-            .collect(Collectors.groupingBy(reservation -> reservation.getPart().getId(), Collectors.reducing(BigDecimal.ZERO, PartReservation::getQuantity, BigDecimal::add)));
-
-        return partRepository.search(null).stream()
-            .filter(part -> part.isActive() && (part.isBelowMinimum() || pendingByPart.containsKey(part.getId())))
-            .map(part -> {
-                BigDecimal pending = pendingByPart.getOrDefault(part.getId(), BigDecimal.ZERO);
-                BigDecimal suggested = part.getMinimumStock().add(pending).subtract(part.getAvailable()).max(BigDecimal.ZERO);
-                return new PartReplenishmentResponse(part.getId(), part.getCode(), part.getName(), part.getUnit(), part.getLocation(), part.getMinimumStock(), part.getOnHand(), part.getReserved(), part.getAvailable(), pending, suggested, part.isBelowMinimum());
-            })
-            .toList();
+        return partRepository.search(null).stream().filter(part -> part.isActive() && part.isBelowMinimum())
+            .map(part -> new PartReplenishmentResponse(part.getId(), part.getCode(), part.getName(), part.getUnit(), part.getLocation(),
+                part.getMinimumStock(), part.getOnHand(), part.getMinimumStock().subtract(part.getOnHand()).max(BigDecimal.ZERO), true)).toList();
     }
 
-    private PartMovement record(Part part, PartMovementType type, BigDecimal onHandChange, BigDecimal reservedChange, BigDecimal unitCost, RmaRecord rma, PartReservation reservation, PartMovement reversed, String reason) {
+    private PartMovement record(Part part, PartMovementType type, BigDecimal onHandChange, BigDecimal unitCost, RmaRecord rma, PartUsage usage, PartMovement reversed, String reason) {
         BigDecimal onHand = part.getOnHand().add(onHandChange);
-        BigDecimal reservedQuantity = part.getReserved().add(reservedChange);
-        if (reservedQuantity.signum() < 0 || onHand.compareTo(reservedQuantity) < 0) {
-            throw new BusinessException("Estoque disponível insuficiente para a peça " + part.getCode() + ". Disponível: " + format(part.getAvailable()));
+        if (onHand.signum() < 0) {
+            throw new BusinessException("Estoque insuficiente para a peça " + part.getCode() + ". Em estoque: " + format(part.getOnHand()) + ".");
         }
 
         part.setOnHand(onHand);
-        part.setReserved(reservedQuantity);
         partRepository.save(part);
 
-        BigDecimal quantity = onHandChange.signum() != 0 ? onHandChange.abs() : reservedChange.abs();
+        BigDecimal quantity = onHandChange.abs();
         PartMovement movement = new PartMovement();
         movement.setPart(part);
         movement.setType(type);
         movement.setQuantity(quantity);
         movement.setOnHandChange(onHandChange);
-        movement.setReservedChange(reservedChange);
         movement.setOnHandAfter(onHand);
-        movement.setReservedAfter(reservedQuantity);
         movement.setUnitCost(unitCost);
         movement.setTotalCost(quantity.multiply(unitCost).setScale(2, RoundingMode.HALF_UP));
         movement.setRma(rma);
-        movement.setReservation(reservation);
+        movement.setUsage(usage);
         movement.setReversedMovement(reversed);
         movement.setReason(reason);
         movement.setCreatedBy(currentUsername());
@@ -278,19 +219,13 @@ public class PartStockService {
         return partMovementRepository.save(movement);
     }
 
-    private PartReservationResponse toReservationResponse(PartReservation reservation) {
-        BigDecimal unitCost = reservation.getStatus() == PartReservationStatus.CONSUMED
-            ? partMovementRepository.findFirstByReservation_IdAndTypeOrderByIdDesc(reservation.getId(), PartMovementType.CONSUMPTION).map(PartMovement::getUnitCost).orElse(reservation.getPart().getUnitCost())
-            : reservation.getPart().getUnitCost();
-        return PartReservationResponse.from(reservation, unitCost, reservation.getQuantity().multiply(unitCost).setScale(2, RoundingMode.HALF_UP));
-    }
-
-    private BigDecimal sumCost(List<PartReservationResponse> reservations, PartReservationStatus status) {
-        return reservations.stream().filter(reservation -> reservation.status() == status).map(PartReservationResponse::totalCost).reduce(BigDecimal.ZERO.setScale(2), BigDecimal::add);
+    private PartUsageResponse toUsageResponse(PartUsage usage) {
+        BigDecimal unitCost = partMovementRepository.findFirstByUsage_IdAndTypeOrderByIdDesc(usage.getId(), PartMovementType.CONSUMPTION).map(PartMovement::getUnitCost).orElse(usage.getPart().getUnitCost());
+        return PartUsageResponse.from(usage, unitCost, usage.getQuantity().multiply(unitCost).setScale(2, RoundingMode.HALF_UP));
     }
 
     /**
-     * Locks the RMA row, serializing reservation changes with status changes that close the RMA (see RmaService).
+     * Locks the RMA row, serializing usage changes with status changes that close the RMA (see RmaService).
      */
     private RmaRecord lockOpenRma(Long rmaId, String closedMessage) {
         RmaRecord rma = rmaRecordRepository.findByIdForUpdate(rmaId).orElseThrow(() -> new ResourceNotFoundException("OS não encontrada: " + rmaId));
@@ -304,23 +239,17 @@ public class PartStockService {
         return partRepository.findByIdForUpdate(partId).orElseThrow(() -> new ResourceNotFoundException("Peça não encontrada: " + partId));
     }
 
-    private PartReservation lockReservation(Long reservationId) {
-        return partReservationRepository.findByIdForUpdate(reservationId).orElseThrow(() -> new ResourceNotFoundException("Reserva não encontrada: " + reservationId));
+    private PartUsage lockUsage(Long usageId) {
+        return partUsageRepository.findByIdForUpdate(usageId).orElseThrow(() -> new ResourceNotFoundException("Uso de peça não encontrado: " + usageId));
     }
 
-    private Long findReservationPartId(Long rmaId, Long reservationId) {
-        return partReservationRepository.findPartIdByIdAndRmaId(reservationId, rmaId).orElseThrow(() -> new ResourceNotFoundException("Reserva não encontrada: " + reservationId));
+    private Long findUsagePartId(Long rmaId, Long usageId) {
+        return partUsageRepository.findPartIdByIdAndRmaId(usageId, rmaId).orElseThrow(() -> new ResourceNotFoundException("Uso de peça não encontrado: " + usageId));
     }
 
     private void ensurePartExists(Long partId) {
         if (!partRepository.existsById(partId)) {
             throw new ResourceNotFoundException("Peça não encontrada: " + partId);
-        }
-    }
-
-    private void requireStatus(PartReservation reservation, String message, PartReservationStatus... allowed) {
-        if (!EnumSet.of(allowed[0], allowed).contains(reservation.getStatus())) {
-            throw new BusinessException(message);
         }
     }
 

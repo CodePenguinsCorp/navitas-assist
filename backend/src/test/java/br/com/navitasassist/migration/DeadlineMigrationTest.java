@@ -39,7 +39,7 @@ class DeadlineMigrationTest {
         PostgresTestDatabase.Coordinates database = PostgresTestDatabase.migrated("deadline_sla");
 
         try (Connection connection = database.connect()) {
-            assertEquals(Set.of("RMA_CREATED", "RMA_ASSIGNED", "RMA_BLOCKED", "PART_PENDING", "TEST_FAILED"),
+            assertEquals(Set.of("RMA_CREATED", "RMA_ASSIGNED", "RMA_BLOCKED", "TEST_FAILED"),
                 strings(connection, "SELECT event_type FROM notification_rules"));
             assertEquals(0, strings(connection, """
                 SELECT CAST(rp.rule_id AS VARCHAR(20)) FROM notification_rule_recipient_profiles rp

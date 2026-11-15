@@ -168,7 +168,7 @@ class NotificationIntegrationTest {
         jdbcTemplate.update("DELETE FROM protocol_template_versions");
         jdbcTemplate.update("DELETE FROM protocol_templates");
         jdbcTemplate.update("DELETE FROM part_movements");
-        jdbcTemplate.update("DELETE FROM part_reservations");
+        jdbcTemplate.update("DELETE FROM part_usages");
         partRepository.deleteAll();
         notificationMuteRepository.deleteAll();
         notificationRepository.deleteAll();
@@ -293,7 +293,7 @@ class NotificationIntegrationTest {
     }
 
     @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "PART_PENDING", "TEST_FAILED"})
+    @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "TEST_FAILED"})
     void notificationsThatAskForActionCanBeSnoozed(NotificationEventType type) throws Exception {
         assertTrue(type.isSnoozable());
         Long id = saveNotification(desk, type, null).getId();
@@ -338,7 +338,7 @@ class NotificationIntegrationTest {
     void usersCanMuteOnlyRulesThatAllowIt() throws Exception {
         mockMvc.perform(get("/api/notifications/preferences").with(as(desk)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(5)));
+            .andExpect(jsonPath("$", hasSize(4)));
 
         mockMvc.perform(put("/api/notifications/preferences/RMA_ASSIGNED").with(as(technician)).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"muted\":true}"))
             .andExpect(status().isBadRequest())
@@ -455,7 +455,7 @@ class NotificationIntegrationTest {
     }
 
     @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "PART_PENDING", "TEST_FAILED"})
+    @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "TEST_FAILED"})
     @org.springframework.security.test.context.support.WithMockUser(username = "nav40-desk")
     void realProducersNotifyDefaultRecipientsAndDeduplicate(NotificationEventType type) {
         RmaDetailResponse rma = assignedRma();
@@ -464,7 +464,7 @@ class NotificationIntegrationTest {
         assertEquals(NotificationEventStatus.PROCESSED, event.getStatus());
         assertTrue(event.getEventKey().matches(type.name() + ":[0-9]+"), event.getEventKey());
         assertEquals(1, countFor(admin(), type));
-        assertEquals(type == NotificationEventType.PART_PENDING ? 0 : 1, countFor(technician, type));
+        assertEquals(1, countFor(technician, type));
         assertEquals(0, countFor(desk, type));
         notificationRepository.findAll().stream().filter(n -> n.getEventType() == type).forEach(n -> {
             assertEquals(NotificationSeverity.WARNING, n.getSeverity());
@@ -472,7 +472,6 @@ class NotificationIntegrationTest {
             assertTrue(n.getTitle().contains(rma.code()));
             assertTrue(n.getMessage().contains(switch (type) {
                 case RMA_BLOCKED -> "Aguardando equipamento";
-                case PART_PENDING -> "sem saldo disponível";
                 case TEST_FAILED -> "Tensão reprovado";
                 default -> throw new IllegalArgumentException();
             }));
@@ -493,7 +492,7 @@ class NotificationIntegrationTest {
     }
 
     @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "PART_PENDING", "TEST_FAILED"})
+    @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "TEST_FAILED"})
     void realProducersRespectDisabledRules(NotificationEventType type) {
         RmaDetailResponse rma = assignedRma();
         NotificationRule rule = notificationRuleRepository.findByEventType(type).orElseThrow();
@@ -506,7 +505,7 @@ class NotificationIntegrationTest {
     }
 
     @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "PART_PENDING", "TEST_FAILED"})
+    @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "TEST_FAILED"})
     void realProducersWithoutRecipientsCreateNoNotifications(NotificationEventType type) {
         NotificationRule rule = notificationRuleRepository.findByEventType(type).orElseThrow();
         rule.setRecipientProfiles(new java.util.HashSet<>());
@@ -517,7 +516,7 @@ class NotificationIntegrationTest {
     }
 
     @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "PART_PENDING", "TEST_FAILED"})
+    @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "TEST_FAILED"})
     void realProducersRequireRmaVisibility(NotificationEventType type) {
         AccessProfile hidden = AccessTestSupport.saveProfile(accessProfiles, CUSTOM_PROFILE + " sem acesso");
         UserAccount hiddenUser = AccessTestSupport.saveAccountWithProfile(userAccountRepository, passwordEncoder, "nav40-hidden", hidden, Set.of());
@@ -532,7 +531,7 @@ class NotificationIntegrationTest {
     }
 
     @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "PART_PENDING", "TEST_FAILED"})
+    @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "TEST_FAILED"})
     void notificationFailureCannotUndoBusinessOperation(NotificationEventType type) {
         RmaDetailResponse rma = assignedRma();
         org.mockito.Mockito.doThrow(new IllegalStateException("Falha simulada"))
@@ -541,14 +540,13 @@ class NotificationIntegrationTest {
         assertEquals(NotificationEventStatus.FAILED, latestEvent(type).getStatus());
         assertTrue(switch (type) {
             case RMA_BLOCKED -> jdbcTemplate.queryForObject("SELECT COUNT(*) FROM rma_blocks WHERE rma_id=?", Integer.class, rma.id()) > 0;
-            case PART_PENDING -> partStockService.getRmaParts(rma.id()).pendingCount() > 0;
             case TEST_FAILED -> executionService.listForRma(rma.id()).get(0).failedItems() > 0;
             default -> false;
         });
     }
 
     @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "PART_PENDING", "TEST_FAILED"})
+    @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "TEST_FAILED"})
     void producersWaitForCommitAndIgnoreRollback(NotificationEventType type) {
         RmaDetailResponse rma = assignedRma();
         new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(tx -> {
@@ -561,7 +559,7 @@ class NotificationIntegrationTest {
     }
 
     @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "PART_PENDING", "TEST_FAILED"})
+    @org.junit.jupiter.params.provider.EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "TEST_FAILED"})
     void assigneeInAdministratorProfileReceivesOnlyOnce(NotificationEventType type) {
         RmaDetailResponse rma = createRma();
         jdbcTemplate.update("UPDATE rmas SET assignee_id=? WHERE id=?", admin().getId(), rma.id());
@@ -577,8 +575,8 @@ class NotificationIntegrationTest {
         part.setCode("nav40-available"); part.setName("Fusível"); part.setUnit("UN");
         part.setOnHand(java.math.BigDecimal.TEN);
         part = partRepository.save(part);
-        assertEquals(br.com.navitasassist.part.PartReservationStatus.ACTIVE,
-            partStockService.reserve(rma.id(), new br.com.navitasassist.part.PartReservationRequest(part.getId(), java.math.BigDecimal.ONE, null)).status());
+        assertEquals(br.com.navitasassist.part.PartUsageStatus.USED,
+            partStockService.use(rma.id(), new br.com.navitasassist.part.PartUsageRequest(part.getId(), java.math.BigDecimal.ONE, "Falha", null, null)).status());
         var item = new br.com.navitasassist.protocol.ProtocolTemplateItemRequest("Bancada", "Inspeção", null,
             br.com.navitasassist.protocol.ProtocolItemType.CHECK, true, null, null, null, null, null, false);
         var template = templateService.create(new br.com.navitasassist.protocol.ProtocolTemplateRequest("Teste", product.getId(), null, true, Set.of(), List.of(item)));
@@ -587,7 +585,7 @@ class NotificationIntegrationTest {
             executionService.recordResult(execution.id(), template.items().get(0).id(), new br.com.navitasassist.protocol.ProtocolItemResultRequest(outcome, null, null, null, "Conferido", null));
         }
         NotificationTestSupport.awaitIdle(notificationExecutor);
-        assertTrue(notificationEventRepository.findAll().stream().noneMatch(e -> e.getEventType() == NotificationEventType.PART_PENDING || e.getEventType() == NotificationEventType.TEST_FAILED));
+        assertTrue(notificationEventRepository.findAll().stream().noneMatch(e -> e.getEventType() == NotificationEventType.TEST_FAILED));
     }
 
     private RmaDetailResponse assignedRma() {
@@ -604,13 +602,6 @@ class NotificationIntegrationTest {
     private void produce(NotificationEventType type, Long rmaId) {
         switch (type) {
             case RMA_BLOCKED -> rmaService.block(rmaId, new br.com.navitasassist.rma.RmaBlockRequest("Aguardando equipamento", "Externo"));
-            case PART_PENDING -> {
-                br.com.navitasassist.part.Part part = new br.com.navitasassist.part.Part();
-                part.setCode("nav40-" + System.nanoTime()); part.setName("Fusível"); part.setUnit("UN");
-                part = partRepository.save(part);
-                assertEquals(br.com.navitasassist.part.PartReservationStatus.PENDING,
-                    partStockService.reserve(rmaId, new br.com.navitasassist.part.PartReservationRequest(part.getId(), java.math.BigDecimal.ONE, null)).status());
-            }
             case TEST_FAILED -> {
                 var executions = executionService.listForRma(rmaId);
                 br.com.navitasassist.protocol.ProtocolExecutionResponse execution;
@@ -697,8 +688,8 @@ class NotificationIntegrationTest {
     }
 
     private void resetRules() {
-        for (NotificationEventType type : List.of(NotificationEventType.RMA_BLOCKED, NotificationEventType.PART_PENDING, NotificationEventType.TEST_FAILED)) {
-            reset(type, NotificationSeverity.WARNING, Set.of("ADMIN"), type != NotificationEventType.PART_PENDING, true);
+        for (NotificationEventType type : List.of(NotificationEventType.RMA_BLOCKED, NotificationEventType.TEST_FAILED)) {
+            reset(type, NotificationSeverity.WARNING, Set.of("ADMIN"), true, true);
         }
         reset(NotificationEventType.RMA_CREATED, NotificationSeverity.INFO, Set.of("ADMIN", "SERVICE_DESK"), false, true);
         reset(NotificationEventType.RMA_ASSIGNED, NotificationSeverity.INFO, Set.of(), true, false);

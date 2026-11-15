@@ -9,7 +9,6 @@ Tipos (`NotificationEventType`):
 | `RMA_CREATED` | Sim, ao abrir uma OS | Ligada, severidade `INFO`, destinatários: perfis Administrador e Atendimento. |
 | `RMA_ASSIGNED` | Sim, ao atribuir ou trocar o responsável | Ligada, `INFO`, avisa só o responsável (`notifyAssignee`); o usuário não pode silenciá-la. |
 | `RMA_BLOCKED` | Sim, ao abrir um impedimento | App ligado, `WARNING`, responsável pela OS e perfil Administrador; permite silenciamento. |
-| `PART_PENDING` | Sim, ao reservar uma peça sem saldo suficiente | App ligado, `WARNING`, perfil Administrador; permite silenciamento. |
 | `TEST_FAILED` | Sim, ao registrar cada tentativa reprovada de um item de protocolo | App ligado, `WARNING`, responsável pela OS e perfil Administrador; permite silenciamento. |
 
 Os alertas `SLA_*` foram removidos; a data limite não gera notificação ([prazo-e-garantia.md](prazo-e-garantia.md)).
@@ -18,7 +17,7 @@ Os alertas `SLA_*` foram removidos; a data limite não gera notificação ([praz
 - Só recebe e vê a notificação quem está ativo e tem `rma.ver`; a regra é reavaliada ao gerar e ao listar, então mudanças de permissão valem na hora.
 - O e-mail inicia **desligado** em todas as regras existentes. O administrador pode ligá-lo na aba Regras.
 - Cada usuário pode silenciar tipos permitidos pela regra (`/api/notifications/preferences`); o silenciamento vale para os dois canais. Ler ou adiar no app não cancela um envio de e-mail pendente.
-- Cada ocorrência usa uma chave por ID do impedimento, reserva ou resultado; reprocessar a mesma chave não duplica a entrega. Resolver impedimento, alocar reserva ou aprovar item não gera esses alertas.
+- Cada ocorrência usa uma chave por ID do impedimento ou resultado; reprocessar a mesma chave não duplica a entrega. Resolver impedimento ou aprovar item não gera esses alertas.
 - O texto sai em português e o link aponta só para rotas internas (`/rmas?rma=<id>`); não há links públicos.
 
 ## Notificações no app
@@ -29,7 +28,7 @@ Os alertas `SLA_*` foram removidos; a data limite não gera notificação ([praz
 - O sino e a caixa de entrada atualizam a cada 60 segundos, sem disparar o pop-up de carregamento.
 - A linha da caixa mostra resumo, severidade, adiamento ativo e hora. Abrir o detalhe marca como lida; em caso de falha, o modal mostra o erro e **Tentar novamente**. A leitura em lote permanece na página e no sino.
 - **Apagar** ainda não existe por item: requer rota DELETE ou campo `dismissedAt`, migração e permissão restrita ao destinatário, com exclusão dos itens dispensados da lista e do resumo.
-- **Adiar** fica apenas no modal de detalhe e existe só para notificações que pedem uma ação do destinatário: `RMA_BLOCKED` (impedimento), `PART_PENDING` (peça pendente) e `TEST_FAILED` (teste reprovado). `RMA_CREATED` e `RMA_ASSIGNED` são informativas: o modal de detalhe e a caixa de entrada não oferecem Adiar para elas, e `POST /api/notifications/{id}/snooze` responde 400 ("Esta notificação é apenas informativa e não pode ser adiada."). O critério é o tipo do evento, não a severidade, porque a severidade é editável em cada regra. A lista fica em `NotificationEventType.isSnoozable()` no backend e em `SNOOZABLE_EVENT_TYPES` (`core/utils/notification-ui.ts`) no front.
+- **Adiar** fica apenas no modal de detalhe e existe só para notificações que pedem uma ação do destinatário: `RMA_BLOCKED` (impedimento) e `TEST_FAILED` (teste reprovado). `RMA_CREATED` e `RMA_ASSIGNED` são informativas: o modal de detalhe e a caixa de entrada não oferecem Adiar para elas, e `POST /api/notifications/{id}/snooze` responde 400 ("Esta notificação é apenas informativa e não pode ser adiada."). O critério é o tipo do evento, não a severidade, porque a severidade é editável em cada regra. A lista fica em `NotificationEventType.isSnoozable()` no backend e em `SNOOZABLE_EVENT_TYPES` (`core/utils/notification-ui.ts`) no front.
 - Uma informativa adiada antes dessa regra tem o adiamento ignorado: aparece na caixa, conta como não lida e volta com `snoozedUntil` nulo. O valor antigo continua gravado no banco, sem migração.
 
 ## E-mail
@@ -74,7 +73,7 @@ O worker consulta primeiro os IDs com envio vencido (`due()`). Se a fila estiver
 
 ## Contexto das notificações operacionais
 
-`RMA_BLOCKED`, `PART_PENDING` e `TEST_FAILED` usam o formato:
+`RMA_BLOCKED` e `TEST_FAILED` usam o formato:
 
 `Cliente · Equipamento · etapa Diagnóstico. Motivo do impedimento: "Aguardando peça. Sem saldo · lote 2". Registrado por "admin".`
 
@@ -83,3 +82,7 @@ O rótulo é `Motivo do impedimento`, `Pendência da peça` ou `Item reprovado`,
 A mensagem tem até 500 caracteres, incluindo escapes e autoria. Somente o motivo pode ser reduzido, preservando caracteres suplementares. Se o contexto e a autoria sozinhos excederem o teto, o processamento registra falha em vez de cortar o cabeçalho. A razão social permite espaços e hifens além do limite de caracteres significativos, portanto seu comprimento total não tem teto fixo.
 
 O modal reconhece somente o formato exato. Mensagens antigas ou ambíguas aparecem integralmente no campo de motivo específico do tipo. Etapa representa o momento do evento. Não há estado atual nem duração do impedimento no contrato da notificação. O conteúdo de e-mail permanece sem dados do cliente e não reutiliza essa mensagem.
+
+## Peças usadas
+
+Falta de estoque recusa o uso com 409 e não produz notificação nem pendência. O evento de reserva pendente foi removido do enum, regras, preferências e conteúdo de e-mail, sem compatibilidade histórica porque a base ser? recriada. A página Peças mantém a lista de reposição por estoque mínimo.

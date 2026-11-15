@@ -11,8 +11,6 @@ public record PartResponse(
     BigDecimal minimumStock,
     BigDecimal unitCost,
     BigDecimal onHand,
-    BigDecimal reserved,
-    BigDecimal available,
     boolean belowMinimum,
     boolean active
 ) {
@@ -26,8 +24,6 @@ public record PartResponse(
             part.getMinimumStock(),
             part.getUnitCost(),
             part.getOnHand(),
-            part.getReserved(),
-            part.getAvailable(),
             part.isBelowMinimum(),
             part.isActive()
         );

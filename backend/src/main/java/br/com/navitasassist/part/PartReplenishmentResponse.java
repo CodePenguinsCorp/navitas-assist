@@ -10,9 +10,6 @@ public record PartReplenishmentResponse(
     String location,
     BigDecimal minimumStock,
     BigDecimal onHand,
-    BigDecimal reserved,
-    BigDecimal available,
-    BigDecimal pendingQuantity,
     BigDecimal suggestedQuantity,
     boolean belowMinimum
 ) {

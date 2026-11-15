@@ -30,13 +30,12 @@ class NotificationContentFactoryTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "PART_PENDING", "TEST_FAILED"})
+    @EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "TEST_FAILED"})
     void preservesContextAndEscapesDetailAndActor(NotificationEventType type) throws Exception {
         String detail = "Aguardando. Lote · 2\n\"peça\"";
         String actor = "admin. \"suporte\"";
         String label = switch (type) {
             case RMA_BLOCKED -> "Motivo do impedimento";
-            case PART_PENDING -> "Pendência da peça";
             default -> "Item reprovado";
         };
         assertEquals("Cliente · Equipamento · etapa Diagnóstico. " + label + ": "
@@ -51,7 +50,7 @@ class NotificationContentFactoryTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "PART_PENDING", "TEST_FAILED"})
+    @EnumSource(value = NotificationEventType.class, names = {"RMA_BLOCKED", "TEST_FAILED"})
     void truncatesOnlyDetailAtCodePointBoundaries(NotificationEventType type) throws Exception {
         var rma = rma();
         rma.getClient().setLegalName("C".repeat(160));

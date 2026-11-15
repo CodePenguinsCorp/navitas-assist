@@ -15,12 +15,12 @@ import java.util.List;
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.diagnosis.Diagnosis;
 import br.com.navitasassist.part.Part;
-import br.com.navitasassist.part.PartReservation;
-import br.com.navitasassist.part.PartReservationStatus;
+import br.com.navitasassist.part.PartUsage;
+import br.com.navitasassist.part.PartUsageStatus;
 import br.com.navitasassist.product.Product;
 import br.com.navitasassist.repository.ClientRepository;
 import br.com.navitasassist.repository.PartRepository;
-import br.com.navitasassist.repository.PartReservationRepository;
+import br.com.navitasassist.repository.PartUsageRepository;
 import br.com.navitasassist.repository.ProductRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import com.lowagie.text.pdf.PdfReader;
@@ -44,14 +44,14 @@ class RmaTechnicalReportIntegrationTest {
     @Autowired private ClientRepository clients;
     @Autowired private ProductRepository products;
     @Autowired private PartRepository parts;
-    @Autowired private PartReservationRepository reservations;
+    @Autowired private PartUsageRepository usages;
     @Autowired private br.com.navitasassist.repository.RmaExternalComponentRepository externalComponents;
     @Autowired private br.com.navitasassist.repository.RmaInterventionRepository interventions;
     private RmaRecord rma;
 
     @BeforeEach
     void setUp() {
-        reservations.deleteAll();
+        usages.deleteAll();
         rmas.deleteAll();
         Client client = new Client();
         client.setLegalName("Cliente Ação Ltda");
@@ -89,8 +89,8 @@ class RmaTechnicalReportIntegrationTest {
         rma.setDiagnosis(diagnosis);
         rmas.saveAndFlush(rma);
 
-        reserve(part("REG-5V", "Regulador de tensão", "12.50"), "2", PartReservationStatus.CONSUMED);
-        reserve(part("CAP-10", "Capacitor cancelado", "1.00"), "1", PartReservationStatus.CANCELLED);
+        use(part("REG-5V", "Regulador de tensão", "12.50"), "2", PartUsageStatus.USED);
+        use(part("CAP-10", "Capacitor cancelado", "1.00"), "1", PartUsageStatus.REVERTED);
     }
 
     @Test
@@ -118,9 +118,9 @@ class RmaTechnicalReportIntegrationTest {
 
     @Test
     void includesStructuredComponentsAndInterventionsWithHours() throws Exception {
-        PartReservation consumed = reservations.findByRma_IdOrderByIdAsc(rma.getId()).get(0);
+        PartUsage consumed = usages.findByRma_IdOrderByIdAsc(rma.getId()).get(0);
         consumed.setReplacementReason("Curto na alimentação"); consumed.setComponentBatch("REG-LOTE");
-        consumed.setAppliedAt(java.time.Instant.now()); consumed.setAppliedBy("maria"); reservations.saveAndFlush(consumed);
+        consumed.setAppliedAt(java.time.Instant.now()); consumed.setAppliedBy("maria"); usages.saveAndFlush(consumed);
         RmaExternalComponent component = new RmaExternalComponent();
         component.setRma(rma); component.setCode("EXT-9"); component.setDescription("Conector externo"); component.setQuantity(new BigDecimal("1.125"));
         component.setUnit("un"); component.setComponentBatch("EXT-LOTE"); component.setReplacementReason("Oxidação dos contatos");
@@ -173,7 +173,7 @@ class RmaTechnicalReportIntegrationTest {
 
     @Test
     void hidesEmptySectionsAndFieldsInsteadOfRepeatingNaoInformado() throws Exception {
-        reservations.deleteAll();
+        usages.deleteAll();
         rma.setRepairSummary(null);
         rma.setTestSummary(" ");
         rma.setReplacedPartsSummary(null);
@@ -243,13 +243,16 @@ class RmaTechnicalReportIntegrationTest {
         return parts.save(part);
     }
 
-    private void reserve(Part part, String quantity, PartReservationStatus status) {
-        PartReservation reservation = new PartReservation();
-        reservation.setPart(part);
-        reservation.setRma(rma);
-        reservation.setQuantity(new BigDecimal(quantity));
-        reservation.setStatus(status);
-        reservations.saveAndFlush(reservation);
+    private void use(Part part, String quantity, PartUsageStatus status) {
+        PartUsage usage = new PartUsage();
+        usage.setPart(part);
+        usage.setRma(rma);
+        usage.setQuantity(new BigDecimal(quantity));
+        usage.setStatus(status);
+        usage.setReplacementReason("Falha");
+        usage.setAppliedAt(java.time.Instant.now());
+        usage.setAppliedBy("tech");
+        usages.saveAndFlush(usage);
     }
 
     private static String text(byte[] pdf) throws Exception {

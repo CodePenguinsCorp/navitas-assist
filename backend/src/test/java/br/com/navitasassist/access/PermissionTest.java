@@ -26,7 +26,7 @@ class PermissionTest {
         "cadastros.importar",
         "pecas.ver",
         "pecas.movimentar",
-        "pecas.reservar",
+        "pecas.usar",
         "protocolos.ver",
         "protocolos.executar",
         "protocolos.catalogo",
@@ -46,8 +46,8 @@ class PermissionTest {
     void modulesAndLabelsMatchSpec() {
         assertEquals(PermissionModule.RMA, Permission.RMA_ATRIBUIVEL.module());
         assertEquals("Pode ser responsável por ordens de serviço", Permission.RMA_ATRIBUIVEL.label());
-        assertEquals(PermissionModule.PECAS, Permission.PECAS_RESERVAR.module());
-        assertEquals("Reservar e aplicar peças nas ordens de serviço", Permission.PECAS_RESERVAR.label());
+        assertEquals(PermissionModule.PECAS, Permission.PECAS_USAR.module());
+        assertEquals("Usar peças nas OS", Permission.PECAS_USAR.label());
         assertEquals(PermissionModule.ADMINISTRACAO, Permission.NOTIFICACOES_REGRAS.module());
         assertEquals("Configurar regras de notificação", Permission.NOTIFICACOES_REGRAS.label());
 

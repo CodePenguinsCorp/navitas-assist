@@ -3,9 +3,13 @@ package br.com.navitasassist.service;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import br.com.navitasassist.report.CsvWriter;
-import br.com.navitasassist.repository.RmaRecordRepository;
+import br.com.navitasassist.repository.PartUsageRepository;
+import br.com.navitasassist.part.PartUsageStatus;
+import br.com.navitasassist.rma.RepairHistorySummary;
 import br.com.navitasassist.rma.ReportLabels;
 import br.com.navitasassist.rma.RmaRecord;
 import br.com.navitasassist.rma.RmaReportRequest;
@@ -26,7 +30,7 @@ public class RmaReportCsvService {
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final RmaReportService rmaReportService;
-    private final RmaRecordRepository rmaRecordRepository;
+    private final PartUsageRepository partUsageRepository;
     private final ExportStatementTimeout exportTimeout;
 
     public CsvFile rmas(RmaReportRequest filters) {
@@ -34,8 +38,14 @@ public class RmaReportCsvService {
         Period period = rmaReportService.period(filters);
         rmaReportService.ensureWithinLimit(filters, period);
         List<RmaRecord> records = rmaReportService.loadPeriod(filters, period);
+        Map<Long, String> usedParts = records.isEmpty() ? Map.of() : partUsageRepository
+            .findByRma_IdInAndStatusOrderByIdAsc(records.stream().map(RmaRecord::getId).toList(), PartUsageStatus.USED).stream()
+            .collect(Collectors.groupingBy(usage -> usage.getRma().getId(), Collectors.mapping(usage ->
+                RepairHistorySummary.component("Peça usada", usage.getPart().getName() + " (código: " + usage.getPart().getCode() + ")",
+                    usage.getQuantity(), usage.getPart().getUnit(), usage.getReplacementReason(), usage.getComponentBatch()),
+                Collectors.joining("\n"))));
         CsvWriter csv = new CsvWriter().row("Código", "Entrada", "Status", "Cliente", "Produto", "SKU", "Lote", "Série", "Garantia",
-            "Ajuste manual de garantia", "Falha relatada", "Falha encontrada", "Tipo de falha", "Causa provável", "Responsável", "Expedição");
+            "Ajuste manual de garantia", "Falha relatada", "Falha encontrada", "Tipo de falha", "Causa provável", "Responsável", "Expedição", "Peças usadas");
         for (ReportItem item : RmaReportService.items(records)) {
             RmaRecord rma = item.rma();
             var diagnosis = rma.getDiagnosis();
@@ -47,7 +57,7 @@ public class RmaReportCsvService {
                 diagnosis == null ? null : diagnosis.getFailureType(),
                 diagnosis == null ? null : diagnosis.getProbableCause(),
                 rma.getAssignee() == null ? null : rma.getAssignee().getFullName(),
-                date(rma.getShippedAt()));
+                date(rma.getShippedAt()), usedParts.get(rma.getId()));
         }
         return new CsvFile("rmas-" + period.from() + "-a-" + period.to() + ".csv", csv.toBytes());
     }

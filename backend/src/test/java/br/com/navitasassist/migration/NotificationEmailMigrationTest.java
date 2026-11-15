@@ -21,7 +21,7 @@ class NotificationEmailMigrationTest {
             }
             s.executeUpdate("update notifications set email_status='PENDING' where title='Legacy'");
             assertThrows(SQLException.class, () -> s.executeUpdate("update notifications set email_status='UNKNOWN' where title='Legacy'"));
-            try (ResultSet rows = s.executeQuery("select count(*) from notification_rules where app_enabled")) { rows.next(); assertEquals(5, rows.getInt(1)); }
+            try (ResultSet rows = s.executeQuery("select count(*) from notification_rules where app_enabled")) { rows.next(); assertEquals(4, rows.getInt(1)); }
 
             s.executeUpdate("insert into access_profiles(name, created_at, updated_at) values ('Email migration', current_timestamp, current_timestamp)");
             String insert = "insert into user_accounts(username, full_name, password_hash, profile_id, active, created_at, updated_at, email) values ('%s','Test','hash',(select id from access_profiles where name='Email migration'),true,current_timestamp,current_timestamp,%s)";

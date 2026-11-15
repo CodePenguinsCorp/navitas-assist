@@ -105,7 +105,7 @@ public class RmaRepairService {
     private void fillExternal(RmaExternalComponent component, ExternalComponentRequest request) {
         QuantityRules.validate(request.quantity(), trimToNull(request.unit()) == null ? "un" : request.unit());
         String code = trimToNull(request.code());
-        if (code != null && parts.existsByCodeIgnoreCase(code)) throw new BusinessException("Código já cadastrado no estoque. Use a reserva de peças.");
+        if (code != null && parts.existsByCodeIgnoreCase(code)) throw new BusinessException("Código já cadastrado no estoque. Use a ação Usar peça.");
         component.setCode(code); component.setDescription(request.description().trim()); component.setQuantity(request.quantity());
         component.setUnit(trimToNull(request.unit()) == null ? "un" : request.unit().trim());
         component.setComponentBatch(trimToNull(request.componentBatch())); component.setReplacementReason(request.replacementReason().trim());

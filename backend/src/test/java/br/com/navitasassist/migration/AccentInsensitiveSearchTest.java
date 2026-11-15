@@ -50,8 +50,8 @@ class AccentInsensitiveSearchTest {
         jdbc.update("INSERT INTO clients (legal_name, trade_name, created_at, updated_at) VALUES ('Assistência Técnica Ômega Ltda', 'Ômega', now(), now())");
         jdbc.update("INSERT INTO products (sku, name, category, default_warranty_months, created_at, updated_at) VALUES ('ACC-CAM-1', 'Câmera Térmica', 'Visão', 12, now(), now())");
         jdbc.update("""
-            INSERT INTO parts (code, name, unit, location, minimum_stock, unit_cost, on_hand_quantity, reserved_quantity, active, created_at, updated_at)
-            VALUES ('ACC-PECA-1', 'Peça Óptica', 'un', 'Prateleira Ç', 0, 0, 0, 0, TRUE, now(), now())
+            INSERT INTO parts (code, name, unit, location, minimum_stock, unit_cost, on_hand_quantity, active, created_at, updated_at)
+            VALUES ('ACC-PECA-1', 'Peça Óptica', 'un', 'Prateleira Ç', 0, 0, 0, TRUE, now(), now())
             """);
         jdbc.update("INSERT INTO access_profiles (name, created_at, updated_at) VALUES ('Ábaco ordenação', now(), now()), ('Zebra ordenação', now(), now()), ('abelha ordenação', now(), now())");
         jdbc.update("""

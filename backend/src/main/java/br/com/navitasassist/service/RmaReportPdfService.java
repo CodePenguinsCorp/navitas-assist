@@ -66,8 +66,8 @@ public class RmaReportPdfService {
         exportTimeout.extend();
         RmaDetailResponse rma = rmaService.getById(rmaId);
         List<ReplacedComponent> components = new ArrayList<>(partStockService.getRmaParts(rmaId).replacedComponents().stream()
-            .map(reservation -> new ReplacedComponent(reservation.partCode(), reservation.partName(), reservation.quantity(), reservation.unit(),
-                reservation.componentBatch(), reservation.replacementReason(), reservation.appliedAt(), reservation.appliedBy(), "Estoque"))
+            .map(usage -> new ReplacedComponent(usage.partCode(), usage.partName(), usage.quantity(), usage.unit(),
+                usage.componentBatch(), usage.replacementReason(), usage.appliedAt(), usage.appliedBy(), "Estoque"))
             .toList());
         repairService.listExternalComponents(rmaId).stream().filter(item -> item.voidedAt() == null).forEach(component -> components.add(new ReplacedComponent(component.code(), component.description(),
             component.quantity(), component.unit(), component.componentBatch(), component.replacementReason(), component.appliedAt(), component.appliedBy(), "Externo")));

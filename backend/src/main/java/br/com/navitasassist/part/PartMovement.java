@@ -53,13 +53,7 @@ public class PartMovement {
     private BigDecimal onHandChange;
 
     @Column(nullable = false, precision = 12, scale = 3)
-    private BigDecimal reservedChange;
-
-    @Column(nullable = false, precision = 12, scale = 3)
     private BigDecimal onHandAfter;
-
-    @Column(nullable = false, precision = 12, scale = 3)
-    private BigDecimal reservedAfter;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal unitCost;
@@ -72,8 +66,8 @@ public class PartMovement {
     private RmaRecord rma;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reservation_id")
-    private PartReservation reservation;
+    @JoinColumn(name = "usage_id")
+    private PartUsage usage;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reversed_movement_id", unique = true)

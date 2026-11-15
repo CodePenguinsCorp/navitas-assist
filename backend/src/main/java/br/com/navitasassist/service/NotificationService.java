@@ -89,14 +89,14 @@ public class NotificationService {
         UserAccount user = currentUser();
         Set<NotificationEventType> muted = new HashSet<>(notificationMuteRepository.findEventTypesByUserId(user.getId()));
         return notificationRuleRepository.findAllByOrderByIdAsc().stream()
-            .filter(rule -> visibilityPolicy.canView(user, rule.getEventType()))
+            .filter(rule -> rule.getEventType().isSupported() && visibilityPolicy.canView(user, rule.getEventType()))
             .map(rule -> toPreference(rule, muted.contains(rule.getEventType())))
             .toList();
     }
 
     public NotificationPreferenceResponse updatePreference(NotificationEventType eventType, boolean muted) {
         UserAccount user = currentUser();
-        NotificationRule rule = notificationRuleRepository.findByEventType(eventType).filter(candidate -> visibilityPolicy.canView(user, candidate.getEventType()))
+        NotificationRule rule = notificationRuleRepository.findByEventType(eventType).filter(candidate -> candidate.getEventType().isSupported() && visibilityPolicy.canView(user, candidate.getEventType()))
             .orElseThrow(() -> new ResourceNotFoundException("Regra de notificação não encontrada: " + eventType));
         if (muted && !rule.isUserMutable()) {
             throw new BusinessException("Esta regra de notificação não pode ser silenciada: " + eventType);

@@ -108,29 +108,31 @@ class DatabaseMigrationTest {
     }
 
     @Test
-    void createsPartInventoryTablesThatRejectNegativeAvailability() throws SQLException {
+    void createsPartInventoryTablesThatRejectNegativeStock() throws SQLException {
         PostgresTestDatabase.Coordinates database = PostgresTestDatabase.migrated("migration_parts");
 
         try (Connection connection = database.connect()) {
             assertTrue(tableExists(connection, "parts"));
-            assertTrue(tableExists(connection, "part_reservations"));
+            assertTrue(tableExists(connection, "part_usages"));
             assertTrue(tableExists(connection, "part_movements"));
-            assertEquals(Set.of("idx_part_reservations_part_id", "idx_part_reservations_rma_id", "idx_part_reservations_status"), applicationIndexes(connection, "part_reservations"));
+            assertEquals(Set.of("idx_part_usages_part_id", "idx_part_usages_rma_id", "idx_part_usages_status"), applicationIndexes(connection, "part_usages"));
             assertEquals(Set.of("idx_part_movements_part_id", "idx_part_movements_rma_id"), applicationIndexes(connection, "part_movements"));
 
-            insertPart(connection, "PCA-OK", "5", "5");
-            assertThrows(SQLException.class, () -> insertPart(connection, "PCA-NEG", "1", "2"));
+            insertPart(connection, "PCA-OK", "5");
+            assertFalse(columnExists(connection, "parts", "reserved_quantity"));
+            assertFalse(columnExists(connection, "part_movements", "reserved_change"));
+            assertTrue(columnExists(connection, "part_usages", "replacement_reason"));
+            assertThrows(SQLException.class, () -> insertPart(connection, "PCA-NEG", "-1"));
         }
     }
 
-    private void insertPart(Connection connection, String code, String onHand, String reserved) throws SQLException {
+    private void insertPart(Connection connection, String code, String onHand) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
-            INSERT INTO parts (code, name, unit, minimum_stock, unit_cost, on_hand_quantity, reserved_quantity, active, created_at, updated_at)
-            VALUES (?, 'Peça', 'un', 0, 1.50, ?, ?, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            INSERT INTO parts (code, name, unit, minimum_stock, unit_cost, on_hand_quantity, active, created_at, updated_at)
+            VALUES (?, 'Peça', 'un', 0, 1.50, ?, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """)) {
             statement.setString(1, code);
             statement.setBigDecimal(2, new java.math.BigDecimal(onHand));
-            statement.setBigDecimal(3, new java.math.BigDecimal(reserved));
             statement.executeUpdate();
         }
     }
@@ -193,7 +195,7 @@ class DatabaseMigrationTest {
                 code, client_id, product_id, purchase_date_unknown, entry_date, received_by,
                 reported_failure, priority, status, created_at, updated_at
             ) VALUES (
-                'OS-25', ?, ?, TRUE, DATE '2026-10-19', 'Técnico', 'Falha',
+                'OS-25', ?, TRUE, DATE '2026-10-19', 'Técnico', 'Falha',
                 'HIGH', 'RECEIVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             )
             """, Statement.RETURN_GENERATED_KEYS)) {
@@ -233,7 +235,7 @@ class DatabaseMigrationTest {
             assertTrue(tableExists(connection, "notifications"));
             assertTrue(tableExists(connection, "notification_mutes"));
             assertEquals(Set.of("idx_notifications_recipient_id", "idx_notifications_rma_id", "idx_notifications_email_due", "idx_notifications_email_sent", "idx_notifications_recipient_created"), applicationIndexes(connection, "notifications"));
-            assertEquals(5, count(connection, "notification_rules"));
+            assertEquals(4, count(connection, "notification_rules"));
 
             try (Statement statement = connection.createStatement()) {
                 String insert = "INSERT INTO notification_events (event_key, event_type, status, recipient_count, occurred_at) VALUES ('KEY-1', 'RMA_CREATED', 'RECEIVED', 0, CURRENT_TIMESTAMP)";

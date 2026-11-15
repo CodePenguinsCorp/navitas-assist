@@ -17,10 +17,10 @@ import org.springframework.context.ApplicationEventPublisher;
 class PartQuantityValidationTest {
     private final PartRepository parts = mock(PartRepository.class);
     private final PartMovementRepository movements = mock(PartMovementRepository.class);
-    private final PartReservationRepository reservations = mock(PartReservationRepository.class);
+    private final PartUsageRepository usages = mock(PartUsageRepository.class);
     private final RmaRecordRepository rmas = mock(RmaRecordRepository.class);
-    private final PartStockService stock = new PartStockService(parts, movements, reservations, rmas,
-        mock(ApplicationEventPublisher.class), mock(RmaService.class));
+    private final PartStockService stock = new PartStockService(parts, movements, usages, rmas,
+        mock(AuditService.class), mock(RmaService.class));
     private final Part part = new Part();
     private final RmaRecord rma = new RmaRecord();
 
@@ -30,7 +30,7 @@ class PartQuantityValidationTest {
         when(parts.findByIdForUpdate(1L)).thenReturn(Optional.of(part));
         when(rmas.findByIdForUpdate(2L)).thenReturn(Optional.of(rma));
         when(movements.save(any())).thenAnswer(call -> call.getArgument(0));
-        when(reservations.save(any())).thenAnswer(call -> call.getArgument(0));
+        when(usages.save(any())).thenAnswer(call -> call.getArgument(0));
     }
 
     @ParameterizedTest
@@ -46,27 +46,32 @@ class PartQuantityValidationTest {
     }
 
     @Test
-    void rejectsFractionInReservationEvenWithoutAvailableBalance() {
-        setup("UN"); part.setOnHand(BigDecimal.ZERO);
-        assertThrows(BusinessException.class, () -> stock.reserve(2L, new PartReservationRequest(1L, new BigDecimal("3.5"), null)));
-        verify(reservations, never()).save(any());
+    void refusesInsufficientStockWithoutSavingOrPublishing() {
+        setup("UN"); part.setCode("P1");
+        var error = assertThrows(br.com.navitasassist.controller.ConflictException.class,
+            () -> stock.use(2L, new PartUsageRequest(1L, new BigDecimal("11"), "Falha", null, null)));
+        assertEquals("Estoque insuficiente para a peça P1. Em estoque: 10.", error.getMessage());
+        verify(usages, never()).save(any()); verify(movements, never()).save(any());
+        assertEquals(BigDecimal.TEN, part.getOnHand());
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"allocate", "consume"})
-    void rejectsApplyingLegacyFractionalReservations(String action) {
+    @Test
+    void immediateUsageTrimsMetadataAndRecordsConsumption() {
         setup("UN");
-        var reservation = new PartReservation(); reservation.setId(3L); reservation.setPart(part); reservation.setRma(rma);
-        reservation.setQuantity(new BigDecimal("1.222"));
-        reservation.setStatus(action.equals("allocate") ? PartReservationStatus.PENDING : PartReservationStatus.ACTIVE);
-        if (action.equals("consume")) part.setReserved(reservation.getQuantity());
-        when(reservations.findPartIdByIdAndRmaId(3L, 2L)).thenReturn(Optional.of(1L));
-        when(reservations.findByIdForUpdate(3L)).thenReturn(Optional.of(reservation));
-        assertThrows(BusinessException.class, () -> {
-            if (action.equals("allocate")) stock.allocate(2L, 3L);
-            else stock.consume(2L, 3L, new PartConsumptionRequest("Falha", null));
-        });
-        verify(movements, never()).save(any());
+        var usage = stock.use(2L, new PartUsageRequest(1L, BigDecimal.ONE, " Curto ", " L1 ", " Teste "));
+        assertEquals(PartUsageStatus.USED, usage.status());
+        assertEquals("Curto", usage.replacementReason()); assertEquals("L1", usage.componentBatch());
+        assertEquals("Teste", usage.notes()); assertEquals(new BigDecimal("9"), part.getOnHand());
+        verify(movements).save(argThat(m -> m.getType() == PartMovementType.CONSUMPTION
+            && m.getOnHandChange().compareTo(BigDecimal.ONE.negate()) == 0));
+        assertEquals(1, rma.getRepairHistory().size());
+    }
+
+    @Test
+    void rejectsFractionInUsageEvenWithoutStock() {
+        setup("UN"); part.setOnHand(BigDecimal.ZERO);
+        assertThrows(BusinessException.class, () -> stock.use(2L, new PartUsageRequest(1L, new BigDecimal("3.5"), "Falha", null, null)));
+        verify(usages, never()).save(any());
     }
 
     @org.junit.jupiter.api.AfterEach
@@ -112,13 +117,13 @@ class PartQuantityValidationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"UN", "kg"})
-    void acceptsValidMovementsAndReservations(String unit) {
+    void acceptsValidMovementsAndUsages(String unit) {
         setup(unit);
         var quantity = new BigDecimal(unit.equals("kg") ? "1.222" : "2.000");
         var movement = stock.registerMovement(1L, new PartMovementRequest(PartMovementType.ENTRY, quantity, null));
         assertEquals(quantity, movement.quantity());
-        var reservation = stock.reserve(2L, new PartReservationRequest(1L, quantity, null));
-        assertEquals(quantity, reservation.quantity());
+        var usage = stock.use(2L, new PartUsageRequest(1L, quantity, "Falha", null, null));
+        assertEquals(quantity, usage.quantity());
     }
 
     @Test

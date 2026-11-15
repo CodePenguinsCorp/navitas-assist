@@ -22,7 +22,7 @@ import br.com.navitasassist.product.Product;
 import br.com.navitasassist.repository.ClientRepository;
 import br.com.navitasassist.repository.PartMovementRepository;
 import br.com.navitasassist.repository.PartRepository;
-import br.com.navitasassist.repository.PartReservationRepository;
+import br.com.navitasassist.repository.PartUsageRepository;
 import br.com.navitasassist.repository.ProductRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.RmaItem;
@@ -61,7 +61,7 @@ class PartInventoryIntegrationTest {
     private PartRepository partRepository;
 
     @Autowired
-    private PartReservationRepository partReservationRepository;
+    private PartUsageRepository partUsageRepository;
 
     @Autowired
     private PartMovementRepository partMovementRepository;
@@ -77,30 +77,6 @@ class PartInventoryIntegrationTest {
 
     private RmaRecord rma;
 
-    @Test
-    void consumptionRequiresReasonAndPersistsReplacementMetadataAtomically() throws Exception {
-        long partId = createPart("PCA-REPLACED", "10.00", "0");
-        movement(partId, "ENTRY", "2", null, ADMIN).andExpect(status().isCreated());
-        long reservationId = id(reserve(rma.getId(), partId, "1", TECHNICIAN));
-        mockMvc.perform(post("/api/rmas/{id}/parts/{reservationId}/consume", rma.getId(), reservationId).with(TECHNICIAN).with(csrf())
-                .contentType(MediaType.APPLICATION_JSON).content("{}"))
-            .andExpect(status().isBadRequest());
-        assertEquals(PartReservationStatus.ACTIVE, partReservationRepository.findById(reservationId).orElseThrow().getStatus());
-        assertEquals(0, partMovementRepository.findByRma_IdOrderByIdDesc(rma.getId()).stream().filter(m -> m.getType() == PartMovementType.CONSUMPTION).count());
-        mockMvc.perform(post("/api/rmas/{id}/parts/{reservationId}/consume", rma.getId(), reservationId).with(TECHNICIAN).with(csrf())
-                .contentType(MediaType.APPLICATION_JSON).content(json(Map.of("replacementReason", "  Curto  ", "componentBatch", " L123 "))))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.replacementReason").value("Curto"))
-            .andExpect(jsonPath("$.componentBatch").value("L123")).andExpect(jsonPath("$.appliedBy").value("tech"))
-            .andExpect(jsonPath("$.appliedAt").isNotEmpty());
-        mockMvc.perform(get("/api/rmas/{id}/parts", rma.getId()).with(VIEWER))
-            .andExpect(jsonPath("$.replacedComponents", hasSize(1))).andExpect(jsonPath("$.replacedComponents[0].replacementReason").value("Curto"));
-        mockMvc.perform(get("/api/rmas/{id}", rma.getId()).with(VIEWER))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.repairHistory", hasSize(1)))
-            .andExpect(jsonPath("$.repairHistory[0].entityType").value("STOCK_COMPONENT"))
-            .andExpect(jsonPath("$.repairHistory[0].summary").value("Peça aplicada: Peça PCA-REPLACED (código: PCA-REPLACED), 1 un. Motivo da troca: Curto. Lote: L123."));
-
-    }
-
     @BeforeEach
     void setUp() {
         cleanUp();
@@ -111,7 +87,7 @@ class PartInventoryIntegrationTest {
     void cleanUp() {
         partMovementRepository.findAll().stream().filter(movement -> movement.getReversedMovement() != null).forEach(partMovementRepository::delete);
         partMovementRepository.deleteAll();
-        partReservationRepository.deleteAll();
+        partUsageRepository.deleteAll();
         partRepository.deleteAll();
         rmaRecordRepository.deleteAll();
         productRepository.deleteAll();
@@ -129,7 +105,6 @@ class PartInventoryIntegrationTest {
             .andExpect(jsonPath("$.location").value("Prateleira A1"))
             .andExpect(jsonPath("$.unitCost").value(12.35))
             .andExpect(jsonPath("$.onHand").value(0))
-            .andExpect(jsonPath("$.available").value(0))
             .andExpect(jsonPath("$.belowMinimum").value(true))
             .andExpect(jsonPath("$.active").value(true));
     }
@@ -143,40 +118,6 @@ class PartInventoryIntegrationTest {
                 .content(json(partPayload("pca-dup", "1.00", "0"))))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value("Código de peça já cadastrado: pca-dup"));
-    }
-
-    @Test
-    void shouldReserveWithoutConsumingBalanceAndReduceAvailability() throws Exception {
-        long partId = createPart("PCA-RES", "10.00", "0");
-        movement(partId, "ENTRY", "5", null, ADMIN).andExpect(status().isCreated())
-            .andExpect(jsonPath("$.partCode").value("PCA-RES"))
-            .andExpect(jsonPath("$.unitCost").doesNotExist()).andExpect(jsonPath("$.totalCost").doesNotExist())
-            .andExpect(jsonPath("$.rmaId").doesNotExist()).andExpect(jsonPath("$.reservationId").doesNotExist());
-
-        reserve(rma.getId(), partId, "2", TECHNICIAN)
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.status").value("ACTIVE"))
-            .andExpect(jsonPath("$.partAvailable").value(3));
-
-        mockMvc.perform(get("/api/parts").param("query", "PCA-RES").with(VIEWER))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].onHand").value(5))
-            .andExpect(jsonPath("$[0].reserved").value(2))
-            .andExpect(jsonPath("$[0].available").value(3));
-    }
-
-    @Test
-    void shouldNotAllowExitThatWouldConsumeReservedStock() throws Exception {
-        long partId = createPart("PCA-EXIT", "10.00", "0");
-        movement(partId, "ENTRY", "5", null, ADMIN).andExpect(status().isCreated());
-        reserve(rma.getId(), partId, "4", TECHNICIAN).andExpect(status().isCreated());
-
-        movement(partId, "EXIT", "2", null, ADMIN)
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Estoque disponível insuficiente para a peça PCA-EXIT. Disponível: 1"));
-
-        movement(partId, "ADJUSTMENT", "-2", "Inventário", ADMIN).andExpect(status().isBadRequest());
-        movement(partId, "EXIT", "1", null, ADMIN).andExpect(status().isCreated()).andExpect(jsonPath("$.onHandAfter").value(4));
     }
 
     @Test
@@ -195,258 +136,64 @@ class PartInventoryIntegrationTest {
     }
 
     @Test
-    void shouldKeepReservationPendingWhenStockIsInsufficientAndAllocateAfterEntry() throws Exception {
-        long partId = createPart("PCA-PEND", "10.00", "1");
-        movement(partId, "ENTRY", "1", null, ADMIN).andExpect(status().isCreated());
-
-        long reservationId = id(reserve(rma.getId(), partId, "3", TECHNICIAN)
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.status").value("PENDING")));
-
-        mockMvc.perform(get("/api/parts/pending").with(VIEWER))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(1)))
-            .andExpect(jsonPath("$[0].rmaCode").value("OS-PART-0001"));
-
-        mockMvc.perform(get("/api/parts/replenishment").with(VIEWER))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(1)))
-            .andExpect(jsonPath("$[0].code").value("PCA-PEND"))
-            .andExpect(jsonPath("$[0].pendingQuantity").value(3))
-            .andExpect(jsonPath("$[0].suggestedQuantity").value(3));
-
-        action(rma.getId(), reservationId, "allocate", TECHNICIAN).andExpect(status().isBadRequest());
-
-        movement(partId, "ENTRY", "4", null, ADMIN).andExpect(status().isCreated());
-        action(rma.getId(), reservationId, "allocate", TECHNICIAN)
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.status").value("ACTIVE"))
-            .andExpect(jsonPath("$.partAvailable").value(2));
-    }
-
-    @Test
-    void shouldReturnAvailabilityWhenReservationIsCancelled() throws Exception {
-        long partId = createPart("PCA-CANCEL", "10.00", "0");
+    void usesImmediatelyAndReversesOnceWithReason() throws Exception {
+        long partId = createPart("PCA-USE", "12.35", "1");
         movement(partId, "ENTRY", "5", null, ADMIN).andExpect(status().isCreated());
-        long reservationId = id(reserve(rma.getId(), partId, "5", TECHNICIAN).andExpect(status().isCreated()));
-
-        action(rma.getId(), reservationId, "cancel", TECHNICIAN)
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.status").value("CANCELLED"))
-            .andExpect(jsonPath("$.partAvailable").value(5));
-
-        action(rma.getId(), reservationId, "cancel", TECHNICIAN).andExpect(status().isBadRequest());
-
-        mockMvc.perform(get("/api/parts/{id}/movements", partId).with(VIEWER))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].type").value("RESERVATION_CANCEL"))
-            .andExpect(jsonPath("$[0].reservedChange").value(-5))
-            .andExpect(jsonPath("$[1].type").value("RESERVATION"));
-    }
-
-    @Test
-    void shouldConsumeReservationAndExposeCostsInRma() throws Exception {
-        long partId = createPart("PCA-CONS", "12.35", "0");
-        long otherPartId = createPart("PCA-OTHER", "7.10", "0");
-        movement(partId, "ENTRY", "5", null, ADMIN).andExpect(status().isCreated());
-        movement(otherPartId, "ENTRY", "1", null, ADMIN).andExpect(status().isCreated());
-        long consumedId = id(reserve(rma.getId(), partId, "3", TECHNICIAN).andExpect(status().isCreated()));
-        reserve(rma.getId(), otherPartId, "1", TECHNICIAN).andExpect(status().isCreated());
-        reserve(rma.getId(), otherPartId, "2", TECHNICIAN).andExpect(jsonPath("$.status").value("PENDING"));
-
-        action(rma.getId(), consumedId, "consume", TECHNICIAN)
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.status").value("CONSUMED"))
-            .andExpect(jsonPath("$.unitCost").value(12.35))
-            .andExpect(jsonPath("$.totalCost").value(37.05));
-
-        mockMvc.perform(get("/api/parts").param("query", "PCA-CONS").with(VIEWER))
-            .andExpect(jsonPath("$[0].onHand").value(2))
-            .andExpect(jsonPath("$[0].reserved").value(0))
-            .andExpect(jsonPath("$[0].available").value(2));
-
+        long usageId = id(use(rma.getId(), partId, "2", TECHNICIAN).andExpect(status().isCreated())
+            .andExpect(jsonPath("$.status").value("USED")).andExpect(jsonPath("$.partOnHand").value(3)));
         mockMvc.perform(get("/api/rmas/{id}/parts", rma.getId()).with(VIEWER))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.rmaCode").value("OS-PART-0001"))
-            .andExpect(jsonPath("$.reservations", hasSize(3)))
-            .andExpect(jsonPath("$.reservations[0].status").value("CONSUMED"))
-            .andExpect(jsonPath("$.reservations[1].status").value("ACTIVE"))
-            .andExpect(jsonPath("$.reservations[2].status").value("PENDING"))
-            .andExpect(jsonPath("$.consumedCost").value(37.05))
-            .andExpect(jsonPath("$.reservedCost").value(7.10))
-            .andExpect(jsonPath("$.pendingCount").value(1))
-            .andExpect(jsonPath("$.movements[0].type").value("CONSUMPTION"))
-            .andExpect(jsonPath("$.movements[0].rmaCode").value("OS-PART-0001"));
+            .andExpect(jsonPath("$.usages", hasSize(1))).andExpect(jsonPath("$.usedCost").value(24.70));
+        String path = "/api/rmas/" + rma.getId() + "/parts/usages/" + usageId + "/reversal";
+        mockMvc.perform(post(path).with(TECHNICIAN).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{}"))
+            .andExpect(status().isBadRequest());
+        mockMvc.perform(post(path).with(TECHNICIAN).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(json(Map.of("reason", "Correção"))))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("REVERTED"));
+        mockMvc.perform(post(path).with(TECHNICIAN).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(json(Map.of("reason", "Correção"))))
+            .andExpect(status().isBadRequest());
+        assertEquals(0, partRepository.findById(partId).orElseThrow().getOnHand().compareTo(new BigDecimal("5")));
+        assertEquals(3, partMovementRepository.findByPart_IdOrderByIdDesc(partId).size());
     }
 
     @Test
-    void shouldCorrectConsumptionOnlyThroughAuditableReversal() throws Exception {
-        long partId = createPart("PCA-REV", "10.00", "0");
-        movement(partId, "ENTRY", "5", null, ADMIN).andExpect(status().isCreated());
-        long reservationId = id(reserve(rma.getId(), partId, "2", TECHNICIAN).andExpect(status().isCreated()));
-        action(rma.getId(), reservationId, "consume", TECHNICIAN).andExpect(status().isOk());
-        long consumptionId = partMovementRepository.findFirstByReservation_IdAndTypeOrderByIdDesc(reservationId, PartMovementType.CONSUMPTION).orElseThrow().getId();
-
-        reverse(consumptionId, "", ADMIN).andExpect(status().isBadRequest());
-
-        reverse(consumptionId, "Peça não utilizada", SERVICE_DESK)
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.type").value("REVERSAL"))
-            .andExpect(jsonPath("$.reversedMovementId").value(consumptionId))
-            .andExpect(jsonPath("$.onHandChange").value(2))
-            .andExpect(jsonPath("$.rmaCode").value("OS-PART-0001"))
-            .andExpect(jsonPath("$.createdBy").value("desk"))
-            .andExpect(jsonPath("$.reason").value("Peça não utilizada"));
-
-        reverse(consumptionId, "De novo", ADMIN)
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("O movimento já foi revertido: " + consumptionId));
-
-        mockMvc.perform(get("/api/parts").param("query", "PCA-REV").with(VIEWER)).andExpect(jsonPath("$[0].onHand").value(5));
-
-        mockMvc.perform(get("/api/rmas/{id}/parts", rma.getId()).with(VIEWER))
-            .andExpect(jsonPath("$.reservations[0].status").value("REVERSED"))
-            .andExpect(jsonPath("$.consumedCost").value(0))
-            .andExpect(jsonPath("$.movements[0].type").value("REVERSAL"))
-            .andExpect(jsonPath("$.movements[1].type").value("CONSUMPTION"))
-            .andExpect(jsonPath("$.movements[1].reversed").value(true));
-
-        assertEquals(4, partMovementRepository.findByPart_IdOrderByIdDesc(partId).size());
+    void insufficientStockCreatesNeitherUsageNorMovement() throws Exception {
+        long partId = createPart("PCA-LOW", "1.00", "2");
+        use(rma.getId(), partId, "1", TECHNICIAN).andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message").value("Estoque insuficiente para a peça PCA-LOW. Em estoque: 0."));
+        assertEquals(0, partUsageRepository.count());
+        assertEquals(0, partMovementRepository.count());
+        mockMvc.perform(get("/api/parts/replenishment").with(VIEWER)).andExpect(jsonPath("$", hasSize(1)));
     }
 
     @Test
-    void shouldReverseEntryOnlyWhenStockIsStillAvailable() throws Exception {
-        long partId = createPart("PCA-REV-IN", "10.00", "0");
-        long entryId = id(movement(partId, "ENTRY", "3", null, ADMIN).andExpect(status().isCreated()));
-        reserve(rma.getId(), partId, "2", TECHNICIAN).andExpect(status().isCreated());
-
-        reverse(entryId, "Lançamento duplicado", ADMIN)
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Estoque disponível insuficiente para a peça PCA-REV-IN. Disponível: 1"));
-    }
-
-    @Test
-    void shouldNotReverseReservationMovements() throws Exception {
-        long partId = createPart("PCA-REV-RES", "10.00", "0");
-        movement(partId, "ENTRY", "3", null, ADMIN).andExpect(status().isCreated());
-        long reservationId = id(reserve(rma.getId(), partId, "1", TECHNICIAN));
-        long reservationMovementId = partMovementRepository.findFirstByReservation_IdAndTypeOrderByIdDesc(reservationId, PartMovementType.RESERVATION).orElseThrow().getId();
-
-        reverse(reservationMovementId, "Teste", ADMIN)
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Movimentos de reserva são corrigidos cancelando a reserva."));
-    }
-
-    @Test
-    void shouldRejectReservationForClosedRma() throws Exception {
-        RmaRecord closed = createRma("OS-PART-0002", RmaStatus.COMPLETED);
-        long partId = createPart("PCA-CLOSED", "10.00", "0");
-        movement(partId, "ENTRY", "3", null, ADMIN).andExpect(status().isCreated());
-
-        reserve(closed.getId(), partId, "1", TECHNICIAN)
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Não é permitido reservar peças em uma OS encerrada."));
-    }
-
-    @Test
-    void shouldDistinguishQueryReservationAndAdjustmentPermissions() throws Exception {
-        long partId = createPart("PCA-PERM", "10.00", "0");
-
-        mockMvc.perform(get("/api/parts")).andExpect(status().isUnauthorized());
-        mockMvc.perform(get("/api/parts").with(VIEWER)).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)));
-        mockMvc.perform(get("/api/rmas/{id}/parts", rma.getId()).with(VIEWER)).andExpect(status().isOk());
-
-        mockMvc.perform(post("/api/parts").with(TECHNICIAN).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(json(partPayload("PCA-X", "1", "0"))))
-            .andExpect(status().isForbidden());
-        mockMvc.perform(put("/api/parts/{id}", partId).with(VIEWER).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(json(partPayload("PCA-PERM", "1", "0"))))
-            .andExpect(status().isForbidden());
-        movement(partId, "ENTRY", "5", null, TECHNICIAN).andExpect(status().isForbidden());
-        movement(partId, "ENTRY", "5", null, VIEWER).andExpect(status().isForbidden());
-        movement(partId, "ENTRY", "5", null, SERVICE_DESK).andExpect(status().isCreated());
-        reverse(1L, "Teste", TECHNICIAN).andExpect(status().isForbidden());
-
-        reserve(rma.getId(), partId, "1", VIEWER).andExpect(status().isForbidden());
-        reserve(rma.getId(), partId, "1", SERVICE_DESK).andExpect(status().isForbidden());
-        long reservationId = id(reserve(rma.getId(), partId, "1", TECHNICIAN).andExpect(status().isCreated()));
-        action(rma.getId(), reservationId, "consume", VIEWER).andExpect(status().isForbidden());
-        action(rma.getId(), reservationId, "cancel", SERVICE_DESK).andExpect(status().isForbidden());
-        action(rma.getId(), reservationId, "cancel", ADMIN).andExpect(status().isOk());
-    }
-
-    @Test
-    void shouldUpdatePartRegistrationWithoutChangingBalances() throws Exception {
-        long partId = createPart("PCA-UPD", "10.00", "0");
-        movement(partId, "ENTRY", "5", null, ADMIN).andExpect(status().isCreated());
-        Map<String, Object> payload = partPayload("PCA-UPD", "11.50", "1");
-        payload.put("location", "Gaveta B2");
-        payload.put("active", false);
-
-        mockMvc.perform(put("/api/parts/{id}", partId).with(ADMIN).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(json(payload)))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.location").value("Gaveta B2"))
-            .andExpect(jsonPath("$.unitCost").value(11.5))
-            .andExpect(jsonPath("$.onHand").value(5))
-            .andExpect(jsonPath("$.active").value(false));
-
-        reserve(rma.getId(), partId, "1", TECHNICIAN)
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("A peça está inativa: PCA-UPD"));
-    }
-
-    @Test
-    void openReservationsBlockClosingTheRmaUntilConsumedOrCancelled() throws Exception {
-        long partId = createPart("PCA-CLOSE", "10.00", "0");
+    void validatesMetadataAndMasksCostsForTechnician() throws Exception {
+        long partId = createPart("PCA-META", "10.00", "0");
         movement(partId, "ENTRY", "2", null, ADMIN).andExpect(status().isCreated());
-        long active = id(reserve(rma.getId(), partId, "1", TECHNICIAN).andExpect(jsonPath("$.status").value("ACTIVE")));
-        long pending = id(reserve(rma.getId(), partId, "5", TECHNICIAN).andExpect(jsonPath("$.status").value("PENDING")));
-
-        changeStatus(rma.getId(), "IRREPARABLE")
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("A OS possui reservas de peças abertas. Aplique ou cancele as reservas antes de encerrar."));
-
-        action(rma.getId(), active, "consume", TECHNICIAN).andExpect(status().isOk());
-        changeStatus(rma.getId(), "COMPLETED").andExpect(status().isBadRequest());
-
-        action(rma.getId(), pending, "cancel", TECHNICIAN).andExpect(status().isOk());
-        changeStatus(rma.getId(), "COMPLETED").andExpect(status().isOk()).andExpect(jsonPath("$.status").value("COMPLETED"));
-        changeStatus(rma.getId(), "RETURNED").andExpect(status().isOk());
+        String path = "/api/rmas/" + rma.getId() + "/parts/usages";
+        mockMvc.perform(post(path).with(TECHNICIAN).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+            .content(json(Map.of("partId", partId, "quantity", 1, "replacementReason", "  ")))).andExpect(status().isBadRequest());
+        mockMvc.perform(post(path).with(TECHNICIAN).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+            .content(json(Map.of("partId", partId, "quantity", 1, "replacementReason", " Curto ", "componentBatch", " L1 ", "notes", " Teste "))))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.replacementReason").value("Curto"))
+            .andExpect(jsonPath("$.componentBatch").value("L1")).andExpect(jsonPath("$.notes").value("Teste"))
+            .andExpect(jsonPath("$.unitCost").doesNotExist()).andExpect(jsonPath("$.appliedBy").value("tech"));
+        mockMvc.perform(get("/api/rmas/{id}", rma.getId()).with(VIEWER)).andExpect(jsonPath("$.repairHistory[0].summary")
+            .value("Peça usada: Peça PCA-META (código: PCA-META), 1 un. Motivo da troca: Curto. Lote: L1."));
     }
 
     @Test
-    void closedRmaReservationsCanOnlyBeCancelled() throws Exception {
-        long partId = createPart("PCA-CLOSED-RES", "10.00", "0");
-        movement(partId, "ENTRY", "1", null, ADMIN).andExpect(status().isCreated());
-        long active = id(reserve(rma.getId(), partId, "1", TECHNICIAN));
-        long pending = id(reserve(rma.getId(), partId, "3", TECHNICIAN));
-        RmaRecord closed = rmaRecordRepository.findById(rma.getId()).orElseThrow();
-        closed.setStatus(RmaStatus.COMPLETED);
-        rmaRecordRepository.save(closed);
-
-        action(rma.getId(), active, "consume", TECHNICIAN)
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Não é permitido reservar ou aplicar peças em uma OS encerrada."));
-        action(rma.getId(), pending, "allocate", TECHNICIAN).andExpect(status().isBadRequest());
-
-        action(rma.getId(), active, "cancel", TECHNICIAN).andExpect(status().isOk()).andExpect(jsonPath("$.partAvailable").value(1));
-        action(rma.getId(), pending, "cancel", TECHNICIAN).andExpect(status().isOk());
-    }
-
-    @Test
-    void pendingReservationOfAnInactivePartCannotBeAllocated() throws Exception {
-        long partId = createPart("PCA-INACTIVE", "10.00", "0");
-        long pending = id(reserve(rma.getId(), partId, "1", TECHNICIAN).andExpect(jsonPath("$.status").value("PENDING")));
+    void refusesClosedOrdersInactivePartsFractionsAndWrongPermission() throws Exception {
+        long partId = createPart("PCA-GUARD", "1.00", "0");
         movement(partId, "ENTRY", "5", null, ADMIN).andExpect(status().isCreated());
-        Map<String, Object> payload = partPayload("PCA-INACTIVE", "10.00", "0");
-        payload.put("active", false);
-        mockMvc.perform(put("/api/parts/{id}", partId).with(ADMIN).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(json(payload))).andExpect(status().isOk());
-
-        action(rma.getId(), pending, "allocate", TECHNICIAN)
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("A peça está inativa: PCA-INACTIVE"));
-    }
-
-    private org.springframework.test.web.servlet.ResultActions changeStatus(long rmaId, String status) throws Exception {
-        return mockMvc.perform(patch("/api/rmas/{id}/status", rmaId).with(TECHNICIAN).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(json(Map.of("status", status))));
+        use(rma.getId(), partId, "1.5", TECHNICIAN).andExpect(status().isBadRequest());
+        use(rma.getId(), partId, "1", VIEWER).andExpect(status().isForbidden());
+        Part part = partRepository.findById(partId).orElseThrow(); part.setActive(false); partRepository.saveAndFlush(part);
+        use(rma.getId(), partId, "1", TECHNICIAN).andExpect(status().isBadRequest());
+        part.setActive(true); partRepository.saveAndFlush(part);
+        long usage = id(use(rma.getId(), partId, "1", TECHNICIAN));
+        rma.setStatus(RmaStatus.COMPLETED); rmaRecordRepository.saveAndFlush(rma);
+        use(rma.getId(), partId, "1", TECHNICIAN).andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/rmas/{id}/parts/usages/{usage}/reversal", rma.getId(), usage).with(TECHNICIAN).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(json(Map.of("reason", "Correção")))).andExpect(status().isBadRequest());
     }
 
     private RmaRecord createRma(String code, RmaStatus status) {
@@ -494,85 +241,6 @@ class PartInventoryIntegrationTest {
         return payload;
     }
 
-    @Test
-    void shouldRejectManualMovementQuantityBeyondThreeDecimalsWithPortugueseMessage() throws Exception {
-        long partId = createPart("PCA-PREC", "10.00", "0");
-        Part measurePart = partRepository.findById(partId).orElseThrow();
-        measurePart.setUnit("kg");
-        partRepository.saveAndFlush(measurePart);
-        for (String quantity : new String[] {"1.0001", "1000000000"}) {
-            movement(partId, "ENTRY", quantity, null, ADMIN)
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Dados inválidos"))
-                .andExpect(jsonPath("$.details[0]").value("quantity: valor numérico fora do limite (esperado <9 dígitos>.<3 dígitos>)"));
-        }
-        movement(partId, "ENTRY", "999999999.999", null, ADMIN).andExpect(status().isCreated());
-    }
-
-    @Test
-    void rejectsFractionsForCountablePartsAcrossStockEndpoints() throws Exception {
-        long partId = createPart("PCA-COUNTABLE", "1", "0");
-        String message = "A unidade UN não aceita quantidade fracionada. Informe um número inteiro.";
-        movement(partId, "ENTRY", "10", null, ADMIN).andExpect(status().isCreated());
-        for (String type : new String[]{"ENTRY", "EXIT", "ADJUSTMENT"}) {
-            movement(partId, type, type.equals("ADJUSTMENT") ? "-1.5" : "1.5", "Inventário", ADMIN)
-                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(message));
-        }
-        reserve(rma.getId(), partId, "3.5", TECHNICIAN).andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value(message));
-        reserve(rma.getId(), partId, "30.5", TECHNICIAN).andExpect(status().isBadRequest());
-        assertEquals(0, partReservationRepository.count());
-        assertEquals(1, partMovementRepository.count());
-        assertEquals(0, new BigDecimal("10").compareTo(partRepository.findById(partId).orElseThrow().getOnHand()));
-
-        mockMvc.perform(post("/api/parts").with(ADMIN).with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content(json(partPayload("PCA-FRACTIONAL-MIN", "1", "0.5"))))
-            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(message));
-        mockMvc.perform(put("/api/parts/{id}", partId).with(ADMIN).with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content(json(partPayload("PCA-COUNTABLE", "1", "0.5"))))
-            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(message));
-    }
-
-    @Test
-    void acceptsMeasureFractionsThroughReserveAllocateConsumeAndStockMovements() throws Exception {
-        var payload = partPayload("PCA-MEASURE", "1", "0.125"); payload.put("unit", "M².");
-        long partId = id(mockMvc.perform(post("/api/parts").with(ADMIN).with(csrf()).contentType(MediaType.APPLICATION_JSON)
-            .content(json(payload))).andExpect(status().isCreated()));
-        long reservationId = id(reserve(rma.getId(), partId, "1.222", TECHNICIAN)
-            .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("PENDING")));
-        movement(partId, "ENTRY", "4.444", null, ADMIN).andExpect(status().isCreated());
-        action(rma.getId(), reservationId, "allocate", TECHNICIAN).andExpect(status().isOk());
-        action(rma.getId(), reservationId, "consume", TECHNICIAN).andExpect(status().isOk())
-            .andExpect(jsonPath("$.quantity").value(1.222));
-        movement(partId, "EXIT", "0.111", null, ADMIN).andExpect(status().isCreated());
-        movement(partId, "ADJUSTMENT", "-0.111", "Inventário", ADMIN).andExpect(status().isCreated());
-        assertEquals(0, new BigDecimal("3.000").compareTo(partRepository.findById(partId).orElseThrow().getOnHand()));
-        assertEquals(PartReservationStatus.CONSUMED, partReservationRepository.findById(reservationId).orElseThrow().getStatus());
-    }
-
-    @Test
-    void unitChangePreservesLegacyBalancesButBlocksApplyingFractionsAndAllowsCorrection() throws Exception {
-        var payload = partPayload("PCA-LEGACY", "1", "0.125"); payload.put("unit", "m");
-        long partId = id(mockMvc.perform(post("/api/parts").with(ADMIN).with(csrf()).contentType(MediaType.APPLICATION_JSON)
-            .content(json(payload))).andExpect(status().isCreated()));
-        long entry = id(movement(partId, "ENTRY", "3.5", null, ADMIN).andExpect(status().isCreated()));
-        long active = id(reserve(rma.getId(), partId, "1.222", TECHNICIAN).andExpect(status().isCreated()));
-        long pending = id(reserve(rma.getId(), partId, "5.222", TECHNICIAN).andExpect(status().isCreated()));
-        payload.put("unit", "un");
-        mockMvc.perform(put("/api/parts/{id}", partId).with(ADMIN).with(csrf()).contentType(MediaType.APPLICATION_JSON)
-            .content(json(payload))).andExpect(status().isOk()).andExpect(jsonPath("$.onHand").value(3.5))
-            .andExpect(jsonPath("$.minimumStock").value(0.125));
-        mockMvc.perform(get("/api/rmas/{id}/parts", rma.getId()).with(VIEWER)).andExpect(status().isOk())
-            .andExpect(jsonPath("$.reservations[0].quantity").value(1.222));
-        action(rma.getId(), active, "consume", TECHNICIAN).andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("A unidade UN não aceita quantidade fracionada. Informe um número inteiro."));
-        action(rma.getId(), pending, "allocate", TECHNICIAN).andExpect(status().isBadRequest());
-        action(rma.getId(), active, "cancel", TECHNICIAN).andExpect(status().isOk());
-        action(rma.getId(), pending, "cancel", TECHNICIAN).andExpect(status().isOk());
-        reverse(entry, "Corrigir saldo legado", ADMIN).andExpect(status().isCreated())
-            .andExpect(jsonPath("$.onHandAfter").value(0));
-    }
-
     private org.springframework.test.web.servlet.ResultActions movement(long partId, String type, String quantity, String reason, RequestPostProcessor role) throws Exception {
         Map<String, Object> payload = new HashMap<>();
         payload.put("type", type);
@@ -587,15 +255,10 @@ class PartInventoryIntegrationTest {
             .content(json(Map.of("reason", reason))));
     }
 
-    private org.springframework.test.web.servlet.ResultActions reserve(long rmaId, long partId, String quantity, RequestPostProcessor role) throws Exception {
-        return mockMvc.perform(post("/api/rmas/{id}/parts", rmaId).with(role).with(csrf())
+    private org.springframework.test.web.servlet.ResultActions use(long rmaId, long partId, String quantity, RequestPostProcessor role) throws Exception {
+        return mockMvc.perform(post("/api/rmas/{id}/parts/usages", rmaId).with(role).with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
-            .content(json(Map.of("partId", partId, "quantity", new BigDecimal(quantity)))));
-    }
-
-    private org.springframework.test.web.servlet.ResultActions action(long rmaId, long reservationId, String action, RequestPostProcessor role) throws Exception {
-        return mockMvc.perform(post("/api/rmas/{id}/parts/{reservationId}/{action}", rmaId, reservationId, action).with(role).with(csrf())
-            .contentType(MediaType.APPLICATION_JSON).content(action.equals("consume") ? json(Map.of("replacementReason", "Falha confirmada")) : "{}"));
+            .content(json(Map.of("partId", partId, "quantity", new BigDecimal(quantity), "replacementReason", "Falha confirmada"))));
     }
 
     private long id(org.springframework.test.web.servlet.ResultActions result) throws Exception {

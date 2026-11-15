@@ -16,7 +16,6 @@ public enum NotificationEventType {
     RMA_CREATED(true, false),
     RMA_ASSIGNED(true, false),
     RMA_BLOCKED(true, true),
-    PART_PENDING(true, true),
     TEST_FAILED(true, true);
 
     private static final List<NotificationEventType> SNOOZABLE = Arrays.stream(values()).filter(NotificationEventType::isSnoozable).toList();

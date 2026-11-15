@@ -62,8 +62,8 @@ class UniquenessCaseTest {
     @Test
     void partCodeIgnoresCase() throws SQLException {
         String insert = """
-            INSERT INTO parts (code, name, unit, minimum_stock, unit_cost, on_hand_quantity, reserved_quantity, active, created_at, updated_at)
-            VALUES ('%s', 'Peça', 'un', 0, 0, 0, 0, TRUE, now(), now())
+            INSERT INTO parts (code, name, unit, minimum_stock, unit_cost, on_hand_quantity, active, created_at, updated_at)
+            VALUES ('%s', 'Peça', 'un', 0, 0, 0, TRUE, now(), now())
             """;
         execute(insert.formatted("CAP-100UF"));
         assertViolates("uk_parts_code", insert.formatted("cap-100uf"));

@@ -1,8 +1,8 @@
 package br.com.navitasassist.controller;
 
-import br.com.navitasassist.part.PartConsumptionRequest;
-import br.com.navitasassist.part.PartReservationRequest;
-import br.com.navitasassist.part.PartReservationResponse;
+import br.com.navitasassist.part.PartReversalRequest;
+import br.com.navitasassist.part.PartUsageRequest;
+import br.com.navitasassist.part.PartUsageResponse;
 import br.com.navitasassist.part.RmaPartsResponse;
 import br.com.navitasassist.service.PartStockService;
 import jakarta.validation.Valid;
@@ -31,26 +31,16 @@ public class RmaPartController {
         return seesCosts(authentication) ? parts : parts.withoutCosts();
     }
 
-    @PostMapping
+    @PostMapping("/usages")
     @ResponseStatus(HttpStatus.CREATED)
-    public PartReservationResponse reserve(@PathVariable Long rmaId, @Valid @RequestBody PartReservationRequest request, Authentication authentication) {
-        return mask(partStockService.reserve(rmaId, request), authentication);
+    public PartUsageResponse use(@PathVariable Long rmaId, @Valid @RequestBody PartUsageRequest request, Authentication authentication) {
+        return mask(partStockService.use(rmaId, request), authentication);
     }
 
-    @PostMapping("/{reservationId}/allocate")
-    public PartReservationResponse allocate(@PathVariable Long rmaId, @PathVariable Long reservationId, Authentication authentication) {
-        return mask(partStockService.allocate(rmaId, reservationId), authentication);
-    }
-
-    @PostMapping("/{reservationId}/consume")
-    public PartReservationResponse consume(@PathVariable Long rmaId, @PathVariable Long reservationId, @Valid @RequestBody PartConsumptionRequest request,
-        Authentication authentication) {
-        return mask(partStockService.consume(rmaId, reservationId, request), authentication);
-    }
-
-    @PostMapping("/{reservationId}/cancel")
-    public PartReservationResponse cancel(@PathVariable Long rmaId, @PathVariable Long reservationId, Authentication authentication) {
-        return mask(partStockService.cancel(rmaId, reservationId), authentication);
+    @PostMapping("/usages/{usageId}/reversal")
+    public PartUsageResponse undoUse(@PathVariable Long rmaId, @PathVariable Long usageId,
+        @Valid @RequestBody PartReversalRequest request, Authentication authentication) {
+        return mask(partStockService.undoUse(rmaId, usageId, request), authentication);
     }
 
     /** Custos de peças só para quem tem `pecas.ver`, em leituras e escritas. */
@@ -58,7 +48,7 @@ public class RmaPartController {
         return authentication != null && authentication.getAuthorities().stream().anyMatch(authority -> Codes.PECAS_VER.equals(authority.getAuthority()));
     }
 
-    private static PartReservationResponse mask(PartReservationResponse reservation, Authentication authentication) {
-        return seesCosts(authentication) ? reservation : reservation.withoutCosts();
+    private static PartUsageResponse mask(PartUsageResponse usage, Authentication authentication) {
+        return seesCosts(authentication) ? usage : usage.withoutCosts();
     }
 }

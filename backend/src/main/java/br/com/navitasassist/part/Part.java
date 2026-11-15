@@ -45,17 +45,10 @@ public class Part extends AuditableEntity {
     @Column(name = "on_hand_quantity", nullable = false, precision = 12, scale = 3)
     private BigDecimal onHand = BigDecimal.ZERO;
 
-    @Column(name = "reserved_quantity", nullable = false, precision = 12, scale = 3)
-    private BigDecimal reserved = BigDecimal.ZERO;
-
     @Column(nullable = false)
     private boolean active = true;
 
-    public BigDecimal getAvailable() {
-        return onHand.subtract(reserved);
-    }
-
     public boolean isBelowMinimum() {
-        return getAvailable().compareTo(minimumStock) < 0;
+        return onHand.compareTo(minimumStock) < 0;
     }
 }

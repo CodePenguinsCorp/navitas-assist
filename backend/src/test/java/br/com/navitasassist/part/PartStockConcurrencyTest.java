@@ -20,7 +20,7 @@ import br.com.navitasassist.product.Product;
 import br.com.navitasassist.repository.ClientRepository;
 import br.com.navitasassist.repository.PartMovementRepository;
 import br.com.navitasassist.repository.PartRepository;
-import br.com.navitasassist.repository.PartReservationRepository;
+import br.com.navitasassist.repository.PartUsageRepository;
 import br.com.navitasassist.repository.ProductRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
 import br.com.navitasassist.rma.RmaRecord;
@@ -46,7 +46,7 @@ class PartStockConcurrencyTest {
     private PartRepository partRepository;
 
     @Autowired
-    private PartReservationRepository partReservationRepository;
+    private PartUsageRepository partUsageRepository;
 
     @Autowired
     private PartMovementRepository partMovementRepository;
@@ -79,7 +79,7 @@ class PartStockConcurrencyTest {
     @AfterEach
     void cleanUp() {
         partMovementRepository.deleteAll();
-        partReservationRepository.deleteAll();
+        partUsageRepository.deleteAll();
         partRepository.deleteAll();
         rmaRecordRepository.deleteAll();
         productRepository.deleteAll();
@@ -87,14 +87,16 @@ class PartStockConcurrencyTest {
     }
 
     @Test
-    void concurrentReservationsNeverReserveMoreThanOnHand() throws Exception {
-        List<PartReservationStatus> statuses = runConcurrently(() -> partStockService.reserve(rma.getId(), new PartReservationRequest(part.getId(), BigDecimal.ONE, null)).status());
-
-        assertEquals(5, statuses.stream().filter(status -> status == PartReservationStatus.ACTIVE).count());
-        assertEquals(THREADS - 5, statuses.stream().filter(status -> status == PartReservationStatus.PENDING).count());
-        Part reloaded = partRepository.findById(part.getId()).orElseThrow();
-        assertEquals(0, reloaded.getReserved().compareTo(new BigDecimal("5")));
-        assertEquals(0, reloaded.getAvailable().signum());
+    void concurrentUsagesNeverConsumeMoreThanOnHand() throws Exception {
+        List<Boolean> results = runConcurrently(() -> {
+            try {
+                partStockService.use(rma.getId(), new PartUsageRequest(part.getId(), BigDecimal.ONE, "Falha", null, null));
+                return true;
+            } catch (br.com.navitasassist.controller.ConflictException exception) { return false; }
+        });
+        assertEquals(5, results.stream().filter(Boolean::booleanValue).count());
+        assertEquals(0, partRepository.findById(part.getId()).orElseThrow().getOnHand().signum());
+        assertEquals(6, partMovementRepository.findByPart_IdOrderByIdDesc(part.getId()).size());
     }
 
     @Test

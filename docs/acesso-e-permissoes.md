@@ -43,7 +43,7 @@ A = Administrador (`ADMIN`), S = Atendimento (`SERVICE_DESK`), T = Técnico (`TE
 | `cadastros.importar` | Clientes e produtos | Importar clientes e produtos | ✓ | | | |
 | `pecas.ver` | Peças | Consultar peças e estoque | ✓ | ✓ | ✓ | ✓ |
 | `pecas.movimentar` | Peças | Cadastrar peças e movimentar estoque | ✓ | ✓ | | |
-| `pecas.reservar` | Peças | Reservar e aplicar peças nas Ordens de serviço | ✓ | | ✓ | |
+| `pecas.usar` | Peças | Usar peças nas OS | ✓ | | ✓ | |
 | `protocolos.ver` | Protocolos técnicos | Consultar modelos de protocolo | ✓ | ✓ | ✓ | ✓ |
 | `protocolos.executar` | Protocolos técnicos | Executar protocolos nas Ordens de serviço | ✓ | | ✓ | |
 | `protocolos.catalogo` | Protocolos técnicos | Gerenciar modelos de protocolo | ✓ | | | |
@@ -67,12 +67,12 @@ Rota a rota em [api.md](api.md).
 | Seletores de clientes e produtos (`/options`) | qualquer uma de `cadastros.ver`, `rma.ver`, `rma.abrir`, `relatorios.ver`, `protocolos.ver`, `protocolos.catalogo` |
 | Totais de clientes e produtos (`/summary`) | qualquer usuário autenticado |
 | Consultar peças, pendências, reposição e movimentos (`GET /api/parts/**`) | `pecas.ver` |
-| Seletor de peças da OS (`GET /api/parts/options`) | qualquer uma de `pecas.ver`, `pecas.reservar` |
-| Custos de peças na OS (`unitCost`, `totalCost`, `reservedCost`, `consumedCost` em `/api/rmas/{id}/parts` e nas respostas das reservas) | `pecas.ver`; sem ela os campos vêm nulos e o painel esconde os blocos de custo |
+| Seletor de peças da OS (`GET /api/parts/options`) | qualquer uma de `pecas.ver`, `pecas.usar` |
+| Custos de peças na OS (`unitCost`, `totalCost`, `usedCost` em `/api/rmas/{id}/parts` e nas respostas dos usos) | `pecas.ver`; sem ela os campos vêm nulos e o painel esconde os blocos de custo |
 | Modelos de protocolo (`GET /api/protocols/templates`) | qualquer uma de `protocolos.ver`, `protocolos.executar`, `rma.ver` |
 | Execuções de protocolo da OS (`GET /api/protocols/rmas/{id}/executions`) | `rma.ver` |
 | Consultar ordens de serviço, Kanban e dashboard (`GET /api/rmas/**`), sugestões de tipo de falha e causa (`GET /api/rmas/diagnosis/suggestions`), de tipo de intervenção e de categoria de impedimento (`GET /api/suggestions/intervention-types` e `/block-categories`) e laudo PDF | `rma.ver` |
-| Sugestões de unidade e de localização de peças (`GET /api/suggestions/part-units`, `/part-locations`) | `pecas.ver`, `pecas.reservar` ou `pecas.movimentar` (localização: `pecas.ver` ou `pecas.movimentar`) |
+| Sugestões de unidade e de localização de peças (`GET /api/suggestions/part-units`, `/part-locations`) | `pecas.ver`, `pecas.usar` ou `pecas.movimentar` (localização: `pecas.ver` ou `pecas.movimentar`) |
 | Criar, alterar ou excluir clientes e produtos | `cadastros.editar` |
 | Baixar modelo, prévia e confirmação de importação CSV | `cadastros.importar` |
 | Abrir OS | `rma.abrir` |
@@ -82,7 +82,7 @@ Rota a rota em [api.md](api.md).
 | Registrar diagnóstico; registrar intervenção | `rma.diagnosticar` |
 | Registrar e resolver impedimentos | `rma.impedimentos` |
 | Cadastrar peças e movimentar estoque | `pecas.movimentar` |
-| Reservar, alocar, aplicar e cancelar peças; componentes externos | `pecas.reservar` |
+| Usar peças e desfazer uso; componentes externos | `pecas.usar` |
 | Executar protocolos | `protocolos.executar` |
 | Gerenciar modelos de protocolo | `protocolos.catalogo` |
 | Relatórios e exportações CSV | `relatorios.ver` |
@@ -122,3 +122,8 @@ Os seletores de clientes e produtos usam `/api/clients/options` e `/api/products
 ## Ordem e páginas do Kanban
 
 `GET /api/rmas/board/column` e `GET /api/rmas/board/counts` exigem `rma.ver`. `PUT /api/rmas/{id}/board-position` exige `rma.status` e CSRF, tanto dentro da coluna quanto entre colunas. Mouse e teclado seguem a mesma permissão. Não há permissão nova nem concessão adicional aos perfis.
+
+
+## Uso de peças
+
+A chave `pecas.usar` substitui a chave anterior nos perfis recriados pela baseline, com rótulo e descrição **Usar peças nas OS**. Autoriza criar uso em `POST /api/rmas/{rmaId}/parts/usages` e desfazê-lo em `POST /api/rmas/{rmaId}/parts/usages/{usageId}/reversal`, além de componentes externos. Não há conversão de perfis existentes: a base será recriada. As rotas antigas de reserva, alocação, aplicação e cancelamento foram removidas. Custos continuam exclusivos de `pecas.ver`; movimentação manual e reversão pelo histórico exigem `pecas.movimentar`.

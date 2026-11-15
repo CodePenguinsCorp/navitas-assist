@@ -148,7 +148,7 @@ class AuthSecurityIntegrationTest {
             .andExpect(jsonPath("$.username").value("technician"))
             .andExpect(jsonPath("$.permissions", contains(
                 "rma.ver", "rma.status", "rma.atribuivel", "rma.diagnosticar", "rma.impedimentos",
-                "cadastros.ver", "pecas.ver", "pecas.reservar", "protocolos.ver", "protocolos.executar", "relatorios.ver")))
+                "cadastros.ver", "pecas.ver", "pecas.usar", "protocolos.ver", "protocolos.executar", "relatorios.ver")))
             .andExpect(jsonPath("$.profileName").value("Técnico"))
             .andExpect(jsonPath("$.extraPermissions").doesNotExist())
             .andExpect(jsonPath("$.role").doesNotExist())

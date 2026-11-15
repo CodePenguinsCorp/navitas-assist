@@ -6,15 +6,15 @@ PostgreSQL 16, em todos os ambientes (local, CI, testes automatizados e ambiente
 
 | Versão | Arquivo | O que faz |
 | --- | --- | --- |
-| V1 | `V1__baseline.sql` | Baseline única em PostgreSQL: extensão `unaccent`, todas as tabelas, índices e constraints e os seeds (linha de bloqueio da numeração das ordens de serviço, com códigos `OS-<ano>-<sequência>`; 4 perfis prontos com permissões; 5 regras de notificação com destinatários por perfil). |
+| V1 | `V1__baseline.sql` | Baseline única em PostgreSQL: extensão `unaccent`, todas as tabelas, índices e constraints e os seeds (linha de bloqueio da numeração das ordens de serviço, com códigos `OS-<ano>-<sequência>`; 4 perfis prontos com permissões; 4 regras de notificação com destinatários por perfil). |
 
-Tabelas principais: `audit_events`, `clients`, `products`, `rmas`, `rma_items`, `rma_item_warranty_history`, `rma_due_date_history`, `diagnoses`, `rma_status_history`, `rma_assignment_history`, `rma_repair_history`, `rma_blocks`, `rma_external_components`, `rma_interventions`, `parts`, `part_reservations`, `part_movements`, `access_profiles`, `access_profile_permissions`, `user_accounts`, `user_account_extra_permissions`, `kanban_views`, `notification_*`, `notifications`, `protocol_*` e `rma_protocol_*`.
+Tabelas principais: `audit_events`, `clients`, `products`, `rmas`, `rma_items`, `rma_item_warranty_history`, `rma_due_date_history`, `diagnoses`, `rma_status_history`, `rma_assignment_history`, `rma_repair_history`, `rma_blocks`, `rma_external_components`, `rma_interventions`, `parts`, `part_usages`, `part_movements`, `access_profiles`, `access_profile_permissions`, `user_accounts`, `user_account_extra_permissions`, `kanban_views`, `notification_*`, `notifications`, `protocol_*` e `rma_protocol_*`.
 
 ## Política da baseline única
 
 Em 14 de novembro de 2026 o MySQL foi aposentado e as migrações MySQL V1 a V15 deram lugar a uma única `V1__baseline.sql` em dialeto PostgreSQL, com o schema final consolidado (as antigas continuam no histórico do git). Não havia dados em produção, então nada foi migrado: os dados de demonstração vêm de `scripts/dev-seed` e o primeiro administrador do `INSERT` abaixo.
 
-Depois da baseline, as migrações são **sempre novas e aditivas** (V2 em diante, próximo número livre); nunca edite uma migração já aplicada. O Flyway Community não tem *undo*: para voltar, restaure o backup anterior à implantação. Um banco criado pelas migrações MySQL não serve: recrie-o vazio.
+A remoção do fluxo de reserva em 15 de novembro de 2026 reescreveu a V1 por decisão do produto, ainda sem produção. Recrie a base do zero: não use Flyway repair sobre um banco antigo. As próximas mudanças seguem migrações novas (próximo número livre). O Flyway Community não tem *undo*: para voltar, restaure o backup anterior à implantação. Um banco criado pelas migrações MySQL não serve: recrie-o vazio.
 
 Convenções da baseline, que as próximas migrações seguem:
 
@@ -82,3 +82,12 @@ A baseline já traz os índices compostos usados por filtros e ordenação: `rma
 | V2 | `V2__rma_board_position.sql` | Adiciona `rmas.board_position BIGINT NULL` e índice `(status, board_position)`; dados existentes permanecem automáticos. |
 | V4 | `V4__intervencao_tipo_texto_livre_e_horas_opcionais.sql` | `rma_interventions.type` passa a `VARCHAR(80)` (texto livre), sem o `CHECK` `ck_interventions_type`; os códigos antigos viram os textos em português (`RESOLDERING` vira "Ressolda", `OTHER` vira "Outro" etc.). `hours` deixa de ser `NOT NULL` (o `CHECK` `hours > 0` continua valendo quando informada). |
 | V3 | `V3__diagnostico_tipo_e_causa_texto_livre.sql` | `diagnoses.failure_type` e `probable_cause` passam a `VARCHAR(80)` (texto livre), sem as restrições `CHECK`; os códigos antigos viram os textos em português (por exemplo `POWER_SUPPLY` vira "Fonte de alimentação"). |
+
+
+## Uso de peças na V1
+
+A base é reconstruída sem conversão de dados. `part_usages` registra `USED` ou `REVERTED`, quantidade, motivo obrigatório, lote opcional, observação e autoria/data do uso. `part_movements.usage_id` referencia o uso. O razão aceita somente `ENTRY`, `EXIT`, `ADJUSTMENT`, `CONSUMPTION` e `REVERSAL`; uma reversão referencia seu movimento original por FK única.
+
+`parts.on_hand_quantity` tem CHECK >= 0. Não há saldo reservado, cálculo de disponibilidade ou fila de pendências. Uso debita o saldo e desfazer devolve o saldo na mesma transação, com locks na ordem OS, peça e uso. Não existe V5 de conversão: V1 a V4 continuam sendo as quatro migrações aplicadas numa base vazia.
+
+O evento de falta de estoque foi removido do enum e das regras iniciais. Permanecem quatro tipos de notificação. A reposição por mínimo permanece independente de notificações de OS.

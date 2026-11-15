@@ -63,18 +63,18 @@ O detalhe da OS (lista e Kanban) oferece os registros de reparo.
 
 | Operação | Rota | Permissão |
 | --- | --- | --- |
-| Aplicar reserva | `POST /api/rmas/{id}/parts/{reservationId}/consume` | `pecas.reservar` |
-| Adicionar componente externo | `POST /api/rmas/{id}/repair/external-components` | `pecas.reservar` |
+| Usar peça | `POST /api/rmas/{id}/parts/usages` | `pecas.usar` |
+| Adicionar componente externo | `POST /api/rmas/{id}/repair/external-components` | `pecas.usar` |
 | Consultar componentes externos | `GET /api/rmas/{id}/repair/external-components` | `rma.ver` |
 | Registrar intervenção | `POST /api/rmas/{id}/repair/interventions` | `rma.diagnosticar` |
 | Editar intervenção | `PUT /api/rmas/{rmaId}/repair/interventions/{id}` | `rma.diagnosticar` |
 | Anular intervenção | `POST /api/rmas/{rmaId}/repair/interventions/{id}/void` | `rma.diagnosticar` |
-| Editar componente externo | `PUT /api/rmas/{rmaId}/repair/external-components/{id}` | `pecas.reservar` |
-| Anular componente externo | `POST /api/rmas/{rmaId}/repair/external-components/{id}/void` | `pecas.reservar` |
+| Editar componente externo | `PUT /api/rmas/{rmaId}/repair/external-components/{id}` | `pecas.usar` |
+| Anular componente externo | `POST /api/rmas/{rmaId}/repair/external-components/{id}/void` | `pecas.usar` |
 | Consultar intervenções e total de horas | `GET /api/rmas/{id}/repair` | `rma.ver` |
 
-- **Aplicação**: exige `{ "replacementReason": "Curto na placa", "componentBatch": "L24" }`; motivo obrigatório (até 1000) e lote opcional (até 120). Ficam na reserva com `appliedAt` e `appliedBy`, definidos pelo servidor na mesma transação do movimento. `GET /api/rmas/{id}/parts` devolve esses campos e `replacedComponents` (reservas `CONSUMED`). Consumos antigos exibem "Motivo não registrado".
-- **Componente externo**: `code` opcional (60), `description` obrigatória (120), `quantity` positiva com até 3 casas, `unit` (20, padrão `un`), `componentBatch` opcional (120) e `replacementReason` obrigatório (1000). Não altera estoque. Código já existente no catálogo de peças (inclusive inativo, sem diferenciar caixa) é recusado, com orientação de usar a reserva. A lista "Componentes trocados" reúne estoque aplicado e externos.
+- **Uso de peça**: exige `partId`, `quantity` e `replacementReason` (até 1000); `componentBatch` (até 120) e `notes` (até 255) são opcionais. O estoque é descontado imediatamente. `appliedAt` e `appliedBy` são definidos pelo servidor. A resposta inclui `replacedComponents` somente com usos `USED`.
+- **Componente externo**: `code` opcional (60), `description` obrigatória (120), `quantity` positiva com até 3 casas, `unit` (20, padrão `un`), `componentBatch` opcional (120) e `replacementReason` obrigatório (1000). Não altera estoque. Código já existente no catálogo de peças (inclusive inativo, sem diferenciar caixa) é recusado, com orientação de usar a peça do estoque. A lista "Componentes trocados" reúne estoque aplicado e externos.
 - **Intervenção**: `type`, `description` obrigatória (1000), `performedOn` (data não futura) e `hours` opcionais (positivas, até 3 casas, como no "Tempo de serviço (opcional)" do documento do cliente). `type` é texto livre obrigatório de até 80 caracteres, com sugestões (Ressolda, Limpeza, Regravação, Atualização de firmware, Troca de chicote, Outro, somadas às já usadas), como a categoria do produto. `technicianName` guarda o usuário autenticado; o tempo é registrado só em horas e somado em `totalServiceHours` (só as informadas; sem nenhuma, o total é 0 e some da tela e do laudo). Início e fim não são registrados.
 - ordens de serviço `COMPLETED`, `RETURNED` e `IRREPARABLE` recusam criação, edição e anulação (`400`, em português); a leitura continua. Registros anulados permanecem visíveis com motivo, `voidedBy` e `voidedAt`, mas saem do total de horas e do laudo PDF. Edições preservam autor/data originais e expõem `editedBy` e `editedAt`.
-- `RmaResponse.repairHistory[]` reúne criação de componentes externos, aplicação de peças (motivo/lote) e criação/edição/anulação de reparos. Cada evento traz `entityType`, `entityId`, `action`, `changedBy`, `changedAt` e `summary`, persistidos na mesma transação. A migração V11 preserva os registros e inclui os anteriores no histórico. As duas superfícies de detalhe usam esses eventos na linha do tempo.
+- `RmaResponse.repairHistory[]` reúne criação de componentes externos, uso de peças (motivo/lote) e criação/edição/anulação de reparos. Cada evento traz `entityType`, `entityId`, `action`, `changedBy`, `changedAt` e `summary`, persistidos na mesma transação. A baseline V1 cria os registros e o histórico de reparo. As duas superfícies de detalhe usam esses eventos na linha do tempo.

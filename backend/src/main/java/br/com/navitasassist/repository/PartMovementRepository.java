@@ -12,13 +12,13 @@ import org.springframework.data.repository.query.Param;
 
 public interface PartMovementRepository extends JpaRepository<PartMovement, Long> {
 
-    @EntityGraph(attributePaths = { "part", "rma", "reservation", "reversedMovement" })
+    @EntityGraph(attributePaths = { "part", "rma", "usage", "reversedMovement" })
     List<PartMovement> findByPart_IdOrderByIdDesc(Long partId);
 
-    @EntityGraph(attributePaths = { "part", "rma", "reservation", "reversedMovement" })
+    @EntityGraph(attributePaths = { "part", "rma", "usage", "reversedMovement" })
     List<PartMovement> findByRma_IdOrderByIdDesc(Long rmaId);
 
-    Optional<PartMovement> findFirstByReservation_IdAndTypeOrderByIdDesc(Long reservationId, PartMovementType type);
+    Optional<PartMovement> findFirstByUsage_IdAndTypeOrderByIdDesc(Long usageId, PartMovementType type);
 
     boolean existsByReversedMovement_Id(Long movementId);
 

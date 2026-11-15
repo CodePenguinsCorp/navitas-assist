@@ -3,19 +3,10 @@ package br.com.navitasassist.part;
 import java.math.BigDecimal;
 import java.util.List;
 
-public record RmaPartsResponse(
-    Long rmaId,
-    String rmaCode,
-    List<PartReservationResponse> reservations,
-    List<PartMovementResponse> movements,
-    BigDecimal reservedCost,
-    BigDecimal consumedCost,
-    List<PartReservationResponse> replacedComponents,
-    long pendingCount
-) {
-    /** Sem `pecas.ver`: as reservas continuam visíveis, mas sem custo unitário, total, reservado ou aplicado. */
+public record RmaPartsResponse(Long rmaId, String rmaCode, List<PartUsageResponse> usages,
+    List<PartMovementResponse> movements, BigDecimal usedCost, List<PartUsageResponse> replacedComponents) {
     public RmaPartsResponse withoutCosts() {
-        return new RmaPartsResponse(rmaId, rmaCode, reservations.stream().map(PartReservationResponse::withoutCosts).toList(), movements,
-            null, null, replacedComponents == null ? null : replacedComponents.stream().map(PartReservationResponse::withoutCosts).toList(), pendingCount);
+        return new RmaPartsResponse(rmaId, rmaCode, usages.stream().map(PartUsageResponse::withoutCosts).toList(),
+            movements, null, replacedComponents.stream().map(PartUsageResponse::withoutCosts).toList());
     }
 }

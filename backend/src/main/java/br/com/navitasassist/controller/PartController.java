@@ -6,7 +6,6 @@ import br.com.navitasassist.part.PartMovementRequest;
 import br.com.navitasassist.part.PartMovementResponse;
 import br.com.navitasassist.part.PartReplenishmentResponse;
 import br.com.navitasassist.part.PartRequest;
-import br.com.navitasassist.part.PartReservationResponse;
 import br.com.navitasassist.part.PartResponse;
 import br.com.navitasassist.part.PartOptionResponse;
 import br.com.navitasassist.part.PartReversalRequest;
@@ -41,11 +40,6 @@ public class PartController {
     @GetMapping("/options")
     public List<PartOptionResponse> listOptions() {
         return partService.listOptions();
-    }
-
-    @GetMapping("/pending")
-    public List<PartReservationResponse> listPending() {
-        return partStockService.listPending();
     }
 
     @GetMapping("/replenishment")

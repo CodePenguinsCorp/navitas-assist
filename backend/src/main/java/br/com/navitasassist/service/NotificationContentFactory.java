@@ -37,7 +37,6 @@ public class NotificationContentFactory {
             case RMA_CREATED -> new Content("Nova OS " + rma.getCode(), context + " · prioridade " + PRIORITY_LABELS.get(rma.getPriority()) + ". Aberta por " + event.actor() + ".", actionPath(rma));
             case RMA_ASSIGNED -> new Content("OS " + rma.getCode() + " atribuída a " + assignee, context + " · etapa " + stage + ". Atribuída por " + event.actor() + ".", actionPath(rma));
             case RMA_BLOCKED -> new Content("Impedimento na OS " + rma.getCode(), operationalMessage(event, context, stage, "Motivo do impedimento", "Impedimento aberto."), actionPath(rma));
-            case PART_PENDING -> new Content("Peça pendente na OS " + rma.getCode(), operationalMessage(event, context, stage, "Pendência da peça", "Reserva pendente por falta de saldo."), actionPath(rma));
             case TEST_FAILED -> new Content("Teste reprovado na OS " + rma.getCode(), operationalMessage(event, context, stage, "Item reprovado", "Item de protocolo reprovado."), actionPath(rma));
         };
     }

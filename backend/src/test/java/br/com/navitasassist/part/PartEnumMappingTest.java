@@ -18,7 +18,7 @@ class PartEnumMappingTest {
 
     @Test
     void enumColumnsAreMappedAsVarchar() {
-        for (Class<?> entity : List.of(PartMovement.class, PartReservation.class)) {
+        for (Class<?> entity : List.of(PartMovement.class, PartUsage.class)) {
             for (Field field : entity.getDeclaredFields()) {
                 if (field.isAnnotationPresent(Enumerated.class)) {
                     JdbcTypeCode type = field.getAnnotation(JdbcTypeCode.class);

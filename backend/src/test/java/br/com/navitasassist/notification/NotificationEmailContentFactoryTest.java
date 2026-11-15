@@ -29,7 +29,6 @@ class NotificationEmailContentFactoryTest {
             case RMA_CREATED -> "OS criada";
             case RMA_ASSIGNED -> "OS atribuída";
             case RMA_BLOCKED -> "Impedimento aberto";
-            case PART_PENDING -> "Peça pendente";
             case TEST_FAILED -> "Teste reprovado";
         };
         assertTrue(message.subject().startsWith("[Navitas Assist] " + label));

@@ -42,7 +42,7 @@ public class NotificationRuleService {
 
     @Transactional(readOnly = true)
     public List<NotificationRuleResponse> list() {
-        return notificationRuleRepository.findAllByOrderByIdAsc().stream().map(NotificationRuleResponse::from).toList();
+        return notificationRuleRepository.findAllByOrderByIdAsc().stream().filter(rule -> rule.getEventType().isSupported()).map(NotificationRuleResponse::from).toList();
     }
 
     public NotificationRuleResponse update(NotificationEventType eventType, NotificationRuleRequest request) {

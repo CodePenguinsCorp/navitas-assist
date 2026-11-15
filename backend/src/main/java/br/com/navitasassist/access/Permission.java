@@ -27,7 +27,7 @@ public enum Permission {
     CADASTROS_IMPORTAR(Codes.CADASTROS_IMPORTAR, PermissionModule.CADASTROS, "Importar clientes e produtos"),
     PECAS_VER(Codes.PECAS_VER, PermissionModule.PECAS, "Consultar peças e estoque"),
     PECAS_MOVIMENTAR(Codes.PECAS_MOVIMENTAR, PermissionModule.PECAS, "Cadastrar peças e movimentar estoque"),
-    PECAS_RESERVAR(Codes.PECAS_RESERVAR, PermissionModule.PECAS, "Reservar e aplicar peças nas ordens de serviço"),
+    PECAS_USAR(Codes.PECAS_USAR, PermissionModule.PECAS, "Usar peças nas OS"),
     PROTOCOLOS_VER(Codes.PROTOCOLOS_VER, PermissionModule.PROTOCOLOS, "Consultar protocolos e execuções"),
     PROTOCOLOS_EXECUTAR(Codes.PROTOCOLOS_EXECUTAR, PermissionModule.PROTOCOLOS, "Executar protocolos nas ordens de serviço"),
     PROTOCOLOS_CATALOGO(Codes.PROTOCOLOS_CATALOGO, PermissionModule.PROTOCOLOS, "Gerenciar modelos de protocolo"),
@@ -99,7 +99,7 @@ public enum Permission {
         public static final String CADASTROS_IMPORTAR = "cadastros.importar";
         public static final String PECAS_VER = "pecas.ver";
         public static final String PECAS_MOVIMENTAR = "pecas.movimentar";
-        public static final String PECAS_RESERVAR = "pecas.reservar";
+        public static final String PECAS_USAR = "pecas.usar";
         public static final String PROTOCOLOS_VER = "protocolos.ver";
         public static final String PROTOCOLOS_EXECUTAR = "protocolos.executar";
         public static final String PROTOCOLOS_CATALOGO = "protocolos.catalogo";

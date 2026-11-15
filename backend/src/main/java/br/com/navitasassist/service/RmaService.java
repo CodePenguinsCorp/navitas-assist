@@ -21,8 +21,6 @@ import br.com.navitasassist.notification.NotificationEventType;
 import br.com.navitasassist.notification.RmaNotificationEvent;
 import br.com.navitasassist.pagination.PageParams;
 import br.com.navitasassist.pagination.PageResponse;
-import br.com.navitasassist.part.PartReservationStatus;
-import br.com.navitasassist.repository.PartReservationRepository;
 import br.com.navitasassist.repository.RmaBoardRepository;
 import br.com.navitasassist.repository.RmaCodeGenerationLockRepository;
 import br.com.navitasassist.repository.RmaRecordRepository;
@@ -66,7 +64,6 @@ public class RmaService {
 
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
     private static final Set<RmaStatus> CLOSED_STATUSES = EnumSet.of(RmaStatus.COMPLETED, RmaStatus.RETURNED, RmaStatus.IRREPARABLE);
-    private static final Set<PartReservationStatus> OPEN_RESERVATION_STATUSES = EnumSet.of(PartReservationStatus.ACTIVE, PartReservationStatus.PENDING);
     private static final int MAX_YEARLY_SEQUENCE = 999_999;
     private static final int BOARD_BATCH = 1000;
 
@@ -81,7 +78,6 @@ public class RmaService {
     private final UserAccountService userAccountService;
     private final ProtocolExecutionService protocolExecutionService;
     private final ApplicationEventPublisher eventPublisher;
-    private final PartReservationRepository partReservationRepository;
 
     /**
      * Cards do Kanban. O histórico de status e os impedimentos entram por duas consultas em lote só com as colunas
@@ -279,13 +275,6 @@ public class RmaService {
 
     private RmaDetailResponse applyStatusChange(RmaRecord rma, RmaStatusUpdateRequest request) {
         boolean changed = !Objects.equals(rma.getStatus(), request.status());
-
-        // Closing requires every part reservation to be consumed or cancelled first, so no stock stays locked or pending
-        // on a closed RMA. The RMA row is locked here and by PartStockService, which serializes both sides.
-        if (changed && CLOSED_STATUSES.contains(request.status())
-            && partReservationRepository.existsByRma_IdAndStatusIn(rma.getId(), OPEN_RESERVATION_STATUSES)) {
-            throw new BusinessException("A OS possui reservas de peças abertas. Aplique ou cancele as reservas antes de encerrar.");
-        }
 
         if (changed) {
             protocolExecutionService.assertTransitionAllowed(rma, request.status());

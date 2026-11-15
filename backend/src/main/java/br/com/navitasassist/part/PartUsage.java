@@ -25,8 +25,8 @@ import org.hibernate.type.SqlTypes;
 @Setter
 @NoArgsConstructor
 @Entity
-@Table(name = "part_reservations")
-public class PartReservation extends AuditableEntity {
+@Table(name = "part_usages")
+public class PartUsage extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -46,17 +46,18 @@ public class PartReservation extends AuditableEntity {
     @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private PartReservationStatus status;
+    private PartUsageStatus status;
 
-    @Column(length = 1000)
+    @Column(nullable = false, length = 1000)
     private String replacementReason;
 
     @Column(length = 120)
     private String componentBatch;
 
+    @Column(nullable = false)
     private java.time.Instant appliedAt;
 
-    @Column(length = 120)
+    @Column(nullable = false, length = 120)
     private String appliedBy;
 
     @Column(length = 255, updatable = false)

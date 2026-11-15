@@ -49,23 +49,18 @@ Convenções:
 
 | Rota | Permissão | Descrição |
 | --- | --- | --- |
-| `GET /api/rmas/{id}/parts` | `rma.ver` | Reservas e componentes trocados da OS. Custos (`unitCost`, `totalCost`, `reservedCost`, `consumedCost`) só com `pecas.ver`; sem ela vêm nulos, também nas respostas de reservar, alocar, aplicar e cancelar. |
-| `POST /api/rmas/{id}/parts` | `pecas.reservar` | Reserva peça. |
-| `POST /api/rmas/{id}/parts/{reservationId}/allocate` | `pecas.reservar` | Aloca a reserva. |
-| `POST /api/rmas/{id}/parts/{reservationId}/consume` | `pecas.reservar` | Aplica a reserva (ação `consume`) (motivo e lote). |
-| `POST /api/rmas/{id}/parts/{reservationId}/cancel` | `pecas.reservar` | Cancela a reserva. |
 | `GET /api/rmas/{id}/repair` | `rma.ver` | Intervenções e `totalServiceHours` (soma só as intervenções ativas que informaram horas; `hours` ausente vem nulo). |
 | `GET /api/suggestions/intervention-types` | `rma.ver` | Tipos de intervenção já usados: lista de textos, sem vazios nem repetidos por maiúsculas ou acentos, em ordem alfabética. As sugestões iniciais (Ressolda, Limpeza, Regravação, Atualização de firmware, Troca de chicote, Outro) ficam na interface. |
 | `GET /api/suggestions/block-categories` | `rma.ver` | Categorias de impedimento já usadas, no mesmo formato. |
-| `GET /api/suggestions/part-units` | `pecas.ver`, `pecas.reservar` ou `pecas.movimentar` | Unidades já usadas em peças e em componentes externos trocados, no mesmo formato (iniciais na interface: UN, PC, PAR, KIT, CX, KG, G, M, CM, MM, L, ML). |
+| `GET /api/suggestions/part-units` | `pecas.ver`, `pecas.usar` ou `pecas.movimentar` | Unidades já usadas em peças e em componentes externos trocados, no mesmo formato (iniciais na interface: UN, PC, PAR, KIT, CX, KG, G, M, CM, MM, L, ML). |
 | `GET /api/suggestions/part-locations` | `pecas.ver` ou `pecas.movimentar` | Localizações de estoque já usadas nas peças, no mesmo formato. |
 | `GET /api/rmas/{id}/repair/external-components` | `rma.ver` | Componentes externos. |
-| `POST /api/rmas/{id}/repair/external-components` | `pecas.reservar` | Adiciona componente externo. |
+| `POST /api/rmas/{id}/repair/external-components` | `pecas.usar` | Adiciona componente externo. |
 | `POST /api/rmas/{id}/repair/interventions` | `rma.diagnosticar` | Registra intervenção: `type` é texto livre obrigatório de até 80 caracteres (aparado), `hours` é opcional (positivas, até 3 casas). |
 | `PUT /api/rmas/{rmaId}/repair/interventions/{id}` | `rma.diagnosticar` | Edita intervenção ativa em OS aberta. |
 | `POST /api/rmas/{rmaId}/repair/interventions/{id}/void` | `rma.diagnosticar` | Anula intervenção com `{ reason }` obrigatório (até 1000). |
-| `PUT /api/rmas/{rmaId}/repair/external-components/{id}` | `pecas.reservar` | Edita componente externo ativo em OS aberta. |
-| `POST /api/rmas/{rmaId}/repair/external-components/{id}/void` | `pecas.reservar` | Anula componente externo com `{ reason }` obrigatório (até 1000). |
+| `PUT /api/rmas/{rmaId}/repair/external-components/{id}` | `pecas.usar` | Edita componente externo ativo em OS aberta. |
+| `POST /api/rmas/{rmaId}/repair/external-components/{id}/void` | `pecas.usar` | Anula componente externo com `{ reason }` obrigatório (até 1000). |
 | `GET /api/protocols/rmas/{rmaId}/executions` | `rma.ver` | Execuções de protocolo da OS. |
 | `POST /api/protocols/rmas/{rmaId}/executions` | `protocolos.executar` | Inicia execução. |
 | `POST /api/protocols/executions/{executionId}/items/{itemId}/results` | `protocolos.executar` | Registra resultado de um item. |
@@ -90,17 +85,16 @@ Convenções:
 
 | Rota | Permissão | Descrição |
 | --- | --- | --- |
-| `GET /api/parts/options` | `pecas.ver` ou `pecas.reservar` | Seletor de peças da OS: `{id, code, name, unit, available, active}`. |
+| `GET /api/parts/options` | `pecas.ver` ou `pecas.usar` | Seletor de peças da OS: `{id, code, name, unit, onHand, active}`. |
 | `GET /api/parts` | `pecas.ver` | Busca peças (`query`). |
-| `GET /api/parts/pending` | `pecas.ver` | Reservas pendentes. |
 | `GET /api/parts/replenishment` | `pecas.ver` | Peças a repor. |
-| `GET /api/parts/{id}/movements` | `pecas.ver` | Movimentações, sem custos (os custos ficam na peça e nas reservas). |
+| `GET /api/parts/{id}/movements` | `pecas.ver` | Movimentações, sem custos (os custos ficam na peça e nos usos). |
 | `POST /api/parts` | `pecas.movimentar` | Cadastra peça. |
 | `PUT /api/parts/{id}` | `pecas.movimentar` | Altera peça. |
 | `POST /api/parts/{id}/movements` | `pecas.movimentar` | Registra movimentação. |
 | `POST /api/parts/movements/{movementId}/reversal` | `pecas.movimentar` | Estorna movimentação. |
 
-Quantidade de peça: quando a unidade (campo `unit` da peça ou do componente externo, texto livre) é contável, a quantidade deve ser um número inteiro positivo; só unidades de medida aceitam decimais, até 3 casas. A comparação ignora acento, caixa e ponto final. São medidas: kg, g, mg, t, l, lt, litro(s), ml, m, metro(s), cm, mm, km, m2, m², m3, m³, pol e as formas por extenso (quilograma, grama, tonelada, mililitro, centímetro, milímetro, quilômetro, polegada, no plural também); tudo o mais (un, und, pc, peça, par, jogo, kit, cx, caixa, rolo, unidade em branco etc.) é contável. A regra vale para reserva, alocação, aplicação, movimentação (entrada, saída, ajuste), estoque mínimo e componente externo; a recusa é 400 com "A unidade UN não aceita quantidade fracionada. Informe um número inteiro." Saldos e reservas antigos fracionados continuam exibidos e podem ser cancelados ou corrigidos por estorno, mas não podem ser alocados nem aplicados enquanto a unidade for contável; ao editar a peça, o estoque mínimo existente é preservado se não for alterado. No frontend a regra única fica em `core/utils/quantity-rules.ts`; no backend, em `part/QuantityRules.java`.
+Quantidade de peça: quando a unidade (campo `unit` da peça ou do componente externo, texto livre) é contável, a quantidade deve ser um número inteiro positivo; só unidades de medida aceitam decimais, até 3 casas. A comparação ignora acento, caixa e ponto final. São medidas: kg, g, mg, t, l, lt, litro(s), ml, m, metro(s), cm, mm, km, m2, m², m3, m³, pol e as formas por extenso (quilograma, grama, tonelada, mililitro, centímetro, milímetro, quilômetro, polegada, no plural também); tudo o mais (un, und, pc, peça, par, jogo, kit, cx, caixa, rolo, unidade em branco etc.) é contável. A regra vale para uso, movimentação (entrada, saída, ajuste), estoque mínimo e componente externo; a recusa é 400 com "A unidade UN não aceita quantidade fracionada. Informe um número inteiro." Usos antigos fracionados continuam exibidos e podem ser corrigidos por estorno; ao editar a peça, o estoque mínimo existente é preservado se não for alterado. No frontend a regra única fica em `core/utils/quantity-rules.ts`; no backend, em `part/QuantityRules.java`.
 
 ## Protocolos (modelos)
 
@@ -152,7 +146,7 @@ Qualquer outra rota de `/api/protocols/**` é negada.
 | `GET /api/notifications/summary` | Contagem de não lidas. |
 | `POST /api/notifications/{id}/read` | Marca como lida. |
 | `POST /api/notifications/read-all` | Marca todas as visíveis como lidas. |
-| `POST /api/notifications/{id}/snooze` | Adia (`minutes` de 5 a 10080). Só `RMA_BLOCKED`, `PART_PENDING` e `TEST_FAILED`; as informativas (`RMA_CREATED`, `RMA_ASSIGNED`) recebem 400. |
+| `POST /api/notifications/{id}/snooze` | Adia (`minutes` de 5 a 10080). Só `RMA_BLOCKED` e `TEST_FAILED`; as informativas (`RMA_CREATED`, `RMA_ASSIGNED`) recebem 400. |
 | `GET /api/notifications/preferences` | Preferências de silenciamento. |
 | `PUT /api/notifications/preferences/{eventType}` | Altera a preferência de um evento. |
 
@@ -185,4 +179,17 @@ Garantia considera ajuste manual e itens legados; basta um item corresponder. Pr
 
 Ordem: posição manual crescente, nulos ao final, prioridade HIGH/MEDIUM/LOW, atualização decrescente e id crescente. `afterId` é o predecessor e `beforeId` é o sucessor; sem vizinhos insere no início. Vizinhos filtrados não precisam ser adjacentes: `beforeId` determina o ponto, enquanto `afterId` valida a ordem. Recusa vizinho fora da coluna, autorreferência e ordem invertida.
 
-Inserir entre cartões automáticos fixa também o prefixo anterior, preservando os nulos abaixo. Intervalos começam em 1024; falta de espaço ou risco de overflow renumera sob o lock da coluna. Advisory locks transacionais de origem e destino precedem o lock da OS, sempre na mesma ordem, inclusive na rota atual de status. Reordenar usa SQL somente em `board_position`, sem alterar data visível nem histórico de status. Mudar de status usa as validações, reservas, protocolos, auditoria e histórico existentes; a rota atual limpa a posição ao trocar de coluna. O endpoint completo `/board` permanece compatível.
+Inserir entre cartões automáticos fixa também o prefixo anterior, preservando os nulos abaixo. Intervalos começam em 1024; falta de espaço ou risco de overflow renumera sob o lock da coluna. Advisory locks transacionais de origem e destino precedem o lock da OS, sempre na mesma ordem, inclusive na rota atual de status. Reordenar usa SQL somente em `board_position`, sem alterar data visível nem histórico de status. Mudar de status usa as validações, protocolos, auditoria e histórico existentes; a rota atual limpa a posição ao trocar de coluna. O endpoint completo `/board` permanece compatível.
+
+
+## Uso de peças nas OS
+
+| Rota | Permissão | Descrição |
+| --- | --- | --- |
+| `GET /api/rmas/{rmaId}/parts` | `rma.ver` | Usos, movimentos, peças trocadas e `usedCost`; custos ocultos sem `pecas.ver`. |
+| `POST /api/rmas/{rmaId}/parts/usages` | `pecas.usar` | Usar peça e descontar o estoque imediatamente (201). |
+| `POST /api/rmas/{rmaId}/parts/usages/{usageId}/reversal` | `pecas.usar` | Desfazer uso com `{ reason }` obrigatório. |
+
+Uso recebe `{ partId, quantity, replacementReason, componentBatch?, notes? }`. Motivo da troca obrigatório, sem espaços nas pontas; lote e observação opcionais. Exige OS aberta, peça ativa e quantidade válida para a unidade. Saldo insuficiente responde 409 com `Estoque insuficiente para a peça X. Em estoque: N.` e não grava uso, movimento ou pendência. Uso e estorno registram histórico e auditoria. Desfazer exige OS aberta, inclusive pela rota de reversão de movimentos; não reverte duas vezes.
+
+Removidos: criação em `POST /api/rmas/{rmaId}/parts`, ações `/{reservationId}/allocate`, `/{reservationId}/consume`, `/{reservationId}/cancel` e `GET /api/parts/pending`. Reposição considera somente estoque abaixo do mínimo. A resposta da OS usa `usages`, `movements`, `usedCost` e `replacedComponents`. Situações persistidas: `USED` (usada) e `REVERTED` (uso desfeito). A base é recriada pela V1, sem registros ou tipos históricos de reserva.

@@ -82,8 +82,8 @@ class ReadAuthorizationByProfileIntegrationTest {
                 "minimumStock", 0, "unitCost", 12.5)))).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
         mvc.perform(post("/api/parts/{id}/movements", partId).with(asProfile("admin", ADMIN)).with(csrf()).contentType(MediaType.APPLICATION_JSON)
             .content("{\"type\":\"ENTRY\",\"quantity\":5}")).andExpect(status().isCreated());
-        mvc.perform(post("/api/rmas/{id}/parts", rmaId).with(asProfile("tech", TECH)).with(csrf()).contentType(MediaType.APPLICATION_JSON)
-            .content("{\"partId\":" + partId + ",\"quantity\":2}")).andExpect(status().isCreated());
+        mvc.perform(post("/api/rmas/{id}/parts/usages", rmaId).with(asProfile("tech", TECH)).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"partId\":" + partId + ",\"quantity\":2,\"replacementReason\":\"Falha\"}")).andExpect(status().isCreated());
     }
 
     /** Leituras de cada tela e os perfis prontos que a abrem; todas precisam responder 200. */
@@ -98,12 +98,11 @@ class ReadAuthorizationByProfileIntegrationTest {
             read("/api/protocols/templates", ALL), read("/api/users/assignable", ALL),
             // Abertura de OS (rma.abrir)
             read("/api/clients/options", Set.of(ADMIN, DESK)), read("/api/products/options", Set.of(ADMIN, DESK)),
-            // Painel de peças da OS (pecas.reservar)
+            // Painel de peças da OS (pecas.usar)
             read("/api/parts/options", Set.of(ADMIN, TECH)),
             // Clientes e Produtos (cadastros.ver + cadastros.editar)
             read("/api/clients", Set.of(ADMIN, DESK)), read("/api/clients/" + clientId, Set.of(ADMIN, DESK)), read("/api/products", Set.of(ADMIN, DESK)),
             // Peças (pecas.ver: todos)
-            read("/api/parts", ALL), read("/api/parts/pending", ALL), read("/api/parts/replenishment", ALL),
             read("/api/parts/" + partId + "/movements", ALL),
             // Relatórios (relatorios.ver): filtro de cliente incluído
             read("/api/reports/rmas?entryFrom=" + today + "&entryTo=" + today, Set.of(ADMIN, TECH, VIEWER)),
@@ -136,7 +135,6 @@ class ReadAuthorizationByProfileIntegrationTest {
     void customProfilesWithoutTheAreaPermissionAreDenied() throws Exception {
         RequestPostProcessor reportsOnly = only(Codes.RELATORIOS_VER);
         for (String path : List.of("/api/clients", "/api/clients/" + clientId, "/api/products", "/api/parts", "/api/parts/options",
-            "/api/parts/pending", "/api/parts/replenishment", "/api/parts/" + partId + "/movements", "/api/protocols/templates",
             "/api/protocols/rmas/" + rmaId + "/executions", "/api/rmas/dashboard", "/api/rmas/" + rmaId + "/parts")) {
             mvc.perform(get(path).with(reportsOnly)).andExpect(status().isForbidden());
         }
@@ -144,7 +142,7 @@ class ReadAuthorizationByProfileIntegrationTest {
         for (String path : List.of("/api/clients", "/api/products", "/api/clients/options", "/api/products/options")) {
             mvc.perform(get(path).with(editorOnly)).andExpect(status().isForbidden());
         }
-        mvc.perform(get("/api/parts").with(only(Codes.PECAS_RESERVAR))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/parts").with(only(Codes.PECAS_USAR))).andExpect(status().isForbidden());
         mvc.perform(get("/api/protocols/templates").with(only(Codes.CADASTROS_VER))).andExpect(status().isForbidden());
         mvc.perform(get("/api/protocols/rmas/" + rmaId + "/executions").with(only(Codes.PROTOCOLOS_VER))).andExpect(status().isForbidden());
     }
@@ -155,39 +153,38 @@ class ReadAuthorizationByProfileIntegrationTest {
             mvc.perform(get("/api/clients/options").with(only(code))).andExpect(status().isOk());
             mvc.perform(get("/api/products/options").with(only(code))).andExpect(status().isOk());
         }
-        for (String code : List.of(Codes.PECAS_VER, Codes.PECAS_RESERVAR)) {
+        for (String code : List.of(Codes.PECAS_VER, Codes.PECAS_USAR)) {
             mvc.perform(get("/api/parts/options").with(only(code))).andExpect(status().isOk());
         }
         for (String code : List.of(Codes.PROTOCOLOS_VER, Codes.PROTOCOLOS_EXECUTAR, Codes.RMA_VER)) {
             mvc.perform(get("/api/protocols/templates").with(only(code))).andExpect(status().isOk());
         }
         mvc.perform(get("/api/clients/" + clientId).with(only(Codes.CADASTROS_VER))).andExpect(status().isOk());
-        mvc.perform(get("/api/parts/pending").with(only(Codes.PECAS_VER))).andExpect(status().isOk());
     }
 
     @Test
     void partCostsReachOnlyWhoHasPartsView() throws Exception {
         mvc.perform(get("/api/rmas/{id}/parts", rmaId).with(only(Codes.RMA_VER)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.reservations[0].quantity").value(2))
-            .andExpect(jsonPath("$.reservations[0].unitCost").value((Object) null))
-            .andExpect(jsonPath("$.reservations[0].totalCost").value((Object) null))
-            .andExpect(jsonPath("$.reservedCost").value((Object) null))
-            .andExpect(jsonPath("$.consumedCost").value((Object) null));
+            .andExpect(jsonPath("$.usages[0].quantity").value(2))
+            .andExpect(jsonPath("$.usages[0].unitCost").value((Object) null))
+            .andExpect(jsonPath("$.usages[0].totalCost").value((Object) null))
+            .andExpect(jsonPath("$.usedCost").value((Object) null))
+            .andExpect(jsonPath("$.usedCost").value((Object) null));
         mvc.perform(get("/api/rmas/{id}/parts", rmaId).with(only(Codes.RMA_VER, Codes.PECAS_VER)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.reservations[0].unitCost").value(12.5))
-            .andExpect(jsonPath("$.reservations[0].totalCost").value(25.0))
-            .andExpect(jsonPath("$.reservedCost").value(25.0));
-        // Escrita: quem reserva sem pecas.ver também recebe a reserva sem custos.
-        mvc.perform(post("/api/rmas/{id}/parts", rmaId).with(only(Codes.PECAS_RESERVAR)).with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"partId\":" + partId + ",\"quantity\":1}"))
+            .andExpect(jsonPath("$.usages[0].unitCost").value(12.5))
+            .andExpect(jsonPath("$.usages[0].totalCost").value(25.0))
+            .andExpect(jsonPath("$.usedCost").value(25.0));
+        // Escrita: quem usa sem pecas.ver também recebe o uso sem custos.
+        mvc.perform(post("/api/rmas/{id}/parts/usages", rmaId).with(only(Codes.PECAS_USAR)).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"partId\":" + partId + ",\"quantity\":1,\"replacementReason\":\"Falha\"}"))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.quantity").value(1))
             .andExpect(jsonPath("$.unitCost").value((Object) null))
             .andExpect(jsonPath("$.totalCost").value((Object) null));
-        mvc.perform(post("/api/rmas/{id}/parts", rmaId).with(only(Codes.PECAS_RESERVAR, Codes.PECAS_VER)).with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"partId\":" + partId + ",\"quantity\":1}"))
+        mvc.perform(post("/api/rmas/{id}/parts/usages", rmaId).with(only(Codes.PECAS_USAR, Codes.PECAS_VER)).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"partId\":" + partId + ",\"quantity\":1,\"replacementReason\":\"Falha\"}"))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.unitCost").value(12.5));
     }

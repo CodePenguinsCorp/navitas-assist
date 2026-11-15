@@ -116,7 +116,6 @@ class PermissionEquivalenceIntegrationTest {
         row(HttpMethod.PUT, "/api/notifications/preferences/{eventType}", ALL),
         row(HttpMethod.GET, "/api/parts", ALL),
         row(HttpMethod.GET, "/api/parts/options", ALL),
-        row(HttpMethod.GET, "/api/parts/pending", ALL),
         row(HttpMethod.GET, "/api/parts/replenishment", ALL),
         row(HttpMethod.GET, "/api/parts/{id}/movements", ALL),
         row(HttpMethod.GET, "/api/protocols/templates", ALL),
@@ -192,10 +191,8 @@ class PermissionEquivalenceIntegrationTest {
         row(HttpMethod.POST, "/api/rmas/{rmaId}/repair/interventions/{id}/void", AT),
         row(HttpMethod.PUT, "/api/rmas/{rmaId}/repair/external-components/{id}", AT),
         row(HttpMethod.POST, "/api/rmas/{rmaId}/repair/external-components/{id}/void", AT),
-        row(HttpMethod.POST, "/api/rmas/{rmaId}/parts", AT),
-        row(HttpMethod.POST, "/api/rmas/{rmaId}/parts/{reservationId}/allocate", AT),
-        row(HttpMethod.POST, "/api/rmas/{rmaId}/parts/{reservationId}/consume", AT),
-        row(HttpMethod.POST, "/api/rmas/{rmaId}/parts/{reservationId}/cancel", AT),
+        row(HttpMethod.POST, "/api/rmas/{rmaId}/parts/usages", AT),
+        row(HttpMethod.POST, "/api/rmas/{rmaId}/parts/usages/{usageId}/reversal", AT),
         row(HttpMethod.POST, "/api/protocols/rmas/{rmaId}/executions", AT),
         row(HttpMethod.POST, "/api/protocols/executions/{executionId}/items/{itemId}/results", AT),
         row(HttpMethod.POST, "/api/protocols/executions/{executionId}/complete", AT),
@@ -285,10 +282,10 @@ class PermissionEquivalenceIntegrationTest {
     @Test
     void repairWritesUseIndependentExistingPermissions() throws Exception {
         for (String[] entry : List.of(
-            new String[] {"external-components", Permission.Codes.PECAS_RESERVAR, Permission.Codes.RMA_DIAGNOSTICAR},
-            new String[] {"interventions", Permission.Codes.RMA_DIAGNOSTICAR, Permission.Codes.PECAS_RESERVAR},
-            new String[] {"consume", Permission.Codes.PECAS_RESERVAR, Permission.Codes.RMA_DIAGNOSTICAR})) {
-            String path = entry[0].equals("consume") ? "/api/rmas/999999/parts/999999/consume" : "/api/rmas/999999/repair/" + entry[0];
+            new String[] {"external-components", Permission.Codes.PECAS_USAR, Permission.Codes.RMA_DIAGNOSTICAR},
+            new String[] {"interventions", Permission.Codes.RMA_DIAGNOSTICAR, Permission.Codes.PECAS_USAR},
+            new String[] {"usages", Permission.Codes.PECAS_USAR, Permission.Codes.RMA_DIAGNOSTICAR})) {
+            String path = entry[0].equals("usages") ? "/api/rmas/999999/parts/usages" : "/api/rmas/999999/repair/" + entry[0];
             int allowed = mvc.perform(request(HttpMethod.POST, path).with(csrf())
                 .with(user("isolated").authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority(entry[1])))
                 .contentType(MediaType.APPLICATION_JSON).content("{}")).andReturn().getResponse().getStatus();
@@ -305,7 +302,7 @@ class PermissionEquivalenceIntegrationTest {
         for (String path : List.of("/api/rmas/999999/repair", "/api/rmas/999999/repair/external-components")) {
             mvc.perform(request(HttpMethod.GET, path).with(user("viewer").authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority(Permission.Codes.RMA_VER))))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
-            mvc.perform(request(HttpMethod.GET, path).with(user("writer").authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority(Permission.Codes.PECAS_RESERVAR))))
+            mvc.perform(request(HttpMethod.GET, path).with(user("writer").authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority(Permission.Codes.PECAS_USAR))))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
         }
     }

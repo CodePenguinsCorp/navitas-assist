@@ -15,7 +15,7 @@ public final class LegacyProfiles {
         "ADMIN", ordered(
             "rma.ver", "rma.abrir", "rma.editar", "rma.status", "rma.responsavel", "rma.diagnosticar", "rma.impedimentos",
             "cadastros.ver", "cadastros.editar", "cadastros.importar",
-            "pecas.ver", "pecas.movimentar", "pecas.reservar",
+            "pecas.ver", "pecas.movimentar", "pecas.usar",
             "protocolos.ver", "protocolos.executar", "protocolos.catalogo",
             "relatorios.ver",
             "usuarios.gerir", "perfis.gerir", "notificacoes.regras", "auditoria.ver"),
@@ -27,7 +27,7 @@ public final class LegacyProfiles {
         "TECHNICIAN", ordered(
             "rma.ver", "rma.status", "rma.atribuivel", "rma.diagnosticar", "rma.impedimentos",
             "cadastros.ver",
-            "pecas.ver", "pecas.reservar",
+            "pecas.ver", "pecas.usar",
             "protocolos.ver", "protocolos.executar",
             "relatorios.ver"),
         "VIEWER", ordered(

@@ -68,7 +68,7 @@ class RmaRepairIntegrationTest {
             rma.getRepairHistory().get(0).getSummary());
         assertEquals(0, parts.findById(part.getId()).orElseThrow().getOnHand().signum());
         write("external-components", Map.of("code", " catalog ", "description", "X", "quantity", "1", "replacementReason", "Falha"))
-            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Código já cadastrado no estoque. Use a reserva de peças."));
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Código já cadastrado no estoque. Use a ação Usar peça."));
         mvc.perform(get(base() + "/external-components").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1))).andExpect(jsonPath("$[0].quantity").value(1.125));
     }
