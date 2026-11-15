@@ -6,6 +6,7 @@ import { RmaBoardFilters, RmaBoardPageResponse, RmaBoardCountsResponse, RmaBoard
 import {
   CreateRmaRequest,
   DiagnosisRequest,
+  DiagnosisSuggestionsResponse,
   PageQuery,
   PageResponse,
   RmaAssigneeUpdateRequest,
@@ -106,6 +107,10 @@ export class RmaService {
 
   resolveBlock(id: number, blockId: number, payload: RmaBlockResolveRequest): Observable<RmaResponse> {
     return this.http.patch<RmaResponse>(`/api/rmas/${id}/blocks/${blockId}`, payload);
+  }
+
+  getDiagnosisSuggestions(): Observable<DiagnosisSuggestionsResponse> {
+    return this.http.get<DiagnosisSuggestionsResponse>('/api/rmas/diagnosis/suggestions');
   }
 
   upsertDiagnosis(id: number, payload: DiagnosisRequest): Observable<RmaResponse> {

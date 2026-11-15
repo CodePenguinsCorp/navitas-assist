@@ -1,6 +1,4 @@
 import {
-  FailureCause,
-  FailureType,
   NavGroup,
   RmaPriority,
   RmaStatus,
@@ -45,47 +43,17 @@ export const WARRANTY_STATUS_LABELS: Record<WarrantyStatus, string> = {
   [WarrantyStatus.OUT_OF_WARRANTY]: 'Fora de garantia'
 };
 
-export const FAILURE_TYPE_OPTIONS: FailureType[] = [
-  'POWER_SUPPLY',
-  'PWM',
-  'SENSOR',
-  'COMMUNICATION',
-  'DISPLAY',
-  'FIRMWARE',
-  'MECHANICAL',
-  'OTHER'
+/** Tamanho máximo do tipo de falha e da causa provável (texto livre, como a categoria do produto). */
+export const FAILURE_TEXT_MAX_LENGTH = 80;
+
+/** Sugestões iniciais; as já usadas em outros diagnósticos são somadas a elas. */
+export const FAILURE_TYPE_SUGGESTIONS: readonly string[] = [
+  'Fonte de alimentação', 'PWM', 'Sensor', 'Comunicação', 'Display', 'Firmware', 'Mecânica', 'Outro'
 ];
 
-export const FAILURE_TYPE_LABELS: Record<FailureType, string> = {
-  POWER_SUPPLY: 'Fonte',
-  PWM: 'PWM',
-  SENSOR: 'Sensor',
-  COMMUNICATION: 'Comunicação',
-  DISPLAY: 'Display',
-  FIRMWARE: 'Firmware',
-  MECHANICAL: 'Mecânica',
-  OTHER: 'Outro'
-};
-
-export const FAILURE_CAUSE_OPTIONS: FailureCause[] = [
-  'COMPONENT',
-  'SOLDER',
-  'HUMIDITY',
-  'OVERLOAD',
-  'ESD',
-  'INCORRECT_USAGE',
-  'OTHER'
+export const FAILURE_CAUSE_SUGGESTIONS: readonly string[] = [
+  'Componente', 'Solda', 'Umidade', 'Sobrecarga', 'ESD', 'Uso incorreto', 'Outro'
 ];
-
-export const FAILURE_CAUSE_LABELS: Record<FailureCause, string> = {
-  COMPONENT: 'Componente',
-  SOLDER: 'Solda',
-  HUMIDITY: 'Umidade',
-  OVERLOAD: 'Sobrecarga',
-  ESD: 'ESD',
-  INCORRECT_USAGE: 'Uso incorreto',
-  OTHER: 'Outro'
-};
 
 export const NAV_GROUPS: NavGroup[] = [
   {

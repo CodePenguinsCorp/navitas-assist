@@ -21,7 +21,7 @@ import {
 // Hoje o módulo ./rma-detail não existe: o vermelho é de resolução do import (compilação).
 
 const diagnosis: DiagnosisResponse = {
-  foundFailure: 'Capacitor estufado', failureType: 'POWER_SUPPLY', probableCause: 'COMPONENT',
+  foundFailure: 'Capacitor estufado', failureType: 'Fonte de alimentação', probableCause: 'Componente',
   notes: 'Trocar lote', diagnosedAt: '2026-10-21', technicianName: 'Bia',
 };
 
@@ -114,7 +114,7 @@ describe('OS detail contract', () => {
   it('returns six diagnosis facts with date and technician, notes only when present', () => {
     expect(diagnosisFacts(diagnosis)).toEqual([
       { label: 'Falha encontrada', value: 'Capacitor estufado', empty: false },
-      { label: 'Tipo', value: 'Fonte', empty: false },
+      { label: 'Tipo', value: 'Fonte de alimentação', empty: false },
       { label: 'Causa provável', value: 'Componente', empty: false },
       { label: 'Data do diagnóstico', value: '21/10/2026', empty: false },
       { label: 'Técnico', value: 'Bia', empty: false },

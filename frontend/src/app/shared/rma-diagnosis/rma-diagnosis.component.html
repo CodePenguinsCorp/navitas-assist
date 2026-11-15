@@ -32,22 +32,36 @@
             }
           </div>
 
-          <div class="field-group">
-            <label>Tipo de falha</label>
-            <app-custom-select
+          <div class="field-group" (focusin)="loadSuggestions()">
+            <span [id]="fieldId('failureType-label')">Tipo de falha</span>
+            <app-suggest-input
               formControlName="failureType"
-              ariaLabel="Tipo de falha"
-              [options]="failureTypeSelectOptions"
+              [labelledBy]="fieldId('failureType-label')"
+              listLabel="Tipos de falha já usados"
+              placeholder="Digite ou escolha um tipo"
+              [suggestions]="failureTypeSuggestions()"
+              [maxlength]="failureTextMaxLength"
+              [invalid]="showDiagnosisError(diagnosisForm.controls.failureType)"
             />
+            @if (showDiagnosisError(diagnosisForm.controls.failureType)) {
+              <small class="field-error">Use até {{ failureTextMaxLength }} caracteres.</small>
+            }
           </div>
 
-          <div class="field-group">
-            <label>Causa provável</label>
-            <app-custom-select
+          <div class="field-group" (focusin)="loadSuggestions()">
+            <span [id]="fieldId('probableCause-label')">Causa provável</span>
+            <app-suggest-input
               formControlName="probableCause"
-              ariaLabel="Causa provável"
-              [options]="failureCauseSelectOptions"
+              [labelledBy]="fieldId('probableCause-label')"
+              listLabel="Causas já usadas"
+              placeholder="Digite ou escolha uma causa"
+              [suggestions]="failureCauseSuggestions()"
+              [maxlength]="failureTextMaxLength"
+              [invalid]="showDiagnosisError(diagnosisForm.controls.probableCause)"
             />
+            @if (showDiagnosisError(diagnosisForm.controls.probableCause)) {
+              <small class="field-error">Use até {{ failureTextMaxLength }} caracteres.</small>
+            }
           </div>
           <div class="field-group field-group--full">
             <label [for]="fieldId('notes')">Notas</label>

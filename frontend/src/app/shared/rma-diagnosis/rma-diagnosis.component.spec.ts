@@ -11,7 +11,7 @@ import { expectInlineForm } from '../../testing/inline-form';
 import { toastMessages } from '../../testing/toast';
 
 const diagnosis: DiagnosisResponse = {
-  foundFailure: 'Falha na fonte', failureType: 'POWER_SUPPLY', probableCause: 'COMPONENT', notes: 'Trocar capacitor',
+  foundFailure: 'Falha na fonte', failureType: 'Fonte de alimentação', probableCause: 'Componente', notes: 'Trocar capacitor',
   diagnosedAt: '2026-11-12', technicianName: 'Ana'
 };
 
@@ -20,6 +20,8 @@ describe('Diagnóstico inline', () => {
   let result: ReturnType<RmaService['upsertDiagnosis']>;
   let calls: DiagnosisRequest[];
   let reads: number;
+  let suggestionReads: number;
+  let used: { failureTypes: string[]; probableCauses: string[] };
   const permissions = signal<readonly ['rma.diagnosticar'] | readonly []>(['rma.diagnosticar']);
   const host = () => fixture.nativeElement as HTMLElement;
   const render = () => { fixture.detectChanges(); TestBed.tick(); };
@@ -29,16 +31,20 @@ describe('Diagnóstico inline', () => {
     const field = host().querySelector<HTMLInputElement>(`[formControlName="${name}"]`)!;
     field.value = value; field.dispatchEvent(new Event('input')); render();
   };
+  const suggestField = (name: string) => host().querySelector<HTMLInputElement>(`[formControlName="${name}"] input`)!;
+  const type = (name: string, value: string) => { const field = suggestField(name); field.value = value; field.dispatchEvent(new Event('input')); render(); };
+  const options = (name: string) => [...host().querySelectorAll(`[formControlName="${name}"] [role="option"]`)].map(o => o.textContent?.trim());
   const submit = () => { host().querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true })); render(); };
 
   beforeEach(async () => {
-    permissions.set(['rma.diagnosticar']); calls = []; reads = 0;
+    permissions.set(['rma.diagnosticar']); calls = []; reads = 0; suggestionReads = 0; used = { failureTypes: [], probableCauses: [] };
     result = of(buildRma({ diagnosis }));
     await TestBed.configureTestingModule({
       imports: [RmaDiagnosisComponent],
       providers: [providePermissions(permissions), { provide: AuthService, useValue: { currentUser: () => ({ name: 'Ana', username: 'ana' }) } }, {
         provide: RmaService, useValue: {
           upsertDiagnosis: (_id: number, payload: DiagnosisRequest) => { calls.push(payload); return result; },
+          getDiagnosisSuggestions: () => { suggestionReads++; return of(used); },
           getById: () => { reads++; return of(buildRma({ diagnosis })); }
         }
       }]
@@ -62,7 +68,7 @@ describe('Diagnóstico inline', () => {
   it('usa o padrão de formulário inline com rótulos visíveis e obrigatório sinalizado', () => {
     edit();
     expectInlineForm(host().querySelector('form'), ['Falha encontrada'], 'Salvar diagnóstico');
-    expect([...host().querySelectorAll('form .field-group > label')].map(l => l.textContent?.trim())).toEqual(['Falha encontrada', 'Tipo de falha', 'Causa provável', 'Notas']);
+    expect([...host().querySelectorAll('form .field-group > :is(label, span)')].map(l => l.textContent?.trim())).toEqual(['Falha encontrada', 'Tipo de falha', 'Causa provável', 'Notas']);
   });
 
   it('valida obrigatórios e limites sem chamar a API', () => {
@@ -74,6 +80,33 @@ describe('Diagnóstico inline', () => {
     expect(field.getAttribute('aria-invalid')).toBe('true');
     expect(host().querySelector('#' + field.getAttribute('aria-describedby'))?.textContent).toContain('Descreva a falha encontrada.');
     expect(calls).toHaveLength(0);
+  });
+
+  it('tipo de falha e causa são texto livre com sugestões fixas somadas às já usadas, sem repetir', () => {
+    used = { failureTypes: ['display', 'Placa trincada'], probableCauses: ['Queda no transporte'] };
+    edit();
+    expect(suggestionReads).toBe(0);
+    suggestField('failureType').dispatchEvent(new Event('focusin', { bubbles: true })); render();
+    suggestField('failureType').dispatchEvent(new Event('focus')); render();
+    expect(suggestionReads).toBe(1);
+    expect(options('failureType')).toEqual(['Comunicação', 'Display', 'Firmware', 'Fonte de alimentação', 'Mecânica', 'Outro', 'Placa trincada', 'PWM', 'Sensor']);
+    suggestField('probableCause').dispatchEvent(new Event('focusin', { bubbles: true })); suggestField('probableCause').dispatchEvent(new Event('focus')); render();
+    expect(suggestionReads).toBe(1);
+    expect(options('probableCause')).toContain('Queda no transporte');
+    expect(options('probableCause')).toContain('Solda');
+    expect(suggestField('failureType').getAttribute('maxlength')).toBe('80');
+  });
+
+  it('envia o tipo e a causa digitados sem espaços nas pontas, ou nulos quando vazios', () => {
+    edit(); fill('foundFailure', 'Falha'); type('failureType', '  Placa trincada '); type('probableCause', '   '); submit();
+    expect(calls).toEqual([expect.objectContaining({ failureType: 'Placa trincada', probableCause: null })]);
+  });
+
+  it('carrega o texto salvo no tipo e na causa ao editar', () => {
+    fixture.componentRef.setInput('rma', buildRma({ diagnosis })); render();
+    button('Editar').click(); render();
+    expect(suggestField('failureType').value).toBe('Fonte de alimentação');
+    expect(suggestField('probableCause').value).toBe('Componente');
   });
 
   it('valida o limite de notas previsto no contrato do backend', () => {

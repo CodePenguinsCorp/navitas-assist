@@ -13,7 +13,7 @@ const SUMMARY: RmaReportSummaryResponse = {
     { key: 'PENDING', label: 'Pendente', count: 0 }],
   byMonth: [{ key: '2026-09', label: '09/2026', count: 1 }, { key: '2026-10', label: '10/2026', count: 3 }],
   topProducts: [{ key: '3', label: 'Controlador (SKU-1)', count: 4 }], topBatches: [{ key: '3|L1', label: 'L1 · Controlador (SKU-1)', count: 2 }],
-  topClients: [{ key: '2', label: 'Cliente Alfa', count: 4 }], topFailureTypes: [{ key: 'SENSOR', label: 'Sensor', count: 2 }],
+  topClients: [{ key: '2', label: 'Cliente Alfa', count: 4 }], topFailureTypes: [{ key: 'sensor', label: 'Sensor', count: 2 }],
   recurrence: { itemsWithSerial: 4, returnedItems: 1, byProduct: [{ key: '3', label: 'Controlador (SKU-1)', items: 4, returnedItems: 1 }],
     byBatch: [], serials: [{ serialNumber: 'SER-A', productName: 'Controlador', productSku: 'SKU-1', rmaCount: 2 }] },
   stages: [{ status: 'RECEIVED', label: 'Recebida', count: 3, averageSeconds: 7200, maximumSeconds: 90000 }]
@@ -23,7 +23,7 @@ const PAGE: RmaReportPageResponse = {
   generatedAt: '2026-10-21T01:00:00Z', entryFrom: '2026-07-24', entryTo: '2026-10-21',
   rmas: { content: [{ id: 1, code: 'OS-REAL', entryDate: '2026-10-20', status: 'RECEIVED', clientName: 'Cliente Alfa', productName: 'Controlador',
     productSku: 'SKU-1', serialNumber: 'SER-A', batchNumber: null, itemCount: 2, warrantyStatuses: [WarrantyStatus.IN_WARRANTY, WarrantyStatus.OUT_OF_WARRANTY],
-    failureType: 'SENSOR' }], page: 0, size: 20, totalElements: 21, totalPages: 2 }
+    failureType: 'Sensor' }], page: 0, size: 20, totalElements: 21, totalPages: 2 }
 };
 
 interface Harness {

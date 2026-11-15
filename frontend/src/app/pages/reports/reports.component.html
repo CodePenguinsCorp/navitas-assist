@@ -152,7 +152,7 @@
                         <span class="table-subtitle">Série {{ row.serialNumber || '—' }}, Lote {{ row.batchNumber || '—' }}</span>
                       </td>
                       <td><span class="status-chip" [attr.data-status]="row.status">{{ statusLabels[row.status] }}</span></td>
-                      <td>{{ warrantyLabel(row) }}</td><td>{{ row.failureType ? failureLabels[row.failureType] : '—' }}</td>
+                      <td>{{ warrantyLabel(row) }}</td><td>{{ row.failureType || '-' }}</td>
                       @if (canViewRma()) { <td class="table-actions-col"><app-rma-report-link [rmaId]="row.id" [code]="row.code" label="PDF" /></td> }
                     </tr>
                   }</tbody>

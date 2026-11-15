@@ -4,7 +4,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Subscription, finalize } from 'rxjs';
-import { FAILURE_TYPE_LABELS, RMA_STATUS_FLOW, RMA_STATUS_LABELS, WARRANTY_STATUS_LABELS } from '../../core/mock-data';
+import { RMA_STATUS_FLOW, RMA_STATUS_LABELS, WARRANTY_STATUS_LABELS } from '../../core/mock-data';
 import { RmaReportFilters, RmaReportPageResponse, RmaReportRow, RmaReportSummaryResponse, RmaStatus } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
 import { PermissionService } from '../../core/services/permission.service';
@@ -72,7 +72,6 @@ export class ReportsComponent {
     { value: '', label: 'Todos os status' }, ...RMA_STATUS_FLOW.map((value) => ({ value, label: RMA_STATUS_LABELS[value] }))
   ];
   protected readonly statusLabels = RMA_STATUS_LABELS;
-  protected readonly failureLabels = FAILURE_TYPE_LABELS;
   protected readonly formatDate = formatDateOnly;
   protected readonly duration = formatDuration;
 

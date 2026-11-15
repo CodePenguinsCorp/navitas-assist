@@ -29,7 +29,7 @@ class StubComponent {}
 const NOW = Date.parse('2026-10-20T12:00:00Z');
 
 const diagnosis: DiagnosisResponse = {
-  foundFailure: 'Capacitor estufado', failureType: 'POWER_SUPPLY', probableCause: 'COMPONENT',
+  foundFailure: 'Capacitor estufado', failureType: 'Fonte de alimentação', probableCause: 'Componente',
   notes: 'Trocar lote', diagnosedAt: '2026-10-21', technicianName: 'Bia',
 };
 
@@ -269,7 +269,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     // Hoje não há "Data do diagnóstico", as notas se chamam "Observações" e o bloco some sem diagnóstico.
     const { section, tiles } = await setup();
     expect(tiles(section('Diagnóstico')!)).toEqual([
-      ['Falha encontrada', 'Capacitor estufado'], ['Tipo', 'Fonte'], ['Causa provável', 'Componente'],
+      ['Falha encontrada', 'Capacitor estufado'], ['Tipo', 'Fonte de alimentação'], ['Causa provável', 'Componente'],
       ['Data do diagnóstico', '21/10/2026'], ['Técnico', 'Bia'], ['Notas', 'Trocar lote']
     ]);
     expect(section('Diagnóstico')!.textContent).not.toContain('Observações');

@@ -2,8 +2,8 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Component, ElementRef, EventEmitter, Injector, Output, afterNextRender, computed, effect, inject, input, signal, viewChild } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
-import { CLOSED_RMA_STATUSES, FAILURE_CAUSE_LABELS, FAILURE_CAUSE_OPTIONS, FAILURE_TYPE_LABELS, FAILURE_TYPE_OPTIONS } from '../../core/mock-data';
-import { FailureCause, FailureType, RmaResponse } from '../../core/models';
+import { CLOSED_RMA_STATUSES, FAILURE_CAUSE_SUGGESTIONS, FAILURE_TEXT_MAX_LENGTH, FAILURE_TYPE_SUGGESTIONS } from '../../core/mock-data';
+import { RmaResponse } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { RmaService } from '../../core/services/rma.service';
@@ -12,13 +12,14 @@ import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { todayInputValue } from '../../core/utils/date';
 import { diagnosisFacts, NO_DIAGNOSIS_LABEL } from '../../core/utils/rma-detail';
 import { normalizeText } from '../../core/utils/rma-ui';
-import { CustomSelectComponent } from '../form-controls/custom-select/custom-select.component';
+import { mergeSuggestions } from '../../core/utils/suggestions';
+import { SuggestInputComponent } from '../form-controls/suggest-input/suggest-input.component';
 import { CollapsibleSectionComponent } from '../collapsible-section/collapsible-section.component';
 import { IconComponent } from '../icon/icon.component';
 
 @Component({
   selector: 'app-rma-diagnosis',
-  imports: [ReactiveFormsModule, NgTemplateOutlet, CustomSelectComponent, CollapsibleSectionComponent, IconComponent],
+  imports: [ReactiveFormsModule, NgTemplateOutlet, SuggestInputComponent, CollapsibleSectionComponent, IconComponent],
   templateUrl: './rma-diagnosis.component.html',
   styles: [`
     :host { display: block; min-width: 0; overflow-wrap: anywhere; }
@@ -53,12 +54,15 @@ export class RmaDiagnosisComponent {
   protected readonly diagnosisSubmitAttempted = signal(false);
   protected readonly diagnosisFacts = diagnosisFacts;
   protected readonly noDiagnosisLabel = NO_DIAGNOSIS_LABEL;
-  protected readonly failureTypeSelectOptions = [{ value: '', label: 'Não classificado' }, ...FAILURE_TYPE_OPTIONS.map(value => ({ value, label: FAILURE_TYPE_LABELS[value] }))];
-  protected readonly failureCauseSelectOptions = [{ value: '', label: 'Não classificada' }, ...FAILURE_CAUSE_OPTIONS.map(value => ({ value, label: FAILURE_CAUSE_LABELS[value] }))];
+  protected readonly failureTextMaxLength = FAILURE_TEXT_MAX_LENGTH;
+  private suggestionsRequested = false;
+  private readonly usedSuggestions = signal({ failureTypes: [] as string[], probableCauses: [] as string[] });
+  protected readonly failureTypeSuggestions = computed(() => mergeSuggestions(FAILURE_TYPE_SUGGESTIONS, this.usedSuggestions().failureTypes));
+  protected readonly failureCauseSuggestions = computed(() => mergeSuggestions(FAILURE_CAUSE_SUGGESTIONS, this.usedSuggestions().probableCauses));
   protected readonly diagnosisForm = this.builder.nonNullable.group({
     foundFailure: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(2000)]],
-    failureType: ['' as FailureType | ''],
-    probableCause: ['' as FailureCause | ''],
+    failureType: ['', Validators.maxLength(FAILURE_TEXT_MAX_LENGTH)],
+    probableCause: ['', Validators.maxLength(FAILURE_TEXT_MAX_LENGTH)],
     notes: ['', Validators.maxLength(2000)],
     diagnosedAt: [todayInputValue(), Validators.required],
     technicianName: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(120)]]
@@ -86,7 +90,15 @@ export class RmaDiagnosisComponent {
     });
     this.diagnosisErrorMessage.set(''); this.diagnosisSubmitAttempted.set(false); this.editing.set(true);
     this.section()?.setOpen(true);
+    this.suggestionsRequested = false;
     this.focus('[formControlName="foundFailure"]');
+  }
+
+  /** Valores já usados em outros diagnósticos: buscados uma vez por edição, quando o técnico chega a um dos dois campos. */
+  protected loadSuggestions(): void {
+    if (this.suggestionsRequested) return;
+    this.suggestionsRequested = true;
+    this.service.getDiagnosisSuggestions().subscribe({ next: used => this.usedSuggestions.set(used), error: () => { this.suggestionsRequested = false; } });
   }
 
   protected cancel(): void {
@@ -110,7 +122,7 @@ export class RmaDiagnosisComponent {
     this.diagnosisSubmitting.set(true); this.busyChange.emit(true);
     this.diagnosisForm.disable();
     this.service.upsertDiagnosis(id, {
-      foundFailure: raw.foundFailure.trim(), failureType: raw.failureType || null, probableCause: raw.probableCause || null,
+      foundFailure: raw.foundFailure.trim(), failureType: normalizeText(raw.failureType), probableCause: normalizeText(raw.probableCause),
       notes: normalizeText(raw.notes), diagnosedAt: raw.diagnosedAt, technicianName: raw.technicianName.trim()
     }).pipe(
       // The PUT answers with the whole updated OS: no second read.

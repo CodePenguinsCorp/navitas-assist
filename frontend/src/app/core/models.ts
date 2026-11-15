@@ -20,25 +20,6 @@ export type RmaStatus =
   | 'RETURNED'
   | 'IRREPARABLE';
 
-export type FailureType =
-  | 'POWER_SUPPLY'
-  | 'PWM'
-  | 'SENSOR'
-  | 'COMMUNICATION'
-  | 'DISPLAY'
-  | 'FIRMWARE'
-  | 'MECHANICAL'
-  | 'OTHER';
-
-export type FailureCause =
-  | 'COMPONENT'
-  | 'SOLDER'
-  | 'HUMIDITY'
-  | 'OVERLOAD'
-  | 'ESD'
-  | 'INCORRECT_USAGE'
-  | 'OTHER';
-
 export interface UserSession {
   username: string;
   name: string;
@@ -195,8 +176,8 @@ export interface ProductRequest {
 
 export interface DiagnosisResponse {
   foundFailure: string | null;
-  failureType: FailureType | null;
-  probableCause: FailureCause | null;
+  failureType: string | null;
+  probableCause: string | null;
   notes: string | null;
   diagnosedAt: string | null;
   technicianName: string | null;
@@ -302,8 +283,8 @@ export interface KanbanViewResponse extends KanbanViewRequest {
 
 export interface DiagnosisRequest {
   foundFailure: string;
-  failureType: FailureType | null;
-  probableCause: FailureCause | null;
+  failureType: string | null;
+  probableCause: string | null;
   notes: string | null;
   diagnosedAt: string;
   technicianName: string;
@@ -809,7 +790,7 @@ export interface RmaReportRow {
   batchNumber: string | null;
   itemCount: number;
   warrantyStatuses: WarrantyStatus[];
-  failureType: FailureType | null;
+  failureType: string | null;
 }
 
 export interface RmaReportPageResponse {
@@ -891,6 +872,12 @@ export interface RmaSummaryResponse {
 
 export interface ClientSummaryResponse {
   total: number;
+}
+
+/** Valores já usados nos diagnósticos, para sugerir no tipo de falha e na causa provável. */
+export interface DiagnosisSuggestionsResponse {
+  failureTypes: string[];
+  probableCauses: string[];
 }
 
 export interface ProductSummaryResponse {

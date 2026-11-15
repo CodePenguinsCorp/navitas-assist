@@ -9,7 +9,7 @@ import {
 } from '../models';
 import { formatBusinessDateTime, formatDateOnly } from './date';
 import { blockDuration } from './rma-block';
-import { failureCauseLabel, failureTypeLabel, statusLabel, warrantyLabel } from './rma-ui';
+import { statusLabel, warrantyLabel } from './rma-ui';
 
 /**
  * Information contract shared by the two RMA details (list tabs and Kanban modal):
@@ -84,10 +84,8 @@ export function receiptFacts(rma: RmaResponse): RmaFact[] {
 export function diagnosisFacts(diagnosis: DiagnosisResponse): RmaFact[] {
   return [
     textFact('Falha encontrada', diagnosis.foundFailure, 'Não informada'),
-    diagnosis.failureType ? fact('Tipo', failureTypeLabel(diagnosis.failureType)) : missing('Tipo', failureTypeLabel(null)),
-    diagnosis.probableCause
-      ? fact('Causa provável', failureCauseLabel(diagnosis.probableCause))
-      : missing('Causa provável', failureCauseLabel(null)),
+    textFact('Tipo', diagnosis.failureType, 'Não classificado'),
+    textFact('Causa provável', diagnosis.probableCause, 'Não classificada'),
     diagnosis.diagnosedAt
       ? fact('Data do diagnóstico', formatDateOnly(diagnosis.diagnosedAt, 'Não informada'))
       : missing('Data do diagnóstico', 'Não informada'),

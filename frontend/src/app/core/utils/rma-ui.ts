@@ -1,13 +1,9 @@
 import {
-  FAILURE_CAUSE_LABELS,
-  FAILURE_TYPE_LABELS,
   RMA_PRIORITY_LABELS,
   RMA_STATUS_LABELS,
   WARRANTY_STATUS_LABELS
 } from '../mock-data';
 import {
-  FailureCause,
-  FailureType,
   RmaBoardCardResponse,
   RmaItemResponse,
   RmaItemSummaryResponse,
@@ -52,14 +48,6 @@ export function warrantyClass(warrantyStatus: WarrantyStatus): string {
 
 export function warrantyLabel(warrantyStatus: WarrantyStatus): string {
   return WARRANTY_STATUS_LABELS[warrantyStatus];
-}
-
-export function failureTypeLabel(value: FailureType | null): string {
-  return value ? FAILURE_TYPE_LABELS[value] : 'N\u00e3o classificado';
-}
-
-export function failureCauseLabel(value: FailureCause | null): string {
-  return value ? FAILURE_CAUSE_LABELS[value] : 'N\u00e3o classificada';
 }
 
 export function formatDate(value: string | null): string {
