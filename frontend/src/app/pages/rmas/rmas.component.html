@@ -212,9 +212,9 @@
           <div><dt>{{ invoice.label }}</dt><dd [class.is-empty]="invoice.empty">{{ invoice.value }}</dd></div>
           @let purchase = purchaseFact(rma);
           <div><dt>{{ purchase.label }}</dt><dd [class.is-empty]="purchase.empty">{{ purchase.value }}</dd></div>
-          <div class="detail-control-row"><dt>Responsável</dt><dd><app-rma-assignee-field [rma]="rma" [canEdit]="canUpdateAssignee()" [disabled]="busyExcept('assignee')" (saved)="detailRmaSaved($event)" (busyChange)="setWriterBusy('assignee', $event)" /></dd></div>
-          <div class="detail-control-row"><dt>Prioridade</dt><dd><app-rma-priority-field [rma]="rma" [canEdit]="canEditRma()" [disabled]="busyExcept('priority')" (saved)="detailRmaSaved($event)" (busyChange)="setWriterBusy('priority', $event)" /></dd></div>
-          <div class="detail-control-row">
+          <div><dt>Responsável</dt><dd><app-rma-assignee-field [rma]="rma" [canEdit]="canUpdateAssignee()" [disabled]="busyExcept('assignee')" (saved)="detailRmaSaved($event)" (busyChange)="setWriterBusy('assignee', $event)" /></dd></div>
+          <div><dt>Prioridade</dt><dd><app-rma-priority-field [rma]="rma" [canEdit]="canEditRma()" [disabled]="busyExcept('priority')" (saved)="detailRmaSaved($event)" (busyChange)="setWriterBusy('priority', $event)" /></dd></div>
+          <div class="rma-details__deadline">
             <dt>Data limite</dt>
             <dd [class.is-empty]="!rma.dueDate">
               <app-rma-due-date-field [showChip]="false" [rma]="rma" [disabled]="busyExcept('dueDate')" [canEdit]="canEditRma()" (saved)="detailRmaSaved($event)" (busyChange)="setWriterBusy('dueDate', $event)" />
@@ -239,7 +239,6 @@
               </section>
               <section class="rma-details__section">
                 <app-collapsible-section title="Produtos" icon="box" [count]="rma.items.length" [open]="rma.items.length > 0" storageKey="rma.products">
-                <p class="rma-detail-copy">Garantia avaliada na entrada da OS.</p>
                 <div class="rma-items-detail">
                   @for (item of rma.items; track item.id ?? $index) {
                     <article class="rma-item-detail detail-tile">

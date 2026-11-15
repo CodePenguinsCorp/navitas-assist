@@ -7,14 +7,13 @@ import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { formatBusinessDateTime, todayInputValue } from '../../core/utils/date';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
-import { ResultCountComponent } from '../../shared/result-count/result-count.component';
 import { CustomSelectComponent } from '../../shared/form-controls/custom-select/custom-select.component';
 import { DatePickerComponent } from '../../shared/form-controls/date-picker/date-picker.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 
 @Component({
   selector: 'app-audit',
-  imports: [ReactiveFormsModule, PageHeaderComponent, PaginationComponent, ResultCountComponent, CustomSelectComponent, DatePickerComponent, IconComponent],
+  imports: [ReactiveFormsModule, PageHeaderComponent, PaginationComponent, CustomSelectComponent, DatePickerComponent, IconComponent],
   templateUrl: './audit.component.html',
   styleUrl: './audit.component.css'
 })

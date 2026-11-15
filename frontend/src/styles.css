@@ -3498,7 +3498,70 @@ app-custom-select:has(> .custom-select--priority) {
   align-content: start;
 }
 
-/* Responsável, Prioridade and Data limite share one look: the same boxed 40px control, right aligned (see .detail-control-row). */
+/* Inline menus among the facts (Responsável, Prioridade; Jira style, like the due date): one height, one padding,
+   no border at rest, a single soft border on hover and while open, the focus ring only for the keyboard.
+   The box starts 0.35rem below its label and grows to the left, so the avatar or bars line up with the label. */
+:is(.detail-summary, .detail-facts) app-custom-select:has(> :is(.custom-select--priority, .custom-select--person)) {
+  --fact-menu-pad-x: 0.7rem;
+  display: inline-block;
+  width: auto;
+  max-width: calc(100% + var(--fact-menu-pad-x) + 1px);
+  margin-inline-start: calc(-1 * (var(--fact-menu-pad-x) + 1px));
+}
+
+.detail-summary > div > dd:has(> * > app-custom-select) {
+  margin-top: calc(0.35rem - 0.15rem);
+}
+
+.detail-facts > .detail-facts__block > dd:has(app-custom-select) {
+  margin-top: calc(0.35rem - var(--space-3));
+}
+
+.custom-select:is(.custom-select--priority, .custom-select--person):where(.detail-summary *, .detail-facts *) {
+  width: auto;
+}
+
+:is(.detail-summary, .detail-facts) .custom-select.custom-select--priority .custom-select__trigger,
+:is(.detail-summary, .detail-facts) .custom-select.custom-select--person .custom-select__trigger {
+  width: auto;
+  min-height: 2.375rem;
+  margin: 0;
+  gap: 0.5rem;
+  padding: 0.35rem var(--fact-menu-pad-x);
+  border-color: transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+:is(.detail-summary, .detail-facts) :is(.custom-select--priority, .custom-select--person) .custom-select__trigger .avatar {
+  width: 24px;
+  height: 24px;
+  font-size: 0.66rem;
+}
+
+:is(.detail-summary, .detail-facts) :is(.custom-select--priority, .custom-select--person) .custom-select__icon {
+  margin-inline-start: 0.15rem;
+  color: var(--muted);
+}
+
+:is(.detail-summary, .detail-facts) .custom-select:is(.custom-select--priority, .custom-select--person) .custom-select__trigger:hover:not(:disabled),
+:is(.detail-summary, .detail-facts) .custom-select:is(.custom-select--priority, .custom-select--person).is-open .custom-select__trigger {
+  border-color: var(--line);
+  background: var(--surface-alt);
+  box-shadow: none;
+}
+
+:is(.detail-summary, .detail-facts) .custom-select:is(.custom-select--priority, .custom-select--person) .custom-select__trigger.custom-select__trigger:focus-visible:not(:disabled) {
+  border-color: var(--focus-border);
+  box-shadow: var(--focus-ring);
+}
+
+:is(.detail-summary, .detail-facts) .custom-select--person .custom-select__label {
+  flex: 0 1 auto;
+}
 
 @media (max-width: 900px) {
   .detail-summary {
@@ -3684,65 +3747,3 @@ app-custom-select:has(> .custom-select--priority) {
 .protocol-launch__row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.6rem; align-items: center; }
 .protocol-launch__row .button-primary { min-height: var(--control-height); }
 
-/* Shared information rows in the list and Kanban details. */
-:is(.detail-summary, .detail-facts) > .detail-control-row {
-  display: flex;
-  grid-column: 1 / -1;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  min-width: 0;
-}
-:is(.detail-summary, .detail-facts) > .detail-control-row > dt { flex: 0 0 auto; }
-:is(.detail-summary, .detail-facts) > .detail-control-row.detail-control-row > dd {
-  width: min(60%, 12rem);
-  margin: 0;
-  text-align: right;
-}
-:is(.detail-summary, .detail-facts) .detail-control-row dd app-custom-select {
-  display: block;
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
-}
-:is(.detail-summary, .detail-facts) .detail-control-row .custom-select,
-:is(.detail-summary, .detail-facts) .detail-control-row .custom-select .custom-select__trigger {
-  width: 100%;
-  min-height: var(--control-height);
-}
-/* The three controls in the information card look the same: the standard boxed trigger, full width of the column
-   (the borderless "action menu" look of person and priority stays for the tables). */
-.detail-control-row .custom-select.custom-select--person .custom-select__trigger,
-.detail-control-row .custom-select.custom-select--priority .custom-select__trigger {
-  width: 100%;
-  min-width: 0;
-  min-height: var(--control-height);
-  margin-inline: 0;
-  padding: 0 var(--space-3);
-  border-color: var(--line);
-  background: var(--surface);
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-regular);
-}
-.detail-control-row .custom-select.custom-select--person .custom-select__trigger:hover:not(:disabled),
-.detail-control-row .custom-select.custom-select--priority .custom-select__trigger:hover:not(:disabled),
-.detail-control-row .custom-select.custom-select--person.is-open .custom-select__trigger,
-.detail-control-row .custom-select.custom-select--priority.is-open .custom-select__trigger {
-  border-color: var(--focus-border);
-  background: var(--surface);
-}
-.detail-control-row .custom-select--person .custom-select__label,
-.detail-control-row .custom-select--priority .custom-select__label { flex: 1 1 auto; text-align: left; }
-
-/* Due date: the situation chip sits to the left of the picker on the same row, so the three rows keep the same height. */
-.detail-control-row:has(.due-date-field__row) > dd { width: auto; max-width: 100%; }
-.detail-control-row .due-date-field__row { flex-wrap: nowrap; justify-content: flex-end; }
-.detail-control-row .due-date-field__picker { flex: 0 0 12rem; width: 12rem; }
-.detail-control-row .due-date-field__row > app-rma-deadline-chip { order: -1; }
-.detail-control-row .person { justify-content: flex-end; }
-@media (max-width: 480px) {
-  :is(.detail-summary, .detail-facts) > .detail-control-row { flex-direction: column; align-items: stretch; }
-  :is(.detail-summary, .detail-facts) > .detail-control-row.detail-control-row > dd { width: 100%; }
-  .detail-control-row .due-date-field__row { flex-wrap: wrap; justify-content: flex-start; }
-  .detail-control-row .due-date-field__picker { flex: 1 1 100%; width: 100%; }
-}

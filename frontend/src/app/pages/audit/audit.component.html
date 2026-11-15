@@ -29,7 +29,6 @@
       </table></div>
     }
     @if (!list.loading() && !error()) {
-      <app-result-count singular="evento" plural="eventos" [count]="list.totalElements()" />
       <app-pagination [page]="list.page()" [size]="list.size()" [totalElements]="list.totalElements()" [totalPages]="list.totalPages()" [shown]="list.items().length" [loading]="list.loading()" singular="evento" plural="eventos" (pageChange)="list.goToPage($event)" (sizeChange)="list.changeSize($event)" />
     }
   </article>

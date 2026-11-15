@@ -153,7 +153,7 @@
         <section class="rma-detail__info detail-card">
           <h3 class="rma-detail__info-title detail-card__header">Informações</h3>
           <dl class="detail-facts">
-            <div class="detail-control-row">
+            <div [class.detail-facts__block]="canUpdateAssignee()">
               <dt>Responsável</dt>
               @if (canUpdateAssignee()) {
                 <dd>
@@ -176,8 +176,8 @@
                 </dd>
               }
             </div>
-            <div class="detail-control-row"><dt>Prioridade</dt><dd><app-rma-priority-field [rma]="rma()" [canEdit]="canEditDueDate()" [disabled]="busyExcept('priority')" (saved)="applyUpdate($event)" (busyChange)="setWriterBusy('priority', $event)" /></dd></div>
-            <div class="detail-control-row">
+            <div><dt>Prioridade</dt><dd><app-rma-priority-field [rma]="rma()" [canEdit]="canEditDueDate()" [disabled]="busyExcept('priority')" (saved)="applyUpdate($event)" (busyChange)="setWriterBusy('priority', $event)" /></dd></div>
+            <div class="detail-facts__block rma-detail__deadline">
               <dt>Data limite</dt>
               <dd [class.is-empty]="!rma().dueDate">
                 <app-rma-due-date-field [showChip]="false" [rma]="rma()" [canEdit]="canEditDueDate()" [disabled]="busyExcept('dueDate')" (saved)="applyUpdate($event)" (busyChange)="setWriterBusy('dueDate', $event)" />
