@@ -186,8 +186,8 @@ Uma escala curta, em três níveis legíveis sem ler as palavras. Vale para toda
 
 | Nível | Elemento | Token de fonte | Peso | Cor |
 | --- | --- | --- | --- | --- |
-| 1 | Título de seção (`.collapsible__title`) | `--font-size-md` | semibold | `--brand-blue-deep` |
-| 1 | Número de resumo (`.record-stats dd`, `.page-summary strong`) | `--font-size-lg` (no máximo `--font-size-xl`) | semibold | `--text` |
+| 1 | Título de seção (`.collapsible__title`, `.detail-card__title`), sem caixa alta | `--font-size-md` | semibold | `--brand-blue-deep` |
+| 1 | Número de resumo de cartão (`.record-stats dd`); o `.page-summary strong` segue em `--font-size-md` bold, por ser indicador em linha | `--font-size-lg` (no máximo `--font-size-xl`) | semibold | `--text` |
 | 2 | Título do registro (`.record-row__title`) | `--font-size-md` | semibold | `--text` |
 | 3 | Valores e texto secundário (`.record-fields dd`, `.record-row__desc`, `.record-row__meta`) | `--font-size-sm` | regular | `--text` |
 | 3 | Rótulos (`dt`, `.record-stats dt`, `.page-summary__item`) | `--font-size-sm` | regular | `--muted` (a mesma em todos) |

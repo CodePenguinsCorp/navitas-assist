@@ -3105,10 +3105,9 @@ app-custom-select:has(> .custom-select--priority) {
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--line);
   color: var(--brand-blue-deep);
-  font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
 }
 
 .detail-card__title svg {
@@ -3418,11 +3417,11 @@ app-rma-kanban-board .board-shell::-webkit-scrollbar-button, app-rma-kanban-boar
 .record-row.is-voided > .icon-tile { opacity: 0.6; }
 .record-row__main { display: grid; gap: var(--space-2); min-width: 0; }
 .record-row__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); min-width: 0; }
-.record-row__title { font-size: var(--font-size-base); line-height: var(--line-height-tight); }
+.record-row__title { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); line-height: var(--line-height-tight); }
 .record-row__code { color: var(--muted); font-size: var(--font-size-sm); }
 .record-row__meta { color: var(--muted); font-size: var(--font-size-sm); font-variant-numeric: tabular-nums; }
 .record-row__meta b { color: var(--text); font-weight: var(--font-weight-semibold); }
-.record-row__desc { justify-self: start; max-width: 100%; padding: 0; border: 0; background: transparent; color: var(--text); font: inherit; font-size: var(--font-size-md); text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: var(--radius-xs); }
+.record-row__desc { justify-self: start; max-width: 100%; padding: 0; border: 0; background: transparent; color: var(--text); font: inherit; font-size: var(--font-size-sm); text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: var(--radius-xs); }
 .record-row__desc.is-expanded { white-space: pre-wrap; overflow: visible; }
 .record-row__desc:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .record-row__actions { display: flex; align-self: start; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-1); }
@@ -3434,10 +3433,10 @@ app-rma-kanban-board .board-shell::-webkit-scrollbar-button, app-rma-kanban-boar
 /* Faixa de resumo: rótulo pequeno e valor grande, sem borda. */
 .record-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: var(--space-3) var(--space-5); margin: 0 0 var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface-alt); border-radius: var(--radius-sm); }
 .record-stats > div { display: grid; gap: var(--space-1); min-width: 0; }
-.record-stats dt { color: var(--muted); font-size: var(--font-size-sm); }
-.record-stats dd { margin: 0; font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); font-variant-numeric: tabular-nums; line-height: var(--line-height-tight); overflow-wrap: anywhere; }
+.record-stats dt { color: var(--muted); font-size: var(--font-size-sm); font-weight: var(--font-weight-regular); }
+.record-stats dd { margin: 0; color: var(--text); font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); font-variant-numeric: tabular-nums; line-height: var(--line-height-tight); overflow-wrap: anywhere; }
 .record-stats--compact { margin: var(--space-1) 0; padding: 0; background: transparent; gap: var(--space-2) var(--space-3); }
-.record-stats--compact dd { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); }
+.record-stats--compact dd { font-size: var(--font-size-sm); font-weight: var(--font-weight-regular); }
 /* Métricas do cartão de reserva: uma linha de colunas iguais (--cols), nunca três mais uma solta. */
 .record-stats--metrics { grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); gap: var(--space-2) var(--space-4); }
 /* Pares rótulo e valor dos registros: três colunas que viram uma em largura estreita. */
@@ -3446,8 +3445,8 @@ app-rma-kanban-board .board-shell::-webkit-scrollbar-button, app-rma-kanban-boar
 .record-fields--single { grid-template-columns: minmax(0, 1fr); }
 .record-fields > div { display: grid; gap: var(--space-1); min-width: 0; }
 .record-fields > .is-wide { grid-column: 1 / -1; }
-.record-fields dt { color: var(--muted); font-size: var(--font-size-sm); }
-.record-fields dd { margin: 0; font-size: var(--font-size-md); overflow-wrap: anywhere; }
+.record-fields dt { color: var(--muted); font-size: var(--font-size-sm); font-weight: var(--font-weight-regular); }
+.record-fields dd { margin: 0; color: var(--text); font-size: var(--font-size-sm); font-weight: var(--font-weight-regular); overflow-wrap: anywhere; }
 @container (max-width: 36rem) { .record-fields, .record-fields--reason { grid-template-columns: minmax(0, 1fr); } }
 /* Cartão de reserva: ações numa linha própria, à direita, sem disputar espaço com o título. */
 .record-row--stacked { grid-template-columns: auto minmax(0, 1fr); }
