@@ -7,7 +7,7 @@ export function notificationDetailContent({ message, eventType, title, rmaCode }
   message: string;
 } {
   const labels: Partial<Record<NotificationResponse['eventType'], string>> = {
-    RMA_BLOCKED: 'Motivo do impedimento', PART_PENDING: 'Pendência da peça', TEST_FAILED: 'Item reprovado'
+    RMA_BLOCKED: 'Motivo do impedimento', TEST_FAILED: 'Item reprovado'
   };
   const label = labels[eventType];
   if (label) {

@@ -5,7 +5,7 @@
 .notification-detail .notification-detail__title { margin: 0; flex-basis: 100%; font-size: var(--font-size-xl); line-height: var(--line-height-tight); overflow-wrap: anywhere; }
 .notification-detail__title:focus-visible { outline: none; border-radius: var(--radius-xs); box-shadow: var(--focus-ring); }
 .notification-detail__code { white-space: normal; overflow-wrap: anywhere; }
-.notification-detail__body { flex: 1 1 auto; overflow-y: auto; min-height: 0; overscroll-behavior: contain; }
+.notification-detail__body { display: flex; flex-direction: column; flex: 1 1 auto; overflow-y: auto; min-height: 0; overscroll-behavior: contain; }
 .notification-detail__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); margin: 0; }
 .notification-detail__fields > div { display: grid; align-content: start; gap: var(--space-2); min-width: 0; }
 .notification-detail__fields > .notification-detail__primary { grid-column: 1 / -1; }
@@ -16,7 +16,7 @@
 .notification-detail__person > span:last-child { min-width: 0; }
 .notification-detail__message { margin: 0; line-height: var(--line-height-body); white-space: pre-wrap; overflow-wrap: anywhere; }
 .notification-detail__message + dl { margin-top: var(--space-4); }
-.notification-detail__meta { margin-top: var(--space-4); display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1) var(--space-2); flex-basis: 100%; color: var(--muted); font-size: var(--font-size-sm); }
+.notification-detail__meta { margin-top: auto; padding-top: var(--space-4); display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1) var(--space-2); flex-basis: 100%; color: var(--muted); font-size: var(--font-size-sm); }
 .notification-detail__meta strong { color: var(--text); }
 .notification-detail__unread { width: var(--space-2); height: var(--space-2); border-radius: var(--radius-pill); background: var(--brand-blue); }
 .notification-detail__snoozed { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--warning-text); flex-basis: 100%; }

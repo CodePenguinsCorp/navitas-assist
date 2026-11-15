@@ -59,7 +59,7 @@ export class NotificationDetailModalComponent {
   protected readonly dateTime = formatNotificationDateTime;
   protected readonly initialsOf = initialsOf;
   protected readonly eventIcons: Record<NotificationEventType, IconName> = {
-    RMA_CREATED: 'clipboard', RMA_ASSIGNED: 'users', RMA_BLOCKED: 'lock', PART_PENDING: 'box', TEST_FAILED: 'alert'
+    RMA_CREATED: 'clipboard', RMA_ASSIGNED: 'users', RMA_BLOCKED: 'lock', TEST_FAILED: 'alert'
   };
   protected readonly stages: Record<string, string> = Object.fromEntries(Object.entries(RMA_STATUS_LABELS).map(([code, label]) => [label, code]));
   protected readonly reasonLabels = ['Motivo do impedimento', 'Pendência da peça', 'Item reprovado'];
