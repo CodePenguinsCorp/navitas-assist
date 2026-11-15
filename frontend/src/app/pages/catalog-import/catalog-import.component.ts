@@ -8,11 +8,10 @@ import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
-import { CustomSelectComponent } from '../../shared/form-controls/custom-select/custom-select.component';
 
 @Component({
   selector: 'app-catalog-import',
-  imports: [IconComponent, PageHeaderComponent, PaginationComponent, CustomSelectComponent],
+  imports: [IconComponent, PageHeaderComponent, PaginationComponent],
   templateUrl: './catalog-import.component.html',
   styleUrl: './catalog-import.component.css'
 })
@@ -30,8 +29,20 @@ export class CatalogImportComponent {
   protected readonly filter = signal<CatalogImportStatus | 'all'>('all');
   protected readonly page = signal(0);
   protected readonly size = signal(10);
-  protected readonly options = [{ value: 'all', label: 'Todas' }, { value: 'VALID', label: 'Válidas' }, { value: 'INVALID', label: 'Inválidas' }, { value: 'DUPLICATE', label: 'Duplicadas' }];
-  protected readonly statuses: Record<CatalogImportStatus, string> = { VALID: 'Válida', INVALID: 'Inválida', DUPLICATE: 'Duplicada' };
+  protected readonly metrics = [
+    { status: 'VALID', field: 'validRows', label: 'válida' },
+    { status: 'INVALID', field: 'invalidRows', label: 'inválida' },
+    { status: 'DUPLICATE', field: 'duplicateRows', label: 'duplicada' }
+  ] as const;
+  protected readonly statuses: Record<CatalogImportStatus, string> = { VALID: 'válida', INVALID: 'inválida', DUPLICATE: 'duplicada' };
+  protected readonly tones: Record<CatalogImportStatus, string> = { VALID: 'success', INVALID: 'danger', DUPLICATE: 'warning' };
+  protected counted(count: number, singular: string, plural = singular + 's'): string {
+    return `${count} ${count === 1 ? singular : plural}`;
+  }
+  protected readonly filterLabel = computed(() => {
+    const status = this.filter();
+    return status === 'all' ? 'Todas as situações' : this.statuses[status];
+  });
   protected readonly filteredRows = computed(() => (this.preview()?.rows ?? []).filter(row => this.filter() === 'all' || row.status === this.filter()));
   protected readonly totalPages = computed(() => Math.ceil(this.filteredRows().length / this.size()));
   protected readonly visibleRows = computed(() => this.filteredRows().slice(this.page() * this.size(), (this.page() + 1) * this.size()));
@@ -82,7 +93,7 @@ export class CatalogImportComponent {
       next: result => {
         this.file.set(null);
         this.preview.set(null);
-        const importSummary = `${result.importedRows} linha(s) importada(s). ${result.ignoredInvalidRows} inválida(s) e ${result.ignoredDuplicateRows} duplicada(s) ignorada(s).`;
+        const importSummary = `${this.counted(result.importedRows, 'linha importada', 'linhas importadas')}. ${this.counted(result.ignoredInvalidRows, 'inválida ignorada', 'inválidas ignoradas')} e ${this.counted(result.ignoredDuplicateRows, 'duplicada ignorada', 'duplicadas ignoradas')}.`;
         void this.router.navigate([this.origin], { state: { importSummary } });
       },
       error: error => this.showError(error)

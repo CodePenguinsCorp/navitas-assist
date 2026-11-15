@@ -6,16 +6,16 @@ import { CatalogImportComponent } from './catalog-import.component';
 
 describe('CatalogImportComponent', () => {
   const preview = { fileName: 'dados.csv', delimiter: ';', totalRows: 3, validRows: 1, invalidRows: 1, duplicateRows: 1, blankRows: 0, rows: [
-    { lineNumber: 2, status: 'VALID', values: { legalName: 'Cliente' }, reasons: [], warnings: [{ field: 'phone', code: 'NOTICE', message: '<b>Aviso</b>' }] },
+    { lineNumber: 2, status: 'VALID', values: { legalName: 'Cliente', sku: 'P01', name: 'Produto' }, reasons: [], warnings: [{ field: 'phone', code: 'NOTICE', message: '<b>Aviso</b>' }] },
     { lineNumber: 3, status: 'INVALID', values: {}, reasons: [{ field: 'legalName', code: 'REQUIRED', message: 'Obrigatório' }], warnings: [] },
     { lineNumber: 4, status: 'DUPLICATE', values: {}, reasons: [], warnings: [] }
   ] };
-  function setup() {
+  function setup(kind = 'clients') {
     const confirmation = new Subject<any>();
     const service = { previewImport: vi.fn(() => of(preview)), confirmImport: vi.fn(() => confirmation), downloadImportTemplate: vi.fn(() => of(new Blob())) };
     const router = { navigate: vi.fn(() => Promise.resolve(true)) };
     TestBed.configureTestingModule({ imports: [CatalogImportComponent], providers: [
-      { provide: CatalogService, useValue: service }, { provide: ActivatedRoute, useValue: { snapshot: { data: { catalogKind: 'clients' } } } }, { provide: Router, useValue: router }
+      { provide: CatalogService, useValue: service }, { provide: ActivatedRoute, useValue: { snapshot: { data: { catalogKind: kind } } } }, { provide: Router, useValue: router }
     ] });
     const fixture = TestBed.createComponent(CatalogImportComponent);
     fixture.detectChanges();
@@ -108,6 +108,54 @@ describe('CatalogImportComponent', () => {
     expect(fixture.nativeElement.querySelector('[role="alert"]').textContent.trim()).not.toBe('');
     expect(page.busy()).toBe(false);
     expect(page.file()).not.toBeNull();
+  });
+
+  it.each(['clients', 'products'])('filtra pelas métricas acessíveis e apresenta chips em %s', kind => {
+    const { page, fixture } = setup(kind);
+    page.selectFile({ target: { files: [new File(['a'], 'a.csv')] } });
+    page.generatePreview(); fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const metrics = root.querySelectorAll<HTMLButtonElement>('.import-summary button');
+    expect(metrics.length).toBe(3);
+    expect(metrics[0].textContent).toContain('1 válida');
+    expect(root.querySelector('caption')?.textContent).toContain('Prévia');
+    expect(root.querySelectorAll('tbody .mini-chip').length).toBe(3);
+    expect(root.querySelector('tbody tr:last-child td:last-child')?.textContent?.trim()).toBe('—');
+    expect(root.querySelector('[aria-live="polite"][aria-atomic="true"]')?.textContent).toContain('3 linhas');
+    expect(root.textContent).toContain('0 linhas em branco ignoradas');
+    expect(root.textContent).toContain('Importar 1 linha válida');
+    metrics[0].click(); fixture.detectChanges();
+    expect(root.querySelector('tbody .table-title')?.textContent).toBe(kind === 'clients' ? 'Cliente' : 'P01 · Produto');
+    expect(root.querySelectorAll('tbody tr').length).toBe(1);
+    metrics[2].click(); fixture.detectChanges();
+    expect(root.querySelector('tbody .mini-chip')?.textContent).toBe('duplicada');
+    metrics[1].click(); fixture.detectChanges();
+    expect(metrics[1].getAttribute('aria-pressed')).toBe('true');
+    expect(root.querySelectorAll('tbody tr').length).toBe(1);
+    expect(root.querySelector('tbody')?.textContent).toContain('Obrigatório');
+    root.querySelector<HTMLButtonElement>('.import-all')!.click(); fixture.detectChanges();
+    expect(root.querySelectorAll('tbody tr').length).toBe(3);
+    page.preview.set({ ...page.preview(), rows: [], validRows: 12, invalidRows: 0, duplicateRows: 0, totalRows: 1, blankRows: 1 });
+    metrics[2].click(); fixture.detectChanges();
+    expect(root.querySelector('tbody')?.textContent).toContain('Nenhuma linha nesta situação');
+    expect(metrics[0].textContent).toContain('12 válidas');
+    expect(metrics[1].textContent).toContain('0 inválidas');
+    expect(metrics[2].textContent).toContain('0 duplicadas');
+    expect(root.querySelector('.import-file-info')?.textContent).toContain('1 linha · 1 linha em branco ignorada');
+    expect(root.textContent).toContain('Importar 12 linhas válidas');
+    expect(root.querySelector('section[aria-label="Prévia"] footer')).not.toBeNull();
+  });
+
+  it.each([['clients', 0], ['clients', 1], ['clients', 12], ['products', 0], ['products', 1], ['products', 12]] as const)('flexiona o resultado de %s com %s registros', (kind, count) => {
+    const { page, router, confirmation } = setup(kind);
+    page.selectFile({ target: { files: [new File(['a'], 'a.csv')] } });
+    page.generatePreview(); page.confirm();
+    confirmation.next({ importedRows: count, ignoredInvalidRows: count, ignoredDuplicateRows: count });
+    expect(router.navigate).toHaveBeenCalledWith([kind === 'clients' ? '/clientes' : '/produtos'], expect.anything());
+    const summary = (router.navigate.mock.calls as any)[0][1].state.importSummary;
+    expect(summary).toBe(count === 1
+      ? '1 linha importada. 1 inválida ignorada e 1 duplicada ignorada.'
+      : `${count} linhas importadas. ${count} inválidas ignoradas e ${count} duplicadas ignoradas.`);
   });
 
 });

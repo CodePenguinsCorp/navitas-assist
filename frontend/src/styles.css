@@ -3483,3 +3483,7 @@ app-rma-kanban-board .board-shell::-webkit-scrollbar-button, app-rma-kanban-boar
 .protocol-launch__row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.6rem; align-items: center; }
 .protocol-launch__row .button-primary { min-height: var(--control-height); }
 
+
+/* Rodapé compacto da prévia de importação com o componente compartilhado. */
+.import-page .pagination { justify-content: flex-end; gap: var(--space-3); }
+.import-page .pagination__summary { margin-right: auto; }

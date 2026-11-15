@@ -27,28 +27,39 @@
   </section>
   @if (preview(); as result) {
     <section class="panel table-card import-card" aria-label="Prévia">
-    <h2><span class="import-step">3.</span> Prévia</h2>
-    <div class="import-summary" role="status">
-      <span><strong>{{ result.validRows }}</strong> Válidas</span><span><strong>{{ result.invalidRows }}</strong> Inválidas</span><span><strong>{{ result.duplicateRows }}</strong> Duplicadas</span>
-    </div>
-    <p class="import-hint">{{ result.fileName }} · {{ result.totalRows }} linhas · {{ result.blankRows }} linhas em branco ignoradas</p>
-    <label class="field-group import-filter"><span>Situação</span><app-custom-select ariaLabel="Filtrar situação" [options]="options" [value]="filter()" (valueChange)="changeFilter($any($event))" /></label>
-    <div class="table-wrap import-table">
-      <table>
-        <thead><tr><th>Linha</th><th>Identificação</th><th>Situação</th><th>Motivos e avisos</th></tr></thead>
-        <tbody>
-          @for (row of visibleRows(); track row.lineNumber) {
-            <tr><td data-label="Linha">{{ row.lineNumber }}</td><td data-label="Identificação"><strong class="table-title">{{ identification(row) }}</strong></td><td data-label="Situação">{{ statuses[row.status] }}</td><td data-label="Motivos e avisos">
-              @for (issue of row.reasons; track $index) { <p>{{ fieldLabel(issue.field) }}: {{ issue.message }}</p> }
-              @for (warning of row.warnings; track $index) { <p>Aviso: {{ fieldLabel(warning.field) }}: {{ warning.message }}</p> }
-              @if (!row.reasons.length && !row.warnings.length) { <span>Sem observações</span> }
-            </td></tr>
-          } @empty { <tr><td colspan="4">Nenhuma linha nesta situação.</td></tr> }
-        </tbody>
-      </table>
-    </div>
-    <app-pagination singular="linha" plural="linhas" [page]="page()" [size]="size()" [totalElements]="filteredRows().length" [totalPages]="totalPages()" [shown]="visibleRows().length" [loading]="busy()" (pageChange)="page.set($event)" (sizeChange)="changeSize($event)" />
+      <h2><span class="import-step">3.</span> Prévia</h2>
+      <div class="record-stats import-summary" role="group" aria-label="Filtrar situação">
+        @for (metric of metrics; track metric.status) {
+          <button type="button" class="import-metric" [attr.data-tone]="tones[metric.status]" [attr.aria-pressed]="filter() === metric.status" (click)="changeFilter(metric.status)"><strong>{{ result[metric.field] }}</strong> {{ result[metric.field] === 1 ? metric.label : metric.label + 's' }}</button>
+        }
+      </div>
+      <p class="import-hint import-file-info"><app-icon name="file" [size]="18" />{{ result.fileName }} · {{ counted(result.totalRows, 'linha') }} · {{ counted(result.blankRows, 'linha em branco ignorada', 'linhas em branco ignoradas') }}</p>
+      <button type="button" class="button-secondary import-all" [attr.aria-pressed]="filter() === 'all'" (click)="changeFilter('all')">Todas</button>
+      <p class="sr-only" aria-live="polite" aria-atomic="true">{{ filterLabel() }}: {{ counted(filteredRows().length, 'linha') }}</p>
+      <div class="table-wrap import-table">
+        <table>
+          <caption class="sr-only">Prévia da importação de {{ label }}</caption>
+          <colgroup><col class="import-col-line" /><col class="import-col-name" /><col class="import-col-status" /><col /></colgroup>
+          <thead><tr><th>Linha</th><th>Identificação</th><th>Situação</th><th>Motivos e avisos</th></tr></thead>
+          <tbody>
+            @for (row of visibleRows(); track row.lineNumber) {
+              <tr><td data-label="Linha">{{ row.lineNumber }}</td><td data-label="Identificação"><strong class="table-title">{{ identification(row) }}</strong></td><td data-label="Situação"><span class="mini-chip" [attr.data-tone]="tones[row.status]">{{ statuses[row.status] }}</span></td><td data-label="Motivos e avisos">
+                @if (row.reasons.length || row.warnings.length) {
+                  <ul>
+                    @for (issue of row.reasons; track $index) { <li>{{ fieldLabel(issue.field) }}: {{ issue.message }}</li> }
+                    @for (warning of row.warnings; track $index) { <li>Aviso: {{ fieldLabel(warning.field) }}: {{ warning.message }}</li> }
+                  </ul>
+                } @else { <span class="import-hint">—</span> }
+              </td></tr>
+            } @empty { <tr><td colspan="4" class="empty-state">Nenhuma linha nesta situação.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+      <app-pagination singular="linha" plural="linhas" [page]="page()" [size]="size()" [totalElements]="filteredRows().length" [totalPages]="totalPages()" [shown]="visibleRows().length" [loading]="busy()" (pageChange)="page.set($event)" (sizeChange)="changeSize($event)" />
+      <footer class="form-actions import-actions"><button type="button" class="button-secondary" (click)="cancel()" [disabled]="busy()">Cancelar</button><button type="button" class="button-primary" (click)="confirm()" [disabled]="!preview()?.validRows || busy()">Importar {{ counted(result.validRows, 'linha válida', 'linhas válidas') }}</button></footer>
     </section>
+  } @else {
+    <footer class="form-actions import-actions"><button type="button" class="button-secondary" (click)="cancel()" [disabled]="busy()">Cancelar</button></footer>
   }
-  <footer class="form-actions import-actions"><button type="button" class="button-secondary" (click)="cancel()" [disabled]="busy()">Cancelar</button><button type="button" class="button-primary" (click)="confirm()" [disabled]="!preview()?.validRows || busy()">Importar {{ preview()?.validRows ?? 0 }} linhas válidas</button></footer>
+
 </section>
