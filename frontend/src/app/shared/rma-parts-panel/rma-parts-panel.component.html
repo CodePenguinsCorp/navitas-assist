@@ -46,7 +46,7 @@
         </label>
         <label class="field-group field-group--required">
           <span>Quantidade @if (selectedPart(); as part) { ({{ part.unit }}) }</span>
-          <input type="number" min="0.001" max="999999999.999" step="0.001" formControlName="quantity"
+          <input type="number" min="0.001" max="999999999.999" step="any" formControlName="quantity"
             [attr.aria-invalid]="hasError(reserveForm.controls.quantity) ? 'true' : null" [attr.aria-describedby]="hasError(reserveForm.controls.quantity) ? 'reserve-quantity-error' : null" />
           @if (hasError(reserveForm.controls.quantity)) {
             <small id="reserve-quantity-error" class="field-error" role="alert">Informe uma quantidade de 0,001 a 999.999.999,999, com até 3 casas decimais.</small>
@@ -221,7 +221,7 @@
     <label class="field-group field-group--required"><span>Descrição</span><input maxlength="120" formControlName="description" [attr.aria-invalid]="hasError(externalForm.controls.description) ? 'true' : null" />
       @if (hasError(externalForm.controls.description)) { <small class="field-error" role="alert">Informe a descrição</small> }
     </label>
-    <label class="field-group field-group--required"><span>Quantidade</span><input type="number" min="0.001" max="999999999.999" step="0.001" placeholder="1" formControlName="quantity" [attr.aria-invalid]="hasError(externalForm.controls.quantity) ? 'true' : null" />
+    <label class="field-group field-group--required"><span>Quantidade</span><input type="number" min="0.001" max="999999999.999" step="any" placeholder="1" formControlName="quantity" [attr.aria-invalid]="hasError(externalForm.controls.quantity) ? 'true' : null" />
       @if (hasError(externalForm.controls.quantity)) { <small class="field-error" role="alert">Informe a quantidade (maior que 0, até 3 casas)</small> }
     </label>
     <label class="field-group"><span>Unidade</span><input maxlength="20" formControlName="unit" /></label>
