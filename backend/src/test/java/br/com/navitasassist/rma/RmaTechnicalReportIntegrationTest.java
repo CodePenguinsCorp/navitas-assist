@@ -105,7 +105,7 @@ class RmaTechnicalReportIntegrationTest {
         for (String expected : List.of("Laudo técnico", "OS-2026/0001", "Cliente Ação Ltda", "Controlador térmico", "CTRL-LAUDO", "LOTE-9",
             "SN-123", "Pendente", "Não liga após queda de energia", "Regulador queimado", "Fonte", "Sobrecarga", "João Técnico",
             "Substituição do regulador", "Teste de bancada aprovado", "Regulador 5V", "REG-5V", "Regulador de tensão", "Carcaça riscada",
-            "Fonte original", "Concluída", "Equipamento recebido", "Sem intervenções registradas", "Técnico responsável", "Cliente", "Página 1 de 1")) {
+            "Fonte original", "Concluída", "Equipamento recebido", "Sem reparos registrados", "Técnico responsável", "Cliente", "Página 1 de 1")) {
             assertTrue(text.contains(expected), "PDF sem \"" + expected + "\":\n" + text);
         }
         assertFalse(text.contains("Capacitor cancelado"), text);
@@ -152,12 +152,12 @@ class RmaTechnicalReportIntegrationTest {
         component.setReplacementReason("Erro"); component.setAppliedAt(java.time.Instant.now()); component.setAppliedBy("tech");
         component.setVoidedAt(java.time.Instant.now()); component.setVoidedBy("tech"); component.setVoidReason("Duplicado"); externalComponents.saveAndFlush(component);
         RmaIntervention item = new RmaIntervention(); item.setRma(rma); item.setType("Limpeza");
-        item.setDescription("INTERVENCAO-ANULADA"); item.setPerformedOn(LocalDate.now()); item.setHours(new BigDecimal("7.125")); item.setTechnicianName("tech");
+        item.setDescription("REPARO-ANULADO"); item.setPerformedOn(LocalDate.now()); item.setHours(new BigDecimal("7.125")); item.setTechnicianName("tech");
         item.setVoidedAt(java.time.Instant.now()); item.setVoidedBy("tech"); item.setVoidReason("Duplicado"); interventions.saveAndFlush(item);
         String report = text(mockMvc.perform(get("/api/rmas/{id}/report.pdf", rma.getId()).with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
-        assertFalse(report.contains("EXTERNO-ANULADO"), report); assertFalse(report.contains("INTERVENCAO-ANULADA"), report);
-        assertFalse(report.contains("7,125"), report); assertTrue(report.contains("Sem intervenções registradas"), report); assertFalse(report.contains("Total de horas"), report);
+        assertFalse(report.contains("EXTERNO-ANULADO"), report); assertFalse(report.contains("REPARO-ANULADO"), report);
+        assertFalse(report.contains("7,125"), report); assertTrue(report.contains("Sem reparos registrados"), report); assertFalse(report.contains("Total de horas"), report);
     }
 
     @Test
@@ -185,7 +185,7 @@ class RmaTechnicalReportIntegrationTest {
         assertFalse(report.contains("Ações executadas"), report);
         assertFalse(report.contains("Equipamento recebido"), report);
         assertTrue(report.contains("Sem peças trocadas"), report);
-        assertTrue(report.contains("Sem intervenções registradas"), report);
+        assertTrue(report.contains("Sem reparos registrados"), report);
     }
 
     @Test

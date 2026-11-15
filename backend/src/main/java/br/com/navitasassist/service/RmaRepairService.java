@@ -54,7 +54,7 @@ public class RmaRepairService {
         fillIntervention(intervention, request);
         intervention.setTechnicianName(currentUsername());
         interventions.saveAndFlush(intervention);
-        RmaRepairHistory.record(intervention.getRma(), "INTERVENTION", intervention.getId(), "CREATE", RepairHistorySummary.intervention("Intervenção registrada", intervention.getDescription(), intervention.getHours()), currentUsername());
+        RmaRepairHistory.record(intervention.getRma(), "INTERVENTION", intervention.getId(), "CREATE", RepairHistorySummary.intervention("Reparo registrado", intervention.getDescription(), intervention.getHours()), currentUsername());
         return InterventionResponse.from(intervention);
     }
 
@@ -72,11 +72,11 @@ public class RmaRepairService {
     public InterventionResponse updateIntervention(Long rmaId, Long id, InterventionRequest request) {
         RmaRecord rma = lockOpenRma(rmaId);
         RmaIntervention item = interventions.findById(id).filter(record -> record.getRma().getId().equals(rmaId))
-            .orElseThrow(() -> new ResourceNotFoundException("Intervenção não encontrada nesta OS."));
+            .orElseThrow(() -> new ResourceNotFoundException("Reparo não encontrado nesta OS."));
         requireActive(item.getVoidedAt());
         fillIntervention(item, request);
         item.setEditedBy(currentUsername()); item.setEditedAt(Instant.now());
-        RmaRepairHistory.record(rma, "INTERVENTION", id, "UPDATE", RepairHistorySummary.intervention("Intervenção editada", item.getDescription(), item.getHours()), currentUsername());
+        RmaRepairHistory.record(rma, "INTERVENTION", id, "UPDATE", RepairHistorySummary.intervention("Reparo editado", item.getDescription(), item.getHours()), currentUsername());
         return InterventionResponse.from(item);
     }
 
@@ -94,10 +94,10 @@ public class RmaRepairService {
     public InterventionResponse voidIntervention(Long rmaId, Long id, RepairVoidRequest request) {
         RmaRecord rma = lockOpenRma(rmaId);
         RmaIntervention item = interventions.findById(id).filter(record -> record.getRma().getId().equals(rmaId))
-            .orElseThrow(() -> new ResourceNotFoundException("Intervenção não encontrada nesta OS."));
+            .orElseThrow(() -> new ResourceNotFoundException("Reparo não encontrado nesta OS."));
         requireActive(item.getVoidedAt());
         item.setVoidedBy(currentUsername()); item.setVoidedAt(Instant.now()); item.setVoidReason(request.reason().trim());
-        RmaRepairHistory.record(rma, "INTERVENTION", id, "VOID", RepairHistorySummary.voided("Intervenção anulada", item.getDescription(), item.getVoidReason()), currentUsername());
+        RmaRepairHistory.record(rma, "INTERVENTION", id, "VOID", RepairHistorySummary.voided("Reparo anulado", item.getDescription(), item.getVoidReason()), currentUsername());
         audit.record("REPAIR_VOID", "INTERVENTION", id, rma.getCode(), "Reparo anulado. Consulte o histórico de reparo da OS #" + rmaId + ", registro #INTERVENTION:" + id + ".");
         return InterventionResponse.from(item);
     }

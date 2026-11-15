@@ -1,4 +1,4 @@
--- Tipo da intervenção deixa de ser lista fixa: passa a ser texto livre (até 80 caracteres) com sugestões vindas dos
+-- Tipo do reparo deixa de ser lista fixa: passa a ser texto livre (até 80 caracteres) com sugestões vindas dos
 -- valores já usados. As horas passam a ser opcionais (o cliente pede "tempo de serviço (opcional)").
 ALTER TABLE rma_interventions DROP CONSTRAINT ck_interventions_type;
 

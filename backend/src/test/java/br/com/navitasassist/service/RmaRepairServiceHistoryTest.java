@@ -49,13 +49,13 @@ class RmaRepairServiceHistoryTest {
     void showsInterventionHoursInPortugueseAndLabelsVoidReason() {
         var request = new InterventionRequest("Limpeza", "Limpeza", LocalDate.now(), new BigDecimal("1.500"));
         service.addIntervention(7L, request);
-        assertEquals("Intervenção registrada: Limpeza (1,5 h).", lastSummary());
+        assertEquals("Reparo registrado: Limpeza (1,5 h).", lastSummary());
         var item = new RmaIntervention(); item.setId(8L); item.setRma(rma);
         when(interventions.findById(8L)).thenReturn(Optional.of(item));
         service.updateIntervention(7L, 8L, request);
-        assertEquals("Intervenção editada: Limpeza (1,5 h).", lastSummary());
+        assertEquals("Reparo editado: Limpeza (1,5 h).", lastSummary());
         service.voidIntervention(7L, 8L, new RepairVoidRequest("duplicada"));
-        assertEquals("Intervenção anulada: Limpeza. Motivo: duplicada.", lastSummary());
+        assertEquals("Reparo anulado: Limpeza. Motivo: duplicada.", lastSummary());
     }
 
     private String lastSummary() { return rma.getRepairHistory().get(rma.getRepairHistory().size() - 1).getSummary(); }

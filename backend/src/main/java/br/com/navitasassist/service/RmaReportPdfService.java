@@ -147,10 +147,10 @@ public class RmaReportPdfService {
             document.add(parts);
         }
 
-        section(document, "Intervenções");
+        section(document, "Reparos");
         List<InterventionResponse> active = report.interventions().stream().filter(item -> item.voidedAt() == null).toList();
         if (active.isEmpty()) {
-            document.add(text("Sem intervenções registradas"));
+            document.add(text("Sem reparos registrados"));
         } else {
             PdfPTable interventions = table(new float[] {1.8f, 2.6f, 2.8f, 5.6f, 1.8f}, "Data", "Técnico", "Tipo", "Descrição", "Duração");
             active.forEach(item -> cells(interventions, date(item.performedOn()), item.technicianName(), item.type(),

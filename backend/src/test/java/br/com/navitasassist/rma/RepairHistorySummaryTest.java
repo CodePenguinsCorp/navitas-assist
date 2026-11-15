@@ -24,14 +24,14 @@ class RepairHistorySummaryTest {
 
     @Test
     void interventionSummaryOmitsHoursWhenAbsent() {
-        assertEquals("Intervenção registrada: Limpeza.", RepairHistorySummary.intervention("Intervenção registrada", "Limpeza", null));
-        assertEquals("Intervenção registrada: Limpeza (1,5 h).", RepairHistorySummary.intervention("Intervenção registrada", "Limpeza", new BigDecimal("1.500")));
+        assertEquals("Reparo registrado: Limpeza.", RepairHistorySummary.intervention("Reparo registrado", "Limpeza", null));
+        assertEquals("Reparo registrado: Limpeza (1,5 h).", RepairHistorySummary.intervention("Reparo registrado", "Limpeza", new BigDecimal("1.500")));
     }
 
     @Test
     void keepsTheCompleteVoidReasonWithinTheHistoryLimit() {
         String reason = "R".repeat(1000);
-        String summary = RepairHistorySummary.voided("Intervenção anulada", "D".repeat(1000), reason);
+        String summary = RepairHistorySummary.voided("Reparo anulado", "D".repeat(1000), reason);
         assertTrue(summary.length() <= 1500);
         assertTrue(summary.endsWith("Motivo: " + reason + "."));
     }

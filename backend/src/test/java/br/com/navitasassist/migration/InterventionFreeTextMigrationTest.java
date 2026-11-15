@@ -10,7 +10,7 @@ import br.com.navitasassist.support.PostgresTestDatabase;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 
-/** Tipo da intervenção vira texto livre (80), os códigos antigos passam para português e as horas ficam opcionais. */
+/** Tipo do reparo vira texto livre (80), os códigos antigos passam para português e as horas ficam opcionais. */
 class InterventionFreeTextMigrationTest {
     private static final String INTERVENTION = "INSERT INTO rma_interventions (id, rma_id, type, description, performed_on, hours, technician_name, created_at, updated_at) "
         + "VALUES (%d, 900, '%s', 'Reparo', CURRENT_DATE, %s, 'tech', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";

@@ -5,7 +5,7 @@ import java.sql.SQLException;
 import br.com.navitasassist.support.PostgresTestDatabase;
 import org.junit.jupiter.api.Test;
 
-/** Reparo no schema final: aplicação de peça do estoque, componentes externos, intervenções e anulação. */
+/** Reparo no schema final: aplicação de peça do estoque, componentes externos, reparos e anulação. */
 class RepairMigrationTest {
     @Test
     void restrictsRepairRecords() throws Exception {
@@ -46,7 +46,7 @@ class RepairMigrationTest {
             sql.executeUpdate(intervention.formatted("CLEANING", "NULL"));
             assertThrows(SQLException.class, () -> sql.executeUpdate(intervention.formatted("T".repeat(81), "1")));
             assertThrows(SQLException.class, () -> sql.executeUpdate(intervention.formatted("CLEANING", "1").replace("(900,", "(999,")));
-            sql.executeUpdate("INSERT INTO rma_repair_history (rma_id, entity_type, entity_id, action, changed_by, changed_at, summary) VALUES (900, 'INTERVENTION', 1, 'CREATE', 'tech', CURRENT_TIMESTAMP, 'Intervenção registrada')");
+            sql.executeUpdate("INSERT INTO rma_repair_history (rma_id, entity_type, entity_id, action, changed_by, changed_at, summary) VALUES (900, 'INTERVENTION', 1, 'CREATE', 'tech', CURRENT_TIMESTAMP, 'Reparo registrado')");
             assertThrows(SQLException.class, () -> sql.executeUpdate("INSERT INTO rma_repair_history (rma_id, entity_type, entity_id, action, changed_by, changed_at, summary) VALUES (999, 'INTERVENTION', 1, 'CREATE', 'tech', CURRENT_TIMESTAMP, 'Órfão')"));
         }
     }

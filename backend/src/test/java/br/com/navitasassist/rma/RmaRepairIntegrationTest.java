@@ -98,7 +98,7 @@ class RmaRepairIntegrationTest {
         mvc.perform(get(base()).with(asProfile("viewer", "VIEWER"))).andExpect(status().isOk())
             .andExpect(jsonPath("$.interventions", hasSize(2))).andExpect(jsonPath("$.totalServiceHours").value(0.5));
         mvc.perform(get("/api/rmas/" + rma.getId()).with(asProfile("viewer", "VIEWER"))).andExpect(status().isOk())
-            .andExpect(jsonPath("$.repairHistory[?(@.summary == 'Intervenção registrada: Sem horas.')]").exists());
+            .andExpect(jsonPath("$.repairHistory[?(@.summary == 'Reparo registrado: Sem horas.')]").exists());
     }
 
     @Test
@@ -152,9 +152,9 @@ class RmaRepairIntegrationTest {
         mvc.perform(get("/api/rmas/" + rma.getId()).with(asProfile("viewer", "VIEWER"))).andExpect(status().isOk())
             .andExpect(jsonPath("$.repairHistory", hasSize(3))).andExpect(jsonPath("$.repairHistory[0].changedBy").isNotEmpty())
             .andExpect(jsonPath("$.repairHistory[0].id").isNumber()).andExpect(jsonPath("$.repairHistory[0].action").value("VOID"))
-            .andExpect(jsonPath("$.repairHistory[0].summary").value("Intervenção anulada: Limpeza da placa. Motivo: Duplicado."))
-            .andExpect(jsonPath("$.repairHistory[1].summary").value("Intervenção editada: Limpeza da placa (2,5 h)."))
-            .andExpect(jsonPath("$.repairHistory[2].summary").value("Intervenção registrada: Limpeza da placa (1 h)."));
+            .andExpect(jsonPath("$.repairHistory[0].summary").value("Reparo anulado: Limpeza da placa. Motivo: Duplicado."))
+            .andExpect(jsonPath("$.repairHistory[1].summary").value("Reparo editado: Limpeza da placa (2,5 h)."))
+            .andExpect(jsonPath("$.repairHistory[2].summary").value("Reparo registrado: Limpeza da placa (1 h)."));
     }
 
     @Test
