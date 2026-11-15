@@ -173,6 +173,44 @@ class ProtocolControllerIntegrationTest {
     }
 
     @Test
+    void shouldAuditCreateUpdateAndDeleteOfTemplatesWithActorAndReadableLabel() throws Exception {
+        long templateId = templateId(createTemplate(templateJson("Auditado", product.getId(), null, List.of(checkItem("Inspeção", true)))));
+        mockMvc.perform(put("/api/protocols/templates/{id}", templateId)
+                .with(asProfile("admin", "ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(templateJson("Auditado v2", product.getId(), null, List.of(checkItem("Inspeção", true), checkItem("Limpeza", false)))))
+            .andExpect(status().isOk());
+        mockMvc.perform(delete("/api/protocols/templates/{id}", templateId).with(asProfile("admin", "ADMIN")).with(csrf()))
+            .andExpect(status().isNoContent());
+
+        List<Map<String, Object>> events = jdbcTemplate.queryForList(
+            "SELECT actor_username, action, entity_label, summary FROM audit_events WHERE entity_type = 'PROTOCOL_TEMPLATE' AND entity_id = ? ORDER BY id", templateId);
+        org.junit.jupiter.api.Assertions.assertEquals(List.of("CREATE", "UPDATE", "DELETE"), events.stream().map(event -> event.get("action")).toList());
+        org.junit.jupiter.api.Assertions.assertTrue(events.stream().allMatch(event -> "admin".equals(event.get("actor_username"))));
+        org.junit.jupiter.api.Assertions.assertEquals("Auditado", events.get(0).get("entity_label"));
+        org.junit.jupiter.api.Assertions.assertEquals("Auditado v2", events.get(1).get("entity_label"));
+        org.junit.jupiter.api.Assertions.assertEquals("Auditado v2", events.get(2).get("entity_label"));
+        org.junit.jupiter.api.Assertions.assertEquals("Registro criado.", events.get(0).get("summary"));
+        org.junit.jupiter.api.Assertions.assertEquals("Nova versão 2 criada.", events.get(1).get("summary"));
+        org.junit.jupiter.api.Assertions.assertEquals("Registro excluído.", events.get(2).get("summary"));
+    }
+
+    @Test
+    void shouldNotAuditRefusedDeletionOfTemplateInUse() throws Exception {
+        Long rmaId = saveRma("OS-PROT-AUD", product);
+        long templateId = templateId(createTemplate(templateJson("Em uso auditado", null, "controladores", List.of(checkItem("Carcaça", true)))));
+        startExecution(rmaId, templateId, "tech", "TECHNICIAN");
+
+        mockMvc.perform(delete("/api/protocols/templates/{id}", templateId).with(asProfile("admin", "ADMIN")).with(csrf()))
+            .andExpect(status().isConflict());
+
+        List<Object> actions = jdbcTemplate.queryForList(
+            "SELECT action FROM audit_events WHERE entity_type = 'PROTOCOL_TEMPLATE' AND entity_id = ? ORDER BY id", Object.class, templateId);
+        org.junit.jupiter.api.Assertions.assertEquals(List.of("CREATE"), actions);
+    }
+
+    @Test
     void shouldFreezeStartedExecutionsWhenTemplateChanges() throws Exception {
         Long rmaId = saveRma("OS-PROT-1", product);
         long templateId = templateId(createTemplate(templateJson("Inspeção visual", null, "controladores", List.of(checkItem("Carcaça", true)))));

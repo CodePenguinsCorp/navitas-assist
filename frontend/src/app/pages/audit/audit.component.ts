@@ -41,7 +41,7 @@ export class AuditComponent {
     USER: 'Usuário', ACCESS_PROFILE: 'Perfil de acesso', CLIENT: 'Cliente', PRODUCT: 'Produto',
     RMA_STATUS_NOTE: 'Observação da OS', RMA_ITEM: 'Item da OS', EXTERNAL_COMPONENT: 'Componente externo',
     INTERVENTION: 'Intervenção', NOTIFICATION_RULE: 'Regra de notificação', NOTIFICATION: 'Notificação',
-    EMAIL: 'E-mail', CATALOG_IMPORT: 'Importação'
+    EMAIL: 'E-mail', CATALOG_IMPORT: 'Importação', PROTOCOL_TEMPLATE: 'Protocolo'
   };
   protected readonly actionOptions = [{ value: '', label: 'Todas as ações' }, ...Object.entries(this.actionLabels).map(([value, label]) => ({ value, label: label! }))];
   protected readonly entityOptions = [{ value: '', label: 'Todos os tipos' }, ...Object.entries(this.entityLabels).map(([value, label]) => ({ value, label: label! }))];

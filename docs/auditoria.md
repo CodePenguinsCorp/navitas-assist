@@ -17,6 +17,7 @@ A auditoria tem três níveis: logs do servidor, trilha transacional no banco e 
 | Usuários | Criação, exclusão e campos alterados; ativação, senha e e-mail alterados sem seus valores. Perfil e permissões com permissões adicionadas/removidas. |
 | Perfis | Criação, edição, exclusão e diferença de permissões. |
 | Clientes e produtos | Criação, exclusão e nomes dos campos alterados; nome/código no rótulo do registro. |
+| Modelos de protocolo | Criação, edição (nova versão) e exclusão; nome do modelo no rótulo. Exclusão recusada por uso em OS não gera evento. |
 | Observação de status da OS | Texto anterior limitado a 200 caracteres e texto novo até 255, com máscaras para dados pessoais e segredos reconhecidos. |
 | Notificações | Alteração de regras, solicitação de reenvio e solicitação de e-mail de teste, sem endereço de destino. |
 | Importação CSV | Confirmação com contagens, sem conteúdo das linhas. |

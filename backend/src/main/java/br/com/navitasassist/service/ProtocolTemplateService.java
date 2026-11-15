@@ -33,11 +33,13 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class ProtocolTemplateService {
+    private static final String AUDIT_TYPE = "PROTOCOL_TEMPLATE";
 
     private final ProtocolTemplateRepository protocolTemplateRepository;
     private final ProtocolTemplateVersionRepository protocolTemplateVersionRepository;
     private final ProductService productService;
     private final RmaProtocolExecutionRepository executionRepository;
+    private final AuditService audit;
 
     @Transactional(readOnly = true)
     public List<ProtocolTemplateResponse> listAll() {
@@ -50,7 +52,9 @@ public class ProtocolTemplateService {
         ProtocolTemplate template = new ProtocolTemplate();
         applyMetadata(template, request);
         template.addVersion(buildVersion(request, 1));
-        return ProtocolTemplateResponse.from(protocolTemplateRepository.save(template), false);
+        ProtocolTemplate saved = protocolTemplateRepository.save(template);
+        audit.record("CREATE", AUDIT_TYPE, saved.getId(), saved.getName(), "Registro criado.");
+        return ProtocolTemplateResponse.from(saved, false);
     }
 
     /**
@@ -62,7 +66,9 @@ public class ProtocolTemplateService {
         ProtocolTemplateVersion version = buildVersion(request, template.getCurrentVersion() + 1);
         template.addVersion(version);
         protocolTemplateVersionRepository.save(version);
-        return ProtocolTemplateResponse.from(protocolTemplateRepository.save(template), executionRepository.existsByTemplateVersion_Template_Id(id));
+        ProtocolTemplate saved = protocolTemplateRepository.save(template);
+        audit.record("UPDATE", AUDIT_TYPE, saved.getId(), saved.getName(), "Nova versão " + version.getVersionNumber() + " criada.");
+        return ProtocolTemplateResponse.from(saved, executionRepository.existsByTemplateVersion_Template_Id(id));
     }
 
     /**
@@ -75,6 +81,7 @@ public class ProtocolTemplateService {
             throw new ConflictException("Este protocolo já foi usado em uma OS e não pode ser excluído. Desative-o.");
         }
         protocolTemplateRepository.delete(template);
+        audit.record("DELETE", AUDIT_TYPE, id, template.getName(), "Registro excluído.");
     }
 
     @Transactional(readOnly = true)
