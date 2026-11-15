@@ -233,7 +233,7 @@ Regras: título curto no cabeçalho, sem subtítulo explicativo; erro no topo do
 | Vazio | `.empty-state` com `.icon-tile`, título (`h3`) e, se houver, uma frase de apoio | Não repete o botão que já está no cabeçalho. Vazio sem dado ("Nenhum cliente cadastrado") e vazio por filtro ("Nenhum cliente encontrado" mais "Limpar busca e filtros") são mensagens diferentes. |
 | Erro de carga | `.empty-state` com `role="alert"` e botão "Tentar novamente" | Mensagem do servidor via `extractHttpErrorMessage`. |
 | Erro de ação | `.alert-banner--error` com `role="alert"` | No topo da lista ou do modal. |
-| Sucesso | `.alert-banner--success` com `role="status"` | Some sozinho ou ao iniciar a próxima ação. Não usar `.status-card.success-card`. |
+| Sucesso | Aviso flutuante (`ToastService`), ver 3.13 | Nunca texto fixo na página nem `.alert-banner--success` (removido). |
 | Carregando | `app-loading-overlay` global e `aria-busy` na região | **Proposto:** esqueleto de linhas (`.skeleton`) na lista e nos painéis, em vez de região em branco (V-13). |
 | Desabilitado | `--disabled-opacity`, `cursor: not-allowed` e, quando há motivo, `blockedReason` no `appRowAction` | Sem permissão: a ação some. |
 
@@ -258,6 +258,41 @@ Regras: título curto no cabeçalho, sem subtítulo explicativo; erro no topo do
 ### 3.12 Filtros
 
 Padrão do Kanban (`.kanban-filters__bar`): barra compacta com busca e seletores de 40 px, filtros avançados recolhidos, "Limpar filtros" como botão secundário no fim. Listas de cadastro usam `.catalog-toolbar.catalog-toolbar--filters` com `.search-field` e `.filter-field`. Contagem de resultados fica no rodapé da lista, não na barra.
+
+### 3.13 Avisos e feedback
+
+Regra: confirmação de sucesso é aviso flutuante (`ToastService.show({ message, tone: 'success' })`, popup no centro inferior, some em 5 s, 8 s com ação, X, Esc, pausa em hover e foco). Nunca um texto fixo na página ou no cartão, que fica "congelado" depois que o usuário já viu. Texto curto, em pt-BR, com ponto final e sem "com sucesso". O aviso sem ação continua válido mesmo que o modal ou painel que o originou seja fechado; com ação, passe o dono para o serviço descartar o aviso junto.
+
+Fica inline: erro de validação junto do campo, erro de API (`role="alert"`, `.field-error` ou `.alert-banner--error`), estado que descreve a tela (vazio, "Adiada até ...", resumo da prévia de importação, limite de e-mail atingido, status do canal, "Salvando...") e qualquer mensagem que o usuário precise reler.
+
+Inventário da migração (tela, texto, destino):
+
+| Arquivo | Texto | Destino |
+| --- | --- | --- |
+| `shared/rma-repair-panel` | Intervenção salva. | Aviso, sucesso |
+| `shared/rma-repair-panel` | Intervenção anulada. (novo) | Aviso, sucesso |
+| `shared/rma-parts-panel` | `<peça>` reservada para a OS. | Aviso, sucesso |
+| `shared/rma-parts-panel` | Saldo insuficiente: `<peça>` ficou pendente de reposição. | Aviso, informação, 8 s |
+| `shared/rma-parts-panel` | Reserva efetivada. / Aplicação registrada. / Reserva cancelada e disponibilidade devolvida. | Aviso, sucesso |
+| `shared/rma-parts-panel` | Componente salvo. / Componente anulado. (novo) | Aviso, sucesso |
+| `shared/rma-diagnosis` | Diagnóstico salvo. (a variável `message` nunca era preenchida; o aviso passou a existir) | Aviso, sucesso |
+| `shared/rma-priority-field` | Prioridade alterada para `<nível>`. | Aviso, sucesso |
+| `shared/rma-assignee-field` | Responsável alterado para `<nome>`. / OS sem responsável. | Aviso, sucesso |
+| `shared/rma-status-field` | Troca de status, com Desfazer (já era aviso) | Aviso, sucesso, com ação |
+| `pages/rmas` | OS `<código>` criada. | Aviso, sucesso |
+| `pages/clients`, `pages/products` | Cliente/Produto `<nome>` cadastrado, atualizado ou excluído. | Aviso, sucesso |
+| `pages/clients`, `pages/products` | Resultado da importação CSV (`N linha(s) importada(s). ...`) | Aviso, sucesso, 10 s. A prévia com contagens continua fixa na tela de importação, antes de confirmar. |
+| `pages/profiles` | Perfil `<nome>` cadastrado, atualizado ou excluído. | Aviso, sucesso |
+| `pages/users` | Usuário `<nome>` cadastrado, atualizado ou excluído. | Aviso, sucesso |
+| `pages/protocols` | Protocolo `<nome>` cadastrado, publicado na versão N ou excluído. | Aviso, sucesso |
+| `pages/parts` | Peça cadastrada ou atualizada. `<Tipo>` registrada para `<peça>`. Movimento N estornado. | Aviso, sucesso |
+| `pages/notifications` | Todas marcadas como lidas. Notificação adiada (até data). `<Evento>` silenciado ou reativado. Regra atualizada. | Aviso, sucesso |
+| `pages/notifications` | Teste enviado. / Simulação registrada. / Reenvio agendado. | Aviso, sucesso |
+| `pages/notifications` | Limite atingido: os envios retomam no próximo período | Fica inline (estado do canal) |
+| `pages/catalog-import` | Contagens da prévia (válidas, inválidas, duplicadas) | Fica inline (descreve a tela) |
+| `pages/login` | Sua sessão expirou. Entre novamente. | Fica inline (estado da tela) |
+| `shared/notification-detail-modal` | Salvando... | Fica inline (progresso) |
+| `shared/rma-due-date-field`, `rma-warranty-field`, `rma-blocks-section` | Sem aviso de sucesso: o novo valor aparece no próprio campo | Sem mudança |
 
 ## 4. Regras de separação visual e hierarquia
 
