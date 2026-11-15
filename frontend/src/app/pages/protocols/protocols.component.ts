@@ -1,11 +1,12 @@
 import { IconComponent } from '../../shared/icon/icon.component';
 import { SuggestInputComponent } from '../../shared/form-controls/suggest-input/suggest-input.component';
-import { Component, ElementRef, Injector, afterNextRender, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, Injector, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable, finalize } from 'rxjs';
 import { RMA_STATUS_LABELS } from '../../core/mock-data';
 import { ProtocolItemType, ProtocolTemplateItemResponse, ProtocolTemplateRequest, ProtocolTemplateResponse, RmaStatus } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
+import { PermissionService } from '../../core/services/permission.service';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { extractHttpErrorMessage, includesQuery, normalizeOptionalText } from '../../core/utils/catalog-ui';
 import { formatBusinessDateTime } from '../../core/utils/date';
@@ -71,9 +72,17 @@ const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
 export class ProtocolsComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly protocolService = inject(ProtocolService);
+  private readonly permissions = inject(PermissionService);
   private readonly catalogService = inject(CatalogService);
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  protected readonly canManage = computed(() => this.permissions.hasPermission('protocolos.catalogo'));
+  protected readonly createButtonElement = viewChild<ElementRef<HTMLButtonElement>>('createButton');
+  protected readonly deletingTemplateId = signal<number | null>(null);
+  protected readonly deleteModalErrorMessage = signal('');
+  private readonly deletingTemplateSignal = signal<ProtocolTemplateResponse | null>(null);
+  protected readonly deletingTemplate = this.deletingTemplateSignal.asReadonly();
 
   protected readonly loading = signal(true);
   protected readonly submitting = signal(false);
@@ -162,6 +171,40 @@ export class ProtocolsComponent {
     this.submitAttempted.set(false);
     this.modalOpen.set(true);
     this.clearMessages();
+  }
+
+  protected deleteBlockedReason(template: ProtocolTemplateResponse): string | null {
+    return template.inUse ? 'Este protocolo já foi usado em uma OS e não pode ser excluído. Desative-o.' : null;
+  }
+
+  protected openDeleteModal(template: ProtocolTemplateResponse): void {
+    if (!this.canManage() || this.deleteBlockedReason(template)) return;
+    this.deletingTemplateSignal.set(template);
+    this.clearMessages();
+  }
+
+  protected closeDeleteModal(): void {
+    if (this.deletingTemplateId() !== null) return;
+    this.resetDeleteModal();
+  }
+
+  protected confirmDeleteTemplate(): void {
+    if (!this.canManage()) return;
+    const template = this.deletingTemplateSignal();
+    if (!template || this.deletingTemplateId() !== null) return;
+
+    this.deletingTemplateId.set(template.id);
+    this.clearMessages();
+    this.protocolService.deleteTemplate(template.id).pipe(
+      finalize(() => this.deletingTemplateId.set(null))
+    ).subscribe({
+      next: () => {
+        this.successMessage.set(`Protocolo ${template.name} excluído com sucesso.`);
+        this.resetDeleteModal();
+        this.loadTemplates();
+      },
+      error: (error) => this.deleteModalErrorMessage.set(extractHttpErrorMessage(error, 'Não foi possível excluir o protocolo agora.'))
+    });
   }
 
   /** Cancel, close button and overlay: ignored while the request is in flight. */
@@ -324,9 +367,15 @@ export class ProtocolsComponent {
     this.submitAttempted.set(false);
   }
 
+  private resetDeleteModal(): void {
+    this.deletingTemplateSignal.set(null);
+    this.deleteModalErrorMessage.set('');
+  }
+
   private clearMessages(): void {
     this.errorMessage.set('');
     this.modalErrorMessage.set('');
+    this.deleteModalErrorMessage.set('');
     this.successMessage.set('');
   }
 }

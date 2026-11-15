@@ -99,6 +99,7 @@ Convenções:
 | `GET /api/protocols/templates` | `protocolos.ver`, `protocolos.executar` ou `rma.ver` | Lista dos modelos. |
 | `POST /api/protocols/templates` | `protocolos.catalogo` | Cria modelo. |
 | `PUT /api/protocols/templates/{id}` | `protocolos.catalogo` | Altera (cria nova versão). |
+| `DELETE /api/protocols/templates/{id}` | `protocolos.catalogo` | Exclui o modelo (204). Responde 409 se alguma versão já foi usada em uma OS; nesse caso o modelo só pode ser desativado. |
 
 Qualquer outra rota de `/api/protocols/**` é negada.
 

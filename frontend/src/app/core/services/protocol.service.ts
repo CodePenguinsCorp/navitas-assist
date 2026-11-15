@@ -24,6 +24,10 @@ export class ProtocolService {
     return this.http.put<ProtocolTemplateResponse>(`/api/protocols/templates/${id}`, payload);
   }
 
+  deleteTemplate(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/protocols/templates/${id}`);
+  }
+
   listExecutions(rmaId: number): Observable<ProtocolExecutionResponse[]> {
     return this.http.get<ProtocolExecutionResponse[]>(`/api/protocols/rmas/${rmaId}/executions`);
   }

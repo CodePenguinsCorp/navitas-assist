@@ -15,6 +15,11 @@ public interface RmaProtocolExecutionRepository extends JpaRepository<RmaProtoco
 
     List<RmaProtocolExecution> findAllByRma_IdOrderByIdAsc(Long rmaId);
 
+    boolean existsByTemplateVersion_Template_Id(Long templateId);
+
+    @Query("select distinct e.templateVersion.template.id from RmaProtocolExecution e")
+    java.util.Set<Long> findUsedTemplateIds();
+
     boolean existsByRma_IdAndTemplateVersion_Template_IdAndStatus(Long rmaId, Long templateId, ProtocolExecutionStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

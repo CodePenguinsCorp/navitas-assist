@@ -136,6 +136,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/protocols/templates").hasAnyAuthority(Codes.PROTOCOLOS_VER, Codes.PROTOCOLOS_EXECUTAR, Codes.RMA_VER)
                 .requestMatchers(HttpMethod.POST, "/api/protocols/templates").hasAuthority(Codes.PROTOCOLOS_CATALOGO)
                 .requestMatchers(HttpMethod.PUT, "/api/protocols/templates/*").hasAuthority(Codes.PROTOCOLOS_CATALOGO)
+                .requestMatchers(HttpMethod.DELETE, "/api/protocols/templates/*").hasAuthority(Codes.PROTOCOLOS_CATALOGO)
                 .requestMatchers(HttpMethod.POST, "/api/protocols/rmas/*/executions", "/api/protocols/executions/*/items/*/results", "/api/protocols/executions/*/complete").hasAuthority(Codes.PROTOCOLOS_EXECUTAR)
                 .requestMatchers("/api/protocols/**").denyAll()
                 .requestMatchers(HttpMethod.GET, "/api/profiles/options").hasAnyAuthority(Codes.PERFIS_GERIR, Codes.USUARIOS_GERIR, Codes.NOTIFICACOES_REGRAS)

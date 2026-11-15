@@ -48,7 +48,7 @@ public class ProtocolTemplate extends AuditableEntity {
     @Column(nullable = false)
     private int currentVersion;
 
-    @OneToMany(mappedBy = "template", cascade = CascadeType.PERSIST)
+    @OneToMany(mappedBy = "template", cascade = {CascadeType.PERSIST, CascadeType.REMOVE})
     @OrderBy("versionNumber DESC")
     private List<ProtocolTemplateVersion> versions = new ArrayList<>();
 

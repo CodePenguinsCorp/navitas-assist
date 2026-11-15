@@ -57,7 +57,7 @@ public class ProtocolTemplateVersion {
     @Column(nullable = false)
     private Instant createdAt;
 
-    @OneToMany(mappedBy = "version", cascade = CascadeType.PERSIST)
+    @OneToMany(mappedBy = "version", cascade = {CascadeType.PERSIST, CascadeType.REMOVE})
     @OrderBy("sortOrder ASC")
     private List<ProtocolTemplateItem> items = new ArrayList<>();
 

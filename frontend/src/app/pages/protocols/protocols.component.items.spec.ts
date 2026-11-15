@@ -4,13 +4,14 @@ import { FormArray, FormGroup } from '@angular/forms';
 import { Subject, of } from 'rxjs';
 import { ProtocolTemplateItemResponse, ProtocolTemplateResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
+import { providePermissions } from '../../testing/permission-fixtures';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { ProtocolsComponent } from './protocols.component';
 
 const MEASUREMENT: ProtocolTemplateItemResponse = { id: 21, sortOrder: 1, stepName: 'Medições', title: 'Tensão', instructions: 'Medir\nna placa.', type: 'MEASUREMENT', required: true,
   unit: 'V', decimalPlaces: 6, minValue: -0.000125, maxValue: 12.5, expectedResult: 'Fonte\nestável', evidenceRequired: true };
 const TEMPLATE: ProtocolTemplateResponse = { id: 2, name: 'Bancada PWM', productId: null, productName: null, category: 'Placas', active: true, currentVersion: 3,
-  blockedStatuses: ['IN_TESTS'], updatedAt: '2026-10-20T12:00:00Z', items: [MEASUREMENT,
+  blockedStatuses: ['IN_TESTS'], updatedAt: '2026-10-20T12:00:00Z', inUse: false, items: [MEASUREMENT,
     { ...MEASUREMENT, id: 22, sortOrder: 2, stepName: 'Inspeção', title: 'Conector', type: 'CHECK', required: false, evidenceRequired: false, unit: null, decimalPlaces: null, minValue: null, maxValue: null },
     { ...MEASUREMENT, id: 23, sortOrder: 3, stepName: 'Final', title: 'Observação', type: 'TEXT', unit: null, decimalPlaces: null, minValue: null, maxValue: null }]
 };
@@ -30,6 +31,7 @@ describe('ProtocolsComponent focused items', () => {
   async function setup() {
     updateTemplate = vi.fn(() => of({ ...TEMPLATE, currentVersion: 4 }));
     await TestBed.configureTestingModule({ imports: [ProtocolsComponent], providers: [
+      providePermissions(['protocolos.ver', 'protocolos.catalogo']),
       { provide: ProtocolService, useValue: { listTemplates: () => of([TEMPLATE]), updateTemplate, createTemplate: vi.fn(() => of(TEMPLATE)) } },
       { provide: CatalogService, useValue: { listProductOptions: () => of([]) } }
     ] }).compileComponents();

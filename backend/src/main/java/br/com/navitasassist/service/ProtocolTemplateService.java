@@ -4,9 +4,11 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import br.com.navitasassist.controller.BusinessException;
+import br.com.navitasassist.controller.ConflictException;
 import br.com.navitasassist.controller.ResourceNotFoundException;
 import br.com.navitasassist.product.Product;
 import br.com.navitasassist.protocol.ProtocolItemType;
@@ -18,6 +20,7 @@ import br.com.navitasassist.protocol.ProtocolTemplateResponse;
 import br.com.navitasassist.protocol.ProtocolTemplateVersion;
 import br.com.navitasassist.repository.ProtocolTemplateRepository;
 import br.com.navitasassist.repository.ProtocolTemplateVersionRepository;
+import br.com.navitasassist.repository.RmaProtocolExecutionRepository;
 import br.com.navitasassist.rma.RmaItem;
 import br.com.navitasassist.rma.RmaRecord;
 import lombok.RequiredArgsConstructor;
@@ -34,17 +37,20 @@ public class ProtocolTemplateService {
     private final ProtocolTemplateRepository protocolTemplateRepository;
     private final ProtocolTemplateVersionRepository protocolTemplateVersionRepository;
     private final ProductService productService;
+    private final RmaProtocolExecutionRepository executionRepository;
 
     @Transactional(readOnly = true)
     public List<ProtocolTemplateResponse> listAll() {
-        return protocolTemplateRepository.findAllOrderByName().stream().map(ProtocolTemplateResponse::from).toList();
+        Set<Long> used = executionRepository.findUsedTemplateIds();
+        return protocolTemplateRepository.findAllOrderByName().stream()
+            .map(template -> ProtocolTemplateResponse.from(template, used.contains(template.getId()))).toList();
     }
 
     public ProtocolTemplateResponse create(ProtocolTemplateRequest request) {
         ProtocolTemplate template = new ProtocolTemplate();
         applyMetadata(template, request);
         template.addVersion(buildVersion(request, 1));
-        return ProtocolTemplateResponse.from(protocolTemplateRepository.save(template));
+        return ProtocolTemplateResponse.from(protocolTemplateRepository.save(template), false);
     }
 
     /**
@@ -56,7 +62,19 @@ public class ProtocolTemplateService {
         ProtocolTemplateVersion version = buildVersion(request, template.getCurrentVersion() + 1);
         template.addVersion(version);
         protocolTemplateVersionRepository.save(version);
-        return ProtocolTemplateResponse.from(protocolTemplateRepository.save(template));
+        return ProtocolTemplateResponse.from(protocolTemplateRepository.save(template), executionRepository.existsByTemplateVersion_Template_Id(id));
+    }
+
+    /**
+     * Exclusão física, permitida só para modelos que nunca foram escolhidos em uma OS (em nenhuma versão).
+     * Os modelos já usados ficam preservados para o histórico: a saída é desativá-los.
+     */
+    public void delete(Long id) {
+        ProtocolTemplate template = protocolTemplateRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Modelo de protocolo não encontrado: " + id));
+        if (executionRepository.existsByTemplateVersion_Template_Id(id)) {
+            throw new ConflictException("Este protocolo já foi usado em uma OS e não pode ser excluído. Desative-o.");
+        }
+        protocolTemplateRepository.delete(template);
     }
 
     @Transactional(readOnly = true)

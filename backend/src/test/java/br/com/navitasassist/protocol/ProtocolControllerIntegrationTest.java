@@ -114,10 +114,62 @@ class ProtocolControllerIntegrationTest {
             .andExpect(jsonPath(created + ".currentVersion").value(1))
             .andExpect(jsonPath(created + ".items[0].unit").value("V"))
             .andExpect(jsonPath(created + ".items[0].decimalPlaces").value(2))
-            .andExpect(jsonPath(created + ".items[0].minValue").value(11.5));
+            .andExpect(jsonPath(created + ".items[0].minValue").value(11.5))
+            .andExpect(jsonPath(created + ".inUse").value(false));
+    }
+
+    @Test
+    void shouldDeleteUnusedTemplateWithAllVersionsOnlyWithCatalogPermission() throws Exception {
+        long templateId = templateId(createTemplate(templateJson("Descartável", product.getId(), null, List.of(checkItem("Inspeção", true)))));
+        mockMvc.perform(put("/api/protocols/templates/{id}", templateId)
+                .with(asProfile("admin", "ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(templateJson("Descartável v2", product.getId(), null, List.of(checkItem("Inspeção", true), checkItem("Limpeza", false)))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.currentVersion").value(2));
+
+        mockMvc.perform(delete("/api/protocols/templates/{id}", templateId).with(asProfile("tech", "TECHNICIAN")).with(csrf()))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/protocols/templates/{id}", templateId).with(asProfile("admin", "ADMIN")))
+            .andExpect(status().isForbidden());
 
         mockMvc.perform(delete("/api/protocols/templates/{id}", templateId).with(asProfile("admin", "ADMIN")).with(csrf()))
-            .andExpect(status().isForbidden());
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/protocols/templates").with(asProfile("viewer", "VIEWER")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@.id == " + templateId + ")]").isEmpty());
+        org.junit.jupiter.api.Assertions.assertEquals(0, jdbcTemplate.queryForObject("SELECT count(*) FROM protocol_template_versions WHERE template_id = ?", Integer.class, templateId));
+        org.junit.jupiter.api.Assertions.assertEquals(0, jdbcTemplate.queryForObject("SELECT count(*) FROM protocol_template_items", Integer.class));
+
+        mockMvc.perform(delete("/api/protocols/templates/{id}", templateId).with(asProfile("admin", "ADMIN")).with(csrf()))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldBlockDeletionOfTemplateUsedInAnyVersionWithConflict() throws Exception {
+        Long rmaId = saveRma("OS-PROT-DEL", product);
+        long templateId = templateId(createTemplate(templateJson("Em uso", null, "controladores", List.of(checkItem("Carcaça", true)))));
+        startExecution(rmaId, templateId, "tech", "TECHNICIAN");
+        mockMvc.perform(put("/api/protocols/templates/{id}", templateId)
+                .with(asProfile("admin", "ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(templateJson("Em uso", null, "controladores", List.of(checkItem("Carcaça", true), checkItem("Conectores", true)))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.currentVersion").value(2))
+            .andExpect(jsonPath("$.inUse").value(true));
+
+        mockMvc.perform(get("/api/protocols/templates").with(asProfile("viewer", "VIEWER")))
+            .andExpect(jsonPath("$[?(@.id == " + templateId + ")].inUse").value(true));
+
+        mockMvc.perform(delete("/api/protocols/templates/{id}", templateId).with(asProfile("admin", "ADMIN")).with(csrf()))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.status").value(409))
+            .andExpect(jsonPath("$.message").value("Este protocolo já foi usado em uma OS e não pode ser excluído. Desative-o."));
+
+        org.junit.jupiter.api.Assertions.assertEquals(2, jdbcTemplate.queryForObject("SELECT count(*) FROM protocol_template_versions WHERE template_id = ?", Integer.class, templateId));
     }
 
     @Test

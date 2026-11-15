@@ -12,6 +12,7 @@ import br.com.navitasassist.service.ProtocolTemplateService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -43,6 +44,12 @@ public class ProtocolController {
     @PutMapping("/templates/{id}")
     public ProtocolTemplateResponse updateTemplate(@PathVariable Long id, @Valid @RequestBody ProtocolTemplateRequest request) {
         return protocolTemplateService.update(id, request);
+    }
+
+    @DeleteMapping("/templates/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteTemplate(@PathVariable Long id) {
+        protocolTemplateService.delete(id);
     }
 
     @GetMapping("/rmas/{rmaId}/executions")

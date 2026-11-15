@@ -146,6 +146,7 @@ class PermissionEquivalenceIntegrationTest {
         row(HttpMethod.DELETE, "/api/users/{id}", A),
         row(HttpMethod.POST, "/api/protocols/templates", A),
         row(HttpMethod.PUT, "/api/protocols/templates/{id}", A),
+        row(HttpMethod.DELETE, "/api/protocols/templates/{id}", A),
         row(HttpMethod.GET, "/api/profiles", A),
         row(HttpMethod.GET, "/api/profiles/options", A),
         row(HttpMethod.POST, "/api/profiles", A),
@@ -198,8 +199,7 @@ class PermissionEquivalenceIntegrationTest {
         row(HttpMethod.PATCH, "/api/rmas/{id}/blocks/{blockId}", AST),
 
         // Sem mapeamento de controller
-        new Row(HttpMethod.PATCH, "/api/products", "/api/products", A, Kind.UNMAPPED),
-        new Row(HttpMethod.DELETE, "/api/protocols/templates/{id}", "/api/protocols/templates/" + ID, NONE, Kind.UNMAPPED)
+        new Row(HttpMethod.PATCH, "/api/products", "/api/products", A, Kind.UNMAPPED)
     );
 
     @Autowired private MockMvc mvc;

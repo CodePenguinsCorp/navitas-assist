@@ -2,7 +2,9 @@
   <app-page-header
     heading="Protocolos técnicos"
   >
-    <button #createButton type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo protocolo</button>
+    @if (canManage()) {
+      <button #createButton type="button" class="button-primary" (click)="openCreateModal()"><app-icon name="plus" />Novo protocolo</button>
+    }
   </app-page-header>
 
   <section class="panel catalog-toolbar catalog-toolbar--filters">
@@ -72,15 +74,28 @@
                 <td><span class="state-dot" [class.is-on]="template.active">{{ template.active ? 'Ativo' : 'Inativo' }}</span></td>
                 <td>{{ updatedAtLabel(template) }}</td>
                 <td class="table-actions-col">
+                  @if (canManage()) {
                   <div class="row-actions">
                     <button
                       appRowAction
-                      icon="layers"
-                      label="Nova versão"
-                      [target]="'de ' + template.name"
+                      icon="pencil"
+                      label="Editar"
+                      [target]="template.name"
                       (click)="openEditModal(template)"
+                      [disabled]="deletingTemplateId() === template.id"
+                    ></button>
+                    <button
+                      appRowAction
+                      icon="trash"
+                      tone="danger"
+                      [label]="deletingTemplateId() === template.id ? 'Excluindo...' : 'Excluir'"
+                      [target]="template.name"
+                      [blockedReason]="deleteBlockedReason(template)"
+                      (click)="openDeleteModal(template)"
+                      [disabled]="deletingTemplateId() !== null"
                     ></button>
                   </div>
+                  }
                 </td>
               </tr>
             }
@@ -97,6 +112,79 @@
   </article>
 </section>
 
+@if (deletingTemplate(); as template) {
+  <div class="modal-overlay" (click)="closeDeleteModal()">
+    <section
+      class="modal-panel modal-panel--narrow panel"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="delete-protocol-title"
+      aria-describedby="delete-protocol-description"
+      appModalFocus
+      modalInitialFocus=".form-actions .button-secondary"
+      [modalCloseBlocked]="deletingTemplateId() !== null"
+      [modalFallbackFocus]="createButtonElement()?.nativeElement ?? null"
+      (modalCloseRequested)="closeDeleteModal()"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="modal-header">
+        <div class="danger-heading">
+          <span class="icon-tile tone-danger"><app-icon name="trash" [size]="20" /></span>
+          <div>
+            <h3 id="delete-protocol-title">Excluir protocolo</h3>
+            <p>Esta ação não poderá ser desfeita.</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="modal-close"
+          aria-label="Fechar"
+          (click)="closeDeleteModal()"
+          [disabled]="deletingTemplateId() !== null"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </header>
+
+      @if (deleteModalErrorMessage()) {
+        <article class="panel alert-banner alert-banner--error modal-feedback" role="alert">
+          <strong>{{ deleteModalErrorMessage() }}</strong>
+        </article>
+      }
+
+      <div id="delete-protocol-description" class="delete-confirmation">
+        <p>Tem certeza de que deseja excluir este protocolo?</p>
+        <div class="delete-target">
+          <span class="icon-tile icon-tile--sm tone-slate"><app-icon name="layers" [size]="17" /></span>
+          <div>
+            <strong>{{ template.name }}</strong>
+            <span class="code-text">{{ scopeLabel(template) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button
+          type="button"
+          class="button-secondary"
+          (click)="closeDeleteModal()"
+          [disabled]="deletingTemplateId() !== null"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="button-primary button-primary--danger"
+          (click)="confirmDeleteTemplate()"
+          [disabled]="deletingTemplateId() !== null"
+        >
+          {{ deletingTemplateId() === template.id ? 'Excluindo...' : 'Excluir protocolo' }}
+        </button>
+      </div>
+    </section>
+  </div>
+}
+
 @if (modalOpen()) {
   <div class="modal-overlay" (click)="closeModal()">
     <section
@@ -107,7 +195,7 @@
       appModalFocus
       modalInitialFocus="[formcontrolname='name']"
       [modalCloseBlocked]="submitting()"
-      [modalFallbackFocus]="createButton"
+      [modalFallbackFocus]="createButtonElement()?.nativeElement ?? null"
       (modalCloseRequested)="closeModal()"
       (click)="$event.stopPropagation()"
     >

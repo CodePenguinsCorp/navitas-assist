@@ -38,6 +38,13 @@ describe('ProtocolService', () => {
     complete.flush({});
   });
 
+  it('deletes a template with DELETE', () => {
+    service.deleteTemplate(2).subscribe();
+    const remove = httpTesting.expectOne('/api/protocols/templates/2');
+    expect(remove.request.method).toBe('DELETE');
+    remove.flush(null, { status: 204, statusText: 'No Content' });
+  });
+
   it('publishes a new template version with PUT', () => {
     service.updateTemplate(2, { name: 'Bancada', productId: 1, category: null, active: true, blockedStatuses: ['IN_TESTS'], items: [] }).subscribe();
     const update = httpTesting.expectOne('/api/protocols/templates/2');

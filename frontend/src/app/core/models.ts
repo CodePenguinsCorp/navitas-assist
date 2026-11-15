@@ -922,6 +922,7 @@ export interface ProtocolTemplateResponse {
   blockedStatuses: RmaStatus[];
   items: ProtocolTemplateItemResponse[];
   updatedAt: string;
+  inUse: boolean;
 }
 
 export interface ProtocolItemResultRequest {

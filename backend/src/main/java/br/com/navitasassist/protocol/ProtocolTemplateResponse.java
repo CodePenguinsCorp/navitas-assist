@@ -16,9 +16,10 @@ public record ProtocolTemplateResponse(
     int currentVersion,
     Set<RmaStatus> blockedStatuses,
     List<ProtocolTemplateItemResponse> items,
-    Instant updatedAt
+    Instant updatedAt,
+    boolean inUse
 ) {
-    public static ProtocolTemplateResponse from(ProtocolTemplate template) {
+    public static ProtocolTemplateResponse from(ProtocolTemplate template, boolean inUse) {
         ProtocolTemplateVersion version = template.latestVersion();
         return new ProtocolTemplateResponse(
             template.getId(),
@@ -30,7 +31,8 @@ public record ProtocolTemplateResponse(
             template.getCurrentVersion(),
             version.blockedStatusSet(),
             version.getItems().stream().map(ProtocolTemplateItemResponse::from).toList(),
-            template.getUpdatedAt()
+            template.getUpdatedAt(),
+            inUse
         );
     }
 }

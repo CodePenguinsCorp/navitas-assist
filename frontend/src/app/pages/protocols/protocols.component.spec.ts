@@ -5,6 +5,8 @@ import { FormArray, FormGroup } from '@angular/forms';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { ProtocolTemplateItemResponse, ProtocolTemplateRequest, ProtocolTemplateResponse } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
+import { Permission } from '../../core/permissions';
+import { providePermissions } from '../../testing/permission-fixtures';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
@@ -35,7 +37,7 @@ function template(overrides: Partial<ProtocolTemplateResponse> = {}): ProtocolTe
   return {
     id: 1, name: 'Diagnóstico Alfa', productId: 10, productName: 'Produto Alfa', category: null,
     active: true, currentVersion: 1, blockedStatuses: [], items: [item()],
-    updatedAt: '2026-10-20T12:00:00Z',
+    updatedAt: '2026-10-20T12:00:00Z', inUse: false,
     ...overrides
   };
 }
@@ -62,15 +64,18 @@ describe('ProtocolsComponent', () => {
   let listTemplates: ReturnType<typeof vi.fn>;
   let createTemplate: ReturnType<typeof vi.fn>;
   let updateTemplate: ReturnType<typeof vi.fn>;
+  let deleteTemplate: ReturnType<typeof vi.fn>;
 
-  async function setup(list: () => Observable<ProtocolTemplateResponse[]> = () => of(catalog())): Promise<void> {
+  async function setup(list: () => Observable<ProtocolTemplateResponse[]> = () => of(catalog()), granted: readonly Permission[] = ['protocolos.ver', 'protocolos.catalogo']): Promise<void> {
     listTemplates = vi.fn(list);
     createTemplate = vi.fn((request: ProtocolTemplateRequest) => of(template({ id: 9, name: request.name })));
+    deleteTemplate = vi.fn(() => of(undefined));
     updateTemplate = vi.fn((id: number, request: ProtocolTemplateRequest) => of(template({ id, name: request.name, currentVersion: 2 })));
     await TestBed.configureTestingModule({
       imports: [ProtocolsComponent],
       providers: [
-        { provide: ProtocolService, useValue: { listTemplates, createTemplate, updateTemplate } },
+        providePermissions(granted),
+        { provide: ProtocolService, useValue: { listTemplates, createTemplate, updateTemplate, deleteTemplate } },
         { provide: CatalogService, useValue: { listProductOptions: vi.fn(() => of([])) } }
       ]
     }).compileComponents();
@@ -154,18 +159,116 @@ describe('ProtocolsComponent', () => {
       expect(nameCell?.textContent).not.toContain('Ativo');
     });
 
-    it('names the Nova versão action with the protocol', async () => {
+    it('shows Editar and Excluir as icon actions, like Clientes and Produtos', async () => {
       await setup();
 
       const actions = rows()[0].querySelectorAll<HTMLButtonElement>('.table-actions-col button');
-      expect(actions.length).toBe(1);
-      const action = actions[0];
-      // Ação só com ícone, no mesmo padrão de Clientes e Produtos: o nome vai no aria-label e na dica.
-      expect(action.classList).toContain('row-action');
-      expect(action.classList).not.toContain('button-secondary');
-      expect(action.querySelector('app-icon')).not.toBeNull();
-      expect(action.querySelector('[role="tooltip"]')?.textContent?.trim()).toBe('Nova versão');
-      expect(action.getAttribute('aria-label')).toBe('Nova versão de Diagnóstico Alfa');
+      expect(actions.length).toBe(2);
+      const [edit, remove] = Array.from(actions);
+      // Ações só com ícone: o nome vai no aria-label e na dica.
+      for (const action of [edit, remove]) {
+        expect(action.classList).toContain('row-action');
+        expect(action.classList).not.toContain('button-secondary');
+        expect(action.querySelector('app-icon')).not.toBeNull();
+      }
+      expect(edit.querySelector('[role="tooltip"]')?.textContent?.trim()).toBe('Editar');
+      expect(edit.getAttribute('aria-label')).toBe('Editar Diagnóstico Alfa');
+      expect(remove.querySelector('[role="tooltip"]')?.textContent?.trim()).toBe('Excluir');
+      expect(remove.getAttribute('aria-label')).toBe('Excluir Diagnóstico Alfa');
+      expect(remove.classList).toContain('icon-button--danger');
+      expect(remove.getAttribute('aria-disabled')).toBeNull();
+    });
+
+    it('opens the editor from Editar', async () => {
+      await setup();
+
+      rows()[0].querySelector<HTMLButtonElement>('button[aria-label="Editar Diagnóstico Alfa"]')!.click();
+      fixture.detectChanges();
+
+      expect(element().querySelector('[role="dialog"] h3')?.textContent?.trim()).toBe('Nova versão do protocolo');
+    });
+
+    it('hides the row actions and the create button without protocolos.catalogo', async () => {
+      await setup(undefined, ['protocolos.ver']);
+
+      expect(rows().length).toBe(2);
+      expect(element().querySelector('.table-actions-col button')).toBeNull();
+      expect(buttonByText('Novo protocolo')).toBeUndefined();
+    });
+
+    it('blocks Excluir with the reason when the protocol was already used in an OS', async () => {
+      await setup(() => of([template({ inUse: true })]));
+
+      const remove = rows()[0].querySelector<HTMLButtonElement>('button[aria-label="Excluir Diagnóstico Alfa"]')!;
+      const reason = 'Este protocolo já foi usado em uma OS e não pode ser excluído. Desative-o.';
+      expect(remove.getAttribute('aria-disabled')).toBe('true');
+      expect(remove.querySelector('[role="tooltip"]')?.textContent?.trim()).toBe(reason);
+
+      remove.click();
+      fixture.detectChanges();
+
+      expect(element().querySelector('[role="alertdialog"]')).toBeNull();
+      expect(deleteTemplate).not.toHaveBeenCalled();
+    });
+
+    it('confirms before deleting an unused protocol, then reloads and reports success', async () => {
+      await setup();
+      const remove = rows()[0].querySelector<HTMLButtonElement>('button[aria-label="Excluir Diagnóstico Alfa"]')!;
+
+      remove.click();
+      fixture.detectChanges();
+
+      const dialog = element().querySelector<HTMLElement>('[role="alertdialog"]')!;
+      expect(dialog.querySelector('h3')?.textContent?.trim()).toBe('Excluir protocolo');
+      expect(dialog.textContent).toContain('Tem certeza de que deseja excluir este protocolo?');
+      expect(dialog.textContent).toContain('Diagnóstico Alfa');
+      expectCancelBeforePrimary(dialog);
+      expect(deleteTemplate).not.toHaveBeenCalled();
+
+      listTemplates.mockClear();
+      Array.from(dialog.querySelectorAll<HTMLButtonElement>('button')).find((button) => button.textContent?.trim() === 'Excluir protocolo')!.click();
+      fixture.detectChanges();
+
+      expect(deleteTemplate).toHaveBeenCalledWith(1);
+      expect(listTemplates).toHaveBeenCalledTimes(1);
+      expect(element().querySelector('[role="alertdialog"]')).toBeNull();
+      expect(text()).toContain('Protocolo Diagnóstico Alfa excluído com sucesso.');
+    });
+
+    it('shows the loading state while deleting and keeps the dialog on a 409 with the backend message', async () => {
+      await setup();
+      const pending = new Subject<void>();
+      deleteTemplate.mockReturnValue(pending);
+      rows()[0].querySelector<HTMLButtonElement>('button[aria-label="Excluir Diagnóstico Alfa"]')!.click();
+      fixture.detectChanges();
+      const confirm = () => element().querySelector<HTMLButtonElement>('[role="alertdialog"] .button-primary--danger')!;
+
+      confirm().click();
+      fixture.detectChanges();
+
+      expect(confirm().textContent?.trim()).toBe('Excluindo...');
+      expect(confirm().disabled).toBe(true);
+      expect(element().querySelector<HTMLButtonElement>('button[aria-label="Excluindo... Diagnóstico Alfa"]')?.disabled).toBe(true);
+
+      pending.error(new HttpErrorResponse({ status: 409, error: { message: 'Este protocolo já foi usado em uma OS e não pode ser excluído. Desative-o.' } }));
+      fixture.detectChanges();
+
+      const alert = element().querySelector('[role="alertdialog"] [role="alert"]');
+      expect(alert?.textContent).toContain('Este protocolo já foi usado em uma OS e não pode ser excluído. Desative-o.');
+      expect(confirm().textContent?.trim()).toBe('Excluir protocolo');
+      expect(confirm().disabled).toBe(false);
+    });
+
+    it('falls back to a Portuguese message when the delete fails without a body', async () => {
+      await setup();
+      deleteTemplate.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+      rows()[0].querySelector<HTMLButtonElement>('button[aria-label="Excluir Diagnóstico Alfa"]')!.click();
+      fixture.detectChanges();
+
+      element().querySelector<HTMLButtonElement>('[role="alertdialog"] .button-primary--danger')!.click();
+      fixture.detectChanges();
+
+      expect(element().querySelector('[role="alertdialog"] [role="alert"]')?.textContent).toContain('Não foi possível excluir o protocolo agora.');
     });
 
     it('shows the empty catalog with the create action only in the header', async () => {
@@ -550,7 +653,7 @@ describe('ProtocolsComponent dialog focus', () => {
     templates = catalog();
     await TestBed.configureTestingModule({
       imports: [ProtocolsComponent],
-      providers: [provideRouter([{ path: '', component: ProtocolsComponent }]), 
+      providers: [provideRouter([{ path: '', component: ProtocolsComponent }]), providePermissions(['protocolos.ver', 'protocolos.catalogo']),
         { provide: ProtocolService, useValue: {
           listTemplates: () => of(templates),
           createTemplate: () => (publish = new Subject<ProtocolTemplateResponse>()),
@@ -621,7 +724,7 @@ describe('ProtocolsComponent dialog focus', () => {
     render();
   }
 
-  const newVersion = 'button[aria-label="Nova versão de Diagnóstico Alfa"]';
+  const newVersion = 'button[aria-label="Editar Diagnóstico Alfa"]';
 
   it('focuses the protocol name from Novo protocolo and returns to it on Escape', () => {
     const trigger = activate('.page-heading button');
@@ -642,7 +745,7 @@ describe('ProtocolsComponent dialog focus', () => {
     expect(element.querySelector('[role="dialog"]')).toBeNull();
   });
 
-  it('returns to Nova versão only after the global overlay hides when publishing succeeds under it', () => {
+  it('returns to Editar only after the global overlay hides when publishing succeeds under it', () => {
     const trigger = activate(newVersion);
     publishVersion();
     showOverlay();
