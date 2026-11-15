@@ -322,10 +322,7 @@
                           <app-rma-status-field [rma]="rma" [event]="entry.event" [showSelector]="false" [disabled]="writeBusy()" (saved)="detailRmaSaved($event)" (busyChange)="setWriterBusy('status', $event)" />
                         } @else if (entry.kind === 'warranty' && entry.reason) { <p class="record-row__meta"><span>Motivo:</span> {{ entry.reason }}</p> }
                         @if (entry.kind === 'repair' && entry.voidReason) { <p class="record-row__meta"><span>Motivo:</span> {{ entry.voidReason }}</p> }
-                        <dl class="record-stats record-stats--compact">
-                          <div><dt>Data</dt><dd><time>{{ dateTimeLabel(entry.at) }}</time></dd></div>
-                          <div><dt>Alterado por</dt><dd>{{ entry.by }}</dd></div>
-                        </dl>
+                        <p class="record-row__meta"><span class="sr-only">Data: </span><time>{{ dateTimeLabel(entry.at) }}</time> por {{ entry.by }}</p>
                       </div>
                     </li>
                   }
