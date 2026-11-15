@@ -45,7 +45,7 @@
             @for (row of visibleRows(); track row.lineNumber) {
               <tr><td data-label="Linha">{{ row.lineNumber }}</td><td data-label="Identificação"><strong class="table-title">{{ identification(row) }}</strong></td><td data-label="Situação"><span class="mini-chip" [attr.data-tone]="tones[row.status]">{{ statuses[row.status] }}</span></td><td data-label="Motivos e avisos">
                 @if (row.reasons.length || row.warnings.length) {
-                  <ul>
+                  <ul class="import-issues">
                     @for (issue of row.reasons; track $index) { <li>{{ fieldLabel(issue.field) }}: {{ issue.message }}</li> }
                     @for (warning of row.warnings; track $index) { <li>Aviso: {{ fieldLabel(warning.field) }}: {{ warning.message }}</li> }
                   </ul>

@@ -3493,3 +3493,4 @@ app-rma-kanban-board .board-shell::-webkit-scrollbar-button, app-rma-kanban-boar
 /* Rodapé compacto da prévia de importação com o componente compartilhado. */
 .import-page .pagination { justify-content: flex-end; gap: var(--space-3); }
 .import-page .pagination__summary { margin-right: auto; }
+.import-issues { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-1); }
