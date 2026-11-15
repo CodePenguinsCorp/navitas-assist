@@ -118,17 +118,16 @@ rodapé fixo                .form-actions: Voltar ou Cancelar (foco inicial), a�
 ### 3.8 Prévia e importação (CSV de clientes e produtos)
 
 ```
-app-page-header (h1)
+app-page-header (h1) com seta de voltar (3.11)
 painel 1. Modelo           ação de baixar o modelo
 painel 2. Arquivo          campo de arquivo, "Gerar prévia", erro
 painel 3. Prévia           texto do arquivo
                            .page-summary clicável (Válidas, Inválidas, Duplicadas)
                            tabela .table-card com chip de situação
-                           rodapé .table-card__footer: app-pagination à esquerda
-                           ações finais .form-actions: Cancelar e Importar à direita
+                           rodapé .table-card__footer: app-pagination e, abaixo, .form-actions--end com Importar à direita
 ```
 
-É a tela-modelo para qualquer fluxo "enviar, conferir, confirmar".
+Não há "Cancelar" de página: sair é a seta de voltar do cabeçalho, e trocar o arquivo é escolher outro no passo 2. O rodapé fica só com a ação primária. É a tela-modelo para qualquer fluxo "enviar, conferir, confirmar".
 
 ### 3.9 Relatórios
 
@@ -150,6 +149,14 @@ rodapé                     app-pagination
 ```
 
 Detalhe em modal médio. Regra de notificação em modal médio.
+
+### 3.11 Sub-página (importação e qualquer página fora do menu)
+
+Toda página que não é item de menu usa a **seta de voltar** no cabeçalho, à esquerda do título: `<app-page-header heading="..." [backLink]="'/clientes'" backLabel="Voltar para Clientes" />`. É um botão de ícone de 40 px (`.icon-button.page-heading__back`) com `aria-label` e dica no foco e no hover, que navega para a lista de origem. Página de rota **não tem botão "Cancelar" de página**; "Cancelar" só existe no rodapé de modal. A conferência das páginas de rota atuais (clientes, produtos, perfis, usuários, protocolos, peças, notificações, OS, Kanban, relatórios, auditoria, dashboard) mostrou que a importação era a única com Cancelar de página.
+
+### 3.12 Cartão de registro
+
+`.record-row` dentro de `.record-rows`: borda de 1 px em `--record-line` (a `--line` clareada, sempre mais leve que a borda do painel que o contém, para não virar caixa dentro de caixa), raio `--radius-md`, fundo `--surface`, padding `--space-4`, **sem sombra** em repouso. Cartões com tom (`tone-*`) mantêm a barra de acento de 3 px à esquerda por dentro do raio. Espaço entre cartões por `gap` (`--space-3`), sem divisória. Vale para reservas, componentes, intervenções, impedimentos, histórico geral e histórico de movimentos de peças. Sombra só no hover de cartão clicável.
 
 ## 4. Estados
 

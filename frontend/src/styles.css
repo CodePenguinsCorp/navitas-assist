@@ -958,7 +958,7 @@ a {
   padding: 0.85rem 0.6rem;
   border-bottom: 1px solid var(--line);
   text-align: left;
-  font-size: 0.92rem;
+  font-size: var(--font-size-control);
 }
 
 /* Header row as a tinted strip with rounded ends; body rows get a soft zebra and a hover tint. */
@@ -1029,7 +1029,7 @@ a {
 
 .table-card th {
   color: var(--brand-blue-deep);
-  font-size: 0.8rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
   letter-spacing: 0.01em;
 }
@@ -3353,12 +3353,12 @@ app-custom-select:has(> .custom-select--priority) {
   background: rgba(255, 255, 255, 0.98);
   box-shadow: 0 18px 40px rgba(18, 51, 83, 0.14);
   scrollbar-width: thin;
-  scrollbar-color: #b9cde0 transparent;
+  scrollbar-color: var(--scrollbar-thumb-menu) transparent;
 }
 
 /* Same bar as the select menu: rounded thumb, no arrow buttons. */
 .suggest-input__menu::-webkit-scrollbar { width: 8px; }
-.suggest-input__menu::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 999px; background: #b9cde0 padding-box; }
+.suggest-input__menu::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 999px; background: var(--scrollbar-thumb-menu) padding-box; }
 .suggest-input__menu::-webkit-scrollbar-button { display: none; }
 
 .suggest-input__option {
@@ -3378,10 +3378,6 @@ app-custom-select:has(> .custom-select--priority) {
   color: var(--brand-blue-deep);
 }
 
-@media (max-width: 600px) {
-  .import-page .pagination__controls { flex-wrap: wrap; }
-  .import-page .pagination__size { max-width: 100%; }
-}
 
 /* Intervenções e componentes trocados (detalhe do RMA): cabeçalho com ação à direita, linhas compactas, formulário recolhido. */
 .repair-panel { display: block; }
@@ -3414,10 +3410,11 @@ app-rma-kanban-board .board-shell::-webkit-scrollbar-thumb:hover { background: l
 app-rma-kanban-board .board-shell::-webkit-scrollbar-button, app-rma-kanban-board .board-shell::-webkit-scrollbar-corner { display: none; width: 0; height: 0; }
 /* Linha de registro (reservas, componentes, intervenções e movimentos): título e chips no topo,
    pares rótulo e valor em colunas e ações à direita. Divisória sutil, sem caixa. */
-.record-rows { display: grid; margin: 0; padding: 0; list-style: none; min-width: 0; }
-.record-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3) var(--space-4); padding: var(--space-4); border-radius: var(--radius-xs); box-shadow: inset 3px 0 0 var(--tone, transparent); min-width: 0; container-type: inline-size; overflow-wrap: anywhere; transition: background-color 120ms ease; }
+/* Cartão de registro: borda 1px mais clara que a do painel que o contém, raio do token, sem sombra; a barra de acento do tom fica por dentro. */
+:root { --record-line: color-mix(in srgb, var(--line) 65%, var(--surface)); --scrollbar-thumb-menu: #b9cde0; }
+.record-rows { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; min-width: 0; }
+.record-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3) var(--space-4); padding: var(--space-4); border: 1px solid var(--record-line); border-radius: var(--radius-md); background: var(--surface); box-shadow: inset 3px 0 0 var(--tone, transparent); min-width: 0; container-type: inline-size; overflow-wrap: anywhere; transition: background-color 120ms ease; }
 .record-row:hover { background: var(--surface-alt); }
-.record-row + .record-row { border-top: 1px solid var(--line); border-top-left-radius: 0; border-top-right-radius: 0; }
 .record-row > .inline-form { grid-column: 1 / -1; margin-bottom: 0; }
 .record-row > .icon-tile { align-self: start; }
 .record-row.is-voided > .icon-tile { opacity: 0.6; }
@@ -3495,7 +3492,56 @@ app-rma-kanban-board .board-shell::-webkit-scrollbar-button, app-rma-kanban-boar
 .protocol-launch__row .button-primary { min-height: var(--control-height); }
 
 
-/* Rodapé compacto da prévia de importação com o componente compartilhado. */
-.import-page .pagination { justify-content: flex-end; gap: var(--space-3); }
-.import-page .pagination__summary { margin-right: auto; }
 .import-issues { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-1); }
+
+/* Resumo clicável (.page-summary): o item vira botão que filtra a lista. Ponto discreto na cor do tom,
+   estado ativo em tinta suave de marca; sem fundo saturado. O item estático continua sendo texto em linha. */
+.page-summary > li { display: contents; }
+button.page-summary__item {
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+button.page-summary__item::before {
+  content: "";
+  flex-shrink: 0;
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--tone, var(--tone-slate));
+}
+button.page-summary__item:hover { border-color: var(--line-hover); background: var(--surface-alt); }
+button.page-summary__item[aria-pressed="true"] { border-color: var(--brand-blue); background: var(--brand-tint); color: var(--text); }
+button.page-summary__item:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.page-summary__clear { align-self: center; }
+
+/* Ações finais de um painel ou de uma tela (Cancelar à esquerda do principal), à direita, sob uma divisória. */
+.form-actions--end {
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+/* Rodapé de painel com tabela: paginação padrão e, depois dela, as ações finais. */
+.table-card__footer { display: grid; gap: var(--space-2); min-width: 0; }
+.table-card__footer > .form-actions--end { margin-top: var(--space-2); }
+
+/* Tabela que vira lista de linhas rotuladas em tela estreita (data-label em cada td). */
+@media (max-width: 600px) {
+  .table-card--stack thead { display: none; }
+  .table-card--stack table, .table-card--stack tbody { display: block; }
+  .table-card--stack tr { display: block; padding-block: var(--space-3); border-bottom: 1px solid var(--line); }
+  .table-card--stack td { display: block; padding: var(--space-2) 0; border: 0; }
+  .table-card--stack td::before { content: attr(data-label); display: block; color: var(--muted); font-size: var(--font-size-sm); }
+}
+
+/* Sub-página: seta de voltar de 40 px antes do título (no lugar de um Cancelar de página). */
+.page-heading__title:has(.page-heading__back) { align-items: center; flex-wrap: nowrap; }
+.page-heading__back { flex-shrink: 0; text-decoration: none; }
