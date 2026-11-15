@@ -13,6 +13,7 @@ import {
   rmaHistory,
   rmaItemFacts,
   sectionLabel,
+  statusTransitions,
   warrantyExpiryLabel,
   warrantyTermLabel
 } from './rma-detail';
@@ -129,7 +130,7 @@ describe('OS detail contract', () => {
     expect(NO_DIAGNOSIS_LABEL).toBe('Sem diagnóstico registrado.');
   });
 
-  it('labels every status record as Status registrado without inferring a transition', () => {
+  it('labels records without a status change as Status registrado and the first one as inicial', () => {
     const history = rmaHistory({
       statusHistory: [
         statusRecord({ changedAt: '2026-10-20T12:00:00Z' }),
@@ -139,18 +140,13 @@ describe('OS detail contract', () => {
     });
 
     expect(history).toHaveLength(2);
-    for (const entry of history) {
-      expect(entry.kind).toBe('status');
-      expect(JSON.stringify(entry)).not.toContain('Moveu');
-      expect(entry).not.toHaveProperty('from');
-      if (entry.kind === 'status') expect(entry.label).toBe('Status registrado: Triagem');
-    }
+    expect(history.map((entry) => entry.kind === 'status' && entry.label)).toEqual(['Status registrado: Triagem', 'Status inicial: Triagem']);
   });
 
   it('keeps a note recorded without a status change', () => {
     const [entry] = rmaHistory({ statusHistory: [statusRecord({ status: 'IN_REPAIR', note: 'Cliente avisado' })], assignmentHistory: [] });
     expect(entry).toEqual({
-      kind: 'status', at: '2026-10-20T12:00:00Z', by: 'ana', label: 'Status registrado: Reparo', status: 'IN_REPAIR', note: 'Cliente avisado', event: statusRecord({ status: 'IN_REPAIR', note: 'Cliente avisado' })
+      kind: 'status', at: '2026-10-20T12:00:00Z', by: 'ana', label: 'Status inicial: Reparo', status: 'IN_REPAIR', previous: null, initial: true, note: 'Cliente avisado', event: statusRecord({ status: 'IN_REPAIR', note: 'Cliente avisado' })
     });
   });
 
@@ -220,7 +216,7 @@ describe('OS detail contract', () => {
       'Data limite removida (era 20/11/2026)',
       'Data limite 20/11/2026 → 25/11/2026',
       'Data limite definida: 20/11/2026',
-      'Status registrado: Triagem'
+      'Status inicial: Triagem'
     ]);
     expect(history[1].by).toBe('bia');
   });
@@ -260,4 +256,51 @@ describe('repair timeline', () => {
     expect(historyEntryTitle(history[0])).toBe('Duplicado');
     expect(history[1]).toMatchObject({ kind: 'repair', by: 'ana', voided: true });
   });
+
+  describe('statusTransitions', () => {
+    it('derives the previous status from the chronological neighbour, whatever the input order', () => {
+      const first = statusRecord({ id: 1, status: 'RECEIVED', changedAt: '2026-10-20T10:00:00Z' });
+      const second = statusRecord({ id: 2, status: 'IN_DIAGNOSIS', changedAt: '2026-10-20T11:00:00Z' });
+      const third = statusRecord({ id: 3, status: 'IN_REPAIR', changedAt: '2026-10-20T12:00:00Z' });
+      const map = statusTransitions([third, first, second]);
+      expect(map.get(first)).toEqual({ previous: null, initial: true });
+      expect(map.get(second)).toEqual({ previous: 'RECEIVED', initial: false });
+      expect(map.get(third)).toEqual({ previous: 'IN_DIAGNOSIS', initial: false });
+    });
+
+    it('breaks equal instants by id and then by input order', () => {
+      const a = statusRecord({ id: 5, status: 'TRIAGE', changedAt: '2026-10-20T10:00:00Z' });
+      const b = statusRecord({ id: 4, status: 'RECEIVED', changedAt: '2026-10-20T10:00:00Z' });
+      const c = statusRecord({ status: 'IN_REPAIR', changedAt: '2026-10-20T10:00:00Z' });
+      const d = statusRecord({ status: 'IN_TESTS', changedAt: '2026-10-20T10:00:00Z' });
+      const map = statusTransitions([a, b, c, d]);
+      expect(map.get(b)?.initial).toBe(true);
+      expect(map.get(a)?.previous).toBe('RECEIVED');
+      expect(map.get(c)?.previous).toBe('TRIAGE');
+      expect(map.get(d)?.previous).toBe('IN_REPAIR');
+    });
+
+    it('handles a single record and an empty list without changing the input', () => {
+      const only = statusRecord({ status: 'RECEIVED' });
+      expect(statusTransitions([only]).get(only)).toEqual({ previous: null, initial: true });
+      expect(statusTransitions([]).size).toBe(0);
+      const input = [statusRecord({ changedAt: '2026-10-20T12:00:00Z' }), statusRecord({ changedAt: '2026-10-20T10:00:00Z' })];
+      const copy = [...input];
+      statusTransitions(input);
+      expect(input).toEqual(copy);
+    });
+
+    it('labels a real change as Status alterado de A para B in the history', () => {
+      const history = rmaHistory({
+        statusHistory: [
+          statusRecord({ id: 1, status: 'RECEIVED', changedAt: '2026-10-20T10:00:00Z' }),
+          statusRecord({ id: 2, status: 'IN_DIAGNOSIS', changedAt: '2026-10-20T11:00:00Z' })
+        ],
+        assignmentHistory: []
+      });
+      expect(history[0]).toMatchObject({ kind: 'status', previous: 'RECEIVED', initial: false, label: 'Status alterado de Recebida para Diagnóstico' });
+      expect(history[1]).toMatchObject({ kind: 'status', previous: null, initial: true, label: 'Status inicial: Recebida' });
+    });
+  });
+
 });

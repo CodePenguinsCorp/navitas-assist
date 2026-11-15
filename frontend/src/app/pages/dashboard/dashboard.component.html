@@ -71,7 +71,7 @@
             @for (event of auditEvents(); track event.id) {
               <li class="timeline-entry activity-item" [attr.data-status]="event.statusCode">
                 <div class="dashboard-audit__body">
-                  <strong><a class="code-text" routerLink="/rmas" [queryParams]="{ rma: event.rmaId }">{{ event.code }}</a> {{ event.label }}</strong>
+                  <strong><a class="code-text" routerLink="/rmas" [queryParams]="{ rma: event.rmaId }">{{ event.code }}</a> <app-rma-status-transition [status]="event.statusCode" [previous]="event.previousStatusCode" [initial]="!event.previousStatusCode" [compact]="true" /></strong>
                   @if (event.note) {
                     <blockquote class="dashboard-audit__note">{{ event.note }}</blockquote>
                   }

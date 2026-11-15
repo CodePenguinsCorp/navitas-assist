@@ -2,6 +2,13 @@ import { CLOSED_RMA_STATUSES } from '../core/mock-data';
 import { RmaDashboardResponse, RmaResponse, RmaStatus, WarrantyStatus } from '../core/models';
 import { businessToday, deadlineStatus } from '../core/utils/rma-deadline';
 
+/** Status do registro anterior da mesma OS (nulo no primeiro), como o servidor calcula nos eventos do dashboard. */
+function previousStatusOf(history: RmaResponse['statusHistory'], event: RmaResponse['statusHistory'][number]): RmaStatus | null {
+  const ordered = [...history].sort((left, right) => Date.parse(left.changedAt) - Date.parse(right.changedAt) || (left.id ?? 0) - (right.id ?? 0));
+  const index = ordered.indexOf(event);
+  return index > 0 ? ordered[index - 1].status : null;
+}
+
 /** Ordem da fila do servidor: prioridade (alta primeiro) e, em empate, a entrada mais antiga. */
 const PRIORITY_WEIGHT: Record<RmaResponse['priority'], number> = { HIGH: 3, MEDIUM: 2, LOW: 1 };
 function compareForQueue(left: RmaResponse, right: RmaResponse): number {
@@ -37,7 +44,7 @@ export function dashboardFromBoard(board: readonly RmaResponse[], today = busine
       .sort((left, right) => time(right.event.changedAt) - time(left.event.changedAt))
       .slice(0, 4)
       .map(({ rma, event }) => ({
-        rmaId: rma.id, code: rma.code, status: event.status, changedBy: event.changedBy, note: event.note, changedAt: event.changedAt
+        rmaId: rma.id, code: rma.code, status: event.status, previousStatus: previousStatusOf(rma.statusHistory, event), changedBy: event.changedBy, note: event.note, changedAt: event.changedAt
       }))
   };
 }

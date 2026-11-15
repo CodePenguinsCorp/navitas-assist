@@ -32,6 +32,7 @@ import { RmaDueDateFieldComponent } from '../rma-due-date-field/rma-due-date-fie
 import { RmaPriorityFieldComponent } from '../rma-priority-field/rma-priority-field.component';
 import { RmaReportLinkComponent } from '../rma-report-link/rma-report-link.component';
 import { RmaStatusFieldComponent } from '../rma-status-field/rma-status-field.component';
+import { RmaStatusTransitionComponent } from '../rma-status-transition/rma-status-transition.component';
 import { RmaDeadlineChipComponent } from '../rma-deadline-chip/rma-deadline-chip.component';
 import { RmaStageTimesComponent } from '../rma-stage-times/rma-stage-times.component';
 import {
@@ -48,7 +49,7 @@ import {
 
 @Component({
   selector: 'app-rma-detail-modal',
-  imports: [RmaProtocolsComponent, RmaHistoryListComponent, CollapsibleSectionComponent, RmaRepairPanelComponent, RmaPartsPanelComponent, RmaWarrantyFieldComponent, CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaStatusFieldComponent, RmaDiagnosisComponent, RmaDeadlineChipComponent, RouterLink],
+  imports: [RmaProtocolsComponent, RmaHistoryListComponent, CollapsibleSectionComponent, RmaRepairPanelComponent, RmaPartsPanelComponent, RmaWarrantyFieldComponent, CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaStatusFieldComponent, RmaStatusTransitionComponent, RmaDiagnosisComponent, RmaDeadlineChipComponent, RouterLink],
   templateUrl: './rma-detail-modal.component.html',
   styleUrl: './rma-detail-modal.component.css'
 })

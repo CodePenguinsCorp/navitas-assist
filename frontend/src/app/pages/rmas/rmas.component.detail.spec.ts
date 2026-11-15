@@ -425,7 +425,8 @@ describe('RmasComponent detail with the shared information contract', () => {
 
     const entries = [...tabPanel().querySelectorAll<HTMLElement>('ol.record-list > li')];
     expect(entries).toHaveLength(2);
-    expect(entries[0].querySelector('.record-card__title strong')?.textContent?.trim()).toBe('Status registrado: Triagem');
+    expect(entries[0].querySelector('.record-card__title strong .sr-only')?.textContent?.trim()).toBe('Status inicial: Triagem');
+    expect(entries[0].querySelectorAll('.record-card__title .status-chip')).toHaveLength(1);
     expect(entries[0].querySelector('blockquote')?.textContent?.trim()).toBe('Prioridade alterada para Alta');
     expect(entries[1].querySelector('.record-card__title strong')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Sem responsável → Ana');
     expect(entries[1].textContent).toContain('bia');

@@ -300,9 +300,10 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     const statusEvents = [...history.querySelectorAll('li.rma-detail__event:not(.is-assignee)')];
 
     expect(statusEvents).toHaveLength(2);
-    expect(statusEvents.map((event) => event.querySelector('p')?.textContent?.trim())).toEqual([
-      'Status registrado: Triagem', 'Status registrado: Triagem'
+    expect(statusEvents.map((event) => event.querySelector('p .sr-only')?.textContent?.trim())).toEqual([
+      'Status registrado: Triagem', 'Status inicial: Triagem'
     ]);
+    expect(statusEvents.map((event) => event.querySelectorAll('p .status-chip').length)).toEqual([1, 1]);
     expect(statusEvents[0].querySelector('blockquote')?.textContent?.trim()).toBe('Prioridade alterada para Alta');
     expect(history.textContent).not.toContain('Moveu para');
   });

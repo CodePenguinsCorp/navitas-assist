@@ -409,6 +409,7 @@ export interface RmaDashboardStatusEvent {
   rmaId: number;
   code: string;
   status: RmaStatus;
+  previousStatus: RmaStatus | null;
   changedBy: string;
   note: string | null;
   changedAt: string;

@@ -17,6 +17,7 @@ import { PermissionService } from '../../core/services/permission.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { RmaService } from '../../core/services/rma.service';
 import { IconComponent, IconName } from '../../shared/icon/icon.component';
+import { RmaStatusTransitionComponent } from '../../shared/rma-status-transition/rma-status-transition.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { initialsOf } from '../../core/utils/rma-ui';
 import { formatBusinessDateTime as formatDateTime, formatDateOnly } from '../../core/utils/date';
@@ -44,7 +45,7 @@ interface AuditRow {
   rmaId: number;
   code: string;
   statusCode: RmaStatus;
-  label: string;
+  previousStatusCode: RmaStatus | null;
   by: string;
   note: string | null;
   time: string;
@@ -62,7 +63,7 @@ interface RecentRmaRow {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [IconComponent, PageHeaderComponent, RouterLink],
+  imports: [IconComponent, PageHeaderComponent, RouterLink, RmaStatusTransitionComponent],
   templateUrl: './dashboard.component.html',
   styles: [`
     :host { display: block; }
@@ -220,7 +221,7 @@ export class DashboardComponent {
       rmaId: event.rmaId,
       code: event.code,
       statusCode: event.status,
-      label: `Status registrado: ${RMA_STATUS_LABELS[event.status]}`,
+      previousStatusCode: event.previousStatus ?? null,
       by: event.changedBy,
       note: event.note?.trim() || null,
       time: formatDateTime(event.changedAt)

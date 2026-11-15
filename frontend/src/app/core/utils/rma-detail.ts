@@ -111,7 +111,7 @@ export function blockedLabel(block: RmaBlockResponse, now: number): string {
 
 
 export type RmaHistoryEntry =
-  | { kind: 'status'; at: string; by: string; label: string; status: RmaStatus; note: string | null; event: RmaStatusHistoryResponse }
+  | { kind: 'status'; at: string; by: string; label: string; status: RmaStatus; previous: RmaStatus | null; initial: boolean; note: string | null; event: RmaStatusHistoryResponse }
   | { kind: 'repair'; at: string; by: string; summary: string; voided: boolean; voidReason: string | null }
   | { kind: 'assignee'; at: string; by: string; from: string; to: string }
   | { kind: 'dueDate'; at: string; by: string; from: string | null; to: string | null }
@@ -134,28 +134,59 @@ export function historyEntryTitle(entry: RmaHistoryEntry): string {
   }
 }
 
+export interface StatusTransition { previous: RmaStatus | null; initial: boolean }
+
+/**
+ * Previous status of each status record: the status of the record right before it in chronological order. Ties on the instant
+ * break by id and then by input order. The first record is the creation (initial, no previous). The input is not changed.
+ */
+export function statusTransitions(records: readonly RmaStatusHistoryResponse[]): Map<RmaStatusHistoryResponse, StatusTransition> {
+  const ordered = records
+    .map((record, index) => ({ record, index }))
+    .sort((a, b) => Date.parse(a.record.changedAt) - Date.parse(b.record.changedAt)
+      || (a.record.id ?? Infinity) - (b.record.id ?? Infinity) || a.index - b.index);
+  const result = new Map<RmaStatusHistoryResponse, StatusTransition>();
+  ordered.forEach(({ record }, position) => {
+    const previous = position > 0 ? ordered[position - 1].record.status : null;
+    result.set(record, { previous, initial: position === 0 });
+  });
+  return result;
+}
+
+function statusEntryLabel(status: RmaStatus, transition: StatusTransition): string {
+  if (transition.initial) return `Status inicial: ${statusLabel(status)}`;
+  if (transition.previous && transition.previous !== status) return `Status alterado de ${statusLabel(transition.previous)} para ${statusLabel(status)}`;
+  return `Status registrado: ${statusLabel(status)}`;
+}
+
 /**
  * Repair events, status records, assignee, due date and warranty changes, newest first. A status record may be a priority change
- * or a note with the same status, so no transition or origin is inferred from neighbours.
+ * or a note with the same status; then the previous status equals the current one and no transition is shown.
  * Ties keep input order (repair, status, assignee, due date and warranty); the input arrays are not changed.
  */
 export function rmaHistory(rma: Pick<RmaResponse, 'statusHistory' | 'assignmentHistory'> & Partial<Pick<RmaResponse, 'dueDateHistory' | 'warrantyHistory' | 'items' | 'repairHistory'>>): RmaHistoryEntry[] {
   const repairHistory = rma.repairHistory ?? [];
   const voids = new Map(repairHistory.filter(event => event.action === 'VOID').map(event => [`${event.entityType}-${event.entityId}`, event.summary]));
+  const transitions = statusTransitions(rma.statusHistory);
   const entries: RmaHistoryEntry[] = [
     ...repairHistory.map((event): RmaHistoryEntry => ({
       kind: 'repair', at: event.changedAt, by: event.changedBy, summary: event.summary,
       voided: voids.has(`${event.entityType}-${event.entityId}`), voidReason: voids.get(`${event.entityType}-${event.entityId}`) ?? null
     })),
-    ...rma.statusHistory.map((record): RmaHistoryEntry => ({
-      kind: 'status',
-      at: record.changedAt,
-      by: record.changedBy,
-      label: `Status registrado: ${statusLabel(record.status)}`,
-      status: record.status,
-      event: record,
-      note: record.note
-    })),
+    ...rma.statusHistory.map((record): RmaHistoryEntry => {
+      const transition = transitions.get(record)!;
+      return {
+        kind: 'status',
+        at: record.changedAt,
+        by: record.changedBy,
+        label: statusEntryLabel(record.status, transition),
+        status: record.status,
+        previous: transition.previous,
+        initial: transition.initial,
+        event: record,
+        note: record.note
+      };
+    }),
     ...rma.assignmentHistory.map((record): RmaHistoryEntry => ({
       kind: 'assignee',
       at: record.changedAt,

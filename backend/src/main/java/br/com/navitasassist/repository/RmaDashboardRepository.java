@@ -63,7 +63,9 @@ public interface RmaDashboardRepository extends Repository<RmaRecord, Long> {
     List<RmaDashboardRecentItem> findRecent(Pageable pageable);
 
     @Query("""
-        select new br.com.navitasassist.rma.RmaDashboardStatusEvent(r.id, r.code, h.status, h.changedBy, h.note, h.changedAt)
+        select new br.com.navitasassist.rma.RmaDashboardStatusEvent(r.id, r.code, h.status,
+            (select p.status from RmaStatusHistory p where p.id = (select max(q.id) from RmaStatusHistory q where q.rma = r and q.id < h.id)),
+            h.changedBy, h.note, h.changedAt)
         from RmaStatusHistory h join h.rma r
         order by h.changedAt desc, h.id desc
         """)

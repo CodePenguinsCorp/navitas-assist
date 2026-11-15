@@ -4,6 +4,7 @@ import { RmaHistoryListComponent } from '../../shared/rma-history-list/rma-histo
 import { RmaWarrantyFieldComponent } from '../../shared/rma-warranty-field/rma-warranty-field.component';
 import { RmaDiagnosisComponent } from '../../shared/rma-diagnosis/rma-diagnosis.component';
 import { RmaStatusFieldComponent } from '../../shared/rma-status-field/rma-status-field.component';
+import { RmaStatusTransitionComponent } from '../../shared/rma-status-transition/rma-status-transition.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { NgComponentOutlet } from '@angular/common';
 import { Component, ElementRef, Injector, Type, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
@@ -100,7 +101,7 @@ export interface RmaListFilters {
 
 @Component({
   selector: 'app-rmas',
-  imports: [TipDirective, CollapsibleSectionComponent, RmaHistoryListComponent, RmaWarrantyFieldComponent, RmaDiagnosisComponent, RmaStatusFieldComponent, IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, RmaRepairPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaAssigneeFieldComponent, RmaDeadlineChipComponent],
+  imports: [TipDirective, CollapsibleSectionComponent, RmaHistoryListComponent, RmaWarrantyFieldComponent, RmaDiagnosisComponent, RmaStatusFieldComponent, RmaStatusTransitionComponent, IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, RmaRepairPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaAssigneeFieldComponent, RmaDeadlineChipComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {

@@ -131,7 +131,7 @@
                       <time>{{ dateTimeLabel(entry.at) }}</time>
                     </div>
                     @if (entry.kind === 'status') {
-                      <p>{{ entry.label }}</p>
+                      <p><app-rma-status-transition [status]="entry.status" [previous]="entry.previous" [initial]="entry.initial" /></p>
                       <app-rma-status-field [rma]="rma()" [event]="entry.event" [showSelector]="false" [disabled]="writePending()" (saved)="applyUpdate($event)" (busyChange)="setWriterBusy('status', $event)" />
                     } @else if (entry.kind === 'assignee') {
                       <p>Responsável <span class="rma-detail__from">{{ entry.from }}</span> <span aria-hidden="true">→</span> <span class="mini-chip">{{ entry.to }}</span></p>

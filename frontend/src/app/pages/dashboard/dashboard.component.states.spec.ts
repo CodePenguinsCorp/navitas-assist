@@ -253,7 +253,7 @@ describe('DashboardComponent load states', () => {
     it('describes audit events like the OS history', async () => {
       await setup({ board: of([rmaFactory({ statusHistory: [history('TRIAGE', '2026-10-21T16:00:00Z', 'Aguardando peça', 'ana')] })]) });
       const [entry] = audit();
-      expect(normalized(entry)).toContain('Status registrado: Triagem');
+      expect(normalized(entry.querySelector('.sr-only'))).toBe('Status inicial: Triagem');
       const pair = Array.from(entry.querySelectorAll('.meta-list div')).find((item) => normalized(item.querySelector('dt')) === 'Alterado por');
       expect(normalized(pair?.querySelector('dd'))).toBe('ana');
       expect(normalized(entry.querySelector('blockquote'))).toBe('Aguardando peça');
@@ -267,6 +267,15 @@ describe('DashboardComponent load states', () => {
       // Preservação: as duas entradas já aparecem hoje.
       expect(audit().length).toBe(2);
       for (const entry of audit()) expect(entry.querySelector('a')?.getAttribute('href')).toBe('/rmas?rma=1');
+    });
+
+    it('shows the previous status as a pair of chips in the audit feed', async () => {
+      await setup({ board: of([rmaFactory({ statusHistory: [history('RECEIVED', '2026-10-20T16:00:00Z'), history('IN_DIAGNOSIS', '2026-10-21T16:00:00Z')] })]) });
+      const [latest, first] = audit();
+      expect(normalized(latest.querySelector('.sr-only'))).toBe('Status alterado de Recebida para Diagnóstico');
+      expect(Array.from(latest.querySelectorAll<HTMLElement>('.status-chip')).map((chip) => chip.dataset['status'])).toEqual(['RECEIVED', 'IN_DIAGNOSIS']);
+      expect(normalized(first.querySelector('.sr-only'))).toBe('Status inicial: Recebida');
+      expect(first.querySelectorAll('.status-chip')).toHaveLength(1);
     });
 
     it('preserves the four most recent audit events', async () => {

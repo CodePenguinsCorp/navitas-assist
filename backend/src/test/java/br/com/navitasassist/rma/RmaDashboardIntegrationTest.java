@@ -92,9 +92,13 @@ class RmaDashboardIntegrationTest {
             .andExpect(jsonPath("$.statusEvents", hasSize(4)))
             .andExpect(jsonPath("$.statusEvents[0].rmaId").value(closed))
             .andExpect(jsonPath("$.statusEvents[0].status").value("COMPLETED"))
+            .andExpect(jsonPath("$.statusEvents[0].previousStatus").value("RECEIVED"))
+            .andExpect(jsonPath("$.statusEvents[1].status").value("TRIAGE"))
+            .andExpect(jsonPath("$.statusEvents[1].previousStatus").value("RECEIVED"))
+            .andExpect(jsonPath("$.statusEvents[2].previousStatus").doesNotExist())
             .andExpect(jsonPath("$.statusEvents[0].changedBy").value("tech"))
             .andExpect(jsonPath("$.statusEvents[0].note").value("Encerrada no teste"))
-            .andExpect(jsonPath("$.statusEvents[0]", aMapWithSize(6)));
+            .andExpect(jsonPath("$.statusEvents[0]", aMapWithSize(7)));
     }
 
     @Test
