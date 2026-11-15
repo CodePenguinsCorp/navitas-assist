@@ -47,7 +47,7 @@ public class RmaReportPdfService {
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter INSTANT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm").withZone(BUSINESS_ZONE);
-    private static final String EMPTY = "-";
+    private static final String EMPTY = "—";
     private static final Color MUTED = new Color(90, 98, 110);
     private static final Color LINE = new Color(210, 214, 220);
     private static final Color ACCENT = new Color(31, 58, 95);

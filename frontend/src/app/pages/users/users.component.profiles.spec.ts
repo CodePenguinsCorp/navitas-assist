@@ -105,24 +105,24 @@ describe('UsersComponent profile and extra permissions', () => {
   });
 
   describe('collapsible extra permissions', () => {
-    const toggle = () => dialog().querySelector<HTMLButtonElement>('.extra-permissions button[aria-controls]')!;
-    const details = () => ({ open: toggle().getAttribute('aria-expanded') === 'true' && !dialog().querySelector<HTMLElement>(`#${toggle().getAttribute('aria-controls')}`)!.hidden });
+    const toggles = () => Array.from(dialog().querySelectorAll<HTMLButtonElement>('.extra-permissions button.permission-module__toggle'));
     const chipCount = () => dialog().querySelectorAll('.extra-permissions .permission-chip').length;
 
-    it('starts minimized for a new user and keeps the checkboxes in the DOM', async () => {
+    it('starts with every group collapsed and keeps the checkboxes in the DOM', async () => {
       await mount();
       component.openCreateModal();
       fixture.detectChanges();
-      expect(details().open).toBe(false);
+      expect(toggles()).toHaveLength(6);
+      expect(toggles().every((toggle) => toggle.getAttribute('aria-expanded') === 'false')).toBe(true);
       expect(chipCount()).toBe(0);
-      expect(dialog().querySelectorAll('.extra-permissions fieldset.permission-module').length).toBe(6);
+      expect(dialog().querySelectorAll('.extra-permissions fieldset.permission-module input').length).toBeGreaterThan(0);
     });
 
-    it('opens by itself when the user being edited already has extras, and counts them', async () => {
+    it('shows the extras already granted as chips while the groups stay collapsed', async () => {
       await mount();
       component.openEditModal(account({ extraPermissions: ['rma.status', 'pecas.reservar'] }));
       fixture.detectChanges();
-      expect(details().open).toBe(true);
+      expect(toggles().every((toggle) => toggle.getAttribute('aria-expanded') === 'false')).toBe(true);
       expect(chipCount()).toBe(2);
     });
 
@@ -134,18 +134,6 @@ describe('UsersComponent profile and extra permissions', () => {
       extraBox('Alterar status').querySelector('input')!.click();
       fixture.detectChanges();
       expect(chipCount()).toBe(1);
-    });
-
-    it('is minimized again the next time a new user is created', async () => {
-      await mount();
-      component.openEditModal(account({ extraPermissions: ['rma.status'] }));
-      fixture.detectChanges();
-      expect(details().open).toBe(true);
-      component.closeModal();
-      fixture.detectChanges();
-      component.openCreateModal();
-      fixture.detectChanges();
-      expect(details().open).toBe(false);
     });
   });
 

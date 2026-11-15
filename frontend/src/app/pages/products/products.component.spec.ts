@@ -255,7 +255,7 @@ describe('ProductsComponent collection layout and states', () => {
     expect(versionCells[0].textContent).toContain('3.1');
     expect(versionCells[1].textContent).not.toContain('Hardware');
     expect(versionCells[1].textContent).toContain('Firmware');
-    expect(versionCells[2].querySelector('[aria-hidden="true"]')?.textContent?.trim()).toBe('-');
+    expect(versionCells[2].querySelector('[aria-hidden="true"]')?.textContent?.trim()).toBe('—');
     expect(versionCells[2].querySelector('.sr-only')?.textContent?.trim()).toBe('Versões não informadas');
     expect(body).not.toContain('HW ');
     expect(body).not.toContain('FW ');

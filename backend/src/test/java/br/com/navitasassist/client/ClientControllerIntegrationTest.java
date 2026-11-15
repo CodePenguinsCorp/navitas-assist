@@ -60,7 +60,7 @@ class ClientControllerIntegrationTest {
 
     @Test
     void shouldCreateClientWith120CharactersIgnoringSpacesAndDashes() throws Exception {
-        String legalName = "A -–- ".repeat(119) + "Z";
+        String legalName = "A -–— ".repeat(119) + "Z";
 
         mockMvc.perform(post("/api/clients")
                 .with(asProfile("admin", "ADMIN"))
@@ -136,7 +136,7 @@ class ClientControllerIntegrationTest {
         Client client = new Client();
         client.setLegalName("Cliente original");
         Long id = clientRepository.save(client).getId();
-        String legalName = "A -–- ".repeat(119) + "Z";
+        String legalName = "A -–— ".repeat(119) + "Z";
 
         mockMvc.perform(put("/api/clients/{id}", id)
                 .with(asProfile("admin", "ADMIN")).with(csrf())

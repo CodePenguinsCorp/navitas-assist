@@ -129,7 +129,6 @@ export class UsersComponent {
   /** Extras marcadas no diálogo. As que o perfil escolhido já inclui ficam guardadas, mas não vão no envio. */
   protected readonly extras = signal<ReadonlySet<Permission>>(new Set());
   private readonly selectedProfileId = signal<number | null>(null);
-  protected readonly extrasOpen = signal(false);
   protected readonly accessReady = computed(() => this.profileOptionsState() === 'ready' && this.catalogState() === 'ready');
   protected readonly accessFailed = computed(() => this.profileOptionsState() === 'failed' || this.catalogState() === 'failed');
   protected readonly profileSelectOptions = computed<ReadonlyArray<CustomSelectOption<number>>>(() =>
@@ -206,7 +205,6 @@ export class UsersComponent {
     this.configurePasswordValidation(true);
     this.form.reset(emptyUserForm());
     this.extras.set(new Set());
-    this.extrasOpen.set(false);
     this.activeModal.set('create');
     this.clearMessages();
     this.loadAccessSources();
@@ -224,7 +222,6 @@ export class UsersComponent {
       active: user.active
     });
     this.extras.set(new Set(user.extraPermissions.filter(isPermission)));
-    this.extrasOpen.set(user.extraPermissions.filter(isPermission).length > 0);
     this.selectProfile(user.profile.id);
     this.activeModal.set('edit');
     this.clearMessages();

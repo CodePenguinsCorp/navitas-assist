@@ -97,7 +97,7 @@
                   <span class="person"><span class="avatar" aria-hidden="true">{{ initials(user.fullName) }}</span><strong class="table-title">{{ user.fullName }}</strong></span>
                 </td>
                 <td><span class="code-text">{{ user.username }}</span></td>
-                <td class="user-email">{{ user.email || '-' }}</td>
+                <td class="user-email">{{ user.email || '—' }}</td>
                 <td>
                   {{ user.profile.name }}
                   @if (extrasLabel(user)) { <span class="mini-chip">{{ extrasLabel(user) }}</span> }
@@ -247,7 +247,6 @@
               [locked]="profilePermissions()"
               [disabled]="submitting()"
               [(selected)]="extras"
-              [(expanded)]="extrasOpen"
             />
           }
         </fieldset>

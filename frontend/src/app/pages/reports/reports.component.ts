@@ -170,7 +170,7 @@ export class ReportsComponent {
   }
 
   protected percent(part: number, base: number): string {
-    return base ? `${(Math.round((part / base) * 1000) / 10).toFixed(1).replace('.', ',')}%` : '-';
+    return base ? `${(Math.round((part / base) * 1000) / 10).toFixed(1).replace('.', ',')}%` : '—';
   }
 
   protected barWidth(count: number, rows: { count: number }[]): number {

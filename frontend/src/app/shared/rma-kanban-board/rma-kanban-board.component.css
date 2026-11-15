@@ -30,8 +30,14 @@
   padding-bottom: var(--space-2);
   overscroll-behavior-x: contain;
   scrollbar-gutter: stable both-edges;
-  scrollbar-color: #8fb8d8 #e3ecf4;
 }
+
+/* Same bar as the modals: rounded track, gradient thumb and no arrow buttons (scrollbar-color would bring them back). */
+.board-shell::-webkit-scrollbar { width: 12px; height: 12px; }
+.board-shell::-webkit-scrollbar-track { border-radius: 999px; background: rgba(205, 220, 235, 0.65); }
+.board-shell::-webkit-scrollbar-thumb { border-radius: 999px; background: linear-gradient(90deg, #1c76bb 0%, #2ea8d4 100%); }
+.board-shell::-webkit-scrollbar-thumb:hover { background: linear-gradient(90deg, #165f98 0%, #238cb4 100%); }
+.board-shell::-webkit-scrollbar-button, .board-shell::-webkit-scrollbar-corner { display: none; width: 0; height: 0; }
 
 .board-grid {
   display: grid;

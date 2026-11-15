@@ -163,10 +163,10 @@ describe('DashboardComponent load states', () => {
     });
 
     // Vermelho: não há legenda de escopo quando a fila é limitada a cinco.
-    it('states how many active ordens de serviço the queue shows', async () => {
+    it('shows only the five first active ordens de serviço in the queue, with no counting text', async () => {
       const active = Array.from({ length: 7 }, (_, index) => rmaFactory({ id: index + 1, code: `OS-${index + 1}` }));
       await setup({ board: of([RMA_CLOSED, ...active]) });
-      expect(text()).toContain('5 primeiras de 7 ordens de serviço em andamento');
+      expect(text()).not.toContain('primeiras de');
       expect(tables()[0].querySelectorAll('tbody tr').length).toBe(5);
     });
 
@@ -187,8 +187,7 @@ describe('DashboardComponent load states', () => {
       expect(codes).toEqual(['OS-HIGH', 'OS-MED-OLD', 'OS-MED-NEW', 'OS-LOW']);
     });
 
-    // Vermelho: rótulos, escopo e detalhe não existem, Cadastros mostra a soma e há barras.
-    it('states indicator scope and keeps the warranty percentage', async () => {
+    it('shows each indicator as a short title and a number, with no explanatory text', async () => {
       await setup({
         role: 'ADMIN',
         board: of([OPEN_2, RMA_CLOSED]),
@@ -196,14 +195,13 @@ describe('DashboardComponent load states', () => {
         products: of({ ...PRODUCTS, total: 4 }),
         users: of({ ...USERS, total: 2 })
       });
-      expect(normalized(indicator('Ordens de serviço em andamento'))).toContain('1 de 2 registradas');
-      const warranty = normalized(indicator('Itens em garantia'));
-      // Preservação: o percentual de 50% já existe hoje.
-      expect(warranty).toContain('50%');
-      expect(warranty).toContain('1 de 2 itens · 1 pendente');
-      expect(warranty).toContain('em todas as ordens de serviço registradas');
-      expect(normalized(indicator('Cadastros'))).toContain('3 clientes · 4 produtos · 2 usuários');
-      expect(normalized(indicator('Cadastros'))).not.toContain('9');
+      const value = (label: string) => normalized(indicator(label)?.querySelector('.dashboard-summary__value'));
+      expect(value('Em andamento')).toBe('1');
+      expect(value('Em garantia')).toBe('50%');
+      expect(value('Clientes')).toBe('3');
+      expect(value('Produtos')).toBe('4');
+      expect(value('Usuários')).toBe('2');
+      expect(normalized(indicator('Em andamento'))).not.toContain('registradas');
       expect(root().querySelector('.meter')).toBeNull();
     });
 
@@ -221,35 +219,34 @@ describe('DashboardComponent load states', () => {
       });
       await setup({ board: of([due(1, -3), due(2, -1), due(3, 2), due(4, 30), due(5, -9, 'COMPLETED'), rmaFactory({ id: 6 })]) });
       const card = indicator('Atrasadas')!;
-      expect(normalized(card.querySelector('.dashboard-summary__value'))).toBe('2 · 1 perto do limite');
+      expect(normalized(card.querySelector('.dashboard-summary__value'))).toBe('2');
+      expect(normalized(indicator('Perto do limite')?.querySelector('.dashboard-summary__value'))).toBe('1');
       expect(card.getAttribute('data-tone')).toBe('danger');
       const labels = Array.from(root().querySelectorAll('ul[aria-label="Indicadores do dashboard"] > li .dashboard-summary__label')).map((item) => item.textContent?.trim());
       expect(labels[1]).toBe('Atrasadas');
     });
 
-    it('keeps the catalog card style regardless of position', async () => {
-      await setup();
+    it('gives each indicator its tone and keeps the order', async () => {
+      await setup({ role: 'ADMIN' });
       const items = Array.from(root().querySelectorAll<HTMLElement>('ul[aria-label="Indicadores do dashboard"] > li'));
-      expect(items.map((item) => item.getAttribute('data-tone'))).toEqual(['brand', 'danger', 'sky', 'success', 'violet']);
-      expect(items.filter((item) => item.classList.contains('dashboard-summary__item--catalog')).map((item) => normalized(item.querySelector('.dashboard-summary__label'))))
-        .toEqual(['Cadastros']);
+      expect(items.map((item) => item.getAttribute('data-tone'))).toEqual(['brand', 'danger', 'warning', 'sky', 'success', 'violet', 'violet', 'violet']);
     });
 
     it('keeps the initial queue indicator and omits users for non-admin profiles', async () => {
       await setup({ role: 'TECHNICIAN', board: of([rmaFactory({ id: 1, priority: 'HIGH' }), rmaFactory({ id: 2, status: 'TRIAGE' })]) });
-      expect(normalized(indicator('Fila inicial'))).toContain('2 · 1 com prioridade alta');
-      expect(normalized(indicator('Cadastros'))).toContain('0 clientes · 0 produtos');
-      expect(normalized(indicator('Cadastros'))).not.toContain('usuários');
+      expect(normalized(indicator('Fila inicial')?.querySelector('.dashboard-summary__value'))).toBe('2');
+      expect(indicator('Clientes')).toBeDefined();
+      expect(indicator('Usuários')).toBeUndefined();
     });
 
     it('follows the users permission when it changes', async () => {
       const permissions = signal<readonly Permission[]>(profilePermissions('ADMIN'));
       await setup({ permissions, users: of({ ...USERS, total: 2 }) });
-      expect(normalized(indicator('Cadastros'))).toContain('2 usuários');
+      expect(normalized(indicator('Usuários')?.querySelector('.dashboard-summary__value'))).toBe('2');
 
       permissions.set(profilePermissions('TECHNICIAN'));
       fixture.detectChanges();
-      expect(normalized(indicator('Cadastros'))).not.toContain('usuários');
+      expect(indicator('Usuários')).toBeUndefined();
     });
 
     // Vermelho: com nota, o autor desaparece, e não há link.

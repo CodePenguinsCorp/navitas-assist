@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { Subject, of, throwError } from 'rxjs';
 import { AuditComponent } from './audit.component';
+import { todayInputValue } from '../../core/utils/date';
 import { AuditService } from '../../core/services/audit.service';
 import { AuditEventResponse, PageResponse } from '../../core/models';
 import { CustomSelectComponent } from '../../shared/form-controls/custom-select/custom-select.component';
@@ -36,6 +37,7 @@ describe('AuditComponent', () => {
     actor.value = 'operador'; actor.dispatchEvent(new Event('input'));
     const dates = fixture.debugElement.queryAll(By.directive(DatePickerComponent));
     dates[0].componentInstance.selectDay({ iso: '2026-11-01' });
+    fixture.detectChanges();
     dates[1].componentInstance.selectDay({ iso: '2026-11-13' });
     const selects = fixture.debugElement.queryAll(By.directive(CustomSelectComponent));
     // ControlValueAccessor follows the same selection path used by the menu.
@@ -44,7 +46,7 @@ describe('AuditComponent', () => {
     fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit'));
     expect(service.search).toHaveBeenLastCalledWith({ page: 0, size: 20, actor: 'operador', from: '2026-11-01', to: '2026-11-13', action: 'UPDATE', entityType: 'USER' });
     button('Limpar filtros').click();
-    expect(service.search).toHaveBeenLastCalledWith({ page: 0, size: 20, actor: '', from: '', to: '', action: '', entityType: '' });
+    expect(service.search).toHaveBeenLastCalledWith({ page: 0, size: 20, actor: '', from: todayInputValue(), to: todayInputValue(), action: '', entityType: '' });
   });
 
   it('requests another page and changes page size', () => {

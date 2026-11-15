@@ -126,9 +126,9 @@
 }
 
 .kanban-views__title {
-  color: var(--muted);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
+  /* Same type as the Busca label next to it. */
+  color: inherit;
+  font: inherit;
 }
 
 .kanban-views__controls {

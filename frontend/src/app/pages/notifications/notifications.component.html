@@ -300,11 +300,11 @@
                 @for (failure of emailFailures(); track failure.notificationId ?? failure.eventKey + failure.recipient) {
                   <tr>
                     <td data-label="Data"><time>{{ dateTime(failure.occurredAt) }}</time></td>
-                    <td data-label="OS">{{ failure.rmaCode || '-' }}</td>
-                    <td data-label="Destinatário">{{ failure.recipient || '-' }}</td>
+                    <td data-label="OS">{{ failure.rmaCode || '—' }}</td>
+                    <td data-label="Destinatário">{{ failure.recipient || '—' }}</td>
                     <td data-label="Tentativas">{{ failure.attempts ?? 0 }}</td>
                     <td class="failure-error" data-label="Erro">
-                      {{ failure.error || '-' }}
+                      {{ failure.error || '—' }}
                       @if (failure.notificationId != null && retryErrors()[failure.notificationId!]) { <small class="field-error" role="alert">{{ retryErrors()[failure.notificationId!] }}</small> }
                     </td>
                     <td class="table-actions-col" data-label="Ação">
@@ -355,9 +355,9 @@
                     <td data-label="Data">{{ dateTime(failure.occurredAt) }}</td>
                     <td data-label="Origem">{{ failureSource(failure) }}</td>
                     <td data-label="Alerta">{{ eventLabels[failure.eventType] }}</td>
-                    <td data-label="OS">{{ failure.rmaCode || '-' }}</td>
-                    <td data-label="Destinatário">{{ failure.recipient || '-' }}</td>
-                    <td class="failure-error" data-label="Erro">{{ failure.error || '-' }}</td>
+                    <td data-label="OS">{{ failure.rmaCode || '—' }}</td>
+                    <td data-label="Destinatário">{{ failure.recipient || '—' }}</td>
+                    <td class="failure-error" data-label="Erro">{{ failure.error || '—' }}</td>
                   </tr>
                 }
               </tbody>

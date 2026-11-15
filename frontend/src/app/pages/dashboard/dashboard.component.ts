@@ -24,11 +24,8 @@ import { formatBusinessDateTime as formatDateTime, formatDateOnly } from '../../
 interface DashboardIndicator {
   label: string;
   value: string;
-  detail: string;
   icon: IconName;
-  tone: 'brand' | 'sky' | 'danger' | 'success' | 'violet';
-  /** The catalog card shows a text value instead of a number. */
-  catalog?: boolean;
+  tone: 'brand' | 'sky' | 'danger' | 'success' | 'violet' | 'warning';
 }
 
 interface QueueRow {
@@ -99,6 +96,7 @@ interface RecentRmaRow {
     .dashboard-summary__item[data-tone='danger'] { --tone: var(--tone-danger); }
     .dashboard-summary__item[data-tone='success'] { --tone: var(--tone-success); }
     .dashboard-summary__item[data-tone='violet'] { --tone: var(--tone-violet); }
+    .dashboard-summary__item[data-tone='warning'] { --tone: var(--tone-warning); }
 
     .dashboard-summary__item > .icon-tile {
       grid-row: span 2;
@@ -134,20 +132,8 @@ interface RecentRmaRow {
       font-variant-numeric: tabular-nums;
     }
 
-    .dashboard-summary__item--catalog .dashboard-summary__value strong {
-      font-size: 1.05rem;
-      font-weight: var(--font-weight-bold);
-      letter-spacing: 0;
-    }
-
     .dashboard-grid > .panel,
     .dashboard-recent { min-width: 0; }
-
-    .dashboard-scope {
-      margin: var(--space-1) 0 0;
-      color: var(--muted);
-      font-size: 0.85rem;
-    }
 
     .dashboard-audit__body {
       display: grid;
@@ -193,57 +179,22 @@ export class DashboardComponent {
     return this.totalCount() - CLOSED_RMA_STATUSES.reduce((sum, status) => sum + (counts[status] ?? 0), 0);
   });
 
+  /** Indicators are just a short title and a number: whoever reads the dashboard knows what each one means. */
   protected readonly indicators = computed<DashboardIndicator[]>(() => {
     const dashboard = this.dashboardSignal();
-    const total = this.totalCount();
-    const active = this.activeCount();
     const initialQueue = (dashboard.statusCounts.RECEIVED ?? 0) + (dashboard.statusCounts.TRIAGE ?? 0);
     const items = dashboard.items;
     const warrantyRate = items === 0 ? 0 : Math.round((dashboard.itemsInWarranty / items) * 100);
-    const pending = dashboard.itemsPendingWarranty;
-    const catalog = [
-      `${this.clientTotalSignal()} ${this.clientTotalSignal() === 1 ? 'cliente' : 'clientes'}`,
-      `${this.productTotalSignal()} ${this.productTotalSignal() === 1 ? 'produto' : 'produtos'}`,
-      ...(this.isAdmin() ? [`${this.userTotalSignal()} ${this.userTotalSignal() === 1 ? 'usuário' : 'usuários'}`] : [])
-    ];
 
     return [
-      {
-        label: 'Ordens de serviço em andamento',
-        value: String(active),
-        detail: `de ${total} ${total === 1 ? 'registrada' : 'registradas'}`,
-        icon: 'clipboard',
-        tone: 'brand'
-      },
-      {
-        label: 'Atrasadas',
-        value: String(dashboard.overdue),
-        detail: `· ${dashboard.dueSoon} perto do limite`,
-        icon: 'clock',
-        tone: 'danger'
-      },
-      {
-        label: 'Fila inicial (Recebida e Triagem)',
-        value: String(initialQueue),
-        detail: `· ${dashboard.initialQueueHighPriority} com prioridade alta`,
-        icon: 'inbox',
-        tone: 'sky'
-      },
-      {
-        label: 'Itens em garantia',
-        value: `${warrantyRate}%`,
-        detail: `· ${dashboard.itemsInWarranty} de ${items} ${items === 1 ? 'item' : 'itens'} · ${pending} ${pending === 1 ? 'pendente' : 'pendentes'}, em todas as ordens de serviço registradas`,
-        icon: 'shield',
-        tone: 'success'
-      },
-      {
-        label: 'Cadastros',
-        value: catalog.join(' · '),
-        detail: '',
-        icon: 'layers',
-        tone: 'violet',
-        catalog: true
-      }
+      { label: 'Em andamento', value: String(this.activeCount()), icon: 'clipboard', tone: 'brand' },
+      { label: 'Atrasadas', value: String(dashboard.overdue), icon: 'clock', tone: 'danger' },
+      { label: 'Perto do limite', value: String(dashboard.dueSoon), icon: 'calendar', tone: 'warning' },
+      { label: 'Fila inicial', value: String(initialQueue), icon: 'inbox', tone: 'sky' },
+      { label: 'Em garantia', value: `${warrantyRate}%`, icon: 'shield', tone: 'success' },
+      { label: 'Clientes', value: String(this.clientTotalSignal()), icon: 'building', tone: 'violet' },
+      { label: 'Produtos', value: String(this.productTotalSignal()), icon: 'box', tone: 'violet' },
+      ...(this.isAdmin() ? [{ label: 'Usuários', value: String(this.userTotalSignal()), icon: 'users' as IconName, tone: 'violet' as const }] : [])
     ];
   });
 

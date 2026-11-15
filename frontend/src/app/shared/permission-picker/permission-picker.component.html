@@ -14,32 +14,25 @@
         </ul>
     </div>
     }
-    <button
-      type="button"
-      class="permission-picker__chevron"
-      [class.is-open]="expanded()"
-      [attr.aria-label]="expanded() ? 'Ocultar permissões' : 'Mostrar todas as permissões'"
-      [attr.aria-expanded]="expanded()"
-      [attr.aria-controls]="panelId"
-      (click)="toggleExpanded()"
-    >
-      <app-icon name="chevron" [size]="18" />
-    </button>
   </div>
 }
 
-<div #panel class="permission-picker__panel" [id]="panelId" [hidden]="mode() === 'extras' && !expanded()">
+<div class="permission-picker__panel" [id]="panelId">
   @if (mode() === 'profile') { <span class="permission-picker__total" aria-live="polite">{{ total() }}</span> }
 
   <div class="permission-picker__grid">
     @for (module of catalog(); track module.module) {
       <fieldset class="permission-module">
         <legend>
-          <span class="permission-module__tile" aria-hidden="true"><app-icon [name]="iconFor(module.module)" [size]="16" /></span>
-          <span class="permission-module__heading">
-            <span class="permission-module__name">{{ module.label }}</span>{{ ' ' }}<span class="permission-module__count">{{ onCount(module) }} de {{ module.permissions.length }}</span>
-          </span>
+          <button type="button" class="permission-module__toggle" [attr.aria-expanded]="isModuleOpen(module.module)" [attr.aria-controls]="panelId + '-' + module.module" (click)="toggleModule(module.module)">
+            <span class="permission-module__tile" aria-hidden="true"><app-icon [name]="iconFor(module.module)" [size]="16" /></span>
+            <span class="permission-module__heading">
+              <span class="permission-module__name">{{ module.label }}</span>{{ ' ' }}<span class="permission-module__count">{{ onCount(module) }} de {{ module.permissions.length }}</span>
+            </span>
+            <span class="permission-module__chevron" [class.is-open]="isModuleOpen(module.module)" aria-hidden="true"><app-icon name="chevron" [size]="16" /></span>
+          </button>
         </legend>
+        <div class="permission-module__rows" [id]="panelId + '-' + module.module" [hidden]="!isModuleOpen(module.module)">
         @for (item of module.permissions; track item.code) {
           <label
             class="permission-row"
@@ -61,6 +54,7 @@
             }
           </label>
         }
+        </div>
       </fieldset>
     }
   </div>

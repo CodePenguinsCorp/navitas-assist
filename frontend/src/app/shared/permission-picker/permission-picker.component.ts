@@ -1,5 +1,5 @@
 import { TipDirective } from '../tip/tip.directive';
-import { Component, ElementRef, Injector, afterNextRender, computed, inject, input, model, viewChild } from '@angular/core';
+import { Component, computed, input, model, signal } from '@angular/core';
 import { PermissionModuleResponse } from '../../core/models';
 import { Permission, isPermission } from '../../core/permissions';
 import { IconComponent, IconName } from '../icon/icon.component';
@@ -22,18 +22,10 @@ let nextPanelId = 0;
   selector: 'app-permission-picker',
   imports: [TipDirective, IconComponent],
   templateUrl: './permission-picker.component.html',
-  host: { '[class.is-extras]': "mode() === 'extras'" },
   styles: [`
     :host { display: grid; gap: var(--space-3); grid-column: 1 / -1; min-width: 0; }
     .permission-picker__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: var(--control-height); }
     .permission-picker__granted { display: grid; gap: var(--space-2); flex: 1 1 260px; min-width: 0; }
-    /* Extras: the arrow sits in the box header (top right), so no empty row is left below the title. */
-    :host(.is-extras), :host(.is-extras) .permission-picker__head { display: contents; }
-    .permission-picker__chevron { position: absolute; top: var(--space-2); right: var(--space-3); z-index: 1; display: inline-flex; align-items: center; justify-content: center; width: var(--control-height-xs); height: var(--control-height-xs); padding: 0; border-radius: var(--radius-xs); background: transparent; color: var(--muted); }
-    .permission-picker__chevron:hover { color: var(--brand-blue-deep); background: var(--brand-tint); }
-    .permission-picker__chevron:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-    .permission-picker__chevron app-icon { display: inline-flex; transition: transform 160ms ease; }
-    .permission-picker__chevron.is-open app-icon { transform: rotate(90deg); }
     .permission-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
     .permission-picker__panel { display: grid; gap: var(--space-3); min-width: 0; }
     .permission-picker__panel[hidden] { display: none; }
@@ -51,6 +43,17 @@ let nextPanelId = 0;
       float: left; flex: 1 1 auto; display: flex; align-items: center; gap: var(--space-2); min-width: 0;
       min-height: var(--control-height); padding: 0 var(--space-1); color: var(--brand-dark);
     }
+    .permission-module__toggle {
+      display: flex; align-items: center; gap: var(--space-2); width: 100%; min-width: 0; padding: 0; border: 0; border-radius: var(--radius-sm);
+      background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+    }
+    .permission-module__toggle:hover .permission-module__name { text-decoration: underline; text-underline-offset: 3px; }
+    .permission-module__toggle:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+    .permission-module__chevron { display: inline-flex; margin-inline-start: auto; color: var(--muted); }
+    .permission-module__chevron app-icon { display: inline-flex; transition: transform 160ms ease; }
+    .permission-module__chevron.is-open app-icon { transform: rotate(90deg); }
+    .permission-module__rows { display: grid; flex: 1 1 100%; min-width: 0; }
+    .permission-module__rows[hidden] { display: none; }
     .permission-module__tile {
       display: grid; place-items: center; flex-shrink: 0; width: 28px; height: 28px;
       border-radius: var(--radius-sm); background: var(--brand-tint); color: var(--brand-blue);
@@ -62,8 +65,6 @@ let nextPanelId = 0;
   `]
 })
 export class PermissionPickerComponent {
-  private readonly injector = inject(Injector);
-  private readonly panel = viewChild<ElementRef<HTMLElement>>('panel');
 
   readonly catalog = input.required<readonly PermissionModuleResponse[]>();
   readonly mode = input<PermissionPickerMode>('profile');
@@ -71,8 +72,8 @@ export class PermissionPickerComponent {
   readonly locked = input<ReadonlySet<string>>(new Set());
   readonly disabled = input(false);
   readonly selected = model<ReadonlySet<Permission>>(new Set());
-  /** Painel aberto no modo `extras`; no modo `profile` ele fica sempre aberto. */
-  readonly expanded = model(false);
+  /** Groups the user flipped from their initial state: closed in `extras` (a long list), open in `profile`. */
+  private readonly flipped = signal<ReadonlySet<string>>(new Set());
 
   protected readonly panelId = `permission-picker-${++nextPanelId}`;
 
@@ -119,12 +120,14 @@ export class PermissionPickerComponent {
     this.update([code], checked);
   }
 
-  protected toggleExpanded(): void {
-    const open = !this.expanded();
-    this.expanded.set(open);
-    if (open) {
-      afterNextRender(() => this.panel()?.nativeElement.querySelector<HTMLInputElement>('input:not(:disabled)')?.focus(), { injector: this.injector });
-    }
+  protected isModuleOpen(module: string): boolean {
+    return (this.mode() === 'profile') !== this.flipped().has(module);
+  }
+
+  protected toggleModule(module: string): void {
+    const next = new Set(this.flipped());
+    if (!next.delete(module)) next.add(module);
+    this.flipped.set(next);
   }
 
   private update(codes: string[], checked: boolean): void {

@@ -66,6 +66,6 @@ export class DonutChartComponent {
   protected readonly arcs = computed(() => buildDonutArcs(this.slices()));
   protected readonly empty = computed(() => this.arcs().every((arc) => arc.value === 0));
   private readonly activeArc = computed(() => (this.active() === null ? null : this.arcs()[this.active() as number] ?? null));
-  protected readonly shownValue = computed(() => (this.empty() ? '-' : this.activeArc()?.value ?? this.centerValue()));
+  protected readonly shownValue = computed(() => (this.empty() ? '—' : this.activeArc()?.value ?? this.centerValue()));
   protected readonly shownLabel = computed(() => (this.empty() ? 'Sem dados' : this.activeArc()?.label ?? this.centerLabel()));
 }

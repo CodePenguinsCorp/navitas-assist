@@ -13,7 +13,6 @@ import { PermissionPickerComponent, PermissionPickerMode } from './permission-pi
       [locked]="locked()"
       [disabled]="disabled()"
       [(selected)]="selected"
-      [(expanded)]="expanded"
     />
   `
 })
@@ -23,7 +22,6 @@ class HostComponent {
   readonly locked = signal<ReadonlySet<string>>(new Set());
   readonly disabled = signal(false);
   readonly selected = signal<ReadonlySet<Permission>>(new Set());
-  readonly expanded = signal(false);
 }
 
 describe('PermissionPickerComponent', () => {
@@ -49,8 +47,8 @@ describe('PermissionPickerComponent', () => {
     .find((item) => text(item.querySelector('.permission-row__label')) === label)!;
   const switchOf = (label: string) => row(label).querySelector<HTMLInputElement>('input[type="checkbox"]')!;
   const counter = (index: number) => text(modules()[index].querySelector('.permission-module__count'));
-  const toggleButton = () => element.querySelector<HTMLButtonElement>('button[aria-controls]')!;
-  const panel = () => element.querySelector<HTMLElement>('.permission-picker__panel')!;
+  const toggleOf = (index: number) => modules()[index].querySelector<HTMLButtonElement>('button.permission-module__toggle')!;
+  const rowsOf = (index: number) => modules()[index].querySelector<HTMLElement>('.permission-module__rows')!;
   const chips = () => Array.from(element.querySelectorAll('.permission-chip')).map((chip) => text(chip.querySelector('.permission-chip__label')));
   const render = () => fixture.detectChanges();
 
@@ -64,10 +62,9 @@ describe('PermissionPickerComponent', () => {
       const switches = Array.from(element.querySelectorAll<HTMLInputElement>('fieldset.permission-module input[type="checkbox"]'));
       expect(switches.length).toBe(22);
       expect(switches.every((input) => input.getAttribute('role') === 'switch')).toBe(true);
-      expect(panel().hidden).toBe(false);
-      expect(toggleButton()).toBeNull();
+      expect(modules().every((_, index) => toggleOf(index).getAttribute('aria-expanded') === 'true' && !rowsOf(index).hidden)).toBe(true);
       expect(element.querySelector('input[type="search"]')).toBeNull();
-      expect(Array.from(element.querySelectorAll('button')).map(text)).toEqual([]);
+      expect(element.querySelectorAll('button:not(.permission-module__toggle)')).toHaveLength(0);
     });
 
     it('toggles a permission and updates the counters', async () => {
@@ -98,7 +95,7 @@ describe('PermissionPickerComponent', () => {
 
     it('disables every control while disabled', async () => {
       await mount((h) => h.disabled.set(true));
-      const controls = Array.from(element.querySelectorAll<HTMLInputElement | HTMLButtonElement>('fieldset.permission-module input, fieldset.permission-module button'));
+      const controls = Array.from(element.querySelectorAll<HTMLInputElement | HTMLButtonElement>('fieldset.permission-module input'));
       expect(controls.length).toBeGreaterThan(20);
       expect(controls.every((control) => control.disabled)).toBe(true);
     });
@@ -128,30 +125,31 @@ describe('PermissionPickerComponent', () => {
       expect(counter(0)).toBe('3 de 8');
     });
 
-    it('starts collapsed with a toggle wired to the panel', async () => {
+    it('starts with every group collapsed, each with its own toggle wired to its rows', async () => {
       await mount((h) => extras(h));
-      expect(panel().hidden).toBe(true);
-      expect(toggleButton().getAttribute('aria-expanded')).toBe('false');
-      expect(toggleButton().getAttribute('aria-controls')).toBe(panel().id);
-      expect(toggleButton().getAttribute('aria-label')).toBe('Mostrar todas as permissões');
+      expect(modules()).toHaveLength(6);
+      for (let index = 0; index < modules().length; index++) {
+        expect(rowsOf(index).hidden).toBe(true);
+        expect(toggleOf(index).getAttribute('aria-expanded')).toBe('false');
+        expect(toggleOf(index).getAttribute('aria-controls')).toBe(rowsOf(index).id);
+      }
+      expect(element.querySelector('.permission-picker__chevron')).toBeNull();
       expect(element.querySelector('.permission-picker__summary')).toBeNull();
       expect(element.querySelector('.permission-picker__total')).toBeNull();
       expect(chips()).toEqual([]);
     });
 
-    it('expands, moves focus into the panel and collapses again', async () => {
+    it('opens and closes one group without touching the others, keeping the switches in the DOM', async () => {
       await mount((h) => extras(h));
-      toggleButton().click();
+      toggleOf(0).click();
       render();
-      await fixture.whenStable();
-      expect(host.expanded()).toBe(true);
-      expect(panel().hidden).toBe(false);
-      expect(toggleButton().getAttribute('aria-expanded')).toBe('true');
-      expect(document.activeElement).toBe(panel().querySelector('input[type="checkbox"]:not(:disabled)'));
-      toggleButton().click();
+      expect(rowsOf(0).hidden).toBe(false);
+      expect(toggleOf(0).getAttribute('aria-expanded')).toBe('true');
+      expect(rowsOf(1).hidden).toBe(true);
+      expect(element.querySelectorAll('label.permission-row').length).toBeGreaterThan(0);
+      toggleOf(0).click();
       render();
-      expect(host.expanded()).toBe(false);
-      expect(panel().hidden).toBe(true);
+      expect(rowsOf(0).hidden).toBe(true);
     });
 
     it('lists the granted extras as chips, without the profile ones, and removes them', async () => {

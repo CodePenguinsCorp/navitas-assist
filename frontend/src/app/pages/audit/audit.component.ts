@@ -4,7 +4,7 @@ import { AuditService } from '../../core/services/audit.service';
 import { AuditEventResponse } from '../../core/models';
 import { PagedList } from '../../core/utils/paged-list';
 import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
-import { formatBusinessDateTime } from '../../core/utils/date';
+import { formatBusinessDateTime, todayInputValue } from '../../core/utils/date';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { ResultCountComponent } from '../../shared/result-count/result-count.component';
@@ -21,7 +21,9 @@ import { IconComponent } from '../../shared/icon/icon.component';
 export class AuditComponent {
   private readonly service = inject(AuditService);
   protected readonly error = signal('');
-  protected readonly filters = inject(FormBuilder).nonNullable.group({ from: '', to: '', actor: '', action: '', entityType: '' });
+  /** Opens on today: the full history is large and would make the first load slow. */
+  private readonly defaultFilters = () => ({ from: todayInputValue(), to: todayInputValue(), actor: '', action: '', entityType: '' });
+  protected readonly filters = inject(FormBuilder).nonNullable.group(this.defaultFilters());
   private appliedFilters = this.filters.getRawValue();
   protected readonly dateTime = formatBusinessDateTime;
   protected readonly list = new PagedList<AuditEventResponse>(
@@ -53,7 +55,7 @@ export class AuditComponent {
   }
 
   protected clearFilters(): void {
-    this.filters.reset();
+    this.filters.reset(this.defaultFilters());
     this.applyFilters();
   }
 
