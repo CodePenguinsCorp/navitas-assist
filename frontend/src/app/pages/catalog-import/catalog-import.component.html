@@ -28,13 +28,13 @@
   @if (preview(); as result) {
     <section class="panel table-card import-card" aria-label="Prévia">
       <h2><span class="import-step">3.</span> Prévia</h2>
-      <div class="record-stats import-summary" role="group" aria-label="Filtrar situação">
+      <p class="import-hint import-file-info">{{ result.fileName }}, {{ counted(result.totalRows, 'linha') }}, {{ counted(result.blankRows, 'linha em branco ignorada', 'linhas em branco ignoradas') }}</p>
+      <div class="import-summary" role="group" aria-label="Filtrar situação">
         @for (metric of metrics; track metric.status) {
-          <button type="button" class="import-metric" [attr.data-tone]="tones[metric.status]" [attr.aria-pressed]="filter() === metric.status" (click)="changeFilter(metric.status)"><strong>{{ result[metric.field] }}</strong> {{ result[metric.field] === 1 ? metric.label : metric.label + 's' }}</button>
+          <button type="button" class="import-metric" [attr.data-tone]="tones[metric.status]" [attr.aria-pressed]="filter() === metric.status" (click)="toggleFilter(metric.status)"><strong>{{ result[metric.field] }}</strong> {{ result[metric.field] === 1 ? metric.label : metric.label + 's' }}</button>
         }
+        @if (filter() !== 'all') { <button type="button" class="link-button import-clear" (click)="changeFilter('all')">Limpar filtro</button> }
       </div>
-      <p class="import-hint import-file-info"><app-icon name="file" [size]="18" />{{ result.fileName }} - {{ counted(result.totalRows, 'linha') }} - {{ counted(result.blankRows, 'linha em branco ignorada', 'linhas em branco ignoradas') }}</p>
-      <button type="button" class="button-secondary import-all" [attr.aria-pressed]="filter() === 'all'" (click)="changeFilter('all')">Todas</button>
       <p class="sr-only" aria-live="polite" aria-atomic="true">{{ filterLabel() }}: {{ counted(filteredRows().length, 'linha') }}</p>
       <div class="table-wrap import-table">
         <table>
@@ -49,7 +49,7 @@
                     @for (issue of row.reasons; track $index) { <li>{{ fieldLabel(issue.field) }}: {{ issue.message }}</li> }
                     @for (warning of row.warnings; track $index) { <li>Aviso: {{ fieldLabel(warning.field) }}: {{ warning.message }}</li> }
                   </ul>
-                } @else { <span class="import-hint">—</span> }
+                } @else { <span class="import-hint">-</span> }
               </td></tr>
             } @empty { <tr><td colspan="4" class="empty-state">Nenhuma linha nesta situação.</td></tr> }
           </tbody>

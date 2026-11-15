@@ -102,6 +102,7 @@ export class CatalogImportComponent {
   }
 
   protected cancel(): void { if (!this.busy()) void this.router.navigate([this.origin]); }
+  protected toggleFilter(value: CatalogImportStatus): void { this.changeFilter(this.filter() === value ? 'all' : value); }
   protected changeFilter(value: CatalogImportStatus | 'all'): void { this.filter.set(value); this.page.set(0); }
   protected changeSize(value: number): void { this.size.set(value); this.page.set(0); }
   protected identification(row: CatalogImportRow): string {

@@ -120,7 +120,7 @@ describe('CatalogImportComponent', () => {
     expect(metrics[0].textContent).toContain('1 válida');
     expect(root.querySelector('caption')?.textContent).toContain('Prévia');
     expect(root.querySelectorAll('tbody .mini-chip').length).toBe(3);
-    expect(root.querySelector('tbody tr:last-child td:last-child')?.textContent?.trim()).toBe('—');
+    expect(root.querySelector('tbody tr:last-child td:last-child')?.textContent?.trim()).toBe('-');
     expect(root.querySelector('[aria-live="polite"][aria-atomic="true"]')?.textContent).toContain('3 linhas');
     expect(root.textContent).toContain('0 linhas em branco ignoradas');
     expect(root.textContent).toContain('Importar 1 linha válida');
@@ -133,7 +133,15 @@ describe('CatalogImportComponent', () => {
     expect(metrics[1].getAttribute('aria-pressed')).toBe('true');
     expect(root.querySelectorAll('tbody tr').length).toBe(1);
     expect(root.querySelector('tbody')?.textContent).toContain('Obrigatório');
-    root.querySelector<HTMLButtonElement>('.import-all')!.click(); fixture.detectChanges();
+    expect(root.querySelector('.import-clear')?.textContent).toBe('Limpar filtro');
+    metrics[1].click(); fixture.detectChanges();
+    expect(metrics[1].getAttribute('aria-pressed')).toBe('false');
+    expect(root.querySelectorAll('tbody tr').length).toBe(3);
+    expect(root.querySelector('.import-clear')).toBeNull();
+    expect([...root.querySelectorAll('button')].some(b => b.textContent?.trim() === 'Todas')).toBe(false);
+    metrics[0].click(); fixture.detectChanges();
+    root.querySelector<HTMLButtonElement>('.import-clear')!.click(); fixture.detectChanges();
+    expect(metrics[0].getAttribute('aria-pressed')).toBe('false');
     expect(root.querySelectorAll('tbody tr').length).toBe(3);
     page.preview.set({ ...page.preview(), rows: [], validRows: 12, invalidRows: 0, duplicateRows: 0, totalRows: 1, blankRows: 1 });
     metrics[2].click(); fixture.detectChanges();
@@ -141,7 +149,7 @@ describe('CatalogImportComponent', () => {
     expect(metrics[0].textContent).toContain('12 válidas');
     expect(metrics[1].textContent).toContain('0 inválidas');
     expect(metrics[2].textContent).toContain('0 duplicadas');
-    expect(root.querySelector('.import-file-info')?.textContent).toContain('1 linha - 1 linha em branco ignorada');
+    expect(root.querySelector('.import-file-info')?.textContent).toContain('1 linha, 1 linha em branco ignorada');
     expect(root.textContent).toContain('Importar 12 linhas válidas');
     expect(root.querySelector('section[aria-label="Prévia"] footer')).not.toBeNull();
   });
