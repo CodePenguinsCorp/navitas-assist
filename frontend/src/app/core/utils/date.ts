@@ -1,5 +1,13 @@
 const APP_TIME_ZONE = 'America/Sao_Paulo';
 
+// Built once: creating an Intl formatter is far costlier than using one, and this runs once per card in list filters.
+const BUSINESS_DAY_PARTS = new Intl.DateTimeFormat('en-US', {
+  timeZone: APP_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
 export function formatBusinessDateTime(value: string | null): string {
   if (!value) {
     return 'N\u00e3o informado';
@@ -39,12 +47,7 @@ export function businessDateInputValue(value: Date): string {
     return '';
   }
 
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: APP_TIME_ZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(value);
+  const parts = BUSINESS_DAY_PARTS.formatToParts(value);
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return `${values['year']}-${values['month']}-${values['day']}`;
 }

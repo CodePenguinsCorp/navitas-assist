@@ -6,6 +6,16 @@ describe('date utilities', () => {
     expect(formatDateOnly('2026-02-30')).toBe('N\u00e3o informado');
   });
 
+  it('reuses one formatter for every conversion instead of creating one per call', () => {
+    const create = vi.spyOn(Intl, 'DateTimeFormat');
+    try {
+      for (let index = 0; index < 50; index++) businessDateInputValue(new Date(Date.UTC(2026, 9, 20, index)));
+      expect(create).not.toHaveBeenCalled();
+    } finally {
+      create.mockRestore();
+    }
+  });
+
   it('calculates today in America/Sao_Paulo around the UTC day boundary', () => {
     expect(todayInputValue(new Date('2026-10-20T02:30:00Z'))).toBe('2026-10-19');
     expect(todayInputValue(new Date('2026-10-20T03:30:00Z'))).toBe('2026-10-20');

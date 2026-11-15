@@ -761,6 +761,7 @@ const WARRANTY_FILTER_OPTIONS: ReadonlyArray<CustomSelectOption<WarrantyFilterVa
 function filterKanbanRmas(rmas: RmaBoardCardResponse[], filters: KanbanFilterValues, now: number): RmaBoardCardResponse[] {
   const query = normalizeSearch(filters.query);
   const today = businessToday(now);
+  const filtersUpdated = Boolean(filters.updatedFrom || filters.updatedTo);
 
   return rmas.filter((rma) => {
     const matchesQuery = !query || rmaSearchText(rma).includes(query);
@@ -775,8 +776,9 @@ function filterKanbanRmas(rmas: RmaBoardCardResponse[], filters: KanbanFilterVal
         ? rma.assigneeId === null
         : rma.assigneeId === filters.assignee);
     const matchesEntryDate = isWithinRange(rma.entryDate, filters.entryFrom, filters.entryTo);
-    const updatedDate = businessDateInputValue(new Date(rma.updatedAt));
-    const matchesUpdatedDate = isWithinRange(updatedDate, filters.updatedFrom, filters.updatedTo);
+    const matchesUpdatedDate =
+      !filtersUpdated ||
+      isWithinRange(businessDateInputValue(new Date(rma.updatedAt)), filters.updatedFrom, filters.updatedTo);
 
     return (
       (filters.blocked === 'all' || Boolean(rma.currentBlock) === (filters.blocked === 'blocked')) &&
