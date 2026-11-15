@@ -3775,10 +3775,15 @@ app-custom-select:has(> .custom-select--priority) {
   width: 100%;
   min-height: var(--control-height);
 }
-.detail-control-row .due-date-field__picker { flex: 1 1 100%; }
-.detail-control-row .due-date-field__row { justify-content: flex-end; }
+/* Due date: the situation chip sits to the left of the picker on the same row, so the three rows keep the same height. */
+.detail-control-row:has(.due-date-field__row) > dd { width: auto; max-width: 100%; }
+.detail-control-row .due-date-field__row { flex-wrap: nowrap; justify-content: flex-end; }
+.detail-control-row .due-date-field__picker { flex: 0 0 12rem; width: 12rem; }
+.detail-control-row .due-date-field__row > app-rma-deadline-chip { order: -1; }
 .detail-control-row .person { justify-content: flex-end; }
 @media (max-width: 480px) {
   :is(.detail-summary, .detail-facts) > .detail-control-row { flex-direction: column; align-items: stretch; }
   :is(.detail-summary, .detail-facts) > .detail-control-row.detail-control-row > dd { width: 100%; }
+  .detail-control-row .due-date-field__row { flex-wrap: wrap; justify-content: flex-start; }
+  .detail-control-row .due-date-field__picker { flex: 1 1 100%; width: 100%; }
 }

@@ -104,6 +104,8 @@ export class RowActionComponent {
 
   protected onFocus(): void {
     this.focused = true;
+    // Only keyboard focus opens the tip: focus handed back after closing a dialog must not leave it stuck.
+    if (!this.isKeyboardFocus()) return;
     this.open();
   }
 
@@ -117,6 +119,10 @@ export class RowActionComponent {
   protected onBlur(): void {
     this.focused = false;
     if (!this.hovered) this.close();
+  }
+
+  private isKeyboardFocus(): boolean {
+    try { return this.hostElement.nativeElement.matches(':focus-visible'); } catch { return true; }
   }
 
   protected close(): void {

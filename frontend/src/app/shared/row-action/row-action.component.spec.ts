@@ -128,6 +128,7 @@ describe('RowActionComponent', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 320 });
     setViewportHeight(800);
     const edit = buttons()[0];
+    vi.spyOn(edit, 'matches').mockImplementation((selector: string) => selector === ':focus-visible');
     placeButton(edit, 200, 270);
     sizeTip(edit, 400, 30);
 
@@ -264,8 +265,16 @@ describe('RowActionComponent', () => {
     expect(host.clicked).toBe(false);
   });
 
+  it('does not open the tip when focus is handed back without keyboard (for example after closing a dialog)', () => {
+    const edit = buttons()[0];
+    vi.spyOn(edit, 'matches').mockReturnValue(false);
+    edit.dispatchEvent(new FocusEvent('focus'));
+    expect(isOpen(edit)).toBe(false);
+  });
+
   it('closes on mouseleave and blur when neither hover nor focus remains, and on scroll and resize', () => {
     const edit = buttons()[0];
+    vi.spyOn(edit, 'matches').mockImplementation((selector: string) => selector === ':focus-visible');
 
     edit.dispatchEvent(new MouseEvent('mouseenter'));
     edit.dispatchEvent(new MouseEvent('mouseleave'));

@@ -151,6 +151,7 @@ describe('RmaKanbanBoardComponent card', () => {
     const element = card(host, 'NAV-0100');
     const client = element.querySelector('.board-card__client');
     expect(client?.textContent?.trim()).toBe(longClient);
+    Object.defineProperty(client!, 'scrollWidth', { configurable: true, value: 400 }); Object.defineProperty(client!, 'clientWidth', { configurable: true, value: 100 });
     client!.dispatchEvent(new Event('mouseenter'));
     expect(document.querySelector('.app-tip')?.textContent).toBe(longClient);
     const avatar = element.querySelector('.board-card__avatar');

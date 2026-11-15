@@ -2,7 +2,7 @@
 <section class="detail-card">
   <app-collapsible-section title="Peças" icon="chip" [open]="reservations().length > 0 || reserveOpen() || loadFailed()" storageKey="rma.parts">
     @if (canCreateReservation()) {
-      <button sectionActions type="button" id="reserve-trigger" class="link-button" [attr.aria-expanded]="reserveOpen()" aria-controls="reserve-form" (click)="toggleReserve()"><app-icon name="plus" [size]="14" /> Reservar peça</button>
+      <button sectionActions type="button" id="reserve-trigger" class="link-button" [attr.aria-expanded]="reserveOpen()" aria-controls="reserve-form" (click)="toggleReserve()">Reservar peça</button>
     }
   @if (loadFailed()) {
     <div class="alert-banner alert-banner--error parts-load-error" role="alert">
@@ -135,7 +135,7 @@
 <section class="repair-panel detail-card">
   <app-collapsible-section title="Componentes trocados" icon="wrench" [open]="replacedComponents().length > 0 || externalOpen() || !!externalError()" storageKey="rma.components">
       @if (canCreateReservation()) {
-        <button sectionActions type="button" id="external-trigger" class="link-button" [attr.aria-expanded]="externalOpen() && !editingExternal()" aria-controls="external-form" (click)="toggleExternal()"><app-icon name="plus" [size]="14" /> Adicionar fora do estoque</button>
+        <button sectionActions type="button" id="external-trigger" class="link-button" [attr.aria-expanded]="externalOpen() && !editingExternal()" aria-controls="external-form" (click)="toggleExternal()">Adicionar fora do estoque</button>
       }
       @if (externalError()) { <p class="field-error" role="alert">{{ externalError() }}</p><button type="button" class="button-secondary button-secondary--small" (click)="loadExternal()">Tentar novamente</button> }
       @if (canCreateReservation() && externalOpen() && !editingExternal()) { <ng-container [ngTemplateOutlet]="externalEditor" /> }

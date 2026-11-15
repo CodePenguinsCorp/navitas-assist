@@ -456,7 +456,8 @@ describe('RmasComponent detail with the shared information contract', () => {
     open({ ...fullRma, dueDate: '2026-10-18', deadline: { status: 'OVERDUE', dueSoonFrom: '2026-10-11' } });
     const summary = detail().querySelector('.rma-details__summary')!;
     expect(summary.textContent).toContain('18/10/2026');
-    const chip = summary.querySelector('.deadline-chip');
+    expect(summary.querySelector('.deadline-chip')).toBeNull();
+    const chip = detail().querySelector('.detail-actions .deadline-chip');
     expect(chip?.textContent?.trim()).toBe('Atrasado há 2 dias');
     expect(chip?.getAttribute('data-deadline')).toBe('OVERDUE');
   });

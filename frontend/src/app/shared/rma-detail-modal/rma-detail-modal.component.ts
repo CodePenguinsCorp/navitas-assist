@@ -32,6 +32,7 @@ import { RmaDueDateFieldComponent } from '../rma-due-date-field/rma-due-date-fie
 import { RmaPriorityFieldComponent } from '../rma-priority-field/rma-priority-field.component';
 import { RmaReportLinkComponent } from '../rma-report-link/rma-report-link.component';
 import { RmaStatusFieldComponent } from '../rma-status-field/rma-status-field.component';
+import { RmaDeadlineChipComponent } from '../rma-deadline-chip/rma-deadline-chip.component';
 import { RmaStageTimesComponent } from '../rma-stage-times/rma-stage-times.component';
 import {
   formatDate,
@@ -47,7 +48,7 @@ import {
 
 @Component({
   selector: 'app-rma-detail-modal',
-  imports: [RmaProtocolsComponent, RmaHistoryListComponent, CollapsibleSectionComponent, RmaRepairPanelComponent, RmaPartsPanelComponent, RmaWarrantyFieldComponent, CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaStatusFieldComponent, RmaDiagnosisComponent, RouterLink],
+  imports: [RmaProtocolsComponent, RmaHistoryListComponent, CollapsibleSectionComponent, RmaRepairPanelComponent, RmaPartsPanelComponent, RmaWarrantyFieldComponent, CustomSelectComponent, IconComponent, ModalFocusDirective, RmaBlocksSectionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaStatusFieldComponent, RmaDiagnosisComponent, RmaDeadlineChipComponent, RouterLink],
   templateUrl: './rma-detail-modal.component.html',
   styleUrl: './rma-detail-modal.component.css'
 })
@@ -165,13 +166,6 @@ export class RmaDetailModalComponent {
         .filter((section): section is CollapsibleSectionComponent => !!section)
     ];
   });
-  protected readonly allOpen = computed(() => this.sections().every((section) => section.isOpen()));
-  /** "Recolher tudo" while every section is open; otherwise "Expandir tudo". */
-  protected toggleAll(): void {
-    const open = !this.allOpen();
-    this.sections().forEach((section) => section.setOpen(open));
-  }
-
   protected chooseAssignee(assigneeId: unknown): void {
     const rma = this.rma();
     if (assigneeId !== rma.assigneeId) this.assigneeChange.emit({ rma, assigneeId: assigneeId as number | null });

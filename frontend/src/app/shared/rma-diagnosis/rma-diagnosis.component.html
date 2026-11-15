@@ -2,7 +2,7 @@
   <app-collapsible-section title="Diagnóstico" icon="clipboard" [open]="!!rma().diagnosis || editing()" storageKey="rma.diagnosis">
     @if (canEdit() && !editing()) {
       <button sectionActions type="button" class="link-button diagnosis-trigger" [disabled]="disabled()" (click)="edit()">
-        @if (rma().diagnosis) { Editar } @else { <app-icon name="plus" [size]="14" /> Registrar diagnóstico }
+        @if (rma().diagnosis) { Editar } @else { Registrar diagnóstico }
       </button>
     }
     <ng-container *ngTemplateOutlet="content" />
@@ -12,7 +12,7 @@
     <h3 class="detail-card__title"><app-icon name="clipboard" [size]="16" /> Diagnóstico</h3>
     @if (canEdit() && !editing()) {
       <button type="button" class="link-button diagnosis-trigger" [disabled]="disabled()" (click)="edit()">
-        @if (rma().diagnosis) { Editar } @else { <app-icon name="plus" [size]="14" /> Registrar diagnóstico }
+        @if (rma().diagnosis) { Editar } @else { Registrar diagnóstico }
       </button>
     }
   </header>

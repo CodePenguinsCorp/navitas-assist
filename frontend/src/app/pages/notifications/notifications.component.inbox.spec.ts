@@ -326,7 +326,9 @@ describe('NotificationsComponent inbox loading', () => {
       const meta = item().querySelector<HTMLElement>('.notification-meta')!;
       expect(meta.textContent!.trim()).toBe('Cliente · Produto');
       expect(meta.querySelector('.notification-event')).toBeNull();
-      meta.querySelector<HTMLElement>('.notification-message')!.dispatchEvent(new Event('mouseenter'));
+      const message = meta.querySelector<HTMLElement>('.notification-message')!;
+      Object.defineProperty(message, 'scrollWidth', { configurable: true, value: 400 }); Object.defineProperty(message, 'clientWidth', { configurable: true, value: 100 });
+      message.dispatchEvent(new Event('mouseenter'));
       expect(document.querySelector('.app-tip')?.textContent).toBe('Cliente · Produto');
     });
 

@@ -41,12 +41,12 @@
           } @else {
             <span class="status-chip rma-detail__status" [attr.data-status]="rma().status">{{ statusLabel(rma().status) }}</span>
           }
+          @if (rma().dueDate) { <app-rma-deadline-chip [rma]="rma()" mode="detail" /> }
           @if (rma().currentBlock; as block) {
             <button type="button" class="detail-block-flag" aria-controls="rma-detail-blocks" (click)="showBlocks(blocksSection)">
               <app-icon name="lock" [size]="16" />{{ blockedLabel(block, clock.now()) }}<span class="sr-only"> · ver impedimento</span>
             </button>
           }
-          <button type="button" class="link-button rma-detail__fold-all" (click)="toggleAll()">{{ allOpen() ? 'Recolher tudo' : 'Expandir tudo' }}</button>
         </div>
 
         @if (actionError()) {
@@ -180,7 +180,7 @@
             <div class="detail-control-row">
               <dt>Data limite</dt>
               <dd [class.is-empty]="!rma().dueDate">
-                <app-rma-due-date-field [rma]="rma()" [canEdit]="canEditDueDate()" [disabled]="busyExcept('dueDate')" (saved)="applyUpdate($event)" (busyChange)="setWriterBusy('dueDate', $event)" />
+                <app-rma-due-date-field [showChip]="false" [rma]="rma()" [canEdit]="canEditDueDate()" [disabled]="busyExcept('dueDate')" (saved)="applyUpdate($event)" (busyChange)="setWriterBusy('dueDate', $event)" />
               </dd>
             </div>
           </dl>

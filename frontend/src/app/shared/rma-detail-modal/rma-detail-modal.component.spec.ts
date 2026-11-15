@@ -145,18 +145,6 @@ describe('RmaDetailModalComponent collapsible sections', () => {
     expect(history().querySelectorAll('li.rma-detail__event')).toHaveLength(5);
   });
 
-  it('includes deferred panels in expand and fold all', async () => {
-    const { fixture, host, buttonByText } = await setup();
-    const [block] = await fixture.getDeferBlocks();
-    await block.render(DeferBlockState.Complete); fixture.detectChanges();
-    const headers = () => [...host.querySelectorAll<HTMLButtonElement>('button.collapsible__toggle')];
-    expect(host.querySelector('app-rma-protocols')).not.toBeNull();
-    buttonByText('Expandir tudo')!.click(); fixture.detectChanges();
-    expect(headers().every(header => header.getAttribute('aria-expanded') === 'true')).toBe(true);
-    buttonByText('Recolher tudo')!.click(); fixture.detectChanges();
-    expect(headers().every(header => header.getAttribute('aria-expanded') === 'false')).toBe(true);
-  });
-
   it('opens sections with content, including several products and history', async () => {
     const { host } = await setup();
     expect(states(host)).toEqual({
@@ -178,19 +166,10 @@ describe('RmaDetailModalComponent collapsible sections', () => {
     expect(host.querySelector('.rma-detail__main .collapsible__count')).not.toBeNull();
   });
 
-  it('Recolher tudo folds every section and Expandir tudo opens them, remembering the choice', async () => {
-    const { fixture, host, buttonByText } = await setup();
-    if (buttonByText('Recolher tudo')) { buttonByText('Recolher tudo')!.click(); fixture.detectChanges(); }
-    expect(buttonByText('Expandir tudo')).toBeDefined();
-    buttonByText('Expandir tudo')!.click();
-    fixture.detectChanges();
-    expect(Object.values(states(host)).every((value) => value === 'true')).toBe(true);
-    expect(buttonByText('Recolher tudo')).toBeDefined();
-    buttonByText('Recolher tudo')!.click();
-    fixture.detectChanges();
-    expect(Object.values(states(host)).every((value) => value === 'false')).toBe(true);
-    expect(localStorage.getItem('navitas.section.rma.diagnosis')).toBe('0');
-    expect(localStorage.getItem('navitas.section.rma.history')).toBe('0');
+  it('has no Expandir tudo / Recolher tudo button (each section opens on its own)', async () => {
+    const { buttonByText } = await setup();
+    expect(buttonByText('Expandir tudo')).toBeUndefined();
+    expect(buttonByText('Recolher tudo')).toBeUndefined();
   });
 
   it('the block flag opens a folded Impedimentos before focusing it', async () => {
@@ -522,7 +501,9 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
       rma: { ...fullRma, dueDate: '2026-10-18', deadline: { status: 'OVERDUE', dueSoonFrom: '2026-10-11' } }
     });
     expect(sidePairs()['Data limite']).toContain('18/10/2026');
-    const chip = host.querySelector('.rma-detail__side .deadline-chip');
+    // The chip sits next to the stage selector, not inside the information card.
+    expect(host.querySelector('.rma-detail__side .deadline-chip')).toBeNull();
+    const chip = host.querySelector('.detail-actions .deadline-chip');
     expect(chip?.textContent?.trim()).toBe('Atrasado há 2 dias');
     expect(chip?.getAttribute('data-deadline')).toBe('OVERDUE');
   });

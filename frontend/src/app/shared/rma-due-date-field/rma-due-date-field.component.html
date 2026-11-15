@@ -10,7 +10,7 @@
       [ariaDescribedBy]="error() ? 'rma-due-date-error' : null"
       (valueChange)="pick($event)"
     />
-    @if (rma().dueDate) { <app-rma-deadline-chip [rma]="rma()" mode="detail" /> }
+    @if (showChip() && rma().dueDate) { <app-rma-deadline-chip [rma]="rma()" mode="detail" /> }
   </div>
   @if (error(); as message) {
     <p id="rma-due-date-error" class="field-error due-date-field__error" role="alert">{{ message }}</p>
@@ -18,6 +18,6 @@
 } @else {
   <span class="due-date-field__static" [class.is-empty]="!rma().dueDate">
     <span class="due-date-field__text">{{ rma().dueDate ? dateLabel(rma().dueDate) : 'Sem data limite' }}</span>
-    @if (rma().dueDate) { <app-rma-deadline-chip [rma]="rma()" mode="detail" /> }
+    @if (showChip() && rma().dueDate) { <app-rma-deadline-chip [rma]="rma()" mode="detail" /> }
   </span>
 }

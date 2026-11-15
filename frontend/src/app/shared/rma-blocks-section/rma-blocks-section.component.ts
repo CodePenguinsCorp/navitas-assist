@@ -1,5 +1,4 @@
 import { CollapsibleSectionComponent } from '../collapsible-section/collapsible-section.component';
-import { IconComponent } from '../icon/icon.component';
 import { Component, DestroyRef, ElementRef, EventEmitter, Injector, Output, afterNextRender, computed, inject, input, linkedSignal, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -20,7 +19,7 @@ type BlocksMode = 'idle' | 'block' | 'resolve';
  */
 @Component({
   selector: 'app-rma-blocks-section',
-  imports: [CollapsibleSectionComponent, IconComponent, ReactiveFormsModule, RmaBlockHistoryComponent],
+  imports: [CollapsibleSectionComponent, ReactiveFormsModule, RmaBlockHistoryComponent],
   templateUrl: './rma-blocks-section.component.html',
   styleUrl: './rma-blocks-section.component.css'
 })

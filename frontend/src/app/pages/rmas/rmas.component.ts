@@ -76,6 +76,7 @@ import { RmaRepairPanelComponent } from '../../shared/rma-repair-panel/rma-repai
 import { RmaPartsPanelComponent } from '../../shared/rma-parts-panel/rma-parts-panel.component';
 import { RmaDueDateFieldComponent } from '../../shared/rma-due-date-field/rma-due-date-field.component';
 import { RmaPriorityFieldComponent } from '../../shared/rma-priority-field/rma-priority-field.component';
+import { RmaDeadlineChipComponent } from '../../shared/rma-deadline-chip/rma-deadline-chip.component';
 import { RmaStageTimesComponent } from '../../shared/rma-stage-times/rma-stage-times.component';
 import { RmaAssigneeFieldComponent } from '../../shared/rma-assignee-field/rma-assignee-field.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
@@ -99,7 +100,7 @@ export interface RmaListFilters {
 
 @Component({
   selector: 'app-rmas',
-  imports: [TipDirective, CollapsibleSectionComponent, RmaHistoryListComponent, RmaWarrantyFieldComponent, RmaDiagnosisComponent, RmaStatusFieldComponent, IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, RmaRepairPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaAssigneeFieldComponent],
+  imports: [TipDirective, CollapsibleSectionComponent, RmaHistoryListComponent, RmaWarrantyFieldComponent, RmaDiagnosisComponent, RmaStatusFieldComponent, IconComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, ModalFocusDirective, NgComponentOutlet, RmaPartsPanelComponent, RmaRepairPanelComponent, PaginationComponent, RmaBlocksSectionComponent, PageHeaderComponent, RowActionComponent, RmaDueDateFieldComponent, RmaPriorityFieldComponent, RmaReportLinkComponent, RmaStageTimesComponent, RmaAssigneeFieldComponent, RmaDeadlineChipComponent],
   templateUrl: './rmas.component.html',
   styles: [`
     :host {

@@ -2,6 +2,9 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { TipDirective } from './tip.directive';
 
+@Component({ imports: [TipDirective], template: '<p appTip="Nome completo da empresa">Nome completo da empresa</p><span appTip="Maria Silva">MS</span>' })
+class TextHostComponent {}
+
 @Component({ imports: [TipDirective], template: '<button appTip="Texto completo" [tipPosition]="position()" aria-label="Abrir">Abrir</button>' })
 class HostComponent { readonly position = signal<'right' | 'top' | 'bottom'>('top'); }
 
@@ -18,6 +21,21 @@ describe('TipDirective', () => {
       expect(document.querySelector('[role="tooltip"]')).toBeNull();
     }
     expect(button.getAttribute('aria-label')).toBe('Abrir');
+  });
+  it('so mostra a dica que repete o texto quando ele esta cortado, e sempre a que acrescenta informacao', () => {
+    const fixture = TestBed.createComponent(TextHostComponent);
+    fixture.detectChanges();
+    const [text, initials] = [fixture.nativeElement.querySelector('p') as HTMLElement, fixture.nativeElement.querySelector('span') as HTMLElement];
+    text.dispatchEvent(new Event('mouseenter'));
+    expect(document.querySelector('[role="tooltip"]')).toBeNull();
+    Object.defineProperty(text, 'scrollWidth', { configurable: true, value: 300 });
+    Object.defineProperty(text, 'clientWidth', { configurable: true, value: 120 });
+    text.dispatchEvent(new Event('mouseenter'));
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe('Nome completo da empresa');
+    text.dispatchEvent(new Event('mouseleave'));
+    initials.dispatchEvent(new Event('mouseenter'));
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe('Maria Silva');
+    initials.dispatchEvent(new Event('mouseleave'));
   });
   it('nunca mostra barra de rolagem dentro da dica', () => {
     const fixture = TestBed.createComponent(HostComponent);

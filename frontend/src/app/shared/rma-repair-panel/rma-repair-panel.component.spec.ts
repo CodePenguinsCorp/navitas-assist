@@ -161,7 +161,9 @@ describe('RmaRepairPanelComponent', () => {
       expect(lines).toHaveLength(2);
       const parts = (l: HTMLElement) => [l.querySelector('.repair-line__title')!, l.querySelector('.repair-line__meta')!, l.querySelector('.repair-line__value')!, l.querySelector('.repair-line__desc')!].map(e => e.textContent!.trim());
       expect(parts(lines[0])).toEqual(['Limpeza', '12/11/2026 · ana', '1,5 h', 'Placa limpa']);
-      lines[0].querySelector('.repair-line__desc')!!.dispatchEvent(new Event('mouseenter'));
+      const desc = lines[0].querySelector('.repair-line__desc')!;
+      Object.defineProperty(desc, 'scrollWidth', { configurable: true, value: 400 }); Object.defineProperty(desc, 'clientWidth', { configurable: true, value: 100 });
+      desc.dispatchEvent(new Event('mouseenter'));
       expect(document.querySelector('.app-tip')?.textContent).toBe('Placa limpa');
       expect(lines[1].querySelector('.repair-voided')).not.toBeNull();
       expect(lines[1].querySelector('[aria-label*="Editar"]')).toBeNull();

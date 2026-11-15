@@ -12,7 +12,6 @@ import { extractHttpErrorMessage, normalizeOptionalText } from '../../core/utils
 import { formatBusinessDateTime } from '../../core/utils/date';
 import { PART_MOVEMENT_LABELS, PART_RESERVATION_STATUS_LABELS, formatCurrency, formatQuantity, reservationStatusClass } from '../../core/utils/part-ui';
 import { NgTemplateOutlet } from '@angular/common';
-import { IconComponent } from '../icon/icon.component';
 import { CollapsibleSectionComponent } from '../collapsible-section/collapsible-section.component';
 import { RowActionComponent } from '../row-action/row-action.component';
 import { CustomSelectComponent, CustomSelectOption } from '../form-controls/custom-select/custom-select.component';
@@ -25,7 +24,7 @@ const ACTION_MESSAGES: Record<PartReservationAction, string> = {
 
 @Component({
   selector: 'app-rma-parts-panel',
-  imports: [TipDirective, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, IconComponent, CollapsibleSectionComponent],
+  imports: [TipDirective, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, CollapsibleSectionComponent],
   templateUrl: './rma-parts-panel.component.html',
   styles: [`
     :host {

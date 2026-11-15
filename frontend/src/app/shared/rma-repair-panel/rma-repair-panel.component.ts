@@ -12,7 +12,6 @@ import { extractHttpErrorMessage } from '../../core/utils/catalog-ui';
 import { formatDateOnly, todayInputValue } from '../../core/utils/date';
 import { CustomSelectComponent } from '../form-controls/custom-select/custom-select.component';
 import { RowActionComponent } from '../row-action/row-action.component';
-import { IconComponent } from '../icon/icon.component';
 import { CollapsibleSectionComponent } from '../collapsible-section/collapsible-section.component';
 import { DatePickerComponent } from '../form-controls/date-picker/date-picker.component';
 
@@ -22,7 +21,7 @@ export const INTERVENTION_LABELS: Record<InterventionType, string> = {
 
 @Component({
   selector: 'app-rma-repair-panel',
-  imports: [TipDirective, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, IconComponent, CollapsibleSectionComponent],
+  imports: [TipDirective, NgTemplateOutlet, RowActionComponent, ReactiveFormsModule, CustomSelectComponent, DatePickerComponent, CollapsibleSectionComponent],
   templateUrl: './rma-repair-panel.component.html'
 })
 export class RmaRepairPanelComponent {

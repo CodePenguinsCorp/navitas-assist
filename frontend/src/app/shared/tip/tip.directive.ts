@@ -35,7 +35,10 @@ export class TipDirective {
   protected show(): void {
     const text = this.appTip();
     if (!text || this.tip) return;
+    if (!this.hoverOrKeyboardFocus()) return;
     const element = this.host.nativeElement;
+    // A tip that only repeats the visible text is useful solely when that text was cut off ("...").
+    if (this.repeatsVisibleText(element, text) && !this.isTruncated(element)) return;
     const rect = element.getBoundingClientRect();
     const tip = document.createElement('span');
     tip.className = 'row-action__tip is-open app-tip';
@@ -61,6 +64,23 @@ export class TipDirective {
     tip.style.top = `${Math.max(GAP, Math.min(top, innerHeight - height - GAP))}px`;
     element.setAttribute('aria-describedby', [element.getAttribute('aria-describedby'), tip.id].filter(Boolean).join(' '));
     this.tip = tip;
+  }
+
+  /** Hover always counts; focus counts only for the keyboard (focus handed back after closing a dialog must not leave the tip stuck). */
+  private hoverOrKeyboardFocus(): boolean {
+    const element = this.host.nativeElement;
+    if (element.matches(':hover')) return true;
+    try { return !element.matches(':focus') || element.matches(':focus-visible'); } catch { return true; }
+  }
+
+  private repeatsVisibleText(element: HTMLElement, text: string): boolean {
+    const normalize = (value: string) => value.replace(/\s+/g, ' ').trim();
+    // innerText follows what is actually rendered (a label hidden in the collapsed rail does not count).
+    return normalize((element as HTMLElement & { innerText?: string }).innerText ?? element.textContent ?? '') === normalize(text);
+  }
+
+  private isTruncated(element: HTMLElement): boolean {
+    return element.scrollWidth > element.clientWidth + 1 || element.scrollHeight > element.clientHeight + 1;
   }
 
   protected hide(): void {

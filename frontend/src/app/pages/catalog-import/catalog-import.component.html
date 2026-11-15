@@ -7,9 +7,13 @@
   </section>
   <section class="panel import-card" aria-label="Arquivo">
     <h2>2. Arquivo</h2>
-  <div class="import-upload">
-    <label class="field-group"><span>Arquivo CSV</span><small>UTF-8 · até 2 MiB · 2.000 registros</small><input type="file" accept=".csv,text/csv" (change)="selectFile($event)" [disabled]="busy()" /></label>
-    <button type="button" class="button-secondary" (click)="generatePreview()" [disabled]="!file() || busy()">Gerar prévia</button>
+  <div class="import-upload field-group">
+    <label for="import-file"><span>Arquivo CSV</span></label>
+    <small>UTF-8 · até 2 MiB · 2.000 registros</small>
+    <div class="import-upload__row">
+      <input id="import-file" type="file" accept=".csv,text/csv" (change)="selectFile($event)" [disabled]="busy()" />
+      <button type="button" class="button-secondary" (click)="generatePreview()" [disabled]="!file() || busy()">Gerar prévia</button>
+    </div>
   </div>
   @if (error()) { <div class="alert-banner alert-banner--error" role="alert">{{ error() }}</div> }
   </section>

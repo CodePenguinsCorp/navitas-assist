@@ -1,7 +1,7 @@
 <section class="repair-panel detail-card">
   <app-collapsible-section title="Protocolos técnicos" icon="checklist" [open]="executions().length > 0 || launchOpen() || loadFailed()" storageKey="rma.protocols">
     @if (canExecute()) {
-      <button sectionActions type="button" class="link-button" [attr.aria-expanded]="launchOpen()" (click)="launchOpen.set(!launchOpen())"><app-icon name="plus" [size]="14" /> Executar protocolo</button>
+      <button sectionActions type="button" class="link-button" [attr.aria-expanded]="launchOpen()" (click)="launchOpen.set(!launchOpen())">Executar protocolo</button>
     }
 
   @if (errorMessage()) {

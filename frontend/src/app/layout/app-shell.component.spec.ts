@@ -335,6 +335,8 @@ describe('AppShellComponent collapsible sidebar', () => {
     const first = items()[0];
     expect(first.getAttribute('title')).toBeNull();
     expect(first.getAttribute('aria-label')).toBe('Dashboard');
+    // Collapsed rail: the label is hidden, so jsdom (no innerText) needs the rendered text stated.
+    Object.defineProperty(first, 'innerText', { configurable: true, value: '' });
     first.dispatchEvent(new Event('mouseenter'));
     expect(document.body.querySelector('.app-tip.row-action__tip')?.textContent).toBe('Dashboard');
     first.dispatchEvent(new Event('mouseleave'));

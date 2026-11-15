@@ -24,6 +24,8 @@ export class RmaDueDateFieldComponent {
   readonly canEdit = input(false);
   /** The host is writing something else: the picker waits. */
   readonly disabled = input(false);
+  /** The situation chip can live elsewhere (next to the stage selector in the details). */
+  readonly showChip = input(true);
   @Output() readonly busyChange = new EventEmitter<boolean>();
   @Output() readonly saved = new EventEmitter<RmaResponse>();
 

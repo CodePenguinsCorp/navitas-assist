@@ -24,7 +24,7 @@ let nextPanelId = 0;
   templateUrl: './permission-picker.component.html',
   styles: [`
     :host { display: grid; gap: var(--space-3); grid-column: 1 / -1; min-width: 0; }
-    .permission-picker__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: var(--control-height); }
+    .permission-picker__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
     .permission-picker__granted { display: grid; gap: var(--space-2); flex: 1 1 260px; min-width: 0; }
     .permission-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
     .permission-picker__panel { display: grid; gap: var(--space-3); min-width: 0; }
@@ -47,7 +47,7 @@ let nextPanelId = 0;
       display: flex; align-items: center; gap: var(--space-2); width: 100%; min-width: 0; padding: 0; border: 0; border-radius: var(--radius-sm);
       background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
     }
-    .permission-module__toggle:hover .permission-module__name { text-decoration: underline; text-underline-offset: 3px; }
+    .permission-module__toggle:hover { background: var(--brand-tint); }
     .permission-module__toggle:focus-visible { outline: none; box-shadow: var(--focus-ring); }
     .permission-module__chevron { display: inline-flex; margin-inline-start: auto; color: var(--muted); }
     .permission-module__chevron app-icon { display: inline-flex; transition: transform 160ms ease; }

@@ -34,7 +34,7 @@
                 routerLinkActive="is-active"
                 class="nav-item"
                 ariaCurrentWhenActive="page"
-                tipPosition="right" [appTip]="item.label"
+                tipPosition="right" [appTip]="expanded() ? null : item.label"
                 [attr.aria-label]="expanded() ? null : item.label"
                 (click)="closeOverlay()"
               >
