@@ -1060,3 +1060,49 @@ describe('KanbanComponent dialog focus under the root blocker', () => {
     expect(focus).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('KanbanComponent default view', () => {
+  let fixture: ComponentFixture<KanbanComponent>;
+  let component: { filtersForm: FormGroup; activeViewId: Signal<number | null> };
+  let views: Subject<KanbanViewResponse[]>;
+
+  const defaultView: KanbanViewResponse = {
+    id: 3, name: 'Padrão', defaultView: true, createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z',
+    filters: { query: 'antiga', priority: 'HIGH', status: null, warranty: null, assigneeId: null, unassignedOnly: false, entryFrom: null, entryTo: null, updatedFrom: null, updatedTo: null, deadline: null, blocked: null },
+  } as KanbanViewResponse;
+
+  beforeEach(async () => {
+    views = new Subject<KanbanViewResponse[]>();
+    await TestBed.configureTestingModule({
+      imports: [KanbanComponent],
+      providers: [
+        provideRouter([]),
+        { provide: ClockService, useValue: { now: signal(Date.parse('2026-10-20T12:00:00Z')) } },
+        providePermissions(profilePermissions('ADMIN')),
+        { provide: CatalogService, useValue: { listAssignableUsers: () => of([]) } },
+        { provide: KanbanViewService, useValue: { list: () => views } },
+        { provide: RmaService, useValue: { listBoard: () => of(TEST_RMAS) } },
+      ],
+    }).compileComponents();
+    fixture = TestBed.createComponent(KanbanComponent);
+    component = fixture.componentInstance as unknown as typeof component;
+    fixture.detectChanges();
+  });
+
+  it('does not overwrite filters edited while the saved views were still loading', () => {
+    component.filtersForm.patchValue({ query: 'nova busca' });
+
+    views.next([defaultView]);
+
+    expect(component.filtersForm.getRawValue().query).toBe('nova busca');
+    expect(component.filtersForm.getRawValue().priority).toBe('all');
+    expect(component.activeViewId()).toBeNull();
+  });
+
+  it('still applies the default view when nothing was edited before the response', () => {
+    views.next([defaultView]);
+
+    expect(component.filtersForm.getRawValue().query).toBe('antiga');
+    expect(component.activeViewId()).toBe(3);
+  });
+});

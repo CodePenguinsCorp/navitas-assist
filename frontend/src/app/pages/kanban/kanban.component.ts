@@ -177,6 +177,8 @@ export class KanbanComponent {
   protected readonly statusFeedbackRma = computed(() => this.rmasSignal().find(rma => rma.id === this.statusFeedbackRmaId()) ?? null);
   private readonly assignableUsersSignal = signal<AssignableUserResponse[]>([]);
   private readonly viewsSignal = signal<KanbanViewResponse[]>([]);
+  /** Set by the first change to the filters: a late default view must not overwrite what the person already chose. */
+  private filtersEdited = false;
   private readonly boardStatus = viewChild.required<RmaStatusFieldComponent>('boardStatus');
 
   protected readonly filtersForm = this.formBuilder.nonNullable.group({
@@ -304,7 +306,10 @@ export class KanbanComponent {
   });
 
   constructor() {
-    this.filtersForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.releaseDivergentView());
+    this.filtersForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.filtersEdited = true;
+      this.releaseDivergentView();
+    });
     this.loadKanban();
     this.loadViews();
   }
@@ -649,7 +654,7 @@ export class KanbanComponent {
       next: (views) => {
         this.viewsSignal.set(sortViews(views));
         const defaultView = views.find((view) => view.defaultView);
-        if (defaultView) {
+        if (defaultView && !this.filtersEdited) {
           this.applyView(defaultView.id);
         }
       },
