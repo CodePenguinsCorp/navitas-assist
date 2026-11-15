@@ -613,3 +613,43 @@ describe('RmasComponent creation dialog focus', () => {
     expect(document.activeElement).toBe(trigger);
   });
 });
+
+describe('RmasComponent creation contract limits', () => {
+  it('limits the products to 20, keeps the filled ones and explains the limit', async () => {
+    const { component, open, render, page, fillValid, submit, rmaService } = await setup();
+    open(); fillValid();
+    const harness = component as unknown as CreateHarness & { addCreateItem(): void };
+    for (let i = 0; i < 25; i++) harness.addCreateItem();
+    render();
+    expect(component.createItems.length).toBe(20);
+    expect(component.createItems.at(0).getRawValue()['serialNumber']).toBe('SER-2');
+    const add = [...page.querySelectorAll<HTMLButtonElement>('.modal-panel button')].find((b) => b.textContent?.trim() === 'Adicionar produto')!;
+    expect(add.disabled).toBe(true);
+    expect(page.querySelector('.modal-panel')!.textContent).toContain('Limite de 20 produtos');
+    for (let i = 1; i < 20; i++) component.createItems.at(i).patchValue({ productId: 2, serialNumber: `S-${i}` });
+    component.createItems.push(component.createItems.at(0) as never);
+    render(); submit();
+    expect(rmaService.create).not.toHaveBeenCalled();
+  });
+
+  it('sends all 20 valid products', async () => {
+    const { component, open, fillValid, submit, rmaService } = await setup();
+    open(); fillValid();
+    const harness = component as unknown as CreateHarness & { addCreateItem(): void };
+    for (let i = 1; i < 20; i++) harness.addCreateItem();
+    for (let i = 1; i < 20; i++) component.createItems.at(i).patchValue({ productId: 2, serialNumber: `S-${i}` });
+    submit();
+    expect(rmaService.create).toHaveBeenCalledTimes(1);
+    expect(rmaService.create.mock.calls[0][0].items.length).toBe(20);
+  });
+
+  it('rejects an invoice number above 80 characters and accepts 80 or empty', async () => {
+    const { component, open, fillValid, submit, rmaService, render, panel } = await setup();
+    open(); fillValid();
+    component.createForm.patchValue({ invoiceNumber: 'N'.repeat(81) }); render(); submit();
+    expect(rmaService.create).not.toHaveBeenCalled();
+    expect(panel()!.textContent).toContain('Use até 80 caracteres.');
+    component.createForm.patchValue({ invoiceNumber: 'N'.repeat(80) }); submit();
+    expect(rmaService.create).toHaveBeenCalledTimes(1);
+  });
+});

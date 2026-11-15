@@ -504,7 +504,10 @@
             }
 
             <div>
-              <button type="button" class="button-secondary" (click)="addCreateItem()">Adicionar produto</button>
+              <button type="button" class="button-secondary" (click)="addCreateItem()" [disabled]="!canAddCreateItem">Adicionar produto</button>
+              @if (!canAddCreateItem) {
+                <small class="field-hint">Limite de 20 produtos por OS atingido. Abra outra OS para os demais.</small>
+              }
             </div>
           </div>
         </fieldset>
@@ -514,7 +517,12 @@
 
           <div class="field-group col-2">
             <label for="invoiceNumber">Nota fiscal</label>
-            <input id="invoiceNumber" type="text" formControlName="invoiceNumber" />
+            <input id="invoiceNumber" type="text" formControlName="invoiceNumber" maxlength="80"
+              [attr.aria-invalid]="showCreateError(createForm.controls.invoiceNumber) || null"
+              [attr.aria-describedby]="showCreateError(createForm.controls.invoiceNumber) ? 'invoiceNumber-error' : null" />
+            @if (showCreateError(createForm.controls.invoiceNumber)) {
+              <small class="field-error" id="invoiceNumber-error">Use até 80 caracteres.</small>
+            }
           </div>
 
           <div class="field-group rma-purchase col-2" role="group" aria-labelledby="rma-purchase-label">

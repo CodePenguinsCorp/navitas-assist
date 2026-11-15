@@ -8,7 +8,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { NgComponentOutlet } from '@angular/common';
 import { Component, ElementRef, Injector, Type, afterNextRender, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { HttpContext } from '@angular/common/http';
 import { Subject, Subscription, catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
@@ -207,7 +207,7 @@ export interface RmaListFilters {
     }
 
     .rma-details__section + .rma-details__section {
-      margin-top: var(--space-5);
+      margin-top: var(--space-3);
     }
 
     .rma-details__section h4 {
@@ -565,12 +565,12 @@ export class RmasComponent {
 
   protected readonly createForm = this.formBuilder.nonNullable.group({
     clientId: [0, [Validators.required, Validators.min(1)]],
-    items: this.formBuilder.array([this.createRmaItemForm()]),
+    items: this.formBuilder.array([this.createRmaItemForm()], { validators: [maxItems(MAX_CREATE_ITEMS)] }),
     purchaseDate: [''],
     purchaseDateUnknown: [false],
     entryDate: [todayInputValue(), [Validators.required]],
     dueDate: [''],
-    invoiceNumber: [''],
+    invoiceNumber: ['', [Validators.maxLength(80)]],
     reportedFailure: ['', [Validators.required, Validators.maxLength(1000)]],
     receivedAccessories: ['', [Validators.maxLength(500)]],
     physicalCondition: ['', [Validators.maxLength(500)]],
@@ -606,7 +606,12 @@ export class RmasComponent {
     return this.createForm.controls.items;
   }
 
+  protected get canAddCreateItem(): boolean {
+    return this.createItems.length < MAX_CREATE_ITEMS;
+  }
+
   protected addCreateItem(): void {
+    if (!this.canAddCreateItem) return;
     this.createItems.push(this.createRmaItemForm());
   }
 
@@ -946,6 +951,12 @@ export class RmasComponent {
     }, { validators: atLeastOneItemIdentification });
   }
 
+}
+
+const MAX_CREATE_ITEMS = 20;
+
+function maxItems(max: number): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => (control as FormArray).length > max ? { maxItems: { max } } : null;
 }
 
 function atLeastOneItemIdentification(control: AbstractControl): ValidationErrors | null {
