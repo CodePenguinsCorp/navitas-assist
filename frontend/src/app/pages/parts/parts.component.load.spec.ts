@@ -28,7 +28,6 @@ describe('PartsComponent snapshot loading', () => {
   const root = (): HTMLElement => fixture.nativeElement.querySelector('.page-surface');
   const text = () => {
     const snapshot = root().cloneNode(true) as HTMLElement;
-    snapshot.querySelector('.alert-banner--success')?.remove();
     return snapshot.textContent!.replace(/\s+/g, ' ').trim();
   };
   const button = (label: string) => Array.from(root().querySelectorAll('button')).find((item) => item.textContent?.trim() === label);

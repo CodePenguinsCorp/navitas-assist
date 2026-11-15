@@ -1,3 +1,4 @@
+import { ToastService } from '../../core/services/toast.service';
 import { TipDirective } from '../../shared/tip/tip.directive';
 import { CollapsibleSectionComponent } from '../../shared/collapsible-section/collapsible-section.component';
 import { RmaHistoryListComponent } from '../../shared/rma-history-list/rma-history-list.component';
@@ -395,6 +396,7 @@ export interface RmaListFilters {
 export class RmasComponent {
   protected readonly protocolsComponent = signal<Type<unknown> | null>(null);
   private readonly formBuilder = inject(FormBuilder);
+  private readonly toasts = inject(ToastService);
   private readonly permissions = inject(PermissionService);
   private readonly catalogService = inject(CatalogService);
   private readonly rmaService = inject(RmaService);
@@ -413,7 +415,6 @@ export class RmasComponent {
   private readonly retroactiveSection = viewChild<CollapsibleSectionComponent>('retroactiveSection');
   protected readonly dateErrors = signal<CreateDateErrors>({ manufacturedAt: [], purchaseDate: '', entryDate: '', dueDate: '' });
   protected readonly pageError = signal('');
-  protected readonly pageMessage = signal('');
   protected readonly activeModal = signal<ModalView | null>(null);
   protected readonly detailTab = signal<DetailTab>('products');
   protected readonly detailTabs: ReadonlyArray<{ id: DetailTab; label: string }> = [
@@ -646,7 +647,6 @@ export class RmasComponent {
 
   protected submitFilters(): void {
     this.appliedFilters.set(this.buildFilters());
-    this.pageMessage.set('');
     this.pageError.set('');
     this.loadListAndSummary(true);
   }
@@ -667,7 +667,6 @@ export class RmasComponent {
       status: ''
     });
     this.appliedFilters.set({});
-    this.pageMessage.set('');
     this.pageError.set('');
     this.loadListAndSummary(true);
   }
@@ -683,7 +682,6 @@ export class RmasComponent {
     }
 
     this.pageError.set('');
-    this.pageMessage.set('');
     this.createErrorMessage.set('');
     this.createSubmitAttempted.set(false);
     this.activeModal.set('create');
@@ -706,7 +704,6 @@ export class RmasComponent {
   private openDetailById(id: number): void {
     void import('../../shared/rma-protocols/rma-protocols.component').then((module) => this.protocolsComponent.set(module.RmaProtocolsComponent));
     this.pageError.set('');
-    this.pageMessage.set('');
     this.detailTab.set('products');
     this.activeModal.set('details');
     this.loadDetail(id);
@@ -769,7 +766,6 @@ export class RmasComponent {
       this.createForm.markAllAsTouched();
       this.createSubmitAttempted.set(true);
       this.createErrorMessage.set('Preencha os campos obrigatórios.');
-      this.pageMessage.set('');
       this.revealInvalidRetroactiveField();
       return;
     }
@@ -779,7 +775,6 @@ export class RmasComponent {
     this.dateErrors.set(dateErrors);
     if (dateErrors.manufacturedAt.some(Boolean) || dateErrors.purchaseDate || dateErrors.entryDate || dateErrors.dueDate) {
       this.createErrorMessage.set('Corrija as datas indicadas no formulário.');
-      this.pageMessage.set('');
       return;
     }
     const payload: CreateRmaRequest = {
@@ -806,7 +801,6 @@ export class RmasComponent {
 
     this.createSubmitting.set(true);
     this.pageError.set('');
-    this.pageMessage.set('');
 
     this.rmaService.create(payload).pipe(
       finalize(() => this.createSubmitting.set(false))
@@ -819,7 +813,7 @@ export class RmasComponent {
         this.filtersForm.setValue({ query: '', status: '' });
         this.appliedFilters.set({});
         this.resetModal();
-        this.pageMessage.set(`OS ${rma.code} criada com sucesso.`);
+        this.toasts.show({ message: `OS ${rma.code} criada.`, tone: 'success' });
         this.refreshRmas();
       },
       error: (error) => {

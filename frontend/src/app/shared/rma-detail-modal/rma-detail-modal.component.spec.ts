@@ -21,6 +21,7 @@ import { RmaPriorityFieldComponent } from '../rma-priority-field/rma-priority-fi
 import { buildRma, buildRmaItem } from '../../testing/rma-fixtures';
 import { profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { RmaDetailModalComponent } from './rma-detail-modal.component';
+import { toastMessages } from '../../testing/toast';
 
 @Component({ template: '' })
 class StubComponent {}
@@ -856,7 +857,8 @@ describe('RmaDetailModalComponent priority selector', () => {
     [...host.querySelectorAll<HTMLButtonElement>('.custom-select__option')].find((option) => option.textContent?.includes('Baixa'))!.click();
     fixture.detectChanges();
     expect(updated.map((rma) => rma.priority)).toEqual(['LOW']);
-    expect(priorityRow(host).querySelector('[role="status"]')?.textContent?.trim()).toBe('Prioridade alterada para Baixa');
+    expect(toastMessages()).toEqual(['Prioridade alterada para Baixa.']);
+    expect(priorityRow(host).querySelector('[role="status"]')).toBeNull();
   });
 
   it('keeps the priority read only without rma.editar or for a closed OS', async () => {

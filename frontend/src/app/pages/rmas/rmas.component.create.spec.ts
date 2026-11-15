@@ -15,6 +15,7 @@ import { buildRma, buildRmaPage } from '../../testing/rma-fixtures';
 import { RmasComponent } from './rmas.component';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { settleRmaLazyChunks } from '../../testing/lazy-chunks';
+import { toastMessages } from '../../testing/toast';
 
 type CreateFn = (payload: CreateRmaRequest) => Observable<RmaResponse>;
 
@@ -283,6 +284,7 @@ describe('RmasComponent creation messages', () => {
     component.createRma();
 
     expect(rmaService.create).toHaveBeenCalledOnce();
+    expect(toastMessages()).toEqual(['OS OS-2026-000002 criada.']);
   });
 
   it('keeps required and length rules for every field', async () => {

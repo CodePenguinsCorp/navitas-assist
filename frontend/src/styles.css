@@ -918,11 +918,6 @@ a {
   line-height: 1.55;
 }
 
-.success-card {
-  border-color: #cde7d7;
-  background: #f4fbf6;
-}
-
 .metrics-grid,
 .module-grid,
 .two-column-grid,
@@ -1897,12 +1892,6 @@ fieldset.form-section {
   border-color: var(--danger-line);
   background: linear-gradient(180deg, #fff4f6 0%, #ffecef 100%);
   color: var(--danger-text);
-}
-
-.alert-banner--success {
-  border-color: #cde7d7;
-  background: linear-gradient(180deg, #f4fbf6 0%, #eef9f2 100%);
-  color: var(--success-text);
 }
 
 /* relative: absolutely positioned children (.sr-only) scroll with the table instead of widening the page. */

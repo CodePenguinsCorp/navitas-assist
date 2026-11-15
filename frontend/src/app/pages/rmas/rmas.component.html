@@ -56,12 +56,6 @@
     </article>
   }
 
-  @if (pageMessage()) {
-    <article class="status-card panel success-card" role="status">
-      <h3>{{ pageMessage() }}</h3>
-    </article>
-  }
-
   <article #listRegion class="table-card table-card--list panel" tabindex="-1">
     @if (loadFailed()) {
       <section class="empty-state" role="alert">

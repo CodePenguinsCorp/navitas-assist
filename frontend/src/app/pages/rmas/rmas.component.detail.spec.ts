@@ -22,6 +22,7 @@ import { buildRma, buildRmaItem, buildRmaPage } from '../../testing/rma-fixtures
 import { RmasComponent } from './rmas.component';
 import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { settleRmaLazyChunks } from '../../testing/lazy-chunks';
+import { toastMessages } from '../../testing/toast';
 
 interface DetailHarness {
   openDetailsModal(rma: RmaResponse): void;
@@ -812,7 +813,8 @@ describe('RmasComponent detail priority selector', () => {
     expect(updatePriority).toHaveBeenCalledWith(5, 'HIGH');
     const field = view.detail().querySelector('app-rma-priority-field')!;
     expect(field.querySelector('.custom-select__trigger')?.getAttribute('data-priority')).toBe('HIGH');
-    expect(field.querySelector('[role="status"]')?.textContent?.trim()).toBe('Prioridade alterada para Alta');
+    expect(toastMessages()).toEqual(['Prioridade alterada para Alta.']);
+    expect(field.querySelector('[role="status"]')).toBeNull();
     expect(view.rmaService.list.mock.calls.length).toBeGreaterThan(listCalls);
     expect(view.page.querySelector('.modal-panel--narrow')).toBeNull();
   });
