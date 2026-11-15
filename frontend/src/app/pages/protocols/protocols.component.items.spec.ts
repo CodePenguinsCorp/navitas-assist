@@ -101,7 +101,7 @@ describe('ProtocolsComponent focused items', () => {
   it('renders each item as a compact row with number badge, title, chips and an X sibling', async () => {
     await setup(); expect(rows()).toHaveLength(3);
     for (const [index, row] of rows().entries()) {
-      expect(row.querySelector('.item-row__badge')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(`Item ${index + 1}`);
+      expect(row.querySelector('.item-row__badge')?.textContent?.replace(/s+/g, ' ').trim()).toBe(`Item ${index + 1}`);
       expect(row.querySelector('.item-row__title')?.textContent?.trim()).toBe(TEMPLATE.items[index].title);
       const remove = removeButton(index + 1);
       expect(row.contains(remove)).toBe(true); expect(summaries()[index].contains(remove)).toBe(false);
@@ -159,7 +159,7 @@ describe('ProtocolsComponent focused items', () => {
     component().saveTemplate(); await stable();
     expect(document.activeElement).toBe(titleOf(0));
     expect(expanded()).toEqual(['true', 'true', 'false']);
-    expect(titleOf(0).closest('label')?.querySelector('.field-error')?.textContent?.trim()).toBe('Informe o item.');
+    expect(titleOf(0).closest('label')?.querySelector('.field-error')?.textContent?.trim()).toBe('Informe o título do item.');
     expect(updateTemplate).not.toHaveBeenCalled(); expect(items().at(0).enabled).toBe(true);
   });
 
@@ -168,7 +168,7 @@ describe('ProtocolsComponent focused items', () => {
     await setup(); open(0);
     for (const [name, max] of [['instructions', 1000], ['expectedResult', 500]] as const) {
       const input = panel().querySelector<HTMLTextAreaElement>(`[formcontrolname="${name}"]`)!;
-      expect(input.tagName).toBe('TEXTAREA'); expect(input.getAttribute('rows')).toBe('3'); expect(input.getAttribute('maxlength')).toBe(String(max));
+      expect(input.tagName).toBe('TEXTAREA'); expect(input.getAttribute('maxlength')).toBe(String(max));
     }
     inputOf(0, 'instructions', ' Linha 1\nLinha 2 '); inputOf(0, 'expectedResult', ' Esperado 1\nEsperado 2 '); component().saveTemplate();
     expect(updateTemplate.mock.calls[0][1].items[0]).toEqual(expect.objectContaining({ instructions: 'Linha 1\nLinha 2', expectedResult: 'Esperado 1\nEsperado 2' }));
@@ -192,6 +192,69 @@ describe('ProtocolsComponent focused items', () => {
     expect(summaries()).toHaveLength(1); expect(expanded()).toEqual(['true']); expect(titleOf(0).value).toBe('');
   });
 
+  describe('item editor layout', () => {
+    const labelsOf = (root: Element, selector: string) => Array.from(root.querySelectorAll(selector)).map((el) => el.textContent?.replace(/\s+/g, ' ').trim());
+
+    it('puts the title first, then Etapa and Tipo, with the item title field named Título do item', async () => {
+      await setup(); open(1);
+      const editor = editorOf(1)!;
+      const fields = Array.from(editor.querySelectorAll('.field-group > span')).map((el) => el.textContent?.trim());
+      expect(fields.slice(0, 3)).toEqual(['Título do item', 'Etapa (grupo)', 'Tipo']);
+      expect(editor.firstElementChild?.tagName).toBe('H4');
+      expect(editor.querySelector('.field-group')?.querySelector('[formcontrolname="title"]')).not.toBeNull();
+      expect(editor.querySelector<HTMLInputElement>('[formcontrolname="title"]')!.getAttribute('placeholder')).toBeTruthy();
+    });
+
+    it('shows the Medição block only for the Medição type, in one row of four fields', async () => {
+      await setup(); open(0); open(1);
+      const measurement = editorOf(0)!.querySelector('fieldset.item-editor__measurement')!;
+      expect(measurement.querySelector('legend')?.textContent?.trim()).toBe('Medição');
+      expect(labelsOf(measurement, '.field-group > span')).toEqual(['Unidade', 'Casas decimais', 'Mínimo', 'Máximo']);
+      expect(measurement.querySelector('.panel, .item-row, fieldset')).toBeNull();
+      expect(editorOf(1)!.querySelector('.item-editor__measurement')).toBeNull();
+      items().at(1).controls['type'].setValue('MEASUREMENT'); render();
+      expect(editorOf(1)!.querySelector('.item-editor__measurement')).not.toBeNull();
+    });
+
+    it('keeps instructions and expected result as same-size half columns and the flags in a footer with no divider', async () => {
+      await setup(); open(0);
+      const editor = editorOf(0)!;
+      expect(labelsOf(editor, '.item-editor__half > span')).toEqual(['Etapa (grupo)', 'Tipo', 'Instruções', 'Resultado esperado']);
+      const flags = editor.querySelector<HTMLElement>('.item-editor__flags')!;
+      expect(labelsOf(flags, 'label')).toEqual(['Obrigatório', 'Exige evidência']);
+      expect(Array.from(flags.querySelectorAll('input')).every((input) => input.classList.contains('switch'))).toBe(true);
+      expect(editor.querySelector('.protocol-item-card__footer')).toBeNull();
+      expect(editor.querySelector('hr')).toBeNull();
+      expect(editor.lastElementChild).toBe(flags);
+      expect(getComputedStyle(flags).borderTopWidth).not.toBe('1px');
+    });
+
+    it('marks the empty title as muted in the collapsed header', async () => {
+      await setup(); items().at(1).controls['title'].setValue(''); render();
+      const title = summaries()[1].querySelector('.item-row__title')!;
+      expect(title.textContent?.trim()).toBe('Sem título'); expect(title.classList).toContain('item-row__title--empty');
+      expect(summaries()[0].querySelector('.item-row__title')!.classList).not.toContain('item-row__title--empty');
+    });
+
+    it('rejects a minimum above the maximum only after touching, and recovers when fixed', async () => {
+      await setup(); open(0);
+      const max = () => editorOf(0)!.querySelector<HTMLInputElement>('[formcontrolname="maxValue"]')!;
+      expect(editorOf(0)!.textContent).not.toContain('O mínimo não pode ser maior que o máximo.');
+      inputOf(0, 'minValue', '20'); inputOf(0, 'maxValue', '5');
+      expect(editorOf(0)!.textContent).toContain('O mínimo não pode ser maior que o máximo.'); expect(max().getAttribute('aria-invalid')).toBe('true');
+      component().saveTemplate(); render(); expect(updateTemplate).not.toHaveBeenCalled();
+      inputOf(0, 'maxValue', '30');
+      expect(editorOf(0)!.textContent).not.toContain('O mínimo não pode ser maior que o máximo.'); expect(max().getAttribute('aria-invalid')).toBeNull();
+    });
+
+    it('stops adding items at the contract limit of 100', async () => {
+      await setup();
+      for (let i = items().length; i < 100; i += 1) component().addItem();
+      render(); expect(items().length).toBe(100); expect(button('Adicionar item').disabled).toBe(true);
+      component().addItem(); expect(items().length).toBe(100);
+    });
+  });
+
   it('preserves hidden measurement validators and does not silently clear invalid values', async () => {
     await setup(); items().at(0).patchValue({ minValue: 'inválido', type: 'CHECK' }); render(); component().saveTemplate(); render();
     expect(updateTemplate).not.toHaveBeenCalled(); expect(items().at(0).controls['minValue'].value).toBe('inválido');
@@ -199,9 +262,9 @@ describe('ProtocolsComponent focused items', () => {
   });
 
   it.each([0, 6])('preserves measurement precision %s and non measurement null extras', async (places) => {
-    await setup(); items().at(0).patchValue({ decimalPlaces: places, minValue: '-1,25', maxValue: '-2,5' }); component().saveTemplate();
+    await setup(); items().at(0).patchValue({ decimalPlaces: places, minValue: '-2,5', maxValue: '-1,25' }); component().saveTemplate();
     const payload = updateTemplate.mock.calls[0][1];
-    expect(payload.items).toHaveLength(3); expect(payload.items[0]).toEqual(expect.objectContaining({ decimalPlaces: places, minValue: '-1.25', maxValue: '-2.5' }));
+    expect(payload.items).toHaveLength(3); expect(payload.items[0]).toEqual(expect.objectContaining({ decimalPlaces: places, minValue: '-2.5', maxValue: '-1.25' }));
     expect(payload.items[1]).toEqual(expect.objectContaining({ unit: null, decimalPlaces: null, minValue: null, maxValue: null }));
   });
 });

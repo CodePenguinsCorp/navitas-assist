@@ -283,7 +283,7 @@
                 <button type="button" class="item-row__summary protocol-item-summary" [id]="'protocol-item-summary-' + index" [attr.aria-expanded]="isExpanded(item)" [attr.aria-controls]="'protocol-item-editor-' + index" (click)="toggleItem(item)" [disabled]="submitting()">
                   <span class="item-row__badge"><span class="sr-only">Item </span>{{ index + 1 }}</span>
                   <span class="item-row__body">
-                    <strong class="item-row__title">{{ item.controls['title'].value.trim() || 'Sem título' }}</strong>
+                    <strong class="item-row__title" [class.item-row__title--empty]="!item.controls['title'].value.trim()">{{ item.controls['title'].value.trim() || 'Sem título' }}</strong>
                     <span class="item-row__chips">
                       @if (item.controls['stepName'].value.trim()) { <span class="item-row__chip">{{ item.controls['stepName'].value }}</span> }
                       <span class="item-row__chip">{{ typeLabel(item) }}</span>
@@ -296,68 +296,74 @@
                 <button appRowAction icon="close" tone="danger" label="Remover item" [target]="'' + (index + 1)" [blockedReason]="items.length === 1 ? 'O protocolo precisa de pelo menos um item.' : null" [disabled]="submitting()" (click)="removeItem(index)"></button>
               </div>
               @if (isExpanded(item)) {
-              <div class="item-row__editor protocol-item-card" [id]="'protocol-item-editor-' + index" [formGroupName]="index">
+              <div class="item-row__editor inline-form item-editor protocol-item-card" [id]="'protocol-item-editor-' + index" [formGroupName]="index">
                 <h4 class="sr-only">Item {{ index + 1 }}</h4>
-                <label class="field-group">
-                  <span>Etapa</span>
-                  <input type="text" formControlName="stepName" maxlength="120" />
+                <label class="field-group field-group--required item-editor__title">
+                  <span>Título do item</span>
+                  <input type="text" formControlName="title" maxlength="200" placeholder="O que verificar neste item" />
+                  @if (hasError(item.controls['title'])) {
+                    <small class="field-error">Informe o título do item.</small>
+                  }
+                </label>
+                <label class="field-group field-group--required item-editor__half">
+                  <span>Etapa (grupo)</span>
+                  <input type="text" formControlName="stepName" maxlength="120" [attr.aria-describedby]="'protocol-item-step-hint-' + index" />
+                  <small class="item-editor__hint" [id]="'protocol-item-step-hint-' + index">Agrupa os itens na execução.</small>
                   @if (hasError(item.controls['stepName'])) {
                     <small class="field-error">Informe a etapa.</small>
                   }
                 </label>
-                <label class="field-group">
-                  <span>Item</span>
-                  <input type="text" formControlName="title" maxlength="200" />
-                  @if (hasError(item.controls['title'])) {
-                    <small class="field-error">Informe o item.</small>
-                  }
-                </label>
-                <label class="field-group">
+                <label class="field-group item-editor__half">
                   <span>Tipo</span>
                   <app-custom-select ariaLabel="Tipo do item" [options]="typeOptions" formControlName="type" />
                 </label>
                 @if (isMeasurement(index)) {
-                  <label class="field-group">
-                    <span>Unidade</span>
-                    <input type="text" formControlName="unit" maxlength="20" />
-                  </label>
-                  <label class="field-group">
-                    <span>Casas decimais</span>
-                    <input type="number" min="0" max="6" formControlName="decimalPlaces" />
-                    @if (hasError(item.controls['decimalPlaces'])) {
-                      <small class="field-error">Use de 0 a 6 casas decimais.</small>
-                    }
-                  </label>
-                  <label class="field-group">
-                    <span>Mínimo</span>
-                    <input type="text" inputmode="decimal" formControlName="minValue" />
-                    @if (hasError(item.controls['minValue'])) {
-                      <small class="field-error">Use um número com até 13 dígitos inteiros e até 6 casas decimais, separadas por vírgula ou ponto.</small>
-                    }
-                  </label>
-                  <label class="field-group">
-                    <span>Máximo</span>
-                    <input type="text" inputmode="decimal" formControlName="maxValue" />
-                    @if (hasError(item.controls['maxValue'])) {
-                      <small class="field-error">Use um número com até 13 dígitos inteiros e até 6 casas decimais, separadas por vírgula ou ponto.</small>
-                    }
-                  </label>
+                  <fieldset class="item-editor__measurement">
+                    <legend>Medição</legend>
+                    <label class="field-group">
+                      <span>Unidade</span>
+                      <input type="text" formControlName="unit" maxlength="20" placeholder="mm" />
+                    </label>
+                    <label class="field-group">
+                      <span>Casas decimais</span>
+                      <input type="number" min="0" max="6" formControlName="decimalPlaces" />
+                      @if (hasError(item.controls['decimalPlaces'])) {
+                        <small class="field-error">Use de 0 a 6 casas decimais.</small>
+                      }
+                    </label>
+                    <label class="field-group">
+                      <span>Mínimo</span>
+                      <input type="text" inputmode="decimal" formControlName="minValue" placeholder="0,00" [attr.aria-invalid]="rangeError(item) ? 'true' : null" />
+                      @if (hasError(item.controls['minValue'])) {
+                        <small class="field-error">Use um número com até 13 dígitos inteiros e até 6 casas decimais, separadas por vírgula ou ponto.</small>
+                      }
+                    </label>
+                    <label class="field-group">
+                      <span>Máximo</span>
+                      <input type="text" inputmode="decimal" formControlName="maxValue" placeholder="10,00" [attr.aria-invalid]="rangeError(item) ? 'true' : null" />
+                      @if (hasError(item.controls['maxValue'])) {
+                        <small class="field-error">Use um número com até 13 dígitos inteiros e até 6 casas decimais, separadas por vírgula ou ponto.</small>
+                      } @else if (rangeError(item)) {
+                        <small class="field-error">O mínimo não pode ser maior que o máximo.</small>
+                      }
+                    </label>
+                  </fieldset>
                 }
-                <label class="field-group field-group--full">
-                  <span>Resultado esperado</span>
-                  <textarea formControlName="expectedResult" rows="3" maxlength="500"></textarea>
-                </label>
-                <label class="field-group field-group--full">
+                <label class="field-group item-editor__half">
                   <span>Instruções</span>
-                  <textarea formControlName="instructions" rows="3" maxlength="1000"></textarea>
+                  <textarea formControlName="instructions" maxlength="1000"></textarea>
                 </label>
-                <div class="protocol-item-card__footer">
+                <label class="field-group item-editor__half">
+                  <span>Resultado esperado</span>
+                  <textarea formControlName="expectedResult" maxlength="500"></textarea>
+                </label>
+                <div class="item-editor__flags">
                   <label class="checkbox-field">
-                    <input type="checkbox" formControlName="required" />
+                    <input type="checkbox" class="switch" formControlName="required" />
                     <span>Obrigatório</span>
                   </label>
                   <label class="checkbox-field">
-                    <input type="checkbox" formControlName="evidenceRequired" />
+                    <input type="checkbox" class="switch" formControlName="evidenceRequired" />
                     <span>Exige evidência</span>
                   </label>
                 </div>
@@ -365,7 +371,7 @@
               }
               </div>
             }
-            <button type="button" class="button-secondary protocol-items__add" (click)="addItem()" [disabled]="submitting()">Adicionar item</button>
+            <button type="button" class="button-secondary protocol-items__add" (click)="addItem()" [disabled]="submitting() || items.length >= maxItems">Adicionar item</button>
           </div>
         </fieldset>
 

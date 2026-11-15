@@ -2,7 +2,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { SuggestInputComponent } from '../../shared/form-controls/suggest-input/suggest-input.component';
 import { Component, DestroyRef, ElementRef, Injector, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Observable, finalize } from 'rxjs';
 import { RMA_STATUS_LABELS } from '../../core/mock-data';
 import { ProtocolItemType, ProtocolTemplateItemResponse, ProtocolTemplateRequest, ProtocolTemplateResponse, RmaStatus } from '../../core/models';
@@ -18,6 +18,8 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
 import { ResultCountComponent } from '../../shared/result-count/result-count.component';
 import { RowActionComponent } from '../../shared/row-action/row-action.component';
 
+/** Limite de itens do contrato (ProtocolTemplateRequest). */
+const MAX_ITEMS = 100;
 const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
 
 @Component({
@@ -29,24 +31,72 @@ const DECIMAL_PATTERN = /^-?\d{1,13}([.,]\d{1,6})?$/;
       display: block;
     }
 
-    .protocol-item-card {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
-      gap: var(--space-3);
+    .item-editor {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-4) var(--space-3);
+      margin: 0;
     }
 
-    .protocol-item-card .field-group {
-      align-content: start;
-    }
-
-    .protocol-item-card__footer {
+    .item-editor__title,
+    .item-editor__measurement,
+    .item-editor__flags {
       grid-column: 1 / -1;
+    }
+
+    .item-editor__half {
+      grid-column: span 2;
+    }
+
+    .item-editor__title input {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    .item-editor__hint {
+      color: var(--muted);
+      font-size: var(--font-size-sm);
+    }
+
+    .item-editor__measurement {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-2) var(--space-3);
+      min-width: 0;
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+
+    .item-editor__measurement legend {
+      grid-column: 1 / -1;
+      padding: 0;
+      margin-bottom: var(--space-1);
+      color: var(--muted);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .item-editor__flags {
       display: flex;
       flex-wrap: wrap;
-      align-items: center;
       gap: var(--space-1) var(--space-5);
-      padding-top: var(--space-3);
-      border-top: 1px solid var(--line);
+    }
+
+    .item-row__title--empty {
+      color: var(--muted);
+      font-weight: var(--font-weight-regular, 400);
+    }
+
+    @media (max-width: 600px) {
+      .item-editor__half {
+        grid-column: 1 / -1;
+      }
+
+      .item-editor__measurement {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
     }
 
     .protocol-items {
@@ -116,6 +166,7 @@ export class ProtocolsComponent {
       .sort((a, b) => a.localeCompare(b, 'pt-BR')));
   protected readonly productOptions = this.productOptionsSignal.asReadonly();
   protected readonly editingTemplate = this.editingTemplateSignal.asReadonly();
+  protected readonly maxItems = MAX_ITEMS;
   protected readonly statusOptions = Object.keys(RMA_STATUS_LABELS) as RmaStatus[];
   protected readonly typeOptions: ReadonlyArray<CustomSelectOption<ProtocolItemType>> = (Object.keys(PROTOCOL_ITEM_TYPE_LABELS) as ProtocolItemType[]).map((type) => ({ value: type, label: PROTOCOL_ITEM_TYPE_LABELS[type] }));
 
@@ -243,7 +294,7 @@ export class ProtocolsComponent {
   }
 
   protected addItem(): void {
-    if (this.submitting()) return;
+    if (this.submitting() || this.items.length >= MAX_ITEMS) return;
     const item = this.itemGroup();
     this.items.push(item);
     // O item novo abre já recolhendo os demais, para a lista continuar curta.
@@ -275,6 +326,12 @@ export class ProtocolsComponent {
     });
   }
 
+  /** Mínimo maior que o máximo, só depois de tocar em um dos dois campos. */
+  protected rangeError(item: FormGroup): boolean {
+    const { minValue, maxValue } = item.controls;
+    return item.hasError('range') && (minValue.touched || minValue.dirty || maxValue.touched || maxValue.dirty);
+  }
+
   protected typeLabel(item: FormGroup): string {
     return PROTOCOL_ITEM_TYPE_LABELS[item.controls['type'].value as ProtocolItemType];
   }
@@ -286,7 +343,7 @@ export class ProtocolsComponent {
     this.expandedItems.update((open) => new Set([...open, ...invalid]));
     afterNextRender(() => {
       const editor = this.host.nativeElement.querySelector<HTMLElement>(`#protocol-item-editor-${index}`);
-      const field = editor?.querySelector<HTMLElement>('input.ng-invalid, textarea.ng-invalid')
+      const field = editor?.querySelector<HTMLElement>('input.ng-invalid, textarea.ng-invalid, input[aria-invalid="true"]')
         ?? editor?.querySelector<HTMLElement>('app-custom-select[formcontrolname="type"] button');
       field?.focus();
     }, { injector: this.injector });
@@ -357,7 +414,7 @@ export class ProtocolsComponent {
       maxValue: [item?.maxValue === null || item?.maxValue === undefined ? '' : String(item.maxValue), [Validators.pattern(DECIMAL_PATTERN)]],
       expectedResult: [item?.expectedResult ?? '', [Validators.maxLength(500)]],
       evidenceRequired: [item?.evidenceRequired ?? false]
-    });
+    }, { validators: [rangeValidator] });
   }
 
   private loadTemplates(): void {
@@ -394,6 +451,19 @@ export class ProtocolsComponent {
     this.deleteModalErrorMessage.set('');
     this.successMessage.set('');
   }
+}
+
+/** Medição com mínimo maior que o máximo (o servidor também recusa). */
+function rangeValidator(group: AbstractControl): ValidationErrors | null {
+  if (group.get('type')?.value !== 'MEASUREMENT') return null;
+  const min = parseLimit(group.get('minValue')?.value);
+  const max = parseLimit(group.get('maxValue')?.value);
+  return min !== null && max !== null && min > max ? { range: true } : null;
+}
+
+function parseLimit(value: unknown): number | null {
+  const normalized = normalizeDecimal(String(value ?? ''));
+  return normalized !== null && DECIMAL_PATTERN.test(normalized) ? Number(normalized) : null;
 }
 
 function buildTemplatePayload(raw: ReturnType<ProtocolsComponent['form']['getRawValue']>): ProtocolTemplateRequest {

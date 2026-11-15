@@ -499,7 +499,7 @@ describe('ProtocolsComponent', () => {
       expect(errorOf('[formcontrolname="name"]')).toBe('Informe o nome do protocolo.');
       expect(errorOf('[formcontrolname="category"]')).toBe('Informe a categoria ou selecione um produto.');
       expect(errorOf('[formcontrolname="stepName"]')).toBe('Informe a etapa.');
-      expect(errorOf('[formcontrolname="title"]')).toBe('Informe o item.');
+      expect(errorOf('[formcontrolname="title"]')).toBe('Informe o título do item.');
       expect(dialog()!.querySelector('[role="alert"]')?.textContent).toContain('Revise os campos e informe o produto ou a categoria do protocolo.');
       expect(createTemplate).not.toHaveBeenCalled();
 
