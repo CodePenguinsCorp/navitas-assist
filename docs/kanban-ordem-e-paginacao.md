@@ -22,7 +22,7 @@ Garantia usa o cálculo efetivo atual, incluindo ajustes manuais e itens legados
 
 ## Ordem e concorrência
 
-- Nova migração `V2__rma_board_position.sql`: `rmas.board_position BIGINT NULL` e índice `(status, board_position)`. Conferir novamente a versão livre antes de escrever. Espelhar a coluna na entidade.
+- Coluna (hoje no baseline V1): `rmas.board_position BIGINT NULL` e índice `(status, board_position)`. Conferir novamente a versão livre antes de escrever. Espelhar a coluna na entidade.
 - Ordem SQL: `board_position ASC NULLS LAST`, prioridade HIGH/MEDIUM/LOW, `updated_at DESC`, `id ASC`. O cliente preserva a sequência recebida.
 - Posições com intervalo inicial de 1024. Sem espaço ou com risco de overflow, renumerar sob o mesmo lock. Não alterar datas ou histórico dos cartões renumerados.
 - `afterId` indica o predecessor e `beforeId` o sucessor. Sem vizinhos significa início da coluna. Recusar auto-referência, vizinho fora da coluna e ordem de vizinhos invertida. Aceitar vizinhos visíveis não adjacentes sob filtros: inserir imediatamente antes de `beforeId`, ou imediatamente após `afterId` se só ele vier. Com ambos, `beforeId` determina o ponto e `afterId` valida a ordem.

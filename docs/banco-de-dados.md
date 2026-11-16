@@ -6,7 +6,7 @@ PostgreSQL 16, em todos os ambientes (local, CI, testes automatizados e ambiente
 
 | Versão | Arquivo | O que faz |
 | --- | --- | --- |
-| V1 | `V1__baseline.sql` | Baseline única em PostgreSQL: extensão `unaccent`, todas as tabelas, índices e constraints e os seeds (linha de bloqueio da numeração das ordens de serviço, com códigos `OS-<ano>-<sequência>`; 4 perfis prontos com permissões; 4 regras de notificação com destinatários por perfil). |
+| V1 | `V1__baseline.sql` | Baseline única em PostgreSQL (inclui `rmas.board_position` com índice `(status, board_position)`, tipo de falha, causa e tipo de reparo como texto livre de até 80 caracteres e horas de reparo opcionais): extensão `unaccent`, todas as tabelas, índices e constraints e os seeds (linha de bloqueio da numeração das ordens de serviço, com códigos `OS-<ano>-<sequência>`; 4 perfis prontos com permissões; 4 regras de notificação com destinatários por perfil). |
 
 Tabelas principais: `audit_events`, `clients`, `products`, `rmas`, `rma_items`, `rma_item_warranty_history`, `rma_due_date_history`, `diagnoses`, `rma_status_history`, `rma_assignment_history`, `rma_repair_history`, `rma_blocks`, `rma_external_components`, `rma_interventions`, `parts`, `part_usages`, `part_movements`, `access_profiles`, `access_profile_permissions`, `user_accounts`, `user_account_extra_permissions`, `kanban_views`, `notification_*`, `notifications`, `protocol_*` e `rma_protocol_*`.
 
@@ -79,9 +79,6 @@ A baseline já traz os índices compostos usados por filtros e ordenação: `rma
 
 | Versão | Arquivo | Alteração |
 | --- | --- | --- |
-| V2 | `V2__rma_board_position.sql` | Adiciona `rmas.board_position BIGINT NULL` e índice `(status, board_position)`; dados existentes permanecem automáticos. |
-| V4 | `V4__intervencao_tipo_texto_livre_e_horas_opcionais.sql` | `rma_interventions.type` passa a `VARCHAR(80)` (texto livre), sem o `CHECK` `ck_interventions_type`; os códigos antigos viram os textos em português (`RESOLDERING` vira "Ressolda", `OTHER` vira "Outro" etc.). `hours` deixa de ser `NOT NULL` (o `CHECK` `hours > 0` continua valendo quando informada). |
-| V3 | `V3__diagnostico_tipo_e_causa_texto_livre.sql` | `diagnoses.failure_type` e `probable_cause` passam a `VARCHAR(80)` (texto livre), sem as restrições `CHECK`; os códigos antigos viram os textos em português (por exemplo `POWER_SUPPLY` vira "Fonte de alimentação"). |
 
 
 ## Uso de peças na V1
