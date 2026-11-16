@@ -92,9 +92,9 @@ class RmaReportCsvIntegrationTest {
         assertEquals((byte) 0xEF, body[0]);
         String[] lines = new String(body, 3, body.length - 3, StandardCharsets.UTF_8).split("\r\n");
         assertEquals("Código;Entrada;Status;Cliente;Produto;SKU;Lote;Série;Garantia;Ajuste manual de garantia;Falha relatada;"
-            + "Falha encontrada;Tipo de falha;Causa provável;Responsável;Expedição;Peças usadas", lines[0]);
+            + "Falha encontrada;Tipo de falha;Causa provável;Responsável;Peças usadas", lines[0]);
         assertEquals("OS-1;05/10/2026;Diagnóstico;\"'=Cliente; \"\"Alfa\"\"\";Controlador;CTRL-1;L1;S1;Pendente;Não;\"Não liga\nàs vezes\";"
-            + "Conector danificado;Comunicação;;;;", lines[1]);
+            + "Conector danificado;Comunicação;;;", lines[1]);
         assertTrue(lines[2].contains(";'-S2;"), lines[2]);
         assertEquals(3, lines.length);
     }

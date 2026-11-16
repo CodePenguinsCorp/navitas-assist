@@ -70,9 +70,6 @@ class RmaTechnicalReportIntegrationTest {
         rma.setReportedFailure("Não liga após queda de energia");
         rma.setPhysicalCondition("Carcaça riscada");
         rma.setReceivedAccessories("Fonte original");
-        rma.setRepairSummary("Substituição do regulador");
-        rma.setReplacedPartsSummary("Regulador 5V");
-        rma.setTestSummary("Teste de bancada aprovado");
         rma.setStatus(RmaStatus.COMPLETED);
         RmaItem item = new RmaItem();
         item.setProduct(product);
@@ -104,7 +101,7 @@ class RmaTechnicalReportIntegrationTest {
         String text = text(pdf);
         for (String expected : List.of("Laudo técnico", "OS-2026/0001", "Cliente Ação Ltda", "Controlador térmico", "CTRL-LAUDO", "LOTE-9",
             "SN-123", "Pendente", "Não liga após queda de energia", "Regulador queimado", "Fonte", "Sobrecarga", "João Técnico",
-            "Substituição do regulador", "Teste de bancada aprovado", "Regulador 5V", "REG-5V", "Regulador de tensão", "Carcaça riscada",
+            "REG-5V", "Regulador de tensão", "Carcaça riscada",
             "Fonte original", "Concluída", "Equipamento recebido", "Sem reparos registrados", "Técnico responsável", "Cliente", "Página 1 de 1")) {
             assertTrue(text.contains(expected), "PDF sem \"" + expected + "\":\n" + text);
         }
@@ -174,9 +171,6 @@ class RmaTechnicalReportIntegrationTest {
     @Test
     void hidesEmptySectionsAndFieldsInsteadOfRepeatingNaoInformado() throws Exception {
         usages.deleteAll();
-        rma.setRepairSummary(null);
-        rma.setTestSummary(" ");
-        rma.setReplacedPartsSummary(null);
         rma.setPhysicalCondition(null);
         rma.setReceivedAccessories(null);
         rmas.saveAndFlush(rma);

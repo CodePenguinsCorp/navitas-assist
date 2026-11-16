@@ -79,9 +79,12 @@ class DatabaseMigrationTest {
             assertFalse(columnExists(connection, "rmas", "warranty_updated_at"));
             assertTrue(columnExists(connection, "rma_items", "warranty_months"));
             assertTrue(columnExists(connection, "rmas", "assignee_id"));
-            assertEquals(600, columnSize(connection, "rmas", "repair_summary"));
-            assertEquals(600, columnSize(connection, "rmas", "replaced_parts_summary"));
-            assertEquals(800, columnSize(connection, "rmas", "test_summary"));
+            assertFalse(columnExists(connection, "rmas", "repair_summary"));
+            assertFalse(columnExists(connection, "rmas", "replaced_parts_summary"));
+            assertFalse(columnExists(connection, "rmas", "test_summary"));
+            assertFalse(columnExists(connection, "rmas", "shipped_at"));
+            assertFalse(columnExists(connection, "rmas", "carrier"));
+            assertFalse(columnExists(connection, "rmas", "tracking_code"));
             assertEquals(
                 Set.of(
                     "idx_rma_items_rma_id",

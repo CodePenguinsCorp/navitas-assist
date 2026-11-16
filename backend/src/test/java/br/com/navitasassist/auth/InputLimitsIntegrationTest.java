@@ -58,7 +58,7 @@ class InputLimitsIntegrationTest {
     @Test void rmaUpdateAlsoRejectsTwentyOneItems() {
         var request = new br.com.navitasassist.rma.UpdateRmaRequest(null,
             Collections.nCopies(21, new RmaItemRequest(1L, null, null, null)),
-            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null, null);
         assertThat(validator.validate(request)).anySatisfy(violation ->
             assertThat(violation.getPropertyPath().toString()).isEqualTo("items"));
     }
@@ -124,6 +124,6 @@ class InputLimitsIntegrationTest {
     private CreateRmaRequest request(int count) {
         return new CreateRmaRequest(1L, Collections.nCopies(count, new RmaItemRequest(1L, null, null, null)),
             LocalDate.of(2026, 1, 1), false, LocalDate.of(2026, 2, 1), null, "Falha", null, null,
-            null, null, null, null, null);
+            null, null);
     }
 }
