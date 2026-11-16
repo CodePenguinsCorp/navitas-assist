@@ -107,7 +107,7 @@ describe('Kanban paginado no servidor', () => {
     expect(host.querySelectorAll('.board-skeleton').length).toBe(0);
     expect(source.textContent).not.toContain('Nenhum item');
     expect(host.querySelector('[data-status="TRIAGE"] [data-rma-id="1"]')).not.toBeNull();
-    expect(host.querySelector('.board-column__stack')?.classList.contains('app-scroll')).toBe(false);
+    expect(host.querySelector('.board-column__stack')?.classList.contains('app-scroll')).toBe(true);
     expect(notice).toHaveBeenCalledTimes(1);
     respond([{ ...first, status: 'TRIAGE' }]);
     expect(source.textContent).toContain('Nenhum item');
