@@ -172,8 +172,7 @@ const createdRma: RmaResponse = {
   purchaseDate: null, purchaseDateUnknown: true, entryDate: '2026-10-20',
   invoiceNumber: 'NF-123', receivedBy: 'tester', reportedFailure: 'Falha', receivedAccessories: null,
   physicalCondition: null, priority: 'MEDIUM', status: 'RECEIVED', assigneeId: null, assigneeName: null,
-  repairSummary: null, replacedPartsSummary: null, testSummary: null, carrier: null,
-  trackingCode: null, diagnosis: null, repairHistory: [], statusHistory: [], assignmentHistory: [], currentBlock: null, blockHistory: [],
+  diagnosis: null, repairHistory: [], statusHistory: [], assignmentHistory: [], currentBlock: null, blockHistory: [],
   dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T12:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [], warrantyHistory: [],
   createdAt: '2026-10-20T12:00:00Z', updatedAt: '2026-10-20T12:00:00Z',
 };

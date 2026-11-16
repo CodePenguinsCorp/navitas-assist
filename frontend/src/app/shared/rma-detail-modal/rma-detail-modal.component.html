@@ -102,18 +102,6 @@
         @defer { <app-rma-repair-panel (changed)="refreshRepair()" [rmaId]="rma().id" [rmaStatus]="rma().status" />
         <app-rma-parts-panel (changed)="refreshRepair()" [rmaId]="rma().id" [rmaStatus]="rma().status" />
         <app-rma-protocols [rmaId]="rma().id" /> } @placeholder { <div aria-busy="true"></div> }
-        @let repair = repairFacts(rma());
-        @if (repair.length > 0) {
-          <section class="rma-detail__section detail-card">
-            <app-collapsible-section [title]="sectionLabel('repair')" icon="wrench" [open]="repair.length > 0" storageKey="rma.repair">
-              <div class="rma-detail__tiles">
-                @for (fact of repair; track fact.label) {
-                  <div class="rma-detail__tile detail-tile" [class.rma-detail__tile--wide]="fact.label === 'Reparo'"><span>{{ fact.label }}</span><strong>{{ fact.value }}</strong></div>
-                }
-              </div>
-            </app-collapsible-section>
-          </section>
-        }
 
         <section class="rma-detail__section detail-card">
           <app-collapsible-section [title]="sectionLabel('history')" icon="history" [count]="activity().length" [open]="activity().length > 0" storageKey="rma.history">
@@ -198,7 +186,6 @@
             <div><dt>{{ invoice.label }}</dt><dd>{{ invoice.value }}</dd></div>
             @let purchase = purchaseFact(rma());
             <div><dt>{{ purchase.label }}</dt><dd>{{ purchase.value }}</dd></div>
-            @if (rma().trackingCode) { <div><dt>Rastreio</dt><dd>{{ rma().carrier }} - {{ rma().trackingCode }}</dd></div> }
           </dl>
         </section>
         <section class="rma-detail__info rma-detail__info--dates detail-card">

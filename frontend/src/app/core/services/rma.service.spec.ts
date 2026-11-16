@@ -115,9 +115,6 @@ describe('RmaService', () => {
       receivedAccessories: null,
       physicalCondition: null,
       priority: 'HIGH',
-      repairSummary: null,
-      replacedPartsSummary: null,
-      testSummary: null,
     };
 
     service.create(payload).subscribe();

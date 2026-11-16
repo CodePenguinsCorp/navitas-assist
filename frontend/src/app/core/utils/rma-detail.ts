@@ -22,14 +22,13 @@ export interface RmaFact {
 }
 
 export type RmaDetailSection =
-  'failure' | 'products' | 'receipt' | 'diagnosis' | 'repair' | 'parts' | 'protocols' | 'blocks' | 'history';
+  'failure' | 'products' | 'receipt' | 'diagnosis' | 'parts' | 'protocols' | 'blocks' | 'history';
 
 export const RMA_DETAIL_SECTIONS: ReadonlyArray<{ id: RmaDetailSection; label: string }> = [
   { id: 'failure', label: 'Falha relatada' },
   { id: 'products', label: 'Produtos' },
   { id: 'receipt', label: 'Recebimento' },
   { id: 'diagnosis', label: 'Diagnóstico' },
-  { id: 'repair', label: 'Reparo e testes' },
   { id: 'parts', label: 'Peças' },
   { id: 'protocols', label: 'Protocolos' },
   { id: 'blocks', label: 'Impedimentos' },
@@ -94,19 +93,9 @@ export function diagnosisFacts(diagnosis: DiagnosisResponse): RmaFact[] {
   ];
 }
 
-/** Records typed when the RMA was opened for a service already performed, with the creation labels. */
-export function repairFacts(rma: RmaResponse): RmaFact[] {
-  return filledFacts([
-    ['Reparo', rma.repairSummary],
-    ['Peças trocadas', rma.replacedPartsSummary],
-    ['Testes', rma.testSummary]
-  ]);
-}
-
 export function blockedLabel(block: RmaBlockResponse, now: number): string {
   return `Impedida há ${blockDuration(block, now)}`;
 }
-
 
 export type RmaHistoryEntry =
   | { kind: 'status'; at: string; by: string; label: string; status: RmaStatus; previous: RmaStatus | null; initial: boolean; note: string | null; event: RmaStatusHistoryResponse }

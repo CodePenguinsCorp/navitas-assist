@@ -49,9 +49,6 @@ const fullRma = buildRma({
   receivedAccessories: 'Fonte original',
   physicalCondition: 'Riscado na lateral',
   diagnosis,
-  repairSummary: 'Troca do capacitor',
-  replacedPartsSummary: 'Capacitor C12',
-  testSummary: 'Bancada 2h sem falha',
   currentBlock: {
     id: 3, reason: 'Aguardando cliente', category: null, blockedBy: 'ana', blockedAt: '2026-10-20T10:00:00Z',
     resolvedBy: null, resolvedAt: null, resolutionNote: null
@@ -232,7 +229,7 @@ describe('RmasComponent detail with the shared information contract', () => {
 
   it('renders the shared interventions panel in diagnosis without legacy repair summaries', async () => {
     const { open, selectTab, tabPanel, fixture } = await setup();
-    open({ ...fullRma, repairSummary: null, replacedPartsSummary: null, testSummary: null }); selectTab('Diagnóstico');
+    open(fullRma); selectTab('Diagnóstico');
     const [block] = await fixture.getDeferBlocks(); await block.render(DeferBlockState.Complete); fixture.detectChanges();
     expect(tabPanel().querySelector('app-rma-repair-panel')).not.toBeNull();
     expect(tabPanel().textContent).toContain('Reparos'); expect(tabPanel().textContent).toContain('Nenhum reparo'); expect(tabPanel().textContent).not.toContain('Total de horas');
@@ -353,7 +350,7 @@ describe('RmasComponent detail with the shared information contract', () => {
     expect(section('Recebimento')).toBeNull();
   });
 
-  it('shows the six diagnosis facts and Reparo e testes in the Diagnóstico tab', async () => {
+  it('shows the six diagnosis facts in the Diagnóstico tab', async () => {
     // Hoje a aba só mostra Falha encontrada, Tipo e Causa provável, sem data, técnico, notas e reparo.
     const { open, selectTab, tabPanel, pairs, section } = await setup();
     open();
@@ -363,21 +360,17 @@ describe('RmasComponent detail with the shared information contract', () => {
       ['Falha encontrada', 'Capacitor estufado'], ['Tipo', 'Fonte de alimentação'], ['Causa provável', 'Componente'],
       ['Data do diagnóstico', '21/10/2026'], ['Técnico', 'Bia'], ['Notas', 'Trocar lote']
     ]);
-    const repair = section('Reparo e testes')!;
-    expect(repair).not.toBeNull();
-    expect(pairs(repair.querySelector('dl')!)).toEqual([
-      ['Reparo', 'Troca do capacitor'], ['Peças trocadas', 'Capacitor C12'], ['Testes', 'Bancada 2h sem falha']
-    ]);
+    expect(section('Reparo e testes')).toBeNull();
   });
 
-  it('shows the empty diagnosis state with the contract label and keeps Reparo e testes', async () => {
+  it('shows the empty diagnosis state with the contract label without legacy summaries', async () => {
     // Hoje o título do estado vazio é "Sem diagnóstico." e o reparo registrado na abertura não aparece.
     const { open, selectTab, tabPanel, section } = await setup();
     open({ ...fullRma, diagnosis: null });
     selectTab('Diagnóstico');
 
     expect(tabPanel().querySelector('app-rma-diagnosis')?.textContent).toContain('Sem diagnóstico registrado.');
-    expect(section('Reparo e testes')).not.toBeNull();
+    expect(section('Reparo e testes')).toBeNull();
   });
 
   it('shows the empty diagnosis with a text action in the card', async () => {
@@ -757,7 +750,6 @@ describe('RmasComponent detail dialog focus', () => {
     expect(document.activeElement).toBe(row);
   });
 });
-
 
 describe('garantia no detalhe da lista', () => {
   it.each(['ADMIN', 'VIEWER'] as const)('respeita rma.editar no perfil %s', async (role) => {

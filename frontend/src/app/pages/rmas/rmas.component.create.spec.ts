@@ -168,7 +168,6 @@ describe('RmasComponent creation messages', () => {
     const { component, open, render, submit, panel } = await setup();
     open();
     component.createItems.at(0).controls['batchNumber'].setValue('L'.repeat(61));
-    component.createForm.patchValue({ repairSummary: 'x'.repeat(601) });
     render();
     submit();
 
@@ -181,14 +180,13 @@ describe('RmasComponent creation messages', () => {
     expectTied(control('textarea[formControlName="reportedFailure"]'), 'Descreva a falha relatada.');
     expectTied(control('app-custom-select[formControlName="productId"] .custom-select__trigger'), 'Selecione o produto.');
     expectTied(control('input[formControlName="batchNumber"]'), 'Use até 60 caracteres.');
-    expectTied(control('textarea[formControlName="repairSummary"]'), 'Use até 600 caracteres.');
     expect(control('input[formControlName="serialNumber"]').getAttribute('aria-invalid')).toBeNull();
 
-    component.createForm.patchValue({ clientId: 1, reportedFailure: 'Falha', repairSummary: '' });
+    component.createForm.patchValue({ clientId: 1, reportedFailure: 'Falha' });
     component.createItems.at(0).patchValue({ productId: 2, batchNumber: 'L1' });
     render();
     for (const selector of ['app-custom-select[formControlName="clientId"] .custom-select__trigger', 'textarea[formControlName="reportedFailure"]',
-      'app-custom-select[formControlName="productId"] .custom-select__trigger', 'input[formControlName="batchNumber"]', 'textarea[formControlName="repairSummary"]']) {
+      'app-custom-select[formControlName="productId"] .custom-select__trigger', 'input[formControlName="batchNumber"]']) {
       expect(control(selector).getAttribute('aria-invalid'), selector).toBeNull();
       expect(control(selector).getAttribute('aria-describedby'), selector).toBeNull();
     }
@@ -299,11 +297,10 @@ describe('RmasComponent creation messages', () => {
     expect(invalid('entryDate', '')).toBe(true);
     expect(invalid('reportedFailure', '')).toBe(true);
     expect(invalid('priority', '')).toBe(true);
-    for (const name of ['invoiceNumber', 'purchaseDate', 'receivedAccessories', 'physicalCondition', 'repairSummary', 'replacedPartsSummary', 'testSummary']) {
+    for (const name of ['invoiceNumber', 'purchaseDate', 'receivedAccessories', 'physicalCondition']) {
       expect(invalid(name, '')).toBe(false);
     }
-    for (const [name, length] of [['reportedFailure', 1001], ['receivedAccessories', 501], ['physicalCondition', 501],
-      ['repairSummary', 601], ['replacedPartsSummary', 601], ['testSummary', 801]] as const) {
+    for (const [name, length] of [['reportedFailure', 1001], ['receivedAccessories', 501], ['physicalCondition', 501]] as const) {
       controls[name].setValue('x'.repeat(length));
       expect(controls[name].hasError('maxlength')).toBe(true);
       controls[name].setValue('x'.repeat(length - 1));
@@ -324,7 +321,6 @@ describe('RmasComponent creation sections', () => {
     'Atendimento': ['clientId', 'priority', 'reportedFailure'],
     'Produtos e identificação': ['productId', 'batchNumber', 'serialNumber', 'manufacturedAt'],
     'Recebimento': ['invoiceNumber', 'purchaseDate', 'purchaseDateUnknown', 'entryDate', 'receivedAccessories', 'physicalCondition'],
-    'Atendimento já realizado': ['repairSummary', 'replacedPartsSummary', 'testSummary']
   };
 
   function sections(form: HTMLFormElement): Map<string, HTMLElement> {
@@ -339,7 +335,7 @@ describe('RmasComponent creation sections', () => {
     [...container.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.trim() === text)!.click();
   }
 
-  it('groups the form into Atendimento, Produtos e identificação, Recebimento and Atendimento já realizado', async () => {
+  it('groups the form into Atendimento, Produtos e identificação, and Recebimento', async () => {
     // Hoje a abertura é uma grade plana, sem fieldset nem details.
     const { open, panel } = await setup();
     open();
@@ -353,44 +349,6 @@ describe('RmasComponent creation sections', () => {
         expect(form.querySelectorAll(`[formControlName="${control}"]`).length, `${control} no formulário`).toBe(1);
       }
     }
-  });
-
-  it('keeps Atendimento já realizado collapsed by default, in the shared collapsible section', async () => {
-    const { open, render, panel } = await setup();
-    open();
-    const section = panel()!.querySelector<HTMLElement>('form > app-collapsible-section')!;
-    const toggle = section.querySelector<HTMLButtonElement>('button.collapsible__toggle')!;
-
-    expect(panel()!.querySelector('details')).toBeNull();
-    expect(toggle.textContent?.trim()).toBe('Atendimento já realizado');
-    expect(toggle.getAttribute('aria-expanded')).toBe('false');
-    expect(section.querySelector('.collapsible__chevron')).not.toBeNull();
-    toggle.click();
-    render();
-    expect(toggle.getAttribute('aria-expanded')).toBe('true');
-    for (const name of ['repairSummary', 'replacedPartsSummary', 'testSummary']) {
-      expect(section.querySelector(`textarea[formControlName="${name}"]`)).not.toBeNull();
-    }
-    expect(section.querySelector('p.empty-note')?.textContent).toContain('Para registrar reparo, peças trocadas e testes feitos antes da abertura.');
-    expect(section.querySelector('fieldset, details, .panel')).toBeNull();
-  });
-
-  it('opens the retroactive group, shows the message and focuses an invalid field', async () => {
-    // Hoje não há grupo recolhido, a mensagem de limite não aparece e o foco não vai a nenhum campo.
-    const { fixture, component, open, render, submit, panel, fillValid, rmaService } = await setup();
-    open();
-    fillValid();
-    component.createForm.controls['repairSummary'].setValue('x'.repeat(601));
-    render();
-    submit();
-    await fixture.whenStable();
-    render();
-
-    const section = panel()!.querySelector<HTMLElement>('form > app-collapsible-section')!;
-    expect(section.querySelector('button.collapsible__toggle')?.getAttribute('aria-expanded')).toBe('true');
-    expect(section.textContent).toContain('Use até 600 caracteres.');
-    expect(document.activeElement).toBe(section.querySelector('textarea[formControlName="repairSummary"]'));
-    expect(rmaService.create).not.toHaveBeenCalled();
   });
 
   it('ties Compra desconhecida to the purchase field', async () => {
@@ -451,20 +409,18 @@ describe('RmasComponent creation sections', () => {
     expect(labels).not.toContain('Serial');
   });
 
-  it('sends the full payload with a known purchase and the retroactive group closed', async () => {
+  it('sends the full payload with a known purchase', async () => {
     const { component, open, render, submit, panel, rmaService } = await setup();
     open();
     component.createForm.patchValue({
       clientId: 1, priority: 'HIGH', invoiceNumber: '  NF-9  ', purchaseDate: '2025-02-01', entryDate: '2025-03-01',
-      reportedFailure: '  Falha  ', receivedAccessories: ' Cabo ', physicalCondition: ' Riscado ',
-      repairSummary: '  Reparo feito  ', replacedPartsSummary: '  Tela  ', testSummary: '  Teste ok  '
+      reportedFailure: '  Falha  ', receivedAccessories: ' Cabo ', physicalCondition: ' Riscado '
     });
     component.createItems.at(0).patchValue({ productId: 2, batchNumber: ' L1 ', manufacturedAt: '2025-01-10' });
     clickButton(panel()!, 'Adicionar produto');
     render();
     component.createItems.at(1).patchValue({ productId: 2, serialNumber: ' S2 ' });
     render();
-    expect(panel()!.querySelector('form > app-collapsible-section button.collapsible__toggle')?.getAttribute('aria-expanded')).toBe('false');
     submit();
 
     expect(rmaService.create).toHaveBeenCalledOnce();
@@ -482,9 +438,6 @@ describe('RmasComponent creation sections', () => {
       receivedAccessories: 'Cabo',
       physicalCondition: 'Riscado',
       priority: 'HIGH',
-      repairSummary: 'Reparo feito',
-      replacedPartsSummary: 'Tela',
-      testSummary: 'Teste ok',
       dueDate: null
     });
   });
@@ -730,18 +683,16 @@ describe('RmasComponent creation layout', () => {
   it('puts every textarea of the form in an inline-form so they share the 6rem height', async () => {
     const { open, render, panel } = await setup();
     open();
-    panel()!.querySelector<HTMLButtonElement>('form > app-collapsible-section button.collapsible__toggle')!.click();
     render();
     const form = panel()!.querySelector('form')!;
     const areas = [...form.querySelectorAll('textarea')].filter((area) => area.id !== 'reportedFailure');
 
     expect(form.classList.contains('inline-form')).toBe(true);
-    expect(areas.map((area) => area.id)).toEqual(['receivedAccessories', 'physicalCondition', 'repairSummary', 'replacedPartsSummary', 'testSummary']);
+    expect(areas.map((area) => area.id)).toEqual(['receivedAccessories', 'physicalCondition']);
     for (const area of areas) {
       expect(area.closest('.inline-form')).toBe(form);
       expect(area.hasAttribute('rows')).toBe(false);
     }
-    expect(form.querySelector('.rma-create-form__done .field-group--full textarea#testSummary')).not.toBeNull();
   });
 
   it('marks the required fields with the shared required class', async () => {

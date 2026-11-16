@@ -17,7 +17,6 @@ import {
   invoiceFact,
   purchaseFact,
   receiptFacts,
-  repairFacts,
   rmaHistory,
   rmaItemFacts,
   sectionLabel
@@ -125,7 +124,6 @@ export class RmaDetailModalComponent {
   protected readonly purchaseFact = purchaseFact;
   protected readonly rmaItemFacts = rmaItemFacts;
   protected readonly receiptFacts = receiptFacts;
-  protected readonly repairFacts = repairFacts;
   protected readonly activity = computed(() => rmaHistory(this.rma()));
   protected readonly historyEntryTitle = historyEntryTitle;
   /** Same choices as the former assignment dialog: unassigned plus the eligible users. */

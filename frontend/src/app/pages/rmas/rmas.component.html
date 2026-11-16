@@ -274,18 +274,6 @@
                 <app-rma-diagnosis [collapsible]="true" [rma]="rma" [disabled]="busyExcept('diagnosis')" (saved)="detailRmaSaved($event)" (busyChange)="setWriterBusy('diagnosis', $event)" />
               </section>
               @defer { <app-rma-repair-panel (changed)="refreshRepair()" [rmaId]="rma.id" [rmaStatus]="rma.status" /> } @placeholder { <div aria-busy="true"></div> }
-              @let repair = repairFacts(rma);
-              @if (repair.length > 0) {
-                <section class="rma-details__section">
-                  <app-collapsible-section title="Reparo e testes" icon="wrench" [open]="repair.length > 0" storageKey="rma.repair">
-                  <dl class="meta-list rma-details__pairs">
-                    @for (fact of repair; track fact.label) {
-                      <div><dt>{{ fact.label }}</dt><dd>{{ fact.value }}</dd></div>
-                    }
-                  </dl>
-                  </app-collapsible-section>
-              </section>
-              }
             }
             @case ('parts') {
               @defer {
@@ -556,42 +544,6 @@
             <textarea id="physicalCondition" formControlName="physicalCondition" maxlength="500"></textarea>
           </div>
         </fieldset>
-
-        <app-collapsible-section #retroactiveSection title="Atendimento já realizado" [open]="false">
-          <div class="rma-create-form__done">
-            <p class="empty-note field-group--full">Para registrar reparo, peças trocadas e testes feitos antes da abertura.</p>
-
-            <div class="field-group">
-              <label for="repairSummary">Reparo</label>
-              <textarea id="repairSummary" formControlName="repairSummary" maxlength="600"
-                [attr.aria-invalid]="showCreateError(createForm.controls.repairSummary) || null"
-                [attr.aria-describedby]="showCreateError(createForm.controls.repairSummary) ? 'repairSummary-error' : null"></textarea>
-              @if (showCreateError(createForm.controls.repairSummary)) {
-                <small class="field-error" id="repairSummary-error">Use até 600 caracteres.</small>
-              }
-            </div>
-
-            <div class="field-group">
-              <label for="replacedPartsSummary">Peças trocadas</label>
-              <textarea id="replacedPartsSummary" formControlName="replacedPartsSummary" maxlength="600"
-                [attr.aria-invalid]="showCreateError(createForm.controls.replacedPartsSummary) || null"
-                [attr.aria-describedby]="showCreateError(createForm.controls.replacedPartsSummary) ? 'replacedPartsSummary-error' : null"></textarea>
-              @if (showCreateError(createForm.controls.replacedPartsSummary)) {
-                <small class="field-error" id="replacedPartsSummary-error">Use até 600 caracteres.</small>
-              }
-            </div>
-
-            <div class="field-group field-group--full">
-              <label for="testSummary">Testes</label>
-              <textarea id="testSummary" formControlName="testSummary" maxlength="800"
-                [attr.aria-invalid]="showCreateError(createForm.controls.testSummary) || null"
-                [attr.aria-describedby]="showCreateError(createForm.controls.testSummary) ? 'testSummary-error' : null"></textarea>
-              @if (showCreateError(createForm.controls.testSummary)) {
-                <small class="field-error" id="testSummary-error">Use até 800 caracteres.</small>
-              }
-            </div>
-          </div>
-        </app-collapsible-section>
 
         <div class="form-actions form-actions--full">
           <button type="button" class="button-secondary" (click)="closeModal()" [disabled]="createSubmitting()">Cancelar</button>

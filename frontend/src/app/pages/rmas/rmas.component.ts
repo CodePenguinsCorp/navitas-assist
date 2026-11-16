@@ -9,7 +9,7 @@ import { RmaStatusFieldComponent } from '../../shared/rma-status-field/rma-statu
 import { RmaStatusTransitionComponent } from '../../shared/rma-status-transition/rma-status-transition.component';
 import { IconComponent, IconName } from '../../shared/icon/icon.component';
 import { NgComponentOutlet } from '@angular/common';
-import { Component, ElementRef, Injector, Type, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, Type, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormArray, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -46,7 +46,6 @@ import {
   invoiceFact,
   purchaseFact,
   receiptFacts,
-  repairFacts,
   rmaHistory,
   rmaItemFacts,
   sectionLabel
@@ -330,16 +329,6 @@ export interface RmaListFilters {
       margin: 0;
     }
 
-    .rma-create-form__done {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: var(--space-3);
-    }
-
-    .rma-create-form__done > p {
-      margin: 0;
-    }
-
     @media (max-width: 900px) {
       .rma-create-form__receipt {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -370,7 +359,6 @@ export interface RmaListFilters {
 
     @media (max-width: 720px) {
       .rma-create-form__receipt,
-      .rma-create-form__done,
       .rma-item-editor {
         grid-template-columns: 1fr;
       }
@@ -402,17 +390,11 @@ export class RmasComponent {
   private readonly rmaService = inject(RmaService);
   private readonly route = inject(ActivatedRoute);
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
-  private readonly injector = inject(Injector);
 
   protected readonly createSubmitting = signal(false);
   /** Creation feedback shown inside the dialog (validation and service errors). */
   protected readonly createErrorMessage = signal('');
   protected readonly createSubmitAttempted = signal(false);
-  /**
-   * "Atendimento já realizado" section. Collapsing only hides the presentation:
-   * its controls stay in the DOM and in createForm.
-   */
-  private readonly retroactiveSection = viewChild<CollapsibleSectionComponent>('retroactiveSection');
   protected readonly dateErrors = signal<CreateDateErrors>({ manufacturedAt: [], purchaseDate: '', entryDate: '', dueDate: '' });
   protected readonly pageError = signal('');
   protected readonly activeModal = signal<ModalView | null>(null);
@@ -529,7 +511,6 @@ export class RmasComponent {
   protected readonly purchaseFact = purchaseFact;
   protected readonly rmaItemFacts = rmaItemFacts;
   protected readonly receiptFacts = receiptFacts;
-  protected readonly repairFacts = repairFacts;
   protected readonly rmaHistory = rmaHistory;
   protected readonly historyEntryTitle = historyEntryTitle;
 
@@ -606,9 +587,6 @@ export class RmasComponent {
     receivedAccessories: ['', [Validators.maxLength(500)]],
     physicalCondition: ['', [Validators.maxLength(500)]],
     priority: ['MEDIUM' as RmaPriority, [Validators.required]],
-    repairSummary: ['', [Validators.maxLength(600)]],
-    replacedPartsSummary: ['', [Validators.maxLength(600)]],
-    testSummary: ['', [Validators.maxLength(800)]]
   });
 
   constructor() {
@@ -774,7 +752,6 @@ export class RmasComponent {
       this.createForm.markAllAsTouched();
       this.createSubmitAttempted.set(true);
       this.createErrorMessage.set('Preencha os campos obrigatórios.');
-      this.revealInvalidRetroactiveField();
       return;
     }
 
@@ -801,9 +778,6 @@ export class RmasComponent {
       receivedAccessories: normalizeText(raw.receivedAccessories),
       physicalCondition: normalizeText(raw.physicalCondition),
       priority: raw.priority,
-      repairSummary: normalizeText(raw.repairSummary),
-      replacedPartsSummary: normalizeText(raw.replacedPartsSummary),
-      testSummary: normalizeText(raw.testSummary),
       dueDate: normalizeText(raw.dueDate)
     };
 
@@ -862,17 +836,6 @@ export class RmasComponent {
     this.refreshRequest?.unsubscribe();
     this.selectedRmaSignal.set(updated);
     this.refreshRmas();
-  }
-
-  /** Opens the collapsed retroactive section and focuses its first invalid field, if any. */
-  private revealInvalidRetroactiveField(): void {
-    const invalid = RETROACTIVE_CONTROLS.find((name) => this.createForm.controls[name].invalid);
-    if (!invalid) return;
-
-    this.retroactiveSection()?.setOpen(true);
-    afterNextRender(() => {
-      this.host.nativeElement.querySelector<HTMLElement>(`#${invalid}`)?.focus();
-    }, { injector: this.injector });
   }
 
   /** Opens the OS referenced by an internal notification link (/rmas?rma=<id>). */
@@ -947,9 +910,6 @@ export class RmasComponent {
       receivedAccessories: '',
       physicalCondition: '',
       priority: 'MEDIUM',
-      repairSummary: '',
-      replacedPartsSummary: '',
-      testSummary: ''
     });
     this.dateErrors.set({ manufacturedAt: [], purchaseDate: '', entryDate: '', dueDate: '' });
   }
@@ -1015,9 +975,6 @@ function atLeastOneItemIdentification(control: AbstractControl): ValidationError
   const serialNumber = control.get('serialNumber')?.value;
   return batchNumber?.trim() || serialNumber?.trim() ? null : { identificationRequired: true };
 }
-
-/** Records of a service already performed, in the order of the "Atendimento já realizado" group. */
-const RETROACTIVE_CONTROLS = ['repairSummary', 'replacedPartsSummary', 'testSummary'] as const;
 
 const STATUS_FILTER_OPTIONS:ReadonlyArray<CustomSelectOption<SearchStatusValue>> = [
   { value: '', label: 'Todos' },

@@ -201,9 +201,6 @@ export interface CreateRmaRequest {
   receivedAccessories: string | null;
   physicalCondition: string | null;
   priority: RmaPriority;
-  repairSummary: string | null;
-  replacedPartsSummary: string | null;
-  testSummary: string | null;
   /** Optional due date of the whole service (YYYY-MM-DD). */
   dueDate?: string | null;
 }
@@ -453,11 +450,6 @@ export interface RmaResponse {
   deadline: RmaDeadlineResponse;
   assigneeId: number | null;
   assigneeName: string | null;
-  repairSummary: string | null;
-  replacedPartsSummary: string | null;
-  testSummary: string | null;
-  carrier: string | null;
-  trackingCode: string | null;
   diagnosis: DiagnosisResponse | null;
   repairHistory: RmaRepairHistoryResponse[];
   statusHistory: RmaStatusHistoryResponse[];

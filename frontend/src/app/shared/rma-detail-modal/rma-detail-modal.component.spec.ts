@@ -49,9 +49,6 @@ const fullRma = buildRma({
   receivedAccessories: 'Fonte original',
   physicalCondition: 'Riscado',
   diagnosis,
-  repairSummary: 'Troca do capacitor',
-  replacedPartsSummary: 'Capacitor C12',
-  testSummary: 'Bancada 2h',
   currentBlock: {
     id: 3, reason: 'Aguardando cliente', category: null, blockedBy: 'ana', blockedAt: '2026-10-20T10:00:00Z',
     resolvedBy: null, resolvedAt: null, resolutionNote: null
@@ -150,7 +147,7 @@ describe('RmaDetailModalComponent collapsible sections', () => {
   it('opens sections with content, including several products and history', async () => {
     const { host } = await setup();
     expect(states(host)).toEqual({
-      'Falha relatada': 'true', Impedimentos: 'true', Produtos: 'true', Recebimento: 'true', Diagnóstico: 'true', 'Reparo e testes': 'true', Histórico: 'true'
+      'Falha relatada': 'true', Impedimentos: 'true', Produtos: 'true', Recebimento: 'true', Diagnóstico: 'true', Histórico: 'true'
     });
   });
 
@@ -198,7 +195,7 @@ describe('RmaDetailModalComponent collapsible sections', () => {
 
 describe('RmaDetailModalComponent with the shared information contract', () => {
   it('renders shared repair and parts panels even without legacy summaries', async () => {
-    const { fixture, host } = await setup({ rma: { ...fullRma, repairSummary: null, replacedPartsSummary: null, testSummary: null } });
+    const { fixture, host } = await setup({ rma: fullRma });
     const [block] = await fixture.getDeferBlocks(); await block.render(DeferBlockState.Complete); fixture.detectChanges();
     expect(fixture.debugElement.query(By.directive(RmaRepairPanelComponent)).componentInstance.rmaId()).toBe(5);
     expect(fixture.debugElement.query(By.directive(RmaPartsPanelComponent)).componentInstance.rmaStatus()).toBe(fullRma.status);
@@ -222,7 +219,7 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     const { host, headingText } = await setup();
 
     expect([...host.querySelectorAll('.rma-detail__heading, .collapsible__heading, app-rma-diagnosis h3')].map(headingText)).toEqual([
-      'Falha relatada', 'Impedimentos', 'Produtos', 'Recebimento', 'Diagnóstico', 'Reparo e testes', 'Histórico', 'Tempo por etapa'
+      'Falha relatada', 'Impedimentos', 'Produtos', 'Recebimento', 'Diagnóstico', 'Histórico', 'Tempo por etapa'
     ]);
   });
 
@@ -281,18 +278,6 @@ describe('RmaDetailModalComponent with the shared information contract', () => {
     expect(block!.querySelector('.record-empty')?.textContent?.trim()).toBe('Sem diagnóstico registrado.');
     expect(block!.querySelector('.record-empty .icon-tile.tone-slate app-icon')?.getAttribute('name')).toBe('clipboard');
     expect(block!.querySelector('button.link-button')?.textContent?.trim()).toBe('Registrar diagnóstico');
-  });
-
-  it('uses the creation labels for retroactive repair records', async () => {
-    // Hoje os rótulos são "Resumo do reparo" e "Peças substituídas".
-    const { section, tiles, host } = await setup();
-
-    expect(section('Reparo e testes')).not.toBeNull();
-    expect(tiles(section('Reparo e testes')!)).toEqual([
-      ['Reparo', 'Troca do capacitor'], ['Peças trocadas', 'Capacitor C12'], ['Testes', 'Bancada 2h']
-    ]);
-    expect(host.textContent).not.toContain('Resumo do reparo');
-    expect(host.textContent).not.toContain('Peças substituídas');
   });
 
   it('labels status records without inferring a move', async () => {
@@ -817,7 +802,6 @@ describe('RmaDetailModalComponent assignee selector', () => {
   });
 });
 
-
 describe('garantia no detalhe compartilhado', () => {
   it('usa o campo em cada item com permissão e propaga a OS salvo', async () => {
     const { fixture, host, component } = await setup({ canEditDueDate: true });
@@ -878,7 +862,6 @@ describe('RmaDetailModalComponent priority selector', () => {
     expect(priorityRow(host).querySelector<HTMLButtonElement>('.custom-select__trigger')!.disabled).toBe(true);
   });
 });
-
 
 describe('RmaDetailModalComponent write concurrency', () => {
   interface Harness { requestClose(): void; refreshRepair(): void; applyUpdate(rma: RmaResponse): void; }

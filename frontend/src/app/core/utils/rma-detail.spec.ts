@@ -9,7 +9,6 @@ import {
   invoiceFact,
   purchaseFact,
   receiptFacts,
-  repairFacts,
   rmaHistory,
   rmaItemFacts,
   sectionLabel,
@@ -39,13 +38,12 @@ function assigneeRecord(overrides: Partial<RmaAssignmentHistoryResponse> = {}): 
 const labels = (facts: { label: string }[]) => facts.map((fact) => fact.label);
 
 describe('OS detail contract', () => {
-  it('lists the nine sections in contract order', () => {
+  it('lists the eight sections in contract order', () => {
     expect(RMA_DETAIL_SECTIONS.map((section) => section.label)).toEqual([
-      'Falha relatada', 'Produtos', 'Recebimento', 'Diagnóstico', 'Reparo e testes',
+      'Falha relatada', 'Produtos', 'Recebimento', 'Diagnóstico',
       'Peças', 'Protocolos', 'Impedimentos', 'Histórico'
     ]);
     expect(sectionLabel('products')).toBe('Produtos');
-    expect(sectionLabel('repair')).toBe('Reparo e testes');
     expect(sectionLabel('history')).toBe('Histórico');
   });
 
@@ -94,21 +92,13 @@ describe('OS detail contract', () => {
     expect(rmaItemFacts({ ...item, manufacturedAt: '2026-01-05' })[3].value).toBe('05/01/2026');
   });
 
-  it('returns receipt and repair facts only when filled, with the creation labels', () => {
+  it('returns receipt facts only when filled, with the creation labels', () => {
     expect(receiptFacts(buildRma())).toEqual([]);
     expect(receiptFacts(buildRma({ receivedAccessories: '  ', physicalCondition: 'Riscado' }))).toEqual([
       { label: 'Condição física', value: 'Riscado', empty: false }
     ]);
     expect(labels(receiptFacts(buildRma({ receivedAccessories: 'Fonte', physicalCondition: 'Riscado' })))).toEqual(['Acessórios', 'Condição física']);
 
-    expect(repairFacts(buildRma())).toEqual([]);
-    const long = 'x'.repeat(600);
-    expect(repairFacts(buildRma({ repairSummary: long, replacedPartsSummary: 'Fonte', testSummary: 'Bancada ok' }))).toEqual([
-      { label: 'Reparo', value: long, empty: false },
-      { label: 'Peças trocadas', value: 'Fonte', empty: false },
-      { label: 'Testes', value: 'Bancada ok', empty: false }
-    ]);
-    expect(labels(repairFacts(buildRma({ testSummary: 'Bancada ok' })))).toEqual(['Testes']);
   });
 
   it('returns six diagnosis facts with date and technician, notes only when present', () => {
@@ -222,7 +212,6 @@ describe('OS detail contract', () => {
   });
 
 });
-
 
 describe('histórico de garantia', () => {
   it('intercala ajustes com os demais eventos e identifica o item, autor, motivo e remoção', () => {

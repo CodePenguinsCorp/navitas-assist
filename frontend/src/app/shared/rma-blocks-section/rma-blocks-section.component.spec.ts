@@ -357,6 +357,6 @@ const RMA: RmaResponse = {
   id: 1, code: 'OS-2026-000001', clientName: 'Cliente', items: [],
   purchaseDate: null, purchaseDateUnknown: true, entryDate: '2026-10-20', invoiceNumber: null, receivedBy: 'desk', reportedFailure: 'Falha', receivedAccessories: null, physicalCondition: null,
   priority: 'MEDIUM', status: 'TRIAGE', dueDate: null, deadline: { status: 'NO_DUE_DATE', dueSoonFrom: null }, stagePeriods: [{ status: 'RECEIVED', enteredAt: '2026-10-20T10:00:00Z', leftAt: null, durationSeconds: 0 }], dueDateHistory: [], warrantyHistory: [],
-  assigneeId: null, assigneeName: null, repairSummary: null, replacedPartsSummary: null, testSummary: null, carrier: null, trackingCode: null, diagnosis: null, repairHistory: [], statusHistory: [], assignmentHistory: [],
+  assigneeId: null, assigneeName: null, diagnosis: null, repairHistory: [], statusHistory: [], assignmentHistory: [],
   currentBlock: null, blockHistory: [], createdAt: '2026-10-20T10:00:00Z', updatedAt: '2026-10-20T10:00:00Z',
 };
