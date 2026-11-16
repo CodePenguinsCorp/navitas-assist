@@ -20,7 +20,7 @@ import lombok.Setter;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 
-/** Perfil de acesso: nome e conjunto de códigos de {@link Permission}. */
+/** Perfil editável: nome e permissões de {@link Permission}, sem privilégios associados ao nome. */
 @Getter
 @Setter
 @NoArgsConstructor

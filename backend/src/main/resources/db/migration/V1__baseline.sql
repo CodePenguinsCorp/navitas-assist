@@ -652,6 +652,8 @@ CREATE INDEX idx_audit_events_actor ON audit_events (actor_username, occurred_at
 
 INSERT INTO rma_code_generation_lock (id) VALUES (1);
 
+-- Único perfil inicial para permitir o primeiro acesso. Os demais são criados pela aplicação.
+-- O nome é usado apenas nesta carga; a autorização depende das permissões.
 INSERT INTO access_profiles (name, created_at, updated_at, created_by, updated_by) VALUES
     ('Administrador', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'system', 'system');
 
