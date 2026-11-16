@@ -80,7 +80,6 @@ describe('PartsComponent stock movement', () => {
     input.value = '1.5'; input.dispatchEvent(new Event('input', { bubbles: true })); fixture.detectChanges();
     const preview = text(panel()!.querySelector('.movement-preview'));
     expect(preview).toContain('Em estoque10 m → 8,5 m');
-    expect(preview).toContain('Estoque confirmado ao registrar.');
     expect(service['registerMovement']).not.toHaveBeenCalled();
     expect(component.movementForm.controls['quantity'].value).toBe(1.5);
   });

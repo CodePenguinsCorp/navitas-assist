@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
 import { PartReplenishmentResponse, PartResponse } from '../../core/models';
 import { Permission } from '../../core/permissions';
-import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { TestProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { PartService } from '../../core/services/part.service';
 import { PartsComponent } from './parts.component';
 
@@ -31,7 +31,7 @@ describe('PartsComponent presentation', () => {
     return new Map(Array.from(table.querySelectorAll('thead th')).map((header, index) => [normalized(header), normalized(cells[index])]));
   };
 
-  async function setup(role: LegacyProfileCode | readonly Permission[] = 'ADMIN', pending = false) {
+  async function setup(role: TestProfileCode | readonly Permission[] = 'ADMIN', pending = false) {
     const parts = new Subject<PartResponse[]>();
     service = { list: vi.fn(() => pending ? parts : of([PART, INACTIVE])), listReplenishment: vi.fn(() => of([REPLENISHMENT])), update: vi.fn(() => of(PART)) };
     await TestBed.configureTestingModule({ imports: [PartsComponent], providers: [
@@ -121,7 +121,7 @@ describe('PartsComponent presentation', () => {
     expect(replenishment.get('Sugestão de compra')).toBe('12,5 m');
   });
 
-  it.each(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as LegacyProfileCode[])('preserves stock actions and visible BRL costs for %s', async (role) => {
+  it.each(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as TestProfileCode[])('preserves stock actions and visible BRL costs for %s', async (role) => {
     await setup(role);
     const row = root().querySelector('tbody tr')!;
     const writable = role === 'ADMIN' || role === 'SERVICE_DESK';

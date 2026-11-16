@@ -93,10 +93,6 @@ public class AccessProfileService {
     public void delete(Long id, String actor) {
         AccessProfile profile = accessProfileRepository.findByIdForUpdate(id).orElseThrow(() -> notFound(id));
         permissionGrantPolicy.ensureCanGrant(actor, Permission.fromCodes(profile.getPermissions()));
-        // Os 4 perfis prontos da migração-base (system_code) não podem ser excluídos.
-        if (profile.getSystemCode() != null) {
-            throw new BusinessException("Perfil migrado não pode ser excluído.");
-        }
         if (userAccountRepository.countByProfile_Id(id) > 0) {
             throw new BusinessException("Perfil possui usuários vinculados e não pode ser excluído.");
         }

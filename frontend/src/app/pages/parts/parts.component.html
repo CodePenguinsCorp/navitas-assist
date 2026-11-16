@@ -298,7 +298,6 @@
               <div><dt>Em estoque</dt><dd>{{ transition(preview.onHandBefore, preview.onHandAfter, part.unit) }}</dd></div>
             </dl>
             @if (preview.onHandAfter < 0) { <p class="field-error">Estoque insuficiente.</p> }
-            <p>Estoque confirmado ao registrar.</p>
           } @else {
             <p>Informe uma quantidade válida.</p>
           }
