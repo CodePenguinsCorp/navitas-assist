@@ -136,7 +136,6 @@ public class RmaService {
         rma.setReceivedBy(currentUsername());
 
         rma.replaceItems(items);
-        syncLegacyItem(rma);
         applyCommonFields(
             rma,
             request.purchaseDate(),
@@ -178,7 +177,6 @@ public class RmaService {
         }
         if (request.items() != null) {
             replaceItemsPreservingWarranty(rma, request.items());
-            syncLegacyItem(rma);
         }
         if (request.priority() != null && request.priority() != rma.getPriority()) {
             addStatusHistory(rma, rma.getStatus(), "Prioridade alterada de " + rma.getPriority() + " para " + request.priority());
@@ -412,17 +410,6 @@ public class RmaService {
         rma.replaceItems(replacements);
     }
 
-    private void syncLegacyItem(RmaRecord rma) {
-        RmaItem firstItem = rma.getItems().get(0);
-        rma.setProduct(firstItem.getProduct());
-        applyTrackableFields(
-            rma.getItemIdentification(),
-            firstItem.getItemIdentification().getBatchNumber(),
-            firstItem.getItemIdentification().getSerialNumber(),
-            firstItem.getItemIdentification().getManufacturedAt()
-        );
-    }
-
     private void applyTrackableFields(ItemIdentification itemIdentification, String batchNumber, String serialNumber, LocalDate manufacturedAt) {
         itemIdentification.setBatchNumber(trimToNull(batchNumber));
         itemIdentification.setSerialNumber(trimToNull(serialNumber));
@@ -490,7 +477,7 @@ public class RmaService {
     }
 
     private void validateMandatoryFields(RmaRecord rma) {
-        if (rma.getItems().isEmpty() && (rma.getProduct() == null || rma.getItemIdentification().isEmpty())) {
+        if (rma.getItems().isEmpty()) {
             throw new BusinessException("Informe pelo menos um produto identificado.");
         }
         if (rma.getItems().stream().anyMatch(item -> item.getProduct() == null || item.getItemIdentification().isEmpty())) {
@@ -512,10 +499,7 @@ public class RmaService {
 
     private void validateDates(RmaRecord rma) {
         LocalDate today = LocalDate.now(BUSINESS_ZONE);
-        LocalDate legacyManufacturedAt = rma.getItemIdentification().getManufacturedAt();
-        List<LocalDate> manufacturedDates = rma.getItems().isEmpty()
-            ? (legacyManufacturedAt == null ? List.of() : List.of(legacyManufacturedAt))
-            : rma.getItems().stream()
+        List<LocalDate> manufacturedDates = rma.getItems().stream()
                 .map(RmaItem::getItemIdentification)
                 .map(ItemIdentification::getManufacturedAt)
                 .filter(Objects::nonNull)

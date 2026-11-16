@@ -1,5 +1,7 @@
 package br.com.navitasassist.product;
 
+import static br.com.navitasassist.support.RmaTestSupport.addItem;
+
 import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
@@ -92,7 +94,7 @@ class ProductControllerIntegrationTest {
 
         RmaRecord rma = new RmaRecord();
         rma.setCode("OS-TEST-0001");
-        rma.setProduct(savedProduct);
+        addItem(rma, savedProduct);
         rma.setClient(savedClient);
         rma.setEntryDate(LocalDate.now());
         rma.setReceivedBy("Test user");
@@ -128,8 +130,6 @@ class ProductControllerIntegrationTest {
 
         RmaRecord rma = new RmaRecord();
         rma.setCode("OS-TEST-SECONDARY");
-        rma.setProduct(savedPrimaryProduct);
-        rma.getItemIdentification().setBatchNumber("PRIMARY-LOT");
         rma.setClient(savedClient);
         rma.setEntryDate(LocalDate.now());
         rma.setReceivedBy("Test user");

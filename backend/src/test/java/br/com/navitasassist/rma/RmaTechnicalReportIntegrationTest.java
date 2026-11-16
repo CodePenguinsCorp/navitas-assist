@@ -64,7 +64,6 @@ class RmaTechnicalReportIntegrationTest {
         rma = new RmaRecord();
         rma.setCode("OS-2026/0001");
         rma.setClient(client);
-        rma.setProduct(product);
         rma.setEntryDate(LocalDate.parse("2026-10-05"));
         rma.setPurchaseDateUnknown(true);
         rma.setReceivedBy("admin");

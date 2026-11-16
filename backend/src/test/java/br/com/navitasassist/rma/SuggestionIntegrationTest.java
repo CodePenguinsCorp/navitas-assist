@@ -1,5 +1,7 @@
 package br.com.navitasassist.rma;
 
+import static br.com.navitasassist.support.RmaTestSupport.addItem;
+
 import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
@@ -51,7 +53,7 @@ class SuggestionIntegrationTest {
     void setup() {
         Client client = new Client(); client.setLegalName("Cliente sugestões"); clients.save(client);
         Product product = new Product(); product.setSku("SUGGEST-TEST"); product.setName("Produto sugestões"); products.save(product);
-        rma = new RmaRecord(); rma.setCode("OS-SUGGEST-TEST"); rma.setClient(client); rma.setProduct(product);
+        rma = new RmaRecord(); rma.setCode("OS-SUGGEST-TEST"); rma.setClient(client); addItem(rma, product);
         rma.setEntryDate(LocalDate.now()); rma.setReceivedBy("Teste"); rma.setReportedFailure("Falha"); rma.setStatus(RmaStatus.IN_REPAIR); rmas.saveAndFlush(rma);
     }
 

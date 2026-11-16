@@ -409,12 +409,10 @@ class PaginationIntegrationTest {
         rma.setCode(code);
         rma.setPriority(priority);
         rma.setClient(client);
-        rma.setProduct(product);
         rma.setStatus(rmaStatus);
         rma.setEntryDate(LocalDate.of(2026, 1, 1).plusDays(daysAfter));
         rma.setReceivedBy("Test user");
         rma.setReportedFailure("Failure");
-        rma.getItemIdentification().setSerialNumber("SERIAL-" + code);
         RmaItem item = new RmaItem();
         item.setProduct(product);
         item.getItemIdentification().setSerialNumber("SERIAL-" + code);

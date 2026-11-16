@@ -1,5 +1,7 @@
 package br.com.navitasassist.rma;
 
+import static br.com.navitasassist.support.RmaTestSupport.addItem;
+
 import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.hamcrest.Matchers.hasSize;
@@ -281,8 +283,6 @@ class RmaControllerIntegrationTest {
         RmaRecord rma = new RmaRecord();
         rma.setCode("OS-UPDATE-0001");
         rma.setClient(savedClient);
-        rma.setProduct(originalProduct);
-        rma.getItemIdentification().setBatchNumber("OLD-LOT");
         rma.setPurchaseDate(LocalDate.of(2025, 1, 1));
         rma.setEntryDate(LocalDate.of(2026, 7, 1));
         rma.setReceivedBy("Service desk");
@@ -331,46 +331,6 @@ class RmaControllerIntegrationTest {
                 .with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.content", hasSize(1)));
-    }
-
-    @Test
-    void shouldExposeLegacyRmaAsSingleItem() throws Exception {
-        Client client = new Client();
-        client.setLegalName("Legacy OS client");
-        Client savedClient = clientRepository.save(client);
-        Product product = saveProduct("SKU-OS-LEGACY", "Legacy product", 12);
-
-        RmaRecord rma = new RmaRecord();
-        rma.setCode("OS-LEGACY-0001");
-        rma.setClient(savedClient);
-        rma.setProduct(product);
-        rma.getItemIdentification().setSerialNumber("LEGACY-SERIAL");
-        rma.setPurchaseDateUnknown(true);
-        rma.setEntryDate(LocalDate.now());
-        rma.setReceivedBy("Service desk");
-        rma.setReportedFailure("Legacy failure");
-        RmaRecord savedRma = rmaRecordRepository.saveAndFlush(rma);
-
-        mockMvc.perform(get("/api/rmas/{id}", savedRma.getId())
-                .with(asProfile("admin", "ADMIN")))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.items", hasSize(1)))
-            .andExpect(jsonPath("$.items[0].id").doesNotExist())
-            .andExpect(jsonPath("$.items[0].productSku").value(product.getSku()))
-            .andExpect(jsonPath("$.items[0].serialNumber").value("LEGACY-SERIAL"))
-            .andExpect(jsonPath("$.items[0].warrantyStatus").value("PENDING"))
-            .andExpect(jsonPath("$.warrantyOverridden").doesNotExist());
-
-        mockMvc.perform(put("/api/rmas/{id}", savedRma.getId())
-                .with(asProfile("admin", "ADMIN"))
-                .with(csrf())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {"purchaseDate":"2025-01-01","purchaseDateUnknown":false,"entryDate":"2026-01-02"}
-                    """))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.items[0].warrantyStatus").value("OUT_OF_WARRANTY"))
-            .andExpect(jsonPath("$.items[0].warrantyExpiresAt").value("2026-01-01"));
     }
 
     @Test
@@ -454,8 +414,8 @@ class RmaControllerIntegrationTest {
         RmaRecord rma = new RmaRecord();
         rma.setCode("OS-ASSIGN-0001");
         rma.setClient(savedClient);
-        rma.setProduct(product);
-        rma.getItemIdentification().setSerialNumber("ASSIGN-SERIAL");
+        addItem(rma, product);
+        rma.getItems().get(0).getItemIdentification().setSerialNumber("ASSIGN-SERIAL");
         rma.setPurchaseDateUnknown(true);
         rma.setEntryDate(LocalDate.now(BUSINESS_ZONE));
         rma.setReceivedBy("Service desk");
@@ -540,8 +500,8 @@ class RmaControllerIntegrationTest {
         RmaRecord rma = new RmaRecord();
         rma.setCode("OS-STAGE-0001");
         rma.setClient(clientRepository.save(client));
-        rma.setProduct(saveProduct("STAGE-PRODUCT", "Stage product", 12));
-        rma.getItemIdentification().setSerialNumber("STAGE-SERIAL");
+        addItem(rma, saveProduct("STAGE-PRODUCT", "Stage product", 12));
+        rma.getItems().get(0).getItemIdentification().setSerialNumber("STAGE-SERIAL");
         rma.setPurchaseDateUnknown(true);
         rma.setEntryDate(LocalDate.now(BUSINESS_ZONE));
         rma.setReceivedBy("Service desk");
@@ -804,8 +764,8 @@ class RmaControllerIntegrationTest {
         RmaRecord rma = new RmaRecord();
         rma.setCode(code);
         rma.setClient(clientRepository.save(client));
-        rma.setProduct(saveProduct(code, "Bulk test product", 12));
-        rma.getItemIdentification().setSerialNumber(code);
+        addItem(rma, saveProduct(code, "Bulk test product", 12));
+        rma.getItems().get(0).getItemIdentification().setSerialNumber(code);
         rma.setPurchaseDateUnknown(true);
         rma.setEntryDate(LocalDate.now(BUSINESS_ZONE));
         rma.setReceivedBy("Service desk");

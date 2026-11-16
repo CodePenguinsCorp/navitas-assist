@@ -36,8 +36,7 @@ class RmaListPerformanceIntegrationTest {
             RmaRecord order = new RmaRecord();
             order.setCode("BATCH-" + i);
             order.setClient(client);
-            order.setProduct(product);
-            order.setEntryDate(LocalDate.of(2026, 11, 13));
+                order.setEntryDate(LocalDate.of(2026, 11, 13));
             order.setPurchaseDateUnknown(true);
             order.setReceivedBy("admin");
             order.setReportedFailure("Falha de teste.");

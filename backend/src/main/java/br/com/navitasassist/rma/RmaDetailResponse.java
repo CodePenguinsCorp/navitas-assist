@@ -43,9 +43,7 @@ public record RmaDetailResponse(
     Instant updatedAt
 ) {
     public static RmaDetailResponse from(RmaRecord rma, List<RmaStagePeriodResponse> stagePeriods, RmaDeadlineResponse deadline) {
-        List<RmaItemResponse> items = rma.getItems().isEmpty()
-            ? List.of(RmaItemResponse.fromLegacy(rma))
-            : rma.getItems().stream().map(RmaItemResponse::from).toList();
+        List<RmaItemResponse> items = rma.getItems().stream().map(RmaItemResponse::from).toList();
 
         return new RmaDetailResponse(
             rma.getId(),

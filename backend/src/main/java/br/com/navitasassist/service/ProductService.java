@@ -90,7 +90,7 @@ public class ProductService {
     public void delete(Long id) {
         Product product = getEntityById(id);
 
-        if (rmaRecordRepository.existsByProduct_Id(id) || rmaRecordRepository.existsByItems_Product_Id(id)) {
+        if (rmaRecordRepository.existsByItems_Product_Id(id)) {
             throw new BusinessException("Produto não pode ser excluído porque está vinculado a uma OS.");
         }
 

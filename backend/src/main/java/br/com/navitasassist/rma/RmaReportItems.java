@@ -8,6 +8,6 @@ public final class RmaReportItems {
     }
 
     public static List<RmaItemResponse> of(RmaRecord rma) {
-        return rma.getItems().isEmpty() ? List.of(RmaItemResponse.fromLegacy(rma)) : rma.getItems().stream().map(RmaItemResponse::from).toList();
+        return rma.getItems().stream().map(RmaItemResponse::from).toList();
     }
 }

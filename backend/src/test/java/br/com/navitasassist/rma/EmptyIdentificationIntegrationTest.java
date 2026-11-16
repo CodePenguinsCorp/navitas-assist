@@ -150,7 +150,6 @@ class EmptyIdentificationIntegrationTest {
         RmaRecord record = new RmaRecord();
         record.setCode("NAV69-" + UUID.randomUUID().toString().substring(0, 8));
         record.setClient(client);
-        record.setProduct(product);
         record.setEntryDate(LocalDate.now(ZoneId.of("America/Sao_Paulo")));
         record.setReportedFailure("Failure");
         record.setPurchaseDateUnknown(true);

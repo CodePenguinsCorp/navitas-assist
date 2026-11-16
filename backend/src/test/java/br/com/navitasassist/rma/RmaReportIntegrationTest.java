@@ -1,5 +1,7 @@
 package br.com.navitasassist.rma;
 
+import static br.com.navitasassist.support.RmaTestSupport.addItem;
+
 import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -268,7 +270,7 @@ class RmaReportIntegrationTest {
         RmaRecord rma = new RmaRecord();
         rma.setCode(code);
         rma.setClient(owner);
-        rma.setProduct(product);
+        addItem(rma, product);
         rma.setEntryDate(LocalDate.parse(date));
         rma.setPurchaseDateUnknown(true);
         rma.setReceivedBy("admin");

@@ -1,5 +1,7 @@
 package br.com.navitasassist.notification;
 
+import static br.com.navitasassist.support.RmaTestSupport.addItem;
+
 import static org.junit.jupiter.api.Assertions.*;
 import br.com.navitasassist.service.NotificationContentFactory;
 import br.com.navitasassist.client.Client;
@@ -17,8 +19,21 @@ class NotificationContentFactoryTest {
         var rma = new RmaRecord();
         var client = new Client(); client.setLegalName("Cliente");
         var product = new Product(); product.setName("Equipamento");
-        rma.setClient(client); rma.setProduct(product); rma.setStatus(RmaStatus.IN_DIAGNOSIS);
+        rma.setClient(client); addItem(rma, product); rma.setStatus(RmaStatus.IN_DIAGNOSIS);
         return rma;
+    }
+
+    @org.junit.jupiter.api.Test
+    void usesTheFirstItemProductInNotificationContext() {
+        var rma = rma();
+        var product = new Product();
+        product.setName("Produto do item");
+        var item = new RmaItem();
+        item.setProduct(product);
+        rma.getItems().add(0, item);
+        String message = factory.build(new RmaNotificationEvent(
+            NotificationEventType.RMA_CREATED, "key", 1L, null, "admin"), rma).message();
+        assertTrue(message.contains("Produto do item"), message);
     }
 
     @org.junit.jupiter.api.Test
@@ -54,7 +69,7 @@ class NotificationContentFactoryTest {
     void truncatesOnlyDetailAtCodePointBoundaries(NotificationEventType type) throws Exception {
         var rma = rma();
         rma.getClient().setLegalName("C".repeat(160));
-        rma.getProduct().setName("P".repeat(120));
+        rma.getItems().get(0).getProduct().setName("P".repeat(120));
         String actor = "a".repeat(60);
         String message = factory.build(new RmaNotificationEvent(type, "key", 1L, null, actor, "😀\n\"".repeat(500)), rma).message();
         assertTrue(message.length() <= 500);

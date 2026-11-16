@@ -1,5 +1,7 @@
 package br.com.navitasassist.protocol;
 
+import static br.com.navitasassist.support.RmaTestSupport.addItem;
+
 import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -509,8 +511,8 @@ class ProtocolControllerIntegrationTest {
         RmaRecord rma = new RmaRecord();
         rma.setCode(code);
         rma.setClient(clientRepository.save(client));
-        rma.setProduct(rmaProduct);
-        rma.getItemIdentification().setSerialNumber(code);
+        addItem(rma, rmaProduct);
+        rma.getItems().get(0).getItemIdentification().setSerialNumber(code);
         rma.setPurchaseDateUnknown(true);
         rma.setEntryDate(LocalDate.now(BUSINESS_ZONE));
         rma.setReceivedBy("Service desk");

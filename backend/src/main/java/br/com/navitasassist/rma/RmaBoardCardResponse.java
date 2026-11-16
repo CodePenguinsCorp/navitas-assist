@@ -77,9 +77,7 @@ public record RmaBoardCardResponse(
     }
 
     static List<RmaItemSummaryResponse> itemsOf(RmaRecord rma) {
-        List<RmaItemResponse> items = rma.getItems().isEmpty()
-            ? List.of(RmaItemResponse.fromLegacy(rma))
-            : rma.getItems().stream().map(RmaItemResponse::from).toList();
+        List<RmaItemResponse> items = rma.getItems().stream().map(RmaItemResponse::from).toList();
         return items.stream().map(RmaItemSummaryResponse::from).toList();
     }
 }

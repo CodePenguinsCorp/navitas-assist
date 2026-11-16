@@ -1,5 +1,7 @@
 package br.com.navitasassist.rma;
 
+import static br.com.navitasassist.support.RmaTestSupport.addItem;
+
 import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -49,7 +51,7 @@ class RmaStatusNoteIntegrationTest {
     void setup() {
         Client client = new Client(); client.setLegalName("Cliente reparo"); clients.save(client);
         Product product = new Product(); product.setSku("REPAIR-TEST"); product.setName("Produto reparo"); products.save(product);
-        rma = new RmaRecord(); rma.setCode("OS-REPAIR-TEST"); rma.setClient(client); rma.setProduct(product);
+        rma = new RmaRecord(); rma.setCode("OS-REPAIR-TEST"); rma.setClient(client); addItem(rma, product);
         rma.setEntryDate(LocalDate.now()); rma.setReceivedBy("Teste"); rma.setReportedFailure("Falha"); rma.setStatus(RmaStatus.IN_REPAIR); rmas.saveAndFlush(rma);
     }
 
@@ -104,7 +106,7 @@ class RmaStatusNoteIntegrationTest {
 
     @Test
     void rejectsEventBelongingToAnotherRma() throws Exception {
-        RmaRecord other = new RmaRecord(); other.setCode("OS-NOTE-OTHER"); other.setClient(rma.getClient()); other.setProduct(rma.getProduct());
+        RmaRecord other = new RmaRecord(); other.setCode("OS-NOTE-OTHER"); other.setClient(rma.getClient()); addItem(other, rma.getItems().get(0).getProduct());
         other.setEntryDate(LocalDate.now()); other.setReceivedBy("original"); other.setReportedFailure("Falha"); other.setStatus(RmaStatus.IN_REPAIR);
         RmaStatusHistory event = new RmaStatusHistory(); event.setStatus(other.getStatus()); event.setChangedBy("original"); event.setChangedAt(java.time.Instant.now());
         event.setNote("Intacta"); other.addStatusHistory(event); other = rmas.saveAndFlush(other); Long eventId = other.getStatusHistory().get(0).getId();

@@ -16,7 +16,7 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class RmaBoardQueryRepository {
     public static final String ORDER = "r.board_position asc nulls last, case r.priority when 'HIGH' then 0 when 'MEDIUM' then 1 else 2 end, r.updated_at desc, r.id asc";
-    private static final String FROM = " from rmas r join clients c on c.id = r.client_id join products p on p.id = r.product_id ";
+    private static final String FROM = " from rmas r join clients c on c.id = r.client_id ";
     private static final String CLOSED = "r.status in ('COMPLETED', 'RETURNED', 'IRREPARABLE')";
     private final NamedParameterJdbcTemplate jdbc;
     private final RmaDeadlineProperties properties;
@@ -59,15 +59,14 @@ public class RmaBoardQueryRepository {
         if (f.updatedTo() != null) { clauses.add("r.updated_at < :updatedTo"); p.addValue("updatedTo", f.updatedTo().plusDays(1).atStartOfDay(zone).toOffsetDateTime()); }
         if (f.query() != null && !f.query().isBlank()) {
             p.addValue("query", "%" + f.query().trim().replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%");
-            clauses.add("(" + search("concat_ws(' ', r.code, c.legal_name, c.trade_name, p.name, p.sku, r.batch_number, r.serial_number)")
+            clauses.add("(" + search("concat_ws(' ', r.code, c.legal_name, c.trade_name)")
                 + " or exists (select 1 from rma_items i join products ip on ip.id = i.product_id where i.rma_id = r.id and "
                 + search("concat_ws(' ', ip.name, ip.sku, i.batch_number, i.serial_number)") + "))");
         }
         if (f.warranty() != null) {
             p.addValue("warranty", f.warranty().name());
-            clauses.add("(exists (select 1 from rma_items i join products ip on ip.id = i.product_id where i.rma_id = r.id and coalesce(i.warranty_override, "
-                + warranty("coalesce(i.warranty_months, ip.default_warranty_months)") + ") = :warranty) or (not exists (select 1 from rma_items i where i.rma_id = r.id) and "
-                + warranty("p.default_warranty_months") + " = :warranty))");
+            clauses.add("exists (select 1 from rma_items i join products ip on ip.id = i.product_id where i.rma_id = r.id and coalesce(i.warranty_override, "
+                + warranty("coalesce(i.warranty_months, ip.default_warranty_months)") + ") = :warranty)");
         }
         if (f.deadline() != null) {
             var today = RmaDeadlineService.businessDate(Instant.now());

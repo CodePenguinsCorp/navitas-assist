@@ -7,12 +7,9 @@ import java.util.List;
 import br.com.navitasassist.client.Client;
 import br.com.navitasassist.config.AuditableEntity;
 import br.com.navitasassist.diagnosis.Diagnosis;
-import br.com.navitasassist.item.ItemIdentification;
-import br.com.navitasassist.product.Product;
 import br.com.navitasassist.user.UserAccount;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
-import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -49,13 +46,6 @@ public class RmaRecord extends AuditableEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
-
-    @Embedded
-    private ItemIdentification itemIdentification = new ItemIdentification();
 
     @OneToMany(mappedBy = "rma", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC, id ASC")
@@ -142,14 +132,6 @@ public class RmaRecord extends AuditableEntity {
     @OneToMany(mappedBy = "rma", cascade = CascadeType.ALL)
     @OrderBy("changedAt DESC, id DESC")
     private List<RmaRepairHistory> repairHistory = new ArrayList<>();
-
-    public ItemIdentification getItemIdentification() {
-        // JPA may reconstruct an all-null embedded value as null.
-        if (itemIdentification == null) {
-            itemIdentification = new ItemIdentification();
-        }
-        return itemIdentification;
-    }
 
     @OneToMany(mappedBy = "rma", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("blockedAt DESC, id DESC")

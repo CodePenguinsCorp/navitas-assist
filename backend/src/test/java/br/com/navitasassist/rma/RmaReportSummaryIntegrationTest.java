@@ -234,7 +234,6 @@ class RmaReportSummaryIntegrationTest {
         RmaRecord rma = new RmaRecord();
         rma.setCode(code);
         rma.setClient(owner);
-        rma.setProduct(items[0].getProduct());
         rma.setEntryDate(LocalDate.parse(entryDate));
         rma.setPurchaseDateUnknown(true);
         rma.setReceivedBy("admin");

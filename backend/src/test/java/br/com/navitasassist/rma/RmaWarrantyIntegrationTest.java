@@ -184,7 +184,7 @@ class RmaWarrantyIntegrationTest {
         Long itemId = rma.getItems().get(0).getId();
         Long rmaId = rma.getId();
         Long clientId = rma.getClient().getId();
-        Long productId = rma.getProduct().getId();
+        Long productId = rma.getItems().get(0).getProduct().getId();
         TestTransaction.flagForCommit();
         TestTransaction.end();
         try {
@@ -221,7 +221,7 @@ class RmaWarrantyIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{\"override\":\"IN_WARRANTY\",\"reason\":\"Cortesia\"}"))
             .andExpect(status().isOk());
         mvc.perform(put("/api/rmas/{id}", rma.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"items\":[{\"productId\":" + rma.getProduct().getId() + ",\"serialNumber\":\"SERIAL\"}]}"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"items\":[{\"productId\":" + rma.getItems().get(0).getProduct().getId() + ",\"serialNumber\":\"SERIAL\"}]}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].id").value(itemId))
             .andExpect(jsonPath("$.items[0].warrantyStatus").value("IN_WARRANTY"))
             .andExpect(jsonPath("$.warrantyHistory", hasSize(1)));
@@ -235,7 +235,7 @@ class RmaWarrantyIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{\"override\":\"IN_WARRANTY\",\"reason\":\"Cortesia\"}"))
             .andExpect(status().isOk());
         mvc.perform(put("/api/rmas/{id}", rma.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"items\":[{\"productId\":" + rma.getProduct().getId() + ",\"serialNumber\":\"OUTRO\"}]}"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"items\":[{\"productId\":" + rma.getItems().get(0).getProduct().getId() + ",\"serialNumber\":\"OUTRO\"}]}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value("Não é possível remover um item com histórico de ajuste de garantia."));
     }
@@ -244,12 +244,12 @@ class RmaWarrantyIntegrationTest {
     void generalEditKeepsTheRequestOrderAndItsFirstItemAsPrimary() throws Exception {
         RmaRecord rma = saveRma();
         RmaItem second = new RmaItem();
-        second.setProduct(rma.getProduct());
+        second.setProduct(rma.getItems().get(0).getProduct());
         second.getItemIdentification().setSerialNumber("SECOND");
         rma.addItem(second);
         em.flush();
         Long secondId = second.getId();
-        Long product = rma.getProduct().getId();
+        Long product = rma.getItems().get(0).getProduct().getId();
         mvc.perform(put("/api/rmas/{id}", rma.getId()).with(asProfile("admin", "ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"items\":[{\"productId\":" + product
                     + ",\"serialNumber\":\"NEW\"},{\"productId\":" + product + ",\"serialNumber\":\"SECOND\"},{\"productId\":" + product
@@ -283,7 +283,6 @@ class RmaWarrantyIntegrationTest {
         RmaRecord rma = new RmaRecord();
         rma.setCode(UUID.randomUUID().toString().substring(0, 20));
         rma.setClient(client);
-        rma.setProduct(product);
         rma.setPurchaseDate(LocalDate.of(2024, 1, 1));
         rma.setEntryDate(LocalDate.of(2026, 1, 1));
         rma.setReceivedBy("desk");

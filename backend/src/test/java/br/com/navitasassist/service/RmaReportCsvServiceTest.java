@@ -1,5 +1,7 @@
 package br.com.navitasassist.service;
 
+import static br.com.navitasassist.support.RmaTestSupport.addItem;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -40,7 +42,7 @@ class RmaReportCsvServiceTest {
         var client = new br.com.navitasassist.client.Client(); client.setLegalName("Cliente");
         var product = new br.com.navitasassist.product.Product(); product.setName("Produto"); product.setSku("SKU");
         var rma = new br.com.navitasassist.rma.RmaRecord(); rma.setId(7L); rma.setCode("OS-7");
-        rma.setClient(client); rma.setProduct(product); rma.setPurchaseDateUnknown(true);
+        rma.setClient(client); addItem(rma, product); rma.setPurchaseDateUnknown(true);
         rma.setStatus(br.com.navitasassist.rma.RmaStatus.IN_REPAIR); rma.setEntryDate(year.entryFrom());
         var part = new br.com.navitasassist.part.Part(); part.setCode("P1"); part.setName("Capacitor"); part.setUnit("UN");
         var usage = new br.com.navitasassist.part.PartUsage(); usage.setRma(rma); usage.setPart(part);

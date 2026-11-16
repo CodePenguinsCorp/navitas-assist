@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Stream;
 
 import br.com.navitasassist.controller.BusinessException;
 import br.com.navitasassist.controller.ConflictException;
@@ -95,7 +94,7 @@ public class ProtocolTemplateService {
     }
 
     public boolean appliesTo(ProtocolTemplate template, RmaRecord rma) {
-        List<Product> products = Stream.concat(Stream.of(rma.getProduct()), rma.getItems().stream().map(RmaItem::getProduct)).filter(Objects::nonNull).toList();
+        List<Product> products = rma.getItems().stream().map(RmaItem::getProduct).toList();
         if (template.getProduct() != null) {
             return products.stream().anyMatch(product -> product.getId().equals(template.getProduct().getId()));
         }

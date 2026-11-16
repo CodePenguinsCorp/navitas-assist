@@ -23,10 +23,6 @@ public record RmaItemResponse(
         return from(item.getId(), item.getProduct(), item.getItemIdentification(), ItemWarranty.calculate(item.getRma(), months), WarrantyOverrideResponse.from(item));
     }
 
-    public static RmaItemResponse fromLegacy(RmaRecord rma) {
-        return from(null, rma.getProduct(), rma.getItemIdentification(), ItemWarranty.calculate(rma, rma.getProduct().getDefaultWarrantyMonths()), null);
-    }
-
     private static RmaItemResponse from(Long id, Product product, ItemIdentification identification, ItemWarranty warranty, WarrantyOverrideResponse override) {
         return new RmaItemResponse(
             id,

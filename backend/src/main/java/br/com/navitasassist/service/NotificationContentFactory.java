@@ -29,7 +29,7 @@ public class NotificationContentFactory {
     private static final Map<RmaPriority, String> PRIORITY_LABELS = Map.of(RmaPriority.HIGH, "alta", RmaPriority.MEDIUM, "média", RmaPriority.LOW, "baixa");
 
     public Content build(RmaNotificationEvent event, RmaRecord rma) {
-        String context = rma.getClient().getLegalName() + " · " + rma.getProduct().getName();
+        String context = rma.getClient().getLegalName() + " · " + rma.getItems().get(0).getProduct().getName();
         String assignee = rma.getAssignee() == null ? "sem responsável" : rma.getAssignee().getFullName();
         String stage = STATUS_LABELS.get(rma.getStatus());
 

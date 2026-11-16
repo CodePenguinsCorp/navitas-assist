@@ -110,12 +110,10 @@ public class RmaReportService {
             stages(open, generatedAt));
     }
 
-    /** One entry per item as the API shows it (legacy RMAs without rma_items count their single product). */
+    /** Uma linha por item da OS. */
     static List<ReportItem> items(List<RmaRecord> records) {
         return records.stream()
-            .flatMap(rma -> rma.getItems().isEmpty()
-                ? RmaReportItems.of(rma).stream().map(item -> new ReportItem(rma, rma.getProduct(), item))
-                : rma.getItems().stream().map(item -> new ReportItem(rma, item.getProduct(), RmaItemResponse.from(item))))
+            .flatMap(rma -> rma.getItems().stream().map(item -> new ReportItem(rma, item.getProduct(), RmaItemResponse.from(item))))
             .toList();
     }
 

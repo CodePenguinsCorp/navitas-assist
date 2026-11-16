@@ -1,5 +1,7 @@
 package br.com.navitasassist.part;
 
+import static br.com.navitasassist.support.RmaTestSupport.addItem;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.math.BigDecimal;
@@ -148,7 +150,7 @@ class PartStockConcurrencyTest {
         client.setLegalName("Cliente concorrente");
         RmaRecord record = new RmaRecord();
         record.setCode("OS-CONC-0001");
-        record.setProduct(productRepository.save(product));
+        addItem(record, productRepository.save(product));
         record.setClient(clientRepository.save(client));
         record.setEntryDate(LocalDate.now());
         record.setReceivedBy("Teste");

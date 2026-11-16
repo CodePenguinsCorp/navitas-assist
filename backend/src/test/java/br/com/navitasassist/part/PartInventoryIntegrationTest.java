@@ -216,7 +216,6 @@ class PartInventoryIntegrationTest {
         });
         RmaRecord record = new RmaRecord();
         record.setCode(code);
-        record.setProduct(product);
         record.setClient(client);
         record.setEntryDate(LocalDate.now());
         record.setReceivedBy("Teste");

@@ -1,5 +1,7 @@
 package br.com.navitasassist.config;
 
+import static br.com.navitasassist.support.RmaTestSupport.addItem;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
@@ -70,8 +72,8 @@ class EnumPersistenceIntegrationTest {
         RmaRecord rma = new RmaRecord();
         rma.setCode(suffix.substring(0, 20));
         rma.setClient(client);
-        rma.setProduct(product);
-        rma.getItemIdentification().setSerialNumber(suffix);
+        addItem(rma, product);
+        rma.getItems().get(0).getItemIdentification().setSerialNumber(suffix);
         rma.setEntryDate(LocalDate.of(2026, 10, 27));
         rma.setPurchaseDateUnknown(true);
         rma.setReceivedBy("Enum persistence");

@@ -1,5 +1,7 @@
 package br.com.navitasassist.client;
 
+import static br.com.navitasassist.support.RmaTestSupport.addItem;
+
 import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -203,7 +205,7 @@ class ClientControllerIntegrationTest {
 
         RmaRecord rma = new RmaRecord();
         rma.setCode("OS-CLIENT-0001");
-        rma.setProduct(savedProduct);
+        addItem(rma, savedProduct);
         rma.setClient(savedClient);
         rma.setEntryDate(LocalDate.now());
         rma.setReceivedBy("Test user");

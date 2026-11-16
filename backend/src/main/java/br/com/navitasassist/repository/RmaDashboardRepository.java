@@ -37,14 +37,6 @@ public interface RmaDashboardRepository extends Repository<RmaRecord, Long> {
         """)
     List<Object[]> itemWarrantyInputs();
 
-    /** OS antigas sem itens contam como um item com a garantia padrão do produto. */
-    @Query("""
-        select r.purchaseDateUnknown, r.purchaseDate, r.entryDate, p.defaultWarrantyMonths
-        from RmaRecord r join r.product p
-        where not exists (select 1 from RmaItem i where i.rma = r)
-        """)
-    List<Object[]> legacyWarrantyInputs();
-
     @Query("""
         select new br.com.navitasassist.rma.RmaDashboardQueueItem(r.id, r.code, c.legalName, r.entryDate, r.status, r.priority)
         from RmaRecord r join r.client c

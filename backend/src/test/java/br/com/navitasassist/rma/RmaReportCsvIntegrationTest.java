@@ -1,5 +1,7 @@
 package br.com.navitasassist.rma;
 
+import static br.com.navitasassist.support.RmaTestSupport.addItem;
+
 import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -57,7 +59,6 @@ class RmaReportCsvIntegrationTest {
         RmaRecord rma = new RmaRecord();
         rma.setCode("OS-1");
         rma.setClient(client);
-        rma.setProduct(product);
         rma.setEntryDate(LocalDate.parse("2026-10-05"));
         rma.setPurchaseDateUnknown(true);
         rma.setReceivedBy("admin");
@@ -101,7 +102,7 @@ class RmaReportCsvIntegrationTest {
         RmaRecord rma = new RmaRecord();
         rma.setCode("OS-1");
         rma.setClient(client);
-        rma.setProduct(product);
+        addItem(rma, product);
         rma.setEntryDate(LocalDate.parse("2026-10-05"));
         rma.setPurchaseDateUnknown(true);
         rma.setReceivedBy("admin");

@@ -42,7 +42,6 @@ public class RmaDashboardService {
             WarrantyStatus override = (WarrantyStatus) row[4];
             count(warranty, override != null ? override : warrantyOf(row));
         }
-        for (Object[] row : repository.legacyWarrantyInputs()) count(warranty, warrantyOf(row));
 
         LocalDate today = RmaDeadlineService.businessDate(Instant.now());
         return new RmaDashboardResponse(
