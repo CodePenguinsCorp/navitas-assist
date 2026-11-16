@@ -19,7 +19,7 @@ public record RmaItemResponse(
     WarrantyOverrideResponse warrantyOverride
 ) {
     public static RmaItemResponse from(RmaItem item) {
-        int months = item.getWarrantyMonths() == null ? item.getProduct().getDefaultWarrantyMonths() : item.getWarrantyMonths();
+        int months = item.getWarrantyMonths();
         return from(item.getId(), item.getProduct(), item.getItemIdentification(), ItemWarranty.calculate(item.getRma(), months), WarrantyOverrideResponse.from(item));
     }
 

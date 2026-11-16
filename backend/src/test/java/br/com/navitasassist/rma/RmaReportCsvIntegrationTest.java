@@ -66,10 +66,12 @@ class RmaReportCsvIntegrationTest {
         rma.setStatus(RmaStatus.IN_DIAGNOSIS);
         RmaItem first = new RmaItem();
         first.setProduct(product);
+        first.setWarrantyMonths(product.getDefaultWarrantyMonths());
         first.getItemIdentification().setSerialNumber("S1");
         first.getItemIdentification().setBatchNumber("L1");
         RmaItem second = new RmaItem();
         second.setProduct(product);
+        second.setWarrantyMonths(product.getDefaultWarrantyMonths());
         second.getItemIdentification().setSerialNumber("-S2");
         rma.replaceItems(List.of(first, second));
         Diagnosis diagnosis = new Diagnosis();

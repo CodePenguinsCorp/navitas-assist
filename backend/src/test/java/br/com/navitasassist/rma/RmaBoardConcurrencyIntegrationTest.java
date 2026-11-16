@@ -27,7 +27,7 @@ class RmaBoardConcurrencyIntegrationTest {
             for (int i = 0; i < 2; i++) {
                 long id = jdbc.queryForObject("insert into rmas (code, client_id, purchase_date_unknown, entry_date, received_by, reported_failure, priority, status, created_at, updated_at) values (?, ?, true, current_date, 'teste', 'Falha', 'LOW', 'RECEIVED', now(), now()) returning id", Long.class, key + i, client);
                 ids.add(id);
-                jdbc.update("insert into rma_items (rma_id, product_id, serial_number, warranty_months) values (?, ?, ?, 12)", id, product, key + i);
+                jdbc.update("insert into rma_items (rma_id, product_id, serial_number, warranty_months, item_position) values (?, ?, ?, 12, 0)", id, product, key + i);
             }
             var start = new CountDownLatch(1);
             var futures = ids.stream().map(id -> pool.submit(() -> {

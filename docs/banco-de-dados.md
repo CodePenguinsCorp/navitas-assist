@@ -98,3 +98,31 @@ A OS tem de 1 a 20 itens, validados na criação e na edição. `rmas` guarda os
 A limpeza de 15 de novembro de 2026 remove da V1 `rmas.product_id`, `batch_number`, `serial_number` e `manufactured_at`, a FK `fk_rmas_product` e o índice `idx_rmas_product_id`. Não havia CHECK dessas quatro colunas. A base será recriada do zero, inclusive no provedor remoto; não há migração de dados nem Flyway repair.
 
 Buscas por nome, SKU, lote e série consultam os itens. O nome do produto no cartão e os campos de produto da linha do relatório derivam do primeiro item, ordenado por `item_position` e `id`. Dashboard, CSV e laudo usam os itens persistidos, sem reconstruir um produto a partir da OS. A existência de pelo menos um item é validada pelo serviço; não há trigger de cardinalidade entre pai e filhos.
+
+## Varredura das sobras de compatibilidade
+
+A revisão da V1 e dos produtores e consumidores em código cobriu as 33 tabelas e os 49 índices restantes. Não foi identificada outra tabela ou valor persistido sem uso que pudesse ser removido com segurança.
+
+| Removido ou restringido | Motivo |
+| --- | --- |
+| Quatro colunas de produto e identificação em `rmas`, uma FK e um índice | Duplicavam os dados de `rma_items`. A entidade e as consultas não mantêm o modelo de produto único. |
+| `RmaItemResponse.fromLegacy`, `RmaService.syncLegacyItem`, datas e garantia alternativas, reconstrução de itens no detalhe/quadro/relatórios | Toda OS criada ou editada precisa de itens reais. Não há conversão de dados antigos. |
+| Nulabilidade de `rma_items.warranty_months` e consulta alternativa ao prazo atual do produto | Cada item grava seu prazo ao ser criado. Agora é `NOT NULL`, sem valor padrão nem recálculo pelo cadastro; a edição preserva o prazo original. |
+| `DEFAULT 0` de `rma_items.item_position` | A aplicação grava a posição de cada item. Escritas SQL também devem informá-la explicitamente. |
+| Testes exclusivos do produto único e de identificação vazia persistida | Não representam mais registros criados pela aplicação. Permanecem testes de identificação obrigatória e preservação de dados informados. |
+
+| Mantido | Uso atual e motivo |
+| --- | --- |
+| Nove status de OS, prioridades e seus CHECKs | Fluxo de status, filtros, encerramento, permissões e bloqueios por protocolo ainda os utilizam; ausência no seed não significa ausência de uso. |
+| `ENTRY`, `EXIT`, `ADJUSTMENT`, `CONSUMPTION`, `REVERSAL` e usos `USED`/`REVERTED` | Todos têm produtor e consumidor em `PartStockService`; preservam o razão, o uso e a reversão auditável. |
+| Situações dos protocolos e tipos/estados de notificação e e-mail | Execução, reprovação, processamento, descarte, falhas, fila e reenvio os produzem e consultam. |
+| Compra, entrada, expedição, resumos de reparo/peças/testes, transportadora e rastreio em `rmas` | São dados comuns de atendimento usados na API, CSV, laudo ou tela; não duplicam a identificação física dos itens. |
+| Históricos, autoria, custos do estoque, resultado de processamento e mensagem de erro do evento | Mantêm auditoria e rastreabilidade. `notification_events.error_message` e `processed_at` são escritos pelos fluxos atuais, mesmo sem exposição direta na lista administrativa. |
+| Defaults de unidade externa, visibilidade de notificação, tentativas e geração de e-mail | Representam estados iniciais atuais, usados por componentes externos, preferências, fila e idempotência. Não são preenchimento para dados antigos. |
+| Índices de FKs, buscas por lote/série, ordenação, filtros e unicidade | Atendem consultas atuais e integridade. Não se remove um índice apenas por não haver referência ao seu nome em Java. |
+| Tratamento de histórico de etapas ausente/inconsistente e de mínimo de estoque inalterado | São comportamentos atuais ainda usados pelo código. Não acrescentam coluna, tabela, enum ou modelo persistido alternativo; sua remoção mudaria regras de prazo ou de edição de unidade fora desta limpeza. |
+| Perfis/permissões, numeração com lock e extensão `unaccent` | Usados diretamente pela autorização, concorrência e busca sem acentos. |
+
+Frontend e `scripts/dev-seed/seed.mjs` já enviam e leem `items[]`; não exigiram alteração. Importação CSV continua restrita a clientes e produtos e não grava produto diretamente numa OS.
+
+Verificação desta limpeza: compilação de fontes e testes, testes unitários sem banco, suíte frontend, build frontend sem avisos e sintaxe do seed. Não foram executados Flyway, validação Hibernate nem testes de integração/migração contra PostgreSQL: `TEST_DB_URL` estava ausente e não foi iniciado Docker. A equivalência efetiva do schema permanece para o `mvn verify` completo em banco recriado.

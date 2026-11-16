@@ -415,6 +415,7 @@ class PaginationIntegrationTest {
         rma.setReportedFailure("Failure");
         RmaItem item = new RmaItem();
         item.setProduct(product);
+        item.setWarrantyMonths(product.getDefaultWarrantyMonths());
         item.getItemIdentification().setSerialNumber("SERIAL-" + code);
         rma.addItem(item);
         RmaStatusHistory history = new RmaStatusHistory();

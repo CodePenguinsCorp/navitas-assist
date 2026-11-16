@@ -137,11 +137,13 @@ class ProductControllerIntegrationTest {
 
         RmaItem primaryItem = new RmaItem();
         primaryItem.setProduct(savedPrimaryProduct);
+        primaryItem.setWarrantyMonths(savedPrimaryProduct.getDefaultWarrantyMonths());
         primaryItem.getItemIdentification().setBatchNumber("PRIMARY-LOT");
         rma.addItem(primaryItem);
 
         RmaItem secondaryItem = new RmaItem();
         secondaryItem.setProduct(savedSecondaryProduct);
+        secondaryItem.setWarrantyMonths(savedSecondaryProduct.getDefaultWarrantyMonths());
         secondaryItem.getItemIdentification().setSerialNumber("SECONDARY-SERIAL");
         rma.addItem(secondaryItem);
         rmaRecordRepository.saveAndFlush(rma);

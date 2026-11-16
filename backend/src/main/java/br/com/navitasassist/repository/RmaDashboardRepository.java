@@ -32,8 +32,8 @@ public interface RmaDashboardRepository extends Repository<RmaRecord, Long> {
 
     /** Por item: compra desconhecida, data de compra, entrada, meses de garantia e ajuste manual. */
     @Query("""
-        select r.purchaseDateUnknown, r.purchaseDate, r.entryDate, coalesce(i.warrantyMonths, p.defaultWarrantyMonths), i.warrantyOverride
-        from RmaItem i join i.rma r join i.product p
+        select r.purchaseDateUnknown, r.purchaseDate, r.entryDate, i.warrantyMonths, i.warrantyOverride
+        from RmaItem i join i.rma r
         """)
     List<Object[]> itemWarrantyInputs();
 

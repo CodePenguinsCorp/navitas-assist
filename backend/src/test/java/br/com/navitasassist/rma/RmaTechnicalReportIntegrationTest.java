@@ -76,6 +76,7 @@ class RmaTechnicalReportIntegrationTest {
         rma.setStatus(RmaStatus.COMPLETED);
         RmaItem item = new RmaItem();
         item.setProduct(product);
+        item.setWarrantyMonths(product.getDefaultWarrantyMonths());
         item.getItemIdentification().setSerialNumber("SN-123");
         item.getItemIdentification().setBatchNumber("LOTE-9");
         rma.replaceItems(List.of(item));

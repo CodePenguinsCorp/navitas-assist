@@ -290,6 +290,7 @@ class RmaControllerIntegrationTest {
 
         RmaItem originalItem = new RmaItem();
         originalItem.setProduct(originalProduct);
+        originalItem.setWarrantyMonths(originalProduct.getDefaultWarrantyMonths());
         originalItem.getItemIdentification().setBatchNumber("OLD-LOT");
         rma.addItem(originalItem);
         RmaRecord savedRma = rmaRecordRepository.saveAndFlush(rma);

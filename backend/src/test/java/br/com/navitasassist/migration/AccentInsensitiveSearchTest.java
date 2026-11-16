@@ -64,8 +64,8 @@ class AccentInsensitiveSearchTest {
                     TRUE, CURRENT_DATE, 'desk', 'Falha', 'MEDIUM', 'RECEIVED', now(), now())
             """);
         jdbc.update("""
-            INSERT INTO rma_items (rma_id, product_id, serial_number, warranty_months)
-            SELECT r.id, p.id, 'ACC-SERIAL', 12 FROM rmas r CROSS JOIN products p
+            INSERT INTO rma_items (rma_id, product_id, serial_number, warranty_months, item_position)
+            SELECT r.id, p.id, 'ACC-SERIAL', 12, 0 FROM rmas r CROSS JOIN products p
             WHERE r.code = 'ACC-RMA-1' AND p.sku = 'ACC-CAM-1'
             """);
     }

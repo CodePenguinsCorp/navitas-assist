@@ -223,6 +223,7 @@ class PartInventoryIntegrationTest {
         record.setStatus(status);
         RmaItem item = new RmaItem();
         item.setProduct(product);
+        item.setWarrantyMonths(product.getDefaultWarrantyMonths());
         item.getItemIdentification().setSerialNumber("SER-" + code);
         record.addItem(item);
         return rmaRecordRepository.save(record);

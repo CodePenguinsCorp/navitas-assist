@@ -209,9 +209,11 @@ class RmaReportIntegrationTest {
             RmaRecord rma = saveRma("OS-N1-" + count + "-" + index, "2026-10-1" + index % 10, RmaStatus.IN_DIAGNOSIS, client);
             RmaItem first = new RmaItem();
             first.setProduct(product);
+            first.setWarrantyMonths(product.getDefaultWarrantyMonths());
             first.getItemIdentification().setSerialNumber("S-" + count + "-" + index + "-A");
             RmaItem second = new RmaItem();
             second.setProduct(product);
+            second.setWarrantyMonths(product.getDefaultWarrantyMonths());
             second.getItemIdentification().setSerialNumber("S-" + count + "-" + index + "-B");
             rma.replaceItems(List.of(first, second));
             addHistory(rma, RmaStatus.RECEIVED, Instant.parse("2026-10-10T10:00:00Z"));

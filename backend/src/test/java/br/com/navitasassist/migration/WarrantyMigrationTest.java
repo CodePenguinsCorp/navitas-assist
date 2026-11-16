@@ -23,13 +23,15 @@ class WarrantyMigrationTest {
                 INSERT INTO rmas (id, code, client_id, purchase_date_unknown, entry_date, received_by, reported_failure, priority, status, created_at, updated_at)
                 VALUES (900, 'GARANTIA', 900, TRUE, CURRENT_DATE, 'desk', 'Falha', 'MEDIUM', 'RECEIVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """);
-            sql.executeUpdate("INSERT INTO rma_items (id, rma_id, product_id, warranty_months) VALUES (900, 900, 900, 12)");
+            sql.executeUpdate("INSERT INTO rma_items (id, rma_id, product_id, warranty_months, item_position) VALUES (900, 900, 900, 12, 0)");
             try (var rows = sql.executeQuery("SELECT warranty_override, warranty_override_reason, warranty_override_by, warranty_override_at, warranty_months, item_position FROM rma_items WHERE id = 900")) {
                 assertTrue(rows.next());
                 for (int column = 1; column <= 4; column++) assertEquals(null, rows.getObject(column));
                 assertEquals(12, rows.getInt(5));
                 assertEquals(0, rows.getInt(6));
             }
+            assertThrows(SQLException.class, () -> sql.executeUpdate("UPDATE rma_items SET warranty_months = NULL WHERE id = 900"));
+            assertThrows(SQLException.class, () -> sql.executeUpdate("INSERT INTO rma_items (rma_id, product_id, warranty_months) VALUES (900, 900, 12)"));
             for (String value : new String[]{"IN_WARRANTY", "OUT_OF_WARRANTY"}) {
                 sql.executeUpdate("UPDATE rma_items SET warranty_override = '" + value + "' WHERE id = 900");
             }

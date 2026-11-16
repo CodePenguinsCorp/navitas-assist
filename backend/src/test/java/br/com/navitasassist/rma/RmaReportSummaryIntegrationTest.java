@@ -225,6 +225,7 @@ class RmaReportSummaryIntegrationTest {
     private RmaItem item(Product product, String serial, String batch) {
         RmaItem item = new RmaItem();
         item.setProduct(product);
+        item.setWarrantyMonths(product.getDefaultWarrantyMonths());
         item.getItemIdentification().setSerialNumber(serial);
         item.getItemIdentification().setBatchNumber(batch);
         return item;

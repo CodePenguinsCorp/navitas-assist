@@ -40,10 +40,10 @@ class ItemWarrantyTest {
     }
 
     @Test
-    void shouldUseCurrentProductTermForLegacyItemWithoutSnapshot() {
+    void shouldPreserveItemTermWhenProductWarrantyChanges() {
         Product product = new Product();
-        product.setSku("LEGACY");
-        product.setName("Legacy product");
+        product.setSku("SNAPSHOT");
+        product.setName("Produto");
         product.setDefaultWarrantyMonths(18);
 
         RmaRecord rma = new RmaRecord();
@@ -53,7 +53,9 @@ class ItemWarrantyTest {
         RmaItem item = new RmaItem();
         item.setRma(rma);
         item.setProduct(product);
+        item.setWarrantyMonths(product.getDefaultWarrantyMonths());
 
+        product.setDefaultWarrantyMonths(36);
         RmaItemResponse response = RmaItemResponse.from(item);
 
         assertEquals(18, response.warrantyMonths());
@@ -78,6 +80,7 @@ class ItemWarrantyTest {
         RmaItem item = new RmaItem();
         item.setRma(rma);
         item.setProduct(product);
+        item.setWarrantyMonths(product.getDefaultWarrantyMonths());
         item.setWarrantyOverride(override);
         item.setWarrantyOverrideReason("Cortesia");
         item.setWarrantyOverrideBy("desk");

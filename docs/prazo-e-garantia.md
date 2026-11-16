@@ -33,7 +33,7 @@ Substitui o antigo SLA por etapa (prazos de 24/48/72/120 h e alertas `SLA_WARNIN
 
 ## Garantia dos produtos
 
-Cada produto da OS é avaliado individualmente, exclusivamente a partir de `rma_items`; não existe garantia de produto armazenado diretamente na OS. O vencimento é a data de compra informada na OS mais o prazo de garantia do produto, em meses. A cobertura considera a data de entrada do atendimento e inclui o dia do vencimento. O prazo é gravado em cada novo item, para preservar a garantia quando o cadastro do produto mudar.
+Cada produto da OS é avaliado individualmente, exclusivamente a partir de `rma_items`; não existe garantia de produto armazenado diretamente na OS. O vencimento é a data de compra informada na OS mais o prazo de garantia do produto, em meses. A cobertura considera a data de entrada do atendimento e inclui o dia do vencimento. O prazo é obrigatório e gravado em cada novo item, para preservar a garantia quando o cadastro do produto mudar; não há consulta alternativa ao prazo atual do cadastro.
 
 | Valor (`WarrantyStatus`) | Situação | Regra |
 | --- | --- | --- |

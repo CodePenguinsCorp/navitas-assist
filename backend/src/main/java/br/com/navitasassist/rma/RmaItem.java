@@ -51,7 +51,7 @@ public class RmaItem {
     @Column(name = "item_position", nullable = false)
     private int position;
 
-    @Column
+    @Column(nullable = false)
     private Integer warrantyMonths;
 
     @Enumerated(EnumType.STRING)

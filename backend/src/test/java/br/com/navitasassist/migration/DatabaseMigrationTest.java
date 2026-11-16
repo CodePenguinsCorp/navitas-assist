@@ -211,8 +211,8 @@ class DatabaseMigrationTest {
 
     private void insertItem(Connection connection, long rmaId, long productId, String serialNumber) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
-            INSERT INTO rma_items (rma_id, product_id, serial_number)
-            VALUES (?, ?, ?)
+            INSERT INTO rma_items (rma_id, product_id, serial_number, warranty_months, item_position)
+            VALUES (?, ?, ?, 12, 0)
             """)) {
             statement.setLong(1, rmaId);
             statement.setLong(2, productId);

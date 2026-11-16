@@ -30,6 +30,7 @@ class NotificationContentFactoryTest {
         product.setName("Produto do item");
         var item = new RmaItem();
         item.setProduct(product);
+        item.setWarrantyMonths(product.getDefaultWarrantyMonths());
         rma.getItems().add(0, item);
         String message = factory.build(new RmaNotificationEvent(
             NotificationEventType.RMA_CREATED, "key", 1L, null, "admin"), rma).message();

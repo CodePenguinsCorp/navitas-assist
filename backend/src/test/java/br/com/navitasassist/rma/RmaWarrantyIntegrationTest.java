@@ -245,6 +245,7 @@ class RmaWarrantyIntegrationTest {
         RmaRecord rma = saveRma();
         RmaItem second = new RmaItem();
         second.setProduct(rma.getItems().get(0).getProduct());
+        second.setWarrantyMonths(rma.getItems().get(0).getProduct().getDefaultWarrantyMonths());
         second.getItemIdentification().setSerialNumber("SECOND");
         rma.addItem(second);
         em.flush();
@@ -268,7 +269,7 @@ class RmaWarrantyIntegrationTest {
             .andExpect(jsonPath("$.items[1].serialNumber").value("SECOND"))
             .andExpect(jsonPath("$.items[2].serialNumber").value("SERIAL"))
             .andExpect(jsonPath("$.serialNumber").doesNotExist());
-        assertThat(jdbc.queryForObject("select serial_number from rmas where id = ?", String.class, rma.getId())).isEqualTo("NEW");
+        assertThat(jdbc.queryForObject("select serial_number from rma_items where rma_id = ? order by item_position, id limit 1", String.class, rma.getId())).isEqualTo("NEW");
     }
 
     private RmaRecord saveRma() {

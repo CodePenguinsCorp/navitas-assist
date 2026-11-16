@@ -42,6 +42,7 @@ class RmaListPerformanceIntegrationTest {
             order.setReportedFailure("Falha de teste.");
             RmaItem item = new RmaItem();
             item.setProduct(product);
+            item.setWarrantyMonths(product.getDefaultWarrantyMonths());
             order.replaceItems(java.util.List.of(item));
             em.persist(order);
         }

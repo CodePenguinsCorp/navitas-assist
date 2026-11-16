@@ -65,8 +65,8 @@ public class RmaBoardQueryRepository {
         }
         if (f.warranty() != null) {
             p.addValue("warranty", f.warranty().name());
-            clauses.add("exists (select 1 from rma_items i join products ip on ip.id = i.product_id where i.rma_id = r.id and coalesce(i.warranty_override, "
-                + warranty("coalesce(i.warranty_months, ip.default_warranty_months)") + ") = :warranty)");
+            clauses.add("exists (select 1 from rma_items i where i.rma_id = r.id and coalesce(i.warranty_override, "
+                + warranty("i.warranty_months") + ") = :warranty)");
         }
         if (f.deadline() != null) {
             var today = RmaDeadlineService.businessDate(Instant.now());

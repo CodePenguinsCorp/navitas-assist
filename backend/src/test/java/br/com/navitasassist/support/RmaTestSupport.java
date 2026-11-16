@@ -11,7 +11,7 @@ public final class RmaTestSupport {
         RmaItem item = new RmaItem();
         item.setProduct(product);
         item.setWarrantyMonths(product.getDefaultWarrantyMonths());
-        item.getItemIdentification().setSerialNumber("SERIAL-TESTE");
+        item.getItemIdentification().setSerialNumber(rma.getCode() == null ? java.util.UUID.randomUUID().toString() : rma.getCode());
         rma.addItem(item);
         return item;
     }
