@@ -279,28 +279,28 @@ export class KanbanComponent {
       icon: 'wrench' as IconName,
       tone: '',
       value: String(this.activeCount()),
-      detail: 'Cards ativos no fluxo',
+      detail: 'Ordens de serviço ainda abertas',
     },
     {
       label: 'Alta prioridade',
       icon: 'flag' as IconName,
       tone: 'tone-danger',
       value: String(this.highPriorityCount()),
-      detail: 'Itens que exigem atenção',
+      detail: 'Ordens de serviço abertas com prioridade alta',
     },
     {
       label: 'Aguardando peça',
       icon: 'clock' as IconName,
       tone: 'tone-warning',
       value: String(this.waitingPartCount()),
-      detail: 'Possível gargalo atual',
+      detail: 'Ordens de serviço paradas à espera de uma peça',
     },
     {
       label: 'Encerrados',
       icon: 'check' as IconName,
       tone: 'tone-success',
       value: String(this.closedCount()),
-      detail: 'Concluídos ou devolvidos',
+      detail: 'Ordens de serviço concluídas, devolvidas ou sem conserto',
     },
   ]);
 
