@@ -59,7 +59,7 @@ Quem tem `rma.editar` ajusta um item com `PUT /api/rmas/{rmaId}/items/{itemId}/w
 
 ## Componentes trocados, reparos e tempo de serviço
 
-O detalhe da OS (lista e Kanban) oferece os registros de reparo.
+O detalhe da OS (lista e Kanban) oferece os registros estruturados de reparos, peças e protocolos. Os antigos resumos livres não fazem parte da abertura, edição ou detalhe da OS. A remoção dos dados de remessa não altera prazos nem garantia.
 
 | Operação | Rota | Permissão |
 | --- | --- | --- |

@@ -103,7 +103,7 @@ O técnico usa a peça em uma única ação com motivo da troca obrigatório, qu
 
 ## Nomenclatura dos reparos
 
-Cada registro de serviço é apresentado como reparo, no masculino. A etapa Reparo (`IN_REPAIR`) e a seção Reparo e testes permanecem; a lista dentro dela se chama Reparos. Tipo livre com sugestões, horas opcionais, anulação com motivo e totais mantêm o mesmo comportamento.
+Cada registro de serviço é apresentado como reparo, no masculino. A etapa Reparo (`IN_REPAIR`) permanece; os registros estruturados ficam na seção Reparos. Os três textos livres de reparo, peças trocadas e testes e os dados de remessa foram removidos da OS. Tipo livre com sugestões, horas opcionais, anulação com motivo e totais mantêm o mesmo comportamento.
 
 Os identificadores internos `InterventionRequest`, `InterventionResponse`, `RmaIntervention`, `INTERVENTION`, o campo JSON `interventions`, as rotas `/repair/interventions` e `/suggestions/intervention-types`, a tabela `rma_interventions` e os nomes das migrações foram preservados. A troca interna atravessaria contrato, autorização e persistência e exigiria validação integrada com PostgreSQL. Esta alteração limita-se ao vocabulário exibido e documentado, sem colisões com `RmaRepairService` e `RmaRepairHistory`.
 

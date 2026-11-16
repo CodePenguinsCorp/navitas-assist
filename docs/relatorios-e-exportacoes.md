@@ -13,7 +13,7 @@ Parâmetros inválidos, intervalo invertido ou período maior que o máximo reto
 | --- | --- |
 | `GET /api/reports/rmas/summary` | Total de ordens de serviço e itens; ordens de serviço por status atual; itens por garantia **efetiva** (com ajuste manual); ordens de serviço por mês de entrada; top 10 de falhas por produto, lote, cliente (itens) e tipo de falha do diagnóstico (texto livre agrupado sem diferenciar maiúsculas, acentos e espaços nas pontas: "Display" e "display" contam juntos, exibindo a grafia mais frequente, ou a primeira em caso de empate); recorrência; tempo médio e maior tempo na etapa atual das ordens de serviço em andamento, medidos em `generatedAt` (encerrados ficam fora). |
 | `GET /api/reports/rmas?page&size` | Lista paginada no servidor (padrão 20, máximo 100), por entrada e ID decrescentes: `{ generatedAt, entryFrom, entryTo, rmas: { content, page, size, totalElements, totalPages } }`. Cada linha traz código, entrada, status, cliente, produto, SKU, série e lote do item principal, quantidade de itens, situações de garantia efetiva distintas e tipo de falha. |
-| `GET /api/reports/rmas/export.csv` | Uma linha por item persistido em `rma_items`: código, entrada, status, cliente, produto, SKU, lote, série, garantia, ajuste manual, falha relatada, falha encontrada, tipo, causa, responsável, expedição e peças usadas. |
+| `GET /api/reports/rmas/export.csv` | Uma linha por item persistido em `rma_items`: código, entrada, status, cliente, produto, SKU, lote, série, garantia, ajuste manual, falha relatada, falha encontrada, tipo, causa, responsável e peças usadas. |
 | `GET /api/reports/rmas/summary/export.csv` | O resumo em tabela longa: `Seção;Item;Quantidade;Base;Percentual;Tempo médio (h);Maior tempo (h)`. |
 
 O resumo e os dois CSV têm o mesmo limite: acima de **5.000 ordens de serviço** no período a resposta é `400` ("Reduza o período: o relatório passa de 5.000 ordens de serviço."). Não há custo por OS nos relatórios nem no laudo.
@@ -28,11 +28,11 @@ Formato dos arquivos exportados: UTF-8 **com BOM**, separador `;`, fim de linha 
 
 ## Laudo final em PDF
 
-`GET /api/rmas/{id}/report.pdf` (`rma.ver`). O PDF traz, nesta ordem: título com o código, faixa "Laudo parcial: diagnóstico ainda não registrado" (só quando não há diagnóstico), cliente, status, entrada e emissão (America/Sao_Paulo); **Produtos** (lote, série e garantia efetiva); **Equipamento recebido** (estado físico e acessórios); **Falha relatada**; **Falha encontrada** (tipo, causa, técnico, data e notas; a seção some sem diagnóstico); **Ações executadas** (reparo e testes); **Peças trocadas**; **Reparos**; e o bloco de assinatura. Sem custos.
+`GET /api/rmas/{id}/report.pdf` (`rma.ver`). O PDF traz, nesta ordem: título com o código, faixa "Laudo parcial: diagnóstico ainda não registrado" (só quando não há diagnóstico), cliente, status, entrada e emissão (America/Sao_Paulo); **Produtos** (lote, série e garantia efetiva); **Equipamento recebido** (estado físico e acessórios); **Falha relatada**; **Falha encontrada** (tipo, causa, técnico, data e notas; a seção some sem diagnóstico); **Peças trocadas**; **Reparos**; e o bloco de assinatura. Sem custos.
 
-- **Peças trocadas**: resumo em texto (se houver) e tabela com código, descrição, quantidade com unidade, lote e motivo das peças usadas e dos componentes externos não anulados; os externos levam "Externo" sob a descrição. Sem nada: "Sem peças trocadas".
+- **Peças trocadas**: tabela com código, descrição, quantidade com unidade, lote e motivo das peças usadas e dos componentes externos não anulados; os externos levam "Externo" sob a descrição. Sem nada: "Sem peças trocadas".
 - **Reparos**: tabela dos não anulados (data, técnico, tipo como foi digitado, descrição, duração em horas, "-" quando não informada) e "Total de horas" ao final (só quando algum reparo informou horas). Sem nenhum: "Sem reparos registrados".
-- **Campos ausentes**: seções sem dado (Equipamento recebido, Ações executadas) e campos sem valor dentro de um bloco são omitidos; célula de tabela sem valor mostra "-".
+- **Campos ausentes**: seções sem dado (Equipamento recebido) e campos sem valor dentro de um bloco são omitidos; célula de tabela sem valor mostra "-".
 - **Fechamento**: duas linhas de assinatura, "Técnico responsável" (com o nome do técnico do diagnóstico ou, sem ele, do primeiro reparo) e "Cliente" (em branco, para o cliente assinar). Todas as páginas têm rodapé com o código da OS, a data e hora de emissão e "Página X de Y".
 
 Usa OpenPDF com a fonte Helvetica padrão (Cp1252, cobre os acentos), sem baixar nada em tempo de execução; texto longo quebra dentro da célula. O arquivo se chama `laudo-<código>.pdf`, com o código reduzido a letras, números, `_` e `-`.

@@ -47,6 +47,8 @@ Convenções:
 
 O produto e sua identificação existem somente em `items[]`. O detalhe e a lista mantêm seus contratos JSON; `productName` no cartão do Kanban continua sendo o nome do primeiro item. Não há item sintetizado sem ID. Busca por produto, SKU, lote e série considera todos os itens, sem consultar campos de produto na OS. As rotas e permissões permanecem iguais.
 
+Os contratos de criação, edição e detalhe não contêm `repairSummary`, `replacedPartsSummary`, `testSummary`, `shippedAt`, `carrier` nem `trackingCode`. Reparos, peças e protocolos usam as rotas estruturadas abaixo.
+
 ## Peças, reparo e protocolos nas ordens de serviço
 
 | Rota | Permissão | Descrição |
