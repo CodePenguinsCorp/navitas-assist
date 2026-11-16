@@ -6,7 +6,7 @@ PostgreSQL 16, em todos os ambientes (local, CI, testes automatizados e ambiente
 
 | Versão | Arquivo | O que faz |
 | --- | --- | --- |
-| V1 | `V1__baseline.sql` | Baseline única em PostgreSQL (inclui `rmas.board_position` com índice `(status, board_position)`, tipo de falha, causa e tipo de reparo como texto livre de até 80 caracteres e horas de reparo opcionais): extensão `unaccent`, todas as tabelas, índices e constraints e os seeds (linha de bloqueio da numeração das ordens de serviço, com códigos `OS-<ano>-<sequência>`; 4 perfis prontos com permissões; 4 regras de notificação com destinatários por perfil). |
+| V1 | `V1__baseline.sql` | Baseline única em PostgreSQL (inclui `rmas.board_position` com índice `(status, board_position)`, tipo de falha, causa e tipo de reparo como texto livre de até 80 caracteres e horas de reparo opcionais): extensão `unaccent`, todas as tabelas, índices e constraints e os seeds (linha de bloqueio da numeração das ordens de serviço, com códigos `OS-<ano>-<sequência>`; somente o perfil inicial Administrador com todas as permissões; 4 regras de notificação com destinatários por perfil). |
 
 Tabelas principais: `audit_events`, `clients`, `products`, `rmas`, `rma_items`, `rma_item_warranty_history`, `rma_due_date_history`, `diagnoses`, `rma_status_history`, `rma_assignment_history`, `rma_repair_history`, `rma_blocks`, `rma_external_components`, `rma_interventions`, `parts`, `part_usages`, `part_movements`, `access_profiles`, `access_profile_permissions`, `user_accounts`, `user_account_extra_permissions`, `kanban_views`, `notification_*`, `notifications`, `protocol_*` e `rma_protocol_*`.
 
@@ -15,6 +15,8 @@ Tabelas principais: `audit_events`, `clients`, `products`, `rmas`, `rma_items`, 
 Em 14 de novembro de 2026 o MySQL foi aposentado e as migrações MySQL V1 a V15 deram lugar a uma única `V1__baseline.sql` em dialeto PostgreSQL, com o schema final consolidado (as antigas continuam no histórico do git). Não havia dados em produção, então nada foi migrado: os dados de demonstração vêm de `scripts/dev-seed` e o primeiro administrador do `INSERT` abaixo.
 
 A remoção do fluxo de reserva em 15 de novembro de 2026 reescreveu a V1 por decisão do produto, ainda sem produção. Recrie a base do zero: não use Flyway repair sobre um banco antigo. As próximas mudanças seguem migrações novas (próximo número livre). O Flyway Community não tem *undo*: para voltar, restaure o backup anterior à implantação. Um banco criado pelas migrações MySQL não serve: recrie-o vazio.
+
+A revisão dos perfis em 15 de novembro de 2026 também reescreve a V1: somente Administrador, com todas as permissões, sem coluna de código de perfil nem índice associado. Recrie a base; não use Flyway repair. As notificações por perfil vão somente ao Administrador, e a atribuição continua avisando o responsável.
 
 Convenções da baseline, que as próximas migrações seguem:
 
@@ -25,7 +27,7 @@ Convenções da baseline, que as próximas migrações seguem:
 
 ## Unicidade e busca
 
-- **Unicidade ignora só a caixa.** SKU, nome e código legado de perfil, usuário, e-mail, código de peça, código da ordem de serviço e nome da visualização do Kanban (por dono) têm índice único funcional em `lower(coluna)`, com o nome que o código e as mensagens esperam (ex.: `uk_user_accounts_email`). `Técnico` e `Tecnico` são valores distintos (no MySQL antigo a collation fazia os dois colidirem). O e-mail é opcional: vários usuários podem ficar sem e-mail.
+- **Unicidade ignora só a caixa.** SKU, nome de perfil, usuário, e-mail, código de peça, código da ordem de serviço e nome da visualização do Kanban (por dono) têm índice único funcional em `lower(coluna)`, com o nome que o código e as mensagens esperam (ex.: `uk_user_accounts_email`). `Técnico` e `Tecnico` são valores distintos (no MySQL antigo a collation fazia os dois colidirem). O e-mail é opcional: vários usuários podem ficar sem e-mail.
 - **Busca ignora caixa e acento.** As consultas de listagem usam `lower(unaccent(coluna)) like lower(unaccent('%termo%'))` (função registrada no Hibernate em `config/PostgresFunctions.java`), e a ordenação por nome usa `lower(unaccent(nome))`, sem depender da collation do banco. "tecnica" encontra "Técnica".
 - A extensão `unaccent` é criada pela V1 (`CREATE EXTENSION IF NOT EXISTS unaccent`). No PostgreSQL 13+ ela é *trusted*: basta o usuário das migrações ser dono do banco. Em provedor gerenciado, confirme que ela está na lista de extensões permitidas; se não puder ser criada pelo usuário, crie-a pelo painel antes da primeira subida.
 
@@ -43,12 +45,12 @@ O backend aplica a V1 na primeira subida. Depois, insira o primeiro administrado
 
 ## Primeiro administrador
 
-A aplicação não cria, recria ou altera usuários na inicialização; contas e hashes ficam só no banco, e recriar o banco não recria uma conta padrão. Em banco novo, insira o administrador com um hash BCrypt, ligado ao perfil pronto `ADMIN`:
+A aplicação não cria, recria ou altera usuários na inicialização; contas e hashes ficam só no banco, e recriar o banco não recria uma conta padrão. Em banco novo, insira o administrador com um hash BCrypt, ligado ao perfil inicial `Administrador`, criado pela baseline com todas as permissões:
 
 ```sql
 INSERT INTO user_accounts (username, full_name, password_hash, active, created_at, updated_at, profile_id)
 VALUES ('admin', 'Administrador', '<hash BCrypt>', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
-        (SELECT id FROM access_profiles WHERE system_code = 'ADMIN'));
+        (SELECT id FROM access_profiles WHERE name = 'Administrador'));
 ```
 
 No banco do compose: `docker compose exec postgres psql -U navitas_app -d navitas_assist`. Depois, usuários e perfis são mantidos pelas telas Usuários e Perfis. Não há coluna de role: o acesso vem do perfil e das permissões extras ([acesso-e-permissoes.md](acesso-e-permissoes.md)). Senha: 6 a 72 bytes (UTF-8).

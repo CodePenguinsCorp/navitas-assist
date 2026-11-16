@@ -111,7 +111,7 @@ As imagens Docker usam `mvn package` (backend) e `ng build --configuration produ
 
 ## Dados de demonstração
 
-`scripts/dev-seed/seed.mjs` popula um ambiente **local** já iniciado (sem dependências; requer os perfis Atendimento, Técnico e Consulta e uma conta administradora):
+`scripts/dev-seed/seed.mjs` popula um ambiente **local** já iniciado (sem dependências; requer uma conta administradora; cria pela API os perfis Atendimento, Técnico e Consulta se ausentes):
 
 ```powershell
 node scripts/dev-seed/seed.mjs

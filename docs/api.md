@@ -129,7 +129,7 @@ Qualquer outra rota de `/api/protocols/**` é negada.
 | `GET /api/profiles` | `perfis.gerir` | Lista paginada de perfis. |
 | `POST /api/profiles` | `perfis.gerir` | Cria perfil. |
 | `PUT /api/profiles/{id}` | `perfis.gerir` | Altera perfil. |
-| `DELETE /api/profiles/{id}` | `perfis.gerir` | Exclui (não vale para perfis prontos nem com usuários). |
+| `DELETE /api/profiles/{id}` | `perfis.gerir` | Exclui qualquer perfil sem usuários vinculados. |
 | `GET /api/profiles/options` | `perfis.gerir`, `usuarios.gerir` ou `notificacoes.regras` | Opções de perfil. |
 | `GET /api/permissions` | `perfis.gerir` ou `usuarios.gerir` | Catálogo de permissões por módulo. |
 

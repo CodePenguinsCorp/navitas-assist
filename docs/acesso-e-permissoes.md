@@ -16,7 +16,7 @@ A API autoriza por **permissão**, não por perfil. Um **perfil** é um nome mai
 
 - Perfis são geridos na tela **Perfis** (`perfis.gerir`); perfil e extras de cada usuário, na tela **Usuários** (`usuarios.gerir`).
 - Não há coluna de role em `user_accounts`: o acesso vem só de `profile_id` e das extras (tabelas `access_profiles`, `access_profile_permissions`, `user_account_extra_permissions`; os perfis destinatários das regras de notificação ficam em `notification_rule_recipient_profiles`).
-- Os 4 perfis prontos são criados pela baseline e **não podem ser excluídos**; um perfil com usuários também não.
+- Qualquer perfil sem usuários pode ser excluído. Perfis com usuários vinculados não podem ser excluídos. A proteção do último administrador depende das permissões efetivas, inclusive extras.
 - Requisições sem autenticação recebem `401`; autenticadas sem permissão, `403`. Rotas de API não classificadas exigem `usuarios.gerir` **e** `perfis.gerir`; as não mapeadas sob `/api/protocols/**` são negadas a todos, inclusive ao administrador.
 
 ### Regras anti-escalada
@@ -24,38 +24,40 @@ A API autoriza por **permissão**, não por perfil. Um **perfil** é um nome mai
 - **Concessão**: quem não é administrador só concede permissões que ele mesmo possui (`PermissionGrantPolicy`); caso contrário, "Você não pode conceder permissões que não possui.". É administrador quem tem `usuarios.gerir` e `perfis.gerir`.
 - **Último administrador**: nenhuma operação (editar, inativar ou excluir usuário; mudar permissões do perfil) pode deixar o sistema sem um usuário ativo com as duas permissões: "É preciso manter ao menos um administrador ativo.". Se já não houver administrador ativo, a mudança passa, para não travar o sistema.
 
-## Catálogo e perfis prontos
+## Catálogo de permissões
 
-A = Administrador (`ADMIN`), S = Atendimento (`SERVICE_DESK`), T = Técnico (`TECHNICIAN`), V = Consulta (`VIEWER`). O código do perfil pronto fica em `access_profiles.system_code`.
+A baseline cria somente o perfil inicial **Administrador**, com todas as 22 permissões. O nome serve apenas para localizar o perfil na carga inicial; nenhum perfil tem código fixo, privilégio por nome ou proteção especial contra exclusão. Os demais perfis são criados na tela Perfis. O seed de demonstração cria Atendimento, Técnico e Consulta pela API, sem alterar perfis já existentes.
 
-| Código | Módulo | Rótulo | A | S | T | V |
-|:---|:---|:---|:-:|:-:|:-:|:-:|
-| `rma.ver` | Ordens de serviço | Ver ordens de serviço, Kanban e dashboard | ✓ | ✓ | ✓ | ✓ |
-| `rma.abrir` | Ordens de serviço | Abrir Ordens de serviço | ✓ | ✓ | | |
-| `rma.editar` | Ordens de serviço | Alterar dados gerais e prioridade | ✓ | ✓ | | |
-| `rma.status` | Ordens de serviço | Alterar status | ✓ | ✓ | ✓ | |
-| `rma.responsavel` | Ordens de serviço | Atribuir responsável | ✓ | ✓ | | |
-| `rma.atribuivel` | Ordens de serviço | Pode ser responsável por Ordens de serviço | | | ✓ | |
-| `rma.diagnosticar` | Ordens de serviço | Registrar diagnóstico | ✓ | | ✓ | |
-| `rma.impedimentos` | Ordens de serviço | Registrar e resolver impedimentos | ✓ | ✓ | ✓ | |
-| `cadastros.ver` | Clientes e produtos | Consultar clientes e produtos | ✓ | ✓ | ✓ | ✓ |
-| `cadastros.editar` | Clientes e produtos | Criar, alterar e excluir clientes e produtos | ✓ | ✓ | | |
-| `cadastros.importar` | Clientes e produtos | Importar clientes e produtos | ✓ | | | |
-| `pecas.ver` | Peças | Consultar peças e estoque | ✓ | ✓ | ✓ | ✓ |
-| `pecas.movimentar` | Peças | Cadastrar peças e movimentar estoque | ✓ | ✓ | | |
-| `pecas.usar` | Peças | Usar peças nas OS | ✓ | | ✓ | |
-| `protocolos.ver` | Protocolos técnicos | Consultar modelos de protocolo | ✓ | ✓ | ✓ | ✓ |
-| `protocolos.executar` | Protocolos técnicos | Executar protocolos nas Ordens de serviço | ✓ | | ✓ | |
-| `protocolos.catalogo` | Protocolos técnicos | Gerenciar modelos de protocolo | ✓ | | | |
-| `relatorios.ver` | Relatórios | Ver relatórios | ✓ | | ✓ | ✓ |
-| `usuarios.gerir` | Administração | Gerenciar usuários | ✓ | | | |
-| `perfis.gerir` | Administração | Gerenciar perfis e permissões | ✓ | | | |
-| `notificacoes.regras` | Administração | Configurar regras de notificação | ✓ | | | |
-| `auditoria.ver` | Administração | Consultar a trilha de auditoria | ✓ | | | |
+| Código | Módulo | Rótulo |
+|:---|:---|:---|
+| `rma.ver` | Ordens de serviço | Ver ordens de serviço, Kanban e dashboard |
+| `rma.abrir` | Ordens de serviço | Abrir Ordens de serviço |
+| `rma.editar` | Ordens de serviço | Alterar dados gerais e prioridade |
+| `rma.status` | Ordens de serviço | Alterar status |
+| `rma.responsavel` | Ordens de serviço | Atribuir responsável |
+| `rma.atribuivel` | Ordens de serviço | Pode ser responsável por Ordens de serviço |
+| `rma.diagnosticar` | Ordens de serviço | Registrar diagnóstico |
+| `rma.impedimentos` | Ordens de serviço | Registrar e resolver impedimentos |
+| `cadastros.ver` | Clientes e produtos | Consultar clientes e produtos |
+| `cadastros.editar` | Clientes e produtos | Criar, alterar e excluir clientes e produtos |
+| `cadastros.importar` | Clientes e produtos | Importar clientes e produtos |
+| `pecas.ver` | Peças | Consultar peças e estoque |
+| `pecas.movimentar` | Peças | Cadastrar peças e movimentar estoque |
+| `pecas.usar` | Peças | Usar peças nas OS |
+| `protocolos.ver` | Protocolos técnicos | Consultar modelos de protocolo |
+| `protocolos.executar` | Protocolos técnicos | Executar protocolos nas Ordens de serviço |
+| `protocolos.catalogo` | Protocolos técnicos | Gerenciar modelos de protocolo |
+| `relatorios.ver` | Relatórios | Ver relatórios |
+| `usuarios.gerir` | Administração | Gerenciar usuários |
+| `perfis.gerir` | Administração | Gerenciar perfis e permissões |
+| `notificacoes.regras` | Administração | Configurar regras de notificação |
+| `auditoria.ver` | Administração | Consultar a trilha de auditoria |
 
-Total: 22 permissões. Administrador tem 21 (todas menos `rma.atribuivel`), Atendimento 11, Técnico 11 e Consulta 5. `cadastros.importar` chega só ao Administrador, pela migração `V9`. `auditoria.ver` chega somente ao Administrador pela `V13`.
+Total: 22 permissões, todas concedidas ao Administrador inicial. Os nomes dos perfis não determinam acesso.
 
-`cadastros.ver`, `pecas.ver` e `protocolos.ver` controlam telas e menus e também as leituras `GET` correspondentes na API (minimização de dados, etapa 3). Os seletores aceitam as permissões das telas que os usam, e os totais de clientes e produtos seguem abertos ao dashboard. Os quatro perfis prontos têm `rma.ver`, `cadastros.ver`, `pecas.ver` e `protocolos.ver`, então nada muda para eles; perfis personalizados sem a permissão da área recebem `403`.
+As regras iniciais RMA_CREATED, RMA_BLOCKED e TEST_FAILED têm somente Administrador como destinatário por perfil. RMA_ASSIGNED avisa apenas o responsável. Os avisos ao responsável de RMA_BLOCKED e TEST_FAILED continuam ativos. Assim, os alertas continuam chegando no primeiro acesso; novos perfis e destinatários são configurados nas telas Perfis e Regras de notificação. O seed de demonstração não altera esses destinatários.
+
+`cadastros.ver`, `pecas.ver` e `protocolos.ver` controlam telas e menus e também as leituras `GET` correspondentes na API (minimização de dados, etapa 3). Os seletores aceitam as permissões das telas que os usam, e os totais de clientes e produtos seguem abertos ao dashboard. Perfis sem a permissão da área recebem `403`.
 
 ## Matriz resumida
 

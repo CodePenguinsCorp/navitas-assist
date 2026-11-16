@@ -79,8 +79,17 @@ async function main() {
   if (!cookies.has('XSRF-TOKEN')) await api('/api/auth/csrf');
 
   const profiles = await api('/api/profiles/options');
-  for (const name of ['Atendimento', 'Técnico', 'Consulta']) {
-    if (!profiles.some(p => p.name === name)) throw new Error(`Perfil obrigatório ausente: ${name}`);
+  const demoProfiles = {
+    Atendimento: ['rma.ver', 'rma.abrir', 'rma.editar', 'rma.status', 'rma.responsavel', 'rma.impedimentos',
+      'cadastros.ver', 'cadastros.editar', 'pecas.ver', 'pecas.movimentar', 'protocolos.ver'],
+    Técnico: ['rma.ver', 'rma.status', 'rma.atribuivel', 'rma.diagnosticar', 'rma.impedimentos',
+      'cadastros.ver', 'pecas.ver', 'pecas.usar', 'protocolos.ver', 'protocolos.executar', 'relatorios.ver'],
+    Consulta: ['rma.ver', 'cadastros.ver', 'pecas.ver', 'protocolos.ver', 'relatorios.ver'],
+  };
+  for (const [name, permissions] of Object.entries(demoProfiles)) {
+    const existing = profiles.find(profile => profile.name.toLocaleLowerCase('pt-BR') === name.toLocaleLowerCase('pt-BR'));
+    count('Perfis', !existing);
+    if (!existing) profiles.push(await api('/api/profiles', 'POST', { name, permissions }));
   }
   const users = await list('/api/users');
   const demoUsers = [];
@@ -90,7 +99,7 @@ async function main() {
     ['demo.consulta', 'Camila Santos [DEMO]', 'Consulta'],
   ]) {
     demoUsers.push(await ensure('Usuários', '/api/users', users, 'username', {
-      username, fullName, password, profileId: profiles.find(p => p.name === profile).id, extraPermissions: [], active: true,
+      username, fullName, password, profileId: profiles.find(p => p.name.toLocaleLowerCase('pt-BR') === profile.toLocaleLowerCase('pt-BR')).id, extraPermissions: [], active: true,
     }));
   }
   const clients = await list('/api/clients');
@@ -215,7 +224,7 @@ async function main() {
       const role = roles[n % roles.length];
       const user = await ensure('Usuários (volume)', '/api/users', users, 'username', {
         username: `demo.v${String(n + 1).padStart(2, '0')}`, fullName: `${names[n]} [DEMO]`, password,
-        profileId: profiles.find(p => p.name === role).id, extraPermissions: [], active: true,
+        profileId: profiles.find(p => p.name.toLocaleLowerCase('pt-BR') === role.toLocaleLowerCase('pt-BR')).id, extraPermissions: [], active: true,
       });
       if (role === 'Técnico') technicians.push(user);
     }

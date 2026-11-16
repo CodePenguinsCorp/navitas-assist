@@ -6,7 +6,7 @@ Tipos (`NotificationEventType`):
 
 | Evento | Produzido hoje | Regra inicial |
 | --- | --- | --- |
-| `RMA_CREATED` | Sim, ao abrir uma OS | Ligada, severidade `INFO`, destinatários: perfis Administrador e Atendimento. |
+| `RMA_CREATED` | Sim, ao abrir uma OS | Ligada, severidade `INFO`, destinatário por perfil: somente Administrador. |
 | `RMA_ASSIGNED` | Sim, ao atribuir ou trocar o responsável | Ligada, `INFO`, avisa só o responsável (`notifyAssignee`); o usuário não pode silenciá-la. |
 | `RMA_BLOCKED` | Sim, ao abrir um impedimento | App ligado, `WARNING`, responsável pela OS e perfil Administrador; permite silenciamento. |
 | `TEST_FAILED` | Sim, ao registrar cada tentativa reprovada de um item de protocolo | App ligado, `WARNING`, responsável pela OS e perfil Administrador; permite silenciamento. |

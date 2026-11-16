@@ -15,7 +15,7 @@
 
 | Documento | Conteúdo |
 | --- | --- |
-| [acesso-e-permissoes.md](acesso-e-permissoes.md) | Perfis, permissões extras, catálogo, perfis prontos, sessão, regras anti-escalada. |
+| [acesso-e-permissoes.md](acesso-e-permissoes.md) | Perfis, permissões extras, catálogo, perfil inicial, sessão, regras anti-escalada. |
 | [api.md](api.md) | Rotas por módulo, com a permissão exigida. |
 | [banco-de-dados.md](banco-de-dados.md) | Migrações, política da baseline, recriar o banco, primeiro administrador. |
 | [nomenclatura-auditoria.txt](nomenclatura-auditoria.txt) | Ocorrências internas preservadas após a adoção de Ordem de Serviço/OS. |

@@ -22,6 +22,8 @@ Navitas Assist é um sistema web para diagnóstico técnico e acompanhamento de 
 | Notificações | Sino e caixa de entrada no app, regras por evento e e-mail opcional. |
 | Administração | Usuários, perfis e permissões, regras de notificação. |
 
+A baseline cria somente o perfil inicial Administrador com todas as permissões. Os demais perfis são definidos pelo dono na tela Perfis; nenhum nome de perfil tem tratamento especial. O último administrador ativo é protegido pelas permissões `usuarios.gerir` e `perfis.gerir`. O seed de demonstração cria seus próprios perfis pela API.
+
 ## Fluxo da OS
 
 Status (`RmaStatus`): `RECEIVED` (Recebido), `TRIAGE` (Triagem), `IN_DIAGNOSIS` (Diagnóstico), `WAITING_PART` (Aguardando peça), `IN_REPAIR` (Reparo), `IN_TESTS` (Testes), `COMPLETED` (Concluído), `RETURNED` (Devolvido) e `IRREPARABLE` (Sem conserto). Os três últimos encerram a OS.
