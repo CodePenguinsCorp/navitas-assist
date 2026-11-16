@@ -33,7 +33,7 @@ Substitui o antigo SLA por etapa (prazos de 24/48/72/120 h e alertas `SLA_WARNIN
 
 ## Garantia dos produtos
 
-Cada produto da OS é avaliado individualmente. O vencimento é a data de compra informada na OS mais o prazo de garantia do produto, em meses. A cobertura considera a data de entrada do atendimento e inclui o dia do vencimento. O prazo é gravado em cada novo item, para preservar a garantia quando o cadastro do produto mudar.
+Cada produto da OS é avaliado individualmente, exclusivamente a partir de `rma_items`; não existe garantia de produto armazenado diretamente na OS. O vencimento é a data de compra informada na OS mais o prazo de garantia do produto, em meses. A cobertura considera a data de entrada do atendimento e inclui o dia do vencimento. O prazo é gravado em cada novo item, para preservar a garantia quando o cadastro do produto mudar.
 
 | Valor (`WarrantyStatus`) | Situação | Regra |
 | --- | --- | --- |
@@ -41,7 +41,7 @@ Cada produto da OS é avaliado individualmente. O vencimento é a data de compra
 | `IN_WARRANTY` | Em garantia | Entrada até o vencimento, inclusive. |
 | `OUT_OF_WARRANTY` | Fora de garantia | Entrada após o vencimento. |
 
-Em `items[]`, `warrantyStatus` é a situação **efetiva** (ajuste manual, se existir; senão o cálculo automático), `calculatedWarrantyStatus` guarda a calculada e `warrantyOverride` traz `{ status, reason, changedBy, changedAt }` ou `null`. Kanban (inclusive filtros de visões salvas), listagens e relatórios usam a situação efetiva; não há fórmula paralela em SQL/JPQL.
+Em `items[]`, `warrantyStatus` é a situação **efetiva** (ajuste manual, se existir; senão o cálculo automático), `calculatedWarrantyStatus` guarda a calculada e `warrantyOverride` traz `{ status, reason, changedBy, changedAt }` ou `null`. Kanban (inclusive filtros de visões salvas), listagens e relatórios usam a situação efetiva; o filtro SQL do Kanban e a agregação do dashboard usam os mesmos dados por item e respeitam o ajuste manual.
 
 ### Ajuste manual
 

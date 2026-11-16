@@ -6,7 +6,7 @@ PostgreSQL 16, em todos os ambientes (local, CI, testes automatizados e ambiente
 
 | Versão | Arquivo | O que faz |
 | --- | --- | --- |
-| V1 | `V1__baseline.sql` | Baseline única em PostgreSQL (inclui `rmas.board_position` com índice `(status, board_position)`, tipo de falha, causa e tipo de reparo como texto livre de até 80 caracteres e horas de reparo opcionais): extensão `unaccent`, todas as tabelas, índices e constraints e os seeds (linha de bloqueio da numeração das ordens de serviço, com códigos `OS-<ano>-<sequência>`; somente o perfil inicial Administrador com todas as permissões; 4 regras de notificação com destinatários por perfil). |
+| V1 | `V1__baseline.sql` | Baseline única em PostgreSQL, com produtos e identificação exclusivamente em `rma_items` (inclui `rmas.board_position` com índice `(status, board_position)`, tipo de falha, causa e tipo de reparo como texto livre de até 80 caracteres e horas de reparo opcionais): extensão `unaccent`, todas as tabelas, índices e constraints e os seeds (linha de bloqueio da numeração das ordens de serviço, com códigos `OS-<ano>-<sequência>`; somente o perfil inicial Administrador com todas as permissões; 4 regras de notificação com destinatários por perfil). |
 
 Tabelas principais: `audit_events`, `clients`, `products`, `rmas`, `rma_items`, `rma_item_warranty_history`, `rma_due_date_history`, `diagnoses`, `rma_status_history`, `rma_assignment_history`, `rma_repair_history`, `rma_blocks`, `rma_external_components`, `rma_interventions`, `parts`, `part_usages`, `part_movements`, `access_profiles`, `access_profile_permissions`, `user_accounts`, `user_account_extra_permissions`, `kanban_views`, `notification_*`, `notifications`, `protocol_*` e `rma_protocol_*`.
 
@@ -87,6 +87,14 @@ A baseline já traz os índices compostos usados por filtros e ordenação: `rma
 
 A base é reconstruída sem conversão de dados. `part_usages` registra `USED` ou `REVERTED`, quantidade, motivo obrigatório, lote opcional, observação e autoria/data do uso. `part_movements.usage_id` referencia o uso. O razão aceita somente `ENTRY`, `EXIT`, `ADJUSTMENT`, `CONSUMPTION` e `REVERSAL`; uma reversão referencia seu movimento original por FK única.
 
-`parts.on_hand_quantity` tem CHECK >= 0. Não há saldo reservado, cálculo de disponibilidade ou fila de pendências. Uso debita o saldo e desfazer devolve o saldo na mesma transação, com locks na ordem OS, peça e uso. Não existe V5 de conversão: V1 a V4 continuam sendo as quatro migrações aplicadas numa base vazia.
+`parts.on_hand_quantity` tem CHECK >= 0. Não há saldo reservado, cálculo de disponibilidade ou fila de pendências. Uso debita o saldo e desfazer devolve o saldo na mesma transação, com locks na ordem OS, peça e uso. Existe apenas a V1 consolidada, aplicada numa base vazia.
 
 O evento de falta de estoque foi removido do enum e das regras iniciais. Permanecem quatro tipos de notificação. A reposição por mínimo permanece independente de notificações de OS.
+
+## Produtos da ordem de serviço
+
+A OS tem de 1 a 20 itens, validados na criação e na edição. `rmas` guarda os dados comuns do atendimento; produto, lote, série e fabricação pertencem exclusivamente a `rma_items`. Compra e entrada continuam comuns à OS. Cada item mantém prazo de garantia, ajuste manual e histórico próprio; itens com histórico de ajuste não podem ser removidos.
+
+A limpeza de 15 de novembro de 2026 remove da V1 `rmas.product_id`, `batch_number`, `serial_number` e `manufactured_at`, a FK `fk_rmas_product` e o índice `idx_rmas_product_id`. Não havia CHECK dessas quatro colunas. A base será recriada do zero, inclusive no provedor remoto; não há migração de dados nem Flyway repair.
+
+Buscas por nome, SKU, lote e série consultam os itens. O nome do produto no cartão e os campos de produto da linha do relatório derivam do primeiro item, ordenado por `item_position` e `id`. Dashboard, CSV e laudo usam os itens persistidos, sem reconstruir um produto a partir da OS. A existência de pelo menos um item é validada pelo serviço; não há trigger de cardinalidade entre pai e filhos.

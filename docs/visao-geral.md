@@ -106,3 +106,7 @@ O técnico usa a peça em uma única ação com motivo da troca obrigatório, qu
 Cada registro de serviço é apresentado como reparo, no masculino. A etapa Reparo (`IN_REPAIR`) e a seção Reparo e testes permanecem; a lista dentro dela se chama Reparos. Tipo livre com sugestões, horas opcionais, anulação com motivo e totais mantêm o mesmo comportamento.
 
 Os identificadores internos `InterventionRequest`, `InterventionResponse`, `RmaIntervention`, `INTERVENTION`, o campo JSON `interventions`, as rotas `/repair/interventions` e `/suggestions/intervention-types`, a tabela `rma_interventions` e os nomes das migrações foram preservados. A troca interna atravessaria contrato, autorização e persistência e exigiria validação integrada com PostgreSQL. Esta alteração limita-se ao vocabulário exibido e documentado, sem colisões com `RmaRepairService` e `RmaRepairHistory`.
+
+## Produtos por atendimento
+
+Cada OS contém de 1 a 20 itens. Produto, lote, série e fabricação são dados de cada item, sem cópia na OS. Cliente, compra, entrada, prazo do atendimento e diagnóstico continuam compartilhados. O primeiro item determina o nome mostrado no cartão do Kanban; buscas, relatórios, laudo e notificações usam os itens persistidos. A garantia e seu histórico permanecem individuais.

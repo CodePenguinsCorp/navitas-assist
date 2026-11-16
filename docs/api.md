@@ -34,8 +34,8 @@ Convenções:
 | `GET /api/rmas/dashboard` | `rma.ver` | Indicadores do dashboard calculados no servidor: `statusCounts`, `initialQueueHighPriority`, `overdue` e `dueSoon` (OS abertas), `items`, `itemsInWarranty` e `itemsPendingWarranty` (todos os itens), `queue` (até 5 OS abertas por prioridade e entrada), `recent` (4 últimas atualizadas) e `statusEvents` (4 últimos eventos de status, cada um com `previousStatus`, nulo no primeiro registro da OS), sem históricos completos. |
 | `GET /api/rmas/{id}` | `rma.ver` | Detalhe completo, lido ao abrir a OS (lista, Kanban e link `/rmas?rma=`). As escritas de OS devolvem o mesmo detalhe. |
 | `GET /api/rmas/{id}/report.pdf` | `rma.ver` | Laudo final em PDF. |
-| `POST /api/rmas` | `rma.abrir` | Abre uma OS. |
-| `PUT /api/rmas/{id}` | `rma.editar` | Altera dados gerais, prioridade e data limite (`dueDate` / `clearDueDate`). |
+| `POST /api/rmas` | `rma.abrir` | Abre uma OS com `items` obrigatório, de 1 a 20 produtos identificados por lote ou série. |
+| `PUT /api/rmas/{id}` | `rma.editar` | Altera dados gerais, prioridade e data limite (`dueDate` / `clearDueDate`). Se `items` vier informado, deve conter de 1 a 20 itens; omitir a lista preserva os existentes. |
 | `PUT /api/rmas/{id}/items/{itemId}/warranty` | `rma.editar` | Ajuste manual de garantia do item. |
 | `PATCH /api/rmas/{id}/status` | `rma.status` | Muda o status. |
 | `PATCH /api/rmas/{id}/status-history/{eventId}/note` | `rma.status` | Edita a observação (`note`, até 255 caracteres) de um evento do histórico de status; recusado em OS encerrada. |
@@ -44,6 +44,8 @@ Convenções:
 | `PUT /api/rmas/{id}/diagnosis` | `rma.diagnosticar` | Registra ou altera o diagnóstico. `failureType` e `probableCause` são texto livre opcional de até 80 caracteres (aparados; vazio vira nulo), como a categoria do produto. |
 | `POST /api/rmas/{id}/blocks` | `rma.impedimentos` | Inicia um impedimento. |
 | `PATCH /api/rmas/{id}/blocks/{blockId}` | `rma.impedimentos` | Resolve aquele impedimento. |
+
+O produto e sua identificação existem somente em `items[]`. O detalhe e a lista mantêm seus contratos JSON; `productName` no cartão do Kanban continua sendo o nome do primeiro item. Não há item sintetizado sem ID. Busca por produto, SKU, lote e série considera todos os itens, sem consultar campos de produto na OS. As rotas e permissões permanecem iguais.
 
 ## Peças, reparo e protocolos nas ordens de serviço
 

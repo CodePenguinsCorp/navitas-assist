@@ -13,14 +13,14 @@ Parâmetros inválidos, intervalo invertido ou período maior que o máximo reto
 | --- | --- |
 | `GET /api/reports/rmas/summary` | Total de ordens de serviço e itens; ordens de serviço por status atual; itens por garantia **efetiva** (com ajuste manual); ordens de serviço por mês de entrada; top 10 de falhas por produto, lote, cliente (itens) e tipo de falha do diagnóstico (texto livre agrupado sem diferenciar maiúsculas, acentos e espaços nas pontas: "Display" e "display" contam juntos, exibindo a grafia mais frequente, ou a primeira em caso de empate); recorrência; tempo médio e maior tempo na etapa atual das ordens de serviço em andamento, medidos em `generatedAt` (encerrados ficam fora). |
 | `GET /api/reports/rmas?page&size` | Lista paginada no servidor (padrão 20, máximo 100), por entrada e ID decrescentes: `{ generatedAt, entryFrom, entryTo, rmas: { content, page, size, totalElements, totalPages } }`. Cada linha traz código, entrada, status, cliente, produto, SKU, série e lote do item principal, quantidade de itens, situações de garantia efetiva distintas e tipo de falha. |
-| `GET /api/reports/rmas/export.csv` | Uma linha por item de OS: código, entrada, status, cliente, produto, SKU, lote, série, garantia, ajuste manual, falha relatada, falha encontrada, tipo, causa, responsável, expedição e peças usadas. |
+| `GET /api/reports/rmas/export.csv` | Uma linha por item persistido em `rma_items`: código, entrada, status, cliente, produto, SKU, lote, série, garantia, ajuste manual, falha relatada, falha encontrada, tipo, causa, responsável, expedição e peças usadas. |
 | `GET /api/reports/rmas/summary/export.csv` | O resumo em tabela longa: `Seção;Item;Quantidade;Base;Percentual;Tempo médio (h);Maior tempo (h)`. |
 
 O resumo e os dois CSV têm o mesmo limite: acima de **5.000 ordens de serviço** no período a resposta é `400` ("Reduza o período: o relatório passa de 5.000 ordens de serviço."). Não há custo por OS nos relatórios nem no laudo.
 
 ### Recorrência
 
-Um item **retornou** quando o mesmo produto e número de série (sem diferenciar maiúsculas nem espaços nas pontas) têm 2 ou mais ordens de serviço com entrada até o fim do período, inclusive ordens de serviço anteriores ao período e de outros clientes. A busca de anteriores considera só os seriais presentes no período. A taxa é itens que retornaram ÷ itens com série no período, no total, por modelo e por lote (top 10), mais a lista dos seriais. Série vazia fica fora da base; ordens de serviço legados sem `rma_items` não entram na busca de anteriores.
+Um item **retornou** quando o mesmo produto e número de série (sem diferenciar maiúsculas nem espaços nas pontas) têm 2 ou mais ordens de serviço com entrada até o fim do período, inclusive ordens de serviço anteriores ao período e de outros clientes. A busca de anteriores considera só os seriais presentes no período. A taxa é itens que retornaram ÷ itens com série no período, no total, por modelo e por lote (top 10), mais a lista dos seriais. Série vazia fica fora da base. Todos os produtos vêm exclusivamente de `rma_items`, inclusive na busca de anteriores.
 
 ## CSV
 
