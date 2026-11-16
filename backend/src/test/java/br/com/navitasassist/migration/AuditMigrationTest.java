@@ -11,7 +11,7 @@ class AuditMigrationTest {
     @Test void createsAuditTrailAndGrantsOnlyAdministrator() throws Exception {
         PostgresTestDatabase.Coordinates database = PostgresTestDatabase.migrated("audit_migration");
         try (var connection = database.connect(); var statement = connection.createStatement()) {
-            try (var rows = statement.executeQuery("select legacy_code from access_profiles p join access_profile_permissions pp on pp.profile_id=p.id where pp.permission='auditoria.ver'")) {
+            try (var rows = statement.executeQuery("select system_code from access_profiles p join access_profile_permissions pp on pp.profile_id=p.id where pp.permission='auditoria.ver'")) {
                 assertThat(rows.next()).isTrue(); assertThat(rows.getString(1)).isEqualTo("ADMIN"); assertThat(rows.next()).isFalse();
             }
             // timestamptz guarda o instante: gravado com outro fuso, volta igual em UTC.

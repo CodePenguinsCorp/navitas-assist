@@ -14,7 +14,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface AccessProfileRepository extends JpaRepository<AccessProfile, Long> {
 
-    Optional<AccessProfile> findByLegacyCode(String legacyCode);
+    Optional<AccessProfile> findBySystemCode(String systemCode);
 
     Optional<AccessProfile> findByNameIgnoreCase(String name);
 

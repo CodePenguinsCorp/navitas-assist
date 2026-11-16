@@ -34,11 +34,11 @@ class UniquenessCaseTest {
     }
 
     @Test
-    void profileNameAndLegacyCodeIgnoreCase() throws SQLException {
-        String insert = "INSERT INTO access_profiles (name, legacy_code, created_at, updated_at) VALUES ('%s', %s, now(), now())";
+    void profileNameAndSystemCodeIgnoreCase() throws SQLException {
+        String insert = "INSERT INTO access_profiles (name, system_code, created_at, updated_at) VALUES ('%s', %s, now(), now())";
         execute(insert.formatted("Supervisão", "'SUPERVISOR'"));
         assertViolates("uk_access_profiles_name", insert.formatted("SUPERVISÃO", "NULL"));
-        assertViolates("uk_access_profiles_legacy_code", insert.formatted("Outro supervisor", "'supervisor'"));
+        assertViolates("uk_access_profiles_system_code", insert.formatted("Outro supervisor", "'supervisor'"));
         // Só a caixa é ignorada: o acento distingue os nomes.
         execute(insert.formatted("Supervisao", "NULL"));
         // Vários perfis sem código legado.
@@ -50,7 +50,7 @@ class UniquenessCaseTest {
     void usernameAndEmailIgnoreCase() throws SQLException {
         String insert = """
             INSERT INTO user_accounts (username, full_name, password_hash, active, email, created_at, updated_at, profile_id)
-            VALUES ('%s', 'Usuário', 'hash', TRUE, %s, now(), now(), (SELECT id FROM access_profiles WHERE legacy_code = 'VIEWER'))
+            VALUES ('%s', 'Usuário', 'hash', TRUE, %s, now(), now(), (SELECT id FROM access_profiles WHERE system_code = 'VIEWER'))
             """;
         execute(insert.formatted("Maria.Silva", "'Maria@Example.invalid'"));
         assertViolates("uk_user_accounts_username", insert.formatted("maria.silva", "NULL"));
@@ -85,7 +85,7 @@ class UniquenessCaseTest {
     void kanbanViewNameIgnoresCasePerOwner() throws SQLException {
         String user = """
             INSERT INTO user_accounts (username, full_name, password_hash, active, created_at, updated_at, profile_id)
-            VALUES ('%s', 'Dono', 'hash', TRUE, now(), now(), (SELECT id FROM access_profiles WHERE legacy_code = 'TECHNICIAN'))
+            VALUES ('%s', 'Dono', 'hash', TRUE, now(), now(), (SELECT id FROM access_profiles WHERE system_code = 'TECHNICIAN'))
             """;
         execute(user.formatted("dono.a"));
         execute(user.formatted("dono.b"));

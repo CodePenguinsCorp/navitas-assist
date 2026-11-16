@@ -97,8 +97,8 @@ class ProfileControllerIntegrationTest {
         AccessTestSupport.deleteAccounts(users, MEMBER, MANAGER, ADMIN_A, ADMIN_B);
         profiles.findAll().stream().filter(profile -> profile.getName().toLowerCase().startsWith(PREFIX.toLowerCase())).forEach(profiles::delete);
         profiles.flush();
-        AccessProfile adminProfile = profiles.findByLegacyCode("ADMIN").orElseThrow();
-        adminProfile.setPermissions(new HashSet<>(LegacyProfiles.PERMISSIONS.get("ADMIN")));
+        AccessProfile adminProfile = profiles.findBySystemCode("ADMIN").orElseThrow();
+        adminProfile.setPermissions(new HashSet<>(SystemProfiles.PERMISSIONS.get("ADMIN")));
         profiles.saveAndFlush(adminProfile);
         UserAccount seed = UserAccountTestSupport.ensureAdmin(users, profiles, passwordEncoder);
         AccessTestSupport.assignProfile(profiles, seed, "ADMIN");
@@ -134,17 +134,17 @@ class ProfileControllerIntegrationTest {
     void optionsSortedByNameWithPermissions() throws Exception {
         JsonNode options = json(mvc.perform(get("/api/profiles/options").with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8));
-        List<String> legacy = new ArrayList<>();
+        List<String> systemProfiles = new ArrayList<>();
         for (JsonNode option : options) {
             String name = option.get("name").asText();
-            if (List.of("Administrador", "Atendimento", "Consulta", "Técnico").contains(name)) legacy.add(name);
+            if (List.of("Administrador", "Atendimento", "Consulta", "Técnico").contains(name)) systemProfiles.add(name);
             if (name.equals("Consulta")) {
                 assertEquals(List.of("rma.ver", "cadastros.ver", "pecas.ver", "protocolos.ver", "relatorios.ver"),
                     mapper.convertValue(option.get("permissions"), List.class));
                 assertNotNull(option.get("id"));
             }
         }
-        assertEquals(List.of("Administrador", "Atendimento", "Consulta", "Técnico"), legacy);
+        assertEquals(List.of("Administrador", "Atendimento", "Consulta", "Técnico"), systemProfiles);
         // Quem cadastra usuários ou regras de notificação também lê as opções de perfil.
         mvc.perform(get("/api/profiles/options").with(user("rules").authorities(authorities("notificacoes.regras")))).andExpect(status().isOk());
         mvc.perform(get("/api/profiles/options").with(user("users").authorities(authorities("usuarios.gerir")))).andExpect(status().isOk());
@@ -246,14 +246,14 @@ class ProfileControllerIntegrationTest {
 
     @Test
     void rejectsRemovingAdminPermissionFromLastAdministratorsProfile() throws Exception {
-        AccessProfile adminProfile = profiles.findByLegacyCode("ADMIN").orElseThrow();
+        AccessProfile adminProfile = profiles.findBySystemCode("ADMIN").orElseThrow();
         Set<String> reduced = new HashSet<>(adminProfile.getPermissions());
         reduced.remove("perfis.gerir");
 
         mvc.perform(put("/api/profiles/{id}", adminProfile.getId()).with(asProfile("admin", "ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content(body("Administrador", reduced.toArray(String[]::new))))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(ADMIN_MESSAGE));
-        assertEquals(LegacyProfiles.PERMISSIONS.get("ADMIN"), profiles.findByLegacyCode("ADMIN").orElseThrow().getPermissions());
+        assertEquals(SystemProfiles.PERMISSIONS.get("ADMIN"), profiles.findBySystemCode("ADMIN").orElseThrow().getPermissions());
         // A permissão do administrador segue a mesma na requisição seguinte.
         mvc.perform(get("/api/profiles").with(user(userDetailsService.loadUserByUsername("admin")))).andExpect(status().isOk());
     }
@@ -327,11 +327,11 @@ class ProfileControllerIntegrationTest {
         assertTrue(profiles.existsById(used.getId()));
     }
 
-    /** Perfis com legacy_code (os 4 prontos da migração-base) não podem ser excluídos. */
+    /** Perfis com system_code (os 4 prontos da migração-base) não podem ser excluídos. */
     @Test
     void deleteBlockedForMigratedProfile() throws Exception {
         AccessProfile migrated = AccessTestSupport.saveProfile(profiles, PREFIX + "Migrado", "rma.ver");
-        migrated.setLegacyCode("TESTE_LEGADO");
+        migrated.setSystemCode("TESTE_LEGADO");
         profiles.saveAndFlush(migrated);
 
         mvc.perform(delete("/api/profiles/{id}", migrated.getId()).with(asProfile("admin", "ADMIN")).with(csrf()))
@@ -358,7 +358,7 @@ class ProfileControllerIntegrationTest {
         AccessTestSupport.saveAccountWithProfile(users, passwordEncoder, ADMIN_A, profileA, Set.of());
         Map<String, Object> demoteSeed = new LinkedHashMap<>(Map.of(
             "username", admin.getUsername(), "fullName", admin.getFullName(),
-            "profileId", profiles.findByLegacyCode("VIEWER").orElseThrow().getId(), "active", true));
+            "profileId", profiles.findBySystemCode("VIEWER").orElseThrow().getId(), "active", true));
         RequestPostProcessor actorA = as(ADMIN_A);
 
         List<Integer> statuses = runTogether(

@@ -52,7 +52,7 @@ describe('permission catalog', () => {
 
   it('keeps the legacy profile fixtures equal to the baseline migration', async () => {
     const migration = await readBackendFile(LEGACY_MIGRATION);
-    const grants = [...migration.matchAll(/SELECT id, '([a-z.]+)' FROM access_profiles WHERE legacy_code IN \(([^)]*)\)/g)]
+    const grants = [...migration.matchAll(/SELECT id, '([a-z.]+)' FROM access_profiles WHERE system_code IN \(([^)]*)\)/g)]
       .map((match) => ({ permission: match[1], profiles: [...match[2].matchAll(/'([A-Z_]+)'/g)].map((profile) => profile[1]) }));
     expect(grants).toHaveLength(PERMISSIONS.length);
     const fromMigration = Object.fromEntries(Object.keys(LEGACY_PROFILE_PERMISSIONS).map((code) => [

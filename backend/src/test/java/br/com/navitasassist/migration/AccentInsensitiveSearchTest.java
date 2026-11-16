@@ -56,7 +56,7 @@ class AccentInsensitiveSearchTest {
         jdbc.update("INSERT INTO access_profiles (name, created_at, updated_at) VALUES ('Ábaco ordenação', now(), now()), ('Zebra ordenação', now(), now()), ('abelha ordenação', now(), now())");
         jdbc.update("""
             INSERT INTO user_accounts (username, full_name, password_hash, active, created_at, updated_at, profile_id)
-            VALUES ('joao.acento', 'João Acentuação', 'hash', TRUE, now(), now(), (SELECT id FROM access_profiles WHERE legacy_code = 'VIEWER'))
+            VALUES ('joao.acento', 'João Acentuação', 'hash', TRUE, now(), now(), (SELECT id FROM access_profiles WHERE system_code = 'VIEWER'))
             """);
         jdbc.update("""
             INSERT INTO rmas (code, client_id, product_id, purchase_date_unknown, entry_date, received_by, reported_failure, priority, status, created_at, updated_at)

@@ -28,32 +28,32 @@ public final class AccessTestSupport {
     private AccessTestSupport() {
     }
 
-    /** Principal de teste (sem consulta ao banco) com as permissões do perfil legado {@code legacyCode} ({@link LegacyProfiles}). */
-    public static RequestPostProcessor asProfile(String username, String legacyCode) {
-        return user(username).authorities(AuthorityUtils.createAuthorityList(LegacyProfiles.authorities(legacyCode)));
+    /** Principal de teste (sem consulta ao banco) com as permissões do perfil legado {@code systemCode} ({@link SystemProfiles}). */
+    public static RequestPostProcessor asProfile(String username, String systemCode) {
+        return user(username).authorities(AuthorityUtils.createAuthorityList(SystemProfiles.authorities(systemCode)));
     }
 
-    /** Grava um usuário ativo com senha {@value #DEFAULT_PASSWORD} e o perfil legado {@code legacyCode}. */
+    /** Grava um usuário ativo com senha {@value #DEFAULT_PASSWORD} e o perfil legado {@code systemCode}. */
     public static UserAccount saveAccount(
         UserAccountRepository users,
         AccessProfileRepository profiles,
         PasswordEncoder passwordEncoder,
         String username,
-        String legacyCode
+        String systemCode
     ) {
         UserAccount account = new UserAccount();
         account.setUsername(username);
         account.setFullName(username);
         account.setPasswordHash(PASSWORD_HASHES.computeIfAbsent(passwordEncoder, encoder -> encoder.encode(DEFAULT_PASSWORD)));
-        assignProfile(profiles, account, legacyCode);
+        assignProfile(profiles, account, systemCode);
         account.setActive(true);
         return users.saveAndFlush(account);
     }
 
-    /** Grava o perfil migrado ({@code legacy_code}); não salva a conta. */
-    public static UserAccount assignProfile(AccessProfileRepository profiles, UserAccount account, String legacyCode) {
-        account.setProfile(profiles.findByLegacyCode(legacyCode)
-            .orElseThrow(() -> new IllegalStateException("Perfil migrado ausente: " + legacyCode)));
+    /** Grava o perfil migrado ({@code system_code}); não salva a conta. */
+    public static UserAccount assignProfile(AccessProfileRepository profiles, UserAccount account, String systemCode) {
+        account.setProfile(profiles.findBySystemCode(systemCode)
+            .orElseThrow(() -> new IllegalStateException("Perfil migrado ausente: " + systemCode)));
         return account;
     }
 

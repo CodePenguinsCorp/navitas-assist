@@ -22,7 +22,7 @@ import org.hibernate.annotations.FetchMode;
 
 /**
  * Perfil de acesso: nome e conjunto de códigos de {@link Permission}. Os 4 perfis prontos da migração-base guardam um
- * código fixo em {@code legacyCode} (ADMIN, SERVICE_DESK, TECHNICIAN, VIEWER) e não podem ser excluídos.
+ * código fixo em {@code systemCode} (ADMIN, SERVICE_DESK, TECHNICIAN, VIEWER) e não podem ser excluídos.
  */
 @Getter
 @Setter
@@ -39,7 +39,7 @@ public class AccessProfile extends AuditableEntity {
     private String name;
 
     @Column(unique = true, length = 30)
-    private String legacyCode;
+    private String systemCode;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @Fetch(FetchMode.SELECT)

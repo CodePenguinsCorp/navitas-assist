@@ -51,7 +51,7 @@ class NotificationRuleProfileRaceIntegrationTest {
     @Test
     void profileDeletedConcurrentlyIsABadRequest() throws Exception {
         Set<Long> before = recipientIds();
-        AccessProfile viewer = profiles.findByLegacyCode("VIEWER").orElseThrow();
+        AccessProfile viewer = profiles.findBySystemCode("VIEWER").orElseThrow();
         doThrow(new DataIntegrityViolationException("fk_rule_recipient_profiles_profile"))
             .when(rules).saveAndFlush(any(NotificationRule.class));
 

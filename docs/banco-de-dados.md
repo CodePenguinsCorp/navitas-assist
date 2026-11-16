@@ -48,7 +48,7 @@ A aplicação não cria, recria ou altera usuários na inicialização; contas e
 ```sql
 INSERT INTO user_accounts (username, full_name, password_hash, active, created_at, updated_at, profile_id)
 VALUES ('admin', 'Administrador', '<hash BCrypt>', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
-        (SELECT id FROM access_profiles WHERE legacy_code = 'ADMIN'));
+        (SELECT id FROM access_profiles WHERE system_code = 'ADMIN'));
 ```
 
 No banco do compose: `docker compose exec postgres psql -U navitas_app -d navitas_assist`. Depois, usuários e perfis são mantidos pelas telas Usuários e Perfis. Não há coluna de role: o acesso vem do perfil e das permissões extras ([acesso-e-permissoes.md](acesso-e-permissoes.md)). Senha: 6 a 72 bytes (UTF-8).

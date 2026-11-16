@@ -9,7 +9,7 @@ import java.util.Set;
  * Permissões dos 4 perfis migrados, copiadas literalmente da tabela da spec §3.
  * É o mapa usado pelos mocks de MockMvc ({@link AccessTestSupport#asProfile}).
  */
-public final class LegacyProfiles {
+public final class SystemProfiles {
 
     public static final Map<String, Set<String>> PERMISSIONS = Map.of(
         "ADMIN", ordered(
@@ -38,7 +38,7 @@ public final class LegacyProfiles {
             "relatorios.ver")
     );
 
-    private LegacyProfiles() {
+    private SystemProfiles() {
     }
 
     public static String[] authorities(String code) {

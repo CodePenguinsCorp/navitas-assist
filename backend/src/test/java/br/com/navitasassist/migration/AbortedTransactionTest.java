@@ -66,7 +66,7 @@ class AbortedTransactionTest {
 
     @Test
     void concurrentEmailsDifferingByCaseKeepOneAndRejectTheOther() throws Exception {
-        Long profileId = profileRepository.findByLegacyCode("VIEWER").orElseThrow().getId();
+        Long profileId = profileRepository.findBySystemCode("VIEWER").orElseThrow().getId();
         List<Object> outcomes = race(
             () -> users.create(new UserAccountRequest("race.one", "Corrida", "password123", profileId, Set.of(), true, "Race@Example.invalid"), "admin"),
             () -> users.create(new UserAccountRequest("race.two", "Corrida", "password123", profileId, Set.of(), true, "race@example.INVALID"), "admin"));

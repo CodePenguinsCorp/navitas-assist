@@ -46,7 +46,7 @@ class DeadlineMigrationTest {
                 LEFT JOIN notification_rules r ON r.id = rp.rule_id WHERE r.id IS NULL
                 """).size());
             assertEquals(Set.of("ADMIN", "SERVICE_DESK"), strings(connection, """
-                SELECT p.legacy_code FROM notification_rule_recipient_profiles rp
+                SELECT p.system_code FROM notification_rule_recipient_profiles rp
                 JOIN notification_rules r ON r.id = rp.rule_id JOIN access_profiles p ON p.id = rp.profile_id
                 WHERE r.event_type = 'RMA_CREATED'
                 """));
@@ -57,7 +57,7 @@ class DeadlineMigrationTest {
         statement.executeUpdate("""
             INSERT INTO user_accounts (username, full_name, password_hash, active, created_at, updated_at, profile_id)
             VALUES ('%s', 'Usuário', 'hash', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
-                    (SELECT id FROM access_profiles WHERE legacy_code = 'TECHNICIAN'))
+                    (SELECT id FROM access_profiles WHERE system_code = 'TECHNICIAN'))
             """.formatted(username));
         try (ResultSet row = statement.executeQuery("SELECT id FROM user_accounts WHERE username = '" + username + "'")) {
             row.next();

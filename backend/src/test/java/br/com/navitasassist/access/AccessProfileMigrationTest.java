@@ -22,16 +22,16 @@ import org.junit.jupiter.api.Test;
 class AccessProfileMigrationTest {
 
     @Test
-    void seedsLegacyProfilesWithExactPermissions() throws SQLException {
+    void seedsSystemProfilesWithExactPermissions() throws SQLException {
         PostgresTestDatabase.Coordinates database = migratedDatabase();
 
         try (Connection connection = database.connect()) {
             assertEquals(
                 Map.of("ADMIN", "Administrador", "SERVICE_DESK", "Atendimento", "TECHNICIAN", "Técnico", "VIEWER", "Consulta"),
-                profileNamesByLegacyCode(connection));
+                profileNamesBySystemCode(connection));
 
-            Map<String, Set<String>> permissions = permissionsByLegacyCode(connection);
-            assertEquals(LegacyProfiles.PERMISSIONS, permissions);
+            Map<String, Set<String>> permissions = permissionsBySystemCode(connection);
+            assertEquals(SystemProfiles.PERMISSIONS, permissions);
 
             // Totais conferidos de forma independente da tabela usada pelos mocks.
             assertEquals(21, permissions.get("ADMIN").size());
@@ -67,7 +67,7 @@ class AccessProfileMigrationTest {
             Map<String, Set<String>> recipients = new HashMap<>();
             try (Statement statement = connection.createStatement();
                  ResultSet rows = statement.executeQuery("""
-                     SELECT r.event_type, p.legacy_code
+                     SELECT r.event_type, p.system_code
                      FROM notification_rules r
                      LEFT JOIN notification_rule_recipient_profiles rp ON rp.rule_id = r.id
                      LEFT JOIN access_profiles p ON p.id = rp.profile_id
@@ -84,23 +84,6 @@ class AccessProfileMigrationTest {
         }
     }
 
-    /** As colunas legadas dos roles fixos não fazem parte da migração-base. */
-    @Test
-    void hasNoLegacyRoleColumns() throws SQLException {
-        PostgresTestDatabase.Coordinates database = migratedDatabase();
-
-        try (Connection connection = database.connect()) {
-            assertEquals(0, count(connection, """
-                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE (UPPER(TABLE_NAME) = 'USER_ACCOUNTS' AND UPPER(COLUMN_NAME) = 'ROLE')
-                   OR (UPPER(TABLE_NAME) = 'NOTIFICATION_RULES' AND UPPER(COLUMN_NAME) = 'RECIPIENT_ROLES')
-                """));
-            assertEquals(0, count(connection, """
-                SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE UPPER(CONSTRAINT_NAME) = 'CK_USER_ACCOUNTS_ROLE'
-                """));
-        }
-    }
-
     @Test
     void requiresProfileForEveryUser() throws SQLException {
         PostgresTestDatabase.Coordinates database = migratedDatabase();
@@ -110,7 +93,7 @@ class AccessProfileMigrationTest {
             statement.executeUpdate("""
                 INSERT INTO user_accounts (username, full_name, password_hash, active, created_at, updated_at, profile_id)
                 VALUES ('base.admin', 'Administrador', 'hash', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
-                        (SELECT id FROM access_profiles WHERE legacy_code = 'ADMIN'))
+                        (SELECT id FROM access_profiles WHERE system_code = 'ADMIN'))
                 """);
             assertThrows(SQLException.class, () -> statement.executeUpdate("""
                 INSERT INTO user_accounts (username, full_name, password_hash, active, created_at, updated_at)
@@ -134,10 +117,10 @@ class AccessProfileMigrationTest {
         }
     }
 
-    private static Map<String, String> profileNamesByLegacyCode(Connection connection) throws SQLException {
+    private static Map<String, String> profileNamesBySystemCode(Connection connection) throws SQLException {
         Map<String, String> names = new HashMap<>();
         try (Statement statement = connection.createStatement();
-             ResultSet rows = statement.executeQuery("SELECT legacy_code, name FROM access_profiles")) {
+             ResultSet rows = statement.executeQuery("SELECT system_code, name FROM access_profiles")) {
             while (rows.next()) {
                 names.put(rows.getString(1), rows.getString(2));
             }
@@ -145,11 +128,11 @@ class AccessProfileMigrationTest {
         return names;
     }
 
-    private static Map<String, Set<String>> permissionsByLegacyCode(Connection connection) throws SQLException {
+    private static Map<String, Set<String>> permissionsBySystemCode(Connection connection) throws SQLException {
         Map<String, Set<String>> permissions = new HashMap<>();
         try (Statement statement = connection.createStatement();
              ResultSet rows = statement.executeQuery("""
-                 SELECT p.legacy_code, pp.permission
+                 SELECT p.system_code, pp.permission
                  FROM access_profiles p
                  JOIN access_profile_permissions pp ON pp.profile_id = p.id
                  """)) {

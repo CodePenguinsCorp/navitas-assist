@@ -26,7 +26,7 @@ A API autoriza por **permissão**, não por perfil. Um **perfil** é um nome mai
 
 ## Catálogo e perfis prontos
 
-A = Administrador (`ADMIN`), S = Atendimento (`SERVICE_DESK`), T = Técnico (`TECHNICIAN`), V = Consulta (`VIEWER`). O código do perfil pronto fica em `access_profiles.legacy_code`.
+A = Administrador (`ADMIN`), S = Atendimento (`SERVICE_DESK`), T = Técnico (`TECHNICIAN`), V = Consulta (`VIEWER`). O código do perfil pronto fica em `access_profiles.system_code`.
 
 | Código | Módulo | Rótulo | A | S | T | V |
 |:---|:---|:---|:-:|:-:|:-:|:-:|

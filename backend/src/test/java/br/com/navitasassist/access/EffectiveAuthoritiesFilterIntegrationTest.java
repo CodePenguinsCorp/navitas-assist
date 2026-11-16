@@ -69,10 +69,10 @@ class EffectiveAuthoritiesFilterIntegrationTest {
         cleanup();
         UserAccountTestSupport.ensureAdmin(users, profiles, passwordEncoder);
         AccessProfile tech = AccessTestSupport.saveProfile(profiles, TECH_PROFILE,
-            LegacyProfiles.authorities("TECHNICIAN"));
+            SystemProfiles.authorities("TECHNICIAN"));
         AccessTestSupport.saveAccountWithProfile(users, passwordEncoder, TECH, tech, Set.of());
         AccessProfile viewer = AccessTestSupport.saveProfile(profiles, VIEWER_PROFILE,
-            LegacyProfiles.authorities("VIEWER"));
+            SystemProfiles.authorities("VIEWER"));
         AccessTestSupport.saveAccountWithProfile(users, passwordEncoder, VIEWER, viewer, Set.of());
     }
 

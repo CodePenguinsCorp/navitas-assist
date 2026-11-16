@@ -66,7 +66,7 @@ class EffectivePermissionIntegrationTest {
     @BeforeEach
     void prepare() {
         cleanup();
-        AccessProfile viewer = profiles.findByLegacyCode("VIEWER").orElseThrow();
+        AccessProfile viewer = profiles.findBySystemCode("VIEWER").orElseThrow();
         AccessTestSupport.saveAccountWithProfile(users, passwordEncoder, VIEWER_EXTRA, viewer, Set.of("rma.abrir"));
         AccessProfile reportsOnly = AccessTestSupport.saveProfile(profiles, REPORTS_PROFILE, "relatorios.ver");
         AccessTestSupport.saveAccountWithProfile(users, passwordEncoder, REPORTS_ONLY, reportsOnly, Set.of());
@@ -178,10 +178,10 @@ class EffectivePermissionIntegrationTest {
     }
 
     @Test
-    void legacyProfilesMatchMigratedSeed() {
-        assertEquals(Set.of("ADMIN", "SERVICE_DESK", "TECHNICIAN", "VIEWER"), LegacyProfiles.PERMISSIONS.keySet());
-        LegacyProfiles.PERMISSIONS.forEach((code, expected) ->
-            assertEquals(expected, profiles.findByLegacyCode(code).orElseThrow().getPermissions(), "Seed do perfil " + code));
+    void systemProfilesMatchSeed() {
+        assertEquals(Set.of("ADMIN", "SERVICE_DESK", "TECHNICIAN", "VIEWER"), SystemProfiles.PERMISSIONS.keySet());
+        SystemProfiles.PERMISSIONS.forEach((code, expected) ->
+            assertEquals(expected, profiles.findBySystemCode(code).orElseThrow().getPermissions(), "Seed do perfil " + code));
     }
 
     private Set<String> authorities(String username) {

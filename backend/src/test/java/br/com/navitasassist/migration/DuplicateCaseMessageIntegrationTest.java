@@ -75,7 +75,7 @@ class DuplicateCaseMessageIntegrationTest {
 
     @Test
     void usernameAndEmailDifferingOnlyByCaseAreRejected() {
-        Long profileId = profileRepository.findByLegacyCode("VIEWER").orElseThrow().getId();
+        Long profileId = profileRepository.findBySystemCode("VIEWER").orElseThrow().getId();
         users.create(new UserAccountRequest("Case.User", "Usuário", "password123", profileId, Set.of(), true, "Case.User@Example.invalid"), "admin");
         assertThatThrownBy(() -> users.create(new UserAccountRequest("case.user", "Outro", "password123", profileId, Set.of(), true, null), "admin"))
             .isInstanceOf(BusinessException.class).hasMessage("Nome de usuário já cadastrado: case.user");
@@ -89,7 +89,7 @@ class DuplicateCaseMessageIntegrationTest {
      */
     @Test
     void emailIndexNameReachesHibernateConstraintViolation() {
-        AccessProfile viewer = profileRepository.findByLegacyCode("VIEWER").orElseThrow();
+        AccessProfile viewer = profileRepository.findBySystemCode("VIEWER").orElseThrow();
         userRepository.saveAndFlush(account("race.one", "Race@Example.invalid", viewer));
 
         assertThatThrownBy(() -> userRepository.saveAndFlush(account("race.two", "race@example.invalid", viewer)))

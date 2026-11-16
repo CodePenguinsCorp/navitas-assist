@@ -164,7 +164,7 @@ class UserControllerIntegrationTest {
 
     @Test
     void concurrentEmailCollisionReturnsOne400AndNoPartialUser() throws Exception {
-        long profileId = accessProfiles.findByLegacyCode("TECHNICIAN").orElseThrow().getId();
+        long profileId = accessProfiles.findBySystemCode("TECHNICIAN").orElseThrow().getId();
         java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(2);
         java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
         try {
@@ -247,7 +247,7 @@ class UserControllerIntegrationTest {
                 ))))
             .andExpect(status().isCreated());
         UserAccount created = userAccountRepository.findByUsernameIgnoreCase("bridge.user").orElseThrow();
-        assertEquals("VIEWER", created.getProfile().getLegacyCode());
+        assertEquals("VIEWER", created.getProfile().getSystemCode());
 
         mockMvc.perform(put("/api/users/{id}", created.getId())
                 .with(asProfile("admin", "ADMIN"))
@@ -261,7 +261,7 @@ class UserControllerIntegrationTest {
                 ))))
             .andExpect(status().isOk());
         UserAccount updated = userAccountRepository.findById(created.getId()).orElseThrow();
-        assertEquals("TECHNICIAN", updated.getProfile().getLegacyCode());
+        assertEquals("TECHNICIAN", updated.getProfile().getSystemCode());
     }
 
     @Test
@@ -472,7 +472,7 @@ class UserControllerIntegrationTest {
             .andExpect(jsonPath("$.profile.name").value("Técnico"))
             .andExpect(jsonPath("$.extraPermissions", contains("rma.abrir", "pecas.movimentar")));
         UserAccount updated = userAccountRepository.findById(id).orElseThrow();
-        assertEquals("TECHNICIAN", updated.getProfile().getLegacyCode());
+        assertEquals("TECHNICIAN", updated.getProfile().getSystemCode());
         assertThat(updated.getExtraPermissions()).containsExactlyInAnyOrder("rma.abrir", "pecas.movimentar");
     }
 
@@ -720,8 +720,8 @@ class UserControllerIntegrationTest {
         return user(MANAGER).authorities(AuthorityUtils.createAuthorityList(managerProfile.getPermissions().toArray(String[]::new)));
     }
 
-    private Long profileId(String legacyCode) {
-        return accessProfiles.findByLegacyCode(legacyCode).orElseThrow().getId();
+    private Long profileId(String systemCode) {
+        return accessProfiles.findBySystemCode(systemCode).orElseThrow().getId();
     }
 
     private void assertUnchanged(UserAccount original) {
@@ -757,8 +757,8 @@ class UserControllerIntegrationTest {
             .andExpect(jsonPath("$.passwordHash").doesNotExist());
     }
 
-    private String userJson(String username, String fullName, String password, String legacyCode, boolean active) throws Exception {
-        Map<String, Object> body = new LinkedHashMap<>(Map.of("username", username, "fullName", fullName, "profileId", profileId(legacyCode), "active", active));
+    private String userJson(String username, String fullName, String password, String systemCode, boolean active) throws Exception {
+        Map<String, Object> body = new LinkedHashMap<>(Map.of("username", username, "fullName", fullName, "profileId", profileId(systemCode), "active", active));
         if (password != null) {
             body.put("password", password);
         }

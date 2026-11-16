@@ -72,7 +72,7 @@ class UserAdminSafetyIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON).content(payload(admin, role, active)))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("É preciso manter ao menos um administrador ativo."));
         UserAccount saved = users.findById(admin.getId()).orElseThrow();
-        assertEquals("ADMIN", saved.getProfile().getLegacyCode());
+        assertEquals("ADMIN", saved.getProfile().getSystemCode());
         assertTrue(saved.isActive());
         assertEquals(admin.getPasswordHash(), saved.getPasswordHash());
     }
@@ -198,11 +198,11 @@ class UserAdminSafetyIntegrationTest {
             "profileId", profileId(role), "extraPermissions", extras, "active", active));
     }
 
-    private Long profileId(String legacyCode) {
-        return accessProfiles.findByLegacyCode(legacyCode).orElseThrow().getId();
+    private Long profileId(String systemCode) {
+        return accessProfiles.findBySystemCode(systemCode).orElseThrow().getId();
     }
 
     private long activeAdmins() {
-        return users.findAll().stream().filter(account -> account.isActive() && "ADMIN".equals(account.getProfile().getLegacyCode())).count();
+        return users.findAll().stream().filter(account -> account.isActive() && "ADMIN".equals(account.getProfile().getSystemCode())).count();
     }
 }

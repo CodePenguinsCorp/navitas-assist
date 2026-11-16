@@ -20,7 +20,7 @@ class NotificationEventsMigrationTest {
                     assertTrue(row.next()); assertTrue(row.getBoolean(1)); assertTrue(row.getBoolean(2)); assertFalse(row.getBoolean(3));
                     assertEquals("WARNING", row.getString(4)); assertEquals(true, row.getBoolean(5)); assertTrue(row.getBoolean(6));
                 }
-                try (ResultSet rows = s.executeQuery("select p.legacy_code from notification_rule_recipient_profiles rp join notification_rules r on r.id=rp.rule_id join access_profiles p on p.id=rp.profile_id where r.event_type='" + type + "'")) {
+                try (ResultSet rows = s.executeQuery("select p.system_code from notification_rule_recipient_profiles rp join notification_rules r on r.id=rp.rule_id join access_profiles p on p.id=rp.profile_id where r.event_type='" + type + "'")) {
                     assertTrue(rows.next()); assertEquals("ADMIN", rows.getString(1)); assertFalse(rows.next());
                 }
             }

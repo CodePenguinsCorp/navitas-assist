@@ -664,7 +664,7 @@ class NotificationIntegrationTest {
     }
 
     private RequestPostProcessor as(UserAccount account) {
-        return asProfile(account.getUsername(), account.getProfile().getLegacyCode());
+        return asProfile(account.getUsername(), account.getProfile().getSystemCode());
     }
 
     private long countFor(UserAccount account, NotificationEventType type) {
@@ -675,16 +675,16 @@ class NotificationIntegrationTest {
         return notificationEventRepository.findAll().stream().filter(event -> event.getEventKey().equals(key)).findFirst().orElseThrow();
     }
 
-    private Map<String, Object> rulePayload(boolean enabled, String severity, Set<String> legacyCodes) {
-        return rulePayloadForProfiles(enabled, severity, legacyCodes.stream().map(code -> profile(code).getId()).toList());
+    private Map<String, Object> rulePayload(boolean enabled, String severity, Set<String> systemCodes) {
+        return rulePayloadForProfiles(enabled, severity, systemCodes.stream().map(code -> profile(code).getId()).toList());
     }
 
     private Map<String, Object> rulePayloadForProfiles(boolean enabled, String severity, List<Long> profileIds) {
         return Map.of("enabled", enabled, "severity", severity, "recipientProfileIds", profileIds, "notifyAssignee", false, "emailEnabled", false, "userMutable", true);
     }
 
-    private AccessProfile profile(String legacyCode) {
-        return accessProfiles.findByLegacyCode(legacyCode).orElseThrow();
+    private AccessProfile profile(String systemCode) {
+        return accessProfiles.findBySystemCode(systemCode).orElseThrow();
     }
 
     private void resetRules() {

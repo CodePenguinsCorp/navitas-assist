@@ -192,7 +192,7 @@ class SessionRevocationIntegrationTest {
         });
         UserAccount saved = users.findById(target.getId()).orElseThrow();
         assertTrue(saved.isActive());
-        assertEquals("ADMIN", saved.getProfile().getLegacyCode());
+        assertEquals("ADMIN", saved.getProfile().getSystemCode());
         mvc.perform(get("/api/users").session(first)).andExpect(status().isOk());
         mvc.perform(get("/api/users").session(second)).andExpect(status().isOk());
     }
@@ -281,8 +281,8 @@ class SessionRevocationIntegrationTest {
         return new LinkedHashMap<>(Map.of("username", TARGET, "fullName", target.getFullName(), "profileId", profileId("ADMIN"), "active", true));
     }
 
-    private Long profileId(String legacyCode) {
-        return accessProfiles.findByLegacyCode(legacyCode).orElseThrow().getId();
+    private Long profileId(String systemCode) {
+        return accessProfiles.findBySystemCode(systemCode).orElseThrow().getId();
     }
 
     private MockHttpSession login(String username, String password) throws Exception {

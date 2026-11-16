@@ -93,7 +93,7 @@ class AdministratorGuardIntegrationTest {
 
     @Test
     void rejectsRemovingAdminPermissionFromLastAdministratorsProfile() {
-        AccessProfile adminProfile = profiles.findByLegacyCode("ADMIN").orElseThrow();
+        AccessProfile adminProfile = profiles.findBySystemCode("ADMIN").orElseThrow();
         Set<String> withoutProfiles = new HashSet<>(adminProfile.getPermissions());
         withoutProfiles.remove("perfis.gerir");
 
@@ -153,8 +153,8 @@ class AdministratorGuardIntegrationTest {
     void allowsChangeWhenNoAdministratorExists() {
         admin.setActive(false);
         users.saveAndFlush(admin);
-        AccessProfile adminProfile = profiles.findByLegacyCode("ADMIN").orElseThrow();
-        AccessProfile viewer = profiles.findByLegacyCode("VIEWER").orElseThrow();
+        AccessProfile adminProfile = profiles.findBySystemCode("ADMIN").orElseThrow();
+        AccessProfile viewer = profiles.findBySystemCode("VIEWER").orElseThrow();
         UserAccount inactiveAdmin = users.findById(admin.getId()).orElseThrow();
 
         assertDoesNotThrow(() -> inTransaction(() -> {
@@ -168,7 +168,7 @@ class AdministratorGuardIntegrationTest {
     @Test
     void reactivatingOrPromotingNeverFails() {
         UserAccount second = AccessTestSupport.saveAccount(users, profiles, passwordEncoder, SECOND, "VIEWER");
-        AccessProfile adminProfile = profiles.findByLegacyCode("ADMIN").orElseThrow();
+        AccessProfile adminProfile = profiles.findBySystemCode("ADMIN").orElseThrow();
 
         assertDoesNotThrow(() -> inTransaction(() -> {
             guard.lockAccessGraph();
@@ -217,7 +217,7 @@ class AdministratorGuardIntegrationTest {
     /** Usuário com o perfil Consulta que é administrador só pelas extras. */
     private UserAccount saveByExtras(boolean active) {
         UserAccount account = AccessTestSupport.saveAccountWithProfile(users, passwordEncoder, BY_EXTRAS,
-            profiles.findByLegacyCode("VIEWER").orElseThrow(), Set.of("usuarios.gerir", "perfis.gerir"));
+            profiles.findBySystemCode("VIEWER").orElseThrow(), Set.of("usuarios.gerir", "perfis.gerir"));
         account.setActive(active);
         return users.saveAndFlush(account);
     }
@@ -236,6 +236,6 @@ class AdministratorGuardIntegrationTest {
 
     private String payload(UserAccount account, String role, Set<String> extras, boolean active) throws Exception {
         return mapper.writeValueAsString(Map.of("username", account.getUsername(), "fullName", account.getFullName(),
-            "profileId", profiles.findByLegacyCode(role).orElseThrow().getId(), "extraPermissions", extras, "active", active));
+            "profileId", profiles.findBySystemCode(role).orElseThrow().getId(), "extraPermissions", extras, "active", active));
     }
 }
