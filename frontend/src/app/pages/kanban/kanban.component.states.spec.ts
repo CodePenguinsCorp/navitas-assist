@@ -132,7 +132,7 @@ describe('KanbanComponent reading states and count', () => {
     respond(0, []);
     expect(text()).toContain('Nenhuma OS cadastrada');
     expect(text()).not.toContain('Nenhuma OS encontrada');
-    expect(firstIndicator()).toBe('0 OS');
+    expect(firstIndicator()).toBe('OS 0');
   });
 
   it('discards an older read that answers after a newer one', () => {

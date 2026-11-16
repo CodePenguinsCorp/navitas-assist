@@ -6,9 +6,9 @@
       <li class="page-summary__item page-summary__item--total" appTip="Ordens de serviço no quadro">
         <app-icon name="inbox" [size]="16" />
         <span>
+          {{ total.label }}
           @if (total.overall !== null) {<strong>{{ total.count }}</strong> de <strong>{{ total.overall }}</strong>}
           @else {<strong>{{ total.count }}</strong>}
-          {{ total.label }}
         </span>
       </li>
       @for (stat of heroStats(); track stat.label) {
