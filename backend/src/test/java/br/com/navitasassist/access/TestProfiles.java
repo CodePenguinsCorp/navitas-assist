@@ -6,14 +6,14 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Permissões dos 4 perfis migrados, copiadas literalmente da tabela da spec §3.
+ * Conjuntos de permissões usados somente como cenários de teste.
  * É o mapa usado pelos mocks de MockMvc ({@link AccessTestSupport#asProfile}).
  */
-public final class SystemProfiles {
+public final class TestProfiles {
 
     public static final Map<String, Set<String>> PERMISSIONS = Map.of(
         "ADMIN", ordered(
-            "rma.ver", "rma.abrir", "rma.editar", "rma.status", "rma.responsavel", "rma.diagnosticar", "rma.impedimentos",
+            "rma.ver", "rma.abrir", "rma.editar", "rma.status", "rma.responsavel", "rma.atribuivel", "rma.diagnosticar", "rma.impedimentos",
             "cadastros.ver", "cadastros.editar", "cadastros.importar",
             "pecas.ver", "pecas.movimentar", "pecas.usar",
             "protocolos.ver", "protocolos.executar", "protocolos.catalogo",
@@ -38,13 +38,13 @@ public final class SystemProfiles {
             "relatorios.ver")
     );
 
-    private SystemProfiles() {
+    private TestProfiles() {
     }
 
     public static String[] authorities(String code) {
         Set<String> permissions = PERMISSIONS.get(code);
         if (permissions == null) {
-            throw new IllegalArgumentException("Perfil legado desconhecido: " + code);
+            throw new IllegalArgumentException("Perfil de teste desconhecido: " + code);
         }
         return permissions.toArray(String[]::new);
     }

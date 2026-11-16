@@ -35,7 +35,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Etapa 3 da minimização: cada perfil pronto continua lendo tudo o que as telas dele usam (200, com dados reais), e
+ * Etapa 3 da minimização: cada perfil de teste continua lendo tudo o que as telas dele usam (200, com dados reais), e
  * perfis personalizados sem a permissão da área recebem 403. As permissões alternativas são testadas uma a uma.
  */
 @SpringBootTest
@@ -86,7 +86,7 @@ class ReadAuthorizationByProfileIntegrationTest {
             .content("{\"partId\":" + partId + ",\"quantity\":2,\"replacementReason\":\"Falha\"}")).andExpect(status().isCreated());
     }
 
-    /** Leituras de cada tela e os perfis prontos que a abrem; todas precisam responder 200. */
+    /** Leituras de cada tela e os perfis de teste que a abrem; todas precisam responder 200. */
     private List<Object[]> screenReads() {
         String today = LocalDate.now(ZoneId.of("America/Sao_Paulo")).toString();
         return List.of(

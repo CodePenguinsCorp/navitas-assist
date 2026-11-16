@@ -1,5 +1,6 @@
 package br.com.navitasassist.notification;
 
+import br.com.navitasassist.access.AccessTestSupport;
 import static br.com.navitasassist.access.AccessTestSupport.asProfile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -51,7 +52,7 @@ class NotificationRuleProfileRaceIntegrationTest {
     @Test
     void profileDeletedConcurrentlyIsABadRequest() throws Exception {
         Set<Long> before = recipientIds();
-        AccessProfile viewer = profiles.findBySystemCode("VIEWER").orElseThrow();
+        AccessProfile viewer = AccessTestSupport.profile(profiles, "VIEWER");
         doThrow(new DataIntegrityViolationException("fk_rule_recipient_profiles_profile"))
             .when(rules).saveAndFlush(any(NotificationRule.class));
 

@@ -17,30 +17,18 @@ import br.com.navitasassist.support.PostgresTestDatabase;
 import org.junit.jupiter.api.Test;
 
 /**
- * Perfis, permissões e regras de notificação semeados pelas migrações (V1 e a limpeza do SLA na V2), num PostgreSQL próprio por teste.
+ * Perfis, permissões e regras de notificação semeados pela baseline V1, num PostgreSQL próprio por teste.
  */
 class AccessProfileMigrationTest {
 
     @Test
-    void seedsSystemProfilesWithExactPermissions() throws SQLException {
-        PostgresTestDatabase.Coordinates database = migratedDatabase();
-
-        try (Connection connection = database.connect()) {
-            assertEquals(
-                Map.of("ADMIN", "Administrador", "SERVICE_DESK", "Atendimento", "TECHNICIAN", "Técnico", "VIEWER", "Consulta"),
-                profileNamesBySystemCode(connection));
-
-            Map<String, Set<String>> permissions = permissionsBySystemCode(connection);
-            assertEquals(SystemProfiles.PERMISSIONS, permissions);
-
-            // Totais conferidos de forma independente da tabela usada pelos mocks.
-            assertEquals(21, permissions.get("ADMIN").size());
-            assertEquals(Set.of("ADMIN"), permissions.entrySet().stream()
-                .filter(entry -> entry.getValue().contains("cadastros.importar"))
-                .map(Map.Entry::getKey).collect(java.util.stream.Collectors.toSet()));
-            assertEquals(11, permissions.get("SERVICE_DESK").size());
-            assertEquals(11, permissions.get("TECHNICIAN").size());
-            assertEquals(5, permissions.get("VIEWER").size());
+    void seedsOnlyAdministratorWithAllPermissions() throws SQLException {
+        try (Connection connection = migratedDatabase().connect()) {
+            assertEquals(Map.of("Administrador", "Administrador"), profileNamesByName(connection));
+            assertEquals(Map.of("Administrador", Permission.codes(Set.of(Permission.values()))),
+                permissionsByName(connection));
+            assertEquals(0, count(connection, "SELECT count(*) FROM information_schema.columns WHERE table_name = 'access_profiles' AND column_name = 'system_code'"));
+            assertEquals(0, count(connection, "SELECT count(*) FROM pg_indexes WHERE indexname = 'uk_access_profiles_system_code'"));
         }
     }
 
@@ -67,7 +55,7 @@ class AccessProfileMigrationTest {
             Map<String, Set<String>> recipients = new HashMap<>();
             try (Statement statement = connection.createStatement();
                  ResultSet rows = statement.executeQuery("""
-                     SELECT r.event_type, p.system_code
+                     SELECT r.event_type, p.name
                      FROM notification_rules r
                      LEFT JOIN notification_rule_recipient_profiles rp ON rp.rule_id = r.id
                      LEFT JOIN access_profiles p ON p.id = rp.profile_id
@@ -79,7 +67,7 @@ class AccessProfileMigrationTest {
                 }
             }
             assertEquals(Map.of(
-                "RMA_CREATED", Set.of("ADMIN", "SERVICE_DESK"),
+                "RMA_CREATED", Set.of("Administrador"),
                 "RMA_ASSIGNED", Set.of()), recipients);
         }
     }
@@ -93,7 +81,7 @@ class AccessProfileMigrationTest {
             statement.executeUpdate("""
                 INSERT INTO user_accounts (username, full_name, password_hash, active, created_at, updated_at, profile_id)
                 VALUES ('base.admin', 'Administrador', 'hash', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
-                        (SELECT id FROM access_profiles WHERE system_code = 'ADMIN'))
+                        (SELECT id FROM access_profiles WHERE name = 'Administrador'))
                 """);
             assertThrows(SQLException.class, () -> statement.executeUpdate("""
                 INSERT INTO user_accounts (username, full_name, password_hash, active, created_at, updated_at)
@@ -117,10 +105,10 @@ class AccessProfileMigrationTest {
         }
     }
 
-    private static Map<String, String> profileNamesBySystemCode(Connection connection) throws SQLException {
+    private static Map<String, String> profileNamesByName(Connection connection) throws SQLException {
         Map<String, String> names = new HashMap<>();
         try (Statement statement = connection.createStatement();
-             ResultSet rows = statement.executeQuery("SELECT system_code, name FROM access_profiles")) {
+             ResultSet rows = statement.executeQuery("SELECT name, name FROM access_profiles")) {
             while (rows.next()) {
                 names.put(rows.getString(1), rows.getString(2));
             }
@@ -128,11 +116,11 @@ class AccessProfileMigrationTest {
         return names;
     }
 
-    private static Map<String, Set<String>> permissionsBySystemCode(Connection connection) throws SQLException {
+    private static Map<String, Set<String>> permissionsByName(Connection connection) throws SQLException {
         Map<String, Set<String>> permissions = new HashMap<>();
         try (Statement statement = connection.createStatement();
              ResultSet rows = statement.executeQuery("""
-                 SELECT p.system_code, pp.permission
+                 SELECT p.name, pp.permission
                  FROM access_profiles p
                  JOIN access_profile_permissions pp ON pp.profile_id = p.id
                  """)) {

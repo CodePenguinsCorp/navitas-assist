@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
 import { of } from 'rxjs';
 import { ProtocolExecutionItemResponse, ProtocolExecutionResponse, ProtocolItemResultRequest } from '../../core/models';
-import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { TestProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { ProtocolService } from '../../core/services/protocol.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { RmaProtocolsComponent } from './rma-protocols.component';
@@ -24,10 +24,10 @@ const EXECUTION: ProtocolExecutionResponse = {
 describe('RmaProtocolsComponent', () => {
   let fixture: ComponentFixture<RmaProtocolsComponent>;
   let component: RmaProtocolsHarness;
-  let role: LegacyProfileCode;
+  let role: TestProfileCode;
   let results: ProtocolItemResultRequest[];
 
-  async function setup(currentRole: LegacyProfileCode, executions = [EXECUTION]): Promise<void> {
+  async function setup(currentRole: TestProfileCode, executions = [EXECUTION]): Promise<void> {
     localStorage.clear();
     role = currentRole;
     results = [];

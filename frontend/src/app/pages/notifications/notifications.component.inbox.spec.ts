@@ -7,7 +7,7 @@ import { Router, provideRouter } from '@angular/router';
 import { NotificationDetailModalComponent } from '../../shared/notification-detail-modal/notification-detail-modal.component';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { NotificationResponse } from '../../core/models';
-import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { TestProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { NotificationService } from '../../core/services/notification.service';
 import { ProfileService } from '../../core/services/profile.service';
 import { ClockService } from '../../core/services/clock.service';
@@ -52,7 +52,7 @@ describe('NotificationsComponent inbox loading', () => {
   const clearFiltersButton = () => filterBar().querySelector<HTMLButtonElement>('.inbox-clear')!;
   const toggle = (label: string) => { filterToggle(label).click(); render(); };
 
-  async function setup(sources: { role?: LegacyProfileCode; unread?: number; list?: Source<NotificationResponse[]>[]; markAllRead?: Observable<void>; snooze?: Observable<NotificationResponse>; markRead?: Observable<NotificationResponse> } = {}) {
+  async function setup(sources: { role?: TestProfileCode; unread?: number; list?: Source<NotificationResponse[]>[]; markAllRead?: Observable<void>; snooze?: Observable<NotificationResponse>; markRead?: Observable<NotificationResponse> } = {}) {
     clock = signal(Date.parse('2026-10-24T13:00:00Z'));
     const list = vi.fn(() => of([NOTIFICATION]));
     for (const source of sources.list ?? []) {

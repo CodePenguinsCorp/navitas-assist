@@ -28,33 +28,44 @@ public final class AccessTestSupport {
     private AccessTestSupport() {
     }
 
-    /** Principal de teste (sem consulta ao banco) com as permissões do perfil legado {@code systemCode} ({@link SystemProfiles}). */
-    public static RequestPostProcessor asProfile(String username, String systemCode) {
-        return user(username).authorities(AuthorityUtils.createAuthorityList(SystemProfiles.authorities(systemCode)));
+    /** Principal de teste (sem consulta ao banco) com as permissões do perfil de teste {@code profileCode} ({@link TestProfiles}). */
+    public static RequestPostProcessor asProfile(String username, String profileCode) {
+        return user(username).authorities(AuthorityUtils.createAuthorityList(TestProfiles.authorities(profileCode)));
     }
 
-    /** Grava um usuário ativo com senha {@value #DEFAULT_PASSWORD} e o perfil legado {@code systemCode}. */
+    /** Grava um usuário ativo com senha {@value #DEFAULT_PASSWORD} e o perfil de teste {@code profileCode}. */
     public static UserAccount saveAccount(
         UserAccountRepository users,
         AccessProfileRepository profiles,
         PasswordEncoder passwordEncoder,
         String username,
-        String systemCode
+        String profileCode
     ) {
         UserAccount account = new UserAccount();
         account.setUsername(username);
         account.setFullName(username);
         account.setPasswordHash(PASSWORD_HASHES.computeIfAbsent(passwordEncoder, encoder -> encoder.encode(DEFAULT_PASSWORD)));
-        assignProfile(profiles, account, systemCode);
+        assignProfile(profiles, account, profileCode);
         account.setActive(true);
         return users.saveAndFlush(account);
     }
 
-    /** Grava o perfil migrado ({@code system_code}); não salva a conta. */
-    public static UserAccount assignProfile(AccessProfileRepository profiles, UserAccount account, String systemCode) {
-        account.setProfile(profiles.findBySystemCode(systemCode)
-            .orElseThrow(() -> new IllegalStateException("Perfil migrado ausente: " + systemCode)));
+    /** Atribui um perfil de teste por nome; não salva a conta. */
+    public static UserAccount assignProfile(AccessProfileRepository profiles, UserAccount account, String profileCode) {
+        account.setProfile(profile(profiles, profileCode));
         return account;
+    }
+
+    public static AccessProfile profile(AccessProfileRepository profiles, String code) {
+        String name = switch (code) {
+            case "ADMIN" -> "Administrador";
+            case "SERVICE_DESK" -> "Atendimento";
+            case "TECHNICIAN" -> "Técnico";
+            case "VIEWER" -> "Consulta";
+            default -> throw new IllegalArgumentException("Perfil de teste desconhecido: " + code);
+        };
+        return profiles.findByNameIgnoreCase(name).orElseGet(() ->
+            saveProfile(profiles, name, TestProfiles.authorities(code)));
     }
 
     /** Grava um usuário ativo com um perfil qualquer (inclusive personalizado) e extras. */

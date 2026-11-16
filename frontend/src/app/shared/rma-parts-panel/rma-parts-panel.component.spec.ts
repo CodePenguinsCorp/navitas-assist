@@ -5,7 +5,7 @@ import { PartUsageResponse, RmaPartsResponse, RmaStatus } from '../../core/model
 import { PartService } from '../../core/services/part.service';
 import { RmaRepairService } from '../../core/services/rma-repair.service';
 import { ToastService } from '../../core/services/toast.service';
-import { providePermissions, profilePermissions, LegacyProfileCode } from '../../testing/permission-fixtures';
+import { providePermissions, profilePermissions, TestProfileCode } from '../../testing/permission-fixtures';
 import { RmaPartsPanelComponent } from './rma-parts-panel.component';
 
 const usage = (id = 1, status: PartUsageResponse['status'] = 'USED'): PartUsageResponse => ({
@@ -26,7 +26,7 @@ describe('RmaPartsPanelComponent - uso de peças', () => {
   const component = () => fixture.componentInstance as any;
   const render = () => fixture.detectChanges();
   const button = (label: string) => Array.from(root().querySelectorAll<HTMLButtonElement>('button')).find(b => b.textContent?.trim() === label);
-  async function setUp(role: LegacyProfileCode = 'TECHNICIAN', status: RmaStatus = 'IN_REPAIR') {
+  async function setUp(role: TestProfileCode = 'TECHNICIAN', status: RmaStatus = 'IN_REPAIR') {
     service = { getRmaParts: vi.fn(() => of(response())), listOptions: vi.fn(() => of([
       { id: 4, code: 'PCA-1', name: 'Capacitor', unit: 'UN', onHand: 3, active: true },
       { id: 5, code: 'CABO', name: 'Cabo', unit: 'm', onHand: 10, active: true }

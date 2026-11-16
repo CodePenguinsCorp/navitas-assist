@@ -13,7 +13,7 @@ import { RmaService } from '../../core/services/rma.service';
 import { expectCancelBeforePrimary } from '../../testing/dialog-actions';
 import { buildRma, buildRmaPage } from '../../testing/rma-fixtures';
 import { RmasComponent } from './rmas.component';
-import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { TestProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { settleRmaLazyChunks } from '../../testing/lazy-chunks';
 import { toastMessages } from '../../testing/toast';
 
@@ -37,7 +37,7 @@ const product: ProductResponse = {
   defaultWarrantyMonths: 12, technicalNotes: null, updatedAt: '2026-10-20T12:00:00Z'
 };
 
-async function setup(options: { role?: LegacyProfileCode; create?: CreateFn } = {}) {
+async function setup(options: { role?: TestProfileCode; create?: CreateFn } = {}) {
   const role = options.role ?? 'ADMIN';
   const rmaService = {
     list: vi.fn(() => of(buildRmaPage([buildRma()], 0, 20, 1))),

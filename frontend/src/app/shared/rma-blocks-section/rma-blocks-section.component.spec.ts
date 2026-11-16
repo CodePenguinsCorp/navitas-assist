@@ -5,7 +5,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RmaBlockResponse, RmaResponse } from '../../core/models';
 import { Permission } from '../../core/permissions';
 import { ClockService } from '../../core/services/clock.service';
-import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { TestProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { RmaBlocksSectionComponent } from './rma-blocks-section.component';
 import { expectInlineForm } from '../../testing/inline-form';
 
@@ -14,7 +14,7 @@ const NOW = Date.parse('2026-10-20T12:00:00Z');
 describe('RmaBlocksSectionComponent', () => {
   let fixture: ComponentFixture<RmaBlocksSectionComponent>;
   let http: HttpTestingController;
-  const role = signal<LegacyProfileCode | readonly Permission[]>('TECHNICIAN');
+  const role = signal<TestProfileCode | readonly Permission[]>('TECHNICIAN');
 
   beforeEach(async () => {
     localStorage.clear();
@@ -307,7 +307,7 @@ describe('RmaBlocksSectionComponent', () => {
     expect(control('Cancelar')!.disabled).toBe(false);
   });
 
-  it.each((['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as LegacyProfileCode[]).flatMap((profile) => [false, true].map((isBlocked) => ({ profile, isBlocked }))))(
+  it.each((['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as TestProfileCode[]).flatMap((profile) => [false, true].map((isBlocked) => ({ profile, isBlocked }))))(
     'offers write actions only with rma.impedimentos ($profile, blocked=$isBlocked)',
     ({ profile, isBlocked }) => {
       role.set(profile);

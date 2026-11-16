@@ -164,7 +164,7 @@ class UserControllerIntegrationTest {
 
     @Test
     void concurrentEmailCollisionReturnsOne400AndNoPartialUser() throws Exception {
-        long profileId = accessProfiles.findBySystemCode("TECHNICIAN").orElseThrow().getId();
+        long profileId = AccessTestSupport.profile(accessProfiles, "TECHNICIAN").getId();
         java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(2);
         java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
         try {
@@ -247,7 +247,7 @@ class UserControllerIntegrationTest {
                 ))))
             .andExpect(status().isCreated());
         UserAccount created = userAccountRepository.findByUsernameIgnoreCase("bridge.user").orElseThrow();
-        assertEquals("VIEWER", created.getProfile().getSystemCode());
+        assertEquals("Consulta", created.getProfile().getName());
 
         mockMvc.perform(put("/api/users/{id}", created.getId())
                 .with(asProfile("admin", "ADMIN"))
@@ -261,7 +261,7 @@ class UserControllerIntegrationTest {
                 ))))
             .andExpect(status().isOk());
         UserAccount updated = userAccountRepository.findById(created.getId()).orElseThrow();
-        assertEquals("TECHNICIAN", updated.getProfile().getSystemCode());
+        assertEquals("Técnico", updated.getProfile().getName());
     }
 
     @Test
@@ -472,7 +472,7 @@ class UserControllerIntegrationTest {
             .andExpect(jsonPath("$.profile.name").value("Técnico"))
             .andExpect(jsonPath("$.extraPermissions", contains("rma.abrir", "pecas.movimentar")));
         UserAccount updated = userAccountRepository.findById(id).orElseThrow();
-        assertEquals("TECHNICIAN", updated.getProfile().getSystemCode());
+        assertEquals("Técnico", updated.getProfile().getName());
         assertThat(updated.getExtraPermissions()).containsExactlyInAnyOrder("rma.abrir", "pecas.movimentar");
     }
 
@@ -694,20 +694,18 @@ class UserControllerIntegrationTest {
 
         mockMvc.perform(get("/api/users/assignable").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[*].username", contains("assignable.viewer", "plain.technician")));
+            .andExpect(jsonPath("$[*].username", org.hamcrest.Matchers.containsInAnyOrder("admin", "assignable.viewer", "plain.technician")));
         assertEquals(viewer.getId(), userAccountService.getAssignableTechnicianById(viewer.getId()).getId());
     }
 
     @Test
-    void administratorIsNotAssignable() throws Exception {
+    void initialAdministratorIsAssignableWithPermission() throws Exception {
         UserAccount admin = userAccountRepository.findByUsernameIgnoreCase("admin").orElseThrow();
 
         mockMvc.perform(get("/api/users/assignable").with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[*].username", not(hasItem("admin"))));
-        assertThatThrownBy(() -> userAccountService.getAssignableTechnicianById(admin.getId()))
-            .isInstanceOf(BusinessException.class)
-            .hasMessage("Somente técnicos podem ser responsáveis por uma OS.");
+            .andExpect(jsonPath("$[*].username", hasItem("admin")));
+        assertEquals(admin.getId(), userAccountService.getAssignableTechnicianById(admin.getId()).getId());
     }
 
     private void saveManager(String... permissions) {
@@ -720,8 +718,8 @@ class UserControllerIntegrationTest {
         return user(MANAGER).authorities(AuthorityUtils.createAuthorityList(managerProfile.getPermissions().toArray(String[]::new)));
     }
 
-    private Long profileId(String systemCode) {
-        return accessProfiles.findBySystemCode(systemCode).orElseThrow().getId();
+    private Long profileId(String profileCode) {
+        return AccessTestSupport.profile(accessProfiles, profileCode).getId();
     }
 
     private void assertUnchanged(UserAccount original) {
@@ -757,8 +755,8 @@ class UserControllerIntegrationTest {
             .andExpect(jsonPath("$.passwordHash").doesNotExist());
     }
 
-    private String userJson(String username, String fullName, String password, String systemCode, boolean active) throws Exception {
-        Map<String, Object> body = new LinkedHashMap<>(Map.of("username", username, "fullName", fullName, "profileId", profileId(systemCode), "active", active));
+    private String userJson(String username, String fullName, String password, String profileCode, boolean active) throws Exception {
+        Map<String, Object> body = new LinkedHashMap<>(Map.of("username", username, "fullName", fullName, "profileId", profileId(profileCode), "active", active));
         if (password != null) {
             body.put("password", password);
         }

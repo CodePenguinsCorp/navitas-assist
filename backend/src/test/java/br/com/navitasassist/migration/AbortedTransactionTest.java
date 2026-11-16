@@ -1,5 +1,6 @@
 package br.com.navitasassist.migration;
 
+import br.com.navitasassist.access.AccessTestSupport;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
@@ -66,7 +67,7 @@ class AbortedTransactionTest {
 
     @Test
     void concurrentEmailsDifferingByCaseKeepOneAndRejectTheOther() throws Exception {
-        Long profileId = profileRepository.findBySystemCode("VIEWER").orElseThrow().getId();
+        Long profileId = AccessTestSupport.profile(profileRepository, "VIEWER").getId();
         List<Object> outcomes = race(
             () -> users.create(new UserAccountRequest("race.one", "Corrida", "password123", profileId, Set.of(), true, "Race@Example.invalid"), "admin"),
             () -> users.create(new UserAccountRequest("race.two", "Corrida", "password123", profileId, Set.of(), true, "race@example.INVALID"), "admin"));

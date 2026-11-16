@@ -93,7 +93,7 @@ class PermissionEquivalenceIntegrationTest {
         new Row(HttpMethod.GET, "/api/auth/csrf", "/api/auth/csrf", ALL, Kind.PUBLIC),
         new Row(HttpMethod.POST, "/api/auth/login", "/api/auth/login", ALL, Kind.PUBLIC),
 
-        // Todos os perfis prontos (autenticado ou permissão que os quatro têm: rma.ver, cadastros.ver, pecas.ver, protocolos.ver)
+        // Todos os perfis dos cenários de teste (autenticado ou permissão comum: rma.ver, cadastros.ver, pecas.ver, protocolos.ver)
         row(HttpMethod.GET, "/api/auth/me", ALL),
         row(HttpMethod.GET, "/api/clients", ALL),
         row(HttpMethod.GET, "/api/clients/options", ALL),

@@ -14,7 +14,7 @@ import { RmaDetailModalComponent } from '../../shared/rma-detail-modal/rma-detai
 import { buildRma } from '../../testing/rma-fixtures';
 import { toBoardCard } from '../../core/utils/rma-ui';
 import { KanbanComponent } from './kanban.component';
-import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { TestProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
 interface KanbanProfileHarness {
   openDetail(rma: RmaResponse): void;
@@ -22,7 +22,7 @@ interface KanbanProfileHarness {
 
 const RMA = buildRma({ id: 1, code: 'NAV-0001', status: 'TRIAGE', assigneeId: 7, assigneeName: 'Técnico Responsável' });
 
-async function setup(role: LegacyProfileCode) {
+async function setup(role: TestProfileCode) {
   return setupWith(profilePermissions(role));
 }
 

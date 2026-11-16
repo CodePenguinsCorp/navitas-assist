@@ -72,7 +72,7 @@ class PaginationIntegrationTest {
     @AfterEach
     void cleanCustomProfiles() {
         userAccountRepository.findAll().stream()
-            .filter(account -> account.getProfile().getSystemCode() == null)
+            .filter(account -> Set.of(CUSTOM_PROFILE, OTHER_PROFILE).contains(account.getProfile().getName()))
             .forEach(userAccountRepository::delete);
         userAccountRepository.flush();
         AccessTestSupport.deleteProfiles(accessProfiles, CUSTOM_PROFILE, OTHER_PROFILE);
@@ -256,7 +256,7 @@ class PaginationIntegrationTest {
         saveUser("carl", "Carl Custom Admin", manager, Set.of(), true);
         saveUser("dora", "Dora Custom Inactive Admin", custom, Set.of("usuarios.gerir", "perfis.gerir"), false);
         saveUser("eve", "Eve Custom", custom, Set.of("usuarios.gerir"), true);
-        saveUser("finn", "Finn Viewer", accessProfiles.findBySystemCode("VIEWER").orElseThrow(), Set.of(), true);
+        saveUser("finn", "Finn Viewer", AccessTestSupport.profile(accessProfiles, "VIEWER"), Set.of(), true);
 
         mockMvc.perform(get("/api/users").param("profileId", custom.getId().toString()).with(admin()))
             .andExpect(status().isOk())
@@ -386,8 +386,8 @@ class PaginationIntegrationTest {
         userAccountRepository.save(account);
     }
 
-    private Long profileId(String systemCode) {
-        return accessProfiles.findBySystemCode(systemCode).orElseThrow().getId();
+    private Long profileId(String profileCode) {
+        return AccessTestSupport.profile(accessProfiles, profileCode).getId();
     }
 
     private void saveUser(String username, String fullName, String role, boolean active) {

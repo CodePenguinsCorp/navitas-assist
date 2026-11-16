@@ -462,6 +462,7 @@ class RmaControllerIntegrationTest {
         rma.setReportedFailure("Assignment test");
         RmaRecord savedRma = rmaRecordRepository.saveAndFlush(rma);
 
+        userAccountRepository.findByUsernameIgnoreCase("admin").orElseGet(() -> saveUser("admin", "Administrador", "ADMIN", true));
         UserAccount firstTechnician = saveUser("first.tech", "First Technician", "TECHNICIAN", true);
         UserAccount secondTechnician = saveUser("second.tech", "Second Technician", "TECHNICIAN", true);
         UserAccount inactiveTechnician = saveUser("inactive.tech", "Inactive Technician", "TECHNICIAN", false);
@@ -470,9 +471,7 @@ class RmaControllerIntegrationTest {
         mockMvc.perform(get("/api/users/assignable")
                 .with(asProfile("viewer", "VIEWER")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(2)))
-            .andExpect(jsonPath("$[0].fullName").value("First Technician"))
-            .andExpect(jsonPath("$[1].fullName").value("Second Technician"));
+            .andExpect(jsonPath("$[*].username", org.hamcrest.Matchers.containsInAnyOrder("admin", "first.tech", "second.tech")));
 
         mockMvc.perform(get("/api/rmas/{id}", savedRma.getId())
                 .with(asProfile("admin", "ADMIN")))

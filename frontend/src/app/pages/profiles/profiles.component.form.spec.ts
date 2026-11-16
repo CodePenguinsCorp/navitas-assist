@@ -222,11 +222,11 @@ describe('ProfilesComponent form', () => {
 
   it('keeps the server refusal inside the delete confirmation', async () => {
     await mount();
-    service.delete.mockImplementation(() => badRequest('Perfil migrado não pode ser excluído.'));
+    service.delete.mockImplementation(() => badRequest('Perfil possui usuários vinculados e não pode ser excluído.'));
     open(() => component.openDeleteModal(SUPERVISOR));
     Array.from(alertDialog()!.querySelectorAll('button')).find((button) => button.textContent?.trim() === 'Excluir perfil')!.click();
     fixture.detectChanges();
-    expect(alertDialog()!.querySelector('.modal-feedback[role="alert"]')?.textContent?.trim()).toBe('Perfil migrado não pode ser excluído.');
+    expect(alertDialog()!.querySelector('.modal-feedback[role="alert"]')?.textContent?.trim()).toBe('Perfil possui usuários vinculados e não pode ser excluído.');
     expect(toastMessages()).toEqual([]);
   });
 

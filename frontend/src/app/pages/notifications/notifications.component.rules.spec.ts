@@ -6,7 +6,7 @@ import { provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { NotificationFailureResponse, NotificationRuleResponse } from '../../core/models';
 import { Permission } from '../../core/permissions';
-import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { TestProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { LoadingService } from '../../core/services/loading.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { NotificationEmailStatusResponse, ProfileOption } from '../../core/models';
@@ -59,7 +59,7 @@ describe('NotificationsComponent rules', () => {
   };
   const openRules = () => { component.selectTab('rules'); render(); };
 
-  async function setup(sources: { role?: LegacyProfileCode; permissions?: readonly Permission[] | Signal<readonly Permission[]>; rules?: Observable<NotificationRuleResponse[]>[]; failures?: Observable<NotificationFailureResponse[]>[]; update?: Observable<NotificationRuleResponse>[]; profiles?: Observable<ProfileOption[]>[]; emailStatus?: NotificationEmailStatusResponse } = {}) {
+  async function setup(sources: { role?: TestProfileCode; permissions?: readonly Permission[] | Signal<readonly Permission[]>; rules?: Observable<NotificationRuleResponse[]>[]; failures?: Observable<NotificationFailureResponse[]>[]; update?: Observable<NotificationRuleResponse>[]; profiles?: Observable<ProfileOption[]>[]; emailStatus?: NotificationEmailStatusResponse } = {}) {
     const listRules = vi.fn(() => of([RULE]));
     for (const source of sources.rules ?? []) listRules.mockImplementationOnce(() => source);
     const listFailures = vi.fn(() => of([] as NotificationFailureResponse[]));
@@ -315,7 +315,7 @@ describe('NotificationsComponent rules', () => {
       expect(service['listRules']).not.toHaveBeenCalled();
     });
 
-    it.each(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as const)('offers the rules tab only to ADMIN among migrated profiles (%s)', async (role) => {
+    it.each(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as const)('offers the rules tab only to ADMIN among test profiles (%s)', async (role) => {
       await setup({ role });
       const tabs = Array.from(root().querySelectorAll('[role="tab"]')).map((tab) => tab.textContent!.trim());
       expect(tabs.includes('Regras')).toBe(role === 'ADMIN');

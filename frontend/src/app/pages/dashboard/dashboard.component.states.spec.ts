@@ -16,7 +16,7 @@ import { businessToday } from '../../core/utils/rma-deadline';
 import { DashboardComponent } from './dashboard.component';
 import { dashboardFromBoard } from '../../testing/dashboard-fixtures';
 import { Permission } from '../../core/permissions';
-import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { TestProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 
 function rmaFactory(overrides: Partial<RmaResponse> = {}): RmaResponse {
   return {
@@ -54,7 +54,7 @@ describe('DashboardComponent load states', () => {
   const failure = () => throwError(() => new HttpErrorResponse({ status: 500 }));
 
   async function setup(sources: {
-    role?: LegacyProfileCode;
+    role?: TestProfileCode;
     permissions?: Signal<readonly Permission[]>;
     board?: Observable<RmaResponse[]>;
     clients?: Observable<ClientSummaryResponse>;
@@ -133,7 +133,7 @@ describe('DashboardComponent load states', () => {
     expect(catalogService.getClientSummary).toHaveBeenCalledTimes(2);
   });
 
-  it.each(['TECHNICIAN', 'SERVICE_DESK', 'VIEWER'] as LegacyProfileCode[])('requests the server-side dashboard once, without user summary, for %s', async (role) => {
+  it.each(['TECHNICIAN', 'SERVICE_DESK', 'VIEWER'] as TestProfileCode[])('requests the server-side dashboard once, without user summary, for %s', async (role) => {
     await setup({ role });
     expect(rmaService.getDashboard).toHaveBeenCalledTimes(1);
     expect(rmaService.getDashboard).toHaveBeenCalledWith();

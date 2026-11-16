@@ -11,14 +11,14 @@ import { ProtocolService } from '../../core/services/protocol.service';
 import { RmaFilters, RmaService } from '../../core/services/rma.service';
 import { buildRma, buildRmaItem, buildRmaPage } from '../../testing/rma-fixtures';
 import { RmasComponent } from './rmas.component';
-import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { TestProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { settleRmaLazyChunks } from '../../testing/lazy-chunks';
 
 type ListFn = (filters: RmaFilters) => Observable<PageResponse<RmaResponse>>;
 type SummaryFn = (filters: Pick<RmaFilters, 'query' | 'status'>) => Observable<RmaSummaryResponse>;
 
 interface SetupOptions {
-  role?: LegacyProfileCode;
+  role?: TestProfileCode;
   list?: ListFn;
   summary?: SummaryFn;
   requestedRma?: number;

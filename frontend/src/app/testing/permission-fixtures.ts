@@ -2,12 +2,12 @@ import { Provider, Signal, isSignal, signal } from '@angular/core';
 import { Permission } from '../core/permissions';
 import { PERMISSION_SOURCE } from '../core/services/permission.service';
 
-export type LegacyProfileCode = 'ADMIN' | 'SERVICE_DESK' | 'TECHNICIAN' | 'VIEWER';
+export type TestProfileCode = 'ADMIN' | 'SERVICE_DESK' | 'TECHNICIAN' | 'VIEWER';
 
-/** Permissões dos 4 perfis migrados (A = 20, S = 11, T = 11, V = 5). */
-export const LEGACY_PROFILE_PERMISSIONS: Readonly<Record<LegacyProfileCode, readonly Permission[]>> = {
+/** Conjuntos de permissões usados somente como cenários de teste. */
+export const TEST_PROFILE_PERMISSIONS: Readonly<Record<TestProfileCode, readonly Permission[]>> = {
   ADMIN: [
-    'rma.ver', 'rma.abrir', 'rma.editar', 'rma.status', 'rma.responsavel', 'rma.diagnosticar', 'rma.impedimentos',
+    'rma.ver', 'rma.abrir', 'rma.editar', 'rma.status', 'rma.responsavel', 'rma.atribuivel', 'rma.diagnosticar', 'rma.impedimentos',
     'cadastros.ver', 'cadastros.editar', 'cadastros.importar', 'pecas.ver', 'pecas.movimentar', 'pecas.usar', 'protocolos.ver',
     'protocolos.executar', 'protocolos.catalogo', 'relatorios.ver', 'usuarios.gerir', 'perfis.gerir',
     'notificacoes.regras', 'auditoria.ver'
@@ -23,8 +23,8 @@ export const LEGACY_PROFILE_PERMISSIONS: Readonly<Record<LegacyProfileCode, read
   VIEWER: ['rma.ver', 'cadastros.ver', 'pecas.ver', 'protocolos.ver', 'relatorios.ver']
 };
 
-export function profilePermissions(code: LegacyProfileCode): readonly Permission[] {
-  return LEGACY_PROFILE_PERMISSIONS[code];
+export function profilePermissions(code: TestProfileCode): readonly Permission[] {
+  return TEST_PROFILE_PERMISSIONS[code];
 }
 
 /** Fixa as permissões vistas pelo `PermissionService`, sem depender do `AuthService` do teste. */

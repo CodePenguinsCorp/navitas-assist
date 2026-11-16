@@ -1,5 +1,6 @@
 package br.com.navitasassist.migration;
 
+import br.com.navitasassist.access.AccessTestSupport;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -75,7 +76,7 @@ class DuplicateCaseMessageIntegrationTest {
 
     @Test
     void usernameAndEmailDifferingOnlyByCaseAreRejected() {
-        Long profileId = profileRepository.findBySystemCode("VIEWER").orElseThrow().getId();
+        Long profileId = AccessTestSupport.profile(profileRepository, "VIEWER").getId();
         users.create(new UserAccountRequest("Case.User", "Usuário", "password123", profileId, Set.of(), true, "Case.User@Example.invalid"), "admin");
         assertThatThrownBy(() -> users.create(new UserAccountRequest("case.user", "Outro", "password123", profileId, Set.of(), true, null), "admin"))
             .isInstanceOf(BusinessException.class).hasMessage("Nome de usuário já cadastrado: case.user");
@@ -89,7 +90,7 @@ class DuplicateCaseMessageIntegrationTest {
      */
     @Test
     void emailIndexNameReachesHibernateConstraintViolation() {
-        AccessProfile viewer = profileRepository.findBySystemCode("VIEWER").orElseThrow();
+        AccessProfile viewer = AccessTestSupport.profile(profileRepository, "VIEWER");
         userRepository.saveAndFlush(account("race.one", "Race@Example.invalid", viewer));
 
         assertThatThrownBy(() -> userRepository.saveAndFlush(account("race.two", "race@example.invalid", viewer)))

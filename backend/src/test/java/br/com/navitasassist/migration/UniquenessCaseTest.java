@@ -34,23 +34,19 @@ class UniquenessCaseTest {
     }
 
     @Test
-    void profileNameAndSystemCodeIgnoreCase() throws SQLException {
-        String insert = "INSERT INTO access_profiles (name, system_code, created_at, updated_at) VALUES ('%s', %s, now(), now())";
-        execute(insert.formatted("Supervisão", "'SUPERVISOR'"));
-        assertViolates("uk_access_profiles_name", insert.formatted("SUPERVISÃO", "NULL"));
-        assertViolates("uk_access_profiles_system_code", insert.formatted("Outro supervisor", "'supervisor'"));
+    void profileNameIgnoresCase() throws SQLException {
+        String insert = "INSERT INTO access_profiles (name, created_at, updated_at) VALUES ('%s', now(), now())";
+        execute(insert.formatted("Supervisão"));
+        assertViolates("uk_access_profiles_name", insert.formatted("SUPERVISÃO"));
         // Só a caixa é ignorada: o acento distingue os nomes.
-        execute(insert.formatted("Supervisao", "NULL"));
-        // Vários perfis sem código legado.
-        execute(insert.formatted("Sem codigo 1", "NULL"));
-        execute(insert.formatted("Sem codigo 2", "NULL"));
+        execute(insert.formatted("Supervisao"));
     }
 
     @Test
     void usernameAndEmailIgnoreCase() throws SQLException {
         String insert = """
             INSERT INTO user_accounts (username, full_name, password_hash, active, email, created_at, updated_at, profile_id)
-            VALUES ('%s', 'Usuário', 'hash', TRUE, %s, now(), now(), (SELECT id FROM access_profiles WHERE system_code = 'VIEWER'))
+            VALUES ('%s', 'Usuário', 'hash', TRUE, %s, now(), now(), (SELECT id FROM access_profiles WHERE name = 'Administrador'))
             """;
         execute(insert.formatted("Maria.Silva", "'Maria@Example.invalid'"));
         assertViolates("uk_user_accounts_username", insert.formatted("maria.silva", "NULL"));
@@ -85,7 +81,7 @@ class UniquenessCaseTest {
     void kanbanViewNameIgnoresCasePerOwner() throws SQLException {
         String user = """
             INSERT INTO user_accounts (username, full_name, password_hash, active, created_at, updated_at, profile_id)
-            VALUES ('%s', 'Dono', 'hash', TRUE, now(), now(), (SELECT id FROM access_profiles WHERE system_code = 'TECHNICIAN'))
+            VALUES ('%s', 'Dono', 'hash', TRUE, now(), now(), (SELECT id FROM access_profiles WHERE name = 'Administrador'))
             """;
         execute(user.formatted("dono.a"));
         execute(user.formatted("dono.b"));

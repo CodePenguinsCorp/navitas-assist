@@ -97,8 +97,8 @@ class ProfileControllerIntegrationTest {
         AccessTestSupport.deleteAccounts(users, MEMBER, MANAGER, ADMIN_A, ADMIN_B);
         profiles.findAll().stream().filter(profile -> profile.getName().toLowerCase().startsWith(PREFIX.toLowerCase())).forEach(profiles::delete);
         profiles.flush();
-        AccessProfile adminProfile = profiles.findBySystemCode("ADMIN").orElseThrow();
-        adminProfile.setPermissions(new HashSet<>(SystemProfiles.PERMISSIONS.get("ADMIN")));
+        AccessProfile adminProfile = AccessTestSupport.profile(profiles, "ADMIN");
+        adminProfile.setPermissions(new HashSet<>(TestProfiles.PERMISSIONS.get("ADMIN")));
         profiles.saveAndFlush(adminProfile);
         UserAccount seed = UserAccountTestSupport.ensureAdmin(users, profiles, passwordEncoder);
         AccessTestSupport.assignProfile(profiles, seed, "ADMIN");
@@ -134,17 +134,14 @@ class ProfileControllerIntegrationTest {
     void optionsSortedByNameWithPermissions() throws Exception {
         JsonNode options = json(mvc.perform(get("/api/profiles/options").with(asProfile("admin", "ADMIN")))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8));
-        List<String> systemProfiles = new ArrayList<>();
-        for (JsonNode option : options) {
-            String name = option.get("name").asText();
-            if (List.of("Administrador", "Atendimento", "Consulta", "Técnico").contains(name)) systemProfiles.add(name);
-            if (name.equals("Consulta")) {
-                assertEquals(List.of("rma.ver", "cadastros.ver", "pecas.ver", "protocolos.ver", "relatorios.ver"),
-                    mapper.convertValue(option.get("permissions"), List.class));
-                assertNotNull(option.get("id"));
-            }
-        }
-        assertEquals(List.of("Administrador", "Atendimento", "Consulta", "Técnico"), systemProfiles);
+        AccessProfile initial = AccessTestSupport.profile(profiles, "ADMIN");
+        JsonNode option = java.util.stream.StreamSupport.stream(options.spliterator(), false)
+            .filter(row -> row.get("id").asLong() == initial.getId()).findFirst().orElseThrow();
+        assertEquals("Administrador", option.get("name").asText());
+        assertEquals(Permission.values().length, option.get("permissions").size());
+        List<String> names = new ArrayList<>();
+        options.forEach(row -> names.add(row.get("name").asText()));
+        assertEquals(names.stream().sorted().toList(), names);
         // Quem cadastra usuários ou regras de notificação também lê as opções de perfil.
         mvc.perform(get("/api/profiles/options").with(user("rules").authorities(authorities("notificacoes.regras")))).andExpect(status().isOk());
         mvc.perform(get("/api/profiles/options").with(user("users").authorities(authorities("usuarios.gerir")))).andExpect(status().isOk());
@@ -195,6 +192,8 @@ class ProfileControllerIntegrationTest {
 
     @Test
     void rejectsDuplicateNameIgnoringCase() throws Exception {
+        AccessTestSupport.profile(profiles, "VIEWER");
+        AccessTestSupport.profile(profiles, "TECHNICIAN");
         mvc.perform(post("/api/profiles").with(asProfile("admin", "ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content(body("  consulta ", "rma.ver")))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Já existe um perfil com o nome consulta."));
@@ -246,14 +245,14 @@ class ProfileControllerIntegrationTest {
 
     @Test
     void rejectsRemovingAdminPermissionFromLastAdministratorsProfile() throws Exception {
-        AccessProfile adminProfile = profiles.findBySystemCode("ADMIN").orElseThrow();
+        AccessProfile adminProfile = AccessTestSupport.profile(profiles, "ADMIN");
         Set<String> reduced = new HashSet<>(adminProfile.getPermissions());
         reduced.remove("perfis.gerir");
 
         mvc.perform(put("/api/profiles/{id}", adminProfile.getId()).with(asProfile("admin", "ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content(body("Administrador", reduced.toArray(String[]::new))))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(ADMIN_MESSAGE));
-        assertEquals(SystemProfiles.PERMISSIONS.get("ADMIN"), profiles.findBySystemCode("ADMIN").orElseThrow().getPermissions());
+        assertEquals(TestProfiles.PERMISSIONS.get("ADMIN"), AccessTestSupport.profile(profiles, "ADMIN").getPermissions());
         // A permissão do administrador segue a mesma na requisição seguinte.
         mvc.perform(get("/api/profiles").with(user(userDetailsService.loadUserByUsername("admin")))).andExpect(status().isOk());
     }
@@ -281,7 +280,7 @@ class ProfileControllerIntegrationTest {
         mvc.perform(post("/api/profiles").with(as(MANAGER)).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content(body(PREFIX + "Subconjunto", "rma.ver", "perfis.gerir")))
             .andExpect(status().isCreated());
-        // O administrador pode conceder qualquer permissão, inclusive as que nenhum perfil dele tem (rma.atribuivel).
+        // O administrador pode conceder qualquer permissão do catálogo.
         mvc.perform(post("/api/profiles").with(asProfile("admin", "ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content(body(PREFIX + "Atribuível", "rma.atribuivel")))
             .andExpect(status().isCreated());
@@ -327,17 +326,29 @@ class ProfileControllerIntegrationTest {
         assertTrue(profiles.existsById(used.getId()));
     }
 
-    /** Perfis com system_code (os 4 prontos da migração-base) não podem ser excluídos. */
     @Test
-    void deleteBlockedForMigratedProfile() throws Exception {
-        AccessProfile migrated = AccessTestSupport.saveProfile(profiles, PREFIX + "Migrado", "rma.ver");
-        migrated.setSystemCode("TESTE_LEGADO");
-        profiles.saveAndFlush(migrated);
-
-        mvc.perform(delete("/api/profiles/{id}", migrated.getId()).with(asProfile("admin", "ADMIN")).with(csrf()))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Perfil migrado não pode ser excluído."));
-        assertTrue(profiles.existsById(migrated.getId()));
+    @org.springframework.transaction.annotation.Transactional
+    void deletesUnusedInitialProfileAfterRename() throws Exception {
+        AccessProfile initial = AccessTestSupport.profile(profiles, "ADMIN");
+        String originalName = initial.getName();
+        // A conta administrativa passa para outro perfil com as mesmas permissões.
+        AccessProfile replacement = AccessTestSupport.saveProfile(profiles, PREFIX + "Substituto",
+            TestProfiles.authorities("ADMIN"));
+        admin.setProfile(replacement);
+        users.saveAndFlush(admin);
+        initial.setName(PREFIX + "Inicial renomeado");
+        profiles.saveAndFlush(initial);
+        try {
+            mvc.perform(delete("/api/profiles/{id}", initial.getId()).with(asProfile("admin", "ADMIN")).with(csrf()))
+                .andExpect(status().isNoContent());
+            assertFalse(profiles.existsById(initial.getId()));
+        } finally {
+            AccessProfile restored = AccessTestSupport.profile(profiles, "ADMIN");
+            restored.setName(originalName);
+            profiles.saveAndFlush(restored);
+            admin.setProfile(restored);
+            users.saveAndFlush(admin);
+        }
     }
 
     @Test
@@ -358,7 +369,7 @@ class ProfileControllerIntegrationTest {
         AccessTestSupport.saveAccountWithProfile(users, passwordEncoder, ADMIN_A, profileA, Set.of());
         Map<String, Object> demoteSeed = new LinkedHashMap<>(Map.of(
             "username", admin.getUsername(), "fullName", admin.getFullName(),
-            "profileId", profiles.findBySystemCode("VIEWER").orElseThrow().getId(), "active", true));
+            "profileId", AccessTestSupport.profile(profiles, "VIEWER").getId(), "active", true));
         RequestPostProcessor actorA = as(ADMIN_A);
 
         List<Integer> statuses = runTogether(

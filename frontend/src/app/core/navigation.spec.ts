@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { LegacyProfileCode, profilePermissions, providePermissions } from '../testing/permission-fixtures';
+import { TestProfileCode, profilePermissions, providePermissions } from '../testing/permission-fixtures';
 import { NAV_GROUPS } from './mock-data';
 import { firstAllowedRoute } from './navigation';
 import { Permission } from './permissions';
@@ -14,7 +14,7 @@ describe('firstAllowedRoute', () => {
   it('permite acessar cadastros somente com importacao sem edicao', () => {
     expect(routeFor(['cadastros.importar' as Permission])).toBe('/clientes');
   });
-  it.each(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as LegacyProfileCode[])(
+  it.each(['ADMIN', 'SERVICE_DESK', 'TECHNICIAN', 'VIEWER'] as TestProfileCode[])(
     'sends the %s profile to the dashboard',
     (code) => {
       expect(routeFor(profilePermissions(code))).toBe('/dashboard');

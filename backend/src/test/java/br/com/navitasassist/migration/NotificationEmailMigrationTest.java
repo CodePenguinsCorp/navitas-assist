@@ -12,7 +12,7 @@ class NotificationEmailMigrationTest {
         PostgresTestDatabase.Coordinates database = PostgresTestDatabase.migrated("email_migration");
         PostgresTestDatabase.flyway(database).validate();
         try (Connection c = database.connect(); Statement s = c.createStatement()) {
-            s.executeUpdate("insert into user_accounts(username, full_name, password_hash, profile_id, active, created_at, updated_at) select 'legacy','Legacy','hash',id,true,current_timestamp,current_timestamp from access_profiles where system_code='ADMIN'");
+            s.executeUpdate("insert into user_accounts(username, full_name, password_hash, profile_id, active, created_at, updated_at) select 'legacy','Legacy','hash',id,true,current_timestamp,current_timestamp from access_profiles where name = 'Administrador'");
             s.executeUpdate("insert into notification_events(event_key,event_type,status,recipient_count,occurred_at) values ('legacy','RMA_CREATED','PROCESSED',1,current_timestamp)");
             s.executeUpdate("insert into notifications(event_id,recipient_id,event_type,severity,title,message,created_at,email_status) select e.id,u.id,'RMA_CREATED','INFO','Legacy','Legacy',current_timestamp,'FAILED' from notification_events e cross join user_accounts u where e.event_key='legacy' and u.username='legacy'");
             try (ResultSet row = s.executeQuery("select u.email,n.app_visible,n.email_status,n.email_attempts,n.email_next_attempt_at,n.email_generation from notifications n join user_accounts u on u.id=n.recipient_id where u.username='legacy'")) {

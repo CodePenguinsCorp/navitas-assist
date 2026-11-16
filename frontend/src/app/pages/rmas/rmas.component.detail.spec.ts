@@ -20,7 +20,7 @@ import { ClockService } from '../../core/services/clock.service';
 import { RmaPartsPanelComponent } from '../../shared/rma-parts-panel/rma-parts-panel.component';
 import { buildRma, buildRmaItem, buildRmaPage } from '../../testing/rma-fixtures';
 import { RmasComponent } from './rmas.component';
-import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { TestProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { settleRmaLazyChunks } from '../../testing/lazy-chunks';
 import { toastMessages } from '../../testing/toast';
 
@@ -64,7 +64,7 @@ const fullRma = buildRma({
   ]
 });
 
-async function setup(options: { role?: LegacyProfileCode } = {}) {
+async function setup(options: { role?: TestProfileCode } = {}) {
   const role = options.role ?? 'ADMIN';
   const rmaService = {
     list: vi.fn(() => of(buildRmaPage([fullRma], 0, 20, 1))),

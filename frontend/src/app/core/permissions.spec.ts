@@ -1,4 +1,4 @@
-import { LEGACY_PROFILE_PERMISSIONS } from '../testing/permission-fixtures';
+import { TEST_PROFILE_PERMISSIONS } from '../testing/permission-fixtures';
 import { PERMISSION_CATALOG } from '../testing/profile-fixtures';
 import { PERMISSIONS, isPermission } from './permissions';
 
@@ -12,7 +12,7 @@ const SPEC_CATALOG = [
 
 const BACKEND_CATALOG = '../backend/src/main/java/br/com/navitasassist/access/Permission.java';
 const BACKEND_MODULES = '../backend/src/main/java/br/com/navitasassist/access/PermissionModule.java';
-const LEGACY_MIGRATION = '../backend/src/main/resources/db/migration/V1__baseline.sql';
+const BASELINE_MIGRATION = '../backend/src/main/resources/db/migration/V1__baseline.sql';
 
 // O teste roda no Node a partir de frontend/; ler os arquivos do backend evita que os catálogos divirjam em silêncio.
 async function readBackendFile(path: string): Promise<string> {
@@ -39,27 +39,26 @@ describe('permission catalog', () => {
     expect(constants.map((constant) => codes[constant])).toEqual([...PERMISSIONS]);
   });
 
-  it('keeps the legacy profile fixtures inside the catalog with the spec totals', () => {
+  it('keeps the test profile fixtures inside the catalog with the spec totals', () => {
     const totals = Object.fromEntries(
-      Object.entries(LEGACY_PROFILE_PERMISSIONS).map(([code, permissions]) => [code, permissions.length]),
+      Object.entries(TEST_PROFILE_PERMISSIONS).map(([code, permissions]) => [code, permissions.length]),
     );
-    expect(totals).toEqual({ ADMIN: 21, SERVICE_DESK: 11, TECHNICIAN: 11, VIEWER: 5 });
-    for (const permissions of Object.values(LEGACY_PROFILE_PERMISSIONS)) {
+    expect(totals).toEqual({ ADMIN: 22, SERVICE_DESK: 11, TECHNICIAN: 11, VIEWER: 5 });
+    for (const permissions of Object.values(TEST_PROFILE_PERMISSIONS)) {
       expect(permissions).toEqual(PERMISSIONS.filter((permission) => permissions.includes(permission)));
     }
-    expect(PERMISSIONS.filter((permission) => !LEGACY_PROFILE_PERMISSIONS.ADMIN.includes(permission))).toEqual(['rma.atribuivel']);
+    expect(PERMISSIONS.filter((permission) => !TEST_PROFILE_PERMISSIONS.ADMIN.includes(permission))).toEqual([]);
   });
 
-  it('keeps the legacy profile fixtures equal to the baseline migration', async () => {
-    const migration = await readBackendFile(LEGACY_MIGRATION);
-    const grants = [...migration.matchAll(/SELECT id, '([a-z.]+)' FROM access_profiles WHERE system_code IN \(([^)]*)\)/g)]
-      .map((match) => ({ permission: match[1], profiles: [...match[2].matchAll(/'([A-Z_]+)'/g)].map((profile) => profile[1]) }));
-    expect(grants).toHaveLength(PERMISSIONS.length);
-    const fromMigration = Object.fromEntries(Object.keys(LEGACY_PROFILE_PERMISSIONS).map((code) => [
-      code, PERMISSIONS.filter((permission) => grants.some((grant) => grant.permission === permission && grant.profiles.includes(code)))
-    ]));
-
-    expect(fromMigration).toEqual(LEGACY_PROFILE_PERMISSIONS);
+  it('semeia somente Administrador com todo o catálogo', async () => {
+    const migration = await readBackendFile(BASELINE_MIGRATION);
+    const grants = [...migration.matchAll(/SELECT id, '([a-z.]+)' FROM access_profiles WHERE name = 'Administrador'/g)]
+      .map((match) => match[1]);
+    expect(grants).toEqual([...PERMISSIONS]);
+    expect(migration).not.toContain('system_code');
+    expect(migration).not.toContain("('Atendimento',");
+    expect(migration).not.toContain("('Técnico',");
+    expect(migration).not.toContain("('Consulta',");
   });
 
   it('keeps the catalog fixture labels equal to the backend enums', async () => {

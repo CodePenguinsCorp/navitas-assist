@@ -94,7 +94,7 @@ class PasswordBoundaryIntegrationTest {
         UserAccount persisted = accounts.findById(original.getId()).orElseThrow();
         assertThat(persisted.getPasswordHash()).isEqualTo(original.getPasswordHash());
         assertThat(persisted.getFullName()).isEqualTo("Original user");
-        assertThat(persisted.getProfile().getSystemCode()).isEqualTo("VIEWER");
+        assertThat(persisted.getProfile().getName()).isEqualTo("Consulta");
         assertThat(persisted.isActive()).isTrue();
         login("original-password", 200);
     }
@@ -188,7 +188,7 @@ class PasswordBoundaryIntegrationTest {
 
     private String userJson(String password, boolean active) throws Exception {
         Map<String, Object> body = new LinkedHashMap<>(Map.of("username", username, "fullName", "Changed user",
-            "profileId", accessProfiles.findBySystemCode("ADMIN").orElseThrow().getId(), "active", active));
+            "profileId", AccessTestSupport.profile(accessProfiles, "ADMIN").getId(), "active", active));
         if (password != null) {
             body.put("password", password);
         }

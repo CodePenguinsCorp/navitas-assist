@@ -5,7 +5,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { NotificationPreferenceResponse } from '../../core/models';
-import { LegacyProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
+import { TestProfileCode, profilePermissions, providePermissions } from '../../testing/permission-fixtures';
 import { NotificationService } from '../../core/services/notification.service';
 import { ProfileService } from '../../core/services/profile.service';
 import { NotificationsComponent } from './notifications.component';
@@ -41,7 +41,7 @@ describe('NotificationsComponent preferences', () => {
   };
   const openPreferences = () => { component.selectTab('preferences'); render(); };
 
-  async function setup(sources: { role?: LegacyProfileCode; preferences?: Observable<NotificationPreferenceResponse[]>[]; update?: Observable<NotificationPreferenceResponse> } = {}) {
+  async function setup(sources: { role?: TestProfileCode; preferences?: Observable<NotificationPreferenceResponse[]>[]; update?: Observable<NotificationPreferenceResponse> } = {}) {
     const listPreferences = vi.fn(() => of(PREFERENCES));
     for (const source of sources.preferences ?? []) listPreferences.mockImplementationOnce(() => source);
     service = {

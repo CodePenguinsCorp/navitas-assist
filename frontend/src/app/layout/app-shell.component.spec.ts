@@ -5,7 +5,7 @@ import { Router, provideRouter } from '@angular/router';
 import { AuthUserResponse } from '../core/models';
 import { AuthService } from '../core/services/auth.service';
 import { NotificationService } from '../core/services/notification.service';
-import { LegacyProfileCode, profilePermissions } from '../testing/permission-fixtures';
+import { TestProfileCode, profilePermissions } from '../testing/permission-fixtures';
 import { AppShellComponent } from './app-shell.component';
 
 const AUTH_USER: AuthUserResponse = {
@@ -200,7 +200,7 @@ describe('AppShellComponent menu by permission', () => {
     ['SERVICE_DESK', { 'Operação': operation, Cadastros: ['Clientes', 'Produtos'] }],
     ['TECHNICIAN', { 'Operação': operation, 'Relatórios': ['Relatórios'] }],
     ['VIEWER', { 'Operação': operation, 'Relatórios': ['Relatórios'] }],
-  ] as [LegacyProfileCode, Record<string, string[]>][])('shows the %s menu', async (code, expected) => {
+  ] as [TestProfileCode, Record<string, string[]>][])('shows the %s menu', async (code, expected) => {
     const page = await render({ permissions: [...profilePermissions(code)] });
 
     expect(menu(page)).toEqual(expected);
