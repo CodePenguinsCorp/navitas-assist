@@ -96,24 +96,6 @@ public class RmaRecord extends AuditableEntity {
     @JoinColumn(name = "assignee_id")
     private UserAccount assignee;
 
-    @Column(length = 600)
-    private String repairSummary;
-
-    @Column(length = 600)
-    private String replacedPartsSummary;
-
-    @Column(length = 800)
-    private String testSummary;
-
-    @Column
-    private LocalDate shippedAt;
-
-    @Column(length = 120)
-    private String carrier;
-
-    @Column(length = 120)
-    private String trackingCode;
-
     @OneToOne(mappedBy = "rma", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Diagnosis diagnosis;
 

@@ -45,7 +45,7 @@ public class RmaReportCsvService {
                     usage.getQuantity(), usage.getPart().getUnit(), usage.getReplacementReason(), usage.getComponentBatch()),
                 Collectors.joining("\n"))));
         CsvWriter csv = new CsvWriter().row("Código", "Entrada", "Status", "Cliente", "Produto", "SKU", "Lote", "Série", "Garantia",
-            "Ajuste manual de garantia", "Falha relatada", "Falha encontrada", "Tipo de falha", "Causa provável", "Responsável", "Expedição", "Peças usadas");
+            "Ajuste manual de garantia", "Falha relatada", "Falha encontrada", "Tipo de falha", "Causa provável", "Responsável", "Peças usadas");
         for (ReportItem item : RmaReportService.items(records)) {
             RmaRecord rma = item.rma();
             var diagnosis = rma.getDiagnosis();
@@ -57,7 +57,7 @@ public class RmaReportCsvService {
                 diagnosis == null ? null : diagnosis.getFailureType(),
                 diagnosis == null ? null : diagnosis.getProbableCause(),
                 rma.getAssignee() == null ? null : rma.getAssignee().getFullName(),
-                date(rma.getShippedAt()), usedParts.get(rma.getId()));
+                usedParts.get(rma.getId()));
         }
         return new CsvFile("rmas-" + period.from() + "-a-" + period.to() + ".csv", csv.toBytes());
     }

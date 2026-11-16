@@ -144,13 +144,7 @@ public class RmaService {
             request.invoiceNumber(),
             request.reportedFailure(),
             request.receivedAccessories(),
-            request.physicalCondition(),
-            request.repairSummary(),
-            request.replacedPartsSummary(),
-            request.testSummary(),
-            null,
-            null,
-            null
+            request.physicalCondition()
         );
         rma.setDueDate(request.dueDate());
         validateMandatoryFields(rma);
@@ -191,13 +185,7 @@ public class RmaService {
             request.invoiceNumber(),
             request.reportedFailure(),
             request.receivedAccessories(),
-            request.physicalCondition(),
-            request.repairSummary(),
-            request.replacedPartsSummary(),
-            request.testSummary(),
-            request.shippedAt(),
-            request.carrier(),
-            request.trackingCode()
+            request.physicalCondition()
         );
 
         LocalDate previousDueDate = rma.getDueDate();
@@ -424,13 +412,7 @@ public class RmaService {
         String invoiceNumber,
         String reportedFailure,
         String receivedAccessories,
-        String physicalCondition,
-        String repairSummary,
-        String replacedPartsSummary,
-        String testSummary,
-        LocalDate shippedAt,
-        String carrier,
-        String trackingCode
+        String physicalCondition
     ) {
         if (purchaseDate != null) {
             rma.setPurchaseDate(purchaseDate);
@@ -455,24 +437,6 @@ public class RmaService {
         }
         if (physicalCondition != null) {
             rma.setPhysicalCondition(trimToNull(physicalCondition));
-        }
-        if (repairSummary != null) {
-            rma.setRepairSummary(trimToNull(repairSummary));
-        }
-        if (replacedPartsSummary != null) {
-            rma.setReplacedPartsSummary(trimToNull(replacedPartsSummary));
-        }
-        if (testSummary != null) {
-            rma.setTestSummary(trimToNull(testSummary));
-        }
-        if (shippedAt != null) {
-            rma.setShippedAt(shippedAt);
-        }
-        if (carrier != null) {
-            rma.setCarrier(trimToNull(carrier));
-        }
-        if (trackingCode != null) {
-            rma.setTrackingCode(trimToNull(trackingCode));
         }
     }
 

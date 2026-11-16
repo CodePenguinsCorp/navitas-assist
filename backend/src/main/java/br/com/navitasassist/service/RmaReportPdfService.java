@@ -123,21 +123,9 @@ public class RmaReportPdfService {
                 "Notas", diagnosis.notes()));
         }
 
-        PdfPTable actions = fields("Reparo", rma.repairSummary(), "Testes", rma.testSummary());
-        if (actions != null) {
-            section(document, "Ações executadas");
-            document.add(actions);
-        }
-
         section(document, "Peças trocadas");
-        boolean hasSummary = rma.replacedPartsSummary() != null && !rma.replacedPartsSummary().isBlank();
-        if (hasSummary) {
-            document.add(text(rma.replacedPartsSummary()));
-        }
         if (report.replacedComponents().isEmpty()) {
-            if (!hasSummary) {
-                document.add(text("Sem peças trocadas"));
-            }
+            document.add(text("Sem peças trocadas"));
         } else {
             PdfPTable parts = table(new float[] {2f, 4f, 1.6f, 2f, 4.4f}, "Código", "Descrição", "Quantidade", "Lote", "Motivo");
             report.replacedComponents().forEach(part -> cells(parts, part.code(),
