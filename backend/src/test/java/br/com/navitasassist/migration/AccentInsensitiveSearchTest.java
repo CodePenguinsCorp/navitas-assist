@@ -59,9 +59,14 @@ class AccentInsensitiveSearchTest {
             VALUES ('joao.acento', 'João Acentuação', 'hash', TRUE, now(), now(), (SELECT id FROM access_profiles WHERE name = 'Administrador'))
             """);
         jdbc.update("""
-            INSERT INTO rmas (code, client_id, product_id, purchase_date_unknown, entry_date, received_by, reported_failure, priority, status, created_at, updated_at)
-            VALUES ('ACC-RMA-1', (SELECT id FROM clients WHERE trade_name = 'Ômega'), (SELECT id FROM products WHERE sku = 'ACC-CAM-1'),
+            INSERT INTO rmas (code, client_id, purchase_date_unknown, entry_date, received_by, reported_failure, priority, status, created_at, updated_at)
+            VALUES ('ACC-RMA-1', (SELECT id FROM clients WHERE trade_name = 'Ômega'),
                     TRUE, CURRENT_DATE, 'desk', 'Falha', 'MEDIUM', 'RECEIVED', now(), now())
+            """);
+        jdbc.update("""
+            INSERT INTO rma_items (rma_id, product_id, serial_number, warranty_months)
+            SELECT r.id, p.id, 'ACC-SERIAL', 12 FROM rmas r CROSS JOIN products p
+            WHERE r.code = 'ACC-RMA-1' AND p.sku = 'ACC-CAM-1'
             """);
     }
 

@@ -70,8 +70,8 @@ class UniquenessCaseTest {
         execute("INSERT INTO clients (legal_name, created_at, updated_at) VALUES ('Cliente unicidade', now(), now())");
         execute("INSERT INTO products (sku, name, default_warranty_months, created_at, updated_at) VALUES ('UNIQ-RMA', 'Produto', 12, now(), now())");
         String insert = """
-            INSERT INTO rmas (code, client_id, product_id, purchase_date_unknown, entry_date, received_by, reported_failure, priority, status, created_at, updated_at)
-            VALUES ('%s', (SELECT max(id) FROM clients), (SELECT id FROM products WHERE sku = 'UNIQ-RMA'), TRUE, CURRENT_DATE, 'desk', 'Falha', 'LOW', 'RECEIVED', now(), now())
+            INSERT INTO rmas (code, client_id, purchase_date_unknown, entry_date, received_by, reported_failure, priority, status, created_at, updated_at)
+            VALUES ('%s', (SELECT max(id) FROM clients), TRUE, CURRENT_DATE, 'desk', 'Falha', 'LOW', 'RECEIVED', now(), now())
             """;
         execute(insert.formatted("RMA-2026-0001"));
         assertViolates("uk_rmas_code", insert.formatted("rma-2026-0001"));

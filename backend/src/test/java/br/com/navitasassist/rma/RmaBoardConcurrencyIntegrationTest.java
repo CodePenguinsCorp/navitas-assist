@@ -24,7 +24,11 @@ class RmaBoardConcurrencyIntegrationTest {
         var ids = new ArrayList<Long>();
         var pool = Executors.newFixedThreadPool(2);
         try {
-            for (int i = 0; i < 2; i++) ids.add(jdbc.queryForObject("insert into rmas (code, client_id, product_id, purchase_date_unknown, entry_date, received_by, reported_failure, priority, status, created_at, updated_at) values (?, ?, ?, true, current_date, 'teste', 'Falha', 'LOW', 'RECEIVED', now(), now()) returning id", Long.class, key + i, client, product));
+            for (int i = 0; i < 2; i++) {
+                long id = jdbc.queryForObject("insert into rmas (code, client_id, purchase_date_unknown, entry_date, received_by, reported_failure, priority, status, created_at, updated_at) values (?, ?, true, current_date, 'teste', 'Falha', 'LOW', 'RECEIVED', now(), now()) returning id", Long.class, key + i, client);
+                ids.add(id);
+                jdbc.update("insert into rma_items (rma_id, product_id, serial_number, warranty_months) values (?, ?, ?, 12)", id, product, key + i);
+            }
             var start = new CountDownLatch(1);
             var futures = ids.stream().map(id -> pool.submit(() -> {
                 start.await();
@@ -35,7 +39,10 @@ class RmaBoardConcurrencyIntegrationTest {
             assertEquals(2, jdbc.queryForObject("select count(distinct board_position) from rmas where id in (?, ?)", Integer.class, ids.get(0), ids.get(1)));
         } finally {
             pool.shutdownNow();
-            for (long id : ids) jdbc.update("delete from rmas where id = ?", id);
+            for (long id : ids) {
+                jdbc.update("delete from rma_items where rma_id = ?", id);
+                jdbc.update("delete from rmas where id = ?", id);
+            }
             jdbc.update("delete from products where id = ?", product);
             jdbc.update("delete from clients where id = ?", client);
         }

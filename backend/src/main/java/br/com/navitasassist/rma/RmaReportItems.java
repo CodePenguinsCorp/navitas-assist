@@ -2,7 +2,7 @@ package br.com.navitasassist.rma;
 
 import java.util.List;
 
-/** Items as the API shows them (legacy RMAs without rma_items expose their single product), with effective warranty. */
+/** Itens da OS com a garantia efetiva apresentada pela API. */
 public final class RmaReportItems {
     private RmaReportItems() {
     }

@@ -20,8 +20,8 @@ class WarrantyMigrationTest {
             sql.executeUpdate("INSERT INTO clients (id, legal_name, created_at, updated_at) VALUES (900, 'Cliente', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
             sql.executeUpdate("INSERT INTO products (id, sku, name, default_warranty_months, created_at, updated_at) VALUES (900, 'GARANTIA', 'Produto', 12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
             sql.executeUpdate("""
-                INSERT INTO rmas (id, code, client_id, product_id, purchase_date_unknown, entry_date, received_by, reported_failure, priority, status, created_at, updated_at)
-                VALUES (900, 'GARANTIA', 900, 900, TRUE, CURRENT_DATE, 'desk', 'Falha', 'MEDIUM', 'RECEIVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                INSERT INTO rmas (id, code, client_id, purchase_date_unknown, entry_date, received_by, reported_failure, priority, status, created_at, updated_at)
+                VALUES (900, 'GARANTIA', 900, TRUE, CURRENT_DATE, 'desk', 'Falha', 'MEDIUM', 'RECEIVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """);
             sql.executeUpdate("INSERT INTO rma_items (id, rma_id, product_id, warranty_months) VALUES (900, 900, 900, 12)");
             try (var rows = sql.executeQuery("SELECT warranty_override, warranty_override_reason, warranty_override_by, warranty_override_at, warranty_months, item_position FROM rma_items WHERE id = 900")) {

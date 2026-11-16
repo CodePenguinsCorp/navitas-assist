@@ -19,7 +19,7 @@ class ServiceOrderCodeMigrationTest {
             }
             sql.executeUpdate("INSERT INTO clients (id, legal_name, created_at, updated_at) VALUES (900, 'Cliente', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
             sql.executeUpdate("INSERT INTO products (id, sku, name, default_warranty_months, created_at, updated_at) VALUES (900, 'OS', 'Produto', 12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
-            String insert = "INSERT INTO rmas (id, code, client_id, product_id, purchase_date_unknown, entry_date, received_by, reported_failure, priority, status, created_at, updated_at) VALUES (%d, '%s', 900, 900, TRUE, CURRENT_DATE, 'desk', 'Falha', 'MEDIUM', 'RECEIVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
+            String insert = "INSERT INTO rmas (id, code, client_id, purchase_date_unknown, entry_date, received_by, reported_failure, priority, status, created_at, updated_at) VALUES (%d, '%s', 900, TRUE, CURRENT_DATE, 'desk', 'Falha', 'MEDIUM', 'RECEIVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
             sql.executeUpdate(insert.formatted(900, "OS-2026-000042"));
             SQLException duplicate = assertThrows(SQLException.class, () -> sql.executeUpdate(insert.formatted(901, "os-2026-000042")));
             assertEquals("23505", duplicate.getSQLState());

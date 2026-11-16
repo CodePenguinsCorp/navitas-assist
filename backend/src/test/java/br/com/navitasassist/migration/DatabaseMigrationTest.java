@@ -28,6 +28,10 @@ class DatabaseMigrationTest {
         assertEquals(1, executedMigrations);
         try (var connection = database.connect()) {
             assertTrue(columnExists(connection, "rmas", "board_position"));
+            for (String column : Set.of("product_id", "batch_number", "serial_number", "manufactured_at")) {
+                assertFalse(columnExists(connection, "rmas", column));
+            }
+            assertFalse(applicationIndexes(connection, "rmas").contains("idx_rmas_product_id"));
         }
         try (Connection connection = database.connect()) {
             assertTrue(tableExists(connection, "rmas"));
@@ -98,7 +102,7 @@ class DatabaseMigrationTest {
 
             long clientId = insertClient(connection);
             long productId = insertProduct(connection);
-            long rmaId = insertRma(connection, clientId, productId);
+            long rmaId = insertRma(connection, clientId);
             insertItem(connection, rmaId, productId, "SERIAL-A");
             insertItem(connection, rmaId, productId, "SERIAL-B");
 
@@ -189,18 +193,17 @@ class DatabaseMigrationTest {
         }
     }
 
-    private long insertRma(Connection connection, long clientId, long productId) throws SQLException {
+    private long insertRma(Connection connection, long clientId) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
             INSERT INTO rmas (
-                code, client_id, product_id, purchase_date_unknown, entry_date, received_by,
+                code, client_id, purchase_date_unknown, entry_date, received_by,
                 reported_failure, priority, status, created_at, updated_at
             ) VALUES (
-                'OS-25', ?, ?, TRUE, DATE '2026-10-19', 'Técnico', 'Falha',
+                'OS-25', ?, TRUE, DATE '2026-10-19', 'Técnico', 'Falha',
                 'HIGH', 'RECEIVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             )
             """, Statement.RETURN_GENERATED_KEYS)) {
             statement.setLong(1, clientId);
-            statement.setLong(2, productId);
             statement.executeUpdate();
             return generatedId(statement);
         }
