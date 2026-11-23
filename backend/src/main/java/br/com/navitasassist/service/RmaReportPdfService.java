@@ -253,7 +253,11 @@ public class RmaReportPdfService {
             cell.setPaddingBottom(6);
             table.addCell(cell);
         }
-        table.completeRow();
+        if (present.size() % 2 == 1) {
+            PdfPCell filler = new PdfPCell(new Phrase(""));
+            filler.setBorder(Rectangle.NO_BORDER);
+            table.addCell(filler);
+        }
         return table;
     }
 
