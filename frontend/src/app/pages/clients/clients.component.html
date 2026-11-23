@@ -104,7 +104,7 @@
                 </td>
                 <td>
                   @if (client.documentNumber?.trim()) {
-                    {{ client.documentNumber }}
+                    {{ formatDocument(client.documentNumber) }}
                   } @else {
                     <span aria-hidden="true">—</span><span class="sr-only">CPF/CNPJ não informado</span>
                   }
@@ -306,7 +306,7 @@
           <div>
             <strong>{{ client.legalName }}</strong>
             @if (client.documentNumber) {
-              <span class="code-text">{{ client.documentNumber }}</span>
+              <span class="code-text">{{ formatDocument(client.documentNumber) }}</span>
             }
           </div>
         </div>

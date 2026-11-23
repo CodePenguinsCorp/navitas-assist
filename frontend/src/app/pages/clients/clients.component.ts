@@ -15,6 +15,7 @@ import {
   PresenceFilter,
   normalizeOptionalText
 } from '../../core/utils/catalog-ui';
+import { formatDocumentNumber } from '../../core/utils/document';
 import { PagedList } from '../../core/utils/paged-list';
 import { SEARCH_DEBOUNCE_MS, presenceToFlag } from '../../core/utils/pagination';
 import { CustomSelectComponent } from '../../shared/form-controls/custom-select/custom-select.component';
@@ -43,6 +44,7 @@ type ClientFormControlName =
 })
 export class ClientsComponent {
   private readonly permissions = inject(PermissionService);
+  protected readonly formatDocument = formatDocumentNumber;
   protected readonly createButtonElement = viewChild<ElementRef<HTMLButtonElement>>('createButton');
   protected readonly canImport = computed(() => this.permissions.hasPermission('cadastros.importar'));
   protected readonly canEdit = computed(() => this.permissions.hasPermission('cadastros.editar'));
