@@ -335,8 +335,8 @@ async function seedVolume({ users, volume, demoClients, demoProducts, demoParts,
       if (stageIdx >= 2) {
         await api(`${path}/diagnosis`, 'PUT', {
           foundFailure: `[DEMO] ${['Capacitor de saída estufado.', 'Trilha rompida próxima ao conector.', 'Firmware corrompido após queda de energia.', 'Sensor fora de calibração.', 'Fonte com ripple elevado.'][i % 5]}`,
-          failureType: ['POWER_SUPPLY', 'PWM', 'SENSOR', 'COMMUNICATION', 'DISPLAY', 'FIRMWARE', 'MECHANICAL', 'OTHER'][i % 8],
-          probableCause: ['COMPONENT', 'SOLDER', 'HUMIDITY', 'OVERLOAD', 'ESD', 'INCORRECT_USAGE', 'OTHER'][i % 7],
+          failureType: ['Fonte de alimentação', 'PWM', 'Sensor', 'Comunicação', 'Display', 'Firmware', 'Mecânica', 'Outro'][i % 8],
+          probableCause: ['Componente defeituoso', 'Solda', 'Umidade', 'Sobrecarga', 'Descarga eletrostática', 'Uso incorreto', 'Outra'][i % 7],
           notes: i % 2 === 0 ? 'Necessária troca de componente.' : null, diagnosedAt: date(Math.max(0, entryAgo - 1)),
           technicianName: technicians[i % technicians.length].fullName,
         });
@@ -345,7 +345,7 @@ async function seedVolume({ users, volume, demoClients, demoProducts, demoParts,
       if (stageIdx >= 4 && stageIdx < 6) {
         for (let k = 0; k < 1 + (i % 3); k++) {
           await api(`${path}/repair/interventions`, 'POST', {
-            type: ['RESOLDERING', 'CLEANING', 'REPROGRAMMING', 'FIRMWARE_UPDATE', 'HARNESS_REPLACEMENT', 'OTHER'][(i + k) % 6],
+            type: ['Ressolda', 'Limpeza', 'Reprogramação', 'Atualização de firmware', 'Troca de chicote', 'Outro'][(i + k) % 6],
             description: `[DEMO] Reparo ${k + 1} do caso ${i + 1}.`, performedOn: date(Math.max(0, entryAgo - 1 - k)), hours: [0.5, 1, 1.5, 2.25, 3][(i + k) % 5],
           });
           count('Reparos (volume)', true);
