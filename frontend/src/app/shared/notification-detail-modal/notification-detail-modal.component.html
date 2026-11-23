@@ -16,7 +16,7 @@
       <button type="button" class="modal-close" aria-label="Fechar" (click)="closed.emit()"><app-icon name="close" [size]="20" /></button>
     </header>
 
-    <div class="notification-detail__body app-scroll" [attr.aria-busy]="busy()">
+    <div class="notification-detail__body app-scroll-thin" [attr.aria-busy]="busy()">
       @if (content().message) {
         <p class="notification-detail__message">{{ content().message }}</p>
       }
