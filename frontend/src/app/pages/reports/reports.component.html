@@ -45,9 +45,9 @@
     <label class="filter-field"><span>Status</span>
       <app-custom-select ariaLabel="Filtrar por status" formControlName="status" [options]="statusOptions" />
     </label>
-    <label class="filter-field"><span>Cliente</span>
-      <app-custom-select ariaLabel="Filtrar por cliente" formControlName="clientId" [options]="clientOptions()" />
-    </label>
+    <div class="filter-field"><span>Cliente</span>
+      <app-custom-select searchable ariaLabel="Filtrar por cliente" formControlName="clientId" [options]="clientOptions()" />
+    </div>
     <div class="report-filters__actions">
       <button type="button" class="link-button" (click)="clearFilters()">Limpar filtros</button>
       <button class="button-primary" type="submit" [disabled]="loading()">Consultar</button>

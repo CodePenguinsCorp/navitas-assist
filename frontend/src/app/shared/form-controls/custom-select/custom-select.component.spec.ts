@@ -218,7 +218,7 @@ describe('CustomSelectComponent dismissal', () => {
     @if (inModal()) {
       <section class="dialog" role="dialog" aria-modal="true" appModalFocus>
         <button type="button" class="m-before">Antes</button>
-        <app-custom-select class="modal-select" [options]="options" ariaLabel="No modal" />
+        <app-custom-select class="modal-select" [searchable]="searchable()" [options]="options" ariaLabel="No modal" />
         <button type="button" class="m-after">Depois</button>
       </section>
     }
@@ -227,6 +227,7 @@ describe('CustomSelectComponent dismissal', () => {
 class TabHost {
   readonly options = OPTIONS;
   readonly inModal = signal(false);
+  readonly searchable = signal(false);
 }
 
 describe('CustomSelectComponent Tab from an open list', () => {
@@ -267,14 +268,24 @@ describe('CustomSelectComponent Tab from an open list', () => {
     expect(pressTab(true).defaultPrevented).toBe(false);
   });
 
-  it('moves to the next control in one Tab inside a modal, and to the previous one with Shift+Tab', () => {
+  it.each([false, true])('moves through modal controls with Tab and Shift+Tab (searchable: %s)', (searchable) => {
+    fixture.componentInstance.searchable.set(searchable);
     fixture.componentInstance.inModal.set(true);
     fixture.detectChanges();
-    openAndFocusOption('.modal-select');
+    const openModalSelect = () => {
+      if (searchable) {
+        page.querySelector<HTMLButtonElement>('.modal-select .custom-select__trigger')!.click();
+        fixture.detectChanges();
+        expect(document.activeElement).toBe(page.querySelector('.modal-select input[role="combobox"]'));
+      } else {
+        openAndFocusOption('.modal-select');
+      }
+    };
+    openModalSelect();
     pressTab(false);
     expect(document.activeElement).toBe(page.querySelector('.m-after'));
 
-    openAndFocusOption('.modal-select');
+    openModalSelect();
     pressTab(true);
     expect(document.activeElement).toBe(page.querySelector('.m-before'));
   });
@@ -329,5 +340,68 @@ describe('CustomSelectComponent menu inside the viewport', () => {
     const menu = open(new DOMRect(20, 60, 100, 34));
     // 160 - 94 - 6 - 8 = 52 below; 60 - 6 - 8 = 46 above: below wins.
     expect(Number.parseFloat(menu.style.maxHeight)).toBe(52);
+  });
+});
+
+describe('CustomSelectComponent busca', () => {
+  it('abre ao digitar, filtra e seleciona com o teclado', () => {
+    const fixture = TestBed.createComponent(CustomSelectComponent);
+    fixture.componentRef.setInput('searchable', true);
+    fixture.componentRef.setInput('options', [
+      { value: 1, label: 'Cliente Ação', disabled: true },
+      { value: 2, label: 'Oficina São João' },
+      { value: 3, label: 'Loja São Pedro' },
+      { value: 4, label: 'Fábrica' }
+    ]);
+    const changed = vi.fn();
+    fixture.componentInstance.registerOnChange(changed);
+    fixture.detectChanges();
+    const page: HTMLElement = fixture.nativeElement;
+    const trigger = page.querySelector('button')!;
+    const key = (target: Element, key: string) => {
+      target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+      fixture.detectChanges();
+    };
+
+    key(trigger, 'S');
+    const search = page.querySelector<HTMLInputElement>('input[role="combobox"]')!;
+    expect(search).not.toBeNull();
+    expect(search.value).toBe('S');
+    expect(document.activeElement).toBe(search);
+
+    const searchFor = (value: string) => {
+      search.value = value;
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      fixture.detectChanges();
+    };
+
+    searchFor('ACAO');
+    expect(page.querySelector('[role="option"]')?.getAttribute('aria-disabled')).toBe('true');
+    expect(search.hasAttribute('aria-activedescendant')).toBe(false);
+    key(search, 'Enter');
+    expect(changed).not.toHaveBeenCalled();
+
+    searchFor('SAO');
+    const results = [...page.querySelectorAll('[role="option"]')];
+    expect(results.map((entry) => entry.textContent?.trim())).toEqual(['Oficina São João', 'Loja São Pedro']);
+    expect(page.querySelector('[aria-live="polite"]')?.textContent).toContain('2 resultados');
+    key(search, 'ArrowDown');
+    expect(search.getAttribute('aria-activedescendant')).toBe(results[1].id);
+    key(search, 'Enter');
+    expect(changed).toHaveBeenCalledExactlyOnceWith(3);
+    expect(document.activeElement).toBe(trigger);
+
+    trigger.click();
+    fixture.detectChanges();
+    expect(page.querySelector<HTMLInputElement>('input')?.value).toBe('');
+    expect(page.querySelector('[aria-selected="true"]')?.textContent).toContain('Loja São Pedro');
+    const reopenedSearch = page.querySelector<HTMLInputElement>('input')!;
+    reopenedSearch.value = 'xyz';
+    reopenedSearch.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    expect(page.textContent).toContain('Nenhum resultado');
+    key(reopenedSearch, 'Escape');
+    expect(page.querySelector('[role="listbox"]')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
   });
 });

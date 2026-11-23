@@ -7,6 +7,7 @@ import {
   Injector,
   Output,
   afterNextRender,
+  booleanAttribute,
   computed,
   effect,
   forwardRef,
@@ -15,6 +16,7 @@ import {
   signal
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { normalizeSearchText } from '../../../core/utils/suggestions';
 import { popupDismiss } from '../../popup-dismiss/popup-dismiss';
 
 export interface CustomSelectOption<T = unknown> {
@@ -58,6 +60,7 @@ export class CustomSelectComponent implements ControlValueAccessor {
   /** Reflects the invalid state of the bound field on the trigger. */
   readonly ariaInvalid = input(false);
   readonly disabled = input(false);
+  readonly searchable = input(false, { transform: booleanAttribute });
   /** 'compact' fits toolbars and table rows (34px, content width). */
   readonly size = input<'default' | 'compact'>('default');
   /**
@@ -72,6 +75,21 @@ export class CustomSelectComponent implements ControlValueAccessor {
 
   protected readonly menuId = `custom-select-menu-${nextMenuId++}`;
   protected readonly isOpen = signal(false);
+  protected readonly search = signal('');
+  private readonly activeOption = signal<CustomSelectOption | undefined>(undefined);
+  protected readonly visibleOptions = computed(() => {
+    const query = normalizeSearchText(this.search());
+    return this.searchable() && query
+      ? this.options().filter((option) => normalizeSearchText(option.label).includes(query)
+        || normalizeSearchText(option.hint ?? '').includes(query))
+      : this.options();
+  });
+  protected readonly activeIndex = computed(() => {
+    const options = this.visibleOptions();
+    const current = this.activeOption();
+    const active = current ? options.indexOf(current) : -1;
+    return active >= 0 && !options[active].disabled ? active : options.findIndex((option) => !option.disabled);
+  });
   private readonly injector = inject(Injector);
   /** Press or focus outside closes the menu; opening it closes any other popup. */
   private readonly dismiss = popupDismiss(() => this.close());
@@ -117,17 +135,73 @@ export class CustomSelectComponent implements ControlValueAccessor {
     else this.open();
   }
 
-  private open(): void {
+  private open(query = ''): void {
+    this.search.set(query);
+    this.activeOption.set(query ? undefined : this.selectedOption() ?? undefined);
     this.placeMenu();
     this.isOpen.set(true);
     this.dismiss.opened();
+    if (this.searchable()) {
+      afterNextRender(() => {
+        const search = this.hostElement.nativeElement.querySelector<HTMLInputElement>('input[role="combobox"]');
+        search?.focus({ preventScroll: true });
+        search?.setSelectionRange(query.length, query.length);
+        this.scrollActiveOption();
+      }, { injector: this.injector });
+    }
+  }
+
+  protected updateSearch(query: string): void {
+    this.search.set(query);
+    this.activeOption.set(undefined);
+    const list = this.hostElement.nativeElement.querySelector<HTMLElement>('.custom-select__list');
+    if (list) list.scrollTop = 0;
+  }
+
+  protected handleSearchKeydown(event: KeyboardEvent): void {
+    if (event.isComposing || this.isDisabled()) return;
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      const option = this.visibleOptions()[this.activeIndex()];
+      if (option) this.selectOption(option);
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const options = this.visibleOptions();
+      const enabled = options.filter((option) => !option.disabled);
+      if (!enabled.length) return;
+      const index = enabled.indexOf(options[this.activeIndex()]);
+      const step = event.key === 'ArrowDown' ? 1 : -1;
+      this.activeOption.set(enabled[(index + step + enabled.length) % enabled.length]);
+      this.scrollActiveOption();
+    }
+  }
+
+  private scrollActiveOption(): void {
+    const option = this.optionElements()[this.activeIndex()];
+    const list = option?.parentElement;
+    if (!list) return;
+    const bounds = list.getBoundingClientRect();
+    const row = option.getBoundingClientRect();
+    if (row.top < bounds.top) list.scrollTop += row.top - bounds.top;
+    else if (row.bottom > bounds.bottom) list.scrollTop += row.bottom - bounds.bottom;
   }
 
   /** A pointer open leaves focus on the trigger; arrow keys open the list and move into it. */
   protected handleTriggerKeydown(event: KeyboardEvent): void {
-    if ((event.key !== 'ArrowDown' && event.key !== 'ArrowUp') || this.isDisabled()) return;
+    if (this.isDisabled() || event.isComposing) return;
+    if (this.searchable() && !this.isOpen() && event.key !== ' ' && Array.from(event.key).length === 1
+      && (event.getModifierState('AltGraph') || (!event.ctrlKey && !event.metaKey && !event.altKey))) {
+      event.preventDefault();
+      this.open(event.key);
+      return;
+    }
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
     event.preventDefault();
     if (!this.isOpen()) this.open();
+    if (this.searchable()) {
+      this.hostElement.nativeElement.querySelector<HTMLInputElement>('input[role="combobox"]')?.focus({ preventScroll: true });
+      return;
+    }
     afterNextRender(() => {
       const items = this.enabledOptions();
       (items.find((item) => item.classList.contains('is-selected')) ?? items[0])?.focus();
@@ -136,6 +210,14 @@ export class CustomSelectComponent implements ControlValueAccessor {
 
   /** Listbox keys: arrows, Home/End, typeahead; Tab closes back to the trigger. */
   protected handleMenuKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Tab') {
+      // Continue from the trigger in the browser's normal Tab order or the modal's focus cycle.
+      this.close();
+      this.focusTrigger();
+      return;
+    }
+    if (this.searchable()) return;
+
     const items = this.enabledOptions();
     const index = items.indexOf(document.activeElement as HTMLElement);
     let target: HTMLElement | undefined;
@@ -143,13 +225,7 @@ export class CustomSelectComponent implements ControlValueAccessor {
     else if (event.key === 'ArrowUp') target = items[(index - 1 + items.length) % items.length];
     else if (event.key === 'Home') target = items[0];
     else if (event.key === 'End') target = items[items.length - 1];
-    else if (event.key === 'Tab') {
-      // Focus returns to the trigger synchronously and the key is not consumed: the browser (or the modal cycle)
-      // then moves on from the trigger, so a single Tab or Shift+Tab leaves the control.
-      this.close();
-      this.focusTrigger();
-      return;
-    } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
       target = this.matchTypeahead(event.key, items, index);
     }
     if (target) {
@@ -247,7 +323,7 @@ export class CustomSelectComponent implements ControlValueAccessor {
 
   @HostListener('keydown.escape', ['$event'])
   protected handleEscape(event: Event): void {
-    if (!this.isOpen() || event.defaultPrevented) return;
+    if (!this.isOpen() || event.defaultPrevented || (event instanceof KeyboardEvent && event.isComposing)) return;
     event.preventDefault();
     event.stopPropagation();
     this.close();

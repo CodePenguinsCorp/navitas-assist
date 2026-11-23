@@ -51,7 +51,7 @@
 
         <div class="field-group">
           <label>Responsável</label>
-          <app-custom-select
+          <app-custom-select searchable
             formControlName="assignee"
             ariaLabel="Filtrar Kanban por responsável"
             [options]="assigneeFilterOptions()"
@@ -179,7 +179,7 @@
     <section class="kanban-views" aria-labelledby="kanbanViewsTitle">
       <span id="kanbanViewsTitle" class="kanban-views__title">Visualização</span>
       <div class="kanban-views__controls">
-        <app-custom-select
+        <app-custom-select searchable
           ariaLabel="Visualização salva do Kanban"
           [options]="viewSelectOptions()"
           [value]="activeViewId()"

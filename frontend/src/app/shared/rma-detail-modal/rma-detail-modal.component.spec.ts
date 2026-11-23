@@ -769,7 +769,7 @@ describe('RmaDetailModalComponent assignee selector', () => {
     expect(document.activeElement).toBe(trigger(host));
   });
 
-  it('moves with arrows and typeahead, and Escape returns focus without choosing', async () => {
+  it('filtra responsáveis pelo teclado e devolve o foco ao cancelar a busca', async () => {
     const { fixture, host, component } = await setup({ rma: assigned });
     const assigneeChange = vi.fn();
     component.assigneeChange.subscribe(assigneeChange);
@@ -778,15 +778,21 @@ describe('RmaDetailModalComponent assignee selector', () => {
     key(trigger(host), 'ArrowDown');
     fixture.detectChanges();
     await fixture.whenStable();
-    expect(name(document.activeElement!)).toBe('Ana Lima');
-    key(document.activeElement!, 'b');
-    expect(name(document.activeElement!)).toBe('Bruno Costa');
-    key(document.activeElement!, 'e');
-    expect(name(document.activeElement!)).toBe('Beatriz Souza');
-    key(document.activeElement!, 'Home');
-    expect(name(document.activeElement!)).toBe('Sem responsável');
+    const search = host.querySelector<HTMLInputElement>('.rma-detail__assignee-picker input[role="combobox"]')!;
+    const active = () => options(host).find((option) => option.id === search.getAttribute('aria-activedescendant'))!;
+    expect(document.activeElement).toBe(search);
+    expect(name(active())).toBe('Ana Lima');
+    key(search, 'ArrowDown');
+    fixture.detectChanges();
+    expect(name(active())).toBe('Bruno Costa');
 
-    key(document.activeElement!, 'Escape');
+    search.value = 'BEAT';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    expect(options(host).map(name)).toEqual(['Beatriz Souza']);
+    expect(name(active())).toBe('Beatriz Souza');
+
+    key(search, 'Escape');
     fixture.detectChanges();
     expect(host.querySelector('.rma-detail__assignee-picker [role="listbox"]')).toBeNull();
     expect(document.activeElement).toBe(trigger(host));

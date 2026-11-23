@@ -17,9 +17,9 @@
       />
     </label>
 
-    <label class="filter-field">
+    <div class="filter-field">
       <span>Perfil</span>
-      <app-custom-select
+      <app-custom-select searchable
         ariaLabel="Filtrar por perfil"
         [options]="profileFilterOptions()"
         [value]="profileFilter() ?? ''"
@@ -28,7 +28,7 @@
       @if (profileOptionsState() === 'failed') {
         <small class="field-error">Não foi possível carregar os perfis.</small>
       }
-    </label>
+    </div>
 
     <label class="filter-field">
       <span>Status</span>
@@ -206,9 +206,9 @@
         <fieldset class="form-section">
           <legend>Acesso</legend>
 
-          <label class="field-group">
+          <div class="field-group">
             <span>Perfil</span>
-            <app-custom-select
+            <app-custom-select searchable
               formControlName="profileId"
               ariaLabel="Perfil do usuário"
               placeholder="Selecione o perfil"
@@ -219,7 +219,7 @@
             @if (hasError('profileId')) {
               <small id="user-profile-error" class="field-error">Selecione o perfil.</small>
             }
-          </label>
+          </div>
 
           <label class="field-group">
             <span>Status</span>

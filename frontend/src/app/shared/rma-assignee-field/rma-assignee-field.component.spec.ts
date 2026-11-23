@@ -72,7 +72,15 @@ describe('RmaAssigneeFieldComponent', () => {
 
   it('saves through the assignment endpoint and reports the new assignee', () => {
     mount();
-    choose('Beatriz Souza');
+    trigger()!.click();
+    fixture.detectChanges();
+    const search = host().querySelector<HTMLInputElement>('input[role="combobox"]')!;
+    search.value = 'BIA';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    expect(host().querySelectorAll('[role="option"]')).toHaveLength(1);
+    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    fixture.detectChanges();
     expect(calls).toEqual([[4, 9]]);
     expect(saved.map((rma) => rma.assigneeId)).toEqual([9]);
     expect(busy).toEqual([true, false]);

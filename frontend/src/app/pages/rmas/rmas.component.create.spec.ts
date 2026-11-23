@@ -98,6 +98,28 @@ function describedText(element: HTMLElement): string {
 afterEach(settleRmaLazyChunks);
 
 describe('RmasComponent creation messages', () => {
+  it('busca cliente e produto no modal e atualiza os campos da nova OS', async () => {
+    const { component, open, dialog, render } = await setup();
+    open();
+    for (const [field, query, id] of [['clientId', 'ENTE', 1], ['productId', 'u-2', 2]] as const) {
+      dialog()!.querySelector<HTMLButtonElement>(`app-custom-select[formControlName="${field}"] button`)!.click();
+      render();
+      const search = dialog()!.querySelector<HTMLInputElement>('input[role="combobox"]')!;
+      expect(document.activeElement).toBe(search);
+      search.value = query;
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      render();
+      expect(dialog()!.querySelectorAll('[role="option"]')).toHaveLength(1);
+      search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      render();
+      const form = field === 'clientId' ? component.createForm : component.createItems.at(0);
+      expect(form.get(field)?.value).toBe(id);
+    }
+    dialog()!.querySelector<HTMLButtonElement>('app-custom-select[formControlName="priority"] button')!.click();
+    render();
+    expect(dialog()!.querySelector('input[role="combobox"]')).toBeNull();
+  });
+
   it('marks the creation dialog for assistive technology', async () => {
     // Hoje o article do diálogo não tem role="dialog", aria-modal nem aria-labelledby, e mostra "Preencha os dados do atendimento.".
     const { page, open, dialog } = await setup();

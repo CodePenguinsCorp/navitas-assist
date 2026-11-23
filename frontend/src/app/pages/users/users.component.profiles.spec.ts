@@ -86,6 +86,24 @@ describe('UsersComponent profile and extra permissions', () => {
     expect(select.closest('.field-group')?.querySelector('.field-error')?.textContent?.trim()).toBe('Selecione o perfil.');
   });
 
+  it('permite buscar e escolher o perfil no formulário do usuário', async () => {
+    await mount();
+    component.openEditModal(account());
+    fixture.detectChanges();
+    const select = dialog().querySelector('app-custom-select[formcontrolname="profileId"]')!;
+    select.querySelector('button')!.click();
+    fixture.detectChanges();
+    const search = select.querySelector<HTMLInputElement>('input[role="combobox"]')!;
+    search.value = 'atendi';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    const results = select.querySelectorAll<HTMLButtonElement>('[role="option"]');
+    expect(results).toHaveLength(1);
+    results[0].click();
+    fixture.detectChanges();
+    expect(component.form.controls['profileId'].value).toBe(2);
+  });
+
   it('marks profile permissions as included and disabled', async () => {
     await mount();
     component.openCreateModal();

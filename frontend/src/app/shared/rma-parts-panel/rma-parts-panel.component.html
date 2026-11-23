@@ -36,14 +36,14 @@
         } @else if (catalogHasLoaded() && partOptions().length === 0) {
           <div class="record-empty field-group--full"><span class="icon-tile tone-slate"><app-icon name="chip" /></span><p>Nenhuma peça ativa</p></div>
         }
-        <label class="field-group field-group--required">
+        <div class="field-group field-group--required">
           <span>Peça</span>
-          <app-custom-select ariaLabel="Peça para usar" [placeholder]="catalogHasLoaded() ? 'Selecione a peça' : 'Carregando opções...'" [options]="partOptions()" formControlName="partId"
+          <app-custom-select searchable ariaLabel="Peça para usar" [placeholder]="catalogHasLoaded() ? 'Selecione a peça' : 'Carregando opções...'" [options]="partOptions()" formControlName="partId"
             [ariaInvalid]="hasError(usageForm.controls.partId)" [ariaDescribedBy]="hasError(usageForm.controls.partId) ? 'usage-part-error' : null" />
           @if (hasError(usageForm.controls.partId)) {
             <small id="usage-part-error" class="field-error" role="alert">Selecione a peça.</small>
           }
-        </label>
+        </div>
         <label class="field-group field-group--required">
           <span>Quantidade @if (selectedPart(); as part) { ({{ part.unit }}) }</span>
           <input type="number" min="0.001" max="999999999.999" [step]="allowsFraction(selectedPart()?.unit) ? 'any' : '1'" [attr.inputmode]="allowsFraction(selectedPart()?.unit) ? 'decimal' : 'numeric'" formControlName="quantity"

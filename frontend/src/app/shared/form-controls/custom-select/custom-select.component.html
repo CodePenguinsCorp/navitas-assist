@@ -4,6 +4,7 @@
     type="button"
     class="custom-select__trigger"
     aria-haspopup="listbox"
+    [attr.role]="searchable() && !isOpen() ? 'combobox' : null"
     [disabled]="isDisabled()"
     [attr.aria-expanded]="isOpen()"
     [attr.aria-controls]="isOpen() ? menuId : null"
@@ -30,39 +31,67 @@
   </button>
 
   @if (isOpen()) {
-    <div class="custom-select__menu" role="listbox" [id]="menuId" [attr.aria-label]="ariaLabel()" [class.is-above]="menuPosition()?.above" [style.top.px]="menuPosition()?.top" [style.left.px]="menuPosition()?.left" [style.width.px]="menuPosition()?.width" [style.max-height.px]="menuPosition()?.maxHeight" (keydown)="handleMenuKeydown($event)">
-      @for (option of options(); track $index) {
-        <button
-          type="button"
-          role="option"
-          tabindex="-1"
-          class="custom-select__option"
-          [class.is-selected]="isSelected(option)"
-          [attr.aria-selected]="isSelected(option)"
-          [attr.aria-disabled]="option.disabled || null"
-          [attr.data-status]="option.status ?? null"
-          [attr.data-priority]="option.priority ?? null"
-          (click)="selectOption(option)"
-        >
-          @if (option.avatar !== undefined) {
-            <span class="avatar" [class.avatar--empty]="!option.avatar" aria-hidden="true">{{ option.avatar || '–' }}</span>
-          }
-          @if (option.priority) {
-            <span class="priority-bars" [attr.data-priority]="option.priority" aria-hidden="true"><i></i><i></i><i></i></span>
-          }
-          <span class="custom-select__text">
-            <span class="custom-select__name">{{ option.label }}</span>
-            @if (option.hint) {
-              <small class="custom-select__hint">{{ option.hint }}</small>
-            }
-          </span>
-          @if (isSelected(option)) {
-            <svg class="custom-select__check" viewBox="0 0 20 20" aria-hidden="true">
-              <path d="m4.5 10.5 3.2 3.2L15.5 6" />
-            </svg>
-          }
-        </button>
+    <div class="custom-select__menu" [class.is-above]="menuPosition()?.above" [style.top.px]="menuPosition()?.top" [style.left.px]="menuPosition()?.left" [style.width.px]="menuPosition()?.width" [style.max-height.px]="menuPosition()?.maxHeight" (keydown)="handleMenuKeydown($event)">
+      @if (searchable()) {
+        <div class="search-field">
+          <input
+            type="text"
+            tabindex="-1"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded="true"
+            [attr.aria-label]="'Buscar: ' + ariaLabel()"
+            [attr.aria-controls]="menuId"
+            [attr.aria-activedescendant]="activeIndex() < 0 ? null : menuId + '-' + activeIndex()"
+            placeholder="Buscar"
+            autocomplete="off"
+            [value]="search()"
+            (input)="updateSearch($any($event.target).value)"
+            (keydown)="handleSearchKeydown($event)"
+          />
+        </div>
+        <span class="sr-only" aria-live="polite" aria-atomic="true">{{ visibleOptions().length === 1 ? '1 resultado' : visibleOptions().length + ' resultados' }}</span>
       }
+      <div class="custom-select__list app-scroll" role="listbox" [id]="menuId" [attr.aria-label]="ariaLabel()">
+        @for (option of visibleOptions(); track $index) {
+          <button
+            type="button"
+            role="option"
+            tabindex="-1"
+            [id]="menuId + '-' + $index"
+            [class.is-active]="searchable() && $index === activeIndex()"
+            class="custom-select__option"
+            [class.is-selected]="isSelected(option)"
+            [attr.aria-selected]="isSelected(option)"
+            [attr.aria-disabled]="option.disabled || null"
+            [attr.data-status]="option.status ?? null"
+            [attr.data-priority]="option.priority ?? null"
+            (click)="selectOption(option)"
+          >
+            @if (option.avatar !== undefined) {
+              <span class="avatar" [class.avatar--empty]="!option.avatar" aria-hidden="true">{{ option.avatar || '–' }}</span>
+            }
+            @if (option.priority) {
+              <span class="priority-bars" [attr.data-priority]="option.priority" aria-hidden="true"><i></i><i></i><i></i></span>
+            }
+            <span class="custom-select__text">
+              <span class="custom-select__name">{{ option.label }}</span>
+              @if (option.hint) {
+                <small class="custom-select__hint">{{ option.hint }}</small>
+              }
+            </span>
+            @if (isSelected(option)) {
+              <svg class="custom-select__check" viewBox="0 0 20 20" aria-hidden="true">
+                <path d="m4.5 10.5 3.2 3.2L15.5 6" />
+              </svg>
+            }
+          </button>
+        } @empty {
+          @if (searchable()) {
+            <div class="custom-select__option" role="presentation">Nenhum resultado</div>
+          }
+        }
+      </div>
     </div>
   }
 </div>

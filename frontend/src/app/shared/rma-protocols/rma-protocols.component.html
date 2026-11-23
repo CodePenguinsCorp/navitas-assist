@@ -141,7 +141,7 @@
       } @else {
         <div class="field-group field-group--full field-group--required">
           <span id="protocol-launch-label">Protocolo</span>
-          <app-custom-select ariaLabel="Protocolo a executar" placeholder="Selecione o protocolo" [options]="templateOptions()" [value]="selectedTemplateId()" (valueChange)="selectTemplate($any($event))" [disabled]="submitting()" />
+          <app-custom-select searchable ariaLabel="Protocolo a executar" placeholder="Selecione o protocolo" [options]="templateOptions()" [value]="selectedTemplateId()" (valueChange)="selectTemplate($any($event))" [disabled]="submitting()" />
         </div>
       }
       <div class="form-actions inline-form__actions">

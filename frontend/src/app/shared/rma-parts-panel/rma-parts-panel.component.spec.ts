@@ -52,7 +52,18 @@ describe('RmaPartsPanelComponent - uso de peças', () => {
 
   it('abre formulário inline e valida quantidade e motivo por campo antes de enviar', async () => {
     await setUp(); root().querySelector<HTMLButtonElement>('#usage-trigger')!.click(); render();
-    component().usageForm.patchValue({ partId: 4, quantity: 1.5, replacementReason: '  ' });
+    root().querySelector<HTMLButtonElement>('button[aria-label="Peça para usar"]')!.click();
+    render();
+    const search = root().querySelector<HTMLInputElement>('input[role="combobox"]')!;
+    search.value = 'pca-1';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    render();
+    const results = root().querySelectorAll<HTMLButtonElement>('[role="option"]');
+    expect(results).toHaveLength(1);
+    results[0].click();
+    render();
+    expect(component().usageForm.controls.partId.value).toBe(4);
+    component().usageForm.patchValue({ quantity: 1.5, replacementReason: '  ' });
     component().use(); render(); expect(service.use).not.toHaveBeenCalled();
     expect(text()).toContain('Em estoque: 3 UN');
     expect(root().querySelector('#usage-quantity-error')?.textContent).toContain('número inteiro');

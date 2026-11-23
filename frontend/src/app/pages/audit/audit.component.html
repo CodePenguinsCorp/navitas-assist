@@ -5,7 +5,7 @@
     <label class="filter-field"><span>Até</span><app-date-picker ariaLabel="Data final" formControlName="to" [minDate]="filters.controls.from.value" /></label>
     <label class="search-field"><span>Usuário</span><input type="search" formControlName="actor" maxlength="60" placeholder="Nome de usuário" /></label>
     <label class="filter-field"><span>Ação</span><app-custom-select ariaLabel="Filtrar por ação" formControlName="action" [options]="actionOptions" /></label>
-    <label class="filter-field"><span>Tipo</span><app-custom-select ariaLabel="Filtrar por tipo" formControlName="entityType" [options]="entityOptions" /></label>
+    <div class="filter-field"><span>Tipo</span><app-custom-select searchable ariaLabel="Filtrar por tipo" formControlName="entityType" [options]="entityOptions" /></div>
     <div class="audit-filter-actions"><button type="submit" class="button-primary">Filtrar</button><button type="button" class="button-secondary" (click)="clearFilters()">Limpar filtros</button></div>
   </form>
   <article class="table-card table-card--list panel">

@@ -34,7 +34,7 @@ export function assigneeSelectOptions(
   imports: [TipDirective, CustomSelectComponent],
   template: `
     @if (canEdit()) {
-      <app-custom-select class="rma-assignee-field__picker" appearance="person" [actionMenu]="true"
+      <app-custom-select searchable class="rma-assignee-field__picker" appearance="person" [actionMenu]="true"
         [ariaLabel]="'Trocar responsável, atual: ' + owner(rma())" [placeholder]="owner(rma())"
         [options]="options()" [value]="rma().assigneeId" [disabled]="disabled() || busy()" (valueChange)="choose($event)" />
     } @else {

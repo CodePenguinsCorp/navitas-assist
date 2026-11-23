@@ -366,7 +366,7 @@
 
           <div class="field-group field-group--required">
             <label>Cliente</label>
-            <app-custom-select
+            <app-custom-select searchable
               formControlName="clientId"
               ariaLabel="Selecionar cliente"
               [options]="clientSelectOptions()"
@@ -407,7 +407,7 @@
               <div class="rma-item-editor" [formGroupName]="index" role="group" [attr.aria-label]="'Produto ' + (index + 1)">
                 <div class="field-group field-group--required">
                   <label>Produto</label>
-                  <app-custom-select
+                  <app-custom-select searchable
                     formControlName="productId"
                     [ariaLabel]="'Selecionar produto do item ' + (index + 1)"
                     [options]="productSelectOptions()"

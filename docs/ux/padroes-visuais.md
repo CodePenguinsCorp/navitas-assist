@@ -195,6 +195,7 @@ Dois contextos, um só visual de campo.
 - Rótulo como filho direto, sempre visível, semibold, `--font-size-md`. Campo largo usa `.field-group--full`.
 - Campo de texto, seletor, data e sugestão têm 40 px de altura, `--radius-sm`, borda `--line`, foco com `--focus-border` e `--focus-ring-soft`; erro com borda `--danger-text`.
 - Seletor: `app-custom-select`; texto livre com sugestão: `app-suggest-input` (categoria do produto, tipo de falha e causa do diagnóstico, tipo de reparo, categoria do impedimento, unidade e localização da peça: sugestões iniciais fixas na interface somadas às já usadas, buscadas no primeiro foco por `lazySuggestions` em `GET /api/suggestions/...`, sem tela de cadastro); data: `app-date-picker`; liga/desliga: `.switch`. Nunca `select`, `datalist` ou `input type="date"` nativos.
+- Seletor com mais de aproximadamente 10 opções usa `searchable`, assim como listas de cadastro que podem ultrapassar esse volume. A busca ignora acentos e maiúsculas.
 - Textarea de 6 rem, sem alça de redimensionar.
 - Erro: `small.field-error` abaixo do campo, mensagem curta em português. Erro de formulário inteiro em `.alert-banner--error` na largura total.
 - Obrigatório: `.field-group--required` acrescenta asterisco vermelho ao rótulo. Não se escreve "(obrigatório)" nem "(opcional)". **Hoje só vale dentro de `.inline-form`; proposto estender aos modais de cadastro (V-02).**

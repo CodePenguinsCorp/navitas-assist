@@ -17,15 +17,15 @@
         (input)="updateSearch(productSearch.value)"
       />
     </label>
-    <label class="filter-field">
+    <div class="filter-field">
       <span>Categoria</span>
-      <app-custom-select
+      <app-custom-select searchable
         ariaLabel="Filtrar por categoria"
         [options]="categoryFilterOptions()"
         [value]="categoryFilter()"
         (valueChange)="updateCategoryFilter($any($event))"
       />
-    </label>
+    </div>
     <label class="filter-field">
       <span>Firmware</span>
       <app-custom-select
